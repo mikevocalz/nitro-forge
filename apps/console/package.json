@@ -1,0 +1,26 @@
+{
+  "name": "@nitro-forge/console",
+  "version": "0.1.0",
+  "description": "Executable workflow demo: drives every Nitro-Forge engine end-to-end via nf-cli.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "nf-console": "./src/main.ts"
+  },
+  "scripts": {
+    "demo": "tsx src/main.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  },
+  "dependencies": {
+    "@nitro-forge/ignition": "workspace:*",
+    "@nitro-forge/prism": "workspace:*",
+    "@nitro-forge/cadence": "workspace:*",
+    "@nitro-forge/splice": "workspace:*",
+    "@nitro-forge/folio": "workspace:*",
+    "@nitro-forge/pitch": "workspace:*",
+    "@nitro-forge/tally": "workspace:*",
+    "@nitro-forge/quill": "workspace:*"
+  }
+}

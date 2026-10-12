@@ -1,0 +1,20 @@
+[package]
+name = "nf-sys"
+description = "C FFI surface for Nitro-Forge engines. The Nitro-generated C++ bridge calls these symbols."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+ignition-core = { workspace = true }
+serde_json = { workspace = true }
+prism-engine = { path = "../../packages/prism/rust" }
+cadence-engine = { path = "../../packages/cadence/rust" }
+splice-engine = { path = "../../packages/splice/rust" }
+folio-engine = { path = "../../packages/folio/rust" }
+pitch-engine = { path = "../../packages/pitch/rust" }
+tally-engine = { path = "../../packages/tally/rust" }
+quill-engine = { path = "../../packages/quill/rust" }

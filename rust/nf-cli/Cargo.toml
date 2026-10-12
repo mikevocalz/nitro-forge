@@ -1,0 +1,20 @@
+[package]
+name = "nf-cli"
+description = "Nitro-Forge test host: JSON-lines driver for every engine (verification transport)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "nf-cli"
+path = "src/main.rs"
+
+[dependencies]
+ignition-core = { workspace = true }
+prism-engine = { path = "../../packages/prism/rust" }
+cadence-engine = { path = "../../packages/cadence/rust" }
+splice-engine = { path = "../../packages/splice/rust" }
+folio-engine = { path = "../../packages/folio/rust" }
+pitch-engine = { path = "../../packages/pitch/rust" }
+tally-engine = { path = "../../packages/tally/rust" }
+quill-engine = { path = "../../packages/quill/rust" }

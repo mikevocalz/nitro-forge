@@ -1,0 +1,22 @@
+{
+  "name": "@nitro-forge/ignition",
+  "version": "0.1.0",
+  "description": "Nitro-Forge native integration layer: engine session contracts, Nitro HybridObject spec, and host transports.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/host-cli.ts",
+    "./nitro": "./src/Forge.nitro.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "react-native-nitro-modules": "^0.29.8",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  }
+}

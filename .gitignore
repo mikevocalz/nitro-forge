@@ -1,0 +1,12 @@
+node_modules/
+lib/
+dist/
+target/
+*.tsbuildinfo
+.turbo/
+.DS_Store
+coverage/
+*.log
+.expo/
+android/build/
+ios/build/

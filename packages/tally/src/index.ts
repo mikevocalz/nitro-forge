@@ -1,0 +1,119 @@
+import {
+  DocumentHandle,
+  type CommandResult,
+  type EngineHost,
+} from "@nitro-forge/ignition";
+
+/** Op names — single source of truth, mirrors docs/ENGINE_OPS.md § tally. */
+export const OPS = {
+  newDoc: "new",
+  describe: "describe",
+  addSheet: "addSheet",
+  renameSheet: "renameSheet",
+  removeSheet: "removeSheet",
+  setActive: "setActive",
+  setCell: "setCell",
+  clearCell: "clearCell",
+  getCell: "getCell",
+  getRange: "getRange",
+  evaluate: "evaluate",
+  workbook: "workbook",
+} as const;
+
+export type CellValue = number | string | boolean | CellError | null;
+export type CellError =
+  | "#DIV/0!"
+  | "#VALUE!"
+  | "#REF!"
+  | "#NAME?"
+  | "#NUM!"
+  | "#CYCLE!";
+
+export interface CellInfo {
+  addr: string;
+  raw: string;
+  computed: CellValue;
+}
+
+export interface WorkbookInfo {
+  sheets: { name: string; cell_count: number }[];
+  active: number;
+}
+
+export class TallyDocument {
+  private constructor(private doc: DocumentHandle) {}
+
+  static async open(host: EngineHost): Promise<TallyDocument> {
+    const doc = await DocumentHandle.open(host, "tally");
+    await doc.apply(OPS.newDoc, {});
+    return new TallyDocument(doc);
+  }
+
+  /** Reopen a workbook from bytes produced by `save()`. */
+  static async openSnapshot(
+    host: EngineHost,
+    bytes: Uint8Array,
+  ): Promise<TallyDocument> {
+    const doc = await DocumentHandle.open(host, "tally");
+    await doc.restore(bytes);
+    return new TallyDocument(doc);
+  }
+
+  get handle(): DocumentHandle {
+    return this.doc;
+  }
+
+  private call<T>(op: string, payload?: unknown): Promise<CommandResult<T>> {
+    return this.doc.apply<T>(op, payload);
+  }
+
+  addSheet(name?: string) {
+    return this.call<{ sheet: string }>(OPS.addSheet, { name });
+  }
+  renameSheet(sheet: string | number, to: string) {
+    return this.call(OPS.renameSheet, { sheet, to });
+  }
+  removeSheet(sheet: string | number) {
+    return this.call(OPS.removeSheet, { sheet });
+  }
+  setActive(sheet: string | number) {
+    return this.call(OPS.setActive, { sheet });
+  }
+  setCell(addr: string, value: string) {
+    return this.call<{ addr: string; computed: CellValue }>(OPS.setCell, {
+      addr,
+      value,
+    });
+  }
+  clearCell(addr: string) {
+    return this.call(OPS.clearCell, { addr });
+  }
+  getCell(addr: string) {
+    return this.call<{ raw: string; computed: CellValue }>(OPS.getCell, { addr });
+  }
+  getRange(from: string, to: string) {
+    return this.call<{ cells: CellInfo[][] }>(OPS.getRange, { from, to });
+  }
+  evaluate(formula: string) {
+    return this.call<{ value: CellValue }>(OPS.evaluate, { formula });
+  }
+  workbook() {
+    return this.call<WorkbookInfo>(OPS.workbook);
+  }
+  describe<T = unknown>() {
+    return this.call<T>(OPS.describe);
+  }
+
+  save(): Promise<Uint8Array> {
+    return this.doc.snapshot();
+  }
+  undo(): Promise<boolean> {
+    return this.doc.undo();
+  }
+  redo(): Promise<boolean> {
+    return this.doc.redo();
+  }
+  close(): Promise<void> {
+    return this.doc.close();
+  }
+}

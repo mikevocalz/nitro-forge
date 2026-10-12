@@ -1,0 +1,1113 @@
+#![forbid(unsafe_code)]
+//! tally-engine — the Nitro-Forge spreadsheet engine.
+//!
+//! Implements the `tally-engine` op surface from `docs/ENGINE_OPS.md` against
+//! `ignition_core::Engine`. State is `{ next_sheet, sheets: [Sheet], active }`;
+//! each `Sheet` is `{ id, name, cells: { "A1": { raw } } }`. Only raw cell text
+//! is stored — computed values are always derived live by the formula
+//! evaluator (`formula` module).
+//!
+//! Semantics documented for reviewers:
+//! * Cell addresses `$?[A-Z]+$?[0-9]+` (case-insensitive); `$` markers are
+//!   accepted and normalized away — `setCell`/`getCell` on `$a$1` is `A1`.
+//! * `setCell` stores the raw string verbatim; `""` (or JSON `null`) clears.
+//!   Numeric/bool JSON values are stored in their canonical text form.
+//! * `computed` values serialize as JSON scalars: number, string, boolean,
+//!   `null` for empty cells, or an error literal string such as `"#DIV/0!"`.
+//! * Sheet parameters (`renameSheet`/`removeSheet`/`setActive`) accept a sheet
+//!   name (case-insensitive) or a 0-based index.
+//! * Sheet names are unique case-insensitively (Excel behavior).
+//! * Formulas evaluate against the **active sheet only** — there are no
+//!   cross-sheet references.
+//! * Read ops (`describe`, `getCell`, `getRange`, `evaluate`, `workbook`)
+//!   record no undo entries and emit no events; mutating ops emit
+//!   `document:changed`.
+//! * Undo entries are per-cell previous raw (`None` = "cell was empty") for
+//!   `setCell`/`clearCell`, plus structural entries covering sheet ops and
+//!   `new` — a strict superset of the spec's per-cell undo. `restore` and
+//!   `new` reset the journal's view of the world appropriately.
+
+mod formula;
+
+use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
+use ignition_core::{
+    decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
+    Journal,
+};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::collections::BTreeMap;
+use std::mem;
+
+const JOURNAL_CAPACITY: usize = 64;
+/// Upper bound on `getRange` materialization (`from`/`to` rect size).
+const MAX_GET_RANGE_CELLS: u64 = 16_384;
+const SUPPORTED_VERSION: u32 = 1;
+
+// ---------------------------------------------------------------------------
+// Document model
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Cell {
+    pub raw: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Sheet {
+    pub id: u64,
+    pub name: String,
+    pub cells: BTreeMap<String, Cell>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+struct Workbook {
+    next_sheet: u64,
+    sheets: Vec<Sheet>,
+    active: usize,
+}
+
+fn blank_workbook() -> Workbook {
+    Workbook {
+        next_sheet: 1,
+        sheets: vec![Sheet {
+            id: 0,
+            name: "Sheet1".to_string(),
+            cells: BTreeMap::new(),
+        }],
+        active: 0,
+    }
+}
+
+impl CellLookup for Sheet {
+    fn cell_raw(&self, addr: &str) -> Option<&str> {
+        self.cells.get(addr).map(|c| c.raw.as_str())
+    }
+
+    fn addrs_in(&self, c0: u32, r0: u32, c1: u32, r1: u32) -> Vec<String> {
+        self.cells
+            .keys()
+            .filter(|k| match parse_addr(k) {
+                Some((c, r)) => c >= c0 && c <= c1 && r >= r0 && r <= r1,
+                None => false,
+            })
+            .cloned()
+            .collect()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Undo
+// ---------------------------------------------------------------------------
+
+/// Inverse-mutation entries, recorded before each mutation. `invert` applies
+/// an entry and returns the entry describing the opposite direction, so undo
+/// and redo share one code path.
+enum UndoEntry {
+    /// Previous raw text of a cell (`None` = the cell was empty).
+    Cell {
+        sheet: u64,
+        addr: String,
+        prev: Option<String>,
+    },
+    /// A sheet was added; undo removes it.
+    AddSheet { sheet_id: u64 },
+    /// A sheet was removed; undo re-inserts it at `index` and restores `active`.
+    RemoveSheet {
+        index: usize,
+        sheet: Sheet,
+        prev_active: usize,
+    },
+    RenameSheet { sheet_id: u64, prev_name: String },
+    SetActive { prev: usize },
+    /// `new` replaced the whole document.
+    Reset { prev: Workbook },
+}
+
+// ---------------------------------------------------------------------------
+// Engine
+// ---------------------------------------------------------------------------
+
+pub struct TallyEngine {
+    doc: Workbook,
+    journal: Journal<UndoEntry>,
+}
+
+impl Default for TallyEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TallyEngine {
+    pub fn new() -> Self {
+        Self {
+            doc: blank_workbook(),
+            journal: Journal::new(JOURNAL_CAPACITY),
+        }
+    }
+
+    // -- payload helpers -----------------------------------------------------
+
+    fn field<'a>(p: &'a Value, key: &str) -> Result<&'a Value, EngineError> {
+        p.get(key)
+            .ok_or_else(|| EngineError::invalid(format!("missing payload field '{key}'")))
+    }
+
+    fn str_field<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
+        Self::field(p, key)?.as_str().ok_or_else(|| {
+            EngineError::invalid(format!("payload field '{key}' must be a string"))
+        })
+    }
+
+    /// Normalized "A1" form of a payload address field.
+    fn addr_field(p: &Value, key: &str) -> Result<String, EngineError> {
+        let (c, r) = Self::addr_coords(p, key)?;
+        Ok(fmt_addr(c, r))
+    }
+
+    fn addr_coords(p: &Value, key: &str) -> Result<(u32, u32), EngineError> {
+        let s = Self::str_field(p, key)?;
+        parse_addr(s).ok_or_else(|| {
+            EngineError::validation(format!("invalid cell address '{s}'"))
+        })
+    }
+
+    /// `sheet` payload param: string → case-insensitive name, number → index.
+    fn resolve_sheet(&self, v: &Value) -> Result<usize, EngineError> {
+        match v {
+            Value::Number(n) => {
+                let i = n.as_u64().ok_or_else(|| {
+                    EngineError::invalid("'sheet' index must be a non-negative integer")
+                })? as usize;
+                if i < self.doc.sheets.len() {
+                    Ok(i)
+                } else {
+                    Err(EngineError::out_of_bounds(format!(
+                        "sheet index {i} out of range ({} sheets)",
+                        self.doc.sheets.len()
+                    )))
+                }
+            }
+            Value::String(name) => self
+                .doc
+                .sheets
+                .iter()
+                .position(|s| s.name.eq_ignore_ascii_case(name))
+                .ok_or_else(|| EngineError::not_found(format!("no sheet named '{name}'"))),
+            _ => Err(EngineError::invalid(
+                "'sheet' must be a name (string) or index (number)",
+            )),
+        }
+    }
+
+    fn name_taken(&self, name: &str, except: Option<usize>) -> bool {
+        self.doc
+            .sheets
+            .iter()
+            .enumerate()
+            .any(|(i, s)| Some(i) != except && s.name.eq_ignore_ascii_case(name))
+    }
+
+    fn default_sheet_name(&self, id: u64) -> String {
+        let mut k = id + 1;
+        loop {
+            let candidate = format!("Sheet{k}");
+            if !self.name_taken(&candidate, None) {
+                return candidate;
+            }
+            k += 1;
+        }
+    }
+
+    fn active_sheet(&self) -> &Sheet {
+        // `active` is an invariant: always in range (validated on restore and
+        // maintained on removeSheet).
+        &self.doc.sheets[self.doc.active]
+    }
+
+    fn active_sheet_mut(&mut self) -> &mut Sheet {
+        &mut self.doc.sheets[self.doc.active]
+    }
+
+    fn sheet_by_id_mut(&mut self, id: u64) -> Option<&mut Sheet> {
+        self.doc.sheets.iter_mut().find(|s| s.id == id)
+    }
+
+    /// Fresh per-request evaluator over the active sheet.
+    fn eval_cell_now(&self, addr: &str) -> FVal {
+        Evaluator::new(self.active_sheet()).eval_cell(addr)
+    }
+
+    /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet`.
+    fn remove_sheet_at(&mut self, idx: usize) -> Sheet {
+        let removed = self.doc.sheets.remove(idx);
+        let len = self.doc.sheets.len();
+        if self.doc.active > idx {
+            self.doc.active -= 1;
+        } else if self.doc.active >= len {
+            self.doc.active = len.saturating_sub(1);
+        }
+        removed
+    }
+
+    // -- op results -----------------------------------------------------------
+
+    fn changed(data: Value) -> CommandResult {
+        CommandResult::data(data) // includes the `document:changed` event
+    }
+
+    fn readonly(data: Value) -> CommandResult {
+        CommandResult {
+            events: vec![],
+            data,
+        }
+    }
+
+    // -- ops ------------------------------------------------------------------
+
+    fn op_new(&mut self) -> Result<CommandResult, EngineError> {
+        let prev = mem::replace(&mut self.doc, blank_workbook());
+        self.journal.record(UndoEntry::Reset { prev });
+        Ok(Self::changed(json!({ "ok": true })))
+    }
+
+    fn op_describe(&self) -> Result<CommandResult, EngineError> {
+        Ok(Self::readonly(serde_json::to_value(&self.doc)?))
+    }
+
+    fn op_add_sheet(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let name = match p.get("name") {
+            None | Some(Value::Null) => None,
+            Some(v) => Some(v.as_str().ok_or_else(|| {
+                EngineError::invalid("'name' must be a string")
+            })?),
+        };
+        if let Some(n) = name {
+            if n.is_empty() {
+                return Err(EngineError::validation("sheet name must not be empty"));
+            }
+            if self.name_taken(n, None) {
+                return Err(EngineError::validation(format!(
+                    "sheet name '{n}' already exists"
+                )));
+            }
+        }
+        let id = self.doc.next_sheet;
+        let name = name
+            .map(str::to_string)
+            .unwrap_or_else(|| self.default_sheet_name(id));
+        let sheet = Sheet {
+            id,
+            name,
+            cells: BTreeMap::new(),
+        };
+        self.journal.record(UndoEntry::AddSheet { sheet_id: id });
+        self.doc.next_sheet += 1;
+        self.doc.sheets.push(sheet);
+        let index = self.doc.sheets.len() - 1;
+        Ok(Self::changed(json!({
+            "sheet": { "id": id, "name": self.doc.sheets[index].name, "index": index }
+        })))
+    }
+
+    fn op_rename_sheet(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.resolve_sheet(Self::field(p, "sheet")?)?;
+        let to = Self::str_field(p, "to")?;
+        if to.is_empty() {
+            return Err(EngineError::validation("sheet name must not be empty"));
+        }
+        if self.name_taken(to, Some(idx)) {
+            return Err(EngineError::validation(format!(
+                "sheet name '{to}' already exists"
+            )));
+        }
+        let sheet_id = self.doc.sheets[idx].id;
+        let prev_name = self.doc.sheets[idx].name.clone();
+        self.journal.record(UndoEntry::RenameSheet {
+            sheet_id,
+            prev_name,
+        });
+        self.doc.sheets[idx].name = to.to_string();
+        Ok(Self::changed(json!({ "ok": true })))
+    }
+
+    fn op_remove_sheet(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.resolve_sheet(Self::field(p, "sheet")?)?;
+        if self.doc.sheets.len() <= 1 {
+            return Err(EngineError::validation("workbook must keep at least one sheet"));
+        }
+        let entry = UndoEntry::RemoveSheet {
+            index: idx,
+            sheet: self.doc.sheets[idx].clone(),
+            prev_active: self.doc.active,
+        };
+        self.journal.record(entry);
+        self.remove_sheet_at(idx);
+        Ok(Self::changed(json!({ "ok": true })))
+    }
+
+    fn op_set_active(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.resolve_sheet(Self::field(p, "sheet")?)?;
+        let prev = self.doc.active;
+        self.journal.record(UndoEntry::SetActive { prev });
+        self.doc.active = idx;
+        Ok(Self::changed(json!({ "ok": true })))
+    }
+
+    fn op_set_cell(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let addr = Self::addr_field(p, "addr")?;
+        let raw = match Self::field(p, "value")? {
+            Value::String(s) => s.clone(),
+            Value::Number(n) => fmt_num(n.as_f64().unwrap_or(0.0)),
+            Value::Bool(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
+            Value::Null => String::new(),
+            other => {
+                return Err(EngineError::validation(format!(
+                    "cell value must be a string, number, boolean, or null (got {other})"
+                )))
+            }
+        };
+        let sheet_id = self.active_sheet().id;
+        let prev = self
+            .active_sheet()
+            .cells
+            .get(&addr)
+            .map(|c| c.raw.clone());
+        self.journal.record(UndoEntry::Cell {
+            sheet: sheet_id,
+            addr: addr.clone(),
+            prev,
+        });
+        {
+            let sheet = self.active_sheet_mut();
+            if raw.is_empty() {
+                sheet.cells.remove(&addr);
+            } else {
+                sheet.cells.insert(addr.clone(), Cell { raw });
+            }
+        }
+        let computed = self.eval_cell_now(&addr).to_json();
+        Ok(Self::changed(json!({ "addr": addr, "computed": computed })))
+    }
+
+    fn op_clear_cell(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let addr = Self::addr_field(p, "addr")?;
+        let sheet_id = self.active_sheet().id;
+        let prev = self
+            .active_sheet()
+            .cells
+            .get(&addr)
+            .map(|c| c.raw.clone());
+        self.journal.record(UndoEntry::Cell {
+            sheet: sheet_id,
+            addr: addr.clone(),
+            prev,
+        });
+        self.active_sheet_mut().cells.remove(&addr);
+        Ok(Self::changed(json!({ "ok": true })))
+    }
+
+    fn op_get_cell(&self, p: &Value) -> Result<CommandResult, EngineError> {
+        let addr = Self::addr_field(p, "addr")?;
+        let sheet = self.active_sheet();
+        let raw = sheet
+            .cells
+            .get(&addr)
+            .map(|c| c.raw.clone())
+            .unwrap_or_default();
+        let computed = Evaluator::new(sheet).eval_cell(&addr).to_json();
+        Ok(Self::readonly(json!({ "raw": raw, "computed": computed })))
+    }
+
+    fn op_get_range(&self, p: &Value) -> Result<CommandResult, EngineError> {
+        let (fa, fr) = Self::addr_coords(p, "from")?;
+        let (ta, tr) = Self::addr_coords(p, "to")?;
+        let (c0, c1) = (fa.min(ta), fa.max(ta));
+        let (r0, r1) = (fr.min(tr), fr.max(tr));
+        let w = u64::from(c1 - c0) + 1;
+        let h = u64::from(r1 - r0) + 1;
+        if w.saturating_mul(h) > MAX_GET_RANGE_CELLS {
+            return Err(EngineError::out_of_bounds(format!(
+                "range {w}x{h} exceeds the {MAX_GET_RANGE_CELLS}-cell limit"
+            )));
+        }
+        let sheet = self.active_sheet();
+        let mut ev = Evaluator::new(sheet);
+        let mut rows = Vec::with_capacity(h as usize);
+        for r in r0..=r1 {
+            let mut row = Vec::with_capacity(w as usize);
+            for c in c0..=c1 {
+                let addr = fmt_addr(c, r);
+                let raw = sheet
+                    .cells
+                    .get(&addr)
+                    .map(|c| c.raw.clone())
+                    .unwrap_or_default();
+                let computed = ev.eval_cell(&addr).to_json();
+                row.push(json!({ "addr": addr, "raw": raw, "computed": computed }));
+            }
+            rows.push(Value::Array(row));
+        }
+        Ok(Self::readonly(json!({ "cells": rows })))
+    }
+
+    fn op_evaluate(&self, p: &Value) -> Result<CommandResult, EngineError> {
+        let f = Self::str_field(p, "formula")?;
+        let v = Evaluator::new(self.active_sheet()).eval_formula_text(f);
+        Ok(Self::readonly(json!({ "value": v.to_json() })))
+    }
+
+    fn op_workbook(&self) -> Result<CommandResult, EngineError> {
+        let sheets: Vec<Value> = self
+            .doc
+            .sheets
+            .iter()
+            .map(|s| json!({ "name": s.name, "cell_count": s.cells.len() }))
+            .collect();
+        Ok(Self::readonly(json!({
+            "sheets": sheets,
+            "active": self.doc.active,
+        })))
+    }
+
+    // -- undo machinery ---------------------------------------------------------
+
+    /// Apply the inverse of `e` to the document and return the entry that
+    /// inverts *that* (pushed onto the opposite journal stack).
+    fn invert(&mut self, e: UndoEntry) -> UndoEntry {
+        match e {
+            UndoEntry::Cell { sheet, addr, prev } => {
+                let cur = self
+                    .doc
+                    .sheets
+                    .iter()
+                    .find(|s| s.id == sheet)
+                    .and_then(|s| s.cells.get(&addr))
+                    .map(|c| c.raw.clone());
+                if let Some(s) = self.sheet_by_id_mut(sheet) {
+                    match &prev {
+                        Some(r) => {
+                            s.cells.insert(addr.clone(), Cell { raw: r.clone() });
+                        }
+                        None => {
+                            s.cells.remove(&addr);
+                        }
+                    }
+                }
+                UndoEntry::Cell {
+                    sheet,
+                    addr,
+                    prev: cur,
+                }
+            }
+            UndoEntry::AddSheet { sheet_id } => {
+                match self.doc.sheets.iter().position(|s| s.id == sheet_id) {
+                    Some(idx) => {
+                        let prev_active = self.doc.active;
+                        let removed = self.remove_sheet_at(idx);
+                        UndoEntry::RemoveSheet {
+                            index: idx,
+                            sheet: removed,
+                            prev_active,
+                        }
+                    }
+                    // Already gone — nothing changed; emit a no-op entry.
+                    None => UndoEntry::SetActive {
+                        prev: self.doc.active,
+                    },
+                }
+            }
+            UndoEntry::RemoveSheet {
+                index,
+                sheet,
+                prev_active,
+            } => {
+                let idx = index.min(self.doc.sheets.len());
+                let sheet_id = sheet.id;
+                self.doc.sheets.insert(idx, sheet);
+                self.doc.active = prev_active.min(self.doc.sheets.len() - 1);
+                UndoEntry::AddSheet { sheet_id }
+            }
+            UndoEntry::RenameSheet {
+                sheet_id,
+                prev_name,
+            } => match self.sheet_by_id_mut(sheet_id) {
+                Some(s) => {
+                    let cur = mem::replace(&mut s.name, prev_name);
+                    UndoEntry::RenameSheet {
+                        sheet_id,
+                        prev_name: cur,
+                    }
+                }
+                None => UndoEntry::SetActive {
+                    prev: self.doc.active,
+                },
+            },
+            UndoEntry::SetActive { prev } => {
+                let cur = self.doc.active;
+                self.doc.active = prev.min(self.doc.sheets.len() - 1);
+                UndoEntry::SetActive { prev: cur }
+            }
+            UndoEntry::Reset { prev } => {
+                let cur = mem::replace(&mut self.doc, prev);
+                UndoEntry::Reset { prev: cur }
+            }
+        }
+    }
+}
+
+impl Engine for TallyEngine {
+    fn kind(&self) -> EngineKind {
+        EngineKind::Tally
+    }
+
+    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+        if cmd.v != SUPPORTED_VERSION {
+            return Err(EngineError::unsupported(format!(
+                "unsupported command version {} (expected {SUPPORTED_VERSION})",
+                cmd.v
+            )));
+        }
+        let p = &cmd.payload;
+        match cmd.op.as_str() {
+            "new" => self.op_new(),
+            "describe" => self.op_describe(),
+            "addSheet" => self.op_add_sheet(p),
+            "renameSheet" => self.op_rename_sheet(p),
+            "removeSheet" => self.op_remove_sheet(p),
+            "setActive" => self.op_set_active(p),
+            "setCell" => self.op_set_cell(p),
+            "clearCell" => self.op_clear_cell(p),
+            "getCell" => self.op_get_cell(p),
+            "getRange" => self.op_get_range(p),
+            "evaluate" => self.op_evaluate(p),
+            "workbook" => self.op_workbook(),
+            other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
+        }
+    }
+
+    fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
+        let payload = serde_json::to_vec(&self.doc)?;
+        Ok(encode_envelope(&payload))
+    }
+
+    fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
+        let (_tag, payload) = decode_envelope(data)?;
+        // Decode + validate into a local first so failures leave state untouched.
+        let mut doc: Workbook = serde_json::from_slice(payload)?;
+        if doc.sheets.is_empty() {
+            return Err(EngineError::serialization(
+                "workbook must contain at least one sheet",
+            ));
+        }
+        if doc.active >= doc.sheets.len() {
+            return Err(EngineError::serialization(
+                "workbook active index out of range",
+            ));
+        }
+        if let Some(max_id) = doc.sheets.iter().map(|s| s.id).max() {
+            if doc.next_sheet <= max_id {
+                doc.next_sheet = max_id + 1;
+            }
+        }
+        self.doc = doc;
+        self.journal = Journal::new(JOURNAL_CAPACITY);
+        Ok(())
+    }
+
+    fn undo(&mut self) -> Result<bool, EngineError> {
+        match self.journal.pop_undo() {
+            None => Ok(false),
+            Some(e) => {
+                let redo = self.invert(e);
+                self.journal.push_redo(redo);
+                Ok(true)
+            }
+        }
+    }
+
+    fn redo(&mut self) -> Result<bool, EngineError> {
+        match self.journal.pop_redo() {
+            None => Ok(false),
+            Some(e) => {
+                let undo = self.invert(e);
+                self.journal.push_undo(undo);
+                Ok(true)
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ignition_core::ErrorCode;
+    use serde_json::json;
+
+    fn cmd(op: &str, payload: Value) -> Command {
+        Command::new(op, payload)
+    }
+
+    fn apply(e: &mut TallyEngine, op: &str, payload: Value) -> CommandResult {
+        match e.apply(cmd(op, payload.clone())) {
+            Ok(r) => r,
+            Err(err) => panic!("{op} {payload} failed: {err:?}"),
+        }
+    }
+
+    fn apply_err(e: &mut TallyEngine, op: &str, payload: Value) -> EngineError {
+        e.apply(cmd(op, payload)).unwrap_err()
+    }
+
+    fn data(e: &mut TallyEngine, op: &str, payload: Value) -> Value {
+        apply(e, op, payload).data
+    }
+
+    fn describe(e: &mut TallyEngine) -> Value {
+        data(e, "describe", json!({}))
+    }
+
+    fn get_cell(e: &mut TallyEngine, addr: &str) -> Value {
+        data(e, "getCell", json!({ "addr": addr }))
+    }
+
+    // -- basics ----------------------------------------------------------------
+
+    #[test]
+    fn kind_and_new_defaults() {
+        let mut e = TallyEngine::new();
+        assert_eq!(e.kind(), EngineKind::Tally);
+        let d = describe(&mut e);
+        assert_eq!(d["active"], json!(0));
+        assert_eq!(d["next_sheet"], json!(1));
+        assert_eq!(d["sheets"].as_array().unwrap().len(), 1);
+        assert_eq!(d["sheets"][0]["name"], json!("Sheet1"));
+        assert_eq!(d["sheets"][0]["id"], json!(0));
+        assert!(d["sheets"][0]["cells"].as_object().unwrap().is_empty());
+
+        // `new` on a dirty doc resets it.
+        data(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        let r = data(&mut e, "new", json!({}));
+        assert_eq!(r["ok"], json!(true));
+        assert_eq!(
+            data(&mut e, "workbook", json!({})),
+            json!({"sheets":[{"name":"Sheet1","cell_count":0}],"active":0})
+        );
+    }
+
+    #[test]
+    fn version_gate_and_unknown_op() {
+        let mut e = TallyEngine::new();
+        let mut c = cmd("workbook", json!({}));
+        c.v = 2;
+        assert_eq!(e.apply(c).unwrap_err().code, ErrorCode::Unsupported);
+        assert_eq!(
+            apply_err(&mut e, "bogus", json!({})).code,
+            ErrorCode::InvalidCommand
+        );
+    }
+
+    // -- cells ------------------------------------------------------------------
+
+    #[test]
+    fn set_get_cell_variants() {
+        let mut e = TallyEngine::new();
+        // numeric string → number
+        let r = data(&mut e, "setCell", json!({"addr":"A1","value":"42"}));
+        assert_eq!(r, json!({"addr":"A1","computed":42.0}));
+        // formula
+        let r = data(&mut e, "setCell", json!({"addr":"$a$2","value":"=A1*2"}));
+        assert_eq!(r, json!({"addr":"A2","computed":84.0}));
+        // text stays text
+        let r = data(&mut e, "setCell", json!({"addr":"B1","value":"hi"}));
+        assert_eq!(r["computed"], json!("hi"));
+        // JSON number / bool values are stored canonically
+        let r = data(&mut e, "setCell", json!({"addr":"C1","value":3.5}));
+        assert_eq!(r["computed"], json!(3.5));
+        let r = data(&mut e, "setCell", json!({"addr":"C2","value":true}));
+        assert_eq!(r["computed"], json!("TRUE"));
+
+        let g = get_cell(&mut e, "A2");
+        assert_eq!(g["raw"], json!("=A1*2"));
+        assert_eq!(g["computed"], json!(84.0));
+        // empty cell → raw "", computed null
+        assert_eq!(get_cell(&mut e, "Z9"), json!({"raw":"","computed":null}));
+
+        // "" clears the cell
+        data(&mut e, "setCell", json!({"addr":"B1","value":""}));
+        assert_eq!(get_cell(&mut e, "B1"), json!({"raw":"","computed":null}));
+        // null also clears
+        data(&mut e, "setCell", json!({"addr":"A1","value":null}));
+        assert_eq!(get_cell(&mut e, "A1"), json!({"raw":"","computed":null}));
+        // A2's formula now sees empty A1 → 0
+        assert_eq!(get_cell(&mut e, "A2")["computed"], json!(0.0));
+    }
+
+    #[test]
+    fn cell_ops_validation() {
+        let mut e = TallyEngine::new();
+        assert_eq!(
+            apply_err(&mut e, "setCell", json!({"addr":"1A","value":"1"})).code,
+            ErrorCode::Validation
+        );
+        assert_eq!(
+            apply_err(&mut e, "setCell", json!({"addr":"A1"})).code,
+            ErrorCode::InvalidCommand
+        );
+        assert_eq!(
+            apply_err(&mut e, "setCell", json!({"addr":"A1","value":[1,2]})).code,
+            ErrorCode::Validation
+        );
+        assert_eq!(
+            apply_err(&mut e, "getCell", json!({"addr":"?"})).code,
+            ErrorCode::Validation
+        );
+        // state unchanged
+        assert_eq!(
+            data(&mut e, "workbook", json!({})),
+            json!({"sheets":[{"name":"Sheet1","cell_count":0}],"active":0})
+        );
+    }
+
+    #[test]
+    fn computed_is_derived_live() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"10"}));
+        data(&mut e, "setCell", json!({"addr":"A2","value":"=A1*2"}));
+        assert_eq!(get_cell(&mut e, "A2")["computed"], json!(20.0));
+        data(&mut e, "setCell", json!({"addr":"A1","value":"50"}));
+        assert_eq!(get_cell(&mut e, "A2")["computed"], json!(100.0));
+    }
+
+    #[test]
+    fn get_range_op() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        data(&mut e, "setCell", json!({"addr":"B2","value":"=A1+10"}));
+        let r = data(&mut e, "getRange", json!({"from":"A1","to":"B2"}));
+        let cells = r["cells"].as_array().unwrap();
+        assert_eq!(cells.len(), 2); // two rows
+        assert_eq!(
+            cells[0][0],
+            json!({"addr":"A1","raw":"1","computed":1.0})
+        );
+        assert_eq!(cells[0][1], json!({"addr":"B1","raw":"","computed":null}));
+        assert_eq!(cells[1][0], json!({"addr":"A2","raw":"","computed":null}));
+        assert_eq!(
+            cells[1][1],
+            json!({"addr":"B2","raw":"=A1+10","computed":11.0})
+        );
+        // reversed bounds are normalized
+        let r2 = data(&mut e, "getRange", json!({"from":"B2","to":"A1"}));
+        assert_eq!(r2, r);
+        // oversized range → OutOfBounds, state untouched
+        assert_eq!(
+            apply_err(&mut e, "getRange", json!({"from":"A1","to":"ZZ9999"})).code,
+            ErrorCode::OutOfBounds
+        );
+    }
+
+    #[test]
+    fn evaluate_op() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"7"}));
+        assert_eq!(
+            data(&mut e, "evaluate", json!({"formula":"=A1*6"})),
+            json!({"value":42.0})
+        );
+        // '=' is optional
+        assert_eq!(
+            data(&mut e, "evaluate", json!({"formula":"SUM(1,2)"})),
+            json!({"value":3.0})
+        );
+        assert_eq!(
+            data(&mut e, "evaluate", json!({"formula":"1/0"})),
+            json!({"value":"#DIV/0!"})
+        );
+        assert_eq!(
+            data(&mut e, "evaluate", json!({"formula":"=("})),
+            json!({"value":"#NAME?"})
+        );
+        assert_eq!(
+            apply_err(&mut e, "evaluate", json!({"formula":5})).code,
+            ErrorCode::InvalidCommand
+        );
+    }
+
+    #[test]
+    fn formulas_end_to_end() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"=1+2*3"}));
+        data(&mut e, "setCell", json!({"addr":"A2","value":"=\"x\"&\"y\""}));
+        data(&mut e, "setCell", json!({"addr":"A3","value":"=A1>5"}));
+        data(&mut e, "setCell", json!({"addr":"A4","value":"=IF(A3,\"big\",\"small\")"}));
+        assert_eq!(get_cell(&mut e, "A1")["computed"], json!(7.0));
+        assert_eq!(get_cell(&mut e, "A2")["computed"], json!("xy"));
+        assert_eq!(get_cell(&mut e, "A3")["computed"], json!(true));
+        assert_eq!(get_cell(&mut e, "A4")["computed"], json!("big"));
+    }
+
+    #[test]
+    fn cycles_end_to_end() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"=B1"}));
+        data(&mut e, "setCell", json!({"addr":"B1","value":"=A1"}));
+        assert_eq!(get_cell(&mut e, "A1")["computed"], json!("#CYCLE!"));
+        assert_eq!(get_cell(&mut e, "B1")["computed"], json!("#CYCLE!"));
+        data(&mut e, "setCell", json!({"addr":"C1","value":"=A1+1"}));
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!("#CYCLE!"));
+        // break the cycle
+        data(&mut e, "setCell", json!({"addr":"B1","value":"9"}));
+        assert_eq!(get_cell(&mut e, "A1")["computed"], json!(9.0));
+    }
+
+    // -- sheets -----------------------------------------------------------------
+
+    #[test]
+    fn sheet_lifecycle() {
+        let mut e = TallyEngine::new();
+        let r = data(&mut e, "addSheet", json!({}));
+        assert_eq!(r["sheet"]["name"], json!("Sheet2"));
+        assert_eq!(r["sheet"]["id"], json!(1));
+        assert_eq!(r["sheet"]["index"], json!(1));
+        let r = data(&mut e, "addSheet", json!({"name":"Data"}));
+        assert_eq!(r["sheet"]["name"], json!("Data"));
+        // duplicate name (case-insensitive) → Validation, state unchanged
+        let before = describe(&mut e);
+        assert_eq!(
+            apply_err(&mut e, "addSheet", json!({"name":"data"})).code,
+            ErrorCode::Validation
+        );
+        assert_eq!(describe(&mut e), before);
+
+        // setActive by name and by index
+        data(&mut e, "setActive", json!({"sheet":"data"}));
+        assert_eq!(describe(&mut e)["active"], json!(2));
+        data(&mut e, "setActive", json!({"sheet":0}));
+        assert_eq!(describe(&mut e)["active"], json!(0));
+        assert_eq!(
+            apply_err(&mut e, "setActive", json!({"sheet":"Nope"})).code,
+            ErrorCode::NotFound
+        );
+        assert_eq!(
+            apply_err(&mut e, "setActive", json!({"sheet":9})).code,
+            ErrorCode::OutOfBounds
+        );
+
+        // rename by index, check uniqueness
+        data(&mut e, "renameSheet", json!({"sheet":1,"to":"Renamed"}));
+        assert_eq!(describe(&mut e)["sheets"][1]["name"], json!("Renamed"));
+        assert_eq!(
+            apply_err(&mut e, "renameSheet", json!({"sheet":"Renamed","to":"DATA"})).code,
+            ErrorCode::Validation
+        );
+
+        // remove middle sheet while another is active
+        data(&mut e, "setActive", json!({"sheet":"Data"}));
+        data(&mut e, "removeSheet", json!({"sheet":"Renamed"}));
+        let d = describe(&mut e);
+        assert_eq!(d["sheets"].as_array().unwrap().len(), 2);
+        assert_eq!(d["sheets"][d["active"].as_u64().unwrap() as usize]["name"], json!("Data"));
+
+        // removing the last sheets is rejected
+        data(&mut e, "removeSheet", json!({"sheet":"Data"}));
+        assert_eq!(
+            apply_err(&mut e, "removeSheet", json!({"sheet":0})).code,
+            ErrorCode::Validation
+        );
+        assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn cells_are_per_active_sheet() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        data(&mut e, "addSheet", json!({"name":"Two"}));
+        data(&mut e, "setActive", json!({"sheet":"Two"}));
+        // Sheet "Two" has no A1 — formulas see the active sheet only.
+        assert_eq!(get_cell(&mut e, "A1"), json!({"raw":"","computed":null}));
+        data(&mut e, "setCell", json!({"addr":"A1","value":"2"}));
+        assert_eq!(
+            data(&mut e, "workbook", json!({})),
+            json!({
+                "sheets":[
+                    {"name":"Sheet1","cell_count":1},
+                    {"name":"Two","cell_count":1}
+                ],
+                "active":1
+            })
+        );
+        data(&mut e, "setActive", json!({"sheet":0}));
+        assert_eq!(get_cell(&mut e, "A1")["computed"], json!(1.0));
+    }
+
+    // -- undo / redo ------------------------------------------------------------
+
+    #[test]
+    fn undo_redo_cells() {
+        let mut e = TallyEngine::new();
+        assert_eq!(e.undo().unwrap(), false);
+        assert_eq!(e.redo().unwrap(), false);
+
+        data(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        data(&mut e, "setCell", json!({"addr":"A1","value":"2"}));
+        data(&mut e, "clearCell", json!({"addr":"B1"}));
+        data(&mut e, "setCell", json!({"addr":"B1","value":"x"}));
+
+        assert!(e.undo().unwrap()); // undo B1 set
+        assert_eq!(get_cell(&mut e, "B1"), json!({"raw":"","computed":null}));
+        assert!(e.undo().unwrap()); // undo B1 clear (was already empty)
+        assert!(e.undo().unwrap()); // undo A1=2 → back to "1"
+        assert_eq!(get_cell(&mut e, "A1"), json!({"raw":"1","computed":1.0}));
+        assert!(e.undo().unwrap()); // undo A1=1 → empty
+        assert_eq!(get_cell(&mut e, "A1"), json!({"raw":"","computed":null}));
+        assert_eq!(e.undo().unwrap(), false);
+
+        assert!(e.redo().unwrap());
+        assert_eq!(get_cell(&mut e, "A1")["raw"], json!("1"));
+        assert!(e.redo().unwrap());
+        assert_eq!(get_cell(&mut e, "A1")["raw"], json!("2"));
+        assert!(e.redo().unwrap());
+        assert!(e.redo().unwrap());
+        assert_eq!(get_cell(&mut e, "B1")["raw"], json!("x"));
+        assert_eq!(e.redo().unwrap(), false);
+
+        // new mutation clears redo
+        assert!(e.undo().unwrap());
+        data(&mut e, "setCell", json!({"addr":"C1","value":"z"}));
+        assert_eq!(e.redo().unwrap(), false);
+    }
+
+    #[test]
+    fn undo_redo_sheets_and_new() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        data(&mut e, "addSheet", json!({"name":"S2"}));
+        data(&mut e, "setActive", json!({"sheet":"S2"}));
+        data(&mut e, "renameSheet", json!({"sheet":"S2","to":"Second"}));
+
+        assert!(e.undo().unwrap()); // un-rename
+        assert_eq!(describe(&mut e)["sheets"][1]["name"], json!("S2"));
+        assert!(e.undo().unwrap()); // un-setActive
+        assert_eq!(describe(&mut e)["active"], json!(0));
+        assert!(e.undo().unwrap()); // un-addSheet
+        assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 1);
+
+        // removeSheet undo restores the sheet with its cells
+        data(&mut e, "addSheet", json!({"name":"Temp"}));
+        data(&mut e, "setActive", json!({"sheet":"Temp"}));
+        data(&mut e, "setCell", json!({"addr":"A1","value":"99"}));
+        data(&mut e, "removeSheet", json!({"sheet":"Temp"}));
+        assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 1);
+        assert!(e.undo().unwrap()); // un-remove
+        assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 2);
+        assert_eq!(describe(&mut e)["sheets"][1]["name"], json!("Temp"));
+        assert_eq!(describe(&mut e)["active"], json!(1));
+        assert_eq!(get_cell(&mut e, "A1")["computed"], json!(99.0));
+
+        // `new` is undoable too
+        data(&mut e, "new", json!({}));
+        assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 1);
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 2);
+
+        // redo chain still coherent
+        while e.redo().unwrap() {}
+        assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 1);
+    }
+
+    // -- snapshot / restore -------------------------------------------------------
+
+    #[test]
+    fn snapshot_restore_equality() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"=B1*2"}));
+        data(&mut e, "setCell", json!({"addr":"B1","value":"21"}));
+        data(&mut e, "addSheet", json!({"name":"S2"}));
+        data(&mut e, "setActive", json!({"sheet":"S2"}));
+        data(&mut e, "setCell", json!({"addr":"C3","value":"text"}));
+        let before = describe(&mut e);
+        let snap = e.snapshot().unwrap();
+
+        let mut e2 = TallyEngine::new();
+        data(&mut e2, "setCell", json!({"addr":"A1","value":"junk"}));
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&mut e2), before);
+        // computed values derive identically after restore
+        data(&mut e2, "setActive", json!({"sheet":0}));
+        assert_eq!(get_cell(&mut e2, "A1")["computed"], json!(42.0));
+    }
+
+    #[test]
+    fn restore_rejects_garbage() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"5"}));
+        let before = describe(&mut e);
+
+        for bad in [
+            &b""[..],
+            b"NFD",
+            b"XXXX\x00\x00\x00\x00\x00",
+            b"NFD1\x00\x03\x00\x00\x00ab", // truncated payload
+            b"NFD1\x00\x05\x00\x00\x00junk!", // payload is not JSON
+        ] {
+            assert_eq!(
+                e.restore(bad).unwrap_err().code,
+                ErrorCode::Serialization,
+                "accepted {bad:?}"
+            );
+        }
+        // valid envelope, invalid document (active out of range)
+        let bad_doc = encode_envelope(b"{\"next_sheet\":1,\"sheets\":[{\"id\":0,\"name\":\"S\",\"cells\":{}}],\"active\":5}");
+        assert_eq!(
+            e.restore(&bad_doc).unwrap_err().code,
+            ErrorCode::Serialization
+        );
+        // state untouched throughout
+        assert_eq!(describe(&mut e), before);
+    }
+
+    #[test]
+    fn full_round_trip() {
+        // new → mutate → snapshot → restore → mutate → verify
+        let mut e = TallyEngine::new();
+        data(&mut e, "new", json!({}));
+        data(&mut e, "setCell", json!({"addr":"A1","value":"=SUM(B1:B3,10)"}));
+        data(&mut e, "setCell", json!({"addr":"B1","value":"1"}));
+        data(&mut e, "setCell", json!({"addr":"B2","value":"2"}));
+        data(&mut e, "setCell", json!({"addr":"B3","value":"3"}));
+        let snap = e.snapshot().unwrap();
+
+        let mut e2 = TallyEngine::new();
+        e2.restore(&snap).unwrap();
+        // keep mutating after restore
+        data(&mut e2, "setCell", json!({"addr":"B4","value":"4"}));
+        assert_eq!(
+            data(&mut e2, "evaluate", json!({"formula":"=SUM(B1:B4)"})),
+            json!({"value":10.0})
+        );
+        // undo still works post-restore (journal was reset; new ops record)
+        assert!(e2.undo().unwrap());
+        assert_eq!(get_cell(&mut e2, "B4"), json!({"raw":"","computed":null}));
+        // snapshot equality of the shared prefix is preserved
+        assert_eq!(describe(&mut e2)["sheets"][0]["cells"]["A1"]["raw"], json!("=SUM(B1:B3,10)"));
+    }
+
+    #[test]
+    fn events_emitted_on_mutations_only() {
+        let mut e = TallyEngine::new();
+        let r = apply(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
+        let r = apply(&mut e, "getCell", json!({"addr":"A1"}));
+        assert!(r.events.is_empty());
+        let r = apply(&mut e, "workbook", json!({}));
+        assert!(r.events.is_empty());
+        let r = apply(&mut e, "describe", json!({}));
+        assert!(r.events.is_empty());
+    }
+}

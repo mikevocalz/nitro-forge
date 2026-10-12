@@ -1,0 +1,11 @@
+[package]
+name = "prism-engine"
+description = "Nitro-Forge Prism engine core."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ignition-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

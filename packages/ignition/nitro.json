@@ -1,0 +1,12 @@
+{
+  "cxxNamespace": ["nitroforge"],
+  "ios": {
+    "iosModuleName": "NitroForge"
+  },
+  "android": {
+    "androidNamespace": ["nitroforge"],
+    "androidCxxLibName": "nitroforge"
+  },
+  "autolinking": {},
+  "ignorePaths": ["node_modules", "lib", "tests"]
+}

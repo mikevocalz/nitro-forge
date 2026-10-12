@@ -1,0 +1,11 @@
+[package]
+name = "ignition-core"
+description = "Nitro-Forge shared engine contracts: Engine trait, commands, errors, journal, snapshot envelope, session registry."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Nitro-Forge",
+    "slug": "nitro-forge",
+    "version": "0.1.0",
+    "scheme": "nitro-forge",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": { "bundleIdentifier": "ai.nitroforge.example", "supportsTablet": true },
+    "android": { "package": "ai.nitroforge.example" },
+    "plugins": ["expo-router"]
+  }
+}

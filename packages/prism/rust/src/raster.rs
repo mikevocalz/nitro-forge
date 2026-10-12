@@ -1,0 +1,196 @@
+//! Pixel math: src-over compositing, filters, shape rasterization, and
+//! canvas-region helpers. All functions are panic-free for any buffer
+//! contents; callers guarantee region bounds before calling read/write.
+
+use crate::model::{Content, Layer, Shape, ShapeKind};
+
+/// Source-over alpha blend of one straight-alpha RGBA `src` pixel onto `dst`
+/// (a 4-byte slice), with the source alpha pre-scaled by `opacity` (0..=1).
+///
+/// out_a = sa + da(1-sa); out_c = (sc*sa + dc*da(1-sa)) / out_a.
+pub fn blend_pixel(dst: &mut [u8], src: &[u8; 4], opacity: f64) {
+    if dst.len() < 4 {
+        return;
+    }
+    let sa = (src[3] as f64 / 255.0) * opacity;
+    if sa <= 0.0 {
+        return; // fully transparent source leaves dst untouched
+    }
+    let da = dst[3] as f64 / 255.0;
+    let inv = 1.0 - sa;
+    let out_a = sa + da * inv;
+    if out_a <= 0.0 {
+        dst[0] = 0;
+        dst[1] = 0;
+        dst[2] = 0;
+        dst[3] = 0;
+        return;
+    }
+    for c in 0..3 {
+        let s = src[c] as f64 * sa;
+        let d = dst[c] as f64 * da * inv;
+        dst[c] = ((s + d) / out_a).round().clamp(0.0, 255.0) as u8;
+    }
+    dst[3] = (out_a * 255.0).round().clamp(0.0, 255.0) as u8;
+}
+
+/// Whether the pixel with center `(px, py)` is covered by `shape`.
+/// Rect covers `[x, x+w) x [y, y+h)`; ellipse covers points where
+/// `((px-cx)/rx)^2 + ((py-cy)/ry)^2 <= 1` with center at the shape's center.
+pub fn shape_covers(shape: &Shape, px: f64, py: f64) -> bool {
+    match shape.kind {
+        ShapeKind::Rect => {
+            px >= shape.x && px < shape.x + shape.w && py >= shape.y && py < shape.y + shape.h
+        }
+        ShapeKind::Ellipse => {
+            let rx = shape.w / 2.0;
+            let ry = shape.h / 2.0;
+            if rx <= 0.0 || ry <= 0.0 {
+                return false;
+            }
+            let dx = (px - (shape.x + rx)) / rx;
+            let dy = (py - (shape.y + ry)) / ry;
+            dx * dx + dy * dy <= 1.0
+        }
+    }
+}
+
+/// Composite all visible layers bottom→top (vec order) into a fresh
+/// canvas-sized RGBA buffer. Per-layer opacity scales source alpha.
+/// Shapes are rasterized on the fly; fully transparent output otherwise.
+pub fn flatten(width: usize, height: usize, layers: &[Layer]) -> Vec<u8> {
+    let mut out = vec![0u8; width * height * 4];
+    for layer in layers {
+        if !layer.visible {
+            continue;
+        }
+        match &layer.content {
+            Content::Raster(px) => {
+                let n = px.len().min(out.len());
+                for (dst, src) in out[..n].chunks_exact_mut(4).zip(px[..n].chunks_exact(4)) {
+                    let s = [src[0], src[1], src[2], src[3]];
+                    blend_pixel(dst, &s, layer.opacity);
+                }
+            }
+            Content::Shape(shape) => {
+                let src = shape.fill;
+                for py in 0..height {
+                    for px in 0..width {
+                        if shape_covers(shape, px as f64 + 0.5, py as f64 + 0.5) {
+                            let off = (py * width + px) * 4;
+                            blend_pixel(&mut out[off..off + 4], &src, layer.opacity);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Per-channel filters applied in place to an RGBA buffer. Alpha is never
+/// touched.
+pub enum Filter {
+    Grayscale,
+    Invert,
+    Brightness(f64), // amount -1..=1, scaled by 255
+}
+
+pub fn apply_filter(buf: &mut [u8], filter: &Filter) {
+    for px in buf.chunks_exact_mut(4) {
+        match filter {
+            Filter::Grayscale => {
+                // ITU-R 601 luma coefficients.
+                let y = (0.299 * px[0] as f64
+                    + 0.587 * px[1] as f64
+                    + 0.114 * px[2] as f64)
+                    .round()
+                    .clamp(0.0, 255.0) as u8;
+                px[0] = y;
+                px[1] = y;
+                px[2] = y;
+            }
+            Filter::Invert => {
+                px[0] = 255 - px[0];
+                px[1] = 255 - px[1];
+                px[2] = 255 - px[2];
+            }
+            Filter::Brightness(amount) => {
+                let delta = amount * 255.0;
+                for c in 0..3 {
+                    px[c] = (px[c] as f64 + delta).round().clamp(0.0, 255.0) as u8;
+                }
+            }
+        }
+    }
+}
+
+/// Copy a `w*h` pixel region out of a canvas-sized buffer. Assumes
+/// `x+w <= canvas_w`, `y*h` rows fit, and `buf` is at least
+/// `canvas_w * canvas_h * 4` — callers clip first. Out-of-range rows are
+/// defensively returned as transparent so no input can panic.
+pub fn read_region(
+    buf: &[u8],
+    canvas_w: usize,
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize,
+) -> Vec<u8> {
+    let row_len = w.saturating_mul(4);
+    let mut out = Vec::with_capacity(row_len.saturating_mul(h));
+    for r in 0..h {
+        let off = (y + r).saturating_mul(canvas_w).saturating_mul(4) + x.saturating_mul(4);
+        let end = off.saturating_add(row_len);
+        if end <= buf.len() {
+            out.extend_from_slice(&buf[off..end]);
+        } else {
+            out.resize(out.len() + row_len, 0);
+        }
+    }
+    out
+}
+
+/// Write a `w*h` region of `src` (must be `w*h*4` bytes) into a canvas-sized
+/// buffer at `(x, y)`. Rows that do not fit are skipped.
+pub fn write_region(
+    buf: &mut [u8],
+    canvas_w: usize,
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize,
+    src: &[u8],
+) {
+    let row_len = w.saturating_mul(4);
+    for r in 0..h {
+        let src_off = r.saturating_mul(row_len);
+        let src_end = src_off.saturating_add(row_len);
+        if src_end > src.len() {
+            break;
+        }
+        let dst_off = (y + r).saturating_mul(canvas_w).saturating_mul(4) + x.saturating_mul(4);
+        let dst_end = dst_off.saturating_add(row_len);
+        if dst_end <= buf.len() {
+            buf[dst_off..dst_end].copy_from_slice(&src[src_off..src_end]);
+        }
+    }
+}
+
+/// Crop/pad a canvas buffer to new dimensions, top-left aligned, padding
+/// with transparent black.
+pub fn resize_canvas(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usize) -> Vec<u8> {
+    let mut out = vec![0u8; dw.saturating_mul(dh).saturating_mul(4)];
+    let copy_w = sw.min(dw);
+    let copy_h = sh.min(dh);
+    for r in 0..copy_h {
+        let src_off = r.saturating_mul(sw).saturating_mul(4);
+        let src_end = src_off.saturating_add(copy_w.saturating_mul(4));
+        let dst_off = r.saturating_mul(dw).saturating_mul(4);
+        let dst_end = dst_off.saturating_add(copy_w.saturating_mul(4));
+        if src_end <= buf.len() && dst_end <= out.len() {
+            out[dst_off..dst_end].copy_from_slice(&buf[src_off..src_end]);
+        }
+    }
+    out
+}

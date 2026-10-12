@@ -1,0 +1,120 @@
+# Nitro-Forge Architecture — Ignition Contracts
+
+Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill)
+implement against these contracts. Changes require touching every engine, so they are
+deliberately small.
+
+## 1. System boundaries
+
+```
+React Native UI (per-product screens)
+        │  JS / JSI
+        ▼
+@nitro-forge/<product>  (TypeScript API — command builders, typed errors, doc handles)
+        │  Nitro HybridObject (async, dispatched on engine thread)
+        ▼
+Nitro-generated C++ bridge ─────────────── same surface compiled for WASM on web
+        │
+        ▼
+<product>-engine  (pure Rust, no platform deps)
+        │  implements
+        ▼
+ignition-core::Engine trait
+```
+
+Rust engines are the **single source of truth** for document state. The UI never edits
+document data directly — it dispatches commands. AI features (optional) issue the same
+commands through the same host; engines work fully offline with no provider.
+
+## 2. The Engine contract (`ignition-core`)
+
+```rust
+pub trait Engine: Send + 'static {
+    fn kind(&self) -> EngineKind;
+    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError>;
+    fn snapshot(&self) -> Result<Vec<u8>, EngineError>;
+    fn restore(&mut self, data: &[u8]) -> Result<(), EngineError>;
+    fn undo(&mut self) -> Result<bool, EngineError>;
+    fn redo(&mut self) -> Result<bool, EngineError>;
+}
+```
+
+### Threading
+- One `Engine` instance owns one open document. Engines are `Send` but never `Sync`:
+  exactly one thread may drive an engine at a time. The host assigns each document
+  handle to a dedicated engine worker and serializes calls.
+- JS-facing Nitro methods are `async`; they hop to the engine worker so the UI thread
+  never blocks on document work.
+- Engines never block on I/O. File bytes cross the boundary in `restore`/`snapshot`.
+
+### Ownership & memory
+- Document memory lives entirely inside the Rust engine. The host holds only a `u64`
+  handle; closing a document drops the engine.
+- `snapshot()` returns owned bytes; the host copies them out. No shared buffers, no
+  lifetime leakage across FFI.
+- Large immutable payloads inside an engine (e.g. Prism pixel buffers, Folio page
+  objects) use `Arc` so structural undo entries are cheap copies, not deep clones.
+
+### Commands
+- Commands are plain data: `{ op, payload }`, serialized as JSON. Every engine also
+  accepts the reserved ops `__undo`, `__redo`, `__snapshot`, `__restore` is never sent
+  through `apply` — it uses `restore()`.
+- `apply` is atomic: either the command fully applies and returns events, or it
+  returns an `EngineError` and document state is unchanged. Engines validate before
+  mutating.
+- Every successful `apply` returns `CommandResult { events, data }`. `data` carries
+  op-specific results (e.g. created ids). `events` describe state changes for
+  listeners (`document:changed`, `selection:*`, `transport:*`, …).
+
+### Undo/redo
+- Engines maintain a bounded `Journal<T>` of engine-specific undo entries recorded
+  *before* mutation (e.g. a cell's previous value, a clip's previous span, the pixel
+  region about to be overwritten).
+- `undo`/`redo` return `Ok(false)` when the respective stack is empty — never an error.
+- A new `apply` clears the redo stack.
+
+### Errors
+`EngineError { code, message, recoverable }` with a closed `ErrorCode` enum:
+`InvalidCommand | NotFound | Validation | Serialization | OutOfBounds | Internal`.
+`recoverable = true` means the document is intact and the user may continue; hosts
+surface these as rejections, never crashes.
+
+### Snapshots
+Versioned envelope: `b"NFD1" || u8 format_tag || u32 LE len || payload`.
+`format_tag` 0 = JSON. `restore` validates magic + version + length before decoding
+and must reject truncated/foreign data with `Serialization` errors. Save → reopen is
+the required round-trip guarantee for every product.
+
+### Versioning
+Envelope version and command schema version are independent. A `Command` may carry
+`v`; engines currently accept only v1 and reject anything else with `Unsupported`.
+(Reserved field; defined now so future engines can evolve without breaking hosts.)
+
+### Failure recovery
+- A panic inside `apply` must not corrupt the journal: engines validate first and only
+  mutate committed state; `nf-cli` and the Nitro host wrap calls so a panic becomes an
+  `Internal` error and the session is marked dead (subsequent calls fail cleanly).
+- The host may `restore` from the last successful `snapshot` to resurrect a session.
+
+## 3. Package layout (per product)
+
+```
+packages/<product>/
+  package.json            # @nitro-forge/<product>
+  nitro.json              # Nitrogen codegen config
+  src/
+    index.ts              # public API
+    <Product>Engine.nitro.ts   # HybridObject spec
+    commands.ts           # typed command builders (single source for op names)
+    document.ts           # DocumentHandle wrapper
+    errors.ts
+  rust/                   # <product>-engine crate (workspace member)
+  tests/                  # vitest e2e via nf-cli (real Rust engine)
+```
+
+## 4. Verification transport
+
+Nitro is the production transport. For CI and TS-side tests, `nf-cli` (a workspace
+binary in `rust/nf-cli`) exposes every engine over stdin/stdout JSON-lines. Vitest
+suites spawn it and drive real open → modify → save → reopen → undo flows against
+compiled Rust. iOS/Android/WASM packaging is tracked in `docs/ROSTER.md`.
