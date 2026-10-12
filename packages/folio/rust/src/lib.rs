@@ -315,8 +315,11 @@ impl FolioEngine {
 
     fn page_id(&self, page: u64) -> Result<ObjectId, EngineError> {
         let pages = self.doc.get_pages();
-        // lopdf page numbers are 1-based; the API is 0-based.
-        pages.get(&(page as u32 + 1)).copied().ok_or_else(|| {
+        // lopdf page numbers are 1-based; the API is 0-based. Use checked
+        // conversion: a huge `page` must be OutOfBounds, not an overflow or
+        // a truncated alias of page 0.
+        let num = u32::try_from(page).ok().and_then(|p| p.checked_add(1));
+        num.and_then(|n| pages.get(&n).copied()).ok_or_else(|| {
             EngineError::out_of_bounds(format!(
                 "page {page} out of range (document has {} pages)",
                 pages.len()
@@ -442,6 +445,33 @@ impl Engine for FolioEngine {
                     Object::Real((rect[0] + rect[2]) as f32),
                     Object::Real((rect[1] + rect[3]) as f32),
                 ];
+                // Resolve and validate the annots destination *before*
+                // recording the journal entry or creating the object, so a
+                // failure leaves both undo and the document untouched.
+                let loc = annots_loc(&self.doc, page_id)?;
+                match loc {
+                    AnnotsLoc::Inline => {
+                        self.doc
+                            .get_object(page_id)
+                            .and_then(|o| o.as_dict())
+                            .map_err(ser_err)?
+                            .get(b"Annots")
+                            .and_then(|o| o.as_array())
+                            .map_err(ser_err)?;
+                    }
+                    AnnotsLoc::Ref(r) => {
+                        self.doc
+                            .get_object(r)
+                            .and_then(|o| o.as_array())
+                            .map_err(ser_err)?;
+                    }
+                    AnnotsLoc::Missing => {
+                        self.doc
+                            .get_object(page_id)
+                            .and_then(|o| o.as_dict())
+                            .map_err(ser_err)?;
+                    }
+                }
                 self.journal.record(self.doc.clone());
                 let annot = dictionary! {
                     "Type" => "Annot",
@@ -450,7 +480,7 @@ impl Engine for FolioEngine {
                     "Contents" => Object::string_literal(contents),
                 };
                 let annot_id = self.doc.add_object(Object::Dictionary(annot));
-                match annots_loc(&self.doc, page_id)? {
+                match loc {
                     AnnotsLoc::Inline => {
                         let page_dict = self
                             .doc
@@ -485,6 +515,40 @@ impl Engine for FolioEngine {
                 let page_id = self.page_id(page)?;
                 let id = req_u64(p, "id")?;
                 let loc = annots_loc(&self.doc, page_id)?;
+                // Confirm the annotation exists (read-only) before recording
+                // an undo entry — a NotFound must not consume an undo slot.
+                let exists = match loc {
+                    AnnotsLoc::Inline => self
+                        .doc
+                        .get_object(page_id)
+                        .and_then(|o| o.as_dict())
+                        .ok()
+                        .and_then(|d| d.get(b"Annots").ok())
+                        .and_then(|o| o.as_array().ok())
+                        .map(|a| {
+                            a.iter().any(|o| {
+                                matches!(o, Object::Reference(r) if u64::from(r.0) == id)
+                            })
+                        })
+                        .unwrap_or(false),
+                    AnnotsLoc::Ref(r) => self
+                        .doc
+                        .get_object(r)
+                        .and_then(|o| o.as_array())
+                        .ok()
+                        .map(|a| {
+                            a.iter().any(|o| {
+                                matches!(o, Object::Reference(r) if u64::from(r.0) == id)
+                            })
+                        })
+                        .unwrap_or(false),
+                    AnnotsLoc::Missing => false,
+                };
+                if !exists {
+                    return Err(EngineError::not_found(format!(
+                        "no annotation with id {id} on page {page}"
+                    )));
+                }
                 self.journal.record(self.doc.clone());
                 let removed = match loc {
                     AnnotsLoc::Inline => {

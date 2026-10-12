@@ -276,12 +276,19 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
 pub fn import_docx(bytes: &[u8]) -> Result<Vec<Block>, EngineError> {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes))
         .map_err(|e| EngineError::serialization(format!("invalid docx zip: {e}")))?;
+    // Bound the decompression: a crafted docx (zip bomb) must not inflate to
+    // uncontrolled memory.
+    const MAX_DOCX_XML: u64 = 256 * 1024 * 1024;
     let mut buf = Vec::new();
-    archive
+    let read = archive
         .by_name("word/document.xml")
         .map_err(|_| EngineError::serialization("docx missing word/document.xml"))?
+        .take(MAX_DOCX_XML + 1)
         .read_to_end(&mut buf)
         .map_err(|e| EngineError::serialization(format!("document.xml unreadable: {e}")))?;
+    if read as u64 > MAX_DOCX_XML {
+        return Err(EngineError::serialization("document.xml exceeds size limit"));
+    }
     let xml = String::from_utf8(buf)
         .map_err(|_| EngineError::serialization("document.xml is not valid UTF-8"))?;
     parse_document(&xml)

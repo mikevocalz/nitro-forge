@@ -35,6 +35,21 @@ fn registry() -> &'static Mutex<SessionRegistry> {
     REG.get_or_init(|| Mutex::new(SessionRegistry::new()))
 }
 
+/// Poison-tolerant lock: if an engine panicked while holding the registry,
+/// the poisoned mutex would otherwise turn every subsequent call into a
+/// panic → abort across the FFI boundary. The registry itself is still
+/// sound (dead handles were closed), so we recover it.
+fn reg_lock() -> std::sync::MutexGuard<'static, SessionRegistry> {
+    registry().lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Write an error string to a caller-provided out-param, tolerating NULL.
+unsafe fn set_err(out_err: *mut *mut c_char, e: EngineError) {
+    if !out_err.is_null() {
+        *out_err = error_json(e).into_raw();
+    }
+}
+
 fn error_json(e: EngineError) -> CString {
     CString::new(serde_json::to_string(&e).unwrap()).unwrap()
 }
@@ -60,21 +75,21 @@ pub unsafe extern "C" fn nf_open(kind: *const c_char, out_err: *mut *mut c_char)
     let kind = match read_str(kind) {
         Ok(s) => s,
         Err(e) => {
-            *out_err = error_json(e).into_raw();
+            set_err(out_err, e);
             return 0;
         }
     };
     let Some(k) = EngineKind::parse(kind) else {
-        *out_err = error_json(EngineError::invalid(format!("unknown engine '{kind}'"))).into_raw();
+        set_err(out_err, EngineError::invalid(format!("unknown engine '{kind}'")));
         return 0;
     };
     match factory(k) {
-        Some(e) => registry().lock().unwrap().open(e) as i64,
+        Some(e) => reg_lock().open(e) as i64,
         None => {
-            *out_err = error_json(EngineError::unsupported(format!(
-                "engine '{kind}' not linked"
-            )))
-            .into_raw();
+            set_err(
+                out_err,
+                EngineError::unsupported(format!("engine '{kind}' not linked")),
+            );
             0
         }
     }
@@ -95,7 +110,7 @@ pub unsafe extern "C" fn nf_apply(handle: i64, command_json: *const c_char) -> *
             Ok(c) => c,
             Err(e) => return error_json(e.into()),
         };
-        let mut reg = registry().lock().unwrap();
+        let mut reg = reg_lock();
         let engine = match reg.require_mut(handle as u64) {
             Ok(e) => e,
             Err(e) => return error_json(e),
@@ -107,6 +122,9 @@ pub unsafe extern "C" fn nf_apply(handle: i64, command_json: *const c_char) -> *
             ignition_core::OP_REDO => engine
                 .redo()
                 .map(|r| serde_json::json!({"ok":true,"data":{"redone":r}})),
+            ignition_core::OP_SNAPSHOT => engine.snapshot().map(|b| {
+                serde_json::json!({"ok":true,"data":{"bytes":ignition_core::base64_encode(&b)}})
+            }),
             _ => engine
                 .apply(cmd)
                 .map(|r| serde_json::json!({"ok":true,"data":r.data,"events":r.events})),
@@ -124,7 +142,7 @@ pub unsafe extern "C" fn nf_apply(handle: i64, command_json: *const c_char) -> *
     match result {
         Ok(s) => s.into_raw(),
         Err(_) => {
-            registry().lock().unwrap().close(handle as u64);
+            reg_lock().close(handle as u64);
             error_json(EngineError {
                 code: ErrorCode::Internal,
                 message: "engine panicked; session closed".into(),
@@ -142,36 +160,47 @@ pub struct NfBytes {
     pub len: usize,
 }
 
+const NULL_BYTES: NfBytes = NfBytes {
+    ptr: std::ptr::null_mut(),
+    len: 0,
+};
+
 /// Serialize a document to the NFD1 envelope. On failure returns
 /// {ptr:null,len:0} and writes an error string to *out_err.
+/// The returned buffer is a boxed slice — release with nf_free_bytes.
 #[no_mangle]
 pub unsafe extern "C" fn nf_snapshot(handle: i64, out_err: *mut *mut c_char) -> NfBytes {
-    let reg = registry().lock().unwrap();
-    let engine = match reg.require(handle as u64) {
-        Ok(e) => e,
-        Err(e) => {
-            *out_err = error_json(e).into_raw();
-            return NfBytes {
-                ptr: std::ptr::null_mut(),
-                len: 0,
-            };
-        }
-    };
-    match engine.snapshot() {
-        Ok(mut b) => {
-            let buf = NfBytes {
-                ptr: b.as_mut_ptr(),
-                len: b.len(),
-            };
-            std::mem::forget(b);
-            buf
-        }
-        Err(e) => {
-            *out_err = error_json(e).into_raw();
-            NfBytes {
-                ptr: std::ptr::null_mut(),
-                len: 0,
+    match catch_unwind(AssertUnwindSafe(|| {
+        let reg = reg_lock();
+        let engine = match reg.require(handle as u64) {
+            Ok(e) => e,
+            Err(e) => {
+                set_err(out_err, e);
+                return NULL_BYTES;
             }
+        };
+        match engine.snapshot() {
+            Ok(b) => {
+                // Box the exact slice so free doesn't depend on Vec capacity.
+                let boxed: Box<[u8]> = b.into_boxed_slice();
+                let len = boxed.len();
+                let ptr = Box::into_raw(boxed) as *mut u8;
+                NfBytes { ptr, len }
+            }
+            Err(e) => {
+                set_err(out_err, e);
+                NULL_BYTES
+            }
+        }
+    })) {
+        Ok(b) => b,
+        Err(_) => {
+            reg_lock().close(handle as u64);
+            set_err(
+                out_err,
+                EngineError::internal("engine panicked in snapshot; session closed"),
+            );
+            NULL_BYTES
         }
     }
 }
@@ -183,15 +212,24 @@ pub unsafe extern "C" fn nf_restore(handle: i64, ptr: *const u8, len: usize) -> 
     if ptr.is_null() || len == 0 {
         return error_json(EngineError::invalid("restore requires non-empty bytes")).into_raw();
     }
-    let data = std::slice::from_raw_parts(ptr, len);
-    let mut reg = registry().lock().unwrap();
-    let engine = match reg.require_mut(handle as u64) {
-        Ok(e) => e,
-        Err(e) => return error_json(e).into_raw(),
-    };
-    match engine.restore(data) {
-        Ok(()) => std::ptr::null_mut(),
-        Err(e) => error_json(e).into_raw(),
+    let data = std::slice::from_raw_parts(ptr, len).to_vec();
+    match catch_unwind(AssertUnwindSafe(|| {
+        let mut reg = reg_lock();
+        let engine = match reg.require_mut(handle as u64) {
+            Ok(e) => e,
+            Err(e) => return error_json(e).into_raw(),
+        };
+        match engine.restore(&data) {
+            Ok(()) => std::ptr::null_mut(),
+            Err(e) => error_json(e).into_raw(),
+        }
+    })) {
+        Ok(p) => p,
+        Err(_) => {
+            reg_lock().close(handle as u64);
+            error_json(EngineError::internal("engine panicked in restore; session closed"))
+                .into_raw()
+        }
     }
 }
 
@@ -212,7 +250,8 @@ pub unsafe extern "C" fn nf_restore_b64(handle: i64, b64: *const c_char) -> *mut
 /// Close a document. Returns 1 if a live engine was dropped, else 0.
 #[no_mangle]
 pub unsafe extern "C" fn nf_close(handle: i64) -> i32 {
-    registry().lock().unwrap().close(handle as u64) as i32
+    catch_unwind(AssertUnwindSafe(|| reg_lock().close(handle as u64) as i32))
+        .unwrap_or(0)
 }
 
 /// Free a string returned by this library.
@@ -223,11 +262,13 @@ pub unsafe extern "C" fn nf_free_string(s: *mut c_char) {
     }
 }
 
-/// Free a byte buffer returned by nf_snapshot.
+/// Free a byte buffer returned by nf_snapshot (a boxed slice).
 #[no_mangle]
 pub unsafe extern "C" fn nf_free_bytes(b: NfBytes) {
     if !b.ptr.is_null() && b.len > 0 {
-        drop(Vec::from_raw_parts(b.ptr, b.len, b.len));
+        drop(Box::<[u8]>::from_raw(std::slice::from_raw_parts_mut(
+            b.ptr, b.len,
+        )));
     }
 }
 

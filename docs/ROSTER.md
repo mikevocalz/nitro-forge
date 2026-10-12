@@ -18,7 +18,8 @@ output actually exists; anything not executed is marked NOT RUN.
 | nf-sys C FFI round-trip test | 1 pass | `cargo test -p nf-sys` |
 | Package e2e suites (vitest → nf-cli → real Rust) | 4×8 = 32 pass | `pnpm -r test` |
 | Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
-| Typecheck: ignition + 7 product packages | clean | `pnpm -r typecheck` |
+| Typecheck: ignition + 7 product packages + apps/console + apps/example | clean | `pnpm -r exec tsc --noEmit` |
+| Post-review full workspace retest | 184 Rust + 32 vitest pass | `cargo test --workspace && pnpm -r test` |
 
 ## Transport status
 
@@ -44,11 +45,48 @@ output actually exists; anything not executed is marked NOT RUN.
 | Folio engine | PDF eng (subagent bdd8014e) | lopdf parse/annotate/save | ✅ 17 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
 | Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX | ✅ 25 tests |
-| Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ⏳ in progress |
+| Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |
 | Example app | RN eng (main session) | Expo screens + useDocument hook | ⚠️ source + typecheck only |
 | Design/UX | — | — | ❌ not staffed this session |
 | AI workstream | — | — | ❌ not started (engines are provider-free as required) |
 | Performance budgets | — | — | ❌ unmeasured; no perf claims made |
+
+## Independent review — findings & resolution (subagent 3cb4c8fe)
+
+Reviewer reproduced three defects live (nf-cli + a C harness against
+`libnf_sys.dylib`). Fixed and retested:
+
+| # | Finding | Severity | Resolution |
+|---|---|---|---|
+| 1 | nf-sys mutex poisoning → process abort on engine panic | Critical | `reg_lock()` recovers poisoned registry at every lock site |
+| 2 | nf_snapshot/nf_restore/nf_close lacked `catch_unwind` | Critical | all extern fns now panic-guarded; panic closes the session |
+| 3 | nf_free_bytes assumed Vec cap == len (latent UB) | Major | snapshot hands out `Box<[u8]>`; freed as slice, capacity-free |
+| 4 | cadence u64 `start+len` overflow panics on crafted input | Major | saturating/checked arithmetic at end_ticks, overlaps, addNote, resizeClip, render |
+| 5 | folio `page as u32 + 1` overflow/truncation aliased pages | Major | `u32::try_from` + `checked_add` → OutOfBounds |
+| 6 | NitroHost.apply ignored `{"ok":false}` → silent success | Major | throws EngineError on `ok === false` |
+| 7 | CliHost: no `error` handler on proc/stdin (ENOENT crash) | Major | `killAll` rejects all pending on error/exit/parse failure |
+| 8 | CliHost UTF-8 corruption at pipe chunk boundaries | Major | `StringDecoder` accumulation |
+| 9 | folio journal recorded before fallible work | Major | add/removeAnnotation validate destination + existence first |
+| 10 | prism restore skipped MAX_PIXELS ceiling | Major | `check_dims` enforced on restore |
+| 12 | envelope: unknown format → `Unsupported` not `Serialization` | Minor | spec-aligned; 4 GiB assert added to encode |
+| 13 | nf_apply didn't route `__snapshot` | Minor | routed, parity with run_stdio |
+| 14 | `*out_err` dereferenced unconditionally | Minor | `set_err` null-checks every write |
+| 15 | tally restore accepted unreachable cell keys/dup sheets | Minor | keys normalized via parse/fmt_addr; dup id/name rejected |
+| 16 | cadence setTimeSig `as u32` truncation | Minor | bounds-checked (d ≤ 128, n ≤ u32::MAX) |
+| 17 | cadence/splice restore could reuse ids | Minor | next_id clamped past max live id |
+| 18 | prism drawPixels fractional x/y + event on no-op | Minor | integral coords required; off-canvas emits no event |
+| 20 | quill import_docx unbounded decompression | Minor | 256 MiB cap on document.xml |
+| 21 | DocumentHandle.emit: listener throw failed apply | Minor | listener errors rethrown via queueMicrotask |
+| 22 | CliHost pending leak + URL.pathname | Minor | pending deleted on write error; `fileURLToPath` |
+| 23 | unparseable frame answered id:0 → caller hangs | Minor | best-effort `extract_frame_id` |
+
+**Deferred (documented, not fixed):**
+- #11 base64 decoders accept non-canonical input (`len%4==1`, stray `=`) —
+  leniency is consistent across Rust+TS decoders; tighten if a strict consumer
+  appears.
+- #19 quill `deleteRange` boundary-block kind merge — behavior is
+  self-consistent with `text()`'s newline-inclusive slicing; flagged for
+  product-level confirmation rather than changed blindly.
 
 ## Known issues & honest limitations
 - Three e2e test expectations were wrong vs. spec and were fixed post-review

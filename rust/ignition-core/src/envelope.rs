@@ -14,6 +14,10 @@ pub const ENVELOPE_FORMAT_JSON: u8 = 0;
 const HEADER_LEN: usize = 4 + 1 + 4;
 
 pub fn encode_envelope(payload: &[u8]) -> Vec<u8> {
+    assert!(
+        payload.len() <= u32::MAX as usize,
+        "snapshot payload exceeds 4 GiB envelope limit"
+    );
     let mut out = Vec::with_capacity(HEADER_LEN + payload.len());
     out.extend_from_slice(ENVELOPE_MAGIC);
     out.push(ENVELOPE_FORMAT_JSON);
@@ -35,7 +39,7 @@ pub fn decode_envelope(data: &[u8]) -> Result<(u8, &[u8]), EngineError> {
     }
     let format = data[4];
     if format != ENVELOPE_FORMAT_JSON {
-        return Err(EngineError::unsupported(format!(
+        return Err(EngineError::serialization(format!(
             "unknown snapshot format tag {format}"
         )));
     }

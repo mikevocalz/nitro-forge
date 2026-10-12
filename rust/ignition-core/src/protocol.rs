@@ -204,6 +204,15 @@ fn handle_frame(
     }
 }
 
+/// Best-effort `id` recovery from a frame that failed JSON parsing, so the
+/// caller can correlate the error instead of receiving an unmatchable id 0.
+fn extract_frame_id(line: &str) -> Option<u64> {
+    let pos = line.find("\"id\"")?;
+    let rest = line[pos + 4..].trim_start().strip_prefix(':')?.trim_start();
+    let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+    digits.parse().ok()
+}
+
 /// Run the protocol on stdin/stdout until EOF. `factory` builds a fresh engine
 /// for a kind, or `None` if this binary wasn't linked with it.
 pub fn run_stdio(
@@ -240,7 +249,10 @@ pub fn run_stdio(
                     }
                 }
             }
-            Err(e) => FrameResponse::err(0, EngineError::serialization(e.to_string())),
+            Err(e) => FrameResponse::err(
+                extract_frame_id(&line).unwrap_or(0),
+                EngineError::serialization(e.to_string()),
+            ),
         };
         writeln!(out, "{}", serde_json::to_string(&resp).unwrap())?;
         out.flush()?;

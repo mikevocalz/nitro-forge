@@ -34,7 +34,19 @@ export class DocumentHandle {
   }
 
   private emit(events: ForgeEvent[]) {
-    for (const e of events) for (const l of this.listeners) l(e);
+    for (const e of events)
+      for (const l of this.listeners) {
+        try {
+          l(e);
+        } catch (err) {
+          // A throwing listener must not fail the apply that triggered it —
+          // the engine command already succeeded. Surface asynchronously so
+          // the error is still observable.
+          queueMicrotask(() => {
+            throw err;
+          });
+        }
+      }
   }
 
   async apply<T = unknown>(

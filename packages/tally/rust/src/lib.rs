@@ -611,6 +611,24 @@ impl Engine for TallyEngine {
                 doc.next_sheet = max_id + 1;
             }
         }
+        // Reject crafted snapshots: sheet ids/names must be unique and every
+        // cell key must be a canonical address reachable via the ops.
+        let mut seen_ids = std::collections::BTreeSet::new();
+        let mut seen_names = std::collections::BTreeSet::new();
+        for s in &mut doc.sheets {
+            if !seen_ids.insert(s.id) {
+                return Err(EngineError::serialization("duplicate sheet id"));
+            }
+            if !seen_names.insert(s.name.to_ascii_lowercase()) {
+                return Err(EngineError::serialization("duplicate sheet name"));
+            }
+            for key in std::mem::take(&mut s.cells).into_iter() {
+                let (col, row) = formula::parse_addr(&key.0).ok_or_else(|| {
+                    EngineError::serialization(format!("invalid cell key '{}'", key.0))
+                })?;
+                s.cells.insert(formula::fmt_addr(col, row), key.1);
+            }
+        }
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())

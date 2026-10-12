@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { StringDecoder } from "node:string_decoder";
+import { fileURLToPath } from "node:url";
 import type {
   Command,
   CommandResult,
@@ -38,17 +40,27 @@ export class CliHost implements EngineHost {
       binPath ??
       process.env.NF_CLI ??
       // package dir is <repo>/packages/ignition — binary lives in <repo>/target/debug
-      new URL("../../../target/debug/nf-cli", import.meta.url).pathname;
+      fileURLToPath(new URL("../../../target/debug/nf-cli", import.meta.url).href);
     this.proc = spawn(path, [], { stdio: ["pipe", "pipe", "inherit"] });
+    // StringDecoder preserves multi-byte UTF-8 sequences split across pipe
+    // chunk boundaries — plain chunk.toString() corrupts them.
+    const decoder = new StringDecoder("utf8");
     let remainder = "";
     this.proc.stdout!.on("data", (chunk: Buffer) => {
-      remainder += chunk.toString("utf8");
+      remainder += decoder.write(chunk);
       let nl: number;
       while ((nl = remainder.indexOf("\n")) >= 0) {
         const line = remainder.slice(0, nl);
         remainder = remainder.slice(nl + 1);
         if (!line.trim()) continue;
-        const res = JSON.parse(line) as FrameResponse;
+        let res: FrameResponse;
+        try {
+          res = JSON.parse(line) as FrameResponse;
+        } catch (e) {
+          // Protocol corruption — the stream is no longer trustworthy.
+          this.killAll(e);
+          return;
+        }
         const p = this.pending.get(res.id);
         if (p) {
           this.pending.delete(res.id);
@@ -56,15 +68,31 @@ export class CliHost implements EngineHost {
         }
       }
     });
+    // 'error' (e.g. ENOENT on a bad binary path) does NOT emit 'exit'.
+    this.proc.on("error", (e) => this.killAll(e));
+    this.proc.stdin!.on("error", (e) => this.killAll(e));
     this.proc.on("exit", (code) => {
-      const err = new EngineError({
-        code: "internal",
-        message: `nf-cli exited with code ${code}`,
-        recoverable: false,
-      });
-      for (const p of this.pending.values()) p.reject(err);
-      this.pending.clear();
+      this.killAll(
+        new EngineError({
+          code: "internal",
+          message: `nf-cli exited with code ${code}`,
+          recoverable: false,
+        }),
+      );
     });
+  }
+
+  private killAll(e: unknown): void {
+    const err =
+      e instanceof EngineError
+        ? e
+        : new EngineError({
+            code: "internal",
+            message: e instanceof Error ? e.message : String(e),
+            recoverable: false,
+          });
+    for (const p of this.pending.values()) p.reject(err);
+    this.pending.clear();
   }
 
   private send(req: {
@@ -75,7 +103,12 @@ export class CliHost implements EngineHost {
   }): Promise<FrameResponse> {
     return new Promise((resolve, reject) => {
       this.pending.set(req.id, { resolve, reject });
-      this.proc.stdin!.write(JSON.stringify(req) + "\n");
+      try {
+        this.proc.stdin!.write(JSON.stringify(req) + "\n");
+      } catch (e) {
+        this.pending.delete(req.id);
+        reject(e);
+      }
     });
   }
 

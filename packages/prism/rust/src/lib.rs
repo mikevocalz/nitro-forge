@@ -414,6 +414,13 @@ impl PrismEngine {
         if !x.is_finite() || !y.is_finite() {
             return Err(EngineError::validation("x/y must be finite"));
         }
+        if x.fract() != 0.0
+            || y.fract() != 0.0
+            || x.abs() > i64::MAX as f64
+            || y.abs() > i64::MAX as f64
+        {
+            return Err(EngineError::validation("x/y must be integers"));
+        }
         if !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0 {
             return Err(EngineError::validation("w/h must be positive"));
         }
@@ -438,8 +445,12 @@ impl PrismEngine {
         let x1 = xi.saturating_add(wi).min(self.width as i64);
         let y1 = yi.saturating_add(hi).min(self.height as i64);
         if x1 <= x0 || y1 <= y0 {
-            // Fully off-canvas: success, nothing mutated, no undo entry.
-            return Ok(CommandResult::data(json!({ "ok": true })));
+            // Fully off-canvas: success, nothing mutated — no undo entry and
+            // no document:changed event.
+            return Ok(CommandResult {
+                events: Vec::new(),
+                data: json!({ "ok": true }),
+            });
         }
         let (cx, cy) = (x0 as u32, y0 as u32);
         let (cw, ch) = ((x1 - x0) as u32, (y1 - y0) as u32);
@@ -707,6 +718,10 @@ impl Engine for PrismEngine {
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_fmt, payload) = decode_envelope(data)?;
         let wire: DocWire = serde_json::from_slice(payload)?;
+        // Enforce the same pixel ceiling as new/resize — a crafted snapshot
+        // must not be able to trigger an unbounded raster allocation.
+        Self::check_dims(wire.width, wire.height)
+            .map_err(|e| EngineError::serialization(format!("snapshot {e}")))?;
         // Decode into a scratch state first — self stays untouched on error.
         let pixel_len = (wire.width as u64)
             .checked_mul(wire.height as u64)

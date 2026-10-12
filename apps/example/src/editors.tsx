@@ -1,4 +1,4 @@
-import type { EngineHost } from "@nitro-forge/ignition";
+import type { DocumentHandle, EngineHost } from "@nitro-forge/ignition";
 import { PrismDocument } from "@nitro-forge/prism";
 import { CadenceDocument } from "@nitro-forge/cadence";
 import { SpliceDocument } from "@nitro-forge/splice";
@@ -18,7 +18,7 @@ export interface Action {
 }
 export interface EditorConfig {
   title: string;
-  open: (host: EngineHost) => Promise<{ handle: unknown }>;
+  open: (host: EngineHost) => Promise<{ handle: DocumentHandle }>;
   rows: (state: unknown) => Row[];
   actions: Action[];
 }
@@ -34,7 +34,7 @@ const configs: Record<string, EditorConfig> = {
       const d = await PrismDocument.open(h, 256, 256);
       const l = (await d.addRasterLayer("Layer 1")).data.layer_id;
       void l;
-      return d as unknown as { handle: unknown };
+      return d;
     },
     rows: (s: any) => [
       { label: "Canvas", value: `${s?.width ?? 0} × ${s?.height ?? 0}` },
@@ -68,7 +68,7 @@ const configs: Record<string, EditorConfig> = {
   },
   cadence: {
     title: "Cadence",
-    open: async (h) => CadenceDocument.open(h) as unknown as { handle: unknown },
+    open: async (h) => CadenceDocument.open(h),
     rows: (s: any) => [
       { label: "Tempo", value: `${s?.tempo_bpm ?? "?"} BPM` },
       { label: "Signature", value: (s?.time_sig ?? []).join("/") },
@@ -100,7 +100,7 @@ const configs: Record<string, EditorConfig> = {
   },
   splice: {
     title: "Splice",
-    open: async (h) => SpliceDocument.open(h) as unknown as { handle: unknown },
+    open: async (h) => SpliceDocument.open(h),
     rows: (s: any) => [
       { label: "FPS", value: String(s?.fps ?? 30) },
       ...(s?.tracks ?? []).map((t: any, i: number) => ({
@@ -134,7 +134,7 @@ const configs: Record<string, EditorConfig> = {
   },
   folio: {
     title: "Folio",
-    open: async (h) => FolioDocument.create(h, 2) as unknown as { handle: unknown },
+    open: async (h) => FolioDocument.create(h, 2),
     rows: (s: any) => [{ label: "Pages", value: String(s?.pages ?? "?") }],
     actions: [
       {
@@ -149,7 +149,7 @@ const configs: Record<string, EditorConfig> = {
   },
   pitch: {
     title: "Pitch",
-    open: async (h) => PitchDocument.open(h, "Demo Deck") as unknown as { handle: unknown },
+    open: async (h) => PitchDocument.open(h, "Demo Deck"),
     rows: (s: any) => [
       { label: "Title", value: g(s?.meta, "title", "—") },
       { label: "Slides", value: String(s?.slides?.length ?? 0) },
@@ -176,7 +176,7 @@ const configs: Record<string, EditorConfig> = {
   },
   tally: {
     title: "Tally",
-    open: async (h) => TallyDocument.open(h) as unknown as { handle: unknown },
+    open: async (h) => TallyDocument.open(h),
     rows: (s: any) =>
       (s?.sheets ?? []).map((sh: any, i: number) => ({
         label: `Sheet ${i}: ${sh.name}`,
@@ -196,7 +196,7 @@ const configs: Record<string, EditorConfig> = {
   },
   quill: {
     title: "Quill",
-    open: async (h) => QuillDocument.open(h) as unknown as { handle: unknown },
+    open: async (h) => QuillDocument.open(h),
     rows: (s: any) =>
       (s?.blocks ?? []).map((b: any, i: number) => ({
         label: `¶${i} (${b.kind})`,

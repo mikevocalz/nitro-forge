@@ -54,7 +54,9 @@ pub struct Clip {
 
 impl Clip {
     fn end_ticks(&self) -> u64 {
-        self.start_ticks + self.length_ticks
+        // Saturate rather than overflow: a corrupt/huge clip end counts as
+        // "extends forever" for overlap and length purposes.
+        self.start_ticks.saturating_add(self.length_ticks)
     }
 }
 
@@ -116,7 +118,7 @@ impl Doc {
     /// Would a clip spanning [start, start+len) overlap an existing clip on the
     /// track? `exclude` skips the clip being moved/resized.
     fn overlaps(&self, track_idx: usize, start: u64, len: u64, exclude: Option<u64>) -> bool {
-        let end = start + len;
+        let end = start.saturating_add(len);
         self.tracks[track_idx].clips.iter().any(|c| {
             Some(c.id) != exclude && start < c.end_ticks() && c.start_ticks < end
         })
@@ -333,9 +335,14 @@ impl Engine for CadenceEngine {
                 if n < 1 {
                     return Err(EngineError::validation("time signature numerator must be >= 1"));
                 }
-                if d < 1 || !(d as u64).is_power_of_two() {
+                if d < 1 || !(d as u64).is_power_of_two() || d > 128 {
                     return Err(EngineError::validation(
-                        "time signature denominator must be a power of two",
+                        "time signature denominator must be a power of two <= 128",
+                    ));
+                }
+                if n > u32::MAX as i64 {
+                    return Err(EngineError::validation(
+                        "time signature numerator too large",
                     ));
                 }
                 self.record();
@@ -530,7 +537,7 @@ impl Engine for CadenceEngine {
                 // Notes outside the new bounds are trimmed/dropped.
                 clip.notes.retain(|n| n.start_ticks < len);
                 for n in &mut clip.notes {
-                    if n.start_ticks + n.length_ticks > len {
+                    if n.start_ticks.saturating_add(n.length_ticks) > len {
                         n.length_ticks = len - n.start_ticks;
                     }
                 }
@@ -570,7 +577,7 @@ impl Engine for CadenceEngine {
                         "addNote requires a clip on a midi track",
                     ));
                 }
-                if start + len > self.doc.tracks[ti].clips[ci].length_ticks {
+                if start.saturating_add(len) > self.doc.tracks[ti].clips[ci].length_ticks {
                     return Err(EngineError::out_of_bounds(
                         "note extends past the end of the clip",
                     ));
@@ -588,18 +595,18 @@ impl Engine for CadenceEngine {
             }
             "removeNote" => {
                 let clip_id = req_u64(p, "clip")?;
-                let index = req_u64(p, "index")? as usize;
+                let index = req_u64(p, "index")?;
                 let (ti, ci) = self
                     .doc
                     .clip_location(clip_id)
                     .ok_or_else(|| EngineError::not_found(format!("no clip {clip_id}")))?;
-                if index >= self.doc.tracks[ti].clips[ci].notes.len() {
+                if index >= self.doc.tracks[ti].clips[ci].notes.len() as u64 {
                     return Err(EngineError::out_of_bounds(format!(
                         "note index {index} out of range"
                     )));
                 }
                 self.record();
-                self.doc.tracks[ti].clips[ci].notes.remove(index);
+                self.doc.tracks[ti].clips[ci].notes.remove(index as usize);
                 Ok(Self::changed(json!({ "ok": true })))
             }
 
@@ -653,7 +660,16 @@ impl Engine for CadenceEngine {
 
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_fmt, payload) = decode_envelope(data)?;
-        let doc: Doc = serde_json::from_slice(payload)?;
+        let mut doc: Doc = serde_json::from_slice(payload)?;
+        // A stale snapshot can carry a next_id below live ids → collisions.
+        let max_id = doc
+            .tracks
+            .iter()
+            .map(|t| t.id)
+            .chain(doc.tracks.iter().flat_map(|t| t.clips.iter().map(|c| c.id)))
+            .max()
+            .unwrap_or(0);
+        doc.next_id = doc.next_id.max(max_id.saturating_add(1));
         // Commit only after the payload fully decoded; document is a new
         // session state, so undo history is reset.
         self.doc = doc;
@@ -729,9 +745,9 @@ fn render_audio(
                 continue;
             }
             for note in &clip.notes {
-                let note_start = clip_start + note.start_ticks;
+                let note_start = clip_start.saturating_add(note.start_ticks);
                 // Clip the note's sounding end to the clip boundary.
-                let note_end = (note_start + note.length_ticks).min(clip_end);
+                let note_end = note_start.saturating_add(note.length_ticks).min(clip_end);
                 if note_end <= note_start {
                     continue;
                 }

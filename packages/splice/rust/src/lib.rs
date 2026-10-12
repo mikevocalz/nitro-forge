@@ -556,7 +556,17 @@ impl Engine for SpliceEngine {
 
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_fmt, payload) = decode_envelope(data)?;
-        let doc: Doc = serde_json::from_slice(payload)?;
+        let mut doc: Doc = serde_json::from_slice(payload)?;
+        // A stale snapshot can carry next_id below live ids → collisions.
+        let max_id = doc
+            .sources
+            .keys()
+            .copied()
+            .chain(doc.tracks.iter().map(|t| t.id))
+            .chain(doc.tracks.iter().flat_map(|t| t.clips.iter().map(|c| c.id)))
+            .max()
+            .unwrap_or(0);
+        doc.next_id = doc.next_id.max(max_id.saturating_add(1));
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())

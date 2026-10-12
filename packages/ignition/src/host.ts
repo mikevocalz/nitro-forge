@@ -54,8 +54,21 @@ export class NitroHost implements EngineHost {
       .catch((e: unknown) => {
         throw parseNativeError(e);
       });
-    const res = JSON.parse(raw) as { data: T; events: ForgeEvent[] };
-    return { data: res.data, events: res.events ?? [] };
+    const res = JSON.parse(raw) as {
+      ok?: boolean;
+      data?: T;
+      events?: ForgeEvent[];
+      error?: EngineErrorShape;
+    };
+    // The C ABI reports engine failures in-band ({"ok":false,"error":{…}}),
+    // not as rejections. Without this check every engine error reads as a
+    // successful apply with undefined data.
+    if (res.ok === false) {
+      throw new EngineError(
+        res.error ?? { code: "internal", message: "empty error", recoverable: false },
+      );
+    }
+    return { data: res.data as T, events: res.events ?? [] };
   }
 
   async snapshot(handle: number): Promise<Uint8Array> {

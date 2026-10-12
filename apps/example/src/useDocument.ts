@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DocumentHandle,
   createNitroHost,
+  type CommandResult,
   type EngineHost,
   type ForgeEvent,
 } from "@nitro-forge/ignition";
@@ -20,7 +21,7 @@ export interface EditorDoc {
   /** Latest describe() snapshot after each change; null until first load. */
   state: unknown;
   error: string | null;
-  apply: (op: string, payload?: unknown) => Promise<void>;
+  apply: <T = unknown>(op: string, payload?: unknown) => Promise<CommandResult<T>>;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
   save: () => Promise<Uint8Array>;
@@ -75,15 +76,19 @@ export function useEditorDoc(
     };
   }, [open, reload]);
 
-  const apply = useCallback(async (op: string, payload?: unknown) => {
-    const d = docRef.current;
-    if (!d) return;
-    try {
-      await d.handle.apply(op, payload);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
+  const apply = useCallback(
+    async <T,>(op: string, payload?: unknown): Promise<CommandResult<T>> => {
+      const d = docRef.current;
+      if (!d) throw new Error("no document");
+      try {
+        return await d.handle.apply<T>(op, payload);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        throw e;
+      }
+    },
+    [],
+  );
 
   return {
     doc,
