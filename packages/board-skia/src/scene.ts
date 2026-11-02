@@ -14,6 +14,8 @@ export interface BoardMark {
   readonly alpha: number;
   readonly dash: DashMode;
   readonly blendMode: "srcOver" | "multiply";
+  /** Rotation about the same local-bounds pivot as QuickDraw's ShapeBounds. */
+  readonly rotation?: { readonly radians: number; readonly centerX: number; readonly centerY: number };
 }
 export type SceneResult =
   | { readonly kind: "ready"; readonly marks: readonly BoardMark[] }
@@ -133,7 +135,7 @@ function compileShape(record: JsonMap, key: string): Compiled | string {
   if (!finite(rot) || !finite(z)) return errorFor(id, "invalid transform");
   // Exact pivot matches require the QuickDraw shape-bounds engine; never draw
   // an incorrectly positioned rotated shape as though it were unrotated.
-  if (rot !== 0) return errorFor(id, "rotated shape needs native pivot parity");
+  // Renderer adds Skia Group origin around QuickDraw local bounds, below.
   const props = map(record.props);
   if (props === null) return errorFor(id, "invalid props");
   const type = record.type;
@@ -179,6 +181,36 @@ function compileShape(record: JsonMap, key: string): Compiled | string {
       dash === "draw" ? "solid" : dash as DashMode));
   } else {
     return errorFor(id, "unsupported record type " + String(type));
+  }
+
+  if (rot !== 0) {
+    let bounds: { x: number; y: number; w: number; h: number };
+    if (type === "geo") {
+      const w = props.w as number;
+      const h = props.h as number;
+      bounds = { x: 0, y: 0, w: w === 0 ? 1 : w, h: h === 0 ? 1 : h };
+    } else {
+      const pts = props.pts as number[];
+      let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+      for (let i = 0; i < pts.length; i += 3) {
+        left = Math.min(left, pts[i]!);
+        top = Math.min(top, pts[i + 1]!);
+        right = Math.max(right, pts[i]!);
+        bottom = Math.max(bottom, pts[i + 1]!);
+      }
+      // Exact Forge Kotlin ShapeBounds margin.
+      const margin = type === "highlight" ? strokeWidth * 4.5 / 2 : strokeWidth * 0.75;
+      bounds = { x: left - margin, y: top - margin,
+        w: right - left + margin * 2, h: bottom - top + margin * 2 };
+    }
+    const rotation = {
+      radians: rot,
+      centerX: x + bounds.x + bounds.w / 2,
+      centerY: y + bounds.y + bounds.h / 2,
+    };
+    for (let i = 0; i < marks.length; i++) {
+      marks[i] = { ...marks[i]!, rotation };
+    }
   }
   return { id, z, marks, highlight: type === "highlight" };
 }

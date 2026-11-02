@@ -40,8 +40,11 @@ export function NativeBoardCanvas({
       <Fill color={backgroundColor} />
       <Group transform={[{ scaleX: x }, { scaleY: y }]}>
         {scene.marks.map((m) => (
+          <Group key={m.id}
+            origin={m.rotation ? { x: m.rotation.centerX, y: m.rotation.centerY } : undefined}
+            transform={m.rotation ? [{ rotate: m.rotation.radians }] : undefined}
+          >
           <Path
-            key={m.id}
             path={m.path}
             color={m.color}
             style={m.mode}
@@ -59,6 +62,7 @@ export function NativeBoardCanvas({
               />
             ) : null}
           </Path>
+          </Group>
         ))}
       </Group>
     </Canvas>

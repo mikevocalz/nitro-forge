@@ -46,9 +46,26 @@ describe("strict QuickDraw -> Skia Graphite scene", () => {
     expect(r.marks[0]).toMatchObject({ color: "#DFE5FB", mode: "fill" });
     expect(r.marks[1]).toMatchObject({ color: "#4263EB", mode: "stroke", dash: "dashed" });
   });
-  it("never silently drops text, images, rotation or unknown records", () => {
+  it("rotates ink about the same local center as Forge Kotlin ShapeBounds", () => {
+    const r = compileQuickDrawScene(snapshot({ ink: draw({ rot: Math.PI / 4 }) }));
+    expect(r.kind).toBe("ready");
+    if (r.kind !== "ready") return;
+    expect(r.marks[0]?.rotation).toEqual({
+      radians: Math.PI / 4, centerX: 20, centerY: 15.5,
+    });
+  });
+  it("rotates geometry about its page-space rectangular center", () => {
+    const r = compileQuickDrawScene(snapshot({ g: {
+      id:"g", typeName:"shape", type:"geo", x:10,y:20,rot:Math.PI/2,z:0,
+      props:{ geo:"rectangle", w:40,h:20,color:"blue",size:"m",dash:"solid",fill:"none" }
+    } }));
+    expect(r.kind).toBe("ready");
+    if(r.kind !== "ready") return;
+    expect(r.marks[0]?.rotation).toEqual({radians:Math.PI/2,centerX:30,centerY:30});
+  });
+  it("never silently drops text, images or unknown records", () => {
     for (const problematic of [
-      draw({ type: "text" }), draw({ type: "image" }), draw({ rot: 0.1 }),
+      draw({ type: "text" }), draw({ type: "image" }),
       draw({ type: "mystery" }), draw({ inkOutline: undefined }),
     ]) {
       const r = compileQuickDrawScene(snapshot({ p: problematic }));
