@@ -17,6 +17,8 @@ export interface YjsBoardDocumentPort {
 export interface LocalYjsBoardSession {
   readonly status: OfflineBoardStatus;
   readonly lastReceipt: OfflineBoardReceipt | null;
+  /** A local transaction has not yet been durably stored; do not show "Saved". */
+  readonly hasUnpersistedChanges: boolean;
   /** Restore a local update into the existing Y.Doc before mounting any view. */
   initialize(): Promise<OfflineBoardReceipt>;
   /** Call after a completed local Yjs/QuickDraw transaction, not on each pen point. */
@@ -45,6 +47,14 @@ export function createLocalYjsBoardSession(options: {
   readonly document: YjsBoardDocumentPort;
   readonly storage: LocalBoardStorage;
   readonly maxSnapshotBytes?: number;
+  /**
+   * Optional listener on the EXISTING board's Yjs/QuickDraw record updates.
+   * For Moyo: handler => boardDoc.onRecords(() => handler()).
+   * Subscribe after initialize; saves are queued once per completed change.
+   */
+  readonly subscribeChanges?: (listener: () => void) => () => void;
+  /** Required when subscribeChanges is provided: never silently swallow a failed save. */
+  readonly onPersistenceError?: (error: unknown) => void;
 }): LocalYjsBoardSession {
   const { documentId, document, storage } = options;
   const maxBytes = options.maxSnapshotBytes ?? 32 * 1024 * 1024;
@@ -57,6 +67,16 @@ export function createLocalYjsBoardSession(options: {
   let closing = false;
   let closeTask: Promise<void> | undefined;
   let tail: Promise<void> = Promise.resolve();
+  // A new epoch is issued synchronously when an edit is observed. A save
+  // cannot mark a newer edit durable merely because an older write finished.
+  let editEpoch = 0;
+  let durableEpoch = 0;
+  let suppressObserver = false;
+  let unsubscribe: (() => void) | undefined;
+  if (options.subscribeChanges !== undefined &&
+      typeof options.onPersistenceError !== "function") {
+    throw new TypeError("subscribeChanges requires an onPersistenceError handler");
+  }
 
   const enqueue = <T>(fn: () => Promise<T>): Promise<T> => {
     const task = tail.then(fn);
@@ -90,7 +110,7 @@ export function createLocalYjsBoardSession(options: {
       throw new OfflineBoardError("storage", "Yjs board remains edited in memory but not saved locally", { cause });
     }
   };
-  const save = async (): Promise<OfflineBoardReceipt> => {
+  const save = async (epoch: number): Promise<OfflineBoardReceipt> => {
     const current = requireReady();
     if (current.revision >= Number.MAX_SAFE_INTEGER) {
       throw new OfflineBoardError("revision", "Local Yjs revision exhausted");
@@ -101,12 +121,24 @@ export function createLocalYjsBoardSession(options: {
     };
     await persist(next);
     checkpoint = copy(next);
+    durableEpoch = Math.max(durableEpoch, epoch);
     return receipt(checkpoint);
+  };
+
+  const queueObservedSave = (): void => {
+    if (suppressObserver || closing || state !== "ready") return;
+    const epoch = ++editEpoch;
+    // Preserve errors for the host UI; never claim an asynchronous write
+    // succeeded merely because the observer itself returned.
+    void enqueue(() => save(epoch)).catch((error: unknown) => {
+      options.onPersistenceError?.(error);
+    });
   };
 
   return {
     get status() { return state; },
     get lastReceipt() { return checkpoint === null ? null : receipt(checkpoint); },
+    get hasUnpersistedChanges() { return editEpoch > durableEpoch; },
     initialize() {
       if (state !== "unopened" || closing) {
         return Promise.reject(new OfflineBoardError("lifecycle", "Yjs board already initialized"));
@@ -134,12 +166,19 @@ export function createLocalYjsBoardSession(options: {
           checkpoint = copy(fresh);
         }
         state = "ready";
+        unsubscribe = options.subscribeChanges?.(queueObservedSave);
         return receipt(checkpoint);
       });
     },
     saveLocal() {
       if (closing) return Promise.reject(new OfflineBoardError("lifecycle", "Yjs board is closing"));
-      return enqueue(save);
+      // With an observer, explicit saveLocal acts as a flush rather than
+      // recording the same Yjs transaction twice.
+      const epoch = options.subscribeChanges ? editEpoch : ++editEpoch;
+      return enqueue(async () => {
+        const current = requireReady();
+        return epoch > durableEpoch ? save(epoch) : receipt(current);
+      });
     },
     mergeRemote(update) {
       if (closing) return Promise.reject(new OfflineBoardError("lifecycle", "Yjs board is closing"));
@@ -149,16 +188,26 @@ export function createLocalYjsBoardSession(options: {
             update.byteLength > maxBytes) {
           throw new OfflineBoardError("invalid-checkpoint", "Invalid remote Yjs update");
         }
-        // Yjs handles concurrent/offline updates by merging CRDT operations.
-        // Persist the full merged update, not just the last incoming delta.
-        document.merge(new Uint8Array(update), "remote");
-        return save();
+        // Suppress the observer for this explicit merge; it is saved once
+        // below, not twice by the observer AND by mergeRemote().
+        suppressObserver = true;
+        try {
+          document.merge(new Uint8Array(update), "remote");
+        } finally {
+          suppressObserver = false;
+        }
+        const epoch = ++editEpoch;
+        return save(epoch);
       });
     },
     acknowledgeSync(revision) {
       if (closing) return Promise.reject(new OfflineBoardError("lifecycle", "Yjs board is closing"));
       return enqueue(async () => {
         const current = requireReady();
+        if (editEpoch > durableEpoch) {
+          throw new OfflineBoardError("storage",
+            "Cannot acknowledge sync while changes are not saved locally");
+        }
         if (!Number.isSafeInteger(revision) || revision < 0 || revision > current.revision) {
           throw new OfflineBoardError("revision", "Invalid local sync acknowledgement");
         }
@@ -171,12 +220,26 @@ export function createLocalYjsBoardSession(options: {
     },
     pendingUpdate() {
       const current = requireReady();
-      return current.revision > current.syncedRevision ? snapshot() : null;
+      return editEpoch > durableEpoch ||
+        current.revision > current.syncedRevision ? snapshot() : null;
     },
     close() {
       if (closeTask) return closeTask;
       closing = true;
-      closeTask = enqueue(async () => { state = "closed"; });
+      closeTask = enqueue(async () => {
+        if (state === "ready" && editEpoch > durableEpoch) {
+          // Refuse a clean close until the in-memory Yjs update is saved.
+          await save(editEpoch);
+        }
+        state = "closed";
+        unsubscribe?.();
+        unsubscribe = undefined;
+      }).catch(error => {
+        // A failed close is retryable once local storage is repaired.
+        closing = false;
+        closeTask = undefined;
+        throw error;
+      });
       return closeTask;
     },
   };
