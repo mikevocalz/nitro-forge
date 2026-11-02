@@ -25,7 +25,7 @@ jobs:
           rustc --version
           cargo --version
       - name: Verify formatting
-        run: rustfmt --edition 2021 --check rust/nf-sys/src/session_registry.rs rust/nf-sys/src/ffi_v1.rs
+        run: rustfmt --edition 2021 --check rust/nf-sys/src/session_registry.rs rust/nf-sys/src/ffi_v1.rs rust/nf-sys/src/ffi_v1_parts.rs
       - name: Test independent document locks and native ABI boundaries
         run: cargo test -p nf-sys --locked -- --nocapture
       - name: Regression test all Ignition Rust engines
