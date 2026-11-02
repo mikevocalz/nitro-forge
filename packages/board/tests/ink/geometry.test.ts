@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardTransform, projectPointer, strokeToSegments } from "../src/geometry";
+import { boardTransform, projectPointer, strokeToSegments } from "../../src/ink/geometry";
 
 describe("native ink geometry", () => {
   it("preserves true pressure and ordered segment coordinates", () => {
