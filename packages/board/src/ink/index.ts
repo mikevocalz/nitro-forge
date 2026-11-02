@@ -55,3 +55,6 @@ export {
   type BoardSegment,
   type BoardTransform,
 } from "./geometry";
+
+/** Direct freehand adapter for drawing apps without a QuickDraw document. */
+export { compileNativeInkScene } from "./scene";
