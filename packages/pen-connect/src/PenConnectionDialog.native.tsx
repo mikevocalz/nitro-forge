@@ -36,7 +36,6 @@ const describe = (state: PenConnectionState): string => {
 };
 const stateAnimation = (state: PenConnectionState): "searching" | "pairing" | "linked" | "connected" | "error" => {
   if (state.kind === "scanning") return "searching";
-  if (state.kind === "connected" as string) return "connected";
   if (state.kind === "ready") return "connected";
   if (state.kind === "linked") return "linked";
   if (state.kind === "error") return "error";

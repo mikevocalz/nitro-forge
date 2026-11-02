@@ -48,7 +48,7 @@ export function createAndroidBlePenPort(
         ? ["android.permission.BLUETOOTH_SCAN", "android.permission.BLUETOOTH_CONNECT"]
         : ["android.permission.ACCESS_FINE_LOCATION"];
       const statuses = await PermissionsAndroid.requestMultiple(permissions as Array<"android.permission.BLUETOOTH_SCAN" | "android.permission.BLUETOOTH_CONNECT" | "android.permission.ACCESS_FINE_LOCATION">);
-      return permissions.every((name) => statuses[name] === PermissionsAndroid.RESULTS.GRANTED);
+      return permissions.every((name) => statuses[name as keyof typeof statuses] === PermissionsAndroid.RESULTS.GRANTED);
     },
     async ensureEnabled() {
       return Platform.OS === "android" && native.isEnabled();
