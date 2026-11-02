@@ -1,0 +1,29 @@
+name: Forge pen Bluetooth connection contract
+on:
+  pull_request:
+    paths:
+      - 'packages/pen-connect/**'
+      - 'assets/pen-connection/**'
+      - '.github/workflows/pen-connect-contract.yml'
+  push:
+    branches:
+      - 'feat/pen-connect-*'
+jobs:
+  pen-connect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @nitro-forge/pen-connect typecheck
+      - run: pnpm --filter @nitro-forge/pen-connect test
+      - name: Verify authored Rive CLI source
+        run: |
+          test -f assets/pen-connection/scene.rml
+          test -f assets/pen-connection/rive.yaml
