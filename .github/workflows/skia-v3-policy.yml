@@ -1,0 +1,41 @@
+name: Skia v3 & npm release gate
+
+on:
+  push:
+    paths:
+      - 'apps/example/package.json'
+      - 'apps/example/app.json'
+      - 'package.json'
+      - 'tooling/check-skia-v3.mjs'
+      - '.github/workflows/skia-v3-policy.yml'
+  pull_request:
+    paths:
+      - 'apps/example/package.json'
+      - 'apps/example/app.json'
+      - 'package.json'
+      - 'tooling/check-skia-v3.mjs'
+      - '.github/workflows/skia-v3-policy.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '13 9 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  skia-v3-manifest:
+    name: Graphite v3 package and platform policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate Skia v3 only, matched WebGPU and Expo requirements
+        run: node tooling/check-skia-v3.mjs
+      - name: Check current npm latest versions (scheduled/manual only)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: node tooling/check-skia-v3.mjs --registry
+
+# This validates manifest and registry version contracts only. Separate native
+# build, WebGPU/Dawn linkage, browser, device and frozen-lockfile CI is required.
