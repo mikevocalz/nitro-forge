@@ -4,7 +4,7 @@
 | --- | --- | --- | --- |
 | Package/API | Independent @nitro-forge/board, public contracts and native entry | Source committed | TS typecheck |
 | Android rendering | 68 Kotlin files: native Canvas, shapes, ink, image, overlay | Viro source transplanted, renamed | Android Gradle compile |
-| Native tests | 15 original JVM test files copied | 9/9 Kotlin JVM tests passed in [CI 41478731482](https://github.com/mikevocalz/nitro-forge/actions/runs/41478731482); remaining Android classes require Gradle | Android full JUnit + compile |
+| Native tests | 15 original JVM test files copied | 47/47 Kotlin JVM tests passed in [CI 41481108441](https://github.com/mikevocalz/nitro-forge/actions/runs/41478731482); remaining Android classes require Gradle | Android full JUnit + compile |
 | Nitro v1 | Generated WhiteboardRenderer/Factory & JNI registration | Specs/CMake/Gradle source | Nitrogen codegen + C++/Kotlin compile |
 | Viro interop | Android CanvasSurfaces registry and XR material identity | Source contract preserved | PICO + Quest physical device |
 | Muse ink | Separate Forge spatial ink PR #15 | PR exists; not wired in consumer | One subscriber + hardware |
@@ -29,4 +29,4 @@ export pixel parity, app background/foreground, and simultaneous tutor input.
 
 ## Source-level native JVM evidence (2026-11-02)
 
-[Android Kotlin JVM CI #41478731482](https://github.com/mikevocalz/nitro-forge/actions/runs/41478731482) **PASSED**: 9/9 original unit tests compile and execute against the transplanted Kotlin sources (BoardGeometry, SeededRandom, RevisionGate). The independent JUnit harness is checked in at `tooling/board-kotlin-core` and compiles **original source files**, not rewrites. This is not an Android AAR/Gradle app build and does not prove JNI, Viro surface acquisition or headset frame output. Main board contract workflow also passed at [41478731483](https://github.com/mikevocalz/nitro-forge/actions/runs/41478731483).
+[Android Kotlin JVM CI #41478731482](https://github.com/mikevocalz/nitro-forge/actions/runs/41478731482) **PASSED**: 47/47 original unit tests compile and execute against the transplanted Kotlin sources (BoardGeometry, SeededRandom, RevisionGate, BoardJsonParser, BoardDocument, BoardLimits, ShapeBounds, ShapeGeometry and TextLayoutEngine). The independent JUnit harness is checked in at `tooling/board-kotlin-core` and compiles **original source files**, not rewrites. This is not an Android AAR/Gradle app build and does not prove JNI, Viro surface acquisition or headset frame output. Main board contract workflow also passed at [41478731483](https://github.com/mikevocalz/nitro-forge/actions/runs/41478731483).
