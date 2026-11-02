@@ -21,7 +21,7 @@ Canonical upstream docs:
 ## Requirements
 
 1. Android `minSdkVersion >= 26`, Vulkan **1.1** capable GPU, native Gradle rebuild. Vulkan support is a device requirement, not guaranteed by the Android API level.
-2. iOS **15.1+**, Metal, rebuilt native dependencies. Because Expo Go bundles legacy v2, use **custom development builds** for v3.
+2. iOS **16.4+** for Expo SDK 58 (Skia's standalone minimum is 15.1), Metal, rebuilt native dependencies. Because Expo Go bundles legacy v2, use **custom development builds** for v3.
 3. Dawn must resolve to **one** version of `react-native-webgpu-dawn`, and `react-native-skia` + `react-native-webgpu` must use a compatible release pair. Skia 3.7+ pairs with WebGPU 0.17+; current pin is 3.8.1 + 0.19.2.
 4. Web must load Skia's supported CanvasKit Web path. Browser support is a separate validation gate from iOS/Android Graphite.
 5. Migrate imports to `react-native-skia` and update removed Canvas/snapshot/native-buffer APIs before adopting v3 in an existing application.
