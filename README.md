@@ -6,6 +6,13 @@ Native document engines for React Native. Seven products — **Prism** (image),
 shared **Ignition** contract, exposed to React Native through a single Nitro
 Module and to Node/tests through the `nf-cli` protocol host.
 
+
+## Studio UI and Skia v3
+
+NitroForge is the **independent** source of truth for the seven Ignition engines and their optional shared editor UI. See [Studio suite design](docs/STUDIO_UI.md), [ArtCraft upstream integration policy](docs/UPSTREAM.md) and [Skia v3 requirement](docs/SKIA_V3.md).
+
+The Expo example now **targets `react-native-skia@3.8.1` (Graphite)** with `react-native-webgpu@0.19.2` and Expo SDK 58. Skia v2 and `@shopify/react-native-skia` are not the target. Check versions with `pnpm check:skia-v3`. Before the example can be declared build-ready, **regenerate and commit the pnpm lockfile**, run Nitro codegen and build/test iOS, Android and web on actual targets. An SDK pin is not proof of working GPU rendering.
+
 ## Layout
 
 ```
