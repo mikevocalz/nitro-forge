@@ -1,0 +1,37 @@
+name: Adaptive fold/hinge geometry (Moyo source extraction)
+
+on:
+  push:
+    branches:
+      - docs/shared-expo-meta-adaptive-ui-2026-11-02
+    paths:
+      - 'packages/adaptive-layout/**'
+      - '.github/workflows/adaptive-layout-test.yml'
+  pull_request:
+    paths:
+      - 'packages/adaptive-layout/**'
+      - '.github/workflows/adaptive-layout-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - run: corepack enable
+      - name: Install package workspace without rewriting the repository lock
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: Run transplanted Moyo fold/hinge cases
+        run: pnpm --filter @nitro-forge/adaptive-layout test
+      - name: Type-check exported pure geometry
+        run: pnpm --filter @nitro-forge/adaptive-layout typecheck
+
+# This validates pure fold math; no actual SwiftUI/Compose, Surface Duo,
+# Meta headset, window geometry bridge or native app is considered tested.
