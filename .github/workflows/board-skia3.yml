@@ -2,7 +2,7 @@ name: Forge native Skia v3 canvas
 on:
   pull_request:
     paths:
-      - 'packages/board-skia/**'
+      - 'packages/board/**'
       - 'docs/native/BOARD_SKIA3.md'
       - '.github/workflows/board-skia3.yml'
   push:
@@ -25,10 +25,10 @@ jobs:
         run: pnpm install --no-frozen-lockfile
       - name: Validate v3-only dependency
         run: |
-          node -e "const p=require('./packages/board-skia/package.json'); if(!p.peerDependencies['react-native-skia'] || p.peerDependencies['@shopify/react-native-skia']) process.exit(1)"
+          node -e "const p=require('./packages/board/package.json'); if(!p.peerDependencies['react-native-skia'] || p.peerDependencies['@shopify/react-native-skia']) process.exit(1)"
       - name: Generate upstream Forge board Nitro v1 types
         run: pnpm --filter @nitro-forge/board codegen
       - name: Typecheck renderer with published Skia v3 types
-        run: pnpm --filter @nitro-forge/board-skia typecheck
+        run: pnpm --filter @nitro-forge/board typecheck
       - name: Run QuickDraw scene fidelity tests
-        run: pnpm --filter @nitro-forge/board-skia test
+        run: pnpm --filter @nitro-forge/board test
