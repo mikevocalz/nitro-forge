@@ -14,7 +14,7 @@ val plainSource = listOf(
   "BoardRecord", "BoardShape", "BoardAsset", "BoardDiff", "BoardDocument",
   "BoardJsonParser", "InkColor", "StrokeSize", "DashStyle", "FillStyle",
   "BoardFont", "TextAlign", "TextMeasurer", "TextBlockLayout",
-  "TextLayoutEngine", "ShapeBounds", "ShapeGeometry", "BoardPalette",
+  "TextLayoutEngine", "TextLine", "ShapeBounds", "ShapeGeometry", "BoardPalette",
   "DrawShape", "HighlightShape", "GeoShape", "ConnectorShape",
   "ImageShape", "NoteShape", "TextShape", "PlacedShape",
   "BoardOverlayState", "OverlaySelection", "OverlayBoxSelection",
