@@ -28,7 +28,7 @@ for (const skill of skills) {
     `${skill} missing acceptance evidence section`);
 }
 
-for (const mention of ["No AI Slop","Expo UI","Margelo","Callstack","Argent",
+for (const mention of ["no-ai-slop","expo-ui","Margelo","Callstack","Argent",
   "TypeGPU","Meta","foldable","Mobbin","Skia v3","Kotlin","Swift"]) {
   assert.ok(registry.toLowerCase().includes(mention.toLowerCase()),
     `Missing required skill source category: ${mention}`);
