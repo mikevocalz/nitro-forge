@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { normalizeSpec, compareTriplet, collectExternal, summarizeDependency } from "./audit.mjs";
 
 test("handles pinned exact and semver ranges without guessing exotic specs", () => {
-  assert.deepEqual(normalizeSpec("~58.0.26"), { major: 58, minor: 0, patch: 26, raw: "~58.0.26" });
-  assert.deepEqual(normalizeSpec("^0.19.2"), { major: 0, minor: 19, patch: 2, raw: "^0.19.2" });
+  assert.deepEqual(normalizeSpec("~58.0.26"), { major: 58, minor: 0, patch: 26, raw: "~58.0.26", prerelease: false });
+  assert.deepEqual(normalizeSpec("^0.19.2"), { major: 0, minor: 19, patch: 2, raw: "^0.19.2", prerelease: false });
   assert.equal(normalizeSpec("workspace:*"), null);
   assert.equal(normalizeSpec("file:foo"), null);
 });
@@ -31,4 +31,15 @@ test("excludes workspace packages but includes external platform dependencies", 
   assert.equal(map.has("@nitro-forge/ignition"), false);
   assert.equal(map.has("react-native-skia"), true);
   assert.equal(map.get("expo")[0].spec, "~58.0.19");
+});
+
+test("does not mislabel Nitro v1 nightly alpha as newest stable npm production", () => {
+  const preview = "1.0.0-alpha.nightly.120.g33ef045b96c0";
+  assert.equal(normalizeSpec(preview).prerelease, true);
+  assert.equal(summarizeDependency("nitro-core", preview, "0.37.1").status,
+    "prerelease-channel-review");
+  assert.equal(summarizeDependency("react-native-nitro-modules", preview, "0.37.1").status,
+    "prerelease-channel-review");
+  assert.equal(summarizeDependency("react-native-skia", "3.8.1", "3.8.2").status,
+    "review-newer");
 });
