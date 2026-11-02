@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Store } from "@quickdrawjs/core";
-import { createNativeBoardSceneBridge } from "../src/scene-store";
+import { createNativeBoardSceneBridge } from "../../src/skia/scene-store";
 
 function fakeStore() {
   let snapshot: unknown = { document: { store: {} } };
