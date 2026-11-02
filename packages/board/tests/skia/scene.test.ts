@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { compileQuickDrawScene } from "../src/scene";
+import { compileQuickDrawScene } from "../../src/skia/scene";
 
 function snapshot(records: Record<string, unknown>) {
   return { document: { store: records } };
