@@ -34,7 +34,8 @@ export declare class ForgeDocument extends HybridObject {
 
   /**
    * Atomically apply one validated command. Errors reject the Promise.
-   * The generated binding transfers a typed JSON struct, not a JSON string.
+   * The generated binding transfers a typed outer struct. Its heterogeneous
+   * payloadJson remains serialized JSON pending verified nested-AnyJSON support.
    */
   apply(command: ForgeCommand): Promise<ForgeCommandResult>;
 
