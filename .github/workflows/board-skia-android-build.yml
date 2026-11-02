@@ -1,14 +1,23 @@
 name: Forge Skia v3 real Android compile (isolated Expo 58 lab)
 on:
-  pull_request:
+  # Full native Android compilation is expensive. Trigger only on native source
+  # changes to this preview branch, or explicit manual dispatch, not every
+  # TS offline test/doc change in a long-lived stacked PR.
+  push:
+    branches:
+      - feat/board-skia3-native-canvas-2026-11-02
     paths:
-      - 'packages/board/**'
+      - 'packages/board/android/**'
+      - 'packages/board/nitro.json'
+      - 'packages/board/package.json'
+      - 'packages/board/src/skia/NativeBoardCanvas.tsx'
+      - 'packages/board/src/skia/NativeBoardCanvasWithInput.tsx'
       - 'apps/board-native-lab/**'
       - '.github/workflows/board-skia-android-build.yml'
   workflow_dispatch:
 concurrency:
   group: board-native-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   android-native:
     runs-on: ubuntu-latest
