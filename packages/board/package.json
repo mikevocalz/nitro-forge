@@ -36,10 +36,6 @@
     "test": "vitest run",
     "test:android": "cd android && ./gradlew testDebugUnitTest"
   },
-  "dependencies": {
-    "@quickdrawjs/core": "0.2.0",
-    "zustand": "^5.0.16"
-  },
   "peerDependencies": {
     "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
@@ -47,7 +43,9 @@
     "react-native": ">=0.88.0",
     "@reactvision/react-viro": ">=3.0.3-moyo.1 <4.0.0",
     "react-native-skia": "^3.8.1",
-    "yjs": ">=13.6.32 <14"
+    "yjs": ">=13.6.32 <14",
+    "@quickdrawjs/core": "0.2.0",
+    "zustand": ">=5.0.16 <6"
   },
   "peerDependenciesMeta": {
     "@reactvision/react-viro": {
@@ -64,6 +62,12 @@
     },
     "yjs": {
       "optional": true
+    },
+    "@quickdrawjs/core": {
+      "optional": true
+    },
+    "zustand": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -74,6 +78,8 @@
     "typescript": "^6.0.3",
     "vitest": "^3.2.7",
     "react-native-skia": "3.8.1",
-    "yjs": "13.6.32"
+    "yjs": "13.6.32",
+    "@quickdrawjs/core": "0.2.0",
+    "zustand": "5.0.16"
   }
 }
