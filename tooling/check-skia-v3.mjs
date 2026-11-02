@@ -54,7 +54,7 @@ const properties = app.expo.plugins.find((plugin) =>
 );
 assert.ok(properties, "Skia v3 needs the expo-build-properties native configuration.");
 assert.ok(properties[1]?.android?.minSdkVersion >= 26, "Skia v3 requires Android minSdk 26.");
-assert.ok(Number(properties[1]?.ios?.deploymentTarget) >= 15.1, "Skia v3 requires iOS 15.1+.");
+assert.ok(Number(properties[1]?.ios?.deploymentTarget) >= 16.4, "Expo SDK 58 requires iOS 16.4+.");
 
 console.log(`Skia v${deps["react-native-skia"]} Graphite + WebGPU v${deps["react-native-webgpu"]}: manifest contract OK.`);
 console.log("Not a runtime/build check. Verify one react-native-webgpu-dawn, Android Vulkan 1.1, and device builds.");
