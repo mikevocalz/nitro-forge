@@ -86,6 +86,21 @@ describe("Pen pairing and verified-ready controller", () => {
     expect(c.state.getState().kind).toBe("idle"); c.dispose();
     expect(stopped).toBeGreaterThan(0);
   });
+  it("releases a GATT link exactly once when the peripheral disconnects unexpectedly", async () => {
+    const f = fakePort();
+    const controller = createPenConnectionController(f.port);
+    await controller.begin();
+    await controller.connect(f.device.id);
+    f.disconnect();
+    expect(controller.state.getState()).toMatchObject({
+      kind: "error", code: "disconnected",
+    });
+    expect(f.metrics().disconnectCalls).toBe(1);
+    await controller.cancel();
+    expect(f.metrics().disconnectCalls).toBe(1);
+    controller.dispose();
+    expect(f.metrics().disconnectCalls).toBe(1);
+  });
   it("keeps an established link until explicit cancel and disconnects once", async () => {
     const f=fakePort(), c=createPenConnectionController(f.port);
     await c.begin(); await c.connect(f.device.id); await c.cancel();
