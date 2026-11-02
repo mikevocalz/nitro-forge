@@ -1,0 +1,57 @@
+name: Resolve Nitro v1 alpha preview lockfile
+
+on:
+  push:
+    branches:
+      - feat/ignition-nitro-v1-preview-2026-11-02
+    paths:
+      - 'packages/ignition-v1-lab/package.json'
+      - '.github/workflows/nitro-v1-lockfile.yml'
+
+concurrency:
+  group: nitro-v1-preview-lockfile
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    if: github.repository == 'mikevocalz/nitro-forge' && github.ref == 'refs/heads/feat/ignition-nitro-v1-preview-2026-11-02'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Enable exact pnpm via Corepack
+        run: corepack enable
+      - name: Resolve preview dependencies without running native install scripts
+        run: pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+      - name: Prove frozen dependency resolution
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Regenerate exact v1 alpha specs
+        run: pnpm --filter @nitro-forge/ignition-v1-lab codegen
+      - name: Check generated classes and stable app isolation
+        run: node tooling/nitro-v1/verify-generated.mjs
+      - name: Update only the lockfile on the trusted preview branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin feat/ignition-nitro-v1-preview-2026-11-02
+          git merge --no-edit origin/feat/ignition-nitro-v1-preview-2026-11-02
+          pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+          pnpm install --frozen-lockfile --ignore-scripts
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo 'Preview lockfile is already current.'
+          else
+            git commit -m 'chore(lockfile): resolve isolated Nitro v1 alpha generator'
+            git push origin HEAD:feat/ignition-nitro-v1-preview-2026-11-02
+          fi
+# This installs/builds no native v1 library and does not modify Moyo or apps/example.
