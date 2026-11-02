@@ -33,7 +33,9 @@ export function validateCatalog(catalog) {
       || (candidate.admittedSha !== null
         && (typeof candidate.admittedSha !== "string" || !shaPattern.test(candidate.admittedSha)))
       || !["unreviewed", "reviewed"].includes(candidate.licenseReview)
-      || !["not-integrated", "source-admitted", "runtime-verified"].includes(candidate.runtimeStatus)) {
+      || !["not-integrated", "source-admitted", "runtime-verified"].includes(candidate.runtimeStatus)
+      || (candidate.runtimeStatus !== "not-integrated"
+        && (candidate.admittedSha === null || candidate.licenseReview !== "reviewed"))) {
       throw new Error("Invalid candidate: " + String(candidate?.name ?? "<missing>"));
     }
     if (names.has(candidate.name)) throw new Error("Duplicate upstream candidate: " + candidate.name);
