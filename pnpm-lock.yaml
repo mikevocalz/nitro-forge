@@ -178,15 +178,15 @@ importers:
   packages/ignition-v1-lab:
     dependencies:
       react-native-nitro-modules:
-        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
-        version: 1.0.0-alpha.nightly.115.gcdaf72e60229(react-native@0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+        specifier: 1.0.0-alpha.nightly.120.g33ef045b96c0
+        version: 1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
     devDependencies:
       nitro-core:
-        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
-        version: 1.0.0-alpha.nightly.115.gcdaf72e60229
+        specifier: 1.0.0-alpha.nightly.120.g33ef045b96c0
+        version: 1.0.0-alpha.nightly.120.g33ef045b96c0
       nitrogen:
-        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
-        version: 1.0.0-alpha.nightly.115.gcdaf72e60229
+        specifier: 1.0.0-alpha.nightly.120.g33ef045b96c0
+        version: 1.0.0-alpha.nightly.120.g33ef045b96c0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -3018,11 +3018,11 @@ packages:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
 
-  nitro-core@1.0.0-alpha.nightly.115.gcdaf72e60229:
-    resolution: {integrity: sha512-lpfa8XfKJLbpoq7Bx8CwegbdZ1798cuqS0wD7cxzNEah7ENUSFfrVz3EkohldwKq5ZZ84IEGvxyGHZRsQfBRWg==}
+  nitro-core@1.0.0-alpha.nightly.120.g33ef045b96c0:
+    resolution: {integrity: sha512-HJLx09kp/mgG4v81WdxQ50ymuh4uS1vhD4OTyjRX+FNVS0K6i1picnUiLzfkr0qFwcDAkfTdXmYtaKO7j+hZEg==}
 
-  nitrogen@1.0.0-alpha.nightly.115.gcdaf72e60229:
-    resolution: {integrity: sha512-RAMfQXme9xUqa21r8ZC4bwG25wwH+gBHSJNn82Jqh5qonoSmPuZ4055+bP5jzgvuECpZtH+dGYKnqqeJ5CLluQ==}
+  nitrogen@1.0.0-alpha.nightly.120.g33ef045b96c0:
+    resolution: {integrity: sha512-bFfD2HaVx+yKz0O3eXEbFRJexsIM7k+O1Ijfh58RWjLfdfa3de6JLp1tFDmButwDVPXiU6dgzGSB6H7eCowjPg==}
     hasBin: true
 
   node-fetch@2.7.0:
@@ -3226,8 +3226,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  react-native-nitro-modules@1.0.0-alpha.nightly.115.gcdaf72e60229:
-    resolution: {integrity: sha512-P4yR0PGUvdx9G71q0AXjWvkw/72/MIcXZPiryh9v8r6Ut5K03mKphVaGlHt6WrLNB0cKOsUVcEHPcFV1u4dXIQ==}
+  react-native-nitro-modules@1.0.0-alpha.nightly.120.g33ef045b96c0:
+    resolution: {integrity: sha512-WEnHB+KAasRxq4rSH82IwECTaVAaNq3dFREOlHQ2Fp+RpPsBGMfbvWRUcLAyJIgwDo2Uqb1mpGd5ryzShLcA6A==}
     peerDependencies:
       react: '*'
       react-native: '>=0.88.0'
@@ -7019,12 +7019,12 @@ snapshots:
     dependencies:
       content-type: 2.1.0
 
-  nitro-core@1.0.0-alpha.nightly.115.gcdaf72e60229: {}
+  nitro-core@1.0.0-alpha.nightly.120.g33ef045b96c0: {}
 
-  nitrogen@1.0.0-alpha.nightly.115.gcdaf72e60229:
+  nitrogen@1.0.0-alpha.nightly.120.g33ef045b96c0:
     dependencies:
       chalk: 5.6.2
-      nitro-core: 1.0.0-alpha.nightly.115.gcdaf72e60229
+      nitro-core: 1.0.0-alpha.nightly.120.g33ef045b96c0
       ts-morph: 28.0.0
       yargs: 18.2.0
       zod: 4.6.7
@@ -7225,9 +7225,9 @@ snapshots:
       react: 19.3.0
       react-native: 0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
 
-  react-native-nitro-modules@1.0.0-alpha.nightly.115.gcdaf72e60229(react-native@0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
+  react-native-nitro-modules@1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
     dependencies:
-      nitro-core: 1.0.0-alpha.nightly.115.gcdaf72e60229
+      nitro-core: 1.0.0-alpha.nightly.120.g33ef045b96c0
       react: 19.3.0
       react-native: 0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
 
