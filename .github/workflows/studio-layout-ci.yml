@@ -1,0 +1,31 @@
+name: Studio dock model and TS contract
+
+on:
+  push:
+    branches:
+      - docs/studio-snaprails-mobbin-workspace-2026-11-02
+  pull_request:
+    paths:
+      - 'packages/studio-layout/**'
+      - '.github/workflows/studio-layout-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dock-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - run: corepack enable
+      - name: Install for new workspace package
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: Run real typed dock model tests
+        run: pnpm --filter @nitro-forge/studio-layout test
+      - name: Strict TypeScript contract
+        run: pnpm --filter @nitro-forge/studio-layout typecheck
+# This exercises layout state only, not native Expo Host, dragging or Rust editing.
