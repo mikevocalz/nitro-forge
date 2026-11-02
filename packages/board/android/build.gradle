@@ -26,7 +26,23 @@ try {
   logger.warn("[forge-board] Viro package unresolved; current Android XR renderer requires it: ${e.message}")
 }
 
+// Viro's CanvasSurfaces class is optional. A Skia-only app must not compile
+// the Viro-specific source files against a missing AAR. Preserve the generated
+// Nitro v1 API by using a fail-closed no-Viro render-loop implementation.
+def viroAar = viroAndroidDir == null ? null : new File(viroAndroidDir, "react_viro/react_viro-release.aar")
+def hasViroCanvasAar = viroAar != null && viroAar.exists()
+
 android {
+  sourceSets {
+    main {
+      if (!hasViroCanvasAar) {
+        java {
+          exclude "**/whiteboard/SurfaceSlot.kt", "**/whiteboard/WhiteboardRenderLoop.kt"
+          srcDirs "src/noViro/java"
+        }
+      }
+    }
+  }
   namespace "com.margelo.nitro.forgeboard"
   ndkVersion getExtOrDefault("ndkVersion", "27.2.12479018")
   compileSdkVersion getExtOrDefault("compileSdkVersion", 36)
@@ -64,12 +80,9 @@ dependencies {
   testImplementation "junit:junit:4.13.2"
   testImplementation "org.json:json:20250517"
 
-  if (viroAndroidDir != null) {
-    def a = new File(viroAndroidDir, "react_viro/react_viro-release.aar")
-    if (a.exists()) {
-      compileOnly files(zipTree(a).matching { include "classes.jar" })
-    } else {
-      logger.warn("[forge-board] No react_viro AAR at ${a}; native Kotlin compile requires CanvasSurfaces")
-    }
+  if (hasViroCanvasAar) {
+    compileOnly files(zipTree(viroAar).matching { include "classes.jar" })
+  } else {
+    logger.lifecycle("[forge-board] Viro CanvasSurfaces AAR absent: compiling no-Viro XR availability stub; Skia v3 2D is unaffected")
   }
 }
