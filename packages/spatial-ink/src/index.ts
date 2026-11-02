@@ -43,7 +43,8 @@ export interface MuseSubscriptionOptions {
 }
 
 const validPoint = (p: Vec3 | null): p is Vec3 =>
-  p !== null && p.length === 3 && p.every(Number.isFinite);
+  Array.isArray(p) && p.length === 3 &&
+  p.every((n) => typeof n === "number" && Number.isFinite(n));
 
 function normalizedPressure(sample: MuseNativeSample): number | undefined {
   return Number.isFinite(sample.pressure) &&
