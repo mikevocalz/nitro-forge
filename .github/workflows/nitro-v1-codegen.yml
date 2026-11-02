@@ -39,6 +39,12 @@ jobs:
         run: pnpm --filter @nitro-forge/ignition-v1-lab typecheck
       - name: Check existing stable engine APIs
         run: pnpm --filter @nitro-forge/ignition typecheck
+      - name: Keep generated v1 C++/Apple/Android/JS contracts for native review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nitro-v1-generated-contracts
+          path: packages/ignition-v1-lab/nitrogen/generated
+          retention-days: 14
 
 # This job intentionally DOES NOT build an Expo app with both Nitro 0.x and 1.x.
 # A separately isolated native sample must prove C++/Rust linkage and device
