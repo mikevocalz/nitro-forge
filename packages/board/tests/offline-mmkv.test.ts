@@ -54,7 +54,8 @@ describe("offline MMKV v4 checkpoint adapter", () => {
     const key = [...h.bytes.keys()][0]!;
     const raw = h.bytes.get(key)!;
     const copy = raw.slice(0);
-    new Uint8Array(copy)[copy.byteLength - 1] ^= 0xff;
+    const corruptBytes = new Uint8Array(copy);
+    corruptBytes[corruptBytes.length - 1] = corruptBytes[corruptBytes.length - 1]! ^ 0xff;
     h.bytes.set(key, copy);
     await expect(adapter.load("board")).rejects.toThrow(/checksum/);
     h.bytes.set(key, raw.slice(0, 5));
