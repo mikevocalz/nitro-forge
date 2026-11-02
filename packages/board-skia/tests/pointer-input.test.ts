@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createNativeBoardPointerRouter, type BoardPointerSample } from "../src/pointer-input";
 const event = (id: number, x: number, y: number, pointerType = "pen", pressure?: number) =>
-  ({ pointerId: id, pointerType, offsetX: x, offsetY: y, isPrimary: true, button: 0, pressure });
+  ({ pointerId: id, pointerType, offsetX: x, offsetY: y, isPrimary: true, button: 0, ...(pressure === undefined ? {} : { pressure }) });
 
 function create() {
   const out: BoardPointerSample[] = [];
