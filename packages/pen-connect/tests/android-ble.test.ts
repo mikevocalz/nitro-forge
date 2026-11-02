@@ -49,7 +49,7 @@ describe("Android Nitro v1 BLE disconnection cleanup", () => {
     const port = createAndroidBlePenPort(f.native, { connectionPollMs: 250 });
     const link = await port.connect("device-A");
     const notices: string[] = [];
-    link.onDisconnected(reason => { notices.push(reason ?? "unknown"); });
+    link.onDisconnected!(reason => { notices.push(reason ?? "unknown"); });
     f.setConnected(false);
     vi.advanceTimersByTime(250);
     expect(notices).toEqual(["Bluetooth link disconnected."]);
@@ -66,7 +66,7 @@ describe("Android Nitro v1 BLE disconnection cleanup", () => {
     const port = createAndroidBlePenPort(f.native, { connectionPollMs: 250 });
     const link = await port.connect("device-A");
     const notices: string[] = [];
-    link.onDisconnected(reason => { notices.push(reason ?? "unknown"); });
+    link.onDisconnected!(reason => { notices.push(reason ?? "unknown"); });
     f.setThrowDuringPoll(true);
     vi.advanceTimersByTime(250);
     expect(f.disconnect).toHaveBeenCalledTimes(1);
@@ -81,7 +81,7 @@ describe("Android Nitro v1 BLE disconnection cleanup", () => {
     const port = createAndroidBlePenPort(f.native, { connectionPollMs: 250 });
     const link = await port.connect("device-A");
     const notices = vi.fn();
-    link.onDisconnected(notices);
+    link.onDisconnected!(notices);
     await link.disconnect();
     await link.disconnect();
     vi.advanceTimersByTime(2000);
