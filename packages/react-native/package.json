@@ -1,0 +1,64 @@
+{
+  "name": "@nitro-forge/react-native",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Independent React Native Nitro v1 transport for the seven Ignition Rust document engines",
+  "type": "module",
+  "imports": {
+    "#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs"
+  },
+  "exports": {
+    ".": {
+      "react-native": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "codegen": "nitrogen",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check:generated": "node ../../tooling/nitro-v1/verify-generated.mjs",
+    "build": "pnpm codegen && pnpm typecheck"
+  },
+  "peerDependencies": {
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.115.gcdaf72e60229",
+    "nitro-core": "1.0.0-alpha.nightly.115.gcdaf72e60229",
+    "react-native": ">=0.88.0"
+  },
+  "devDependencies": {
+    "nitrogen": "1.0.0-alpha.nightly.115.gcdaf72e60229",
+    "nitro-core": "1.0.0-alpha.nightly.115.gcdaf72e60229",
+    "typescript": "^6.0.3"
+  },
+  "swiftpmConfig": {
+    "name": "NitroForgeV1",
+    "dependencies": [
+      "react-native-nitro-modules"
+    ]
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "react-native": "./src/index.ts",
+  "source": "./src/index.ts",
+  "files": [
+    "src",
+    "cpp",
+    "nitro.json",
+    "nitrogen/generated",
+    "android",
+    "apple",
+    "Package.swift",
+    "*.podspec",
+    "react-native.config.js",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "keywords": [
+    "nitro",
+    "react-native",
+    "rust",
+    "document-editor",
+    "native-module"
+  ]
+}

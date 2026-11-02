@@ -1,6 +1,7 @@
 /**
- * Standalone Nitro v1 *preview*, intentionally unused by Expo or Moyo until
- * Nitrogen, C++/Rust ownership, native builds, and mobile devices are proven.
+ * Reusable Nitro v1 transport package (unreleased). Native consumers require
+ * the generated platform module and linked Rust library; source code alone
+ * is not a working editor. Keep app-specific UI, auth, and storage separate.
  */
 import "react-native-nitro-modules";
 
