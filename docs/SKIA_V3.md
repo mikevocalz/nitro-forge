@@ -20,7 +20,7 @@ Canonical upstream docs:
 
 ## Requirements
 
-1. Android `minSdkVersion >= 26`, Vulkan **1.1** capable GPU, native Gradle rebuild. Vulkan support is a device requirement, not guaranteed by the Android API level.
+1. Android `minSdkVersion >= 26`, **compileSdkVersion 37** for Expo 58 asset/filesystem/font/keep-awake AAR metadata, targetSdkVersion 36 until a separately reviewed target-behavior upgrade, Vulkan **1.1** capable GPU, native Gradle rebuild. Compile SDK 37 does not require installing API 37 on consumer devices, and Vulkan capability is device-specific.
 2. iOS **16.4+** for Expo SDK 58 (Skia's standalone minimum is 15.1), Metal, rebuilt native dependencies. Because Expo Go bundles legacy v2, use **custom development builds** for v3.
 3. Dawn must resolve to **one** version of `react-native-webgpu-dawn`, and `react-native-skia` + `react-native-webgpu` must use a compatible release pair. Skia 3.7+ pairs with WebGPU 0.17+; current pin is 3.8.1 + 0.19.2.
 4. Web must load Skia's supported CanvasKit Web path. Browser support is a separate validation gate from iOS/Android Graphite.
@@ -42,7 +42,7 @@ pnpm --filter @nitro-forge/example exec expo run:android
 pnpm why react-native-webgpu-dawn
 ```
 
-**Important:** this branch updates `apps/example/package.json` and native config, but `pnpm-lock.yaml` has not been regenerated in this ChatGPT environment. Re-generate and commit it before a freeze-locked install, merge or release. Test native codegen, architecture-specific artifacts, Skia scenes, GPU memory, actual devices, web bundling and Moyo integration separately. The runtime engine bridge is currently not implemented.
+**Dependency status:** GitHub Actions generated and committed an updated `pnpm-lock.yaml` and verified a frozen install ([CI run 41458549938](https://github.com/mikevocalz/nitro-forge/actions/runs/41458549938)). Android API 37 native compilation, Xcode linking, Skia v3 pixel output and real-device behavior still require separate evidence. Do not treat a frozen dependency install as a working native renderer. Test native codegen, architecture-specific artifacts, Skia scenes, GPU memory, actual devices, web bundling and Moyo integration separately. The runtime engine bridge is currently not implemented.
 
 Run `node tooling/check-skia-v3.mjs` offline for the package policy. The scheduled GitHub Actions gate also uses `--registry` to compare pinned versions with the latest npm publications. A new npm release triggers a **review/update PR**, not an unverified auto-upgrade.
 
