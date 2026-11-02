@@ -1,0 +1,59 @@
+name: Standalone NitroForge React Native package
+
+on:
+  push:
+    branches:
+      - feat/package-react-native-2026-11-02
+  pull_request:
+    paths:
+      - 'packages/react-native/**'
+      - 'tooling/nitro-v1/**'
+      - '.github/workflows/react-native-package.yml'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Enable pinned pnpm
+        run: corepack enable
+      - name: Frozen workspace install
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Test package independence and v1 boundary
+        run: node --test packages/react-native/tests/package.test.mjs
+      - name: Generate native C++ and JavaScript v1 class bindings
+        run: pnpm --filter @nitro-forge/react-native codegen
+      - name: Check exact v1 codegen and isolated runtime
+        run: node tooling/nitro-v1/verify-generated.mjs
+      - name: Check public TypeScript API
+        run: pnpm --filter @nitro-forge/react-native typecheck
+      - name: Produce a pre-release package archive for inspection
+        run: |
+          mkdir -p "$RUNNER_TEMP/nitroforge-pack"
+          pnpm --filter @nitro-forge/react-native pack --pack-destination "$RUNNER_TEMP/nitroforge-pack"
+          tarball=$(find "$RUNNER_TEMP/nitroforge-pack" -maxdepth 1 -name '*.tgz' -print -quit)
+          test -n "$tarball"
+          tar -tzf "$tarball" | tee "$RUNNER_TEMP/nitroforge-files.txt"
+          grep -q 'package/cpp/HybridForgeFactory.cpp' "$RUNNER_TEMP/nitroforge-files.txt"
+          grep -q 'package/cpp/HybridForgeDocument.cpp' "$RUNNER_TEMP/nitroforge-files.txt"
+          grep -q 'package/nitrogen/generated/shared/javascript/ForgeFactory.cjs' "$RUNNER_TEMP/nitroforge-files.txt"
+          grep -q 'package/nitrogen/generated/shared/javascript/ForgeDocument.cjs' "$RUNNER_TEMP/nitroforge-files.txt"
+          grep -q 'package/nitro.json' "$RUNNER_TEMP/nitroforge-files.txt"
+      - name: Archive package file manifest (not a production release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: react-native-package-contents
+          path: ${{ runner.temp }}/nitroforge-files.txt
+          retention-days: 14
+
+# The package is private. This checks source/package layout, type contracts
+# and generated artifacts, not actual Expo iOS/Android links or GPU runtime.
