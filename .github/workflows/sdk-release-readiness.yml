@@ -10,7 +10,8 @@ on:
       - '.github/workflows/sdk-release-readiness.yml'
   workflow_dispatch:
   schedule:
-    - cron: '21 11 * * 1'
+    - cron: '21 11 * * 1' # Weekly full npm catalogue audit
+    - cron: '19 9 * * *' # Daily lightweight Nitro v1 upstream check
 
 permissions:
   contents: read
@@ -26,10 +27,12 @@ jobs:
       - run: node --test tooling/release/audit.test.mjs
       - run: node tooling/release/audit.mjs --offline
       - run: node tooling/release/check-package-boundaries.mjs
+      - run: node --test tooling/release/nitro-v1-latest.test.mjs
+      - run: node tooling/release/nitro-v1-latest.mjs --offline
 
   npm-latest-review:
     needs: verify-release-boundaries
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '21 11 * * 1'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -43,3 +46,17 @@ jobs:
           name: nitroforge-npm-latest-review
           path: reports/npm/latest-review.md
           retention-days: 14
+
+  nitro-v1-latest:
+    needs: verify-release-boundaries
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '19 9 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Check newest published Nitro v1 release (no automatic native upgrades)
+        run: node tooling/release/nitro-v1-latest.mjs --online
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
