@@ -33,8 +33,8 @@ jobs:
       - name: Verify native class overrides against generated headers
         run: |
           ROOT="$PWD"
-          NITRO_ROOT=$(pnpm --filter @nitro-forge/ignition-v1-lab exec node -p "require.resolve('nitro-core/package.json').replace(/\\/package.json$/, '')")
-          RN_ROOT=$(pnpm --filter @nitro-forge/example exec node -p "require.resolve('react-native/package.json').replace(/\\/package.json$/, '')")
+          NITRO_ROOT=$(pnpm --filter @nitro-forge/ignition-v1-lab exec node -p "require('node:path').dirname(require.resolve('nitro-core/package.json'))")
+          RN_ROOT=$(pnpm --filter @nitro-forge/example exec node -p "require('node:path').dirname(require.resolve('react-native/package.json'))")
           echo "Native Nitro core: $NITRO_ROOT"
           echo "React Native headers: $RN_ROOT"
           clang++ -std=c++20 -Wall -Wextra -Werror -Wno-unused-parameter -fsyntax-only \
