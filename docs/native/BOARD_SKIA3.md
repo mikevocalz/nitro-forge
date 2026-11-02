@@ -72,8 +72,7 @@ strokes should silently vanish.
     fallback={<ExistingBoard />}
   />
 
-The example is descriptive; a consumer must **subscribe to Store changes**,
-coalesce updates per frame and pass the latest immutable scene object to React.
+The example is descriptive; `createNativeBoardSceneBridge` plus `ConnectedNativeBoardCanvas` now implement frame-coalesced Store subscription. The app still owns the single QuickDraw store and input callbacks.
 Do not rebuild the whole scene on every 6DoF pen sensor sample.
 
 ## Platform scope
@@ -92,7 +91,9 @@ Do not rebuild the whole scene on every 6DoF pen sensor sample.
 - [x] Pure scene compiler validates QuickDraw JSON, pressure outline geometry,
   draw ordering, named colors, known shapes and explicit unsupported conditions.
 - [x] Native React Native Graphite Canvas source authored with fallback.
-- [ ] TypeScript and 7 replay tests pass in GitHub Actions (read latest run).
+- [x] Zustand vanilla `createNativeBoardSceneBridge` subscribes to one QuickDraw Store, coalesces by display frame and cleans up listeners.
+- [x] `NativeBoardCanvasWithInput` uses native RN Pointer Events; pointer coordinates map exactly once to board space, preserving pressure, cancellation and palm rejection. No WebView or second editor.
+- [x] TypeScript, published Skia v3 types, and **12/12 replay tests PASS** ([CI 41479322871](https://github.com/mikevocalz/nitro-forge/actions/runs/41479322871)); three test files cover scene, frame-coalesced Zustand bridge, and native pen/touch input.
 - [ ] Real Expo 58 + react-native-skia v3 native device compile on iOS / Android.
 - [ ] Vision Pro visionOS Skia native view support demonstrated.
 - [ ] Native font layout/image assets/arrows and rotated shapes parity.
