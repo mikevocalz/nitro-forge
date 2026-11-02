@@ -15,7 +15,8 @@
     "./specs/*": "./src/specs/*.nitro.ts",
     "./skia": "./src/skia/index.ts",
     "./skia/native": "./src/skia/native.ts",
-    "./ink": "./src/ink/index.ts"
+    "./ink": "./src/ink/index.ts",
+    "./offline": "./src/offline.ts"
   },
   "files": [
     "src",
