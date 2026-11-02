@@ -1,0 +1,37 @@
+name: Native drawing contracts (source-level)
+on:
+  pull_request:
+    paths:
+      - "packages/spatial-ink/**"
+      - "packages/native-board/**"
+      - "docs/native/SPATIAL_INK_MUSE.md"
+      - "docs/native/NATIVE_BOARD_INK.md"
+      - ".github/workflows/native-drawing-contracts.yml"
+  push:
+    branches:
+      - "feat/spatial-ink-logitech-muse-2026-11-02"
+      - "feat/native-whiteboard-skia3-ink-2026-11-02"
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: corepack enable
+      - name: Install workspace dependencies
+        # New packages still need the workspace lockfile regenerated/reviewed.
+        run: pnpm install --no-frozen-lockfile
+      - name: Check spatial-ink API and tests
+        run: |
+          pnpm --filter @nitro-forge/spatial-ink typecheck
+          pnpm --filter @nitro-forge/spatial-ink test
+      - name: Check native-board geometry and tests
+        # Excludes native.tsx until the Expo 58 Skia 3.8 dev client is linked.
+        run: |
+          pnpm --filter @nitro-forge/native-board typecheck
+          pnpm --filter @nitro-forge/native-board test
