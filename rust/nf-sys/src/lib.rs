@@ -12,6 +12,7 @@
 
 // New v1 transport is separate: legacy nf_* entrypoints remain available.
 mod ffi_v1;
+mod ffi_v1_parts;
 mod session_registry;
 
 use ignition_core::{
