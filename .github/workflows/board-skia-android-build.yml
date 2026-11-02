@@ -5,13 +5,10 @@ on:
       - 'packages/board-skia/**'
       - 'apps/board-native-lab/**'
       - '.github/workflows/board-skia-android-build.yml'
-  push:
-    branches:
-      - 'feat/board-skia3-*'
-    paths:
-      - 'packages/board-skia/**'
-      - 'apps/board-native-lab/**'
-      - '.github/workflows/board-skia-android-build.yml'
+  workflow_dispatch:
+concurrency:
+  group: board-native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   android-native:
     runs-on: ubuntu-latest
