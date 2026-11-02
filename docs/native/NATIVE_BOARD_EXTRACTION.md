@@ -1,6 +1,6 @@
 # Native whiteboard/canvas extraction into Nitro-Forge
 
-**Status: DRAFT / SOURCE PORT. Native app and headset validation NOT RUN.**
+**Status: DRAFT / SOURCE PORT. Nitro v1 generator, TypeScript and JS replay CI passed; Android app linking, JUnit and headset validation NOT RUN.**
 Issue addressed: Move the Moyo/Viro-specific native whiteboard rendering code
 into a reusable, first-party `@nitro-forge/board` package with the same
 document, ink and rendering semantics.
@@ -194,8 +194,8 @@ pnpm --filter @nitro-forge/board test
 - [x] Native Kotlin implementation and JVM tests copied to separate namespace.
 - [x] Nitro v1 specs, package boundaries, Android linkage files authored.
 - [x] JS QuickDraw binding/encoder source and mock tests added.
-- [ ] Node install / Nitro v1 codegen and generated C++/Kotlin signature checks.
-- [ ] TypeScript and Vitest PASS recorded in CI.
+- [x] Workspace install + Nitro v1 codegen: 2/2 HybridObjects generated, outputs present ([CI run 41475556197](https://github.com/mikevocalz/nitro-forge/actions/runs/41475556197)). Native C++/Kotlin compilation remains unverified.
+- [x] TypeScript and Vitest PASSED in CI ([run 41475556197](https://github.com/mikevocalz/nitro-forge/actions/runs/41475556197): 3/3 JS replay tests).
 - [ ] Kotlin JUnit and Android Gradle assembleDebug PASS with Viro registry AAR.
 - [ ] Device tests on Quest 3, PICO 4 Ultra and Android phone.
 - [ ] iOS/visionOS Skia v3 native renderer (separate follow-up).
