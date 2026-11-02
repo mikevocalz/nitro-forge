@@ -1,7 +1,10 @@
 export { NativeBoardCanvas } from "./NativeBoardCanvas";
+export { NativeBoardCanvasWithInput } from "./NativeBoardCanvasWithInput";
 export { ConnectedNativeBoardCanvas } from "./ConnectedNativeBoardCanvas";
 export type { NativeBoardCanvasProps } from "./NativeBoardCanvas";
 export { compileQuickDrawScene } from "./scene";
 export { createNativeBoardSceneBridge } from "./scene-store";
+export { createNativeBoardPointerRouter } from "./pointer-input";
 export type { SceneResult } from "./scene";
 export type { NativeBoardSceneBridge, NativeBoardSceneBridgeOptions } from "./scene-store";
+export type { NativeBoardPointerRouter, NativeBoardPointerOptions, BoardPointerSample } from "./pointer-input";
