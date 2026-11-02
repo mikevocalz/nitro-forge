@@ -1,6 +1,5 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
-import { createInkOutlineEncoder } from "@nitro-forge/board";
-import type { ShapeRecord, Store } from "@quickdrawjs/core";
+import type { Snapshot, Store } from "@quickdrawjs/core";
 import { compileQuickDrawScene, type SceneResult } from "./scene";
 
 /**
@@ -15,7 +14,8 @@ export interface NativeBoardSceneState {
 }
 export interface NativeBoardSceneBridgeOptions {
   readonly source: Pick<Store, "getSnapshot" | "listen">;
-  readonly getInkOutline: (shape: ShapeRecord) => number[] | undefined;
+  /** Caller-owned QuickDraw snapshot encoder: no native Viro dependency. */
+  readonly encodeSnapshot: (snapshot: Snapshot) => string;
   /** Must schedule a callback before the next display frame. */
   readonly requestFrame: (callback: (timestampMs: number) => void) => number;
   readonly cancelFrame: (handle: number) => void;
@@ -28,8 +28,7 @@ export interface NativeBoardSceneBridge {
   dispose(): void;
 }
 export function createNativeBoardSceneBridge(options: NativeBoardSceneBridgeOptions): NativeBoardSceneBridge {
-  const encoder = createInkOutlineEncoder(options.getInkOutline);
-  const capture = () => compileQuickDrawScene(encoder.encodeSnapshot(options.source.getSnapshot()));
+  const capture = () => compileQuickDrawScene(options.encodeSnapshot(options.source.getSnapshot()));
   const state = createStore<NativeBoardSceneState>(() => ({
     scene: capture(), revision: 1,
   }));

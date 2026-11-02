@@ -27,7 +27,7 @@ describe("Zustand native board scene subscription", () => {
     let next = 1;
     const b = createNativeBoardSceneBridge({
       source: s.source,
-      getInkOutline: () => undefined,
+      encodeSnapshot: (value) => JSON.stringify(value),
       requestFrame(cb) { const id = next++; pending.set(id, cb); return id; },
       cancelFrame(handle) { pending.delete(handle); },
     });
