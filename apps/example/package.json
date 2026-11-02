@@ -33,7 +33,11 @@
     "react-native-skia": "3.8.1",
     "react-native-webgpu": "0.19.2",
     "uniwind": "1.12.0",
-    "tailwindcss": "4.3.3"
+    "tailwindcss": "4.3.3",
+    "expo-constants": "~58.0.14",
+    "expo-dev-client": "~58.0.15",
+    "@expo/metro-runtime": "~58.0.15",
+    "expo-linking": "~58.0.14"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",
