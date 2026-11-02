@@ -4,14 +4,14 @@ import { assertSafeEngineHandle, NitroHost, type ForgeNitro } from "../src/host"
 
 function bridge(openHandle = 1) {
   const methods = {
-    openEngine: vi.fn((_kind: string) => openHandle),
+    openEngine: vi.fn(async (_kind: string) => openHandle),
     applyJson: vi.fn(async (_handle: number, _commandJson: string) =>
       JSON.stringify({ ok: true, data: { ok: true }, events: [] })),
     snapshotB64: vi.fn(async (_handle: number) => "TkZEMQ=="),
     restoreB64: vi.fn(async (_handle: number, _bytes: string) => {}),
     undo: vi.fn(async (_handle: number) => true),
     redo: vi.fn(async (_handle: number) => true),
-    closeEngine: vi.fn((_handle: number) => true),
+    closeEngine: vi.fn(async (_handle: number) => true),
   } satisfies ForgeNitro;
   return methods;
 }
