@@ -6,7 +6,7 @@ Independent `Ignition` Rust document engines (Prism, Cadence, Splice, Folio, Pit
 ## Skills first: required before implementation or PR authoring
 1. Read `docs/ENGINEERING_SKILLS.md`, the workstream-specific local `.agents/skills/*/SKILL.md`, and `docs/WORKSTREAM_ROSTER.md`.
 2. Read the relevant *pinned* upstream skills from the skill registry before changing code. Verify the file and version actually exists; never claim a skill was loaded if only its name or README was read.
-3. For Expo/native UI begin with `expo-overview`, then `expo-ui`, `expo-native-ui`, `expo-design-system`, `expo-module` and `expo-animation` as appropriate. For Nitro/C++/Rust use Margelo Nitro, C++, Swift and Kotlin references. For tests and perf use Callstack + Software Mansion Argent.
+3. For Expo/native UI begin with `expo-overview`, then `expo-ui`, `expo-native-ui`, `expo-design-system`, `expo-module` and `expo-animation` as appropriate. For public TypeScript/React/native API changes, read **Margelo `api-design` first**, then its `build-nitro-modules` skill, then C++, Swift and Kotlin as the implementation requires. Match generated Nitro signatures exactly; never claim codegen exists until run. For tests and perf use Callstack + Software Mansion Argent.
 4. Apply `petergyang/no-ai-slop` **to all docs, README and PR narratives**: specific facts, precise tests, no filler, no invented benchmarks. Also apply `pbakaus/impeccable`/Expo design-system audit for UI; use Mobbin as reference evidence, never copy proprietary assets.
 5. Before a PR opens, provide a roster with named workstreams, ownership roles, source files, capability limits and acceptance evidence. For unfinished work use a **draft PR** and say exactly what is missing.
 
