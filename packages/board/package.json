@@ -14,7 +14,14 @@
     "./native": "./src/native.ts",
     "./specs/*": "./src/specs/*.nitro.ts"
   },
-  "files": ["src", "android", "nitro.json", "nitrogen", "react-native.config.js", "README.md"],
+  "files": [
+    "src",
+    "android",
+    "nitro.json",
+    "nitrogen",
+    "react-native.config.js",
+    "README.md"
+  ],
   "scripts": {
     "codegen": "nitrogen",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -33,13 +40,20 @@
     "@reactvision/react-viro": ">=3.0.3-moyo.1 <4.0.0"
   },
   "peerDependenciesMeta": {
-    "@reactvision/react-viro": { "optional": true },
-    "react": { "optional": true },
-    "react-native": { "optional": true }
+    "@reactvision/react-viro": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "nitrogen": "1.0.0-alpha.nightly.115.gcdaf72e60229",
+    "@types/react": "19.3.0",
     "nitro-core": "1.0.0-alpha.nightly.115.gcdaf72e60229",
+    "nitrogen": "1.0.0-alpha.nightly.115.gcdaf72e60229",
     "react-native-nitro-modules": "1.0.0-alpha.nightly.115.gcdaf72e60229",
     "typescript": "^6.0.3",
     "vitest": "^3.2.7"

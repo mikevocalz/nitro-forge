@@ -70,7 +70,7 @@ export function useWhiteboardRenderer(options: UseWhiteboardRendererOptions): Wh
           });
           binding = createWhiteboardRendererBinding({
             store,
-            board,
+            ...(board === undefined ? {} : { board }),
             renderer: created,
             getInkOutline,
             requestFrame: (callback) => requestAnimationFrame(callback),
