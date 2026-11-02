@@ -1,0 +1,23 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "environment": "react-native",
+  "cxxNamespace": [
+    "nitroforge",
+    "ignitionv1"
+  ],
+  "apple": {
+    "moduleName": "NitroForgeV1"
+  },
+  "android": {
+    "namespace": [
+      "nitroforge",
+      "ignitionv1"
+    ],
+    "cxxLibName": "NitroForgeV1"
+  },
+  "ignorePaths": [
+    "**/node_modules",
+    "**/tests",
+    "**/lib"
+  ]
+}
