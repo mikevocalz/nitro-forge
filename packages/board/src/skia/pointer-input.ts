@@ -43,13 +43,18 @@ export interface NativeBoardPointerRouter {
   resetPenPreference(): void;
   dispose(): void;
 }
+import { boardTransform, projectPointer } from "../ink/geometry";
+
 const isFinitePositive = (n: number) => Number.isFinite(n) && n > 0;
-const clamp = (v: number, max: number) => Math.min(max, Math.max(0, v));
 
 export function createNativeBoardPointerRouter(options: NativeBoardPointerOptions): NativeBoardPointerRouter {
   for (const length of [options.surfaceWidth, options.surfaceHeight, options.boardWidth, options.boardHeight]) {
     if (!isFinitePositive(length)) throw new RangeError("board sizes must be finite positive numbers");
   }
+  const transform = boardTransform(
+    options.boardWidth, options.boardHeight, options.surfaceWidth, options.surfaceHeight,
+  );
+  if (transform === null) throw new RangeError("Native canvas projection is not invertible");
   const now = options.now ?? (() => performance.now());
   const palmRejection = options.palmRejection ?? "after-pen";
   let lastTimestamp = -Infinity;
@@ -73,13 +78,11 @@ export function createNativeBoardPointerRouter(options: NativeBoardPointerOption
       timestampMs: timestamp(),
     });
   };
-  const coords = (e: NativePointerLike): [number, number] | null => {
-    if (!Number.isFinite(e.offsetX) || !Number.isFinite(e.offsetY)) return null;
-    return [
-      clamp(e.offsetX * options.boardWidth / options.surfaceWidth, options.boardWidth),
-      clamp(e.offsetY * options.boardHeight / options.surfaceHeight, options.boardHeight),
-    ];
-  };
+  const coords = (e: NativePointerLike, clampOutside: boolean): readonly [number, number] | null =>
+    projectPointer(
+      e.offsetX, e.offsetY, options.boardWidth, options.boardHeight,
+      transform, clampOutside,
+    );
   const canStart = (e: NativePointerLike): boolean => {
     if (!Number.isSafeInteger(e.pointerId) || !["mouse", "pen", "touch"].includes(e.pointerType)) return false;
     if (e.pointerType === "mouse" && e.button !== undefined && e.button !== 0) return false;
@@ -102,7 +105,7 @@ export function createNativeBoardPointerRouter(options: NativeBoardPointerOption
       if (disposed) return;
       if (phase === "down") {
         if (active !== null || !canStart(event)) return;
-        const xy = coords(event);
+        const xy = coords(event, false);
         if (xy === null) return;
         if (event.pointerType === "pen") penSeen = true;
         active = { id: event.pointerId, type: event.pointerType, x: xy[0], y: xy[1] };
@@ -111,7 +114,7 @@ export function createNativeBoardPointerRouter(options: NativeBoardPointerOption
       }
       if (active === null || event.pointerId !== active.id) return;
       if (phase === "cancel" || phase === "leave") { cancel(); return; }
-      const xy = coords(event);
+      const xy = coords(event, true);
       if (xy !== null) { active.x = xy[0]; active.y = xy[1]; }
       if (phase === "move") {
         if (xy !== null) send("move", event, active.x, active.y);
