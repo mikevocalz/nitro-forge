@@ -202,7 +202,7 @@ mod tests {
             assert!(nf_v1_restore(h, bytes.as_ptr(), bytes.len()).is_null());
             let restored = apply(h, r#"{"op":"getCell","payload":{"addr":"A1"}}"#);
             assert_eq!(restored["ok"], true);
-            assert_eq!(restored["data"]["computed"], 42);
+            assert_eq!(restored["data"]["computed"].as_f64(), Some(42.0));
             assert_eq!(nf_v1_close(h), 1);
             assert_eq!(nf_v1_close(h), 0);
         }
