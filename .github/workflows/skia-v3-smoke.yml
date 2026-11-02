@@ -36,6 +36,8 @@ jobs:
           pnpm why react-native-webgpu-dawn
       - name: Type-check all seven engine public JS APIs and Expo example
         run: pnpm -r typecheck
+      - name: Test NitroHost JS-to-native contract, safe handles and engine errors
+        run: pnpm --filter @nitro-forge/ignition exec vitest run tests/nitro-host.test.ts
       - name: Compile Expo web bundle (not a browser pixel test)
         run: pnpm --filter @nitro-forge/example exec expo export --platform web
         env:
