@@ -2,7 +2,7 @@
   "name": "@nitro-forge/board",
   "version": "0.1.0",
   "private": true,
-  "description": "Standalone native QuickDraw-compatible whiteboard/canvas renderer for Nitro-Forge",
+  "description": "Universal canvas with reusable ink geometry and optional native Skia v3 and XR renderers",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -12,7 +12,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./native": "./src/native.ts",
-    "./specs/*": "./src/specs/*.nitro.ts"
+    "./specs/*": "./src/specs/*.nitro.ts",
+    "./skia": "./src/skia/index.ts",
+    "./skia/native": "./src/skia/native.ts",
+    "./ink": "./src/ink/index.ts"
   },
   "files": [
     "src",
@@ -37,7 +40,8 @@
     "react-native-nitro-modules": "1.0.0-alpha.nightly.115.gcdaf72e60229",
     "react": ">=19.0.0",
     "react-native": ">=0.88.0",
-    "@reactvision/react-viro": ">=3.0.3-moyo.1 <4.0.0"
+    "@reactvision/react-viro": ">=3.0.3-moyo.1 <4.0.0",
+    "react-native-skia": "^3.8.1"
   },
   "peerDependenciesMeta": {
     "@reactvision/react-viro": {
@@ -48,6 +52,9 @@
     },
     "react-native": {
       "optional": true
+    },
+    "react-native-skia": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -56,6 +63,7 @@
     "nitrogen": "1.0.0-alpha.nightly.115.gcdaf72e60229",
     "react-native-nitro-modules": "1.0.0-alpha.nightly.115.gcdaf72e60229",
     "typescript": "^6.0.3",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "react-native-skia": "3.8.1"
   }
 }
