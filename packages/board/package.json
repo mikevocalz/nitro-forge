@@ -18,7 +18,8 @@
     "./ink": "./src/ink/index.ts",
     "./offline": "./src/offline.ts",
     "./offline/mmkv": "./src/offline-mmkv.ts",
-    "./offline/yjs": "./src/offline-yjs.ts"
+    "./offline/yjs": "./src/offline-yjs.ts",
+    "./scene": "./src/universal-scene.ts"
   },
   "files": [
     "src",
