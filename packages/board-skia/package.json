@@ -35,5 +35,10 @@
     "react-native-skia": "3.8.1",
     "typescript": "^6.0.3",
     "vitest": "^3.2.7"
+  },
+  "dependencies": {
+    "@nitro-forge/board": "workspace:*",
+    "@quickdrawjs/core": "0.2.0",
+    "zustand": "^5.0.16"
   }
 }

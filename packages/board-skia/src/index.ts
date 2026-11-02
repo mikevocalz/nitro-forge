@@ -1,4 +1,5 @@
-// This entrypoint is intentionally portable: it never evaluates the GPU
-// runtime. Only import ./native inside a configured React Native Skia v3 app.
+// No Skia runtime import here: command-line tools and web can compile scenes.
 export { compileQuickDrawScene } from "./scene";
+export { createNativeBoardSceneBridge } from "./scene-store";
 export type { BoardMark, SceneResult, PaintMode, DashMode } from "./scene";
+export type { NativeBoardSceneBridge, NativeBoardSceneBridgeOptions, NativeBoardSceneState } from "./scene-store";
