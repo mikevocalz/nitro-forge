@@ -18,7 +18,7 @@
     "@nitro-forge/pitch": "workspace:*",
     "@nitro-forge/tally": "workspace:*",
     "@nitro-forge/quill": "workspace:*",
-    "expo": "58.0.19",
+    "expo": "58.0.22",
     "expo-router": "~58.0.26",
     "expo-status-bar": "~58.0.4",
     "react": "19.3.0",
