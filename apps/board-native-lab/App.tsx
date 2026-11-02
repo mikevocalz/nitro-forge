@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { SafeAreaView, Text, View } from "react-native";
-import { compileQuickDrawScene } from "@nitro-forge/board-skia";
-import { NativeBoardCanvasWithInput } from "@nitro-forge/board-skia/native";
-import { createNativeBoardPointerRouter } from "@nitro-forge/board-skia";
+import { compileQuickDrawScene } from "@nitro-forge/board/skia";
+import { NativeBoardCanvasWithInput } from "@nitro-forge/board/skia/native";
+import { createNativeBoardPointerRouter } from "@nitro-forge/board/skia";
 
 const empty = compileQuickDrawScene({
   document: { store: {
