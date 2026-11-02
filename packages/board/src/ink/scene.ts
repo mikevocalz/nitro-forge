@@ -17,14 +17,19 @@ export function compileNativeInkScene(strokes: readonly BoardStroke[]): SceneRes
   }
   const MAX_POINTS = 200_000;
   let points = 0;
+  const seen = new Set<string>();
   const marks: BoardMark[] = [];
   for (const [i, stroke] of strokes.entries()) {
     if (!stroke || typeof stroke.id !== "string" || stroke.id.length < 1 ||
         stroke.id.length > 256 || typeof stroke.color !== "string" ||
         !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(stroke.color) ||
-        !Array.isArray(stroke.points)) {
+        !Array.isArray(stroke.points) || seen.has(stroke.id) ||
+        !stroke.points.every(p => p !== null && typeof p === "object" &&
+          Number.isFinite(p.x) && Number.isFinite(p.y) &&
+          (p.pressure === undefined || Number.isFinite(p.pressure)))) {
       return { kind: "unsupported", reasons: [`ink ${i}: invalid stroke`] };
     }
+    seen.add(stroke.id);
     points += stroke.points.length;
     if (points > MAX_POINTS) {
       return { kind: "unsupported", reasons: ["ink point budget exceeded"] };
@@ -43,7 +48,7 @@ export function compileNativeInkScene(strokes: readonly BoardStroke[]): SceneRes
       const endX = segment.dot ? segment.x1 + 0.001 : segment.x2;
       const endY = segment.y2;
       marks.push({
-        id: `${stroke.id}:${j}`,
+        id: `${encodeURIComponent(stroke.id)}:${j}`,
         path: `M ${segment.x1} ${segment.y1} L ${endX} ${endY}`,
         color: segment.color,
         mode: "stroke",
