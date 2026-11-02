@@ -2,7 +2,7 @@ name: Forge Skia v3 real Android compile (isolated Expo 58 lab)
 on:
   pull_request:
     paths:
-      - 'packages/board-skia/**'
+      - 'packages/board/**'
       - 'apps/board-native-lab/**'
       - '.github/workflows/board-skia-android-build.yml'
   workflow_dispatch:
