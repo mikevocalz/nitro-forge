@@ -17,12 +17,12 @@
     "check:generated": "node ../../tooling/nitro-v1/check-generated.mjs"
   },
   "peerDependencies": {
-    "react-native-nitro-modules": "1.0.0-alpha.nightly.115.gcdaf72e60229",
-    "nitro-core": "1.0.0-alpha.nightly.115.gcdaf72e60229"
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0"
   },
   "devDependencies": {
-    "nitrogen": "1.0.0-alpha.nightly.115.gcdaf72e60229",
-    "nitro-core": "1.0.0-alpha.nightly.115.gcdaf72e60229",
+    "nitrogen": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "typescript": "^6.0.3"
   },
   "swiftpmConfig": {
