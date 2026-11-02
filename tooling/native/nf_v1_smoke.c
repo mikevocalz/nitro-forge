@@ -36,6 +36,17 @@ int main(void) {
   assert(restore_error == NULL);
   apply_checked(handle, "{\"op\":\"getCell\",\"payload\":{\"addr\":\"A1\"}}");
 
+  const char* op = "getCell";
+  const char* payload = "{\"addr\":\"A1\"}";
+  NfV1CommandResult typed = nf_v1_apply_parts(
+    handle, (const uint8_t*)op, strlen(op),
+    (const uint8_t*)payload, strlen(payload), 1
+  );
+  assert(typed.error_json == NULL);
+  assert(typed.data_json != NULL && strstr(typed.data_json, "42") != NULL);
+  assert(typed.event_count == 0);
+  nf_v1_free_command_result(typed);
+
   assert(nf_v1_close(handle) == 1);
   assert(nf_v1_close(handle) == 0);
   char* result = nf_v1_apply(handle, (const uint8_t*)"{\"op\":\"describe\"}", 17);
