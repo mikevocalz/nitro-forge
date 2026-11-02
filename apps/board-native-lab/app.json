@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Forge Board Native Lab",
+    "slug": "forge-board-native-lab",
+    "version": "0.0.1",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "dev.nitroforge.boardnative",
+      "edgeToEdgeEnabled": true
+    },
+    "ios": {
+      "bundleIdentifier": "dev.nitroforge.boardnative",
+      "supportsTablet": true
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26,
+            "compileSdkVersion": 37,
+            "targetSdkVersion": 36
+          }
+        }
+      ]
+    ]
+  }
+}

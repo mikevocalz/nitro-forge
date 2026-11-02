@@ -1,0 +1,58 @@
+name: Forge Skia v3 real Android compile (isolated Expo 58 lab)
+on:
+  pull_request:
+    paths:
+      - 'packages/board-skia/**'
+      - 'apps/board-native-lab/**'
+      - '.github/workflows/board-skia-android-build.yml'
+  push:
+    branches:
+      - 'feat/board-skia3-*'
+    paths:
+      - 'packages/board-skia/**'
+      - 'apps/board-native-lab/**'
+      - '.github/workflows/board-skia-android-build.yml'
+jobs:
+  android-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: '1'
+      ORG_GRADLE_PROJECT_reactNativeArchitectures: arm64-v8a
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 37 and NDK for Expo 58
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-37' 'build-tools;36.0.0' \
+            'ndk;28.2.13676358' 'cmake;3.22.1'
+      - name: Install workspace packages
+        run: pnpm install --no-frozen-lockfile
+      - name: Typecheck Expo native lab
+        run: pnpm --filter @nitro-forge/board-native-lab typecheck
+      - name: Generate real Expo 58 Android project
+        working-directory: apps/board-native-lab
+        run: pnpm exec expo prebuild --platform android --non-interactive --no-install
+      - name: Compile and link native Android Skia v3 (no emulator)
+        working-directory: apps/board-native-lab/android
+        run: ./gradlew :app:assembleDebug --no-daemon --max-workers=1 --stacktrace '-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g'
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-board-native-android-build-diagnostics
+          path: |
+            apps/board-native-lab/android/build/reports
+            apps/board-native-lab/android/app/build/reports
+          if-no-files-found: ignore
