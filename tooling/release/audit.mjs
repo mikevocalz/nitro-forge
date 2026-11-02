@@ -14,9 +14,10 @@ const requested = process.argv.slice(2);
 
 export function normalizeSpec(spec) {
   if (typeof spec !== "string") return null;
-  const match = /^[~^]?(\d+)\.(\d+)\.(\d+)(?:-[\da-zA-Z.-]+)?$/.exec(spec);
+  const match = /^[~^]?(\d+)\.(\d+)\.(\d+)(?:-([\da-zA-Z.-]+))?$/.exec(spec);
   if (!match) return null;
-  return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]), raw: spec };
+  return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]), raw: spec,
+    prerelease: match[4] !== undefined };
 }
 export function compareTriplet(a, b) {
   for (const key of ["major", "minor", "patch"]) {
@@ -28,7 +29,10 @@ export function summarizeDependency(name, spec, latest) {
   const installedRange = normalizeSpec(spec);
   const tagged = normalizeSpec(latest);
   if (!installedRange) return { name, spec, latest, status: "custom-or-unparseable" };
-  if (!tagged || latest.includes("-")) return { name, spec, latest, status: "verify-registry-tag" };
+  if (!tagged || tagged.prerelease) return { name, spec, latest, status: "verify-registry-tag" };
+  if (installedRange.prerelease) {
+    return { name, spec, latest, status: "prerelease-channel-review" };
+  }
   if (compareTriplet(tagged, installedRange) > 0) {
     return { name, spec, latest, status: "review-newer" };
   }
