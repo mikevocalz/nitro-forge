@@ -5,7 +5,7 @@ import {
   type BoardCheckpoint,
   type BoardDocumentPort,
   type LocalBoardStorage,
-} from "../../src/offline";
+} from "../src/offline";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
