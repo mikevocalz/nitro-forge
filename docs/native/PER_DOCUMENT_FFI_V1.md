@@ -47,3 +47,9 @@ These are roles, not claims that autonomous subagents or independent reviewers h
 - All native buffers must have an explicitly paired allocator/deallocator. Avoid the legacy nf_alloc_copy interface until audited.
 - Large commands/snapshots have conservative size limits. Consider per-engine budgets, decompression limits and cancellation after real device load testing.
 - Document FFI panic isolation and close semantics are tested here; the separate legacy FFI still has a global lock.
+
+## Structured v1 native command result (added after initial FFI smoke)
+
+The v1 bridge also exposes `nf_v1_apply_parts` and `nf_v1_free_command_result`. The caller passes an operation name and one JSON payload **as distinct length-delimited buffers**, plus the numeric command schema version. Rust validates payload JSON before constructing an Ignition command, preventing C++ string-concatenation injection. The return value contains a data JSON string, a native-allocated array of typed event `kind` and `detail_json` strings, and an optional error string. All are released through one paired Rust function. `nf_v1_open`, the structured command path, snapshot, restore and close share the **same** per-document registry.
+
+This change still requires a real native C++ HybridObject implementation and Xcode/Android tests. The independent Rust/C harness now checks a structured getCell call in addition to the original JSON ABI. The generated Nitro `ForgeCommand` spec currently contains `payloadJson` because the tested Nitro v1 alpha did not generate nested `AnyJSON` structs reliably.
