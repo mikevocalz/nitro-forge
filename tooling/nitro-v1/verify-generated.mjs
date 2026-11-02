@@ -15,7 +15,7 @@ const config = readJson(join(packageDir, "nitro.json"));
 const app = readJson(join(root, "apps/example/package.json"));
 const stable = readJson(join(root, "packages/ignition/package.json"));
 
-const v1 = "1.0.0-alpha.nightly.115.gcdaf72e60229";
+const v1 = "1.0.0-alpha.nightly.120.g33ef045b96c0";
 assert.equal(preview.private, true, "v1 is not ready for publishing");
 assert.equal(preview.devDependencies.nitrogen, v1, "Nitrogen runtime and codegen must use the same build");
 assert.equal(preview.devDependencies["nitro-core"], v1);
