@@ -2,8 +2,10 @@
 
 **Status: DRAFT / source and TS tests.** This PR is stacked on
 [Forge board #18](https://github.com/mikevocalz/nitro-forge/pull/18), not
-directly on master. It introduces a first-party native **2D** renderer for
+directly on master. It consolidates a first-party native **2D** renderer into the *existing* `@nitro-forge/board` package for
 phone, tablet, iPad and supported Apple / Android XR React Native views.
+
+**Source consolidation update:** The separate `board-skia` package was removed from this branch. Skia rendering now lives in `packages/board/src/skia`, while the original PR #16 pressure geometry and tests are at `packages/board/src/ink`. QuickDraw's existing snapshot encoder remains an optional source adapter. The document-neutral `@nitro-forge/board/scene` is usable by drawing, photo, vector, slide and PDF annotation hosts without importing QuickDraw. The local-first MMKV/Yjs adapters and their evidence gates are described in [BOARD_OFFLINE_UNIVERSAL.md](./BOARD_OFFLINE_UNIVERSAL.md).
 
 ## Confirmed upstream version change
 
@@ -21,7 +23,7 @@ package stays private/draft; no main app dependency is changed here.
 
 ## Implementation boundaries
 
-- @nitro-forge/board-skia consumes augmented QuickDraw JSON snapshots
+- @nitro-forge/board/skia consumes augmented QuickDraw JSON snapshots
   produced by the existing Forge board encoder, not an HTML/WebView editor.
 - NativeBoardCanvas renders with **react-native-skia**'s native Canvas/Path
   and SurfaceView on Android, via the v3 Graphite GPU backend.
@@ -54,7 +56,7 @@ strokes should silently vanish.
 ## Example (React Native dev build with Skia v3 and Forge #18)
 
   import { createInkOutlineEncoder } from "@nitro-forge/board";
-  import { NativeBoardCanvas, compileQuickDrawScene } from "@nitro-forge/board-skia/native";
+  import { NativeBoardCanvas, compileQuickDrawScene } from "@nitro-forge/board/skia/native";
 
   // One source of truth, owned by the existing QuickDraw BoardSession.
   const snapshotJson = createInkOutlineEncoder(getInkOutline)
@@ -125,6 +127,11 @@ https://wcandillon.github.io/react-native-skia/docs/shapes/path/
 
 ## Isolated Android native build proof
 
-`apps/board-native-lab` is a small Expo SDK 58 / React Native 0.88 dev app. It compiles the `@nitro-forge/board-skia` package with **Skia v3 only**, then attempts a real Android debug APK native build in [`.github/workflows/board-skia-android-build.yml`](https://github.com/mikevocalz/nitro-forge/blob/feat/board-skia3-native-canvas-2026-11-02/.github/workflows/board-skia-android-build.yml). It contains a sample pressure-ink path, native pointer wrapper and required fallback. It does not mount a second QuickDraw editor.
+`apps/board-native-lab` is a small Expo SDK 58 / React Native 0.88 dev app. It compiles the `@nitro-forge/board/skia` package with **Skia v3 only**, then attempts a real Android debug APK native build in [`.github/workflows/board-skia-android-build.yml`](https://github.com/mikevocalz/nitro-forge/blob/feat/board-skia3-native-canvas-2026-11-02/.github/workflows/board-skia-android-build.yml). It contains a sample pressure-ink path, native pointer wrapper and required fallback. It does not mount a second QuickDraw editor.
 
 **SDK mismatch to resolve:** First runner attempt could not install `platforms;android-37` even though Expo 58's reference target expects compileSdk 37. The smoke lab temporarily uses SDK 36 (available to the runner) to isolate native linker behavior; a green SDK 36 build **would not** satisfy the Expo 58 SDK 37 release parity gate. Exact build outcome is reported by the workflow, not assumed here. Moyo Learn remains unchanged.
+
+
+## Offline persistence and document authority
+
+A native Skia Canvas is **presentation only**. For Moyo's offline-capable board the existing `BoardDoc` Yjs state, local-author undo and MMKV are authoritative. The optional `@nitro-forge/board/offline/mmkv` and `@nitro-forge/board/offline/yjs` adapters supply scoped binary checkpoints, autosave and explicit unsaved/sync receipts without creating another QuickDraw Store. **No offline or device acceptance is claimed until airplane-mode, termination/relaunch and failed-MMKV tests pass on actual devices.**
