@@ -159,3 +159,46 @@ export function resizeDock(l: Layout, dock: Dock, fraction: number, geometry: Ge
   const next: Layout = { ...l, sizes: { ...l.sizes, [key]: fraction } };
   return stageFits(next, geometry) ? { ok: true, layout: next } : failure(l, "no-stage-space");
 }
+
+/** Accessible equivalents of dock drag/drop; host maps keyboard, pointer, and
+ * screen-reader actions to the same atomic state transition.
+ * The engine/document and GPU lifecycle remain owned by the host.
+ */
+export type DockAction =
+  | "move-left" | "move-right" | "move-bottom"
+  | "move-before" | "move-after"
+  | "collapse" | "expand" | "activate";
+
+export function applyDockAction(
+  layout: Layout, id: string, action: DockAction,
+  known: ReadonlySet<string>, geometry?: Geometry,
+): Result {
+  if (!known.has(id)) return failure(layout, "unknown-panel");
+  if (action === "collapse" || action === "expand") {
+    return collapsePanel(layout, id, action === "collapse");
+  }
+  const source = DOCKS.find(d => layout.docks[d].includes(id));
+  if (action === "activate") {
+    if (!source) return failure(layout, "missing-panel");
+    // This also expands collapsed panels and restores their tab selection.
+    const expanded = collapsePanel(layout, id, false);
+    return expanded.ok && (!geometry || stageFits(expanded.layout, geometry))
+      ? expanded : failure(layout, "no-stage-space");
+  }
+  if (action.startsWith("move-") && ["move-left", "move-right", "move-bottom"].includes(action)) {
+    const target = action.slice(5) as Dock;
+    const destinationLength = layout.docks[target].filter(p => p !== id).length;
+    return dockPanel(layout, id, target, destinationLength, known, geometry);
+  }
+  if (!source) return failure(layout, "missing-panel");
+  const index = layout.docks[source].indexOf(id);
+  if (action === "move-before") {
+    if (index === 0) return { ok: true, layout };
+    return dockPanel(layout, id, source, index - 1, known, geometry);
+  }
+  if (action === "move-after") {
+    if (index === layout.docks[source].length - 1) return { ok: true, layout };
+    return dockPanel(layout, id, source, index + 1, known, geometry);
+  }
+  return failure(layout, "invalid-position");
+}
