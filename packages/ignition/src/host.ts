@@ -41,14 +41,33 @@ export interface ForgeNitro {
   closeEngine(handle: number): boolean;
 }
 
+/**
+ * The current v1 Nitro surface transports Rust u64 session IDs as JS numbers.
+ * Reject any value outside JS's exact integer range before allowing it to
+ * address an engine. A future generated HybridDocument API can eliminate
+ * numeric handle transport entirely; never silently round a Rust handle.
+ */
+export function assertSafeEngineHandle(handle: number): void {
+  if (!Number.isSafeInteger(handle) || handle <= 0) {
+    throw new EngineError({
+      code: "validation",
+      message: "Invalid or unsafe native document handle",
+      recoverable: false,
+    });
+  }
+}
+
 export class NitroHost implements EngineHost {
   constructor(private forge: ForgeNitro) {}
 
   async open(kind: EngineKind): Promise<number> {
-    return this.forge.openEngine(kind);
+    const handle = this.forge.openEngine(kind);
+    assertSafeEngineHandle(handle);
+    return handle;
   }
 
   async apply<T>(handle: number, cmd: Command): Promise<CommandResult<T>> {
+    assertSafeEngineHandle(handle);
     const raw = await this.forge
       .applyJson(handle, JSON.stringify(cmd))
       .catch((e: unknown) => {
@@ -72,22 +91,27 @@ export class NitroHost implements EngineHost {
   }
 
   async snapshot(handle: number): Promise<Uint8Array> {
+    assertSafeEngineHandle(handle);
     return base64ToBytes(await this.forge.snapshotB64(handle));
   }
 
   async restore(handle: number, bytes: Uint8Array): Promise<void> {
+    assertSafeEngineHandle(handle);
     await this.forge.restoreB64(handle, bytesToBase64(bytes));
   }
 
   undo(handle: number): Promise<boolean> {
+    assertSafeEngineHandle(handle);
     return this.forge.undo(handle);
   }
 
   redo(handle: number): Promise<boolean> {
+    assertSafeEngineHandle(handle);
     return this.forge.redo(handle);
   }
 
   async close(handle: number): Promise<boolean> {
+    assertSafeEngineHandle(handle);
     return this.forge.closeEngine(handle);
   }
 
