@@ -6,8 +6,26 @@
     "scheme": "nitro-forge",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": { "bundleIdentifier": "ai.nitroforge.example", "supportsTablet": true },
-    "android": { "package": "ai.nitroforge.example" },
-    "plugins": ["expo-router"]
+    "ios": {
+      "bundleIdentifier": "ai.nitroforge.example",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "ai.nitroforge.example"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
+    ]
   }
 }
