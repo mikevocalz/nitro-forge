@@ -1,28 +1,27 @@
-import type { AnyJSON } from "nitro-core";
-
-/** Engine identifiers remain identical to the existing Ignition command registry. */
+/** Engine identifiers are shared with the existing Ignition command registry. */
 export type ForgeEngineKind =
   | "prism" | "cadence" | "splice" | "folio"
   | "pitch" | "tally" | "quill";
 
 /**
- * A typed Nitro v1 native command. No JSON strings cross the JavaScript/JSI
- * boundary. Native validates and encodes the command for Ignition's Rust API.
+ * Nitro v1 supports named native structs. The current Rust engine payload
+ * is heterogeneous JSON: keep it serialized until nested AnyJSON codegen is
+ * supported and tested; no arbitrary object conversion is trusted here.
  */
 export interface ForgeCommand {
   op: string;
   v?: number;
-  payload?: AnyJSON;
+  payloadJson?: string;
 }
 
-/** An engine event emitted after the Rust state machine commits a command. */
+/** Event payload is JSON, encoded only when details exist. */
 export interface ForgeEvent {
   kind: string;
-  detail?: AnyJSON;
+  detailJson?: string;
 }
 
-/** The native command result, without an in-band ok/error ambiguity. */
+/** Transport success is implied by resolution; errors reject the Promise. */
 export interface ForgeCommandResult {
-  data: AnyJSON;
+  dataJson: string;
   events: ForgeEvent[];
 }
