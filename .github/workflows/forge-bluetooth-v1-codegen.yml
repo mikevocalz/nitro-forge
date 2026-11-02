@@ -1,0 +1,32 @@
+name: Forge Bluetooth Nitro v1 source/codegen
+on:
+  pull_request:
+    paths:
+      - 'packages/bluetooth-v1/**'
+      - '.github/workflows/forge-bluetooth-v1-codegen.yml'
+  push:
+    branches:
+      - 'feat/pen-connect-*'
+    paths:
+      - 'packages/bluetooth-v1/**'
+      - '.github/workflows/forge-bluetooth-v1-codegen.yml'
+jobs:
+  nitro-bluetooth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @nitro-forge/bluetooth-v1 codegen
+      - run: pnpm --filter @nitro-forge/bluetooth-v1 typecheck
+      - name: Check generated native code exists
+        run: |
+          test -f packages/bluetooth-v1/nitrogen/generated/android/NitroForgeBluetoothV1+autolinking.gradle
+          test -f packages/bluetooth-v1/nitrogen/generated/android/NitroForgeBluetoothV1+autolinking.cmake
+          test -f packages/bluetooth-v1/nitrogen/generated/shared/javascript/ForgeBluetooth.cjs
