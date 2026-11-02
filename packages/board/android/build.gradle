@@ -35,11 +35,11 @@ def hasViroCanvasAar = viroAar != null && viroAar.exists()
 android {
   sourceSets {
     main {
-      if (!hasViroCanvasAar) {
-        java {
-          exclude "**/whiteboard/SurfaceSlot.kt", "**/whiteboard/WhiteboardRenderLoop.kt"
-          srcDirs "src/noViro/java"
-        }
+      java {
+        // Select exactly one renderer implementation at configuration time.
+        // Kotlin excludes on src/main/java are not reliable under AGP 9;
+        // place the two Viro-bound files in an opt-in source root instead.
+        srcDir(hasViroCanvasAar ? "src/viro/java" : "src/noViro/java")
       }
     }
   }
