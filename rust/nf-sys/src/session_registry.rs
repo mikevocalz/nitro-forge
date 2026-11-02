@@ -45,7 +45,7 @@ impl ConcurrentSessions {
         // i64 C ABI handles, and never issue zero as a valid handle.
         let id = self
             .next
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |next| {
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |next| {
                 if next == 0 || next > i64::MAX as u64 {
                     None
                 } else {
