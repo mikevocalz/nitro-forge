@@ -16,6 +16,7 @@ export interface PenConnectionDialogProps {
   readonly controller: PenConnectionController;
   readonly onClose: () => void;
   readonly title?: string;
+  readonly onOpenBluetoothSettings?: () => void;
   readonly renderAnimation?: (
     phase: "searching" | "pairing" | "linked" | "connected" | "error",
   ) => ReactNode;
@@ -50,7 +51,7 @@ function DeviceOption({device, onPress}: {readonly device: PenDevice; readonly o
   );
 }
 export function PenConnectionDialog({
-  visible, controller, onClose, title = "Connect your pen", renderAnimation,
+  visible, controller, onClose, title = "Connect your pen", renderAnimation, onOpenBluetoothSettings,
 }: PenConnectionDialogProps): ReactElement {
   const state = useStore(controller.state, (s) => s);
   const phase = stateAnimation(state);
@@ -107,6 +108,11 @@ export function PenConnectionDialog({
           {state.kind === "scanning" ? (
             <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => void controller.cancel()}>
               <Text style={styles.secondaryLabel}>Cancel scan</Text>
+            </Pressable>
+          ) : null}
+          {state.kind === "error" && state.code === "disabled" && onOpenBluetoothSettings ? (
+            <Pressable accessibilityRole="button" style={styles.secondary} onPress={onOpenBluetoothSettings}>
+              <Text style={styles.secondaryLabel}>Open Bluetooth settings</Text>
             </Pressable>
           ) : null}
           {state.kind === "linked" ? (

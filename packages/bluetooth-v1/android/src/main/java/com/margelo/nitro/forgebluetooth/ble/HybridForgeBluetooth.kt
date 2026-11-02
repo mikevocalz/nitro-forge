@@ -12,6 +12,8 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.Intent
+import android.provider.Settings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -71,6 +73,11 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
     check(context().checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
       "Bluetooth permission missing: " + permission + ". Request from user before native access."
     }
+  }
+
+  override fun openBluetoothSettings() {
+    val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context().startActivity(intent)
   }
 
   override fun isEnabled(): Boolean {

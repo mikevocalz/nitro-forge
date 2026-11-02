@@ -6,6 +6,8 @@ export * from "#nitro/ForgeBluetooth";
 export declare class ForgeBluetooth extends HybridObject {
   static readonly isAvailable: boolean;
   isEnabled(): boolean;
+  /** Open Android system Bluetooth Settings; does not assert radio was enabled. */
+  openBluetoothSettings(): void;
   startScan(): void;
   stopScan(): void;
   getDevicesJson(): string;

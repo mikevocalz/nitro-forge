@@ -7,6 +7,7 @@ import type { BlePenPort, PenDevice, PenLink } from "./types";
  */
 export interface ForgeBluetoothAndroid {
   isEnabled(): boolean;
+  openBluetoothSettings(): void;
   startScan(): void;
   stopScan(): void;
   getDevicesJson(): string;
