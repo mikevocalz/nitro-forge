@@ -38,7 +38,7 @@
 5. `react-native-skia` v3 Graphite and RN WebGPU may share Dawn on compatible versions. Rust `wgpu` does NOT inherit that GPUDevice; any zero-copy Rust path needs independent integration proof.
 6. Skia canvas visibility must stop its worker/presentation loop on panel hide. `react-freeze` does not suspend side effects.
 7. Document the unsupported native GPU state and a safe user-visible response; never render an unexplained blank canvas.
-8. Support native Android API26+ with **Vulkan 1.1**, iOS15.1+ Metal, Expo development builds (not Expo Go); web is separately tested through CanvasKit.
+8. Support native Android API26+ with **Vulkan 1.1**, iOS16.4+ (Expo SDK 58 minimum) Metal, Expo development builds (not Expo Go); web is separately tested through CanvasKit.
 
 ## Exact smoke procedure (execute after #1 frozen lock install)
 ```sh
