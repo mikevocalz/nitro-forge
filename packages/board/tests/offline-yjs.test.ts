@@ -120,6 +120,77 @@ describe("Moyo-compatible Yjs CRDT + MMKV offline board", () => {
     a.doc.destroy();
   });
 
+  it("automatically persists edits from the existing Y.Doc observer", async () => {
+    const h = mmkvStorage();
+    const a = yDoc();
+    const failures: unknown[] = [];
+    const board = createLocalYjsBoardSession({
+      documentId:"auto", document:a.port, storage:h.storage,
+      subscribeChanges(onChange) {
+        const listener = () => onChange();
+        a.doc.on("update", listener);
+        return () => a.doc.off("update", listener);
+      },
+      onPersistenceError(error) { failures.push(error); },
+    });
+    await board.initialize();
+    a.doc.transact(() => a.records.set("ink-one", shape("one")), "local");
+    a.doc.transact(() => a.records.set("ink-two", shape("two")), "local");
+    const persisted = await board.saveLocal(); // explicit flush, not a duplicate commit
+    expect(persisted).toMatchObject({ revision:2, needsSync:true });
+    expect(failures).toHaveLength(0);
+    await board.close();
+    a.doc.destroy();
+
+    const reopenedDoc = yDoc();
+    const reopened = createLocalYjsBoardSession({
+      documentId:"auto", document:reopenedDoc.port, storage:h.storage,
+    });
+    expect(await reopened.initialize()).toMatchObject({ revision:2, needsSync:true });
+    expect([...reopenedDoc.records.keys()].sort()).toEqual(["ink-one","ink-two"]);
+    reopenedDoc.doc.destroy();
+  });
+
+  it("reports unsaved MMKV failures and refuses a false cloud ACK", async () => {
+    const h = mmkvStorage();
+    const a = yDoc();
+    const errors: unknown[] = [];
+    const board = createLocalYjsBoardSession({
+      documentId:"unsafe", document:a.port, storage:h.storage,
+      subscribeChanges(onChange) {
+        const listener = () => onChange();
+        a.doc.on("update", listener);
+        return () => a.doc.off("update", listener);
+      },
+      onPersistenceError(error) { errors.push(error); },
+    });
+    await board.initialize();
+    h.fail(true);
+    a.records.set("not-on-disk", shape("not-on-disk"));
+    await expect(board.saveLocal()).rejects.toMatchObject({ code:"storage" });
+    expect(board.hasUnpersistedChanges).toBe(true);
+    expect(errors.length).toBe(1);
+    expect(board.pendingUpdate()).toBeInstanceOf(Uint8Array);
+    await expect(board.acknowledgeSync(0)).rejects.toMatchObject({ code:"storage" });
+    await expect(board.close()).rejects.toMatchObject({ code:"storage" });
+    expect(board.status).toBe("ready");
+
+    h.fail(false);
+    const retried = await board.saveLocal();
+    expect(retried).toMatchObject({ needsSync:true });
+    expect(board.hasUnpersistedChanges).toBe(false);
+    await board.close();
+    a.doc.destroy();
+
+    const reopenedDoc = yDoc();
+    const reopened = createLocalYjsBoardSession({
+      documentId:"unsafe", document:reopenedDoc.port, storage:h.storage,
+    });
+    await reopened.initialize();
+    expect(reopenedDoc.records.has("not-on-disk")).toBe(true);
+    reopenedDoc.doc.destroy();
+  });
+
   it("rejects a corrupt local checkpoint and never silently creates an empty board", async () => {
     const h = mmkvStorage();
     const a = yDoc();
