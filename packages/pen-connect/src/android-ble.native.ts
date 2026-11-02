@@ -92,28 +92,37 @@ export function createAndroidBlePenPort(
       if (!(await native.connect(id))) throw new Error("Bluetooth GATT connection failed.");
       let disposed = false;
       let pollTimer: ReturnType<typeof setInterval> | undefined;
+      const closeNative = () => {
+        // A disconnected link still owns a native GATT object. Always close it
+        // exactly once, including the spontaneous-disconnect and scan-error
+        // paths, so repeated pairing cannot leak native BLE resources.
+        if (disposed) return;
+        disposed = true;
+        if (pollTimer !== undefined) clearInterval(pollTimer);
+        pollTimer = undefined;
+        native.disconnect();
+      };
       const link: PenLink = {
         async disconnect() {
-          if (disposed) return;
-          disposed = true;
-          if (pollTimer !== undefined) clearInterval(pollTimer);
-          native.disconnect();
+          closeNative();
         },
         onDisconnected(listener) {
           if (disposed) return () => undefined;
           if (pollTimer !== undefined) clearInterval(pollTimer);
           pollTimer = setInterval(() => {
             if (disposed) return;
+            let reason = "Bluetooth link disconnected.";
             try {
               if (native.isConnected()) return;
-              disposed = true;
-              if (pollTimer !== undefined) clearInterval(pollTimer);
-              listener("Bluetooth link disconnected.");
             } catch (error) {
-              disposed = true;
-              if (pollTimer !== undefined) clearInterval(pollTimer);
-              listener(error instanceof Error ? error.message : "Bluetooth link was lost.");
+              reason = error instanceof Error ? error.message : "Bluetooth link was lost.";
             }
+            try {
+              closeNative();
+            } catch (error) {
+              reason = error instanceof Error ? error.message : reason;
+            }
+            listener(reason);
           }, polling);
           return () => {
             if (pollTimer !== undefined) clearInterval(pollTimer);
