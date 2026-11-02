@@ -175,22 +175,6 @@ importers:
         specifier: ^3.1.0
         version: 3.2.7(@types/node@26.6.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
 
-  packages/ignition-v1-lab:
-    dependencies:
-      react-native-nitro-modules:
-        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
-        version: 1.0.0-alpha.nightly.115.gcdaf72e60229(react-native@0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
-    devDependencies:
-      nitro-core:
-        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
-        version: 1.0.0-alpha.nightly.115.gcdaf72e60229
-      nitrogen:
-        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
-        version: 1.0.0-alpha.nightly.115.gcdaf72e60229
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
   packages/pitch:
     dependencies:
       '@nitro-forge/ignition':
@@ -229,6 +213,25 @@ importers:
       vitest:
         specifier: ^3.1.0
         version: 3.2.7(@types/node@26.6.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
+  packages/react-native:
+    dependencies:
+      react-native:
+        specifier: '>=0.88.0'
+        version: 0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
+      react-native-nitro-modules:
+        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
+        version: 1.0.0-alpha.nightly.115.gcdaf72e60229(react-native@0.88.0(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+    devDependencies:
+      nitro-core:
+        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
+        version: 1.0.0-alpha.nightly.115.gcdaf72e60229
+      nitrogen:
+        specifier: 1.0.0-alpha.nightly.115.gcdaf72e60229
+        version: 1.0.0-alpha.nightly.115.gcdaf72e60229
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   packages/splice:
     dependencies:
