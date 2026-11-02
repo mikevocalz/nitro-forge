@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createWorkspace, dockPanel, collapsePanel, floatPanel, resizeDock,
-  parsePreset, serializePreset, stageFits, type Layout,
+  parsePreset, serializePreset, stageFits, applyDockAction, type Layout,
 } from "./index.ts";
 
 const known = new Set(["tools", "layers", "assets", "inspector", "timeline"]);
@@ -78,4 +78,46 @@ test("reject bad viewport measurements and untenable bottom dock sizes", () => {
   });
   assert.equal(denied.ok, false);
   assert.equal(denied.layout.sizes.bottomFraction, 0.27);
+});
+
+test("accessible dock actions match pointer docking and tab order", () => {
+  const start = withLayers();
+  const added = dockPanel(start, "assets", "left", 1, known);
+  assert.equal(added.ok, true);
+  const moved = applyDockAction(added.layout, "layers", "move-after", known);
+  assert.equal(moved.ok, true);
+  assert.deepEqual(moved.layout.docks.left, ["assets", "layers"]);
+  const before = applyDockAction(moved.layout, "layers", "move-before", known);
+  assert.equal(before.ok, true);
+  assert.deepEqual(before.layout.docks.left, ["layers", "assets"]);
+  const right = applyDockAction(before.layout, "assets", "move-right", known, wide);
+  assert.equal(right.ok, true);
+  assert.deepEqual(right.layout.docks.right, ["assets"]);
+  assert.deepEqual(before.layout.docks.right, []);
+});
+
+test("screen reader collapse/activate has no hidden or unreachable selected tab", () => {
+  const start = withLayers();
+  const closed = applyDockAction(start, "layers", "collapse", known);
+  assert.equal(closed.ok, true);
+  assert.deepEqual(closed.layout.collapsed, ["layers"]);
+  assert.equal(closed.layout.activeTabs.left, undefined);
+  const activated = applyDockAction(closed.layout, "layers", "activate", known, wide);
+  assert.equal(activated.ok, true);
+  assert.deepEqual(activated.layout.collapsed, []);
+  assert.equal(activated.layout.activeTabs.left, "layers");
+});
+
+test("keyboard dock requests reject unknown panels and stage-blocking destinations", () => {
+  const start = withLayers();
+  const bad = applyDockAction(start, "invented", "move-right", known, wide);
+  assert.equal(bad.ok, false);
+  assert.equal(bad.layout, start);
+  const narrow = { width: 550, height: 500, minStageWidth: 420, minStageHeight: 290 };
+  const denied = applyDockAction(start, "inspector", "move-right", known, narrow);
+  assert.equal(denied.ok, false);
+  assert.equal(denied.layout, start);
+  const unknown = applyDockAction(start, "layers", "move-before", known);
+  assert.equal(unknown.ok, true);
+  assert.equal(unknown.layout, start);
 });
