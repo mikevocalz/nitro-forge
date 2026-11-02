@@ -1,4 +1,4 @@
-import type { BoardStroke } from "./index";
+import type { BoardPoint, BoardStroke } from "./index";
 import { strokeToSegments } from "./geometry";
 import type { BoardMark, SceneResult } from "../skia/scene";
 
@@ -24,7 +24,7 @@ export function compileNativeInkScene(strokes: readonly BoardStroke[]): SceneRes
         stroke.id.length > 256 || typeof stroke.color !== "string" ||
         !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(stroke.color) ||
         !Array.isArray(stroke.points) || seen.has(stroke.id) ||
-        !stroke.points.every(p => p !== null && typeof p === "object" &&
+        !stroke.points.every((p: BoardPoint) => p !== null && typeof p === "object" &&
           Number.isFinite(p.x) && Number.isFinite(p.y) &&
           (p.pressure === undefined || Number.isFinite(p.pressure)))) {
       return { kind: "unsupported", reasons: [`ink ${i}: invalid stroke`] };
