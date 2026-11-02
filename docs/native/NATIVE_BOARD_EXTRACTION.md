@@ -226,3 +226,7 @@ not a proof of production-native compatibility.
   — frame coalescing, surface lifetime, measurement not assumed performance.
 - [No AI Slop](https://github.com/petergyang/no-ai-slop/blob/000650b156983f5159695b441477f4e63b25dc85/skills/no-ai-slop/SKILL.md)
   — real code, exact ownership, measured evidence vs not-run labels.
+
+### Expanded real Kotlin source verification
+
+[Actions 41481108441](https://github.com/mikevocalz/nitro-forge/actions/runs/41481108441) ran **47/47** original Kotlin/JUnit checks, compiling true parser, document, bounds and text-layout source with Gradle. No Android SDK JNI/Viro render integration was exercised.
