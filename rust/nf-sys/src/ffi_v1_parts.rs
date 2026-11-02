@@ -1,21 +1,11 @@
 //! A structured FFI command boundary for Nitro v1 native classes.
 //! This avoids C++ JSON injection and avoids a second C++ JSON parser.
 
-use crate::session_registry::ConcurrentSessions;
 use ignition_core::{Command, CommandResult, EngineError, Event, COMMAND_VERSION, OP_REDO, OP_SNAPSHOT, OP_UNDO};
 use std::ffi::{c_char, CString};
 use std::ptr;
-use std::sync::OnceLock;
 
 const MAX_COMMAND_BYTES: usize = 32 * 1024 * 1024;
-
-fn registry() -> &'static ConcurrentSessions {
-    static REGISTRY: OnceLock<ConcurrentSessions> = OnceLock::new();
-    REGISTRY.get_or_init(ConcurrentSessions::new)
-}
-
-// Future C++ bridge must use the *same* registry as nf_v1_open/close.
-// Exported entrypoints get it from ffi_v1::registry() instead of this module.
 
 #[repr(C)]
 pub struct NfV1Event {
