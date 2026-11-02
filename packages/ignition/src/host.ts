@@ -32,13 +32,13 @@ export interface EngineHost {
  * blocks the UI thread.
  */
 export interface ForgeNitro {
-  openEngine(kind: string): number;
+  openEngine(kind: string): Promise<number>;
   applyJson(handle: number, commandJson: string): Promise<string>;
   snapshotB64(handle: number): Promise<string>;
   restoreB64(handle: number, bytesB64: string): Promise<void>;
   undo(handle: number): Promise<boolean>;
   redo(handle: number): Promise<boolean>;
-  closeEngine(handle: number): boolean;
+  closeEngine(handle: number): Promise<boolean>;
 }
 
 /**
@@ -61,7 +61,7 @@ export class NitroHost implements EngineHost {
   constructor(private forge: ForgeNitro) {}
 
   async open(kind: EngineKind): Promise<number> {
-    const handle = this.forge.openEngine(kind);
+    const handle = await this.forge.openEngine(kind);
     assertSafeEngineHandle(handle);
     return handle;
   }
