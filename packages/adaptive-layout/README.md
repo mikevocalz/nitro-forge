@@ -1,0 +1,5 @@
+# Adaptive layouts — source admission
+The geometry in this package is a **source-preserving first extraction** of the user's Moyo `packages/ui/adaptive-panes/fold-layout.ts` and `reserved-regions.types.ts`, including the original Node tests. It does not move Moyo's existing imports or global navigation yet.
+The components from `@expo/ui` (SwiftUI/Compose), Uniwind native and react-native-css web, and the Jetpack WindowManager/Expo Modules 2 adapter **remain** in Moyo pending a separate reviewed shared-component migration. Avoid shipping two divergent sources; eventually Moyo's adapter must import this published package rather than keep the copied geometry.
+This library is host-neutral: it maps measured region coordinates, multiple hinge boundaries, physical segments and an Inspector width floor. Do not infer hinge angles. See `docs/ui/SHARED_NATIVE_COMPONENTS.md` and `docs/ui/RESPONSIVE_ACCEPTANCE.md`.
+**Status:** layout geometry admission + tests, no physical device/Expo native UI claims. Source baseline: Moyo main observed 2026-11-02. Tests must be rerun against current Moyo source before replacing it.
