@@ -9,13 +9,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nitro-forge/board-skia": "workspace:*",
     "expo": "58.0.19",
     "expo-build-properties": "58.0.11",
     "react": "19.3.0",
     "react-native": "0.88.0",
     "react-native-skia": "3.8.1",
-    "zustand": "5.0.16"
+    "zustand": "5.0.16",
+    "@nitro-forge/board": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
