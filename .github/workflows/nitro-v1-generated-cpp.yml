@@ -1,0 +1,51 @@
+name: Nitro v1 generated C++ HybridObject signatures
+
+on:
+  push:
+    branches:
+      - feat/nitro-v1-cpp-rust-session-2026-11-02
+  pull_request:
+    paths:
+      - 'packages/ignition-v1-lab/cpp/**'
+      - '.github/workflows/nitro-v1-generated-cpp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generated-cpp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Install exact preview dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile --ignore-scripts
+      - name: Generate actual v1 native C++ specs
+        run: pnpm --filter @nitro-forge/ignition-v1-lab codegen
+      - name: Typecheck v1 public API
+        run: pnpm --filter @nitro-forge/ignition-v1-lab typecheck
+      - name: Verify native class overrides against generated headers
+        run: |
+          ROOT="$PWD"
+          NITRO_ROOT=$(pnpm --filter @nitro-forge/ignition-v1-lab exec node -p "require.resolve('nitro-core/package.json').replace(/\\/package.json$/, '')")
+          RN_ROOT=$(pnpm --filter @nitro-forge/example exec node -p "require.resolve('react-native/package.json').replace(/\\/package.json$/, '')")
+          echo "Native Nitro core: $NITRO_ROOT"
+          echo "React Native headers: $RN_ROOT"
+          clang++ -std=c++20 -Wall -Wextra -Werror -Wno-unused-parameter -fsyntax-only \
+            -I "$ROOT/packages/ignition-v1-lab/cpp" \
+            -I "$ROOT/packages/ignition-v1-lab/nitrogen/generated/shared/c++/include" \
+            -I "$NITRO_ROOT/native/cpp/include" \
+            -I "$RN_ROOT/ReactCommon/jsi" \
+            -I "$RN_ROOT/ReactCommon" \
+            -I "$ROOT/rust/nf-sys/include" \
+            packages/ignition-v1-lab/cpp/HybridForgeFactory.cpp \
+            packages/ignition-v1-lab/cpp/HybridForgeDocument.cpp
+
+# Syntax/type compatibility with generated v1 C++ headers is NOT an Android
+# Gradle or Apple Xcode link, nor proof of live JS/native execution.
