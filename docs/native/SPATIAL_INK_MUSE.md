@@ -9,23 +9,23 @@ a new editor or claim physical Muse pairing on non-Apple headsets.
 - Apple WWDC25 "Explore spatial accessory input on visionOS": Logitech Muse,
   GameController events, ARKit/RealityKit spatial accessory tracking and haptics.
   https://developer.apple.com/videos/play/wwdc2025/289/
-- \`mikevocalz/viro\` readmes/VISIONOS_SPATIAL_STYLUS.md: existing visionOS
+- `mikevocalz/viro` readmes/VISIONOS_SPATIAL_STYLUS.md: existing visionOS
   GameController / spatial accessory implementation; subscription stream.
-- \`mikevocalz/viro-external\` packages/ui/src/MusePenInput.tsx and
+- `mikevocalz/viro-external` packages/ui/src/MusePenInput.tsx and
   packages/xr-platform-contract/src/muse.ts: existing Moyo QuickDraw bridge.
-- \`mikevocalz/viro-external\` packages/ui/src/quickdraw-input/
+- `mikevocalz/viro-external` packages/ui/src/quickdraw-input/
   createBoardInputRouter.ts: world-to-paper UV mapping and pointer ownership.
 
 ## Package boundary
 
-\`@nitro-forge/spatial-ink\` is an **input adapter**, not another Bluetooth
+`@nitro-forge/spatial-ink` is an **input adapter**, not another Bluetooth
 stack, not an independent ARKit tracking session, and not a document engine.
 On Vision Pro, the **native Viro bridge** owns GameController and ARKit.
 Forge consumes a stream exposed by that already-native bridge. We do not
 ship Apple's SDK binaries, fork Logitech SDK internals, or claim a separate
 public Logitech Android SDK.
 
-\`\`\`
+```
 Logitech Muse (paired to Apple Vision Pro)
      | native sensor + visionOS accessory pose
 Viro Swift/GameController + ARKit (existing)
@@ -37,11 +37,11 @@ Viro BoardInputRouter (existing)
 QuickDraw editor authority OR native editor (later)
      | document diffs + undo/collaboration
 native board/canvas view (separate PR)
-\`\`\`
+```
 
 ## Example consuming the already-native Viro API
 
-\`\`\`ts
+```ts
 import { subscribeSpatialStylus } from "@reactvision/react-viro";
 import { subscribeMuseSpatialInk } from "@nitro-forge/spatial-ink";
 
@@ -62,9 +62,9 @@ const stop = subscribeMuseSpatialInk({
   }),
 });
 // call stop() on board teardown/unmount
-\`\`\`
+```
 
-Do **not** run the old \`MusePenInput\` and this new subscription for the same
+Do **not** run the old `MusePenInput` and this new subscription for the same
 board. Otherwise the same stylus signal will draw twice. Replace the old
 converter at a single integration seam after a separate Moyo/Viro change.
 
@@ -136,3 +136,11 @@ https://github.com/margelo/react-native-skills/tree/main/skills
 https://github.com/expo/skills
 https://github.com/callstackincubator/agent-skills
 https://github.com/petergyang/no-ai-slop
+
+
+## Source-level CI evidence — November 2, 2026
+
+The downstream native-board PR #16 contains a shared workflow that ran
+`@nitro-forge/spatial-ink` TypeScript typecheck and Vitest successfully:
+https://github.com/mikevocalz/nitro-forge/actions/runs/41474301108
+This is **not** an Xcode visionOS build or real Muse pairing test.
