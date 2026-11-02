@@ -59,3 +59,29 @@ test("summary contains compare link and explicit review requirement", () => {
 test("invalid output SHA fails closed", () => {
   assert.throws(() => compareObserved(sample(), { photocraft: "latest" }));
 });
+
+test("cannot mark observed-only source admitted without a pinned and reviewed source", () => {
+  const candidate = sample().candidates[0];
+  assert.throws(() => validateCatalog({
+    schemaVersion: 1,
+    candidates: [{ ...candidate, runtimeStatus: "source-admitted" }],
+  }));
+  assert.throws(() => validateCatalog({
+    schemaVersion: 1,
+    candidates: [{ ...candidate, runtimeStatus: "source-admitted", admittedSha: shaA }],
+  }));
+  assert.throws(() => validateCatalog({
+    schemaVersion: 1,
+    candidates: [{ ...candidate, runtimeStatus: "runtime-verified", licenseReview: "reviewed" }],
+  }));
+  const reviewed = {
+    ...candidate, runtimeStatus: "source-admitted",
+    admittedSha: shaA, licenseReview: "reviewed",
+  };
+  assert.equal(validateCatalog({ schemaVersion: 1, candidates: [reviewed] }).candidates.length, 1);
+  const updated = updateObserved({ schemaVersion: 1, candidates: [reviewed] },
+    [{ name: "photocraft", after: shaB }]);
+  assert.equal(updated.candidates[0].admittedSha, shaA,
+    "Observed HEAD updates may not replace admitted source");
+  assert.equal(updated.candidates[0].licenseReview, "reviewed");
+});
