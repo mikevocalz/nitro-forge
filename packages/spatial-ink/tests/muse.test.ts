@@ -85,6 +85,17 @@ describe("native Logitech Muse input adapter", () => {
     expect(s.disconnected()).toBe(1);
   });
 
+  it("rejects malformed runtime poses from a native provider without crashing", () => {
+    const s = setup();
+    s.send({ ...base(), position: {} as MuseNativeSample["position"], tipPressed: true });
+    s.send({ ...base(), position: [0, 2] as unknown as MuseNativeSample["position"], tipPressed: true });
+    s.send({ ...base(), position: ["x", 1, 2] as unknown as MuseNativeSample["position"], tipPressed: true });
+    expect(s.events).toHaveLength(0);
+    s.send({ ...base(), tipPressed: true });
+    expect(s.events.map(e => e.phase)).toEqual(["down"]);
+    s.dispose();
+  });
+
   it("never moves timestamps backwards when the host clock jitters", () => {
     let idx = 0;
     const t = [20, 19, 22];
