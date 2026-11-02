@@ -28,6 +28,29 @@ int64_t nf_v1_open(const uint8_t* kind, size_t kind_len, char** out_err);
  */
 char* nf_v1_apply(int64_t handle, const uint8_t* bytes, size_t len);
 
+/* Structured v1 command bridge: separate op and one validated JSON payload.
+ * version=0 selects default version 1. A non-null error_json is failure.
+ * Every returned string and event array is Rust owned. Free once with
+ * nf_v1_free_command_result, after copying any strings used by native C++.
+ */
+typedef struct NfV1Event {
+  char* kind;
+  char* detail_json;
+} NfV1Event;
+
+typedef struct NfV1CommandResult {
+  char* data_json;
+  NfV1Event* events;
+  size_t event_count;
+  char* error_json;
+} NfV1CommandResult;
+
+NfV1CommandResult nf_v1_apply_parts(
+  int64_t handle, const uint8_t* op, size_t op_len,
+  const uint8_t* payload, size_t payload_len, uint32_t version
+);
+void nf_v1_free_command_result(NfV1CommandResult result);
+
 /* Returns owned NFD1 bytes (max 256 MiB), or {NULL,0} and *out_err. */
 NfBytes nf_v1_snapshot(int64_t handle, char** out_err);
 
