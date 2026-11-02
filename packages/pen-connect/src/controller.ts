@@ -125,10 +125,15 @@ export function createPenConnectionController(port: PenConnectionPort): PenConne
         pairedDevice = device;
         unsubscribeLink = nextLink.onDisconnected?.((reason) => {
           if (!valid(generation)) return;
+          const detachedLink = link;
           link = undefined;
           unsubscribeLink?.();
           unsubscribeLink = undefined;
           pairedDevice = undefined;
+          // Some native transports emit an unplug callback before disposing
+          // their GATT handle. Explicitly release it; the port must implement
+          // idempotent disconnect so a spontaneous disconnect is safe.
+          if (detachedLink !== undefined) void detachedLink.disconnect().catch(() => undefined);
           transition({kind:"error",code:"disconnected",message:reason ?? "Bluetooth connection was lost."});
         });
         transition({kind:"linked",device,detail:"awaiting-native-input"});
