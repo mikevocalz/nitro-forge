@@ -45,7 +45,7 @@ android {
   }
   namespace "com.margelo.nitro.forgeboard"
   ndkVersion getExtOrDefault("ndkVersion", "27.2.12479018")
-  compileSdkVersion getExtOrDefault("compileSdkVersion", 36)
+  compileSdkVersion getExtOrDefault("compileSdkVersion", 37)
 
   defaultConfig {
     minSdkVersion Math.max(getExtOrDefault("minSdkVersion", 26).toInteger(), 26)
