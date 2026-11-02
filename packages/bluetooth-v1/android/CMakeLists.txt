@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(NitroForgeBluetoothV1 LANGUAGES C CXX)
+add_library(NitroForgeBluetoothV1 SHARED src/main/cpp/cpp-adapter.cpp)
+target_compile_features(NitroForgeBluetoothV1 PUBLIC cxx_std_20)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../nitrogen/generated/android/NitroForgeBluetoothV1+autolinking.cmake)
+find_library(LOG_LIB log)
+target_link_libraries(NitroForgeBluetoothV1 ${LOG_LIB} android)
+target_link_options(NitroForgeBluetoothV1 PRIVATE "-Wl,-z,max-page-size=16384")

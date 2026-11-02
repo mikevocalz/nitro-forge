@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "resolvePackageJsonImports": true,
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "experimentalDecorators": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "nitrogen/generated/shared/javascript/**/*.d.cts"
+  ]
+}
