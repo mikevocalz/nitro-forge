@@ -53,6 +53,19 @@ describe("NitroHost native Rust u64 handle boundary", () => {
     expect(methods.closeEngine).not.toHaveBeenCalled();
   });
 
+  it("fails closed on malformed or status-free native command frames", async () => {
+    const methods = bridge(9);
+    const host = new NitroHost(methods);
+    for (const raw of ["{not json", "null", "{}", JSON.stringify({
+      ok: true, data: { ok: true }, events: [{ bogus: "missing kind" }],
+    })]) {
+      methods.applyJson.mockResolvedValueOnce(raw);
+      await expect(host.apply(9, { op: "describe" })).rejects.toMatchObject({
+        code: "internal", recoverable: false,
+      });
+    }
+  });
+
   it("keeps the existing v1 happy path and engine error semantics", async () => {
     const methods = bridge(7);
     const host = new NitroHost(methods);
