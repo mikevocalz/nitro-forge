@@ -9,6 +9,7 @@ export declare class ForgeBluetooth extends HybridObject {
   startScan(): void;
   stopScan(): void;
   getDevicesJson(): string;
+  getScanError(): string;
   connect(deviceId: string): Promise<boolean>;
   disconnect(): void;
   isConnected(): boolean;
