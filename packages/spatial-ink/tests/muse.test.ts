@@ -92,7 +92,11 @@ describe("native Logitech Muse input adapter", () => {
     s.send({ ...base(), position: ["x", 1, 2] as unknown as MuseNativeSample["position"], tipPressed: true });
     expect(s.events).toHaveLength(0);
     s.send({ ...base(), tipPressed: true });
-    expect(s.events.map(e => e.phase)).toEqual(["down"]);
+    // A malformed press blocks the stroke until a real release; never resume
+    // a drawing mid-stroke after lost spatial tracking.
+    s.send(base());
+    s.send({ ...base(), tipPressed: true });
+    expect(s.events.map(e => e.phase)).toEqual(["hover", "hover", "down"]);
     s.dispose();
   });
 
