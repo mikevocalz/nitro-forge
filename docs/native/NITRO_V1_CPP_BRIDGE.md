@@ -4,9 +4,9 @@
 
 ## Code implemented in this branch
 
-- packages/ignition-v1-lab/cpp/ForgeRustSession.hpp/.cpp: app-neutral, C++20 RAII ownership of one Rust native handle. Uses nf_v1_open, nf_v1_apply_parts, nf_v1_snapshot, nf_v1_restore, nf_v1_close and the paired Rust deallocators.
-- packages/ignition-v1-lab/cpp/HybridForgeFactory.hpp/.cpp: concrete C++ class implementing the exact generated HybridForgeFactorySpec signature. Opens a ready Rust-backed document on Nitro's worker thread via Promise::async.
-- packages/ignition-v1-lab/cpp/HybridForgeDocument.hpp/.cpp: implements generated ForgeDocument methods; native actions are async, bytes transferred using owning ArrayBuffer, event arrays converted from structured Rust command results.
+- packages/react-native/cpp/ForgeRustSession.hpp/.cpp: app-neutral, C++20 RAII ownership of one Rust native handle. Uses nf_v1_open, nf_v1_apply_parts, nf_v1_snapshot, nf_v1_restore, nf_v1_close and the paired Rust deallocators.
+- packages/react-native/cpp/HybridForgeFactory.hpp/.cpp: concrete C++ class implementing the exact generated HybridForgeFactorySpec signature. Opens a ready Rust-backed document on Nitro's worker thread via Promise::async.
+- packages/react-native/cpp/HybridForgeDocument.hpp/.cpp: implements generated ForgeDocument methods; native actions are async, bytes transferred using owning ArrayBuffer, event arrays converted from structured Rust command results.
 - tooling/native/nf_v1_cpp_smoke.cpp: independently compiled C++ test calling the optimized Rust staticlib, with save/reopen/close, invalid payload rejection and cleanup.
 - Two scoped workflows: optimized Linux Rust+C++ smoke, and a separate Nitrogen generation + C++ syntax/ABI signature check.
 
@@ -58,3 +58,7 @@ No handcrafted generated files were committed. Implementations derive from gener
 A Linux syntax check against generated headers and an independent C++ C ABI test are not the same as a linked Nitro HybridObject in an iOS/Android Expo dev build. Native packaging still needs verified CMake/Gradle, Apple Podspec/SwiftPM, generated artifacts and Rust staticlib integration. UI remains separate and shared across apps through the Expo UI/adaptive/Tailwind system. This branch does not alter Skia v3 versions, published APIs, Moyo imports or production binary releases.
 
 An independent agent/subagent can take each row above in its own branch after explicit assignment. This document is not evidence that such an agent ran.
+
+
+## New native package
+`@nitro-forge/react-native` now owns this C++ implementation in `packages/react-native`. This was moved, not copied, from the temporary lab. Do not preserve two divergent native implementations. Platform setup and actual Xcode/Gradle linkage remain separate release gates.

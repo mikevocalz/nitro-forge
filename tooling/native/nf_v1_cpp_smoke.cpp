@@ -1,4 +1,4 @@
-#include "../../packages/ignition-v1-lab/cpp/ForgeRustSession.hpp"
+#include "../../packages/react-native/cpp/ForgeRustSession.hpp"
 
 #include <cassert>
 #include <cstring>

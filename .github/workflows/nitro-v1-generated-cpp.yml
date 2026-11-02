@@ -3,10 +3,10 @@ name: Nitro v1 generated C++ HybridObject signatures
 on:
   push:
     branches:
-      - feat/nitro-v1-cpp-rust-session-2026-11-02
+      - feat/package-react-native-2026-11-02
   pull_request:
     paths:
-      - 'packages/ignition-v1-lab/cpp/**'
+      - 'packages/react-native/cpp/**'
       - '.github/workflows/nitro-v1-generated-cpp.yml'
   workflow_dispatch:
 
@@ -27,25 +27,25 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile --ignore-scripts
       - name: Generate actual v1 native C++ specs
-        run: pnpm --filter @nitro-forge/ignition-v1-lab codegen
+        run: pnpm --filter @nitro-forge/react-native codegen
       - name: Typecheck v1 public API
-        run: pnpm --filter @nitro-forge/ignition-v1-lab typecheck
+        run: pnpm --filter @nitro-forge/react-native typecheck
       - name: Verify native class overrides against generated headers
         run: |
           ROOT="$PWD"
-          NITRO_ROOT=$(pnpm --filter @nitro-forge/ignition-v1-lab exec node -p "require('node:path').dirname(require.resolve('nitro-core/package.json'))")
+          NITRO_ROOT=$(pnpm --filter @nitro-forge/react-native exec node -p "require('node:path').dirname(require.resolve('nitro-core/package.json'))")
           RN_ROOT=$(pnpm --filter @nitro-forge/example exec node -p "require('node:path').dirname(require.resolve('react-native/package.json'))")
           echo "Native Nitro core: $NITRO_ROOT"
           echo "React Native headers: $RN_ROOT"
           clang++ -std=c++20 -Wall -Wextra -Werror -Wno-unused-parameter -fsyntax-only \
-            -I "$ROOT/packages/ignition-v1-lab/cpp" \
-            -I "$ROOT/packages/ignition-v1-lab/nitrogen/generated/shared/c++/include" \
+            -I "$ROOT/packages/react-native/cpp" \
+            -I "$ROOT/packages/react-native/nitrogen/generated/shared/c++/include" \
             -I "$NITRO_ROOT/native/cpp/include" \
             -I "$RN_ROOT/ReactCommon/jsi" \
             -I "$RN_ROOT/ReactCommon" \
             -I "$ROOT/rust/nf-sys/include" \
-            packages/ignition-v1-lab/cpp/HybridForgeFactory.cpp \
-            packages/ignition-v1-lab/cpp/HybridForgeDocument.cpp
+            packages/react-native/cpp/HybridForgeFactory.cpp \
+            packages/react-native/cpp/HybridForgeDocument.cpp
 
 # Syntax/type compatibility with generated v1 C++ headers is NOT an Android
 # Gradle or Apple Xcode link, nor proof of live JS/native execution.

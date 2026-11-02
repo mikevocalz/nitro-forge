@@ -26,7 +26,7 @@
 ## Exact files in this PR
 
 ```text
-packages/ignition-v1-lab/
+packages/react-native/
   package.json               # private, alpha pinned, not a product dependency
   nitro.json                 # v1 apple/android config, no legacy autolinking
   tsconfig.json              # TS6 + resolvePackageJsonImports
@@ -47,7 +47,7 @@ The preview is designed to use native **C++** as its portable Rust bridge on And
 ### Intended call site (not runnable until native backend exists)
 
 ```ts
-import { ForgeFactory } from '@nitro-forge/ignition-v1-lab'
+import { ForgeFactory } from '@nitro-forge/react-native'
 
 const factory = new ForgeFactory()
 const document = await factory.open('prism')
@@ -106,3 +106,7 @@ try {
 4. Benchmark JSON-vs-typed commands and base64-vs-ArrayBuffer, plus actual Skia v3 render; report measured speed/memory instead of guessing gains.
 5. Only then assess switching `@nitro-forge/ignition` to v1 as a **reviewed, versioned compatibility migration**. A prerelease is not an automatic production dependency upgrade.
 
+
+
+## Promotion note
+The native transport source was moved from the temporary `ignition-v1-lab` fixture into `packages/react-native` as the **new independent `@nitro-forge/react-native` package** in the next stacked PR. It remains private until native installation, packaging and device tests pass. The old historical PR #8 remains the record of v1 alpha codegen discovery.
