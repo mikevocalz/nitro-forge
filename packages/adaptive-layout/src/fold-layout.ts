@@ -15,7 +15,7 @@ export interface FoldLayout {
   orientation: FoldOrientation;
   state: FoldState;
   posture: FoldPosture;
-  occlusionType?: FoldOcclusionType;
+  occlusionType?: FoldOcclusionType | undefined;
   separating: boolean;
   x: number;
   y: number;
