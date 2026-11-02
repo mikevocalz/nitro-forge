@@ -32,7 +32,7 @@ jobs:
           version: 10.32.1
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - uses: actions/setup-java@v4
         with:
@@ -54,7 +54,8 @@ jobs:
       - name: Validate Viro-free Skia 2D autolink mode
         run: |
           NITRO_FORGE_BOARD_VIRO_ANDROID=off node -e "const c=require('./packages/board/react-native.config.cjs'); if (c.dependency.platforms.android !== null) process.exit(1)"
-      - name: Typecheck Expo native lab
+      - name: Typecheck Expo native lab, including generic Ink scene
+
         run: pnpm --filter @nitro-forge/board-native-lab typecheck
       - name: Generate real Expo 58 Android project
         working-directory: apps/board-native-lab
