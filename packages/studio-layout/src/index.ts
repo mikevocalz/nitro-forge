@@ -202,3 +202,83 @@ export function applyDockAction(
   }
   return failure(layout, "invalid-position");
 }
+
+/** Host/window-space coordinates; never guess screen size from device names. */
+export type Point = { x: number; y: number };
+export type DockDropPreview = {
+  dock: Dock;
+  position: number;
+  /** Host/window-space preview for a non-destructive drag indicator. */
+  rect: Rect;
+};
+/** Touch, pointer and stylus share the same hit test; keyboard uses applyDockAction. */
+export type DockDropQuery = {
+  layout: Layout;
+  known: ReadonlySet<string>;
+  panelId: string;
+  point: Point;
+  /** Measured editor host including its offset from the physical window. */
+  host: Rect;
+  /** Occluding or separating folding regions converted to window coordinates. */
+  blockedRegions?: readonly Rect[];
+  /** Dock snapping distance in logical pixels/points. */
+  snapDistance?: number;
+  minimumStageWidth: number;
+  minimumStageHeight: number;
+};
+const overlaps = (a: Rect, b: Rect): boolean =>
+  a.x < b.x + b.width && b.x < a.x + a.width &&
+  a.y < b.y + b.height && b.y < a.y + a.height;
+
+/**
+ * Resolve a magnetic rail preview without committing any layout mutation.
+ * Hinge/keyboard/safe-area geometry comes from a real host adapter; this
+ * function neither queries native APIs nor invents a fold posture.
+ */
+export function resolveDockDropPreview({
+  layout, known, panelId, point, host, blockedRegions = [], snapDistance = 36,
+  minimumStageWidth, minimumStageHeight,
+}: DockDropQuery): DockDropPreview | null {
+  if (!known.has(panelId) ||
+      ![point.x, point.y, host.x, host.y, host.width, host.height,
+        snapDistance, minimumStageWidth, minimumStageHeight].every(isFiniteNumber) ||
+      host.width <= 0 || host.height <= 0 ||
+      minimumStageWidth <= 0 || minimumStageHeight <= 0 ||
+      snapDistance < 8 || snapDistance > 160 ||
+      point.x < host.x || point.x > host.x + host.width ||
+      point.y < host.y || point.y > host.y + host.height) return null;
+  if (blockedRegions.some(blocked => (
+    ![blocked.x, blocked.y, blocked.width, blocked.height].every(isFiniteNumber) ||
+    blocked.width < 0 || blocked.height < 0
+  ))) return null;
+  if (blockedRegions.some(r =>
+    point.x >= r.x && point.x <= r.x + r.width &&
+    point.y >= r.y && point.y <= r.y + r.height
+  )) return null;
+
+  const nearest = ([
+    { dock: "left" as Dock, distance: point.x - host.x },
+    { dock: "right" as Dock, distance: host.x + host.width - point.x },
+    { dock: "bottom" as Dock, distance: host.y + host.height - point.y },
+  ]).filter(candidate => candidate.distance <= snapDistance)
+    .sort((a, b) => a.distance - b.distance)[0];
+  if (!nearest) return null;
+  const { dock } = nearest;
+  const position = layout.docks[dock].filter(id => id !== panelId).length;
+  const geometry: Geometry = {
+    width: host.width, height: host.height,
+    minStageWidth: minimumStageWidth, minStageHeight: minimumStageHeight,
+  };
+  const result = dockPanel(layout, panelId, dock, position, known, geometry);
+  if (!result.ok) return null;
+  const { leftFraction, rightFraction, bottomFraction } = layout.sizes;
+  const rect: Rect = dock === "left"
+    ? { x: host.x, y: host.y, width: host.width * leftFraction, height: host.height }
+    : dock === "right"
+      ? { x: host.x + host.width * (1 - rightFraction), y: host.y,
+          width: host.width * rightFraction, height: host.height }
+      : { x: host.x, y: host.y + host.height * (1 - bottomFraction),
+          width: host.width, height: host.height * bottomFraction };
+  if (blockedRegions.some(region => overlaps(rect, region))) return null;
+  return { dock, position, rect };
+}
