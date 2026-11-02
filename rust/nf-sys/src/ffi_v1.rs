@@ -3,7 +3,7 @@
 
 use super::{error_json, factory, ok_json, set_err, NfBytes, NULL_BYTES};
 use crate::session_registry::ConcurrentSessions;
-use ignition_core::{Command, EngineError, EngineKind, OP_REDO, OP_SNAPSHOT, OP_UNDO};
+use ignition_core::{Command, Engine, EngineError, EngineKind, OP_REDO, OP_SNAPSHOT, OP_UNDO};
 use std::ffi::{c_char, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::OnceLock;
@@ -14,6 +14,14 @@ const MAX_SNAPSHOT_BYTES: usize = 256 * 1024 * 1024;
 fn registry() -> &'static ConcurrentSessions {
     static REGISTRY: OnceLock<ConcurrentSessions> = OnceLock::new();
     REGISTRY.get_or_init(ConcurrentSessions::new)
+}
+
+/// Share the exact same session registry with structured v1 command frames.
+pub(super) fn with_v1_engine<T>(
+    handle: i64,
+    operation: impl FnOnce(&mut dyn Engine) -> Result<T, EngineError>,
+) -> Result<T, EngineError> {
+    registry().with_engine(handle, operation)
 }
 
 fn error_frame(error: EngineError) -> CString {
