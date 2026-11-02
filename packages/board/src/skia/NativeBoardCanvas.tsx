@@ -1,6 +1,7 @@
 import { Canvas, DashPathEffect, Fill, Group, Path, Skia } from "react-native-skia";
 import type { ReactElement, ReactNode } from "react";
 import type { SceneResult } from "./scene";
+import { boardTransform } from "../ink/geometry";
 
 /**
  * A genuine React Native Skia v3 Graphite canvas. No HTML, WebView, bitmap
@@ -30,15 +31,20 @@ export function NativeBoardCanvas({
       ) || !Skia.gpu.isAvailable) {
     return <>{fallback}</>;
   }
-  const x = width / boardWidth;
-  const y = height / boardHeight;
+  // Keep drawing coordinates isotropic on resize, iPad split-screen and
+  // foldable panes. Nonuniform scaling changes brush shape and input mapping.
+  const transform = boardTransform(boardWidth, boardHeight, width, height);
+  if (transform === null) return <>{fallback}</>;
   return (
     <Canvas
       style={{ width, height }}
       android={{ backingView: "SurfaceView", opaque: true }}
     >
       <Fill color={backgroundColor} />
-      <Group transform={[{ scaleX: x }, { scaleY: y }]}>
+      <Group transform={[
+          { translateX: transform.offsetX }, { translateY: transform.offsetY },
+          { scaleX: transform.scale }, { scaleY: transform.scale },
+        ]}>
         {scene.marks.map((m) => (
           <Group key={m.id}
             {...(m.rotation === undefined ? {} : {
