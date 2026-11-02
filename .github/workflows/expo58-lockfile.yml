@@ -50,6 +50,13 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # A reviewer may have updated docs while resolution ran. Merge the
+          # trusted branch's newer commits (never rebase/reset/force push).
+          git fetch origin feat/studio-suite-upstream-monitor-2026-11-02
+          git merge --no-edit origin/feat/studio-suite-upstream-monitor-2026-11-02
+          # Re-resolve against the latest committed manifests after merge.
+          pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+          pnpm install --frozen-lockfile --ignore-scripts
           git add pnpm-lock.yaml
           if git diff --cached --quiet; then
             echo 'Lockfile already matches current manifests.'
