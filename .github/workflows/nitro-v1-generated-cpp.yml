@@ -26,6 +26,9 @@ jobs:
         run: |
           corepack enable
           pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify exact Nitro v1 runtime and generator before native codegen
+        run: |
+          pnpm --filter @nitro-forge/ignition-v1-lab exec node -e "const p=require('./package.json'); const v=p.devDependencies.nitrogen; if(v!==p.devDependencies['nitro-core'] || v!==p.peerDependencies['react-native-nitro-modules']) process.exit(1); console.log('Pinned v1 release:',v)"
       - name: Generate actual v1 native C++ specs
         run: pnpm --filter @nitro-forge/ignition-v1-lab codegen
       - name: Typecheck v1 public API
