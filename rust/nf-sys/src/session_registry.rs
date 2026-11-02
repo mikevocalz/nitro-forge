@@ -75,11 +75,13 @@ impl ConcurrentSessions {
         let session = self.lookup(handle)?;
         let mut guard = lock_unpoison(&session.engine);
         if session.closing.load(Ordering::Acquire) {
-            return Err(EngineError::not_found(format!("closed native session {handle}")));
+            return Err(EngineError::not_found(format!(
+                "closed native session {handle}"
+            )));
         }
-        let engine = guard.as_deref_mut().ok_or_else(|| {
-            EngineError::not_found(format!("closed native session {handle}"))
-        })?;
+        let engine = guard
+            .as_deref_mut()
+            .ok_or_else(|| EngineError::not_found(format!("closed native session {handle}")))?;
 
         // Catch here, *inside* the session lock, so one panicking document
         // cannot unwind across a C ABI or poison the registry map lock.
@@ -96,7 +98,9 @@ impl ConcurrentSessions {
             Err(_) => {
                 session.closing.store(true, Ordering::Release);
                 guard.take();
-                Err(EngineError::internal("engine panicked; native session closed"))
+                Err(EngineError::internal(
+                    "engine panicked; native session closed",
+                ))
             }
         };
         let terminal = session.closing.load(Ordering::Acquire);
@@ -127,7 +131,9 @@ impl ConcurrentSessions {
 
     fn lookup(&self, handle: i64) -> Result<Arc<Session>, EngineError> {
         if handle <= 0 {
-            return Err(EngineError::not_found(format!("invalid native session {handle}")));
+            return Err(EngineError::not_found(format!(
+                "invalid native session {handle}"
+            )));
         }
         lock_unpoison(&self.sessions)
             .get(&(handle as u64))
@@ -137,7 +143,10 @@ impl ConcurrentSessions {
 
     fn remove_if_current(&self, id: u64, session: &Arc<Session>) {
         let mut sessions = lock_unpoison(&self.sessions);
-        if sessions.get(&id).is_some_and(|current| Arc::ptr_eq(current, session)) {
+        if sessions
+            .get(&id)
+            .is_some_and(|current| Arc::ptr_eq(current, session))
+        {
             sessions.remove(&id);
         }
     }
@@ -166,18 +175,30 @@ mod tests {
         }
     }
     impl Engine for Dummy {
-        fn kind(&self) -> EngineKind { EngineKind::Tally }
+        fn kind(&self) -> EngineKind {
+            EngineKind::Tally
+        }
         fn apply(&mut self, _command: Command) -> Result<CommandResult, EngineError> {
             Ok(CommandResult::empty())
         }
-        fn snapshot(&self) -> Result<Vec<u8>, EngineError> { Ok(vec![1, 2, 3]) }
-        fn restore(&mut self, _bytes: &[u8]) -> Result<(), EngineError> { Ok(()) }
-        fn undo(&mut self) -> Result<bool, EngineError> { Ok(false) }
-        fn redo(&mut self) -> Result<bool, EngineError> { Ok(false) }
+        fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
+            Ok(vec![1, 2, 3])
+        }
+        fn restore(&mut self, _bytes: &[u8]) -> Result<(), EngineError> {
+            Ok(())
+        }
+        fn undo(&mut self) -> Result<bool, EngineError> {
+            Ok(false)
+        }
+        fn redo(&mut self) -> Result<bool, EngineError> {
+            Ok(false)
+        }
     }
 
     fn dummy(drops: &Arc<AtomicUsize>) -> Box<dyn Engine> {
-        Box::new(Dummy { drops: Arc::clone(drops) })
+        Box::new(Dummy {
+            drops: Arc::clone(drops),
+        })
     }
 
     #[test]
@@ -186,7 +207,10 @@ mod tests {
         let drops = Arc::new(AtomicUsize::new(0));
         let a = sessions.open(dummy(&drops)).unwrap();
         assert!(a > 0);
-        assert_eq!(sessions.with_engine(a, |engine| engine.snapshot()).unwrap(), vec![1, 2, 3]);
+        assert_eq!(
+            sessions.with_engine(a, |engine| engine.snapshot()).unwrap(),
+            vec![1, 2, 3]
+        );
         assert!(sessions.close(a));
         assert!(!sessions.close(a));
         assert!(sessions.with_engine(a, |engine| engine.snapshot()).is_err());
@@ -235,15 +259,24 @@ mod tests {
         let drops = Arc::new(AtomicUsize::new(0));
         let bad = sessions.open(dummy(&drops)).unwrap();
         let other = sessions.open(dummy(&drops)).unwrap();
-        let err = sessions.with_engine(bad, |_engine| -> Result<(), EngineError> {
-            panic!("simulated per-document engine panic")
-        }).unwrap_err();
+        let err = sessions
+            .with_engine(bad, |_engine| -> Result<(), EngineError> {
+                panic!("simulated per-document engine panic")
+            })
+            .unwrap_err();
         assert!(!err.recoverable);
         assert_eq!(sessions.len(), 1);
-        assert_eq!(sessions.with_engine(other, |engine| engine.snapshot()).unwrap(), vec![1, 2, 3]);
-        let terminal = sessions.with_engine(other, |_engine| -> Result<(), EngineError> {
-            Err(EngineError::internal("fatal"))
-        }).unwrap_err();
+        assert_eq!(
+            sessions
+                .with_engine(other, |engine| engine.snapshot())
+                .unwrap(),
+            vec![1, 2, 3]
+        );
+        let terminal = sessions
+            .with_engine(other, |_engine| -> Result<(), EngineError> {
+                Err(EngineError::internal("fatal"))
+            })
+            .unwrap_err();
         assert!(!terminal.recoverable);
         assert_eq!(sessions.len(), 0);
         assert_eq!(drops.load(Ordering::SeqCst), 2);
@@ -257,11 +290,13 @@ mod tests {
         let (entered_tx, entered_rx) = mpsc::channel();
         let (release_tx, release_rx) = mpsc::channel();
         let running = Arc::clone(&sessions);
-        let worker = thread::spawn(move || running.with_engine(id, |_engine| {
-            entered_tx.send(()).unwrap();
-            release_rx.recv().unwrap();
-            Ok(())
-        }));
+        let worker = thread::spawn(move || {
+            running.with_engine(id, |_engine| {
+                entered_tx.send(()).unwrap();
+                release_rx.recv().unwrap();
+                Ok(())
+            })
+        });
         entered_rx.recv_timeout(Duration::from_secs(2)).unwrap();
         let closing = Arc::clone(&sessions);
         let (close_tx, close_rx) = mpsc::channel();
@@ -271,7 +306,9 @@ mod tests {
         assert!(worker.join().unwrap().is_ok());
         closer.join().unwrap();
         assert_eq!(close_rx.recv_timeout(Duration::from_secs(2)).unwrap(), true);
-        assert!(sessions.with_engine(id, |engine| engine.snapshot()).is_err());
+        assert!(sessions
+            .with_engine(id, |engine| engine.snapshot())
+            .is_err());
         assert_eq!(drops.load(Ordering::SeqCst), 1);
     }
 }

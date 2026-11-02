@@ -46,8 +46,17 @@ pub unsafe extern "C" fn nf_v1_open(
     }));
     match result {
         Ok(Ok(handle)) => handle,
-        Ok(Err(error)) => { set_err(out_err, error); 0 }
-        Err(_) => { set_err(out_err, EngineError::internal("panic opening native engine")); 0 }
+        Ok(Err(error)) => {
+            set_err(out_err, error);
+            0
+        }
+        Err(_) => {
+            set_err(
+                out_err,
+                EngineError::internal("panic opening native engine"),
+            );
+            0
+        }
     }
 }
 
@@ -57,19 +66,18 @@ pub unsafe extern "C" fn nf_v1_open(
 /// # Safety
 /// bytes must point to exactly len readable bytes until this call returns.
 #[no_mangle]
-pub unsafe extern "C" fn nf_v1_apply(
-    handle: i64,
-    bytes: *const u8,
-    len: usize,
-) -> *mut c_char {
-    let result = catch_unwind(AssertUnwindSafe(|| -> Result<serde_json::Value, EngineError> {
-        if bytes.is_null() || len == 0 || len > MAX_COMMAND_BYTES {
-            return Err(EngineError::invalid("native command missing or exceeds 32 MiB"));
-        }
-        let input = std::slice::from_raw_parts(bytes, len);
-        let cmd: Command = serde_json::from_slice(input)
-            .map_err(|error| EngineError::invalid(format!("invalid command JSON: {error}")))?;
-        registry().with_engine(handle, |engine| match cmd.op.as_str() {
+pub unsafe extern "C" fn nf_v1_apply(handle: i64, bytes: *const u8, len: usize) -> *mut c_char {
+    let result = catch_unwind(AssertUnwindSafe(
+        || -> Result<serde_json::Value, EngineError> {
+            if bytes.is_null() || len == 0 || len > MAX_COMMAND_BYTES {
+                return Err(EngineError::invalid(
+                    "native command missing or exceeds 32 MiB",
+                ));
+            }
+            let input = std::slice::from_raw_parts(bytes, len);
+            let cmd: Command = serde_json::from_slice(input)
+                .map_err(|error| EngineError::invalid(format!("invalid command JSON: {error}")))?;
+            registry().with_engine(handle, |engine| match cmd.op.as_str() {
             OP_UNDO => engine.undo().map(|undone|
                 serde_json::json!({"ok":true,"data":{"undone":undone},"events":[]})),
             OP_REDO => engine.redo().map(|redone|
@@ -79,7 +87,8 @@ pub unsafe extern "C" fn nf_v1_apply(
             _ => engine.apply(cmd).map(|result|
                 serde_json::json!({"ok":true,"data":result.data,"events":result.events})),
         })
-    }));
+        },
+    ));
     match result {
         Ok(Ok(value)) => ok_json(value).into_raw(),
         Ok(Err(error)) => error_frame(error).into_raw(),
@@ -94,17 +103,17 @@ pub unsafe extern "C" fn nf_v1_apply(
 /// out_err must be writable if non-null; returned errors are freed by
 /// nf_free_string and returned byte allocations by nf_free_bytes.
 #[no_mangle]
-pub unsafe extern "C" fn nf_v1_snapshot(
-    handle: i64,
-    out_err: *mut *mut c_char,
-) -> NfBytes {
-    let result = catch_unwind(AssertUnwindSafe(|| registry().with_engine(
-        handle, |engine| engine.snapshot(),
-    )));
+pub unsafe extern "C" fn nf_v1_snapshot(handle: i64, out_err: *mut *mut c_char) -> NfBytes {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        registry().with_engine(handle, |engine| engine.snapshot())
+    }));
     match result {
         Ok(Ok(bytes)) => {
             if bytes.len() > MAX_SNAPSHOT_BYTES {
-                set_err(out_err, EngineError::validation("native snapshot exceeds 256 MiB"));
+                set_err(
+                    out_err,
+                    EngineError::validation("native snapshot exceeds 256 MiB"),
+                );
                 return NULL_BYTES;
             }
             let boxed = bytes.into_boxed_slice();
@@ -112,9 +121,15 @@ pub unsafe extern "C" fn nf_v1_snapshot(
             let ptr = Box::into_raw(boxed) as *mut u8;
             NfBytes { ptr, len }
         }
-        Ok(Err(error)) => { set_err(out_err, error); NULL_BYTES }
+        Ok(Err(error)) => {
+            set_err(out_err, error);
+            NULL_BYTES
+        }
         Err(_) => {
-            set_err(out_err, EngineError::internal("panic snapshotting native engine"));
+            set_err(
+                out_err,
+                EngineError::internal("panic snapshotting native engine"),
+            );
             NULL_BYTES
         }
     }
@@ -126,11 +141,7 @@ pub unsafe extern "C" fn nf_v1_snapshot(
 /// bytes must reference exactly len readable bytes. Caller frees any
 /// returned error string via nf_free_string.
 #[no_mangle]
-pub unsafe extern "C" fn nf_v1_restore(
-    handle: i64,
-    bytes: *const u8,
-    len: usize,
-) -> *mut c_char {
+pub unsafe extern "C" fn nf_v1_restore(handle: i64, bytes: *const u8, len: usize) -> *mut c_char {
     let result = catch_unwind(AssertUnwindSafe(|| -> Result<(), EngineError> {
         if bytes.is_null() || len == 0 || len > MAX_SNAPSHOT_BYTES {
             return Err(EngineError::invalid("snapshot missing or exceeds 256 MiB"));
@@ -153,8 +164,8 @@ pub extern "C" fn nf_v1_close(handle: i64) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{nf_free_bytes, nf_free_string};
+    use super::*;
     use std::ffi::CStr;
 
     unsafe fn apply(handle: i64, command: &str) -> serde_json::Value {
@@ -172,13 +183,22 @@ mod tests {
             let h = nf_v1_open(b"tally".as_ptr(), 5, &mut error);
             assert!(h > 0 && error.is_null());
             assert_eq!(apply(h, r#"{"op":"new","payload":{}}"#)["ok"], true);
-            assert_eq!(apply(h, r#"{"op":"setCell","payload":{"addr":"A1","value":"42"}}"#)["ok"], true);
+            assert_eq!(
+                apply(
+                    h,
+                    r#"{"op":"setCell","payload":{"addr":"A1","value":"42"}}"#
+                )["ok"],
+                true
+            );
             let snapshot = nf_v1_snapshot(h, &mut error);
             assert!(error.is_null());
             assert!(snapshot.len > 9 && !snapshot.ptr.is_null());
             let bytes = std::slice::from_raw_parts(snapshot.ptr, snapshot.len).to_vec();
             nf_free_bytes(snapshot);
-            assert_eq!(apply(h, r#"{"op":"setCell","payload":{"addr":"A1","value":"8"}}"#)["ok"], true);
+            assert_eq!(
+                apply(h, r#"{"op":"setCell","payload":{"addr":"A1","value":"8"}}"#)["ok"],
+                true
+            );
             assert!(nf_v1_restore(h, bytes.as_ptr(), bytes.len()).is_null());
             let restored = apply(h, r#"{"op":"getCell","payload":{"addr":"A1"}}"#);
             assert_eq!(restored["ok"], true);
