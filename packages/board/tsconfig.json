@@ -3,8 +3,19 @@
   "compilerOptions": {
     "noEmit": true,
     "resolvePackageJsonImports": true,
-    "lib": ["ES2022", "DOM"],
-    "experimentalDecorators": false
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "experimentalDecorators": false,
+    "jsx": "react-jsx",
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "nitrogen/generated/shared/javascript/**/*.d.cts"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "nitrogen/generated/shared/javascript/**/*.d.cts"
+  ]
 }
