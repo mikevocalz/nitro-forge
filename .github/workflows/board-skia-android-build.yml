@@ -38,10 +38,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install available Android SDK 36 and NDK for isolated compile
+      - name: Install Android API 37 (Expo SDK 58 AAR requirement) and NDK
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            'platforms;android-36' 'build-tools;36.0.0' \
+            'platforms;android-37' 'build-tools;36.0.0' \
             'ndk;28.2.13676358' 'cmake;3.22.1'
       - name: Install workspace packages
         run: pnpm install --no-frozen-lockfile
