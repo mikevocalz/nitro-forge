@@ -16,7 +16,9 @@
     "./skia": "./src/skia/index.ts",
     "./skia/native": "./src/skia/native.ts",
     "./ink": "./src/ink/index.ts",
-    "./offline": "./src/offline.ts"
+    "./offline": "./src/offline.ts",
+    "./offline/mmkv": "./src/offline-mmkv.ts",
+    "./offline/yjs": "./src/offline-yjs.ts"
   },
   "files": [
     "src",
@@ -42,7 +44,8 @@
     "react": ">=19.0.0",
     "react-native": ">=0.88.0",
     "@reactvision/react-viro": ">=3.0.3-moyo.1 <4.0.0",
-    "react-native-skia": "^3.8.1"
+    "react-native-skia": "^3.8.1",
+    "yjs": ">=13.6.32 <14"
   },
   "peerDependenciesMeta": {
     "@reactvision/react-viro": {
@@ -56,6 +59,9 @@
     },
     "react-native-skia": {
       "optional": true
+    },
+    "yjs": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -65,6 +71,7 @@
     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "typescript": "^6.0.3",
     "vitest": "^3.2.7",
-    "react-native-skia": "3.8.1"
+    "react-native-skia": "3.8.1",
+    "yjs": "13.6.32"
   }
 }
