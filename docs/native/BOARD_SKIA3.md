@@ -43,7 +43,7 @@ package stays private/draft; no main app dependency is changed here.
 | Solid/dashed/dotted draw | Centerline path, rounded stroke, DashPathEffect | Existing QuickDraw shape wire |
 | Highlighter | 4.5x size, alpha 0.55, Multiply, drawn below ordinary ink | BoardPalette/ShapePainter |
 | Geo: rectangle, ellipse, triangle, diamond, hexagon, star | Native path, solid/semi/none fill and stroke | BoardGeometry/InkColor |
-| Rotated shapes | **Unsupported → fallback** until pivot-parity tests | No misleadingly unrotated drawing |
+| Rotated ink/highlights/geo | Skia Group rotation around QuickDraw ShapeBounds local center; source-level tests | Native visual parity/device not yet proven |
 | Text, notes, images, arrows, lines, pattern fill, geo labels | **Unsupported → fallback** | Needs native font/layout, asset and connector parity |
 | Unknown record type / malformed or oversized input | **Unsupported → fallback** | All-or-nothing document fidelity |
 
@@ -93,10 +93,10 @@ Do not rebuild the whole scene on every 6DoF pen sensor sample.
 - [x] Native React Native Graphite Canvas source authored with fallback.
 - [x] Zustand vanilla `createNativeBoardSceneBridge` subscribes to one QuickDraw Store, coalesces by display frame and cleans up listeners.
 - [x] `NativeBoardCanvasWithInput` uses native RN Pointer Events; pointer coordinates map exactly once to board space, preserving pressure, cancellation and palm rejection. No WebView or second editor.
-- [x] TypeScript, published Skia v3 types, and **12/12 replay tests PASS** ([CI 41479322871](https://github.com/mikevocalz/nitro-forge/actions/runs/41479322871)); three test files cover scene, frame-coalesced Zustand bridge, and native pen/touch input.
+- [x] TypeScript, published Skia v3 types, and **14/14 replay tests PASS** ([CI 41479322871](https://github.com/mikevocalz/nitro-forge/actions/runs/41479322871)); three test files cover scene (including exact rotation pivots), frame-coalesced Zustand bridge, and native pen/touch input.
 - [ ] Real Expo 58 + react-native-skia v3 native device compile on iOS / Android.
 - [ ] Vision Pro visionOS Skia native view support demonstrated.
-- [ ] Native font layout/image assets/arrows and rotated shapes parity.
+- [ ] Native font layout/image assets/arrows and on-device rotation visual parity.
 - [ ] Compare Golden PNGs with QuickDraw (text/image/eraser/selection) and
       measure latency, FPS and memory at 60/90/120Hz.
 - [ ] Moyo replaces its v2 @shopify Skia dependency safely with v3, without
@@ -122,3 +122,9 @@ Relevant public sources:
 https://wcandillon.github.io/react-native-skia/docs/getting-started/migration/
 https://wcandillon.github.io/react-native-skia/docs/group/
 https://wcandillon.github.io/react-native-skia/docs/shapes/path/
+
+## Isolated Android native build proof
+
+`apps/board-native-lab` is a small Expo SDK 58 / React Native 0.88 dev app. It compiles the `@nitro-forge/board-skia` package with **Skia v3 only**, then attempts a real Android debug APK native build in [`.github/workflows/board-skia-android-build.yml`](https://github.com/mikevocalz/nitro-forge/blob/feat/board-skia3-native-canvas-2026-11-02/.github/workflows/board-skia-android-build.yml). It contains a sample pressure-ink path, native pointer wrapper and required fallback. It does not mount a second QuickDraw editor.
+
+**SDK mismatch to resolve:** First runner attempt could not install `platforms;android-37` even though Expo 58's reference target expects compileSdk 37. The smoke lab temporarily uses SDK 36 (available to the runner) to isolate native linker behavior; a green SDK 36 build **would not** satisfy the Expo 58 SDK 37 release parity gate. Exact build outcome is reported by the workflow, not assumed here. Moyo Learn remains unchanged.
