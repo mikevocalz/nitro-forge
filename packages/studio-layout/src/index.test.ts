@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createWorkspace, dockPanel, collapsePanel, floatPanel, resizeDock,
-  parsePreset, serializePreset, stageFits, applyDockAction, type Layout,
+  parsePreset, serializePreset, stageFits, applyDockAction, resolveDockDropPreview, type Layout,
 } from "./index.ts";
 
 const known = new Set(["tools", "layers", "assets", "inspector", "timeline"]);
@@ -120,4 +120,59 @@ test("keyboard dock requests reject unknown panels and stage-blocking destinatio
   const unknown = applyDockAction(start, "layers", "move-before", known);
   assert.equal(unknown.ok, true);
   assert.equal(unknown.layout, start);
+});
+
+
+test("magnetic left/right/bottom rails derive previews from the measured host origin", () => {
+  const layout = createWorkspace("prism");
+  const host = { x: 100, y: 60, width: 1300, height: 800 };
+  const base = { layout, known, panelId: "layers", host,
+    minimumStageWidth: 500, minimumStageHeight: 330 };
+  const left = resolveDockDropPreview({ ...base, point: {x: 107, y: 300} });
+  assert.deepEqual(left, {
+    dock: "left", position: 0, rect: {x: 100, y: 60, width: 286, height: 800},
+  });
+  const right = resolveDockDropPreview({ ...base, point: {x: 1390, y: 300} });
+  assert.deepEqual(right, {
+    dock: "right", position: 0, rect: {x: 1088, y: 60, width: 312, height: 800},
+  });
+  const bottom = resolveDockDropPreview({ ...base, point: {x: 750, y: 852} });
+  assert.deepEqual(bottom, {
+    dock: "bottom", position: 0, rect: {x: 100, y: 644, width: 1300, height: 216},
+  });
+  assert.deepEqual(layout.docks, {left:[],right:[],bottom:[]});
+});
+
+test("snap previews reject blocked hinge regions and invalid host geometry", () => {
+  const base = {layout:createWorkspace("prism"),known,panelId:"layers",
+    point: {x: 102, y: 200}, host: {x:100,y:60,width:1300,height:800},
+    minimumStageWidth:500,minimumStageHeight:330};
+  assert.equal(resolveDockDropPreview({ ...base,
+    blockedRegions:[{x:220,y:60,width:24,height:800}],
+  }), null);
+  assert.equal(resolveDockDropPreview({ ...base,
+    // A zero-width separating crease inside the dock also blocks the rail.
+    blockedRegions:[{x:220,y:60,width:0,height:800}],
+  }), null);
+  assert.notEqual(resolveDockDropPreview({ ...base,
+    blockedRegions:[{x:1800,y:60,width:24,height:800}],
+  }), null);
+  assert.equal(resolveDockDropPreview({ ...base,
+    point: {x:98,y:200},
+  }), null);
+  assert.equal(resolveDockDropPreview({ ...base, snapDistance: Infinity }), null);
+});
+
+test("small windows decline magnetic drops that would consume the canvas", () => {
+  const base = {layout:createWorkspace("prism"),known,panelId:"inspector",
+    host:{x:20,y:20,width:500,height:600},
+    point:{x:510,y:100},minimumStageWidth:420,minimumStageHeight:360};
+  assert.equal(resolveDockDropPreview(base), null);
+  const allowed = resolveDockDropPreview({ ...base, minimumStageWidth:320 });
+  assert.equal(allowed?.dock, "right");
+  const after = dockPanel(base.layout,"inspector","right",0,known,
+    {width:500,height:600,minStageWidth:320,minStageHeight:360});
+  assert.equal(after.ok,true);
+  assert.deepEqual(base.layout.docks.right,[]);
+  assert.deepEqual(after.layout.docks.right,["inspector"]);
 });
