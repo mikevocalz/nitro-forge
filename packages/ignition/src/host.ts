@@ -73,19 +73,35 @@ export class NitroHost implements EngineHost {
       .catch((e: unknown) => {
         throw parseNativeError(e);
       });
-    const res = JSON.parse(raw) as {
+    let res: {
       ok?: boolean;
       data?: T;
       events?: ForgeEvent[];
       error?: EngineErrorShape;
-    };
-    // The C ABI reports engine failures in-band ({"ok":false,"error":{…}}),
-    // not as rejections. Without this check every engine error reads as a
-    // successful apply with undefined data.
-    if (res.ok === false) {
+    } | null;
+    try {
+      res = JSON.parse(raw) as typeof res;
+    } catch {
+      throw new EngineError({
+        code: "internal",
+        message: "Malformed native engine response",
+        recoverable: false,
+      });
+    }
+    // Native failures arrive in-band; a missing status is never successful.
+    if (res?.ok === false) {
       throw new EngineError(
         res.error ?? { code: "internal", message: "empty error", recoverable: false },
       );
+    }
+    if (res?.ok !== true || (res.events !== undefined &&
+      (!Array.isArray(res.events) || res.events.some((e) =>
+        e === null || typeof e !== "object" || typeof e.kind !== "string")))) {
+      throw new EngineError({
+        code: "internal",
+        message: "Invalid native engine response shape",
+        recoverable: false,
+      });
     }
     return { data: res.data as T, events: res.events ?? [] };
   }
