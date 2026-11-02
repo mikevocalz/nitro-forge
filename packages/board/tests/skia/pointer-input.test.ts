@@ -59,4 +59,24 @@ describe("native 2D pen/touch board coordinates", () => {
     expect(out.map(s => s.phase)).toEqual(["begin", "end"]);
     router.dispose();
   });
+
+  it("letterboxes drawing without stretching and rejects a new stroke in the margin", () => {
+    const out: BoardPointerSample[] = [];
+    const router = createNativeBoardPointerRouter({
+      surfaceWidth: 400, surfaceHeight: 400,
+      boardWidth: 1000, boardHeight: 500,
+      now: () => 10,
+      onPointer: sample => out.push(sample),
+    });
+    // Actual ink occupies y = 100..300. A margin touch is not a stroke.
+    router.handle("down", event(1, 200, 20, "pen", 0.2));
+    expect(out).toHaveLength(0);
+    router.handle("down", event(1, 200, 200, "pen", 0.2));
+    router.handle("move", event(1, 200, 0, "pen", 0.8));
+    router.handle("up", event(1, 200, 200, "pen", 1));
+    expect(out.map(x => [x.x,x.y])).toEqual([[500,250],[500,0],[500,250]]);
+    expect(out.map(x => x.pressure)).toEqual([0.2,0.8,1]);
+    router.dispose();
+  });
+
 });
