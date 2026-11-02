@@ -15,7 +15,7 @@
 | --- | --- | --- |
 | `Forge` interface, `createHybridObject<Forge>()` | Generated `ForgeFactory` native class with declared constructor and factory method | TypeScript and native constructor consistency; requires Nitrogen and actual C++ implementation |
 | JS `number` for Rust `u64` session handle | `ForgeDocument` is an opaque native-owned HybridObject returned by `open()` | No unsafe numeric document ID exposed to JS. Internal Rust handles still require generation/lifecycle validation |
-| `applyJson(string): Promise<string>` | `apply(ForgeCommand): Promise<ForgeCommandResult>` using named structured types and `AnyJSON` | Removes manual JSON string frames at the JS boundary. C++ still validates/serializes into the current Rust JSON FFI; benchmark actual costs |
+| `applyJson(string): Promise<string>` | `apply(ForgeCommand): Promise<ForgeCommandResult>` with a named command/result envelope and serialized `payloadJson` / `dataJson` | Removes the ambiguous outer JSON status frame, but retains heterogeneous Rust payload JSON until Nitrogen supports nested `AnyJSON` in named struct properties; benchmark costs |
 | `snapshotB64()/restoreB64()` | `snapshot(): Promise<ArrayBuffer>`, `restore(ArrayBuffer)` | Avoids base64 encoding over the JS/native boundary, not necessarily zero copies between Rust/native/Skia |
 | Global Forge module dispatches every session by handle | One ForgeDocument native object per document | Allows per-session ownership and cleanup after implementation. Current `nf-sys` global mutex remains a blocker |
 | Generated v0 interface, `nitro.json.autolinking` | v1 class annotations, runtime registration via constructor/implementation | Must port Native C++/Swift/Kotlin and packaging; no compatibility shim should hide broken build |
@@ -42,7 +42,7 @@ tooling/nitro-v1/
   nitro-v1-codegen.yml       # isolated codegen, package checks and TypeScript
 ```
 
-The preview uses native **C++** as its portable Rust bridge on Android and Apple, rather than duplicating Rust document logic in Swift and Kotlin. Platform-specific SwiftUI/Compose editor views stay in the separate shared Expo UI layer. Nitro v1's visionOS/macOS/tvOS support is promising for future NitroForge adapters but not validated by this PR.
+The preview is designed to use native **C++** as its portable Rust bridge on Android and Apple, rather than duplicating Rust document logic in Swift and Kotlin. Platform-specific SwiftUI/Compose editor views stay in the separate shared Expo UI layer. Nitro v1's visionOS/macOS/tvOS support is promising for future NitroForge adapters but not validated by this PR.
 
 ### Intended call site (not runnable until native backend exists)
 
@@ -70,7 +70,7 @@ try {
 - `ForgeDocument` owns one Rust `Engine` handle behind native RAII; `close` is idempotent; finalizer `dispose` releases it safely when not explicitly closed. Never let a stale callback dereference closed Rust state.
 - Rust `u64` handle remains **native-only**; no pointer/number export. Use v1 `UInt64` only for supported, documented 64-bit domain values and test BigInt/Swift/Kotlin conversions.
 - `nf-sys` currently holds the global registry lock while executing each `Engine` operation. To achieve per-document concurrency, refactor that owner boundary first; Promise-returning generated methods alone do **not** establish concurrency.
-- C++ translates typed `ForgeCommand` to existing Rust JSON commands and validates `NFD1` data; memory and buffer ownership must match `nf_free_bytes`, `nf_free_string` and native `ArrayBuffer` destruction. Do not call unreviewed `nf_alloc_copy` or claim zero-copy without proof.
+- C++ translates the typed outer `ForgeCommand` and its validated `payloadJson` to existing Rust JSON commands and validates `NFD1` data; memory and buffer ownership must match `nf_free_bytes`, `nf_free_string` and native `ArrayBuffer` destruction. Do not call unreviewed `nf_alloc_copy` or claim zero-copy without proof.
 - Nitro v1's `AnyJSON` supports nested structured JS values but may allocate for large commands. Validate maximum payload size/recursion and compare against typed structs/byte-buffer operations. Don't route raw file paths, untrusted callbacks, arbitrary plug-ins or MCP commands from user documents.
 - Preserve strict per-engine command behavior from `docs/ENGINE_OPS.md`, atomic undo/redo, `NFD1` snapshot migrations, errors, and bounded imports.
 
