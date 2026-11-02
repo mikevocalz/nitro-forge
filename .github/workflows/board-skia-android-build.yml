@@ -51,6 +51,9 @@ jobs:
         run: |
           test -f packages/board/nitrogen/generated/android/NitroForgeBoard+autolinking.gradle
           test -f packages/board/nitrogen/generated/android/NitroForgeBoard+autolinking.cmake
+      - name: Validate Viro-free Skia 2D autolink mode
+        run: |
+          NITRO_FORGE_BOARD_VIRO_ANDROID=off node -e "const c=require('./packages/board/react-native.config.cjs'); if (c.dependency.platforms.android !== null) process.exit(1)"
       - name: Typecheck Expo native lab
         run: pnpm --filter @nitro-forge/board-native-lab typecheck
       - name: Generate real Expo 58 Android project

@@ -27,7 +27,7 @@
     "android",
     "nitro.json",
     "nitrogen",
-    "react-native.config.js",
+    "react-native.config.cjs",
     "README.md"
   ],
   "scripts": {
