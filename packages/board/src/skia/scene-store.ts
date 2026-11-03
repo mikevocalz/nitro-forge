@@ -28,7 +28,17 @@ export interface NativeBoardSceneBridge {
   dispose(): void;
 }
 export function createNativeBoardSceneBridge(options: NativeBoardSceneBridgeOptions): NativeBoardSceneBridge {
-  const capture = () => compileQuickDrawScene(options.encodeSnapshot(options.source.getSnapshot()));
+  const capture = (): SceneResult => {
+    try {
+      return compileQuickDrawScene(options.encodeSnapshot(options.source.getSnapshot()));
+    } catch {
+      // Restored/collaborative documents can contain unknown records, and a
+      // host's outline encoder may reject them before the strict compiler runs.
+      // Preserve the entire source and select its complete fallback. Never let
+      // one record crash the host, or make a partial scene look complete.
+      return { kind: "unsupported", reasons: ["Board snapshot or ink outline encoding failed"] };
+    }
+  };
   const state = createStore<NativeBoardSceneState>(() => ({
     scene: capture(), revision: 1,
   }));

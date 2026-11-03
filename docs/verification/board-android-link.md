@@ -24,3 +24,7 @@ The renderer binding accepts only getSnapshot/listen from its document source. A
 The no-Viro build-only opt-in is NITRO_FORGE_BOARD_VIRO_ANDROID=on. It compiles the existing fail-closed backend for link verification; the factory remains unavailable without Viro CanvasSurfaces. It does not introduce a rendering implementation or assert runtime capability.
 
 Skills read: [workstream receipt](board-android-link-skills.md). The [shared receipt](moyo-shared-skill-receipt.md) records the main session's broader skill reads.
+
+## Malformed document follow-up
+
+A scene bridge now selects the complete fallback when reading/encoding a source throws. Null records, malformed draw props, and a throwing ink-outline provider are covered at construction and after mount. Tests verify that the source is unchanged, a subsequent valid snapshot recovers, and disposal detaches the listener. Board typecheck and 65 tests PASS after this change.
