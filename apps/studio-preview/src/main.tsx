@@ -10,7 +10,7 @@ import { useEditorDoc } from './useDocument';
 import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { AppLauncher } from './app-launcher';
 import { Page, Main, Nav, Link, Text as SemanticText } from '@acme/ui/html';
-import { Pressable, Text, View, Menu, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
+import { Text, View, Menu, Button, Banner, DropZone, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
 import { studioControls, FilePicker } from '@acme/ui/studio-controls/web';
 import './style.css';
 
@@ -59,10 +59,13 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
     });
   };
   const leadingActions = <Page className="document-actions">
-    <FilePicker className="document-action" label="Open" disabled={busy || !editor.doc}
+    <DropZone disableObjectUrl includeBase64={false} accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
+      className="border-0 p-0 md:p-0 gap-0 rounded-[4px]"
+      onDrop={({ assets }) => { const file = assets.find(asset => asset.file)?.file; if (file) void openFile(file).catch(() => {}); }}>
+    <FilePicker className="document-action text-ink-50" label="Open" disabled={busy || !editor.doc}
       accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
-      onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} />
-      {studio === 'quill' && <Pressable accessibilityLabel="Export Word document" style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }} disabled={busy || !editor.doc} onPress={() => {
+      onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} /></DropZone>
+      {studio === 'quill' && <Button aria-label="Export Word document" title="Export Word" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
         void run(async () => {
           await textEditor.current?.flush();
           const result = await editor.apply<{ bytes_b64: string }>('exportDocx');
@@ -72,7 +75,7 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
           setTimeout(() => URL.revokeObjectURL(url), 1000);
           store.setState({ notice: 'Word document exported' });
         }).catch(() => {});
-      }}><Text style={{ color: 'inherit', fontSize: 12 }}>Export Word</Text></Pressable>}
+      }} />}
 
   </Page>;
   return <>
@@ -85,7 +88,7 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
       busy={busy || !editor.doc} error={error ?? editor.error}>
       {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc} /> : undefined}
     </ForgeWorkspace>
-    <Page className="engine-notice" role="status">{notice ? <SemanticText>{notice}</SemanticText> : null}</Page>
+    {notice && <Banner tone="info" title={notice} className="rounded-[4px]" />}
   </>;
 }
 
@@ -107,9 +110,8 @@ function App() {
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
   }, [store]);
-  const themeToggle = <Pressable accessibilityLabel={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-    style={{ minHeight: 44, minWidth: 44, paddingHorizontal: 10, justifyContent: 'center' }}
-    onPress={() => store.setState({ theme: theme === 'dark' ? 'light' : 'dark' })}><Text style={{ color: theme === 'dark' ? '#F0F1F7' : '#252A3A', fontSize: 12 }}>{theme === 'dark' ? 'Light' : 'Dark'}</Text></Pressable>;
+  const themeToggle = <Button aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={theme === 'dark' ? 'Light' : 'Dark'} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]"
+    onPress={() => store.setState({ theme: theme === 'dark' ? 'light' : 'dark' })} />;
   const editorControls = <Page className="editor-host-controls">
     <Menu title="Preview width" triggerLabel="Preview controls" actions={[
       { id: 'desktop', title: 'Desktop · full' }, { id: 'tablet', title: 'Tablet · 768px' },
@@ -118,7 +120,7 @@ function App() {
       <View style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: theme === 'dark' ? '#ADB3C4' : '#687287', fontSize: 11 }}>Preview</Text></View>
     </Menu>{themeToggle}
   </Page>;
-  return <Main data-theme={theme}>
+  return <Main dataSet={{ theme }}>
     {!app && <Nav className="launcher-nav" aria-label="App navigation">
       <Link className="suite-label" href="#/"><SemanticText className="suite-mark" aria-hidden="true">N</SemanticText>NitroForge <SemanticText className="suite-caption">The creative collection</SemanticText></Link>
       {themeToggle}

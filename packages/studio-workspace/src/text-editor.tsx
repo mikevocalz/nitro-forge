@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { Platform } from 'react-native';
-import { Pressable, ScrollView, Text, TextInput, View } from './ui';
+import { Button, Banner, ScrollView, Text, TextInput, View } from './ui';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { workspaceThemes, workspaceScale as scale } from './theme';
@@ -132,12 +132,9 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
         <ForgeIcon name="file" size={14} color={colors.muted} reducedMotion />
         <Text style={{ color: colors.muted, fontSize: 11 }}>{wordCount} {wordCount === 1 ? 'word' : 'words'}{dirty ? ' · Draft changes' : ' · Up to date'}</Text>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Apply essay text" disabled={busy || !dirty || conflict}
-        onPress={() => { void flush().catch(() => {}); }}
-        style={{ minHeight: scale.size.target, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: scale.radius.control, backgroundColor: dirty ? colors.soft : 'transparent', opacity: busy || !dirty || conflict ? .5 : 1 }}>
-        <ForgeIcon name="check" size={16} color={colors.accent} reducedMotion />
-        <Text style={{ color: colors.accent, fontSize: 12 }}>{busy ? 'Applying…' : 'Apply text'}</Text>
-      </Pressable>
+      <Button aria-label="Apply essay text" title={busy ? 'Applying…' : 'Apply text'} disabled={busy || !dirty || conflict} loading={busy}
+        onPress={() => { void flush().catch(() => {}); }} variant={dirty ? 'primary' : 'ghost'} tone="carolina" size="sm" cornerRadius={scale.radius.control} className="rounded-[4px]"
+        icon={<ForgeIcon name="check" size={16} color={colors.accent} reducedMotion />} />
     </View>
     <View style={{ width: '100%', maxWidth: 792, alignSelf: 'center', minHeight: 760, backgroundColor: colors.paper,
       borderRadius: scale.radius.paper, paddingHorizontal: compact ? 24 : 64, paddingTop: compact ? 36 : 56, paddingBottom: 64,
@@ -148,9 +145,7 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
         style={{ minHeight: 480, padding: 0, backgroundColor: 'transparent', color: colors.paperInk, fontFamily: manuscriptFont,
           fontSize: compact ? 17 : 19, lineHeight: compact ? 29 : 34, borderWidth: 0 }} />
     </View>
-    {(error || conflict || dirty) && <Text accessibilityLiveRegion="polite" style={{ maxWidth: 792, width: '100%', alignSelf: 'center', color: error || conflict ? colors.error : colors.muted, fontSize: 12 }}>{error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)}</Text>}
-    {conflict && <Pressable accessibilityRole="button" disabled={busy} onPress={() => { void loadLatest(); }} style={{ minHeight: 44, justifyContent: 'center' }}>
-      <Text style={{ color: colors.accent }}>Discard draft and load latest document</Text>
-    </Pressable>}
+    {(error || conflict || dirty) && <View style={{ maxWidth: 792, width: '100%', alignSelf: 'center' }}><Banner tone={error || conflict ? 'danger' : 'info'} title={error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)} live={error || conflict ? 'alert' : 'status'} className="rounded-[4px]" /></View>}
+    {conflict && <Button title="Discard draft and load latest document" aria-label="Discard draft and load latest document" disabled={busy} onPress={() => { void loadLatest(); }} variant="ghost" tone="carolina" size="sm" cornerRadius={scale.radius.control} className="rounded-[4px]" />}
   </ScrollView>;
 });

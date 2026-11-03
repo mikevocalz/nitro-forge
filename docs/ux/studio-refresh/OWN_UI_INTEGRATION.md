@@ -25,7 +25,7 @@ and host envelope import actual `@acme/ui/html` landmarks and content elements.
 Tailwind scans the canonical source and uses its theme; `important` is required
 by that source's documented RNWeb class precedence contract.
 
-Local source-owned dependency commit: nyc-mon `c8ac0ddab89076eb4bc28036c5befd7d7d4ab70c`.
+Local source-owned dependency commit: nyc-mon `782c682ea684606111e612242a66761d50137f95`.
 It is committed locally, not pushed. The paired UI commit must be published
 before pushing the NitroForge branch: CI checks out that exact UI commit into
 an adjacent `nyc-mon` directory, installs its own dependencies, then builds the
@@ -53,3 +53,17 @@ keyboard and assistive-technology operation.
 NYC DropZone handles incoming files/content; it is not an internal list sorter.
 No exported NYC row sorter with pointer/touch parity was found, so Studio reuses
 its existing dock drag machinery rather than mislabelling DropZone as a sorter.
+
+## Existing control inventory
+
+Studio now exposes the actual canonical TabBar and SegmentedControl through
+the required host provider. Dock panel headers use TabBar with tabs semantics;
+Arrange panel-position choices use SegmentedControl as a named radio group.
+Their selection callbacks call the existing dock model, not a parallel state
+machine. This does not add new editor modes or change application routing.
+
+Use the canonical inventory before composing new controls: TabBar for tab-panel
+selection, SegmentedControl for exclusive choices, Menu/Select for dropdowns,
+TextInput for text entry, and semantic ui/html for document structure. DropZone
+handles incoming content; internal row sorting retains the existing drag engine.
+The Studio provider has no handmade fallback when a binding is absent.

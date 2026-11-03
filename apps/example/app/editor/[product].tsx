@@ -1,10 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef } from 'react';
 import { useColorScheme } from 'react-native';
-import { Pressable, Text } from '@nitro-forge/studio-workspace/ui';
+import { Button } from '@nitro-forge/studio-workspace/ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ForgeWorkspace, QuillTextEditor, type QuillTextEditorHandle } from '@nitro-forge/studio-workspace';
-import { workspaceThemes } from '@nitro-forge/studio-workspace/theme';
 import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
 import { useEditorDoc } from '../../src/useDocument';
@@ -29,7 +28,7 @@ function StudioEditor({ studioId }: { studioId: Studio }) {
   return <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={{ flex: 1 }}>
     <Stack.Screen options={{ headerShown: false }} />
     <ForgeWorkspace studioId={studioId} title={config.title} documentTitle={`Untitled ${config.title} document`}
-      headerLeading={<Pressable accessibilityRole="button" accessibilityLabel="All apps" onPress={() => router.replace('/')} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}><Text style={{ color: workspaceThemes[theme].text, fontSize: 12 }}>All apps</Text></Pressable>}
+      headerLeading={<Button title="All apps" aria-label="All apps" onPress={() => router.replace('/')} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" />}
       theme={theme} state={doc.state} rows={doc.state ? config.rows(doc.state) : []}
       actions={config.actions.map(action => ({ title: action.title, run: () => action.run(doc) }))}
       onUndo={doc.undo} onRedo={doc.redo} onSave={save} onRefresh={doc.reload}

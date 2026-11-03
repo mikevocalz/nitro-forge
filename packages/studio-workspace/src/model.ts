@@ -155,3 +155,18 @@ export function createStudioWorkspaceStore(studioId: Studio = 'prism') {
     },
   }));
 }
+
+/** Compact activation migrates a side panel once; switching tabs preserves order. */
+export function actOnPanel(store: ReturnType<typeof createStudioWorkspaceStore>, id: string, kind: DockAction, compact: boolean) {
+  const current = store.getState();
+  if (compact && (kind === 'activate' || kind === 'expand')) {
+    if (!current.layout.docks.bottom.includes(id)) {
+      const target = dockPanel(current.layout, id, 'bottom', current.layout.docks.bottom.length,
+        KNOWN_PANELS, current.geometry ?? undefined);
+      if (target.ok) store.setState({ layout: target.layout });
+    }
+    const next = store.getState();
+    if (next.layout.docks.bottom.includes(id) && next.layout.sizes.bottomFraction !== 0.5) next.resize('bottom', 0.5);
+  }
+  return store.getState().action(id, kind);
+}

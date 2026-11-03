@@ -2,8 +2,10 @@ import { defineConfig, type Plugin } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
 const sourceUIRoot = process.env.STUDIO_UI_ROOT ?? fileURLToPath(new URL('../../../nyc-mon/packages/ui', import.meta.url));
+const uiRequire = createRequire(resolve(sourceUIRoot, 'package.json'));
+const legendMotionEsm = resolve(dirname(uiRequire.resolve('@legendapp/motion/package.json')), 'lib/module/index.js');
 import { CliHost } from '../../packages/ignition/src/host-cli';
 import type { EngineKind, Command } from '../../packages/ignition/src/types';
 
@@ -64,6 +66,9 @@ export default defineConfig({
     // React Native packages publish platform siblings without browser exports.
     extensions: webExtensions,
     alias: [
+    // The published root is an ESM star-export of CommonJS. Use the same
+    // installed library's real ESM entry so Vite dev can expose named exports.
+    { find: /^@legendapp\/motion$/, replacement: legendMotionEsm },
     { find: /^@acme\/ui\/studio-controls\/web$/, replacement: resolve(sourceUIRoot, 'studio-controls/web.tsx') },
     { find: /^@acme\/ui\/studio-controls$/, replacement: resolve(sourceUIRoot, 'studio-controls/index.tsx') },
     { find: /^@acme\/ui\/html$/, replacement: resolve(sourceUIRoot, 'html/index.tsx') },

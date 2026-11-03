@@ -8,7 +8,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test:bridge": "node verify-bridge.mjs",
-    "test:integration": "node verify-local.mjs"
+    "test:integration": "node verify-local.mjs",
+    "test:ui-modules": "node verify-ui-modules.mjs"
   },
   "dependencies": {
     "@nitro-forge/studio-workspace": "workspace:*",

@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: mikevocalz/nyc-mon
-          ref: c8ac0ddab89076eb4bc28036c5befd7d7d4ab70c
+          ref: 782c682ea684606111e612242a66761d50137f95
           path: nyc-mon
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -64,8 +64,10 @@ jobs:
           pnpm --filter @nitro-forge/studio-workspace typecheck
           pnpm --filter @nitro-forge/example typecheck
           pnpm --filter @nitro-forge/studio-preview typecheck
-      - name: Browser production bundle
-        run: pnpm --filter @nitro-forge/studio-preview build
+      - name: Browser UI module contracts and production bundle
+        run: |
+          pnpm --filter @nitro-forge/studio-preview test:ui-modules
+          pnpm --filter @nitro-forge/studio-preview build
       - name: Build real engine host
         run: cargo build --locked -p nf-cli
       - name: Seven-engine browser bridge round trips

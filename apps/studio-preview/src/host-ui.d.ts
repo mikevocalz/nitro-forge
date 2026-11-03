@@ -5,7 +5,7 @@ declare module '@acme/ui/studio-controls' {
 declare module '@acme/ui/html' {
   import type { ComponentType, ComponentProps } from 'react';
   export const Page: ComponentType<ComponentProps<'div'>>;
-  export const Main: ComponentType<ComponentProps<'main'>>;
+  export const Main: ComponentType<ComponentProps<'main'> & { dataSet?: Record<string, string> }>;
   export const Header: ComponentType<ComponentProps<'header'>>;
   export const Footer: ComponentType<ComponentProps<'footer'>>;
   export const Section: ComponentType<ComponentProps<'section'>>;

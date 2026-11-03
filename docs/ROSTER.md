@@ -340,3 +340,28 @@ tests and scoped lint passed. Its local-only paired commit is
 c8ac0ddab89076eb4bc28036c5befd7d7d4ab70c; CI pins it but remote CI was not run.
 Publish paired NYC source before NitroForge. No native window/config changes.
 See docs/ux/studio-refresh/RESPONSIVE.md and prism-responsive-*.png evidence.
+
+### Canonical component inventory and reuse — November 3, 2026
+
+Audited 42 public NYC UI export entries, root/group barrels, platform contracts
+and 41 NeonBlade catalog entries. Bound and consumed actual Button/IconButton,
+TabBar, SegmentedControl, Toolbar, FieldGroup/KeyValueList, static List/ListItem,
+Card, Badge, Banner/ErrorMessage, EmptyState and NightScope, alongside existing
+Menu/Select/Input/Image/semantic components. Open uses the actual DropZone and
+keeps its FilePicker path. Layer sorting retains its measured domain controller.
+The component-first requirement is persisted in AGENTS.md.
+
+Eleven fresh Craft Anything scenarios passed after fixes for tab-order jumps,
+compact captions/colour, Card badge wrapping, DOM accessibility labels and RN
+line-height conversion. Named Quill text entry/apply updates the real engine
+and renders top-left/wrapped at desktop/phone. The motion ESM runtime failure
+is fixed through actual installed-module resolution and a UI module export
+guard, rather than a replacement motion/control implementation.
+
+Executed 28 workspace tests, all package typechecks, source UI typecheck/lint,
+six focused style/type-scale tests, UI module contracts, preview build and
+seven-engine integration. Native runtime/hardware, full OS/browser matrix,
+screen readers and real drop/picker interaction remain unverified. Paired NYC
+commit 782c682ea684606111e612242a66761d50137f95 is local, pinned in CI; remote
+CI not run. Native window/config contracts unchanged. See
+docs/ux/studio-refresh/UI_COMPONENT_AUDIT.md and docs/ux/evidence/kit-*.png.

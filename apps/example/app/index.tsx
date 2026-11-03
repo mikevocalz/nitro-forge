@@ -1,6 +1,6 @@
 import { Link, Stack } from 'expo-router';
 import { useColorScheme, useWindowDimensions } from 'react-native';
-import { Pressable, ScrollView, Text, View } from '@nitro-forge/studio-workspace/ui';
+import { Pressable, ScrollView, Text, View, Card } from '@nitro-forge/studio-workspace/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { workspaceThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
@@ -35,9 +35,9 @@ export default function Home() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' }}>
           {APPS.map(app => <Link key={app.id} href={`/editor/${app.id}`} asChild>
             <Pressable accessibilityRole="link" accessibilityLabel={`Open ${app.name}: ${app.task}`}
-              style={({ pressed }) => ({ width: columns ? '48.8%' : '100%', minHeight: scale.size.target, padding: compact ? 17 : 22,
-                flexDirection: 'row', alignItems: 'flex-start', gap: compact ? 14 : 18, backgroundColor: pressed ? colors.soft : colors.raised,
-                borderWidth: 1, borderColor: pressed ? colors.accent : colors.line, borderRadius: scale.radius.panel, borderCurve: 'continuous' })}>
+              style={{ width: columns ? '48.8%' : '100%', minHeight: scale.size.target }}>
+              {({ pressed }) => <Card surface="page" padded={false} style={{ width: '100%', borderRadius: scale.radius.panel, borderColor: pressed ? colors.accent : colors.line, backgroundColor: pressed ? colors.soft : colors.raised }}>
+              <View style={{ padding: compact ? 17 : 22, flexDirection: 'row', alignItems: 'flex-start', gap: compact ? 14 : 18 }}>
               <View accessible={false} importantForAccessibility="no-hide-descendants" style={{ width: compact ? 48 : 54, height: compact ? 48 : 54, borderRadius: scale.radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.soft }}>
                 <ForgeIcon name={app.glyph} size={29} color={colors.accent} appearance={theme} surfaceColor={colors.soft} reducedMotion />
               </View>
@@ -49,6 +49,7 @@ export default function Home() {
                 <Text style={{ color: colors.text, fontSize: 12, lineHeight: 19 }}>{app.task}</Text>
                 <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '500', marginTop: 10 }}>Open app →</Text>
               </View>
+              </View></Card>}
             </Pressable>
           </Link>)}
         </View>

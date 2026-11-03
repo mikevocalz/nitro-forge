@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { View as NativeView } from 'react-native';
-import { Image, Pressable, ScrollView, Text, View, Menu } from './ui';
+import { Image, Pressable, ScrollView, Text, View, Menu, Button, IconButton, Banner, Badge, EmptyState, NightScope } from './ui';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { base64ToBytes, bytesToBase64 } from '@nitro-forge/ignition';
@@ -171,11 +171,16 @@ export function PrismEditor(props: PrismEditorProps) {
     if (index < 0 || index === target) { store.setState({ notice: 'Layer order unchanged' }); return; }
     await run('moveLayer', { id: session.id, to_index: target }, 'Layer reordered');
   };
-  const control = (label: string, onPress: () => void, disabled = false, selected = false, glyph?: string, visibleLabel?: string, iconOnly = false, hint?: string) => <Pressable key={label} accessibilityRole="button" accessibilityLabel={label} accessibilityHint={hint} accessibilityState={{ disabled: disabled || busy || !!props.busy || !!drag, ...(label === 'Layers' ? { selected } : {}) }} disabled={disabled || busy || props.busy || !!drag} onPress={onPress}
-    style={({ pressed }) => ({ minHeight: 44, minWidth: 44, paddingHorizontal: iconOnly ? 0 : 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: scale.radius.control, borderWidth: 1, borderColor: selected ? colors.accent + '65' : 'transparent', backgroundColor: selected ? colors.soft : pressed ? colors.line : 'transparent', opacity: disabled || busy || props.busy || drag ? .4 : 1 })}>
-    {glyph && <ForgeIcon name={glyph} size={17} color={selected ? colors.accent : colors.muted} reducedMotion />}
-    {!iconOnly && <Text style={{ color: selected ? colors.accent : colors.text, fontSize: 11, fontWeight: selected ? '600' : '400' }}>{visibleLabel ?? label}</Text>}
-  </Pressable>;
+  const control = (label: string, onPress: () => void, disabled = false, selected = false, glyph?: string, visibleLabel?: string, iconOnly = false, hint?: string) => {
+    const unavailable = disabled || busy || !!props.busy || !!drag;
+    const icon = glyph ? <ForgeIcon name={glyph} size={17} color={selected ? colors.accent : colors.muted} reducedMotion /> : undefined;
+    const shared = { onPress, disabled: unavailable, variant: 'ghost' as const, size: 'sm' as const, tone: 'carolina' as const,
+      cornerRadius: 4, className: `rounded-[4px]${selected ? ' bg-carolina-500/15' : ''}`,
+      ...(label === 'Layers' ? { selected } : {}), ...(hint ? { accessibilityHint: hint } : {}) };
+    return iconOnly
+      ? <IconButton key={label} {...shared} icon={icon} aria-label={label} />
+      : <Button key={label} {...shared} title={visibleLabel ?? label} aria-label={label} icon={icon} />;
+  };
   const addShape = (kind: 'rect' | 'ellipse') => {
     if (!doc) return;
     const w = Math.max(1, Math.round(doc.width * .38)), h = Math.max(1, Math.round(doc.height * .32));
@@ -183,7 +188,7 @@ export function PrismEditor(props: PrismEditorProps) {
   };
   const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 60, top: panelTop, right: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, borderRadius: scale.radius.control, overflow: 'visible', boxShadow: '0 12px 30px #00000035' }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 4, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.line }}>
-      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Text style={{ color: colors.muted, fontSize: 10, marginRight: 8 }}>{layers.length}</Text>
+      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="mr-2 rounded-[4px] overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
     {/* Opacity is above the measured row scroller. The canonical web menu
@@ -208,15 +213,15 @@ export function PrismEditor(props: PrismEditorProps) {
           </Pressable>
           {control(`${layer.visible ? 'Hide' : 'Show'} ${layer.name}`, () => { void run('setLayerVisible', { id: layer.id, visible: !layer.visible }, layer.visible ? 'Layer hidden' : 'Layer shown'); }, false, false, undefined, layer.visible ? 'Hide' : 'Show')}
         </View>)}
-        {!layers.length && <Text style={{ padding: 16, color: colors.muted, fontSize: 12, lineHeight: 19 }}>No layers. Add a shape or raster layer to begin.</Text>}
+        {!layers.length && <EmptyState title="No layers" description="Add a shape or raster layer to begin." className="p-3" tone="carolina" action={<Button title="Add rectangle" onPress={() => addShape('rect')} disabled={busy || !!props.busy || !doc} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />} />}
       </ScrollView></View>
       {selected && <View style={{ padding: 12, gap: 8 }}>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 5 }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}{control('Remove', () => { void run('removeLayer', { id: selected.id }, 'Layer removed'); })}</View>
       </View>}
-    {drag && <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2, padding: 10, gap: 4, backgroundColor: colors.raised, borderTopWidth: 1, borderTopColor: colors.line }}><Text accessibilityLiveRegion="polite" style={{ color: colors.accent, fontSize: 11 }}>{drag.target === null ? 'Drag within the layer list to choose a position' : `Move to layer position ${drag.target + 1} from bottom`}</Text><Pressable accessibilityRole="button" accessibilityLabel="Cancel layer move" onPress={cancelLayerDrag} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: colors.text, fontSize: 12 }}>Cancel move</Text></Pressable></View>}
+    {drag && <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2, padding: 10, gap: 4, backgroundColor: colors.raised, borderTopWidth: 1, borderTopColor: colors.line }}><Text accessibilityLiveRegion="polite" style={{ color: colors.accent, fontSize: 11 }}>{drag.target === null ? 'Drag within the layer list to choose a position' : `Move to layer position ${drag.target + 1} from bottom`}</Text><Button title="Cancel move" aria-label="Cancel layer move" onPress={cancelLayerDrag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /></View>}
   </View>;
-  return <View {...{ onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
+  return <NightScope><View className="scheme-dark" {...{ onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
     const { width, height } = event.nativeEvent.layout;
     if (width <= 0 || height <= 0) return;
     if (firstMeasurement.current) { firstMeasurement.current = false; store.setState({ width, height, layersOpen: width >= 700 }); }
@@ -242,9 +247,12 @@ export function PrismEditor(props: PrismEditorProps) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: 50, alignItems: 'center', flexDirection: 'row', gap: 2 }} style={{ flex: 1 }}>
       {!narrow && <Text style={{ color: colors.muted, fontSize: 10, marginRight: 8 }}>{selected?.content?.type === 'raster' ? 'Fill' : 'New shape fill'}</Text>}
       {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${['violet', 'teal', 'amber', 'rose'][index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: color === index ? 3 : 1, borderColor: color === index ? '#FFFFFF' : '#FFFFFF50' }} /></Pressable>)}
-      {selected?.content?.type === 'raster' && <><View style={{ width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: 5 }} />{control('Fill layer', () => { void run('fillLayer', { id: selected.id, color: FILLS[color] }, 'Raster layer filled'); })}</>}
+      {selected?.content?.type === 'raster' && <><View style={{ width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: 5 }} />{control('Fill layer', () => { void run('fillLayer', { id: selected.id, color: FILLS[color] }, 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
       </ScrollView>
     </View>
-    {!!feedback && <View style={{ position: 'absolute', zIndex: 35, bottom: 82, left: (width - Math.min(360, width - 24)) / 2, width: Math.min(360, Math.max(1, width - 24)), minHeight: 40, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.base, borderRadius: scale.radius.control }}><Text accessibilityLiveRegion="polite" numberOfLines={2} style={{ flex: 1, color: error || previewError ? colors.error : colors.muted, fontSize: 10, lineHeight: 15 }}>{feedback}</Text>{previewError && control('Retry preview', () => store.setState(s => ({ retry: s.retry + 1 })), false, false, 'redo', undefined, true)}</View>}
-  </View>;
+    {!!feedback && <View style={{ position: 'absolute', zIndex: 35, bottom: 82, left: (width - Math.min(360, width - 24)) / 2, width: Math.min(360, Math.max(1, width - 24)) }}>
+      <Banner tone={error || previewError ? 'danger' : 'info'} title={feedback} live={error || previewError ? 'alert' : 'status'} className="rounded-[4px]"
+        {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy || !!drag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /> } : {})} />
+    </View>}
+  </View></NightScope>;
 }

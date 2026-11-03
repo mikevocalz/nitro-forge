@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { AccessibilityInfo, useColorScheme, type View as NativeView, type LayoutChangeEvent, type ViewStyle } from 'react-native';
-import { Pressable, ScrollView, Text, View, Menu } from './ui';
+import { ScrollView, Text, View, Menu, SegmentedControl, TabBar, Button, IconButton, KeyValueList, FieldGroup, ErrorMessage, Toolbar, List, ListItem } from './ui';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
-import { DOCKS, dockPanel, type Dock, type DockAction, type Rect, type Studio } from '@nitro-forge/studio-layout';
-import { createStudioWorkspaceStore, MIN_STAGE_HEIGHT, MIN_STAGE_WIDTH, PANEL_IDS, KNOWN_PANELS } from './model';
+import { DOCKS, type Dock, type DockAction, type Rect, type Studio } from '@nitro-forge/studio-layout';
+import { createStudioWorkspaceStore, MIN_STAGE_HEIGHT, MIN_STAGE_WIDTH, PANEL_IDS, actOnPanel } from './model';
 import { ForgeDocumentStage } from './stage';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { DragGrabHandle } from './drag-grab-handle';
@@ -92,61 +92,35 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     catch (error) { store.setState({ error: error instanceof Error ? error.message : String(error) }); }
     finally { operation.current = false; }
   };
-  const button = (label: string, onPress: () => void, selected = false, disabled = false, small = false, iconOnly = false, glyph?: string, primary = false) => (
-    <Pressable key={label} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled, ...(Object.values(panelNames).includes(label) ? { selected } : {}) }} disabled={disabled}
-      onPress={onPress} style={({ pressed }) => ({ minHeight: scale.size.target, minWidth: scale.size.target, paddingHorizontal: iconOnly ? 10 : small ? 10 : 14,
-        justifyContent: iconOnly || primary ? 'center' : 'flex-start', alignItems: 'center', flexDirection: 'row', gap: scale.space.element, borderRadius: scale.radius.control,
-        borderWidth: 1, borderColor: primary ? colors.accent : selected ? colors.accent + '35' : 'transparent',
-        backgroundColor: primary ? colors.accent : selected ? colors.soft : pressed ? colors.line : 'transparent', opacity: disabled ? .4 : 1 })}>
-      {({ pressed }) => <>
-        {glyph && <ForgeIcon name={glyph} size={18} selected={selected} pressed={pressed} disabled={disabled}
-          appearance={appearance} color={primary ? colors.ink : selected ? colors.accent : colors.muted} selectedColor={primary ? colors.ink : colors.accent} surfaceColor={primary ? colors.accent : selected ? colors.soft : colors.base} reducedMotion={reducedMotion} />}
-        {!iconOnly && <Text style={{ fontSize: scale.type.label, fontWeight: selected ? '600' : '400', color: primary ? colors.ink : selected ? colors.accent : colors.text }}>{label}</Text>}
-      </>}
-    </Pressable>
-  );
-  const action = (id: string, kind: DockAction) => {
-    const current = store.getState();
-    if (compact && (kind === 'activate' || kind === 'expand')) {
-      const target = dockPanel(current.layout, id, 'bottom', current.layout.docks.bottom.filter(p => p !== id).length,
-        KNOWN_PANELS, current.geometry ?? undefined);
-      if (target.ok) {
-        store.setState({ layout: target.layout });
-        current.resize('bottom', 0.5);
-      }
-    }
-    store.getState().action(id, kind);
+  const button = (label: string, onPress: () => void, selected = false, disabled = false, small = false, iconOnly = false, glyph?: string, primary = false) => {
+    const toggled = Object.values(panelNames).includes(label) ? selected : undefined;
+    const icon = glyph ? <ForgeIcon name={glyph} size={18} selected={selected} disabled={disabled}
+      appearance={appearance} color={primary ? colors.ink : selected ? colors.accent : colors.muted}
+      selectedColor={primary ? colors.ink : colors.accent} surfaceColor={primary ? colors.accent : selected ? colors.soft : colors.base} reducedMotion={reducedMotion} /> : undefined;
+    const shared = { onPress, disabled, ...(toggled === undefined ? {} : { selected: toggled }), cornerRadius: scale.radius.control,
+      variant: primary ? 'primary' as const : 'ghost' as const, tone: 'carolina' as const,
+      className: selected && !primary ? 'rounded-[4px] bg-ink-800' : 'rounded-[4px]' };
+    return iconOnly ? <IconButton key={label} {...shared} size={primary ? 'md' : 'sm'} aria-label={label} icon={icon} />
+      : <Button key={label} {...shared} size={small ? 'sm' : 'md'} title={label} icon={icon} />;
   };
+  const action = (id: string, kind: DockAction) => actOnPanel(store, id, kind, compact);
   const fraction = (dock: Dock) => layout.sizes[dock === 'left' ? 'leftFraction' : dock === 'right' ? 'rightFraction' : 'bottomFraction'];
 
   function renderPanel(id: string, dock?: Dock) {
     return <View style={{ flex: 1, minHeight: 0, backgroundColor: colors.raised }}>
-      {(!dock || arranging) && <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 4, minHeight: 52 }}>
-        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>{panelHeadings[id]}</Text>
-        {arranging && <DragHandle id={id} store={store} measure={measure} hostRect={hostRect} blockedRegions={props.blockedRegions} color={colors.muted} />}
-        {button(`Hide ${panelNames[id]}`, () => action(id, 'collapse'), false, false, true, true, 'close')}
-      </View>}
+      {(!dock || arranging) && <Toolbar density="compact" title={panelHeadings[id] ?? panelNames[id] ?? id} tone="carolina"
+        leading={arranging ? <DragHandle id={id} store={store} measure={measure} hostRect={hostRect} blockedRegions={props.blockedRegions} color={colors.muted} /> : undefined}
+        actions={button(`Hide ${panelNames[id]}`, () => action(id, 'collapse'), false, false, true, true, 'close')} />}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: dock && !arranging ? 16 : 0, paddingBottom: 18, gap: 14 }}>
         {id === 'outline' && <>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', padding: 12, backgroundColor: colors.base, borderRadius: scale.radius.control }}><ForgeIcon name={appIcons[props.studioId]} size={20} color={colors.accent} reducedMotion={reducedMotion} /><Text style={{ color: colors.text, fontSize: scale.type.body, fontWeight: '500', flex: 1 }}>{props.documentTitle}</Text></View>
-          {props.rows.map((row, index) => <View key={index} style={{ flexDirection: 'row', gap: 10, paddingVertical: 8 }}>
-            <View style={{ width: 3, backgroundColor: colors.line, borderRadius: 2 }} />
-            <View style={{ flex: 1, gap: 5 }}><Text selectable style={{ color: colors.muted, fontSize: 10 }}>{row.label}</Text>
-            <Text selectable numberOfLines={2} style={{ color: colors.text, fontSize: scale.type.label, lineHeight: 19 }}>{row.value || 'Empty paragraph'}</Text></View>
-          </View>)}
+          <List tone="carolina">{props.rows.map((row, index) => <ListItem key={`${index}:${row.label}`} supportingText={row.value || 'Empty paragraph'}>{row.label}</ListItem>)}</List>
         </>}
-        {id === 'properties' && <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: scale.radius.control, backgroundColor: colors.soft }}><Text style={{ color: colors.accent, fontSize: 10, fontWeight: '600' }}>{props.title}</Text></View>
-            <Text style={{ color: colors.muted, fontSize: 11 }}>Document details</Text>
-          </View>
-          <View style={{ borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, overflow: 'hidden' }}>
-            {props.rows.length ? props.rows.map((row, index) => <View key={index} style={{ gap: 7, padding: 13, borderTopWidth: index ? 1 : 0, borderTopColor: colors.line }}>
-              <Text style={{ color: colors.muted, fontSize: 10, fontWeight: '500' }}>{row.label}</Text>
-              <Text selectable style={{ color: colors.text, fontSize: 13, lineHeight: 20, fontVariant: ['tabular-nums'] }}>{row.value}</Text>
-            </View>) : <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 19, padding: 13 }}>Open a document to inspect its properties.</Text>}
-          </View>
-        </>}
+        {id === 'properties' && <View style={{ borderRadius: scale.radius.panel, overflow: 'hidden' }}><FieldGroup>
+          <FieldGroup.Section title="Document details" tone="carolina">
+            <KeyValueList columns={1} surface="night" items={props.rows.map((row, index) => ({ key: `${index}:${row.label}`, label: row.label, value: row.value || 'Empty' }))} />
+          </FieldGroup.Section>
+        </FieldGroup></View>}
         {id === 'actions' && <>
           <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 19 }}>Run an operation on this document.</Text>
           {props.actions.map(item => <View key={item.title} style={{ backgroundColor: colors.base, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control }}>
@@ -160,7 +134,10 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         </View>}
         {arranging && <View style={{ borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 12, gap: 4 }}>
           <Text style={{ color: colors.muted, fontSize: 10, letterSpacing: 1 }}>PANEL POSITION</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{DOCKS.map(zone => button(`Move ${zone}`, () => action(id, `move-${zone}`), dock === zone, false, true))}</View>
+          <SegmentedControl aria-label={`Dock position for ${panelNames[id] ?? id}`} value={dock ?? ''}
+            options={DOCKS.map(zone => ({ value: zone, label: zone[0]!.toUpperCase() + zone.slice(1) }))}
+            onChange={zone => { if (DOCKS.includes(zone as Dock)) action(id, `move-${zone as Dock}`); }}
+            tone="royal" className="w-full rounded-[4px]" segmentClassName="rounded-[4px]" />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {button('Move before', () => action(id, 'move-before'), false, false, true)}
             {button('Move after', () => action(id, 'move-after'), false, false, true)}
@@ -178,9 +155,13 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     return <View key={dock} testID={`dock-${dock}`} style={[{ minHeight: 0, padding: 8, backgroundColor: colors.deep }, style]}>
       <View style={{ flex: 1, minHeight: 0, borderColor: colors.line, borderWidth: 1, borderRadius: scale.radius.panel, overflow: 'hidden', backgroundColor: colors.raised }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: 5, borderBottomWidth: 1, borderBottomColor: colors.line }}>
-          <ScrollView horizontal style={{ flex: 1 }} contentContainerStyle={{ alignItems: 'center', gap: 3 }}>
-            {panels.map(id => button(panelNames[id] ?? id, () => action(id, 'activate'), active === id, false, true, false, panelIcons[id]))}
-          </ScrollView>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <TabBar semantics="tabs" density="compact" aria-label={`${dock} dock panels`} tone="royal" className="rounded-[4px] overflow-hidden" tabs={panels.map(id => ({
+              key: id, label: panelNames[id] ?? id, active: active === id,
+              onPress: () => action(id, 'activate'),
+              icon: <ForgeIcon name={panelIcons[id] ?? 'file'} size={17} color={active === id ? '#FFFFFF' : colors.muted} reducedMotion={reducedMotion} />,
+            }))} />
+          </View>
           {!arranging && button(`Hide ${panelNames[active]}`, () => action(active, 'collapse'), false, false, true, true, 'close')}
         </View>
         {renderPanel(active, dock)}
@@ -267,7 +248,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
       </View>)}
     </View>}
     {(!canvasStudio || props.error || layoutError || /complete|generated|failed|…/.test(status)) && <View style={{ minHeight: scale.size.status, paddingHorizontal: 16, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.line, ...(canvasStudio ? { position: 'absolute', left: 76, right: 76, bottom: 84, zIndex: 20, backgroundColor: colors.raised, borderRadius: scale.radius.control, borderWidth: 1, borderColor: colors.line, boxShadow: '0 4px 16px #00000030' } : {}) }}>
-      <Text accessibilityRole={props.error || layoutError ? 'alert' : undefined} accessibilityLiveRegion="polite" selectable style={{ color: props.error || layoutError ? colors.error : colors.muted, fontSize: 11 }}>{props.error || layoutError || status}</Text>
+      {props.error || layoutError ? <ErrorMessage surface="night" message={props.error || layoutError || ''} /> : <Text accessibilityLiveRegion="polite" selectable style={{ color: colors.muted, fontSize: 11 }}>{status}</Text>}
     </View>}
   </View>;
 }

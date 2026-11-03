@@ -31,3 +31,13 @@ pnpm --filter @nitro-forge/console demo   # all-engines workflow demo
 - Op names live in `docs/ENGINE_OPS.md` — change the doc and every engine together.
 - No `unsafe` inside product engines (FFI lives in `rust/nf-sys` only).
 - Never claim verification that wasn't run; update `docs/ROSTER.md` truthfully.
+
+## Existing UI controls first
+
+User requirement (2026-11-03): use the canonical `nyc-mon/packages/ui` inventory
+before assembling custom controls. Use its TabBar for tab panels and its
+SegmentedControl for mutually exclusive choices, alongside the existing native
+Menu/Select, semantic ui/html and input components. Extend the strict Studio UI
+provider when a canonical component is missing from that boundary. Preserve
+rounded-sm (4px) Studio chrome. Do not substitute action buttons or fake modes
+for existing controls; keep app navigation, tabs and radio choices distinct.
