@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'packages/board/**'
+      - 'apps/board-native-lab/**'
       - 'docs/native/BOARD_SKIA3.md'
       - '.github/workflows/board-skia3.yml'
   push:
@@ -32,3 +33,7 @@ jobs:
         run: pnpm --filter @nitro-forge/board typecheck
       - name: Run QuickDraw scene fidelity tests
         run: pnpm --filter @nitro-forge/board test
+      - name: Verify live Android ink sample types and behavior
+        run: |
+          pnpm --filter @nitro-forge/board-native-lab typecheck
+          pnpm --filter @nitro-forge/board-native-lab test
