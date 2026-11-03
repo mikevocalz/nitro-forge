@@ -1,5 +1,6 @@
 import { Link, Stack } from 'expo-router';
-import { Pressable, ScrollView, Text, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { useColorScheme, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View } from '@nitro-forge/studio-workspace/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { workspaceThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';

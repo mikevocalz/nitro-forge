@@ -2,6 +2,8 @@ import { defineConfig, type Plugin } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
+const sourceUIRoot = process.env.STUDIO_UI_ROOT ?? fileURLToPath(new URL('../../../nyc-mon/packages/ui', import.meta.url));
 import { CliHost } from '../../packages/ignition/src/host-cli';
 import type { EngineKind, Command } from '../../packages/ignition/src/types';
 
@@ -62,9 +64,12 @@ export default defineConfig({
     // React Native packages publish platform siblings without browser exports.
     extensions: webExtensions,
     alias: [
+    { find: /^@acme\/ui\/studio-controls\/web$/, replacement: resolve(sourceUIRoot, 'studio-controls/web.tsx') },
+    { find: /^@acme\/ui\/studio-controls$/, replacement: resolve(sourceUIRoot, 'studio-controls/index.tsx') },
+    { find: /^@acme\/ui\/html$/, replacement: resolve(sourceUIRoot, 'html/index.tsx') },
     { find: /^react-native-svg$/, replacement: createRequire(import.meta.url).resolve('react-native-svg/lib/module/ReactNativeSVG.web.js') },
     { find: /^react-native$/, replacement: createRequire(import.meta.url).resolve('react-native-web') },
     { find: 'react-native-nitro-modules', replacement: fileURLToPath(new URL('./src/native-unavailable.ts', import.meta.url)) },
-  ], dedupe: ['react', 'react-dom'] },
-  server: { host: '127.0.0.1', port: 4173, strictPort: true },
+  ], dedupe: ['react', 'react-dom', 'react-native-web'] },
+  server: { host: '127.0.0.1', port: 4173, strictPort: true, fs: { allow: [fileURLToPath(new URL('../..', import.meta.url)), sourceUIRoot, resolve(sourceUIRoot, '..')] } },
 });

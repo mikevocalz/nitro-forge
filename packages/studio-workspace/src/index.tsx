@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { AccessibilityInfo, PanResponder, Pressable, ScrollView, Text, View, useColorScheme, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, useColorScheme, type View as NativeView, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, Text, View, Menu } from './ui';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { DOCKS, dockPanel, type Dock, type DockAction, type Rect, type Studio } from '@nitro-forge/studio-layout';
 import { createStudioWorkspaceStore, MIN_STAGE_HEIGHT, MIN_STAGE_WIDTH, PANEL_IDS, KNOWN_PANELS } from './model';
 import { ForgeDocumentStage } from './stage';
 import { ForgeIcon } from '@nitro-forge/icons/native';
+import { DragGrabHandle } from './drag-grab-handle';
 import { workspaceThemes, workspaceScale as scale, type WorkspaceColors } from './theme';
 export { createStudioWorkspaceStore } from './model';
 export { ForgeDocumentStage } from './stage';
@@ -35,9 +37,8 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const appearance = (props.theme ?? systemTheme) === 'light' ? 'light' : 'dark';
   const colors: WorkspaceColors = { ...workspaceThemes[appearance], ...props.themeOverrides };
   const store = useMemo(() => createStudioWorkspaceStore(props.studioId), [props.studioId]);
-  const ui = useMemo(() => createStore(() => ({ arranging: false, menu: false, reducedMotion: true, width: 1200 })), [props.studioId]);
+  const ui = useMemo(() => createStore(() => ({ arranging: false, reducedMotion: true, width: 1200 })), [props.studioId]);
   const arranging = useStore(ui, s => s.arranging);
-  const menu = useStore(ui, s => s.menu);
   const reducedMotion = useStore(ui, s => s.reducedMotion);
   useEffect(() => {
     let active = true;
@@ -50,7 +51,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const drag = useStore(store, s => s.drag);
   const status = useStore(store, s => s.status);
   const layoutError = useStore(store, s => s.error);
-  const shell = useRef<View>(null);
+  const shell = useRef<NativeView>(null);
   const hostRect = useRef<Rect>({ x: 0, y: 0, width: 0, height: 0 });
   const savedPreset = useMemo(() => ({ current: null as string | null }), [store]);
   const operation = useMemo(() => ({ current: false }), [store]);
@@ -85,7 +86,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     finally { operation.current = false; }
   };
   const button = (label: string, onPress: () => void, selected = false, disabled = false, small = false, iconOnly = false, glyph?: string, primary = false) => (
-    <Pressable key={label} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected, disabled }} disabled={disabled}
+    <Pressable key={label} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled, ...(Object.values(panelNames).includes(label) ? { selected } : {}) }} disabled={disabled}
       onPress={onPress} style={({ pressed }) => ({ minHeight: scale.size.target, minWidth: scale.size.target, paddingHorizontal: iconOnly ? 10 : small ? 10 : 14,
         justifyContent: iconOnly || primary ? 'center' : 'flex-start', alignItems: 'center', flexDirection: 'row', gap: scale.space.element, borderRadius: scale.radius.control,
         borderWidth: 1, borderColor: primary ? colors.accent : selected ? colors.accent + '35' : 'transparent',
@@ -180,7 +181,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     </View>;
   };
 
-  const keyboardProps = { onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') { store.getState().cancelDrag(); ui.setState({ menu: false }); } } };
+  const keyboardProps = { onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') { store.getState().cancelDrag(); } } };
   const rail = <View style={{ width: scale.size.rail, backgroundColor: colors.base, borderRightWidth: 1, borderRightColor: colors.line, alignItems: 'center', paddingVertical: 14 }}>
     <View style={{ alignItems: 'center', gap: 12, paddingBottom: 16 }}>
       {PANEL_IDS.filter(id => id !== 'history').map(id => <View key={id} style={{ alignItems: 'center', gap: 4 }}>
@@ -217,15 +218,18 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         {button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy, true, true, 'undo')}
         {button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy, true, true, 'redo')}
       </ScrollView>
-      {button('Workspace', () => ui.setState({ menu: !menu }), menu, false, true, compact, 'settings')}
+      <Menu title="Workspace" triggerLabel="Workspace" actions={[
+        { id: 'arrange', title: arranging ? 'Done arranging' : 'Arrange panels' },
+        { id: 'save', title: 'Save layout' }, { id: 'restore', title: 'Restore layout' },
+        { id: 'reset', title: 'Reset layout' }, { id: 'refresh', title: 'Refresh', disabled: !!props.busy },
+      ]} onAction={id => {
+        if (id === 'arrange') { ui.setState({ arranging: !arranging }); store.getState().cancelDrag(); }
+        if (id === 'save') void perform('Save layout', async () => { const raw = store.getState().savePreset(); if (raw) { savedPreset.current = raw; await props.persistPreset?.(raw); } });
+        if (id === 'restore') { if (savedPreset.current) store.getState().restorePreset(savedPreset.current); else store.setState({ error: 'Save a layout first' }); }
+        if (id === 'reset') store.getState().reset();
+        if (id === 'refresh') void perform('Refresh', props.onRefresh);
+      }}><View style={{ minHeight: 44, minWidth: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: colors.text, fontSize: 12 }}>Workspace</Text></View></Menu>
     </View>
-    {menu && <View testID="workspace-menu" style={{ position: 'absolute', zIndex: 100, top: scale.size.header + scale.size.toolbar, right: 10, width: 226, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, padding: 8, boxShadow: appearance === 'light' ? '0 12px 30px #26304A20' : '0 12px 30px #00000040' }}>
-      {button(arranging ? 'Done arranging' : 'Arrange panels', () => { ui.setState({ arranging: !arranging, menu: false }); store.getState().cancelDrag(); }, arranging, false, false, false, 'move')}
-      {button('Save layout', () => { void perform('Save layout', async () => { const raw = store.getState().savePreset(); if (raw) { savedPreset.current = raw; await props.persistPreset?.(raw); } }); ui.setState({ menu: false }); }, false, false, false, false, 'save')}
-      {button('Restore layout', () => { if (savedPreset.current) store.getState().restorePreset(savedPreset.current); else store.setState({ error: 'Save a layout first' }); ui.setState({ menu: false }); }, false, false, false, false, 'folder')}
-      {button('Reset layout', () => { store.getState().reset(); ui.setState({ menu: false }); }, false, false, false, false, 'layers')}
-      {button('Refresh', () => { void perform('Refresh', props.onRefresh); ui.setState({ menu: false }); }, false, props.busy, false, false, 'file')}
-    </View>}
     {arranging && <View style={{ flexDirection: 'row', backgroundColor: colors.soft, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'space-between' }}><Text style={{ color: colors.accent, fontSize: 11 }}>Drag a panel to an edge, or use its move controls.</Text>{button('Done arranging', () => { ui.setState({ arranging: false }); store.getState().cancelDrag(); })}</View>}
     <View style={{ flex: 1, minHeight: 0, flexDirection: 'row' }}>
       {!compact && rail}
@@ -260,23 +264,12 @@ function DragHandle({ id, store, measure, hostRect, blockedRegions, color }: {
   id: string; store: ReturnType<typeof createStudioWorkspaceStore>; measure: () => void;
   hostRect: { current: Rect }; blockedRegions: readonly Rect[] | undefined; color: string;
 }) {
-  const current = useRef({ measure, blockedRegions });
-  current.current = { measure, blockedRegions };
-  const responder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => { current.current.measure(); store.getState().beginDrag(id); },
-    onPanResponderMove: (_event, gesture) => {
-      store.getState().previewDrag({ point: { x: gesture.moveX, y: gesture.moveY }, host: hostRect.current,
-        ...(current.current.blockedRegions ? { blockedRegions: current.current.blockedRegions } : {}) });
-    },
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderRelease: () => { store.getState().commitDrag(); },
-    onPanResponderTerminate: () => { store.getState().cancelDrag(); },
-  }), [id, store, hostRect]);
-  return <View {...responder.panHandlers} accessibilityLabel={`Drag ${panelNames[id]} to a dock edge`}
-    style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
-    <ForgeIcon name="move" size={16} color={color} reducedMotion />
-  </View>;
+  return <DragGrabHandle label={`Drag ${panelNames[id]} to a dock edge`} color={color}
+    onStart={() => { measure(); store.getState().beginDrag(id); }}
+    onMove={point => store.getState().previewDrag({ point, host: hostRect.current,
+      ...(blockedRegions ? { blockedRegions } : {}) })}
+    onCommit={() => { store.getState().commitDrag(); }}
+    onCancel={() => store.getState().cancelDrag()} />;
 }
 
 export { QuillTextEditor, type QuillTextEditorHandle, type QuillTextEditorProps } from './text-editor';

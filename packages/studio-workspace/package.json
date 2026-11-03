@@ -8,7 +8,8 @@
     "./model": "./src/model.ts",
     "./theme": "./src/theme.ts",
     "./apps": "./src/app-manifest.ts",
-    "./prism": "./src/prism-editor.tsx"
+    "./prism": "./src/prism-editor.tsx",
+    "./ui": "./src/ui.tsx"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",

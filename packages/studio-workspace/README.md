@@ -1,6 +1,6 @@
 # Studio workspace
 
-Shared React Native / React Native Web editor chrome, backed by the validated
+Host-UI-bound React Native / React Native Web editor chrome, backed by the validated
 `@nitro-forge/studio-layout` model and a vanilla Zustand store per instance.
 The host supplies its existing document state and command callbacks. Panel
 changes never open, close, restore or mutate an engine document.
@@ -38,3 +38,18 @@ saving or exporting; `isDirty()` prevents opening another document over unapplie
 text. External edits cause a visible conflict and preserve the draft. Host apps
 own document entry, file pickers and persistence. The shared workspace does not
 require a permanent app/mode switcher.
+
+## Required application UI
+
+Wrap Studio with `StudioUIProvider` from `@nitro-forge/studio-workspace/ui` and
+pass your application's actual components. This project uses the source-owned
+`studioControls` export from `nyc-mon/packages/ui` (`@acme/ui/studio-controls`).
+There is no raw-native visual fallback and no copied Studio UI kit. The browser
+host uses `@acme/ui/studio-controls/web` for its canonical semantic file picker.
+Menu and layer opacity use the existing Menu/Select adapters, with native OS/kit
+implementations selected by the consuming host. See
+`docs/ux/studio-refresh/OWN_UI_INTEGRATION.md` for checkout and runtime boundaries.
+
+Dock and layer handles reuse `DragGrabHandle`. Layers preview a measured
+destination and submit a single engine move only after release. Fast release
+waits for native measurement callbacks; cancellation wins while waiting.

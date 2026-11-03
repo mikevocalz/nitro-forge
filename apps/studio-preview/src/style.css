@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@import "tailwindcss" important;
+@import "../../../../nyc-mon/packages/theme/theme.css";
+@source "../../../../nyc-mon/packages/ui";
 @import "../../../packages/studio-workspace/src/theme.css";
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; min-height: 100%; background: #17191b; }
@@ -83,3 +85,75 @@ button:disabled { opacity: .45; cursor: default; }
 }
 @media (prefers-reduced-motion: reduce) { .app-card { transition: none; } }
 @media (forced-colors: active) { .app-glyph, .suite-mark { border: 1px solid CanvasText; } .app-open-label { color: LinkText; } .open-indicator::before { background: CanvasText; } }
+
+/* Canonical semantic containers are column-flex by default; host controls are a row. */
+.editor-host-controls { flex-direction: row; }
+
+.document-action { display: inline-flex; align-items: center; }
+
+/* The host composes canonical semantic elements. Their generated body/layout
+   utilities are important, so these explicit host roles must be equally clear. */
+.launcher-nav,
+.suite-label,
+.launcher-heading,
+.launcher-session-note,
+.directory-heading,
+.app-card,
+.app-card-identity,
+.app-card-footer,
+.launcher-footnote,
+.editor-host-controls,
+.document-actions {
+  display: flex !important;
+  flex-direction: row !important;
+}
+.launcher-nav,
+.directory-heading,
+.app-card-footer { align-items: center !important; justify-content: space-between !important; }
+.suite-label,
+.launcher-session-note,
+.app-card-identity,
+.editor-host-controls,
+.document-actions { align-items: center !important; justify-content: flex-start !important; }
+.launcher-heading { align-items: flex-end !important; justify-content: space-between !important; }
+.app-card,
+.launcher-footnote { align-items: flex-start !important; justify-content: space-between !important; }
+.app-card-copy { display: flex !important; flex-direction: column !important; align-items: stretch !important; }
+.app-list { display: grid !important; }
+.suite-label,
+.launcher-heading h1,
+.directory-heading h2,
+.app-name,
+.app-task { color: var(--text) !important; text-align: left !important; }
+.suite-caption,
+.launcher-location,
+.launcher-intro,
+.launcher-session-note,
+.directory-heading > span,
+.app-category,
+.open-indicator,
+.launcher-footnote > span { color: var(--muted) !important; text-align: left !important; }
+.suite-mark { color: #fff !important; display: grid !important; place-items: center !important; }
+.app-glyph { color: #b7a5ff !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+.app-open-label,
+.app-open-label > span { color: #b9a8ff !important; }
+.launcher-session-note > span { color: #a997f2 !important; }
+.launcher-heading h1 { font-size: 30px !important; font-weight: 600 !important; line-height: 1.15 !important; }
+.directory-heading h2 { font-size: 13px !important; font-weight: 600 !important; }
+.app-name { font-size: 19px !important; font-weight: 600 !important; line-height: 1.3 !important; }
+.launcher-footnote > span { font-size: inherit !important; line-height: inherit !important; }
+[data-theme="light"] .app-glyph { color: #6b51c2 !important; }
+[data-theme="light"] .app-open-label,
+[data-theme="light"] .app-open-label > span { color: #694fc0 !important; }
+[data-theme="light"] .launcher-session-note > span { color: #755ac7 !important; }
+@media (max-width: 760px) { .launcher-session-note, .suite-caption { display: none !important; } }
+@media (max-width: 440px) {
+  .launcher-heading h1 { font-size: 28px !important; }
+  .app-name { font-size: 18px !important; }
+  .directory-heading > span { display: none !important; }
+  .launcher-footnote { flex-direction: column !important; }
+}
+@media (forced-colors: active) {
+  .app-open-label,
+  .app-open-label > span { color: LinkText !important; }
+}

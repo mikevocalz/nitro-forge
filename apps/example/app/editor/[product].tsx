@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef } from 'react';
-import { Pressable, Text, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
+import { Pressable, Text } from '@nitro-forge/studio-workspace/ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ForgeWorkspace, QuillTextEditor, type QuillTextEditorHandle } from '@nitro-forge/studio-workspace';
 import { workspaceThemes } from '@nitro-forge/studio-workspace/theme';

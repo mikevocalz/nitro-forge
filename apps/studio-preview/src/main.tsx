@@ -9,10 +9,12 @@ import { getEditorConfig } from '../../example/src/editors';
 import { useEditorDoc } from './useDocument';
 import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { AppLauncher } from './app-launcher';
+import { Page, Main, Nav, Link, Text as SemanticText } from '@acme/ui/html';
+import { Pressable, Text, Menu, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
+import { studioControls, FilePicker } from '@acme/ui/studio-controls/web';
 import './style.css';
 
 function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme: 'dark' | 'light'; headerTrailing: ReactNode }) {
-  const fileInput = useRef<HTMLInputElement>(null);
   const textEditor = useRef<QuillTextEditorHandle>(null);
   const config = getEditorConfig(studio);
   const editor = useEditorDoc(config.open);
@@ -56,11 +58,11 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
       store.setState({ notice: `Opened ${file.name}`, documentTitle: file.name });
     });
   };
-  const leadingActions = <div className="document-actions">
-    <button className="document-action" type="button" aria-label="Open document" disabled={busy || !editor.doc} onClick={() => fileInput.current?.click()}>Open</button>
-    <input ref={fileInput} hidden aria-label="Open document" type="file" disabled={busy || !editor.doc} accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
-      onChange={event => { const file = event.target.files?.[0]; if (file) void openFile(file).catch(() => {}); event.target.value = ''; }} />
-      {studio === 'quill' && <button className="document-action" type="button" aria-label="Export Word document" disabled={busy || !editor.doc} onClick={() => {
+  const leadingActions = <Page className="document-actions">
+    <FilePicker className="document-action" label="Open" disabled={busy || !editor.doc}
+      accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
+      onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} />
+      {studio === 'quill' && <Pressable accessibilityLabel="Export Word document" style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }} disabled={busy || !editor.doc} onPress={() => {
         void run(async () => {
           await textEditor.current?.flush();
           const result = await editor.apply<{ bytes_b64: string }>('exportDocx');
@@ -70,11 +72,11 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
           setTimeout(() => URL.revokeObjectURL(url), 1000);
           store.setState({ notice: 'Word document exported' });
         }).catch(() => {});
-      }}>Export Word</button>}
+      }}><Text style={{ color: 'inherit', fontSize: 12 }}>Export Word</Text></Pressable>}
 
-  </div>;
+  </Page>;
   return <>
-    <ForgeWorkspace headerLeading={<a className="back-link" href="#/">← All apps</a>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
+    <ForgeWorkspace headerLeading={<Link className="back-link" href="#/">← All apps</Link>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
       theme={theme} loadPreset={loadPreset} persistPreset={persistPreset}
       state={editor.state} rows={config.rows(editor.state)}
       actions={config.actions.map(action => ({ title: action.title, run: () => run(() => action.run(editor)) }))}
@@ -83,7 +85,7 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
       busy={busy || !editor.doc} error={error ?? editor.error}>
       {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc} /> : undefined}
     </ForgeWorkspace>
-    <div className="engine-notice" role="status">{notice}</div>
+    <Page className="engine-notice" role="status">{notice ? <SemanticText>{notice}</SemanticText> : null}</Page>
   </>;
 }
 
@@ -105,27 +107,28 @@ function App() {
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
   }, [store]);
-  const themeToggle = <button className="theme-toggle" type="button" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-    onClick={() => store.setState({ theme: theme === 'dark' ? 'light' : 'dark' })}>{theme === 'dark' ? 'Light' : 'Dark'}</button>;
-  const editorControls = <div className="editor-host-controls">
-    <details className="preview-controls"><summary aria-label="Preview controls">Preview</summary>
-      <label>Preview width<select aria-label="Host width" value={hostWidth} onChange={event => {
-        const value = event.target.value;
-        if (value === 'desktop' || value === 'tablet' || value === 'split' || value === 'phone') store.setState({ hostWidth: value });
-      }}><option value="desktop">Desktop · full</option><option value="tablet">Tablet · 768px</option><option value="split">Split view · 724px</option><option value="phone">Phone · 390px</option></select></label>
-    </details>{themeToggle}
-  </div>;
-  return <main data-theme={theme}>
-    {!app && <nav className="launcher-nav" aria-label="App navigation">
-      <a className="suite-label" href="#/"><span className="suite-mark" aria-hidden="true">N</span>NitroForge <span className="suite-caption">The creative collection</span></a>
+  const themeToggle = <Pressable accessibilityLabel={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+    style={{ minHeight: 44, minWidth: 44, paddingHorizontal: 10, justifyContent: 'center' }}
+    onPress={() => store.setState({ theme: theme === 'dark' ? 'light' : 'dark' })}><Text style={{ color: theme === 'dark' ? '#F0F1F7' : '#252A3A', fontSize: 12 }}>{theme === 'dark' ? 'Light' : 'Dark'}</Text></Pressable>;
+  const editorControls = <Page className="editor-host-controls">
+    <Menu title="Preview width" triggerLabel="Preview controls" actions={[
+      { id: 'desktop', title: 'Desktop · full' }, { id: 'tablet', title: 'Tablet · 768px' },
+      { id: 'split', title: 'Split view · 724px' }, { id: 'phone', title: 'Phone · 390px' },
+    ]} onAction={value => { if (value === 'desktop' || value === 'tablet' || value === 'split' || value === 'phone') store.setState({ hostWidth: value }); }}>
+      <Text style={{ color: theme === 'dark' ? '#ADB3C4' : '#687287', fontSize: 11, padding: 8 }}>Preview</Text>
+    </Menu>{themeToggle}
+  </Page>;
+  return <Main data-theme={theme}>
+    {!app && <Nav className="launcher-nav" aria-label="App navigation">
+      <Link className="suite-label" href="#/"><SemanticText className="suite-mark" aria-hidden="true">N</SemanticText>NitroForge <SemanticText className="suite-caption">The creative collection</SemanticText></Link>
       {themeToggle}
-    </nav>}
-    {opened.map(id => <div key={id} className="workspace-container" data-host-width={hostWidth} hidden={app !== id}
+    </Nav>}
+    {opened.map(id => <Page key={id} className="workspace-container" data-host-width={hostWidth} hidden={app !== id}
       style={{ display: app === id ? 'flex' : 'none', width: hostWidth === 'desktop' ? '100%' : hostWidth === 'tablet' ? 768 : hostWidth === 'split' ? 724 : 390 }}>
       <StudioEditor studio={id} theme={theme} headerTrailing={editorControls} />
-    </div>)}
+    </Page>)}
     {!app && <AppLauncher opened={opened} theme={theme} />}
-  </main>;
+  </Main>;
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(<StudioUIProvider components={studioControls}><App /></StudioUIProvider>);

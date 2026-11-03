@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from './ui';
 import type { Studio } from '@nitro-forge/studio-layout';
 
 type Data = Record<string, any>;

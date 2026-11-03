@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from './ui';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { workspaceThemes, workspaceScale as scale } from './theme';

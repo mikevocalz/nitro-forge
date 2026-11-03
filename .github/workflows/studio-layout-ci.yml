@@ -21,15 +21,30 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    working-directory: nitro-forge
+
 jobs:
   dock-layout:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: nitro-forge
+      # Paired source-owned UI change must be published before this branch.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: mikevocalz/nyc-mon
+          ref: 4154ea344987de4bee94d4ee0e9f0249f66e8087
+          path: nyc-mon
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '24'
+          node-version: '26'
       - run: corepack enable
+      - name: Install canonical UI source dependencies
+        working-directory: nyc-mon
+        run: pnpm --filter @acme/ui... install --frozen-lockfile --ignore-scripts
       - name: Install for new workspace package
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Run real typed dock model tests
@@ -44,6 +59,7 @@ jobs:
           git diff --exit-code -- packages/studio-workspace/src/theme.css
       - name: Workspace transitions and strict types
         run: |
+          node packages/studio-workspace/verify-ui-boundary.mjs
           pnpm --filter @nitro-forge/studio-workspace test
           pnpm --filter @nitro-forge/studio-workspace typecheck
           pnpm --filter @nitro-forge/example typecheck

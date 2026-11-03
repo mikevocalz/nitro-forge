@@ -256,3 +256,29 @@ REA6.8.0 source-only static analysis ran successfully using temporary Node26.12.
 without global configuration changes; partial coverage and 68 observations are
 not runtime validation or bug counts. The bounded summary is committed; full
 report stays in ignored artifacts/rea.
+
+### Canonical NYC UI integration — November 3, 2026
+
+User selected `nyc-mon/packages/ui`. Studio now requires a host-injected
+`StudioUIProvider`, with actual canonical semantic primitives, native Menu and
+Select bindings, Image and input adapters. Browser landmarks and FilePicker
+use `@acme/ui/html`. An AST check rejects direct React Native visual imports
+inside shared Studio. Dock bars and layer bars reuse the same drag controller.
+A release-before-measurement race was reproduced and fixed with an awaited,
+cancellable measurement transaction.
+
+Executed: all package typechecks, 70 package tests, preview production build,
+and seven-engine integration checks passed. Canonical NYC UI additionally
+passed its typecheck, scoped lint and three adapter regression tests. Browser
+manual evidence confirms provider Menu/Select operation and real layer drag,
+reorder and undo. The final app-list review exposed canonical default style
+conflicts; host styles were corrected afterward. A fresh screenshot and the
+new browser FilePicker interaction remain unverified because the Chrome
+automation window became unavailable. DOCX engine import/export integration
+passed independently. No native runtime/device or full browser matrix run.
+
+Canonical UI commit `4154ea344987de4bee94d4ee0e9f0249f66e8087` is local only.
+CI pins that paired source commit and was not run remotely; publish the NYC
+commit before the NitroForge branch. The legacy Expo54 example is not asserted
+compatible with the Expo58 UI runtime. SDK/window/orientation/manifest contracts
+remain unchanged. See `docs/ux/studio-refresh/OWN_UI_INTEGRATION.md`.
