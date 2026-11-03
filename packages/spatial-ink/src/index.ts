@@ -134,3 +134,52 @@ export function subscribeMuseSpatialInk(options: MuseSubscriptionOptions): () =>
     }
   };
 }
+
+/**
+ * The existing Vision Pro Viro stream -> existing QuickDraw BoardInputRouter
+ * compatibility boundary. Viro owns native GameController/ARKit; the board owns
+ * projection, tool selection and the SINGLE editable document.
+ *
+ * Replace the old MusePenInput converter when adopting this adapter: do not
+ * mount two subscriptions to one pen/board at the same time.
+ */
+export interface MuseBoardPointerSample extends MuseNativeSample {
+  readonly phase: SpatialPenPhase;
+  /** Actual normalized pressure, or NaN if native measurement is missing. */
+  readonly pressure: number;
+  readonly timestampMs: number;
+  /** Deprecated legacy field required by existing Viro router consumers. */
+  readonly timestamp: number;
+}
+export interface MuseBoardRouterTarget {
+  handlePenSample(sample: MuseBoardPointerSample): void;
+}
+export interface MuseBoardBridgeOptions
+  extends Pick<MuseSubscriptionOptions, "subscribe" | "now" | "sideButtonsDraw"> {
+  readonly router: MuseBoardRouterTarget;
+  readonly wallClock?: () => number;
+}
+
+/** Returns the ONE native stream unsubscribe, with deterministic cancellation. */
+export function connectMuseToBoardRouter(options: MuseBoardBridgeOptions): () => void {
+  const wallClock = options.wallClock ?? (() => Date.now());
+  return subscribeMuseSpatialInk({
+    subscribe: options.subscribe,
+    ...(options.now ? { now: options.now } : {}),
+    sideButtonsDraw: options.sideButtonsDraw ?? false,
+    onEvent: (event) => {
+      options.router.handlePenSample({
+        tracked: event.tracked,
+        position: event.position,
+        headPosition: event.headPosition,
+        tipPressed: event.tipPressed,
+        primaryPressed: event.primaryPressed,
+        secondaryPressed: event.secondaryPressed,
+        phase: event.phase,
+        pressure: event.normalizedPressure ?? Number.NaN,
+        timestamp: wallClock(),
+        timestampMs: event.timestampMs,
+      });
+    },
+  });
+}
