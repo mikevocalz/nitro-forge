@@ -1,6 +1,6 @@
 # Studio UX-01..UX-12 — unified editor shell, snap rails and responsive workspaces
 
-**Status:** design contract only. The seven headless engines already exist, but this document does not implement a workspace, canvas, dock, responsive renderer or screenshots.
+**Status:** shared workspace shell implemented on November 3, 2026 in `packages/studio-workspace`, integrated into the Expo example and a real-engine browser harness. The design contract below remains the broader target; native canvas adapters, direct manipulation, device and accessibility validation are not implied by the shell implementation.
 
 ## Product stance
 NitroForge Studio is one **recognizable original product family** with Prism (image/vector), Quill (text), Tally (spreadsheets), Pitch (slides), Folio (PDF), Splice (video) and Cadence (audio). Every editor uses the same workspace structure, control grammar, actions, keyboard behavior, focus affordances, dock mechanics, save/export states, typography/icon scale and interaction feedback. The engine/document model and domain-specific inspectors change by explicit studio manifest, not by creating seven separate app shells.
@@ -99,4 +99,21 @@ Prefer crisp hierarchy, restrained elevation and well-labelled controls. Avoid r
 - Dark/light themes and two host themes share component source, not screenshots; contrast, focus, screen reader, tooltips, touch targets.
 - Actual performance trace for stage redraw and hidden worker gating. No claimed 60 fps or GPU zero-copy without measurements.
 
-**No implementation in this spec PR.** Each runtime component requires a separate reviewed implementation and test evidence; don't call a mock canvas an editor.
+## Implemented follow-up
+
+`ForgeWorkspace` now supplies the document bar, stage slot, left/right/bottom
+panel groups, tabs, collapsing, resizing, reordering, move controls, drag previews,
+Escape/cancel, and validated layout presets. Its per-instance Zustand model uses
+the original docking core. Compact hosts use bottom panels. The host owns the
+engine session and persistence; native resources remain in refs.
+
+`apps/studio-preview` runs all seven original command lists through a loopback
+bridge to the real Rust engines. It supports dark/light themes, per-studio layout
+storage and measured full/768/390px containers. The same workspace component is
+used in `apps/example`. Default stages project real engine state; PDF painting,
+raster compositing, object editing/snapping and media playback require host
+adapters. This is a working workspace shell, not seven complete visual editors.
+
+The UX milestone table above describes the full cross-platform acceptance scope.
+Those milestones are not all closed by this follow-up. See `docs/ROSTER.md` for
+executed checks and outstanding device evidence.

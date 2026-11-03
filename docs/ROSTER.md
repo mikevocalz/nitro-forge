@@ -100,3 +100,46 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
 - No git remote → commits are local; no PRs.
+
+## Studio workspace implementation — November 3, 2026
+
+Implemented `packages/studio-workspace` over the existing layout core and wired
+it into the Expo editor route and `apps/studio-preview`. The shared shell has
+three dock zones, tabs, collapse/activate, move/reorder/resize controls, drag
+previews, cancellation, compact bottom panels and host-owned presets. Zustand
+stores contain UI/document projections; native document handles remain in refs.
+The browser harness uses the actual Rust engines through a loopback CLI bridge.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Strict workspace typechecks, including Expo and browser harness | PASS | `pnpm -r typecheck` |
+| Original host/product e2e tests | 32 PASS | `pnpm -r test` |
+| Dock layout core tests | 12 PASS | same command |
+| New workspace model tests | 8 PASS: isolation, atomic drag/cancel, invalid targets, geometry, compact reset/restore, presets and resize | same command |
+| Browser bundle | PASS, Vite 7.3.7; 586.40 kB JS before gzip (size warning remains) | `pnpm --filter @nitro-forge/studio-preview build` |
+| Seven-engine HTTP mutation, undo/redo, NFD1 snapshot/reopen; request-origin guards | PASS | `pnpm --filter @nitro-forge/studio-preview test:integration` |
+| Frozen workspace lock | PASS | `pnpm install --lockfile-only --frozen-lockfile --ignore-scripts --offline` |
+| Browser pointer docking | PASS: Document dragged left→right, status `outline docked` | connected Chrome UI |
+| Browser keyboard movement | PASS: Enter on Pitch Commands→Move left; existing slide text retained | connected Chrome UI |
+| Engine history survives layout changes | PASS: Quill paragraph undo/redo after moving Commands; layout save/reset/restore retains placement | connected Chrome UI |
+| Preset reload | PASS: saved Tally bottom Commands restored after page reload and studio selection | connected Chrome UI |
+| Measured responsive hosts / themes | PASS: full width, 768px, 390px; bottom Commands accessible; Prism retained two layers through theme/width changes | screenshots below |
+| Browser snapshot download UI | NOT VERIFIED: browser download-wait tooling timed out; bridge snapshot/reopen verified above | no download claim |
+| iOS/Android execution, native drag/stylus, VoiceOver/TalkBack, physical fold/hinge, XR | NOT RUN | no suitable running simulator/emulator; native runtime remains separate |
+
+Screenshots: [desktop Tally](ux/evidence/studio-desktop-tally.png),
+[390px host](ux/evidence/studio-compact-tally.png),
+[768px light host](ux/evidence/studio-tablet-light-tally.png).
+These are measured editor containers in Chrome, not native device screenshots.
+Browser viewport emulation itself was not established.
+
+Subagent implementation/review found and fixed stale async document actions
+crossing studio sessions, panel responder remounts, compact presets reopening side
+docks and incorrect PDF/snapshot status wording. The same document stays mounted
+while changing layout, theme or measured host width. Switching studios intentionally
+closes that studio's current temporary document.
+
+The default stages are read-only projections of engine state. Native raster/PDF
+painting, direct manipulation, media playback, object snapping, Rive integration,
+independent native floating windows and the broader UX milestone acceptance packet
+remain pending. No native manifest/window contract was modified or verified.

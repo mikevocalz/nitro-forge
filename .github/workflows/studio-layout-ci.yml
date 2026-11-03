@@ -1,4 +1,4 @@
-name: Studio dock model and TS contract
+name: Studio workspace and dock contract
 
 on:
   push:
@@ -7,6 +7,13 @@ on:
   pull_request:
     paths:
       - 'packages/studio-layout/**'
+      - 'packages/studio-workspace/**'
+      - 'apps/studio-preview/**'
+      - 'apps/example/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.base.json'
       - '.github/workflows/studio-layout-ci.yml'
   workflow_dispatch:
 
@@ -23,9 +30,21 @@ jobs:
           node-version: '24'
       - run: corepack enable
       - name: Install for new workspace package
-        run: pnpm install --no-frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Run real typed dock model tests
         run: pnpm --filter @nitro-forge/studio-layout test
       - name: Strict TypeScript contract
         run: pnpm --filter @nitro-forge/studio-layout typecheck
-# This exercises layout state only, not native Expo Host, dragging or Rust editing.
+      - name: Workspace transitions and strict types
+        run: |
+          pnpm --filter @nitro-forge/studio-workspace test
+          pnpm --filter @nitro-forge/studio-workspace typecheck
+          pnpm --filter @nitro-forge/example typecheck
+          pnpm --filter @nitro-forge/studio-preview typecheck
+      - name: Browser production bundle
+        run: pnpm --filter @nitro-forge/studio-preview build
+      - name: Build real engine host
+        run: cargo build --locked -p nf-cli
+      - name: Seven-engine browser bridge round trips
+        run: pnpm --filter @nitro-forge/studio-preview test:integration
+# UI gestures, native devices and assistive technology require separate evidence.

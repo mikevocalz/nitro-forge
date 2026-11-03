@@ -1,0 +1,11 @@
+{
+  "name": "@nitro-forge/studio-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.tsx", "./model": "./src/model.ts" },
+  "scripts": { "test": "node --experimental-strip-types --test src/*.test.ts", "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": { "@nitro-forge/studio-layout": "workspace:*", "zustand": "^5.0.8" },
+  "peerDependencies": { "react": ">=19", "react-native": ">=0.81" },
+  "devDependencies": { "@types/react": "^19.1.0", "react": "^19.1.0", "react-native": "^0.81.0" }
+}
