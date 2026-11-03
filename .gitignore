@@ -10,3 +10,5 @@ coverage/
 .expo/
 android/build/
 ios/build/
+
+artifacts/

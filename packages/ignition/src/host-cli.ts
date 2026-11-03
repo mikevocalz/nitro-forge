@@ -7,10 +7,10 @@ import type {
   EngineErrorShape,
   EngineKind,
   ForgeEvent,
-} from "./types";
-import { EngineError } from "./types";
-import { base64ToBytes, bytesToBase64 } from "./base64";
-import type { EngineHost } from "./host";
+} from "./types.js";
+import { EngineError } from "./types.js";
+import { base64ToBytes, bytesToBase64 } from "./base64.js";
+import type { EngineHost } from "./host.js";
 
 interface Pending {
   resolve: (v: FrameResponse) => void;
@@ -182,3 +182,4 @@ export class CliHost implements EngineHost {
     this.pending.clear();
   }
 }
+

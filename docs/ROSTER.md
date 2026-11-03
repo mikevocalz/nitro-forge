@@ -100,3 +100,27 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
 - No git remote → commits are local; no PRs.
+
+
+## Package distribution — November 3, 2026
+
+Applied the pinned Margelo `build-nitro-modules` publishing guidance and two
+subagent reviews for native boundaries and distribution. Resolved the optional
+Nitro type leak, compiled Metro exports, codegen output exclusion and Folio example.
+
+| Check | Result | Command |
+|---|---|---|
+| Eight package ESM/declaration builds | PASS, TypeScript 5.9.3, pnpm 10.32.1 | `pnpm run build:packages` |
+| Eight actual pnpm tarballs + export targets + exact internal dependencies | PASS | `pnpm run check:packages` |
+| Isolated Node ESM and React Native export condition imports | PASS, Node 24.22.1 | `node tooling/packages/verify.mjs` |
+| Strict external TS consumer, no Nitro/React and no skipLibCheck | PASS | same verifier |
+| Eight package source/test typechecks | PASS | `pnpm --filter './packages/**' -r run typecheck` |
+| Frozen lockfile validation | PASS | `pnpm install --lockfile-only --frozen-lockfile --ignore-scripts --offline` |
+| Packaged APIs against seven Rust engines | NOT RUN locally: Rust/Cargo unavailable; CI stage added | `NF_CLI=... node tooling/packages/verify.mjs --engines` |
+| Metro bundling, iOS/Android, WASM and native ownership tests | NOT RUN | separate native workstreams |
+| npm publishing | NOT RUN | preview tarballs only |
+
+These results cover JavaScript/TypeScript distribution only. The new CI workflow
+adds packaged real-engine round-trips; a passing local export-condition check
+does not establish device support. Existing verified-engine counts above are
+historical and were not rerun for this packaging change.

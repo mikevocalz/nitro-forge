@@ -1,0 +1,30 @@
+name: Package distribution
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tarballs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - run: npm install --global pnpm@10.32.1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run check:packages
+      - run: pnpm --filter './packages/**' -r run typecheck
+      - run: rustup toolchain install stable --profile minimal
+      - run: cargo +stable build --locked -p nf-cli
+      - run: node tooling/packages/verify.mjs --engines
+        env:
+          NF_CLI: ${{ github.workspace }}/target/debug/nf-cli
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nitro-forge-preview-tarballs
+          path: artifacts/packages/
+          retention-days: 7
