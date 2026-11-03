@@ -47,3 +47,20 @@ packages lie outside the selected directory. Observations are not defects and
 this does not validate runtime or visual behavior. Bounded evidence is in
 rea-summary.json; full 2.9MB report remains in ignored artifacts/rea. Neither
 system Node nor global agent configuration was changed.
+
+## Affinity editor feel correction — November 3, 2026
+
+User explicitly wants the new Affinity application's feel, not just styling
+polish in the launcher. Craft Anything captured the official reference; its
+public editor imagery (Pixel/Curves, Vector/Logo, Layout/Pages) was then inspected.
+The defining composition is a continuous canvas with floating charcoal control
+islands: compact ribbon, narrow tool capsule, detached contextual inspector,
+blue selected controls, and small panel grab bars.
+
+Prism now follows that editing composition using the existing canonical NYC
+components. Generic workspace panel toggles remain reachable through Workspace;
+its redundant outer rail and phone bottom navigation no longer consume the
+canvas. Graphite/blue is local to Prism. Separate application sessions, real
+engine operations and native window contracts remain the established contract.
+Only supported editing actions appear; no unsupported Affinity controls are
+added as decoration. Final captures and review are recorded separately.

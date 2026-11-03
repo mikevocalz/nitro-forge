@@ -297,3 +297,26 @@ interaction and the full OS/browser matrix remain unverified. Raw evidence
 stays ignored; final launcher images and provenance are committed in docs/ux.
 No nested rebuild, global registration or native configuration changes.
 See `docs/ux/studio-refresh/CRAFT_ANYTHING.md`.
+
+### Affinity canvas composition — November 3, 2026
+
+Prism now uses a local graphite/blue palette and continuous measured canvas
+with floating tool capsule, compact selected-layer ribbon, detached Layers and
+stationary fill strip. The artboard fits both available dimensions and preserves
+its aspect ratio. Generic dock controls remain reachable through Workspace.
+No app-window/orientation/manifest changes or unsupported editor tools. Native
+resources remain refs; view state remains per-instance Zustand.
+
+Craft Anything live browser walks created real violet rectangles and teal
+ellipses at390/768/1440. Round1 visual review led to compact ribbon and neutral
+opacity Menu refinements. Round2 found a genuine clipped popup; a dispatched
+click was not accepted as proof of an engine edit. Details, subsequent proof and
+limits are in `docs/ux/studio-refresh/AFFINITY_FEEL.md`. Workspace21 tests, all
+package typechecks, preview build and seven-engine integration passed. Native
+runtime and full browser/OS/device matrix remain unverified.
+
+Final Round3 browser proof: the complete opacity menu is visible, and actual
+selection changes the engine layer to50% with a visibly blended canvas at
+390/768/1440. Phone final closes Layers without changing the artwork. Main and
+continued critic inspected final captures. Final21 workspace tests/typecheck
+and preview build passed after popup fix. Images: docs/ux/evidence/prism-affinity-*.png.
