@@ -29,11 +29,14 @@ function findViroAar() {
 }
 
 const viroAar = findViroAar();
+// Build-only CI opt-in exercises the JSI/Prefab link without claiming an XR
+// renderer exists. Gradle selects src/noViro, whose factory is unavailable.
+const compileNativeBackend = process.env.NITRO_FORGE_BOARD_VIRO_ANDROID === "on";
 module.exports = {
   dependency: {
     platforms: {
       // A Viro-free app uses Skia's own RN native view, not this XR backend.
-      android: viroAar ? {} : null,
+      android: viroAar || compileNativeBackend ? {} : null,
       ios: null, // Apple board is Skia v3; no unimplemented Nitro iOS renderer.
     },
   },

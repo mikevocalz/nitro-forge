@@ -11,6 +11,15 @@ def getExtOrDefault(name, fallback) {
   return rootProject.ext.has(name) ? rootProject.ext.get(name) : fallback
 }
 
+// Match NitroModules' ABI selection. Its Prefab package publishes headers for
+// every consumer, but only has a shared library for architectures it built.
+// Without this, an arm64-only host also builds Board for armeabi-v7a and gets
+// a headers-only Nitro target, followed by unresolved margelo::nitro symbols.
+def reactNativeArchitectures() {
+  def value = rootProject.getProperties().get("reactNativeArchitectures")
+  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+}
+
 // No Viro assets are bundled. Consumer's Viro AAR supplies CanvasSurfaces;
 // this is a compile-only dependency, and runtime checks gate missing APIs.
 def viroAndroidDir = null
@@ -54,6 +63,7 @@ android {
       cmake {
         cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
         arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters (*reactNativeArchitectures())
       }
     }
   }
