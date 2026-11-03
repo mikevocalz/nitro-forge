@@ -143,3 +143,32 @@ The default stages are read-only projections of engine state. Native raster/PDF
 painting, direct manipulation, media playback, object snapping, Rive integration,
 independent native floating windows and the broader UX milestone acceptance packet
 remain pending. No native manifest/window contract was modified or verified.
+
+
+## Independent app entry and writing flow — November 3, 2026
+
+User clarified that each app is independently requested from a list. Replaced
+browser studio tabs with an app launcher and per-app hash routes; apps open on
+first request and retain separate sessions while navigating the list. Browser
+reload still ends temporary sessions. The native Expo list already uses separate
+routes. Shared shell code remains reusable without imposing a suite-mode UI.
+
+Quill now provides a Zustand-backed essay draft, Unicode-aware minimal engine
+edits, conflict detection, snapshot flush and DOCX/NFD opening / DOCX export in
+the browser harness. Native example snapshots also flush its writing surface;
+native file selection remains a host integration. Formatting outside edited spans
+is preserved by the engine; this writing surface is a plain text editor, with
+existing format commands remaining available.
+
+Follow-up evidence:
+- Workspace tests: 11 PASS (8 docking + 3 text-diff); workspace/example/browser
+  typechecks PASS; browser bundle PASS (594.78 kB JS, existing size warning).
+- `pnpm --filter @nitro-forge/studio-preview test:integration` PASS: seven engines,
+  six Unicode/newline essay edit scenarios, real DOCX export/import and independent
+  document state. Integration server stops itself afterward.
+- Browser PASS: app list → Quill, type/apply two paragraphs → app list → Tally →
+  app list → Quill, essay retained. [App list](ux/evidence/app-list.png) and
+  [writing space](ux/evidence/quill-writing-space.png) captured.
+- Native essay execution NOT RUN. Automated browser file-selection check blocked
+  by Chrome extension file-access permission; permission unchanged. DOCX engine
+  import/export passed via the integration bridge, not the file-picker UI.

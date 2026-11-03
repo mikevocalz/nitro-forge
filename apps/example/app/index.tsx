@@ -8,7 +8,7 @@ const PRODUCTS = [
   { id: "folio", name: "Folio", tagline: "PDF documents" },
   { id: "pitch", name: "Pitch", tagline: "Presentations" },
   { id: "tally", name: "Tally", tagline: "Spreadsheets" },
-  { id: "quill", name: "Quill", tagline: "Rich text" },
+  { id: "quill", name: "Quill", tagline: "Write an essay or open a Word document" },
 ] as const;
 
 export default function Home() {

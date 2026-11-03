@@ -8,9 +8,11 @@ cargo build --locked -p nf-cli
 pnpm --filter @nitro-forge/studio-preview dev
 ```
 
-Open http://127.0.0.1:4173. The seven studio tabs each open an engine document.
+Open http://127.0.0.1:4173. The app list opens only the app requested, at its own `#/apps/<app>` route.
+Opened apps keep independent engine sessions while navigating the list; a page
+reload closes those temporary sessions. There is no editor mode-switching strip.
 Actions, undo/redo, refresh and downloaded NFD1 snapshots use `nf-cli` through
-same-origin POST requests. Switching studio closes its previous document.
+same-origin POST requests. Returning to the app list preserves each opened document for this browser session.
 Documents are temporary unless a snapshot is downloaded.
 Save layout writes a versioned preset to localStorage separately for each studio;
 it loads again on reload. The light/dark toggle changes the shared workspace theme
@@ -31,3 +33,9 @@ The development bridge binds only to loopback and rejects cross-origin requests.
 It is a local QA harness, not a production server or native-runtime substitute.
 `vite build` validates browser bundling but requires this dev bridge for engine
 operations; static hosting does not provide the Rust process.
+
+Quill supplies an essay text area, Apply text, DOCX/NFD opening and Word export.
+Save flushes the pending essay draft before creating its NFD snapshot. Word import
+uses the real engine; the current DOCX subset remains the engine contract described
+in ENGINE_OPS.md. The shared native example also supports the essay surface; native
+file-picker integration remains a host responsibility.

@@ -218,3 +218,5 @@ function DragHandle({ id, store, measure, hostRect, blockedRegions, color }: {
     <Text style={{ color, fontSize: 20 }}>⠿</Text>
   </View>;
 }
+
+export { QuillTextEditor, type QuillTextEditorHandle, type QuillTextEditorProps } from './text-editor';

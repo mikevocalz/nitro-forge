@@ -29,3 +29,7 @@ A separate `nitro-forge-moyo-board` worktree contains an Expo 58 / React Native
 0.88 native Board lab and generated Android build output. It was inspected
 read-only and is not the Studio implementation target. Preserve its output and
 configuration.
+
+The current browser entry is an app list, with independent `#/apps/<app>` routes.
+Opened sessions survive navigation through the list; browser reload ends them.
+Quill now has a writable stage and DOCX import/export in the browser harness.

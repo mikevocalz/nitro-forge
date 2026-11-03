@@ -1,4 +1,4 @@
-# Studio UX-01..UX-12 — unified editor shell, snap rails and responsive workspaces
+# Studio UX-01..UX-12 — shared editor components, snap rails and independent app spaces
 
 **Status:** shared workspace shell implemented on November 3, 2026 in `packages/studio-workspace`, integrated into the Expo example and a real-engine browser harness. The design contract below remains the broader target; native canvas adapters, direct manipulation, device and accessibility validation are not implied by the shell implementation.
 
@@ -13,7 +13,7 @@ Affinity's unified Photo/Vector/Layout app is an **interaction reference** for a
 ┌────────────────────────────────── Product header ──────────────────────────────────┐
 │ NitroForge logo     Document title / save state         Search   Share    Export │
 ├────────────────────────────────────────────────────────────────────────────────────┤
-│ Studio selector      Main context actions / undo / redo / document scope         │
+│ App identity         Main context actions / undo / redo / document scope         │
 ├──────────┬─────────────────────────────────────────────┬───────────────────────────┤
 │ LEFT RAIL│            DOCUMENT/STAGE                   │ RIGHT DOCK                │
 │ Tools    │  Contextual floating bar (only on selection)│ Properties | Layers | FX  │
@@ -27,7 +27,7 @@ Affinity's unified Photo/Vector/Layout app is an **interaction reference** for a
 └────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Single components across all studios:** `ForgeWorkspace`, `ForgeDocumentBar`, `ForgeStudioSwitcher`, `ForgeToolRail`, `ForgeContextBar`, `ForgeDock`, `ForgeInspector`, `ForgeStageHost`, `ForgeCommandPalette`, `ForgeStatusBar`, `ForgeWorkspacePreset`. App-specific persistence/auth and global nav are host ports; NitroForge owns the inner editor UI only. `ForgeStageHost` never creates a second document/undo model.
+**Single components across all studios:** `ForgeWorkspace`, `ForgeDocumentBar`, `ForgeToolRail`, `ForgeContextBar`, `ForgeDock`, `ForgeInspector`, `ForgeStageHost`, `ForgeCommandPalette`, `ForgeStatusBar`, `ForgeWorkspacePreset`. App-specific persistence/auth and global nav are host ports; NitroForge owns the inner editor UI only. `ForgeStageHost` never creates a second document/undo model.
 
 ### Studio manifests, no divergent UI kits
 
@@ -117,3 +117,18 @@ adapters. This is a working workspace shell, not seven complete visual editors.
 The UX milestone table above describes the full cross-platform acceptance scope.
 Those milestones are not all closed by this follow-up. See `docs/ROSTER.md` for
 executed checks and outstanding device evidence.
+
+
+## App entry contract — user clarification, November 3, 2026
+
+Each app is independently callable. A host presents an app list and opens only
+what the user needs in that app's space. Quill is the writing app: a user can type
+an essay there or open an existing Word document. Prism, Tally, Pitch, Folio,
+Splice and Cadence similarly own their document sessions and entry routes.
+Shared dock/workspace components are implementation reuse, not a requirement
+for a single editor with seven modes or a permanent studio switcher.
+
+The browser preview now starts with this list. Opened app instances keep their
+independent documents while returning to the list. Quill has a real writing
+surface, DOCX import and export; the existing Expo app list leads to separate
+editor routes and now supplies the same writing surface.

@@ -51,3 +51,31 @@ for (const origin of [undefined, 'https://untrusted.example']) {
 }
 assert.equal((await fetch(`${base}/api/engine`)).status, 403);
 console.log('Cross-origin, missing-origin and GET requests rejected');
+
+// Exercise the same Unicode-aware replacement plan as the writing surface.
+const { textEdit, plainText } = await import('../../packages/studio-workspace/src/text-diff.ts');
+for (const [before, after] of [
+  ['Hello 🌍', 'Hello 👋'], ['first\nsecond', 'first second'],
+  ['one', 'one\ntwo\nthree'], ['', '\n'], ['erase me', ''], ['tail', 'tail\n'],
+]) {
+  const handle = await call('open', 'quill');
+  try {
+    if (before) await call('apply', handle, { op: 'insertText', payload: { at: { block: 0, offset: 0 }, text: before } });
+    const edit = textEdit(before, after);
+    if (edit.remove) await call('apply', handle, { op: 'deleteRange', payload: { from: edit.from, to: edit.to } });
+    if (edit.insert) await call('apply', handle, { op: 'insertText', payload: { at: edit.from, text: edit.insert } });
+    assert.equal(plainText((await call('apply', handle, { op: 'describe' })).data), after);
+  } finally { await call('close', handle); }
+}
+const essay = await call('open', 'quill');
+const opened = await call('open', 'quill');
+try {
+  const text = 'An essay in its own space.\nA second paragraph with Unicode 👋.';
+  await call('apply', essay, { op: 'insertText', payload: { at: { block: 0, offset: 0 }, text } });
+  const exported = await call('apply', essay, { op: 'exportDocx' });
+  await call('apply', opened, { op: 'importDocx', payload: { bytes_b64: exported.data.bytes_b64 } });
+  assert.equal(plainText((await call('apply', opened, { op: 'describe' })).data), text);
+  await call('apply', essay, { op: 'insertText', payload: { at: { block: 0, offset: 0 }, text: 'Original only: ' } });
+  assert.equal(plainText((await call('apply', opened, { op: 'describe' })).data), text);
+} finally { await call('close', essay); await call('close', opened); }
+console.log('Essay Unicode/newline edits, Word import/export and independent documents passed');

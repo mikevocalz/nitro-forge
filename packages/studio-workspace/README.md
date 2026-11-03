@@ -29,3 +29,12 @@ pending. No app orientation or spatial window dimensions are changed here.
 pnpm --filter @nitro-forge/studio-workspace test
 pnpm --filter @nitro-forge/studio-workspace typecheck
 ```
+
+
+`QuillTextEditor` is a separate writing surface supplied through the stage slot.
+It keeps a local draft in Zustand and writes minimal Unicode-aware edits through
+Quill on Apply text. Its imperative `flush()` lets a host commit the draft before
+saving or exporting; `isDirty()` prevents opening another document over unapplied
+text. External edits cause a visible conflict and preserve the draft. Host apps
+own document entry, file pickers and persistence. The shared workspace does not
+require a permanent app/mode switcher.
