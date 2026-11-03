@@ -96,3 +96,27 @@ this pass does not invent one.
 
 Native/foldable/XR execution and source-neutral Expo UI extraction remain outside
 this browser evidence. No orientation, manifest or spatial window contract changed.
+
+## PhotoCraft / Affinity for iPad follow-up (November 3)
+
+User selected [Affinity for iPad](https://www.affinity.studio/ipad-app) as the
+primary photo/vector experience. The actual official hero image was downloaded
+and inspected: large canvas, narrow toolrail, floating contextual strip, rounded
+Layers panel with visible selection and per-layer visibility. Pixel/Sketch/Layout
+screens were also inspected by the reference subagent. These observations guide
+Prism; they do not establish feature parity or permission to include the reference
+artwork. PhotoCraft's Studio light screenshot and pinned theme/toolbar source
+were inspected at commit d93e65d0018602913e72ab468b08c4a2973718b9. Its 6/8/12 radius
+family, brighter cards, neutral canvas and inset selection informed the shared
+8/12 controls/panels. Source: https://github.com/storytold/photocraft.
+
+New Mobbin iOS images actually inspected: [Photoroom layers](https://mobbin.com/screens/17875c39-0946-4b6b-a760-bb3868918e01)
+and [Canva layer selection](https://mobbin.com/screens/a7d2e8f9-cf06-4b76-bd09-50d1a2315114).
+Both keep a large preview above a titled layer sheet, with grouped rows and clear
+selection. [Pinterest collage toolbar](https://mobbin.com/screens/039e0db8-7a21-4217-9859-1cab995cefe3)
+was used only for contextual placement, not photo/vector feature evidence.
+
+Web Designer Pro's local skill process was used with source studies and continued
+critic rounds. Browser extension state changed mid-session; Chrome's native
+accessibility fallback supplied desktop and 390px host-width evidence. No
+cross-platform browser matrix or native runtime result is claimed.

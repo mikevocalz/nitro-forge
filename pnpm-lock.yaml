@@ -290,6 +290,9 @@ importers:
       '@nitro-forge/icons':
         specifier: workspace:*
         version: link:../icons
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
       '@nitro-forge/studio-layout':
         specifier: workspace:*
         version: link:../studio-layout

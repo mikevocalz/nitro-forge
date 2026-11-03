@@ -141,11 +141,6 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
     <View style={{ width: '100%', maxWidth: 792, alignSelf: 'center', minHeight: 760, backgroundColor: colors.paper,
       borderRadius: scale.radius.paper, paddingHorizontal: compact ? 24 : 64, paddingTop: compact ? 36 : 56, paddingBottom: 64,
       boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-        <View style={{ width: 28, height: 2, backgroundColor: colors.paperMuted }} />
-        <Text style={{ color: colors.paperMuted, fontSize: 9, letterSpacing: 2 }}>QUILL / DOCUMENT</Text>
-      </View>
-      <Text style={{ fontFamily: manuscriptFont, fontSize: compact ? 28 : 38, color: colors.paperInk, lineHeight: compact ? 38 : 48, marginBottom: 28 }}>{props.documentTitle ?? 'Untitled document'}</Text>
       <TextInput accessibilityLabel="Essay text" multiline editable={!busy && !!props.state} value={text}
         onChangeText={value => store.setState({ text: value, error: null, status: 'Draft changes · Apply text to update your document.' })}
         placeholder="Begin writing…" placeholderTextColor={colors.paperMuted} textAlignVertical="top"

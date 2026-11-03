@@ -25,7 +25,8 @@ export type ForgeWorkspaceProps = {
   blockedRegions?: readonly Rect[]; theme?: 'dark' | 'light';
 };
 const panelNames: Record<string, string> = { outline: 'Document', properties: 'Properties', actions: 'Commands', history: 'History' };
-const panelIcons: Record<string, string> = { outline: 'layers', properties: 'settings', actions: 'plus', history: 'undo' };
+const panelIcons: Record<string, string> = { outline: 'file', properties: 'layers', actions: 'plus', history: 'undo' };
+const panelHeadings: Record<string, string> = { outline: 'Document structure', properties: 'Inspector', actions: 'Document commands', history: 'Edit history' };
 const appIcons: Record<Studio, string> = { quill: 'text', prism: 'brush', tally: 'table', pitch: 'slide', folio: 'pdf', splice: 'video', cadence: 'music' };
 
 /** Shared inner editor chrome. The host owns and supplies one stable engine document. */
@@ -83,15 +84,16 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     catch (error) { store.setState({ error: error instanceof Error ? error.message : String(error) }); }
     finally { operation.current = false; }
   };
-  const button = (label: string, onPress: () => void, selected = false, disabled = false, small = false, iconOnly = false, glyph?: string) => (
+  const button = (label: string, onPress: () => void, selected = false, disabled = false, small = false, iconOnly = false, glyph?: string, primary = false) => (
     <Pressable key={label} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected, disabled }} disabled={disabled}
       onPress={onPress} style={({ pressed }) => ({ minHeight: scale.size.target, minWidth: scale.size.target, paddingHorizontal: iconOnly ? 10 : small ? 10 : 14,
-        justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: scale.space.element, borderRadius: scale.radius.control,
-        backgroundColor: selected ? colors.soft : pressed ? colors.line : 'transparent', opacity: disabled ? .4 : 1 })}>
+        justifyContent: iconOnly || primary ? 'center' : 'flex-start', alignItems: 'center', flexDirection: 'row', gap: scale.space.element, borderRadius: scale.radius.control,
+        borderWidth: 1, borderColor: primary ? colors.accent : selected ? colors.accent + '35' : 'transparent',
+        backgroundColor: primary ? colors.accent : selected ? colors.soft : pressed ? colors.line : 'transparent', opacity: disabled ? .4 : 1 })}>
       {({ pressed }) => <>
         {glyph && <ForgeIcon name={glyph} size={18} selected={selected} pressed={pressed} disabled={disabled}
-          appearance={appearance} color={selected ? colors.accent : colors.muted} selectedColor={colors.accent} surfaceColor={selected ? colors.soft : colors.base} reducedMotion={reducedMotion} />}
-        {!iconOnly && <Text style={{ fontSize: scale.type.label, fontWeight: selected ? '600' : '400', color: selected ? colors.accent : colors.text }}>{label}</Text>}
+          appearance={appearance} color={primary ? colors.ink : selected ? colors.accent : colors.muted} selectedColor={primary ? colors.ink : colors.accent} surfaceColor={primary ? colors.accent : selected ? colors.soft : colors.base} reducedMotion={reducedMotion} />}
+        {!iconOnly && <Text style={{ fontSize: scale.type.label, fontWeight: selected ? '600' : '400', color: primary ? colors.ink : selected ? colors.accent : colors.text }}>{label}</Text>}
       </>}
     </Pressable>
   );
@@ -111,29 +113,35 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
 
   function renderPanel(id: string, dock?: Dock) {
     return <View style={{ flex: 1, minHeight: 0, backgroundColor: colors.raised }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: colors.line }}>
-        <Text style={{ color: colors.muted, fontSize: scale.type.label, fontWeight: '500', flex: 1 }}>{panelNames[id]}</Text>
+      {(!dock || arranging) && <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 4, minHeight: 52 }}>
+        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>{panelHeadings[id]}</Text>
         {arranging && <DragHandle id={id} store={store} measure={measure} hostRect={hostRect} blockedRegions={props.blockedRegions} color={colors.muted} />}
         {button(`Hide ${panelNames[id]}`, () => action(id, 'collapse'), false, false, true, true, 'close')}
-      </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 12 }}>
+      </View>}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: dock && !arranging ? 16 : 0, paddingBottom: 18, gap: 14 }}>
         {id === 'outline' && <>
-          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', paddingVertical: 10 }}><ForgeIcon name={appIcons[props.studioId]} size={20} color={colors.accent} reducedMotion={reducedMotion} /><Text style={{ color: colors.text, fontSize: scale.type.body, fontWeight: '500', flex: 1 }}>{props.documentTitle}</Text></View>
-          {props.rows.map((row, index) => <View key={index} style={{ borderLeftWidth: 2, borderLeftColor: colors.line, paddingLeft: 10, gap: 4 }}>
-            <Text selectable style={{ color: colors.muted, fontSize: 10 }}>{row.label}</Text>
-            <Text selectable numberOfLines={2} style={{ color: colors.text, fontSize: scale.type.label, lineHeight: 19 }}>{row.value || 'Empty paragraph'}</Text>
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', padding: 12, backgroundColor: colors.base, borderRadius: scale.radius.control }}><ForgeIcon name={appIcons[props.studioId]} size={20} color={colors.accent} reducedMotion={reducedMotion} /><Text style={{ color: colors.text, fontSize: scale.type.body, fontWeight: '500', flex: 1 }}>{props.documentTitle}</Text></View>
+          {props.rows.map((row, index) => <View key={index} style={{ flexDirection: 'row', gap: 10, paddingVertical: 8 }}>
+            <View style={{ width: 3, backgroundColor: colors.line, borderRadius: 2 }} />
+            <View style={{ flex: 1, gap: 5 }}><Text selectable style={{ color: colors.muted, fontSize: 10 }}>{row.label}</Text>
+            <Text selectable numberOfLines={2} style={{ color: colors.text, fontSize: scale.type.label, lineHeight: 19 }}>{row.value || 'Empty paragraph'}</Text></View>
           </View>)}
         </>}
         {id === 'properties' && <>
-          <Text style={{ color: colors.muted, fontSize: 10, letterSpacing: 1.1 }}>DOCUMENT DETAILS</Text>
-          {props.rows.length ? props.rows.map((row, index) => <View key={index} style={{ gap: 6, paddingVertical: 10 }}>
-            <Text style={{ color: colors.muted, fontSize: 11 }}>{row.label}</Text>
-            <Text selectable style={{ color: colors.text, fontSize: 13, fontVariant: ['tabular-nums'] }}>{row.value}</Text>
-          </View>) : <Text style={{ color: colors.muted }}>Open a document to inspect its properties.</Text>}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: colors.soft }}><Text style={{ color: colors.accent, fontSize: 10, fontWeight: '600' }}>{props.title}</Text></View>
+            <Text style={{ color: colors.muted, fontSize: 11 }}>Document details</Text>
+          </View>
+          <View style={{ borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, overflow: 'hidden' }}>
+            {props.rows.length ? props.rows.map((row, index) => <View key={index} style={{ gap: 7, padding: 13, borderTopWidth: index ? 1 : 0, borderTopColor: colors.line }}>
+              <Text style={{ color: colors.muted, fontSize: 10, fontWeight: '500' }}>{row.label}</Text>
+              <Text selectable style={{ color: colors.text, fontSize: 13, lineHeight: 20, fontVariant: ['tabular-nums'] }}>{row.value}</Text>
+            </View>) : <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 19, padding: 13 }}>Open a document to inspect its properties.</Text>}
+          </View>
         </>}
         {id === 'actions' && <>
-          <Text style={{ color: colors.muted, fontSize: 10, letterSpacing: 1.1 }}>AVAILABLE ACTIONS</Text>
-          {props.actions.map(item => <View key={item.title} style={{ backgroundColor: colors.base, borderRadius: scale.radius.control }}>
+          <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 19 }}>Run an operation on this document.</Text>
+          {props.actions.map(item => <View key={item.title} style={{ backgroundColor: colors.base, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control }}>
             {button(item.title, () => { void perform(item.title, item.run); }, false, props.busy)}
           </View>)}
         </>}
@@ -159,20 +167,32 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     const panels = layout.docks[dock].filter(id => !layout.collapsed.includes(id));
     if (!panels.length) return null;
     const active = panels.includes(layout.activeTabs[dock] ?? '') ? layout.activeTabs[dock]! : panels[0]!;
-    return <View key={dock} testID={`dock-${dock}`} style={[{ borderColor: colors.line, borderWidth: 1, overflow: 'hidden', minHeight: 0 }, style]}>
-      <ScrollView horizontal style={{ flexGrow: 0, backgroundColor: colors.base }} contentContainerStyle={{ gap: 2, paddingHorizontal: 5 }}>
-        {panels.map(id => button(panelNames[id] ?? id, () => action(id, 'activate'), active === id, false, true, false, panelIcons[id]))}
-      </ScrollView>
-      {renderPanel(active, dock)}
+    return <View key={dock} testID={`dock-${dock}`} style={[{ minHeight: 0, padding: 8, backgroundColor: colors.deep }, style]}>
+      <View style={{ flex: 1, minHeight: 0, borderColor: colors.line, borderWidth: 1, borderRadius: scale.radius.panel, overflow: 'hidden', backgroundColor: colors.raised }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 5, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+          <ScrollView horizontal style={{ flex: 1 }} contentContainerStyle={{ alignItems: 'center', gap: 3 }}>
+            {panels.map(id => button(panelNames[id] ?? id, () => action(id, 'activate'), active === id, false, true, false, panelIcons[id]))}
+          </ScrollView>
+          {!arranging && button(`Hide ${panelNames[active]}`, () => action(active, 'collapse'), false, false, true, true, 'close')}
+        </View>
+        {renderPanel(active, dock)}
+      </View>
     </View>;
   };
 
   const keyboardProps = { onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') { store.getState().cancelDrag(); ui.setState({ menu: false }); } } };
-  const rail = <View style={{ width: scale.size.rail, backgroundColor: colors.base, borderRightWidth: 1, borderRightColor: colors.line, alignItems: 'center', paddingVertical: 12, gap: 10 }}>
-    {PANEL_IDS.map(id => <View key={id} style={{ alignItems: 'center' }}>
-      {button(panelNames[id]!, () => action(id, layout.collapsed.includes(id) ? 'activate' : 'collapse'), !layout.collapsed.includes(id), false, false, true, panelIcons[id])}
-      <Text style={{ color: !layout.collapsed.includes(id) ? colors.accent : colors.muted, fontSize: scale.type.micro }}>{id === 'properties' ? 'Inspect' : id === 'actions' ? 'Tools' : panelNames[id]}</Text>
-    </View>)}
+  const rail = <View style={{ width: scale.size.rail, backgroundColor: colors.base, borderRightWidth: 1, borderRightColor: colors.line, alignItems: 'center', paddingVertical: 14 }}>
+    <View style={{ alignItems: 'center', gap: 12, paddingBottom: 16 }}>
+      {PANEL_IDS.filter(id => id !== 'history').map(id => <View key={id} style={{ alignItems: 'center', gap: 4 }}>
+        {button(panelNames[id]!, () => action(id, layout.collapsed.includes(id) ? 'activate' : 'collapse'), !layout.collapsed.includes(id), false, false, true, panelIcons[id])}
+        <Text style={{ color: !layout.collapsed.includes(id) ? colors.accent : colors.muted, fontSize: 9, fontWeight: !layout.collapsed.includes(id) ? '600' : '400' }}>{id === 'properties' ? 'Inspect' : id === 'actions' ? 'Commands' : 'Document'}</Text>
+      </View>)}
+    </View>
+    <View style={{ width: 28, height: 1, backgroundColor: colors.line }} />
+    <View style={{ alignItems: 'center', gap: 4, paddingTop: 16 }}>
+      {button('History', () => action('history', layout.collapsed.includes('history') ? 'activate' : 'collapse'), !layout.collapsed.includes('history'), false, false, true, panelIcons.history)}
+      <Text style={{ color: layout.collapsed.includes('history') ? colors.muted : colors.accent, fontSize: 9 }}>History</Text>
+    </View>
   </View>;
   return <View {...keyboardProps} onLayout={event => {
     const width = event.nativeEvent.layout.width;
@@ -180,26 +200,26 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   }} testID="forge-workspace" style={{ flex: 1, minHeight: 0, backgroundColor: colors.base }}>
     <View style={{ paddingHorizontal: compact ? 12 : 20, borderBottomWidth: 1, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: compact ? 8 : 16, minHeight: scale.size.header }}>
       {props.headerLeading}
-      <View style={{ width: 38, height: 38, backgroundColor: colors.soft, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: 38, height: 38, backgroundColor: colors.soft, borderRadius: scale.radius.panel, alignItems: 'center', justifyContent: 'center' }}>
         <ForgeIcon name={appIcons[props.studioId]} size={23} selected color={colors.accent} selectedColor={colors.accent} surfaceColor={colors.soft} reducedMotion={reducedMotion} />
       </View>
       <View style={{ flex: 1, minWidth: 40, gap: 4 }}>
-        <Text numberOfLines={1} style={{ color: colors.text, fontWeight: '500', fontSize: 14 }}>{props.documentTitle}</Text>
-        <Text style={{ color: colors.muted, fontSize: 10 }}>{props.title}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 10, fontWeight: '600', letterSpacing: .4, flexShrink: 1 }}>{props.title}</Text>{!compact && <><Text style={{ color: colors.line, fontSize: 10 }}> / </Text><Text style={{ color: colors.muted, fontSize: 10 }}>{props.busy ? 'Working…' : 'Document'}</Text></>}</View>
+        <Text numberOfLines={1} style={{ color: colors.text, fontWeight: '600', fontSize: compact ? 13 : 15 }}>{props.documentTitle}</Text>
       </View>
       {props.headerTrailing}
-      {button('Save', () => { void perform('Save', props.onSave); }, true, props.busy, false, compact, 'save')}
+      {button('Save', () => { void perform('Save', props.onSave); }, true, props.busy, false, compact, 'save', true)}
     </View>
     <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.line, alignItems: 'center', paddingHorizontal: compact ? 8 : 16, minHeight: scale.size.toolbar }}>
       <ScrollView horizontal style={{ flex: 1 }} contentContainerStyle={{ alignItems: 'center', gap: 4 }}>
         {props.leadingActions}
-        <View style={{ width: 1, height: 20, backgroundColor: colors.line, marginHorizontal: 8 }} />
+        <View style={{ width: 1, height: 22, backgroundColor: colors.line, marginHorizontal: 8 }} />
         {button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy, true, true, 'undo')}
         {button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy, true, true, 'redo')}
       </ScrollView>
       {button('Workspace', () => ui.setState({ menu: !menu }), menu, false, true, compact, 'settings')}
     </View>
-    {menu && <View testID="workspace-menu" style={{ position: 'absolute', zIndex: 100, top: scale.size.header + scale.size.toolbar, right: 10, width: 226, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, padding: 8 }}>
+    {menu && <View testID="workspace-menu" style={{ position: 'absolute', zIndex: 100, top: scale.size.header + scale.size.toolbar, right: 10, width: 226, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, padding: 8, boxShadow: appearance === 'light' ? '0 12px 30px #26304A20' : '0 12px 30px #00000040' }}>
       {button(arranging ? 'Done arranging' : 'Arrange panels', () => { ui.setState({ arranging: !arranging, menu: false }); store.getState().cancelDrag(); }, arranging, false, false, false, 'move')}
       {button('Save layout', () => { void perform('Save layout', async () => { const raw = store.getState().savePreset(); if (raw) { savedPreset.current = raw; await props.persistPreset?.(raw); } }); ui.setState({ menu: false }); }, false, false, false, false, 'save')}
       {button('Restore layout', () => { if (savedPreset.current) store.getState().restorePreset(savedPreset.current); else store.setState({ error: 'Save a layout first' }); ui.setState({ menu: false }); }, false, false, false, false, 'folder')}
@@ -218,7 +238,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         {dockView('right', { width: `${layout.sizes.rightFraction * 100}%` })}
       </View>
       {dockView('bottom', { height: `${layout.sizes.bottomFraction * 100}%` })}
-      {layout.floating.filter(f => !layout.collapsed.includes(f.panelId)).map(f => <View key={f.panelId} style={{ position: 'absolute', left: `${f.rect.x * 100}%`, top: `${f.rect.y * 100}%`, width: `${f.rect.width * 100}%`, height: `${f.rect.height * 100}%`, borderWidth: 1, borderColor: colors.accent }}>{renderPanel(f.panelId)}</View>)}
+      {layout.floating.filter(f => !layout.collapsed.includes(f.panelId)).map(f => <View key={f.panelId} style={{ position: 'absolute', left: `${f.rect.x * 100}%`, top: `${f.rect.y * 100}%`, width: `${f.rect.width * 100}%`, height: `${f.rect.height * 100}%`, borderWidth: 1, borderColor: colors.accent, borderRadius: scale.radius.panel, overflow: 'hidden' }}>{renderPanel(f.panelId)}</View>)}
       {drag?.preview && <View pointerEvents="none" testID="dock-preview" style={{ position: 'absolute', left: drag.preview.rect.x - hostRect.current.x, top: drag.preview.rect.y - hostRect.current.y, width: drag.preview.rect.width, height: drag.preview.rect.height, backgroundColor: colors.accent + '30', borderColor: colors.accent, borderWidth: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: colors.text }}>Dock {drag.preview.dock}</Text></View>}
       {drag && <View style={{ position: 'absolute', alignSelf: 'center', top: 8, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.accent }}>{button('Cancel move', () => store.getState().cancelDrag())}</View>}
     </View>

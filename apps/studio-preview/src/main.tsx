@@ -7,6 +7,7 @@ import { bytesToBase64, base64ToBytes, type DocumentHandle } from '@nitro-forge/
 import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
 import { getEditorConfig } from '../../example/src/editors';
 import { useEditorDoc } from './useDocument';
+import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { AppLauncher } from './app-launcher';
 import './style.css';
 
@@ -56,10 +57,10 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
     });
   };
   const leadingActions = <div className="document-actions">
-    <button className="document-action" type="button" disabled={busy || !editor.doc} onClick={() => fileInput.current?.click()}>Open document</button>
+    <button className="document-action" type="button" aria-label="Open document" disabled={busy || !editor.doc} onClick={() => fileInput.current?.click()}>Open</button>
     <input ref={fileInput} hidden aria-label="Open document" type="file" disabled={busy || !editor.doc} accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
       onChange={event => { const file = event.target.files?.[0]; if (file) void openFile(file).catch(() => {}); event.target.value = ''; }} />
-      {studio === 'quill' && <button className="document-action" type="button" disabled={busy || !editor.doc} onClick={() => {
+      {studio === 'quill' && <button className="document-action" type="button" aria-label="Export Word document" disabled={busy || !editor.doc} onClick={() => {
         void run(async () => {
           await textEditor.current?.flush();
           const result = await editor.apply<{ bytes_b64: string }>('exportDocx');
@@ -69,7 +70,7 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
           setTimeout(() => URL.revokeObjectURL(url), 1000);
           store.setState({ notice: 'Word document exported' });
         }).catch(() => {});
-      }}>Export Word document</button>}
+      }}>Export Word</button>}
 
   </div>;
   return <>
@@ -80,7 +81,7 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
       onUndo={() => run(editor.undo)} onRedo={() => run(editor.redo)}
       onSave={() => run(save)} onRefresh={() => run(editor.reload)}
       busy={busy || !editor.doc} error={error ?? editor.error}>
-      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : undefined}
+      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc} /> : undefined}
     </ForgeWorkspace>
     <div className="engine-notice" role="status">{notice}</div>
   </>;

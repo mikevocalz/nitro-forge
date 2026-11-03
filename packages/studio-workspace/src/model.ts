@@ -22,8 +22,8 @@ export function createDefaultLayout(studioId: Studio = 'prism'): Layout {
   const layout = createWorkspace(studioId);
   return { ...layout,
     docks: { left: ['outline'], right: ['properties', 'actions'], bottom: ['history'] },
-    activeTabs: studioId === 'quill' ? { left: 'outline' } : { left: 'outline', right: 'properties' },
-    collapsed: studioId === 'quill' ? ['properties', 'actions', 'history'] : ['history'],
+    activeTabs: studioId === 'prism' ? {} : studioId === 'quill' ? { left: 'outline' } : { left: 'outline', right: 'properties' },
+    collapsed: studioId === 'prism' ? ['outline', 'properties', 'actions', 'history'] : studioId === 'quill' ? ['properties', 'actions', 'history'] : ['history'],
     sizes: { leftFraction: .18, rightFraction: .22, bottomFraction: .27 },
   };
 }
@@ -87,7 +87,7 @@ export function createStudioWorkspaceStore(studioId: Studio = 'prism') {
         set({ error: result.ok ? 'no-stage-space' : result.reason, drag: null });
         return false;
       }
-      set({ layout: result.layout, drag: null, error: null, status: `${panelId}: ${action}` });
+      set({ layout: result.layout, drag: null, error: null, status: `${({ outline: "Document", properties: "Inspector", actions: "Commands", history: "History" } as Record<string, string>)[panelId] ?? "Panel"} ${action === "collapse" ? "hidden" : "opened"}` });
       return true;
     },
     resize(dock, fraction) {

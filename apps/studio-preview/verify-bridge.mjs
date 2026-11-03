@@ -79,3 +79,45 @@ try {
   assert.equal(plainText((await call('apply', opened, { op: 'describe' })).data), text);
 } finally { await call('close', essay); await call('close', opened); }
 console.log('Essay Unicode/newline edits, Word import/export and independent documents passed');
+
+// Prism's stage uses this exact read-only composite plus these single-command
+// layer edits. Assert real RGBA, including opacity/order, rather than UI-only state.
+const artwork = await call('open', 'prism');
+try {
+  const apply = async (op, payload = {}) => (await call('apply', artwork, { op, payload })).data;
+  const pixels = async () => {
+    const frame = await apply('flatten');
+    assert.equal(frame.width, 4); assert.equal(frame.height, 4);
+    const rgba = Buffer.from(frame.pixels_b64, 'base64');
+    assert.equal(rgba.length, 64);
+    return rgba;
+  };
+  const pixel = (rgba, x, y) => [...rgba.subarray((y * 4 + x) * 4, (y * 4 + x + 1) * 4)];
+  await apply('new', { width: 4, height: 4 });
+  const background = (await apply('addRasterLayer', { name: 'Background' })).layer_id;
+  await apply('fillLayer', { id: background, color: [20, 40, 60, 255] });
+  assert.deepEqual(pixel(await pixels(), 0, 0), [20, 40, 60, 255]);
+  const rect = (await apply('addShape', { name: 'Rectangle', shape: { kind: 'rect', x: 0, y: 0, w: 2, h: 2, fill: [220, 40, 60, 255] } })).layer_id;
+  assert.deepEqual(pixel(await pixels(), 0, 0), [220, 40, 60, 255]);
+  await apply('setLayerVisible', { id: rect, visible: false });
+  assert.deepEqual(pixel(await pixels(), 0, 0), [20, 40, 60, 255]);
+  await apply('setLayerVisible', { id: rect, visible: true });
+  await apply('setLayerOpacity', { id: rect, opacity: .5 });
+  assert.deepEqual(pixel(await pixels(), 0, 0), [120, 40, 60, 255]);
+  const ellipse = (await apply('addShape', { name: 'Ellipse', shape: { kind: 'ellipse', x: 2, y: 2, w: 2, h: 2, fill: [20, 200, 60, 255] } })).layer_id;
+  assert.deepEqual(pixel(await pixels(), 3, 3), [20, 200, 60, 255]);
+  await apply('moveLayer', { id: ellipse, to_index: 0 });
+  assert.deepEqual(pixel(await pixels(), 3, 3), [20, 40, 60, 255]);
+  await apply('removeLayer', { id: rect });
+  assert.deepEqual(pixel(await pixels(), 0, 0), [20, 40, 60, 255]);
+  assert.equal(await call('undo', artwork), true);
+  assert.deepEqual(pixel(await pixels(), 0, 0), [120, 40, 60, 255]);
+  const final = await pixels();
+  const { encodeRgbaPng } = await import('../../packages/studio-workspace/src/rgba-png.ts');
+  assert.deepEqual([...encodeRgbaPng(4, 4, final).subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  const saved = await call('snapshot', artwork);
+  await apply('new', { width: 4, height: 4 });
+  await call('restore', artwork, saved);
+  assert.deepEqual(await pixels(), final);
+} finally { await call('close', artwork); }
+console.log('Prism real raster/rectangle/ellipse composite, visibility, opacity, order, remove/undo, PNG and snapshot restore passed');

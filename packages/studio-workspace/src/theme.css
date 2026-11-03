@@ -1,34 +1,34 @@
 /* Generated from theme.ts; do not edit. Tailwind v4 semantic tokens. */
 @theme {
-  --color-forge-surface: #18191C;
-  --color-forge-raised: #202226;
-  --color-forge-mat: #121416;
-  --color-forge-border: #33363A;
-  --color-forge-text: #EEEDE7;
-  --color-forge-muted: #A1A5A7;
-  --color-forge-accent: #E8B66A;
-  --color-forge-on-accent: #191A1C;
-  --color-forge-tint: #302A22;
-  --color-forge-paper: #FFFEFA;
-  --color-forge-paper-ink: #343631;
-  --color-forge-paper-muted: #8C8C82;
-  --color-forge-error: #F0A59A;
+  --color-forge-surface: #1C1E25;
+  --color-forge-raised: #262932;
+  --color-forge-mat: #15171D;
+  --color-forge-border: #393D49;
+  --color-forge-text: #F0F1F7;
+  --color-forge-muted: #ADB3C4;
+  --color-forge-accent: #B7A5FF;
+  --color-forge-on-accent: #211A3D;
+  --color-forge-tint: #38304F;
+  --color-forge-paper: #FFFEFC;
+  --color-forge-paper-ink: #303440;
+  --color-forge-paper-muted: #797F8D;
+  --color-forge-error: #FFAAA7;
   --spacing-forge-target: 44px;
-  --radius-forge-control: 6px;
+  --radius-forge-control: 8px;
   --font-forge-editorial: Georgia, 'Times New Roman', serif;
 }
 [data-theme="light"] {
-  --color-forge-surface: #F6F5F1;
+  --color-forge-surface: #F4F5F8;
   --color-forge-raised: #FFFFFF;
-  --color-forge-mat: #EAEAE4;
-  --color-forge-border: #D4D8D0;
-  --color-forge-text: #292D2A;
-  --color-forge-muted: #657168;
-  --color-forge-accent: #8C6022;
+  --color-forge-mat: #E7EAF1;
+  --color-forge-border: #DDE1EB;
+  --color-forge-text: #252A3A;
+  --color-forge-muted: #687287;
+  --color-forge-accent: #6950D1;
   --color-forge-on-accent: #FFFFFF;
-  --color-forge-tint: #F0E7D7;
-  --color-forge-paper: #FFFEFA;
-  --color-forge-paper-ink: #343631;
-  --color-forge-paper-muted: #8C8C82;
-  --color-forge-error: #A53E35;
+  --color-forge-tint: #EEE9FF;
+  --color-forge-paper: #FFFEFC;
+  --color-forge-paper-ink: #303440;
+  --color-forge-paper-muted: #797F8D;
+  --color-forge-error: #B33E46;
 }

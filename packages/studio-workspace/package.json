@@ -7,7 +7,8 @@
     ".": "./src/index.tsx",
     "./model": "./src/model.ts",
     "./theme": "./src/theme.ts",
-    "./apps": "./src/app-manifest.ts"
+    "./apps": "./src/app-manifest.ts",
+    "./prism": "./src/prism-editor.tsx"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",
@@ -18,7 +19,8 @@
     "@nitro-forge/studio-layout": "workspace:*",
     "zustand": "^5.0.8",
     "@nitro-forge/icons": "workspace:*",
-    "react-native-svg": "15.12.1"
+    "react-native-svg": "15.12.1",
+    "@nitro-forge/ignition": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=19",

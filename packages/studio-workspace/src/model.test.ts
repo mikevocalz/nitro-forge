@@ -102,7 +102,7 @@ test('resize validates fraction and geometry without partially changing sizes', 
 
 
 test('resizing cannot consume the minimum stage and a host resize invalidates drag previews', () => {
-  const store = createStudioWorkspaceStore();
+  const store = createStudioWorkspaceStore('tally');
   const geometry = { width: 800, height: 800, minStageWidth: 420, minStageHeight: 240 };
   store.getState().setGeometry(geometry);
   const before = store.getState().layout;
@@ -153,4 +153,14 @@ test('writing defaults reserve page space and keep optional history collapsed', 
   for (const studio of ['prism', 'tally', 'pitch', 'folio', 'splice', 'cadence'] as const) {
     assert.equal(createStudioWorkspaceStore(studio).getState().layout.collapsed.includes('history'), true);
   }
+});
+
+
+test('Prism starts canvas-first and its collapsed preset round-trips', () => {
+  const store = createStudioWorkspaceStore('prism');
+  assert.deepEqual(store.getState().layout.activeTabs, {});
+  assert.equal(store.getState().layout.collapsed.length, 4);
+  const preset = store.getState().savePreset();
+  assert.ok(preset);
+  assert.equal(store.getState().restorePreset(preset), true);
 });

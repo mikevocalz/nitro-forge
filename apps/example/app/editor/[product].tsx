@@ -4,6 +4,7 @@ import { Pressable, Text, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ForgeWorkspace, QuillTextEditor, type QuillTextEditorHandle } from '@nitro-forge/studio-workspace';
 import { workspaceThemes } from '@nitro-forge/studio-workspace/theme';
+import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
 import { useEditorDoc } from '../../src/useDocument';
 import { getEditorConfig } from '../../src/editors';
@@ -32,7 +33,7 @@ function StudioEditor({ studioId }: { studioId: Studio }) {
       actions={config.actions.map(action => ({ title: action.title, run: () => action.run(doc) }))}
       onUndo={doc.undo} onRedo={doc.redo} onSave={save} onRefresh={doc.reload}
       busy={!doc.state} error={doc.error}>
-      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={`Untitled ${config.title} document`} state={doc.state} apply={doc.apply} reload={doc.reload} /> : undefined}
+      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={`Untitled ${config.title} document`} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} /> : undefined}
     </ForgeWorkspace>
   </SafeAreaView>;
 }

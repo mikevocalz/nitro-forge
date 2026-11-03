@@ -218,3 +218,41 @@ because the narrower default left dock now legitimately fits at 400px; the
 stage-space rejection invariant remains tested. Shared native-control extraction
 with Moyo, SDK-specific Expo UI adapters, native visual baselines and Rive
 compilation remain separate release gates. App window/manifest contracts unchanged.
+
+### Studio PhotoCraft / Affinity refresh — November 3, 2026
+
+Shared editor uses cool neutral themes, violet selection, 8pt controls and 12pt
+panels, grouped rail controls and denser inspector hierarchy. Browser and native
+source app lists use compact directories; separate routes and sessions remain.
+Quill paper branding was removed, paragraph labels made readable, and browser
+file-action labels shortened while keeping full accessible names.
+
+Prism now uses its actual `flatten` RGBA output, encoded as bounded PNG for
+native/web Image. It supports existing engine operations through contextual
+rectangle/ellipse/raster creation, raster fill, layer selection, visibility,
+opacity, reordering and removal. Default generic Prism docks are collapsed to
+reserve the canvas; its context Layers panel opens on first wide measurement.
+PNG transfer is limited to 1,048,576 pixels and 4096px per side with explicit
+fallback. This is not freehand/node editing, photo import, PSD support or
+Affinity feature parity. Native source is wired but native runtime is unverified.
+
+Executed: `pnpm -r typecheck`, `pnpm -r test` (65 tests), preview production
+build, frozen lockfile installation, and isolated integration bridge. New proof
+checks exact RGBA for raster/rectangle/ellipse compositing, layer visibility,
+opacity, order, removal/undo, PNG and snapshot restore. Encoder tests independently
+check CRC/zlib/alpha and block boundaries. A regression test covers canvas-first
+collapsed Prism preset restoration. Final browser build has the existing >500KB
+chunk warning (679KB minified JS), not a build failure.
+
+Chrome native accessibility fallback: Quill typing/apply and desktop/390px host,
+Prism fill/shapes/50% opacity/visibility/undo, layer panel dismissal at390px,
+and Prism artwork retained through app-list/Quill navigation. Browser extension
+connection was unavailable for these captures; native Chrome screenshots include
+browser chrome. Full OS/browser matrix, screen reader, physical phone/stylus and
+native runtime were not run. Screens in docs/ux/evidence/*refresh.jpg.
+
+Reference evidence and continued critic scores are in docs/ux/studio-refresh.
+REA6.8.0 source-only static analysis ran successfully using temporary Node26.12.1,
+without global configuration changes; partial coverage and 68 observations are
+not runtime validation or bug counts. The bounded summary is committed; full
+report stays in ignored artifacts/rea.
