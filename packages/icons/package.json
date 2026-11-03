@@ -1,0 +1,49 @@
+{
+  "name": "@nitro-forge/icons",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Original Rive-ready outline/filled icon system for all Nitro-Forge editor engines",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./native": {
+      "types": "./src/ForgeIcon.d.ts",
+      "default": "./src/ForgeIcon.js"
+    },
+    "./web": {
+      "types": "./src/ForgeIcon.d.ts",
+      "default": "./src/ForgeIcon.js"
+    },
+    "./catalog": "./src/catalog.js",
+    "./glyphs": "./src/glyphs.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "typecheck": "node --check src/index.js && node --check src/catalog.js && node --check src/glyphs.js && node --check src/state.js && node --check src/ForgeIcon.js"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-native-svg": ">=15",
+    "react-native": ">=0.81"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-native-svg": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0"
+  }
+}

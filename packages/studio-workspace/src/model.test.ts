@@ -54,7 +54,7 @@ test('blocked and interior drops produce no target and cannot commit', () => {
 
 test('responsive fallback preserves every panel and refuses expansions that consume stage space', () => {
   const store = createStudioWorkspaceStore();
-  const compact = { width: 400, height: 300, minStageWidth: 320, minStageHeight: 240 };
+  const compact = { width: 380, height: 300, minStageWidth: 320, minStageHeight: 240 };
   store.getState().setGeometry(compact);
   assert.equal(stageFits(store.getState().layout, compact), true);
   assert.deepEqual(new Set(Object.values(store.getState().layout.docks).flat()), KNOWN_PANELS);
@@ -140,4 +140,17 @@ test('compact reset and preset restore preserve placements with side panels coll
   assertCompactSides();
   assert.equal(store.getState().restorePreset(preset), true);
   assertCompactSides();
+});
+
+
+test('writing defaults reserve page space and keep optional history collapsed', () => {
+  const writing = createStudioWorkspaceStore('quill').getState().layout;
+  assert.deepEqual(writing.activeTabs, { left: 'outline' });
+  assert.equal(writing.collapsed.includes('history'), true);
+  assert.equal(writing.collapsed.includes('properties'), true);
+  assert.equal(writing.collapsed.includes('actions'), true);
+  assert.equal(writing.collapsed.includes('outline'), false);
+  for (const studio of ['prism', 'tally', 'pitch', 'folio', 'splice', 'cadence'] as const) {
+    assert.equal(createStudioWorkspaceStore(studio).getState().layout.collapsed.includes('history'), true);
+  }
 });

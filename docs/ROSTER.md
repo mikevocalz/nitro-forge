@@ -172,3 +172,49 @@ Follow-up evidence:
 - Native essay execution NOT RUN. Automated browser file-selection check blocked
   by Chrome extension file-access permission; permission unchanged. DOCX engine
   import/export passed via the integration bridge, not the file-picker UI.
+
+
+## Reference-driven visual pass — November 3, 2026
+
+Reviewed the complete current docs plus relevant remote-branch visual/native/icon
+contracts. All seven exact Mobbin images from the original ledger were opened
+and inspected, alongside additional Craft writing references and the official
+Affinity layout image. See [DESIGN_REFERENCE_AUDIT.md](ux/DESIGN_REFERENCE_AUDIT.md)
+for exact sources and what was actually visible. No Mobbin artwork is vendored.
+
+- Reworked the existing shared workspace: single document header, one context
+  toolbar, optional inspector, original icon rail, Workspace menu, compact panel
+  controls and writing-first defaults. History starts collapsed.
+- Reused the exact authored icon source from the icons branch, adding typed native
+  exports. Expo 54's supported SVG version is pinned. Selected/disabled states and
+  reduced-motion handling are active; compiled Rive remains pending.
+- Central semantic theme tokens feed native RN styles and generated Tailwind v4
+  CSS. Host overrides remain supported. Native home uses the same app manifests,
+  theme and glyphs, with typecheck evidence only. Duplicate native headers removed.
+- App launcher has original decorative tool previews and actual opened-session
+  state. No fabricated recent files, usage counts or document thumbnails.
+
+| Check | Result | Evidence |
+|---|---|---|
+| All package/app typechecks | PASS | `pnpm -r typecheck`; example rechecked after native home change |
+| All JS/TS tests | 61 PASS: 32 host/product, 12 dock core, 12 workspace/text, 5 icon | `pnpm -r test` |
+| Browser bundle and Tailwind v4 token compilation | PASS; existing large-chunk warning remains | `pnpm --filter @nitro-forge/studio-preview build` |
+| Seven-engine, Unicode essay, DOCX import/export and independent documents | PASS | `pnpm --filter @nitro-forge/studio-preview test:integration` |
+| Frozen lockfile | PASS | `pnpm install --lockfile-only --frozen-lockfile --ignore-scripts --offline` |
+| Browser controls | PASS: menu/reset, keyboard undo/redo, drag left→right, compact bottom Commands, essay retained through theme/width | Chrome UI |
+| Breakpoint band / animated icon cleanup | PASS after fixes: stable outer 724px measurement, real SVG web resolver, RN Animated global alias in both dev and production | Chrome and generated dev code |
+| Native iOS/Android, assistive technology, physical fold/pen/XR | NOT RUN | no native execution claim |
+
+[Before/after board](ux/evidence/quill-before-after.html),
+[comparison PNG](ux/evidence/quill-before-after.png),
+[new app list](ux/evidence/app-list-redesign.png),
+[writing page](ux/evidence/quill-redesign.png),
+[390px light container](ux/evidence/quill-redesign-compact-light.png).
+Screenshots depict measured browser containers, not native devices.
+
+Review found and fixed a rail-induced breakpoint oscillation and an RN Web
+Animated cleanup error. A minimum-stage fixture was adjusted from 400px to 380px
+because the narrower default left dock now legitimately fits at 400px; the
+stage-space rejection invariant remains tested. Shared native-control extraction
+with Moyo, SDK-specific Expo UI adapters, native visual baselines and Rive
+compilation remain separate release gates. App window/manifest contracts unchanged.

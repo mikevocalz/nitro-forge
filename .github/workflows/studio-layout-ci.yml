@@ -8,6 +8,7 @@ on:
     paths:
       - 'packages/studio-layout/**'
       - 'packages/studio-workspace/**'
+      - 'packages/icons/**'
       - 'apps/studio-preview/**'
       - 'apps/example/**'
       - 'pnpm-lock.yaml'
@@ -35,6 +36,12 @@ jobs:
         run: pnpm --filter @nitro-forge/studio-layout test
       - name: Strict TypeScript contract
         run: pnpm --filter @nitro-forge/studio-layout typecheck
+      - name: Original glyph contracts and generated theme parity
+        run: |
+          pnpm --filter @nitro-forge/icons test
+          pnpm --filter @nitro-forge/icons typecheck
+          pnpm --filter @nitro-forge/studio-workspace build:theme
+          git diff --exit-code -- packages/studio-workspace/src/theme.css
       - name: Workspace transitions and strict types
         run: |
           pnpm --filter @nitro-forge/studio-workspace test

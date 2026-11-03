@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
@@ -7,9 +7,11 @@ import { bytesToBase64, base64ToBytes, type DocumentHandle } from '@nitro-forge/
 import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
 import { getEditorConfig } from '../../example/src/editors';
 import { useEditorDoc } from './useDocument';
+import { AppLauncher } from './app-launcher';
 import './style.css';
 
-function StudioEditor({ studio, theme }: { studio: Studio; theme: 'dark' | 'light' }) {
+function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme: 'dark' | 'light'; headerTrailing: ReactNode }) {
+  const fileInput = useRef<HTMLInputElement>(null);
   const textEditor = useRef<QuillTextEditorHandle>(null);
   const config = getEditorConfig(studio);
   const editor = useEditorDoc(config.open);
@@ -53,9 +55,11 @@ function StudioEditor({ studio, theme }: { studio: Studio; theme: 'dark' | 'ligh
       store.setState({ notice: `Opened ${file.name}`, documentTitle: file.name });
     });
   };
-  return <>
-    <div className="document-open">
-      {studio === 'quill' && <button className="theme-toggle" type="button" disabled={busy || !editor.doc} onClick={() => {
+  const leadingActions = <div className="document-actions">
+    <button className="document-action" type="button" disabled={busy || !editor.doc} onClick={() => fileInput.current?.click()}>Open document</button>
+    <input ref={fileInput} hidden aria-label="Open document" type="file" disabled={busy || !editor.doc} accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
+      onChange={event => { const file = event.target.files?.[0]; if (file) void openFile(file).catch(() => {}); event.target.value = ''; }} />
+      {studio === 'quill' && <button className="document-action" type="button" disabled={busy || !editor.doc} onClick={() => {
         void run(async () => {
           await textEditor.current?.flush();
           const result = await editor.apply<{ bytes_b64: string }>('exportDocx');
@@ -67,39 +71,27 @@ function StudioEditor({ studio, theme }: { studio: Studio; theme: 'dark' | 'ligh
         }).catch(() => {});
       }}>Export Word document</button>}
 
-      <label>Open {studio === 'quill' ? 'Word document or saved document' : 'saved document'}
-        <input aria-label="Open document" type="file" disabled={busy || !editor.doc} accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
-          onChange={event => { const file = event.target.files?.[0]; if (file) void openFile(file).catch(() => {}); event.target.value = ''; }} />
-      </label>
-    </div>
-    <ForgeWorkspace studioId={studio} title={config.title} documentTitle={documentTitle}
+  </div>;
+  return <>
+    <ForgeWorkspace headerLeading={<a className="back-link" href="#/">← All apps</a>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
       theme={theme} loadPreset={loadPreset} persistPreset={persistPreset}
       state={editor.state} rows={config.rows(editor.state)}
       actions={config.actions.map(action => ({ title: action.title, run: () => run(() => action.run(editor)) }))}
       onUndo={() => run(editor.undo)} onRedo={() => run(editor.redo)}
       onSave={() => run(save)} onRefresh={() => run(editor.reload)}
       busy={busy || !editor.doc} error={error ?? editor.error}>
-      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} theme={theme} apply={editor.apply} reload={editor.reload} /> : undefined}
+      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : undefined}
     </ForgeWorkspace>
     <div className="engine-notice" role="status">{notice}</div>
   </>;
 }
 
-const APPS: Record<Studio, { task: string; detail: string }> = {
-  quill: { task: 'Write a document', detail: 'Type an essay, work on a draft, or open a Word document.' },
-  prism: { task: 'Create an image', detail: 'Work with image layers, shapes and artwork.' },
-  tally: { task: 'Open a spreadsheet', detail: 'Organize figures, formulas and sheets.' },
-  pitch: { task: 'Build a presentation', detail: 'Arrange slides, text and visual elements.' },
-  folio: { task: 'Work with a PDF', detail: 'Inspect pages, rotate and annotate a document.' },
-  splice: { task: 'Edit a video timeline', detail: 'Arrange sources, clips and timing.' },
-  cadence: { task: 'Make an audio project', detail: 'Work with tracks, notes and arrangements.' },
-};
 function currentApp(): Studio | null {
   const id = window.location.hash.replace(/^#\/apps\//, '');
   return STUDIOS.find(studio => studio === id) ?? null;
 }
 function App() {
-  const store = useMemo(() => createStore(() => ({ app: currentApp(), opened: currentApp() ? [currentApp()!] : [] as Studio[], theme: 'dark' as 'dark' | 'light', hostWidth: 'desktop' as 'desktop' | 'tablet' | 'phone' })), []);
+  const store = useMemo(() => createStore(() => ({ app: currentApp(), opened: currentApp() ? [currentApp()!] : [] as Studio[], theme: 'dark' as 'dark' | 'light', hostWidth: 'desktop' as 'desktop' | 'tablet' | 'split' | 'phone' })), []);
   const app = useStore(store, s => s.app);
   const opened = useStore(store, s => s.opened);
   const theme = useStore(store, s => s.theme);
@@ -112,38 +104,26 @@ function App() {
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
   }, [store]);
+  const themeToggle = <button className="theme-toggle" type="button" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+    onClick={() => store.setState({ theme: theme === 'dark' ? 'light' : 'dark' })}>{theme === 'dark' ? 'Light' : 'Dark'}</button>;
+  const editorControls = <div className="editor-host-controls">
+    <details className="preview-controls"><summary aria-label="Preview controls">Preview</summary>
+      <label>Preview width<select aria-label="Host width" value={hostWidth} onChange={event => {
+        const value = event.target.value;
+        if (value === 'desktop' || value === 'tablet' || value === 'split' || value === 'phone') store.setState({ hostWidth: value });
+      }}><option value="desktop">Desktop · full</option><option value="tablet">Tablet · 768px</option><option value="split">Split view · 724px</option><option value="phone">Phone · 390px</option></select></label>
+    </details>{themeToggle}
+  </div>;
   return <main data-theme={theme}>
-    <nav className="studio-switcher" aria-label="App navigation">
-      <a className="suite-label" href="#/">NITROFORGE <span>APPS</span></a>
-      {app && <a className="back-link" href="#/">← All apps</a>}
-      <span className="app-context">{app ? getEditorConfig(app).title : 'Choose what you need'}</span>
-      {app && <label className="width-control">Preview width
-        <select aria-label="Host width" value={hostWidth} onChange={event => {
-          const value = event.target.value;
-          if (value === 'desktop' || value === 'tablet' || value === 'phone') store.setState({ hostWidth: value });
-        }}>
-          <option value="desktop">Desktop · full</option>
-          <option value="tablet">Tablet · 768px</option>
-          <option value="phone">Phone · 390px</option>
-        </select>
-      </label>}
-      <button className="theme-toggle" type="button" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-        onClick={() => store.setState({ theme: theme === 'dark' ? 'light' : 'dark' })}>{theme === 'dark' ? 'Light' : 'Dark'}</button>
-    </nav>
+    {!app && <nav className="launcher-nav" aria-label="App navigation">
+      <a className="suite-label" href="#/"><span className="suite-mark" aria-hidden="true">N</span>NitroForge <span className="suite-caption">The creative collection</span></a>
+      {themeToggle}
+    </nav>}
     {opened.map(id => <div key={id} className="workspace-container" data-host-width={hostWidth} hidden={app !== id}
-      style={{ display: app === id ? 'flex' : 'none', width: hostWidth === 'desktop' ? '100%' : hostWidth === 'tablet' ? 768 : 390 }}>
-      <StudioEditor studio={id} theme={theme} />
+      style={{ display: app === id ? 'flex' : 'none', width: hostWidth === 'desktop' ? '100%' : hostWidth === 'tablet' ? 768 : hostWidth === 'split' ? 724 : 390 }}>
+      <StudioEditor studio={id} theme={theme} headerTrailing={editorControls} />
     </div>)}
-    {!app && <section className="app-launcher">
-      <p className="eyebrow">YOUR WORKSPACE</p>
-      <h1>What would you like to work on?</h1>
-      <p className="launcher-intro">Open the app you need. Your document lives in its own editing space.</p>
-      <div className="app-list">{Object.entries(APPS).map(([id, info], index) => <a className="app-row" key={id} href={`#/apps/${id}`}>
-        <span className="app-number">{String(index + 1).padStart(2, '0')}</span>
-        <span className="app-copy"><strong>{info.task}</strong><span>{info.detail}</span></span>
-        <span className="app-name">{getEditorConfig(id).title}</span><span aria-hidden="true">↗</span>
-      </a>)}</div>
-    </section>}
+    {!app && <AppLauncher opened={opened} theme={theme} />}
   </main>;
 }
 

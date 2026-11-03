@@ -1,7 +1,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View, Platform } from 'react-native';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
+import { workspaceThemes, workspaceScale as scale } from './theme';
+import { ForgeIcon } from '@nitro-forge/icons/native';
 import { plainText, textEdit } from './text-diff';
 
 export interface QuillTextEditorHandle {
@@ -13,8 +15,9 @@ export interface QuillTextEditorProps {
   theme?: 'dark' | 'light';
   apply: (op: string, payload?: unknown) => Promise<unknown>;
   reload: () => Promise<void>;
+  documentTitle?: string;
 }
-type Draft = { base: string; text: string; busy: boolean; conflict: boolean; error: string | null; status: string };
+type Draft = { width: number; base: string; text: string; busy: boolean; conflict: boolean; error: string | null; status: string };
 const errorMessage = (e: unknown) => e instanceof Error ? e.message : String(e);
 
 /** A local essay draft; only Apply text (or a host flush) writes to Quill. */
@@ -22,9 +25,10 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
   const storeRef = useRef<StoreApi<Draft> | null>(null);
   if (!storeRef.current) {
     const initial = plainText(props.state);
-    storeRef.current = createStore<Draft>(() => ({ base: initial, text: initial, busy: false, conflict: false, error: null, status: 'Write your essay here.' }));
+    storeRef.current = createStore<Draft>(() => ({ width: 800, base: initial, text: initial, busy: false, conflict: false, error: null, status: 'Write your essay here.' }));
   }
   const store = storeRef.current;
+  const width = useStore(store, s => s.width);
   const text = useStore(store, s => s.text);
   const busy = useStore(store, s => s.busy);
   const conflict = useStore(store, s => s.conflict);
@@ -99,38 +103,58 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
   };
   useImperativeHandle(ref, () => ({ flush, isDirty: () => store.getState().text !== store.getState().base }));
 
-  const light = props.theme === 'light';
-  const headingColor = light ? '#283329' : '#e8ece5';
-  const detailColor = light ? '#53634f' : '#b5bdb5';
-  const warningColor = light ? '#a03024' : '#f1a39a';
-  const linkColor = light ? '#80510a' : '#e8b66a';
-  return <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 14 }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <Text style={{ color: headingColor, fontSize: 18, flex: 1 }}>Your writing space</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Apply essay text" disabled={busy || !dirty || conflict} onPress={() => { void flush().catch(() => {}); }} style={{ minHeight: 44, paddingHorizontal: 16, borderRadius: 6, backgroundColor: '#e8b66a', justifyContent: 'center', opacity: busy || !dirty || conflict ? 0.5 : 1 }}>
-        <Text style={{ color: '#202923', fontWeight: '700' }}>{busy ? 'Applying…' : 'Apply text'}</Text>
+  const loadLatest = async () => {
+    store.setState({ busy: true });
+    try {
+      const api = current.current;
+      const result = await api.apply('describe') as { data: unknown };
+      if (!mounted.current) return;
+      const source = plainText(result.data);
+      baseline.current = JSON.stringify(result.data);
+      store.setState({ base: source, text: source, conflict: false, error: null, status: 'Latest document loaded.' });
+      await api.reload();
+    } catch (e) {
+      if (mounted.current) store.setState({ error: errorMessage(e) });
+    } finally {
+      if (mounted.current) store.setState({ busy: false });
+    }
+  };
+  const manuscriptFont = Platform.OS === 'android' ? 'serif' : scale.font.serif;
+  const colors = workspaceThemes[props.theme ?? 'dark'];
+  const wordCount = text.trim() ? text.trim().split(/\s+/u).length : 0;
+  const compact = width < 600;
+  return <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled"
+    onLayout={event => { const next = event.nativeEvent.layout.width; if (next > 0 && next !== store.getState().width) store.setState({ width: next }); }}
+    contentContainerStyle={{ paddingHorizontal: compact ? 16 : 40, paddingTop: compact ? 18 : 32, paddingBottom: 48, gap: 16 }}>
+    <View style={{ width: '100%', maxWidth: 792, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <ForgeIcon name="file" size={14} color={colors.muted} reducedMotion />
+        <Text style={{ color: colors.muted, fontSize: 11 }}>{wordCount} {wordCount === 1 ? 'word' : 'words'}{dirty ? ' · Draft changes' : ' · Up to date'}</Text>
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Apply essay text" disabled={busy || !dirty || conflict}
+        onPress={() => { void flush().catch(() => {}); }}
+        style={{ minHeight: scale.size.target, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: scale.radius.control, backgroundColor: dirty ? colors.soft : 'transparent', opacity: busy || !dirty || conflict ? .5 : 1 }}>
+        <ForgeIcon name="check" size={16} color={colors.accent} reducedMotion />
+        <Text style={{ color: colors.accent, fontSize: 12 }}>{busy ? 'Applying…' : 'Apply text'}</Text>
       </Pressable>
     </View>
-    <TextInput accessibilityLabel="Essay text" multiline editable={!busy && !!props.state} value={text}
-      onChangeText={value => store.setState({ text: value, error: null, status: 'Draft changes · Apply text to update your document.' })}
-      placeholder="Start writing your essay…" placeholderTextColor="#8a9187" textAlignVertical="top"
-      style={{ minHeight: 480, padding: 28, backgroundColor: '#f7f5ed', color: '#283329', fontSize: 17, lineHeight: 28, borderRadius: 3 }} />
-    <Text accessibilityLiveRegion="polite" style={{ color: error || conflict ? warningColor : detailColor, fontSize: 12 }}>{error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)}</Text>
-    {conflict && <Pressable accessibilityRole="button" disabled={busy} onPress={() => { void (async () => {
-      store.setState({ busy: true });
-      try {
-        const api = current.current;
-        const result = await api.apply('describe') as { data: unknown };
-        if (!mounted.current) return;
-        const source = plainText(result.data);
-        baseline.current = JSON.stringify(result.data);
-        store.setState({ base: source, text: source, conflict: false, error: null, status: 'Latest document loaded.' });
-        await api.reload();
-      } catch (e) {
-        if (mounted.current) store.setState({ error: errorMessage(e) });
-      } finally {
-        if (mounted.current) store.setState({ busy: false });
-      }
-    })(); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: linkColor }}>Discard draft and load latest document</Text></Pressable>}
+    <View style={{ width: '100%', maxWidth: 792, alignSelf: 'center', minHeight: 760, backgroundColor: colors.paper,
+      borderRadius: scale.radius.paper, paddingHorizontal: compact ? 24 : 64, paddingTop: compact ? 36 : 56, paddingBottom: 64,
+      boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+        <View style={{ width: 28, height: 2, backgroundColor: colors.paperMuted }} />
+        <Text style={{ color: colors.paperMuted, fontSize: 9, letterSpacing: 2 }}>QUILL / DOCUMENT</Text>
+      </View>
+      <Text style={{ fontFamily: manuscriptFont, fontSize: compact ? 28 : 38, color: colors.paperInk, lineHeight: compact ? 38 : 48, marginBottom: 28 }}>{props.documentTitle ?? 'Untitled document'}</Text>
+      <TextInput accessibilityLabel="Essay text" multiline editable={!busy && !!props.state} value={text}
+        onChangeText={value => store.setState({ text: value, error: null, status: 'Draft changes · Apply text to update your document.' })}
+        placeholder="Begin writing…" placeholderTextColor={colors.paperMuted} textAlignVertical="top"
+        style={{ minHeight: 480, padding: 0, backgroundColor: 'transparent', color: colors.paperInk, fontFamily: manuscriptFont,
+          fontSize: compact ? 17 : 19, lineHeight: compact ? 29 : 34, borderWidth: 0 }} />
+    </View>
+    {(error || conflict || dirty) && <Text accessibilityLiveRegion="polite" style={{ maxWidth: 792, width: '100%', alignSelf: 'center', color: error || conflict ? colors.error : colors.muted, fontSize: 12 }}>{error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)}</Text>}
+    {conflict && <Pressable accessibilityRole="button" disabled={busy} onPress={() => { void loadLatest(); }} style={{ minHeight: 44, justifyContent: 'center' }}>
+      <Text style={{ color: colors.accent }}>Discard draft and load latest document</Text>
+    </Pressable>}
   </ScrollView>;
 });

@@ -17,7 +17,7 @@ Documents are temporary unless a snapshot is downloaded.
 Save layout writes a versioned preset to localStorage separately for each studio;
 it loads again on reload. The light/dark toggle changes the shared workspace theme
 without reopening the document or clearing engine history.
-The Host width selector constrains the editor container to full width, 768px or
+The Host width selector constrains the editor container to full width, 768px, 724px or
 390px (clamped to available space), without changing the browser window or
 reopening the engine. It supports measured responsive QA inside one browser tab.
 
@@ -39,3 +39,8 @@ Save flushes the pending essay draft before creating its NFD snapshot. Word impo
 uses the real engine; the current DOCX subset remains the engine contract described
 in ENGINE_OPS.md. The shared native example also supports the essay surface; native
 file-picker integration remains a host responsibility.
+
+The current visual pass uses the authored shared icon package, semantic RN theme
+tokens and Tailwind v4 compilation. Workspace settings are in the menu; app entry
+and document sessions remain independent. Source and reference notes live in
+`docs/ux/DESIGN_REFERENCE_AUDIT.md`.

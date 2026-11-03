@@ -1,4 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { CliHost } from '../../packages/ignition/src/host-cli';
@@ -50,9 +51,18 @@ function engineBridge(): Plugin {
   };
 }
 
+const webExtensions = ['.web.mjs', '.mjs', '.web.js', '.js', '.web.ts', '.ts', '.web.tsx', '.tsx', '.json'];
+
 export default defineConfig({
-  plugins: [engineBridge()],
-  resolve: { alias: [
+  // React Native Web Animated uses the RN global alias in lifecycle cleanup.
+  define: { global: 'globalThis' },
+  plugins: [tailwindcss(), engineBridge()],
+  optimizeDeps: { esbuildOptions: { resolveExtensions: webExtensions, define: { global: 'globalThis' } } },
+  resolve: {
+    // React Native packages publish platform siblings without browser exports.
+    extensions: webExtensions,
+    alias: [
+    { find: /^react-native-svg$/, replacement: createRequire(import.meta.url).resolve('react-native-svg/lib/module/ReactNativeSVG.web.js') },
     { find: /^react-native$/, replacement: createRequire(import.meta.url).resolve('react-native-web') },
     { find: 'react-native-nitro-modules', replacement: fileURLToPath(new URL('./src/native-unavailable.ts', import.meta.url)) },
   ], dedupe: ['react', 'react-dom'] },

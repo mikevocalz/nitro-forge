@@ -22,7 +22,9 @@ export function createDefaultLayout(studioId: Studio = 'prism'): Layout {
   const layout = createWorkspace(studioId);
   return { ...layout,
     docks: { left: ['outline'], right: ['properties', 'actions'], bottom: ['history'] },
-    activeTabs: { left: 'outline', right: 'properties', bottom: 'history' },
+    activeTabs: studioId === 'quill' ? { left: 'outline' } : { left: 'outline', right: 'properties' },
+    collapsed: studioId === 'quill' ? ['properties', 'actions', 'history'] : ['history'],
+    sizes: { leftFraction: .18, rightFraction: .22, bottomFraction: .27 },
   };
 }
 

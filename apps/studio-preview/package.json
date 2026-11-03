@@ -17,12 +17,16 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-native-web": "^0.21.0",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "@nitro-forge/icons": "workspace:*",
+    "react-native-svg": "15.12.1"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "vite": "^7.0.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "tailwindcss": "^4.1.0",
+    "@tailwindcss/vite": "^4.1.0"
   }
 }

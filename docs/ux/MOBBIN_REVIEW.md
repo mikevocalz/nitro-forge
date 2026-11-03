@@ -1,6 +1,6 @@
 # Mobbin and Affinity research ledger (selection, not redistribution)
 
-**Research source:** Mobbin searches on 2026-11-02 focused on design-editor workspaces and native creative tools. Individual links are canonical Mobbin screen URLs. A future visual reviewer must open each screen and record concrete observed details before implementing UI. Do **not** infer exact spacing, color values or proprietary component anatomy from a result's app name alone. Do not embed, redistribute or vendor screenshot assets in NitroForge.
+**Research source:** Mobbin searches on 2026-11-02 focused on design-editor workspaces and native creative tools. Individual links are canonical Mobbin screen URLs. The initial ledger required opening each screen before implementation. The November 3 follow-up inspected all seven exact images; observed details and source boundaries are recorded in [DESIGN_REFERENCE_AUDIT.md](./DESIGN_REFERENCE_AUDIT.md). Do **not** infer exact spacing, color values or proprietary component anatomy from a result's app name alone. Do not embed, redistribute or vendor screenshot assets in NitroForge.
 
 | Reference | Canonical Mobbin screen | Question for hands-on visual review | Proposed NitroForge hypothesis / proof requirement |
 | --- | --- | --- | --- |
@@ -28,4 +28,4 @@ Affinity's unified Vector/Pixel/Layout studio concepts motivate switchable tools
 5. Apply [Impeccable](https://github.com/pbakaus/impeccable/tree/e89e3ada3e875a89ac2c5d33d11e65ebef6fe285), [Expo design system](https://github.com/expo/skills/blob/a9e5bd3fa00b4e61f632e43f85da73aee1942582/plugins/expo/skills/expo-design-system/SKILL.md) and [No AI Slop](https://github.com/petergyang/no-ai-slop/blob/000650b156983f5159695b441477f4e63b25dc85/skills/no-ai-slop/SKILL.md) before approving any PR description or design review.
 6. Attach screenshots/notes captured for review where licensing allows; include task, device, viewport size and what changed. **No images from Mobbin are committed here.**
 
-Status: curated candidates, not a claim that we visually inspected or analyzed every image. The Mobbin tool supplied matching screen metadata/links; human inspection and detailed UX conclusions are pending.
+Status: the seven original screen images have now been inspected in Chrome. Additional Craft writing screens were inspected through the Mobbin tool. This is not a claim that every product named in the icon taxonomy was audited. See DESIGN_REFERENCE_AUDIT.md for the actual observations, failed article extraction, applied changes and pending native evidence.
