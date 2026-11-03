@@ -10,7 +10,7 @@ import { useEditorDoc } from './useDocument';
 import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { AppLauncher } from './app-launcher';
 import { Page, Main, Nav, Link, Text as SemanticText } from '@acme/ui/html';
-import { Pressable, Text, Menu, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
+import { Pressable, Text, View, Menu, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
 import { studioControls, FilePicker } from '@acme/ui/studio-controls/web';
 import './style.css';
 
@@ -115,7 +115,7 @@ function App() {
       { id: 'desktop', title: 'Desktop · full' }, { id: 'tablet', title: 'Tablet · 768px' },
       { id: 'split', title: 'Split view · 724px' }, { id: 'phone', title: 'Phone · 390px' },
     ]} onAction={value => { if (value === 'desktop' || value === 'tablet' || value === 'split' || value === 'phone') store.setState({ hostWidth: value }); }}>
-      <Text style={{ color: theme === 'dark' ? '#ADB3C4' : '#687287', fontSize: 11, padding: 8 }}>Preview</Text>
+      <View style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: theme === 'dark' ? '#ADB3C4' : '#687287', fontSize: 11 }}>Preview</Text></View>
     </Menu>{themeToggle}
   </Page>;
   return <Main data-theme={theme}>

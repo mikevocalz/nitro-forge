@@ -38,7 +38,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const canvasStudio = props.studioId === 'prism';
   const colors: WorkspaceColors = { ...(canvasStudio ? prismThemes : workspaceThemes)[appearance], ...props.themeOverrides };
   const store = useMemo(() => createStudioWorkspaceStore(props.studioId), [props.studioId]);
-  const ui = useMemo(() => createStore(() => ({ arranging: false, reducedMotion: true, width: 1200 })), [props.studioId]);
+  const ui = useMemo(() => createStore(() => ({ arranging: false, reducedMotion: true, width: 1200, height: 800 })), [props.studioId]);
   const arranging = useStore(ui, s => s.arranging);
   const reducedMotion = useStore(ui, s => s.reducedMotion);
   useEffect(() => {
@@ -57,7 +57,13 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const savedPreset = useMemo(() => ({ current: null as string | null }), [store]);
   const operation = useMemo(() => ({ current: false }), [store]);
   // Breakpoints use the stable outer width; the rail must not change its own breakpoint.
-  const compact = useStore(ui, s => s.width) < 700;
+  const outerWidth = useStore(ui, s => s.width);
+  const outerHeight = useStore(ui, s => s.height);
+  const compact = outerWidth < 700;
+  const separateHostControls = canvasStudio && outerWidth < 380 && !!props.headerTrailing;
+  // A short landscape host keeps its existing toolbar height. Host menus stay
+  // outside the horizontal scroller so their platform popup can open normally.
+  const packHostControls = separateHostControls && outerHeight < 500;
 
   useEffect(() => {
     let active = true;
@@ -197,21 +203,24 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     </View>
   </View>;
   return <View {...keyboardProps} onLayout={event => {
-    const width = event.nativeEvent.layout.width;
-    if (width > 0 && width !== ui.getState().width) ui.setState({ width });
+    const { width, height } = event.nativeEvent.layout;
+    if (width > 0 && height > 0 && (width !== ui.getState().width || height !== ui.getState().height)) ui.setState({ width, height });
   }} testID="forge-workspace" style={{ flex: 1, minHeight: 0, backgroundColor: canvasStudio ? colors.deep : colors.base }}>
     <View style={{ paddingHorizontal: compact ? 12 : 20, borderBottomWidth: canvasStudio ? 0 : 1, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: compact ? 8 : 16, minHeight: canvasStudio ? 52 : scale.size.header, ...(canvasStudio ? { backgroundColor: colors.base, margin: 8, marginBottom: 0, borderRadius: 10, boxShadow: '0 3px 12px #00000020' } : {}) }}>
       {props.headerLeading}
-      <View style={{ width: 38, height: 38, backgroundColor: colors.soft, borderRadius: scale.radius.panel, alignItems: 'center', justifyContent: 'center' }}>
-        <ForgeIcon name={appIcons[props.studioId]} size={23} selected color={colors.accent} selectedColor={colors.accent} surfaceColor={colors.soft} reducedMotion={reducedMotion} />
+      <View style={{ width: separateHostControls ? 32 : 38, height: separateHostControls ? 32 : 38, backgroundColor: colors.soft, borderRadius: scale.radius.panel, alignItems: 'center', justifyContent: 'center' }}>
+        <ForgeIcon name={appIcons[props.studioId]} size={separateHostControls ? 20 : 23} selected color={colors.accent} selectedColor={colors.accent} surfaceColor={colors.soft} reducedMotion={reducedMotion} />
       </View>
       <View style={{ flex: 1, minWidth: 40, gap: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 10, fontWeight: '600', letterSpacing: .4, flexShrink: 1 }}>{props.title}</Text>{!compact && <><Text style={{ color: colors.line, fontSize: 10 }}> / </Text><Text style={{ color: colors.muted, fontSize: 10 }}>{props.busy ? 'Working…' : 'Document'}</Text></>}</View>
         <Text numberOfLines={1} style={{ color: colors.text, fontWeight: '600', fontSize: compact ? 13 : 15 }}>{props.documentTitle}</Text>
       </View>
-      {props.headerTrailing}
+      {!separateHostControls && props.headerTrailing}
       {button('Save', () => { void perform('Save', props.onSave); }, true, props.busy, false, compact, 'save', true)}
     </View>
+    {separateHostControls && !packHostControls && <View testID="workspace-host-controls" style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 12 }}>
+      {props.headerTrailing}
+    </View>}
     <View style={{ flexDirection: 'row', borderBottomWidth: canvasStudio ? 0 : 1, borderBottomColor: colors.line, alignItems: 'center', paddingHorizontal: compact ? 8 : 16, minHeight: canvasStudio ? 44 : scale.size.toolbar }}>
       <ScrollView horizontal style={{ flex: 1 }} contentContainerStyle={{ alignItems: 'center', gap: 4 }}>
         {props.leadingActions}
@@ -219,6 +228,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         {button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy, true, true, 'undo')}
         {button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy, true, true, 'redo')}
       </ScrollView>
+      {packHostControls && <View testID="workspace-host-controls" style={{ flexDirection: 'row', alignItems: 'center' }}>{props.headerTrailing}</View>}
       <Menu title="Workspace" triggerLabel="Workspace" actions={[
         ...PANEL_IDS.map(id => ({ id: `panel:${id}`, title: `${layout.collapsed.includes(id) ? 'Show' : 'Hide'} ${panelNames[id]}` })),
         { id: 'arrange', title: arranging ? 'Done arranging' : 'Arrange panels' },

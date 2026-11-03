@@ -7,6 +7,7 @@ import { base64ToBytes, bytesToBase64 } from '@nitro-forge/ignition';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { encodeRgbaPng, validatePreviewSize } from './rgba-png';
 import { prismThemes } from './theme';
+import { prismViewportLayout } from './prism-layout';
 import { DragGrabHandle, type DragPoint } from './drag-grab-handle';
 import { layerDropIndex, awaitLayerDrop, type LayerMeasurements, type MeasuredLayer } from './layer-drop';
 
@@ -67,25 +68,21 @@ export function PrismEditor(props: PrismEditorProps) {
   };
   useEffect(() => { cancelLayerDrag(); }, [props.state, width, height, layersOpen]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => {
+    if (!notice || drag) return;
+    const timer = setTimeout(() => {
+      if (mounted.current && store.getState().notice === notice) store.setState({ notice: '' });
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [notice, drag, store]);
   const doc = readState(props.state);
   const layers = doc?.layers ?? [];
   const selected = layers.find(layer => layer.id === selectedId);
   const selectedIndex = layers.findIndex(layer => layer.id === selectedId);
-  const narrow = width < 700;
-  const short = height < 400;
-  const panelWidth = narrow ? Math.min(280, Math.max(220, width - 24)) : 280;
-  const panelTop = narrow ? 76 : 12;
-  const panelMaxHeight = Math.max(92, height - panelTop - 108);
-  const layerListMaxHeight = Math.max(52, Math.min(245, panelMaxHeight - 164));
-  const canvasLeft = short ? 16 : narrow ? 76 : 88;
-  const canvasRight = layersOpen && !narrow ? panelWidth + 32 : 20;
-  const canvasTop = short ? 136 : 80;
-  const availableWidth = Math.max(1, width - canvasLeft - canvasRight);
-  const availableHeight = Math.max(1, height - canvasTop - 124);
   const ratio = doc && doc.width > 0 && doc.height > 0 ? doc.width / doc.height : 1;
-  const canvasWidth = Math.max(1, Math.min(620, availableWidth, availableHeight * ratio));
-  const canvasHeight = canvasWidth / ratio;
-  const fillWidth = Math.min(selected?.content?.type === 'raster' ? 384 : narrow ? 220 : 320, Math.max(1, width - 24));
+  const { narrow, short, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight,
+    canvasLeft, canvasRight, canvasTop, canvasBottom, canvasWidth, canvasHeight, fillWidth, fillLeft
+  } = prismViewportLayout(width, height, ratio, layersOpen, selected?.content?.type === 'raster');
   const feedback = error ?? previewError ?? (rendering ? 'Updating engine composite…' : notice);
   const dropRows = drag ? layers.slice().reverse().filter(layer => layer.id !== drag.id) : [];
   const dropVisualIndex = drag?.target === null || !drag ? null : layers.length - 1 - drag.target;
@@ -184,7 +181,7 @@ export function PrismEditor(props: PrismEditorProps) {
     const w = Math.max(1, Math.round(doc.width * .38)), h = Math.max(1, Math.round(doc.height * .32));
     void run('addShape', { name: `${kind === 'rect' ? 'Rectangle' : 'Ellipse'} ${layers.length + 1}`, shape: { kind, x: Math.max(0, Math.round((doc.width - w) / 2)), y: Math.max(0, Math.round((doc.height - h) / 2)), w, h, fill: FILLS[store.getState().color] } }, `${kind === 'rect' ? 'Rectangle' : 'Ellipse'} added`);
   };
-  const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 30, top: panelTop, right: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, borderRadius: 14, overflow: 'visible', boxShadow: '0 12px 30px #00000035' }}>
+  const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 60, top: panelTop, right: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, borderRadius: 14, overflow: 'visible', boxShadow: '0 12px 30px #00000035' }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 4, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.line }}>
       <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Text style={{ color: colors.muted, fontSize: 10, marginRight: 8 }}>{layers.length}</Text>
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
@@ -225,7 +222,7 @@ export function PrismEditor(props: PrismEditorProps) {
     if (firstMeasurement.current) { firstMeasurement.current = false; store.setState({ width, height, layersOpen: width >= 700 }); }
     else store.setState({ width, height });
   }} style={{ flex: 1, minHeight: 0, position: 'relative', backgroundColor: mat.deep }}>
-    <View pointerEvents="none" style={{ position: 'absolute', left: canvasLeft, top: canvasTop, right: canvasRight, bottom: 124, alignItems: 'center', justifyContent: 'center' }}>
+    <View pointerEvents="none" style={{ position: 'absolute', left: canvasLeft, top: canvasTop, right: canvasRight, bottom: canvasBottom, alignItems: 'center', justifyContent: 'center' }}>
       <View testID="prism-artboard" style={{ width: canvasWidth, height: canvasHeight, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#00000030', overflow: 'hidden', boxShadow: '0 12px 35px #00000035' }}>
         {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}><Text style={{ color: colors.paperInk, fontSize: 12, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}
       </View>
@@ -234,17 +231,19 @@ export function PrismEditor(props: PrismEditorProps) {
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 9 }}>{selected?.content?.type === 'shape' ? 'Shape layer' : selected ? 'Raster layer' : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
       {control('Layers', () => store.setState({ layersOpen: !layersOpen }), false, layersOpen, 'layers')}
     </View>
-    <View accessibilityLabel="Creation tools" style={{ position: 'absolute', zIndex: 20, left: 12, top: 76, ...(short ? { flexDirection: 'row' as const } : { width: 52 }), alignItems: 'center', padding: 3, gap: 3, borderWidth: 1, borderColor: colors.line, borderRadius: 12, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
+    <View accessibilityLabel="Creation tools" style={{ position: 'absolute', zIndex: 20, left: 12, top: short ? 68 : 76, width: 52, alignItems: 'center', padding: 3, gap: 3, borderWidth: 1, borderColor: colors.line, borderRadius: 12, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
       {control('Rectangle', () => addShape('rect'), !doc, false, 'rectangle', undefined, true, 'Adds a centered rectangle using the selected fill')}
       {control('Ellipse', () => addShape('ellipse'), !doc, false, 'ellipse', undefined, true, 'Adds a centered ellipse using the selected fill')}
-      <View style={short ? { width: 1, height: 24, backgroundColor: colors.line } : { height: 1, width: 26, backgroundColor: colors.line }} />
+      <View style={{ height: 1, width: 26, backgroundColor: colors.line }} />
       {control('Raster layer', () => { void run('addRasterLayer', { name: `Raster ${layers.length + 1}` }, 'Raster layer added'); }, !doc, false, 'image', undefined, true, 'Adds an empty raster layer')}
     </View>
     {layersOpen && panel}
-    <View testID="prism-fill-bar" style={{ position: 'absolute', zIndex: 25, left: (width - fillWidth) / 2, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: colors.line, borderRadius: 12, backgroundColor: colors.base, boxShadow: '0 6px 20px #00000025' }}>
+    <View testID="prism-fill-bar" style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: colors.line, borderRadius: 12, backgroundColor: colors.base, boxShadow: '0 6px 20px #00000025' }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: 50, alignItems: 'center', flexDirection: 'row', gap: 2 }} style={{ flex: 1 }}>
       {!narrow && <Text style={{ color: colors.muted, fontSize: 10, marginRight: 8 }}>{selected?.content?.type === 'raster' ? 'Fill' : 'New shape fill'}</Text>}
       {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${['violet', 'teal', 'amber', 'rose'][index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: 13, borderWidth: color === index ? 3 : 1, borderColor: color === index ? '#FFFFFF' : '#FFFFFF50' }} /></Pressable>)}
       {selected?.content?.type === 'raster' && <><View style={{ width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: 5 }} />{control('Fill layer', () => { void run('fillLayer', { id: selected.id, color: FILLS[color] }, 'Raster layer filled'); })}</>}
+      </ScrollView>
     </View>
     {!!feedback && <View style={{ position: 'absolute', zIndex: 35, bottom: 82, left: (width - Math.min(360, width - 24)) / 2, width: Math.min(360, Math.max(1, width - 24)), minHeight: 40, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.base, borderRadius: 8 }}><Text accessibilityLiveRegion="polite" numberOfLines={2} style={{ flex: 1, color: error || previewError ? colors.error : colors.muted, fontSize: 10, lineHeight: 15 }}>{feedback}</Text>{previewError && control('Retry preview', () => store.setState(s => ({ retry: s.retry + 1 })), false, false, 'redo', undefined, true)}</View>}
   </View>;

@@ -320,3 +320,23 @@ selection changes the engine layer to50% with a visibly blended canvas at
 390/768/1440. Phone final closes Layers without changing the artwork. Main and
 continued critic inspected final captures. Final21 workspace tests/typecheck
 and preview build passed after popup fix. Images: docs/ux/evidence/prism-affinity-*.png.
+
+### Responsive verification — November 3, 2026
+
+Craft Anything reproduced and verified fixes for narrow-header Save clipping,
+a 26px landscape artboard and viewport/stacking clipping of opacity options.
+Measured viewport geometry, adaptive header packing and the source-owned NYC
+web Menu now support 320×480,320×568,390×667,844×390,1024×768 and 1440×900.
+All six accepted runs show actual shape edits and 100%→50% opacity changes;
+short landscape uses focus-scroll plus visible click to reach clipped options.
+A previously interrupted tablet run passed a frozen-source retry. Keyboard-only
+activation, native hardware and the full browser/OS matrix remain unverified.
+Success notices expire without altering document state; focused short phone
+and landscape images confirm unobscured paper afterward.
+
+All package typechecks, 25 workspace tests, the visual import boundary and
+preview production build passed. NYC UI full typecheck, 3 new Menu placement
+tests and scoped lint passed. Its local-only paired commit is
+c8ac0ddab89076eb4bc28036c5befd7d7d4ab70c; CI pins it but remote CI was not run.
+Publish paired NYC source before NitroForge. No native window/config changes.
+See docs/ux/studio-refresh/RESPONSIVE.md and prism-responsive-*.png evidence.

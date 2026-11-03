@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: mikevocalz/nyc-mon
-          ref: 4154ea344987de4bee94d4ee0e9f0249f66e8087
+          ref: c8ac0ddab89076eb4bc28036c5befd7d7d4ab70c
           path: nyc-mon
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
