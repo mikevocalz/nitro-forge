@@ -64,18 +64,24 @@ const cases = [
 try {
   for (const [Document, mutate] of cases) {
     const doc = await (Document === folio.FolioDocument ? Document.create(host) : Document.open(host));
-    const before = await doc.save();
+    // lopdf can serialize equivalent PDFs differently; compare page semantics
+    // for Folio, as its Rust snapshot test does, and exact bytes elsewhere.
+    const state = async d => Document === folio.FolioDocument ? (await d.describe()).data : d.save();
+    const before = await state(doc);
     await mutate(doc);
-    const after = await doc.save();
+    const snapshot = await doc.save();
+    assert.equal(new TextDecoder().decode(snapshot.subarray(0, 4)), 'NFD1');
+    const after = await state(doc);
     assert.notDeepEqual(after, before);
     assert.equal(await doc.undo(), true);
-    assert.deepEqual(await doc.save(), before);
+    assert.deepEqual(await state(doc), before);
     assert.equal(await doc.redo(), true);
-    assert.deepEqual(await doc.save(), after);
+    assert.deepEqual(await state(doc), after);
     await doc.close();
-    const reopened = await Document.openSnapshot(host, after);
-    assert.deepEqual(await reopened.save(), after);
+    const reopened = await Document.openSnapshot(host, snapshot);
+    assert.deepEqual(await state(reopened), after);
     await reopened.close();
+    console.log('Packaged round-trip passed:', Document.name);
   }
   console.log('Verified packaged APIs against all seven Rust engines.');
 } finally { await host.dispose(); }
