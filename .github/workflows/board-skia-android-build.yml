@@ -8,6 +8,7 @@ on:
       - 'packages/board/react-native.config.cjs'
       - 'apps/board-native-lab/**'
       - 'scripts/verify-board-android-link.mjs'
+      - 'scripts/test-viro-canvas-capability.mjs'
       - '.github/workflows/board-skia-android-build.yml'
   # Full native Android compilation is expensive. Trigger only on native source
   # changes to this preview branch, or explicit manual dispatch, not every
@@ -24,6 +25,7 @@ on:
       - 'packages/board/src/skia/NativeBoardCanvasWithInput.tsx'
       - 'apps/board-native-lab/**'
       - 'scripts/verify-board-android-link.mjs'
+      - 'scripts/test-viro-canvas-capability.mjs'
       - '.github/workflows/board-skia-android-build.yml'
   workflow_dispatch:
 concurrency:
@@ -81,6 +83,8 @@ jobs:
       - name: Compile and link native Android Skia v3 (no emulator)
         working-directory: apps/board-native-lab/android
         run: ./gradlew :app:assembleDebug --no-daemon --max-workers=1 -PreactNativeArchitectures=arm64-v8a -PndkVersion=28.2.13676358 --stacktrace '-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g'
+      - name: Verify old Viro AARs select the unavailable backend
+        run: node scripts/test-viro-canvas-capability.mjs
       - name: Verify Board uses the real Nitro runtime for the requested ABI
         run: node scripts/verify-board-android-link.mjs packages/board/android/build arm64-v8a
       - name: Upload build diagnostics

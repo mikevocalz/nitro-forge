@@ -1,0 +1,21 @@
+import java.util.jar.JarInputStream
+import java.util.zip.ZipFile
+
+// Older Viro builds contain a valid AAR but no canvas registry. Inspect the
+// actual bytecode archive before choosing source files that import that API.
+// This does not establish device/runtime availability; the factory checks it.
+ext.forgeBoardHasViroCanvas = { File aar ->
+  if (aar == null || !aar.isFile()) return false
+  return new ZipFile(aar).withCloseable { archive ->
+    def classes = archive.getEntry("classes.jar")
+    if (classes == null) return false
+    return new JarInputStream(archive.getInputStream(classes)).withCloseable { jar ->
+      def entry = jar.nextJarEntry
+      while (entry != null) {
+        if (entry.name == "com/viromedia/bridge/canvas/CanvasSurfaces.class") return true
+        entry = jar.nextJarEntry
+      }
+      return false
+    }
+  }
+}

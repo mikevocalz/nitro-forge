@@ -28,3 +28,7 @@ Skills read: [workstream receipt](board-android-link-skills.md). The [shared rec
 ## Malformed document follow-up
 
 A scene bridge now selects the complete fallback when reading/encoding a source throws. Null records, malformed draw props, and a throwing ink-outline provider are covered at construction and after mount. Tests verify that the source is unchanged, a subsequent valid snapshot recovers, and disposal detaches the listener. Board typecheck and 65 tests PASS after this change.
+
+## Older Viro capability follow-up
+
+Gradle inspects classes.jar for com/viromedia/bridge/canvas/CanvasSurfaces.class before selecting the Viro source root. An existing older AAR without that class selects the existing unavailable backend. This check does not establish runtime or device capability. PASS: node scripts/test-viro-canvas-capability.mjs runs the actual Gradle selector against missing, old-registry and canvas-registry archive fixtures. The marker fixtures contain no executable native implementation.

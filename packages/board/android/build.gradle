@@ -6,6 +6,7 @@ buildscript {
 apply plugin: "com.android.library"
 apply plugin: "org.jetbrains.kotlin.android"
 apply from: "../nitrogen/generated/android/NitroForgeBoard+autolinking.gradle"
+apply from: "./viro-canvas-capability.gradle"
 
 def getExtOrDefault(name, fallback) {
   return rootProject.ext.has(name) ? rootProject.ext.get(name) : fallback
@@ -39,7 +40,7 @@ try {
 // the Viro-specific source files against a missing AAR. Preserve the generated
 // Nitro v1 API by using a fail-closed no-Viro render-loop implementation.
 def viroAar = viroAndroidDir == null ? null : new File(viroAndroidDir, "react_viro/react_viro-release.aar")
-def hasViroCanvasAar = viroAar != null && viroAar.exists()
+def hasViroCanvasAar = forgeBoardHasViroCanvas(viroAar)
 
 android {
   sourceSets {
@@ -93,6 +94,6 @@ dependencies {
   if (hasViroCanvasAar) {
     compileOnly files(zipTree(viroAar).matching { include "classes.jar" })
   } else {
-    logger.lifecycle("[forge-board] Viro CanvasSurfaces AAR absent: compiling no-Viro XR availability stub; Skia v3 2D is unaffected")
+    logger.lifecycle("[forge-board] Viro CanvasSurfaces class absent: compiling no-Viro XR availability stub; Skia v3 2D is unaffected")
   }
 }
