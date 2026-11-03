@@ -1,5 +1,14 @@
 name: Forge Skia v3 real Android compile (isolated Expo 58 lab)
 on:
+  pull_request:
+    paths:
+      - 'packages/board/android/**'
+      - 'packages/board/nitro.json'
+      - 'packages/board/package.json'
+      - 'packages/board/react-native.config.cjs'
+      - 'apps/board-native-lab/**'
+      - 'scripts/verify-board-android-link.mjs'
+      - '.github/workflows/board-skia-android-build.yml'
   # Full native Android compilation is expensive. Trigger only on native source
   # changes to this preview branch, or explicit manual dispatch, not every
   # TS offline test/doc change in a long-lived stacked PR.
@@ -10,9 +19,11 @@ on:
       - 'packages/board/android/**'
       - 'packages/board/nitro.json'
       - 'packages/board/package.json'
+      - 'packages/board/react-native.config.cjs'
       - 'packages/board/src/skia/NativeBoardCanvas.tsx'
       - 'packages/board/src/skia/NativeBoardCanvasWithInput.tsx'
       - 'apps/board-native-lab/**'
+      - 'scripts/verify-board-android-link.mjs'
       - '.github/workflows/board-skia-android-build.yml'
   workflow_dispatch:
 concurrency:
@@ -69,7 +80,7 @@ jobs:
         run: pnpm exec expo prebuild --platform android --non-interactive --no-install
       - name: Compile and link native Android Skia v3 (no emulator)
         working-directory: apps/board-native-lab/android
-        run: ./gradlew :app:assembleDebug --no-daemon --max-workers=1 -PreactNativeArchitectures=arm64-v8a --stacktrace '-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g'
+        run: ./gradlew :app:assembleDebug --no-daemon --max-workers=1 -PreactNativeArchitectures=arm64-v8a -PndkVersion=28.2.13676358 --stacktrace '-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g'
       - name: Verify Board uses the real Nitro runtime for the requested ABI
         run: node scripts/verify-board-android-link.mjs packages/board/android/build arm64-v8a
       - name: Upload build diagnostics
