@@ -64,3 +64,7 @@ canvas. Graphite/blue is local to Prism. Separate application sessions, real
 engine operations and native window contracts remain the established contract.
 Only supported editing actions appear; no unsupported Affinity controls are
 added as decoration. Final captures and review are recorded separately.
+
+Corner update: user requested `rounded-sm` on November 3, 2026. Studio controls,
+launcher cards, toolbars, palette swatches and panels use the shared 4px radius
+on web/native. Document geometry and authored ellipse shapes are unchanged.

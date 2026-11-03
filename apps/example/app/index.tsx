@@ -38,7 +38,7 @@ export default function Home() {
               style={({ pressed }) => ({ width: columns ? '48.8%' : '100%', minHeight: scale.size.target, padding: compact ? 17 : 22,
                 flexDirection: 'row', alignItems: 'flex-start', gap: compact ? 14 : 18, backgroundColor: pressed ? colors.soft : colors.raised,
                 borderWidth: 1, borderColor: pressed ? colors.accent : colors.line, borderRadius: scale.radius.panel, borderCurve: 'continuous' })}>
-              <View accessible={false} importantForAccessibility="no-hide-descendants" style={{ width: compact ? 48 : 54, height: compact ? 48 : 54, borderRadius: 12, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.soft }}>
+              <View accessible={false} importantForAccessibility="no-hide-descendants" style={{ width: compact ? 48 : 54, height: compact ? 48 : 54, borderRadius: scale.radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.soft }}>
                 <ForgeIcon name={app.glyph} size={29} color={colors.accent} appearance={theme} surfaceColor={colors.soft} reducedMotion />
               </View>
               <View style={{ flex: 1, minWidth: 0, gap: 4 }}>

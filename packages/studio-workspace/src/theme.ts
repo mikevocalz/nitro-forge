@@ -9,7 +9,7 @@ export const workspaceThemes = {
 export type WorkspaceColors = { [K in keyof typeof workspaceThemes.dark]: string };
 export const workspaceScale = {
   space: { stack: 4, element: 8, inset: 12, group: 16, section: 24, canvas: 32, page: 64 },
-  radius: { control: 8, panel: 12, paper: 2 },
+  radius: { control: 4, panel: 4, paper: 2 },
   type: { micro: 10, label: 12, body: 14, title: 20, display: 32, manuscript: 20 },
   font: { serif: 'Georgia', mono: 'monospace' },
   size: { target: 44, rail: 72, header: 60, toolbar: 52, status: 28 },

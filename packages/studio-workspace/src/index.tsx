@@ -137,7 +137,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         </>}
         {id === 'properties' && <>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, backgroundColor: colors.soft }}><Text style={{ color: colors.accent, fontSize: 10, fontWeight: '600' }}>{props.title}</Text></View>
+            <View style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: scale.radius.control, backgroundColor: colors.soft }}><Text style={{ color: colors.accent, fontSize: 10, fontWeight: '600' }}>{props.title}</Text></View>
             <Text style={{ color: colors.muted, fontSize: 11 }}>Document details</Text>
           </View>
           <View style={{ borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, overflow: 'hidden' }}>
@@ -206,7 +206,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     const { width, height } = event.nativeEvent.layout;
     if (width > 0 && height > 0 && (width !== ui.getState().width || height !== ui.getState().height)) ui.setState({ width, height });
   }} testID="forge-workspace" style={{ flex: 1, minHeight: 0, backgroundColor: canvasStudio ? colors.deep : colors.base }}>
-    <View style={{ paddingHorizontal: compact ? 12 : 20, borderBottomWidth: canvasStudio ? 0 : 1, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: compact ? 8 : 16, minHeight: canvasStudio ? 52 : scale.size.header, ...(canvasStudio ? { backgroundColor: colors.base, margin: 8, marginBottom: 0, borderRadius: 10, boxShadow: '0 3px 12px #00000020' } : {}) }}>
+    <View style={{ paddingHorizontal: compact ? 12 : 20, borderBottomWidth: canvasStudio ? 0 : 1, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: compact ? 8 : 16, minHeight: canvasStudio ? 52 : scale.size.header, ...(canvasStudio ? { backgroundColor: colors.base, margin: 8, marginBottom: 0, borderRadius: scale.radius.control, boxShadow: '0 3px 12px #00000020' } : {}) }}>
       {props.headerLeading}
       <View style={{ width: separateHostControls ? 32 : 38, height: separateHostControls ? 32 : 38, backgroundColor: colors.soft, borderRadius: scale.radius.panel, alignItems: 'center', justifyContent: 'center' }}>
         <ForgeIcon name={appIcons[props.studioId]} size={separateHostControls ? 20 : 23} selected color={colors.accent} selectedColor={colors.accent} surfaceColor={colors.soft} reducedMotion={reducedMotion} />
@@ -266,7 +266,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         <Text style={{ color: layout.collapsed.includes(id) ? colors.muted : colors.accent, fontSize: scale.type.micro }}>{id === 'properties' ? 'Inspect' : id === 'actions' ? 'Tools' : panelNames[id]}</Text>
       </View>)}
     </View>}
-    {(!canvasStudio || props.error || layoutError || /complete|generated|failed|…/.test(status)) && <View style={{ minHeight: scale.size.status, paddingHorizontal: 16, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.line, ...(canvasStudio ? { position: 'absolute', left: 76, right: 76, bottom: 84, zIndex: 20, backgroundColor: colors.raised, borderRadius: 8, borderWidth: 1, borderColor: colors.line, boxShadow: '0 4px 16px #00000030' } : {}) }}>
+    {(!canvasStudio || props.error || layoutError || /complete|generated|failed|…/.test(status)) && <View style={{ minHeight: scale.size.status, paddingHorizontal: 16, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.line, ...(canvasStudio ? { position: 'absolute', left: 76, right: 76, bottom: 84, zIndex: 20, backgroundColor: colors.raised, borderRadius: scale.radius.control, borderWidth: 1, borderColor: colors.line, boxShadow: '0 4px 16px #00000030' } : {}) }}>
       <Text accessibilityRole={props.error || layoutError ? 'alert' : undefined} accessibilityLiveRegion="polite" selectable style={{ color: props.error || layoutError ? colors.error : colors.muted, fontSize: 11 }}>{props.error || layoutError || status}</Text>
     </View>}
   </View>;
