@@ -38,11 +38,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install Android API 37 (Expo SDK 58 AAR requirement) and NDK
+      - name: Install Android API 37.0 (Expo SDK 58 AAR requirement) and NDK
         run: |
+          # Android 37 uses minor-versioned platform package IDs, not
+          # platforms;android-37 (which sdkmanager cannot find).
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            'platforms;android-37' 'build-tools;36.0.0' \
+            'platforms;android-37.0' 'build-tools;37.0.0' \
             'ndk;28.2.13676358' 'cmake;3.22.1'
+          test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --list_installed | grep 'platforms;android-37.0'
       - name: Install workspace packages
         run: pnpm install --no-frozen-lockfile
       - name: Generate Nitro v1 native board Gradle and CMake registration
