@@ -94,7 +94,7 @@ microphone:both(S("M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z","M5 11a
 timeline:both(S("M3 5h18v14H3z","M3 10h18","M8 10v9","M14 10v9","M6 14h3","M12 14h4"),
  [...F("M2 4h20v16H2z"),...K("M4 9h16","M8 10v9","M15 10v9")]),
 "color-wheel":both(S("M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z","M12 3v9l8 4","M12 12l-8 4"),
- F("M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22z"),),
+ F("M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22z")),
 });
 export const glyphIds=Object.freeze(Object.keys(glyphs));
 /** Never render misleading generic artwork for an unimplemented semantic ID. */
