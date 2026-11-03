@@ -14,7 +14,7 @@ export function AppLauncher({ opened, theme }: { opened: readonly Studio[]; them
       </Page>
       <Paragraph className="launcher-session-note"><Text aria-hidden="true"><ForgeIcon name="layers" size={17} color="currentColor" reducedMotion /></Text>Switch apps without closing your work.</Paragraph>
     </Header>
-    <Page className="directory-heading"><Heading level={2}>All applications</Heading><Text>Choose where to work</Text></Page>
+    <Page className="directory-heading"><Heading level={2}>All applications</Heading><Text className="directory-hint">Choose where to work</Text></Page>
     <Page className="app-list">{Object.entries(APPS).map(([id, info]) => {
       const app = id as Studio;
       const isOpen = opened.includes(app);
@@ -28,6 +28,6 @@ export function AppLauncher({ opened, theme }: { opened: readonly Studio[]; them
         </Page>
       </Link>;
     })}</Page>
-    <Footer className="launcher-footnote"><Text>Your apps, separate workspaces.</Text><Text>Save your document before closing this browser session.</Text></Footer>
+    <Footer className="launcher-footnote"><Text className="launcher-footnote-text">Your apps, separate workspaces.</Text><Text className="launcher-footnote-text">Save your document before closing this browser session.</Text></Footer>
   </Section>;
 }

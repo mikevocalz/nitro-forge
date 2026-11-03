@@ -282,3 +282,18 @@ CI pins that paired source commit and was not run remotely; publish the NYC
 commit before the NitroForge branch. The legacy Expo54 example is not asserted
 compatible with the Expo58 UI runtime. SDK/window/orientation/manifest contracts
 remain unchanged. See `docs/ux/studio-refresh/OWN_UI_INTEGRATION.md`.
+
+### Craft Anything browser inspection — November 3, 2026
+
+Official Craft Anything v0.3.0 CLI archive verified against its release digest,
+then used through its own persistent MCP server in Clean room mode. Captured
+launcher, Prism and the public Affinity iPad page at390/768/1440. Captures found
+and drove fixes for canonical utility precedence and tag-dependent helper/footer
+styles. All three final launcher images were inspected by the main agent and
+continued critic, with readable text and mobile helper hiding confirmed. All
+three Prism baseline images were inspected. Preview typecheck and production
+build passed after fixes. Quill open timed out; native runtime, file-picker
+interaction and the full OS/browser matrix remain unverified. Raw evidence
+stays ignored; final launcher images and provenance are committed in docs/ux.
+No nested rebuild, global registration or native configuration changes.
+See `docs/ux/studio-refresh/CRAFT_ANYTHING.md`.
