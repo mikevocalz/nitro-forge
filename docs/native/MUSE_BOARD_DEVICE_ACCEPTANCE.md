@@ -69,7 +69,11 @@ AND a rendered+saved stroke.
 
 ## Implementation priorities
 
-The first responsible target is **Vision Pro**, the device with the already
-merged Viro Muse SDK input path. Android Bluetooth PR #20 is an optional
-independent generic BLE discovery/connection project, not the dependency
-for Apple Vision Pro Muse drawing.
+The **currently verified source provider** is the existing Viro visionOS Muse
+bridge; this does not limit product scope. **Android is also required**, including
+Android 2D pen/touch, Surface Duo, Android XR, Quest and PICO. Android's Board
+Skia renderer and BLE transport have source implementations but no proven
+Logitech Muse pen protocol, pairing, 6DoF or hardware input. Follow the Android
+acceptance matrix in Nitro-Forge PR #20. Do not substitute Interaxon's Muse EEG
+SDK for the Logitech spatial stylus. The Vision Pro SDK should be reused where
+available, while Android providers must be implemented and validated separately.
