@@ -6,7 +6,8 @@
   "scripts": {
     "android:prebuild": "expo prebuild --platform android --non-interactive --no-install",
     "android:compile": "cd android && ./gradlew :app:assembleDebug --no-daemon --max-workers=1",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run tests"
   },
   "dependencies": {
     "expo": "58.0.19",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@types/react": "19.3.0",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "^3.2.7"
   }
 }
