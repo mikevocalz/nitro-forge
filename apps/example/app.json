@@ -8,6 +8,9 @@
     "newArchEnabled": true,
     "ios": { "bundleIdentifier": "ai.nitroforge.example", "supportsTablet": true },
     "android": { "package": "ai.nitroforge.example" },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      ["expo-build-properties", { "android": { "minSdkVersion": 26 } }]
+    ]
   }
 }
