@@ -101,3 +101,7 @@ Related existing work: [Studio #5](https://github.com/mikevocalz/nitro-forge/pul
 ## Design exploration and independent review
 
 Follow [Forge 2046's three-direction design and native quality playbook](./FORGE_2046_DESIGN_REVIEW_PLAYBOOK.md) before calling any instrument visually finished. A locally owned Web Designer Pro ZIP informed the **process** (exploration, specificity, responsive critique), but is not copied, published or required by CI. Compare real Prism, Splice and Cadence interactions, produce independent review notes, and clear separate design and engineering gates. Marketing-page visual techniques do not override editor data accuracy, physical input behavior or content legibility.
+
+## Living micro-interactions and native overlays
+
+Micro-interactions, actual editable focus/hover/pressed feedback, reduced-motion behavior, responsive popovers and native menus are core Forge 2046 acceptance gates, not later cosmetic polish. See [the implementation and QA contract](./FORGE_2046_MICROINTERACTIONS_NATIVE_OVERLAYS.md) and the separately tracked [source-owned native rich Popover in @acme/ui](https://github.com/mikevocalz/nyc-mon/issues/172). The existing `@acme/ui/Menu` is already bound; the rich `Popover` source is not yet shipped. `@nitro-forge/studio-workspace/interaction` provides testable motion and pane-local overlay policy, not a replacement renderer. All motion must respect reduced motion, dynamic type, native platform behavior, hinge-safe placement, keyboard/screen-reader accessibility and real engine edit state.
