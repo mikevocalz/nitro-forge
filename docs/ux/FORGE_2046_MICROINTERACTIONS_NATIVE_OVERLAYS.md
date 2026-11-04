@@ -92,3 +92,11 @@ Responsive inputs are **usable pane dimensions**, real safe areas, keyboard/wind
 - **QA:** 320/390/768/1280/1920 widths; RTL, software keyboard, text scaling; menu flip/outside click/Back/Escape/focus return; both light/dark and reduced-motion modes; long-press, pen-hover, touch and pointer; Surface Duo real hinge and iPad native. Screenshots and videos are required for each, plus performance traces on real hardware.
 
 Do not confuse this document or pure interaction tests with a shipped native rich Popover.
+
+## Expo SDK 58 Material 3 Expressive native dropdowns
+
+**Source implementation:** [NYC-MON PR #174](https://github.com/mikevocalz/nyc-mon/pull/174), stacked on native rich Popover #173. [Expo upstream PR #52598](https://github.com/expo/expo/pull/52598) merged on October 30, 2026; these new `@expo/ui/jetpack-compose` primitives require a release containing the merge (the old 58.0.20 pin predates it). The source branch now targets SDK 58's published `@expo/ui@58.0.27`.
+
+Do **not** confuse this with the interactive Popover: `NativeDropdown` is for a **single, controlled choice** with groups, selection, disabled items and supporting descriptions. On Android it uses the real Compose `Box + DropdownMenuPopup + DropdownMenuGroup + SelectableDropdownMenuItem`; iOS uses its own SwiftUI Menu/Section/Button primitives; web uses the source-owned accessible popover/sheet. Group and item shapes are native Android Material 3 Expressive, not artwork to copy onto iOS. Old `@acme/ui/Menu` action lists remain unchanged.
+
+`@nitro-forge/studio-workspace/ui` now exposes a strictly **optional** `NativeDropdown` host port, with no duplicate RN Modal or fake fallback. Do not claim this is wired into existing Studio consumers until the source-host binding is updated, Expo 58 native client rebuilt and screenshot/accessibility/engine tests pass. Independent pure-model tests are not native acceptance evidence.
