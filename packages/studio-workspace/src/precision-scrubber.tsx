@@ -120,7 +120,8 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
     const next = scrubPrecision({
       min: current.min, max: current.max, step: current.step,
       startValue: gesture.value, deltaPixels: point.x - gesture.point.x,
-      pixelsPerStep: 8, mode, detents: current.detents,
+      pixelsPerStep: 8, mode,
+      ...(current.detents === undefined ? {} : { detents: current.detents }),
     });
     return { next, mode };
   };
