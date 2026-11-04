@@ -18,7 +18,7 @@
     },
     "./pcm": {
       "types": "./src/NativeSourceRecordingTrack.tsx",
-      "default": "./src/NativeSourceRecordingTrack.tsx"
+      "default": "./src/NativeSourceRecordingTrack"
     }
   },
   "scripts": {
