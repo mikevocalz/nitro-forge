@@ -1,61 +1,77 @@
-# SDK 58 native decoded video monitor
+# Selected video adapter: react-native-video on Nitro v1
 
-`@nitro-forge/media-ui/video` is an optional real playback adapter for
-`@nitro-forge/media-ui`, implemented via Expo Video (AVPlayer / Media3 /
-browser video). This subpath avoids forcing media codec dependencies on
-consumers that only need a transport slider or waveform geometry.
+The user selected **react-native-video 7.0.0-beta.12**, requires **Nitro v1**,
+and explicitly rejected Expo Video. The previous Expo-backed experiment has
+been removed, including dependency declarations. No older Nitro runtime or
+alternative decoder was installed.
 
-```tsx
-import { NativeVideoMonitor, createVideoMonitorStore }
-  from "@nitro-forge/media-ui/video";
+## Current behavior
 
-const store = createVideoMonitorStore();
+`NativeVideoMonitor` displays an explicit unavailable status on every platform.
+It loads no media and has no play/seek controls, fabricated frames or timers.
+Its existing props and separate transport/state utilities are retained for the
+replacement. `VIDEO_PLAYBACK_CAPABILITY.status` is `blocked`.
 
-function Preview() {
-  return (
-    <NativeVideoMonitor
-      source={pickedVideoUri}
-      store={store}
-      frameRate={{ numerator: 30000, denominator: 1001 }}
-    />
-  );
-}
-```
+Web support exists upstream in react-native-video beta.12, but this draft has
+not yet packaged an isolated web adapter without linking the incompatible native
+backend. The previous browser backend was Expo Video and was removed too.
+There is currently **no working playback backend** in this draft. A historical
+successful Expo native build is not evidence for the selected replacement.
 
-**Actual capabilities:** native decoded video surface, play/pause, seek request
-mapped to rational frames in the caller's timebase, real duration/status/time events, clamped frame
-steps, progress/buffer telemetry, and lifecycle disposal through Expo's
-`useVideoPlayer`. Uses the existing `NativeSeekBar` from PR #25.
+## Verified compatibility blocker
 
-**Precision:** requesting a frame is not evidence that the decoder shows it.
-The monitor keeps `requestedFrame` separate from `reportedFrame`. A request
-clears when a native `timeUpdate` reaches the requested frame (while playing,
-up to one event interval past it). Reports from before the seek never clear
-it. Expo Video has no seek-completed event and a paused player may emit no
-`timeUpdate`, so 400 ms after the last seek the monitor reads
-`player.currentTime` and records that native position as the reported frame.
+Audited November 4, 2026:
 
-Seeks target the centre of the frame interval, `(2n + 1) * den / (2 * num)`,
-and reported times map back with `floor`, so a float shortfall cannot land on
-frame `n - 1`.
+- The registry beta tag is still `7.0.0-beta.12` (stable is `6.19.3`).
+- beta.12 declares Nitro `>=0.35.0`; it does not opt into v1 prereleases.
+- Its native `playerFactory.ts` eagerly calls
+  `NitroModules.createHybridObject('VideoPlayerFactory')`.
+- Published `nitro-core@1.0.0-alpha.nightly.120.g33ef045b96c0` exposes
+  `getHybridClass` instead, with no `createHybridObject` in its proxy API.
+- beta.12 also ships v0 interface-style specs, old autolinking config, and
+  generated Swift/Kotlin/C++ bindings. Changing only a package version, a peer
+  range or one JS call is not a complete migration.
 
-`seekTolerance` is set to zero. AVPlayer (iOS) and Media3 (Android) honour it;
-the web backend ignores `seekTolerance`, so web seeks are whatever the browser
-`HTMLVideoElement` does and are not exact. Codecs, GOP structure and remote
-streams can still make native seeks approximate.
+The read-only probe `scripts/check-video-v1-contract.mjs` reproduces the missing
+factory API against extracted upstream packages. Its expected exit status is 1
+for these exact versions. This is a concrete API blocker, not a tested claim
+that a maintained port is impossible. No official released v1-compatible video
+adapter was found in the checked registry or upstream PR search.
 
-Frame indices use the `frameRate` prop, not the media track. The monitor shows
-the track's own rate from `VideoTrack.frameRate` when iOS or Android reports
-it; web always reports it as unavailable. No frame-exact output or
-compositing claim.
+## Port implementation scope
 
-**Cross-platform contract:** Expo Video's supported backend is iOS AVPlayer,
-Android Media3, Web video; the control API is shared. The SDK 58 sample
-demonstrates an online upstream Expo documentation fixture. Actual iOS,
-Android, Surface Duo and web browser playback tests are **NOT RUN**.
-PICO and visionOS are not claimed. The Rust Splice engine is still the editing
-authority (clips/undo/render plan); this is a media preview, not a substitute
-for a source/audio decoder or export encoder.
+1. Preserve beta.12's MIT license. Migrate its four `.nitro.ts` spec families
+   (player, source, event emitter and view manager), factory registration and
+   config to v1 classes/decorators with one exact matching runtime/core/generator.
+2. Regenerate bindings and adapt native Swift/Kotlin implementations, construction,
+   Promise/error handling, listener ownership and release paths. Validate native
+   view registration and Pods/Gradle with the same v1 version, not mixed runtimes.
+3. Restore the shared Forge adapter using real load/progress/error/seek/end events.
+   Guard source changes/unmount, avoid stale event writes, and retain separate
+   requested versus reported playback time. Playback time is not pixel proof.
+4. Validate web platform resolution independently, then iOS/Android compile/link,
+   playback, repeated disposal, interruptions, seeks and local/remote sources.
+   Quest/immersive surfaces require their own tests. Native compilation alone
+   does not establish actual playback or frame-exact seeking.
 
-No copied CapCraft or Adobe UI source. No new WebView editor, local React
-`useState`, or duplicated document store.
+Splice remains the Rust edit/undo/timeline authority. Preview is not a compositor
+or render-plan encoder. The patch removes the rejected backend and starts the
+compatibility probe; it does **not** claim that the native v1 port is finished.
+
+Sources:
+- [Pinned video package](https://github.com/TheWidlarzGroup/react-native-video/blob/321b868085e49669a6fe1aa1cfb58e64d63d326f/packages/react-native-video/package.json)
+- [Pinned factory](https://github.com/TheWidlarzGroup/react-native-video/blob/321b868085e49669a6fe1aa1cfb58e64d63d326f/packages/react-native-video/src/core/utils/playerFactory.ts)
+- [Nitro v1 proxy](https://github.com/margelo/nitro/blob/v1.0.0-alpha.nightly.120.g33ef045b96c0/packages/nitro-core/js/src/NitroModulesProxy.ts)
+
+## Verification for backend removal
+
+- Media UI TypeScript and the media-lab application TypeScript: PASS.
+- 27 pure unit/source-policy tests: PASS. These are not player rendering tests.
+- Compatibility probe with official beta.12 and nightly120 source packages:
+  expected BLOCKED (exit 1), independently reviewed.
+- The rebased branch preserves concurrent seek/timebase fixes and pinned CI.
+  Dependency removal is reconciled against that newer lockfile.
+- No native v1 decoder or device playback was tested. Shell builds, if green,
+  prove only that the unavailable-state UI compiles.
+- Metro web export of the unavailable-state media shell: PASS (261 modules).
+  This is bundle evidence only, not browser interaction or media playback.

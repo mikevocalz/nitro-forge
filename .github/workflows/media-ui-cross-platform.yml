@@ -4,9 +4,9 @@ on:
   pull_request:
     paths:
       - 'packages/media-ui/**'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/media-ui-cross-platform.yml'
       - 'apps/forge-media-lab/**'
-      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 permissions:

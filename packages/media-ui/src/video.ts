@@ -12,3 +12,5 @@ export {
   validFrameCount,
 } from "./videoMonitorState";
 export type { VideoMonitorPhase, VideoMonitorState } from "./videoMonitorState";
+export { VIDEO_PLAYBACK_CAPABILITY } from "./videoCapability";
+export type { ForgeVideoSource } from "./NativeVideoMonitor";

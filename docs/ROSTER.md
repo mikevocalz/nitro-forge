@@ -100,3 +100,18 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
 - No git remote → commits are local; no PRs.
+
+## Video backend correction — November 4, 2026
+
+PR #33 removes the rejected Expo Video implementation. The selected replacement
+is react-native-video 7.0.0-beta.12 on Nitro v1; no Nitro downgrade was introduced.
+NativeVideoMonitor now reports playback unavailable and neither loads media nor
+changes preview state. Existing seek/timebase utilities remain independent.
+Web playback is also unavailable until an isolated supported adapter is wired.
+Historical Expo Video native compilation does not validate this replacement.
+
+The exact beta.12 factory calls createHybridObject, which is absent from the
+published Nitro v1 nightly120 proxy. The read-only compatibility probe reproduces
+that blocker. See packages/media-ui/VIDEO_MONITOR.md for the required native
+spec/factory/binding migration and independent platform test gates. No native
+v1 player port or device playback success is claimed.

@@ -33,17 +33,11 @@
     "@expo/ui": "^58.0.0",
     "expo": "^58.0.0",
     "react": ">=19.0.0",
-    "react-native": ">=0.88.0",
-    "expo-video": "^58.0.0"
+    "react-native": ">=0.88.0"
   },
   "devDependencies": {
     "vitest": "^3.2.7",
     "@types/react": "^19.2.0"
-  },
-  "peerDependenciesMeta": {
-    "expo-video": {
-      "optional": true
-    }
   },
   "dependencies": {
     "zustand": "^5.0.0"

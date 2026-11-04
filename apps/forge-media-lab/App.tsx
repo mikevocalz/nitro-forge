@@ -46,10 +46,10 @@ export default function App() {
         onValueChange={(next) => store.setState({ gain: next })} />
       <View style={{ gap: 8 }}>
         <Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "700" }}>
-          Native decoded video monitor
+          Video adapter status
         </Text>
         <Text style={{ color: "#CBCBDE", fontSize: 12 }}>
-          Online reference fixture from official Expo Video docs; requires network access
+          Selected: react-native-video 7.0.0-beta.12. Playback awaits Nitro v1 compatibility.
         </Text>
         <NativeVideoMonitor
           source="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
@@ -60,9 +60,8 @@ export default function App() {
         />
       </View>
       <Text style={{ color: "#9999AF", fontSize: 12 }}>
-        The top transport and waveform are isolated fixtures. The native video monitor
-        below uses real decoded media and seeks; no microphone recording or Rust
-        timeline mutation is attached.
+        The transport and waveform above are isolated fixtures. Video playback is
+        currently unavailable; no source is loaded and no timeline mutation is attached.
       </Text>
     </ScrollView>
   );

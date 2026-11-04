@@ -1,12 +1,12 @@
-name: Forge video SDK58 native builds
+name: Forge media shell native builds (playback blocked)
 
 on:
   pull_request:
     paths:
       - 'packages/media-ui/**'
+      - 'pnpm-lock.yaml'
       - 'apps/forge-media-lab/**'
       - '.github/workflows/video-sdk58-native-build.yml'
-      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 permissions:
@@ -38,7 +38,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generate Expo SDK58 Android project
         run: pnpm --dir apps/forge-media-lab exec expo prebuild --platform android --no-install
-      - name: Compile app and linked native UI modules
+      - name: Compile unavailable-player shell and native UI modules
         working-directory: apps/forge-media-lab/android
         run: ./gradlew :app:assembleDebug --no-daemon
 
@@ -60,7 +60,7 @@ jobs:
       - name: Resolve native CocoaPods dependencies
         working-directory: apps/forge-media-lab/ios
         run: pod install
-      - name: Compile native app for iOS Simulator without signing
+      - name: Compile unavailable-player shell for iOS Simulator without signing
         working-directory: apps/forge-media-lab/ios
         shell: bash
         run: |
