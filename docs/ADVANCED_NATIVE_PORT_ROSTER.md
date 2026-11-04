@@ -5,7 +5,7 @@ NYC-Tron UI is the ONLY shared visual component owner. Nitro Forge owns document
 ## Actually implemented in this branch
 
 - `@nitro-forge/cadence/instrument-adapter`: bounds-checked native UI binding from `InstrumentKnob` gain/pan to `CadenceDocument.setTrackGain` and `setTrackPan`. Exactly one engine mutation per completed control commit. UI never copies the engine's value.
-- Vitest mock checks single-call routing and invalid value rejection. Real Rust and device validation must still be run in a consuming app.
+- Vitest mock checks single-call routing and invalid value rejection; `instrument-adapter.e2e.test.ts` drives the real Rust engine through `nf-cli` (commit, undo, bounds, unknown track). Device validation in a consuming app is still NOT RUN.
 
 ## Upstream study and source-admission register
 

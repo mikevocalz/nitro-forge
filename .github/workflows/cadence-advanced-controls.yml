@@ -4,11 +4,14 @@ on:
     paths:
       - "packages/cadence/**"
       - "packages/ignition/**"
+      - "rust/**"
       - ".github/workflows/cadence-advanced-controls.yml"
   push:
     branches: [master]
     paths:
       - "packages/cadence/**"
+      - "packages/ignition/**"
+      - "rust/**"
       - ".github/workflows/cadence-advanced-controls.yml"
 permissions:
   contents: read
@@ -24,7 +27,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: corepack enable
       - name: Install workspace
-        run: corepack pnpm install --no-frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
       - name: Build real Rust host
         run: cargo build -p nf-cli
       - name: Check adapter TypeScript
