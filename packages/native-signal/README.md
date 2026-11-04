@@ -15,7 +15,7 @@ const waveform = await analyzeWavFile(fileUri, 768);
 ```
 
 - Expo Modules 2.0 annotated native method `ForgeSignal.analyzeWavFile` implemented in **Swift and Kotlin**.
-- WAV must be local `file://` and <=64 MiB; channels 1 or 2; 16-bit little-endian PCM; 8kHz..384kHz.
+- WAV must be a `file://` URI inside the app sandbox: iOS Caches or Documents, Android `cacheDir` or `filesDir`. Native code resolves `..` and symlinks before checking, compares by path component, and rejects anything else. Files must be <=64 MiB; channels 1 or 2; 16-bit little-endian PCM; 8kHz..384kHz.
 - Each column uses real min/max samples from its time range, including all input channels. Empty columns become zero. Returned values are normalized to [-1, 1].
 - Analysis is dispatched off the main thread. It is not a live audio tap, recorder, decoder, player or visual waveform view.
 - Integration requires an Expo SDK **58** native development build; Expo Go and a web fallback are **not** validated. The current `master` example still pins Expo 54, so this package is deliberately not wired into it.

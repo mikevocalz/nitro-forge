@@ -6,7 +6,7 @@ export { WaveformLane } from "./WaveformLane";
 export type { WaveformLaneProps } from "./WaveformLane";
 export {
   FRAME_RATES, assertFrameRate, clampFrame, formatTimecode,
-  framesToSeconds, secondsToFrame,
+  framesToSeconds, secondsToFrame, frameToPosition, positionToFrame,
 } from "./timebase";
 export type { FrameRate, TimecodeOptions } from "./timebase";
 export { normalizePeak, peaksToBars, resamplePeaks } from "./waveform";

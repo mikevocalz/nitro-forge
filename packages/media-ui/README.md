@@ -8,7 +8,7 @@ dense timelines belong to the existing **Skia v3** / Board GPU track.
 
 ## Source-level components in this batch
 
-- `NativeSeekBar` — controlled, integer-frame native seekbar with optional NTSC
+- `NativeSeekBar` — controlled, integer-frame native seekbar using a normalized native slider (no huge Compose step count) with optional NTSC
   drop-frame timecode, frame stepping and disabled semantics.
 - `NativeLevelSlider` — controlled native gain slider (linear 0..1).
 - `WaveformLane` — real min/max peak display with up to 128 column native RN
