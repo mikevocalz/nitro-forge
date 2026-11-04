@@ -5,6 +5,7 @@ on:
     paths:
       - 'packages/color-ui/**'
       - '.github/workflows/color-ui-cross-platform.yml'
+      - 'apps/forge-color-lab/**'
   workflow_dispatch:
 
 jobs:
@@ -30,5 +31,10 @@ jobs:
         run: pnpm --filter @nitro-forge/color-ui typecheck
       - name: Pure behavior contract tests
         run: pnpm --filter @nitro-forge/color-ui test
+      - name: Expo SDK 58 app TypeScript integration
+        run: pnpm --filter @nitro-forge/color-lab typecheck
+      - name: Metro web bundle smoke test
+        if: runner.os == 'Linux'
+        run: pnpm --filter @nitro-forge/color-lab export:web
       - name: Document validation scope
         run: echo "Native iOS/Android device E2E and web browser E2E are pending."
