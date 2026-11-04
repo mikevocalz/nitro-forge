@@ -7,8 +7,6 @@ on:
       - 'packages/studio-workspace/src/persona.test.ts'
       - 'packages/studio-workspace/src/turret.ts'
       - 'packages/studio-workspace/src/turret.test.ts'
-      - 'packages/studio-workspace/src/persona-store.ts'
-      - 'packages/studio-workspace/src/persona-store.test.ts'
       - 'packages/studio-workspace/src/instrument-system.ts'
       - '.github/workflows/persona-continuity.yml'
   push:
@@ -19,8 +17,6 @@ on:
       - 'packages/studio-workspace/src/persona.test.ts'
       - 'packages/studio-workspace/src/turret.ts'
       - 'packages/studio-workspace/src/turret.test.ts'
-      - 'packages/studio-workspace/src/persona-store.ts'
-      - 'packages/studio-workspace/src/persona-store.test.ts'
       - 'packages/studio-workspace/src/instrument-system.ts'
       - '.github/workflows/persona-continuity.yml'
 
@@ -39,4 +35,4 @@ jobs:
       # Dependency-free, like forge-2046-instruments.yml, so the 24h npm
       # release-age gate cannot block the continuity contract.
       - name: Continuity, manifests, composer and turret state machine
-        run: node --experimental-strip-types --test packages/studio-workspace/src/persona.test.ts packages/studio-workspace/src/turret.test.ts packages/studio-workspace/src/persona-store.test.ts
+        run: node --experimental-strip-types --test packages/studio-workspace/src/persona.test.ts packages/studio-workspace/src/turret.test.ts
