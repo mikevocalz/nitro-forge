@@ -12,7 +12,9 @@
     "./ui": "./src/ui.tsx",
     "./instruments": "./src/instrument-system.ts",
     "./interaction": "./src/interaction-policy.ts",
-    "./precision": "./src/precision-scrubber.tsx"
+    "./precision": "./src/precision-scrubber.tsx",
+    "./personas": "./src/persona-store.ts",
+    "./turret": "./src/persona-turret.tsx"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",

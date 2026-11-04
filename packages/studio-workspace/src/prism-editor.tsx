@@ -14,12 +14,17 @@ import { ForgePrecisionScrubber } from './precision-scrubber';
 import type { CanvasLayer } from './prism-canvas-model';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
 import { DragGrabHandle, type DragPoint } from './drag-grab-handle';
+import { Platform } from 'react-native';
+import { PersonaTurret, TURRET_SIZE } from './persona-turret';
+import { createPersonaStore, type PersonaStore } from './persona-store';
+import type { PersonaSurface } from './persona';
+import type { TurretEffect } from './turret';
 import { layerDropIndex, awaitLayerDrop, type LayerMeasurements, type MeasuredLayer } from './layer-drop';
 
 type Layer = CanvasLayer & { name: string };
 type PrismState = { width: number; height: number; layers: Layer[] };
 type LayerDrag = { id: number; target: number | null };
-type LocalState = { drag: LayerDrag | null; selectedId: number | null; uri: string | null; rendering: boolean; busy: boolean; error: string | null; previewError: string | null; notice: string; layersOpen: boolean; width: number; height: number; retry: number; color: number };
+type LocalState = { drag: LayerDrag | null; selectedId: number | null; uri: string | null; rendering: boolean; busy: boolean; error: string | null; previewError: string | null; notice: string; layersOpen: boolean; personaOpen: boolean; width: number; height: number; retry: number; color: number };
 /** A real-engine Prism canvas. Selection and panel state are local; all edits use engine commands. */
 export interface PrismEditorProps {
   state: unknown;
@@ -27,7 +32,12 @@ export interface PrismEditorProps {
   reload: () => Promise<void>;
   theme?: 'dark' | 'light';
   busy?: boolean;
+  /** Persona session for this document. Omitted: the editor keeps its own. */
+  personas?: PersonaStore;
+  /** Host feedback for turret detents and commits (haptics on native). */
+  onPersonaEffect?: (effect: TurretEffect) => void;
 }
+const hostSurface = (): PersonaSurface => Platform.OS === 'web' ? 'web' : Platform.OS === 'ios' ? ((Platform as { isPad?: boolean }).isPad ? 'ipad' : 'iphone') : 'android-phone';
 const FILLS = [[105, 80, 209, 255], [36, 145, 132, 255], [227, 155, 76, 255], [226, 109, 146, 255]] as const;
 const FILL_COLORS = ['#6950D1', '#249184', '#E39B4C', '#E26D92'];
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -42,8 +52,14 @@ export function PrismEditor(props: PrismEditorProps) {
   const mat = prismThemes[props.theme ?? 'dark'];
   // Editing controls remain graphite over the continuous artboard mat.
   const colors = prismThemes.dark;
+  const ownPersonas = useRef<PersonaStore | null>(null);
+  if (!props.personas && !ownPersonas.current) ownPersonas.current = createPersonaStore({ surface: hostSurface() });
+  const personaStore = props.personas ?? ownPersonas.current!;
+  const persona = useStore(personaStore, s => s);
+  const activePersona = persona.personas.find(p => p.id === persona.activeId);
+  const activeCaps = new Set(activePersona?.capabilities ?? []);
   const localRef = useRef<StoreApi<LocalState> | null>(null);
-  if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ drag: null, selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, width: 800, height: 600, retry: 0, color: 0 }));
+  if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ drag: null, selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, personaOpen: false, width: 800, height: 600, retry: 0, color: 0 }));
   const store = localRef.current;
   const drag = useStore(store, s => s.drag);
   const selectedId = useStore(store, s => s.selectedId);
@@ -54,6 +70,7 @@ export function PrismEditor(props: PrismEditorProps) {
   const previewError = useStore(store, s => s.previewError);
   const notice = useStore(store, s => s.notice);
   const layersOpen = useStore(store, s => s.layersOpen);
+  const personaOpen = useStore(store, s => s.personaOpen);
   const width = useStore(store, s => s.width);
   const height = useStore(store, s => s.height);
   const retry = useStore(store, s => s.retry);
@@ -261,15 +278,26 @@ export function PrismEditor(props: PrismEditorProps) {
           <Text style={{ color: colors.muted, fontSize: 11 }}>Transform</Text>
         </View>
       </Menu>}
+      {control(activePersona?.label ?? 'Persona', () => store.setState({ personaOpen: !personaOpen }), false, personaOpen, undefined, activePersona?.label ?? 'Persona', false, 'Switch between Vector, Pixel, Layout and Sketch')}
       {control('Layers', () => store.setState({ layersOpen: !layersOpen }), false, layersOpen, 'layers')}
     </View>
     <View accessibilityLabel="Creation tools" style={{ position: 'absolute', zIndex: 20, left: 12, top: short ? 68 : 76, width: 52, alignItems: 'center', padding: 3, gap: 3, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
-      {control('Rectangle', () => addShape('rect'), !doc, false, 'rectangle', undefined, true, 'Adds a centered rectangle using the selected fill')}
-      {control('Ellipse', () => addShape('ellipse'), !doc, false, 'ellipse', undefined, true, 'Adds a centered ellipse using the selected fill')}
-      <View style={{ height: 1, width: 26, backgroundColor: colors.line }} />
-      {control('Raster layer', () => { void run('addRasterLayer', { name: `Raster ${layers.length + 1}` }, 'Raster layer added'); }, !doc, false, 'image', undefined, true, 'Adds an empty raster layer')}
+      {activeCaps.has('shapes') && <>
+        {control('Rectangle', () => addShape('rect'), !doc, false, 'rectangle', undefined, true, 'Adds a centered rectangle using the selected fill')}
+        {control('Ellipse', () => addShape('ellipse'), !doc, false, 'ellipse', undefined, true, 'Adds a centered ellipse using the selected fill')}
+      </>}
+      {activeCaps.has('shapes') && activeCaps.has('raster-layers') && <View style={{ height: 1, width: 26, backgroundColor: colors.line }} />}
+      {activeCaps.has('raster-layers') && control('Raster layer', () => { void run('addRasterLayer', { name: `Raster ${layers.length + 1}` }, 'Raster layer added'); }, !doc, false, 'image', undefined, true, 'Adds an empty raster layer')}
+      {!activeCaps.has('shapes') && !activeCaps.has('raster-layers') && <Text accessibilityRole="text" style={{ color: colors.muted, fontSize: 9, textAlign: 'center', paddingVertical: 6 }}>No tools in this build</Text>}
     </View>
     {layersOpen && panel}
+    {personaOpen && <View testID="persona-panel" accessibilityViewIsModal={narrow} style={{ position: 'absolute', zIndex: 30, top: 68, ...(narrow ? { left: 12, right: 12 } : { left: 76 }), minWidth: TURRET_SIZE + 32, padding: 16, gap: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, backgroundColor: colors.base, boxShadow: '0 8px 24px #00000033' }}>
+      <PersonaTurret personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors}
+        onSwitch={id => { persona.switchTo(id); store.setState({ personaOpen: false }); }}
+        {...(props.onPersonaEffect ? { onEffect: props.onPersonaEffect } : {})} />
+      {persona.error && <Text accessibilityRole="alert" style={{ color: colors.error, fontSize: 11, maxWidth: 240 }}>{persona.error}</Text>}
+      {control('Close personas', () => store.setState({ personaOpen: false }), false, false, 'close', 'Close', false)}
+    </View>}
     <View testID="prism-fill-bar" style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 6px 20px #00000025' }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: 50, alignItems: 'center', flexDirection: 'row', gap: 2 }} style={{ flex: 1 }}>
       {!narrow && <Text style={{ color: colors.muted, fontSize: 10, marginRight: 8 }}>{selected ? 'Fill' : 'New shape fill'}</Text>}
