@@ -29,6 +29,22 @@ export function clampFrame(frame: number, durationFrames: number): number {
   return Math.min(durationFrames, Math.max(0, Math.round(frame)));
 }
 
+/**
+ * Native slider position independent of media length. A continuous [0,1]
+ * slider avoids creating tens of thousands of discrete Compose steps for
+ * long recordings; requests are quantized to full frames at the API edge.
+ */
+export function frameToPosition(frame: number, durationFrames: number): number {
+  const current = clampFrame(frame, durationFrames);
+  return durationFrames === 0 ? 0 : current / durationFrames;
+}
+export function positionToFrame(position: number, durationFrames: number): number {
+  if (!Number.isFinite(position) || position < 0 || position > 1) {
+    throw new RangeError("Seek position must be finite in [0, 1]");
+  }
+  return clampFrame(Math.round(position * durationFrames), durationFrames);
+}
+
 export function framesToSeconds(frame: number, rate: FrameRate): number {
   assertFrameRate(rate);
   if (!Number.isSafeInteger(frame) || frame < 0) {
