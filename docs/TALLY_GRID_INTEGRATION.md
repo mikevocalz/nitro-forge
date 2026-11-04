@@ -56,3 +56,34 @@ frozen panes, variable widths/row heights, native accessibility grid semantics,
 high-density GPU/perf testing, a real Tally runtime integration smoke test,
 and validated Android/Windows/macOS/web renderers. Raw HTML is prohibited.
 Do not confuse the current node/TS integration tests with device validation.
+
+## Responsive phone, tablet and foldable usage
+
+NYC-Tron's spreadsheet view is **not** a normal responsive record DataTable.
+On a narrow phone pane it deliberately retains the lettered columns,
+numbered rows, A1 addressing and horizontally scrollable editable cells.
+Its source uses responsive *container measurements*, not width-based
+hardware identity:
+
+- Up to the library's compact threshold (default 540 logical RN units),
+  cell hit targets are at least 44 high, columns remain readable at
+  least 112 wide, and the formula editor stacks below the selected-cell
+  address rather than squeezing between narrow controls.
+- Landscape, iPad/tablet split view and desktop-pane resizing return to
+  the normal density. Position changes retain the logical row/column
+  anchor instead of jumping to a different cell.
+- In a native foldable/dual-screen device, place the spreadsheet within
+  an already hinge-safe AdaptivePanes region. **Do not** place cells over
+  an occluding hinge, and do not replace the device's persistent
+  physical-right navigation rail (even in RTL).
+- The host can pass the measured `width` and `height` to
+  `SpreadsheetGrid`, or let NYC-Tron measure an appropriately bounded
+  flex container. Never use the full physical display width to size a
+  grid mounted in a narrower detail pane.
+- A normal `DataTable` elsewhere in the app becomes label/value record
+  cards in small panes; that conversion is incorrect for a formula sheet.
+
+See [NYC-Tron responsive tables](https://github.com/mikevocalz/NYC-Tron-UI/blob/feat/themeable-cross-platform-foundation/docs/RESPONSIVE_TABLES.md).
+Phone/split-pane source and viewport tests pass on that repository's
+GitHub CI. These tests do not replace physical Surface Duo,
+TalkBack/VoiceOver, keyboard/IME and 1M-row scroll performance acceptance.
