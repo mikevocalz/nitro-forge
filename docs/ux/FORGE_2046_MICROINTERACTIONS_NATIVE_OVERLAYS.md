@@ -15,6 +15,8 @@ Repository source audit:
 
 **Source implementation tracker:** [NYC-MON @acme/ui issue #172](https://github.com/mikevocalz/nyc-mon/issues/172). This is a code work item, not evidence that the native popover has shipped.
 
+**Source implementation PR:** [NYC-MON #173](https://github.com/mikevocalz/nyc-mon/pull/173) now contains source-owned `Popover.ios/.android/.web` implementations, a neutral instrument surface, geometry tests and Storybook fixtures. It is a **draft**, and the canonical Studio binding remains pending until source-version integration and native/device QA. Do not mark runtime parity from source files alone.
+
 ### Three distinct UI affordances
 
 | Need | Canonical owner | Native/web behavior | Implementation status |
