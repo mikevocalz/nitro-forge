@@ -77,7 +77,7 @@ export function NativeRecordingTrack({
         peaks={levelHistory}
         height={64}
         columns={64}
-        testID={testID ? testID + "-meter-history" : undefined}
+        {...(testID ? { testID: testID + "-meter-history" } : {})}
       />
     </View>
   );
