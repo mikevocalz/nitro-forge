@@ -46,6 +46,7 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
       configure: async () => {
         await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       },
+      release: () => setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }),
       prepare: async () => {
         accumulator.reset();
         lastFile.current = null;

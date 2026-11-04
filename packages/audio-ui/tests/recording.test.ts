@@ -26,6 +26,7 @@ function mockRecorder(permission = true) {
       isRecording = false;
       return "file:///recorded-audio.m4a";
     },
+    release: async () => { calls.push("release"); },
     getStatus: () => ({ ...status, isRecording }),
   };
   return { driver, calls, setPermission: (yes: boolean) => { permissionResult = yes; } };
@@ -44,7 +45,7 @@ describe("real native recording controller lifecycle", () => {
     expect(store.getState().phase).toEqual({
       kind: "saved", uri: "file:///recorded-audio.m4a", durationMs: 500,
     });
-    expect(calls).toEqual(["requestPermission", "configure", "prepare", "record", "stop"]);
+    expect(calls).toEqual(["requestPermission", "configure", "prepare", "record", "stop", "release"]);
     await controller.dispose();
     expect(calls.filter((item) => item === "stop")).toHaveLength(1);
   });
@@ -108,6 +109,61 @@ describe("real native recording controller lifecycle", () => {
     controller.observe({ isRecording: false, durationMillis: 1500, mediaServicesDidReset: true });
     expect(controller.store.getState().phase.kind).toBe("error");
     await controller.dispose();
+  });
+});
+
+describe("host lifecycle re-runs and interruptions", () => {
+  it("survives an effect cleanup followed by a re-attach (StrictMode / Fast Refresh)", async () => {
+    const { driver, calls } = mockRecorder();
+    const controller = new ForgeRecordingController(driver, createRecordingStore());
+    controller.attach();
+    await controller.detach();
+    controller.attach();
+    expect(await controller.start()).toBe(true);
+    await controller.detach();
+    expect(calls.filter((item) => item === "stop")).toHaveLength(1);
+    expect(calls.at(-1)).toBe("release");
+    await expect(controller.start()).rejects.toThrow("detached");
+  });
+
+  it("surfaces a recorder the OS stopped as an interrupted phase", async () => {
+    const { driver } = mockRecorder();
+    const controller = new ForgeRecordingController(driver, createRecordingStore());
+    await controller.start();
+    controller.observe({ isRecording: true, durationMillis: 900, metering: -10 });
+    controller.observe({ isRecording: false, durationMillis: 900 });
+    expect(controller.store.getState().phase).toEqual({
+      kind: "interrupted", durationMs: 900,
+      message: "Recording stopped by the system (call, route change or another app).",
+    });
+  });
+
+  it("surfaces a status read failure instead of freezing the timer", async () => {
+    const { driver } = mockRecorder();
+    const controller = new ForgeRecordingController(driver, createRecordingStore());
+    await controller.start();
+    controller.reportStatusError(new Error("recorder released"));
+    expect(controller.store.getState().phase).toEqual({
+      kind: "error", message: "recorder released",
+    });
+  });
+
+  it("restores the audio session after a failed start", async () => {
+    const mock = mockRecorder();
+    const controller = new ForgeRecordingController({
+      ...mock.driver,
+      prepare: async () => { throw new Error("busy"); },
+    }, createRecordingStore());
+    await expect(controller.start()).rejects.toThrow("busy");
+    expect(mock.calls.at(-1)).toBe("release");
+  });
+
+  it("does not touch the audio session when permission is denied", async () => {
+    const { driver, calls } = mockRecorder(false);
+    const controller = new ForgeRecordingController(driver, createRecordingStore());
+    await controller.start();
+    await controller.dispose();
+    expect(calls).not.toContain("release");
   });
 });
 

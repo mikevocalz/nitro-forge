@@ -7,6 +7,11 @@ export type RecordingPhase =
   | { readonly kind: "permission-denied" }
   | { readonly kind: "preparing" }
   | { readonly kind: "recording"; readonly durationMs: number }
+  /**
+   * The OS stopped the native recorder (phone call, route loss, another app
+   * taking the session). The partial file can still be finalized with stop().
+   */
+  | { readonly kind: "interrupted"; readonly durationMs: number; readonly message: string }
   | { readonly kind: "stopping"; readonly durationMs: number }
   | { readonly kind: "saved"; readonly uri: string; readonly durationMs: number }
   | { readonly kind: "error"; readonly message: string };
@@ -35,6 +40,11 @@ export interface RecordingDriver {
   record(): void | Promise<void>;
   /** Must return a URI referencing an actual finalized recording. */
   stop(): Promise<string>;
+  /**
+   * Undo configure(): hand the audio session back to playback. Called once
+   * after every configure(), on stop, failed start, detach and dispose.
+   */
+  release(): Promise<void>;
   getStatus(): RecordingStatus;
 }
 
@@ -75,28 +85,52 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Recording failed";
 }
 
+export const INTERRUPTED_MESSAGE =
+  "Recording stopped by the system (call, route change or another app).";
+
 /**
  * One lifecycle owner per editor recording session. No hidden React state,
  * duplicate Rust document, or simulated recording. All actions are single
  * flight and state changes are visible through a vanilla Zustand store.
+ *
+ * Host lifecycle: attach()/detach() pair with a React effect and can repeat
+ * (StrictMode double-invokes effects, Fast Refresh re-runs them). detach()
+ * stops any live capture and releases the audio session but leaves the
+ * controller reusable. dispose() is the permanent end.
  */
 export class ForgeRecordingController {
   private busy = false;
   private generation = 0;
   private disposed = false;
-  private stopped = false;
+  private attached = true;
+  private stopped = true;
+  private sessionActive = false;
+  private confirmedRecording = false;
 
   constructor(
     private readonly driver: RecordingDriver,
     readonly store: StoreApi<RecordingSnapshot>,
   ) {}
 
-  async start(): Promise<boolean> {
+  attach(): void {
     if (this.disposed) throw new Error("Recorder has been disposed");
+    this.attached = true;
+  }
+
+  /** Effect cleanup. Reversible with attach(). Failures land in the store. */
+  async detach(): Promise<void> {
+    if (!this.attached) return;
+    this.attached = false;
+    ++this.generation;
+    await this.teardown();
+  }
+
+  async start(): Promise<boolean> {
+    this.assertUsable();
     if (this.busy || this.store.getState().phase.kind === "recording") return false;
     this.busy = true;
     const generation = ++this.generation;
-    this.stopped = false;
+    this.confirmedRecording = false;
     try {
       this.store.setState({ phase: { kind: "requesting-permission" }, levelHistory: [] });
       if (!(await this.driver.requestPermission())) {
@@ -107,20 +141,20 @@ export class ForgeRecordingController {
       }
       if (!this.isCurrent(generation)) return false;
       this.store.setState({ phase: { kind: "preparing" } });
+      this.sessionActive = true;
       await this.driver.configure();
-      if (!this.isCurrent(generation)) return false;
+      if (!this.isCurrent(generation)) return await this.abandon();
       await this.driver.prepare();
-      if (!this.isCurrent(generation)) return false;
+      if (!this.isCurrent(generation)) return await this.abandon();
+      this.stopped = false;
       await this.driver.record();
-      if (!this.isCurrent(generation)) {
-        await this.safeStop();
-        return false;
-      }
+      if (!this.isCurrent(generation)) return await this.abandon();
       this.store.setState({ phase: { kind: "recording", durationMs: 0 } });
       return true;
     } catch (error) {
+      const failures = [errorMessage(error), ...(await this.teardownErrors())];
       if (this.isCurrent(generation)) {
-        this.store.setState({ phase: { kind: "error", message: errorMessage(error) } });
+        this.store.setState({ phase: { kind: "error", message: failures.join("; ") } });
       }
       throw error;
     } finally {
@@ -138,7 +172,21 @@ export class ForgeRecordingController {
       });
       return;
     }
-    if (!status.isRecording) return;
+    if (!status.isRecording) {
+      // Only a recorder that was seen running can be "interrupted"; the first
+      // poll may land before the native recorder reports its started state.
+      if (this.confirmedRecording) {
+        this.store.setState({
+          phase: {
+            kind: "interrupted",
+            durationMs: state.phase.durationMs,
+            message: INTERRUPTED_MESSAGE,
+          },
+        });
+      }
+      return;
+    }
+    this.confirmedRecording = true;
     const durationMs = Number.isFinite(status.durationMillis)
       ? Math.max(0, Math.round(status.durationMillis))
       : state.phase.durationMs;
@@ -148,10 +196,17 @@ export class ForgeRecordingController {
     this.store.setState({ phase: { kind: "recording", durationMs }, levelHistory });
   }
 
+  /** The native status read threw while recording: show it, don't freeze. */
+  reportStatusError(error: unknown): void {
+    if (this.disposed || this.busy) return;
+    if (this.store.getState().phase.kind !== "recording") return;
+    this.store.setState({ phase: { kind: "error", message: errorMessage(error) } });
+  }
+
   async stop(): Promise<string> {
-    if (this.disposed) throw new Error("Recorder has been disposed");
+    this.assertUsable();
     const state = this.store.getState();
-    if (this.busy || state.phase.kind !== "recording") {
+    if (this.busy || (state.phase.kind !== "recording" && state.phase.kind !== "interrupted")) {
       throw new Error("Recorder is not recording");
     }
     this.busy = true;
@@ -159,16 +214,22 @@ export class ForgeRecordingController {
     const durationMs = state.phase.durationMs;
     this.store.setState({ phase: { kind: "stopping", durationMs } });
     try {
-      const uri = await this.driver.stop();
-      this.stopped = true;
+      let uri: string;
+      try {
+        uri = await this.driver.stop();
+      } finally {
+        this.stopped = true;
+      }
+      await this.releaseSession();
       if (!uri || typeof uri !== "string") throw new Error("Native recorder did not return a file URI");
       if (this.isCurrent(generation)) {
         this.store.setState({ phase: { kind: "saved", uri, durationMs } });
       }
       return uri;
     } catch (error) {
+      const failures = [errorMessage(error), ...(await this.teardownErrors())];
       if (this.isCurrent(generation)) {
-        this.store.setState({ phase: { kind: "error", message: errorMessage(error) } });
+        this.store.setState({ phase: { kind: "error", message: failures.join("; ") } });
       }
       throw error;
     } finally {
@@ -178,21 +239,56 @@ export class ForgeRecordingController {
 
   async dispose(): Promise<void> {
     if (this.disposed) return;
+    this.attached = false;
     this.disposed = true;
     ++this.generation;
-    if (!this.stopped && ["recording", "error"].includes(this.store.getState().phase.kind)) {
-      await this.safeStop();
-    }
+    await this.teardown();
+  }
+
+  private assertUsable(): void {
+    if (this.disposed) throw new Error("Recorder has been disposed");
+    if (!this.attached) throw new Error("Recorder is detached from its host");
   }
 
   private isCurrent(generation: number): boolean {
-    return !this.disposed && this.generation === generation;
+    return !this.disposed && this.attached && this.generation === generation;
   }
 
-  private async safeStop(): Promise<void> {
-    if (this.stopped) return;
-    try { await this.driver.stop(); }
-    catch { /* Some native recorders are already stopped or invalidated. */ }
-    finally { this.stopped = true; }
+  /** A start() overtaken by detach/dispose undoes its own native work. */
+  private async abandon(): Promise<false> {
+    const failures = await this.teardownErrors();
+    if (failures.length > 0) {
+      this.store.setState({ phase: { kind: "error", message: failures.join("; ") } });
+    }
+    return false;
+  }
+
+  private async teardown(): Promise<void> {
+    const failures = await this.teardownErrors();
+    if (failures.length > 0) {
+      this.store.setState({ phase: { kind: "error", message: failures.join("; ") } });
+    } else if (["recording", "interrupted", "stopping", "preparing", "requesting-permission"]
+      .includes(this.store.getState().phase.kind)) {
+      this.store.setState({ phase: { kind: "idle" } });
+    }
+  }
+
+  /** Stop native capture and release the session; collect, never swallow. */
+  private async teardownErrors(): Promise<string[]> {
+    const failures: string[] = [];
+    if (!this.stopped) {
+      this.stopped = true;
+      try { await this.driver.stop(); }
+      catch (error) { failures.push("Stopping recorder failed: " + errorMessage(error)); }
+    }
+    try { await this.releaseSession(); }
+    catch (error) { failures.push("Restoring audio session failed: " + errorMessage(error)); }
+    return failures;
+  }
+
+  private async releaseSession(): Promise<void> {
+    if (!this.sessionActive) return;
+    this.sessionActive = false;
+    await this.driver.release();
   }
 }

@@ -3,6 +3,7 @@ export type { NativeRecordingTrackProps } from "./NativeRecordingTrack";
 export { useForgeAudioRecorder } from "./useForgeAudioRecorder";
 export {
   ForgeRecordingController,
+  INTERRUPTED_MESSAGE,
   MAX_METER_HISTORY,
   createRecordingStore,
   dbfsToPeak,
