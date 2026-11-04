@@ -15,6 +15,7 @@ private enum WavPeaks {
   enum Problem: Error {
     case invalidColumns
     case invalidUri
+    case outsideSandbox
     case fileTooLarge
     case malformedWav
     case unsupportedPcm
@@ -33,9 +34,31 @@ private enum WavPeaks {
     String(decoding: bytes[at..<(at + 4)], as: UTF8.self)
   }
 
+  /// The app's Caches and Documents directories, symlinks resolved.
+  static func sandboxRoots() -> [URL] {
+    let manager = FileManager.default
+    return [FileManager.SearchPathDirectory.cachesDirectory, .documentDirectory]
+      .flatMap { manager.urls(for: $0, in: .userDomainMask) }
+      .map { $0.standardizedFileURL.resolvingSymlinksInPath() }
+  }
+
+  /// Resolves `..` and symlinks, then requires the file to sit strictly inside
+  /// one of `roots`, compared by path component so `/Caches2` never matches `/Caches`.
+  static func sandboxLocal(_ url: URL, roots: [URL] = sandboxRoots()) throws -> URL {
+    let resolved = url.standardizedFileURL.resolvingSymlinksInPath()
+    let parts = resolved.pathComponents
+    let inside = roots.contains { root in
+      let base = root.pathComponents
+      return parts.count > base.count && Array(parts.prefix(base.count)) == base
+    }
+    guard inside else { throw Problem.outsideSandbox }
+    return resolved
+  }
+
   static func analyze(uri: String, columns: Int) throws -> [[Double]] {
     guard (1...4096).contains(columns) else { throw Problem.invalidColumns }
-    guard let url = URL(string: uri), url.isFileURL else { throw Problem.invalidUri }
+    guard let parsed = URL(string: uri), parsed.isFileURL else { throw Problem.invalidUri }
+    let url = try sandboxLocal(parsed)
     let path = url.path
     let attributes = try FileManager.default.attributesOfItem(atPath: path)
     guard let size = attributes[.size] as? NSNumber, size.int64Value <= 64 * 1024 * 1024 else {
