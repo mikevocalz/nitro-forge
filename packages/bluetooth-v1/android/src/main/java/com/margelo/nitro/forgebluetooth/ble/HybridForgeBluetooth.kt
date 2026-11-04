@@ -25,7 +25,6 @@ import com.margelo.nitro.forgebluetooth.HybridForgeBluetoothSpec
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * First-party Android BLE central; shares no Nitro v0 code.
@@ -44,6 +43,10 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
           context?.packageManager?.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE) == true
       } catch (_: Throwable) { false }
+
+    /** Hardware safety bound; JS scanDurationMs is capped at the same 30 s. */
+    private const val MAX_SCAN_DURATION_MS = 30_000L
+    private const val CONNECT_TIMEOUT_MS = 15_000L
   }
 
   private data class Seen(val device: BluetoothDevice, val name: String, val rssi: Int)
@@ -52,7 +55,9 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
   private val main = Handler(Looper.getMainLooper())
   private var scanner: BluetoothLeScanner? = null
   private var scanCallback: ScanCallback? = null
+  private var scanAutoStop: Runnable? = null
   private var link: BluetoothGatt? = null
+  private var pending: GattConnectAttempt? = null
   @Volatile private var linked = false
   @Volatile private var scanFailure: String? = null
   @Volatile private var disposed = false
@@ -90,6 +95,7 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
     check(!disposed) { "ForgeBluetooth has been disposed" }
     requirePermission(true)
     requirePermission(false)
+    BleScanLocationRequirement.requireSatisfied(context())
     val bt = adapter()
     check(bt.isEnabled) { "Bluetooth is disabled; turn it on in system Settings" }
     stopScan()
@@ -100,7 +106,12 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
       override fun onScanResult(callbackType: Int, result: ScanResult) {
         if (disposed) return
         val device = result.device
-        val name = try { device.name } catch (_: SecurityException) { null }
+        // device.name is the cached remote name and needs BLUETOOTH_CONNECT on
+        // API 31+ (checked in startScan). Devices not yet name-resolved still
+        // carry the advertised local name in the scan record, which needs no
+        // extra permission.
+        val cachedName = try { device.name } catch (_: SecurityException) { null }
+        val name = cachedName?.takeIf { it.isNotBlank() } ?: result.scanRecord?.deviceName
         if (name.isNullOrBlank()) return
         val id = device.address
         if (id.isNotBlank() && discovered.size < 50) discovered[id] = Seen(device, name, result.rssi)
@@ -109,17 +120,30 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
         scanFailure = "Android Bluetooth scan failed, code " + errorCode
       }
     }
+    // LOW_LATENCY has no OS-side duration. If JS reloads or never calls
+    // stopScan, this bounds the radio's high-duty scanning.
+    val autoStop = Runnable { stopScanIfCurrent(callback) }
     synchronized(lock) {
       scanner = current
       scanCallback = callback
+      scanAutoStop = autoStop
     }
     current.startScan(null, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), callback)
+    main.postDelayed(autoStop, MAX_SCAN_DURATION_MS)
   }
 
   override fun stopScan() {
+    stopScanIfCurrent(null)
+  }
+
+  /** Stops the active scan; with [expected], only if that scan is still the active one. */
+  private fun stopScanIfCurrent(expected: ScanCallback?) {
     val previous: Pair<BluetoothLeScanner, ScanCallback>? = synchronized(lock) {
       val scannerNow = scanner
       val callbackNow = scanCallback
+      if (expected != null && callbackNow !== expected) return
+      scanAutoStop?.let { main.removeCallbacks(it) }
+      scanAutoStop = null
       scanner = null
       scanCallback = null
       if (scannerNow != null && callbackNow != null) Pair(scannerNow, callbackNow) else null
@@ -145,53 +169,101 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
     requirePermission(false)
     val seen = discovered[deviceId]
       ?: return Promise.rejected(IllegalArgumentException("Connect only to a device returned by the last BLE scan"))
-    stopScan()
+    cancelPendingConnect(IllegalStateException("BLE connect superseded by a newer connect"))
     disconnect()
-    return Promise.async { resolve, reject ->
-      val settled = AtomicBoolean(false)
-      val timeout = Runnable {
-        if (settled.compareAndSet(false, true)) {
-          linked = false
-          synchronized(lock) { link?.close(); link = null }
-          reject(IllegalStateException("BLE connection timed out"))
+    // Manual Promise: settled from BluetoothGattCallback or the timeout, both
+    // of which are native callbacks that cannot be expressed as a suspend call.
+    val promise = Promise<Boolean>()
+    val attempt = GattConnectAttempt(promise)
+    attempt.timeout = Runnable { onConnectTimeout(attempt) }
+    val callback = object : BluetoothGattCallback() {
+      override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+        if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
+          onGattConnected(attempt, gatt)
+        } else if (newState == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
+          onGattDisconnected(attempt, gatt, status)
         }
       }
-      val callback = object : BluetoothGattCallback() {
-        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-          if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
-            if (settled.compareAndSet(false, true)) {
-              main.removeCallbacks(timeout)
-              linked = true
-              resolve(true)
-            }
-          } else if (newState == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
-            linked = false
-            if (settled.compareAndSet(false, true)) {
-              main.removeCallbacks(timeout)
-              reject(IllegalStateException("Bluetooth GATT connection failed, status " + status))
-            }
-            synchronized(lock) {
-              if (link === gatt) link = null
-              gatt.close()
-            }
-          }
-        }
+    }
+    synchronized(lock) { pending = attempt }
+    try {
+      val created = seen.device.connectGatt(context(), false, callback, BluetoothDevice.TRANSPORT_LE)
+        ?: throw IllegalStateException("Bluetooth connectGatt returned null")
+      val stillCurrent = synchronized(lock) {
+        if (pending === attempt) {
+          attempt.gatt = created
+          link = created
+          true
+        } else false
       }
-      try {
-        val currentGatt = seen.device.connectGatt(context(), false, callback, BluetoothDevice.TRANSPORT_LE)
-          ?: throw IllegalStateException("Bluetooth connectGatt returned null")
-        synchronized(lock) { link = currentGatt }
-        main.postDelayed(timeout, 15000L)
-      } catch (error: Exception) {
-        if (settled.compareAndSet(false, true)) reject(error)
+      if (!stillCurrent) {
+        // Superseded while connectGatt ran; the attempt is already rejected.
+        created.close()
+        return promise
       }
+      main.postDelayed(attempt.timeout, CONNECT_TIMEOUT_MS)
+    } catch (error: Exception) {
+      synchronized(lock) { if (pending === attempt) pending = null }
+      attempt.reject(error)
+    }
+    return promise
+  }
+
+  private fun onGattConnected(attempt: GattConnectAttempt, gatt: BluetoothGatt) {
+    val current = synchronized(lock) {
+      if (pending === attempt && link === gatt) {
+        pending = null
+        linked = true
+        true
+      } else false
+    }
+    if (!current) return
+    main.removeCallbacks(attempt.timeout)
+    attempt.resolve()
+  }
+
+  private fun onGattDisconnected(attempt: GattConnectAttempt, gatt: BluetoothGatt, status: Int) {
+    synchronized(lock) {
+      if (link === gatt) {
+        link = null
+        linked = false
+      }
+      if (pending === attempt) pending = null
+    }
+    main.removeCallbacks(attempt.timeout)
+    attempt.reject(IllegalStateException("Bluetooth GATT connection failed, status " + status))
+    gatt.close()
+  }
+
+  private fun onConnectTimeout(attempt: GattConnectAttempt) {
+    val gatt = synchronized(lock) {
+      // A superseded or settled attempt no longer owns any shared state.
+      if (pending !== attempt) return
+      pending = null
+      val own = attempt.gatt
+      if (own != null && link === own) {
+        link = null
+        linked = false
+      }
+      own
+    }
+    attempt.reject(IllegalStateException("BLE connection timed out"))
+    gatt?.close()
+  }
+
+  /** Settles an in-flight connect without touching any GATT handle; disconnect() closes the link. */
+  private fun cancelPendingConnect(reason: Throwable) {
+    val previous = synchronized(lock) { val current = pending; pending = null; current }
+    if (previous != null) {
+      main.removeCallbacks(previous.timeout)
+      previous.reject(reason)
     }
   }
 
   override fun disconnect() {
     stopScan()
-    linked = false
-    val old = synchronized(lock) { val current = link; link = null; current }
+    cancelPendingConnect(IllegalStateException("BLE connect cancelled by disconnect"))
+    val old = synchronized(lock) { val current = link; link = null; linked = false; current }
     if (old != null) {
       try { if (context().checkSelfPermission(permissionNeeded(false)) == PackageManager.PERMISSION_GRANTED) old.disconnect() }
       catch (_: SecurityException) {}
