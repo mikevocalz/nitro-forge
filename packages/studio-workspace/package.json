@@ -9,7 +9,8 @@
     "./theme": "./src/theme.ts",
     "./apps": "./src/app-manifest.ts",
     "./prism": "./src/prism-editor.tsx",
-    "./ui": "./src/ui.tsx"
+    "./ui": "./src/ui.tsx",
+    "./instruments": "./src/instrument-system.ts"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",
