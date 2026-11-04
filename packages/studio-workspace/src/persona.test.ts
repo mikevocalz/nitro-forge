@@ -84,7 +84,7 @@ test('export and import round-trip a user persona and resolve conflicts', () => 
   assert.deepEqual({ ...fresh }, { ...mine });
   const again = importPersona(json, [...BUILT_IN_PERSONAS, mine]);
   assert.equal(again.label, 'Poster 2');
-  assert.throws(() => exportPersona(BUILT_IN_PERSONAS[0]), /built in/);
+  assert.throws(() => exportPersona(BUILT_IN_PERSONAS[0]!), /built in/);
 });
 
 test('import treats the file as untrusted input', () => {

@@ -35,12 +35,16 @@ No other studio package changes in this branch.
 | Sketch strokes as editable vector sources | **DEFER** | Depends on the path layer above. Sketch today can paint raster via `drawPixels`; its manifest line for strokes reads "not in this build". |
 | Data merge | **DEFER** | No engine op. Declared desktop and web only in the manifest. |
 | Persona persistence (Zustand plus MMKV) | **DEFER** | No MMKV dependency exists in the repo; FORGE_2046_DESIGN_SYSTEM.md:37 places persistence behind a host port. User personas serialize through `exportPersona`; the host store lands with the turret UI. |
-| Turret (persona switcher instrument) | **BUILD** next | Step 2. Native, web and XR hosts, haptic detents, peek, ⌘1 to ⌘4. |
+| Turret state machine | **BUILD** (done) | `turret.ts`: one reducer for every host. Drag and arrows peek, release, Enter or ⌘-digit commit, Escape or a cancelled gesture drops the peek. Effects tell the host when to play the detent haptic, the end-stop cue and the announcement. Change/commit split taken from the rotary references in `design/references/mobbin-studio-switch-web.md`. |
+| Turret hosts (iOS, Android, web, XR) | **BUILD** next | Render the three Forge directions on the turret, then native hosts. Blocked locally on node_modules for anything that renders. |
 
 ## What is verified
 
-- `node --experimental-strip-types --test src/persona.test.ts src/instrument-system.test.ts`
-  in `packages/studio-workspace`: 16 tests pass, 2026-11-04.
+- `node --experimental-strip-types --test src/persona.test.ts src/turret.test.ts src/instrument-system.test.ts`
+  in `packages/studio-workspace`: all pass, 2026-11-04.
+- `persona.ts`, `turret.ts` and their tests typecheck under the base config's
+  strict flags with TypeScript 6.0.3 borrowed from another checkout. The repo
+  pins 7.0.2; its own `tsc --noEmit` has not run.
 - Not run: `tsc --noEmit` (node_modules is empty while pnpm 12's release-age
   policy rejects the current lockfile), Rust tests, any UI, device or
   accessibility check. Nothing in this slice renders yet.
