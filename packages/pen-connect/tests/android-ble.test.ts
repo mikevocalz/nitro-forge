@@ -89,3 +89,83 @@ describe("Android Nitro v1 BLE disconnection cleanup", () => {
     expect(notices).not.toHaveBeenCalled();
   });
 });
+
+describe("Android Nitro v1 BLE scan generations", () => {
+  function scanningNative() {
+    let scanning = false;
+    const startScan = vi.fn(() => { scanning = true; });
+    const stopScan = vi.fn(() => { scanning = false; });
+    const native: ForgeBluetoothAndroid = {
+      isEnabled: () => true,
+      openBluetoothSettings: () => {},
+      startScan,
+      stopScan,
+      getDevicesJson: () => JSON.stringify([{ id: "AA:BB", name: "Pen", rssi: -40 }]),
+      getScanError: () => "",
+      connect: async () => true,
+      disconnect: () => {},
+      isConnected: () => true,
+    };
+    return { native, startScan, stopScan, isScanning: () => scanning };
+  }
+
+  it("a cancelled scan's cleanup does not stop the newer scan started by rescan", async () => {
+    vi.useFakeTimers();
+    const f = scanningNative();
+    const port = createAndroidBlePenPort(f.native, { scanDurationMs: 1000 });
+    const first = port.scan();
+    // Same order as controller.rescan(): cancel, then start the next scan.
+    port.cancelScan();
+    const second = port.scan();
+    await expect(first).resolves.toEqual([]);
+    expect(f.startScan).toHaveBeenCalledTimes(2);
+    expect(f.isScanning()).toBe(true);
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(second).resolves.toEqual([{ id: "AA:BB", name: "Pen", rssi: -40 }]);
+    expect(f.isScanning()).toBe(false);
+  });
+
+  it("an overlapping scan supersedes the previous one without stopping itself", async () => {
+    vi.useFakeTimers();
+    const f = scanningNative();
+    const port = createAndroidBlePenPort(f.native, { scanDurationMs: 1000 });
+    const first = port.scan();
+    const second = port.scan();
+    await expect(first).resolves.toEqual([]);
+    expect(f.isScanning()).toBe(true);
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(second).resolves.toHaveLength(1);
+    expect(f.isScanning()).toBe(false);
+  });
+});
+
+describe("controller.rescan() over the real Android port", () => {
+  it("keeps the rescan's native scan running after the cancelled scan unwinds", async () => {
+    vi.useFakeTimers();
+    const { createPenConnectionController } = await import("../src/controller");
+    let scanning = false;
+    const native: ForgeBluetoothAndroid = {
+      isEnabled: () => true,
+      openBluetoothSettings: () => {},
+      startScan: () => { scanning = true; },
+      stopScan: () => { scanning = false; },
+      getDevicesJson: () => JSON.stringify([{ id: "AA:BB", name: "Pen" }]),
+      getScanError: () => "",
+      connect: async () => true,
+      disconnect: () => {},
+      isConnected: () => true,
+    };
+    const c = createPenConnectionController(createAndroidBlePenPort(native, { scanDurationMs: 1000 }));
+    const begun = c.begin();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(c.state.getState().kind).toBe("scanning");
+    const rescanned = c.rescan();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(scanning).toBe(true);
+    await vi.advanceTimersByTimeAsync(1000);
+    await begun;
+    await rescanned;
+    expect(c.state.getState()).toMatchObject({ kind: "found", devices: [{ id: "AA:BB", name: "Pen" }] });
+    expect(scanning).toBe(false);
+  });
+});

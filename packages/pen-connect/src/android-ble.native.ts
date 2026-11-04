@@ -39,6 +39,10 @@ export function createAndroidBlePenPort(
     throw new RangeError("connectionPollMs must be 250..60000");
   }
   let cancelPending: (() => void) | undefined;
+  // Each scan() owns one generation. Only the scan that is still current may
+  // stop the native scanner, so a superseded scan's cleanup cannot stop the
+  // newer scan that rescan() started right after cancelling it.
+  let scanGeneration = 0;
 
   return {
     mode: "bluetooth-le",
@@ -56,6 +60,8 @@ export function createAndroidBlePenPort(
     },
     async scan() {
       if (Platform.OS !== "android") return [];
+      cancelPending?.();
+      const generation = ++scanGeneration;
       native.startScan();
       let interrupted = false;
       try {
@@ -81,10 +87,11 @@ export function createAndroidBlePenPort(
         }
         return devices;
       } finally {
-        native.stopScan();
+        if (generation === scanGeneration) native.stopScan();
       }
     },
     cancelScan() {
+      ++scanGeneration;
       cancelPending?.();
       native.stopScan();
     },
