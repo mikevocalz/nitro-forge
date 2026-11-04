@@ -46,21 +46,21 @@ export function NativeColorChannels({
           <Text>{preview}</Text>
           <Text>{`Red ${value.r}`}</Text>
           <Slider value={value.r} min={0} max={255} step={1} disabled={disabled}
-            testID={testID ? testID + "-red" : undefined}
+            {...(testID ? { testID: testID + "-red" } : {})}
             onValueChange={(next) => update("r", next)} />
           <Text>{`Green ${value.g}`}</Text>
           <Slider value={value.g} min={0} max={255} step={1} disabled={disabled}
-            testID={testID ? testID + "-green" : undefined}
+            {...(testID ? { testID: testID + "-green" } : {})}
             onValueChange={(next) => update("g", next)} />
           <Text>{`Blue ${value.b}`}</Text>
           <Slider value={value.b} min={0} max={255} step={1} disabled={disabled}
-            testID={testID ? testID + "-blue" : undefined}
+            {...(testID ? { testID: testID + "-blue" } : {})}
             onValueChange={(next) => update("b", next)} />
           {showAlpha ? (
             <>
               <Text>{`Opacity ${Math.round(value.alpha * 100)}%`}</Text>
               <Slider value={value.alpha} min={0} max={1} step={0.01} disabled={disabled}
-                testID={testID ? testID + "-alpha" : undefined}
+                {...(testID ? { testID: testID + "-alpha" } : {})}
                 onValueChange={(next) => onValueChange({
                   ...value,
                   alpha: Math.min(1, Math.max(0, next)),
