@@ -61,7 +61,7 @@ export function pushMeterLevel(
     throw new RangeError("Meter history limit must be 1..4096");
   }
   const sample = dbfsToPeak(dbfs);
-  return [...history.slice(-(limit - 1)), sample];
+  return limit === 1 ? [sample] : [...history.slice(1 - limit), sample];
 }
 
 export function createRecordingStore(): StoreApi<RecordingSnapshot> {
