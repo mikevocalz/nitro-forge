@@ -32,5 +32,9 @@ jobs:
         run: corepack pnpm --filter @nitro-forge/tally typecheck
       - name: Test bounded windows and Rust command handoff (mock host)
         run: corepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.test.ts
-      # Source-level only: does not compile a native Nitro bridge, run the
-      # Rust Tally engine, or render NYC-Tron on a device.
+      - name: Compile real Rust Tally engine host
+        run: cargo build -p nf-cli
+      - name: Test live Rust sheet formulas and adapter undo
+        run: corepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.e2e.test.ts
+      # This compiles Rust on Linux and validates its protocol, not a native
+      # Nitro JSI/Swift/WinUI component or a physical device renderer.
