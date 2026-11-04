@@ -60,3 +60,26 @@ describe("prism engine e2e (real Rust via nf-cli)", () => {
     await doc.close();
   });
 });
+
+// Typed public API, real Rust host, one history entry and durable layer identity.
+it("edits an existing shape fill and preserves it through undo/redo and reopen", async () => {
+  const doc = await PrismDocument.open(host, 4, 4);
+  const id = (await doc.addShape({ kind: "rect", x: 0, y: 0, w: 4, h: 4, fill: [255, 0, 0, 255] }, "Shape")).data.layer_id;
+  const before = await doc.save();
+  await doc.setShapeFill(id, [0, 128, 255, 255]);
+  expect(Array.from(base64ToBytes((await doc.flatten()).data.pixels_b64).slice(0, 4))).toEqual([0, 128, 255, 255]);
+  const after = await doc.save();
+  expect(await doc.undo()).toBe(true);
+  expect(await doc.save()).toEqual(before);
+  await expect(doc.setShapeFill(id, [0, 0, 256, 255])).rejects.toBeInstanceOf(EngineError);
+  expect(await doc.save()).toEqual(before);
+  expect(await doc.redo()).toBe(true);
+  expect(await doc.save()).toEqual(after);
+  const reopened = await PrismDocument.openSnapshot(host, after);
+  const layer = (await reopened.getLayer(id)).data as { id: number; name: string };
+  expect(layer.id).toBe(id);
+  expect(layer.name).toBe("Shape");
+  expect((await reopened.flatten()).data).toEqual((await doc.flatten()).data);
+  await reopened.close();
+  await doc.close();
+});

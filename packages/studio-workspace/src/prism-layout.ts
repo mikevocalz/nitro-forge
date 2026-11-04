@@ -1,5 +1,5 @@
 /** Geometry belongs to the editor viewport, never the native app window contract. */
-export function prismViewportLayout(width: number, height: number, ratio: number, layersOpen: boolean, raster: boolean) {
+export function prismViewportLayout(width: number, height: number, ratio: number, layersOpen: boolean, hasFillAction: boolean) {
   const narrow = width < 700;
   const short = height < 400;
   const aspect = Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
@@ -18,7 +18,7 @@ export function prismViewportLayout(width: number, height: number, ratio: number
   // In short narrow windows the palette stays to the right of the tool capsule.
   // Its contents scroll horizontally when raster actions need more width.
   const paletteSpace = Math.max(1, width - (short && narrow ? 88 : 24));
-  const fillWidth = Math.min(raster ? 384 : narrow ? 220 : 320, paletteSpace);
+  const fillWidth = Math.min(hasFillAction ? 384 : narrow ? 220 : 320, paletteSpace);
   const fillLeft = short && narrow ? width - fillWidth - 12 : (width - fillWidth) / 2;
   return { narrow, short, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight,
     canvasLeft, canvasRight, canvasTop, canvasBottom, canvasWidth, canvasHeight,

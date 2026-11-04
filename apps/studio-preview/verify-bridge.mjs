@@ -112,6 +112,16 @@ try {
   assert.deepEqual(pixel(await pixels(), 0, 0), [20, 40, 60, 255]);
   assert.equal(await call('undo', artwork), true);
   assert.deepEqual(pixel(await pixels(), 0, 0), [120, 40, 60, 255]);
+  const original = await apply('getLayer', { id: rect });
+  await apply('setShapeFill', { id: rect, color: [20, 240, 60, 255] });
+  assert.deepEqual(pixel(await pixels(), 0, 0), [20, 140, 60, 255]);
+  const recolored = await apply('getLayer', { id: rect });
+  assert.deepEqual(recolored, { ...original, content: { ...original.content,
+    shape: { ...original.content.shape, fill: [20, 240, 60, 255] } } });
+  assert.equal(await call('undo', artwork), true);
+  assert.deepEqual(await apply('getLayer', { id: rect }), original);
+  assert.equal(await call('redo', artwork), true);
+  assert.deepEqual(await apply('getLayer', { id: rect }), recolored);
   const final = await pixels();
   const { encodeRgbaPng } = await import('../../packages/studio-workspace/src/rgba-png.ts');
   assert.deepEqual([...encodeRgbaPng(4, 4, final).subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
@@ -120,4 +130,4 @@ try {
   await call('restore', artwork, saved);
   assert.deepEqual(await pixels(), final);
 } finally { await call('close', artwork); }
-console.log('Prism real raster/rectangle/ellipse composite, visibility, opacity, order, remove/undo, PNG and snapshot restore passed');
+console.log('Prism real raster/rectangle/ellipse composite, visibility, opacity, order, remove/undo, existing-shape fill/undo/redo, PNG and snapshot restore passed');

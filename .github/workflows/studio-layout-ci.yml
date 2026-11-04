@@ -6,6 +6,7 @@ on:
       - docs/studio-snaprails-mobbin-workspace-2026-11-02
   pull_request:
     paths:
+      - 'packages/prism/**'
       - 'packages/studio-layout/**'
       - 'packages/studio-workspace/**'
       - 'packages/icons/**'
@@ -68,8 +69,14 @@ jobs:
         run: |
           pnpm --filter @nitro-forge/studio-preview test:ui-modules
           pnpm --filter @nitro-forge/studio-preview build
+      - name: Rust engine and contract regression tests
+        run: cargo test --locked --workspace
       - name: Build real engine host
         run: cargo build --locked -p nf-cli
+      - name: Prism typed API round trips
+        run: |
+          pnpm --filter @nitro-forge/prism typecheck
+          pnpm --filter @nitro-forge/prism test
       - name: Seven-engine browser bridge round trips
         run: pnpm --filter @nitro-forge/studio-preview test:integration
 # UI gestures, native devices and assistive technology require separate evidence.

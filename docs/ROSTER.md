@@ -365,3 +365,23 @@ screen readers and real drop/picker interaction remain unverified. Paired NYC
 commit 782c682ea684606111e612242a66761d50137f95 is local, pinned in CI; remote
 CI not run. Native window/config contracts unchanged. See
 docs/ux/studio-refresh/UI_COMPONENT_AUDIT.md and docs/ux/evidence/kit-*.png.
+
+## Prism existing-shape fill editing — 2026-11-04
+
+Studio's existing Fill layer action now works for selected rectangles and ellipses,
+not only raster layers. `setShapeFill` and the typed `PrismDocument.setShapeFill`
+API change only RGBA fill in the original Rust document, preserving layer ID,
+geometry, name, opacity, visibility and stack order. The operation records one
+Rust history entry; it adds no parallel document/history store or upstream code.
+The existing horizontally scrolling adaptive palette reserves space for this
+action for both shape and raster selections. Selecting a swatch alone still only
+chooses the color; Fill layer commits it.
+
+Local checks: 40 dock/workspace tests, Prism/Studio/example/preview TypeScript,
+canonical UI boundary/module checks and preview production bundle passed.
+Rust toolchain is unavailable locally; new Rust tests and typed nf-cli tests
+are committed and included in the existing Studio CI workflow, not claimed as
+executed locally. The Rust cases cover rectangles/ellipses, rendered pixels,
+transparent fill, invalid channels/targets, atomic failure preserving redo,
+one-step undo/redo and snapshot restoration. No native/device or interactive
+browser validation of this new action has been performed.

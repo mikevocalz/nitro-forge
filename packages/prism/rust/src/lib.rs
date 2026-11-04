@@ -345,6 +345,20 @@ impl PrismEngine {
         Ok(CommandResult::data(json!({ "layer_id": id })))
     }
 
+    /// `setShapeFill {id,color}` — edits only the fill, preserving geometry and identity.
+    fn op_set_shape_fill(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.layer_index(Self::req_id(p)?)?;
+        let color = Self::req_color(p, "color")?;
+        if self.layers[idx].is_raster() {
+            return Err(EngineError::validation("setShapeFill requires a shape layer"));
+        }
+        self.journal.record(UndoEntry::Doc(self.capture()));
+        if let Content::Shape(shape) = &mut self.layers[idx].content {
+            shape.fill = color;
+        }
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
     /// `removeLayer {id}`.
     fn op_remove_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
@@ -695,6 +709,7 @@ impl Engine for PrismEngine {
             "resize" => self.op_resize(&cmd.payload),
             "addRasterLayer" => self.op_add_raster_layer(&cmd.payload),
             "addShape" => self.op_add_shape(&cmd.payload),
+            "setShapeFill" => self.op_set_shape_fill(&cmd.payload),
             "removeLayer" => self.op_remove_layer(&cmd.payload),
             "moveLayer" => self.op_move_layer(&cmd.payload),
             "renameLayer" => self.op_rename_layer(&cmd.payload),
@@ -834,6 +849,60 @@ mod tests {
 
     fn fill(e: &mut PrismEngine, id: u64, color: [u8; 4]) {
         apply(e, "fillLayer", json!({"id": id, "color": color}));
+    }
+
+    #[test]
+    fn shape_fill_preserves_identity_geometry_and_round_trips() {
+        for kind in ["rect", "ellipse"] {
+            let mut e = eng();
+            let id = apply(&mut e, "addShape", json!({"name": "art", "shape": {
+                "kind": kind, "x": 0, "y": 0, "w": 4, "h": 4, "fill": [255,0,0,255]
+            }})).data["layer_id"].as_u64().unwrap();
+            let before = e.snapshot().unwrap();
+            apply(&mut e, "setShapeFill", json!({"id": id, "color": [0,128,255,255]}));
+            let after = e.snapshot().unwrap();
+            let layer = apply(&mut e, "getLayer", json!({"id": id})).data;
+            assert_eq!(layer["name"], "art");
+            assert_eq!(layer["content"]["shape"]["kind"], kind);
+            assert_eq!(layer["content"]["shape"]["w"], 4.0);
+            assert_eq!(pixel(&flatten_pixels(&mut e), 4, 2, 2), [0,128,255,255]);
+            assert!(e.undo().unwrap());
+            assert_eq!(e.snapshot().unwrap(), before);
+            assert!(e.redo().unwrap());
+            assert_eq!(e.snapshot().unwrap(), after);
+            let mut restored = eng();
+            restored.restore(&after).unwrap();
+            assert_eq!(restored.snapshot().unwrap(), after);
+            assert_eq!(flatten_pixels(&mut restored), flatten_pixels(&mut e));
+        }
+    }
+
+    #[test]
+    fn invalid_shape_fill_is_atomic_and_keeps_redo() {
+        let mut e = eng();
+        let raster = add_raster(&mut e);
+        let id = apply(&mut e, "addShape", json!({"shape": {
+            "kind": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "fill": [255,0,0,255]
+        }})).data["layer_id"].as_u64().unwrap();
+        apply(&mut e, "setShapeFill", json!({"id": id, "color": [0,0,255,0]}));
+        assert_eq!(pixel(&flatten_pixels(&mut e), 4, 2, 2), [0,0,0,0]);
+        let after = e.snapshot().unwrap();
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        for payload in [
+            json!({"id": raster, "color": [0,0,0,255]}),
+            json!({"id": 999, "color": [0,0,0,255]}),
+            json!({"id": id, "color": [0,0,256,255]}),
+            json!({"id": id, "color": [0,0,-1,255]}),
+            json!({"id": id, "color": [0,0,1.5,255]}),
+            json!({"id": id, "color": [0,0,0]}),
+            json!({"id": id}),
+        ] {
+            apply_err(&mut e, "setShapeFill", payload);
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), after);
     }
 
     // -- construction / new / describe --------------------------------------

@@ -37,6 +37,7 @@ State `{ width, height, next_id, layers: [Layer] }`.
 | `resize` | `{width,height}` | `{ok}` | raster layers crop/pad with transparent |
 | `addRasterLayer` | `{name?}` | `{layer_id}` | transparent, top of stack |
 | `addShape` | `{shape, name?}` | `{layer_id}` | |
+| `setShapeFill` | `{id,color:[r,g,b,a]}` | `{ok}` | shape only; preserves geometry/ID, one undo step; NotFound if absent, Validation for raster/channels >255, InvalidCommand for malformed RGBA (including negative/non-integer channels) |
 | `removeLayer` | `{id}` | `{ok}` | NotFound if absent |
 | `moveLayer` | `{id,to_index}` | `{ok}` | index 0 = bottom |
 | `renameLayer` | `{id,name}` | `{ok}` | |

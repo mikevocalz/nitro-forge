@@ -12,6 +12,7 @@ export const OPS = {
   resize: "resize",
   addRasterLayer: "addRasterLayer",
   addShape: "addShape",
+  setShapeFill: "setShapeFill",
   removeLayer: "removeLayer",
   moveLayer: "moveLayer",
   renameLayer: "renameLayer",
@@ -86,6 +87,10 @@ export class PrismDocument {
   }
   addShape(shape: Shape, name?: string) {
     return this.call<{ layer_id: number }>(OPS.addShape, { shape, name });
+  }
+  /** Change an existing shape fill without replacing its geometry or layer ID. */
+  setShapeFill(id: number, color: Rgba) {
+    return this.call(OPS.setShapeFill, { id, color });
   }
   removeLayer(id: number) {
     return this.call(OPS.removeLayer, { id });

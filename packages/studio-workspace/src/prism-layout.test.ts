@@ -21,7 +21,7 @@ test('portrait, landscape and extreme document ratios fit both available dimensi
   }
 });
 
-test('short narrow raster palette stays beside tools and inside its viewport', () => {
+test('short narrow shape/raster fill palette stays beside tools and inside its viewport', () => {
   const layout = prismViewportLayout(320, 244, 1, false, true);
   assert.ok(layout.fillLeft >= 76);
   assert.ok(layout.fillLeft + layout.fillWidth <= 308);

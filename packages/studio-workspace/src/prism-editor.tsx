@@ -82,7 +82,7 @@ export function PrismEditor(props: PrismEditorProps) {
   const ratio = doc && doc.width > 0 && doc.height > 0 ? doc.width / doc.height : 1;
   const { narrow, short, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight,
     canvasLeft, canvasRight, canvasTop, canvasBottom, canvasWidth, canvasHeight, fillWidth, fillLeft
-  } = prismViewportLayout(width, height, ratio, layersOpen, selected?.content?.type === 'raster');
+  } = prismViewportLayout(width, height, ratio, layersOpen, !!selected);
   const feedback = error ?? previewError ?? (rendering ? 'Updating engine composite…' : notice);
   const dropRows = drag ? layers.slice().reverse().filter(layer => layer.id !== drag.id) : [];
   const dropVisualIndex = drag?.target === null || !drag ? null : layers.length - 1 - drag.target;
@@ -245,9 +245,9 @@ export function PrismEditor(props: PrismEditorProps) {
     {layersOpen && panel}
     <View testID="prism-fill-bar" style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 6px 20px #00000025' }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: 50, alignItems: 'center', flexDirection: 'row', gap: 2 }} style={{ flex: 1 }}>
-      {!narrow && <Text style={{ color: colors.muted, fontSize: 10, marginRight: 8 }}>{selected?.content?.type === 'raster' ? 'Fill' : 'New shape fill'}</Text>}
+      {!narrow && <Text style={{ color: colors.muted, fontSize: 10, marginRight: 8 }}>{selected ? 'Fill' : 'New shape fill'}</Text>}
       {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${['violet', 'teal', 'amber', 'rose'][index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: color === index ? 3 : 1, borderColor: color === index ? '#FFFFFF' : '#FFFFFF50' }} /></Pressable>)}
-      {selected?.content?.type === 'raster' && <><View style={{ width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: 5 }} />{control('Fill layer', () => { void run('fillLayer', { id: selected.id, color: FILLS[color] }, 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
+      {selected && <><View style={{ width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: 5 }} />{control('Fill layer', () => { void run(selected.content.type === 'shape' ? 'setShapeFill' : 'fillLayer', { id: selected.id, color: FILLS[color] }, selected.content.type === 'shape' ? 'Shape fill changed' : 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
       </ScrollView>
     </View>
     {!!feedback && <View style={{ position: 'absolute', zIndex: 35, bottom: 82, left: (width - Math.min(360, width - 24)) / 2, width: Math.min(360, Math.max(1, width - 24)) }}>
