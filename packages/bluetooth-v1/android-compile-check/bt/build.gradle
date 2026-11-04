@@ -1,0 +1,19 @@
+apply plugin: "com.android.library"
+
+def pkg = file("../..").canonicalPath
+def sources = ["$pkg/android/src/main/java", "$pkg/nitrogen/generated/android/kotlin"]
+
+android {
+  namespace "com.margelo.nitro.forgebluetooth"
+  compileSdk 36
+  defaultConfig { minSdk 26 }
+  sourceSets {
+    main {
+      java.srcDirs = sources
+      kotlin.srcDirs = sources
+      manifest.srcFile "$pkg/android/src/main/AndroidManifest.xml"
+    }
+  }
+}
+
+dependencies { implementation project(":nitro") }

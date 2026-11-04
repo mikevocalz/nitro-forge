@@ -1,0 +1,3 @@
+nitrogen/
+android-compile-check/**/build/
+android-compile-check/.gradle/
