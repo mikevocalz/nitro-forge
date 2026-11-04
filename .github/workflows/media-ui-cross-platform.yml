@@ -1,0 +1,34 @@
+name: Media UI cross-platform contracts
+
+on:
+  pull_request:
+    paths:
+      - 'packages/media-ui/**'
+      - '.github/workflows/media-ui-cross-platform.yml'
+  workflow_dispatch:
+
+jobs:
+  source-contracts:
+    name: TypeScript + contract tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install SDK 58 peer-isolated contract dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Strict public API typecheck
+        run: pnpm --filter @nitro-forge/media-ui typecheck
+      - name: Pure behavior contract tests
+        run: pnpm --filter @nitro-forge/media-ui test
+      - name: Document validation scope
+        run: echo "Native iOS/Android device E2E and web browser E2E are pending."
