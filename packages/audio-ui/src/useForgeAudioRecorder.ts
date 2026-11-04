@@ -34,6 +34,10 @@ export function useForgeAudioRecorder(
       configure: async () => {
         await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       },
+      // expo-audio exposes no getter for the current mode, so the prior mode
+      // cannot be read back. Return to the playback configuration: recording
+      // off (iOS leaves .playAndRecord, which routes output to the receiver).
+      release: () => setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }),
       prepare: () => recorder.prepareToRecordAsync(),
       record: () => recorder.record(),
       stop: async () => {
@@ -48,15 +52,25 @@ export function useForgeAudioRecorder(
   }, [recorder, store]);
 
   useEffect(() => {
+    // StrictMode and Fast Refresh run cleanup and then this effect again on
+    // the same memoized controller, so the pair must be reversible.
+    controller.attach();
     // Status polling is intentionally low frequency; PCM audio buffers remain
     // inside the platform recorder, never forwarded over JS frame callbacks.
     const poll = setInterval(() => {
-      try { controller.observe(recorder.getStatus()); }
-      catch { /* Native resource may already be released during unmount. */ }
+      let status;
+      try {
+        status = recorder.getStatus();
+      } catch (error) {
+        controller.reportStatusError(error);
+        return;
+      }
+      controller.observe(status);
     }, 100);
     return () => {
       clearInterval(poll);
-      void controller.dispose().catch(() => undefined);
+      // detach() writes stop/session-restore failures into the store.
+      void controller.detach();
     };
   }, [controller, recorder]);
 
