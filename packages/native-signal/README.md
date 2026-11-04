@@ -30,4 +30,4 @@ const waveform = await analyzeWavFile(fileUri, 768);
 
 ## Authorship and boundaries
 
-Do not add app-specific Moyo code, credentials, assets, isolated persistence or a second undo store. Cadence/Splice remain document authorities. License: MIT for this newly written package; upstream references retain their own licensing requirements.
+Do not add app-specific Moyo code, credentials, assets, isolated persistence or a second undo store. Cadence/Splice remain document authorities. Package licensing is not assigned by this PR (private/unpublished); upstream references retain their own licensing requirements.
