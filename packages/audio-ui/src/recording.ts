@@ -180,7 +180,7 @@ export class ForgeRecordingController {
     if (this.disposed) return;
     this.disposed = true;
     ++this.generation;
-    if (!this.stopped && ["recording", "stopping", "error"].includes(this.store.getState().phase.kind)) {
+    if (!this.stopped && ["recording", "error"].includes(this.store.getState().phase.kind)) {
       await this.safeStop();
     }
   }
