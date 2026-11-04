@@ -57,7 +57,7 @@ button:disabled { opacity: .45; cursor: default; }
 .preview-controls { position: relative; font-size: 10px; }.preview-controls summary { min-height: 44px; display: flex; align-items: center; padding: 0 6px; opacity: .65; }.preview-controls label { position: absolute; z-index: 50; top: 42px; right: 0; width: 210px; padding: 16px; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-forge-control); box-shadow: 0 8px 24px #0003; display: flex; flex-direction: column; gap: 10px; }.preview-controls select { min-height: 38px; max-width: 100%; color: inherit; background: var(--base); border: 1px solid var(--line); padding: 5px; border-radius: 4px; }
 .document-actions { display: flex; align-items: center; gap: 2px; }.document-action { min-height: 44px; padding: 0 11px; color: inherit; background: transparent; border: 0; border-radius: var(--radius-forge-control); font-size: 11px; font-weight: 600; white-space: nowrap; }.document-action:hover:not(:disabled) { background: #8882; }
 /* The kit's FilePicker hides its input inside the label; show keyboard focus on the label. */
-.document-action:has(:focus-visible) { outline: 2px solid var(--accent, #e9c685); outline-offset: 4px; }
+.document-action:has(:focus-visible) { outline: 2px solid var(--accent, #e9c685); outline-offset: -3px; }
 @media (forced-colors: active) { .document-action:has(:focus-visible) { outline-color: Highlight; } }
 .engine-notice { flex-shrink: 0; color: var(--muted); font-size: 11px; background: var(--base); padding: 0 18px; }.engine-notice:not(:empty) { padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--line); }
 @media (max-width: 760px) {
