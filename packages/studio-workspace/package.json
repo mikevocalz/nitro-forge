@@ -14,7 +14,8 @@
     "./interaction": "./src/interaction-policy.ts",
     "./precision": "./src/precision-scrubber.tsx",
     "./personas": "./src/persona-store.ts",
-    "./turret": "./src/persona-turret.tsx"
+    "./turret": "./src/persona-turret.tsx",
+    "./composer": "./src/persona-composer.tsx"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",
