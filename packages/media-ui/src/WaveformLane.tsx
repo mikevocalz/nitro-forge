@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { View } from "react-native";
-import { peaksToBars, resamplePeaks, type WaveformPeak } from "./waveform.js";
+import { peaksToBars, resamplePeaks, type WaveformPeak } from "./waveform";
 
 export interface WaveformLaneProps {
   readonly peaks: readonly WaveformPeak[];
