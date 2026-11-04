@@ -32,7 +32,7 @@ export interface RecordingDriver {
   requestPermission(): Promise<boolean>;
   configure(): Promise<void>;
   prepare(): Promise<void>;
-  record(): void;
+  record(): void | Promise<void>;
   /** Must return a URI referencing an actual finalized recording. */
   stop(): Promise<string>;
   getStatus(): RecordingStatus;
@@ -111,7 +111,7 @@ export class ForgeRecordingController {
       if (!this.isCurrent(generation)) return false;
       await this.driver.prepare();
       if (!this.isCurrent(generation)) return false;
-      this.driver.record();
+      await this.driver.record();
       if (!this.isCurrent(generation)) {
         await this.safeStop();
         return false;
