@@ -97,3 +97,7 @@ Study the *principle*, never reproduce original UI assets/brand/traced geometry.
 - [Dribbble Audio Design Desk / DAW redesign](https://dribbble.com/shots/26160115-Audio-Design-Desk-DAW-UI-Redesign), [Nixtio video editor](https://dribbble.com/shots/26280112-AI-Video-Editor-Platform-UI-Design), and [Design Tool explorations](https://dribbble.com/search/design-tool): aesthetic ideation, not source code.
 
 Related existing work: [Studio #5](https://github.com/mikevocalz/nitro-forge/pull/5), [media-ui #25](https://github.com/mikevocalz/nitro-forge/pull/25), [color-ui #26](https://github.com/mikevocalz/nitro-forge/pull/26), [icons #21](https://github.com/mikevocalz/nitro-forge/pull/21), [Board #18/#19](https://github.com/mikevocalz/nitro-forge/pull/19), [pen #20](https://github.com/mikevocalz/nitro-forge/pull/20).
+
+## Design exploration and independent review
+
+Follow [Forge 2046's three-direction design and native quality playbook](./FORGE_2046_DESIGN_REVIEW_PLAYBOOK.md) before calling any instrument visually finished. A locally owned Web Designer Pro ZIP informed the **process** (exploration, specificity, responsive critique), but is not copied, published or required by CI. Compare real Prism, Splice and Cadence interactions, produce independent review notes, and clear separate design and engineering gates. Marketing-page visual techniques do not override editor data accuracy, physical input behavior or content legibility.
