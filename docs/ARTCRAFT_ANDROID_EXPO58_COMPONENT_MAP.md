@@ -3,6 +3,10 @@
 Status: **source audit + initial independent Expo Modules 2.0 WAV analyzer**, NOT a 296-component implementation.
 Audit date: 2026-11-03. Source organization: https://github.com/artcraft-android (7 public repositories on this date).
 
+## Canonical complete component inventory
+
+The **single source of truth** for the full suite is [COMPONENT_MASTER_INVENTORY.md](./COMPONENT_MASTER_INVENTORY.md), reconciled on November 3/4, 2026. It has **341 unique component contracts** (296 original + 45 newly enumerated Android controls), comprising **P0 196 / P1 128 / P2 17**, with IDs, interactions, provenance candidates, runtime choices, legal gates and implementation validation criteria. This document is an upstream file-to-feature crosswalk and 14-line initial migration *roster*, not a competing 14-component inventory. Add or deprecate component IDs in the master first; cross-reference here.
+
 ## Baseline / architecture
 
 - **Expo SDK 58 is stable**, released October 15, 2026, with React Native 0.88 and iOS 27. https://expo.dev/changelog/sdk-58
