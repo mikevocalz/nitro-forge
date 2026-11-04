@@ -1,0 +1,67 @@
+name: Reconcile Expo 58 / Skia 3 lockfile
+
+on:
+  push:
+    branches:
+      - feat/studio-suite-upstream-monitor-2026-11-02
+    paths:
+      - 'package.json'
+      - 'apps/example/package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/expo58-lockfile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: nitroforge-expo58-lockfile
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    # Scoped to this trusted migration branch; never writes arbitrary PR heads.
+    if: github.repository == 'mikevocalz/nitro-forge' && github.ref == 'refs/heads/feat/studio-suite-upstream-monitor-2026-11-02'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Activate exact pnpm version through Corepack
+        run: |
+          corepack enable
+          pnpm --version
+      - name: Resolve the Expo 58 / Skia 3 dependency graph without package scripts
+        run: pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+      - name: Validate the resolved lockfile with a clean frozen install
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify Skia v3 policy against resolved dependencies
+        run: |
+          pnpm check:skia-v3
+          pnpm why react-native-webgpu-dawn
+      - name: Commit only the generated lockfile on this migration branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # A reviewer may have updated docs while resolution ran. Merge the
+          # trusted branch's newer commits (never rebase/reset/force push).
+          git fetch origin feat/studio-suite-upstream-monitor-2026-11-02
+          git merge --no-edit origin/feat/studio-suite-upstream-monitor-2026-11-02
+          # Re-resolve against the latest committed manifests after merge.
+          pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+          pnpm install --frozen-lockfile --ignore-scripts
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo 'Lockfile already matches current manifests.'
+          else
+            git commit -m 'chore(lockfile): resolve Expo 58 and Skia v3 dependency graph'
+            git push origin HEAD:feat/studio-suite-upstream-monitor-2026-11-02
+          fi
+# This reconciles and verifies install resolution, NOT a native or web runtime.
