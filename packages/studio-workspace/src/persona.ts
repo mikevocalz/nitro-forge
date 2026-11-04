@@ -6,6 +6,7 @@
  * and is carried unchanged across every switch.
  */
 import { forgeInstrumentBlueprints } from './instrument-system.ts';
+import { jsonProblem } from './json-problem.ts';
 
 /** A device class the persona switcher renders on. */
 export type PersonaSurface = 'iphone' | 'ipad' | 'android-phone' | 'android-foldable' | 'web' | 'desktop' | 'xr';
@@ -180,7 +181,7 @@ export function exportPersona(persona: PersonaSpec): string {
  * @throws on malformed JSON, an unsupported format, or invalid fields. */
 export function importPersona(json: string, existing: readonly PersonaSpec[]): PersonaSpec {
   let raw: unknown;
-  try { raw = JSON.parse(json); } catch { throw new Error('Persona file is not valid JSON'); }
+  try { raw = JSON.parse(json); } catch (cause) { throw new Error(jsonProblem(json, cause)); }
   if (typeof raw !== 'object' || raw === null) throw new Error('Persona file must be a JSON object');
   const o = raw as Record<string, unknown>;
   if (o.format !== PERSONA_FORMAT) throw new Error(`Unsupported persona format ${String(o.format)}; expected ${PERSONA_FORMAT}`);

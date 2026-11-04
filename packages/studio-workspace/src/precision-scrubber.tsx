@@ -204,7 +204,9 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
           onChangeText={draft => store.setState({ draft })}
           onSubmitEditing={applyDraft}
           onBlur={applyDraft}
-          style={{ color: palette.text, width: 58, textAlign: 'right', fontSize: scale.type.body, fontWeight: '600', fontVariant: ['tabular-nums'], paddingVertical: 6, paddingHorizontal: 2, borderWidth: 1, borderColor: state.editing ? palette.accent : 'transparent', borderRadius: scale.radius.control }}
+          style={{ color: palette.text, width: 58, textAlign: 'right', fontSize: scale.type.body, fontWeight: '600', fontVariant: ['tabular-nums'], paddingVertical: 6, paddingHorizontal: 2, borderWidth: 1, borderColor: state.editing ? palette.accent : 'transparent', borderRadius: scale.radius.control,
+            // Web: a real focus ring while editing, not only the edge colour.
+            ...(state.editing ? { outlineStyle: 'solid', outlineWidth: 2, outlineColor: palette.accent, outlineOffset: 1 } : {}) } as never}
         />
         {!!props.unit && <Text style={{ fontSize: 11, color: palette.muted, paddingLeft: 2 }}>{props.unit}</Text>}
       </View>

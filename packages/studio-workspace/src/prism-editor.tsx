@@ -15,8 +15,8 @@ import type { CanvasLayer } from './prism-canvas-model';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
 import { DragGrabHandle, type DragPoint } from './drag-grab-handle';
 import { Platform } from 'react-native';
-import { PersonaTurret, TURRET_SIZE, documentRtl, useTurretShortcut, type PersonaTurretHandle } from './persona-turret';
-import { forgeDirections, forgeFeedbackMotion } from './forge-directions';
+import { PersonaTurret, documentRtl, turretBoxWidth, turretTextScale, useForgeRenderPrefs, useTurretShortcut, type PersonaTurretHandle } from './persona-turret';
+import { chromePalette, forgeDirections, forgeFeedbackMotion, workbenchChrome } from './forge-directions';
 import { turretDisplayAngle } from './turret';
 import { personasOn } from './persona';
 import { createPersonaStore, type PersonaStore } from './persona-store';
@@ -48,17 +48,17 @@ export interface PrismEditorProps {
 const hostSurface = (): PersonaSurface => Platform.OS === 'web' ? 'web' : Platform.OS === 'ios' ? ((Platform as { isPad?: boolean }).isPad ? 'ipad' : 'iphone') : 'android-phone';
 const FILLS = [[105, 80, 209, 255], [36, 145, 132, 255], [227, 155, 76, 255], [226, 109, 146, 255]] as const;
 const FILL_COLORS = ['#6950D1', '#249184', '#E39B4C', '#E26D92'];
-/** Disabled icon ink: 5:1 in the unavailable well. */
-const DISABLED_INK = '#858991';
+const FILL_NAMES = ['violet', 'teal', 'amber', 'rose'];
+/** A colour chip is the content, so forced colours must not repaint it (web). */
+const keepColour = Platform.OS === 'web' ? { forcedColorAdjust: 'none' } as object : {};
 /** Below this editor width the persona panel is a bottom sheet over a scrim. */
 const PERSONA_SHEET_MAX_WIDTH = 600;
 const workbench = forgeDirections.workbench;
-const personaMaterial = workbench.materials.dark;
-/** The panel's own edge light: a 1 px highlight on the lit top edge over the direction's panel shadow. */
-const personaPanelDepth = workbench.depth.dark.panel;
 const PERSONA_ARROW = 12;
-/** Room for the layer name, Transform, the persona mode and Layers. */
-const TOOLBAR_MAX_WIDTH = 440;
+/** Room for the layer name and its size line, Transform, the persona mode and Layers. */
+const TOOLBAR_MAX_WIDTH = 560;
+/** One gutter for the persona panel: title, turret captions and footer share it. */
+const PANEL_GUTTER = 16;
 /** The tool rail's right edge plus a gutter, in toolbar coordinates: the popover never covers it. */
 const POPOVER_MIN_LEFT = 64;
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -70,9 +70,13 @@ function readState(state: unknown): PrismState | null {
 
 /** Render Prism's own raster/vector composite, with bounded PNG transfer to native or web Image. */
 export function PrismEditor(props: PrismEditorProps) {
-  const mat = prismThemes[props.theme ?? 'dark'];
-  // Editing controls remain graphite over the continuous artboard mat.
-  const colors = prismThemes.dark;
+  const scheme = props.theme ?? 'dark';
+  const mat = prismThemes[scheme];
+  // Every panel is cut from the turret's Workbench material: graphite in
+  // dark, white ceramic with dark engraving in light.
+  const chrome = workbenchChrome[scheme];
+  const colors = chromePalette(scheme);
+  const forced = !!useForgeRenderPrefs().forcedColors;
   const ownPersonas = useRef<PersonaStore | null>(null);
   if (!props.personas && !ownPersonas.current) ownPersonas.current = createPersonaStore({ surface: hostSurface() });
   const personaStore = props.personas ?? ownPersonas.current!;
@@ -216,26 +220,28 @@ export function PrismEditor(props: PrismEditorProps) {
   };
   const control = (label: string, onPress: () => void, disabled = false, selected = false, glyph?: string, visibleLabel?: string, iconOnly = false, hint?: string) => {
     const unavailable = disabled || busy || !!props.busy || !!drag;
-    const icon = glyph ? <ForgeIcon name={glyph} size={17} color={unavailable ? DISABLED_INK : selected ? colors.accent : colors.muted} reducedMotion /> : undefined;
+    const icon = glyph ? <ForgeIcon name={glyph} size={17} color={unavailable ? chrome.disabledInk : selected ? colors.accent : colors.muted} reducedMotion /> : undefined;
     // `opacity-100` keeps a host's blanket disabled fade off the kit's own
     // disabled ink, which is drawn to be read at full strength.
     const shared = { onPress, disabled: unavailable, variant: 'ghost' as const, size: 'sm' as const, tone: 'carolina' as const,
-      cornerRadius: 4, className: `rounded-[4px]${selected ? ' bg-carolina-500/15' : ''}${unavailable ? ' opacity-100' : ''}`,
+      cornerRadius: 4, className: `rounded-[4px] border border-transparent${selected ? ' bg-carolina-500/15' : ''}${unavailable ? ' opacity-100' : ''}`,
       ...(label === 'Layers' ? { selected } : {}), ...(hint ? { accessibilityHint: hint } : {}) };
     const button = iconOnly
       ? <IconButton key={label} {...shared} icon={icon} aria-label={label} />
       : <Button key={label} {...shared} title={visibleLabel ?? label} aria-label={label} icon={icon} />;
-    // Unavailable controls sit in a recessed well: the kit's disabled ink is
-    // 2.9:1 on the raised graphite and 3.9:1 on the deep ground.
-    return unavailable ? <View key={label} style={{ backgroundColor: colors.deep, borderRadius: scale.radius.control }}>{button}</View> : button;
+    // Unavailable controls sit in a recessed well, where the disabled ink
+    // still reads (forge-directions.test.ts).
+    return unavailable ? <View key={label} style={{ backgroundColor: chrome.well, borderRadius: scale.radius.control }}>{button}</View> : button;
   };
   const addShape = (kind: 'rect' | 'ellipse') => {
     if (!doc) return;
     const w = Math.max(1, Math.round(doc.width * .38)), h = Math.max(1, Math.round(doc.height * .32));
     void run('addShape', { name: `${kind === 'rect' ? 'Rectangle' : 'Ellipse'} ${layers.length + 1}`, shape: { kind, x: Math.max(0, Math.round((doc.width - w) / 2)), y: Math.max(0, Math.round((doc.height - h) / 2)), w, h, fill: FILLS[store.getState().color] } }, `${kind === 'rect' ? 'Rectangle' : 'Ellipse'} added`);
   };
-  const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 60, top: panelTop, right: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, borderRadius: scale.radius.control, overflow: 'visible', boxShadow: '0 12px 30px #00000035' }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 4, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+  /** One panel finish for every piece of chrome: the face, its chamfer and the lit top edge. */
+  const chromeSurface = { backgroundColor: chrome.body, borderWidth: 1, borderColor: chrome.edge, borderRadius: scale.radius.panel, boxShadow: chrome.depth };
+  const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 60, top: panelTop, right: 12, ...chromeSurface, overflow: 'visible' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 4, minHeight: 48, borderBottomWidth: 1, borderBottomColor: chrome.rule }}>
       <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-[4px] overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
@@ -256,13 +262,16 @@ export function PrismEditor(props: PrismEditorProps) {
       />
     </View>}
       <View ref={layerViewport} collapsable={false} style={{ maxHeight: layerListMaxHeight, flexShrink: 1 }}><ScrollView nestedScrollEnabled removeClippedSubviews={false} scrollEnabled={!drag} onScroll={cancelLayerDrag} scrollEventThrottle={16} style={{ maxHeight: layerListMaxHeight, flexShrink: 1 }}>
-        {[...layers].reverse().map(layer => <View key={layer.id} ref={view => { if (view) rowViews.current.set(layer.id, view); else rowViews.current.delete(layer.id); }} collapsable={false} style={{ position: 'relative', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, backgroundColor: selectedId === layer.id ? '#344453' : 'transparent', borderLeftWidth: 2, borderLeftColor: selectedId === layer.id ? colors.accent : 'transparent', borderBottomWidth: 1, borderBottomColor: colors.line }}>
+        {[...layers].reverse().map(layer => <View key={layer.id} ref={view => { if (view) rowViews.current.set(layer.id, view); else rowViews.current.delete(layer.id); }} collapsable={false} style={{ position: 'relative', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, backgroundColor: selectedId === layer.id ? chrome.selected : 'transparent', borderBottomWidth: 1, borderBottomColor: chrome.rule }}>
           {(dropBefore === layer.id || (dropAtEnd && dropRows.at(-1)?.id === layer.id)) && <View pointerEvents="none" style={{ position: 'absolute', left: 4, right: 4, height: 2, backgroundColor: colors.accent, ...(dropBefore === layer.id ? { top: 0 } : { bottom: 0 }) }} />}
-          <DragGrabHandle label={`Drag layer ${layer.name} to reorder`} color={selectedId === layer.id ? '#DFEFFF' : colors.muted} disabled={busy || props.busy || layers.length < 2}
+          <DragGrabHandle label={`Drag layer ${layer.name} to reorder`} color={selectedId === layer.id ? chrome.selectedMuted : colors.muted} disabled={busy || props.busy || layers.length < 2}
             onStart={() => beginLayerDrag(layer.id)} onMove={previewLayerDrag} onCommit={() => { void commitLayerDrag(); }} onCancel={cancelLayerDrag} />
-          <Pressable accessibilityRole="button" accessibilityLabel={`Select layer ${layer.name}`} accessibilityState={{ selected: selectedId === layer.id }} onPress={() => store.setState({ selectedId: layer.id })} style={{ flex: 1, minWidth: 0, minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 2 }}>
-            <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FFFFFF35', borderRadius: scale.radius.control, backgroundColor: layer.content?.type === 'shape' && layer.content.shape?.fill ? `rgba(${layer.content.shape.fill.slice(0, 3).join(',')},${(layer.content.shape.fill[3] ?? 255) / 255})` : colors.base }}><ForgeIcon name={layer.content?.type === 'shape' ? layer.content.shape?.kind === 'ellipse' ? 'ellipse' : 'rectangle' : 'image'} size={17} color={selectedId === layer.id ? '#FFFFFF' : colors.muted} reducedMotion /></View>
-            <View style={{ flex: 1, gap: 4 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: selectedId === layer.id ? '600' : '400' }}>{layer.name}</Text><Text style={{ color: selectedId === layer.id ? '#DAEBFC' : colors.muted, fontSize: scale.type.label }}>{layer.content?.type === 'shape' ? layer.content.shape?.kind : 'Raster'} · {Math.round(layer.opacity * 100)}%</Text></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Select layer ${layer.name}`} accessibilityState={{ selected: selectedId === layer.id }} onPress={() => store.setState({ selectedId: layer.id })} style={{ flex: 1, minWidth: 0, minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 2, borderWidth: 1, borderColor: 'transparent', borderRadius: scale.radius.control }}>
+            {/* The thumbnail is the layer's own fill; the selected one is ringed in the accent. */}
+            <View style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: scale.radius.control + 2, borderWidth: 2, borderColor: selectedId === layer.id ? (forced ? 'Highlight' : chrome.accent) : 'transparent', ...keepColour }}>
+              <View style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: forced ? 'CanvasText' : chrome.chipEdge, borderRadius: scale.radius.control, backgroundColor: layer.content?.type === 'shape' && layer.content.shape?.fill ? `rgba(${layer.content.shape.fill.slice(0, 3).join(',')},${(layer.content.shape.fill[3] ?? 255) / 255})` : chrome.well, ...keepColour }}><ForgeIcon name={layer.content?.type === 'shape' ? layer.content.shape?.kind === 'ellipse' ? 'ellipse' : 'rectangle' : 'image'} size={15} color={layer.content?.type === 'shape' ? '#FFFFFF' : colors.muted} reducedMotion /></View>
+            </View>
+            <View style={{ flex: 1, gap: 4 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: selectedId === layer.id ? '600' : '400' }}>{layer.name}</Text><Text style={{ color: selectedId === layer.id ? chrome.selectedMuted : colors.muted, fontSize: scale.type.label }}>{layer.content?.type === 'shape' ? layer.content.shape?.kind : 'Raster'} · {Math.round(layer.opacity * 100)}%</Text></View>
           </Pressable>
           {control(`${layer.visible ? 'Hide' : 'Show'} ${layer.name}`, () => { void run('setLayerVisible', { id: layer.id, visible: !layer.visible }, layer.visible ? 'Layer hidden' : 'Layer shown'); }, false, false, undefined, layer.visible ? 'Hide' : 'Show')}
         </View>)}
@@ -270,9 +279,9 @@ export function PrismEditor(props: PrismEditorProps) {
       </ScrollView></View>
       {selected && <View style={{ padding: 12, gap: 8 }}>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 5 }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}{control('Remove', () => { void run('removeLayer', { id: selected.id }, 'Layer removed'); })}</View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: chrome.rule, paddingTop: 5 }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}{control('Remove', () => { void run('removeLayer', { id: selected.id }, 'Layer removed'); })}</View>
       </View>}
-    {drag && <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2, padding: 10, gap: 4, backgroundColor: colors.raised, borderTopWidth: 1, borderTopColor: colors.line }}><Text accessibilityLiveRegion="polite" style={{ color: colors.accent, fontSize: 11 }}>{drag.target === null ? 'Drag within the layer list to choose a position' : `Move to layer position ${drag.target + 1} from bottom`}</Text><Button title="Cancel move" aria-label="Cancel layer move" onPress={cancelLayerDrag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /></View>}
+    {drag && <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2, padding: 10, gap: 4, backgroundColor: chrome.body, borderTopWidth: 1, borderTopColor: chrome.rule }}><Text accessibilityLiveRegion="polite" style={{ color: colors.accent, fontSize: 11 }}>{drag.target === null ? 'Drag within the layer list to choose a position' : `Move to layer position ${drag.target + 1} from bottom`}</Text><Button title="Cancel move" aria-label="Cancel layer move" onPress={cancelLayerDrag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /></View>}
   </View>;
 
   // Persona: a mode control in the toolbar. Its panel follows it in reading
@@ -313,14 +322,13 @@ export function PrismEditor(props: PrismEditorProps) {
   const announcePersona = (text: string) => store.setState(s => ({ personaStatus: s.personaStatus === text ? `${text}\u00A0` : text }));
   const sheet = width < PERSONA_SHEET_MAX_WIDTH;
   const toolbarWidth = Math.max(1, Math.min(narrow ? width - 24 : TOOLBAR_MAX_WIDTH, width - (layersOpen && dockedLayers ? panelWidth + 36 : 24)));
-  const popoverWidth = TURRET_SIZE + 32;
+  const popoverWidth = Math.min(turretBoxWidth(turretTextScale(), personaStops.length) + PANEL_GUTTER * 2, Math.max(1, width - 24));
   const triggerCentre = trigger.x + trigger.width / 2;
   // Keep the popover on the editor; the arrow keeps pointing at the trigger.
   const popoverLeft = Math.max(Math.min(POPOVER_MIN_LEFT, width - 24 - popoverWidth), Math.min(triggerCentre - popoverWidth / 2, width - 24 - popoverWidth));
   const arrowLeft = Math.max(PERSONA_ARROW, Math.min(popoverWidth - PERSONA_ARROW * 2, triggerCentre - popoverLeft - PERSONA_ARROW / 2));
   const popoverTop = toolbarHeight + PERSONA_ARROW / 2 + 6;
-  const sheetPadding = width < 360 ? 10 : 16;
-  const pm = personaMaterial;
+  const pm = workbench.materials[scheme];
 
   const personaTrigger = <View ref={personaTriggerView} key="persona-trigger" collapsable={false}
     onLayout={event => { const { x, width: w } = event.nativeEvent.layout; measureTrigger({ x, width: w }); }}>
@@ -330,7 +338,7 @@ export function PrismEditor(props: PrismEditorProps) {
       style={({ pressed }) => ({
         minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8, borderRadius: scale.radius.control,
         borderWidth: 1, borderColor: 'transparent',
-        backgroundColor: personaOpen ? `${colors.accent}26` : pressed ? '#FFFFFF14' : 'transparent',
+        backgroundColor: personaOpen ? `${colors.accent}26` : pressed ? chrome.press : 'transparent',
         transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
       }) as never}>
       {/* A small dial: the ring and a pointer set to the active stop. */}
@@ -343,11 +351,12 @@ export function PrismEditor(props: PrismEditorProps) {
   </View>;
 
   const personaBody = <>
-    <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', minHeight: 44, paddingLeft: 4 }}>
+    {/* The close glyph's own inset is pulled into the gutter, so its edge lines up with the captions. */}
+    <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', minHeight: 44, marginRight: -scale.space.inset }}>
       <Text accessibilityRole="header" style={{ color: pm.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Persona</Text>
       {control('Close personas', () => closePersonas(), false, false, 'close', undefined, true)}
     </View>
-    <PersonaTurret handle={personaTurret} personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors} direction="workbench" scheme="dark"
+    <PersonaTurret handle={personaTurret} personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors} direction="workbench" scheme={scheme}
       autoFocus onAnnounce={announcePersona} onDismiss={() => closePersonas()}
       onSwitch={id => {
         persona.switchTo(id);
@@ -356,11 +365,12 @@ export function PrismEditor(props: PrismEditorProps) {
       }}
       {...(props.onPersonaEffect ? { onEffect: props.onPersonaEffect } : {})} />
     {persona.error && <Text accessibilityRole="alert" style={{ color: colors.error, fontSize: scale.type.label, alignSelf: 'stretch' }}>{persona.error}</Text>}
+    {/* The ghost button's inset is pulled out, so its glyph sits on the gutter. */}
     {props.onComposePersona && <View style={{ alignSelf: 'stretch', borderTopWidth: 1, borderTopColor: pm.panelEdge, paddingTop: 4, alignItems: 'flex-start' }}>
-      {control('Compose new persona', () => { closePersonas(false); props.onComposePersona?.(); }, false, false, 'plus', 'Compose new persona', false, 'Opens the Persona Composer')}
+      <View style={{ marginLeft: -scale.space.inset }}>{control('Compose new persona', () => { closePersonas(false); props.onComposePersona?.(); }, false, false, 'plus', 'Compose new persona', false, 'Opens the Persona Composer')}</View>
     </View>}
   </>;
-  const panelSurface = { backgroundColor: pm.panelSolid, borderColor: pm.panelEdge, boxShadow: personaPanelDepth };
+  const panelSurface = { backgroundColor: chrome.body, borderColor: chrome.edge, boxShadow: chrome.depth };
   const personaKeys = { onKeyDown: (event: StudioKeyboardEvent & { preventDefault?: () => void; stopPropagation?: () => void }) => {
     if (keyboardKey(event) !== 'Escape') return;
     event.preventDefault?.(); event.stopPropagation?.();
@@ -372,16 +382,16 @@ export function PrismEditor(props: PrismEditorProps) {
         onPress={() => closePersonas()} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, backgroundColor: '#000000', opacity: 0.45 }} />
       <View testID="persona-panel" role="dialog" aria-modal aria-label="Personas" accessibilityViewIsModal {...personaKeys}
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: Math.min(560, Math.round(height * 0.6)), borderTopWidth: 1, borderTopLeftRadius: scale.radius.panel, borderTopRightRadius: scale.radius.panel, ...panelSurface } as never}>
-        <ScrollView contentContainerStyle={{ padding: sheetPadding, paddingTop: 4, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
+        <ScrollView contentContainerStyle={{ padding: PANEL_GUTTER, paddingTop: 4, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
       </View>
     </View>
     : <View key="persona-popover" testID="persona-panel" role="dialog" aria-label="Personas" {...personaKeys}
       style={{ position: 'absolute', top: popoverTop, left: popoverLeft, width: popoverWidth, maxHeight: Math.max(240, height - popoverTop - 36), borderWidth: 1, borderRadius: scale.radius.panel, ...panelSurface } as never}>
       {/* The notch: a square turned 45°, its top edges in the panel's edge colour. */}
-      <View aria-hidden pointerEvents="none" style={{ position: 'absolute', top: -PERSONA_ARROW / 2 - 1, left: arrowLeft, width: PERSONA_ARROW, height: PERSONA_ARROW, backgroundColor: pm.panelSolid, borderLeftWidth: 1, borderTopWidth: 1, borderColor: pm.panelEdge, transform: [{ rotate: '45deg' }] }} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
+      <View aria-hidden pointerEvents="none" style={{ position: 'absolute', top: -PERSONA_ARROW / 2 - 1, left: arrowLeft, width: PERSONA_ARROW, height: PERSONA_ARROW, backgroundColor: chrome.body, borderLeftWidth: 1, borderTopWidth: 1, borderColor: chrome.edge, transform: [{ rotate: '45deg' }] }} />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: PANEL_GUTTER, paddingTop: 4, paddingBottom: 12, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
     </View>;
-  return <NightScope><View className="scheme-dark" {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
+  const editor = <View className={scheme === 'dark' ? 'scheme-dark' : 'scheme-light'} {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
     const { width, height } = event.nativeEvent.layout;
     if (width <= 0 || height <= 0) return;
     if (firstMeasurement.current) { firstMeasurement.current = false; store.setState({ width, height, layersOpen: width >= PRISM_DOCKED_LAYERS_MIN_WIDTH }); }
@@ -395,7 +405,7 @@ export function PrismEditor(props: PrismEditorProps) {
         {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}><Text style={{ color: colors.paperInk, fontSize: 12, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}
       </PrismCanvas>}
     </View>
-    <View ref={personaToolbar} onLayout={event => store.setState({ toolbarHeight: event.nativeEvent.layout.height })} style={{ position: 'absolute', zIndex: personaOpen ? 70 : 20, top: 12, left: 12, width: toolbarWidth, minHeight: 48, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
+    <View ref={personaToolbar} onLayout={event => store.setState({ toolbarHeight: event.nativeEvent.layout.height })} style={{ position: 'absolute', zIndex: personaOpen ? 70 : 20, top: 12, left: 12, width: toolbarWidth, minHeight: 48, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 10, ...chromeSurface }}>
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: scale.type.label }}>{selected?.content?.type === 'shape' ? 'Shape layer' : selected ? 'Raster layer' : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
       {selected?.content?.type === 'shape' && !props.busy && <Menu key={selected.id} title="Transform shape" triggerLabel="Transform shape"
         actions={SHAPE_TRANSFORMS.map(({ id, title }) => ({ id, title, disabled: busy || !!props.busy || !!drag }))}
@@ -415,21 +425,27 @@ export function PrismEditor(props: PrismEditorProps) {
       {personaSurface}
       {control('Layers', () => store.setState({ layersOpen: !layersOpen }), false, layersOpen, 'layers', undefined, width < 420)}
     </View>
-    <View accessibilityLabel="Creation tools" style={{ position: 'absolute', zIndex: 20, left: 12, top: short ? 68 : 76, width: 52, alignItems: 'center', padding: 3, gap: 3, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
+    <View accessibilityLabel="Creation tools" style={{ position: 'absolute', zIndex: 20, left: 12, top: short ? 68 : 76, width: 52, alignItems: 'center', padding: 3, gap: 3, ...chromeSurface }}>
       {activeCaps.has('shapes') && <>
         {control('Rectangle', () => addShape('rect'), !doc, false, 'rectangle', undefined, true, 'Adds a centered rectangle using the selected fill')}
         {control('Ellipse', () => addShape('ellipse'), !doc, false, 'ellipse', undefined, true, 'Adds a centered ellipse using the selected fill')}
       </>}
-      {activeCaps.has('shapes') && activeCaps.has('raster-layers') && <View style={{ height: 1, width: 26, backgroundColor: colors.line }} />}
+      {activeCaps.has('shapes') && activeCaps.has('raster-layers') && <View style={{ height: 1, width: 26, backgroundColor: chrome.rule }} />}
       {activeCaps.has('raster-layers') && control('Raster layer', () => { void run('addRasterLayer', { name: `Raster ${layers.length + 1}` }, 'Raster layer added'); }, !doc, false, 'image', undefined, true, 'Adds an empty raster layer')}
       {!activeCaps.has('shapes') && !activeCaps.has('raster-layers') && <Text accessibilityRole="text" style={{ color: colors.muted, fontSize: scale.type.label, textAlign: 'center', paddingVertical: 6 }}>No tools in this build</Text>}
     </View>
     {layersOpen && panel}
-    <View testID="prism-fill-bar" style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 6px 20px #00000025' }}>
+    <View testID="prism-fill-bar" style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, ...chromeSurface }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: 50, alignItems: 'center', flexDirection: 'row', gap: 2 }} style={{ flex: 1 }}>
       {!narrow && <Text style={{ color: colors.muted, fontSize: scale.type.label, marginRight: 8 }}>{selected ? 'Fill' : 'New shape fill'}</Text>}
-      {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${['violet', 'teal', 'amber', 'rose'][index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: color === index ? 3 : 1, borderColor: color === index ? '#FFFFFF' : '#FFFFFF50' }} /></Pressable>)}
-      {selected && <><View style={{ width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: 5 }} />{control('Fill layer', () => { void run(selected.content.type === 'shape' ? 'setShapeFill' : 'fillLayer', { id: selected.id, color: FILLS[color] }, selected.content.type === 'shape' ? 'Shape fill changed' : 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
+      {/* Each chip sits in a 44 pt target. The chosen one is ringed with a gap,
+          in the engraving colour, or the system highlight under forced colours. */}
+      {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${FILL_NAMES[index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent', borderRadius: scale.radius.control }}>
+        <View style={{ width: 33, height: 33, alignItems: 'center', justifyContent: 'center', borderRadius: scale.radius.control + 2, borderWidth: 2, borderColor: color === index ? (forced ? 'Highlight' : chrome.chipRing) : 'transparent', ...keepColour }}>
+          <View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: 1, borderColor: forced ? 'CanvasText' : chrome.chipEdge, ...keepColour }} />
+        </View>
+      </Pressable>)}
+      {selected && <><View style={{ width: 1, height: 24, backgroundColor: chrome.rule, marginHorizontal: 5 }} />{control('Fill layer', () => { void run(selected.content.type === 'shape' ? 'setShapeFill' : 'fillLayer', { id: selected.id, color: FILLS[color] }, selected.content.type === 'shape' ? 'Shape fill changed' : 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
       </ScrollView>
     </View>
     {!!feedback && <View style={{ position: 'absolute', zIndex: 35, bottom: 82, left: (width - Math.min(360, width - 24)) / 2, width: Math.min(360, Math.max(1, width - 24)) }}>
@@ -438,5 +454,7 @@ export function PrismEditor(props: PrismEditorProps) {
     </View>}
     {/* The one live region for persona changes. It stays mounted, so the commit is read after the panel closes. */}
     <Text testID="persona-status" accessibilityLiveRegion="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}>{personaStatus}</Text>
-  </View></NightScope>;
+  </View>;
+  // Kit controls take the chrome's scheme: night on graphite, day on ceramic.
+  return scheme === 'dark' ? <NightScope>{editor}</NightScope> : editor;
 }

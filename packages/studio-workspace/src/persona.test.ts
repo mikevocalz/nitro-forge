@@ -88,7 +88,7 @@ test('export and import round-trip a user persona and resolve conflicts', () => 
 });
 
 test('import treats the file as untrusted input', () => {
-  assert.throws(() => importPersona('{', []), /not valid JSON/);
+  assert.throws(() => importPersona('{', []), /Ends early at character 1\. Paste the whole file/);
   assert.throws(() => importPersona('null', []), /JSON object/);
   assert.throws(() => importPersona('{"format":2}', []), /Unsupported persona format 2/);
   assert.throws(() => importPersona('{"format":1,"label":"A","rail":"x","capabilities":[],"surfaces":"all"}', []), /'rail' must be a list/);

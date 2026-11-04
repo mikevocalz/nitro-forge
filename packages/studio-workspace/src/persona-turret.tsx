@@ -9,7 +9,7 @@ import type { GesturePoint } from './studio-gesture-types';
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 import { personaManifest, personasOn, type PersonaSpec, type PersonaSurface } from './persona';
 import {
-  turretAnnouncement, turretArrowKey, turretDialScale, turretDisplayAngle, turretLogicalAngle, turretReduce,
+  turretAnnouncement, turretArrowKey, turretDisplayAngle, turretFrame, turretLogicalAngle, turretReduce,
   turretShortcutDigit, turretShortcutFor, type TurretEffect, type TurretEvent, type TurretShortcut, type TurretState,
 } from './turret';
 import { workspaceScale as scale, type WorkspaceColors } from './theme';
@@ -22,8 +22,27 @@ import { TurretPointer, TurretRim, type TurretPulse } from './turret-motion';
 export { BUILT_IN_PERSONAS } from './persona';
 export type { PersonaSurface } from './persona';
 
-/** Width of the turret's drawing box. Hosts size their panel from it. */
+/** Width of the turret's drawing box at 100 % text. Hosts size their panel
+ * from {@linkcode turretBoxWidth}, which grows with the text. */
 export const TURRET_SIZE = geo.boxWidth;
+
+/** The user's text size as a multiple of 100 %: Dynamic Type or Android font
+ * scale on native, the browser's default font size on web (RN Web sets text
+ * in px, so the turret applies it itself). Browser zoom needs nothing: it
+ * scales the whole page and the frame fits the narrower width. */
+export function turretTextScale(): number {
+  if (Platform.OS !== 'web') return PixelRatio.getFontScale();
+  const g = globalThis as { document?: { documentElement?: unknown }; getComputedStyle?: (e: unknown) => { fontSize?: string } };
+  const root = g.document?.documentElement;
+  const px = root && g.getComputedStyle ? parseFloat(g.getComputedStyle(root).fontSize ?? '') : NaN;
+  return Number.isFinite(px) && px > 0 ? Math.max(1, px / 16) : 1;
+}
+
+/** Width a host panel gives the turret so `count` stops keep their ring at
+ * `textScale`. Narrower panels get the stacked names instead. */
+export function turretBoxWidth(textScale: number, count: number): number {
+  return turretFrame(0, textScale, count, geo).boxWidth;
+}
 
 /** Every string the turret shows. Capability lines come from persona manifests. */
 export const turretCopy = {
@@ -42,7 +61,6 @@ export const turretCopy = {
   actionActivate: 'Switch to previewed persona',
   actionEscape: 'Cancel preview',
   allReady: (label: string) => `Everything in ${label} works here.`,
-  allStops: (labels: readonly string[]) => labels.join(' · '),
   noStops: 'No persona runs on this device',
   disabled: 'Persona switching waits for the engine to finish',
 } as const;
@@ -150,10 +168,9 @@ const polar = (deg: number, r: number) => {
   return { x: r * Math.sin(rad), y: -r * Math.cos(rad) };
 };
 const ringSize = geo.bezel * 2;
-const cx = geo.boxWidth / 2;
-/** Dial-face text is drawn to the dial; it grows a little, the list below grows fully. */
+/** The readout engraved in the dial face is sized to the face, so it grows a
+ * little. Stop names and captions follow the text size fully. */
 const FACE_TEXT_MAX_SCALE = 1.2;
-const STOP_TEXT_MAX_SCALE = 1.3;
 const visuallyHidden = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, clip: 'rect(0 0 0 0)' } as unknown as ViewStyle;
 
 /**
@@ -259,10 +276,74 @@ export function PersonaTurret(props: PersonaTurretProps) {
   const from = polar(lightDeg, 0.5), to = polar(lightDeg + 180, 0.5);
   const gradient = { x1: 0.5 + from.x, y1: 0.5 + from.y, x2: 0.5 + to.x, y2: 0.5 + to.y };
   const R = geo.bezel;
-  const dial = turretDialScale(state.width, geo.boxWidth);
-  const lineWidth = Math.min(geo.boxWidth, state.width || geo.boxWidth);
+  const textScale = turretTextScale();
+  // Native scales text itself; RN Web sets px, so the turret multiplies.
+  const fs = (size: number) => Platform.OS === 'web' ? Math.round(size * textScale) : size;
+  const frame = turretFrame(state.width, textScale, stops.length, geo);
+  const stacked = frame.layout === 'stacked';
+  const cx = frame.boxWidth / 2;
+  const lineWidth = Math.min(frame.boxWidth * frame.scale, state.width || geo.boxWidth);
   const notchBoost = prefs.moreContrast || forced ? 1 : 0;
-  const largeText = Platform.OS !== 'web' && PixelRatio.getFontScale() > STOP_TEXT_MAX_SCALE;
+  const faceSize = (size: number) => Platform.OS === 'web' ? Math.round(size * Math.min(textScale, FACE_TEXT_MAX_SCALE)) : size;
+
+  // Focus is tracked on the group: focus and blur bubble from the stops, and
+  // the kit's web Pressable keeps its own blur handler.
+  const stopGroup = (
+    <View accessibilityRole="radiogroup" accessibilityLabel={turretCopy.stopsHeading} pointerEvents="box-none"
+      {...{
+        onFocus: (event: { target?: unknown }) => {
+          const id = (event.target as { getAttribute?: (n: string) => string | null } | undefined)?.getAttribute?.('data-testid') ?? '';
+          const index = stops.findIndex(p => `persona-stop-${p.id}` === id);
+          store.setState({ focusedStop: index >= 0 ? index : null });
+        },
+        onBlur: () => store.setState({ focusedStop: null }),
+      } as object}
+      style={stacked
+        // Stacked: a scale printed under the dial, one row per detent.
+        ? { alignSelf: 'stretch', gap: scale.space.stack }
+        : { position: 'absolute', left: 0, top: 0, width: frame.boxWidth, height: frame.boxHeight }}>
+      {stops.map((p, s) => {
+        // On the ring the name's near edge sits labelGap off the bezel, outside its detent.
+        const pos = polar(turretDisplayAngle(s, stops.length, rtl), geo.bezel + geo.labelGap);
+        const committed = s === state.turret.committed;
+        const lit = s === shown;
+        const digit = s < 9 ? s + 1 : undefined;
+        const tag = keys && digit !== undefined ? shortcut.tag(digit) : undefined;
+        const side = pos.x < -8 ? 'flex-end' : pos.x > 8 ? 'flex-start' : 'center';
+        const focusedStop = state.focusedStop === s;
+        const place: ViewStyle = stacked
+          ? { minHeight: frame.labelHeight, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: scale.space.element, paddingHorizontal: scale.space.element }
+          : { position: 'absolute', width: frame.labelWidth, minHeight: frame.labelHeight, alignItems: side, justifyContent: 'center', paddingHorizontal: scale.space.stack,
+            left: cx + pos.x - (pos.x < -8 ? frame.labelWidth : pos.x > 8 ? 0 : frame.labelWidth / 2),
+            top: frame.boxTop + pos.y - (Math.abs(pos.x) <= 8 ? frame.labelHeight : frame.labelHeight / 2) };
+        return (
+          <Pressable key={p.id} testID={`persona-stop-${p.id}`}
+            accessibilityRole="radio" accessibilityState={{ checked: committed, disabled: !!props.disabled }} aria-checked={committed}
+            accessibilityLabel={turretCopy.srStop(p.label, keys && digit !== undefined ? shortcut.spoken(digit) : undefined)}
+            onPress={() => dispatch({ type: 'shortcut', digit: s + 1 }, null)}
+            style={({ pressed }) => ({
+              ...place,
+              borderRadius: scale.radius.control, borderWidth: 1,
+              // A transparent edge keeps the stop's shape under Windows High Contrast.
+              borderColor: focusedStop ? focusColor : 'transparent',
+              // Pressed: the name sinks into the panel, an inset of the notch colour.
+              backgroundColor: pressed ? `${m.notch}33` : 'transparent',
+              transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
+              ...(Platform.OS === 'web' ? {
+                transitionProperty: 'transform, background-color', transitionDuration: prefs.reduceMotion ? '0ms' : `${forgeFeedbackMotion.press.ms}ms`, transitionTimingFunction: 'ease-out',
+                outlineStyle: focusedStop ? 'solid' : 'none', outlineWidth: 2, outlineColor: focusColor, outlineOffset: 1,
+              } : {}),
+            }) as ViewStyle}>
+            <Text numberOfLines={stacked ? undefined : 1} style={{ flexShrink: 1, color: lit ? m.text : m.muted, fontSize: fs(scale.type.label + 1), fontWeight: committed || lit ? '700' : '500' }}>{p.label}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.stack, minHeight: 14 }}>
+              {committed && <View style={{ width: 6, height: 2, borderRadius: 1, backgroundColor: m.accent }} />}
+              {tag && <Text style={{ color: m.muted, fontSize: fs(scale.type.micro + 1), fontVariant: ['tabular-nums'] }}>{tag}</Text>}
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 
   return (
     <View testID="persona-turret" style={{ alignSelf: 'stretch', alignItems: 'center', gap: scale.space.inset, opacity: props.disabled ? 0.5 : 1 }}
@@ -287,12 +368,12 @@ export function PersonaTurret(props: PersonaTurretProps) {
         consume();
         dispatch({ type: 'key', key: action }, 'key');
       } }}>
-      <View style={{ width: geo.boxWidth * dial, height: geo.boxHeight * dial }}>
+      <View style={{ width: frame.boxWidth * frame.scale, height: frame.boxHeight * frame.scale }}>
         {/* Physical layout: RTL is mirrored by the angles, never by a second flip. */}
-        <View style={{ width: geo.boxWidth, height: geo.boxHeight, direction: 'ltr', transform: [{ scale: dial }], transformOrigin: 'top left' } as ViewStyle}>
+        <View style={{ width: frame.boxWidth, height: frame.boxHeight, direction: 'ltr', transform: [{ scale: frame.scale }], transformOrigin: 'top left' } as ViewStyle}>
           {/* Focus ring sits outside the bezel so it never covers a detent. */}
           <View pointerEvents="none" style={{
-            position: 'absolute', left: cx - R - 5, top: geo.boxTop - R - 5, width: ringSize + 10, height: ringSize + 10, borderRadius: R + 5,
+            position: 'absolute', left: cx - R - 5, top: frame.boxTop - R - 5, width: ringSize + 10, height: ringSize + 10, borderRadius: R + 5,
             borderWidth: state.focused ? 2 : 0, borderColor: focusColor,
             ...(state.focused && Platform.OS === 'web' ? { outlineStyle: 'solid', outlineWidth: forced ? 2 : 0, outlineColor: focusColor, outlineOffset: 1 } : {}),
           } as ViewStyle} />
@@ -319,7 +400,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
               }}
               {...{ onFocus: () => store.setState({ focused: true }), onBlur: () => { store.setState({ focused: false }); dispatch({ type: 'cancel' }, null); } }}
               style={{
-                position: 'absolute', left: cx - R, top: geo.boxTop - R, width: ringSize, height: ringSize, borderRadius: R,
+                position: 'absolute', left: cx - R, top: frame.boxTop - R, width: ringSize, height: ringSize, borderRadius: R,
                 // The face colour under the drawing, so the readout has a real ground for contrast checks.
                 backgroundColor: m.face[1],
                 ...(depth.dial ? { boxShadow: depth.dial } : {}),
@@ -369,76 +450,25 @@ export function PersonaTurret(props: PersonaTurretProps) {
                 <View style={{ position: 'absolute', left: R - 1.5, top: R - geo.face + 3, width: 3, height: 10, borderRadius: 1.5, backgroundColor: peeking ? m.faceText : m.accent }} />
               </TurretPointer>
               <View pointerEvents="none" style={{ position: 'absolute', left: R - geo.face + 6, width: (geo.face - 6) * 2, top: R - 22, alignItems: 'center', gap: 2 }}>
-                <Text numberOfLines={1} maxFontSizeMultiplier={FACE_TEXT_MAX_SCALE} style={{ color: m.faceText, fontSize: scale.type.body + 2, fontWeight: '700', letterSpacing: -0.2 }}>{persona?.label ?? turretCopy.ringLabel}</Text>
-                <Text maxFontSizeMultiplier={FACE_TEXT_MAX_SCALE} style={{ color: m.faceText, opacity: peeking ? 1 : 0.78, fontWeight: peeking ? '700' : '400', fontSize: scale.type.micro + 1, fontVariant: ['tabular-nums'] }}>
+                <Text numberOfLines={1} maxFontSizeMultiplier={FACE_TEXT_MAX_SCALE} style={{ color: m.faceText, fontSize: faceSize(scale.type.body + 2), fontWeight: '700', letterSpacing: -0.2 }}>{persona?.label ?? turretCopy.ringLabel}</Text>
+                {/* The count is a readout: 13 pt, the phone floor for readouts. */}
+                <Text maxFontSizeMultiplier={FACE_TEXT_MAX_SCALE} style={{ color: m.faceText, opacity: peeking ? 1 : 0.78, fontWeight: peeking ? '700' : '400', fontSize: faceSize(scale.type.micro + 3), fontVariant: ['tabular-nums'] }}>
                   {stops.length ? turretCopy.position(shown + 1, stops.length) : '0 of 0'}
                 </Text>
               </View>
             </View>
           </StudioGesture>
-          {/* Focus is tracked here: focus and blur bubble from the stops, and the
-              kit's web Pressable keeps its own blur handler. */}
-          <View accessibilityRole="radiogroup" accessibilityLabel={turretCopy.stopsHeading} pointerEvents="box-none"
-            {...{
-              onFocus: (event: { target?: unknown }) => {
-                const id = (event.target as { getAttribute?: (n: string) => string | null } | undefined)?.getAttribute?.('data-testid') ?? '';
-                const index = stops.findIndex(p => `persona-stop-${p.id}` === id);
-                store.setState({ focusedStop: index >= 0 ? index : null });
-              },
-              onBlur: () => store.setState({ focusedStop: null }),
-            } as object}
-            style={{ position: 'absolute', left: 0, top: 0, width: geo.boxWidth, height: geo.boxHeight }}>
-            {stops.map((p, s) => {
-              // The name's near edge sits labelGap off the bezel, on the outside of its detent.
-              const pos = polar(turretDisplayAngle(s, stops.length, rtl), geo.bezel + geo.labelGap);
-              const committed = s === state.turret.committed;
-              const lit = s === shown;
-              const digit = s < 9 ? s + 1 : undefined;
-              const tag = keys && digit !== undefined ? shortcut.tag(digit) : undefined;
-              const side = pos.x < -8 ? 'flex-end' : pos.x > 8 ? 'flex-start' : 'center';
-              const focusedStop = state.focusedStop === s;
-              return (
-                <Pressable key={p.id} testID={`persona-stop-${p.id}`}
-                  accessibilityRole="radio" accessibilityState={{ checked: committed, disabled: !!props.disabled }} aria-checked={committed}
-                  accessibilityLabel={turretCopy.srStop(p.label, keys && digit !== undefined ? shortcut.spoken(digit) : undefined)}
-                  onPress={() => dispatch({ type: 'shortcut', digit: s + 1 }, null)}
-                  style={({ pressed }) => ({
-                    position: 'absolute', width: geo.labelWidth, minHeight: geo.labelHeight,
-                    left: cx + pos.x - (pos.x < -8 ? geo.labelWidth : pos.x > 8 ? 0 : geo.labelWidth / 2),
-                    top: geo.boxTop + pos.y - (Math.abs(pos.x) <= 8 ? geo.labelHeight : geo.labelHeight / 2),
-                    alignItems: side, justifyContent: 'center', paddingHorizontal: scale.space.stack,
-                    borderRadius: scale.radius.control, borderWidth: 1,
-                    // A transparent edge keeps the stop's shape under Windows High Contrast.
-                    borderColor: focusedStop ? focusColor : 'transparent',
-                    // Pressed: the name sinks into the panel, an inset of the notch colour.
-                    backgroundColor: pressed ? `${m.notch}33` : 'transparent',
-                    transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
-                    ...(Platform.OS === 'web' ? {
-                      transitionProperty: 'transform, background-color', transitionDuration: prefs.reduceMotion ? '0ms' : `${forgeFeedbackMotion.press.ms}ms`, transitionTimingFunction: 'ease-out',
-                      outlineStyle: focusedStop ? 'solid' : 'none', outlineWidth: 2, outlineColor: focusColor, outlineOffset: 1,
-                    } : {}),
-                  }) as ViewStyle}>
-                  <Text numberOfLines={1} maxFontSizeMultiplier={STOP_TEXT_MAX_SCALE} style={{ color: lit ? m.text : m.muted, fontSize: scale.type.label + 1, fontWeight: committed || lit ? '700' : '500' }}>{p.label}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale.space.stack, minHeight: 14 }}>
-                    {committed && <View style={{ width: 6, height: 2, borderRadius: 1, backgroundColor: m.accent }} />}
-                    {tag && <Text maxFontSizeMultiplier={STOP_TEXT_MAX_SCALE} style={{ color: m.muted, fontSize: scale.type.micro + 1, fontVariant: ['tabular-nums'] }}>{tag}</Text>}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
+          {!stacked && stopGroup}
         </View>
       </View>
-      {/* Large text: the names on the dial stop growing at 130 %, so they are
-          listed here at full size. The stops above stay the controls. */}
-      {largeText && <Text importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
-        style={{ color: m.text, fontSize: scale.type.label, textAlign: 'center', maxWidth: lineWidth }}>{turretCopy.allStops(stops.map(p => p.label))}</Text>}
-      <Text testID="persona-turret-hint" numberOfLines={largeText ? undefined : 2}
-        style={{ color: peeking ? m.accent : m.muted, fontSize: scale.type.label, fontWeight: peeking ? '600' : '400', textAlign: 'center', maxWidth: lineWidth }}>{hint}</Text>
-      <View testID="persona-turret-readout" style={{ width: lineWidth, gap: scale.space.stack, borderTopWidth: 1, borderTopColor: m.panelEdge, paddingTop: scale.space.element }}>
+      {stacked && stopGroup}
+      <Text testID="persona-turret-hint" numberOfLines={textScale > 1.3 ? undefined : 2}
+        style={{ color: peeking ? m.accent : m.muted, fontSize: fs(scale.type.label), fontWeight: peeking ? '600' : '400', textAlign: 'center', maxWidth: stacked ? undefined : lineWidth, alignSelf: stacked ? 'stretch' : 'auto' }}>{hint}</Text>
+      {/* Full width, so the capability lines share the panel's gutter with its title and footer. */}
+      <View testID="persona-turret-readout" style={{ alignSelf: 'stretch', gap: scale.space.stack, borderTopWidth: 1, borderTopColor: m.panelEdge, paddingTop: scale.space.element }}>
         {persona && (missing.length === 0
-          ? <Text style={{ color: m.muted, fontSize: scale.type.label }}>{turretCopy.allReady(persona.label)}</Text>
-          : missing.map(line => <Text key={line.id} style={{ color: m.muted, fontSize: scale.type.label }}>{line.note}</Text>))}
+          ? <Text style={{ color: m.muted, fontSize: fs(scale.type.label) }}>{turretCopy.allReady(persona.label)}</Text>
+          : missing.map(line => <Text key={line.id} style={{ color: m.muted, fontSize: fs(scale.type.label) }}>{line.note}</Text>))}
       </View>
       {Platform.OS === 'web' && !props.onAnnounce && <Text testID="persona-turret-status" accessibilityLiveRegion="polite" style={visuallyHidden}>{state.status}</Text>}
     </View>

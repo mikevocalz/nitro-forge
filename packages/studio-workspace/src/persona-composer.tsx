@@ -6,7 +6,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { iconStroke } from '@nitro-forge/icons';
 import {
-  Banner, Button, FieldGroup, IconButton, List, ListItem, Menu, NightScope, Pressable, SegmentedControl, Text, TextInput, View,
+  Banner, Button, FieldGroup, IconButton, Menu, NightScope, Pressable, SegmentedControl, Text, TextInput, View,
 } from './ui';
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 import { DragGrabHandle } from './drag-grab-handle';
@@ -203,11 +203,44 @@ export function PersonaComposer(props: PersonaComposerProps) {
     </Pressable>;
   };
   const unfolded = (which: 'instruments' | 'capabilities') => !phone || s.open[which];
-  /** The kit List is a night slab in both themes, so marks inside its rows take the dark palette. */
-  const slab = prismThemes.dark;
   const rowMenu = (labelText: string) => <View accessibilityLabel={labelText} style={{ minWidth: scale.size.target, minHeight: scale.size.target, alignItems: 'center', justifyContent: 'center' }}>
-    <ComposerGlyph name="more" color={slab.muted} />
+    <ComposerGlyph name="more" color={c.muted} />
   </View>;
+  /** Rows share the toggle tiles' material and type, so the rail, the grid and
+   * the persona list read as one instrument. The kit sections scope night on
+   * web; light rows put the day scheme back for the kit buttons inside them. */
+  const rowStack = (testID: string, label: string, children: ReactNode, onLayout?: (height: number) => void) =>
+    <View testID={testID} accessibilityRole="list" accessibilityLabel={label} {...((props.theme ?? 'dark') === 'light' ? { className: 'scheme-light' } : {})}
+      {...(onLayout ? { onLayout: (e: { nativeEvent: { layout: { height: number } } }) => onLayout(e.nativeEvent.layout.height) } : {})}
+      style={{ gap: scale.space.stack }}>{children}</View>;
+  const row = (key: string, parts: { on?: boolean; leading?: ReactNode; title: string; note?: string; trailing?: ReactNode }) =>
+    <View key={key} accessibilityRole={'listitem' as never} style={{
+      minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', gap: scale.space.element,
+      paddingLeft: parts.leading ? scale.space.stack : scale.space.inset, paddingRight: scale.space.stack, paddingVertical: scale.space.stack,
+      borderRadius: scale.radius.control, borderWidth: 1, borderColor: parts.on ? c.accent : c.line, backgroundColor: parts.on ? c.soft : c.deep,
+    }}>
+      {parts.leading}
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text style={{ color: c.text, fontSize: scale.type.label, fontWeight: '600' }}>{parts.title}</Text>
+        {parts.note && <Text style={{ color: c.muted, fontSize: scale.type.label }}>{parts.note}</Text>}
+      </View>
+      {parts.trailing}
+    </View>;
+
+  const capabilityBody = <>
+    {foldTitle('capabilities', 'Capabilities', disclosureCount('capabilities', draft.capabilities.length, composerCapabilities.length))}
+    {unfolded('capabilities') && <>
+      {label('Unbuilt items can still be picked. The preview marks them missing until the engine supports them.')}
+      {tileGrid('composer-capabilities', composerCapabilities.map(cap => {
+        const on = draft.capabilities.includes(cap.id);
+        const tag = capabilityTag(cap);
+        return tile(cap.id, {
+          on, title: cap.label, name: capabilityToggleName(cap, on), testID: `composer-capability-${cap.id}`, ...(tag ? { note: tag } : {}),
+          onPress: () => setDraft({ capabilities: toggleId(draft.capabilities, cap.id) }),
+        });
+      }))}
+    </>}
+  </>;
 
   const railSection = <FieldGroup.Section>
     <View style={{ gap: scale.space.element }}>
@@ -217,44 +250,42 @@ export function PersonaComposer(props: PersonaComposerProps) {
         ? <View testID="composer-rail-empty" style={{ minHeight: scale.size.target, justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: c.line, borderRadius: scale.radius.control, paddingHorizontal: scale.space.inset }}>
           <Text style={{ color: c.muted, fontSize: scale.type.label }}>{phone ? 'The rail is empty. Open Instruments below and pick one.' : 'The rail is empty. Pick an instrument below.'}</Text>
         </View>
-        : <View testID="composer-rail" onLayout={e => ui.setState({ railHeight: e.nativeEvent.layout.height })}>
-          <List tone="carolina">
-            {draft.rail.map((id, index) => {
-              const name = instrumentLabel(id);
-              const target = s.drag?.target === index && s.drag.index !== index;
-              const number = <Text style={{ color: slab.accent, fontSize: scale.type.label, fontWeight: '600', fontVariant: ['tabular-nums'], minWidth: 16, textAlign: 'right' }}>{String(index + 1)}</Text>;
-              return <ListItem key={id} selected={s.drag?.index === index || target}
-                leading={<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {draft.rail.length > 1 ? <DragGrabHandle label={`Drag ${name} to reorder`} color={slab.muted}
-                    onStart={() => ui.setState({ drag: { index, originY: null, target: index } })}
-                    onMove={point => ui.setState(st => {
-                      if (!st.drag) return {};
-                      const originY = st.drag.originY ?? point.y;
-                      return { drag: { ...st.drag, originY, target: dragTargetIndex(st.drag.index, point.y - originY, rowHeights) } };
-                    })}
-                    onCommit={() => { const d = ui.getState().drag; ui.setState({ drag: null }); if (d && d.target !== d.index) move(d.index, d.target - d.index); }}
-                    onCancel={() => ui.setState({ drag: null })} /> : null}
-                  {number}
-                </View>}
-                trailing={!wide ? <Menu title={name} triggerLabel={`Move or remove ${name}`}
-                  actions={[
-                    { id: 'up', title: 'Move up', disabled: index === 0 }, { id: 'down', title: 'Move down', disabled: index === draft.rail.length - 1 },
-                    { id: 'top', title: 'Move to top', disabled: index === 0 }, { id: 'bottom', title: 'Move to bottom', disabled: index === draft.rail.length - 1 },
-                    { id: 'remove', title: 'Remove from rail', destructive: true },
-                  ]}
-                  onAction={a => {
-                    if (a === 'up') move(index, -1); else if (a === 'down') move(index, 1);
-                    else if (a === 'top') move(index, -index); else if (a === 'bottom') move(index, draft.rail.length - 1 - index);
-                    else if (a === 'remove') setDraft({ rail: draft.rail.filter(x => x !== id) });
-                  }}>{rowMenu(`Move or remove ${name}`)}</Menu> : <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Button title="Up" aria-label={`Move ${name} up`} disabled={index === 0} onPress={() => move(index, -1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
-                  <Button title="Down" aria-label={`Move ${name} down`} disabled={index === draft.rail.length - 1} onPress={() => move(index, 1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
-                  <IconButton aria-label={`Remove ${name} from the rail`} icon={<ForgeIcon name="close" size={16} color={slab.muted} reducedMotion />}
-                    onPress={() => setDraft({ rail: draft.rail.filter(x => x !== id) })} variant="ghost" size="sm" tone="carolina" />
-                </View>}>{name}</ListItem>;
-            })}
-          </List>
-        </View>}
+        : rowStack('composer-rail', 'Rail order', draft.rail.map((id, index) => {
+            const name = instrumentLabel(id);
+            const target = s.drag?.target === index && s.drag.index !== index;
+            return row(id, {
+              on: s.drag?.index === index || target, title: name,
+              leading: <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {draft.rail.length > 1 ? <DragGrabHandle label={`Drag ${name} to reorder`} color={c.muted}
+                  onStart={() => ui.setState({ drag: { index, originY: null, target: index } })}
+                  onMove={point => ui.setState(st => {
+                    if (!st.drag) return {};
+                    const originY = st.drag.originY ?? point.y;
+                    return { drag: { ...st.drag, originY, target: dragTargetIndex(st.drag.index, point.y - originY, rowHeights) } };
+                  })}
+                  onCommit={() => { const d = ui.getState().drag; ui.setState({ drag: null }); if (d && d.target !== d.index) move(d.index, d.target - d.index); }}
+                  onCancel={() => ui.setState({ drag: null })} /> : null}
+                {/* The same numeral the chosen tile carries. */}
+                <Text style={{ color: c.accent, fontSize: scale.type.label, fontWeight: '700', fontVariant: ['tabular-nums'], minWidth: 18, textAlign: 'center' }}>{String(index + 1)}</Text>
+              </View>,
+              trailing: !wide ? <Menu title={name} triggerLabel={`Move or remove ${name}`}
+                actions={[
+                  { id: 'up', title: 'Move up', disabled: index === 0 }, { id: 'down', title: 'Move down', disabled: index === draft.rail.length - 1 },
+                  { id: 'top', title: 'Move to top', disabled: index === 0 }, { id: 'bottom', title: 'Move to bottom', disabled: index === draft.rail.length - 1 },
+                  { id: 'remove', title: 'Remove from rail', destructive: true },
+                ]}
+                onAction={a => {
+                  if (a === 'up') move(index, -1); else if (a === 'down') move(index, 1);
+                  else if (a === 'top') move(index, -index); else if (a === 'bottom') move(index, draft.rail.length - 1 - index);
+                  else if (a === 'remove') setDraft({ rail: draft.rail.filter(x => x !== id) });
+                }}>{rowMenu(`Move or remove ${name}`)}</Menu> : <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Button title="Up" aria-label={`Move ${name} up`} disabled={index === 0} onPress={() => move(index, -1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
+                <Button title="Down" aria-label={`Move ${name} down`} disabled={index === draft.rail.length - 1} onPress={() => move(index, 1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
+                <IconButton aria-label={`Remove ${name} from the rail`} icon={<ForgeIcon name="close" size={16} color={c.muted} reducedMotion />}
+                  onPress={() => setDraft({ rail: draft.rail.filter(x => x !== id) })} variant="ghost" size="sm" tone="carolina" />
+              </View>,
+            });
+          }), height => ui.setState({ railHeight: height }))}
       {s.drag && <Text accessibilityLiveRegion="polite" style={{ color: c.accent, fontSize: scale.type.label }}>
         {`Drop at position ${s.drag.target + 1} of ${draft.rail.length}. Press Escape to cancel.`}</Text>}
       <View style={{ gap: scale.space.element, marginTop: scale.space.element }}>
@@ -267,25 +298,15 @@ export function PersonaComposer(props: PersonaComposerProps) {
             onPress: () => setDraft({ rail: toggleId(draft.rail, i.id) }),
           });
         }))}
+        {/* Phone: both grids fold, so their disclosures sit together in one
+            section, split by a hairline, with no section gap between them. */}
+        {phone && <View style={{ gap: scale.space.element, borderTopWidth: 1, borderTopColor: c.line }}>{capabilityBody}</View>}
       </View>
     </View>
   </FieldGroup.Section>;
 
   const capabilitySection = <FieldGroup.Section>
-    <View style={{ gap: scale.space.element }}>
-      {foldTitle('capabilities', 'Capabilities', disclosureCount('capabilities', draft.capabilities.length, composerCapabilities.length))}
-      {unfolded('capabilities') && <>
-        {label('Unbuilt items can still be picked. The preview marks them missing until the engine supports them.')}
-        {tileGrid('composer-capabilities', composerCapabilities.map(cap => {
-          const on = draft.capabilities.includes(cap.id);
-          const tag = capabilityTag(cap);
-          return tile(cap.id, {
-            on, title: cap.label, name: capabilityToggleName(cap, on), testID: `composer-capability-${cap.id}`, ...(tag ? { note: tag } : {}),
-            onPress: () => setDraft({ capabilities: toggleId(draft.capabilities, cap.id) }),
-          });
-        }))}
-      </>}
-    </View>
+    <View style={{ gap: scale.space.element }}>{capabilityBody}</View>
   </FieldGroup.Section>;
 
   const surfaceSection = <FieldGroup.Section>
@@ -352,19 +373,18 @@ export function PersonaComposer(props: PersonaComposerProps) {
     </View>}
     {noticeBanner('list')}
     {personas.some(p => p.builtIn) && label(BUILT_IN_CAPTION)}
-    <List tone="carolina">
-      {personas.map(p => {
-        const actions = p.builtIn
-          ? [{ id: 'copy', title: 'Start a copy' }]
-          : [{ id: 'copy', title: 'Start a copy' }, { id: 'export', title: props.onExportPersona ? 'Export' : 'Show JSON' }, { id: 'remove', title: 'Remove', destructive: true }];
-        // Summary nested in the title so it sets at label size in muted ink; the kit's supportingText matches the title on wide screens.
-        return <ListItem key={p.id}
-          trailing={<Menu title={p.label} triggerLabel={`Actions for ${p.label}`} actions={actions}
-            onAction={id => { if (id === 'copy') startFrom(p); else if (id === 'export') void exportPersona(p); else if (id === 'remove') removePersona(p); }}>
-            {rowMenu(`Actions for ${p.label}`)}
-          </Menu>}>{p.label}{'\n'}<Text style={{ color: slab.muted, fontSize: scale.type.label }}>{personaSummary(p)}</Text></ListItem>;
-      })}
-    </List>
+    {rowStack('composer-personas', 'Personas', personas.map(p => {
+      const actions = p.builtIn
+        ? [{ id: 'copy', title: 'Start a copy' }]
+        : [{ id: 'copy', title: 'Start a copy' }, { id: 'export', title: props.onExportPersona ? 'Export' : 'Show JSON' }, { id: 'remove', title: 'Remove', destructive: true }];
+      return row(p.id, {
+        title: p.label, note: personaSummary(p),
+        trailing: <Menu title={p.label} triggerLabel={`Actions for ${p.label}`} actions={actions}
+          onAction={id => { if (id === 'copy') startFrom(p); else if (id === 'export') void exportPersona(p); else if (id === 'remove') removePersona(p); }}>
+          {rowMenu(`Actions for ${p.label}`)}
+        </Menu>,
+      });
+    }))}
     {personas.every(p => p.builtIn) && label('Personas you save or import are listed here too.')}
     {s.exported && <View style={{ gap: scale.space.stack }}>
       {label(`${s.exported.label} as JSON`)}
@@ -374,7 +394,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
   </View>;
 
 
-  const form = <FieldGroup>{nameSection}{railSection}{capabilitySection}{surfaceSection}</FieldGroup>;
+  const form = <FieldGroup>{nameSection}{railSection}{phone ? null : capabilitySection}{surfaceSection}</FieldGroup>;
   const cancelDrag = (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape' && ui.getState().drag) ui.setState({ drag: null }); };
   const body = <View testID="persona-composer" onLayout={e => ui.setState({ width: e.nativeEvent.layout.width })}
     {...{ onKeyDown: cancelDrag }}

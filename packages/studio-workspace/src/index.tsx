@@ -101,7 +101,8 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
       selectedColor={primary ? colors.ink : colors.accent} surfaceColor={primary ? colors.accent : selected ? colors.soft : colors.base} reducedMotion={reducedMotion} /> : undefined;
     const shared = { onPress, disabled, ...(toggled === undefined ? {} : { selected: toggled }), cornerRadius: scale.radius.control,
       variant: primary ? 'primary' as const : 'ghost' as const, tone: 'carolina' as const,
-      className: selected && !primary ? 'rounded-[4px] bg-ink-800' : 'rounded-[4px]' };
+      // A transparent edge keeps each button's shape under Windows High Contrast.
+      className: selected && !primary ? 'rounded-[4px] border border-transparent bg-ink-800' : 'rounded-[4px] border border-transparent' };
     return iconOnly ? <IconButton key={label} {...shared} size={primary ? 'md' : 'sm'} aria-label={label} icon={icon} />
       : <Button key={label} {...shared} size={small ? 'sm' : 'md'} title={label} icon={icon} />;
   };
@@ -135,7 +136,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
           <View style={{ flexDirection: 'row', gap: 8 }}>{button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy)}{button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy)}</View>
         </View>}
         {arranging && <View style={{ borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 12, gap: 4 }}>
-          <Text style={{ color: colors.muted, fontSize: 10, letterSpacing: 1 }}>PANEL POSITION</Text>
+          <Text style={{ color: colors.muted, fontSize: 11, letterSpacing: 1 }}>PANEL POSITION</Text>
           <SegmentedControl aria-label={`Dock position for ${panelNames[id] ?? id}`} value={dock ?? ''}
             options={DOCKS.map(zone => ({ value: zone, label: zone[0]!.toUpperCase() + zone.slice(1) }))}
             onChange={zone => { if (DOCKS.includes(zone as Dock)) action(id, `move-${zone as Dock}`); }}
@@ -195,7 +196,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         <ForgeIcon name={appIcons[props.studioId]} size={separateHostControls ? 20 : 23} selected color={colors.accent} selectedColor={colors.accent} surfaceColor={colors.soft} reducedMotion={reducedMotion} />
       </View>
       <View style={{ flex: 1, minWidth: 40, gap: 4 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 10, fontWeight: '600', letterSpacing: .4, flexShrink: 1 }}>{props.title}</Text>{!compact && <><Text style={{ color: colors.line, fontSize: 10 }}> / </Text><Text style={{ color: colors.muted, fontSize: 10 }}>{props.busy ? 'Working…' : 'Document'}</Text></>}</View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11, fontWeight: '600', letterSpacing: .4, flexShrink: 1 }}>{props.title}</Text>{!compact && <><Text style={{ color: colors.line, fontSize: 11 }}> / </Text><Text style={{ color: colors.muted, fontSize: 11 }}>{props.busy ? 'Working…' : 'Document'}</Text></>}</View>
         <Text numberOfLines={1} style={{ color: colors.text, fontWeight: '600', fontSize: compact ? 13 : 15 }}>{props.documentTitle}</Text>
       </View>
       {!separateHostControls && props.headerTrailing}

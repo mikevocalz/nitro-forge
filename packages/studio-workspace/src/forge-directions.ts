@@ -214,6 +214,59 @@ export const prismFillSwatches = [
   { name: 'rose', hex: '#E26D92' },
 ] as const;
 
+/** Prism's editor chrome (toolbar, tool rail, layers panel, fill bar and the
+ * persona popover) cut from the Workbench billet, so the panels and the dial
+ * read as one material. Dark is graphite. Light is white ceramic with dark
+ * engraving and a chamfer line drawn dark enough to hold its edge on the
+ * light mat; it is designed for daylight, not inverted from graphite.
+ * Contrast pairs are checked in forge-directions.test.ts. */
+export type ForgeChrome = Readonly<{
+  /** Panel face. */
+  body: string;
+  /** Outer chamfer line around every panel. */
+  edge: string;
+  /** Hairlines inside a panel: row splits, section rules. */
+  rule: string;
+  /** Recessed ground: unavailable controls, inputs. */
+  well: string;
+  /** Ground of the selected row. */
+  selected: string;
+  text: string;
+  muted: string;
+  /** Secondary text on {@linkcode ForgeChrome.selected}. */
+  selectedMuted: string;
+  /** Icon ink of an unavailable control in the well. */
+  disabledInk: string;
+  accent: string;
+  /** Tint under a pressed control. */
+  press: string;
+  /** Hairline around a colour chip, so a chip near the body's value keeps its shape. */
+  chipEdge: string;
+  /** Ring around the chosen colour chip. */
+  chipRing: string;
+  /** Lit top edge over the panel's short shadow. */
+  depth: string;
+}>;
+
+export const workbenchChrome: Readonly<Record<ForgeScheme, ForgeChrome>> = {
+  dark: {
+    body: '#1E2024', edge: '#3A3D44', rule: '#2E3036', well: '#141518', selected: '#2B3846',
+    text: '#F2F3F5', muted: '#B8BBC4', selectedMuted: '#D5E3F0', disabledInk: '#858991', accent: '#66B9FF',
+    press: '#FFFFFF14', chipEdge: '#FFFFFF59', chipRing: '#F2F3F5', depth: forgeDirections.workbench.depth.dark.panel,
+  },
+  light: {
+    body: '#ECEDEF', edge: '#737882', rule: '#CDD0D6', well: '#DADCE1', selected: '#D3E4F4',
+    text: '#1F2228', muted: '#555B66', selectedMuted: '#2F4357', disabledInk: '#6B707A', accent: '#086CB8',
+    press: '#1F222814', chipEdge: '#1F222859', chipRing: '#1F2228', depth: forgeDirections.workbench.depth.light.panel,
+  },
+};
+
+/** The chrome as a palette for shared controls (the Precision Scrubber). */
+export function chromePalette(scheme: ForgeScheme): WorkspaceColors {
+  const c = workbenchChrome[scheme];
+  return { ...prismThemes[scheme], base: c.body, raised: c.body, deep: c.well, line: c.rule, text: c.text, muted: c.muted, accent: c.accent };
+}
+
 /** Lab backdrop: the Prism mat and an 800 x 600 artboard behind the chrome. */
 export const labCanvas = {
   dark: { mat: '#18191D', paper: '#FFFEFC', paperInk: '#303440', ground: '#121316' },

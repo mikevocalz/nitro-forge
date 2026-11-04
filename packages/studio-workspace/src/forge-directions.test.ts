@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FORGE_DIRECTION_IDS, forgeDirections, contrastRatio, luminance, glassAllowed, detentDurationMs,
-  labCanvas, DEFAULT_TURRET_DIRECTION, type ForgeScheme,
+  labCanvas, DEFAULT_TURRET_DIRECTION, workbenchChrome, type ForgeScheme,
 } from './forge-directions.ts';
 
 const schemes: ForgeScheme[] = ['dark', 'light'];
@@ -66,4 +66,24 @@ test('the committed slot accent holds 3:1 on its halo in every direction and sch
     assert.ok(ratio >= 3, `${id} ${scheme}: accent ${m.accent} on halo ${m.accentHalo} is ${ratio.toFixed(2)}:1`);
     assert.equal(forgeDirections[id].motion.easing, `cubic-bezier(${forgeDirections[id].motion.bezier.join(', ')})`);
   }
+});
+
+test('editor chrome: engraving reads at 4.5:1 and state marks at 3:1, in both materials', () => {
+  const ratio = (a: string, b: string) => contrastRatio(luminance(a), luminance(b));
+  for (const scheme of schemes) {
+    const c = workbenchChrome[scheme];
+    const text: [string, string, string][] = [
+      ['text on body', c.text, c.body], ['muted on body', c.muted, c.body], ['muted in well', c.muted, c.well],
+      ['text on selected row', c.text, c.selected], ['selected muted', c.selectedMuted, c.selected],
+    ];
+    for (const [name, ink, ground] of text) assert.ok(ratio(ink, ground) >= 4.5, `${scheme} ${name}: ${ratio(ink, ground).toFixed(2)}`);
+    const marks: [string, string, string][] = [
+      ['accent on body', c.accent, c.body], ['accent in well', c.accent, c.well], ['accent on selected row', c.accent, c.selected],
+      ['chip ring on body', c.chipRing, c.body], ['disabled icon in well', c.disabledInk, c.well],
+    ];
+    for (const [name, ink, ground] of marks) assert.ok(ratio(ink, ground) >= 3, `${scheme} ${name}: ${ratio(ink, ground).toFixed(2)}`);
+  }
+  // Ceramic is near the light mat's value, so its chamfer line carries the panel edge.
+  const light = workbenchChrome.light;
+  assert.ok(ratio(light.edge, light.body) >= 3 && ratio(light.edge, labCanvas.light.mat) >= 3, 'light chamfer holds 3:1 on its face and on the mat');
 });

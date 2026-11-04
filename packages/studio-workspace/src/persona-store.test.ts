@@ -47,7 +47,7 @@ test('import validates untrusted JSON and export round-trips', () => {
   const json = store.getState().exportJson(made.id);
   const copy = store.getState().importJson(json);
   assert.equal(copy.label, 'Ink 2');
-  assert.throws(() => store.getState().importJson('nope'), /not valid JSON/);
+  assert.throws(() => store.getState().importJson('nope'), /Stops at character 2, at “o”/);
 });
 
 test('a surface change keeps a persona that runs there and falls back otherwise', () => {

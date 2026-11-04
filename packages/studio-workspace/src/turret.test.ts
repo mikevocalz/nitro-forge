@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  TURRET_ARC_DEG, turretAnnouncement, turretArrowKey, turretDialScale, turretDisplayAngle, turretLogicalAngle, turretReduce,
+  TURRET_ARC_DEG, TURRET_MIN_RING_SCALE, turretAnnouncement, turretFrame, turretArrowKey, turretDialScale, turretDisplayAngle, turretLogicalAngle, turretReduce,
   turretShortcutDigit, turretShortcutFor, turretStopAngle, turretStopAt, type TurretEvent, type TurretState,
 } from './turret.ts';
 
@@ -119,4 +119,32 @@ test('the dial scales down to fit the measured width and never grows', () => {
   assert.equal(turretDialScale(288, 300), 0.96);
   assert.equal(turretDialScale(175, 300), 175 / 300, '390 px at 200 % zoom');
   assert.equal(turretDialScale(60, 300), 0.5);
+});
+
+const geometry = { bezel: 66, labelGap: 14, labelWidth: 80, labelHeight: 44, boxWidth: 300, boxTop: 128, boxHeight: 200 };
+
+test('at 100 % text the frame is the drawn 300 x 200 box', () => {
+  const f = turretFrame(358, 1, 3, geometry);
+  assert.deepEqual(f, { layout: 'ring', scale: 1, boxWidth: 300, boxHeight: 200, boxTop: 128, labelWidth: 80, labelHeight: 44 });
+  assert.equal(turretFrame(288, 1, 3, geometry).scale, 0.96, '320 px phone: a 4 % fit, names stay on the ring');
+});
+
+test('larger text grows the names and the box instead of capping them', () => {
+  const f = turretFrame(0, 2, 3, geometry);
+  assert.equal(f.layout, 'ring');
+  assert.equal(f.labelWidth, 160);
+  assert.equal(f.labelHeight, 88);
+  assert.ok(f.boxWidth >= 2 * (80 * Math.sin(Math.PI * 2 / 3) + 160), `box ${f.boxWidth} holds both side names`);
+  assert.ok(f.boxTop >= 80 + 88, 'the top name sits wholly inside the box');
+  assert.equal(turretFrame(900, 2, 3, geometry).scale, 1, 'a wide panel draws the grown ring at size');
+});
+
+test('when the grown ring cannot fit, names stack under the ring instead of shrinking', () => {
+  for (const [available, scale] of [[358, 2], [288, 2], [163, 1], [128, 1]] as const) {
+    const f = turretFrame(available, scale, 3, geometry);
+    assert.equal(f.layout, 'stacked', `${available} pt at ${scale}x`);
+    assert.ok(f.boxWidth * f.scale <= available, 'the ring fits');
+    assert.ok(f.scale >= TURRET_MIN_RING_SCALE, 'the ring keeps its drawn size within a few percent');
+  }
+  for (const count of [1, 2, 4]) assert.equal(turretFrame(358, 1, count, geometry).layout, 'ring', `${count} stops at 100 %`);
 });

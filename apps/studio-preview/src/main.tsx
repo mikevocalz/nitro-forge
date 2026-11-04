@@ -14,6 +14,7 @@ import { Text, View, Menu, Button, Banner, DropZone, StudioUIProvider } from '@n
 import { studioControls, FilePicker } from '@acme/ui/studio-controls/web';
 import { TurretLab, isTurretLabRoute } from './turret-lab';
 import { ComposerLab, isComposerLabRoute, COMPOSER_LAB_HASH } from './composer-lab';
+import { ComposerGlyph } from '@nitro-forge/studio-workspace/composer';
 import { prismPersonaStore } from './persona-storage';
 import './style.css';
 
@@ -82,7 +83,7 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
 
   </Page>;
   return <>
-    <ForgeWorkspace headerLeading={<Link className="back-link" href="#/">← All apps</Link>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
+    <ForgeWorkspace headerLeading={<Link className="back-link" href="#/"><SemanticText className="back-chevron" aria-hidden="true"><ComposerGlyph name="chevron-left" size={14} color="currentColor" /></SemanticText>All apps</Link>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
       theme={theme} loadPreset={loadPreset} persistPreset={persistPreset}
       state={editor.state} rows={config.rows(editor.state)}
       actions={config.actions.map(action => ({ title: action.title, run: () => run(() => action.run(editor)) }))}
@@ -114,7 +115,7 @@ function App() {
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
   }, [store]);
-  const themeToggle = <Button aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={theme === 'dark' ? 'Light' : 'Dark'} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]"
+  const themeToggle = <Button aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={theme === 'dark' ? 'Light' : 'Dark'} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px] border border-transparent"
     onPress={() => store.setState({ theme: theme === 'dark' ? 'light' : 'dark' })} />;
   const editorControls = <Page className="editor-host-controls">
     <Menu title="Preview width" triggerLabel="Preview controls" actions={[

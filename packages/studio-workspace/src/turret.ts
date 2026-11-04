@@ -111,6 +111,53 @@ export function turretDialScale(available: number, boxWidth: number): number {
   return Math.max(0.5, available / boxWidth);
 }
 
+/** Drawn sizes a turret frame is built from, in points at 100 % text. */
+export type TurretFrameGeometry = Readonly<{
+  bezel: number; labelGap: number; labelWidth: number; labelHeight: number;
+  boxWidth: number; boxTop: number; boxHeight: number;
+}>;
+
+/** Where the stop names go at one text size. `ring`: around the bezel, the
+ * box grown so every name keeps its full size. `stacked`: the ring alone,
+ * the names as a list under it, for widths the grown ring cannot fit. */
+export type TurretFrame = Readonly<{
+  layout: 'ring' | 'stacked';
+  /** Uniform scale applied to the drawing box. Never above 1. */
+  scale: number;
+  boxWidth: number; boxHeight: number; boxTop: number;
+  labelWidth: number; labelHeight: number;
+}>;
+
+/** Smallest scale a ring of names may be drawn at before they move to a list:
+ * below it a 13 pt name would render under 11 pt. */
+export const TURRET_MIN_RING_SCALE = 0.85;
+
+/** The turret's drawing box for `count` stops at `textScale` (1 = 100 %),
+ * fitted to `available` points. Names grow with the text; the box grows
+ * around them; when the grown box cannot fit, the names stack instead of
+ * shrinking. `available` of 0 means not measured yet. */
+export function turretFrame(available: number, textScale: number, count: number, g: TurretFrameGeometry): TurretFrame {
+  const t = Math.max(1, Number.isFinite(textScale) ? textScale : 1);
+  const labelWidth = Math.ceil(g.labelWidth * t), labelHeight = Math.max(g.labelHeight, Math.ceil(g.labelHeight * t));
+  const reach = g.bezel + g.labelGap;
+  let half = g.bezel + 5, top = g.bezel + 5, bottom = g.bezel + 5;
+  for (let i = 0; i < count; i++) {
+    const rad = turretStopAngle(i, count) * Math.PI / 180;
+    const x = Math.abs(reach * Math.sin(rad)), y = -reach * Math.cos(rad);
+    const centred = x <= 8;
+    half = Math.max(half, x + (centred ? labelWidth / 2 : labelWidth));
+    top = Math.max(top, -y + (centred ? labelHeight : labelHeight / 2));
+    bottom = Math.max(bottom, y + labelHeight / 2);
+  }
+  const boxWidth = Math.max(g.boxWidth, Math.ceil(half * 2));
+  const boxTop = Math.max(g.boxTop, Math.ceil(top));
+  const boxHeight = Math.max(g.boxHeight, boxTop + Math.ceil(bottom));
+  const fit = turretDialScale(available, boxWidth);
+  if (fit >= TURRET_MIN_RING_SCALE) return { layout: 'ring', scale: fit, boxWidth, boxHeight, boxTop, labelWidth, labelHeight };
+  const ring = (g.bezel + 5) * 2;
+  return { layout: 'stacked', scale: turretDialScale(available, ring), boxWidth: ring, boxHeight: ring, boxTop: ring / 2, labelWidth, labelHeight };
+}
+
 /** What a screen reader hears for one effect. `commit` reads the new persona,
  * `cancel` the one kept; a detent reads the previewed one. */
 export function turretAnnouncement(effect: TurretEffect, shown: string, committed: string, atEnd: 'first' | 'last' | null = null): string {
