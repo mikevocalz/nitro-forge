@@ -1,0 +1,63 @@
+name: Forge audio SDK58 native builds
+
+on:
+  pull_request:
+    paths:
+      - 'packages/audio-ui/**'
+      - 'apps/forge-audio-lab/**'
+      - '.github/workflows/audio-sdk58-native-build.yml'
+  workflow_dispatch:
+
+jobs:
+  android-native-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: pnpm install --no-frozen-lockfile
+      - name: Generate Expo SDK58 Android project
+        run: pnpm --dir apps/forge-audio-lab exec expo prebuild --platform android --no-install
+      - name: Compile app and linked native UI modules
+        working-directory: apps/forge-audio-lab/android
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+  ios-native-build:
+    runs-on: macos-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Generate Expo SDK58 Apple project
+        run: pnpm --dir apps/forge-audio-lab exec expo prebuild --platform ios --no-install
+      - name: Resolve native CocoaPods dependencies
+        working-directory: apps/forge-audio-lab/ios
+        run: pod install
+      - name: Compile native app for iOS Simulator without signing
+        working-directory: apps/forge-audio-lab/ios
+        shell: bash
+        run: |
+          set -euo pipefail
+          workspace=$(find . -maxdepth 2 -name '*.xcworkspace' -type d | head -1)
+          test -n "$workspace"
+          scheme=$(xcodebuild -list -json -workspace "$workspace" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("workspace",{}).get("schemes",[""])[0])')
+          test -n "$scheme"
+          xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
