@@ -11,7 +11,7 @@ export interface VideoMonitorState {
   /** Last frame reported by the *actual* native decoder; not an optimistic request. */
   readonly reportedFrame: number;
   /** Latest user request, cleared by the first subsequent decoder time event. */
-  readonly requestedFrame?: number;
+  readonly requestedFrame: number | null;
   readonly durationFrames: number;
   readonly bufferedFrame: number;
 }
@@ -22,6 +22,7 @@ export function createVideoMonitorStore(): StoreApi<VideoMonitorState> {
     reportedFrame: 0,
     durationFrames: 0,
     bufferedFrame: 0,
+    requestedFrame: null,
   }));
 }
 
@@ -46,7 +47,7 @@ export function reportNativePlaybackTime(
   store.setState({
     reportedFrame: nextFrame,
     bufferedFrame,
-    requestedFrame: undefined,
+    requestedFrame: null,
   });
 }
 
