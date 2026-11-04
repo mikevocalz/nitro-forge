@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  EMPTY_COMPOSER_DRAFT, capabilityTag, composerCapabilities, designStudioInstruments, dragTargetIndex, draftManifest,
+  BUILT_IN_CAPTION, EMPTY_COMPOSER_DRAFT, capabilityTag, capabilityToggleName, composerCapabilities, composerLayout, designStudioInstruments,
+  disclosureCount, dragTargetIndex, draftManifest, instrumentToggleName, personaSummary, railPosition, toggleGrid,
   moveAnnouncement, moveRailItem, nameCounter, requestedImportLabel, saveBlocker, savedMessage, toPersonaDraft, toggleId,
 } from './persona-composer-model.ts';
 import { createPersonaStore } from './persona-store.ts';
@@ -79,4 +80,47 @@ test('saved message names the suffix when the store resolved a conflict', () => 
   assert.equal(savedMessage('Saved', ' Print ', plain), 'Saved Print');
   assert.equal(requestedImportLabel('{"label":"Pixel"}'), 'Pixel');
   assert.equal(requestedImportLabel('not json'), '');
+});
+
+test('layout folds the grids below 600 and splits columns from 1000', () => {
+  assert.equal(composerLayout(0), 'single');
+  assert.equal(composerLayout(390), 'phone');
+  assert.equal(composerLayout(599), 'phone');
+  assert.equal(composerLayout(600), 'single');
+  assert.equal(composerLayout(999), 'single');
+  assert.equal(composerLayout(1000), 'wide');
+});
+
+test('toggle grid fits whole tiles and never exceeds the width', () => {
+  assert.deepEqual(toggleGrid(358, 8), { columns: 2, tile: 175 });
+  assert.deepEqual(toggleGrid(100, 8), { columns: 1, tile: 100 });
+  assert.equal(toggleGrid(2000, 8).columns, 4);
+  assert.deepEqual(toggleGrid(0, 8), { columns: 1, tile: 0 });
+  for (const w of [320, 480, 720, 610]) {
+    const g = toggleGrid(w, 8);
+    assert.ok(g.tile * g.columns + 8 * (g.columns - 1) <= w);
+  }
+});
+
+test('tile names contain the visible label and say the state', () => {
+  const byId = new Map(composerCapabilities.map(c => [c.id, c]));
+  assert.equal(capabilityToggleName(byId.get('path-nodes')!, false), 'Include Paths and nodes, not in this build');
+  assert.equal(capabilityToggleName(byId.get('path-nodes')!, true), 'Included Paths and nodes, not in this build');
+  assert.equal(capabilityToggleName(byId.get('shapes')!, true), 'Included Rectangles and ellipses');
+  assert.equal(capabilityToggleName({ ...byId.get('shapes')!, surfaces: ['ipad', 'xr'] }, false), 'Include Rectangles and ellipses, iPad and XR only');
+  assert.equal(railPosition(['a', 'b'], 'b'), 2);
+  assert.equal(railPosition(['a'], 'z'), undefined);
+  assert.equal(instrumentToggleName('Ink Deck', undefined), 'Add Ink Deck to the rail');
+  assert.equal(instrumentToggleName('Ink Deck', 2), 'Ink Deck, position 2 on the rail. Press to remove');
+  assert.equal(disclosureCount('rail', 2, 9), '2 of 9 on the rail');
+  assert.equal(disclosureCount('capabilities', 0, 11), '0 of 11 included');
+});
+
+test('persona summary marks built-ins once, in the row', () => {
+  const store = createPersonaStore({ surface: 'iphone' });
+  const [builtIn] = store.getState().personas;
+  assert.match(personaSummary(builtIn!), /^Built in, \d+ on rail, /);
+  const mine = store.getState().compose({ label: 'Print', rail: ['forge.ink-deck'], capabilities: [], surfaces: ['ipad', 'web'] });
+  assert.equal(personaSummary(mine), '1 on rail, iPad, Web');
+  assert.ok(!BUILT_IN_CAPTION.includes('\n'));
 });
