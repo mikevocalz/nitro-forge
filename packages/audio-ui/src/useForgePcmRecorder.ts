@@ -25,6 +25,7 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
     let finalized: Extract<SourceRecordingFile, { kind: "pcm-wav" }> | null = null;
     let failure: string | null = null;
     let disposed = false;
+    let observingInterruptions = false;
     let stopping: Promise<string> | null = null;
     let starting: ReturnType<AudioRecorder["start"]> | null = null;
     let registrationError: string | null = null;
@@ -58,6 +59,8 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
       configure: async () => {
         AudioManager.setSystemOptions({ ios: { category: "playAndRecord", mode: "default", options: ["defaultToSpeaker"] } });
         if (AppState.currentState && AppState.currentState !== "active") throw new Error("Recording requires the foreground app");
+        AudioManager.observeAudioInterruptions(true);
+        observingInterruptions = true;
       },
       prepare: async () => {
         // A previous error's shutdown must finish before the next recording.
@@ -116,6 +119,7 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
     return () => {
       disposed = true; session.current = null;
       appState.remove(); interruption.remove(); recorder.clearOnAudioReady(); recorder.clearOnError();
+      if (observingInterruptions) AudioManager.observeAudioInterruptions(false);
       void controller.dispose().catch(() => undefined);
       void stopNative().catch(() => undefined);
     };
