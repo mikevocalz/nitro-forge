@@ -21,7 +21,7 @@ export function NativeLevelSlider({
   return (
     <Host style={{ width: "100%" }}>
       <Column>
-        <Text>{label} {Math.round(gain * 100)}%</Text>
+        <Text>{`${label} ${Math.round(gain * 100)}%`}</Text>
         <Slider
           value={gain}
           min={0}
