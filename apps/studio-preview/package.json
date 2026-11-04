@@ -20,7 +20,8 @@
     "react-native-web": "^0.21.0",
     "zustand": "^5.0.8",
     "@nitro-forge/icons": "workspace:*",
-    "react-native-svg": "15.12.1"
+    "react-native-svg": "15.12.1",
+    "next": "16.4.2"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

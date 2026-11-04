@@ -3,3 +3,7 @@ packages:
   - "apps/*"
 allowBuilds:
   esbuild: false
+
+# Keep the locked Tailwind resolver outside the minimum release-age window.
+overrides:
+  enhanced-resolve: 5.26.0

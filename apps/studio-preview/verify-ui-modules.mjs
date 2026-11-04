@@ -33,3 +33,21 @@ const controls = await exportNames(controlsEntry);
 const required = ['Button', 'IconButton', 'Banner', 'Badge', 'EmptyState', 'KeyValueList', 'ErrorMessage', 'FieldGroup', 'Card', 'Toolbar', 'List', 'ListItem', 'NightScope', 'TabBar', 'SegmentedControl', 'Menu', 'Select', 'FilePicker'];
 for (const name of required) assert.ok(controls.has(name), `Canonical studio controls must export ${name}`);
 console.log(`Canonical UI exports verified (4 motion APIs, ${required.length} control APIs)`);
+
+// Resolve the transitive Image peer from the external canonical UI tree too.
+const imageEntry = await config.createResolver()('next/image', controlsEntry);
+assert.equal(imageEntry, require.resolve('next/image'), 'Canonical Image must use the standalone host Next peer');
+console.log('Canonical Image host peer resolution verified');
+const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
+const ImageModule = require(imageEntry);
+const NextImage = ImageModule.default ?? ImageModule;
+const png = '/canvas-preview.png';
+const markup = renderToStaticMarkup(React.createElement(NextImage, {
+  src: png, alt: 'Engine canvas preview', fill: true, unoptimized: true,
+}));
+assert.ok(markup.includes(`src="${png}"`), 'Engine PNG must retain its direct source');
+assert.ok(!markup.includes('/_next/image'), 'Standalone preview has no Next optimizer service');
+const optimized = renderToStaticMarkup(React.createElement(NextImage, { src: png, alt: '', fill: true }));
+assert.ok(optimized.includes('/_next/image'), 'Ordinary PNG must exercise optimization unless explicitly disabled');
+console.log('Standalone unoptimized canvas image render verified');

@@ -66,6 +66,9 @@ export default defineConfig({
     // React Native packages publish platform siblings without browser exports.
     extensions: webExtensions,
     alias: [
+    // Canonical Image uses Solito's Next image adapter. Resolve its peer from
+    // this standalone host, not the adjacent source checkout's node_modules.
+    { find: /^next\/image$/, replacement: createRequire(import.meta.url).resolve('next/image') },
     // The published root is an ESM star-export of CommonJS. Use the same
     // installed library's real ESM entry so Vite dev can expose named exports.
     { find: /^@legendapp\/motion$/, replacement: legendMotionEsm },
