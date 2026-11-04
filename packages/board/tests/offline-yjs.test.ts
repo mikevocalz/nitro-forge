@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { createMMKVBoardStorage, type MMKVBoardPort } from "../src/offline-mmkv";
+import { CorruptCheckpointError } from "../src/offline";
 import { createLocalYjsBoardSession, type YjsBoardDocumentPort } from "../src/offline-yjs";
 
 function mmkvStorage() {
@@ -171,7 +172,9 @@ describe("Moyo-compatible Yjs CRDT + MMKV offline board", () => {
     expect(board.hasUnpersistedChanges).toBe(true);
     expect(errors.length).toBe(1);
     expect(board.pendingUpdate()).toBeInstanceOf(Uint8Array);
-    await expect(board.acknowledgeSync(0)).rejects.toMatchObject({ code:"storage" });
+    // Nothing durable exists beyond revision 0, so a cloud ACK for the
+    // unsaved edit is impossible.
+    await expect(board.acknowledgeSync(1)).rejects.toMatchObject({ code:"revision" });
     await expect(board.close()).rejects.toMatchObject({ code:"storage" });
     expect(board.status).toBe("ready");
 
@@ -205,5 +208,92 @@ describe("Moyo-compatible Yjs CRDT + MMKV offline board", () => {
       documentId:"damaged",document:fresh.port,storage:h.storage,
     }).initialize()).rejects.toThrow(/truncated/);
     a.doc.destroy(); fresh.doc.destroy();
+  });
+
+  it("stays retryable after a transient MMKV read failure", async () => {
+    const h = mmkvStorage();
+    const seed = yDoc();
+    const first = createLocalYjsBoardSession({ documentId:"flaky", document:seed.port, storage:h.storage });
+    await first.initialize();
+    seed.records.set("kept", shape("kept"));
+    await first.saveLocal();
+    await first.close();
+    let failLoads = 1;
+    const storage = {
+      load: (id: string) => failLoads-- > 0
+        ? Promise.reject(new Error("mmkv busy")) : h.storage.load(id),
+      replaceAtomically: h.storage.replaceAtomically,
+    };
+    const b = yDoc();
+    const board = createLocalYjsBoardSession({ documentId:"flaky", document:b.port, storage });
+    await expect(board.initialize()).rejects.toMatchObject({ code:"storage" });
+    expect(board.status).toBe("unopened");
+    expect(await board.initialize()).toMatchObject({ revision:1 });
+    expect(b.records.get("kept")).toEqual(shape("kept"));
+    seed.doc.destroy(); b.doc.destroy();
+  });
+
+  it("surfaces a corrupt MMKV checkpoint as a typed error and discards only when asked", async () => {
+    const h = mmkvStorage();
+    const a = yDoc();
+    const seeded = createLocalYjsBoardSession({ documentId:"corrupt", document:a.port, storage:h.storage });
+    await seeded.initialize();
+    await seeded.close();
+    const key = [...h.map.keys()][0]!;
+    h.map.set(key, new ArrayBuffer(2));
+
+    const b = yDoc();
+    b.records.set("survivor", shape("survivor"));
+    const board = createLocalYjsBoardSession({ documentId:"corrupt", document:b.port, storage:h.storage });
+    const error = await board.initialize().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CorruptCheckpointError);
+    expect(error).toMatchObject({ boardId:"corrupt", code:"invalid-checkpoint" });
+    expect(board.status).toBe("corrupt");
+    expect(h.map.get(key)!.byteLength).toBe(2);
+    await expect(board.discardCorruptCheckpoint("wrong")).rejects.toMatchObject({ code:"lifecycle" });
+    expect(h.map.get(key)!.byteLength).toBe(2);
+
+    expect(await board.discardCorruptCheckpoint("corrupt")).toMatchObject({ revision:0, needsSync:false });
+    expect(board.status).toBe("ready");
+    await board.close();
+
+    const c = yDoc();
+    const reopened = createLocalYjsBoardSession({ documentId:"corrupt", document:c.port, storage:h.storage });
+    expect(await reopened.initialize()).toMatchObject({ revision:0 });
+    expect(c.records.get("survivor")).toEqual(shape("survivor"));
+    a.doc.destroy(); b.doc.destroy(); c.doc.destroy();
+  });
+
+  it("acknowledges a sent revision while newer local edits are still unsaved", async () => {
+    const h = mmkvStorage();
+    const a = yDoc();
+    const errors: unknown[] = [];
+    const board = createLocalYjsBoardSession({
+      documentId:"busy", document:a.port, storage:h.storage,
+      subscribeChanges(onChange) {
+        const listener = () => onChange();
+        a.doc.on("update", listener);
+        return () => a.doc.off("update", listener);
+      },
+      onPersistenceError(error) { errors.push(error); },
+    });
+    await board.initialize();
+    a.records.set("sent", shape("sent"));
+    expect(await board.saveLocal()).toMatchObject({ revision:1, syncedRevision:0 });
+
+    // A newer stroke lands while the upload of revision 1 is in flight
+    // and its local save has not completed.
+    h.fail(true);
+    a.records.set("newer", shape("newer"));
+    await expect(board.saveLocal()).rejects.toMatchObject({ code:"storage" });
+    expect(board.hasUnpersistedChanges).toBe(true);
+    h.fail(false);
+
+    expect(await board.acknowledgeSync(1)).toMatchObject({ revision:1, syncedRevision:1, needsSync:false });
+    expect(board.hasUnpersistedChanges).toBe(true);
+    expect(board.pendingUpdate()).toBeInstanceOf(Uint8Array);
+    expect(await board.saveLocal()).toMatchObject({ revision:2, syncedRevision:1, needsSync:true });
+    await board.close();
+    a.doc.destroy();
   });
 });

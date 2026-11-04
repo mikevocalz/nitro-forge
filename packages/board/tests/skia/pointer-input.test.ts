@@ -79,4 +79,34 @@ describe("native 2D pen/touch board coordinates", () => {
     router.dispose();
   });
 
+
+  it("lets a pen pre-empt a palm touch that landed first", () => {
+    const { out, router } = create();
+    router.handle("down", event(7, 10, 10, "touch"));
+    router.handle("move", event(7, 12, 12, "touch"));
+    router.handle("down", event(3, 20, 20, "pen", 0.4));
+    router.handle("move", event(7, 14, 14, "touch"));
+    router.handle("move", event(3, 30, 30, "pen", 0.5));
+    router.handle("up", event(3, 30, 30, "pen", 0.5));
+    expect(out.map(s => [s.phase, s.pointerType, s.pointerId])).toEqual([
+      ["begin", "touch", 7], ["move", "touch", 7], ["cancel", "touch", 7],
+      ["begin", "pen", 3], ["move", "pen", 3], ["end", "pen", 3],
+    ]);
+    // penSeen is set: after-pen rejects the next palm.
+    router.handle("down", event(7, 10, 10, "touch"));
+    expect(out).toHaveLength(6);
+    router.dispose();
+  });
+  it("keeps the touch stroke when palm rejection is off", () => {
+    const out: BoardPointerSample[] = [];
+    const router = createNativeBoardPointerRouter({
+      surfaceWidth: 200, surfaceHeight: 100, boardWidth: 1000, boardHeight: 500,
+      now: () => 0, onPointer: s => out.push(s), palmRejection: "off",
+    });
+    router.handle("down", event(7, 10, 10, "touch"));
+    router.handle("down", event(3, 20, 20, "pen"));
+    router.handle("up", event(7, 10, 10, "touch"));
+    expect(out.map(s => [s.phase, s.pointerType])).toEqual([["begin", "touch"], ["end", "touch"]]);
+    router.dispose();
+  });
 });

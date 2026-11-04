@@ -21,6 +21,9 @@ export interface BoardCheckpoint {
 /**
  * Must be genuinely local/offline and crash-safe. replaceAtomically must
  * never leave a partial checkpoint visible after a kill or power loss.
+ * load() rejects with CorruptCheckpointError when stored bytes exist but
+ * cannot be decoded; any other rejection is treated as a retryable read
+ * failure.
  */
 export interface LocalBoardStorage {
   load(documentId: string): Promise<BoardCheckpoint | null>;
@@ -34,7 +37,14 @@ export interface BoardDocumentPort<Command> {
   restore(data: Uint8Array): Promise<void>;
 }
 
-export type OfflineBoardStatus = "unopened" | "ready" | "failed" | "closed";
+/**
+ * unopened -> opening -> ready | unopened (retryable read failure)
+ *                     -> corrupt (stored checkpoint unreadable)
+ * corrupt  -> opening (open() re-reads, or discardCorruptCheckpoint())
+ * ready    -> failed (rollback impossible) | closed
+ */
+export type OfflineBoardStatus =
+  "unopened" | "opening" | "ready" | "corrupt" | "failed" | "closed";
 export interface OfflineBoardReceipt {
   readonly documentId: string;
   readonly revision: number;
@@ -53,11 +63,49 @@ export class OfflineBoardError extends Error {
   }
 }
 
+/**
+ * A local checkpoint exists for this board but cannot be read. Its bytes are
+ * left untouched. Show this to the user; only an explicit
+ * discardCorruptCheckpoint(boardId) replaces it with a fresh board.
+ */
+export class CorruptCheckpointError extends OfflineBoardError {
+  constructor(readonly boardId: string, message: string, options?: ErrorOptions) {
+    super("invalid-checkpoint", message, options);
+    this.name = "CorruptCheckpointError";
+  }
+}
+
+/** True when open/initialize may be called: never opened, or last open hit corruption. */
+export function canOpenFrom(status: OfflineBoardStatus): boolean {
+  return status === "unopened" || status === "corrupt";
+}
+
+/** Classify a load() rejection: corruption stays typed, anything else is a retryable storage error. */
+export function classifyLoadFailure(documentId: string, error: unknown): OfflineBoardError {
+  if (error instanceof CorruptCheckpointError) {
+    return error.boardId === documentId ? error
+      : new CorruptCheckpointError(documentId, error.message, { cause: error });
+  }
+  if (error instanceof OfflineBoardError) return error;
+  return new OfflineBoardError("storage", "Could not read the local board checkpoint", { cause: error });
+}
+
 export interface OfflineBoardController<Command> {
   readonly status: OfflineBoardStatus;
   readonly lastReceipt: OfflineBoardReceipt | null;
-  /** Opens or initializes from a local checkpoint before permitting edits. */
+  /**
+   * Opens or initializes from a local checkpoint before permitting edits.
+   * A failed read leaves the controller retryable; an unreadable checkpoint
+   * rejects with CorruptCheckpointError and status "corrupt".
+   */
   open(): Promise<OfflineBoardReceipt>;
+  /**
+   * User-confirmed recovery after CorruptCheckpointError. Re-reads storage:
+   * if the checkpoint has become readable it opens normally; otherwise it
+   * replaces the unreadable checkpoint with the current document as revision 0.
+   * boardId must equal this controller's document ID.
+   */
+  discardCorruptCheckpoint(boardId: string): Promise<OfflineBoardReceipt>;
   /** Serializes operations; returns only AFTER durable local save. */
   commit(command: Command): Promise<OfflineBoardReceipt>;
   /** Save a successful server ACK without discarding newer offline revisions. */
@@ -118,7 +166,7 @@ export function createOfflineBoardController<Command>(options: {
   };
 
   const verify = (value: BoardCheckpoint): void => {
-    if (value.schemaVersion !== 1 || value.documentId !== documentId ||
+    if (value === null || typeof value !== "object" || value.schemaVersion !== 1 || value.documentId !== documentId ||
         !finiteRevision(value.revision) ||
         !finiteRevision(value.syncedRevision) ||
         value.syncedRevision > value.revision ||
@@ -126,6 +174,15 @@ export function createOfflineBoardController<Command>(options: {
         value.data.byteLength === 0 || value.data.byteLength > maxBytes) {
       throw new OfflineBoardError(
         "invalid-checkpoint", "Local board checkpoint is corrupt or incompatible",
+      );
+    }
+  };
+  const verifyLoaded = (value: BoardCheckpoint): void => {
+    try {
+      verify(value);
+    } catch (cause) {
+      throw new CorruptCheckpointError(
+        documentId, "Local board checkpoint is corrupt or incompatible", { cause },
       );
     }
   };
@@ -169,34 +226,81 @@ export function createOfflineBoardController<Command>(options: {
     );
   };
 
+  const createFresh = async (): Promise<BoardCheckpoint> => {
+    const initial = await capture();
+    const next: BoardCheckpoint = {
+      schemaVersion: 1, documentId, revision: 0, syncedRevision: 0, data: initial,
+    };
+    await persist(next);
+    return copyCheckpoint(next);
+  };
+
+  const openWith = (discardCorrupt: boolean): Promise<OfflineBoardReceipt> => {
+    if (!canOpenFrom(status) || closing) {
+      return Promise.reject(new OfflineBoardError("lifecycle", "Board already opened or closed"));
+    }
+    // Assigned synchronously so a second open() cannot start a parallel load.
+    const previous = status;
+    status = "opening";
+    return enqueue(async () => {
+      let saved: BoardCheckpoint | null;
+      try {
+        saved = await storage.load(documentId);
+        if (saved !== null) verifyLoaded(saved);
+      } catch (error) {
+        const failure = classifyLoadFailure(documentId, error);
+        if (!(failure instanceof CorruptCheckpointError)) {
+          status = previous;
+          throw failure;
+        }
+        if (!discardCorrupt) {
+          status = "corrupt";
+          throw failure;
+        }
+        try {
+          checkpoint = await createFresh();
+        } catch (writeError) {
+          status = "corrupt";
+          throw writeError;
+        }
+        status = "ready";
+        return receipt(checkpoint);
+      }
+      try {
+        if (saved !== null) {
+          const restored = copyCheckpoint(saved);
+          await document.restore(new Uint8Array(restored.data));
+          checkpoint = restored;
+        } else {
+          checkpoint = await createFresh();
+        }
+      } catch (error) {
+        status = previous;
+        throw error;
+      }
+      status = "ready";
+      return receipt(checkpoint);
+    });
+  };
+
   return {
     get status() { return status; },
     get lastReceipt() { return checkpoint === null ? null : receipt(checkpoint); },
 
     open() {
-      if (status !== "unopened" || closing) {
-        return Promise.reject(new OfflineBoardError("lifecycle", "Board already opened or closed"));
+      return openWith(false);
+    },
+
+    discardCorruptCheckpoint(boardId) {
+      if (status !== "corrupt" || closing) {
+        return Promise.reject(new OfflineBoardError(
+          "lifecycle", "No corrupt checkpoint was reported for this board"));
       }
-      // Assign status synchronously to prevent duplicate open() calls.
-      status = "failed";
-      return enqueue(async () => {
-        const saved = await storage.load(documentId);
-        if (saved !== null) {
-          verify(saved);
-          const restored = copyCheckpoint(saved);
-          await document.restore(new Uint8Array(restored.data));
-          checkpoint = restored;
-        } else {
-          const initial = await capture();
-          const next: BoardCheckpoint = {
-            schemaVersion: 1, documentId, revision: 0, syncedRevision: 0, data: initial,
-          };
-          await persist(next);
-          checkpoint = copyCheckpoint(next);
-        }
-        status = "ready";
-        return receipt(checkpoint);
-      });
+      if (boardId !== documentId) {
+        return Promise.reject(new OfflineBoardError(
+          "lifecycle", "Discard confirmation does not match this board"));
+      }
+      return openWith(true);
     },
 
     commit(command) {

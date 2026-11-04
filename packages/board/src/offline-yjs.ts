@@ -1,7 +1,9 @@
 import type {
   BoardCheckpoint, LocalBoardStorage, OfflineBoardReceipt, OfflineBoardStatus,
 } from "./offline";
-import { OfflineBoardError } from "./offline";
+import {
+  canOpenFrom, classifyLoadFailure, CorruptCheckpointError, OfflineBoardError,
+} from "./offline";
 
 /**
  * Structural interface matching Moyo's existing Yjs BoardDoc.
@@ -19,13 +21,27 @@ export interface LocalYjsBoardSession {
   readonly lastReceipt: OfflineBoardReceipt | null;
   /** A local transaction has not yet been durably stored; do not show "Saved". */
   readonly hasUnpersistedChanges: boolean;
-  /** Restore a local update into the existing Y.Doc before mounting any view. */
+  /**
+   * Restore a local update into the existing Y.Doc before mounting any view.
+   * A failed read leaves the session retryable; an unreadable checkpoint
+   * rejects with CorruptCheckpointError and status "corrupt".
+   */
   initialize(): Promise<OfflineBoardReceipt>;
+  /**
+   * User-confirmed recovery after CorruptCheckpointError. Re-reads storage:
+   * a now-readable checkpoint is restored normally; otherwise the unreadable
+   * checkpoint is replaced by the current Y.Doc state as revision 0. Yjs
+   * cannot clear a live Y.Doc, so whatever it already holds is kept.
+   */
+  discardCorruptCheckpoint(boardId: string): Promise<OfflineBoardReceipt>;
   /** Call after a completed local Yjs/QuickDraw transaction, not on each pen point. */
   saveLocal(): Promise<OfflineBoardReceipt>;
   /** Merge a remote CRDT update and durably persist the resulting union. */
   mergeRemote(update: Uint8Array): Promise<OfflineBoardReceipt>;
-  /** Mark an ACK without discarding newer offline work. */
+  /**
+   * Mark an ACK of a durably saved revision. Later local edits, saved or
+   * not, stay pending for the next sync.
+   */
   acknowledgeSync(localRevision: number): Promise<OfflineBoardReceipt>;
   /** Full Yjs update to transmit to an app-owned sync provider on reconnect. */
   pendingUpdate(): Uint8Array | null;
@@ -135,40 +151,86 @@ export function createLocalYjsBoardSession(options: {
     });
   };
 
+  const validLoaded = (loaded: BoardCheckpoint): boolean =>
+    loaded !== null && typeof loaded === "object" &&
+    loaded.schemaVersion === 1 && loaded.documentId === documentId &&
+    Number.isSafeInteger(loaded.revision) && loaded.revision >= 0 &&
+    Number.isSafeInteger(loaded.syncedRevision) && loaded.syncedRevision >= 0 &&
+    loaded.syncedRevision <= loaded.revision &&
+    loaded.data instanceof Uint8Array && loaded.data.byteLength >= 1 &&
+    loaded.data.byteLength <= maxBytes;
+
+  const createFresh = async (): Promise<BoardCheckpoint> => {
+    const fresh: BoardCheckpoint = {
+      schemaVersion: 1, documentId, revision: 0, syncedRevision: 0, data: snapshot(),
+    };
+    await persist(fresh);
+    return copy(fresh);
+  };
+
+  const initializeWith = (discardCorrupt: boolean): Promise<OfflineBoardReceipt> => {
+    if (!canOpenFrom(state) || closing) {
+      return Promise.reject(new OfflineBoardError("lifecycle", "Yjs board already initialized"));
+    }
+    // Assigned synchronously so a second initialize() cannot load in parallel.
+    const previous = state;
+    state = "opening";
+    return enqueue(async () => {
+      let loaded: BoardCheckpoint | null;
+      try {
+        loaded = await storage.load(documentId);
+        if (loaded !== null && !validLoaded(loaded)) {
+          throw new CorruptCheckpointError(documentId, "Invalid persisted Yjs board checkpoint");
+        }
+        if (loaded !== null) {
+          try {
+            document.merge(new Uint8Array(loaded.data), "restore");
+          } catch (cause) {
+            throw new CorruptCheckpointError(
+              documentId, "Persisted Yjs board update could not be applied", { cause });
+          }
+        }
+      } catch (error) {
+        const failure = classifyLoadFailure(documentId, error);
+        if (!(failure instanceof CorruptCheckpointError)) {
+          state = previous;
+          throw failure;
+        }
+        if (!discardCorrupt) {
+          state = "corrupt";
+          throw failure;
+        }
+        loaded = null;
+      }
+      try {
+        checkpoint = loaded !== null ? copy(loaded) : await createFresh();
+      } catch (error) {
+        state = previous;
+        throw error;
+      }
+      state = "ready";
+      unsubscribe = options.subscribeChanges?.(queueObservedSave);
+      return receipt(checkpoint);
+    });
+  };
+
   return {
     get status() { return state; },
     get lastReceipt() { return checkpoint === null ? null : receipt(checkpoint); },
     get hasUnpersistedChanges() { return editEpoch > durableEpoch; },
     initialize() {
-      if (state !== "unopened" || closing) {
-        return Promise.reject(new OfflineBoardError("lifecycle", "Yjs board already initialized"));
+      return initializeWith(false);
+    },
+    discardCorruptCheckpoint(boardId) {
+      if (state !== "corrupt" || closing) {
+        return Promise.reject(new OfflineBoardError(
+          "lifecycle", "No corrupt checkpoint was reported for this board"));
       }
-      state = "failed"; // blocks double initialization until ready
-      return enqueue(async () => {
-        const loaded = await storage.load(documentId);
-        if (loaded !== null) {
-          if (loaded.schemaVersion !== 1 || loaded.documentId !== documentId ||
-              !Number.isSafeInteger(loaded.revision) || loaded.revision < 0 ||
-              !Number.isSafeInteger(loaded.syncedRevision) || loaded.syncedRevision < 0 ||
-              loaded.syncedRevision > loaded.revision ||
-              !(loaded.data instanceof Uint8Array) || loaded.data.byteLength < 1 ||
-              loaded.data.byteLength > maxBytes) {
-            throw new OfflineBoardError("invalid-checkpoint", "Invalid persisted Yjs board checkpoint");
-          }
-          document.merge(new Uint8Array(loaded.data), "restore");
-          checkpoint = copy(loaded);
-        } else {
-          const fresh: BoardCheckpoint = {
-            schemaVersion: 1, documentId, revision: 0,
-            syncedRevision: 0, data: snapshot(),
-          };
-          await persist(fresh);
-          checkpoint = copy(fresh);
-        }
-        state = "ready";
-        unsubscribe = options.subscribeChanges?.(queueObservedSave);
-        return receipt(checkpoint);
-      });
+      if (boardId !== documentId) {
+        return Promise.reject(new OfflineBoardError(
+          "lifecycle", "Discard confirmation does not match this board"));
+      }
+      return initializeWith(true);
     },
     saveLocal() {
       if (closing) return Promise.reject(new OfflineBoardError("lifecycle", "Yjs board is closing"));
@@ -203,11 +265,10 @@ export function createLocalYjsBoardSession(options: {
     acknowledgeSync(revision) {
       if (closing) return Promise.reject(new OfflineBoardError("lifecycle", "Yjs board is closing"));
       return enqueue(async () => {
+        // Only durable revisions can have been sent, so an ACK is checked
+        // against the saved checkpoint. Edits not yet saved locally have no
+        // revision; they stay pending and pendingUpdate() keeps returning them.
         const current = requireReady();
-        if (editEpoch > durableEpoch) {
-          throw new OfflineBoardError("storage",
-            "Cannot acknowledge sync while changes are not saved locally");
-        }
         if (!Number.isSafeInteger(revision) || revision < 0 || revision > current.revision) {
           throw new OfflineBoardError("revision", "Invalid local sync acknowledgement");
         }

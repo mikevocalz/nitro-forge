@@ -172,6 +172,7 @@ internal class WhiteboardRenderLoop(
       return error
     }
     var failure: Throwable? = null
+    var unlockFailure: Throwable? = null
     try {
       frames.draw(canvas, entry.width, entry.height, document, camera, overlay)
     } catch (error: Throwable) {
@@ -180,14 +181,19 @@ internal class WhiteboardRenderLoop(
       // The frame is reported as failed (lost); only VM-level errors pass.
       if (!DrawFailures.isRecoverable(error)) throw error
       failure = error
+    } finally {
+      // Release the locked canvas on every path, including a VM-level error
+      // rethrown above. A Surface left locked rejects every later
+      // lockHardwareCanvas() call, so the board could never draw again.
+      try {
+        surface.unlockCanvasAndPost(canvas)
+      } catch (error: IllegalStateException) {
+        unlockFailure = error
+      } catch (error: IllegalArgumentException) {
+        unlockFailure = error
+      }
     }
-    try {
-      surface.unlockCanvasAndPost(canvas)
-    } catch (error: IllegalStateException) {
-      return error
-    } catch (error: IllegalArgumentException) {
-      return error
-    }
+    unlockFailure?.let { return it }
     if (failure == null && lifecycle.state == WhiteboardRendererState.LOST) {
       transition(lifecycle.onSurfaceProvided())
     }
