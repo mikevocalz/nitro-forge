@@ -2,8 +2,8 @@ import { ScrollView, Text, View } from "react-native";
 import { useStore } from "zustand";
 import {
   createRecordingStore,
-  NativeRecordingTrack,
 } from "@nitro-forge/audio-ui";
+import { NativeSourceRecordingTrack } from "@nitro-forge/audio-ui/pcm";
 
 /** Single track owner; one vanilla Zustand store, never React useState. */
 const track = createRecordingStore();
@@ -18,15 +18,15 @@ export default function App() {
         Nitro Forge · Native Audio Lab
       </Text>
       <Text style={{ fontSize: 15, color: "#CBCBE1" }}>
-        SDK 58 microphone recording + real level meter · iOS, Android and web
+        SDK 58 PCM WAV and source waveform on native; compressed recording with decoded peaks where supported on web
       </Text>
-      <NativeRecordingTrack
+      <NativeSourceRecordingTrack
         store={track}
         testID="forge-recording-track"
-        onSaved={(uri) => {
+        onSaved={(result) => {
           // Studio host receives the real media URI. Rust must explicitly
           // confirm attachment before a clip is shown as saved in the project.
-          console.info("Native recording completed:", uri);
+          console.info("Native recording completed:", result.uri, result.kind, result.peaks.length);
         }}
       />
       <View style={{ gap: 6 }}>
@@ -34,9 +34,9 @@ export default function App() {
           Phase: {phase.kind}
         </Text>
         <Text style={{ fontSize: 12, color: "#9999AF" }}>
-          Important: metering history is not a decoded source PCM waveform.
-          The app records a real audio file; edit-accurate waveform analysis
-          and Rust project attachment remain separate work.
+          This recording UI now uses actual PCM peak extrema on iOS/Android.
+          Web records compressed media and decodes when supported. A Rust clip
+          is not created until its host confirms the saved source.
         </Text>
       </View>
     </ScrollView>
