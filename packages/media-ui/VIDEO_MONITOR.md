@@ -23,16 +23,31 @@ function Preview() {
 ```
 
 **Actual capabilities:** native decoded video surface, play/pause, seek request
-mapped to rational frames, real duration/status/time events, clamped frame
+mapped to rational frames in the caller's timebase, real duration/status/time events, clamped frame
 steps, progress/buffer telemetry, and lifecycle disposal through Expo's
 `useVideoPlayer`. Uses the existing `NativeSeekBar` from PR #25.
 
-**Precision:** requesting a given frame is NOT evidence that the corresponding
-decoded frame is displayed. The monitor tracks `requestedFrame` separately
-from `reportedFrame`, clearing the request only on a `timeUpdate` event.
-The player asks for exact seek tolerance but codecs, GOP structure, remote
-streams and platform implementations may still be approximate. No false
-frame-exact output or compositing claim.
+**Precision:** requesting a frame is not evidence that the decoder shows it.
+The monitor keeps `requestedFrame` separate from `reportedFrame`. A request
+clears when a native `timeUpdate` reaches the requested frame (while playing,
+up to one event interval past it). Reports from before the seek never clear
+it. Expo Video has no seek-completed event and a paused player may emit no
+`timeUpdate`, so 400 ms after the last seek the monitor reads
+`player.currentTime` and records that native position as the reported frame.
+
+Seeks target the centre of the frame interval, `(2n + 1) * den / (2 * num)`,
+and reported times map back with `floor`, so a float shortfall cannot land on
+frame `n - 1`.
+
+`seekTolerance` is set to zero. AVPlayer (iOS) and Media3 (Android) honour it;
+the web backend ignores `seekTolerance`, so web seeks are whatever the browser
+`HTMLVideoElement` does and are not exact. Codecs, GOP structure and remote
+streams can still make native seeks approximate.
+
+Frame indices use the `frameRate` prop, not the media track. The monitor shows
+the track's own rate from `VideoTrack.frameRate` when iOS or Android reports
+it; web always reports it as unavailable. No frame-exact output or
+compositing claim.
 
 **Cross-platform contract:** Expo Video's supported backend is iOS AVPlayer,
 Android Media3, Web video; the control API is shared. The SDK 58 sample

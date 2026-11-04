@@ -1,18 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button, Column, Host, Text } from "@expo/ui";
-import { VideoView, useVideoPlayer, type VideoSource } from "expo-video";
+import { VideoView, useVideoPlayer, type VideoPlayer, type VideoSource, type VideoTrack } from "expo-video";
 import { View } from "react-native";
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
-import {
-  FRAME_RATES,
-  framesToSeconds,
-  type FrameRate,
-} from "./timebase";
+import { FRAME_RATES, type FrameRate } from "./timebase";
 import { NativeSeekBar } from "./NativeSeekBar";
 import {
+  applyPlayingChange,
+  describeFrameTimebase,
+  frameSeekSeconds,
   reportNativePlaybackTime,
   requestVideoFrame,
+  settleSeekRequest,
   validFrameCount,
   type VideoMonitorState,
 } from "./videoMonitorState";
@@ -22,18 +22,38 @@ export interface NativeVideoMonitorProps {
   readonly source: VideoSource;
   /** Stable per-player Zustand store; Rust/Splice keeps the edit document. */
   readonly store: StoreApi<VideoMonitorState>;
+  /** Timebase for frame indices. Not read from the media track. */
   readonly frameRate?: FrameRate;
   readonly height?: number;
   readonly testID?: string;
   readonly autoplay?: boolean;
 }
 
+const TIME_UPDATE_INTERVAL_S = 0.1;
+/** How long a seek may go unconfirmed before the native position is read back. */
+const SEEK_SETTLE_MS = 400;
+
+function trackRate(track: VideoTrack | null | undefined): number | null {
+  const fps = track?.frameRate;
+  return typeof fps === "number" && Number.isFinite(fps) && fps > 0 ? fps : null;
+}
+
+/** Reads a getter on a player that may already be released; null if it is gone. */
+function readPlayer<T>(player: VideoPlayer, read: (p: VideoPlayer) => T): T | null {
+  try {
+    return read(player);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Real native decoded video preview on iOS/Android, HTML video backend on web,
  * backed by Expo SDK 58's AVPlayer/Media3/browser implementations.
  *
- * Seek bar requests frame coordinates; subsequent decoder events update the
- * true reported position. Never equate requested frame with displayed frame.
+ * The seek bar requests frame coordinates. Decoder events, or a native time
+ * read after the seek settles, set the reported position. A requested frame
+ * is never shown as the decoded frame.
  */
 export function NativeVideoMonitor({
   source,
@@ -44,62 +64,93 @@ export function NativeVideoMonitor({
   autoplay = false,
 }: NativeVideoMonitorProps) {
   const player = useVideoPlayer(source, (native) => {
-    native.timeUpdateEventInterval = 0.1;
+    native.timeUpdateEventInterval = TIME_UPDATE_INTERVAL_S;
+    // Honoured by AVPlayer and Media3; the web backend ignores seekTolerance.
     native.seekTolerance = { toleranceBefore: 0, toleranceAfter: 0 };
     if (autoplay) native.play();
   });
   const state = useStore(store, (s) => s);
   const sourceKey = JSON.stringify(source);
+  const { numerator, denominator } = frameRate;
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Reset playback facts only when the player or its source changes.
   useEffect(() => {
     store.setState({
       phase: player.status === "readyToPlay"
         ? { kind: "ready", playing: player.playing }
-        : { kind: "loading" },
+        : player.status === "error"
+          ? { kind: "error", message: "Video decoder failed" }
+          : { kind: "loading" },
       reportedFrame: 0,
-      durationFrames: validFrameCount(player.duration, frameRate),
       bufferedFrame: 0,
       requestedFrame: null,
+      trackFrameRate: trackRate(player.videoTrack),
     });
-    const time = player.addListener("timeUpdate", (payload) => {
-      reportNativePlaybackTime(store, payload.currentTime, payload.bufferedPosition, frameRate);
-    });
-    const loaded = player.addListener("sourceLoad", (payload) => {
-      store.setState({ durationFrames: validFrameCount(payload.duration, frameRate) });
-    });
-    const playing = player.addListener("playingChange", (payload) => {
-      store.setState({ phase: { kind: "ready", playing: payload.isPlaying } });
-    });
-    const status = player.addListener("statusChange", (payload) => {
-      if (payload.status === "error") {
+  }, [player, store, sourceKey]);
+
+  // Listeners depend on the timebase; re-subscribing must not touch playback.
+  useEffect(() => {
+    const rate: FrameRate = { numerator, denominator };
+    const windowFrames = Math.ceil(TIME_UPDATE_INTERVAL_S * numerator / denominator) + 1;
+    const current = readPlayer(player, (p) => p.currentTime);
+    store.setState({ durationFrames: validFrameCount(player.duration, rate) });
+    if (current !== null) reportNativePlaybackTime(store, current, player.bufferedPosition, rate);
+    const subs = [
+      player.addListener("timeUpdate", (payload) => {
+        reportNativePlaybackTime(store, payload.currentTime, payload.bufferedPosition, rate, windowFrames);
+      }),
+      player.addListener("sourceLoad", (payload) => {
         store.setState({
-          phase: { kind: "error", message: payload.error?.message ?? "Video decoder failed" },
+          durationFrames: validFrameCount(payload.duration, rate),
+          trackFrameRate: trackRate(payload.availableVideoTracks[0]) ?? store.getState().trackFrameRate,
         });
-      } else if (payload.status === "readyToPlay") {
-        store.setState({ phase: { kind: "ready", playing: player.playing } });
-      } else {
-        store.setState({ phase: { kind: "loading" } });
-      }
-    });
-    const ended = player.addListener("playToEnd", () => {
-      store.setState({ phase: { kind: "ready", playing: false } });
-    });
+      }),
+      player.addListener("videoTrackChange", (payload) => {
+        store.setState({ trackFrameRate: trackRate(payload.videoTrack) });
+      }),
+      player.addListener("playingChange", (payload) => {
+        store.setState({ phase: applyPlayingChange(store.getState().phase, payload.isPlaying) });
+      }),
+      player.addListener("statusChange", (payload) => {
+        if (payload.status === "error") {
+          store.setState({
+            phase: { kind: "error", message: payload.error?.message ?? "Video decoder failed" },
+          });
+        } else if (payload.status === "readyToPlay") {
+          store.setState({ phase: { kind: "ready", playing: player.playing } });
+        } else {
+          store.setState({ phase: { kind: "loading" } });
+        }
+      }),
+      player.addListener("playToEnd", () => {
+        store.setState({ phase: applyPlayingChange(store.getState().phase, false) });
+      }),
+    ];
     return () => {
-      time.remove();
-      loaded.remove();
-      playing.remove();
-      status.remove();
-      ended.remove();
-      player.pause();
+      for (const sub of subs) sub.remove();
     };
-  }, [player, store, frameRate.numerator, frameRate.denominator, sourceKey]);
+  }, [player, store, numerator, denominator]);
+
+  // Pause only when this player goes away, never on a timebase change.
+  useEffect(() => () => {
+    if (settleTimer.current !== null) clearTimeout(settleTimer.current);
+    settleTimer.current = null;
+    readPlayer(player, (p) => p.pause());
+  }, [player]);
 
   const requestSeek = (frame: number) => {
     if (state.phase.kind !== "ready" || state.durationFrames <= 0) return;
     const clamped = requestVideoFrame(store, frame);
-    // Native decoder chooses the actually visible frame. Reported frame
-    // updates only through timeUpdate after native acknowledges playback time.
-    player.currentTime = framesToSeconds(clamped, frameRate);
+    const lastFrame = Math.max(0, state.durationFrames - 1);
+    // Aim at the frame centre so float error cannot land on the previous frame.
+    player.currentTime = frameSeekSeconds(Math.min(clamped, lastFrame), frameRate);
+    if (settleTimer.current !== null) clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => {
+      settleTimer.current = null;
+      const seconds = readPlayer(player, (p) => p.currentTime);
+      if (seconds !== null) settleSeekRequest(store, clamped, seconds, frameRate);
+    }, SEEK_SETTLE_MS);
   };
   const statusText = state.phase.kind === "error"
     ? state.phase.message
@@ -126,7 +177,8 @@ export function NativeVideoMonitor({
       <Host style={{ width: "100%" }}>
         <Column spacing={8}>
           <Text>{statusText}</Text>
-          <Text>{`Decoded frame: ${state.reportedFrame} / Requested: ${state.requestedFrame ?? "—"}`}</Text>
+          <Text>{`Reported frame: ${state.reportedFrame} / Requested: ${state.requestedFrame ?? "—"}`}</Text>
+          <Text>{describeFrameTimebase(frameRate, state.trackFrameRate)}</Text>
           <Button
             label={state.phase.kind === "ready" && state.phase.playing ? "Pause" : "Play"}
             disabled={!canControl}
