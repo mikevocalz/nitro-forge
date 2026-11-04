@@ -16,7 +16,7 @@ export function ComposerLab({ theme }: { theme: 'dark' | 'light' }) {
   return <ScrollView style={{ flex: 1, backgroundColor: prismThemes[theme].base }} contentContainerStyle={{ maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
     <View style={{ paddingHorizontal: 8, paddingTop: 8, alignItems: 'flex-start' }}>
       {/* Kit buttons carry a 48 px min-height target at every size. */}
-      <Button title="Back to Prism" icon={<ComposerGlyph name="chevron-left" color={prismThemes[theme].accent} />}
+      <Button title="Back to Prism" icon={<span className="back-chevron"><ComposerGlyph name="chevron-left" color={prismThemes[theme].accent} /></span>}
         onPress={() => { window.location.hash = '#/apps/prism'; }} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />
     </View>
     <PersonaComposer store={prismPersonaStore()} theme={theme}
