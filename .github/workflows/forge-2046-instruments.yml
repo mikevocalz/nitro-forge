@@ -1,0 +1,32 @@
+name: Forge 2046 independent precision contracts
+
+on:
+  pull_request:
+    paths:
+      - 'packages/studio-workspace/src/instrument-system.ts'
+      - 'packages/studio-workspace/src/instrument-system.test.ts'
+      - '.github/workflows/forge-2046-instruments.yml'
+  push:
+    branches:
+      - feat/forge-2046-premium-instruments-2026-11-04
+    paths:
+      - 'packages/studio-workspace/src/instrument-system.ts'
+      - 'packages/studio-workspace/src/instrument-system.test.ts'
+      - '.github/workflows/forge-2046-instruments.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-instruments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      # Independent of the repository's strict 24h npm release-age gate.
+      # It validates the actual pure TS timebase/scrubber engine contract.
+      - name: Test scrubber, rational frames, beats and bounded timeline ticks
+        run: node --experimental-strip-types --test packages/studio-workspace/src/instrument-system.test.ts
