@@ -75,3 +75,14 @@ Sources:
   prove only that the unavailable-state UI compiles.
 - Metro web export of the unavailable-state media shell: PASS (261 modules).
   This is bundle evidence only, not browser interaction or media playback.
+
+## Experimental v1 port material
+
+[tooling/react-native-video-v1](../../tooling/react-native-video-v1) retains a
+licensed patch against the exact upstream beta.12 commit, including migrated
+specs/config, three JS factories, Kotlin factory companions, Swift factory
+initializers and RN0.88 Fabric imports. Exact v1 code generation (7/7 objects),
+a real native-source TypeScript probe and RN Fabric parsing passed. This is
+**not installed or autolinked**. Native Promise/variant ABI and Apple build
+integration remain incomplete, so playback stays unavailable. Reproduction,
+source provenance and remaining blockers accompany the patch.

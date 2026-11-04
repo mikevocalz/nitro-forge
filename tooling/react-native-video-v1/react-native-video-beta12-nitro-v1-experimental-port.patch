@@ -1,0 +1,774 @@
+diff --git a/packages/react-native-video/package.json b/packages/react-native-video/package.json
+--- a/packages/react-native-video/package.json
++++ b/packages/react-native-video/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "react-native-video",
+-  "version": "7.0.0-beta.12",
++  "version": "7.0.0-beta.12-nitrov1-experimental.0",
+   "description": "<Video /> Component for React Native",
+   "source": "./src/index.tsx",
+   "main": "./lib/commonjs/index.js",
+@@ -20,6 +20,12 @@
+     },
+     "./package.json": "./package.json",
+     "./app.plugin.js": "./app.plugin.js"
++  },
++  "imports": {
++    "#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs"
++  },
++  "swiftpmConfig": {
++    "name": "ReactNativeVideo"
+   },
+   "files": [
+     "src",
+@@ -82,26 +88,27 @@
+   "devDependencies": {
+     "@expo/config-plugins": "^10.0.2",
+     "@react-native/eslint-config": "^0.77.0",
+-    "@types/react": "^18.2.44",
++    "@types/react": "19.3.0",
+     "@types/react-native-web": "^0.19.2",
+     "del-cli": "^5.1.0",
+     "eslint": "^8.51.0",
+     "eslint-config-prettier": "^9.0.0",
+     "eslint-plugin-prettier": "^5.0.1",
+-    "nitrogen": "0.35.0",
++    "nitrogen": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+     "prettier": "^3.0.3",
+     "@types/react-test-renderer": "^18.0.0",
+-    "react": "18.3.1",
+-    "react-native": "^0.77.0",
++    "react": "19.3.0",
++    "react-native": "0.88.0",
+     "react-native-builder-bob": "^0.40.0",
+     "react-test-renderer": "18.3.1",
+-    "react-native-nitro-modules": "0.35.0",
+-    "typescript": "^5.2.2"
++    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
++    "typescript": "7.0.2",
++    "@types/node": "26.6.6"
+   },
+   "peerDependencies": {
+     "react": "*",
+-    "react-native": "*",
+-    "react-native-nitro-modules": ">=0.35.0"
++    "react-native": ">=0.88.0",
++    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0"
+   },
+   "release-it": {
+     "npm": {
+diff --git a/packages/react-native-video/nitro.json b/packages/react-native-video/nitro.json
+--- a/packages/react-native-video/nitro.json
++++ b/packages/react-native-video/nitro.json
+@@ -1,28 +1,14 @@
+ {
+-  "android": {
+-    "androidCxxLibName": "ReactNativeVideo",
+-    "androidNamespace": [
+-      "video"
+-    ]
+-  },
+   "cxxNamespace": [
+     "video"
+   ],
+-  "ios": {
+-    "iosModuleName": "ReactNativeVideo"
++  "apple": {
++    "moduleName": "ReactNativeVideo"
+   },
+-  "autolinking": {
+-    "VideoPlayerFactory": {
+-      "swift": "HybridVideoPlayerFactory",
+-      "kotlin": "HybridVideoPlayerFactory"
+-    },
+-    "VideoPlayerSourceFactory": {
+-      "swift": "HybridVideoPlayerSourceFactory",
+-      "kotlin": "HybridVideoPlayerSourceFactory"
+-    },
+-    "VideoViewViewManagerFactory": {
+-      "swift": "HybridVideoViewViewManagerFactory",
+-      "kotlin": "HybridVideoViewViewManagerFactory"
+-    }
++  "android": {
++    "namespace": [
++      "video"
++    ],
++    "cxxLibName": "ReactNativeVideo"
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/packages/react-native-video/src/spec/nitro/VideoPlayer.nitro.ts b/packages/react-native-video/src/spec/nitro/VideoPlayer.nitro.ts
+--- a/packages/react-native-video/src/spec/nitro/VideoPlayer.nitro.ts
++++ b/packages/react-native-video/src/spec/nitro/VideoPlayer.nitro.ts
+@@ -1,66 +1,52 @@
+ import type { HybridObject } from 'react-native-nitro-modules';
++import { Android, Apple } from "react-native-nitro-modules";
++import type { IgnoreSilentSwitchMode } from "../../core/types/IgnoreSilentSwitchMode";
++import type { MixAudioMode } from "../../core/types/MixAudioMode";
+ import type { TextTrack } from '../../core/types/TextTrack';
+-import type { VideoPlayerBase } from '../../core/types/VideoPlayerBase';
++import type { VideoPlayerStatus } from "../../core/types/VideoPlayerStatus";
+ import type { VideoPlayerEventEmitter } from './VideoPlayerEventEmitter.nitro';
+ import type { VideoPlayerSource } from './VideoPlayerSource.nitro';
+ 
+-export interface VideoPlayer
+-  extends HybridObject<{ ios: 'swift'; android: 'kotlin' }>, VideoPlayerBase {
+-  // Override with (hybrid) VideoPlayerSource
++export * from "#nitro/VideoPlayer";
++export * from "#nitro/VideoPlayerFactory";
++
++@Apple({ language: 'swift', implementation: { className: 'HybridVideoPlayer' } })
++@Android({ language: 'kotlin', implementation: { className: 'HybridVideoPlayer' } })
++export declare class VideoPlayer extends HybridObject {
++
+   readonly source: VideoPlayerSource;
+-
+-  // Holder of the video player events.
+   readonly eventEmitter: VideoPlayerEventEmitter;
+-
+-  /**
+-   * Show playback controls in the notifications area
+-   *
+-   * @note on Android, this can be overridden by {@linkcode VideoPlayer.playInBackground}, as Android requires
+-   * a foreground service to show notifications while the app is in the background.
+-   *
+-   * @default false
+-   */
+   showNotificationControls: boolean;
+-
+-  /**
+-   * Replace the current source of the player.
+-   * @param source - The new source of the video.
+-   * @note If you want to clear the source, you can pass null. It has the same effect as {@link release}.
+-   * see {@link VideoPlayerSourceBase}
+-   */
+   replaceSourceAsync(source: VideoPlayerSource | null): Promise<void>;
+-
+-  /**
+-   * Get all available text tracks for the current source.
+-   * @returns Array of available text tracks
+-   */
+   getAvailableTextTracks(): TextTrack[];
+-
+-  /**
+-   * Select a text track to display.
+-   * @param textTrack - Text track to select, or null to unselect current track
+-   */
+   selectTextTrack(textTrack: TextTrack | null): void;
+-
+-  /**
+-   * Releases the player's native resources and releases native state.
+-   */
+   release(): void;
++  readonly status: VideoPlayerStatus;
++  readonly duration: number;
++  volume: number;
++  currentTime: number;
++  muted: boolean;
++  loop: boolean;
++  rate: number;
++  mixAudioMode: MixAudioMode;
++  ignoreSilentSwitchMode: IgnoreSilentSwitchMode;
++  playInBackground: boolean;
++  playWhenInactive: boolean;
++  disableAudioSessionManagement: boolean;
++  readonly isPlaying: boolean;
++  initialize(): Promise<void>;
++  preload(): Promise<void>;
++  play(): void;
++  pause(): void;
++  seekBy(time: number): void;
++  seekTo(time: number): void;
++  readonly selectedTrack?: TextTrack;
+ }
+ 
+-export interface VideoPlayerFactory extends HybridObject<{
+-  ios: 'swift';
+-  android: 'kotlin';
+-}> {
++@Apple({ language: 'swift', implementation: { className: 'HybridVideoPlayerFactory' } })
++@Android({ language: 'kotlin', implementation: { className: 'HybridVideoPlayerFactory' } })
++export declare class VideoPlayerFactory extends HybridObject {
++  constructor();
+   createPlayer(source: VideoPlayerSource): VideoPlayer;
+-
+-  /**
+-   * Disables the internal audio session management.
+-   * When disabled, react-native-video will not configure or activate the AVAudioSession,
+-   * allowing other libraries (like audio recording libraries) to manage it.
+-   *
+-   * @param disabled - If true, audio session management is disabled
+-   * @platform iOS
+-   */
+   setAudioSessionManagementDisabled(disabled: boolean): void;
+ }
+diff --git a/packages/react-native-video/src/spec/nitro/VideoPlayerEventEmitter.nitro.ts b/packages/react-native-video/src/spec/nitro/VideoPlayerEventEmitter.nitro.ts
+--- a/packages/react-native-video/src/spec/nitro/VideoPlayerEventEmitter.nitro.ts
++++ b/packages/react-native-video/src/spec/nitro/VideoPlayerEventEmitter.nitro.ts
+@@ -12,208 +12,65 @@
+ import type { VideoPlayerStatus } from '../../core/types/VideoPlayerStatus';
+ 
+ // eslint-disable-next-line @typescript-eslint/no-unused-vars
+-import type { VideoPlayerEvents } from '../../core/types/Events';
++import { Android, Apple } from "react-native-nitro-modules";
++
++export * from "#nitro/VideoPlayerEventEmitter";
+ 
+ export interface ListenerSubscription {
+   remove(): void;
+ }
+ 
+-export interface VideoPlayerEventEmitter extends HybridObject<{
+-  ios: 'swift';
+-  android: 'kotlin';
+-}> {
+-  /**
+-   * Adds a listener for the `onAudioBecomingNoisy` event.
+-   * @see {@link VideoPlayerEvents.onAudioBecomingNoisy}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
++@Apple({ language: 'swift', implementation: { className: 'HybridVideoPlayerEventEmitter' } })
++@Android({ language: 'kotlin', implementation: { className: 'HybridVideoPlayerEventEmitter' } })
++export declare class VideoPlayerEventEmitter extends HybridObject {
++
+   addOnAudioBecomingNoisyListener(listener: () => void): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onAudioFocusChange` event.
+-   * @see {@link VideoPlayerEvents.onAudioFocusChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnAudioFocusChangeListener(
+     listener: (hasAudioFocus: boolean) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onBandwidthUpdate` event.
+-   * @see {@link VideoPlayerEvents.onBandwidthUpdate}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnBandwidthUpdateListener(
+     listener: (data: BandwidthData) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onBuffer` event.
+-   * @see {@link VideoPlayerEvents.onBuffer}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnBufferListener(
+     listener: (buffering: boolean) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onControlsVisibleChange` event.
+-   * @see {@link VideoPlayerEvents.onControlsVisibleChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnControlsVisibleChangeListener(
+     listener: (visible: boolean) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onEnd` event.
+-   * @see {@link VideoPlayerEvents.onEnd}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnEndListener(listener: () => void): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for asynchronous native errors (e.g. a source that fails to load,
+-   * or playback that fails later). Delivered to JS as the `onError` event.
+-   * @see {@link VideoPlayerEvents.onError}
+-   * @param listener - The listener to add. It receives the error encoded as
+-   * `{%@<code>::<message>@%}`, the same format as errors thrown by native methods.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnErrorListener(listener: (error: string) => void): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onExternalPlaybackChange` event.
+-   * @see {@link VideoPlayerEvents.onExternalPlaybackChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnExternalPlaybackChangeListener(
+     listener: (externalPlaybackActive: boolean) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onLoad` event.
+-   * @see {@link VideoPlayerEvents.onLoad}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnLoadListener(listener: (data: onLoadData) => void): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onLoadStart` event.
+-   * @see {@link VideoPlayerEvents.onLoadStart}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnLoadStartListener(
+     listener: (data: onLoadStartData) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onPlaybackStateChange` event.
+-   * @see {@link VideoPlayerEvents.onPlaybackStateChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnPlaybackStateChangeListener(
+     listener: (data: onPlaybackStateChangeData) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onPlaybackRateChange` event.
+-   * @see {@link VideoPlayerEvents.onPlaybackRateChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnPlaybackRateChangeListener(
+     listener: (rate: number) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onProgress` event.
+-   * @see {@link VideoPlayerEvents.onProgress}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnProgressListener(
+     listener: (data: onProgressData) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onReadyToDisplay` event.
+-   * @see {@link VideoPlayerEvents.onReadyToDisplay}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnReadyToDisplayListener(listener: () => void): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onSeek` event.
+-   * @see {@link VideoPlayerEvents.onSeek}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnSeekListener(listener: (position: number) => void): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onStatusChange` event.
+-   * @see {@link VideoPlayerEvents.onStatusChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnStatusChangeListener(
+     listener: (status: VideoPlayerStatus) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onTimedMetadata` event.
+-   * @see {@link VideoPlayerEvents.onTimedMetadata}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnTimedMetadataListener(
+     listener: (data: TimedMetadata) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onTextTrackDataChanged` event.
+-   * @see {@link VideoPlayerEvents.onTextTrackDataChanged}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnTextTrackDataChangedListener(
+     listener: (data: string[]) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onTrackChange` event.
+-   * @see {@link VideoPlayerEvents.onTrackChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnTrackChangeListener(
+     listener: (track: TextTrack | null) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onVolumeChange` event.
+-   * @see {@link VideoPlayerEvents.onVolumeChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnVolumeChangeListener(
+     listener: (data: onVolumeChangeData) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Clears all listeners from the event emitter.
+-   */
+   clearAllListeners(): void;
+ }
+diff --git a/packages/react-native-video/src/spec/nitro/VideoPlayerSource.nitro.ts b/packages/react-native-video/src/spec/nitro/VideoPlayerSource.nitro.ts
+--- a/packages/react-native-video/src/spec/nitro/VideoPlayerSource.nitro.ts
++++ b/packages/react-native-video/src/spec/nitro/VideoPlayerSource.nitro.ts
+@@ -1,21 +1,24 @@
+ import type { HybridObject } from 'react-native-nitro-modules';
++import { Android, Apple } from "react-native-nitro-modules";
+ import type { NativeVideoConfig } from '../../core/types/VideoConfig';
+-import type { VideoPlayerSourceBase } from '../../core/types/VideoPlayerSourceBase';
++import type { VideoInformation } from "../../core/types/VideoInformation";
+ 
+-/**
+- * A source for a {@link VideoPlayer}.
+- * Source cannot be changed after it is created. If you need to update the source, you need to create a new one.
+- * It provides functions to get information about the asset.
+- */
+-export interface VideoPlayerSource
+-  extends
+-    HybridObject<{ ios: 'swift'; android: 'kotlin' }>,
+-    VideoPlayerSourceBase {}
++export * from "#nitro/VideoPlayerSource";
++export * from "#nitro/VideoPlayerSourceFactory";
+ 
+-export interface VideoPlayerSourceFactory extends HybridObject<{
+-  ios: 'swift';
+-  android: 'kotlin';
+-}> {
++@Apple({ language: 'swift', implementation: { className: 'HybridVideoPlayerSource' } })
++@Android({ language: 'kotlin', implementation: { className: 'HybridVideoPlayerSource' } })
++export declare class VideoPlayerSource extends HybridObject {
++
++  readonly uri: string;
++  readonly config: NativeVideoConfig;
++  getAssetInformationAsync(): Promise<VideoInformation>;
++}
++
++@Apple({ language: 'swift', implementation: { className: 'HybridVideoPlayerSourceFactory' } })
++@Android({ language: 'kotlin', implementation: { className: 'HybridVideoPlayerSourceFactory' } })
++export declare class VideoPlayerSourceFactory extends HybridObject {
++  constructor();
+   fromUri(uri: string): VideoPlayerSource;
+   fromVideoConfig(config: NativeVideoConfig): VideoPlayerSource;
+ }
+diff --git a/packages/react-native-video/src/spec/nitro/VideoViewViewManager.nitro.ts b/packages/react-native-video/src/spec/nitro/VideoViewViewManager.nitro.ts
+--- a/packages/react-native-video/src/spec/nitro/VideoViewViewManager.nitro.ts
++++ b/packages/react-native-video/src/spec/nitro/VideoViewViewManager.nitro.ts
+@@ -1,15 +1,19 @@
+ import type { HybridObject } from 'react-native-nitro-modules';
++import { Android, Apple } from "react-native-nitro-modules";
+ import type { ResizeMode } from '../../core/types/ResizeMode';
+ import type { VideoPlayer } from './VideoPlayer.nitro';
+ import type { ListenerSubscription } from './VideoPlayerEventEmitter.nitro';
+ 
++export * from "#nitro/VideoViewViewManager";
++export * from "#nitro/VideoViewViewManagerFactory";
++
+ export type SurfaceType = 'surface' | 'texture';
+ 
+ // @internal
+-export interface VideoViewViewManager extends HybridObject<{
+-  ios: 'swift';
+-  android: 'kotlin';
+-}> {
++@Apple({ language: 'swift', implementation: { className: 'HybridVideoViewViewManager' } })
++@Android({ language: 'kotlin', implementation: { className: 'HybridVideoViewViewManager' } })
++export declare class VideoViewViewManager extends HybridObject {
++
+   player?: VideoPlayer;
+   controls: boolean;
+   pictureInPicture: boolean;
+@@ -22,75 +26,27 @@
+   canEnterPictureInPicture(): boolean;
+   keepScreenAwake: boolean;
+   surfaceType: SurfaceType;
+-
+-  // Event listeners
+-
+-  /**
+-   * Adds a listener for the `onPictureInPictureChange` event.
+-   * @see {@link VideoViewEvents.onPictureInPictureChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnPictureInPictureChangeListener(
+     listener: (isInPictureInPicture: boolean) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `onFullscreenChange` event.
+-   * @see {@link VideoViewEvents.onFullscreenChange}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addOnFullscreenChangeListener(
+     listener: (fullscreen: boolean) => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `willEnterFullscreen` event.
+-   * @see {@link VideoViewEvents.willEnterFullscreen}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addWillEnterFullscreenListener(listener: () => void): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `willExitFullscreen` event.
+-   * @see {@link VideoViewEvents.willExitFullscreen}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addWillExitFullscreenListener(listener: () => void): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `willEnterPictureInPicture` event.
+-   * @see {@link VideoViewEvents.willEnterPictureInPicture}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addWillEnterPictureInPictureListener(
+     listener: () => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Adds a listener for the `willExitPictureInPicture` event.
+-   * @see {@link VideoViewEvents.willExitPictureInPicture}
+-   * @param listener - The listener to add.
+-   * @returns A subscription object that can be used to remove the listener.
+-   */
+   addWillExitPictureInPictureListener(
+     listener: () => void
+   ): ListenerSubscription;
+-
+-  /**
+-   * Clears all listeners from the event emitter.
+-   */
+   clearAllListeners(): void;
+ }
+ 
+ // @internal
+-export interface VideoViewViewManagerFactory extends HybridObject<{
+-  ios: 'swift';
+-  android: 'kotlin';
+-}> {
++@Apple({ language: 'swift', implementation: { className: 'HybridVideoViewViewManagerFactory' } })
++@Android({ language: 'kotlin', implementation: { className: 'HybridVideoViewViewManagerFactory' } })
++export declare class VideoViewViewManagerFactory extends HybridObject {
++  constructor();
+   createViewManager(nitroId: number): VideoViewViewManager;
+ }
+diff --git a/packages/react-native-video/src/core/utils/playerFactory.ts b/packages/react-native-video/src/core/utils/playerFactory.ts
+--- a/packages/react-native-video/src/core/utils/playerFactory.ts
++++ b/packages/react-native-video/src/core/utils/playerFactory.ts
+@@ -1,8 +1,7 @@
++import { VideoPlayerFactory as NativeVideoPlayerFactory } from '../../spec/nitro/VideoPlayer.nitro';
+ import { Platform } from 'react-native';
+-import { NitroModules } from 'react-native-nitro-modules';
+ import type {
+   VideoPlayer,
+-  VideoPlayerFactory,
+ } from '../../spec/nitro/VideoPlayer.nitro';
+ import type { VideoPlayerSource } from '../../spec/nitro/VideoPlayerSource.nitro';
+ import type { VideoConfig, VideoSource } from '../types/VideoConfig';
+@@ -10,8 +9,7 @@
+ import { tryParseNativeVideoError } from '../types/VideoError';
+ import { isVideoPlayerSource } from './sourceUtils';
+ 
+-const VideoPlayerFactory =
+-  NitroModules.createHybridObject<VideoPlayerFactory>('VideoPlayerFactory');
++const VideoPlayerFactory = new NativeVideoPlayerFactory();
+ 
+ /**
+  * Disables the internal audio session management on iOS.
+diff --git a/packages/react-native-video/src/core/utils/sourceFactory.ts b/packages/react-native-video/src/core/utils/sourceFactory.ts
+--- a/packages/react-native-video/src/core/utils/sourceFactory.ts
++++ b/packages/react-native-video/src/core/utils/sourceFactory.ts
+@@ -1,8 +1,7 @@
++import { VideoPlayerSourceFactory as NativeVideoPlayerSourceFactory } from '../../spec/nitro/VideoPlayerSource.nitro';
+ import { Image, Platform } from 'react-native';
+-import { NitroModules } from 'react-native-nitro-modules';
+ import type {
+   VideoPlayerSource,
+-  VideoPlayerSourceFactory,
+ } from '../../spec/nitro/VideoPlayerSource.nitro';
+ import type {
+   ExternalSubtitle,
+@@ -17,10 +16,7 @@
+ } from '../types/VideoError';
+ import { isVideoPlayerSource } from './sourceUtils';
+ 
+-const VideoPlayerSourceFactory =
+-  NitroModules.createHybridObject<VideoPlayerSourceFactory>(
+-    'VideoPlayerSourceFactory'
+-  );
++const VideoPlayerSourceFactory = new NativeVideoPlayerSourceFactory();
+ 
+ /**
+  * Creates a `VideoPlayerSource` instance from a URI (string).
+diff --git a/packages/react-native-video/src/core/utils/sourceUtils.ts b/packages/react-native-video/src/core/utils/sourceUtils.ts
+--- a/packages/react-native-video/src/core/utils/sourceUtils.ts
++++ b/packages/react-native-video/src/core/utils/sourceUtils.ts
+@@ -1,10 +1,5 @@
+-import type { VideoPlayerSource } from '../../spec/nitro/VideoPlayerSource.nitro';
++import { VideoPlayerSource } from '../../spec/nitro/VideoPlayerSource.nitro';
+ 
+-export const isVideoPlayerSource = (obj: any): obj is VideoPlayerSource => {
+-  return (
+-    obj && // obj is not null
+-    typeof obj === 'object' && // obj is an object
+-    'name' in obj && // obj has a name property
+-    obj.name === 'VideoPlayerSource' // obj.name is 'VideoPlayerSource'
+-  );
++export const isVideoPlayerSource = (obj: unknown): obj is VideoPlayerSource => {
++  return obj instanceof VideoPlayerSource;
+ };
+diff --git a/packages/react-native-video/src/core/video-view/VideoView.tsx b/packages/react-native-video/src/core/video-view/VideoView.tsx
+--- a/packages/react-native-video/src/core/video-view/VideoView.tsx
++++ b/packages/react-native-video/src/core/video-view/VideoView.tsx
+@@ -1,9 +1,8 @@
++import { VideoViewViewManagerFactory as NativeVideoViewViewManagerFactory } from '../../spec/nitro/VideoViewViewManager.nitro';
+ import * as React from 'react';
+-import { NitroModules } from 'react-native-nitro-modules';
+ import type { ListenerSubscription } from '../../spec/nitro/VideoPlayerEventEmitter.nitro';
+ import type {
+   VideoViewViewManager,
+-  VideoViewViewManagerFactory,
+ } from '../../spec/nitro/VideoViewViewManager.nitro';
+ import { type VideoViewEvents } from '../types/Events';
+ import {
+@@ -16,10 +15,7 @@
+ import type { VideoViewProps, VideoViewRef } from './VideoViewProps';
+ 
+ let nitroIdCounter = 1;
+-const VideoViewViewManagerFactory =
+-  NitroModules.createHybridObject<VideoViewViewManagerFactory>(
+-    'VideoViewViewManagerFactory'
+-  );
++const VideoViewViewManagerFactory = new NativeVideoViewViewManagerFactory();
+ 
+ const wrapNativeViewManagerFunction = <T,>(
+   manager: VideoViewViewManager | null,
+diff --git a/packages/react-native-video/src/spec/fabric/VideoViewNativeComponent.ts b/packages/react-native-video/src/spec/fabric/VideoViewNativeComponent.ts
+--- a/packages/react-native-video/src/spec/fabric/VideoViewNativeComponent.ts
++++ b/packages/react-native-video/src/spec/fabric/VideoViewNativeComponent.ts
+@@ -1,17 +1,12 @@
+-import type { ViewProps } from 'react-native';
+-import type {
+-  DirectEventHandler,
+-  Int32,
+-} from 'react-native/Libraries/Types/CodegenTypes';
+-import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
++import { codegenNativeComponent, type CodegenTypes, type ViewProps } from 'react-native';
+ 
+ type OnNitroIdChangeEvent = Readonly<{
+-  nitroId: Int32;
++  nitroId: CodegenTypes.Int32;
+ }>;
+ 
+ export interface ViewViewNativeProps extends ViewProps {
+-  nitroId: Int32;
+-  onNitroIdChange?: DirectEventHandler<OnNitroIdChangeEvent>;
++  nitroId: CodegenTypes.Int32;
++  onNitroIdChange?: CodegenTypes.DirectEventHandler<OnNitroIdChangeEvent>;
+ }
+ 
+ export default codegenNativeComponent<ViewViewNativeProps>('RNCVideoView');
+diff --git a/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoplayer/HybridVideoPlayerFactory.kt b/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoplayer/HybridVideoPlayerFactory.kt
+--- a/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoplayer/HybridVideoPlayerFactory.kt
++++ b/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoplayer/HybridVideoPlayerFactory.kt
+@@ -6,6 +6,10 @@
+ 
+ @DoNotStrip
+ class HybridVideoPlayerFactory(): HybridVideoPlayerFactorySpec() {
++  companion object : HybridVideoPlayerFactorySpec.Companion {
++    override fun constructor(): HybridVideoPlayerFactory = HybridVideoPlayerFactory()
++  }
++
+   @OptIn(UnstableApi::class)
+   override fun createPlayer(source: HybridVideoPlayerSourceSpec): HybridVideoPlayerSpec {
+     return HybridVideoPlayer(source as HybridVideoPlayerSource)
+diff --git a/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoplayersource/HybridVideoPlayerSourceFactory.kt b/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoplayersource/HybridVideoPlayerSourceFactory.kt
+--- a/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoplayersource/HybridVideoPlayerSourceFactory.kt
++++ b/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoplayersource/HybridVideoPlayerSourceFactory.kt
+@@ -10,6 +10,10 @@
+ 
+ @DoNotStrip
+ class HybridVideoPlayerSourceFactory: HybridVideoPlayerSourceFactorySpec() {
++  companion object : HybridVideoPlayerSourceFactorySpec.Companion {
++    override fun constructor(): HybridVideoPlayerSourceFactory = HybridVideoPlayerSourceFactory()
++  }
++
+   private val applicationContext: Context
+     get() = NitroModules.applicationContext
+       ?: throw IllegalStateException(
+diff --git a/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoviewviewmanager/HybridVideoViewViewManagerFactory.kt b/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoviewviewmanager/HybridVideoViewViewManagerFactory.kt
+--- a/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoviewviewmanager/HybridVideoViewViewManagerFactory.kt
++++ b/packages/react-native-video/android/src/main/java/com/twg/video/hybrids/videoviewviewmanager/HybridVideoViewViewManagerFactory.kt
+@@ -4,6 +4,10 @@
+ 
+ @DoNotStrip
+ class HybridVideoViewViewManagerFactory: HybridVideoViewViewManagerFactorySpec() {
++  companion object : HybridVideoViewViewManagerFactorySpec.Companion {
++    override fun constructor(): HybridVideoViewViewManagerFactory = HybridVideoViewViewManagerFactory()
++  }
++
+   override fun createViewManager(nitroId: Double): HybridVideoViewViewManagerSpec {
+     return HybridVideoViewViewManager(nitroId.toInt())
+   }
+diff --git a/packages/react-native-video/ios/hybrids/VideoPlayer/HybridVideoPlayerFactory.swift b/packages/react-native-video/ios/hybrids/VideoPlayer/HybridVideoPlayerFactory.swift
+--- a/packages/react-native-video/ios/hybrids/VideoPlayer/HybridVideoPlayerFactory.swift
++++ b/packages/react-native-video/ios/hybrids/VideoPlayer/HybridVideoPlayerFactory.swift
+@@ -9,6 +9,10 @@
+ import NitroModules
+ 
+ class HybridVideoPlayerFactory: HybridVideoPlayerFactorySpec {
++  required override init() throws {
++    try super.init()
++  }
++
+   func createPlayer(source: HybridVideoPlayerSourceSpec) throws -> HybridVideoPlayerSpec {
+     return try HybridVideoPlayer(source: source)
+   }
+diff --git a/packages/react-native-video/ios/hybrids/VideoPlayerSource/HybridVideoPlayerSourceFactory.swift b/packages/react-native-video/ios/hybrids/VideoPlayerSource/HybridVideoPlayerSourceFactory.swift
+--- a/packages/react-native-video/ios/hybrids/VideoPlayerSource/HybridVideoPlayerSourceFactory.swift
++++ b/packages/react-native-video/ios/hybrids/VideoPlayerSource/HybridVideoPlayerSourceFactory.swift
+@@ -8,6 +8,10 @@
+ import Foundation
+ 
+ class HybridVideoPlayerSourceFactory: HybridVideoPlayerSourceFactorySpec {
++  required override init() throws {
++    try super.init()
++  }
++
+   func fromVideoConfig(config: NativeVideoConfig) throws
+     -> any HybridVideoPlayerSourceSpec
+   {
+diff --git a/packages/react-native-video/ios/hybrids/VideoViewViewManager/HybridVideoViewViewManagerFactory.swift b/packages/react-native-video/ios/hybrids/VideoViewViewManager/HybridVideoViewViewManagerFactory.swift
+--- a/packages/react-native-video/ios/hybrids/VideoViewViewManager/HybridVideoViewViewManagerFactory.swift
++++ b/packages/react-native-video/ios/hybrids/VideoViewViewManager/HybridVideoViewViewManagerFactory.swift
+@@ -8,6 +8,10 @@
+ import Foundation
+ 
+ class HybridVideoViewViewManagerFactory: HybridVideoViewViewManagerFactorySpec {
++  required override init() throws {
++    try super.init()
++  }
++
+   func createViewManager(nitroId: Double) throws -> any HybridVideoViewViewManagerSpec {
+     return try HybridVideoViewViewManager(nitroId: nitroId)
+   }
