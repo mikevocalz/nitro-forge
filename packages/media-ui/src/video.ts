@@ -6,6 +6,7 @@ export {
   describeFrameTimebase,
   frameAtTime,
   frameSeekSeconds,
+  initialVideoMonitorPhase,
   reportNativePlaybackTime,
   requestVideoFrame,
   settleSeekRequest,

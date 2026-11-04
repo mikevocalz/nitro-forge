@@ -24,5 +24,6 @@ describe("selected video runtime boundary", () => {
     expect(source).not.toContain("setInterval");
     expect(source).not.toContain("store.setState");
     expect(source).toContain("VIDEO_PLAYBACK_CAPABILITY.reason");
+    expect(source).not.toContain('accessibilityRole="alert"');
   });
 });

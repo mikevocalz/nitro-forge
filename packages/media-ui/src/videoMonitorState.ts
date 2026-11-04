@@ -1,7 +1,9 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { assertFrameRate, clampFrame, secondsToFrame, type FrameRate } from "./timebase";
+import { VIDEO_PLAYBACK_CAPABILITY } from "./videoCapability";
 
 export type VideoMonitorPhase =
+  | { readonly kind: "unavailable"; readonly reason: string }
   | { readonly kind: "loading" }
   | { readonly kind: "ready"; readonly playing: boolean }
   | { readonly kind: "error"; readonly message: string };
@@ -21,9 +23,22 @@ export interface VideoMonitorState {
   readonly trackFrameRate: number | null;
 }
 
+/**
+ * Decision (2026-11-04, product-decisions DEFER): while the selected player is
+ * blocked, a new store starts "unavailable" with the capability's reason. It
+ * must not start "loading", because no player will ever finish loading and a
+ * consumer would show a spinner forever. "loading" is kept for the day a real
+ * react-native-video Nitro v1 adapter is wired and flips the capability status.
+ */
+export function initialVideoMonitorPhase(): VideoMonitorPhase {
+  return VIDEO_PLAYBACK_CAPABILITY.status === "blocked"
+    ? { kind: "unavailable", reason: VIDEO_PLAYBACK_CAPABILITY.reason }
+    : { kind: "loading" };
+}
+
 export function createVideoMonitorStore(): StoreApi<VideoMonitorState> {
   return createStore<VideoMonitorState>(() => ({
-    phase: { kind: "loading" },
+    phase: initialVideoMonitorPhase(),
     reportedFrame: 0,
     durationFrames: 0,
     bufferedFrame: 0,
@@ -125,7 +140,7 @@ export function requestVideoFrame(
   return target;
 }
 
-/** playingChange/playToEnd only toggle playback inside `ready`; loading and error stand. */
+/** playingChange/playToEnd only toggle playback inside `ready`; unavailable, loading and error stand. */
 export function applyPlayingChange(
   phase: VideoMonitorPhase,
   isPlaying: boolean,

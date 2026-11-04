@@ -5,12 +5,14 @@ import {
   describeFrameTimebase,
   frameAtTime,
   frameSeekSeconds,
+  initialVideoMonitorPhase,
   reportNativePlaybackTime,
   requestVideoFrame,
   settleSeekRequest,
   validFrameCount,
 } from "../src/videoMonitorState";
 import { FRAME_RATES, framesToSeconds } from "../src/timebase";
+import { VIDEO_PLAYBACK_CAPABILITY } from "../src/videoCapability";
 
 describe("native video seek observability", () => {
   const fps = FRAME_RATES.NTSC_2997;
@@ -121,6 +123,16 @@ describe("frame-centre seek targets", () => {
 });
 
 describe("phase transitions", () => {
+  it("starts unavailable, not loading, while the selected player is blocked", () => {
+    expect(VIDEO_PLAYBACK_CAPABILITY.status).toBe("blocked");
+    const expected = { kind: "unavailable", reason: VIDEO_PLAYBACK_CAPABILITY.reason };
+    expect(initialVideoMonitorPhase()).toEqual(expected);
+    expect(createVideoMonitorStore().getState().phase).toEqual(expected);
+  });
+  it("keeps unavailable when a playing change arrives", () => {
+    const phase = { kind: "unavailable", reason: "blocked" } as const;
+    expect(applyPlayingChange(phase, true)).toBe(phase);
+  });
   it("only updates playing while ready", () => {
     expect(applyPlayingChange({ kind: "ready", playing: false }, true))
       .toEqual({ kind: "ready", playing: true });

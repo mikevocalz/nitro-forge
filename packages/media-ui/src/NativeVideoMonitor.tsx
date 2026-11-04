@@ -22,6 +22,10 @@ export interface NativeVideoMonitorProps {
  * the required Nitro v1 host. No fake frames, timer, fallback decoder, or controls.
  * Prop names remain stable; the source type is a minimal host descriptor, not
  * the previous backend-specific source/options API.
+ *
+ * Decision (2026-11-04): the message is static status, not an event, so it
+ * uses header + text roles and is read in order. An "alert" role would
+ * interrupt the screen reader on every mount for something that never changes.
  */
 export function NativeVideoMonitor({ height = 220, testID }: NativeVideoMonitorProps) {
   return (
@@ -29,7 +33,7 @@ export function NativeVideoMonitor({ height = 220, testID }: NativeVideoMonitorP
       <Text accessibilityRole="header" style={{ color: "#FFFFFF", fontSize: 18 }}>
         Video playback unavailable
       </Text>
-      <Text accessibilityRole="alert" style={{ color: "#CBCBDE" }}>
+      <Text accessibilityRole="text" style={{ color: "#CBCBDE" }}>
         {VIDEO_PLAYBACK_CAPABILITY.reason}
       </Text>
     </View>
