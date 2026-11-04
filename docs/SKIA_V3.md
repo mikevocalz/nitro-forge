@@ -39,8 +39,10 @@ pnpm --filter @nitro-forge/example start
 # Use a native development build, not Expo Go:
 pnpm --filter @nitro-forge/example exec expo run:ios
 pnpm --filter @nitro-forge/example exec expo run:android
-pnpm why react-native-webgpu-dawn
+pnpm why react-native-webgpu-dawn   # inspection only; exits 0 even with duplicates
 ```
+
+`pnpm check:skia-v3` is the Dawn gate: it fails when `pnpm-lock.yaml` resolves more than one `react-native-webgpu-dawn` version, or when `node_modules/.pnpm` holds more than one after an install. The scheduled `--registry` run reports npm drift in the run summary and a tracking issue; it does not fail, and the pins move only through a dependency PR that bumps Skia and WebGPU together.
 
 **Dependency status:** GitHub Actions generated and committed an updated `pnpm-lock.yaml` and verified a frozen install ([CI run 41458549938](https://github.com/mikevocalz/nitro-forge/actions/runs/41458549938)). Android API 37 native compilation, Xcode linking, Skia v3 pixel output and real-device behavior still require separate evidence. Do not treat a frozen dependency install as a working native renderer. Test native codegen, architecture-specific artifacts, Skia scenes, GPU memory, actual devices, web bundling and Moyo integration separately. The runtime engine bridge is currently not implemented.
 
