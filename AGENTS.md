@@ -31,3 +31,7 @@ pnpm --filter @nitro-forge/console demo   # all-engines workflow demo
 - Op names live in `docs/ENGINE_OPS.md` — change the doc and every engine together.
 - No `unsafe` inside product engines (FFI lives in `rust/nf-sys` only).
 - Never claim verification that wasn't run; update `docs/ROSTER.md` truthfully.
+
+## Advanced native UI extraction
+
+NYC-Tron UI is the single owner of reusable native controls, per [NYC-Tron PR #2](https://github.com/mikevocalz/NYC-Tron-UI/pull/2). Forge adds only Rust/native engine behavior and typed adapters. Inspect [the source-port roster](docs/ADVANCED_NATIVE_PORT_ROSTER.md) before introducing an upstream port; file-level license review is mandatory. Never recreate the knob, graph, crop overlay, or generic native popup inside Forge.

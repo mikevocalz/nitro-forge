@@ -100,3 +100,8 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
 - No git remote → commits are local; no PRs.
+
+## 2026-11-04 advanced component bridge work
+
+- Cadence typed gain/pan knob adapter **SOURCE IMPLEMENTED** (separate branch). Tests authored but not asserted green here until CI.
+- Graph routing, real crop, MIDI piano roll, Media3/AVFoundation decoder, Ink/Muse and spatial renderer **NOT IMPLEMENTED**. The roster in `ADVANCED_NATIVE_PORT_ROSTER.md` is a plan, not device proof.
