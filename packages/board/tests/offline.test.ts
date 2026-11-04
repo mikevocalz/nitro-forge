@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CorruptCheckpointError,
   createOfflineBoardController,
   OfflineBoardError,
   type BoardCheckpoint,
@@ -110,9 +111,69 @@ describe("offline board: locally durable document authority", () => {
       documentId: "damaged", document: doc, storage: h.storage,
     });
     await expect(board.open()).rejects.toMatchObject({ code: "invalid-checkpoint" });
-    expect(board.status).toBe("failed");
+    expect(board.status).toBe("corrupt");
     expect(doc.read()).toBe("new");
     expect(h.writes).toBe(0);
+  });
+
+  it("stays retryable after a transient load failure", async () => {
+    const h = harness();
+    h.records.set("flaky", {
+      schemaVersion: 1, documentId: "flaky", revision: 3,
+      syncedRevision: 1, data: encoder.encode("kept"),
+    });
+    let failLoads = 1;
+    const storage: LocalBoardStorage = {
+      async load(id) {
+        if (failLoads-- > 0) throw new Error("storage busy");
+        return h.storage.load(id);
+      },
+      replaceAtomically: (id, c) => h.storage.replaceAtomically(id, c),
+    };
+    const doc = h.doc("empty");
+    const board = createOfflineBoardController({ documentId: "flaky", document: doc, storage });
+    await expect(board.open()).rejects.toMatchObject({ code: "storage" });
+    expect(board.status).toBe("unopened");
+    expect(await board.open()).toMatchObject({ revision: 3, syncedRevision: 1 });
+    expect(board.status).toBe("ready");
+    expect(doc.read()).toBe("kept");
+    expect(h.writes).toBe(0);
+  });
+
+  it("surfaces a typed corrupt-checkpoint error and discards only on explicit request", async () => {
+    const h = harness();
+    h.records.set("broken", {
+      schemaVersion: 1, documentId: "broken", revision: 2,
+      syncedRevision: 5, data: encoder.encode("unreadable"),
+    });
+    const doc = h.doc("fresh");
+    const board = createOfflineBoardController({ documentId: "broken", document: doc, storage: h.storage });
+    const error = await board.open().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CorruptCheckpointError);
+    expect(error).toMatchObject({ boardId: "broken", code: "invalid-checkpoint" });
+    expect(board.status).toBe("corrupt");
+    // A second open re-reads storage and still refuses; nothing was written.
+    await expect(board.open()).rejects.toBeInstanceOf(CorruptCheckpointError);
+    await expect(board.commit(" x")).rejects.toMatchObject({ code: "lifecycle" });
+    expect(h.writes).toBe(0);
+    // The board id acts as an explicit confirmation of which board to wipe.
+    await expect(board.discardCorruptCheckpoint("other")).rejects.toMatchObject({ code: "lifecycle" });
+    expect(h.writes).toBe(0);
+
+    expect(await board.discardCorruptCheckpoint("broken"))
+      .toMatchObject({ documentId: "broken", revision: 0, syncedRevision: 0, needsSync: false });
+    expect(board.status).toBe("ready");
+    expect(decoder.decode(h.records.get("broken")!.data)).toBe("fresh");
+    expect(await board.commit(" ink")).toMatchObject({ revision: 1 });
+  });
+
+  it("refuses to discard a checkpoint that is not known to be corrupt", async () => {
+    const h = harness();
+    const board = createOfflineBoardController({ documentId: "fine", document: h.doc(), storage: h.storage });
+    await expect(board.discardCorruptCheckpoint("fine")).rejects.toMatchObject({ code: "lifecycle" });
+    await board.open();
+    await expect(board.discardCorruptCheckpoint("fine")).rejects.toMatchObject({ code: "lifecycle" });
+    expect(h.writes).toBe(1);
   });
 
   it("persists server ACK separately while preserving newer offline edits", async () => {

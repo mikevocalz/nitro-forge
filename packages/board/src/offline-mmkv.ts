@@ -1,4 +1,5 @@
 import type { BoardCheckpoint, LocalBoardStorage } from "./offline";
+import { CorruptCheckpointError } from "./offline";
 
 /**
  * The binary storage subset of react-native-mmkv v4. Inject the host's
@@ -54,11 +55,11 @@ function encode(checkpoint: BoardCheckpoint, maxBytes: number): ArrayBuffer {
 
 function decode(documentId: string, raw: ArrayBuffer, maxBytes: number): BoardCheckpoint {
   if (!(raw instanceof ArrayBuffer) || raw.byteLength < HEADER_BYTES) {
-    throw new TypeError("MMKV board checkpoint is truncated");
+    throw new CorruptCheckpointError(documentId, "MMKV board checkpoint is truncated");
   }
   const view = new DataView(raw);
   if (view.getUint32(0, false) !== MAGIC || view.getUint8(4) !== 1) {
-    throw new TypeError("MMKV board checkpoint schema is unsupported");
+    throw new CorruptCheckpointError(documentId, "MMKV board checkpoint schema is unsupported");
   }
   const revision = Number(view.getBigUint64(8, false));
   const syncedRevision = Number(view.getBigUint64(16, false));
@@ -66,11 +67,11 @@ function decode(documentId: string, raw: ArrayBuffer, maxBytes: number): BoardCh
   if (!safeRevision(revision) || !safeRevision(syncedRevision) ||
       syncedRevision > revision || len < 1 || len > maxBytes ||
       raw.byteLength !== HEADER_BYTES + len) {
-    throw new TypeError("MMKV board checkpoint header is invalid");
+    throw new CorruptCheckpointError(documentId, "MMKV board checkpoint header is invalid");
   }
   const bytes = new Uint8Array(raw, HEADER_BYTES, len);
   if (crc32(bytes) !== view.getUint32(28, false)) {
-    throw new TypeError("MMKV board checkpoint failed checksum");
+    throw new CorruptCheckpointError(documentId, "MMKV board checkpoint failed checksum");
   }
   return { schemaVersion: 1, documentId, revision, syncedRevision, data: new Uint8Array(bytes) };
 }

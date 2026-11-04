@@ -48,6 +48,7 @@ The native Skia Canvas accepts a `SceneResult` and renders **only fully supporte
 ```ts
 import { createMMKVBoardStorage } from '@nitro-forge/board/offline/mmkv';
 import { createLocalYjsBoardSession } from '@nitro-forge/board/offline/yjs';
+import { CorruptCheckpointError } from '@nitro-forge/board/offline';
 
 const storage = createMMKVBoardStorage(mmkv, {
   scope: organizationId + '/' + learnerId,
@@ -62,10 +63,19 @@ const saved = createLocalYjsBoardSession({
     }),
   onPersistenceError: err => showUnsavedWarning(err),
 });
-await saved.initialize(); // restore previous ink before the canvas is shown
+try {
+  await saved.initialize(); // restore previous ink before the canvas is shown
+} catch (err) {
+  if (err instanceof CorruptCheckpointError) {
+    // The stored bytes are kept. Wipe them only after the user confirms.
+    if (await confirmStartOver(err.boardId)) await saved.discardCorruptCheckpoint(err.boardId);
+  } else {
+    showRetry(err); // a failed read leaves the session retryable
+  }
+}
 ```
 
-The app owns its MMKV instance, identity, permission checks and encryption; the SDK requires a scoped key to prevent shared-tablet learner data leaks. Yjs merges are nondestructive. Failed MMKV writes remain **unsaved** and cannot be ACKed as synchronized. Reopen/merge/sync behavior is tested at source level, not on actual devices.
+The app owns its MMKV instance, identity, permission checks and encryption; the SDK requires a scoped key to prevent shared-tablet learner data leaks. Yjs merges are nondestructive. Failed MMKV writes remain **unsaved** and cannot be ACKed as synchronized; an ACK for an already saved revision still lands, and the newer edits stay pending. Reopen/merge/sync behavior is tested at source level, not on actual devices.
 
 An existing Moyo board is already based on a Yjs `Y.Doc`, `Y.Map` record IDs, local-author UndoManager and MMKV storage. Its old local board key is unscoped and must be migrated **after ownership is verified**, with a safe old-data read-through. The current native Moyo experiment also mirrors strokes into a second QuickDraw session; this needs a separate single-document consumer migration.
 
