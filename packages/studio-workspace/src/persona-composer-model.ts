@@ -157,3 +157,56 @@ export function requestedImportLabel(json: string): string {
 export function moveAnnouncement(rail: readonly string[], id: string): string {
   return `${instrumentLabel(id)} moved to position ${rail.indexOf(id) + 1} of ${rail.length}`;
 }
+
+/** Composer width at which the form and preview sit side by side. */
+export const COMPOSER_WIDE = 1000;
+/** Composer width below which the instrument and capability grids fold behind disclosures. */
+export const COMPOSER_PHONE = 600;
+
+/** Layout for a measured composer width. An unmeasured width (0) renders as one column. */
+export type ComposerLayout = 'wide' | 'single' | 'phone';
+export function composerLayout(width: number): ComposerLayout {
+  if (!(width > 0)) return 'single';
+  if (width >= COMPOSER_WIDE) return 'wide';
+  return width < COMPOSER_PHONE ? 'phone' : 'single';
+}
+
+/** Columns and tile width for a toggle grid `width` points wide: tiles at least
+ * `minTile` wide, at most `maxColumns` across, `gap` between them. */
+export function toggleGrid(width: number, gap: number, minTile = 148, maxColumns = 4): Readonly<{ columns: number; tile: number }> {
+  if (!(width > 0)) return { columns: 1, tile: 0 };
+  const columns = Math.max(1, Math.min(maxColumns, Math.floor((width + gap) / (minTile + gap))));
+  return { columns, tile: Math.floor((width - gap * (columns - 1)) / columns) };
+}
+
+/** Rail position (1-based) of `id`, or undefined when it is not on the rail. */
+export function railPosition(rail: readonly string[], id: string): number | undefined {
+  const i = rail.indexOf(id);
+  return i < 0 ? undefined : i + 1;
+}
+
+/** Spoken name for an instrument tile. Contains the visible label. */
+export function instrumentToggleName(label: string, position: number | undefined): string {
+  return position === undefined ? `Add ${label} to the rail` : `${label}, position ${position} on the rail. Press to remove`;
+}
+
+/** Spoken name for a capability tile: "Include Paths and nodes, not in this build". Contains the visible label. */
+export function capabilityToggleName(capability: PersonaCapability, on: boolean): string {
+  const tag = capabilityTag(capability);
+  const spokenTag = tag === 'Not in this build' ? 'not in this build' : tag;
+  return `${on ? 'Included' : 'Include'} ${capability.label}${spokenTag ? `, ${spokenTag}` : ''}`;
+}
+
+/** Count shown on a folded grid: "2 of 9 on the rail", "3 of 11 included". */
+export function disclosureCount(kind: 'rail' | 'capabilities', chosen: number, total: number): string {
+  return `${chosen} of ${total} ${kind === 'rail' ? 'on the rail' : 'included'}`;
+}
+
+/** Shown once above the persona list instead of on every built-in row. */
+export const BUILT_IN_CAPTION = "Built-in personas can't be removed or exported. Start a copy to change one.";
+
+/** One-line summary under a persona in the list. */
+export function personaSummary(persona: PersonaSpec): string {
+  const where = persona.surfaces === 'all' ? 'every surface' : persona.surfaces.map(x => SURFACE_LABELS[x]).join(', ');
+  return `${persona.builtIn ? 'Built in, ' : ''}${persona.rail.length} on rail, ${where}`;
+}
