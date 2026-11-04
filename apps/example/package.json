@@ -6,7 +6,8 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --experimental-strip-types --test src/persona/*.test.ts"
   },
   "dependencies": {
     "@nitro-forge/cadence": "workspace:*",
@@ -46,6 +47,7 @@
     "expo-constants": "58.0.15",
     "expo-linking": "58.0.16",
     "expo-dev-client": "58.0.18",
+    "expo-haptics": "58.0.7",
     "@expo/metro-runtime": "58.0.17"
   },
   "devDependencies": {
