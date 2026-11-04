@@ -62,7 +62,7 @@ export function useForgeAudioRecorder(
       try {
         status = recorder.getStatus();
       } catch (error) {
-        controller.reportStatusError(error);
+        void controller.reportStatusError(error);
         return;
       }
       controller.observe(status);
