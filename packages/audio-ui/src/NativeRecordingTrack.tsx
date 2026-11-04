@@ -14,11 +14,7 @@ export interface NativeRecordingTrackProps {
   readonly disabled?: boolean;
 }
 
-/**
- * Actual microphone recording controls on iOS/Android/Web via Expo Audio.
- * Visible peaks are sampled input *level history*, not decoded file samples.
- * The underlying recorder produces a genuine .m4a / WebM media file.
- */
+/** Audio API PCM capture on native; browser MediaRecorder fallback, without live browser peaks. */
 export function NativeRecordingTrack({
   store, onSaved, testID, disabled = false,
 }: NativeRecordingTrackProps) {

@@ -1,0 +1,22 @@
+name: Audio API lifecycle contracts
+on:
+  pull_request:
+    paths:
+      - 'packages/audio-ui/**'
+      - 'apps/forge-audio-lab/**'
+      - '.github/workflows/audio-api-contracts.yml'
+  workflow_dispatch:
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --experimental-strip-types --test packages/audio-ui/node-tests/audio-api.test.mjs
+      - name: Reject retired audio dependencies
+        run: |
+          if grep -R -E 'from ["\x27]expo-audio|"expo-audio"' packages/audio-ui/src packages/audio-ui/package.json apps/forge-audio-lab; then
+            echo 'Forge audio must use Audio API, not Expo Audio'; exit 1
+          fi

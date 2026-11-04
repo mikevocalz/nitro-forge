@@ -1,12 +1,14 @@
+import { useEffect, useRef } from "react";
+import { AudioContext } from "react-native-audio-api";
 import { NativeRecordingTrack } from "./NativeRecordingTrack";
 import { WaveformPeakAccumulator } from "./pcmPeaks";
 import type { NativeSourceRecordingTrackProps, SourceRecordingFile } from "./sourceRecordingTypes";
 
-async function decodeWebRecording(uri: string): Promise<SourceRecordingFile> {
+async function decodeWebRecording(uri: string, durationMs: number): Promise<SourceRecordingFile> {
   const unavailable = (): SourceRecordingFile => ({
     kind: "compressed-web", uri, peaks: [], waveform: "unavailable",
   });
-  if (!uri.startsWith("blob:")) return unavailable();
+  if (!uri.startsWith("blob:") || !Number.isFinite(durationMs) || durationMs <= 0 || durationMs > 60_000) return unavailable();
   let context: AudioContext | undefined;
   try {
     const response = await fetch(uri);
@@ -17,7 +19,8 @@ async function decodeWebRecording(uri: string): Promise<SourceRecordingFile> {
     }
     context = new AudioContext();
     const decoded = await context.decodeAudioData(data);
-    if (decoded.length < 1 || decoded.numberOfChannels < 1) return unavailable();
+    if (decoded.length < 1 || decoded.numberOfChannels < 1 || decoded.duration > 60 ||
+        decoded.length * decoded.numberOfChannels * 4 > 32 * 1024 * 1024) return unavailable();
     const accumulator = new WaveformPeakAccumulator();
     const chunkFrames = 2048;
     const channels = Array.from(
@@ -57,17 +60,21 @@ async function decodeWebRecording(uri: string): Promise<SourceRecordingFile> {
 export function NativeSourceRecordingTrack({
   store, disabled, testID, onSaved,
 }: NativeSourceRecordingTrackProps) {
+  const generation = useRef(0);
+  useEffect(() => { generation.current++; return () => { generation.current++; }; }, [store]);
   return (
     <NativeRecordingTrack
       store={store}
       {...(disabled === undefined ? {} : { disabled })}
       {...(testID ? { testID } : {})}
       onSaved={(uri) => {
-        void decodeWebRecording(uri)
-          .then((result) => onSaved?.(result))
-          .catch(() => onSaved?.({
-            kind: "compressed-web", uri, peaks: [], waveform: "unavailable",
-          }));
+        const token = generation.current;
+        const phase = store.getState().phase;
+        const durationMs = phase.kind === "saved" ? phase.durationMs : 0;
+        void decodeWebRecording(uri, durationMs).then(result => {
+          const latest = store.getState().phase;
+          if (generation.current === token && latest.kind === "saved" && latest.uri === uri) onSaved?.(result);
+        });
       }}
     />
   );

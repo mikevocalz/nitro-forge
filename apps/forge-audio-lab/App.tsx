@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 import {
   createRecordingStore,
 } from "@nitro-forge/audio-ui";
+import { NativeAudioPreview } from "@nitro-forge/audio-ui/playback";
 import { NativeSourceRecordingTrack } from "@nitro-forge/audio-ui/pcm";
 
 /** Single track owner; one vanilla Zustand store, never React useState. */
@@ -18,7 +19,7 @@ export default function App() {
         Nitro Forge · Native Audio Lab
       </Text>
       <Text style={{ fontSize: 15, color: "#CBCBE1" }}>
-        SDK 58 PCM WAV and source waveform on native; compressed recording with decoded peaks where supported on web
+        Audio API 1.0 PCM WAV capture and native audio graph playback; compressed recording with decoded peaks where supported on web
       </Text>
       <NativeSourceRecordingTrack
         store={track}
@@ -29,6 +30,9 @@ export default function App() {
           console.info("Native recording completed:", result.uri, result.kind, result.peaks.length);
         }}
       />
+      <NativeAudioPreview uri={phase.kind === "saved" ? phase.uri : null}
+        durationSeconds={phase.kind === "saved" ? phase.durationMs / 1000 : 0}
+        disabled={["recording", "preparing", "requesting-permission", "stopping"].includes(phase.kind)} />
       <View style={{ gap: 6 }}>
         <Text style={{ fontSize: 13, color: "#AAAAAA" }}>
           Phase: {phase.kind}
