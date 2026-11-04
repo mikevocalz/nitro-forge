@@ -1,0 +1,40 @@
+name: Forge audio SDK 58 cross-platform contracts
+
+on:
+  pull_request:
+    paths:
+      - 'packages/audio-ui/**'
+      - 'apps/forge-audio-lab/**'
+      - '.github/workflows/audio-ui-cross-platform.yml'
+  workflow_dispatch:
+
+jobs:
+  source-contracts:
+    name: audio TS + lifecycle contracts (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install (experimental branch, lock update pending)
+        run: pnpm install --no-frozen-lockfile
+      - name: Audio UI TypeScript
+        run: pnpm --filter @nitro-forge/audio-ui typecheck
+      - name: Audio recording state-machine tests
+        run: pnpm --filter @nitro-forge/audio-ui test
+      - name: Expo SDK 58 lab typecheck
+        run: pnpm --filter @nitro-forge/audio-lab typecheck
+      - name: Bundle Expo Metro web app
+        if: runner.os == 'Linux'
+        run: pnpm --filter @nitro-forge/audio-lab export:web
+      - name: Scope statement
+        run: echo "CI validates source, typecheck and web bundling only; permission/mic/device runtime E2E remains required."
