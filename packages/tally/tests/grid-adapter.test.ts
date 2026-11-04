@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { TallyGridDocument } from "../src/grid-adapter";
 import {
   tallyColumnName,tallyCellAddress,windowToA1Range,
-  readTallyWindow,commitTallyGridCell
+  readTallyWindow,commitTallyGridCell,parseTallyCellAddress
 } from "../src/grid-adapter";
 
 describe("Tally viewport adapter for NYC-Tron native SpreadsheetGrid",()=>{
@@ -48,5 +48,25 @@ describe("Tally viewport adapter for NYC-Tron native SpreadsheetGrid",()=>{
     expect(setCell).toHaveBeenCalledWith("A1","=4+4");
     expect(result.data.computed).toBe(8);
     await expect(commitTallyGridCell(doc,"A0","42")).rejects.toThrow();
+  });
+
+  it("rejects writes outside the XFD1048576 grid before reaching Rust",async()=>{
+    const setCell=vi.fn().mockResolvedValue({events:[],data:{}});
+    const doc={getRange:vi.fn(),setCell} as unknown as TallyGridDocument;
+    await expect(commitTallyGridCell(doc,"XFE1","1")).rejects.toThrow(/outside/);
+    await expect(commitTallyGridCell(doc,"ZZZ1","1")).rejects.toThrow(/outside/);
+    await expect(commitTallyGridCell(doc,"A1048577","1")).rejects.toThrow(/outside/);
+    await commitTallyGridCell(doc,"XFD1048576","1");
+    expect(setCell).toHaveBeenCalledTimes(1);
+    expect(parseTallyCellAddress("AA100")).toEqual({row:99,column:26});
+  });
+
+  it("rejects engine cells outside the requested window",async()=>{
+    const getRange=vi.fn().mockResolvedValue({events:[],data:{cells:[[
+      {addr:"Z99",raw:"",computed:null}
+    ]]}});
+    const doc={getRange,setCell:vi.fn()} as unknown as TallyGridDocument;
+    await expect(readTallyWindow(doc,{startRow:0,endRow:1,startColumn:0,endColumn:1}))
+      .rejects.toThrow(/outside the requested window/);
   });
 });

@@ -16,7 +16,8 @@ The independent NYC-Tron UI source repository has two related components:
 The adapter exported from `@nitro-forge/tally/grid-adapter` is only a
 typed bridge: it translates the UI's exclusive range bounds into A1 addresses,
 reads the corresponding Rust `getRange` output, and writes through
-`TallyDocument.setCell`. It imports no React, `@nyc-tron/*`, native controls
+`TallyDocument.setCell`. Both ops act on the workbook's active sheet; call
+`TallyDocument.setActive` when the grid switches `sheetId`. It imports no React, `@nyc-tron/*`, native controls
 or TanStack, so it cannot create a UI-engine dependency cycle.
 
 ```tsx
@@ -35,11 +36,18 @@ import { readTallyWindow, commitTallyGridCell } from "@nitro-forge/tally/grid-ad
   onSelectionChange={setSelectedAddress}
   cells={visibleCells}
   onWindowChange={(range) => {
-    void readTallyWindow(document, range).then(setVisibleCells);
+    // Generation fence: drop responses for windows the user scrolled past.
+    const generation = ++windowGeneration.current;
+    lastRange.current = range;
+    readTallyWindow(document, range)
+      .then((cells) => {
+        if (generation === windowGeneration.current) setVisibleCells(cells);
+      })
+      .catch(reportGridError);
   }}
   onCommitCell={async (address, raw) => {
     await commitTallyGridCell(document, address, raw);
-    await refreshVisibleRange();
+    setVisibleCells(await readTallyWindow(document, lastRange.current));
   }}
 />
 ```
