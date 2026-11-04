@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { createPersonaStore, type PersonaStore } from '@nitro-forge/studio-workspace/personas';
+import { personaFileStorage } from './persona-file-storage';
 
 /** Host-side panel state. `peeking` mirrors the turret's open peek from its
  * effects (detent opens one; commit and cancel close it). */
@@ -20,7 +21,7 @@ export function acquirePersonaSession(key: string): PersonaSession {
   const existing = sessions.get(key);
   if (existing) { existing.holders += 1; return existing.session; }
   const session: PersonaSession = {
-    personas: createPersonaStore({ surface: hostSurface() }),
+    personas: createPersonaStore({ surface: hostSurface(), storage: personaFileStorage() }),
     ui: createStore<PersonaHostState>(() => ({ open: false, peeking: false })),
   };
   sessions.set(key, { session, holders: 1 });
