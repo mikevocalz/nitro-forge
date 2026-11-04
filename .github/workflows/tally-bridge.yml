@@ -1,0 +1,36 @@
+name: Tally grid adapter (independent Rust bridge)
+
+on:
+  pull_request:
+    paths:
+      - "packages/tally/**"
+      - "docs/TALLY_GRID_INTEGRATION.md"
+      - ".github/workflows/tally-bridge.yml"
+  push:
+    branches: [master]
+    paths:
+      - "packages/tally/**"
+      - "docs/TALLY_GRID_INTEGRATION.md"
+      - ".github/workflows/tally-bridge.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck-and-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Install Forge workspace
+        run: corepack pnpm install --frozen-lockfile
+      - name: Typecheck Tally adapter
+        run: corepack pnpm --filter @nitro-forge/tally typecheck
+      - name: Test bounded windows and Rust command handoff (mock host)
+        run: corepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.test.ts
+      # Source-level only: does not compile a native Nitro bridge, run the
+      # Rust Tally engine, or render NYC-Tron on a device.
