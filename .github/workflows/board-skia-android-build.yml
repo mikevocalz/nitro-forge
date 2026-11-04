@@ -48,7 +48,7 @@ jobs:
           test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --list_installed | grep 'platforms;android-37.0'
       - name: Install workspace packages
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Generate Nitro v1 native board Gradle and CMake registration
         run: pnpm --filter @nitro-forge/board codegen
       - name: Verify generated Nitro v1 Android build scripts

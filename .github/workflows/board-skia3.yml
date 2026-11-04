@@ -23,7 +23,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - name: Install only updated workspace dependency tree
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Validate v3-only dependency
         run: |
           node -e "const p=require('./packages/board/package.json'); if(!p.peerDependencies['react-native-skia'] || p.peerDependencies['@shopify/react-native-skia']) process.exit(1)"
