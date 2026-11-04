@@ -1,5 +1,5 @@
 import { Button, Column, Host, Row, Slider, Text } from "@expo/ui";
-import { clampFrame, formatTimecode, type FrameRate } from "./timebase.js";
+import { clampFrame, formatTimecode, type FrameRate } from "./timebase";
 
 export interface NativeSeekBarProps {
   /** Integer frame index in the source timeline. The component is fully controlled. */
