@@ -1,6 +1,6 @@
 # SDK58 / latest npm candidate (2026-11-04)
 
-**Draft.** JS bundles export for iOS and Android; native compilation and device runs are not yet verified.
+**Draft compatibility candidate.** Metro0.87.2/Uniwind iOS, Android and web JavaScript exports pass; native compilation and device runs remain unverified.
 
 The actual example and shared Studio now target Expo58.0.23, React19.3.1,
 React Native0.88.1, Expo Image58.0.18, Gesture Handler3.4.0, Skia3.9.1,
@@ -15,48 +15,43 @@ Direct package versions were queried against npm on November4. This is a dated
 candidate, not a claim that versions remain latest indefinitely. Shared external
 NYC dependencies not explicitly supplied by this host are not upgraded here.
 
-## Metro: Expo 58's pinned 0.87.1 (decision 2026-11-04)
+## Metro0.87.2 compatibility candidate
 
-The workspace overrides now keep all fourteen Metro packages on **0.87.1**, the
-version `@expo/metro` 58.0.0 declares. The earlier 0.87.2 candidate could not
-start: Expo CLI 58.1.19 always substitutes `@expo/metro-file-map` 58.0.5, which
-has no `addRoot()`/`getRoots()`, and Metro 0.87.2 calls them during runtime-root
-discovery:
+The fourteen-package Metro family is pinned coherently to user-requested0.87.2.
+Expo58's declared baseline remains0.87.1. Its branded file-map58.0.5 receives a
+version-pinned, licensed port of real dynamic-root registry/crawl/watch support,
+not a shim or disabled assertion. See METRO_FILE_MAP_PORT.md for provenance,
+regression commands and support limitations. The previous0.87.1 fallback is
+superseded by this candidate; its export results do not prove this candidate.
 
-    TypeError: this._haste.addRoot is not a function
-    at DependencyGraph._addMetroRuntimeRoots
+The config watches finite Forge and canonical UI workspaces, preserving Expo
+roots while including actual asset/symlink targets. Uniwind wraps the finished
+config and compiles canonical UI plus generated Forge light/dark native themes.
 
-That was the only thing blocking native and web exports. On 0.87.1 the sibling
-canonical UI package (`STUDIO_UI_ROOT`, default `../../../nyc-mon/packages/ui`)
-must be in `watchFolders`, because 0.87.1 resolves only inside watched roots;
-`apps/example/metro.config.cjs` adds it next to Expo's monorepo defaults.
-
-Deferred: Metro 0.87.2. Revisit when an Expo release ships a file-map fork with
-`addRoot`/`getRoots`. `verify-metro-stack.cjs` reads the expected version from
-`@expo/metro`, so the overrides can follow Expo without editing the script.
-
-Reproduce, from the repository root:
+Reproduce after a policy-compliant frozen install:
 
     node apps/example/tooling/verify-metro-stack.cjs
+    node --test apps/example/tooling/metro-dynamic-roots.test.cjs apps/example/tooling/metro-watcher-lifecycle.test.cjs
+    node apps/example/tooling/verify-native-styles.cjs
     cd apps/example
     CI=1 EXPO_NO_TELEMETRY=1 pnpm exec expo export --platform ios --max-workers 1 --no-minify --no-bytecode
     CI=1 EXPO_NO_TELEMETRY=1 pnpm exec expo export --platform android --max-workers 1 --no-minify --no-bytecode
+    CI=1 EXPO_NO_TELEMETRY=1 pnpm exec expo export --platform web --max-workers 1 --no-minify
 
-Both exports completed locally on 2026-11-04 (one JS entry bundle each). CI's
-`expo-native-bundles` job runs the same commands. A JS export is not a native
-build: Xcode/Gradle compilation and device runs are separate evidence.
+Fresh candidate validation: eight Metro root/watch regressions, real Uniwind
+iOS/Android transforms with zero diagnostics, and actual iOS4525-module/Android
+4504-module JavaScript exports pass. Expo web also passes3828modules with the declared Next16.4.5 peer. Exports prove JavaScript
+bundling, not Xcode/Gradle build/link or physical device input/rendering.
 
 ## Supply-chain age gate
 
-pnpm12 frozen install rejects current exact latest pins published less than24h
-ago (including Expo, Skia, Next and their packages). The first non-frozen install
-automatically wrote release-age exemptions; those were removed after inspection.
-**No exemptions or policy relaxation are committed.** Strict frozen install now
-fails as expected until those publications age past the cutoff. Registry times
-for all35 rejected entries were verified: the last is Next16.4.5, eligible
-November4 at18:01:54.667 UTC; recheck at18:02 UTC. Do not bypass the
-gate or describe the candidate as a clean/frozen-install pass. Source checks using
-the already-installed candidate are narrower evidence.
+The latest original pin Next16.4.5 was published November3 at18:01:54.667UTC,
+so its24h gate cleared November4 at18:01:54.667UTC. Added host peers
+expo-drag-drop-content-view0.9.2 (June22) and react-native-pulsar1.7.0 (August11)
+already satisfy the age policy. A normal pnpm12.16.1 install generated the actual
+patch hash/lock; the subsequent strict frozen install passed without exclusions
+or policy overrides. Do not reuse another branch's locally bypassed resolution
+as supply-chain proof. Future updates must pass the same strict policy.
 
 ## Evidence and remaining gates
 
@@ -72,3 +67,20 @@ the already-installed candidate are narrower evidence.
 
 Sources: https://docs.expo.dev/guides/customizing-metro/ and
 https://github.com/react/metro/releases/tag/v0.87.2 plus installed npm package source.
+
+## Reconstructed follow-through (November 4, revalidated)
+
+The original executor was replaced before the unpublished follow-through could
+be persisted. These source changes have been reconstructed from the published
+candidate and upstream APIs. Earlier local export results do not validate this
+reconstructed tree. The reconstructed tree has now passed normal/frozen installation, eight Metro
+regressions, real native-style transforms and all three platform exports.
+
+Uniwind is the outermost Metro wrapper, imports the canonical shared native theme,
+and generates Forge light/dark native variants from the same theme.ts as web.
+The default checkout layout requires sibling `nyc-mon`; STUDIO_UI_ROOT alone does
+not relocate CSS imports/source scanning. Relocated hosts must update both.
+Source scanning retains web implementations, excludes story/test helpers, and
+native diagnostics fail validation rather than silently dropping classes.
+The canonical KeyValueList fix plus quiet controls are pinned at 2c5b94ba. No visual/device or Meta
+runtime validation is inferred from source checks or JavaScript exports.

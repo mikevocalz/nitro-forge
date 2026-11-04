@@ -46,7 +46,10 @@
     "expo-constants": "58.0.15",
     "expo-linking": "58.0.16",
     "expo-dev-client": "58.0.18",
-    "@expo/metro-runtime": "58.0.17"
+    "@expo/metro-runtime": "58.0.17",
+    "next": "16.4.5",
+    "expo-drag-drop-content-view": "0.9.2",
+    "react-native-pulsar": "1.7.0"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

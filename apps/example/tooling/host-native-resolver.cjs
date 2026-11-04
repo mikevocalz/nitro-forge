@@ -5,6 +5,7 @@ const HOST_NATIVE_MODULES = [
   'react-native-nitro-modules', 'react-native-skia', 'react-native-webgpu',
   'react-native-reanimated', 'react-native-worklets', 'react-native-svg',
   'react-native-safe-area-context', 'react-native-screens', '@expo/ui',
+  'uniwind', '@expo/html-elements', 'react-native-pulsar', 'expo-drag-drop-content-view',
 ];
 
 /** Source-owned shared UI must use the native modules linked into its host app,

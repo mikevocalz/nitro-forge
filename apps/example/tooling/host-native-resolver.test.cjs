@@ -12,6 +12,8 @@ test('shared UI resolves host Expo Image and Gesture Handler on iOS and Android/
     assert.equal(resolver(context, 'react-native-gesture-handler', platform).filePath, 'react-native-gesture-handler');
   }
   assert.equal(calls.length, 6);
+  assert.equal(resolver(context, 'uniwind', 'ios').filePath, 'uniwind');
+  assert.equal(resolver(context, '@expo/html-elements', 'android').filePath, '@expo/html-elements');
   assert.ok(calls.every(call => call[2] === '/host/package.json'));
   assert.equal(resolver(context, 'react-native/setup-env', 'ios').filePath, 'react-native/setup-env');
   assert.equal(resolver(context, 'react', 'ios').filePath, 'react');
