@@ -71,12 +71,13 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
           stream.stop();
         }
       },
-      getStatus: () => ({
-        isRecording: stream.isStreaming,
-        durationMillis: store.getState().phase.kind === "recording"
-          ? store.getState().phase.durationMs
-          : 0,
-      }),
+      getStatus: () => {
+        const phase = store.getState().phase;
+        return {
+          isRecording: stream.isStreaming,
+          durationMillis: phase.kind === "recording" ? phase.durationMs : 0,
+        };
+      },
     };
     return new ForgeRecordingController(driver, store);
   }, [accumulator, store, stream]);
