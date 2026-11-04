@@ -124,6 +124,7 @@ describe("real meter history math", () => {
     for (let i = 0; i < 50; i++) history = pushMeterLevel(history, -30 + i, 16);
     expect(history).toHaveLength(16);
     expect(history.at(-1)).toEqual(dbfsToPeak(19));
+    expect(pushMeterLevel(history, -5, 1)).toEqual([dbfsToPeak(-5)]);
     expect(() => pushMeterLevel(history, -5, 0)).toThrow();
   });
 });
