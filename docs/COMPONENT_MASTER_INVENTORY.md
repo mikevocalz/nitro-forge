@@ -513,6 +513,22 @@
 - [ ] **N-20 `AudioInterruptionRecoveryDialog`:** Audio focus/route-loss/recovered-recording experience with safe pause/stop/resume. *Source candidate: `filmcraft/ui/editor/Voiceover.kt`; requires verified implementation and license admission.*
 - [ ] **N-21 `AccessiblePrecisionScrubControl`:** Keyboard, switch control, screen reader adjustable value, trackpad and touch scrub parity. *Source candidate: `lightcraft/ui/DevelopSlider.kt`; requires verified implementation and license admission.*
 
+## Active implementation slices (November 3–4, 2026)
+
+The following are **source-level partial components**, not completed parity entries.
+Leave their checklist items **unchecked** until the platform/runtime gates below pass.
+
+| Master ID | Source implementation | CI evidence | Still missing |
+| --- | --- | --- | --- |
+| D-04 `NativeSeekBar` | [media-ui PR #25](https://github.com/mikevocalz/nitro-forge/pull/25) — controlled native Expo UI slider, frame-step and timecode | [Linux/macOS/Windows TS and unit checks pass](https://github.com/mikevocalz/nitro-forge/actions/runs/41774414374) | Real decoded media seeking, buffered region, drag-end lifecycle, platform E2E |
+| E-02 `WaveformLane` | [media-ui PR #25](https://github.com/mikevocalz/nitro-forge/pull/25) — bounded RN min/max display + seeker | Same source CI pass | Skia v3 GPU lane, viewport virtualization, actual mic/PCM streaming, device perf |
+| C-06 `ColorChannels` | [color-ui PR #26](https://github.com/mikevocalz/nitro-forge/pull/26) — native RGBA sliders and hex/HSV conversions | [Linux/macOS/Windows TS and unit checks pass](https://github.com/mikevocalz/nitro-forge/actions/runs/41774424739) | Native hue/SV picker, CMYK/Lab + ICC management, actual device/brower E2E |
+| E-11/E-12 mixer-related | [media-ui PR #25](https://github.com/mikevocalz/nitro-forge/pull/25) — `NativeLevelSlider` generic gain control | Same source CI pass | dB precision, routing/meters, audio engine integration |
+
+**Cross-platform is a required acceptance contract, not a checked feature merely because one shared TypeScript component exists.** Universal Expo SDK 58 `@expo/ui` renders SwiftUI/Jetpack Compose/browser range controls, but all new UI requires mounted/interactive verification on supported iOS, Android, desktop/mobile browser, phone/tablet/hinge. Nitro v1 and Expo Modules v2 platforms require separately passing native integration tests. visionOS/PICO need explicit adapters and tests; do not assume support from iPhone/Android code.
+
+**Agent-ready, not dispatched:** [native player #27](https://github.com/mikevocalz/nitro-forge/issues/27), [audio capture and GPU waveform #28](https://github.com/mikevocalz/nitro-forge/issues/28), [color wheel/gradient/eyedropper #29](https://github.com/mikevocalz/nitro-forge/issues/29), [native ABI + AGPL source/release QA #30](https://github.com/mikevocalz/nitro-forge/issues/30). Copilot cloud-agent assignment was rejected by the repository, so these are human/agent-ready engineering issues and **no autonomous agent session is claimed**.
+
 ## Required engine/platform dependencies before declaring parity
 
 1. **Splice / ReelForge:** native decode, video texture/frame output, synchronized audio, play/pause/seek, frame-accurate timebase, source indexing, thumbnails, GPU compositor, and render/export encoder. Current `master` exposes mostly clip metadata and a render *plan*, not playable media.
