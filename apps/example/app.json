@@ -11,6 +11,7 @@
     "plugins": [
       "expo-router",
       ["expo-build-properties", { "android": { "minSdkVersion": 29 } }]
-    ]
+    ],
+    "experiments": { "swiftPackageManager": true }
   }
 }

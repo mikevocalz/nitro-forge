@@ -4,6 +4,13 @@
   "private": true,
   "type": "module",
   "main": "expo-router/entry",
+  "expo": {
+    "autolinking": {
+      "ios": {
+        "exclude": ["@expo/ui", "expo-dev-client", "expo-dev-launcher", "expo-dev-menu", "expo-dev-menu-interface", "expo-json-utils", "expo-manifests", "expo-updates-interface"]
+      }
+    }
+  },
   "scripts": {
     "start": "expo start",
     "typecheck": "tsc --noEmit -p tsconfig.json",
