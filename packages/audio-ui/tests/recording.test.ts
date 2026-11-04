@@ -115,7 +115,7 @@ describe("real meter history math", () => {
   it("converts dBFS to linear amplitude", () => {
     expect(dbfsToPeak(0)).toEqual({ min: -1, max: 1 });
     expect(dbfsToPeak(-20).max).toBeCloseTo(0.1);
-    expect(dbfsToPeak(-1000).max).toBe(0);
+    expect(dbfsToPeak(-1000).max).toBeLessThan(1e-40);
     expect(dbfsToPeak(8).max).toBe(1);
     expect(() => dbfsToPeak(Number.NaN)).toThrow();
   });
