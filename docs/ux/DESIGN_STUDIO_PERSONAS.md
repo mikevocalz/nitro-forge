@@ -22,6 +22,31 @@ Found by discovery, not assumed:
 
 No other studio package changes in this branch.
 
+## Affinity evidence (clean room)
+
+`design/research/affinity-studio-switch.md` records Affinity's studio switch
+from public pages only, captured with Craft Anything 0.3.0 in clean-room mode
+(62 records, all `clean_room: true`; index in
+`design/research/affinity-evidence-index.tsv`). Affinity is not installed on
+the research machine, so no app UI was studied. Screenshots and page text are
+kept out of the repository.
+
+What it changes for Forge:
+
+- No public source says what survives a switch (selection, zoom, undo,
+  layer focus) or how fast it is. Forge's continuity contract and the 120 ms
+  budget are our own rules, not imitation.
+- Affinity's release notes fix "document focus not changing when switching
+  studios" on Windows and "persona switching" on Mac and Windows. Continuity
+  regressions happen in shipping apps, which is why `persona-continuity` is a
+  CI gate.
+- Custom studios clone the current studio or start blank and export as files.
+  The Persona Composer does the same with `composePersona` and
+  `exportPersona`, with explicit suffixes on name conflicts.
+- Per-surface gaps are listed publicly (Books, Batch, Data Merge, Scope and
+  macros missing on iPad). Forge's manifests show the same kind of list on the
+  turret itself.
+
 ## Decisions
 
 | Item | Disposition | Reason |
