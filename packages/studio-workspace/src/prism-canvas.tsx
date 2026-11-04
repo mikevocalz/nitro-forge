@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { PanResponder, Platform, type View as NativeView } from 'react-native';
+import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
+import type { StudioViewRef } from './ui';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { View, Text, Button } from './ui';
+import { StudioGesture } from './studio-gesture';
 import { shapeOutline, windowToPageRect, type CanvasDocument, type CanvasRect } from './prism-canvas-model';
 import { createCanvasGesture, type CanvasPreview } from './prism-canvas-model';
 
@@ -13,7 +16,7 @@ export function PrismCanvas(props: {
 }) {
   const current = useRef(props); current.current = props;
   const selection = useRef(props.selectedId); selection.current = props.selectedId;
-  const view = useRef<NativeView>(null);
+  const view = useRef<StudioViewRef>(null);
   const mounted = useRef(true);
   const [preview, setPreview] = useState<CanvasPreview>(null);
   const controller = useRef<ReturnType<typeof createCanvasGesture> | null>(null);
@@ -36,18 +39,6 @@ export function PrismCanvas(props: {
     commit: (id, dx, dy) => current.current.onMoveShape(id, dx, dy),
   });
   const gesture = controller.current;
-  const responder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: event => !current.current.disabled && event.nativeEvent.touches.length === 1,
-    onPanResponderGrant: event => {
-      view.current?.focus();
-      gesture.begin({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY });
-    },
-    onPanResponderStart: event => { if (event.nativeEvent.touches.length !== 1) gesture.cancel(); },
-    onPanResponderMove: (event, state) => gesture.move({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }, state.numberActiveTouches),
-    onPanResponderRelease: event => { void gesture.release({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }); },
-    onPanResponderTerminationRequest: () => true,
-    onPanResponderTerminate: () => gesture.cancel(),
-  }), [gesture]);
   useEffect(() => { gesture.cancel(); }, [props.document, props.width, props.height, props.disabled, gesture]);
   useEffect(() => { gesture.selectionChanged(props.selectedId); }, [props.selectedId, gesture]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; gesture.cancel(); }; }, [gesture]);
@@ -64,8 +55,11 @@ export function PrismCanvas(props: {
   const layer = props.document.layers.find(item => item.id === (preview?.id ?? props.selectedId));
   const touchStyle = Platform.OS === 'web' ? { touchAction: 'none' as const } : {};
   const outline = shapeOutline(props.document, props.width, props.height, layer, preview ?? undefined);
-  return <View ref={view} collapsable={false} focusable onLayout={() => gesture.cancel()} {...responder.panHandlers}
-    {...{ onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') gesture.cancel(); } }}
+  return <StudioGesture disabled={props.disabled}
+    onBegin={point => { view.current?.focus(); gesture.begin(point); }}
+    onMove={gesture.move} onRelease={point => { void gesture.release(point); }} onCancel={gesture.cancel}>
+    <View ref={view} collapsable={false} focusable onLayout={() => gesture.cancel()}
+    {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') gesture.cancel(); } }}
     testID="prism-artboard" accessibilityLabel="Prism artboard. Select layers or use Transform for accessible move actions."
     style={{ ...touchStyle, width: props.width, height: props.height, backgroundColor: '#FFFFFF', overflow: 'hidden', boxShadow: '0 12px 35px #00000035' }}>
     <View pointerEvents="none" style={{ position: 'absolute', inset: 0 }}>{props.children}</View>
@@ -74,5 +68,5 @@ export function PrismCanvas(props: {
       <Text style={{ color: '#FFFFFF', fontSize: 11 }}>Move preview · release to apply</Text>
       <Button title="Cancel move" aria-label="Cancel shape move" onPress={() => gesture.cancel()} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
     </View>}
-  </View>;
+  </View></StudioGesture>;
 }

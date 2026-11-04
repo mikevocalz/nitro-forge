@@ -436,3 +436,16 @@ permitted`, including after tool escalation. No pointer/touch interaction succes
 or native device evidence is claimed. The gesture wiring is statically reviewed
 and unit tested; physical input, browser interaction and assistive-technology QA
 remain release gates.
+
+## SDK58/latest host migration candidate — 2026-11-04
+
+The canonical shared Image, root Gesture Handler adapter, latest npm host pins,
+Nitro v1 session integration and Skia web asset work are preserved in this draft.
+The provisional SDK54 additions were replaced before publication.
+
+**Blocked:** Metro0.87.2 and latest Expo CLI's file-map fork have incompatible
+runtime-root APIs. Strict frozen installation also rejects fresh package pins
+under pnpm12's release-age policy; no policy exceptions are retained.
+Do not treat this as native-ready, a clean-install pass, or complete parity.
+See docs/native/SDK58_METRO_UPGRADE.md for exact versions, reproduction,
+source checks, native autolinking evidence and remaining release gates.

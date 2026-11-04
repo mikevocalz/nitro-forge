@@ -44,3 +44,32 @@ The current visual pass uses the authored shared icon package, semantic RN theme
 tokens and Tailwind v4 compilation. Workspace settings are in the menu; app entry
 and document sessions remain independent. Source and reference notes live in
 `docs/ux/DESIGN_REFERENCE_AUDIT.md`.
+
+### Canonical Skia web runtime
+
+The preview hosts the existing NYC UI Skia web wrappers. `skia-web-assets.mjs`
+resolves CanvasKit through this host's pinned `react-native-skia` 3.9.1, serves
+`/canvaskit/canvaskit.wasm` with the WASM MIME type in development and emits the
+same binary for production builds. Vite aliases the canonical UI imports to that
+same host installation; it never mixes the sibling checkout's Skia with host WASM. Vite resolves Skia's asset registry to React Native Web and
+provides the canonical gate's root-path environment setting. A custom deployment
+base requires matching the gate's asset prefix as well as Vite's base.
+
+Run `node verify-skia-assets.mjs` and `node verify-skia-bundle.mjs` from this
+folder. The latter bundles the real canonical Arrow web wrapper, gate and lazy
+Skia drawing, then removes its generated fixture. These are asset/import checks,
+not browser GPU pixels or a native engine integration. The canonical gate loads
+CanvasKit before its drawing module; a network failure currently requires a page
+reload and its shared error UI remains a separate canonical-package change.
+
+Cross-platform reuse means shared component contracts, themes and scene/input
+models with platform adapters: CanvasKit/WebGL in browsers, Skia Graphite on
+supported iOS/Android hardware, and separately validated spatial surface/input
+adapters on Meta headsets. Browser builds do not validate Quest/Viro surfaces or
+controller/hand/pen behavior. Skia initialization is independent of the Rust
+engine host: this loopback preview is not a browser-WASM engine implementation.
+
+The SDK58/latest candidate is blocked for Expo/Metro exports and fresh-package
+release-age checks. See `../../docs/native/SDK58_METRO_UPGRADE.md`. The preview
+aliases canonical Skia imports and CanvasKit to the same host3.9.1 installation;
+SVG assets use the existing React Native Web asset registry.

@@ -7,6 +7,8 @@ on:
   pull_request:
     paths:
       - 'packages/prism/**'
+      - 'packages/ignition/**'
+      - 'rust/**'
       - 'packages/studio-layout/**'
       - 'packages/studio-workspace/**'
       - 'packages/icons/**'
@@ -48,6 +50,16 @@ jobs:
         run: pnpm --filter @acme/ui... install --frozen-lockfile --ignore-scripts
       - name: Install for new workspace package
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Nitro v1 code generation and host contracts
+        run: |
+          pnpm --filter @nitro-forge/ignition codegen
+          git diff --exit-code -- packages/ignition/nitrogen/generated
+          pnpm --filter @nitro-forge/ignition typecheck
+          pnpm --filter @nitro-forge/ignition exec vitest run tests/nitro-host.test.ts
+      - name: Native host image and gesture dependencies
+        run: |
+          node --test apps/example/tooling/host-native-resolver.test.cjs
+          node apps/example/tooling/verify-native-host.cjs
       - name: Run real typed dock model tests
         run: pnpm --filter @nitro-forge/studio-layout test
       - name: Strict TypeScript contract
@@ -67,6 +79,8 @@ jobs:
           pnpm --filter @nitro-forge/studio-preview typecheck
       - name: Browser UI module contracts and production bundle
         run: |
+          node apps/studio-preview/verify-skia-assets.mjs
+          node apps/studio-preview/verify-skia-bundle.mjs
           pnpm --filter @nitro-forge/studio-preview test:ui-modules
           pnpm --filter @nitro-forge/studio-preview build
       - name: Rust engine and contract regression tests
@@ -79,4 +93,32 @@ jobs:
           pnpm --filter @nitro-forge/prism test
       - name: Seven-engine browser bridge round trips
         run: pnpm --filter @nitro-forge/studio-preview test:integration
+  rust-session-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: nitro-forge
+      - name: Rust engine and v1 session contracts independent of npm age gate
+        run: |
+          cargo test --locked --workspace
+          cargo build --locked -p nf-sys
+          g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp tooling/native/serial_queue_test.cpp -o /tmp/serial-queue-test
+          /tmp/serial-queue-test
+          g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp tooling/native/nf_v1_cpp_smoke.cpp packages/ignition/cpp/ForgeRustSession.cpp target/debug/libnf_sys.a -ldl -lpthread -lm -o target/nf-v1-smoke
+          target/nf-v1-smoke
+  expo-metro-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: nitro-forge
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # Intentionally fails until Expo's fork implements Metro0.87.2 dynamic roots.
+      # Do not mark continue-on-error or monkeypatch missing methods.
+      - run: node apps/example/tooling/verify-metro-stack.cjs
 # UI gestures, native devices and assistive technology require separate evidence.

@@ -1,5 +1,7 @@
+import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
+import type { StudioViewRef } from './ui';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { AccessibilityInfo, useColorScheme, type View as NativeView, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, useColorScheme, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import { ScrollView, Text, View, Menu, SegmentedControl, TabBar, Button, IconButton, KeyValueList, FieldGroup, ErrorMessage, Toolbar, List, ListItem } from './ui';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
@@ -52,7 +54,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const drag = useStore(store, s => s.drag);
   const status = useStore(store, s => s.status);
   const layoutError = useStore(store, s => s.error);
-  const shell = useRef<NativeView>(null);
+  const shell = useRef<StudioViewRef>(null);
   const hostRect = useRef<Rect>({ x: 0, y: 0, width: 0, height: 0 });
   const savedPreset = useMemo(() => ({ current: null as string | null }), [store]);
   const operation = useMemo(() => ({ current: false }), [store]);
@@ -169,7 +171,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     </View>;
   };
 
-  const keyboardProps = { onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') { store.getState().cancelDrag(); } } };
+  const keyboardProps = { onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') { store.getState().cancelDrag(); } } };
   const rail = <View style={{ width: scale.size.rail, backgroundColor: colors.base, borderRightWidth: 1, borderRightColor: colors.line, alignItems: 'center', paddingVertical: 14 }}>
     <View style={{ alignItems: 'center', gap: 12, paddingBottom: 16 }}>
       {PANEL_IDS.filter(id => id !== 'history').map(id => <View key={id} style={{ alignItems: 'center', gap: 4 }}>

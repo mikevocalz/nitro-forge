@@ -4,6 +4,22 @@ packages:
 allowBuilds:
   esbuild: false
 
-# Keep the locked Tailwind resolver outside the minimum release-age window.
 overrides:
-  enhanced-resolve: 5.26.0
+  enhanced-resolve: 5.26.1
+
+  # Requested Metro 0.87.2 candidate. Expo58 pins0.87.1; keep the full family
+  # coherent and validate actual host exports rather than mixing runtime versions.
+  metro: 0.87.2
+  metro-babel-transformer: 0.87.2
+  metro-cache: 0.87.2
+  metro-cache-key: 0.87.2
+  metro-config: 0.87.2
+  metro-core: 0.87.2
+  metro-file-map: 0.87.2
+  metro-minify-terser: 0.87.2
+  metro-resolver: 0.87.2
+  metro-runtime: 0.87.2
+  metro-source-map: 0.87.2
+  metro-symbolicate: 0.87.2
+  metro-transform-plugins: 0.87.2
+  metro-transform-worker: 0.87.2

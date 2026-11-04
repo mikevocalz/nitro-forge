@@ -11,7 +11,7 @@
     "demo": "tsx src/main.ts"
   },
   "devDependencies": {
-    "tsx": "^4.0.0"
+    "tsx": "4.23.15"
   },
   "dependencies": {
     "@nitro-forge/ignition": "workspace:*",

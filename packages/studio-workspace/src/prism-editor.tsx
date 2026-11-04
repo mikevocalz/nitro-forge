@@ -1,5 +1,6 @@
+import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
+import type { StudioViewRef } from './ui';
 import { useEffect, useRef } from 'react';
-import type { View as NativeView } from 'react-native';
 import { Image, Pressable, ScrollView, Text, View, Menu, Button, IconButton, Banner, Badge, EmptyState, NightScope } from './ui';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -60,8 +61,8 @@ export function PrismEditor(props: PrismEditorProps) {
   current.current = props;
   const mounted = useRef(true);
   const firstMeasurement = useRef(true);
-  const rowViews = useRef(new Map<number, NativeView>());
-  const layerViewport = useRef<NativeView>(null);
+  const rowViews = useRef(new Map<number, StudioViewRef>());
+  const layerViewport = useRef<StudioViewRef>(null);
   const dragSequence = useRef(0);
   const dragSession = useRef<{ token: number; id: number; signature: string; rows: MeasuredLayer[]; viewport: MeasuredLayer | null; point: DragPoint | null; ready: Promise<LayerMeasurements> | null } | null>(null);
   const cancelLayerDrag = () => {
@@ -224,7 +225,7 @@ export function PrismEditor(props: PrismEditorProps) {
       </View>}
     {drag && <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2, padding: 10, gap: 4, backgroundColor: colors.raised, borderTopWidth: 1, borderTopColor: colors.line }}><Text accessibilityLiveRegion="polite" style={{ color: colors.accent, fontSize: 11 }}>{drag.target === null ? 'Drag within the layer list to choose a position' : `Move to layer position ${drag.target + 1} from bottom`}</Text><Button title="Cancel move" aria-label="Cancel layer move" onPress={cancelLayerDrag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /></View>}
   </View>;
-  return <NightScope><View className="scheme-dark" {...{ onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
+  return <NightScope><View className="scheme-dark" {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
     const { width, height } = event.nativeEvent.layout;
     if (width <= 0 || height <= 0) return;
     if (firstMeasurement.current) { firstMeasurement.current = false; store.setState({ width, height, layersOpen: width >= 700 }); }

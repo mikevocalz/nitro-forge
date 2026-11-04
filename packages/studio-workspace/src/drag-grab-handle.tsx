@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { PanResponder } from 'react-native';
+import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
+import { useEffect, useRef } from 'react';
+import { StudioGesture } from './studio-gesture';
 import { View } from './ui';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { createDragController, type DragPoint } from './drag-controller';
@@ -21,17 +22,11 @@ export function DragGrabHandle(props: {
   });
   const controller = controllerRef.current;
   useEffect(() => () => controller.cancel(), [controller]);
-  const responder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => !current.current.disabled,
-    onPanResponderGrant: () => controller.begin(),
-    onPanResponderMove: (_event, gesture) => controller.move({ x: gesture.moveX, y: gesture.moveY }),
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderRelease: () => controller.release(),
-    onPanResponderTerminate: () => controller.cancel(),
-  }), []);
-  const keyboard = { onKeyDown: (event: { key: string }) => { if (event.key === 'Escape') controller.cancel(); } };
-  return <View {...responder.panHandlers} {...keyboard} accessibilityLabel={props.label} accessibilityState={{ disabled: !!props.disabled }}
+  const keyboard = { onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') controller.cancel(); } };
+  return <StudioGesture disabled={!!props.disabled} onBegin={controller.begin}
+    onMove={(point, touches) => { if (touches === 1) controller.move(point); else controller.cancel(); }}
+    onRelease={controller.release} onCancel={controller.cancel}><View collapsable={false} {...keyboard} accessibilityLabel={props.label} accessibilityState={{ disabled: !!props.disabled }}
     style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center', opacity: props.disabled ? .4 : 1 }}>
     <ForgeIcon name="menu" size={16} color={props.color} reducedMotion />
-  </View>;
+  </View></StudioGesture>;
 }

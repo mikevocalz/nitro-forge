@@ -15,14 +15,14 @@
     "lint": "turbo run lint"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
-    "tsx": "^4.23.15",
-    "turbo": "^2.11.7",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.7"
+    "@types/node": "26.6.6",
+    "tsx": "4.23.15",
+    "turbo": "2.11.10",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
   },
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@12.16.1",
   "engines": {
-    "node": ">=20"
+    "node": ">=24.3.0"
   }
 }

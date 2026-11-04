@@ -1,9 +1,12 @@
 import { defineConfig, type Plugin } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
+import { skiaWebAssets } from './skia-web-assets.mjs';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
 const sourceUIRoot = process.env.STUDIO_UI_ROOT ?? fileURLToPath(new URL('../../../nyc-mon/packages/ui', import.meta.url));
+const hostRequire = createRequire(import.meta.url);
+const hostSkiaRoot = dirname(hostRequire.resolve('react-native-skia/package.json'));
 const uiRequire = createRequire(resolve(sourceUIRoot, 'package.json'));
 const legendMotionEsm = resolve(dirname(uiRequire.resolve('@legendapp/motion/package.json')), 'lib/module/index.js');
 import { CliHost } from '../../packages/ignition/src/host-cli';
@@ -59,13 +62,18 @@ const webExtensions = ['.web.mjs', '.mjs', '.web.js', '.js', '.web.ts', '.ts', '
 
 export default defineConfig({
   // React Native Web Animated uses the RN global alias in lifecycle cleanup.
-  define: { global: 'globalThis' },
-  plugins: [tailwindcss(), engineBridge()],
-  optimizeDeps: { esbuildOptions: { resolveExtensions: webExtensions, define: { global: 'globalThis' } } },
+  define: { global: 'globalThis', 'process.env.NEXT_PUBLIC_BASE_PATH': JSON.stringify('') },
+  plugins: [tailwindcss(), engineBridge(), skiaWebAssets(fileURLToPath(new URL('./package.json', import.meta.url)))],
+  optimizeDeps: { rolldownOptions: { resolve: { extensions: webExtensions } } },
   resolve: {
     // React Native packages publish platform siblings without browser exports.
     extensions: webExtensions,
     alias: [
+    { find: /^react-native-skia$/, replacement: hostRequire.resolve('react-native-skia') },
+    { find: /^react-native-skia\//, replacement: hostSkiaRoot + '/' },
+    { find: /^@react-native\/assets-registry\/registry$/, replacement: hostRequire.resolve('react-native-web/dist/modules/AssetRegistry/index.js') },
+    // Canonical Skia web components must not reach RN's Flow-only asset registry.
+    { find: /^react-native\/(asset-registry|Libraries\/Image\/AssetRegistry)$/, replacement: createRequire(import.meta.url).resolve('react-native-web/dist/modules/AssetRegistry/index.js') },
     // Canonical Image uses Solito's Next image adapter. Resolve its peer from
     // this standalone host, not the adjacent source checkout's node_modules.
     { find: /^next\/image$/, replacement: createRequire(import.meta.url).resolve('next/image') },
