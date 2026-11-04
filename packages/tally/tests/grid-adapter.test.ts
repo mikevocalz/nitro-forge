@@ -33,8 +33,8 @@ describe("Tally viewport adapter for NYC-Tron native SpreadsheetGrid",()=>{
     const doc={getRange,setCell} as unknown as TallyGridDocument;
     const out=await readTallyWindow(doc,{startRow:9,endRow:10,startColumn:1,endColumn:3});
     expect(getRange).toHaveBeenCalledWith("B10","C10");
-    expect(out["B10"].computed).toBe(4);
-    expect(out["C10"].raw).toBe("hello");
+    expect(out["B10"]!.computed).toBe(4);
+    expect(out["C10"]!.raw).toBe("hello");
     expect(Object.keys(out)).toHaveLength(2);
   });
 
