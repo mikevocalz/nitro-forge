@@ -1,4 +1,4 @@
-export { NativeColorChannels } from "./NativeColorChannels.js";
-export type { NativeColorChannelsProps } from "./NativeColorChannels.js";
-export { assertRgba, rgbaToHex, parseHexColor, rgbToHsv, hsvToRgb } from "./color.js";
-export type { RgbaColor, HsvColor } from "./color.js";
+export { NativeColorChannels } from "./NativeColorChannels";
+export type { NativeColorChannelsProps } from "./NativeColorChannels";
+export { assertRgba, rgbaToHex, parseHexColor, rgbToHsv, hsvToRgb } from "./color";
+export type { RgbaColor, HsvColor } from "./color";
