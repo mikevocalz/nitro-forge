@@ -1,0 +1,70 @@
+name: ArtCraft native packages
+
+on:
+  pull_request:
+    paths:
+      - 'packages/agpl-speed-curve/**'
+      - 'packages/native-signal/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/artcraft-native-packages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: artcraft-native-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: TypeScript typecheck + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm --filter @nitro-forge/agpl-speed-curve --filter @nitro-forge/native-signal typecheck
+      - name: Speed-curve tests
+        run: pnpm --filter @nitro-forge/agpl-speed-curve test
+
+  kotlin:
+    name: Kotlin compile + JVM sandbox check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile modules and run check
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          platform=$(ls "$sdk/platforms" | sort -V | tail -1)
+          export ANDROID_JAR="$sdk/platforms/$platform/android.jar"
+          test -f "$ANDROID_JAR"
+          echo "android.jar: $ANDROID_JAR"
+          bash packages/native-signal/tests/native/run-kotlin-check.sh
+
+  swift:
+    name: Swift sandbox check (macOS host)
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: bash packages/native-signal/tests/native/run-swift-check.sh
+      - name: Scope
+        run: echo "Swift Expo-macro modules are not compiled here (needs an Expo 58 prebuild + pods). Only WavPeaks runs, on macOS Foundation."
