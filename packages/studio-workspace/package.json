@@ -10,7 +10,8 @@
     "./apps": "./src/app-manifest.ts",
     "./prism": "./src/prism-editor.tsx",
     "./ui": "./src/ui.tsx",
-    "./instruments": "./src/instrument-system.ts"
+    "./instruments": "./src/instrument-system.ts",
+    "./precision": "./src/precision-scrubber.tsx"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",
