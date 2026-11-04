@@ -95,11 +95,11 @@ export function reportNativePlaybackTime(
 }
 
 /**
- * Seek-completion fallback. Expo Video has no seek-completed event and a
- * paused player may emit no timeUpdate, so after the seek settles the caller
- * reads `player.currentTime` and passes it here. The native reading becomes
- * the reported frame and resolves the request, unless a newer request
- * superseded `requestedFrame`.
+ * Seek-completion fallback. A paused player may emit no progress event after
+ * a seek, so once the seek settles the caller reads the player's current
+ * position and passes it here. The native reading becomes the reported frame
+ * and resolves the request, unless a newer request superseded
+ * `requestedFrame`. No player is wired yet (see VIDEO_PLAYBACK_CAPABILITY).
  */
 export function settleSeekRequest(
   store: StoreApi<VideoMonitorState>,

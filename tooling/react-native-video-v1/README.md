@@ -34,7 +34,7 @@ npm pack --dry-run --ignore-scripts --json > /tmp/video-pack.json
 node "$ARTIFACTS/check-package.cjs" /tmp/video-pack.json
 ```
 
-Verified on November 4, 2026: exact generator 7/7; real Bob module and declaration builds; native-source TypeScript (web excluded); RN0.88 Fabric schema; 5 Android source-contract tests; 49 Swift method signatures and26 callback dispatches; npm packed entrypoint/import-map presence; bounded concurrency source contracts with 15 mutation regressions. These are not native compiler or runtime tests. Optional upstream Expo config-plugin source requires @expo/config-plugins for typechecking; no Expo Video or Expo Audio was added.
+Verified on November 4, 2026: exact generator 7/7; real Bob module and declaration builds; native-source TypeScript (web excluded); RN 0.88 Fabric schema; 5 Android source-contract tests; 49 Swift method signatures and 26 callback dispatches; npm packed entrypoint/import-map presence; bounded concurrency source contracts with 15 mutation regressions. These are not native compiler or runtime tests. Optional upstream Expo config-plugin source requires @expo/config-plugins for typechecking; no Expo Video or Expo Audio was added.
 
 Generated native files are not included in the source patch. Nitrogen regenerates them and the Package.swift helper. Build output is module-only esm:false, with built source/react-native entrypoints and no nested package scopes hiding #nitro imports. No Node CommonJS/SSR support claim is made.
 
