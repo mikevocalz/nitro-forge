@@ -345,6 +345,34 @@ impl PrismEngine {
         Ok(CommandResult::data(json!({ "layer_id": id })))
     }
 
+    /// Relative translation and axis-aligned resize, anchored at the top-left.
+    /// Validate computed bounds before touching the document or its history.
+    fn op_transform_shape(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.layer_index(Self::req_id(p)?)?;
+        let mut shape = match &self.layers[idx].content {
+            Content::Shape(shape) => shape.clone(),
+            Content::Raster(_) => {
+                return Err(EngineError::validation("transformShape requires a shape layer"));
+            }
+        };
+        let dx = Self::req_f64(p, "dx")?;
+        let dy = Self::req_f64(p, "dy")?;
+        let scale_x = Self::req_f64(p, "scale_x")?;
+        let scale_y = Self::req_f64(p, "scale_y")?;
+        if !dx.is_finite() || !dy.is_finite() || !scale_x.is_finite()
+            || !scale_y.is_finite() || scale_x <= 0.0 || scale_y <= 0.0 {
+            return Err(EngineError::validation("translation must be finite and scales positive and finite"));
+        }
+        shape.x += dx;
+        shape.y += dy;
+        shape.w *= scale_x;
+        shape.h *= scale_y;
+        shape.validate()?;
+        self.journal.record(UndoEntry::Doc(self.capture()));
+        self.layers[idx].content = Content::Shape(shape);
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
     /// `setShapeFill {id,color}` — edits only the fill, preserving geometry and identity.
     fn op_set_shape_fill(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
@@ -710,6 +738,7 @@ impl Engine for PrismEngine {
             "addRasterLayer" => self.op_add_raster_layer(&cmd.payload),
             "addShape" => self.op_add_shape(&cmd.payload),
             "setShapeFill" => self.op_set_shape_fill(&cmd.payload),
+            "transformShape" => self.op_transform_shape(&cmd.payload),
             "removeLayer" => self.op_remove_layer(&cmd.payload),
             "moveLayer" => self.op_move_layer(&cmd.payload),
             "renameLayer" => self.op_rename_layer(&cmd.payload),
@@ -899,6 +928,76 @@ mod tests {
             json!({"id": id}),
         ] {
             apply_err(&mut e, "setShapeFill", payload);
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), after);
+    }
+
+    #[test]
+    fn shape_transform_pixels_identity_history_and_restore() {
+        for kind in ["rect", "ellipse"] {
+            let mut e = eng();
+            let id = apply(&mut e, "addShape", json!({"name": "art", "shape": {
+                "kind": kind, "x": 0, "y": 0, "w": 1, "h": 1, "fill": [0,128,255,255]
+            }})).data["layer_id"].as_u64().unwrap();
+            let before = e.snapshot().unwrap();
+            let original = apply(&mut e, "getLayer", json!({"id": id})).data;
+            let result = apply(&mut e, "transformShape", json!({
+                "id": id, "dx": 1, "dy": 1, "scale_x": 2, "scale_y": 2
+            }));
+            assert!(result.events.iter().any(|ev| ev.kind == "document:changed"));
+            let transformed = apply(&mut e, "getLayer", json!({"id": id})).data;
+            let mut expected = original;
+            expected["content"]["shape"]["x"] = json!(1.0);
+            expected["content"]["shape"]["y"] = json!(1.0);
+            expected["content"]["shape"]["w"] = json!(2.0);
+            expected["content"]["shape"]["h"] = json!(2.0);
+            assert_eq!(transformed, expected);
+            assert_eq!(pixel(&flatten_pixels(&mut e), 4, 0, 0), [0,0,0,0]);
+            assert_eq!(pixel(&flatten_pixels(&mut e), 4, 1, 1), [0,128,255,255]);
+            let after = e.snapshot().unwrap();
+            assert!(e.undo().unwrap());
+            assert_eq!(e.snapshot().unwrap(), before);
+            assert!(e.redo().unwrap());
+            assert_eq!(e.snapshot().unwrap(), after);
+            let mut restored = eng();
+            restored.restore(&after).unwrap();
+            assert_eq!(restored.snapshot().unwrap(), after);
+            assert_eq!(flatten_pixels(&mut restored), flatten_pixels(&mut e));
+            // Off-canvas translation is valid, with rendering clipped to canvas.
+            apply(&mut e, "transformShape", json!({
+                "id": id, "dx": -10, "dy": -10, "scale_x": 1, "scale_y": 1
+            }));
+            assert!(flatten_pixels(&mut e).iter().all(|channel| *channel == 0));
+        }
+    }
+
+    #[test]
+    fn invalid_shape_transform_preserves_state_and_redo() {
+        let mut e = eng();
+        let raster = add_raster(&mut e);
+        let id = apply(&mut e, "addShape", json!({"shape": {
+            "kind": "rect", "x": 1e308, "y": 1e308, "w": 1e308, "h": 1e308,
+            "fill": [255,0,0,255]
+        }})).data["layer_id"].as_u64().unwrap();
+        apply(&mut e, "transformShape", json!({
+            "id": id, "dx": 0, "dy": 0, "scale_x": 0.5, "scale_y": 0.5
+        }));
+        let after = e.snapshot().unwrap();
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        let base = json!({"id": id, "dx": 0, "dy": 0, "scale_x": 1, "scale_y": 1});
+        for (key, value) in [
+            ("id", json!(raster)), ("id", json!(999)),
+            ("dx", json!(1e308)), ("dy", json!(1e308)),
+            ("scale_x", json!(2)), ("scale_y", json!(2)),
+            ("scale_x", json!(0)), ("scale_y", json!(-1)),
+            ("dx", Value::Null), ("scale_y", json!("1")),
+        ] {
+            let mut payload = base.clone();
+            payload[key] = value;
+            apply_err(&mut e, "transformShape", payload);
             assert_eq!(e.snapshot().unwrap(), before);
         }
         assert!(e.redo().unwrap());

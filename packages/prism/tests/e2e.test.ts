@@ -83,3 +83,29 @@ it("edits an existing shape fill and preserves it through undo/redo and reopen",
   await reopened.close();
   await doc.close();
 });
+
+it("translates and resizes shapes atomically through the typed API", async () => {
+  const doc = await PrismDocument.open(host, 4, 4);
+  const id = (await doc.addShape({ kind: "ellipse", x: 0, y: 0, w: 1, h: 1, fill: [0, 128, 255, 255] })).data.layer_id;
+  const before = await doc.save();
+  await doc.transformShape(id, { dx: 1, dy: 1, scaleX: 2, scaleY: 2 });
+  const frame = base64ToBytes((await doc.flatten()).data.pixels_b64);
+  expect(Array.from(frame.slice(0, 4))).toEqual([0, 0, 0, 0]);
+  expect(Array.from(frame.slice(20, 24))).toEqual([0, 128, 255, 255]);
+  const after = await doc.save();
+  expect(await doc.undo()).toBe(true);
+  expect(await doc.save()).toEqual(before);
+  await expect(doc.transformShape(id, { scaleX: 0 })).rejects.toBeInstanceOf(EngineError);
+  expect(await doc.save()).toEqual(before);
+  expect(await doc.redo()).toBe(true);
+  expect(await doc.save()).toEqual(after);
+  const reopened = await PrismDocument.openSnapshot(host, after);
+  expect((await reopened.getLayer(id)).data).toEqual((await doc.getLayer(id)).data);
+  expect((await reopened.flatten()).data).toEqual((await doc.flatten()).data);
+  // Optional scale defaults preserve dimensions for a translation-only command.
+  await reopened.transformShape(id, { dx: -1 });
+  const layer = (await reopened.getLayer(id)).data as { content: { shape: { x: number; y: number; w: number; h: number } } };
+  expect(layer.content.shape).toMatchObject({ x: 0, y: 1, w: 2, h: 2 });
+  await reopened.close();
+  await doc.close();
+});

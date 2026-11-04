@@ -13,6 +13,7 @@ export const OPS = {
   addRasterLayer: "addRasterLayer",
   addShape: "addShape",
   setShapeFill: "setShapeFill",
+  transformShape: "transformShape",
   removeLayer: "removeLayer",
   moveLayer: "moveLayer",
   renameLayer: "renameLayer",
@@ -44,6 +45,9 @@ export interface EllipseShape {
   fill: Rgba;
 }
 export type Shape = RectShape | EllipseShape;
+
+/** Positive axis-aligned scaling about the shape top-left, followed by translation. */
+export interface ShapeTransform { dx?: number; dy?: number; scaleX?: number; scaleY?: number }
 
 export type Filter =
   | { type: "grayscale" }
@@ -91,6 +95,10 @@ export class PrismDocument {
   /** Change an existing shape fill without replacing its geometry or layer ID. */
   setShapeFill(id: number, color: Rgba) {
     return this.call(OPS.setShapeFill, { id, color });
+  }
+  /** One atomic Rust undo step; preserves identity, fill and other layer properties. */
+  transformShape(id: number, { dx = 0, dy = 0, scaleX = 1, scaleY = 1 }: ShapeTransform) {
+    return this.call(OPS.transformShape, { id, dx, dy, scale_x: scaleX, scale_y: scaleY });
   }
   removeLayer(id: number) {
     return this.call(OPS.removeLayer, { id });

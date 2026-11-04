@@ -385,3 +385,26 @@ executed locally. The Rust cases cover rectangles/ellipses, rendered pixels,
 transparent fill, invalid channels/targets, atomic failure preserving redo,
 one-step undo/redo and snapshot restoration. No native/device or interactive
 browser validation of this new action has been performed.
+
+## Prism bounded shape geometry editing — 2026-11-04
+
+The original Prism engine now exposes `transformShape`: relative translation and
+positive axis-aligned scaling anchored at the top-left, committed as one Rust
+history entry. It retains shape kind, fill, layer identity and all layer metadata.
+Computed non-finite or non-positive bounds, raster targets and malformed inputs
+are rejected before document/history mutation. Off-canvas shapes remain valid
+and are clipped by the existing renderer.
+
+Studio uses the canonical Menu in its existing context bar for selected shapes:
+1px/10px directional moves and 10% enlarge/shrink. The menu resets on selection change or host busy state, while old callbacks
+reject stale state. Its trigger stays mounted across its own edits to preserve
+keyboard focus.
+No parallel geometry state, new package, copied upstream source, or renderer
+migration was introduced. Arbitrary numeric bounds, pointer resize handles,
+rotation, skew, path editing and full ArtCraft parity remain outside this slice.
+
+Local verification: 42 dock/workspace Node tests and affected TypeScript checks
+passed. Rust and typed-host tests plus the browser bridge scenario are in the
+existing CI workflow; local Rust execution remains unavailable. Browser module
+and build checks are separate from interactive browser or native/device QA,
+which has not been performed for the new transform menu.

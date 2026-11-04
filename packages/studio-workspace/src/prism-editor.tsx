@@ -8,6 +8,7 @@ import { ForgeIcon } from '@nitro-forge/icons/native';
 import { encodeRgbaPng, validatePreviewSize } from './rgba-png';
 import { prismThemes, workspaceScale as scale } from './theme';
 import { prismViewportLayout } from './prism-layout';
+import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
 import { DragGrabHandle, type DragPoint } from './drag-grab-handle';
 import { layerDropIndex, awaitLayerDrop, type LayerMeasurements, type MeasuredLayer } from './layer-drop';
 
@@ -234,6 +235,20 @@ export function PrismEditor(props: PrismEditorProps) {
     </View>
     <View style={{ position: 'absolute', zIndex: 20, top: 12, left: 12, width: Math.max(1, Math.min(narrow ? width - 24 : 360, width - (layersOpen && !narrow ? panelWidth + 36 : 24))), minHeight: 48, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 9 }}>{selected?.content?.type === 'shape' ? 'Shape layer' : selected ? 'Raster layer' : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
+      {selected?.content?.type === 'shape' && !props.busy && <Menu key={selected.id} title="Transform shape" triggerLabel="Transform shape"
+        actions={SHAPE_TRANSFORMS.map(({ id, title }) => ({ id, title, disabled: busy || !!props.busy || !!drag }))}
+        onAction={action => {
+          const selection = store.getState().selectedId;
+          // Reject stale callbacks. Keep the trigger mounted across our own
+          // relative edits so repeated keyboard actions retain focus.
+          if (selection !== selected.id || current.current.state !== props.state || store.getState().drag) return;
+          const payload = shapeTransformPayload(selected.id, action);
+          if (payload) void run('transformShape', payload, 'Shape transformed');
+        }}>
+        <View style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8, opacity: busy || props.busy || drag ? .4 : 1 }}>
+          <Text style={{ color: colors.muted, fontSize: 11 }}>Transform</Text>
+        </View>
+      </Menu>}
       {control('Layers', () => store.setState({ layersOpen: !layersOpen }), false, layersOpen, 'layers')}
     </View>
     <View accessibilityLabel="Creation tools" style={{ position: 'absolute', zIndex: 20, left: 12, top: short ? 68 : 76, width: 52, alignItems: 'center', padding: 3, gap: 3, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
