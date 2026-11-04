@@ -408,3 +408,31 @@ passed. Rust and typed-host tests plus the browser bridge scenario are in the
 existing CI workflow; local Rust execution remains unavailable. Browser module
 and build checks are separate from interactive browser or native/device QA,
 which has not been performed for the new transform menu.
+
+## Prism direct artboard selection and shape movement — 2026-11-04
+
+Added touch/pointer responder wiring to the existing Prism artboard. Taps select
+by topmost rectangle/ellipse pixel coverage and raster alpha; hidden/transparent
+layers are skipped. Dragging a shape shows a dashed bounds preview, then issues
+one existing `transformShape` command on release. The composite remains the Rust
+engine result. Layer controls and the Transform menu remain the accessible
+alternatives; this does not add pointer resize/rotation handles.
+
+The gesture model handles delayed or failed measurements, selection changes,
+document/viewport changes, multi-touch cancellation, Escape, responder termination,
+unmount and repeated releases. Release remeasures the artboard and cancels if
+its origin or dimensions moved, including ancestor scrolling. Web coordinates
+account for page scrolling; captured scroll/resize/blur also cancel. A tap or
+cancel records no history. Raster selections cannot dispatch shape transforms.
+
+Local checks: 53 dock/workspace tests and Studio/example/preview typechecks pass.
+The production bundle and canonical UI boundary/module checks pass. The existing
+real-engine bridge test now drives the same gesture planner into Rust, checking
+pixels, one-step undo/redo and save/restore in CI.
+
+Interactive Chromium validation was attempted against an isolated component
+fixture but blocked before browser launch by `socket() failed: Operation not
+permitted`, including after tool escalation. No pointer/touch interaction success
+or native device evidence is claimed. The gesture wiring is statically reviewed
+and unit tested; physical input, browser interaction and assistive-technology QA
+remain release gates.

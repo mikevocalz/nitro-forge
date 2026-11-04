@@ -132,6 +132,24 @@ try {
   assert.deepEqual(await apply('getLayer', { id: rect }), recolored);
   assert.equal(await call('redo', artwork), true);
   assert.deepEqual(await apply('getLayer', { id: rect }), transformed);
+  // Drive the same gesture planner with the real engine document and command.
+  const { createCanvasGesture } = await import('../../packages/studio-workspace/src/prism-canvas-model.ts');
+  const dragDocument = await apply('describe');
+  let selection = rect, dragCommits = 0, mutation;
+  const gesture = createCanvasGesture({
+    context: () => ({ document: dragDocument, width: 200, height: 200, disabled: false, selectedId: selection }),
+    measure: async () => ({ x: 100, y: 200, width: 200, height: 200 }),
+    select: id => { selection = id; }, preview: () => {},
+    commit: (id, dx, dy) => { dragCommits++; mutation = apply('transformShape', { id, dx, dy, scale_x: 1, scale_y: 1 }); },
+  });
+  gesture.begin({ x: 160, y: 260 });
+  await gesture.release({ x: 210, y: 260 });
+  await mutation;
+  assert.equal(dragCommits, 1);
+  assert.deepEqual(pixel(await pixels(), 2, 1), [20, 140, 60, 255]);
+  assert.equal(await call('undo', artwork), true);
+  assert.deepEqual(await apply('describe'), dragDocument);
+  assert.equal(await call('redo', artwork), true);
   const final = await pixels();
   const { encodeRgbaPng } = await import('../../packages/studio-workspace/src/rgba-png.ts');
   assert.deepEqual([...encodeRgbaPng(4, 4, final).subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
@@ -140,4 +158,4 @@ try {
   await call('restore', artwork, saved);
   assert.deepEqual(await pixels(), final);
 } finally { await call('close', artwork); }
-console.log('Prism real raster/rectangle/ellipse composite, visibility, opacity, order, remove/undo, existing-shape fill/transform/undo/redo, PNG and snapshot restore passed');
+console.log('Prism real raster/rectangle/ellipse composite, visibility, opacity, order, remove/undo, existing-shape fill/transform/gesture/undo/redo, PNG and snapshot restore passed');
