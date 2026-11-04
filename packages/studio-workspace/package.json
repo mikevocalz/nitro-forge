@@ -15,7 +15,8 @@
     "./precision": "./src/precision-scrubber.tsx",
     "./personas": "./src/persona-store.ts",
     "./turret": "./src/persona-turret.tsx",
-    "./composer": "./src/persona-composer.tsx"
+    "./composer": "./src/persona-composer.tsx",
+    "./directions": "./src/forge-directions.ts"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",
