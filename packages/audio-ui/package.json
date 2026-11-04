@@ -15,6 +15,10 @@
     "./recording": {
       "types": "./src/recording.ts",
       "default": "./src/recording.ts"
+    },
+    "./pcm": {
+      "types": "./src/NativeSourceRecordingTrack.tsx",
+      "default": "./src/NativeSourceRecordingTrack.tsx"
     }
   },
   "scripts": {
