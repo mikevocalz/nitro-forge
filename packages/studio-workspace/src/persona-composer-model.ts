@@ -171,6 +171,11 @@ export function composerLayout(width: number): ComposerLayout {
   return width < COMPOSER_PHONE ? 'phone' : 'single';
 }
 
+/** Narrowest toggle tile off the phone: room for a 23-character name such as
+ * "Rectangles and ellipses" on one line beside its mark (12 pt label, 12 pt
+ * insets, an 18 pt mark and an 8 pt gap). Phones keep two columns at 148. */
+export const COMPOSER_TILE_MIN = 184;
+
 /** Columns and tile width for a toggle grid `width` points wide: tiles at least
  * `minTile` wide, at most `maxColumns` across, `gap` between them. */
 export function toggleGrid(width: number, gap: number, minTile = 148, maxColumns = 4): Readonly<{ columns: number; tile: number }> {

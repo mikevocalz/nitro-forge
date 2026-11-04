@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   BUILT_IN_CAPTION, EMPTY_COMPOSER_DRAFT, capabilityTag, capabilityToggleName, composerCapabilities, composerLayout, designStudioInstruments,
-  disclosureCount, dragTargetIndex, draftManifest, instrumentToggleName, personaSummary, railPosition, toggleGrid,
+  COMPOSER_TILE_MIN, disclosureCount, dragTargetIndex, draftManifest, instrumentToggleName, personaSummary, railPosition, toggleGrid,
   moveAnnouncement, moveRailItem, nameCounter, requestedImportLabel, saveBlocker, savedMessage, toPersonaDraft, toggleId,
 } from './persona-composer-model.ts';
 import { createPersonaStore } from './persona-store.ts';
@@ -123,4 +123,14 @@ test('persona summary marks built-ins once, in the row', () => {
   const mine = store.getState().compose({ label: 'Print', rail: ['forge.ink-deck'], capabilities: [], surfaces: ['ipad', 'web'] });
   assert.equal(personaSummary(mine), '1 on rail, iPad, Web');
   assert.ok(!BUILT_IN_CAPTION.includes('\n'));
+});
+
+test('off the phone, toggle tiles are wide enough for a one-line name', () => {
+  // Form column widths measured at 768 and 1440 px.
+  for (const width of [736, 677]) {
+    const grid = toggleGrid(width, 8, COMPOSER_TILE_MIN);
+    assert.ok(grid.tile >= COMPOSER_TILE_MIN, `${width}: ${grid.tile} pt tiles`);
+    assert.ok(grid.columns >= 3, `${width}: ${grid.columns} columns`);
+  }
+  assert.equal(toggleGrid(358, 8).columns, 2, 'a phone keeps two columns');
 });

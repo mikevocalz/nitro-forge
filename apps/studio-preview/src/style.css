@@ -1,6 +1,8 @@
 @import "tailwindcss" important;
 @import "../../../../nyc-mon/packages/theme/theme.css";
 @source "../../../../nyc-mon/packages/ui";
+/* The studio packages pass kit classes too (danger notice ground, light Surfaces well). */
+@source "../../../packages/studio-workspace/src";
 @import "../../../packages/studio-workspace/src/theme.css";
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; min-height: 100%; background: #17191b; }

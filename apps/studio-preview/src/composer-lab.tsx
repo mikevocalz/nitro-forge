@@ -17,7 +17,7 @@ export function ComposerLab({ theme }: { theme: 'dark' | 'light' }) {
     <View style={{ paddingHorizontal: 8, paddingTop: 8, alignItems: 'flex-start' }}>
       {/* Kit buttons carry a 48 px min-height target at every size. */}
       <Button title="Back to Prism" icon={<span className="back-chevron"><ComposerGlyph name="chevron-left" color={prismThemes[theme].accent} /></span>}
-        onPress={() => { window.location.hash = '#/apps/prism'; }} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />
+        onPress={() => { window.location.hash = '#/apps/prism'; }} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px] border border-transparent" />
     </View>
     <PersonaComposer store={prismPersonaStore()} theme={theme}
       onExportPersona={async json => { await navigator.clipboard.writeText(json); return 'copied'; }} />

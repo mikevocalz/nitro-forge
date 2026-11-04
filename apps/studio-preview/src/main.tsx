@@ -64,9 +64,11 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
   };
   const leadingActions = <Page className="document-actions">
     <DropZone disableObjectUrl includeBase64={false} accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
-      className="border-0 p-0 md:p-0 gap-0 rounded-[4px]"
+      // The kit's drop well is a night surface; Open sits in the editor's own
+      // toolbar, so the well is cleared and the label takes the theme's ink.
+      className="border-0 p-0 md:p-0 gap-0 rounded-[4px] bg-transparent"
       onDrop={({ assets }) => { const file = assets.find(asset => asset.file)?.file; if (file) void openFile(file).catch(() => {}); }}>
-    <FilePicker className="document-action text-ink-50" label="Open" disabled={busy || !editor.doc}
+    <FilePicker className="document-action" label="Open" disabled={busy || !editor.doc}
       accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
       onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} /></DropZone>
       {studio === 'quill' && <Button aria-label="Export Word document" title="Export Word" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {

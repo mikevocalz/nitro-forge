@@ -13,7 +13,7 @@ import { DragGrabHandle } from './drag-grab-handle';
 import { PERSONA_SURFACES, type PersonaSpec, type PersonaSurface } from './persona';
 import type { PersonaStore } from './persona-store';
 import {
-  BUILT_IN_CAPTION, EMPTY_COMPOSER_DRAFT, PERSONA_NAME_MAX, SURFACE_LABELS, capabilityTag, capabilityToggleName, composerCapabilities,
+  BUILT_IN_CAPTION, COMPOSER_TILE_MIN, EMPTY_COMPOSER_DRAFT, PERSONA_NAME_MAX, SURFACE_LABELS, capabilityTag, capabilityToggleName, composerCapabilities,
   composerLayout, designStudioInstruments, disclosureCount, dragTargetIndex, draftManifest, instrumentLabel, instrumentToggleName,
   moveAnnouncement, moveRailItem, nameCounter, personaSummary, railPosition, requestedImportLabel, saveBlocker, savedMessage,
   SURFACE_PROSE, toPersonaDraft, toggleGrid, toggleId, type ComposerDraft, type SurfaceMode,
@@ -53,6 +53,28 @@ type ComposerState = {
 };
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** The kit's studio section pads its body by the 12 pt inset. Pulling it back
+ * puts section text on the page's own gutter, so the form has one left edge,
+ * and sections sit one section gap apart instead of gap plus two insets. */
+const SECTION_INSET = scale.space.inset;
+/** The kit's small ghost button pads its label by the same inset, inside the 1 pt High Contrast edge. */
+const GHOST_INSET = scale.space.inset + 1;
+/** Danger notices sit on a danger-tinted ground; the kit's raised ground is
+ * the navy every tone shares in the night scheme. */
+const DANGER_GROUND = 'bg-danger/15';
+/** Windows High Contrast removes backgrounds; a transparent edge keeps each kit button and segment's shape there. */
+const HC_EDGE = 'border border-transparent';
+const LEVEL_1 = { 'aria-level': 1 } as object;
+const LEVEL_2 = { 'aria-level': 2 } as object;
+/** Light theme on web: the Surfaces well follows the page instead of the
+ * kit's night well. Theme tokens (`forge-*`), so the class reads the theme. */
+const LIGHT_SEGMENTS = {
+  className: 'border-forge-border bg-forge-mat',
+  // Labels stay in the text ink (muted fails 4.5:1 on the well); the chosen
+  // segment is a raised tile with a muted ring, which holds 3:1 on the well;
+  // keyboard focus draws a 2 px ring in the page accent over it.
+  segmentClassName: 'border border-transparent hover:bg-forge-border aria-checked:bg-forge-raised aria-checked:ring-1 aria-checked:ring-forge-muted aria-checked:focus-visible:ring-2 aria-checked:focus-visible:ring-forge-accent aria-checked:shadow-[0_1px_2px_#252A3A26] *:text-forge-text',
+} as const;
 const isWeb = Platform.OS === 'web';
 /** Web announces through the hidden live region; iOS and Android need an explicit announcement. */
 const announceNative = (text: string) => { if (!isWeb && text) AccessibilityInfo.announceForAccessibility(text); };
@@ -93,7 +115,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
   const setDraft = (patch: Partial<ComposerDraft>) => ui.setState(st => ({ draft: { ...st.draft, ...patch } }));
   const blocker = saveBlocker(draft);
   const manifest = draftManifest(draft, surface);
-  const grid = toggleGrid(s.gridWidth, scale.space.element);
+  const grid = phone ? toggleGrid(s.gridWidth, scale.space.element) : toggleGrid(s.gridWidth, scale.space.element, COMPOSER_TILE_MIN);
   const surfaceWord = SURFACE_PROSE[surface];
 
   const move = (index: number, delta: number) => {
@@ -153,11 +175,16 @@ export function PersonaComposer(props: PersonaComposerProps) {
     });
   };
 
+  /** A kit section whose body padding is pulled back onto the page gutter. */
+  const section = (children: ReactNode) => <FieldGroup.Section>
+    <View style={{ margin: -SECTION_INSET }}>{children}</View>
+  </FieldGroup.Section>;
   const label = (text: string) => <Text style={{ color: c.muted, fontSize: scale.type.label }}>{text}</Text>;
-  const heading = (text: string, id?: string) => <Text accessibilityRole="header" nativeID={id} style={{ color: c.text, fontSize: scale.type.body, fontWeight: '600' }}>{text}</Text>;
+  // Web: one h1 for the page title, h2 for each section (React Native Web reads aria-level).
+  const heading = (text: string, id?: string) => <Text accessibilityRole="header" {...LEVEL_2} nativeID={id} style={{ color: c.text, fontSize: scale.type.body, fontWeight: '600' }}>{text}</Text>;
   const rowHeights = draft.rail.map(() => (draft.rail.length ? s.railHeight / draft.rail.length : 0));
 
-  const nameSection = <FieldGroup.Section>
+  const nameSection = section(
     <View style={{ gap: scale.space.stack }}>
       {heading('Name')}
       <TextInput testID="composer-name" accessibilityLabel="Persona name" placeholder="Print layout" maxLength={PERSONA_NAME_MAX}
@@ -167,8 +194,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
         {label('Shown on the turret and the rail header')}
         <Text style={{ color: c.muted, fontSize: scale.type.label, fontVariant: ['tabular-nums'] }}>{nameCounter(draft.label)}</Text>
       </View>
-    </View>
-  </FieldGroup.Section>;
+    </View>);
 
   /** A dense on/off tile. Accent marks chosen tiles only; the rest stay neutral. */
   const tile = (key: string, props: { on: boolean; title: string; note?: string; mark?: ReactNode; name: string; onPress: () => void; testID?: string }) =>
@@ -242,7 +268,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     </>}
   </>;
 
-  const railSection = <FieldGroup.Section>
+  const railSection = section(
     <View style={{ gap: scale.space.element }}>
       {heading('Rail')}
       {label('Top to bottom, as the rail shows them. Drag the handle or use the row controls to reorder.')}
@@ -279,10 +305,10 @@ export function PersonaComposer(props: PersonaComposerProps) {
                   else if (a === 'top') move(index, -index); else if (a === 'bottom') move(index, draft.rail.length - 1 - index);
                   else if (a === 'remove') setDraft({ rail: draft.rail.filter(x => x !== id) });
                 }}>{rowMenu(`Move or remove ${name}`)}</Menu> : <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Button title="Up" aria-label={`Move ${name} up`} disabled={index === 0} onPress={() => move(index, -1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
-                <Button title="Down" aria-label={`Move ${name} down`} disabled={index === draft.rail.length - 1} onPress={() => move(index, 1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
+                <Button title="Up" aria-label={`Move ${name} up`} disabled={index === 0} onPress={() => move(index, -1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
+                <Button title="Down" aria-label={`Move ${name} down`} disabled={index === draft.rail.length - 1} onPress={() => move(index, 1)} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
                 <IconButton aria-label={`Remove ${name} from the rail`} icon={<ForgeIcon name="close" size={16} color={c.muted} reducedMotion />}
-                  onPress={() => setDraft({ rail: draft.rail.filter(x => x !== id) })} variant="ghost" size="sm" tone="carolina" />
+                  onPress={() => setDraft({ rail: draft.rail.filter(x => x !== id) })} variant="ghost" size="sm" tone="carolina" className={HC_EDGE} />
               </View>,
             });
           }), height => ui.setState({ railHeight: height }))}
@@ -302,34 +328,36 @@ export function PersonaComposer(props: PersonaComposerProps) {
             section, split by a hairline, with no section gap between them. */}
         {phone && <View style={{ gap: scale.space.element, borderTopWidth: 1, borderTopColor: c.line }}>{capabilityBody}</View>}
       </View>
-    </View>
-  </FieldGroup.Section>;
+    </View>);
 
-  const capabilitySection = <FieldGroup.Section>
-    <View style={{ gap: scale.space.element }}>{capabilityBody}</View>
-  </FieldGroup.Section>;
+  const capabilitySection = section(<View style={{ gap: scale.space.element }}>{capabilityBody}</View>);
 
-  const surfaceSection = <FieldGroup.Section>
+  const surfaceSection = section(
     <View style={{ gap: scale.space.element }}>
       {heading('Surfaces')}
       <SegmentedControl aria-label="Where this persona appears" value={draft.surfaceMode}
         options={[{ value: 'all', label: 'Every surface' }, { value: 'chosen', label: 'Chosen surfaces' }]}
-        onChange={value => setDraft({ surfaceMode: value as SurfaceMode })} />
+        onChange={value => setDraft({ surfaceMode: value as SurfaceMode })}
+        {...(isWeb && (props.theme ?? 'dark') === 'light' ? LIGHT_SEGMENTS : { segmentClassName: HC_EDGE })} />
       {draft.surfaceMode === 'chosen' && tileGrid('composer-surfaces', PERSONA_SURFACES.map(sf => {
           const on = draft.surfaces.includes(sf);
           return tile(sf, { on, title: SURFACE_LABELS[sf], name: `${on ? 'Shown on' : 'Show on'} ${SURFACE_LABELS[sf]}`, testID: `composer-surface-${sf}`,
             onPress: () => setDraft({ surfaces: toggleId<PersonaSurface>(draft.surfaces, sf) }) });
         }))}
       {label(draft.surfaceMode === 'all' ? 'Shows on iPhone, iPad, Android, web, desktop and XR.' : 'The turret hides this persona on surfaces left out.')}
-    </View>
-  </FieldGroup.Section>;
+    </View>);
 
+  /** Dismiss's label lines up with the message text: the button's own inset is pulled out. */
+  const dismiss = (onPress: () => void) => <View style={{ marginLeft: -GHOST_INSET }}>
+    <Button title="Dismiss" onPress={onPress} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
+  </View>;
   const noticeBanner = (where: 'save' | 'list') => s.notice && (s.notice.at ?? 'save') === where && <Banner tone={s.notice.tone} live={s.notice.tone === 'danger' ? 'alert' : 'status'} title={s.notice.title}
     {...(s.notice.description ? { description: s.notice.description } : {})}
-    action={<Button title="Dismiss" onPress={() => ui.setState({ notice: null })} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />} />;
+    {...(s.notice.tone === 'danger' ? { className: DANGER_GROUND } : {})}
+    action={dismiss(() => ui.setState({ notice: null }))} />;
   const notices = <>
-    {storeError && <Banner tone="danger" live="alert" title="Persona problem" description={storeError}
-      action={<Button title="Dismiss" onPress={() => props.store.getState().clearError()} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />} />}
+    {storeError && <Banner tone="danger" live="alert" title="Persona problem" description={storeError} className={DANGER_GROUND}
+      action={dismiss(() => props.store.getState().clearError())} />}
     {noticeBanner('save')}
   </>;
 
@@ -352,7 +380,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
         <Text style={{ color: line.ready ? c.text : c.muted, fontSize: scale.type.label, flex: 1 }}>{line.ready ? `${line.label}: works here` : line.note}</Text>
       </View>)}
     <View style={{ gap: scale.space.stack, marginTop: scale.space.element }}>
-      <Button title="Save persona" onPress={save} disabled={!!blocker} variant="primary" size="md" tone="carolina" cornerRadius={4}
+      <Button title="Save persona" onPress={save} disabled={!!blocker} variant="primary" size="md" tone="carolina" cornerRadius={4} className={HC_EDGE}
         {...(blocker ? { accessibilityHint: blocker } : {})} />
       {blocker && <Text style={{ color: c.muted, fontSize: scale.type.label }}>{blocker}</Text>}
       {notices}
@@ -362,14 +390,14 @@ export function PersonaComposer(props: PersonaComposerProps) {
   const personaRows = <View style={{ gap: scale.space.element }}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: scale.space.element }}>
       {heading('Personas')}
-      <Button title={s.importOpen ? 'Close import' : 'Import'} onPress={() => ui.setState(st => ({ importOpen: !st.importOpen }))} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
+      <Button title={s.importOpen ? 'Close import' : 'Import'} onPress={() => ui.setState(st => ({ importOpen: !st.importOpen }))} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
     </View>
     {s.importOpen && <View style={{ gap: scale.space.element }}>
       <TextInput testID="composer-import" accessibilityLabel="Persona JSON to import" multiline numberOfLines={4} value={s.importText}
         placeholder='Paste an exported persona, starting with {"format":1' autoCapitalize="none" autoCorrect={false}
         onChangeText={text => ui.setState({ importText: text })}
         style={{ minHeight: 96, borderWidth: 1, borderColor: c.line, borderRadius: scale.radius.control, padding: scale.space.inset, color: c.text, backgroundColor: c.deep, fontSize: scale.type.label, fontFamily: scale.font.mono, textAlignVertical: 'top' }} />
-      <Button title="Import persona" onPress={runImport} disabled={!s.importText.trim()} variant="primary" size="sm" tone="carolina" cornerRadius={4} />
+      <Button title="Import persona" onPress={runImport} disabled={!s.importText.trim()} variant="primary" size="sm" tone="carolina" cornerRadius={4} className={HC_EDGE} />
     </View>}
     {noticeBanner('list')}
     {personas.some(p => p.builtIn) && label(BUILT_IN_CAPTION)}
@@ -400,7 +428,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
     {...{ onKeyDown: cancelDrag }}
     style={{ gap: scale.space.group, padding: wide ? scale.space.section : scale.space.group, backgroundColor: c.base }}>
     <View style={{ gap: scale.space.stack }}>
-      <Text accessibilityRole="header" style={{ color: c.text, fontSize: scale.type.title, fontWeight: '700' }}>New persona</Text>
+      <Text accessibilityRole="header" {...LEVEL_1} style={{ color: c.text, fontSize: scale.type.title, fontWeight: '700' }}>New persona</Text>
       <Text style={{ color: c.muted, fontSize: scale.type.label }}>{`Pick the rail and capabilities for a persona in the design studio. The preview shows what works on ${surfaceWord}.`}</Text>
     </View>
     {isWeb && <Text accessibilityLiveRegion="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}>{s.announcement}</Text>}
