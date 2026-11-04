@@ -10,6 +10,7 @@ import { encodeRgbaPng, validatePreviewSize } from './rgba-png';
 import { prismThemes, workspaceScale as scale } from './theme';
 import { prismViewportLayout } from './prism-layout';
 import { PrismCanvas } from './prism-canvas';
+import { ForgePrecisionScrubber } from './precision-scrubber';
 import type { CanvasLayer } from './prism-canvas-model';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
 import { DragGrabHandle, type DragPoint } from './drag-grab-handle';
@@ -195,16 +196,21 @@ export function PrismEditor(props: PrismEditorProps) {
       <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="mr-2 rounded-[4px] overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
-    {/* Opacity is above the measured row scroller. The canonical web menu
-        opens outside its bounds; only the layer rows own clipping. */}
+    {/* Layer opacity uses the same precision instrument as every studio;
+        only its released value becomes a Rust document operation. */}
     {selected && <View style={{ paddingHorizontal: 12, paddingVertical: 8, zIndex: 10 }}>
-        <Menu title="Layer opacity" triggerLabel="Layer opacity" actions={[0, .25, .5, .75, 1].map(value => ({ id: String(value), title: `${value * 100}%`, disabled: busy || !!props.busy || !!drag }))}
-          onAction={value => { const opacity = Number(value); if (!store.getState().busy && !current.current.busy && !store.getState().drag && [0, .25, .5, .75, 1].includes(opacity)) void run('setLayerOpacity', { id: selected.id, opacity }, 'Layer opacity changed'); }}>
-          <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8, borderRadius: scale.radius.control, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.base, opacity: busy || props.busy || drag ? .4 : 1 }}>
-            <Text style={{ color: colors.muted, fontSize: 11, flex: 1 }}>Opacity</Text><Text style={{ color: colors.text, fontSize: 12, fontVariant: ['tabular-nums'] }}>{Math.round(selected.opacity * 100)}%</Text>
-            <View style={{ transform: [{ rotate: '90deg' }] }}><ForgeIcon name="play" size={10} color={colors.muted} reducedMotion /></View>
-          </View>
-        </Menu>
+      <ForgePrecisionScrubber
+        label="Layer opacity"
+        value={selected.opacity * 100}
+        min={0}
+        max={100}
+        step={1}
+        unit="%"
+        detents={[0, 25, 50, 75, 100]}
+        disabled={busy || !!props.busy || !!drag}
+        colors={colors}
+        onCommit={value => run('setLayerOpacity', { id: selected.id, opacity: value / 100 }, 'Layer opacity changed')}
+      />
     </View>}
       <View ref={layerViewport} collapsable={false} style={{ maxHeight: layerListMaxHeight, flexShrink: 1 }}><ScrollView nestedScrollEnabled removeClippedSubviews={false} scrollEnabled={!drag} onScroll={cancelLayerDrag} scrollEventThrottle={16} style={{ maxHeight: layerListMaxHeight, flexShrink: 1 }}>
         {[...layers].reverse().map(layer => <View key={layer.id} ref={view => { if (view) rowViews.current.set(layer.id, view); else rowViews.current.delete(layer.id); }} collapsable={false} style={{ position: 'relative', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, backgroundColor: selectedId === layer.id ? '#2468AC' : 'transparent', borderBottomWidth: 1, borderBottomColor: colors.line }}>
