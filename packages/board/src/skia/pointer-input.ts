@@ -32,7 +32,10 @@ export interface NativeBoardPointerOptions {
   readonly boardHeight: number;
   readonly onPointer: (sample: BoardPointerSample) => void;
   readonly now?: () => number;
-  /** After-pen prevents palm strokes until resetPenPreference(). Default. */
+  /**
+   * After-pen prevents palm strokes until resetPenPreference(). Default.
+   * In both rejection modes a pen down cancels an active touch stroke.
+   */
   readonly palmRejection?: PalmRejection;
 }
 export interface NativeBoardPointerRouter {
@@ -104,9 +107,14 @@ export function createNativeBoardPointerRouter(options: NativeBoardPointerOption
     handle(phase, event) {
       if (disposed) return;
       if (phase === "down") {
-        if (active !== null || !canStart(event)) return;
+        // With palm rejection on, a pen pre-empts a touch stroke that landed
+        // first (usually the palm): the touch stroke is cancelled, not kept.
+        const penPreempts = active !== null && active.type === "touch" &&
+          event.pointerType === "pen" && palmRejection !== "off";
+        if ((active !== null && !penPreempts) || !canStart(event)) return;
         const xy = coords(event, false);
         if (xy === null) return;
+        if (penPreempts) cancel();
         if (event.pointerType === "pen") penSeen = true;
         active = { id: event.pointerId, type: event.pointerType, x: xy[0], y: xy[1] };
         send("begin", event, xy[0], xy[1]);
