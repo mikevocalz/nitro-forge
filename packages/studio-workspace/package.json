@@ -11,6 +11,7 @@
     "./prism": "./src/prism-editor.tsx",
     "./ui": "./src/ui.tsx",
     "./instruments": "./src/instrument-system.ts",
+    "./interaction": "./src/interaction-policy.ts",
     "./precision": "./src/precision-scrubber.tsx"
   },
   "scripts": {
