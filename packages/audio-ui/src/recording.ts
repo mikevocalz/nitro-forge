@@ -174,15 +174,7 @@ export class ForgeRecordingController {
     if (!status.isRecording) {
       // Only a recorder that was seen running can be "interrupted"; the first
       // poll may land before the native recorder reports its started state.
-      if (this.confirmedRecording) {
-        this.store.setState({
-          phase: {
-            kind: "interrupted",
-            durationMs: state.phase.durationMs,
-            message: INTERRUPTED_MESSAGE,
-          },
-        });
-      }
+      if (this.confirmedRecording) this.reportInterrupted();
       return;
     }
     this.confirmedRecording = true;
@@ -193,6 +185,16 @@ export class ForgeRecordingController {
       ? state.levelHistory
       : pushMeterLevel(state.levelHistory, status.metering);
     this.store.setState({ phase: { kind: "recording", durationMs }, levelHistory });
+  }
+
+  /** The OS stopped native capture while this controller was recording. */
+  reportInterrupted(): void {
+    if (this.disposed || this.busy) return;
+    const phase = this.store.getState().phase;
+    if (phase.kind !== "recording") return;
+    this.store.setState({
+      phase: { kind: "interrupted", durationMs: phase.durationMs, message: INTERRUPTED_MESSAGE },
+    });
   }
 
   /** The native status read threw while recording: show it, don't freeze. */

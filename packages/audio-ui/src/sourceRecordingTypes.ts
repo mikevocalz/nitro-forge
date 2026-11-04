@@ -10,12 +10,16 @@ export type SourceRecordingFile =
       readonly sampleRate: number;
       readonly channels: number;
       readonly durationSeconds: number;
+      /** Unreadable stream buffers; their time span shows as an empty gap. */
+      readonly droppedBuffers: number;
     }
   | {
       readonly kind: "compressed-web";
       readonly uri: string;
       readonly peaks: readonly WaveformPeak[];
       readonly waveform: "decoded" | "unavailable";
+      /** Why the waveform is unavailable (codec, size bound, fetch failure). */
+      readonly reason?: string;
     };
 
 export interface NativeSourceRecordingTrackProps {

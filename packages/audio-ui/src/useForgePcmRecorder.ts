@@ -7,11 +7,17 @@ import {
 } from "expo-audio";
 import type { StoreApi } from "zustand/vanilla";
 import { ForgeRecordingController, type RecordingDriver, type RecordingSnapshot } from "./recording";
-import { WaveformPeakAccumulator } from "./pcmPeaks";
+import { PcmCaptureSession } from "./pcmCapture";
 import type { SourceRecordingFile } from "./sourceRecordingTypes";
 
 export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
-  const accumulator = useMemo(() => new WaveformPeakAccumulator(4096), [store]);
+  const controllerRef = useRef<ForgeRecordingController | null>(null);
+  const session = useMemo(
+    () => new PcmCaptureSession(store, "int16", (message) => {
+      void controllerRef.current?.abort(message);
+    }),
+    [store],
+  );
   const lastFile = useRef<AudioStreamFileRecordingResult | null>(null);
 
   // Expo Audio Stream captures actual interleaved signed PCM samples and
@@ -21,23 +27,7 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
     sampleRate: 48000,
     channels: 1,
     encoding: "int16",
-    onBuffer: (buffer) => {
-      try {
-        const chunk = accumulator.appendPcm(buffer.data, buffer.channels, "int16");
-        const snapshot = store.getState();
-        if (snapshot.phase.kind !== "recording") return;
-        store.setState({
-          levelHistory: [...snapshot.levelHistory.slice(-159), chunk.peak],
-          phase: {
-            kind: "recording",
-            durationMs: Math.max(0, Math.round(buffer.timestamp * 1000)),
-          },
-        });
-      } catch {
-        // A malformed native stream buffer must never create fake peaks.
-        // A future error/event channel should surface backend failures.
-      }
-    },
+    onBuffer: (buffer) => session.onBuffer(buffer),
   });
 
   const controller = useMemo(() => {
@@ -46,9 +36,10 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
       configure: async () => {
         await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       },
+      // expo-audio has no getter for the prior mode; return to playback.
       release: () => setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }),
       prepare: async () => {
-        accumulator.reset();
+        session.reset();
         lastFile.current = null;
       },
       record: async () => {
@@ -62,8 +53,11 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
           stream.stop();
           throw error;
         }
+        // Peaks accumulate only while the file is being written.
+        session.openFileWindow();
       },
       stop: async () => {
+        session.closeFileWindow();
         try {
           const file = await stream.stopFileRecordingAsync();
           lastFile.current = file;
@@ -80,14 +74,28 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
         };
       },
     };
-    return new ForgeRecordingController(driver, store);
-  }, [accumulator, store, stream]);
+    const created = new ForgeRecordingController(driver, store);
+    controllerRef.current = created;
+    return created;
+  }, [session, store, stream]);
 
   useEffect(() => {
+    // Reversible so StrictMode / Fast Refresh effect re-runs keep a usable
+    // controller; detach() stops capture and writes failures to the store.
+    controller.attach();
+    // The stream reports isStreaming=false when the OS ends capture (call,
+    // route loss, another app). The controller ignores it while it is busy
+    // with its own start/stop, so only external stops become "interrupted".
+    const statusSub = stream.addListener("audioStreamStatus", (status) => {
+      if (status.isStreaming) return;
+      session.closeFileWindow();
+      controller.reportInterrupted();
+    });
     return () => {
-      void controller.dispose().catch(() => undefined);
+      statusSub.remove();
+      void controller.detach();
     };
-  }, [controller]);
+  }, [controller, session, stream]);
 
   const stop = async (): Promise<SourceRecordingFile> => {
     const uri = await controller.stop();
@@ -98,10 +106,12 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
     return {
       kind: "pcm-wav",
       uri,
-      peaks: accumulator.toColumns(512),
+      // Writes the full-recording columns into the store for the saved lane.
+      peaks: session.finalize(),
       sampleRate: file.sampleRate,
       channels: file.channels,
       durationSeconds: file.duration,
+      droppedBuffers: session.droppedBuffers,
     };
   };
   return { controller, stop };
