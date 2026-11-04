@@ -59,7 +59,7 @@ export function NativeVideoMonitor({
       reportedFrame: 0,
       durationFrames: validFrameCount(player.duration, frameRate),
       bufferedFrame: 0,
-      requestedFrame: undefined,
+      requestedFrame: null,
     });
     const time = player.addListener("timeUpdate", (payload) => {
       reportNativePlaybackTime(store, payload.currentTime, payload.bufferedPosition, frameRate);
