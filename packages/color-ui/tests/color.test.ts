@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  assertRgba, hsvToRgb, parseHexColor, rgbToHsv, rgbaToHex,
+  alphaPercent, assertRgba, hsvToRgb, parseHexColor, rgbToHsv, rgbaToHex,
 } from "../src/color";
 
 describe("universal document-neutral display colors", () => {
@@ -32,5 +32,24 @@ describe("universal document-neutral display colors", () => {
     expect(() => assertRgba({ r: -1, g: 0, b: 0, alpha: 1 })).toThrow();
     expect(() => assertRgba({ r: 255, g: 0, b: 0, alpha: Infinity })).toThrow();
     expect(() => hsvToRgb({ h: 0, s: 2, v: 1, alpha: 1 })).toThrow();
+  });
+});
+
+describe("8-bit hex alpha quantization", () => {
+  it("shows the same whole opacity percent after a hex round trip", () => {
+    for (let percent = 0; percent <= 100; percent++) {
+      const color = { r: 10, g: 20, b: 30, alpha: percent / 100 };
+      const reparsed = parseHexColor(rgbaToHex(color));
+      expect(alphaPercent(color.alpha)).toBe(percent);
+      expect(alphaPercent(reparsed.alpha)).toBe(percent);
+    }
+  });
+  it("stores the quantized byte, not the slider value, after parsing", () => {
+    expect(rgbaToHex({ r: 0, g: 0, b: 0, alpha: 0.01 })).toBe("#00000003");
+    expect(parseHexColor("#00000003").alpha).toBe(3 / 255);
+  });
+  it("rejects invalid alpha", () => {
+    expect(() => alphaPercent(Number.NaN)).toThrow();
+    expect(() => alphaPercent(1.5)).toThrow();
   });
 });

@@ -15,6 +15,13 @@ deterministic document-agnostic display color calculations. They do **not**
 replace Rust ICC profile management, HDR, P3, CMYK, spot ink or theme color
 references, and must not flatten document colors when saving.
 
+Hex alpha is 8-bit. `rgbaToHex` writes `Math.round(alpha * 255)`, so an
+opacity of 0.01 becomes `03` and `parseHexColor` returns 3/255, not 0.01.
+The opacity label uses `alphaPercent`, which rounds to a whole percent; every
+whole percent from 0 to 100 reads the same before and after a hex round trip
+(covered in `tests/color.test.ts`). Keep the float yourself if you need it
+exactly.
+
 ```tsx
 import { NativeColorChannels } from '@nitro-forge/color-ui';
 
