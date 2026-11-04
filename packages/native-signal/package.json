@@ -1,0 +1,23 @@
+{
+  "name": "@nitro-forge/native-signal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Expo SDK 58 / Expo Modules 2.0 native waveform analysis adapter for Nitro Forge.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "expo": "^58.0.0"
+  }
+}
