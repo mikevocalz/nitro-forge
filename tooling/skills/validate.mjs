@@ -1,6 +1,18 @@
 /**
- * Repository-owned skills contract smoke gate. Checks the *presence and pinning*
- * of engineering guidance, not whether an AI agent read it or ran native tests.
+ * Repository-owned skills contract gate.
+ *
+ * What it proves:
+ *   - every github.com link in docs/ENGINEERING_SKILLS.md is pinned to a
+ *     40-hex commit SHA (blob/ or tree/). No link is exempt; Mobbin and local
+ *     relative links are not github.com links and are not checked.
+ *   - with --resolve (CI), each pinned SHA exists in its repository and the
+ *     linked path exists at that SHA (GitHub REST API).
+ *   - the local SKILL.md files have frontmatter and an evidence section; the
+ *     roster lists NF-00..NF-14; the PR template carries the evidence headings.
+ *
+ * What it does NOT prove: the category keyword checks only show a word appears
+ * in the registry text. Nothing here shows that an agent read a skill, that a
+ * linked skill fits its row, or that any native/Expo/GPU work ran.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -33,12 +45,30 @@ for (const mention of ["no-ai-slop","expo-ui","Margelo","Callstack","Argent",
   assert.ok(registry.toLowerCase().includes(mention.toLowerCase()),
     `Missing required skill source category: ${mention}`);
 }
+// Every github.com link in the registry must be SHA-pinned.
+const PINNED = /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/(?:blob|tree)\/([0-9a-f]{40})(?:\/([^)#?\s]*))?$/;
+const links = [...registry.matchAll(/https:\/\/github\.com\/[^)\s]+/g)].map((m) => m[0]);
+const unpinned = links.filter((url) => !PINNED.test(url));
+assert.deepEqual(unpinned, [], `Skill links must be pinned to a 40-hex commit SHA:\n  ${unpinned.join("\n  ")}`);
 for (const source of ["petergyang/no-ai-slop","margelo/react-native-skills",
   "expo/skills","callstackincubator/agent-skills","software-mansion/argent"]) {
-  const link = registry.match(new RegExp(
-    `https://github\\.com/${source.replaceAll("/", "\\/")}/(?:blob|tree)/([a-f0-9]{40})/`, "i",
-  ));
-  assert.ok(link, `Skill source must be pinned to a commit SHA: ${source}`);
+  assert.ok(links.some((url) => url.toLowerCase().startsWith(`https://github.com/${source.toLowerCase()}/`)),
+    `Required skill source missing from registry: ${source}`);
+}
+if (process.argv.includes("--resolve")) {
+  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  const headers = { accept: "application/vnd.github+json", ...(token && { authorization: `Bearer ${token}` }) };
+  const api = async (path) => (await fetch(`https://api.github.com/${path}`, { headers })).status;
+  const failures = [];
+  for (const url of new Set(links)) {
+    const [, owner, repo, sha, path = ""] = PINNED.exec(url);
+    const commit = await api(`repos/${owner}/${repo}/commits/${sha}`);
+    const clean = decodeURIComponent(path.replace(/\/$/, ""));
+    const file = commit === 200 && clean ? await api(`repos/${owner}/${repo}/contents/${clean}?ref=${sha}`) : commit;
+    if (commit !== 200 || file !== 200) failures.push(`${url} (commit ${commit}, path ${file})`);
+  }
+  assert.deepEqual(failures, [], `Pinned skill links that do not resolve:\n  ${failures.join("\n  ")}`);
+  console.log(`${new Set(links).size} pinned skill links resolve to an existing commit and path.`);
 }
 for (let i = 0; i <= 14; i++) {
   const tag = "NF-" + String(i).padStart(2, "0");
@@ -50,5 +80,5 @@ for (const item of ["Skills actually read", "Workstream roster", "Acceptance mat
   "NOT RUN","Breaking change"]) {
   assert.ok(template.includes(item), `PR template missing evidence requirement: ${item}`);
 }
-console.log("NitroForge required local skills, pinned references, PR template and NF-00..NF-14 roster are present.");
-console.log("Documentation integrity only; native/Expo/GPU and agent skill execution remain NOT RUN.");
+console.log(`${links.length} registry links are SHA-pinned; local skills, PR template and NF-00..NF-14 roster are present.`);
+console.log("Category keywords are text matches only. Agent skill reading and native/Expo/GPU work remain NOT RUN.");
