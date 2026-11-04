@@ -15,6 +15,8 @@ Changes made by Nitro Forge, November 3, 2026:
 - Ported the speed curve's logarithmic scale and trapezoidal average behavior into
   a validated cross-platform TS interface and native Swift/Kotlin method service.
 - Added bounded input validation and a sampled preview output interface.
+- November 4, 2026: documented `at` as output (timeline) position, matching
+  upstream `meanOf` and its playhead-based point placement.
 - No upstream Compose UI, music/audio/media assets or icon files are copied.
 - Original UI, full retime engine integration, and direct manipulable view remain unbuilt.
 
