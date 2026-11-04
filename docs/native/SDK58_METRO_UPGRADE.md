@@ -1,6 +1,6 @@
 # SDK58 / latest npm candidate (2026-11-04)
 
-**Draft, blocked. Do not merge or describe this host as native-ready.**
+**Draft.** JS bundles export for iOS and Android; native compilation and device runs are not yet verified.
 
 The actual example and shared Studio now target Expo58.0.23, React19.3.1,
 React Native0.88.1, Expo Image58.0.18, Gesture Handler3.4.0, Skia3.9.1,
@@ -15,43 +15,36 @@ Direct package versions were queried against npm on November4. This is a dated
 candidate, not a claim that versions remain latest indefinitely. Shared external
 NYC dependencies not explicitly supplied by this host are not upgraded here.
 
-## Metro0.87.2: explicit request, explicit incompatibility
+## Metro: Expo 58's pinned 0.87.1 (decision 2026-11-04)
 
-All14 upstream Metro packages, including metro-resolver/runtime/file-map/config,
-are overridden together to0.87.2. Expo58's @expo/metro58.0.0 pins0.87.1.
-This is an **unendorsed integration candidate**, not Expo's supported pairing.
-Configuration still extends `expo/metro-config`. Host-native singleton resolution
-keeps package names and exports intact, including RN0.88's `react-native/setup-env`.
-
-Useful new upstream behavior includes `metro:runtime/*` import resolution across
-workspace boundaries, dynamic runtime-root discovery, symlink/file-watching fixes,
-and conditional-exports fixes. `resolver.schemeResolvers` (introduced0.87.1) is
-preserved; the preflight exercises actual scheme dispatch. No unused custom
-production scheme or experimental server middleware was added just to enable a
-flag. Runtime-root and watch behavior cannot be claimed working in Expo yet.
-
-Latest Expo CLI58.1.19 unconditionally substitutes @expo/metro-file-map58.0.5.
-That fork lacks `addRoot()` and `getRoots()`, which Metro0.87.2 calls during
-runtime-root discovery. Actual iOS JS export fails before bundling with:
+The workspace overrides now keep all fourteen Metro packages on **0.87.1**, the
+version `@expo/metro` 58.0.0 declares. The earlier 0.87.2 candidate could not
+start: Expo CLI 58.1.19 always substitutes `@expo/metro-file-map` 58.0.5, which
+has no `addRoot()`/`getRoots()`, and Metro 0.87.2 calls them during runtime-root
+discovery:
 
     TypeError: this._haste.addRoot is not a function
     at DependencyGraph._addMetroRuntimeRoots
 
-Both on-demand filesystem settings construct the same incompatible fork.
-There is no newer official npm next release (next=latest58.0.5; canary is older).
-No no-op shim, prototype monkeypatch, silent downgrade, or disabled assertion is
-included. Correct support requires a real Expo fork update, including roots,
-symlink handling, crawl/watch registration and change-event serialization.
+That was the only thing blocking native and web exports. On 0.87.1 the sibling
+canonical UI package (`STUDIO_UI_ROOT`, default `../../../nyc-mon/packages/ui`)
+must be in `watchFolders`, because 0.87.1 resolves only inside watched roots;
+`apps/example/metro.config.cjs` adds it next to Expo's monorepo defaults.
+
+Deferred: Metro 0.87.2. Revisit when an Expo release ships a file-map fork with
+`addRoot`/`getRoots`. `verify-metro-stack.cjs` reads the expected version from
+`@expo/metro`, so the overrides can follow Expo without editing the script.
 
 Reproduce, from the repository root:
 
     node apps/example/tooling/verify-metro-stack.cjs
     cd apps/example
     CI=1 EXPO_NO_TELEMETRY=1 pnpm exec expo export --platform ios --max-workers 1 --no-minify --no-bytecode
+    CI=1 EXPO_NO_TELEMETRY=1 pnpm exec expo export --platform android --max-workers 1 --no-minify --no-bytecode
 
-The preflight intentionally exits nonzero while the API is missing. Android and
-Expo web share this startup blocker; their full exports are not claimed passed.
-Standalone Vite preview is a separate host and does not prove Metro compatibility.
+Both exports completed locally on 2026-11-04 (one JS entry bundle each). CI's
+`expo-native-bundles` job runs the same commands. A JS export is not a native
+build: Xcode/Gradle compilation and device runs are separate evidence.
 
 ## Supply-chain age gate
 

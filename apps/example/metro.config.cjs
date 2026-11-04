@@ -5,8 +5,9 @@ const { createHostNativeResolver } = require('./tooling/host-native-resolver.cjs
 // A consuming app normally resolves @acme/ui from its own workspace instead.
 const uiRoot = process.env.STUDIO_UI_ROOT || path.resolve(__dirname, '../../../nyc-mon/packages/ui');
 const config = getDefaultConfig(__dirname);
-// SDK58's default on-demand filesystem handles the sibling UI's pnpm links.
-// Retain Expo's monorepo/watch/scheme defaults instead of old watchFolders hacks.
+// Metro 0.87.1 (Expo 58's pin) only resolves files inside watched roots, so the
+// sibling UI package is watched explicitly alongside Expo's monorepo defaults.
+config.watchFolders = [...(config.watchFolders ?? []), uiRoot];
 config.resolver.extraNodeModules = { ...config.resolver.extraNodeModules, '@acme/ui': uiRoot };
 config.resolver.resolveRequest = createHostNativeResolver(__dirname, config.resolver.resolveRequest);
 module.exports = config;
