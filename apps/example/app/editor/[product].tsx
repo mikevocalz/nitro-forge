@@ -8,7 +8,7 @@ import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
 import { useEditorDoc } from '../../src/useDocument';
 import { getEditorConfig } from '../../src/editors';
-import { PersonaDock, PersonaTrigger, usePersonaPlacement, usePersonaSession } from '../../src/persona/persona-placement-host';
+import { PersonaDock, usePersonaPlacement, usePersonaSession } from '../../src/persona/persona-placement-host';
 import { playTurretHaptic } from '../../src/persona/turret-haptics-driver';
 
 export default function EditorScreen() {
@@ -30,19 +30,22 @@ function StudioEditor({ studioId }: { studioId: Studio }) {
   // One persona session per Prism document, shared with the sheet route.
   const personaKey = `persona:${studioId}`;
   const personas = usePersonaSession(personaKey);
-  const placement = usePersonaPlacement();
+  const placement = usePersonaPlacement(personas);
+  // Phones present the sheet route, two-pane foldables the docked panel;
+  // regular-width windows keep PrismEditor's own inline panel.
+  const openPersonas = placement.mode === 'sheet' ? () => router.push({ pathname: '/personas', params: { session: personaKey } })
+    : placement.mode === 'dock' ? () => personas.ui.setState({ open: true }) : undefined;
   const prism = studioId === 'prism';
   return <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={{ flex: 1 }}>
     <Stack.Screen options={{ headerShown: false }} />
     <ForgeWorkspace studioId={studioId} title={config.title} documentTitle={`Untitled ${config.title} document`}
-      headerTrailing={prism ? <PersonaTrigger sessionKey={personaKey} session={personas} placement={placement} /> : undefined}
       headerLeading={<Button title="All apps" aria-label="All apps" onPress={() => router.replace('/')} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" />}
       theme={theme} state={doc.state} rows={doc.state ? config.rows(doc.state) : []}
       actions={config.actions.map(action => ({ title: action.title, run: () => action.run(doc) }))}
       onUndo={doc.undo} onRedo={doc.redo} onSave={save} onRefresh={doc.reload}
       busy={!doc.state} error={doc.error}>
-      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={`Untitled ${config.title} document`} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} personas={personas.personas} onPersonaEffect={playTurretHaptic} /> : undefined}
+      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={`Untitled ${config.title} document`} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} personas={personas.personas} onPersonaEffect={playTurretHaptic} {...(openPersonas ? { onOpenPersonas: openPersonas } : {})} /> : undefined}
     </ForgeWorkspace>
-    {prism && <PersonaDock session={personas} placement={placement} />}
+    {prism && <PersonaDock session={personas} sessionKey={personaKey} placement={placement} />}
   </SafeAreaView>;
 }

@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { I18nManager, useWindowDimensions } from 'react-native';
+import { I18nManager, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from 'zustand';
 import { useReservedRegions } from '@acme/ui/adaptive-panes';
-import { Button, View } from '@nitro-forge/studio-workspace/ui';
+import { View } from '@nitro-forge/studio-workspace/ui';
 import { TURRET_SIZE } from '@nitro-forge/studio-workspace/turret';
 import { prismThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
 import { acquirePersonaSession, releasePersonaSession, type PersonaSession } from './persona-session';
@@ -22,31 +22,24 @@ export function usePersonaSession(key: string): PersonaSession {
   return ref.current.session;
 }
 
-/** Where the panel goes on this window, from real fold geometry. */
-export function usePersonaPlacement(): PersonaPlacement {
+/** Where the panel goes on this window, from real fold geometry. On Android
+ * a WindowManager folding feature (a `division` region) makes the window an
+ * `android-foldable` surface for the persona manifests. */
+export function usePersonaPlacement(session?: PersonaSession): PersonaPlacement {
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const regions = useReservedRegions();
+  const folding = Platform.OS === 'android' && regions.some(r => r.kind === 'division');
+  useEffect(() => {
+    if (Platform.OS === 'android') session?.personas.getState().setSurface(folding ? 'android-foldable' : 'android-phone');
+  }, [folding, session]);
   return planPersonaPlacement({ window, regions, insets, panel: PANEL, direction: I18nManager.isRTL ? 'rtl' : 'ltr' });
-}
-
-/** Header trigger: phones present the formSheet route, two-pane foldables
- * open the docked panel. Regular-width windows keep PrismEditor's own panel. */
-export function PersonaTrigger({ sessionKey, session, placement }: { sessionKey: string; session: PersonaSession; placement: PersonaPlacement }) {
-  const router = useRouter();
-  const label = useStore(session.personas, s => s.personas.find(p => p.id === s.activeId)?.label ?? 'Persona');
-  if (placement.mode === 'inline') return null;
-  return <Button title={label} aria-label={`Persona: ${label}`} accessibilityHint="Switch between Vector, Pixel, Layout and Sketch"
-    onPress={() => {
-      if (placement.mode === 'sheet') router.push({ pathname: '/personas', params: { session: sessionKey } });
-      else session.ui.setState({ open: true });
-    }}
-    variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" />;
 }
 
 /** The pane-docked panel. Closes when the posture stops offering a dock, so
  * it never stays behind a hinge or across panes after a fold change. */
-export function PersonaDock({ session, placement }: { session: PersonaSession; placement: PersonaPlacement }) {
+export function PersonaDock({ session, sessionKey, placement }: { session: PersonaSession; sessionKey: string; placement: PersonaPlacement }) {
+  const router = useRouter();
   const open = useStore(session.ui, s => s.open);
   const docked = placement.mode === 'dock';
   useEffect(() => { if (!docked && session.ui.getState().open) session.ui.setState({ open: false, peeking: false }); }, [docked, session]);
@@ -57,6 +50,7 @@ export function PersonaDock({ session, placement }: { session: PersonaSession; p
     borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, backgroundColor: colors.base, overflow: 'hidden',
     boxShadow: '0 8px 24px #00000033',
   }}>
-    <PersonaTurretHost session={session} presentation="dock" onClose={() => session.ui.setState({ open: false, peeking: false })} />
+    <PersonaTurretHost session={session} presentation="dock" onClose={() => session.ui.setState({ open: false, peeking: false })}
+      onCompose={() => { session.ui.setState({ open: false, peeking: false }); router.push({ pathname: '/persona-composer', params: { session: sessionKey } }); }} />
   </View>;
 }

@@ -15,7 +15,8 @@ export default function PersonaSheet() {
   // Sheet content is presented outside the root view's gesture tree on Android.
   return <GestureHandlerRootView style={{ flex: 1, backgroundColor: prismThemes.dark.base }}>
     {session
-      ? <PersonaTurretHost session={session} presentation="sheet" onClose={close} />
+      ? <PersonaTurretHost session={session} presentation="sheet" onClose={close}
+        onCompose={() => router.replace({ pathname: '/persona-composer', params: { session: key } })} />
       : <View style={{ padding: scale.space.group, gap: scale.space.element }}>
         <Text accessibilityRole="alert" style={{ color: prismThemes.dark.text, fontSize: scale.type.body }}>No design document is open.</Text>
         <Button title="Close" onPress={close} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />

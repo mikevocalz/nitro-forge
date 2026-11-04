@@ -11,6 +11,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ title: "Nitro-Forge" }} />
           <Stack.Screen name="editor/[product]" options={{ title: "Editor" }} />
           <Stack.Screen name="personas" options={{ presentation: "formSheet", sheetAllowedDetents: "fitToContents", sheetGrabberVisible: true, sheetCornerRadius: 4, headerShown: false, title: "Persona" }} />
+          <Stack.Screen name="persona-composer" options={{ presentation: "modal", title: "New persona" }} />
         </Stack>
       </StudioUIProvider>
     </GestureHandlerRootView>

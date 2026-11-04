@@ -49,3 +49,15 @@ test('import validates untrusted JSON and export round-trips', () => {
   assert.equal(copy.label, 'Ink 2');
   assert.throws(() => store.getState().importJson('nope'), /not valid JSON/);
 });
+
+test('a surface change keeps a persona that runs there and falls back otherwise', () => {
+  const store = createPersonaStore({ surface: 'ipad', initialPersonaId: 'sketch' });
+  const before = store.getState().continuity;
+  store.getState().setSurface('xr');
+  assert.equal(store.getState().activeId, 'sketch');
+  store.getState().setSurface('android-foldable');
+  assert.equal(store.getState().surface, 'android-foldable');
+  assert.equal(store.getState().activeId, 'vector');
+  assert.match(store.getState().error ?? '', /Sketch does not run here/);
+  assert.equal(store.getState().continuity, before);
+});

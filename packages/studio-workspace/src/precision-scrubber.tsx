@@ -5,7 +5,7 @@ import { Text, TextInput, Pressable, View } from './ui';
 import { StudioGesture } from './studio-gesture';
 import type { GesturePoint } from './studio-gesture-types';
 import { scrubPrecision, type ScrubMode } from './instrument-system';
-import { workspaceThemes, type WorkspaceColors } from './theme';
+import { workspaceScale as scale, workspaceThemes, type WorkspaceColors } from './theme';
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 
 export type ForgePrecisionScrubberProps = {
@@ -204,7 +204,7 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
           onChangeText={draft => store.setState({ draft })}
           onSubmitEditing={applyDraft}
           onBlur={applyDraft}
-          style={{ color: palette.text, width: 54, textAlign: 'right', fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'], paddingVertical: 6 }}
+          style={{ color: palette.text, width: 58, textAlign: 'right', fontSize: scale.type.body, fontWeight: '600', fontVariant: ['tabular-nums'], paddingVertical: 6, paddingHorizontal: 2, borderWidth: 1, borderColor: state.editing ? palette.accent : 'transparent', borderRadius: scale.radius.control }}
         />
         {!!props.unit && <Text style={{ fontSize: 11, color: palette.muted, paddingLeft: 2 }}>{props.unit}</Text>}
       </View>
@@ -256,10 +256,10 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
       </Pressable>
     </View>
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Text style={{ fontSize: 10, color: state.active || state.focused ? palette.accent : palette.muted }}>
+      <Text style={{ fontSize: scale.type.label, color: state.active || state.focused ? palette.accent : palette.muted }}>
         {state.active ? `${state.mode.toUpperCase()} PRECISION` : 'DRAG · FINE ↑ · COARSE ↓'}
       </Text>
-      <Text style={{ fontSize: 10, color: palette.muted, fontVariant: ['tabular-nums'] }}>
+      <Text style={{ fontSize: scale.type.label, color: palette.muted, fontVariant: ['tabular-nums'] }}>
         {format(props.min, props.step)} – {format(props.max, props.step)}{props.unit ?? ''}
       </Text>
     </View>

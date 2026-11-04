@@ -36,6 +36,11 @@ export interface PrismEditorProps {
   personas?: PersonaStore;
   /** Host feedback for turret detents and commits (haptics on native). */
   onPersonaEffect?: (effect: TurretEffect) => void;
+  /** Host-presented persona panel (a native sheet or a fold dock). When set,
+   * the editor's Persona control opens it instead of the inline panel. */
+  onOpenPersonas?: () => void;
+  /** Opens the host's Persona Composer for this document's persona store. */
+  onComposePersona?: () => void;
 }
 const hostSurface = (): PersonaSurface => Platform.OS === 'web' ? 'web' : Platform.OS === 'ios' ? ((Platform as { isPad?: boolean }).isPad ? 'ipad' : 'iphone') : 'android-phone';
 const FILLS = [[105, 80, 209, 255], [36, 145, 132, 255], [227, 155, 76, 255], [226, 109, 146, 255]] as const;
@@ -278,7 +283,7 @@ export function PrismEditor(props: PrismEditorProps) {
           <Text style={{ color: colors.muted, fontSize: 11 }}>Transform</Text>
         </View>
       </Menu>}
-      {control(activePersona?.label ?? 'Persona', () => store.setState({ personaOpen: !personaOpen }), false, personaOpen, undefined, activePersona?.label ?? 'Persona', false, 'Switch between Vector, Pixel, Layout and Sketch')}
+      {control(activePersona?.label ?? 'Persona', () => { if (props.onOpenPersonas) props.onOpenPersonas(); else store.setState({ personaOpen: !personaOpen }); }, false, personaOpen, undefined, activePersona?.label ?? 'Persona', false, 'Switch between Vector, Pixel, Layout and Sketch')}
       {control('Layers', () => store.setState({ layersOpen: !layersOpen }), false, layersOpen, 'layers')}
     </View>
     <View accessibilityLabel="Creation tools" style={{ position: 'absolute', zIndex: 20, left: 12, top: short ? 68 : 76, width: 52, alignItems: 'center', padding: 3, gap: 3, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
@@ -291,11 +296,12 @@ export function PrismEditor(props: PrismEditorProps) {
       {!activeCaps.has('shapes') && !activeCaps.has('raster-layers') && <Text accessibilityRole="text" style={{ color: colors.muted, fontSize: 9, textAlign: 'center', paddingVertical: 6 }}>No tools in this build</Text>}
     </View>
     {layersOpen && panel}
-    {personaOpen && <View testID="persona-panel" accessibilityViewIsModal={narrow} style={{ position: 'absolute', zIndex: 30, top: 68, ...(narrow ? { left: 12, right: 12 } : { left: 76 }), minWidth: TURRET_SIZE + 32, padding: 16, gap: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, backgroundColor: colors.base, boxShadow: '0 8px 24px #00000033' }}>
+    {personaOpen && !props.onOpenPersonas && <View testID="persona-panel" accessibilityViewIsModal={narrow} style={{ position: 'absolute', zIndex: 30, top: 68, ...(narrow ? { left: 12, right: 12 } : { left: 76 }), minWidth: TURRET_SIZE + 32, padding: 16, gap: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, backgroundColor: colors.base, boxShadow: '0 8px 24px #00000033' }}>
       <PersonaTurret personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors} direction="workbench" scheme="dark"
         onSwitch={id => { persona.switchTo(id); store.setState({ personaOpen: false }); }}
         {...(props.onPersonaEffect ? { onEffect: props.onPersonaEffect } : {})} />
       {persona.error && <Text accessibilityRole="alert" style={{ color: colors.error, fontSize: 11, maxWidth: 240 }}>{persona.error}</Text>}
+      {props.onComposePersona && control('New persona', () => { store.setState({ personaOpen: false }); props.onComposePersona?.(); }, false, false, undefined, 'New persona', false, 'Opens the Persona Composer')}
       {control('Close personas', () => store.setState({ personaOpen: false }), false, false, 'close', 'Close', false)}
     </View>}
     <View testID="prism-fill-bar" style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 6px 20px #00000025' }}>

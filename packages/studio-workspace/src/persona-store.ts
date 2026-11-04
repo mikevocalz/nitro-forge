@@ -22,6 +22,9 @@ export type PersonaStoreState = Readonly<{
 
 export type PersonaStoreActions = Readonly<{
   switchTo: (personaId: string) => void;
+  /** The window moved to another surface class (a fold opened, a display
+   * attached). Keeps the persona when it runs there, else falls back to Vector. */
+  setSurface: (surface: PersonaSurface) => void;
   setContinuity: (patch: Partial<ContinuityState>) => void;
   compose: (draft: PersonaDraft) => PersonaSpec;
   importJson: (json: string) => PersonaSpec;
@@ -70,6 +73,12 @@ export function createPersonaStore(options: { surface: PersonaSurface; storage?:
         const next = switchPersona({ personaId: get().activeId, continuity: get().continuity }, personaId, get().personas, get().surface);
         set({ activeId: next.personaId, error: null });
       } catch (e) { set({ error: e instanceof Error ? e.message : String(e) }); }
+    },
+    setSurface: surface => {
+      if (surface === get().surface) return;
+      const active = get().personas.find(p => p.id === get().activeId);
+      const runs = active && (active.surfaces === 'all' || active.surfaces.includes(surface));
+      set({ surface, ...(runs ? {} : { activeId: 'vector', error: `${active?.label ?? 'This persona'} does not run here, so Vector is active` }) });
     },
     setContinuity: patch => set({ continuity: { ...get().continuity, ...patch } }),
     compose: draft => {

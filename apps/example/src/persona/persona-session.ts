@@ -3,11 +3,8 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { createPersonaStore, type PersonaStore } from '@nitro-forge/studio-workspace/personas';
 
 /** Host-side panel state. `peeking` mirrors the turret's open peek from its
- * effects (detent opens one; commit and cancel close it). `turretKey`
- * remounts the turret, which drops a peek back to the committed persona:
- * PersonaTurret exposes no cancel input, so this is the host's only way to
- * cancel from outside (Android Back). */
-export type PersonaHostState = Readonly<{ open: boolean; peeking: boolean; turretKey: number }>;
+ * effects (detent opens one; commit and cancel close it). */
+export type PersonaHostState = Readonly<{ open: boolean; peeking: boolean }>;
 
 export type PersonaSession = Readonly<{ personas: PersonaStore; ui: StoreApi<PersonaHostState> }>;
 
@@ -24,7 +21,7 @@ export function acquirePersonaSession(key: string): PersonaSession {
   if (existing) { existing.holders += 1; return existing.session; }
   const session: PersonaSession = {
     personas: createPersonaStore({ surface: hostSurface() }),
-    ui: createStore<PersonaHostState>(() => ({ open: false, peeking: false, turretKey: 0 })),
+    ui: createStore<PersonaHostState>(() => ({ open: false, peeking: false })),
   };
   sessions.set(key, { session, holders: 1 });
   return session;

@@ -13,6 +13,8 @@ import { Page, Main, Nav, Link, Text as SemanticText } from '@acme/ui/html';
 import { Text, View, Menu, Button, Banner, DropZone, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
 import { studioControls, FilePicker } from '@acme/ui/studio-controls/web';
 import { TurretLab, isTurretLabRoute } from './turret-lab';
+import { ComposerLab, isComposerLabRoute, COMPOSER_LAB_HASH } from './composer-lab';
+import { prismPersonaStore } from './persona-storage';
 import './style.css';
 
 function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme: 'dark' | 'light'; headerTrailing: ReactNode }) {
@@ -87,7 +89,8 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
       onUndo={() => run(editor.undo)} onRedo={() => run(editor.redo)}
       onSave={() => run(save)} onRefresh={() => run(editor.reload)}
       busy={busy || !editor.doc} error={error ?? editor.error}>
-      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc} /> : undefined}
+      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc}
+        personas={prismPersonaStore()} onComposePersona={() => { window.location.hash = COMPOSER_LAB_HASH; }} /> : undefined}
     </ForgeWorkspace>
     {notice && <Banner tone="info" title={notice} className="rounded-[4px]" />}
   </>;
@@ -121,6 +124,7 @@ function App() {
       <View style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: theme === 'dark' ? '#ADB3C4' : '#687287', fontSize: 11 }}>Preview</Text></View>
     </Menu>{themeToggle}
   </Page>;
+  if (isComposerLabRoute()) return <Main dataSet={{ theme }}><ComposerLab theme={theme} /></Main>;
   return <Main dataSet={{ theme }}>
     {!app && <Nav className="launcher-nav" aria-label="App navigation">
       <Link className="suite-label" href="#/"><SemanticText className="suite-mark" aria-hidden="true">N</SemanticText>NitroForge <SemanticText className="suite-caption">The creative collection</SemanticText></Link>

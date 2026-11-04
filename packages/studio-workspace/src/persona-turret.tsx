@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { AccessibilityInfo, Platform, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Stop } from 'react-native-svg';
 import { useStore } from 'zustand';
@@ -57,7 +57,12 @@ export type PersonaTurretProps = {
   /** Host palette. Only its accent is used, so the studio keeps its own. */
   colors?: WorkspaceColors;
   disabled?: boolean;
+  /** Host control. `cancel()` drops an open peek exactly as Escape does, for
+   * input the turret cannot see itself (Android Back, a closing sheet). */
+  handle?: Ref<PersonaTurretHandle>;
 };
+
+export type PersonaTurretHandle = Readonly<{ cancel: () => void }>;
 
 type PeekSource = 'drag' | 'key' | null;
 type LocalState = { turret: TurretState; origin: { x: number; y: number } | null; focused: boolean; source: PeekSource };
@@ -142,6 +147,8 @@ export function PersonaTurret(props: PersonaTurretProps) {
     const target = list[next.committed];
     if (effect === 'commit' && target) ref.current.onSwitch(target.id);
   };
+
+  useImperativeHandle(props.handle, () => ({ cancel: () => dispatch({ type: 'cancel' }, null) }));
 
   const measureOrigin = () => new Promise<{ x: number; y: number } | null>(resolve => {
     const view = ring.current as unknown as { measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void } | null;
