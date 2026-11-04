@@ -29,7 +29,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run tests"
+    "test": "vitest run --dir tests"
   },
   "dependencies": {
     "@nitro-forge/media-ui": "workspace:*",
