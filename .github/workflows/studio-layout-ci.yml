@@ -107,18 +107,36 @@ jobs:
           /tmp/serial-queue-test
           g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp tooling/native/nf_v1_cpp_smoke.cpp packages/ignition/cpp/ForgeRustSession.cpp target/debug/libnf_sys.a -ldl -lpthread -lm -o target/nf-v1-smoke
           target/nf-v1-smoke
-  expo-metro-candidate:
+  expo-native-bundles:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           path: nitro-forge
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: mikevocalz/nyc-mon
+          ref: 75617163382235ed698e2230e9eefb70c8e19e06
+          path: nyc-mon
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '26'
       - run: corepack enable
+      - name: Install canonical UI source dependencies
+        working-directory: nyc-mon
+        run: pnpm --filter @acme/ui... install --frozen-lockfile --ignore-scripts
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      # Intentionally fails until Expo's fork implements Metro0.87.2 dynamic roots.
-      # Do not mark continue-on-error or monkeypatch missing methods.
-      - run: node apps/example/tooling/verify-metro-stack.cjs
+      - name: Metro family matches Expo 58's pin
+        run: node apps/example/tooling/verify-metro-stack.cjs
+      - name: Export iOS and Android JS bundles through Expo's own Metro
+        working-directory: nitro-forge/apps/example
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+          STUDIO_UI_ROOT: ${{ github.workspace }}/nyc-mon/packages/ui
+        run: |
+          pnpm exec expo export --platform ios --max-workers 2 --no-minify --no-bytecode --output-dir /tmp/export-ios
+          pnpm exec expo export --platform android --max-workers 2 --no-minify --no-bytecode --output-dir /tmp/export-android
+          test -s "$(ls /tmp/export-ios/_expo/static/js/ios/*.js)"
+          test -s "$(ls /tmp/export-android/_expo/static/js/android/*.js)"
 # UI gestures, native devices and assistive technology require separate evidence.
