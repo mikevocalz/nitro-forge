@@ -1,6 +1,6 @@
 import { Column, Host, Slider, Text } from "@expo/ui";
 import { View } from "react-native";
-import { assertRgba, rgbaToHex, type RgbaColor } from "./color.js";
+import { assertRgba, rgbaToHex, type RgbaColor } from "./color";
 
 export interface NativeColorChannelsProps {
   /** Controlled RGBA display color; document-specific profiles stay in Rust. */
