@@ -16,11 +16,14 @@ Original MIT license preserved. No npm release or enabled Forge dependency.
 - SwiftPM manifest with generated Nitro targets, separate ObjC++ Fabric target, generated app headers and Swift bridge linkage; discovery-only podspec replaces obsolete Ruby autolinking. Public imports are explicit under generated InternalImportsByDefault.
 - Module-only Bob build, decorator syntax support, built React Native/source entrypoints, verified declaration paths and package import scope; React19 renderer alignment and TS7 removed-option cleanup.
 
+- Registry dictionary mutations/reads are locked; six callback paths use snapshots outside locks. Plugin getters, awaits and removed-object release remain unlocked. Remote seeking captures a scalar; artwork is created on MainActor and rejects expired weak player/item references before identity checks. No unchecked Sendable or unsafe isolation was introduced.
+
 ## Verified
 - Patch applies to exact pinned upstream; regenerated7/7 specs.
 - Actual Bob JavaScript and TypeScript declaration builds, no ambient shim. Web source excluded from declarations, as documented in tsconfig.
 - Actual RN0.88 Fabric parser emits RNCVideoView schema.
 - Five Android source checks;49 Swift generated method signatures,26 callback dispatches and Promise/nullable/constructor checks.
+- Bounded concurrency source checks reject 15 deliberate regressions. These do not establish runtime thread safety; Thread Sanitizer and SDK builds remain required.
 - npm pack dry-run includes entrypoints, generated runtime and Package.swift; no nested lib package.json hides imports.
 - These checks do not compile Kotlin, C++, Swift or ObjC++, and do not execute upstream unit/device suites.
 

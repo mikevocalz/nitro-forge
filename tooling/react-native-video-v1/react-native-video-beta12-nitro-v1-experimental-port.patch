@@ -957,6 +957,178 @@ index 22a209a..8ee707b 100644
  
  public extension ResizeMode {
    func toVideoGravity() -> AVLayerVideoGravity {
+diff --git a/packages/react-native-video/ios/core/NowPlayingInfoCenterManager.swift b/packages/react-native-video/ios/core/NowPlayingInfoCenterManager.swift
+index 0039e4d..0ee303a 100644
+--- a/packages/react-native-video/ios/core/NowPlayingInfoCenterManager.swift
++++ b/packages/react-native-video/ios/core/NowPlayingInfoCenterManager.swift
+@@ -190,13 +190,16 @@ class NowPlayingInfoCenterManager {
+ 
+     playbackPositionTarget = remoteCommandCenter.changePlaybackPositionCommand
+       .addTarget { [weak self] event in
++        // Only move the scalar position across the queue boundary, not the event.
++        guard let positionTime = (event as? MPChangePlaybackPositionCommandEvent)?.positionTime else {
++          return .commandFailed
++        }
+         return runOnMainThreadSync {
+-          guard let player = self?.currentPlayer,
+-                let event = event as? MPChangePlaybackPositionCommandEvent else {
++          guard let player = self?.currentPlayer else {
+             return .commandFailed
+           }
+           player.seek(
+-            to: CMTime(seconds: event.positionTime, preferredTimescale: .max)
++            to: CMTime(seconds: positionTime, preferredTimescale: .max)
+           )
+           return .success
+         }
+@@ -287,12 +290,13 @@ class NowPlayingInfoCenterManager {
+     ).first else { return }
+ 
+     Task { [weak self, weak player, weak currentItem] in
+-      guard let data = try? await artworkMetadataItem.load(.dataValue),
+-            let image = UIImage(data: data) else { return }
+-      let artworkItem = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
++      guard let data = try? await artworkMetadataItem.load(.dataValue) else { return }
+       await MainActor.run {
+-        guard let self, self.currentPlayer === player,
+-              self.currentPlayer?.currentItem === currentItem else { return }
++        guard let self, let player, let currentItem, self.currentPlayer === player,
++              self.currentPlayer?.currentItem === currentItem,
++              let image = UIImage(data: data) else { return }
++        // Keep UIKit/MediaPlayer artwork objects on the actor that consumes them.
++        let artworkItem = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+         info[MPMediaItemPropertyArtwork] = artworkItem
+         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+diff --git a/packages/react-native-video/ios/core/Plugins/PluginsRegistry.swift b/packages/react-native-video/ios/core/Plugins/PluginsRegistry.swift
+index 2b712a2..58a5c39 100644
+--- a/packages/react-native-video/ios/core/Plugins/PluginsRegistry.swift
++++ b/packages/react-native-video/ios/core/Plugins/PluginsRegistry.swift
+@@ -8,52 +8,73 @@
+ import AVFoundation
+ import Foundation
+ 
++// Only registry membership is shared: every dictionary access is protected by `lock`.
++// Plugin callbacks and property getters run outside the lock, since they may re-enter
++// the registry. Plugin implementations remain responsible for their own mutable state.
++// This does not make plugin objects Sendable; do not add an unchecked conformance to
++// silence the singleton diagnostic before establishing plugin callback isolation.
+ public final class PluginsRegistry {
+   public static let shared = PluginsRegistry()
+ 
+-  // Plugin ID -> ReactNativeVideoPluginSpec
++  private let lock = NSLock()
++
++  // Plugin ID -> ReactNativeVideoPluginSpec; access only inside withLock.
+   private var plugins: [String: ReactNativeVideoPluginSpec] = [:]
+ 
+   // MARK: - Public API
+ 
+   public func register(plugin: ReactNativeVideoPluginSpec) {
++    // Read user-defined getters before locking; even `id` may re-enter the registry.
++    let id = plugin.id
++    let previous = withLock { plugins.updateValue(plugin, forKey: id) }
++
+     #if DEBUG
+-      if hasPlugin(plugin: plugin) {
++      if previous != nil {
+         print(
+-          "[ReactNativeVideo] Plugin \(plugin.name) (ID: \(plugin.id)) is already registered - overwriting."
++          "[ReactNativeVideo] Plugin \(plugin.name) (ID: \(id)) is already registered - overwriting."
+         )
+       } else {
+         print(
+-          "[ReactNativeVideo] Registering plugin \(plugin.name) (ID: \(plugin.id))."
++          "[ReactNativeVideo] Registering plugin \(plugin.name) (ID: \(id))."
+         )
+       }
+     #endif
+ 
+-    plugins.updateValue(plugin, forKey: plugin.id)
++    // A replaced plugin's deinit can unregister another plugin. Release it unlocked.
++    withExtendedLifetime(previous) {}
+   }
+ 
+   public func unregister(plugin: ReactNativeVideoPluginSpec) {
++    let id = plugin.id
++    let removed = withLock { plugins.removeValue(forKey: id) }
++
+     #if DEBUG
+-      if !hasPlugin(plugin: plugin) {
++      if removed == nil {
+         print(
+-          "[ReactNativeVideo] Plugin \(plugin.name) (ID: \(plugin.id)) is not registered - skipping."
++          "[ReactNativeVideo] Plugin \(plugin.name) (ID: \(id)) is not registered - skipping."
+         )
+       } else {
+-        print("[ReactNativeVideo] Unregistering plugin \(plugin.name) (ID: \(plugin.id)).")
++        print("[ReactNativeVideo] Unregistering plugin \(plugin.name) (ID: \(id)).")
+       }
+     #endif
+ 
+-    plugins.removeValue(forKey: plugin.id)
++    withExtendedLifetime(removed) {}
+   }
+ 
+   // MARK: - Internal API
+ 
+-  private func hasPlugin(plugin: ReactNativeVideoPluginSpec) -> Bool {
+-    return plugins.contains { $0.value.id == plugin.id }
++  private func withLock<T>(_ operation: () -> T) -> T {
++    lock.lock()
++    defer { lock.unlock() }
++    return operation()
++  }
++
++  private func snapshot() -> [ReactNativeVideoPluginSpec] {
++    withLock { Array(plugins.values) }
+   }
+ 
+   internal func getDrmManager(source: NativeVideoPlayerSource) throws -> DRMManagerSpec? {
+-    for plugin in plugins.values {
++    for plugin in snapshot() {
+       if let drmManager = plugin.getDRMManager(source: source) {
+         return drmManager
+       }
+@@ -67,7 +88,7 @@ public final class PluginsRegistry {
+   {
+     var overriddenSource = source
+ 
+-    for plugin in plugins.values {
++    for plugin in snapshot() {
+       overriddenSource = await plugin.overrideSource(source: overriddenSource)
+     }
+ 
+@@ -77,25 +98,25 @@ public final class PluginsRegistry {
+   // MARK: - Notifications
+ 
+   internal func notifyPlayerCreated(player: NativeVideoPlayer) {
+-    for plugin in plugins.values {
++    for plugin in snapshot() {
+       plugin.onPlayerCreated(player: Weak(value: player))
+     }
+   }
+ 
+   internal func notifyPlayerDestroyed(player: NativeVideoPlayer) {
+-    for plugin in plugins.values {
++    for plugin in snapshot() {
+       plugin.onPlayerDestroyed(player: Weak(value: player))
+     }
+   }
+ 
+   internal func notifyVideoViewCreated(view: VideoComponentView) {
+-    for plugin in plugins.values {
++    for plugin in snapshot() {
+       plugin.onVideoViewCreated(view: Weak(value: view))
+     }
+   }
+ 
+   internal func notifyVideoViewDestroyed(view: VideoComponentView) {
+-    for plugin in plugins.values {
++    for plugin in snapshot() {
+       plugin.onVideoViewDestroyed(view: Weak(value: view))
+     }
+   }
 diff --git a/packages/react-native-video/ios/core/Spec/DRMManagerSpec.swift b/packages/react-native-video/ios/core/Spec/DRMManagerSpec.swift
 index 105703b..67c98ad 100644
 --- a/packages/react-native-video/ios/core/Spec/DRMManagerSpec.swift
