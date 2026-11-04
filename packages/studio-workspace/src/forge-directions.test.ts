@@ -58,3 +58,12 @@ test('directions differ on motion and Reduce Motion makes every detent instant',
   }
   assert.equal(DEFAULT_TURRET_DIRECTION, 'workbench');
 });
+
+test('the committed slot accent holds 3:1 on its halo in every direction and scheme', () => {
+  for (const id of FORGE_DIRECTION_IDS) for (const scheme of ['dark', 'light'] as const) {
+    const m = forgeDirections[id].materials[scheme];
+    const ratio = contrastRatio(luminance(m.accent), luminance(m.accentHalo));
+    assert.ok(ratio >= 3, `${id} ${scheme}: accent ${m.accent} on halo ${m.accentHalo} is ${ratio.toFixed(2)}:1`);
+    assert.equal(forgeDirections[id].motion.easing, `cubic-bezier(${forgeDirections[id].motion.bezier.join(', ')})`);
+  }
+});

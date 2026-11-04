@@ -30,6 +30,9 @@ export type ForgeMaterial = Readonly<{
   /** Readout text on the dial face. */
   faceText: string;
   accent: string;
+  /** Ground drawn under the committed slot's accent so it holds 3:1 against
+   * the bezel, which in light schemes is close to the accent's own value. */
+  accentHalo: string;
 }>;
 
 export type ForgeLight = Readonly<{
@@ -52,6 +55,8 @@ export type ForgeMotion = Readonly<{
   /** Indicator travel between detents. Reduced motion makes it 0. */
   detentMs: number;
   easing: string;
+  /** The same curve as `easing`, as control points for native timing. */
+  bezier: readonly [number, number, number, number];
   /** Named curve from docs/ux motion tokens. */
   token: 'snap' | 'reveal' | 'dock';
 }>;
@@ -81,18 +86,18 @@ export const forgeDirections: Readonly<Record<ForgeDirectionId, ForgeDirection>>
       dark: { panel: '0 1px 0 #FFFFFF0F inset, 0 6px 14px #00000059', dial: '2px 3px 6px #00000073', planes: 3 },
       light: { panel: '0 1px 0 #FFFFFF inset, 0 6px 14px #1B1D2124', dial: '2px 3px 6px #1B1D2138', planes: 3 },
     },
-    motion: { detentMs: 120, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', token: 'snap' },
+    motion: { detentMs: 120, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', bezier: [0.22, 1, 0.36, 1], token: 'snap' },
     glass: null,
     materials: {
       dark: {
         panel: '#1E2024', panelEdge: '#3A3D44', panelSolid: '#1E2024',
         face: ['#3A3D45', '#191B1F'], lathe: '#FFFFFF', bezel: ['#565A64', '#141518'],
-        knurl: '#6A6F7A', notch: '#08090B', text: '#F2F3F5', muted: '#B8BBC4', faceText: '#F2F3F5', accent: '#66B9FF',
+        knurl: '#6A6F7A', notch: '#08090B', text: '#F2F3F5', muted: '#B8BBC4', faceText: '#F2F3F5', accent: '#66B9FF', accentHalo: '#08090B',
       },
       light: {
         panel: '#ECEDEF', panelEdge: '#C3C6CD', panelSolid: '#ECEDEF',
         face: ['#FFFFFF', '#CDD0D7'], lathe: '#1F2228', bezel: ['#FFFFFF', '#9EA3AD'],
-        knurl: '#7D828D', notch: '#3E434C', text: '#1F2228', muted: '#555B66', faceText: '#1F2228', accent: '#086CB8',
+        knurl: '#7D828D', notch: '#3E434C', text: '#1F2228', muted: '#555B66', faceText: '#1F2228', accent: '#086CB8', accentHalo: '#FFFFFF',
       },
     },
   },
@@ -105,18 +110,18 @@ export const forgeDirections: Readonly<Record<ForgeDirectionId, ForgeDirection>>
       dark: { panel: '0 1px 0 #FFFFFF24 inset, 0 10px 28px #0000004D', dial: '', planes: 3 },
       light: { panel: '0 1px 0 #FFFFFF inset, 0 10px 28px #1B1D211F', dial: '', planes: 3 },
     },
-    motion: { detentMs: 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', token: 'reveal' },
+    motion: { detentMs: 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', bezier: [0.16, 1, 0.3, 1], token: 'reveal' },
     glass: { blurPx: 18, saturate: 1.4 },
     materials: {
       dark: {
         panel: '#1C1E25C7', panelEdge: '#FFFFFF24', panelSolid: '#1C1E25',
         face: ['#17191E', '#0C0D10'], lathe: '#66B9FF', bezel: ['#66B9FF', '#7CDCCF', '#B7A5FF', '#66B9FF'],
-        knurl: '#8FA4BC', notch: '#050607', text: '#F2F3F5', muted: '#C2C6D0', faceText: '#F2F3F5', accent: '#66B9FF',
+        knurl: '#8FA4BC', notch: '#050607', text: '#F2F3F5', muted: '#C2C6D0', faceText: '#F2F3F5', accent: '#66B9FF', accentHalo: '#050607',
       },
       light: {
         panel: '#FAFAFCDB', panelEdge: '#FFFFFFCC', panelSolid: '#F4F5F8',
         face: ['#20232A', '#121418'], lathe: '#66B9FF', bezel: ['#086CB8', '#0F8C80', '#6950D1', '#086CB8'],
-        knurl: '#5D6E82', notch: '#050607', text: '#1F2228', muted: '#4F5562', faceText: '#F2F3F5', accent: '#086CB8',
+        knurl: '#5D6E82', notch: '#050607', text: '#1F2228', muted: '#4F5562', faceText: '#F2F3F5', accent: '#086CB8', accentHalo: '#FFFFFF',
       },
     },
   },
@@ -129,18 +134,18 @@ export const forgeDirections: Readonly<Record<ForgeDirectionId, ForgeDirection>>
       dark: { panel: '0 2px 4px #0000002E, 0 18px 40px #00000059', dial: '0 10px 22px #00000066', planes: 3 },
       light: { panel: '0 2px 4px #1B1D2114, 0 18px 40px #1B1D2129', dial: '0 10px 22px #1B1D2133', planes: 3 },
     },
-    motion: { detentMs: 280, easing: 'cubic-bezier(0.25, 1, 0.5, 1)', token: 'dock' },
+    motion: { detentMs: 280, easing: 'cubic-bezier(0.25, 1, 0.5, 1)', bezier: [0.25, 1, 0.5, 1], token: 'dock' },
     glass: null,
     materials: {
       dark: {
         panel: '#2A2C31', panelEdge: '#44474F', panelSolid: '#2A2C31',
         face: ['#43464E', '#34373E'], lathe: '#FFFFFF', bezel: ['#4C4F58', '#3A3D44'],
-        knurl: '#5D616B', notch: '#1A1B1F', text: '#F2F3F5', muted: '#BEC1CA', faceText: '#F2F3F5', accent: '#66B9FF',
+        knurl: '#5D616B', notch: '#1A1B1F', text: '#F2F3F5', muted: '#BEC1CA', faceText: '#F2F3F5', accent: '#66B9FF', accentHalo: '#1A1B1F',
       },
       light: {
         panel: '#FAFAF8', panelEdge: '#DCDDE1', panelSolid: '#FAFAF8',
         face: ['#FFFFFF', '#ECEDEF'], lathe: '#1F2228', bezel: ['#F2F3F5', '#DADCE0'],
-        knurl: '#A3A7AF', notch: '#6B707A', text: '#1F2228', muted: '#555B66', faceText: '#1F2228', accent: '#086CB8',
+        knurl: '#A3A7AF', notch: '#6B707A', text: '#1F2228', muted: '#555B66', faceText: '#1F2228', accent: '#086CB8', accentHalo: '#FFFFFF',
       },
     },
   },
@@ -156,7 +161,18 @@ export function isForgeDirection(value: unknown): value is ForgeDirectionId {
 }
 
 /** Accessibility settings that change how a direction renders. */
-export type ForgeRenderPrefs = Readonly<{ reduceMotion: boolean; reduceTransparency: boolean; moreContrast: boolean }>;
+export type ForgeRenderPrefs = Readonly<{ reduceMotion: boolean; reduceTransparency: boolean; moreContrast: boolean;
+  /** Windows High Contrast and other forced palettes (web `forced-colors: active`). */
+  forcedColors?: boolean }>;
+
+/** Feedback timings shared by every direction (forge-designer-pro motion.md):
+ * `press` on touch down, `endStop` the two-beat nudge at a limit, `commit`
+ * the rim flash that confirms a switch. */
+export const forgeFeedbackMotion = {
+  press: { ms: 80, scale: 0.96 },
+  endStop: { beatMs: 60, deg: 3 },
+  commit: { ms: 200, peakOpacity: 0.9 },
+} as const;
 
 /** Whether the chrome may be glass right now. */
 export function glassAllowed(direction: ForgeDirection, prefs: ForgeRenderPrefs): boolean {

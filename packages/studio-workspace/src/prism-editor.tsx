@@ -15,7 +15,10 @@ import type { CanvasLayer } from './prism-canvas-model';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
 import { DragGrabHandle, type DragPoint } from './drag-grab-handle';
 import { Platform } from 'react-native';
-import { PersonaTurret, TURRET_SIZE } from './persona-turret';
+import { PersonaTurret, TURRET_SIZE, documentRtl, useTurretShortcut, type PersonaTurretHandle } from './persona-turret';
+import { forgeDirections, forgeFeedbackMotion } from './forge-directions';
+import { turretDisplayAngle } from './turret';
+import { personasOn } from './persona';
 import { createPersonaStore, type PersonaStore } from './persona-store';
 import type { PersonaSurface } from './persona';
 import type { TurretEffect } from './turret';
@@ -24,7 +27,7 @@ import { layerDropIndex, awaitLayerDrop, type LayerMeasurements, type MeasuredLa
 type Layer = CanvasLayer & { name: string };
 type PrismState = { width: number; height: number; layers: Layer[] };
 type LayerDrag = { id: number; target: number | null };
-type LocalState = { drag: LayerDrag | null; selectedId: number | null; uri: string | null; rendering: boolean; busy: boolean; error: string | null; previewError: string | null; notice: string; layersOpen: boolean; personaOpen: boolean; width: number; height: number; retry: number; color: number };
+type LocalState = { drag: LayerDrag | null; selectedId: number | null; uri: string | null; rendering: boolean; busy: boolean; error: string | null; previewError: string | null; notice: string; layersOpen: boolean; personaOpen: boolean; personaStatus: string; trigger: { x: number; width: number }; toolbarHeight: number; width: number; height: number; retry: number; color: number };
 /** A real-engine Prism canvas. Selection and panel state are local; all edits use engine commands. */
 export interface PrismEditorProps {
   state: unknown;
@@ -45,6 +48,19 @@ export interface PrismEditorProps {
 const hostSurface = (): PersonaSurface => Platform.OS === 'web' ? 'web' : Platform.OS === 'ios' ? ((Platform as { isPad?: boolean }).isPad ? 'ipad' : 'iphone') : 'android-phone';
 const FILLS = [[105, 80, 209, 255], [36, 145, 132, 255], [227, 155, 76, 255], [226, 109, 146, 255]] as const;
 const FILL_COLORS = ['#6950D1', '#249184', '#E39B4C', '#E26D92'];
+/** Disabled icon ink: 5:1 in the unavailable well. */
+const DISABLED_INK = '#858991';
+/** Below this editor width the persona panel is a bottom sheet over a scrim. */
+const PERSONA_SHEET_MAX_WIDTH = 600;
+const workbench = forgeDirections.workbench;
+const personaMaterial = workbench.materials.dark;
+/** The panel's own edge light: a 1 px highlight on the lit top edge over the direction's panel shadow. */
+const personaPanelDepth = workbench.depth.dark.panel;
+const PERSONA_ARROW = 12;
+/** Room for the layer name, Transform, the persona mode and Layers. */
+const TOOLBAR_MAX_WIDTH = 440;
+/** The tool rail's right edge plus a gutter, in toolbar coordinates: the popover never covers it. */
+const POPOVER_MIN_LEFT = 64;
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
 function readState(state: unknown): PrismState | null {
   if (!state || typeof state !== 'object') return null;
@@ -64,7 +80,7 @@ export function PrismEditor(props: PrismEditorProps) {
   const activePersona = persona.personas.find(p => p.id === persona.activeId);
   const activeCaps = new Set(activePersona?.capabilities ?? []);
   const localRef = useRef<StoreApi<LocalState> | null>(null);
-  if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ drag: null, selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, personaOpen: false, width: 800, height: 600, retry: 0, color: 0 }));
+  if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ drag: null, selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, personaOpen: false, personaStatus: '', trigger: { x: 0, width: 0 }, toolbarHeight: 48, width: 800, height: 600, retry: 0, color: 0 }));
   const store = localRef.current;
   const drag = useStore(store, s => s.drag);
   const selectedId = useStore(store, s => s.selectedId);
@@ -200,13 +216,18 @@ export function PrismEditor(props: PrismEditorProps) {
   };
   const control = (label: string, onPress: () => void, disabled = false, selected = false, glyph?: string, visibleLabel?: string, iconOnly = false, hint?: string) => {
     const unavailable = disabled || busy || !!props.busy || !!drag;
-    const icon = glyph ? <ForgeIcon name={glyph} size={17} color={selected ? colors.accent : colors.muted} reducedMotion /> : undefined;
+    const icon = glyph ? <ForgeIcon name={glyph} size={17} color={unavailable ? DISABLED_INK : selected ? colors.accent : colors.muted} reducedMotion /> : undefined;
+    // `opacity-100` keeps a host's blanket disabled fade off the kit's own
+    // disabled ink, which is drawn to be read at full strength.
     const shared = { onPress, disabled: unavailable, variant: 'ghost' as const, size: 'sm' as const, tone: 'carolina' as const,
-      cornerRadius: 4, className: `rounded-[4px]${selected ? ' bg-carolina-500/15' : ''}`,
+      cornerRadius: 4, className: `rounded-[4px]${selected ? ' bg-carolina-500/15' : ''}${unavailable ? ' opacity-100' : ''}`,
       ...(label === 'Layers' ? { selected } : {}), ...(hint ? { accessibilityHint: hint } : {}) };
-    return iconOnly
+    const button = iconOnly
       ? <IconButton key={label} {...shared} icon={icon} aria-label={label} />
       : <Button key={label} {...shared} title={visibleLabel ?? label} aria-label={label} icon={icon} />;
+    // Unavailable controls sit in a recessed well: the kit's disabled ink is
+    // 2.9:1 on the raised graphite and 3.9:1 on the deep ground.
+    return unavailable ? <View key={label} style={{ backgroundColor: colors.deep, borderRadius: scale.radius.control }}>{button}</View> : button;
   };
   const addShape = (kind: 'rect' | 'ellipse') => {
     if (!doc) return;
@@ -241,7 +262,7 @@ export function PrismEditor(props: PrismEditorProps) {
             onStart={() => beginLayerDrag(layer.id)} onMove={previewLayerDrag} onCommit={() => { void commitLayerDrag(); }} onCancel={cancelLayerDrag} />
           <Pressable accessibilityRole="button" accessibilityLabel={`Select layer ${layer.name}`} accessibilityState={{ selected: selectedId === layer.id }} onPress={() => store.setState({ selectedId: layer.id })} style={{ flex: 1, minWidth: 0, minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 2 }}>
             <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FFFFFF35', borderRadius: scale.radius.control, backgroundColor: layer.content?.type === 'shape' && layer.content.shape?.fill ? `rgba(${layer.content.shape.fill.slice(0, 3).join(',')},${(layer.content.shape.fill[3] ?? 255) / 255})` : colors.base }}><ForgeIcon name={layer.content?.type === 'shape' ? layer.content.shape?.kind === 'ellipse' ? 'ellipse' : 'rectangle' : 'image'} size={17} color={selectedId === layer.id ? '#FFFFFF' : colors.muted} reducedMotion /></View>
-            <View style={{ flex: 1, gap: 4 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: selectedId === layer.id ? '600' : '400' }}>{layer.name}</Text><Text style={{ color: selectedId === layer.id ? '#DAEBFC' : colors.muted, fontSize: 9 }}>{layer.content?.type === 'shape' ? layer.content.shape?.kind : 'Raster'} · {Math.round(layer.opacity * 100)}%</Text></View>
+            <View style={{ flex: 1, gap: 4 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: selectedId === layer.id ? '600' : '400' }}>{layer.name}</Text><Text style={{ color: selectedId === layer.id ? '#DAEBFC' : colors.muted, fontSize: scale.type.label }}>{layer.content?.type === 'shape' ? layer.content.shape?.kind : 'Raster'} · {Math.round(layer.opacity * 100)}%</Text></View>
           </Pressable>
           {control(`${layer.visible ? 'Hide' : 'Show'} ${layer.name}`, () => { void run('setLayerVisible', { id: layer.id, visible: !layer.visible }, layer.visible ? 'Layer hidden' : 'Layer shown'); }, false, false, undefined, layer.visible ? 'Hide' : 'Show')}
         </View>)}
@@ -253,6 +274,113 @@ export function PrismEditor(props: PrismEditorProps) {
       </View>}
     {drag && <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2, padding: 10, gap: 4, backgroundColor: colors.raised, borderTopWidth: 1, borderTopColor: colors.line }}><Text accessibilityLiveRegion="polite" style={{ color: colors.accent, fontSize: 11 }}>{drag.target === null ? 'Drag within the layer list to choose a position' : `Move to layer position ${drag.target + 1} from bottom`}</Text><Button title="Cancel move" aria-label="Cancel layer move" onPress={cancelLayerDrag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /></View>}
   </View>;
+
+  // Persona: a mode control in the toolbar. Its panel follows it in reading
+  // order, anchored under it on wide editors and a bottom sheet on phones.
+  const personaTriggerView = useRef<StudioViewRef>(null);
+  const personaToolbar = useRef<StudioViewRef>(null);
+  const personaTurret = useRef<PersonaTurretHandle>(null);
+  const personaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (personaTimer.current) clearTimeout(personaTimer.current); }, []);
+  const personaStatus = useStore(store, s => s.personaStatus);
+  const trigger = useStore(store, s => s.trigger);
+  const toolbarHeight = useStore(store, s => s.toolbarHeight);
+  const { keys: shortcutKeys, shortcut } = useTurretShortcut();
+  const personaStops = personasOn(persona.personas, persona.surface);
+  const activeStop = Math.max(0, personaStops.findIndex(p => p.id === persona.activeId));
+  const personaLabel = activePersona?.label ?? 'Persona';
+  const focusPersonaTrigger = () => {
+    if (Platform.OS !== 'web') return;
+    const node = personaTriggerView.current as unknown as { querySelector?: (q: string) => { focus?: () => void } | null } | null;
+    node?.querySelector?.('[role="button"],button')?.focus?.();
+  };
+  // RN Web reports layout x from the inline start in RTL, and a direction
+  // change moves the trigger without a layout event; the popover is placed
+  // physically, so the browser measures it again on every open.
+  const measureTrigger = (fallback?: { x: number; width: number }) => {
+    type Rect = { left: number; width: number };
+    const box = (v: unknown) => (v as { getBoundingClientRect?: () => Rect } | null)?.getBoundingClientRect?.();
+    const own = box(personaTriggerView.current), bar = box(personaToolbar.current);
+    if (own && bar) store.setState({ trigger: { x: own.left - bar.left - 1, width: own.width } });
+    else if (fallback) store.setState({ trigger: fallback });
+  };
+  const closePersonas = (restoreFocus = true) => {
+    if (personaTimer.current) { clearTimeout(personaTimer.current); personaTimer.current = null; }
+    personaTurret.current?.cancel();
+    store.setState({ personaOpen: false });
+    if (restoreFocus) requestAnimationFrame(focusPersonaTrigger);
+  };
+  const announcePersona = (text: string) => store.setState(s => ({ personaStatus: s.personaStatus === text ? `${text}\u00A0` : text }));
+  const sheet = width < PERSONA_SHEET_MAX_WIDTH;
+  const toolbarWidth = Math.max(1, Math.min(narrow ? width - 24 : TOOLBAR_MAX_WIDTH, width - (layersOpen && dockedLayers ? panelWidth + 36 : 24)));
+  const popoverWidth = TURRET_SIZE + 32;
+  const triggerCentre = trigger.x + trigger.width / 2;
+  // Keep the popover on the editor; the arrow keeps pointing at the trigger.
+  const popoverLeft = Math.max(Math.min(POPOVER_MIN_LEFT, width - 24 - popoverWidth), Math.min(triggerCentre - popoverWidth / 2, width - 24 - popoverWidth));
+  const arrowLeft = Math.max(PERSONA_ARROW, Math.min(popoverWidth - PERSONA_ARROW * 2, triggerCentre - popoverLeft - PERSONA_ARROW / 2));
+  const popoverTop = toolbarHeight + PERSONA_ARROW / 2 + 6;
+  const sheetPadding = width < 360 ? 10 : 16;
+  const pm = personaMaterial;
+
+  const personaTrigger = <View ref={personaTriggerView} key="persona-trigger" collapsable={false}
+    onLayout={event => { const { x, width: w } = event.nativeEvent.layout; measureTrigger({ x, width: w }); }}>
+    <Pressable testID="persona-trigger" accessibilityRole="button" aria-expanded={personaOpen} accessibilityState={{ expanded: personaOpen }}
+      accessibilityLabel={`Persona: ${personaLabel}`} accessibilityHint="Opens the persona turret"
+      onPress={() => { if (props.onOpenPersonas) props.onOpenPersonas(); else if (personaOpen) closePersonas(); else { measureTrigger(); store.setState({ personaOpen: true }); } }}
+      style={({ pressed }) => ({
+        minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8, borderRadius: scale.radius.control,
+        borderWidth: 1, borderColor: 'transparent',
+        backgroundColor: personaOpen ? `${colors.accent}26` : pressed ? '#FFFFFF14' : 'transparent',
+        transform: [{ scale: pressed ? forgeFeedbackMotion.press.scale : 1 }],
+      }) as never}>
+      {/* A small dial: the ring and a pointer set to the active stop. */}
+      <View aria-hidden style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: personaOpen ? colors.accent : colors.muted, transform: [{ rotate: `${personaStops.length ? turretDisplayAngle(activeStop, personaStops.length, documentRtl()) : 0}deg` }] }}>
+        <View style={{ position: 'absolute', left: 5.75, top: 1.5, width: 1.5, height: 5, borderRadius: 0.75, backgroundColor: colors.accent }} />
+      </View>
+      <Text numberOfLines={1} style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{personaLabel}</Text>
+      {shortcutKeys && activeStop < 9 && <Text style={{ color: colors.muted, fontSize: scale.type.micro + 1, fontVariant: ['tabular-nums'] }}>{shortcut.tag(activeStop + 1)}</Text>}
+    </Pressable>
+  </View>;
+
+  const personaBody = <>
+    <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', minHeight: 44, paddingLeft: 4 }}>
+      <Text accessibilityRole="header" style={{ color: pm.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Persona</Text>
+      {control('Close personas', () => closePersonas(), false, false, 'close', undefined, true)}
+    </View>
+    <PersonaTurret handle={personaTurret} personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors} direction="workbench" scheme="dark"
+      autoFocus onAnnounce={announcePersona} onDismiss={() => closePersonas()}
+      onSwitch={id => {
+        persona.switchTo(id);
+        // Hold the panel for the rim flash that confirms the switch.
+        personaTimer.current = setTimeout(() => { personaTimer.current = null; if (mounted.current) closePersonas(); }, forgeFeedbackMotion.commit.ms);
+      }}
+      {...(props.onPersonaEffect ? { onEffect: props.onPersonaEffect } : {})} />
+    {persona.error && <Text accessibilityRole="alert" style={{ color: colors.error, fontSize: scale.type.label, alignSelf: 'stretch' }}>{persona.error}</Text>}
+    {props.onComposePersona && <View style={{ alignSelf: 'stretch', borderTopWidth: 1, borderTopColor: pm.panelEdge, paddingTop: 4, alignItems: 'flex-start' }}>
+      {control('Compose new persona', () => { closePersonas(false); props.onComposePersona?.(); }, false, false, 'plus', 'Compose new persona', false, 'Opens the Persona Composer')}
+    </View>}
+  </>;
+  const panelSurface = { backgroundColor: pm.panelSolid, borderColor: pm.panelEdge, boxShadow: personaPanelDepth };
+  const personaKeys = { onKeyDown: (event: StudioKeyboardEvent & { preventDefault?: () => void; stopPropagation?: () => void }) => {
+    if (keyboardKey(event) !== 'Escape') return;
+    event.preventDefault?.(); event.stopPropagation?.();
+    closePersonas();
+  } };
+  const personaSurface = !personaOpen || props.onOpenPersonas ? null : sheet
+    ? <View key="persona-sheet" testID="persona-sheet-layer" style={{ position: 'absolute', left: -13, top: -13, width, height }}>
+      <Pressable testID="persona-scrim" focusable={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden
+        onPress={() => closePersonas()} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, backgroundColor: '#000000', opacity: 0.45 }} />
+      <View testID="persona-panel" role="dialog" aria-modal aria-label="Personas" accessibilityViewIsModal {...personaKeys}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: Math.min(560, Math.round(height * 0.6)), borderTopWidth: 1, borderTopLeftRadius: scale.radius.panel, borderTopRightRadius: scale.radius.panel, ...panelSurface } as never}>
+        <ScrollView contentContainerStyle={{ padding: sheetPadding, paddingTop: 4, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
+      </View>
+    </View>
+    : <View key="persona-popover" testID="persona-panel" role="dialog" aria-label="Personas" {...personaKeys}
+      style={{ position: 'absolute', top: popoverTop, left: popoverLeft, width: popoverWidth, maxHeight: Math.max(240, height - popoverTop - 36), borderWidth: 1, borderRadius: scale.radius.panel, ...panelSurface } as never}>
+      {/* The notch: a square turned 45°, its top edges in the panel's edge colour. */}
+      <View aria-hidden pointerEvents="none" style={{ position: 'absolute', top: -PERSONA_ARROW / 2 - 1, left: arrowLeft, width: PERSONA_ARROW, height: PERSONA_ARROW, backgroundColor: pm.panelSolid, borderLeftWidth: 1, borderTopWidth: 1, borderColor: pm.panelEdge, transform: [{ rotate: '45deg' }] }} />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
+    </View>;
   return <NightScope><View className="scheme-dark" {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
     const { width, height } = event.nativeEvent.layout;
     if (width <= 0 || height <= 0) return;
@@ -267,8 +395,8 @@ export function PrismEditor(props: PrismEditorProps) {
         {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}><Text style={{ color: colors.paperInk, fontSize: 12, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}
       </PrismCanvas>}
     </View>
-    <View style={{ position: 'absolute', zIndex: 20, top: 12, left: 12, width: Math.max(1, Math.min(narrow ? width - 24 : 360, width - (layersOpen && dockedLayers ? panelWidth + 36 : 24))), minHeight: 48, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
-      <View style={{ flex: 1, minWidth: 0, gap: 3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 9 }}>{selected?.content?.type === 'shape' ? 'Shape layer' : selected ? 'Raster layer' : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
+    <View ref={personaToolbar} onLayout={event => store.setState({ toolbarHeight: event.nativeEvent.layout.height })} style={{ position: 'absolute', zIndex: personaOpen ? 70 : 20, top: 12, left: 12, width: toolbarWidth, minHeight: 48, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
+      <View style={{ flex: 1, minWidth: 0, gap: 3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: scale.type.label }}>{selected?.content?.type === 'shape' ? 'Shape layer' : selected ? 'Raster layer' : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
       {selected?.content?.type === 'shape' && !props.busy && <Menu key={selected.id} title="Transform shape" triggerLabel="Transform shape"
         actions={SHAPE_TRANSFORMS.map(({ id, title }) => ({ id, title, disabled: busy || !!props.busy || !!drag }))}
         onAction={action => {
@@ -283,8 +411,9 @@ export function PrismEditor(props: PrismEditorProps) {
           <Text style={{ color: colors.muted, fontSize: 11 }}>Transform</Text>
         </View>
       </Menu>}
-      {control(activePersona?.label ?? 'Persona', () => { if (props.onOpenPersonas) props.onOpenPersonas(); else store.setState({ personaOpen: !personaOpen }); }, false, personaOpen, undefined, activePersona?.label ?? 'Persona', false, 'Switch between Vector, Pixel, Layout and Sketch')}
-      {control('Layers', () => store.setState({ layersOpen: !layersOpen }), false, layersOpen, 'layers')}
+      {personaTrigger}
+      {personaSurface}
+      {control('Layers', () => store.setState({ layersOpen: !layersOpen }), false, layersOpen, 'layers', undefined, width < 420)}
     </View>
     <View accessibilityLabel="Creation tools" style={{ position: 'absolute', zIndex: 20, left: 12, top: short ? 68 : 76, width: 52, alignItems: 'center', padding: 3, gap: 3, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
       {activeCaps.has('shapes') && <>
@@ -293,20 +422,12 @@ export function PrismEditor(props: PrismEditorProps) {
       </>}
       {activeCaps.has('shapes') && activeCaps.has('raster-layers') && <View style={{ height: 1, width: 26, backgroundColor: colors.line }} />}
       {activeCaps.has('raster-layers') && control('Raster layer', () => { void run('addRasterLayer', { name: `Raster ${layers.length + 1}` }, 'Raster layer added'); }, !doc, false, 'image', undefined, true, 'Adds an empty raster layer')}
-      {!activeCaps.has('shapes') && !activeCaps.has('raster-layers') && <Text accessibilityRole="text" style={{ color: colors.muted, fontSize: 9, textAlign: 'center', paddingVertical: 6 }}>No tools in this build</Text>}
+      {!activeCaps.has('shapes') && !activeCaps.has('raster-layers') && <Text accessibilityRole="text" style={{ color: colors.muted, fontSize: scale.type.label, textAlign: 'center', paddingVertical: 6 }}>No tools in this build</Text>}
     </View>
     {layersOpen && panel}
-    {personaOpen && !props.onOpenPersonas && <View testID="persona-panel" accessibilityViewIsModal={narrow} style={{ position: 'absolute', zIndex: 30, top: 68, ...(narrow ? { left: 12, right: 12 } : { left: 76 }), minWidth: TURRET_SIZE + 32, padding: 16, gap: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, backgroundColor: colors.base, boxShadow: '0 8px 24px #00000033' }}>
-      <PersonaTurret personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors} direction="workbench" scheme="dark"
-        onSwitch={id => { persona.switchTo(id); store.setState({ personaOpen: false }); }}
-        {...(props.onPersonaEffect ? { onEffect: props.onPersonaEffect } : {})} />
-      {persona.error && <Text accessibilityRole="alert" style={{ color: colors.error, fontSize: 11, maxWidth: 240 }}>{persona.error}</Text>}
-      {props.onComposePersona && control('New persona', () => { store.setState({ personaOpen: false }); props.onComposePersona?.(); }, false, false, undefined, 'New persona', false, 'Opens the Persona Composer')}
-      {control('Close personas', () => store.setState({ personaOpen: false }), false, false, 'close', 'Close', false)}
-    </View>}
     <View testID="prism-fill-bar" style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 6px 20px #00000025' }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: 50, alignItems: 'center', flexDirection: 'row', gap: 2 }} style={{ flex: 1 }}>
-      {!narrow && <Text style={{ color: colors.muted, fontSize: 10, marginRight: 8 }}>{selected ? 'Fill' : 'New shape fill'}</Text>}
+      {!narrow && <Text style={{ color: colors.muted, fontSize: scale.type.label, marginRight: 8 }}>{selected ? 'Fill' : 'New shape fill'}</Text>}
       {FILL_COLORS.map((fill, index) => <Pressable key={fill} accessibilityRole="button" accessibilityLabel={`Choose ${['violet', 'teal', 'amber', 'rose'][index]} fill`} accessibilityState={{ selected: color === index }} onPress={() => store.setState({ color: index })} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 25, height: 25, backgroundColor: fill, borderRadius: scale.radius.control, borderWidth: color === index ? 3 : 1, borderColor: color === index ? '#FFFFFF' : '#FFFFFF50' }} /></Pressable>)}
       {selected && <><View style={{ width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: 5 }} />{control('Fill layer', () => { void run(selected.content.type === 'shape' ? 'setShapeFill' : 'fillLayer', { id: selected.id, color: FILLS[color] }, selected.content.type === 'shape' ? 'Shape fill changed' : 'Raster layer filled'); }, false, false, undefined, short && narrow ? 'Fill' : 'Fill layer')}</>}
       </ScrollView>
@@ -315,5 +436,7 @@ export function PrismEditor(props: PrismEditorProps) {
       <Banner tone={error || previewError ? 'danger' : 'info'} title={feedback} live={error || previewError ? 'alert' : 'status'} className="rounded-[4px]"
         {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy || !!drag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /> } : {})} />
     </View>}
+    {/* The one live region for persona changes. It stays mounted, so the commit is read after the panel closes. */}
+    <Text testID="persona-status" accessibilityLiveRegion="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}>{personaStatus}</Text>
   </View></NightScope>;
 }

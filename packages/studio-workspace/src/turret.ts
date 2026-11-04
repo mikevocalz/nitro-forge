@@ -51,6 +51,78 @@ function commit(state: TurretState, index: number): [TurretState, TurretEffect] 
   return [{ committed: index, peek: undefined }, 'commit'];
 }
 
+/** Where stop `index` is drawn. Right-to-left mirrors the dial, so the first
+ * persona sits on the right and the order reads from the leading edge. */
+export function turretDisplayAngle(index: number, count: number, rtl: boolean): number {
+  const deg = turretStopAngle(index, count);
+  return rtl && deg !== 0 ? -deg : deg;
+}
+
+/** A drag angle measured on screen, as the reducer's logical angle. */
+export function turretLogicalAngle(screenDeg: number, rtl: boolean): number {
+  return rtl ? -screenDeg : screenDeg;
+}
+
+/** Arrow keys follow reading direction: the leading arrow goes back a stop. */
+export function turretArrowKey(key: string, rtl: boolean): 'next' | 'previous' | undefined {
+  switch (key) {
+    case 'ArrowDown': return 'next';
+    case 'ArrowUp': return 'previous';
+    case 'ArrowRight': return rtl ? 'previous' : 'next';
+    case 'ArrowLeft': return rtl ? 'next' : 'previous';
+    default: return undefined;
+  }
+}
+
+/** Keyboard shortcut for the stops. Apple keeps ⌘-digit. Elsewhere Ctrl-digit
+ * belongs to the browser's tab switching, so the turret takes Alt-digit. */
+export type TurretShortcut = Readonly<{ modifier: 'meta' | 'alt'; tag: (digit: number) => string; spoken: (digit: number) => string }>;
+
+const APPLE_SHORTCUT: TurretShortcut = { modifier: 'meta', tag: d => `⌘${d}`, spoken: d => `Command ${d}` };
+const ALT_SHORTCUT: TurretShortcut = { modifier: 'alt', tag: d => `Alt ${d}`, spoken: d => `Alt ${d}` };
+
+/** `platform` is `navigator.platform` (or `userAgentData.platform`) on web. */
+export function turretShortcutFor(platform: string): TurretShortcut {
+  return /mac|iphone|ipad|ipod|ios/i.test(platform) ? APPLE_SHORTCUT : ALT_SHORTCUT;
+}
+
+/** Whether a key event carries the shortcut modifier and nothing that would
+ * make it another command (⌘⌥1, Ctrl+Alt+1 for AltGr layouts). */
+export function turretShortcutDigit(
+  event: Readonly<{ key: string; metaKey?: boolean; altKey?: boolean; ctrlKey?: boolean; code?: string }>,
+  shortcut: TurretShortcut,
+): number | undefined {
+  const held = shortcut.modifier === 'meta'
+    ? !!event.metaKey && !event.altKey && !event.ctrlKey
+    : !!event.altKey && !event.metaKey && !event.ctrlKey;
+  if (!held) return undefined;
+  // Alt changes `key` on macOS layouts and some others; the physical digit is in `code`.
+  const source = /^Digit[1-9]$/.test(event.code ?? '') ? event.code!.slice(5) : event.key;
+  const digit = Number(source);
+  return Number.isInteger(digit) && digit >= 1 && digit <= 9 ? digit : undefined;
+}
+
+/** Scale for a dial box `boxWidth` wide in `available` points: never larger
+ * than drawn, and small enough that nothing clips. Narrow boxes come from
+ * browser zoom or split windows, where the zoom itself keeps targets large;
+ * the floor only stops a zero-width first layout from collapsing the dial. */
+export function turretDialScale(available: number, boxWidth: number): number {
+  if (!Number.isFinite(available) || available <= 0 || available >= boxWidth) return 1;
+  return Math.max(0.5, available / boxWidth);
+}
+
+/** What a screen reader hears for one effect. `commit` reads the new persona,
+ * `cancel` the one kept; a detent reads the previewed one. */
+export function turretAnnouncement(effect: TurretEffect, shown: string, committed: string, atEnd: 'first' | 'last' | null = null): string {
+  switch (effect) {
+    case 'none': return '';
+    case 'detent': return `${shown}, previewing`;
+    case 'end-stop': return atEnd === 'first' ? `${shown}, first persona` : `${shown}, last persona`;
+    case 'commit': return `Persona: ${shown}`;
+    case 'cancel': return `Persona: ${committed}, kept`;
+  }
+}
+
 /** Advance the turret. `count` is the number of stops on this surface.
  * @throws when `count` is below 1 or the state is outside it. */
 export function turretReduce(state: TurretState, event: TurretEvent, count: number): [TurretState, TurretEffect] {

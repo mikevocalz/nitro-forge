@@ -6,13 +6,14 @@ import { useStore } from 'zustand';
 import { useReservedRegions } from '@acme/ui/adaptive-panes';
 import { View } from '@nitro-forge/studio-workspace/ui';
 import { TURRET_SIZE } from '@nitro-forge/studio-workspace/turret';
-import { prismThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
+import { workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
+import { forgeDirections } from '@nitro-forge/studio-workspace/directions';
 import { acquirePersonaSession, releasePersonaSession, type PersonaSession } from './persona-session';
 import { planPersonaPlacement, type PersonaPlacement } from './persona-dock';
 import { PersonaTurretHost } from './persona-turret-host';
 
 const PANEL = { width: TURRET_SIZE + 48, height: 380 };
-const colors = prismThemes.dark;
+const workbench = forgeDirections.workbench;
 
 /** Holds the document's persona session for the life of the editor. */
 export function usePersonaSession(key: string): PersonaSession {
@@ -47,8 +48,8 @@ export function PersonaDock({ session, sessionKey, placement }: { session: Perso
   const { rect } = placement;
   return <View testID="persona-dock" pointerEvents="box-none" style={{
     position: 'absolute', zIndex: 80, left: rect.x, top: rect.y, width: rect.width, maxHeight: rect.height,
-    borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, backgroundColor: colors.base, overflow: 'hidden',
-    boxShadow: '0 8px 24px #00000033',
+    borderWidth: 1, borderColor: workbench.materials.dark.panelEdge, borderRadius: scale.radius.panel, backgroundColor: workbench.materials.dark.panelSolid, overflow: 'hidden',
+    boxShadow: workbench.depth.dark.panel,
   }}>
     <PersonaTurretHost session={session} presentation="dock" onClose={() => session.ui.setState({ open: false, peeking: false })}
       onCompose={() => { session.ui.setState({ open: false, peeking: false }); router.push({ pathname: '/persona-composer', params: { session: sessionKey } }); }} />

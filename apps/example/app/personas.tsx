@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Button, Text, View } from '@nitro-forge/studio-workspace/ui';
 import { prismThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
+import { forgeDirections } from '@nitro-forge/studio-workspace/directions';
 import { findPersonaSession } from '../src/persona/persona-session';
 import { PersonaTurretHost } from '../src/persona/persona-turret-host';
 
@@ -13,7 +14,7 @@ export default function PersonaSheet() {
   const session = findPersonaSession(key);
   const close = () => { if (router.canGoBack()) router.back(); };
   // Sheet content is presented outside the root view's gesture tree on Android.
-  return <GestureHandlerRootView style={{ flex: 1, backgroundColor: prismThemes.dark.base }}>
+  return <GestureHandlerRootView style={{ flex: 1, backgroundColor: forgeDirections.workbench.materials.dark.panelSolid }}>
     {session
       ? <PersonaTurretHost session={session} presentation="sheet" onClose={close}
         onCompose={() => router.replace({ pathname: '/persona-composer', params: { session: key } })} />
