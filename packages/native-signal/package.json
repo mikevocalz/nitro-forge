@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Expo SDK 58 / Expo Modules 2.0 native waveform analysis adapter for Nitro Forge.",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
