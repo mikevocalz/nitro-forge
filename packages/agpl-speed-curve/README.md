@@ -19,6 +19,13 @@ const preview = sampleSpeeds(curve, 256);
 const nativePreview = await nativeSampleSpeeds(curve, 256); // Expo 58 dev build only
 ```
 
+`at` is a normalized position along the clip's **output (timeline)** duration,
+as in upstream, where points sit at the playhead offset divided by the clip's
+timeline length. `meanSpeed` is the time-averaged speed over that timeline
+(source seconds per output second), so `previewDurationSeconds(source, curve)`
+returns `source / meanSpeed(curve)`. Curves keyed by source position need
+`source * ∫ dp / speed(p)` instead; this package does not provide that.
+
 Swift and Kotlin use **Expo Modules v2** annotated asynchronous methods with
 matching validation and sample generation. These are batch methods:
 do not bridge to native on every scrub gesture. Use Skia v3 / UI-thread math

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FRAME_RATES, assertFrameRate, clampFrame,
-  formatTimecode, framesToSeconds, secondsToFrame,
+  formatTimecode, framesToSeconds, secondsToFrame, frameToPosition, positionToFrame,
 } from "../src/timebase";
 
 describe("frame-accurate transport math", () => {
@@ -29,6 +29,16 @@ describe("frame-accurate transport math", () => {
   it("uses drop frame labeling for 59.94fps", () => {
     expect(formatTimecode(35964, FRAME_RATES.NTSC_5994, { dropFrame: true }))
       .toBe("00:10:00;00");
+  });
+  it("normalizes long media transport without exposing giant native step counts", () => {
+    expect(frameToPosition(0, 1000000)).toBe(0);
+    expect(frameToPosition(500000, 1000000)).toBeCloseTo(0.5);
+    expect(positionToFrame(0.5, 1000000)).toBe(500000);
+    expect(positionToFrame(1, 1000000)).toBe(1000000);
+    expect(frameToPosition(0, 0)).toBe(0);
+    expect(positionToFrame(0.8, 0)).toBe(0);
+    expect(() => positionToFrame(NaN, 1)).toThrow();
+    expect(() => positionToFrame(2, 1)).toThrow();
   });
   it("clamps and rejects invalid timebases/frames", () => {
     expect(clampFrame(-15, 100)).toBe(0);

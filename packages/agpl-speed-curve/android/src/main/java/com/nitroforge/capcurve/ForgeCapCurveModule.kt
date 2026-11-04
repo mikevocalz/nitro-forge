@@ -44,6 +44,8 @@ private object CurveMath {
     }
   }
 
+  // Trapezoid average of speed over output time (`at` is timeline position),
+  // i.e. source seconds per output second. Mirrors src/math.ts meanSpeed.
   fun average(positions: List<Double>, speeds: List<Double>): Double {
     validate(positions, speeds)
     var area = 0.0

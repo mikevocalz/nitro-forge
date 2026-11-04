@@ -1,5 +1,6 @@
 /**
- * Native peak extraction for already-recorded, sandbox-local 16-bit PCM WAV files.
+ * Native peak extraction for already-recorded 16-bit PCM WAV files inside the
+ * app sandbox (iOS Caches/Documents, Android cacheDir/filesDir), enforced natively.
  * A small, independent first Expo Modules 2.0 slice; not an audio recorder/player.
  * No native work runs during SSR/import. Use from an Expo SDK 58 dev build.
  */
