@@ -61,8 +61,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          workspace=$(find . -maxdepth 2 -name '*.xcworkspace' -type d | head -1)
-          test -n "$workspace"
-          scheme=$(xcodebuild -list -json -workspace "$workspace" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("workspace",{}).get("schemes",[""])[0])')
-          test -n "$scheme"
-          xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+          # Only the top-level CocoaPods workspace is valid. The nested
+          # .xcodeproj/project.xcworkspace is NOT a CocoaPods workspace.
+          workspace=$(find . -maxdepth 1 -name '*.xcworkspace' -type d -print -quit)
+          project=$(find . -maxdepth 1 -name '*.xcodeproj' -type d -print -quit)
+          test -n "$workspace" && test -n "$project"
+          scheme=$(basename "$project" .xcodeproj)
+          echo "Compiling iOS app scheme: $scheme in $workspace"
+          # Explicitly check the actual app scheme, not first in the list
+          # (which can be 'boost' or an unrelated Pod target).
+          xcodebuild -list -json -workspace "$workspace" | SCHEME="$scheme" python3 -c 'import json,os,sys; d=json.load(sys.stdin); target=os.environ["SCHEME"]; assert target in d.get("workspace",{}).get("schemes",[]), f"Missing app scheme: {target}"'
+          xcodebuild -workspace "$workspace" -scheme "$scheme" \
+            -configuration Debug -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
