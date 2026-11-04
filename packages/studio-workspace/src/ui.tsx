@@ -18,6 +18,18 @@ export type StudioPopoverProps = {
 };
 export type StudioMenuProps = { children: ReactNode; actions: readonly StudioMenuAction[]; onAction: (id: string) => void; title?: string; triggerLabel?: string; placement?: 'down' | 'up'; className?: string };
 export type StudioSelectProps = { label: string; value: string; options: readonly { label: string; value: string }[]; onValueChange: (value: string) => void; disabled?: boolean };
+/** Canonical source-owned expressive single choice, not an editor-local picker. */
+export type StudioDropdownProps = {
+  label: string;
+  value: string;
+  groups: readonly { id: string; label?: string; options: readonly {
+    value: string; label: string; supportingText?: string; disabled?: boolean;
+  }[] }[];
+  onValueChange: (value: string) => void;
+  disabled?: boolean;
+  hint?: string;
+  testID?: string;
+};
 export type StudioSegmentedControlProps = {
   options: readonly { value: string; label: string }[];
   value: string; onChange: (value: string) => void;
@@ -57,6 +69,8 @@ export interface StudioUIComponents {
   Menu: ComponentType<StudioMenuProps>;
   /** Optional until the canonical @acme/ui rich Popover is implemented. Never fall back to a fake RN modal. */
   Popover?: ComponentType<StudioPopoverProps>;
+  /** Offered only when @acme/ui/NativeDropdown is available in the host. */
+  NativeDropdown?: ComponentType<StudioDropdownProps>;
   Select: ComponentType<StudioSelectProps>;
   SegmentedControl: ComponentType<StudioSegmentedControlProps>;
   TabBar: ComponentType<StudioTabBarProps>;
@@ -95,6 +109,12 @@ export const Menu = (props: StudioMenuProps) => { const C = useComponents().Menu
 export const Popover = (props: StudioPopoverProps) => {
   const C = useComponents().Popover;
   if (!C) throw new Error('Forge Popover requires a source-owned @acme/ui Popover host adapter. No generic popup is substituted.');
+  return <C {...props} />;
+};
+/** Grouped single-select native UI is supplied exclusively by @acme/ui. */
+export const NativeDropdown = (props: StudioDropdownProps) => {
+  const C = useComponents().NativeDropdown;
+  if (!C) throw new Error('Forge NativeDropdown requires source-owned @acme/ui/NativeDropdown (Expo SDK 58.0.26+).');
   return <C {...props} />;
 };
 export const Select = (props: StudioSelectProps) => { const C = useComponents().Select; return <C {...props} />; };
