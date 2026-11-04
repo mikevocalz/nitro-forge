@@ -7,7 +7,8 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 import { hsvToRgb, rgbaToHex, rgbToHsv, type HsvColor } from "./color";
-import { assertHsv, pointToHsv } from "./fieldGeometry";
+import { assertHsv } from "./fieldGeometry";
+import { createFieldGesture } from "./fieldGesture";
 import { NativeColorChannels } from "./NativeColorChannels";
 
 export interface NativeHsvPickerProps {
@@ -43,35 +44,34 @@ export function NativeHsvPicker({
 
   const refs = useRef({ value, onValueChange, disabled });
   refs.current = { value, onValueChange, disabled };
-  const dimensions = useRef({ width: 0, height: fieldHeight });
-  const startColor = useRef(value);
-  const latest = useRef(value);
+  // Width stays 0 until onLayout runs; the gesture ignores input until then.
+  const dimensions = useRef({ width: 0, height: 0 });
   const panResponder = useMemo(() => {
-    const setFromGesture = (e: GestureResponderEvent) => {
-      const next = pointToHsv(
-        { x: e.nativeEvent.locationX, y: e.nativeEvent.locationY },
-        dimensions.current,
-        refs.current.value,
-      );
-      latest.current = next;
-      refs.current.onValueChange(next);
-    };
+    const gesture = createFieldGesture({
+      getSize: () => dimensions.current,
+      getValue: () => refs.current.value,
+      getDisabled: () => refs.current.disabled,
+      onChange: (next) => refs.current.onValueChange(next),
+    });
+    const point = (e: GestureResponderEvent) => ({
+      x: e.nativeEvent.locationX,
+      y: e.nativeEvent.locationY,
+    });
     return PanResponder.create({
-      onStartShouldSetPanResponder: () => !refs.current.disabled,
-      onMoveShouldSetPanResponder: () => !refs.current.disabled,
-      onPanResponderGrant: (event) => {
-        startColor.current = refs.current.value;
-        setFromGesture(event);
-      },
-      onPanResponderMove: setFromGesture,
-      onPanResponderRelease: () => {
-        // onApply is intentionally NOT called here. A color dialog can
-        // preview continuously, then commit a single Rust transaction.
-      },
-      onPanResponderTerminate: () => {
-        refs.current.onValueChange(startColor.current);
-      },
-      onPanResponderTerminationRequest: () => true,
+      onStartShouldSetPanResponder: gesture.shouldStart,
+      onStartShouldSetPanResponderCapture: gesture.shouldStart,
+      onMoveShouldSetPanResponder: gesture.shouldStart,
+      onMoveShouldSetPanResponderCapture: gesture.shouldStart,
+      onPanResponderGrant: (event) => gesture.grant(point(event)),
+      onPanResponderMove: (event) => gesture.move(point(event)),
+      // onApply is intentionally NOT called on release. A color dialog can
+      // preview continuously, then commit a single Rust transaction.
+      onPanResponderRelease: gesture.release,
+      onPanResponderTerminate: gesture.terminate,
+      // Refuse hand-off to a parent ScrollView while dragging, and ask the
+      // native side (Android) not to intercept the touch stream.
+      onPanResponderTerminationRequest: gesture.terminationRequest,
+      onShouldBlockNativeResponder: () => true,
     });
   }, []);
 
@@ -84,8 +84,8 @@ export function NativeHsvPicker({
         {...panResponder.panHandlers}
         onLayout={(event) => {
           dimensions.current = {
-            width: Math.max(1, event.nativeEvent.layout.width),
-            height: Math.max(1, event.nativeEvent.layout.height),
+            width: event.nativeEvent.layout.width,
+            height: event.nativeEvent.layout.height,
           };
         }}
         accessible

@@ -5,4 +5,6 @@ export type { RgbaColor, HsvColor } from "./color";
 export { NativeHsvPicker } from "./NativeHsvPicker";
 export type { NativeHsvPickerProps } from "./NativeHsvPicker";
 export { pointToHsv, hsvToPoint, assertHsv } from "./fieldGeometry";
+export { createFieldGesture } from "./fieldGesture";
+export type { FieldGestureOptions } from "./fieldGesture";
 export type { FieldPoint, FieldSize } from "./fieldGeometry";

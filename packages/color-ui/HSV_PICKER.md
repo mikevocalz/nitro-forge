@@ -6,8 +6,15 @@
 `NativeHsvPicker` is a cross-platform display-color editor with:
 - A touch/stylus/mouse saturation/value field backed by actual
   `expo-linear-gradient` native views (iOS/Android) and web renderer
-- Exact, bounded saturation/value pointer geometry; drag cancellation restores
-  the starting color, with clamp-to-field semantics
+- Exact, bounded saturation/value pointer geometry with clamp-to-field
+  semantics. Touches before the first `onLayout` are ignored.
+- The field keeps the touch for the whole drag: it refuses termination
+  requests and blocks the native responder, so a parent `ScrollView` does not
+  scroll or steal a vertical brightness drag. If the platform still cancels
+  the touch (an incoming call, a system gesture), the field restores the color
+  from the start of that drag, the same as a UIKit or Android touch cancel.
+  A normal release keeps the last color; `onCancel` is how a host discards a
+  previewed color.
 - A hue spectrum preview, native SwiftUI/Compose/web `@expo/ui` Hue,
   Saturation, Brightness sliders, and RGBA/alpha controls
 - `onValueChange` preview, explicit `onApply` and `onCancel` to let
