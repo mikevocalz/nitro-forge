@@ -292,7 +292,7 @@ export function PrismEditor(props: PrismEditorProps) {
     </View>
     {layersOpen && panel}
     {personaOpen && <View testID="persona-panel" accessibilityViewIsModal={narrow} style={{ position: 'absolute', zIndex: 30, top: 68, ...(narrow ? { left: 12, right: 12 } : { left: 76 }), minWidth: TURRET_SIZE + 32, padding: 16, gap: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.panel, backgroundColor: colors.base, boxShadow: '0 8px 24px #00000033' }}>
-      <PersonaTurret personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors}
+      <PersonaTurret personas={persona.personas} surface={persona.surface} activeId={persona.activeId} colors={colors} direction="workbench" scheme="dark"
         onSwitch={id => { persona.switchTo(id); store.setState({ personaOpen: false }); }}
         {...(props.onPersonaEffect ? { onEffect: props.onPersonaEffect } : {})} />
       {persona.error && <Text accessibilityRole="alert" style={{ color: colors.error, fontSize: 11, maxWidth: 240 }}>{persona.error}</Text>}

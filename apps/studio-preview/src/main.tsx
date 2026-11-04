@@ -12,6 +12,7 @@ import { AppLauncher } from './app-launcher';
 import { Page, Main, Nav, Link, Text as SemanticText } from '@acme/ui/html';
 import { Text, View, Menu, Button, Banner, DropZone, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
 import { studioControls, FilePicker } from '@acme/ui/studio-controls/web';
+import { TurretLab, isTurretLabRoute } from './turret-lab';
 import './style.css';
 
 function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme: 'dark' | 'light'; headerTrailing: ReactNode }) {
@@ -133,4 +134,4 @@ function App() {
   </Main>;
 }
 
-createRoot(document.getElementById('root')!).render(<StudioUIProvider components={studioControls}><App /></StudioUIProvider>);
+createRoot(document.getElementById('root')!).render(<StudioUIProvider components={studioControls}>{isTurretLabRoute() ? <TurretLab /> : <App />}</StudioUIProvider>);
