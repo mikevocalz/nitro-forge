@@ -175,3 +175,12 @@ Portable recorded Craft scripts are in apps/studio-preview/qa. They launch a
 fresh private local preview, use screenshot-only captures and exercise named
 controls. Completed click steps require inspection of the resulting content;
 they are not automatically a visual or engine-state assertion.
+
+## Affinity finish follow-up
+
+The canonical control audit also informs the visual material. Studio's binding
+uses source-owned Studio appearances on Button, SegmentedControl,
+FieldGroup.Section, KeyValueList, Menu and Banner; compact TabBar/Toolbar keep their existing
+semantics while reducing the prominence of branded chrome. These changes reuse
+the same native/browser controls rather than rebuilding them in the editor.
+See `AFFINITY_FEEL.md` for the fresh Mobbin/Affinity review and evidence.

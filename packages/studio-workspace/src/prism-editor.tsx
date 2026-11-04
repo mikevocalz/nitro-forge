@@ -192,7 +192,7 @@ export function PrismEditor(props: PrismEditorProps) {
   };
   const panel = <View testID="prism-layers" style={{ width: panelWidth, maxHeight: panelMaxHeight, position: 'absolute', zIndex: 60, top: panelTop, right: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, borderRadius: scale.radius.control, overflow: 'visible', boxShadow: '0 12px 30px #00000035' }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 4, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.line }}>
-      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="mr-2 rounded-[4px] overflow-hidden" />
+      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-[4px] overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
     {/* Opacity is above the measured row scroller. The canonical web menu
@@ -207,7 +207,7 @@ export function PrismEditor(props: PrismEditorProps) {
         </Menu>
     </View>}
       <View ref={layerViewport} collapsable={false} style={{ maxHeight: layerListMaxHeight, flexShrink: 1 }}><ScrollView nestedScrollEnabled removeClippedSubviews={false} scrollEnabled={!drag} onScroll={cancelLayerDrag} scrollEventThrottle={16} style={{ maxHeight: layerListMaxHeight, flexShrink: 1 }}>
-        {[...layers].reverse().map(layer => <View key={layer.id} ref={view => { if (view) rowViews.current.set(layer.id, view); else rowViews.current.delete(layer.id); }} collapsable={false} style={{ position: 'relative', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, backgroundColor: selectedId === layer.id ? '#2468AC' : 'transparent', borderBottomWidth: 1, borderBottomColor: colors.line }}>
+        {[...layers].reverse().map(layer => <View key={layer.id} ref={view => { if (view) rowViews.current.set(layer.id, view); else rowViews.current.delete(layer.id); }} collapsable={false} style={{ position: 'relative', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, backgroundColor: selectedId === layer.id ? '#344453' : 'transparent', borderLeftWidth: 2, borderLeftColor: selectedId === layer.id ? colors.accent : 'transparent', borderBottomWidth: 1, borderBottomColor: colors.line }}>
           {(dropBefore === layer.id || (dropAtEnd && dropRows.at(-1)?.id === layer.id)) && <View pointerEvents="none" style={{ position: 'absolute', left: 4, right: 4, height: 2, backgroundColor: colors.accent, ...(dropBefore === layer.id ? { top: 0 } : { bottom: 0 }) }} />}
           <DragGrabHandle label={`Drag layer ${layer.name} to reorder`} color={selectedId === layer.id ? '#DFEFFF' : colors.muted} disabled={busy || props.busy || layers.length < 2}
             onStart={() => beginLayerDrag(layer.id)} onMove={previewLayerDrag} onCommit={() => { void commitLayerDrag(); }} onCancel={cancelLayerDrag} />

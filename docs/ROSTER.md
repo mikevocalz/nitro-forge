@@ -366,6 +366,33 @@ commit 782c682ea684606111e612242a66761d50137f95 is local, pinned in CI; remote
 CI not run. Native window/config contracts unchanged. See
 docs/ux/studio-refresh/UI_COMPONENT_AUDIT.md and docs/ux/evidence/kit-*.png.
 
+## Studio Affinity control finish — November 3, 2026
+
+Canonical NYC UI commit `75617163382235ed698e2230e9eefb70c8e19e06` adds opt-in
+Studio appearances to the existing shared controls. Prism adds a direct wide
+panel rail, quieter layer selection and a larger measured artboard. Native
+window/configuration and document engine contracts are unchanged.
+
+Verified locally: all package typechecks;28 workspace tests; the UI boundary
+check;4 motion/18 control export module checks; browser production build;
+canonical UI typecheck, scoped13-file lint and6 type-scale/style tests.
+The existing production chunk-size warning remains. No remote CI run is claimed.
+
+Craft Anything round1 passed6 fresh scenarios. Final round2 passed5 fresh
+scenarios covering1440 desktop,768 tablet,390 phone, Properties open/close and
+light theme. Screenshots show real rectangle/ellipse edits,50% opacity and
+restored canvas geometry after panel closure. One standalone desktop browser
+WebSocket failure is retained and excluded; the successful extended desktop
+scenario repeats the same editing flow. A startup timeout occurred before app
+navigation and succeeded on retry. Both visual review rounds were inspected.
+
+Final proof index: `artifacts/craft-anything/affinity-evolution-r2/verified-summary.json`.
+Committed representative screenshots: `docs/ux/evidence/affinity-studio-*.png`.
+Portable desktop/phone scripts: `apps/studio-preview/qa/affinity-editor-*.json`.
+Native runtime, physical input, screen readers and full OS/browser matrix are
+unverified. Rea source analysis is recorded separately in
+`docs/ux/studio-refresh/rea-workspace-summary.json` and is not runtime proof.
+
 ## Prism existing-shape fill editing — 2026-11-04
 
 Studio's existing Fill layer action now works for selected rectangles and ellipses,

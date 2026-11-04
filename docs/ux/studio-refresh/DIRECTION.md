@@ -28,7 +28,7 @@ Choose A, retaining dark mode as a designed counterpart. Refuse both the Paper E
 
 ## Tokens and shell
 
-Source of truth: packages/studio-workspace/src/theme.ts; generated theme.css for browser host. Cool neutral base, lighter raised cards, darker canvas mat; violet only for selection and primary actions. Controls 8, panel cards 12, document page 2px radius. Sans for compact chrome, document type remains distinct from UI. 44pt touch targets retained even where reference desktop buttons are smaller.
+Source of truth: packages/studio-workspace/src/theme.ts; generated theme.css for browser host. Cool neutral base, lighter raised cards, darker canvas mat; violet only for selection and primary actions. Studio controls and panel chrome use4px rounded-sm; document paper remains2px. Sans for compact chrome, document type remains distinct from UI. 44pt touch targets retained even where reference desktop buttons are smaller.
 
 Layers: canvas mat, document/artboard, contextual floating menu. Shadows only on the paper or truly floating controls. Docks use 8pt insets and fine borders. Content owns most of the area. Phone uses bottom panel toggles and horizontal contextual toolbar rather than squeezing desktop docks.
 
@@ -58,9 +58,9 @@ islands: compact ribbon, narrow tool capsule, detached contextual inspector,
 blue selected controls, and small panel grab bars.
 
 Prism now follows that editing composition using the existing canonical NYC
-components. Generic workspace panel toggles remain reachable through Workspace;
-its redundant outer rail and phone bottom navigation no longer consume the
-canvas. Graphite/blue is local to Prism. Separate application sessions, real
+components. Generic workspace panel toggles remain reachable through Workspace; a narrow
+wide-screen panel capsule provides direct Inspector, Commands and History access.
+Phone bottom navigation does not consume the canvas. Graphite/blue is local to Prism. Separate application sessions, real
 engine operations and native window contracts remain the established contract.
 Only supported editing actions appear; no unsupported Affinity controls are
 added as decoration. Final captures and review are recorded separately.

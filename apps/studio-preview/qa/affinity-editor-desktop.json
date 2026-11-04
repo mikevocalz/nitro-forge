@@ -1,0 +1,116 @@
+{
+  "launch": true,
+  "headless": true,
+  "capture_network": false,
+  "capture": {
+    "after_each_step": [
+      "screenshot"
+    ],
+    "at_end": [
+      "screenshot"
+    ],
+    "events": []
+  },
+  "screenshot_each_step": false,
+  "keep_bodies": {
+    "header_values": false,
+    "request_body": false,
+    "response_body": false
+  },
+  "environment": {
+    "width": 1440,
+    "height": 1000,
+    "device_scale_factor": 1,
+    "locale": "en-US",
+    "timezone": "America/New_York",
+    "color_scheme": "dark",
+    "reduced_motion": true,
+    "bypass_service_workers": true
+  },
+  "actions": [
+    {
+      "kind": "goto",
+      "url": "http://127.0.0.1:4173/#/apps/prism",
+      "wait_ms": 1800,
+      "step_id": "open-prism"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Rectangle",
+      "step_id": "add-rectangle"
+    },
+    {
+      "kind": "wait",
+      "ms": 700,
+      "step_id": "rectangle-state"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Choose teal fill",
+      "step_id": "choose-teal"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Ellipse",
+      "step_id": "add-ellipse"
+    },
+    {
+      "kind": "wait",
+      "ms": 850,
+      "step_id": "ellipse-state"
+    },
+    {
+      "kind": "click",
+      "selector": "[data-testid=\"prism-layers\"] summary",
+      "step_id": "open-opacity"
+    },
+    {
+      "kind": "wait",
+      "ms": 200,
+      "step_id": "opacity-options"
+    },
+    {
+      "kind": "click",
+      "role": "menuitem",
+      "name": "50%",
+      "step_id": "opacity-50"
+    },
+    {
+      "kind": "wait",
+      "ms": 1000,
+      "step_id": "opacity-state"
+    },
+    {
+      "kind": "wait",
+      "ms": 2800,
+      "step_id": "canvas-state"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Properties",
+      "step_id": "show-properties-rail"
+    },
+    {
+      "kind": "wait",
+      "ms": 400,
+      "step_id": "properties-state"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Properties",
+      "step_id": "hide-properties-rail"
+    },
+    {
+      "kind": "wait",
+      "ms": 400,
+      "step_id": "restored-canvas"
+    }
+  ],
+  "action_timeout_ms": 6000,
+  "timeout_secs": 45
+}
