@@ -53,7 +53,7 @@ export function NativeSeekBar({
           max={Math.max(1, durationFrames)}
           step={stepFrames}
           disabled={isDisabled}
-          testID={testID}
+          {...(testID ? { testID } : {})}
         />
         <Row>
           <Button onPress={() => seek(current - stepFrames)} disabled={isDisabled} label={`−${stepFrames} frame`} />
