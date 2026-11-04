@@ -90,3 +90,47 @@ step URLs and screenshots identify the actual local Prism editor.
 Final workspace21 tests, typecheck and production build passed after the popup
 fix. No native runtime or complete device/browser matrix pass is claimed. The
 canonical popup's own district styling remains source-owned NYC UI.
+
+## Canonical control finish — November 3, 2026
+
+The next review compared the actual editor imagery on the
+[official iPad page](https://www.affinity.studio/ipad-app), plus Mobbin
+[Photoroom](https://mobbin.com/screens/17875c39-0946-4b6b-a760-bb3868918e01)
+and [Canva](https://mobbin.com/screens/a7d2e8f9-cf06-4b76-bd09-50d1a2315114)
+layer references. The remaining mismatch was the prominence of branded UI:
+bold display labels, saturated full-width tabs and stacked panel keylines.
+This is an evolution of the chosen editor direction, retaining its typography
+family, graphite ground and blue selection, rather than three unrelated concepts.
+
+The canonical NYC components now own opt-in Studio appearances: compact sans
+button labels, neutral segmented choices, restrained inspector headings and
+12/13px field labels/values. Menu popups use a graphite browser facade while
+native menus remain OS-owned; feedback banners retain status colors and live
+regions with compact sans labels. Compact TabBar uses a graphite face and a thin blue
+active mark; compact Toolbar removes its heavy cornice. Shared native/browser
+bindings consume these same components. Default branded appearances remain
+available to other consumers. Studio's 4px corners and 44pt hit targets remain.
+
+Prism selection uses a subdued tinted layer row with a thin blue edge. A narrow
+wide-screen panel capsule exposes Properties, Commands and History directly;
+the Workspace menu remains available at every width. The artboard can grow to
+900px while its measured width, height and document ratio still bound it. This
+changes editor presentation only. It adds no unsupported editing tools.
+
+Rea 6.8.0 executed a fresh inert analysis of 21 workspace source files with zero
+parse errors. Its 326 observations are static facts, not defects or runtime proof.
+External graph coverage remains partial. See `rea-workspace-summary.json`.
+
+
+Final Craft Anything review: six successful first-round cases, then five
+successful final cases at1440/768/390 and in light theme. Actual edits create a
+rectangle and ellipse, set50% opacity, and open/close Properties to restore
+canvas space. The first round's menu and Badge findings were fixed and inspected
+again. Final critic scores were4/5 for hierarchy, type, colour, finish, craft,
+responsive behavior and retained functionality; screenshot memorability was3/5.
+No remaining must-fix defect was observed in those states. This is bounded
+Chromium proof; no full platform-matrix or native-runtime pass is claimed.
+One final standalone desktop WebSocket failure was excluded; the extended
+desktop editing flow subsequently succeeded. Raw results and both critique
+rounds remain in ignored `artifacts/craft-anything/affinity-evolution-r{1,2}`.
+Representative final screenshots are `docs/ux/evidence/affinity-studio-*.png`.

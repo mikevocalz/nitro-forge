@@ -1,0 +1,18 @@
+{
+  "tool": "rea-agents",
+  "version": "6.8.0",
+  "target": "packages/studio-workspace/src",
+  "status": "completed-with-partial-external-graph",
+  "exitCode": 0,
+  "parsedFiles": 21,
+  "parseFailures": 0,
+  "staticObservations": 326,
+  "evidenceId": "ev_890d3fed929a078594d1be3ea3ad78812b65d544c8ee7bb5f444822fae5ef4b6",
+  "rootSha256": "5032bb231427ee179c89db7a321cf9f27b78e2443c7891bd92b4f7d83578bab5",
+  "limitations": [
+    "Inert source analysis; no target code executed.",
+    "External graph coverage partial.",
+    "Observations are not defects or runtime/visual verification."
+  ],
+  "rawReport": "artifacts/rea/affinity-refinement/workspace.json"
+}
