@@ -27,6 +27,8 @@ export type ForgePrecisionScrubberProps = {
 type PrecisionState = {
   preview: number;
   active: boolean;
+  hovered: boolean;
+  focused: boolean;
   pending: boolean;
   editing: boolean;
   draft: string;
@@ -55,6 +57,8 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
     local.current = createStore<PrecisionState>(() => ({
       preview: props.value,
       active: false,
+      hovered: false,
+      focused: false,
       pending: false,
       editing: false,
       draft: format(props.value, props.step),
@@ -214,6 +218,12 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
       <View style={{ flex: 1, minWidth: 0 }}>
         <StudioGesture disabled={disabled} onBegin={begin} onMove={move} onRelease={release} onCancel={cancel}>
           <View collapsable={false} {...keys}
+            testID="precision-scale"
+            onPointerEnter={() => { if (!disabled) store.setState({ hovered: true }); }}
+            onPointerLeave={() => store.setState({ hovered: false })}
+            onFocus={() => store.setState({ focused: true })}
+            onBlur={() => store.setState({ focused: false })}
+            focusable={!disabled}
             accessible accessibilityRole="adjustable" accessibilityLabel={props.label}
             accessibilityHint="Drag horizontally to adjust. Move upward for fine precision or downward for coarse. Use arrow keys or the increase and decrease controls."
             accessibilityValue={{ min: props.min, max: props.max, now: state.preview, text: `${display}${props.unit ?? ''}` }}
@@ -223,8 +233,10 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
               if (event.nativeEvent.actionName === 'increment') nudge(1);
               if (event.nativeEvent.actionName === 'decrement') nudge(-1);
             }}
-            style={{ minHeight: 44, borderWidth: 1, borderColor: state.active ? palette.accent : palette.line,
-              backgroundColor: palette.deep, borderRadius: 4, paddingHorizontal: 11, justifyContent: 'center',
+            style={{ minHeight: 44, borderWidth: 1,
+              borderColor: state.active || state.focused ? palette.accent : state.hovered ? palette.muted : palette.line,
+              backgroundColor: state.active ? palette.soft : state.hovered ? palette.raised : palette.deep,
+              borderRadius: 4, paddingHorizontal: 11, justifyContent: 'center',
               overflow: 'hidden' }}>
             <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 20 }}>
               {ticks}
@@ -243,7 +255,7 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
       </Pressable>
     </View>
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Text style={{ fontSize: 10, color: palette.muted }}>
+      <Text style={{ fontSize: 10, color: state.active || state.focused ? palette.accent : palette.muted }}>
         {state.active ? `${state.mode.toUpperCase()} PRECISION` : 'DRAG · FINE ↑ · COARSE ↓'}
       </Text>
       <Text style={{ fontSize: 10, color: palette.muted, fontVariant: ['tabular-nums'] }}>
