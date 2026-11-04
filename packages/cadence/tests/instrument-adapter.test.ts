@@ -9,10 +9,12 @@ describe("NYC-Tron instrument to Cadence engine adapter",()=>{
   expect(binding.gain).toMatchObject({min:0,max:1,step:.01});
   expect(binding.pan).toMatchObject({min:-1,max:1,step:.01});
   await binding.gain.onCommit(.75);
-  expect(setTrackGain).toHaveBeenCalledExactlyOnceWith(23,.75);
+  expect(setTrackGain).toHaveBeenCalledTimes(1);
+  expect(setTrackGain).toHaveBeenCalledWith(23,.75);
   expect(setTrackPan).not.toHaveBeenCalled();
   await binding.pan.onCommit(-.25);
-  expect(setTrackPan).toHaveBeenCalledExactlyOnceWith(23,-.25);
+  expect(setTrackPan).toHaveBeenCalledTimes(1);
+  expect(setTrackPan).toHaveBeenCalledWith(23,-.25);
  });
  it("rejects invalid and out-of-range parameters before touching Rust",async()=>{
   const setTrackGain=vi.fn(async()=>({data:{ok:true},events:[]}));

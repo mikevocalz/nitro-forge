@@ -1,0 +1,33 @@
+name: Cadence advanced component adapter
+on:
+  pull_request:
+    paths:
+      - "packages/cadence/**"
+      - "packages/ignition/**"
+      - ".github/workflows/cadence-advanced-controls.yml"
+  push:
+    branches: [master]
+    paths:
+      - "packages/cadence/**"
+      - ".github/workflows/cadence-advanced-controls.yml"
+permissions:
+  contents: read
+jobs:
+  cadence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: dtolnay/rust-toolchain@stable
+      - run: corepack enable
+      - name: Install workspace
+        run: corepack pnpm install --no-frozen-lockfile
+      - name: Build real Rust host
+        run: cargo build -p nf-cli
+      - name: Check adapter TypeScript
+        run: corepack pnpm --filter @nitro-forge/cadence typecheck
+      - name: Run Cadence tests with Rust host
+        run: corepack pnpm --filter @nitro-forge/cadence test

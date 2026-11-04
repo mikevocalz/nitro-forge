@@ -35,8 +35,8 @@ export function createCadenceTrackInstrumentBindings(
  if(!Number.isSafeInteger(trackId)||trackId<1)throw new RangeError("Invalid Cadence track id");
  return {
   gain:{min:0,max:1,step:0.01,unit:"",
-   onCommit:value=>document.setTrackGain(trackId,ensureBounded(value,0,1))},
+   onCommit:async value=>document.setTrackGain(trackId,ensureBounded(value,0,1))},
   pan:{min:-1,max:1,step:0.01,unit:"",
-   onCommit:value=>document.setTrackPan(trackId,ensureBounded(value,-1,1))}
+   onCommit:async value=>document.setTrackPan(trackId,ensureBounded(value,-1,1))}
  };
 }
