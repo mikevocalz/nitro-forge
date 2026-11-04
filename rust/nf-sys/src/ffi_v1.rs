@@ -16,6 +16,21 @@ fn registry() -> &'static ConcurrentSessions {
     REGISTRY.get_or_init(ConcurrentSessions::new)
 }
 
+/// Snapshot with the 256 MiB cap applied. Every snapshot path (the dedicated
+/// export and the `__snapshot` op through either apply entry point) uses this,
+/// so JS cannot bypass the cap by sending the op name.
+pub(super) fn bounded_snapshot(engine: &mut dyn Engine) -> Result<Vec<u8>, EngineError> {
+    bounded_snapshot_within(engine, MAX_SNAPSHOT_BYTES)
+}
+
+fn bounded_snapshot_within(engine: &mut dyn Engine, max: usize) -> Result<Vec<u8>, EngineError> {
+    let bytes = engine.snapshot()?;
+    if bytes.len() > max {
+        return Err(EngineError::validation("native snapshot exceeds 256 MiB"));
+    }
+    Ok(bytes)
+}
+
 /// Share the exact same session registry with structured v1 command frames.
 pub(super) fn with_v1_engine<T>(
     handle: i64,
@@ -90,7 +105,7 @@ pub unsafe extern "C" fn nf_v1_apply(handle: i64, bytes: *const u8, len: usize) 
                 serde_json::json!({"ok":true,"data":{"undone":undone},"events":[]})),
             OP_REDO => engine.redo().map(|redone|
                 serde_json::json!({"ok":true,"data":{"redone":redone},"events":[]})),
-            OP_SNAPSHOT => engine.snapshot().map(|snapshot|
+            OP_SNAPSHOT => bounded_snapshot(engine).map(|snapshot|
                 serde_json::json!({"ok":true,"data":{"bytes":ignition_core::base64_encode(&snapshot)},"events":[]})),
             _ => engine.apply(cmd).map(|result|
                 serde_json::json!({"ok":true,"data":result.data,"events":result.events})),
@@ -113,17 +128,10 @@ pub unsafe extern "C" fn nf_v1_apply(handle: i64, bytes: *const u8, len: usize) 
 #[no_mangle]
 pub unsafe extern "C" fn nf_v1_snapshot(handle: i64, out_err: *mut *mut c_char) -> NfBytes {
     let result = catch_unwind(AssertUnwindSafe(|| {
-        registry().with_engine(handle, |engine| engine.snapshot())
+        registry().with_engine(handle, bounded_snapshot)
     }));
     match result {
         Ok(Ok(bytes)) => {
-            if bytes.len() > MAX_SNAPSHOT_BYTES {
-                set_err(
-                    out_err,
-                    EngineError::validation("native snapshot exceeds 256 MiB"),
-                );
-                return NULL_BYTES;
-            }
             let boxed = bytes.into_boxed_slice();
             let len = boxed.len();
             let ptr = Box::into_raw(boxed) as *mut u8;
@@ -175,6 +183,23 @@ mod tests {
     use super::super::{nf_free_bytes, nf_free_string};
     use super::*;
     use std::ffi::CStr;
+
+    #[test]
+    fn snapshot_cap_applies_to_every_snapshot_path() {
+        let mut engine = factory(EngineKind::Tally).expect("tally engine linked");
+        let size = bounded_snapshot(engine.as_mut())
+            .expect("small snapshot passes")
+            .len();
+        assert!(size > 0);
+        let error = bounded_snapshot_within(engine.as_mut(), size - 1).unwrap_err();
+        assert!(serde_json::to_string(&error).unwrap().contains("256 MiB"));
+        assert_eq!(
+            bounded_snapshot_within(engine.as_mut(), size)
+                .unwrap()
+                .len(),
+            size
+        );
+    }
 
     unsafe fn apply(handle: i64, command: &str) -> serde_json::Value {
         let raw = nf_v1_apply(handle, command.as_ptr(), command.len());
