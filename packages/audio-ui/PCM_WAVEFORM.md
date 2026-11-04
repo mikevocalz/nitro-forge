@@ -30,7 +30,19 @@ const store = createRecordingStore();
   retaining raw PCM buffers or sending them to React state.
 - `WaveformPeakAccumulator` keeps up to 4,096 time-aware segments.
   When compacting, ranges remain frame-aligned and min/max transients
-  are preserved. On stop, it emits up to 512 actual-source peak columns.
+  are preserved. On stop, it emits 512 actual-source peak columns and writes
+  them to the store, so the lane shows the whole recording after saving
+  (drawn at `WaveformLane`'s 128-column maximum; resampling keeps each
+  column's min/max).
+- Peaks accumulate only between `startFileRecordingAsync()` resolving and
+  `stopFileRecordingAsync()` being called, the window the WAV covers.
+  Elapsed time is file frames / sample rate, not the stream timestamp.
+- An unreadable buffer advances the timeline by its frame count (an empty
+  gap, counted in `droppedBuffers`); one whose frame count cannot be derived
+  aborts the recording with an error.
+- The stream's `audioStreamStatus` event is observed: if the OS stops the
+  stream (call, route loss), the phase becomes `interrupted` and the partial
+  WAV can still be saved.
 - The same Zustand recording state machine controls permission, start,
   save, failure, duplicate operations and native lifecycle cleanup.
 - **Not a full DAW**: audio sync, latency compensation, source trimming,
@@ -45,9 +57,25 @@ The SDK 58 `useAudioStream` web implementation is a **stub**, so Forge
 `expo-audio` MediaRecorder used in PR #31, returning a
 `{kind:'compressed-web'}` result. After saving, the wrapper attempts
 Web Audio `decodeAudioData()` on the returned Blob URL and extracts real
-peaks, bounded at 64MiB of encoded source. Browser codec support varies;
-on failure it reports `waveform:'unavailable'` and returns the actual
-saved URI, never fabricated PCM. Browser waveform processing is
+peaks. Decoding expands to float32 per channel, so memory is bounded on
+decoded size (512 MiB, about 46 minutes of 48 kHz stereo): the clip's
+duration is probed from an `<audio>` element first; when the container
+reports no duration (Chrome WebM), only clips up to 8 MiB encoded are
+decoded; the decoded `AudioBuffer` is checked again and dropped if over the
+cap. Encoded input stays capped at 64 MiB. Browser codec support varies;
+on any failure it reports `waveform:'unavailable'` with a `reason` and
+returns the actual saved URI, never fabricated PCM.
+
+### Resolution of `@nitro-forge/audio-ui/pcm`
+
+| Condition | File |
+| --- | --- |
+| `react-native` (Metro iOS/Android) | `NativeSourceRecordingTrack.native.tsx` |
+| `browser` (Metro web, web bundlers) | `NativeSourceRecordingTrack.web.tsx` |
+| anything else | `NativeSourceRecordingTrack.unsupported.ts`, throws at import |
+
+A resolver that sets neither condition fails loudly instead of silently
+getting the web fallback. Browser waveform processing is
 best-effort and not a substitute for native large-file streaming.
 
 ### Tests and verification
