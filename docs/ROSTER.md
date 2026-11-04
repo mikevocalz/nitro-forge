@@ -393,6 +393,23 @@ Native runtime, physical input, screen readers and full OS/browser matrix are
 unverified. Rea source analysis is recorded separately in
 `docs/ux/studio-refresh/rea-workspace-summary.json` and is not runtime proof.
 
+## Stable tablet canvas — November 3, 2026
+
+Prism Layers now starts closed below1100px of measured editor width and overlays
+rather than resizing the artboard on those layouts. Explicit panel choices
+survive subsequent measurement. Desktop reserved-panel layout remains available.
+Native app window dimensions, orientation, manifests and engine contracts did
+not change.
+
+Verified locally:29 workspace tests (including closed/open artboard geometry),
+all package typechecks, UI import boundary and production build. Four actual
+Craft Anything cases at768/1024/390/1440 show real shape creation,50% opacity,
+Layers open/close, unchanged overlay artboard geometry and desktop restoration.
+Full-size screenshots and captured DOM geometry were inspected independently.
+The response-size limit required supported evidence pagination; all recorded
+steps were successful. Proof is indexed in RESPONSIVE.md. Native runtime,
+physical input and full browser/OS matrix remain unverified.
+
 ## Prism existing-shape fill editing — 2026-11-04
 
 Studio's existing Fill layer action now works for selected rectangles and ellipses,

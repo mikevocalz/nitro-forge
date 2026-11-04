@@ -8,7 +8,7 @@ import { base64ToBytes, bytesToBase64 } from '@nitro-forge/ignition';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { encodeRgbaPng, validatePreviewSize } from './rgba-png';
 import { prismThemes, workspaceScale as scale } from './theme';
-import { prismViewportLayout } from './prism-layout';
+import { prismViewportLayout, PRISM_DOCKED_LAYERS_MIN_WIDTH } from './prism-layout';
 import { PrismCanvas } from './prism-canvas';
 import type { CanvasLayer } from './prism-canvas-model';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
@@ -84,7 +84,7 @@ export function PrismEditor(props: PrismEditorProps) {
   const selected = layers.find(layer => layer.id === selectedId);
   const selectedIndex = layers.findIndex(layer => layer.id === selectedId);
   const ratio = doc && doc.width > 0 && doc.height > 0 ? doc.width / doc.height : 1;
-  const { narrow, short, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight,
+  const { narrow, short, dockedLayers, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight,
     canvasLeft, canvasRight, canvasTop, canvasBottom, canvasWidth, canvasHeight, fillWidth, fillLeft
   } = prismViewportLayout(width, height, ratio, layersOpen, !!selected);
   const feedback = error ?? previewError ?? (rendering ? 'Updating engine composite…' : notice);
@@ -228,7 +228,7 @@ export function PrismEditor(props: PrismEditorProps) {
   return <NightScope><View className="scheme-dark" {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
     const { width, height } = event.nativeEvent.layout;
     if (width <= 0 || height <= 0) return;
-    if (firstMeasurement.current) { firstMeasurement.current = false; store.setState({ width, height, layersOpen: width >= 700 }); }
+    if (firstMeasurement.current) { firstMeasurement.current = false; store.setState({ width, height, layersOpen: width >= PRISM_DOCKED_LAYERS_MIN_WIDTH }); }
     else store.setState({ width, height });
   }} style={{ flex: 1, minHeight: 0, position: 'relative', backgroundColor: mat.deep }}>
     <View pointerEvents="box-none" style={{ position: 'absolute', left: canvasLeft, top: canvasTop, right: canvasRight, bottom: canvasBottom, alignItems: 'center', justifyContent: 'center' }}>
@@ -239,7 +239,7 @@ export function PrismEditor(props: PrismEditorProps) {
         {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}><Text style={{ color: colors.paperInk, fontSize: 12, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}
       </PrismCanvas>}
     </View>
-    <View style={{ position: 'absolute', zIndex: 20, top: 12, left: 12, width: Math.max(1, Math.min(narrow ? width - 24 : 360, width - (layersOpen && !narrow ? panelWidth + 36 : 24))), minHeight: 48, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
+    <View style={{ position: 'absolute', zIndex: 20, top: 12, left: 12, width: Math.max(1, Math.min(narrow ? width - 24 : 360, width - (layersOpen && dockedLayers ? panelWidth + 36 : 24))), minHeight: 48, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control, backgroundColor: colors.base, boxShadow: '0 4px 14px #00000020' }}>
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 9 }}>{selected?.content?.type === 'shape' ? 'Shape layer' : selected ? 'Raster layer' : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
       {selected?.content?.type === 'shape' && !props.busy && <Menu key={selected.id} title="Transform shape" triggerLabel="Transform shape"
         actions={SHAPE_TRANSFORMS.map(({ id, title }) => ({ id, title, disabled: busy || !!props.busy || !!drag }))}

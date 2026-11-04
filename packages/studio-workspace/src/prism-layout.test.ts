@@ -34,3 +34,18 @@ test('invalid document aspect uses a finite square preview', () => {
     assert.equal(layout.canvasWidth, layout.canvasHeight);
   }
 });
+
+
+test('tablet Layers overlays preserve artboard size and placement while desktop reserves panel space', () => {
+  for (const [width, height] of [[716, 920], [972, 664], [390, 563]]) {
+    const closed = prismViewportLayout(width!, height!, 1, false, false);
+    const opened = prismViewportLayout(width!, height!, 1, true, false);
+    assert.equal(opened.dockedLayers, false);
+    for (const key of ['canvasWidth', 'canvasHeight', 'canvasLeft', 'canvasRight', 'canvasTop', 'canvasBottom'] as const) {
+      assert.equal(opened[key], closed[key], `${width}px: ${key} must not move when Layers opens`);
+    }
+  }
+  const wide = prismViewportLayout(1388, 896, 1, true, false);
+  assert.equal(wide.dockedLayers, true);
+  assert.ok(wide.canvasRight > wide.panelWidth);
+});

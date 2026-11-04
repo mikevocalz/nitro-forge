@@ -68,3 +68,14 @@ The full OS/browser matrix and native runtime are unverified; a full skill
 stop-rule pass is not claimed. Marketing conversion/below-fold criteria do not
 apply to this single-screen editor. Proof and screenshots are indexed in
 AFFINITY_FEEL.md and ROSTER.md.
+
+
+## Stable tablet canvas follow-up
+
+Before: the768px portrait capture reduced the artboard to315px beside an open
+Layers panel. Proposal review approved an overlay layout below1100px and Layers
+closed initially, retaining wider desktop reservations. Final rendered review
+inspected all four viewport fixtures and observed a608px tablet artboard,
+unchanged size/placement during panel open/close, actual50% opacity and retained
+44pt controls. No must-fix defect observed. This is a focused geometry correction;
+no new whole-application design score or full-platform pass is claimed.
