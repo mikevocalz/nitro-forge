@@ -25,7 +25,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - name: Use preinstalled GitHub-hosted Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "Using Android SDK: ${ANDROID_HOME:-/usr/local/lib/android/sdk}"
       - run: pnpm install --no-frozen-lockfile
       - name: Generate Expo SDK58 Android project
         run: pnpm --dir apps/forge-media-lab exec expo prebuild --platform android --no-install
