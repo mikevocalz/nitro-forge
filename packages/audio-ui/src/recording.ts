@@ -106,6 +106,7 @@ export class ForgeRecordingController {
   private stopped = true;
   private sessionActive = false;
   private confirmedRecording = false;
+  private pendingAbort: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly driver: RecordingDriver,
@@ -167,9 +168,7 @@ export class ForgeRecordingController {
     const state = this.store.getState();
     if (state.phase.kind !== "recording") return;
     if (status.mediaServicesDidReset) {
-      this.store.setState({
-        phase: { kind: "error", message: "Audio services reset; stop and retry recording." },
-      });
+      this.pendingAbort = this.abort("Audio services reset; retry recording.");
       return;
     }
     if (!status.isRecording) {
@@ -197,10 +196,36 @@ export class ForgeRecordingController {
   }
 
   /** The native status read threw while recording: show it, don't freeze. */
-  reportStatusError(error: unknown): void {
+  reportStatusError(error: unknown): Promise<void> {
+    this.pendingAbort = this.abort(errorMessage(error));
+    return this.pendingAbort;
+  }
+
+  /**
+   * A live capture failed (backend error, unreadable stream). Stop native
+   * capture, restore the audio session and show the failure. The controller
+   * stays usable: start() can record again.
+   */
+  async abort(message: string): Promise<void> {
     if (this.disposed || this.busy) return;
-    if (this.store.getState().phase.kind !== "recording") return;
-    this.store.setState({ phase: { kind: "error", message: errorMessage(error) } });
+    const kind = this.store.getState().phase.kind;
+    if (kind !== "recording" && kind !== "interrupted") return;
+    this.busy = true;
+    const generation = ++this.generation;
+    this.store.setState({ phase: { kind: "error", message } });
+    try {
+      const failures = await this.teardownErrors();
+      if (failures.length > 0 && this.isCurrent(generation)) {
+        this.store.setState({ phase: { kind: "error", message: [message, ...failures].join("; ") } });
+      }
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** Resolves once an abort started from a synchronous callback finishes. */
+  settled(): Promise<void> {
+    return this.pendingAbort;
   }
 
   async stop(): Promise<string> {

@@ -142,10 +142,32 @@ describe("host lifecycle re-runs and interruptions", () => {
     const { driver } = mockRecorder();
     const controller = new ForgeRecordingController(driver, createRecordingStore());
     await controller.start();
-    controller.reportStatusError(new Error("recorder released"));
+    await controller.reportStatusError(new Error("recorder released"));
     expect(controller.store.getState().phase).toEqual({
       kind: "error", message: "recorder released",
     });
+  });
+
+  it("stops native capture and restores the session when a live failure aborts", async () => {
+    const { driver, calls } = mockRecorder();
+    const controller = new ForgeRecordingController(driver, createRecordingStore());
+    await controller.start();
+    await controller.abort("Audio stream failed");
+    expect(calls.slice(-2)).toEqual(["stop", "release"]);
+    expect(controller.store.getState().phase).toEqual({
+      kind: "error", message: "Audio stream failed",
+    });
+    expect(await controller.start()).toBe(true);
+  });
+
+  it("stops the recorder when media services reset", async () => {
+    const { driver, calls } = mockRecorder();
+    const controller = new ForgeRecordingController(driver, createRecordingStore());
+    await controller.start();
+    controller.observe({ isRecording: true, durationMillis: 10, mediaServicesDidReset: true });
+    await controller.settled();
+    expect(calls.slice(-2)).toEqual(["stop", "release"]);
+    expect(controller.store.getState().phase.kind).toBe("error");
   });
 
   it("restores the audio session after a failed start", async () => {
