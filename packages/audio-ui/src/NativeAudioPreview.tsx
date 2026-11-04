@@ -36,7 +36,7 @@ export function NativeAudioPreview({ uri, durationSeconds, disabled = false }: {
     }, next => store.setState(next));
     player.current = current;
     const listener = AppState.addEventListener("change", next => { if (next !== "active") current.stop(); });
-    return () => { player.current = null; listener.remove(); void current.dispose().catch(() => undefined); };
+    return () => { player.current = null; listener.remove(); void current.dispose().catch((error: unknown) => { console.warn("[audio-ui] closing preview AudioContext failed", error); }); };
   }, [store]);
   useEffect(() => { player.current?.stop(); }, [uri, disabled]);
   const active = state.phase === "playing" || state.phase === "loading";

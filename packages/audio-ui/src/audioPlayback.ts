@@ -82,10 +82,14 @@ export class ForgeAudioPlayback<B extends PlaybackBuffer = PlaybackBuffer> {
   private releaseSource(stop: boolean): void {
     const source = this.source; this.source = null;
     if (!source) return;
-    // A native teardown failure must not prevent the remaining cleanup or close.
-    try { source.onended = null; } catch { /* Continue resource cleanup. */ }
-    try { if (stop) source.stop(); } catch { /* Already stopped/invalidated. */ }
-    try { source.disconnect(); } catch { /* Context may already be interrupted. */ }
-    try { source.buffer = null; } catch { /* Source is already unreachable. */ }
+    // A native teardown failure must not prevent the remaining cleanup or
+    // close; each one is still reported.
+    const attempt = (step: string, run: () => void) => {
+      try { run(); } catch (error) { console.warn(`[audio-ui] preview source ${step} failed`, error); }
+    };
+    attempt("onended reset", () => { source.onended = null; });
+    if (stop) attempt("stop", () => source.stop());
+    attempt("disconnect", () => source.disconnect());
+    attempt("buffer release", () => { source.buffer = null; });
   }
 }
