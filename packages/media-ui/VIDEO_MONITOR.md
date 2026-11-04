@@ -79,10 +79,10 @@ Sources:
 ## Experimental v1 port material
 
 [tooling/react-native-video-v1](../../tooling/react-native-video-v1) retains a
-licensed patch against the exact upstream beta.12 commit, including migrated
-specs/config, three JS factories, Kotlin factory companions, Swift factory
-initializers and RN0.88 Fabric imports. Exact v1 code generation (7/7 objects),
-a real native-source TypeScript probe and RN Fabric parsing passed. This is
-**not installed or autolinked**. Native Promise/variant ABI and Apple build
-integration remain incomplete, so playback stays unavailable. Reproduction,
-source provenance and remaining blockers accompany the patch.
+licensed experimental patch against exact upstream beta.12. It now includes
+v1 spec/factory and native Callback/Promise/nullable ABI changes, JNI, SwiftPM
+and Bob packaging. Generation (7/7), native-source TypeScript, real Bob builds,
+RN Fabric parsing and portable source/package checks pass. It is **not installed
+or autolinked**. Native SDK compilation and Swift6 concurrency migration remain
+open, so playback stays unavailable. See the reproduction and explicit build,
+lifecycle and device gates beside the patch.
