@@ -19,18 +19,24 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  BRANCH: feat/studio-suite-upstream-monitor-2026-11-02
+
 jobs:
-  reconcile:
-    # Scoped to this trusted migration branch; never writes arbitrary PR heads.
+  # Resolve and verify with read-only credentials. Every check that a normal
+  # CI run would apply to the lockfile runs here, against the exact bytes that
+  # the commit job later pushes.
+  resolve:
     if: github.repository == 'mikevocalz/nitro-forge' && github.ref == 'refs/heads/feat/studio-suite-upstream-monitor-2026-11-02'
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    permissions:
-      contents: write
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+      base: ${{ steps.diff.outputs.base }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          persist-credentials: true
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
@@ -42,26 +48,66 @@ jobs:
         run: pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
       - name: Validate the resolved lockfile with a clean frozen install
         run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Verify Skia v3 policy against resolved dependencies
+      - name: Verify Skia v3 policy and a single Dawn against the resolved graph
+        # Fails on more than one react-native-webgpu-dawn version in the
+        # lockfile or in node_modules/.pnpm (pnpm why alone always exits 0).
+        run: pnpm check:skia-v3
+      - name: Record whether the lockfile changed
+        id: diff
         run: |
-          pnpm check:skia-v3
-          pnpm why react-native-webgpu-dawn
-      - name: Commit only the generated lockfile on this migration branch
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: steps.diff.outputs.changed == 'true'
+        with:
+          name: verified-pnpm-lock
+          path: pnpm-lock.yaml
+          retention-days: 7
+
+  # The only job with write access. It pushes the verified lockfile and nothing
+  # else. A push made with GITHUB_TOKEN starts no workflow runs, so the
+  # resolve job above is the CI evidence for that commit; its run URL goes into
+  # the commit message. If the branch moved and changed any manifest, the push
+  # is skipped: that newer push starts its own run of this workflow.
+  commit:
+    needs: resolve
+    if: needs.resolve.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-pnpm-lock
+          path: ${{ runner.temp }}/verified
+      - name: Commit the verified lockfile if manifests are unchanged since resolution
+        env:
+          BASE: ${{ needs.resolve.outputs.base }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          # A reviewer may have updated docs while resolution ran. Merge the
-          # trusted branch's newer commits (never rebase/reset/force push).
-          git fetch origin feat/studio-suite-upstream-monitor-2026-11-02
-          git merge --no-edit origin/feat/studio-suite-upstream-monitor-2026-11-02
-          # Re-resolve against the latest committed manifests after merge.
-          pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
-          pnpm install --frozen-lockfile --ignore-scripts
+          if ! git diff --quiet "$BASE" HEAD -- package.json pnpm-workspace.yaml pnpm-lock.yaml 'apps/*/package.json' 'packages/*/package.json'; then
+            echo "::notice::Manifests changed after $BASE; skipping. The newer push re-runs this workflow."
+            exit 0
+          fi
+          cp "$RUNNER_TEMP/verified/pnpm-lock.yaml" pnpm-lock.yaml
           git add pnpm-lock.yaml
           if git diff --cached --quiet; then
             echo 'Lockfile already matches current manifests.'
-          else
-            git commit -m 'chore(lockfile): resolve Expo 58 and Skia v3 dependency graph'
-            git push origin HEAD:feat/studio-suite-upstream-monitor-2026-11-02
+            exit 0
           fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(lockfile): resolve Expo 58 and Skia v3 dependency graph' \
+            -m "Frozen install and pnpm check:skia-v3 passed on these bytes in $RUN_URL (resolved against $BASE). Pushed with GITHUB_TOKEN, so no CI run follows this commit."
+          git push origin "HEAD:$BRANCH"
 # This reconciles and verifies install resolution, NOT a native or web runtime.
