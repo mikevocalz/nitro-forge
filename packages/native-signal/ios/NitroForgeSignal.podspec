@@ -6,7 +6,7 @@ Pod::Spec.new do |s|
   s.version        = package['version']
   s.summary        = package['description']
   s.description    = package['description']
-  s.license        = package['license']
+  s.license        = { :type => 'Proprietary' }
   s.author         = 'Nitro Forge contributors'
   s.homepage       = 'https://github.com/mikevocalz/nitro-forge'
   s.platforms      = { :ios => '16.4' }
