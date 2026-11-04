@@ -1,0 +1,34 @@
+name: Design studio persona continuity
+
+on:
+  pull_request:
+    paths:
+      - 'packages/studio-workspace/src/persona.ts'
+      - 'packages/studio-workspace/src/persona.test.ts'
+      - 'packages/studio-workspace/src/instrument-system.ts'
+      - '.github/workflows/persona-continuity.yml'
+  push:
+    branches:
+      - feat/forge-2046-design-studio-personas-2026-11-04
+    paths:
+      - 'packages/studio-workspace/src/persona.ts'
+      - 'packages/studio-workspace/src/persona.test.ts'
+      - 'packages/studio-workspace/src/instrument-system.ts'
+      - '.github/workflows/persona-continuity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  persona-continuity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      # Dependency-free, like forge-2046-instruments.yml, so the 24h npm
+      # release-age gate cannot block the continuity contract.
+      - name: Continuity, manifests and composer across every persona pair
+        run: node --experimental-strip-types --test packages/studio-workspace/src/persona.test.ts
