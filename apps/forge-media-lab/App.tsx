@@ -1,4 +1,5 @@
 import { ScrollView, Text, View } from "react-native";
+import { NativeVideoMonitor, createVideoMonitorStore } from "@nitro-forge/media-ui/video";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 import {
@@ -11,6 +12,7 @@ import {
 
 interface DemoState { frame: number; gain: number }
 const store = createStore<DemoState>(() => ({ frame: 1800, gain: 0.72 }));
+const nativeVideoStore = createVideoMonitorStore();
 /** Synthetic static fixture: NOT a microphone, decoding, or playback claim. */
 const syntheticPeakFixture: WaveformPeak[] = Array.from({length: 160}, (_, i) => {
   const magnitude = Math.abs(Math.sin(i * 0.19) * Math.cos(i * 0.032)) * 0.85;
@@ -42,9 +44,25 @@ export default function App() {
       </View>
       <NativeLevelSlider value={gain} testID="forge-level"
         onValueChange={(next) => store.setState({ gain: next })} />
+      <View style={{ gap: 8 }}>
+        <Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "700" }}>
+          Native decoded video monitor
+        </Text>
+        <Text style={{ color: "#CBCBDE", fontSize: 12 }}>
+          Online reference fixture from official Expo Video docs; requires network access
+        </Text>
+        <NativeVideoMonitor
+          source="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          store={nativeVideoStore}
+          frameRate={FRAME_RATES.NTSC_2997}
+          height={218}
+          testID="forge-native-video-monitor"
+        />
+      </View>
       <Text style={{ color: "#9999AF", fontSize: 12 }}>
-        This test surface demonstrates control state only. No actual video decoding,
-        microphone recording, or Rust timeline mutation is attached.
+        The top transport and waveform are isolated fixtures. The native video monitor
+        below uses real decoded media and seeks; no microphone recording or Rust
+        timeline mutation is attached.
       </Text>
     </ScrollView>
   );
