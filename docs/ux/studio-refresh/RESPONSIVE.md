@@ -70,9 +70,10 @@ list scrolling was not explicitly walked. Success confirmations now clear after
 Focused 320×480 and 844×390 clean-canvas captures verify that confirmations no
 longer persist over the artboard.
 
-The paired canonical UI commit is
-`c8ac0ddab89076eb4bc28036c5befd7d7d4ab70c` (local only). CI pins that commit;
-publish it before pushing the NitroForge branch. No remote CI run is claimed.
+The original responsive pass used canonical UI commit
+`c8ac0ddab89076eb4bc28036c5befd7d7d4ab70c`. The current integration pin and
+publication status are documented in OWN_UI_INTEGRATION.md. No remote CI run
+is claimed for this responsive pass.
 
 Final checks: all root package typechecks, 25 workspace tests, visual import
 boundary and preview production build passed. NYC UI full typecheck, three new
@@ -80,3 +81,35 @@ Menu geometry tests and scoped lint passed. Existing bundle-size warning remains
 Raw scripts, exact parameters, screenshots and retry evidence remain under
 `artifacts/craft-anything/responsive-r1`; final selected images are in
 `docs/ux/evidence/prism-responsive-*.png`.
+
+
+## Stable tablet canvas follow-up
+
+Layers starts closed when the measured editor is narrower than1100px. Opening
+it overlays the artboard on tablet/phone editors; its width, height and position
+stay fixed. Wider editors retain reserved space beside Layers. Resizing does
+not overwrite an explicit open/close choice. This threshold describes editor
+space, not native app window size or orientation.
+
+The geometry regression checks identical artboard dimensions and all placement
+insets with Layers closed/open at716px,972px and390px editor widths, plus the
+reserved desktop case. All29 workspace tests, all package typechecks, the UI
+boundary check and preview production build passed. Browser observation is
+recorded below after inspection; no native runtime pass is inferred.
+
+
+Four fresh Craft Anything scenarios passed at768×1024,1024×768,390×667 and
+1440×1000. Actual captured DOM artboard dimensions and parent insets match with
+Layers closed/open/closed on overlay layouts:608px portrait tablet,484px
+landscape tablet and294px phone. The wide desktop retains its312px right inset
+when open and restores20px when closed. Screenshots confirm actual50% engine
+opacity and the larger tablet canvas. Main agent and independent reviewer
+inspected full-size images. The768px tablet artboard is608px wide, versus315px
+in the previous Layers-open default.
+
+The tool's immediate response budget was exceeded by per-step DOM/PNG output;
+supported saved-evidence pagination recovered the successful steps and images.
+This is not counted as an application failure. Raw proof:
+`artifacts/craft-anything/tablet-canvas-r1/verified-summary.json`.
+Portable successful script: `apps/studio-preview/qa/affinity-editor-tablet.json`.
+Representative images: `docs/ux/evidence/prism-tablet-*.png`.

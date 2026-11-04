@@ -236,6 +236,11 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
           {props.children ?? <ForgeDocumentStage studioId={props.studioId} state={props.state} theme={appearance} />}
         </View>
         {dockView('right', { width: `${layout.sizes.rightFraction * 100}%` })}
+        {canvasStudio && !compact && <View accessibilityLabel="Studio panels" style={{ width: 52, alignItems: 'center', gap: 4, paddingTop: 12, backgroundColor: colors.deep }}>
+          <View style={{ paddingVertical: 4, gap: 2, backgroundColor: colors.base, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control }}>
+            {(['properties', 'actions', 'history'] as const).map(id => button(panelNames[id]!, () => action(id, layout.collapsed.includes(id) ? 'activate' : 'collapse'), !layout.collapsed.includes(id), false, true, true, panelIcons[id]))}
+          </View>
+        </View>}
       </View>
       {dockView('bottom', { height: `${layout.sizes.bottomFraction * 100}%` })}
       {layout.floating.filter(f => !layout.collapsed.includes(f.panelId)).map(f => <View key={f.panelId} style={{ position: 'absolute', left: `${f.rect.x * 100}%`, top: `${f.rect.y * 100}%`, width: `${f.rect.width * 100}%`, height: `${f.rect.height * 100}%`, borderWidth: 1, borderColor: colors.accent, borderRadius: scale.radius.panel, overflow: 'hidden' }}>{renderPanel(f.panelId)}</View>)}

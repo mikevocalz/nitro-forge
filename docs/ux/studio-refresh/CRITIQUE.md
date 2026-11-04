@@ -49,3 +49,33 @@ instead of `actions: collapse`. Raster rows retain an honest type icon rather
 than fabricated thumbnails. Existing Workspace fitted status is retained as a
 brief layout acknowledgement, not a document state. No decorative reference
 photography or unsupported tools were added.
+
+## Affinity canonical-control evolution — November 3, 2026
+
+Round1: actual screenshots at1440/768/390, Properties and light mode inspected.
+Hierarchy, typography, colour, finish, craft, responsive behavior and retained
+functionality scored4/5; screenshot memorability3/5. Concrete asks: replace the
+remaining orange web Menu facade with graphite, quiet feedback typography and
+vertically center the Layers Badge.
+
+Round2: all asks landed and were inspected again. Same scores; no remaining
+must-fix visible defect in observed states. Five final successful Craft cases
+exercise actual shape creation,50% opacity, panel open/close and light theme.
+A standalone desktop WebSocket failure is excluded; the extended desktop flow
+repeats the edit successfully. Main agent also inspected final desktop, tablet,
+phone, inspector and popup images. No additional design changes after review.
+The full OS/browser matrix and native runtime are unverified; a full skill
+stop-rule pass is not claimed. Marketing conversion/below-fold criteria do not
+apply to this single-screen editor. Proof and screenshots are indexed in
+AFFINITY_FEEL.md and ROSTER.md.
+
+
+## Stable tablet canvas follow-up
+
+Before: the768px portrait capture reduced the artboard to315px beside an open
+Layers panel. Proposal review approved an overlay layout below1100px and Layers
+closed initially, retaining wider desktop reservations. Final rendered review
+inspected all four viewport fixtures and observed a608px tablet artboard,
+unchanged size/placement during panel open/close, actual50% opacity and retained
+44pt controls. No must-fix defect observed. This is a focused geometry correction;
+no new whole-application design score or full-platform pass is claimed.

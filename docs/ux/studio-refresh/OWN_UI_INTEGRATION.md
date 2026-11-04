@@ -25,7 +25,7 @@ and host envelope import actual `@acme/ui/html` landmarks and content elements.
 Tailwind scans the canonical source and uses its theme; `important` is required
 by that source's documented RNWeb class precedence contract.
 
-Local source-owned dependency commit: nyc-mon `782c682ea684606111e612242a66761d50137f95`.
+Local source-owned dependency commit: nyc-mon `75617163382235ed698e2230e9eefb70c8e19e06`.
 It is committed locally, not pushed. The paired UI commit must be published
 before pushing the NitroForge branch: CI checks out that exact UI commit into
 an adjacent `nyc-mon` directory, installs its own dependencies, then builds the

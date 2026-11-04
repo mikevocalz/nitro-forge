@@ -16,3 +16,9 @@ state changes; dispatched clicks alone do not establish visual correctness.
 
 Native runtime, screen readers and the full browser/OS matrix need separate
 evidence. Raw successful runs are indexed in docs/ux/studio-refresh/UI_COMPONENT_AUDIT.md.
+
+The tablet script records DOM as well as screenshots to compare artboard size
+and placement before/after Layers opens. Its complete evidence may exceed the
+immediate tool response budget; inspect the saved evidence through Craft's
+supported evidence browsing instead of treating a paginated response as failure.
+DOM truncation inside an image URI does not prove that later elements are absent.

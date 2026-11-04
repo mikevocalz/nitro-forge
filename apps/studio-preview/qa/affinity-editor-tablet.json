@@ -1,0 +1,113 @@
+{
+  "launch": true,
+  "headless": true,
+  "capture_network": false,
+  "capture": {
+    "after_each_step": [
+      "screenshot",
+      "dom"
+    ],
+    "at_end": [
+      "screenshot",
+      "dom"
+    ],
+    "events": []
+  },
+  "screenshot_each_step": false,
+  "keep_bodies": {
+    "header_values": false,
+    "request_body": false,
+    "response_body": false
+  },
+  "environment": {
+    "width": 768,
+    "height": 1024,
+    "device_scale_factor": 1,
+    "locale": "en-US",
+    "timezone": "America/New_York",
+    "color_scheme": "dark",
+    "reduced_motion": true,
+    "bypass_service_workers": true
+  },
+  "actions": [
+    {
+      "kind": "goto",
+      "url": "http://127.0.0.1:4173/#/apps/prism",
+      "wait_ms": 2200,
+      "step_id": "initial-state"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Rectangle",
+      "step_id": "add-rectangle"
+    },
+    {
+      "kind": "wait",
+      "ms": 600,
+      "step_id": "rectangle-state"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Choose teal fill",
+      "step_id": "choose-teal"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Ellipse",
+      "step_id": "add-ellipse"
+    },
+    {
+      "kind": "wait",
+      "ms": 2800,
+      "step_id": "closed-baseline"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Layers",
+      "step_id": "open-layers"
+    },
+    {
+      "kind": "wait",
+      "ms": 350,
+      "step_id": "open-overlay"
+    },
+    {
+      "kind": "click",
+      "selector": "[data-testid=\"prism-layers\"] summary",
+      "step_id": "open-opacity"
+    },
+    {
+      "kind": "wait",
+      "ms": 200,
+      "step_id": "opacity-options"
+    },
+    {
+      "kind": "click",
+      "role": "menuitem",
+      "name": "50%",
+      "step_id": "opacity-50"
+    },
+    {
+      "kind": "wait",
+      "ms": 2800,
+      "step_id": "open-opacity-state"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Close layers",
+      "step_id": "close-layers"
+    },
+    {
+      "kind": "wait",
+      "ms": 400,
+      "step_id": "closed-final"
+    }
+  ],
+  "action_timeout_ms": 6000,
+  "timeout_secs": 45
+}
