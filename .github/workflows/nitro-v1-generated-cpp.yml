@@ -48,7 +48,8 @@ jobs:
             -I "$RN_ROOT/ReactCommon" \
             -I "$ROOT/rust/nf-sys/include" \
             packages/ignition-v1-lab/cpp/HybridForgeFactory.cpp \
-            packages/ignition-v1-lab/cpp/HybridForgeDocument.cpp
+            packages/ignition-v1-lab/cpp/HybridForgeDocument.cpp \
+            packages/ignition-v1-lab/cpp/ForgeSerialQueue.cpp
 
 # Syntax/type compatibility with generated v1 C++ headers is NOT an Android
 # Gradle or Apple Xcode link, nor proof of live JS/native execution.

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ForgeRustSession.hpp"
+#include "ForgeSerialQueue.hpp"
 #include <NitroForgeV1/HybridForgeDocumentSpec.hpp>
 #include <memory>
 
@@ -25,6 +26,8 @@ class HybridForgeDocument final : public HybridForgeDocumentSpec {
  private:
   const ForgeEngineKind _kind;
   std::shared_ptr<::nitroforge::native::ForgeRustSession> _session;
+  /** Every engine call goes through this, so calls reach Rust in call order. */
+  std::shared_ptr<::nitroforge::native::ForgeSerialQueue> _queue;
 };
 
 } // namespace margelo::nitro::nitroforge::ignitionv1

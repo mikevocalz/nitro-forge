@@ -53,6 +53,11 @@ class ForgeRustSession final {
   /** Idempotent; concurrent operations either complete or reject as closed. */
   void close() noexcept;
 
+  /**
+   * False once close() ran. A document the engine terminated after a panic or
+   * non-recoverable error stays "open" here until close(); every later call
+   * then rejects with the engine's error, so no command runs on it.
+   */
   [[nodiscard]] bool isOpen() const noexcept;
 
  private:

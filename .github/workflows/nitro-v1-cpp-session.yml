@@ -8,6 +8,7 @@ on:
     paths:
       - 'packages/ignition-v1-lab/cpp/**'
       - 'tooling/native/nf_v1_cpp_smoke.cpp'
+      - 'tooling/native/serial_queue_test.cpp'
       - '.github/workflows/nitro-v1-cpp-session.yml'
   workflow_dispatch:
 
@@ -37,6 +38,20 @@ jobs:
             -ldl -lm -o /tmp/nitroforge-v1-cpp
       - name: Run native C++ open/edit/restore/close and malformed payload cases
         run: /tmp/nitroforge-v1-cpp
+      - name: Per-document command queue keeps call order under a multi-thread pool
+        run: |
+          clang++ -std=c++20 -Wall -Wextra -Werror -pthread \
+            -I packages/ignition-v1-lab/cpp \
+            packages/ignition-v1-lab/cpp/ForgeSerialQueue.cpp \
+            tooling/native/serial_queue_test.cpp -o /tmp/nitroforge-serial-queue
+          /tmp/nitroforge-serial-queue
+      - name: Same queue under ThreadSanitizer
+        run: |
+          clang++ -std=c++20 -g -fsanitize=thread -pthread \
+            -I packages/ignition-v1-lab/cpp \
+            packages/ignition-v1-lab/cpp/ForgeSerialQueue.cpp \
+            tooling/native/serial_queue_test.cpp -o /tmp/nitroforge-serial-queue-tsan
+          /tmp/nitroforge-serial-queue-tsan
 
 # Compiles the native session adapter against Rust, not the generated Nitro v1
 # HybridObject or iOS/Android packaging. Those need separate native app CI.
