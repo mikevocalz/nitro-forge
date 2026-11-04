@@ -5,130 +5,218 @@ import {
 } from "react-native-audio-api";
 import type { StoreApi } from "zustand/vanilla";
 import { ForgeRecordingController, type RecordingDriver, type RecordingSnapshot } from "./recording";
-import { WaveformPeakAccumulator } from "./pcmPeaks";
-import { planarPeak, recordingFileUri, stopAfterStart } from "./audioApiContracts";
+import { PcmCaptureSession, SOURCE_COLUMNS } from "./pcmCapture";
+import { recordingFileUri, stopAfterStart } from "./audioApiContracts";
 import type { SourceRecordingFile } from "./sourceRecordingTypes";
 
-/** Native-only import: AudioRecorder is not available in Audio API's web entry. */
+const FILE_SAMPLE_RATE = 48000;
+const STATUS_POLL_MS = 250;
+
+interface FinalizedFile {
+  readonly uri: string;
+  readonly durationSeconds: number;
+}
+
+/**
+ * Native-only import: AudioRecorder is not available in Audio API's web entry.
+ *
+ * Each effect run owns a fresh AudioRecorder and controller, so StrictMode and
+ * Fast Refresh re-runs never reuse a recorder whose effect was cleaned up.
+ * Cleanup disposes that owner permanently; the next run builds a new one.
+ */
 export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
   const session = useRef<{
-    controller: ForgeRecordingController;
+    start: () => Promise<boolean>;
     stop: () => Promise<SourceRecordingFile>;
   } | null>(null);
 
   useEffect(() => {
     // A new resource owner cannot inherit another recorder's transient state.
     if (store.getState().phase.kind !== "saved") store.setState({ phase: { kind: "idle" }, levelHistory: [] });
-    // Create resources in the effect, never render. StrictMode gets a fresh owner.
     const recorder = new AudioRecorder();
-    const accumulator = new WaveformPeakAccumulator(4096);
-    let finalized: Extract<SourceRecordingFile, { kind: "pcm-wav" }> | null = null;
-    let failure: string | null = null;
-    let disposed = false;
-    let observingInterruptions = false;
+    let controller: ForgeRecordingController | null = null;
+    // Unreadable stream: stop native capture and show the failure.
+    const capture = new PcmCaptureSession(store, "int16", (message) => {
+      void controller?.abort(message);
+    });
+    let finalized: FinalizedFile | null = null;
     let stopping: Promise<string> | null = null;
     let starting: ReturnType<AudioRecorder["start"]> | null = null;
-    let registrationError: string | null = null;
+    // A failure or interruption that arrived while start() was in flight.
+    let pendingFailure: string | null = null;
+    let pendingInterruption: string | null = null;
+    let confirmedRecording = false;
+    let disposed = false;
+
     const stopNative = (): Promise<string> => {
       if (stopping) return stopping;
       stopping = (async () => {
-        // Stop must run after an in-flight start, even on interruption/unmount.
-        const result = await stopAfterStart(starting, () => recorder.stop());
-        if (result.status === "error") throw new Error(result.message);
-        const uri = recordingFileUri(result.paths);
-        if (!Number.isFinite(result.duration) || result.duration < 0) throw new Error("Invalid recording duration");
-        finalized = { kind: "pcm-wav", uri, peaks: accumulator.frames ? accumulator.toColumns(512) : [],
-          sampleRate: 48000, channels: 1, durationSeconds: result.duration };
-        return uri;
+        try {
+          // Stop must run after an in-flight start, even on interruption/unmount.
+          const result = await stopAfterStart(starting, () => recorder.stop());
+          if (result.status === "error") throw new Error(result.message);
+          if (!Number.isFinite(result.duration) || result.duration < 0) {
+            throw new Error("Recorder returned an invalid duration");
+          }
+          const uri = recordingFileUri(result.paths);
+          finalized = { uri, durationSeconds: result.duration };
+          return uri;
+        } finally {
+          // Every callback emitted before the file closed has been delivered.
+          capture.closeFileWindow();
+        }
       })();
       return stopping;
     };
-    const fail = (message: string) => {
-      failure = message;
-      if (!disposed) store.setState({ phase: { kind: "error", message } });
-      // Never silently keep the microphone open after an error/interruption.
-      void stopNative().catch(() => undefined);
+
+    /**
+     * The OS or app lifecycle ended capture. Finalize the partial file now so
+     * the microphone is released, and let the user save it from "interrupted".
+     */
+    const interrupt = (message: string) => {
+      if (disposed || !controller) return;
+      const kind = store.getState().phase.kind;
+      if (kind === "preparing" || kind === "requesting-permission") {
+        pendingInterruption = message;
+        return;
+      }
+      if (kind !== "recording") return;
+      capture.closeFileWindow();
+      controller.reportInterrupted();
+      void stopNative().catch((error: unknown) => {
+        void controller?.abort("Finalizing interrupted recording failed: " +
+          (error instanceof Error ? error.message : String(error)));
+      });
     };
+
     const driver: RecordingDriver = {
       requestPermission: async () => {
-        if (registrationError) throw new Error(registrationError);
+        // A previous recording's shutdown must finish before a new one starts;
+        // its failure was already reported through the store.
         await stopping?.catch(() => undefined);
-        stopping = null; failure = null;
+        stopping = null; starting = null; finalized = null;
+        pendingFailure = null; pendingInterruption = null;
         return (await AudioManager.requestRecordingPermissions()) === "Granted";
       },
       configure: async () => {
+        if (AppState.currentState && AppState.currentState !== "active") {
+          throw new Error("Recording requires the foreground app");
+        }
         AudioManager.setSystemOptions({ ios: { category: "playAndRecord", mode: "default", options: ["defaultToSpeaker"] } });
-        if (AppState.currentState && AppState.currentState !== "active") throw new Error("Recording requires the foreground app");
         AudioManager.observeAudioInterruptions(true);
-        observingInterruptions = true;
+      },
+      // Undo configure(). The session is not deactivated: a preview
+      // AudioContext may still own running output I/O, and deactivating an
+      // active session fails on iOS. Returning to the playback category drops
+      // the input route and the receiver-only output of playAndRecord.
+      release: async () => {
+        AudioManager.observeAudioInterruptions(false);
+        AudioManager.setSystemOptions({ ios: { category: "playback", mode: "default", options: [] } });
       },
       prepare: async () => {
-        // A previous error's shutdown must finish before the next recording.
-        await stopping?.catch(() => undefined);
-        if (failure) throw new Error(failure);
-        stopping = null; starting = null; finalized = null; accumulator.reset();
+        capture.reset();
+        confirmedRecording = false;
         recorder.enableFileOutput({ directory: FileDirectory.Document, subDirectory: "Forge", format: FileFormat.Wav,
-          channelCount: 1, rotateIntervalBytes: 0, preset: { ...FilePreset.High, sampleRate: 48000, bitDepth: BitDepth.Bit16 } });
+          channelCount: 1, rotateIntervalBytes: 0, preset: { ...FilePreset.High, sampleRate: FILE_SAMPLE_RATE, bitDepth: BitDepth.Bit16 } });
       },
       record: async () => {
-        if (failure || disposed) throw new Error(failure ?? "Recorder disposed");
+        if (disposed) throw new Error("Recorder disposed");
+        // The file and onAudioReady are fed from the same native stream once
+        // start() runs, so the peak window opens with it.
+        capture.openFileWindow();
         starting = recorder.start();
-        let result: Awaited<ReturnType<AudioRecorder["start"]>>;
-        try { result = await starting; } catch (error) {
-          await stopNative().catch(() => undefined);
-          throw error;
-        }
-        if (result.status === "error" || failure || disposed) {
-          await stopNative().catch(() => undefined);
-          throw new Error(result.status === "error" ? result.message : failure ?? "Recorder disposed");
-        }
+        const result = await starting;
+        // On failure the controller stops native capture and releases the session.
+        if (result.status === "error") throw new Error(result.message);
+        if (pendingFailure) throw new Error(pendingFailure);
+        if (pendingInterruption) throw new Error(pendingInterruption);
       },
       stop: stopNative,
       getStatus: () => ({ isRecording: recorder.isRecording(), durationMillis: recorder.getCurrentDuration() * 1000 }),
     };
-    const controller = new ForgeRecordingController(driver, store);
-    recorder.onError(({ message }) => fail(message));
-    const subscription = recorder.onAudioReady({ sampleRate: 48000, channelCount: 1, bufferLength: 4800 }, ({ buffer, numFrames, when }) => {
-      if (disposed || failure) return;
-      try {
-        const peak = planarPeak(Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i)), numFrames);
-        accumulator.append(peak, numFrames);
-        if (store.getState().phase.kind === "recording") store.setState({
-          levelHistory: [...store.getState().levelHistory.slice(-159), peak],
-          phase: { kind: "recording", durationMs: Math.max(0, Math.round((when + numFrames / buffer.sampleRate) * 1000)) },
-        });
-      } catch (error) { fail(error instanceof Error ? error.message : "PCM callback failed"); }
+    const owned = new ForgeRecordingController(driver, store);
+    controller = owned;
+
+    recorder.onError(({ message }) => {
+      capture.closeFileWindow();
+      const kind = store.getState().phase.kind;
+      if (kind === "recording" || kind === "interrupted") void owned.abort(message);
+      else pendingFailure = message;
     });
-    if (subscription.status === "error") { registrationError = subscription.message; fail(subscription.message); }
-    const appState = AppState.addEventListener("change", state => {
-      if (state !== "active" && ["recording", "preparing"].includes(store.getState().phase.kind)) fail("Recording interrupted when app left foreground. Start again to retry.");
+    const subscription = recorder.onAudioReady(
+      { sampleRate: FILE_SAMPLE_RATE, channelCount: 1, bufferLength: 4800 },
+      ({ buffer, numFrames }) => {
+        if (disposed) return;
+        let channels: Float32Array[];
+        try {
+          channels = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
+        } catch {
+          // Unreadable channel data: the frame count still positions the gap.
+          channels = [];
+        }
+        capture.onPlanarBuffer(channels, numFrames, buffer.sampleRate);
+      },
+    );
+    const registrationError = subscription.status === "error" ? subscription.message : null;
+
+    // Android can end the input stream without an interruption event.
+    const poll = setInterval(() => {
+      if (store.getState().phase.kind !== "recording") return;
+      let running: boolean;
+      try { running = recorder.isRecording(); }
+      catch (error) { void owned.reportStatusError(error); return; }
+      if (running) confirmedRecording = true;
+      else if (confirmedRecording) interrupt("Recording stopped by the system. Save the partial WAV or start again.");
+    }, STATUS_POLL_MS);
+    const appState = AppState.addEventListener("change", (state) => {
+      if (state !== "active") interrupt("Recording stopped when the app left the foreground. Save the partial WAV or start again.");
     });
-    const interruption = AudioManager.addSystemEventListener("interruption", event => {
-      if (event.type === "began" && ["recording", "preparing"].includes(store.getState().phase.kind)) fail("Audio session interrupted. Start again to retry.");
+    const interruption = AudioManager.addSystemEventListener("interruption", (event) => {
+      if (event.type === "began") interrupt("Audio session interrupted. Save the partial WAV or start again.");
     });
+
     session.current = {
-      controller,
+      start: async () => {
+        if (registrationError) throw new Error("PCM callback registration failed: " + registrationError);
+        const started = await owned.start();
+        // An interruption that landed between start() resolving and the
+        // "recording" phase is applied now instead of being lost.
+        if (started && pendingInterruption) interrupt(pendingInterruption);
+        return started;
+      },
       stop: async () => {
-        await controller.stop();
-        if (failure) throw new Error(failure);
-        if (!finalized || disposed) throw new Error("No finalized recording available");
-        store.setState({ phase: { kind: "saved", uri: finalized.uri, durationMs: Math.round(finalized.durationSeconds * 1000) } });
-        return finalized;
+        await owned.stop();
+        const file: FinalizedFile | null = finalized;
+        if (!file || disposed) throw new Error("WAV capture ended without a finalized native recording");
+        return {
+          kind: "pcm-wav",
+          uri: file.uri,
+          // Writes the full-recording columns into the store for the saved lane.
+          peaks: capture.finalize(SOURCE_COLUMNS, file.durationSeconds),
+          sampleRate: FILE_SAMPLE_RATE,
+          channels: 1,
+          durationSeconds: file.durationSeconds,
+          droppedBuffers: capture.droppedBuffers,
+        };
       },
     };
     return () => {
-      disposed = true; session.current = null;
-      appState.remove(); interruption.remove(); recorder.clearOnAudioReady(); recorder.clearOnError();
-      if (observingInterruptions) AudioManager.observeAudioInterruptions(false);
-      void controller.dispose().catch(() => undefined);
-      void stopNative().catch(() => undefined);
+      disposed = true; session.current = null; controller = null;
+      clearInterval(poll); appState.remove(); interruption.remove();
+      recorder.clearOnAudioReady(); recorder.clearOnError();
+      // dispose() stops live capture, releases the session and writes any
+      // teardown failure into the store.
+      void owned.dispose();
     };
   }, [store]);
+
   return useMemo(() => ({
-    controller: { start: async () => {
-      if (!session.current) throw new Error("Audio recorder is not mounted");
-      return session.current.controller.start();
-    } },
+    controller: {
+      start: async () => {
+        if (!session.current) throw new Error("Audio recorder is not mounted");
+        return session.current.start();
+      },
+    },
     stop: async () => {
       if (!session.current) throw new Error("Audio recorder is not mounted");
       return session.current.stop();

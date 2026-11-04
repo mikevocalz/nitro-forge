@@ -1,5 +1,5 @@
 import { Button, Column, Host, Row, Slider, Text } from "@expo/ui";
-import { clampFrame, formatTimecode, type FrameRate } from "./timebase";
+import { clampFrame, formatTimecode, frameToPosition, positionToFrame, type FrameRate } from "./timebase";
 
 export interface NativeSeekBarProps {
   /** Integer frame index in the source timeline. The component is fully controlled. */
@@ -47,11 +47,10 @@ export function NativeSeekBar({
     <Host style={{ width: "100%" }}>
       <Column>
         <Slider
-          value={current}
-          onValueChange={seek}
+          value={frameToPosition(current, durationFrames)}
+          onValueChange={(position) => seek(positionToFrame(position, durationFrames))}
           min={0}
-          max={Math.max(1, durationFrames)}
-          step={stepFrames}
+          max={1}
           disabled={isDisabled}
           {...(testID ? { testID } : {})}
         />

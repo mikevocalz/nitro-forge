@@ -16,10 +16,12 @@ export function NativeSourceRecordingTrack({
   const history = useStore(store, (s) => s.levelHistory);
   const { controller, stop } = useForgePcmRecorder(store);
   const active = phase.kind === "recording";
+  const canSave = active || phase.kind === "interrupted";
   const busy = ["requesting-permission", "preparing", "stopping"].includes(phase.kind);
-  const duration = active || phase.kind === "stopping" || phase.kind === "saved"
+  const duration = active || phase.kind === "stopping" || phase.kind === "saved" ||
+    phase.kind === "interrupted"
     ? phase.durationMs : 0;
-  const label = phase.kind === "error"
+  const label = phase.kind === "error" || phase.kind === "interrupted"
     ? phase.message : phase.kind === "permission-denied"
       ? "Microphone permission required"
       : phase.kind === "saved" ? "WAV saved: " + phase.uri
@@ -27,7 +29,7 @@ export function NativeSourceRecordingTrack({
 
   const toggle = () => {
     if (disabled || busy) return;
-    if (active) {
+    if (canSave) {
       void stop().then(onSaved).catch(() => undefined);
     } else {
       void controller.start().catch(() => undefined);
@@ -41,17 +43,22 @@ export function NativeSourceRecordingTrack({
           <Text>{label}</Text>
           <Text>{`Elapsed: ${(duration / 1000).toFixed(1)}s`}</Text>
           <Button
-            label={active ? "Stop and save WAV" : "Record PCM WAV"}
+            label={active
+              ? "Stop and save WAV"
+              : phase.kind === "interrupted" ? "Save interrupted WAV" : "Record PCM WAV"}
             disabled={disabled || busy}
             onPress={toggle}
             {...(testID ? { testID: testID + "-toggle" } : {})}
           />
         </Column>
       </Host>
+      {/* While recording: the last 160 live buffer peaks. After saving: the
+          512 full-recording source columns from stop(), drawn at the lane's
+          128-column maximum (resampling keeps each column's min/max). */}
       <WaveformLane
         peaks={history}
         height={72}
-        columns={96}
+        columns={phase.kind === "saved" ? 128 : 96}
         {...(testID ? { testID: testID + "-waveform" } : {})}
       />
     </View>

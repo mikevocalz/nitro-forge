@@ -3,6 +3,7 @@ package com.nitroforge.signal
 import io.github.expo.modules.v2.ExpoModule
 import io.github.expo.modules.v2.JS
 import io.github.expo.modules.v2.Module
+import io.github.expo.modules.v2.react.androidContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -15,15 +16,34 @@ import java.nio.ByteOrder
 class ForgeSignalModule : Module() {
   @JS
   suspend fun analyzeWavFile(uri: String, columns: Int): List<List<Double>> =
-    withContext(Dispatchers.IO) { WavPeaks.analyze(uri, columns) }
+    withContext(Dispatchers.IO) {
+      val ctx = androidContext
+      WavPeaks.analyze(uri, columns, listOf(ctx.cacheDir, ctx.filesDir))
+    }
 }
 
 private object WavPeaks {
-  fun analyze(uri: String, columns: Int): List<List<Double>> {
-    require(columns in 1..4096) { "columns must be between 1 and 4096" }
+  /**
+   * Resolves `..` and symlinks with canonicalFile, then requires the file to sit
+   * strictly inside one of [roots], compared by path component (Path.startsWith),
+   * so a sibling such as `cache2/` never matches `cache/`.
+   */
+  fun sandboxLocal(uri: String, roots: List<File>): File {
     val parsed = URI(uri)
     require(parsed.scheme == "file") { "Only sandbox-local file:// WAV URIs are supported" }
-    val file = File(parsed)
+    val file = File(parsed).canonicalFile
+    val path = file.toPath()
+    val inside = roots.any { root ->
+      val base = root.canonicalFile.toPath()
+      path != base && path.startsWith(base)
+    }
+    require(inside) { "WAV file must be inside the app's cache or files directory" }
+    return file
+  }
+
+  fun analyze(uri: String, columns: Int, roots: List<File>): List<List<Double>> {
+    require(columns in 1..4096) { "columns must be between 1 and 4096" }
+    val file = sandboxLocal(uri, roots)
     require(file.isFile && file.length() in 44L..(64L * 1024L * 1024L)) {
       "WAV file missing or larger than 64 MiB"
     }

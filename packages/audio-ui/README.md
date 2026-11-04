@@ -39,9 +39,14 @@ and acknowledges it. Rust remains authoritative for project/undo/transport.
 ## Lifecycle and platform limits
 
 Permission is requested only by the user's Record action. Background audio
-and Android foreground services are explicitly disabled. Native recorder
-errors, interruption and leaving foreground stop capture, with a visible
-error and no automatic microphone restart. Browser capture releases tracks
+and Android foreground services are explicitly disabled. A session
+interruption, leaving the foreground, or the input stream stopping on its
+own finalizes the partial WAV (releasing the microphone) and moves the
+phase to `interrupted`; the user can save that file. Recorder errors and
+unreadable callback buffers abort with a visible error. There is no
+automatic microphone restart. After every recording attempt the iOS
+category returns from `playAndRecord` to `playback` and interruption
+observation is turned off. Browser capture releases tracks
 on stop/error/unmount and caps encoded output at 64 MiB. Browser Blob URLs
 are owned by the recording component and expire on new capture/unmount;
 consumers must persist bytes before relying on them for a project.
@@ -59,7 +64,11 @@ No Skia v3, Nitro v1 or concurrent Studio PR #5 files are changed.
 
 `node --experimental-strip-types --test packages/audio-ui/node-tests/audio-api.test.mjs`
 passes seven contracts: file URI normalization, planar peaks, source cleanup,
-late decode cancellation, and bounded/invalid playback rejection.
+late decode cancellation, and bounded/invalid playback rejection. The Vitest
+suite (`tests/`) covers the recording state machine, the PCM capture window
+for interleaved and planar buffers, web decode bounds and the `./pcm` export
+conditions; it does not import Audio API, but CI runs it after the frozen
+install, so it is gated with everything else below.
 
 The 24-hour minimum-release-age policy blocks Audio API 1.0.0 until
 **2026-11-04 18:01:08.810 UTC**. The attempted lock resolution reported

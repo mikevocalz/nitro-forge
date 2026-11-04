@@ -9,7 +9,11 @@ export const MIN_SPEED = 0.1;
 export const MAX_SPEED = 10;
 
 export interface SpeedPoint {
-  /** Normalized position in the source clip, [0, 1]. */
+  /**
+   * Normalized position along the clip's output (timeline) duration, [0, 1].
+   * Matches upstream, where `at` is the playhead offset divided by the clip's
+   * timeline duration. It is not a position in the source media.
+   */
   readonly at: number;
   /** Speed multiplier 0.1x..10x. */
   readonly speed: number;
@@ -56,7 +60,13 @@ export function validateCurve(points: readonly SpeedPoint[]): SpeedPoint[] {
   return cleaned;
 }
 
-/** The original CapCraft trapezoidal approximation for average clip rate. */
+/**
+ * Time-averaged speed over the output timeline: source seconds consumed per
+ * output second, by the trapezoid rule over `at`. This is upstream's `meanOf`.
+ * Because `at` is output time, output duration is source / meanSpeed. If `at`
+ * were a source position the duration would instead be source * integral of
+ * 1/speed, which this API does not compute.
+ */
 export function meanSpeed(points: readonly SpeedPoint[]): number {
   const curve = validateCurve(points);
   let area = 0;
@@ -68,6 +78,7 @@ export function meanSpeed(points: readonly SpeedPoint[]): number {
   return area;
 }
 
+/** Output (timeline) seconds for `sourceSeconds` of media under the curve. */
 export function previewDurationSeconds(
   sourceSeconds: number,
   points: readonly SpeedPoint[],

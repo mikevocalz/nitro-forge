@@ -89,6 +89,18 @@ export class WaveformPeakAccumulator {
     }
   }
 
+  /**
+   * Advance the timeline over frames whose samples could not be read. The
+   * gap renders as an empty column; later peaks keep their true position.
+   */
+  skip(frameCount: number): void {
+    if (!Number.isSafeInteger(frameCount) || frameCount <= 0 ||
+        !Number.isSafeInteger(this.currentFrame + frameCount)) {
+      throw new RangeError("Invalid PCM duration");
+    }
+    this.currentFrame += frameCount;
+  }
+
   appendPcm(data: ArrayBuffer, channels: number, encoding: PcmEncoding): PcmPeakChunk {
     const chunk = peakFromPcmBuffer(data, channels, encoding);
     this.append(chunk.peak, chunk.frames);

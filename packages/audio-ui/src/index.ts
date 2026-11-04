@@ -3,6 +3,7 @@ export type { NativeRecordingTrackProps } from "./NativeRecordingTrack";
 export { useForgeAudioRecorder } from "./useForgeAudioRecorder";
 export {
   ForgeRecordingController,
+  INTERRUPTED_MESSAGE,
   MAX_METER_HISTORY,
   createRecordingStore,
   dbfsToPeak,
@@ -18,4 +19,6 @@ export type {
 export { NativeSourceRecordingTrack } from "./NativeSourceRecordingTrack";
 export type { NativeSourceRecordingTrackProps, SourceRecordingFile } from "./sourceRecordingTypes";
 export { WaveformPeakAccumulator, peakFromPcmBuffer } from "./pcmPeaks";
+export { PcmCaptureSession, SOURCE_COLUMNS } from "./pcmCapture";
+export type { PcmBuffer } from "./pcmCapture";
 export type { PcmEncoding, PcmPeakChunk } from "./pcmPeaks";

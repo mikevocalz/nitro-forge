@@ -22,15 +22,17 @@ export function NativeRecordingTrack({
   const levelHistory = useStore(store, (s) => s.levelHistory);
   const controller = useForgeAudioRecorder(store);
   const isRecording = phase.kind === "recording";
+  const canSave = isRecording || phase.kind === "interrupted";
   const pending = phase.kind === "requesting-permission" ||
     phase.kind === "preparing" || phase.kind === "stopping";
   const durationMs =
     phase.kind === "recording" || phase.kind === "stopping" ||
+    phase.kind === "interrupted" ||
     phase.kind === "saved" ? phase.durationMs : 0;
 
   const act = () => {
     if (disabled || pending) return;
-    if (isRecording) {
+    if (canSave) {
       void controller.stop()
         .then((uri) => onSaved?.(uri))
         .catch(() => undefined); // Controller displays the error state.
@@ -41,7 +43,7 @@ export function NativeRecordingTrack({
 
   const statusText = phase.kind === "permission-denied"
     ? "Microphone permission denied"
-    : phase.kind === "error"
+    : phase.kind === "error" || phase.kind === "interrupted"
       ? phase.message
       : phase.kind === "saved"
         ? "Saved recording: " + phase.uri
@@ -62,7 +64,11 @@ export function NativeRecordingTrack({
           <Text>{statusText}</Text>
           <Text>{`Elapsed: ${(durationMs / 1000).toFixed(1)} seconds`}</Text>
           <Button
-            label={isRecording ? "Stop and save recording" : "Start microphone recording"}
+            label={isRecording
+              ? "Stop and save recording"
+              : phase.kind === "interrupted"
+                ? "Save interrupted recording"
+                : "Start microphone recording"}
             disabled={disabled || pending}
             onPress={act}
             {...(testID ? { testID: testID + "-action" } : {})}

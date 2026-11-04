@@ -35,6 +35,8 @@ export function useForgeAudioRecorder(store: StoreApi<RecordingSnapshot>) {
         }
       },
       configure: async () => {},
+      // Browsers have no app audio session to hand back; tracks are stopped in onstop/onerror.
+      release: async () => {},
       prepare: async () => {
         if (!stream) throw new Error("Microphone stream is unavailable");
         if (uri) URL.revokeObjectURL(uri);
@@ -89,10 +91,12 @@ export function useForgeAudioRecorder(store: StoreApi<RecordingSnapshot>) {
     };
     const controller = new ForgeRecordingController(driver, store); current.current = controller;
     const timer = setInterval(() => controller.observe(driver.getStatus()), 100);
+    // Hidden tab: end capture (releasing the microphone) but leave saving to
+    // the user, so the clip still reaches onSaved through the track's stop().
     const visibility = () => {
-      if (document.hidden && store.getState().phase.kind === "recording") {
-        void controller.stop().catch(() => undefined);
-      }
+      if (!document.hidden || store.getState().phase.kind !== "recording") return;
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+      controller.reportInterrupted();
     };
     document.addEventListener("visibilitychange", visibility);
     return () => {
