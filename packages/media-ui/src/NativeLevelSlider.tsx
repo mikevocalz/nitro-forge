@@ -28,7 +28,7 @@ export function NativeLevelSlider({
           max={1}
           step={0.01}
           disabled={disabled}
-          testID={testID}
+          {...(testID ? { testID } : {})}
           onValueChange={(next) => onValueChange(Math.max(0, Math.min(1, next)))}
         />
       </Column>
