@@ -25,9 +25,37 @@ Repositories (verify each selected file and nested assets/dependencies separatel
 | [pdfcraft-android](https://github.com/artcraft-android/pdfcraft-android) | MIT OR Apache-2.0 | Yes, reviewed per file | Viewer, annotations, forms, digital signatures, voice notes |
 | [wordcraft-android](https://github.com/artcraft-android/wordcraft-android) | MIT OR Apache-2.0 | Yes, reviewed per file | Rich text, contextual ribbon, comments, object dragging |
 | [gridcraft-android](https://github.com/artcraft-android/gridcraft-android) | MIT OR Apache-2.0 | Yes, reviewed per file | Grid, formula references, keyboard, formatting palettes |
-| [capcraft-android](https://github.com/artcraft-android/capcraft-android) | **AGPL-3.0-or-later** | **NO copy into commercial Forge SDK absent deliberate license/legal review** | Feature/behavior references only: timeline, speed curves, captions, effects and audio |
+| [capcraft-android](https://github.com/artcraft-android/capcraft-android) | **AGPL-3.0-or-later** | **YES, if the actual integrated work is distributed under AGPL-compatible terms and all obligations are met** | Port/reuse timeline, speed curves, captions, effects, audio as reviewed AGPL code; no automatic closed-source exception from Nitro/Expo wrappers |
 
-A repository license is not a license for every font, trademark, reference image, icon, codec, model or third-party asset. Reuse under MIT/Apache requires correct notices and modified-source tracking; check any crate/submodule dependencies and patent/trademark constraints. CapCraft is a specification/behavior study only for the independent Forge implementation.
+A repository license is not a license for every font, trademark, reference image, icon, codec, model or third-party asset. Reuse under MIT/Apache requires correct notices and modified-source tracking; check any crate/submodule dependencies and patent/trademark constraints. **CapCraft is approved as a potential source to reuse under its AGPL-3.0-or-later license**; it is not limited to behavioral study. The Expo Modules 2.0 / Nitro v1 wrappers do not change the inherited license. Check the whole linked work, not just the component's package.json.
+
+
+## AGPL-3.0-or-later adoption decision (2026-11-03)
+
+The owner has elected to **permit AGPL source use** where the Forge components and their resulting *combined distributions* comply with the terms. Previous wording blocking direct CapCraft reuse is superseded.
+
+This is **not** permission to use AGPL as if it were MIT/Apache. Upgrading to Nitro Modules v1, Expo Modules 2.0, Swift, Kotlin, C++, WASM, Rust or an alternate public API does **not** eliminate copyright obligations for source-derived code. In particular, wrapping a copied/ported AGPL module and linking it into an app can create a combined AGPL-covered work. Technical packaging alone, including separate workspaces, repositories, plugins or processes, does not guarantee legal separation.
+
+### Proposed adoption structure
+
+- **Core Forge UI and engines:** remain independent of CapCraft source by default, until a project-level decision is made to distribute the relevant combination under AGPL-compatible terms. Preserve other already-permissive source provenance.
+- **Optional source-derived AGPL track:** create distinct `@nitro-forge/capcraft-agpl-*` packages only with per-file copyright notices, unchanged upstream licensing where applicable, full LICENSE copy, attribution, provenance pinned to upstream revision, modifications log, source availability statement, and explicit package dependency gates. Even when a package is optional, integrating it into a native app or library can bring the **combined work** within copyleft requirements.
+- **Integration contracts:** expose a stable `SpeedCurve`, `TimelineLane`, `AutoCaption`, `AudioEffects` interface that works through Expo 58 v2-native methods/views where supported, or Nitro v1 for Rust/C++ DSP/timeline systems. Neither bridge is a license loophole. Preserve Rust as the document source of truth, with atomic begin/update/commit/cancel undo gestures.
+- **Platforms:** Android Compose UI + iOS SwiftUI/UIKit equivalent; Skia v3 for extremely dense drawing; web desktop adapter using Canvas/WASM where appropriate. Never claim that the Android Compose component is already cross-platform.
+- **AGPL vs commercial:** Selling an AGPL application is permitted. Restricting the entire linked AGPL-derived application/SDK as closed-source while distributing that combined work generally is not; if closed distribution is required, obtain an alternative license from the rights holders or implement independently without copying AGPL expression, subject to review.
+
+### Source admission checklist
+
+1. Record the exact upstream `capcraft-android` commit SHA, path, copyright holders (including Concat contributors where relevant), SPDX expression and what expression was copied.
+2. Preserve original copyright, license/warranty notices, and required notices of modifications/dates. Include complete AGPL-3.0-or-later license and project-specific third-party notices.
+3. Analyze **what is combined**: JS library, v2 native module, Nitro v1 native binary, app, bundled assets, and server. Source availability of modified AGPL works and distributed combined works must comply with AGPL sections 4–6; section 13 may require an online source offer if users interact remotely with a modified AGPL program.
+4. Verify original and new sources can be built from Corresponding Source, including build scripts and required installation information where applicable. Source offer in UI/NOTICE where required.
+5. Check UI fonts/assets, FFmpeg codec configurations, speech models and audio dependencies individually against `NOTICE` and `THIRD_PARTY_NOTICES.md`.
+6. Separate untouched, independent MIT/Apache modules from the AGPL-derived track **only when architecturally and legally independent**. An `optional` flag, dynamic linking, generated bindings, or a TS interface by itself does not make code independent.
+7. Seek counsel before shipping a proprietary app/template SDK incorporating AGPL-derived native code. The key question is the resulting licensed **combined work**, not whether a component can technically be compiled.
+8. Until a release decision is completed, keep AGPL-derived packages opt-in, out of the stable package export graph, and unclaimed as safe for proprietary redistribution.
+
+**Ground truth:** https://github.com/artcraft-android/capcraft-android/blob/main/LICENSE , https://github.com/artcraft-android/capcraft-android/blob/main/NOTICE , https://github.com/artcraft-android/capcraft-android/blob/main/THIRD_PARTY_NOTICES.md , https://www.gnu.org/licenses/agpl-3.0.en.html , https://www.gnu.org/licenses/gpl-faq.en.html#GPLAndPlugins .
 
 ## Source-to-component map
 
@@ -55,9 +83,9 @@ Source paths below are from public `main` and are pointers for engineering revie
 | `gridcraft-android/apps/.../ui/editor/GridView.kt` | virtual grid, range selection, fill handles | `grid-ui`, Tally | P1 high-volume native rendering |
 | `gridcraft-android/apps/.../ui/editor/FormulaRefs.kt` | formula reference coloring and taps | `grid-ui`, Tally | P1 accepts Rust evaluator semantics |
 | `gridcraft-android/apps/.../ui/editor/Keypad.kt` | numeric/formula keypad | `grid-ui`, Tally | P1 IME-safe |
-| `capcraft-android/src/crates/.../ui/editor/Timeline.kt` | overlay/effect track hierarchy | Splice | P1 clean-room behavior only |
-| `capcraft-android/src/crates/.../ui/editor/panels/SpeedCurveEditor.kt` | nonlinear speed curve and handles | Splice | P1 clean-room behavior only |
-| `capcraft-android/src/crates/.../ui/editor/panels/AutoCaptions.kt` | captions review workflow | Splice | P1 clean-room behavior only |
+| `capcraft-android/src/crates/.../ui/editor/Timeline.kt` | overlay/effect track hierarchy | Splice / optional AGPL module | P1 AGPL source port permitted with provenance and corresponding-source release obligations |
+| `capcraft-android/src/crates/.../ui/editor/panels/SpeedCurveEditor.kt` | nonlinear speed curve and handles | Splice / optional AGPL module | P1 may port with original notices, license file, changes and AGPL-aware distribution |
+| `capcraft-android/src/crates/.../ui/editor/panels/AutoCaptions.kt` | captions review workflow | Splice / optional AGPL module | P1 may port; evaluate model, subtitle, and runtime third-party licenses separately |
 
 ## First real seed in this PR
 
@@ -82,7 +110,7 @@ All items are **planned, not implemented**, except the source-only native-signal
 | ART-11 | `PDFPageViewport`, comments/forms/signature controls | PdfCraft | native/Board overlay + Folio | docs owner; semantic PDF save/reopen |
 | ART-12 | `RichTextCaret`, selection toolbar, contextual ribbon | WordCraft | native IME host + Quill | docs owner; composition/bidi test |
 | ART-13 | `VirtualSheetGrid`, `FormulaBar` | GridCraft | native virtualized view + Tally | grid owner; 100k cell scroll test |
-| ART-14 | `SpeedCurveEditor`, `CaptionTimeline`, `EffectsTracks` | CapCraft behavior only | original code only, no AGPL import | video + legal approval gate |
+| ART-14 | `SpeedCurveEditor`, `CaptionTimeline`, `EffectsTracks` | CapCraft AGPL-3.0-or-later code or behavior | optional AGPL-native module + Splice, distribution compliance gate | video engineer + licensing/source reviewer; device and API verification |
 
 ## No false positives / test gates
 
