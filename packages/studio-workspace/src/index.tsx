@@ -10,6 +10,7 @@ import { createStudioWorkspaceStore, MIN_STAGE_HEIGHT, MIN_STAGE_WIDTH, PANEL_ID
 import { ForgeDocumentStage } from './stage';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { DragGrabHandle } from './drag-grab-handle';
+import { useStudioTextScale } from './persona-turret';
 import { workspaceThemes, prismThemes, workspaceScale as scale, type WorkspaceColors } from './theme';
 export { createStudioWorkspaceStore } from './model';
 export { ForgeDocumentStage } from './stage';
@@ -62,7 +63,11 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const outerWidth = useStore(ui, s => s.width);
   const outerHeight = useStore(ui, s => s.height);
   const compact = outerWidth < 700;
-  const separateHostControls = canvasStudio && outerWidth < 380 && !!props.headerTrailing;
+  // The header's kit controls grow with the text size, so the width that fits
+  // them on one row grows too: at 200 % a 390 pt phone gives the host
+  // controls their own row instead of clipping Save.
+  const textScale = useStudioTextScale();
+  const separateHostControls = canvasStudio && outerWidth < 380 * textScale && !!props.headerTrailing;
   // A short landscape host keeps its existing toolbar height. Host menus stay
   // outside the horizontal scroller so their platform popup can open normally.
   const packHostControls = separateHostControls && outerHeight < 500;
@@ -237,7 +242,8 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
           {props.children ?? <ForgeDocumentStage studioId={props.studioId} state={props.state} theme={appearance} />}
         </View>
         {dockView('right', { width: `${layout.sizes.rightFraction * 100}%` })}
-        {canvasStudio && !compact && <View accessibilityLabel="Studio panels" style={{ width: 52, alignItems: 'center', gap: 4, paddingTop: 12, backgroundColor: colors.deep }}>
+        {/* Sized by its buttons, so grown text widens the column and the stage gives way, rather than the buttons spilling over the stage. */}
+        {canvasStudio && !compact && <View accessibilityLabel="Studio panels" style={{ minWidth: 52, paddingHorizontal: 3, alignItems: 'center', gap: 4, paddingTop: 12, backgroundColor: colors.deep }}>
           <View style={{ paddingVertical: 4, gap: 2, backgroundColor: colors.base, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control }}>
             {(['properties', 'actions', 'history'] as const).map(id => button(panelNames[id]!, () => action(id, layout.collapsed.includes(id) ? 'activate' : 'collapse'), !layout.collapsed.includes(id), false, true, true, panelIcons[id]))}
           </View>

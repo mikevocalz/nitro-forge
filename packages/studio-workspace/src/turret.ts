@@ -128,6 +128,23 @@ export type TurretFrame = Readonly<{
   labelWidth: number; labelHeight: number;
 }>;
 
+/** Dial parts drawn in points: the bezel, the face that carries the readout,
+ * the detent slot depth and the gap to the names. */
+export type TurretDialGeometry = TurretFrameGeometry & Readonly<{ face: number; notch: number }>;
+
+/** The dial grown with the text, so the readout in the face can follow the
+ * text size and stay the largest type on the instrument. The face, bezel,
+ * slots, name gap and the box minimums scale together; name targets already
+ * grow inside {@linkcode turretFrame}. Scales below 1 keep the drawn size. */
+export function scaleTurretGeometry<G extends TurretDialGeometry>(g: G, textScale: number): G {
+  const k = Math.max(1, Number.isFinite(textScale) ? textScale : 1);
+  if (k === 1) return g;
+  return {
+    ...g, bezel: g.bezel * k, face: g.face * k, notch: g.notch * k, labelGap: g.labelGap * k,
+    boxWidth: Math.ceil(g.boxWidth * k), boxTop: Math.ceil(g.boxTop * k), boxHeight: Math.ceil(g.boxHeight * k),
+  };
+}
+
 /** Smallest scale a ring of names may be drawn at before they move to a list:
  * below it a 13 pt name would render under 11 pt. */
 export const TURRET_MIN_RING_SCALE = 0.85;

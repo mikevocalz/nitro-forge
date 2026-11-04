@@ -2,10 +2,32 @@ import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 import type { StudioViewRef } from './ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
+import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { View, Text, Button } from './ui';
 import { StudioGesture } from './studio-gesture';
 import { shapeOutline, windowToPageRect, type CanvasDocument, type CanvasRect } from './prism-canvas-model';
 import { createCanvasGesture, type CanvasPreview } from './prism-canvas-model';
+
+/** The engine composite is transparent where nothing is painted (an empty
+ * raster layer stays clear), so the artboard shows that as a fine checker
+ * instead of a white block: 8 pt squares in two near-white neutrals, quiet
+ * enough that every fill reads over it. */
+export const ARTBOARD_CHECKER = { size: 8, light: '#FFFFFF', dark: '#EDEFF3' } as const;
+
+function TransparencyChecker({ width, height }: { width: number; height: number }) {
+  const { size, light, dark } = ARTBOARD_CHECKER;
+  return <Svg testID="prism-transparency" width={width} height={height} aria-hidden pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0 }}
+    {...(Platform.OS === 'web' ? {} : { accessible: false, focusable: false })}>
+    <Defs>
+      <Pattern id="prism-checker" width={size * 2} height={size * 2} patternUnits="userSpaceOnUse">
+        <Rect width={size * 2} height={size * 2} fill={light} />
+        <Rect width={size} height={size} fill={dark} />
+        <Rect x={size} y={size} width={size} height={size} fill={dark} />
+      </Pattern>
+    </Defs>
+    <Rect width={width} height={height} fill="url(#prism-checker)" />
+  </Svg>;
+}
 
 /** Touch/pointer edits commit once on release. The overlay previews bounds only. */
 export function PrismCanvas(props: {
@@ -61,7 +83,8 @@ export function PrismCanvas(props: {
     <View ref={view} collapsable={false} focusable onLayout={() => gesture.cancel()}
     {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') gesture.cancel(); } }}
     testID="prism-artboard" accessibilityLabel="Prism artboard. Select layers or use Transform for accessible move actions."
-    style={{ ...touchStyle, width: props.width, height: props.height, backgroundColor: '#FFFFFF', overflow: 'hidden', boxShadow: '0 12px 35px #00000035' }}>
+    style={{ ...touchStyle, width: props.width, height: props.height, backgroundColor: ARTBOARD_CHECKER.light, overflow: 'hidden', boxShadow: '0 12px 35px #00000035' }}>
+    <TransparencyChecker width={props.width} height={props.height} />
     <View pointerEvents="none" style={{ position: 'absolute', inset: 0 }}>{props.children}</View>
     {outline && <View pointerEvents="none" testID="prism-selection-bounds" style={{ position: 'absolute', left: outline.x, top: outline.y, width: outline.width, height: outline.height, borderWidth: 2, borderColor: props.color, borderStyle: preview ? 'dashed' : 'solid' }} />}
     {preview && <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: '#111827', padding: 4 }}>

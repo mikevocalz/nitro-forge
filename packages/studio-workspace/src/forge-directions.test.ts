@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FORGE_DIRECTION_IDS, forgeDirections, contrastRatio, luminance, glassAllowed, detentDurationMs,
-  labCanvas, DEFAULT_TURRET_DIRECTION, workbenchChrome, type ForgeScheme,
+  labCanvas, DEFAULT_TURRET_DIRECTION, workbenchChrome, systemColor, type ForgeScheme,
 } from './forge-directions.ts';
 
 const schemes: ForgeScheme[] = ['dark', 'light'];
@@ -86,4 +86,11 @@ test('editor chrome: engraving reads at 4.5:1 and state marks at 3:1, in both ma
   // Ceramic is near the light mat's value, so its chamfer line carries the panel edge.
   const light = workbenchChrome.light;
   assert.ok(ratio(light.edge, light.body) >= 3 && ratio(light.edge, labCanvas.light.mat) >= 3, 'light chamfer holds 3:1 on its face and on the mat');
+});
+
+test('forced-colour system colours survive React Native Web: var() with the keyword as fallback', () => {
+  assert.equal(systemColor('CanvasText'), 'var(--forge-system-CanvasText, CanvasText)');
+  assert.equal(systemColor('Highlight'), 'var(--forge-system-Highlight, Highlight)');
+  // React Native Web passes colours through only when they start with var( (isWebColor).
+  for (const name of ['Canvas', 'CanvasText', 'Highlight', 'GrayText'] as const) assert.ok(systemColor(name).startsWith('var('));
 });

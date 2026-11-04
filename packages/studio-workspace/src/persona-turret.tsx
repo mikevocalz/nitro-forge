@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
-import { AccessibilityInfo, I18nManager, PixelRatio, Platform, findNodeHandle, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, Dimensions, I18nManager, PixelRatio, Platform, findNodeHandle, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Stop } from 'react-native-svg';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -9,13 +9,13 @@ import type { GesturePoint } from './studio-gesture-types';
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 import { personaManifest, personasOn, type PersonaSpec, type PersonaSurface } from './persona';
 import {
-  turretAnnouncement, turretArrowKey, turretDisplayAngle, turretFrame, turretLogicalAngle, turretReduce,
+  scaleTurretGeometry, turretAnnouncement, turretArrowKey, turretDisplayAngle, turretFrame, turretLogicalAngle, turretReduce,
   turretShortcutDigit, turretShortcutFor, type TurretEffect, type TurretEvent, type TurretShortcut, type TurretState,
 } from './turret';
 import { workspaceScale as scale, type WorkspaceColors } from './theme';
 import {
   DEFAULT_TURRET_DIRECTION, detentDurationMs, forgeDirections, forgeFeedbackMotion, turretGeometry as geo,
-  type ForgeDirectionId, type ForgeRenderPrefs, type ForgeScheme,
+  systemColor, type ForgeDirectionId, type ForgeRenderPrefs, type ForgeScheme,
 } from './forge-directions';
 import { TurretPointer, TurretRim, type TurretPulse } from './turret-motion';
 
@@ -41,7 +41,7 @@ export function turretTextScale(): number {
 /** Width a host panel gives the turret so `count` stops keep their ring at
  * `textScale`. Narrower panels get the stacked names instead. */
 export function turretBoxWidth(textScale: number, count: number): number {
-  return turretFrame(0, textScale, count, geo).boxWidth;
+  return turretFrame(0, textScale, count, scaleTurretGeometry(geo, textScale)).boxWidth;
 }
 
 /** Every string the turret shows. Capability lines come from persona manifests. */
@@ -101,12 +101,12 @@ type LocalState = {
   focusedStop: number | null; width: number; pulse: TurretPulse | null; status: string;
 };
 
-type HostPrefs = ForgeRenderPrefs & { finePointer: boolean; platform: string };
+type HostPrefs = ForgeRenderPrefs & { finePointer: boolean; platform: string; textScale: number };
 type MediaList = { matches: boolean; addEventListener?: (t: 'change', cb: () => void) => void };
 
 // Accessibility settings shared by every turret, read once per process.
 const prefsStore = createStore<HostPrefs>(() => ({
-  reduceMotion: false, reduceTransparency: false, moreContrast: false, forcedColors: false, finePointer: false, platform: Platform.OS,
+  reduceMotion: false, reduceTransparency: false, moreContrast: false, forcedColors: false, finePointer: false, platform: Platform.OS, textScale: 1,
 }));
 let prefsWatching = false;
 function watchPrefs() {
@@ -127,8 +127,11 @@ function watchPrefs() {
     watch('(pointer: fine)', 'finePointer');
     const nav = (globalThis as { navigator?: { platform?: string; userAgentData?: { platform?: string } } }).navigator;
     prefsStore.setState({ platform: nav?.userAgentData?.platform || nav?.platform || '' });
+    watchWebTextScale();
     return;
   }
+  prefsStore.setState({ textScale: PixelRatio.getFontScale() });
+  Dimensions.addEventListener('change', () => prefsStore.setState({ textScale: PixelRatio.getFontScale() }));
   void AccessibilityInfo.isReduceMotionEnabled().then(v => prefsStore.setState({ reduceMotion: v }));
   AccessibilityInfo.addEventListener('reduceMotionChanged', v => prefsStore.setState({ reduceMotion: v }));
   if (Platform.OS === 'ios') {
@@ -137,6 +140,29 @@ function watchPrefs() {
     void AccessibilityInfo.isDarkerSystemColorsEnabled?.().then(v => prefsStore.setState({ moreContrast: v }));
     AccessibilityInfo.addEventListener('darkerSystemColorsChanged', v => prefsStore.setState({ moreContrast: v }));
   }
+}
+
+/** Web: a 1rem probe reports every change to the root font size (the
+ * browser's text size setting, or a page that sets it), so layouts sized from
+ * the text follow it without a reload. */
+function watchWebTextScale() {
+  const g = globalThis as unknown as { document?: { createElement: (t: string) => { style: Record<string, string>; setAttribute: (k: string, v: string) => void }; body?: { appendChild: (n: unknown) => void } };
+    ResizeObserver?: new (cb: () => void) => { observe: (n: unknown) => void } };
+  const update = () => { const next = turretTextScale(); if (next !== prefsStore.getState().textScale) prefsStore.setState({ textScale: next }); };
+  update();
+  if (!g.document?.body || !g.ResizeObserver) return;
+  const probe = g.document.createElement('div');
+  probe.setAttribute('aria-hidden', 'true');
+  Object.assign(probe.style, { position: 'fixed', visibility: 'hidden', pointerEvents: 'none', width: '1rem', height: '1rem', top: '0', left: '0' });
+  g.document.body.appendChild(probe);
+  new g.ResizeObserver(update).observe(probe);
+}
+
+/** The user's text size as a multiple of 100 %, kept current: the browser's
+ * root font size on web, the system font scale on native. */
+export function useStudioTextScale(): number {
+  watchPrefs();
+  return useStore(prefsStore, s => s.textScale);
 }
 
 /** Reduce Motion, Reduce Transparency, Increase Contrast and forced colours, as one store. */
@@ -167,10 +193,6 @@ const polar = (deg: number, r: number) => {
   const rad = deg * Math.PI / 180;
   return { x: r * Math.sin(rad), y: -r * Math.cos(rad) };
 };
-const ringSize = geo.bezel * 2;
-/** The readout engraved in the dial face is sized to the face, so it grows a
- * little. Stop names and captions follow the text size fully. */
-const FACE_TEXT_MAX_SCALE = 1.2;
 const visuallyHidden = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, clip: 'rect(0 0 0 0)' } as unknown as ViewStyle;
 
 /**
@@ -202,7 +224,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
   const shortcut = turretShortcutFor(prefs.platform);
   const keys = Platform.OS === 'web' && prefs.finePointer;
   const forced = !!prefs.forcedColors;
-  const focusColor = forced ? 'Highlight' : m.accent;
+  const focusColor = forced ? systemColor('Highlight') : m.accent;
 
   // The host owns which persona is active; follow it when no peek is open.
   useEffect(() => {
@@ -275,16 +297,20 @@ export function PersonaTurret(props: PersonaTurretProps) {
   const lightDeg = direction.light.angleDeg;
   const from = polar(lightDeg, 0.5), to = polar(lightDeg + 180, 0.5);
   const gradient = { x1: 0.5 + from.x, y1: 0.5 + from.y, x2: 0.5 + to.x, y2: 0.5 + to.y };
-  const R = geo.bezel;
-  const textScale = turretTextScale();
+  const textScale = prefs.textScale;
+  // The dial grows with the text, so the readout in its face follows the text
+  // size like the stop names and stays the largest type on the instrument.
+  const g = scaleTurretGeometry(geo, textScale);
+  const k = g.face / geo.face;
+  const R = g.bezel;
+  const ringSize = R * 2;
   // Native scales text itself; RN Web sets px, so the turret multiplies.
   const fs = (size: number) => Platform.OS === 'web' ? Math.round(size * textScale) : size;
-  const frame = turretFrame(state.width, textScale, stops.length, geo);
+  const frame = turretFrame(state.width, textScale, stops.length, g);
   const stacked = frame.layout === 'stacked';
   const cx = frame.boxWidth / 2;
-  const lineWidth = Math.min(frame.boxWidth * frame.scale, state.width || geo.boxWidth);
+  const lineWidth = Math.min(frame.boxWidth * frame.scale, state.width || g.boxWidth);
   const notchBoost = prefs.moreContrast || forced ? 1 : 0;
-  const faceSize = (size: number) => Platform.OS === 'web' ? Math.round(size * Math.min(textScale, FACE_TEXT_MAX_SCALE)) : size;
 
   // Focus is tracked on the group: focus and blur bubble from the stops, and
   // the kit's web Pressable keeps its own blur handler.
@@ -304,7 +330,7 @@ export function PersonaTurret(props: PersonaTurretProps) {
         : { position: 'absolute', left: 0, top: 0, width: frame.boxWidth, height: frame.boxHeight }}>
       {stops.map((p, s) => {
         // On the ring the name's near edge sits labelGap off the bezel, outside its detent.
-        const pos = polar(turretDisplayAngle(s, stops.length, rtl), geo.bezel + geo.labelGap);
+        const pos = polar(turretDisplayAngle(s, stops.length, rtl), g.bezel + g.labelGap);
         const committed = s === state.turret.committed;
         const lit = s === shown;
         const digit = s < 9 ? s + 1 : undefined;
@@ -425,14 +451,14 @@ export function PersonaTurret(props: PersonaTurretProps) {
                   const deg = i * 360 / geo.knurlCount;
                   const nearStop = stops.some((_, s) => Math.abs((((deg - turretDisplayAngle(s, stops.length, rtl)) % 360) + 540) % 360 - 180) < 4);
                   if (nearStop) return null;
-                  const a = polar(deg, R - 3), b = polar(deg, R - 8);
+                  const a = polar(deg, R - 3 * k), b = polar(deg, R - 8 * k);
                   return <Line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={m.knurl} strokeWidth={1} strokeOpacity={0.55} />;
                 })}
                 {/* Detent slots, one per persona. The committed slot carries the
                     accent over a halo, so it holds 3:1 on a light bezel. */}
                 {stops.map((p, s) => {
                   const deg = turretDisplayAngle(s, stops.length, rtl);
-                  const a = polar(deg, R - 2), b = polar(deg, R - geo.notch);
+                  const a = polar(deg, R - 2), b = polar(deg, R - g.notch);
                   const committed = s === state.turret.committed;
                   return <G key={p.id}>
                     <Line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={m.notch} strokeWidth={5 + notchBoost} strokeLinecap="round" />
@@ -440,19 +466,19 @@ export function PersonaTurret(props: PersonaTurretProps) {
                     <Line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={committed ? m.accent : m.knurl} strokeWidth={(committed ? 2.5 : 1) + notchBoost} strokeLinecap="round" />
                   </G>;
                 })}
-                <Circle r={geo.face} fill={`url(#face-${direction.id})`} stroke={m.notch} strokeWidth={1} />
-                {[6, 13, 20, 27, 34].map(d => <Circle key={d} r={geo.face - d} fill="none" stroke={m.lathe} strokeWidth={0.6} strokeOpacity={direction.light.model === 'refract' ? 0.14 : 0.07} />)}
+                <Circle r={g.face} fill={`url(#face-${direction.id})`} stroke={m.notch} strokeWidth={1} />
+                {[6, 13, 20, 27, 34].map(d => <Circle key={d} r={g.face - d * k} fill="none" stroke={m.lathe} strokeWidth={0.6} strokeOpacity={direction.light.model === 'refract' ? 0.14 : 0.07} />)}
               </Svg>
               <TurretRim pulse={state.pulse} reduceMotion={prefs.reduceMotion} size={ringSize} commitColor={m.accent} limitColor={m.muted} />
               {/* The pointer: a slot milled from the face to the shown detent. */}
               <TurretPointer deg={indicatorDeg} durationMs={travel} easing={direction.motion.easing} bezier={direction.motion.bezier}
                 reduceMotion={prefs.reduceMotion} pulse={state.pulse} size={ringSize}>
-                <View style={{ position: 'absolute', left: R - 1.5, top: R - geo.face + 3, width: 3, height: 10, borderRadius: 1.5, backgroundColor: peeking ? m.faceText : m.accent }} />
+                <View style={{ position: 'absolute', left: R - 1.5 * k, top: R - g.face + 3 * k, width: 3 * k, height: 10 * k, borderRadius: 1.5 * k, backgroundColor: peeking ? m.faceText : m.accent }} />
               </TurretPointer>
-              <View pointerEvents="none" style={{ position: 'absolute', left: R - geo.face + 6, width: (geo.face - 6) * 2, top: R - 22, alignItems: 'center', gap: 2 }}>
-                <Text numberOfLines={1} maxFontSizeMultiplier={FACE_TEXT_MAX_SCALE} style={{ color: m.faceText, fontSize: faceSize(scale.type.body + 2), fontWeight: '700', letterSpacing: -0.2 }}>{persona?.label ?? turretCopy.ringLabel}</Text>
+              <View pointerEvents="none" style={{ position: 'absolute', left: R - g.face + 6 * k, width: (g.face - 6 * k) * 2, top: R - 22 * k, alignItems: 'center', gap: 2 * k }}>
+                <Text numberOfLines={1} style={{ color: m.faceText, fontSize: fs(scale.type.body + 2), fontWeight: '700', letterSpacing: -0.2 }}>{persona?.label ?? turretCopy.ringLabel}</Text>
                 {/* The count is a readout: 13 pt, the phone floor for readouts. */}
-                <Text maxFontSizeMultiplier={FACE_TEXT_MAX_SCALE} style={{ color: m.faceText, opacity: peeking ? 1 : 0.78, fontWeight: peeking ? '700' : '400', fontSize: faceSize(scale.type.micro + 3), fontVariant: ['tabular-nums'] }}>
+                <Text style={{ color: m.faceText, opacity: peeking ? 1 : 0.78, fontWeight: peeking ? '700' : '400', fontSize: fs(scale.type.micro + 3), fontVariant: ['tabular-nums'] }}>
                   {stops.length ? turretCopy.position(shown + 1, stops.length) : '0 of 0'}
                 </Text>
               </View>

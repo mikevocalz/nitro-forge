@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { Text, TextInput, Pressable, View } from './ui';
@@ -7,6 +8,13 @@ import type { GesturePoint } from './studio-gesture-types';
 import { scrubPrecision, type ScrubMode } from './instrument-system';
 import { workspaceScale as scale, workspaceThemes, type WorkspaceColors } from './theme';
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
+import { useForgeRenderPrefs } from './persona-turret';
+import { systemColor } from './forge-directions';
+
+/** Forced colours repaint backgrounds to Canvas, which would blank the scale.
+ * The scale opts out and paints itself in system colours instead: the track
+ * and ticks in CanvasText, the travelled part and the position in Highlight. */
+const SYSTEM_INK = { forcedColorAdjust: 'none' } as object;
 
 export type ForgePrecisionScrubberProps = {
   label: string;
@@ -73,6 +81,9 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
   const disabled = !!props.disabled || state.pending;
   const percent = bounded((state.preview - props.min) / (props.max - props.min), 0, 1);
   const display = format(state.preview, props.step);
+  const renderPrefs = useForgeRenderPrefs();
+  const forced = Platform.OS === 'web' && !!renderPrefs.forcedColors;
+  const ink = forced ? { line: systemColor('CanvasText'), accent: systemColor('Highlight'), ...SYSTEM_INK } : { line: palette.line, accent: palette.accent };
 
   useEffect(() => {
     if (!store.getState().active && !store.getState().editing && !store.getState().pending) {
@@ -182,8 +193,9 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
     const major = i % 5 === 0;
     return <View key={i} style={{
       width: 1, height: major ? 12 : 5,
-      backgroundColor: tickPercent <= percent ? palette.accent : palette.line,
-      opacity: major ? 0.9 : 0.55,
+      backgroundColor: tickPercent <= percent ? ink.accent : ink.line,
+      opacity: forced ? 1 : major ? 0.9 : 0.55,
+      ...(forced ? SYSTEM_INK : {}),
     }} />;
   });
 
@@ -244,8 +256,10 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
             <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 20 }}>
               {ticks}
             </View>
-            <View pointerEvents="none" style={{ position: 'absolute', left: 11, right: 11, bottom: 5, height: 3, backgroundColor: palette.line }}>
-              <View style={{ width: `${percent * 100}%`, height: 3, backgroundColor: palette.accent }} />
+            <View pointerEvents="none" style={{ position: 'absolute', left: 11, right: 11, bottom: 5, height: 3, backgroundColor: ink.line, ...(forced ? SYSTEM_INK : {}) }}>
+              <View style={{ width: `${percent * 100}%`, height: 3, backgroundColor: ink.accent, ...(forced ? SYSTEM_INK : {}) }} />
+              {/* The value position, a notch across the track. Forced colours keep it in Highlight. */}
+              {forced && <View testID="precision-position" style={{ position: 'absolute', left: `${percent * 100}%`, bottom: -4, width: 3, height: 11, marginLeft: -1.5, backgroundColor: ink.accent, ...SYSTEM_INK }} />}
             </View>
           </View>
         </StudioGesture>

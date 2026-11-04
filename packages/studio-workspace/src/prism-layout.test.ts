@@ -49,3 +49,25 @@ test('tablet Layers overlays preserve artboard size and placement while desktop 
   assert.equal(wide.dockedLayers, true);
   assert.ok(wide.canvasRight > wide.panelWidth);
 });
+
+test('phone artboard sits centred: equal margins on both sides of the screen', () => {
+  for (const width of [320, 390, 430]) {
+    const l = prismViewportLayout(width, 600, 1, false, false);
+    const left = l.canvasLeft + (l.availableWidth - l.canvasWidth) / 2;
+    const right = width - left - l.canvasWidth;
+    assert.ok(Math.abs(left - right) < 1, `${width}px: ${left} left vs ${right} right`);
+    assert.ok(l.canvasLeft >= 64, 'the artboard clears the tool rail');
+  }
+});
+
+test('grown chrome at 200 % text moves the rail, panel and artboard below and beside what was measured', () => {
+  const base = prismViewportLayout(390, 600, 1, false, false);
+  const grown = prismViewportLayout(390, 600, 1, false, false, { toolbarBottom: 103, railRight: 76 });
+  assert.equal(base.railTop, 76, '100 %: the rail keeps its drawn place');
+  assert.ok(grown.railTop >= 103 + 8, 'the rail starts below the measured toolbar');
+  assert.ok(grown.panelTop >= 103 + 8, 'the phone Layers panel starts below the toolbar');
+  assert.ok(grown.canvasTop >= base.canvasTop + 43, 'the artboard moves down by the growth');
+  assert.ok(grown.canvasLeft >= 76 + 12, 'the artboard clears the measured rail');
+  const wide = prismViewportLayout(1388, 796, 1, true, false, { toolbarBottom: 80 });
+  assert.equal(wide.panelTop, 12, 'a docked desktop panel stays at the top edge');
+});

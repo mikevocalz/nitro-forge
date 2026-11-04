@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  TURRET_ARC_DEG, TURRET_MIN_RING_SCALE, turretAnnouncement, turretFrame, turretArrowKey, turretDialScale, turretDisplayAngle, turretLogicalAngle, turretReduce,
+  TURRET_ARC_DEG, TURRET_MIN_RING_SCALE, scaleTurretGeometry, turretAnnouncement, turretFrame, turretArrowKey, turretDialScale, turretDisplayAngle, turretLogicalAngle, turretReduce,
   turretShortcutDigit, turretShortcutFor, turretStopAngle, turretStopAt, type TurretEvent, type TurretState,
 } from './turret.ts';
 
@@ -147,4 +147,22 @@ test('when the grown ring cannot fit, names stack under the ring instead of shri
     assert.ok(f.scale >= TURRET_MIN_RING_SCALE, 'the ring keeps its drawn size within a few percent');
   }
   for (const count of [1, 2, 4]) assert.equal(turretFrame(358, 1, count, geometry).layout, 'ring', `${count} stops at 100 %`);
+});
+
+test('the dial grows with the text, so the face readout keeps pace with the stop names', () => {
+  const dial = { ...geometry, face: 48, notch: 14 };
+  assert.equal(scaleTurretGeometry(dial, 1), dial, '100 % keeps the drawn dial');
+  assert.equal(scaleTurretGeometry(dial, 0.8), dial, 'smaller text never shrinks the dial');
+  for (const t of [1.5, 2, 3]) {
+    const g = scaleTurretGeometry(dial, t);
+    assert.equal(g.face, 48 * t);
+    assert.equal(g.bezel, 66 * t);
+    // The readout is 16 pt at 100 % and the stop names 13 pt; both follow the text.
+    const readout = 16 * t, stopName = 13 * t;
+    assert.ok(readout > stopName, `${t}x: the readout stays the largest type`);
+    // Room across the face for "Layout" in a bold 16 pt face (about 3.6 em) at this size.
+    assert.ok((g.face - 6) * 2 >= readout * 3.6, `${t}x: the readout fits the face`);
+    const f = turretFrame(0, t, 3, g);
+    assert.ok(f.boxTop >= g.bezel + g.labelGap + f.labelHeight, `${t}x: the top name clears the grown bezel`);
+  }
 });

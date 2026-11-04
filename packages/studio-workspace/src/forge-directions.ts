@@ -165,6 +165,14 @@ export type ForgeRenderPrefs = Readonly<{ reduceMotion: boolean; reduceTranspare
   /** Windows High Contrast and other forced palettes (web `forced-colors: active`). */
   forcedColors?: boolean }>;
 
+/** A CSS system colour for forced-colours mode (web only). React Native Web
+ * drops colour keywords it does not know, `CanvasText` and `Highlight`
+ * included, but passes `var()` through; the empty custom property falls back
+ * to the keyword, which the browser resolves to the user's palette. Pair it
+ * with `forced-color-adjust: none` on the element. */
+export type SystemColor = 'Canvas' | 'CanvasText' | 'Highlight' | 'HighlightText' | 'GrayText' | 'ButtonText' | 'LinkText';
+export const systemColor = (name: SystemColor): string => `var(--forge-system-${name}, ${name})`;
+
 /** Feedback timings shared by every direction (forge-designer-pro motion.md):
  * `press` on touch down, `endStop` the two-beat nudge at a limit, `commit`
  * the rim flash that confirms a switch. */
