@@ -13,6 +13,8 @@ Repository source audit:
 - The Studio host's \`@acme/ui/studio-controls\` export binds \`Menu\` as an actual canonical component. This export is source-owned and not a clone.
 - A **general rich-content Popover is not currently exported by this @acme/ui Studio binding**. Forge's optional \`StudioUIComponents.Popover\` contract intentionally fails clearly when requested without a source-owned host implementation. Do not claim popover feature parity until its native source and QA exist.
 
+**Source implementation tracker:** [NYC-MON @acme/ui issue #172](https://github.com/mikevocalz/nyc-mon/issues/172). This is a code work item, not evidence that the native popover has shipped.
+
 ### Three distinct UI affordances
 
 | Need | Canonical owner | Native/web behavior | Implementation status |
