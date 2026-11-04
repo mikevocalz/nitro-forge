@@ -28,6 +28,22 @@ export function assertRgba(color: RgbaColor): void {
   }
 }
 
+/**
+ * Whole opacity percent shown in the UI for a stored alpha.
+ *
+ * `#RRGGBBAA` stores alpha as one byte (0..255), so a slider value of 0.01
+ * is written as `03` and parses back as 3/255 (about 0.0118). The byte step
+ * (0.39%) is finer than 1%, so every whole percent 0..100 survives a hex
+ * round trip under this rounding. Callers that need the exact float must keep
+ * it outside the hex string.
+ */
+export function alphaPercent(alpha: number): number {
+  if (!Number.isFinite(alpha) || alpha < 0 || alpha > 1) {
+    throw new RangeError("Alpha must be in [0, 1]");
+  }
+  return Math.round(alpha * 100);
+}
+
 export function rgbaToHex(color: RgbaColor, includeAlpha = true): string {
   assertRgba(color);
   const hex = (value: number) => Math.round(value).toString(16).padStart(2, "0").toUpperCase();

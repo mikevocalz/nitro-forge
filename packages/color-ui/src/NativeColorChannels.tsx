@@ -1,6 +1,6 @@
 import { Column, Host, Slider, Text } from "@expo/ui";
 import { View } from "react-native";
-import { assertRgba, rgbaToHex, type RgbaColor } from "./color";
+import { alphaPercent, assertRgba, rgbaToHex, type RgbaColor } from "./color";
 
 export interface NativeColorChannelsProps {
   /** Controlled RGBA display color; document-specific profiles stay in Rust. */
@@ -58,7 +58,7 @@ export function NativeColorChannels({
             onValueChange={(next) => update("b", next)} />
           {showAlpha ? (
             <>
-              <Text>{`Opacity ${Math.round(value.alpha * 100)}%`}</Text>
+              <Text>{`Opacity ${alphaPercent(value.alpha)}%`}</Text>
               <Slider value={value.alpha} min={0} max={1} step={0.01} disabled={disabled}
                 {...(testID ? { testID: testID + "-alpha" } : {})}
                 onValueChange={(next) => onValueChange({
