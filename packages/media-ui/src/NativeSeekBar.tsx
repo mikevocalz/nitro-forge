@@ -56,15 +56,11 @@ export function NativeSeekBar({
           testID={testID}
         />
         <Row>
-          <Button onPress={() => seek(current - stepFrames)} disabled={isDisabled}>
-            −{stepFrames}f
-          </Button>
+          <Button onPress={() => seek(current - stepFrames)} disabled={isDisabled} label={`−${stepFrames} frame`} />
           <Text>
-            {formatTimecode(current, frameRate, timecode)} / {formatTimecode(durationFrames, frameRate, timecode)}
+            {`${formatTimecode(current, frameRate, timecode)} / ${formatTimecode(durationFrames, frameRate, timecode)}`}
           </Text>
-          <Button onPress={() => seek(current + stepFrames)} disabled={isDisabled}>
-            +{stepFrames}f
-          </Button>
+          <Button onPress={() => seek(current + stepFrames)} disabled={isDisabled} label={`+${stepFrames} frame`} />
         </Row>
       </Column>
     </Host>
