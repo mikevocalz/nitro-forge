@@ -179,6 +179,28 @@ Why the others lost:
   artboard size. They are secondary readouts at the slop.md floor (11 pt
   UI); the persona name in the face is 16 px.
 
+## Round 5: the web pass on CRITIQUE-r4
+
+| r4 defect | Fix |
+|---|---|
+| 1. Scrubber track blank in forced colours | The ticks, track, travelled part and a position notch opt out with `forced-color-adjust: none` and paint in `CanvasText` and `Highlight`. React Native Web drops colour keywords it does not know, so every system colour goes through `systemColor()` (`var(--forge-system-X, X)`), which it passes. The swatch rings and layer chips used bare keywords and were dropped too; they use the helper now |
+| 2. 200 % text breaks the shell | The text size is watched live (a 1rem probe on web, the font scale on native). The header moves Preview and Light to their own row below `380 × text scale`; the Studio panels column sizes to its buttons; the tool rail, phone Layers panel and artboard start from the measured toolbar and rail; the toast sits on the measured fill bar and moves right of the persona popover when the popover's content reaches it, or the popover stops above it when there is no room |
+| 3. Face readout stops being the largest type | The dial grows with the text (`scaleTurretGeometry`): bezel, face, slots, knurl and pointer scale together, and the readout follows the text size with no cap. At 200 % the readout is 32 px against 26 px stop names |
+| 4. Dark import error on the info ground | Danger notices take a danger-tinted ground (`bg-danger/15`); Dismiss pulls its own inset back, so its label starts on the message's left edge |
+| 5. Open and Surfaces as dark slabs in light | Open clears the kit drop well (`bg-transparent`) and takes the theme's ink. The Surfaces SegmentedControl has no light variant in the kit, so on web in light theme it gets `className`/`segmentClassName` built from the `forge-*` theme tokens: a page-coloured well, a raised chosen segment with a muted ring (3:1 on the well), labels in the text ink (muted measured 4.0:1, under 4.5) and a 2 px accent focus ring |
+| 6. Phone Composer: two left edges, 60 px gaps | Each kit section's 12 pt body inset is pulled back, so section text sits on the 16 pt page gutter and sections are one 24 pt gap apart |
+| 7. Layer rows print `rect` | `prism-layer-label.ts` maps every kind to Rectangle, Ellipse or Raster for rows, the toolbar subline, new layer names and the row icon (tested) |
+| 8. Phone artboard off-centre | On phones the right inset matches the rail side, so the artboard is centred on screen: 76 px each side at 390 |
+| 9. "Picture renders as a flat block" | The engine composite of an empty raster layer is transparent (`flatten_empty_is_transparent`); the white came from the artboard's own fill. The artboard now draws the transparency as an 8 pt checker in two near-white neutrals (`ARTBOARD_CHECKER`), so Layer 1 reads as an empty artboard and every fill still reads over it. The warn no longer appears on `#/apps/prism` |
+
+Also fixed while verifying: toggle tiles off the phone are at least 184 pt so a 23-character name stays on one line (shoot FAIL "Control label wraps"); Composer headings are one h1 and h2 sections (warn: 6 to 8 h1); Composer kit buttons and segments carry a transparent 1 pt edge for Windows High Contrast (matrix windows-hc FAIL).
+
+Warns left, each answered:
+
+- Default-reach font, Space Grotesk and Inter: unchanged from round 0. The host theme sets Space Grotesk for every Studio control; Inter is the preview host's body face. A suite decision, not this pass's.
+- 11 px text on `#/apps/prism` ("All apps", "Prism", "Preview", "/") and on `#/lab/turret` (shortcut tags, `n of m`, the artboard size): host chrome and secondary readouts at the 11 pt UI floor. The readouts they sit beside are 16 px or larger.
+- `impeccable detect` on the changed files: one warning, the same Inter in `apps/studio-preview/src/style.css`, answered above.
+
 ## Not verified
 
 Native iOS and Android hosts, VoiceOver and TalkBack on hardware, Pencil
