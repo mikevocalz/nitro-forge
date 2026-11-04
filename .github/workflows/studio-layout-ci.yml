@@ -139,4 +139,7 @@ jobs:
           pnpm exec expo export --platform android --max-workers 2 --no-minify --no-bytecode --output-dir /tmp/export-android
           test -s "$(ls /tmp/export-ios/_expo/static/js/ios/*.js)"
           test -s "$(ls /tmp/export-android/_expo/static/js/android/*.js)"
+          # The design studio's persona turret ships in both native bundles.
+          grep -q persona-turret-ring /tmp/export-ios/_expo/static/js/ios/*.js
+          grep -q persona-turret-ring /tmp/export-android/_expo/static/js/android/*.js
 # UI gestures, native devices and assistive technology require separate evidence.
