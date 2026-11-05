@@ -185,7 +185,9 @@ patchedDependencies:
   expo-router@58.0.30: 750766f47b1ed12994e0a2424d4bf72f8fc13fb45b4df4592ec6bdcb459db8bf
   react-native-pulsar@1.7.0: 4d74b376618e44a01f4ed383b6b0d8c1e4fc965ae3fd3c07e63bdb3988d7a1db
   react-native-screens@4.30.1: 252f664c6aeb3d32f86424beeddd4afa59bfaf9c9d2b96edd26466e1442965de
+  react-native-skia@3.9.1: 8f88578e62e5266a27ae14d585aaf040b4eac113ff6745b1a1a455b1c7c21394
   react-native-svg@15.16.0: 64bd49635309978133680e9c7df6a5a3884a40a66687d7536a1eb5b3c14177ca
+  react-native-webgpu@0.21.0: 5f1c66bb3f24b29b50ac52d4105351d7db638fc73e25692ea4c7c4d0c3c2e2de
 
 importers:
 
@@ -350,7 +352,7 @@ importers:
         version: 4.30.1(patch_hash=252f664c6aeb3d32f86424beeddd4afa59bfaf9c9d2b96edd26466e1442965de)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
       react-native-skia:
         specifier: 3.9.1
-        version: 3.9.1(e6252e037a153ae0e4e4b7dfaa13d6ee)
+        version: 3.9.1(patch_hash=8f88578e62e5266a27ae14d585aaf040b4eac113ff6745b1a1a455b1c7c21394)(e6252e037a153ae0e4e4b7dfaa13d6ee)
       react-native-svg:
         specifier: 15.16.0
         version: 15.16.0(patch_hash=64bd49635309978133680e9c7df6a5a3884a40a66687d7536a1eb5b3c14177ca)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
@@ -359,7 +361,7 @@ importers:
         version: 0.21.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react-native-webgpu:
         specifier: 0.21.0
-        version: 0.21.0(e6252e037a153ae0e4e4b7dfaa13d6ee)
+        version: 0.21.0(patch_hash=5f1c66bb3f24b29b50ac52d4105351d7db638fc73e25692ea4c7c4d0c3c2e2de)(e6252e037a153ae0e4e4b7dfaa13d6ee)
       react-native-worklets:
         specifier: 0.13.1
         version: 0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)
@@ -405,7 +407,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       react-native-skia:
         specifier: 3.9.1
-        version: 3.9.1(e6252e037a153ae0e4e4b7dfaa13d6ee)
+        version: 3.9.1(patch_hash=8f88578e62e5266a27ae14d585aaf040b4eac113ff6745b1a1a455b1c7c21394)(e6252e037a153ae0e4e4b7dfaa13d6ee)
       react-native-svg:
         specifier: 15.16.0
         version: 15.16.0(patch_hash=64bd49635309978133680e9c7df6a5a3884a40a66687d7536a1eb5b3c14177ca)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
@@ -7975,7 +7977,7 @@ snapshots:
 
   react-native-skia-graphite-apple-tvos@157.1.0: {}
 
-  react-native-skia@3.9.1(e6252e037a153ae0e4e4b7dfaa13d6ee):
+  react-native-skia@3.9.1(patch_hash=8f88578e62e5266a27ae14d585aaf040b4eac113ff6745b1a1a455b1c7c21394)(e6252e037a153ae0e4e4b7dfaa13d6ee):
     dependencies:
       canvaskit-wasm: 0.41.1
       react: 19.3.1
@@ -8014,7 +8016,7 @@ snapshots:
 
   react-native-webgpu-dawn@157.1.0: {}
 
-  react-native-webgpu@0.21.0(e6252e037a153ae0e4e4b7dfaa13d6ee):
+  react-native-webgpu@0.21.0(patch_hash=5f1c66bb3f24b29b50ac52d4105351d7db638fc73e25692ea4c7c4d0c3c2e2de)(e6252e037a153ae0e4e4b7dfaa13d6ee):
     dependencies:
       react: 19.3.1
       react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
