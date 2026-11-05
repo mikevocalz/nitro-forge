@@ -488,8 +488,8 @@ Nitro v1 session integration and Skia web asset work are preserved in this draft
 The provisional SDK54 additions were replaced before publication.
 
 **Blocked:** Metro0.87.2 and latest Expo CLI's file-map fork have incompatible
-runtime-root APIs. Strict frozen installation also rejects fresh package pins
-under pnpm12's release-age policy; no policy exceptions are retained.
+runtime-root APIs. (The release-age rejection noted earlier no longer applies:
+the workspace sets `minimumReleaseAge: 0` as of 2026-11-04.)
 Do not treat this as native-ready, a clean-install pass, or complete parity.
 See docs/native/SDK58_METRO_UPGRADE.md for exact versions, reproduction,
 source checks, native autolinking evidence and remaining release gates.

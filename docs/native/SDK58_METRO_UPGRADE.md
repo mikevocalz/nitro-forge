@@ -43,15 +43,12 @@ iOS/Android transforms with zero diagnostics, and actual iOS4525-module/Android
 4504-module JavaScript exports pass. Expo web also passes3828modules with the declared Next16.4.5 peer. Exports prove JavaScript
 bundling, not Xcode/Gradle build/link or physical device input/rendering.
 
-## Supply-chain age gate
+## Release age
 
-The latest original pin Next16.4.5 was published November3 at18:01:54.667UTC,
-so its24h gate cleared November4 at18:01:54.667UTC. Added host peers
-expo-drag-drop-content-view0.9.2 (June22) and react-native-pulsar1.7.0 (August11)
-already satisfy the age policy. A normal pnpm12.16.1 install generated the actual
-patch hash/lock; the subsequent strict frozen install passed without exclusions
-or policy overrides. Do not reuse another branch's locally bypassed resolution
-as supply-chain proof. Future updates must pass the same strict policy.
+pnpm-workspace.yaml sets `minimumReleaseAge: 0` (decided 2026-11-04), so pnpm
+12.16.1's default 24-hour quarantine does not apply and fresh releases install
+immediately. Versions are still pinned exactly, and CI installs with
+`--frozen-lockfile`, so nothing changes without a reviewed lockfile diff.
 
 ## Evidence and remaining gates
 
