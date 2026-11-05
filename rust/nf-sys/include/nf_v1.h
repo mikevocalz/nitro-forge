@@ -57,6 +57,13 @@ NfBytes nf_v1_snapshot(int64_t handle, char** out_err);
 /* Returns NULL on success or a Rust-owned JSON error string on failure. */
 char* nf_v1_restore(int64_t handle, const uint8_t* bytes, size_t len);
 
+/* Estimated heap bytes owned by the document (live state plus undo journal),
+ * for GC memory-pressure hints. 0 for an invalid or closed handle.
+ * Takes only this document's lock and never allocates, but waits behind an
+ * in-flight command on the same document: call it from a worker thread.
+ */
+size_t nf_v1_document_size(int64_t handle);
+
 /* Returns 1 once for a live document; 0 for invalid/previously closed. */
 int32_t nf_v1_close(int64_t handle);
 
