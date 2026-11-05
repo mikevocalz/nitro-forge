@@ -1,19 +1,51 @@
 import { useEffect, useMemo, useRef } from "react";
-import { AppState, View } from "react-native";
-import { Button, Column, Host, Text } from "@expo/ui";
+import { AppState } from "react-native";
 import { AudioContext, type AudioBuffer } from "react-native-audio-api";
 import { createStore } from "zustand/vanilla";
 import { useStore } from "zustand";
+import { AudioPreview } from "@nyc-tron/ui/components/forge/audio/AudioPreview";
+import type { WaveformPeak } from "@nitro-forge/media-ui";
 import { ForgeAudioPlayback, type PlaybackContext, type PlaybackSnapshot } from "./audioPlayback";
+import { claimPlayback } from "./playbackOwnership";
+import { toPreviewViewState } from "./previewView";
 
-/** Same React Native controls and Audio API graph on iOS, Android and web. */
-export function NativeAudioPreview({ uri, durationSeconds, disabled = false }: {
-  uri: string | null; durationSeconds: number; disabled?: boolean;
-}) {
-  const store = useMemo(() => createStore<PlaybackSnapshot>(() => ({ phase: "idle", message: "Record a clip to preview", duration: 0 })), []);
+/** Playhead refresh while a preview plays; matches the view's 0.1 s display. */
+const POSITION_TICK_MS = 100;
+
+interface PreviewStore {
+  readonly snapshot: PlaybackSnapshot;
+  readonly positionSeconds: number;
+}
+
+export interface NativeAudioPreviewProps {
+  /** Saved take to audition, or null before one exists. */
+  readonly uri: string | null;
+  /** Length of the saved take from the recorder, shown before decoding. */
+  readonly durationSeconds: number;
+  /** Measured peaks of the take; omit to hide the lane. */
+  readonly peaks?: readonly WaveformPeak[];
+  readonly disabled?: boolean;
+  readonly testID?: string;
+}
+
+/**
+ * Forge's Audio API preview player drawn with NYC-Tron's AudioPreview. One
+ * AudioContext and one source per owner; decoding and scheduling stay on the
+ * native graph. Same code on iOS, Android and web.
+ */
+export function NativeAudioPreview({
+  uri, durationSeconds, peaks, disabled = false, testID,
+}: NativeAudioPreviewProps) {
+  const store = useMemo(() => createStore<PreviewStore>(() => ({
+    snapshot: { phase: "idle", message: "Record a clip to preview", duration: 0 },
+    positionSeconds: 0,
+  })), []);
   const state = useStore(store);
   const player = useRef<ForgeAudioPlayback<AudioBuffer> | null>(null);
   useEffect(() => {
+    let claim: (() => void) | null = null;
+    let tick: ReturnType<typeof setInterval> | null = null;
+    const stopTicking = () => { if (tick) clearInterval(tick); tick = null; };
     const current = new ForgeAudioPlayback<AudioBuffer>(() => {
       const context = new AudioContext();
       const graph: PlaybackContext<AudioBuffer> = {
@@ -33,16 +65,42 @@ export function NativeAudioPreview({ uri, durationSeconds, disabled = false }: {
         },
       };
       return graph;
-    }, next => store.setState(next));
+    }, next => {
+      // The capture session stays active while a preview plays (see captureSession.ts).
+      if (next.phase === "loading" || next.phase === "playing") {
+        if (!claim) claim = claimPlayback();
+      } else {
+        claim?.(); claim = null;
+      }
+      stopTicking();
+      if (next.phase === "playing") {
+        tick = setInterval(() => store.setState({ positionSeconds: current.positionSeconds() }), POSITION_TICK_MS);
+      }
+      store.setState({ snapshot: next, positionSeconds: 0 });
+    });
     player.current = current;
     const listener = AppState.addEventListener("change", next => { if (next !== "active") current.stop(); });
-    return () => { player.current = null; listener.remove(); void current.dispose().catch((error: unknown) => { console.warn("[audio-ui] closing preview AudioContext failed", error); }); };
+    return () => {
+      player.current = null; listener.remove(); stopTicking();
+      claim?.(); claim = null;
+      void current.dispose().catch((error: unknown) => {
+        console.warn("[audio-ui] closing preview AudioContext failed", error);
+      });
+    };
   }, [store]);
   useEffect(() => { player.current?.stop(); }, [uri, disabled]);
-  const active = state.phase === "playing" || state.phase === "loading";
-  return <View style={{ width: "100%" }}><Host style={{ width: "100%" }}><Column spacing={8}>
-    <Text>{state.message}</Text>
-    <Button label={active ? "Stop preview" : "Play saved recording"} disabled={disabled || !uri}
-      onPress={() => { if (active) player.current?.stop(); else if (uri) void player.current?.play(uri, durationSeconds).catch(() => undefined); }} />
-  </Column></Host></View>;
+
+  const play = () => {
+    if (uri) void player.current?.play(uri, durationSeconds).catch(() => undefined); // shown as "error"
+  };
+  return (
+    <AudioPreview
+      state={toPreviewViewState(state.snapshot, uri, durationSeconds, state.positionSeconds)}
+      onPlay={play}
+      onStop={() => player.current?.stop()}
+      disabled={disabled || !uri}
+      {...(peaks && peaks.length > 0 ? { peaks } : {})}
+      {...(testID === undefined ? {} : { testID })}
+    />
+  );
 }

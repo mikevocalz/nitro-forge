@@ -21,11 +21,13 @@ The host app must compile NYC-Tron's class names with Uniwind; see
 - Web: Audio API has **no AudioRecorder export**. Browser `getUserMedia` and
   `MediaRecorder` capture compressed audio; Audio API decodes it for peaks and
   playback. Requires HTTPS and browser permission. No pretend WAV fallback.
-- Shared `NativeAudioPreview`: Audio API `AudioContext.decodeAudioData`, fresh
+- Shared `NativeAudioPreview`, drawn with NYC-Tron's `AudioPreview`: Audio API
+  `AudioContext.decodeAudioData`, fresh
   one-shot `AudioBufferSourceNode`, native graph scheduling, stop/ended cleanup
   and stale-decode rejection. Audition is limited to recordings <=60 seconds
-  and <=32 MiB decoded PCM, not unbounded DAW streaming.
-- Shared React Native / `@expo/ui` controls and Zustand lifecycle. No duplicate
+  and <=32 MiB decoded PCM, not unbounded DAW streaming. The playhead reads
+  the graph clock every 100 ms.
+- NYC-Tron views over Forge controllers and a Zustand lifecycle. No duplicate
   Rust document or undo journal, no simulated audio, no JS audio render loop.
 
 ```tsx
@@ -47,14 +49,34 @@ and acknowledges it. Rust remains authoritative for project/undo/transport.
 ## Lifecycle and platform limits
 
 Permission is requested only by the user's Record action. Background audio
-and Android foreground services are explicitly disabled. A session
-interruption, leaving the foreground, or the input stream stopping on its
-own finalizes the partial WAV (releasing the microphone) and moves the
-phase to `interrupted`; the user can save that file. Recorder errors and
-unreadable callback buffers abort with a visible error. There is no
-automatic microphone restart. After every recording attempt the iOS
-category returns from `playAndRecord` to `playback` and interruption
-observation is turned off. Browser capture releases tracks
+and Android foreground services are explicitly disabled. A take is never
+dropped without the user saving it; the `interrupted` phase carries a
+`cause`:
+
+- `session`: an OS interruption began (call, Siri, another app taking audio
+  focus). The recorder is paused with the WAV still open. When the OS ends
+  the interruption with `shouldResume`, capture resumes into the same file
+  and the timer continues. If it ends without `shouldResume`, the partial
+  WAV is finalized and the phase moves to `ended`.
+- `input-lost`: a `routeChange` with `OldDeviceUnavailable` removed an input
+  that was present when the take started (a headset mic unplugged; Android
+  reports this from its `AudioDeviceCallback`). The recorder pauses so
+  nothing is captured from a different microphone. Removing an output-only
+  device does not pause. If the device list cannot be read, the take pauses.
+- `ended`: leaving the foreground, or the input stream stopping on its own,
+  finalizes the WAV and releases the microphone.
+
+In every case "Save what was recorded" returns the file. Recorder errors and
+unreadable callback buffers abort with a visible error.
+
+After each attempt, once the recorder has stopped, interruption observation
+is turned off and the session is released. With no Forge preview playing,
+the session is deactivated; `notifyOthersOnDeactivation` (set in the capture
+options) lets other apps resume their audio. While a preview plays, the
+session stays active and returns to the `playback` category, because
+deactivating would cut the preview off. `playbackOwnership.ts` is the flag
+the release reads; it goes away once NYC-Tron's platform playback-session
+module (NYC-Tron-UI #45) ships. Browser capture releases tracks
 on stop/error/unmount and caps encoded output at 64 MiB. Browser Blob URLs
 are owned by the recording component and expire on new capture/unmount;
 consumers must persist bytes before relying on them for a project.
@@ -95,7 +117,7 @@ foldable accessibility and Meta hardware are **NOT RUN**.
 | Playback graph | AudioContext, AudioBufferSourceNode | Injected lifecycle contracts; device pending |
 | Waveform | planarPeak, WaveformPeakAccumulator | Pure tests; device callback continuity pending |
 | Project ownership | Rust Cadence addClip/render schema unchanged | ENGINE_OPS inspected; no attachment claim |
-| UI | shared RN/@expo/ui controls | Typecheck/Metro/device pending |
+| UI | NYC-Tron RecordingTrack / AudioPreview (v0.1.0-alpha.2) | Typecheck, Metro web render; device pending |
 | Dependency safety | npm latest + minimumReleaseAge 1440 | Real registry and rejected install |
 
 Reviewed repository AGENTS.md, ARCHITECTURE.md, ENGINE_OPS.md and ROSTER.md;

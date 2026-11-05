@@ -82,6 +82,8 @@ export function useForgeAudioRecorder(store: StoreApi<RecordingSnapshot>) {
         void completion.catch(() => undefined);
         if (active.state !== "recording") throw new Error("Browser recorder could not start");
       },
+      pause: async () => { if (recorder?.state === "recording") recorder.pause(); },
+      resume: async () => { if (recorder?.state === "paused") recorder.resume(); },
       stop: async () => {
         if (!recorder || !completion) { release(); throw new Error("No active browser recording"); }
         if (recorder.state !== "inactive") recorder.stop();

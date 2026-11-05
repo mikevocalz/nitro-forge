@@ -42,13 +42,16 @@ const store = createRecordingStore();
 - A malformed callback buffer advances the timeline by `numFrames` (an empty
   gap, counted in `droppedBuffers`); a buffer whose frame count is not a
   positive integer aborts the recording with an error.
-- Interruption (`AudioManager` `interruption` began), leaving the foreground,
-  or `isRecording()` turning false while recording finalizes the partial WAV
-  and sets the phase to `interrupted`; "Save interrupted WAV" returns it.
-- After every attempt the session is handed back: interruption observation
-  off and the iOS category reset from `playAndRecord` to `playback`. The
-  session is not deactivated, because a preview `AudioContext` may still own
-  output I/O.
+- An `interruption` that begins pauses the recorder with the WAV open; the
+  capture window stays open, so the peaks stay aligned with the file. On
+  `ended` with `shouldResume` the same file resumes. Without it, or on
+  leaving the foreground, or when `isRecording()` turns false, the partial
+  WAV is finalized. A `routeChange` that removed an input pauses the take.
+  "Save what was recorded" returns the file in every case. See the README's
+  lifecycle section for the causes.
+- After every attempt the recorder stops first, then the session is
+  released: deactivated with `notifyOthersOnDeactivation` when no preview
+  plays, or returned to `playback` while one does.
 - Each effect run owns a fresh recorder and controller, so StrictMode and
   Fast Refresh re-runs never reuse a disposed owner.
 - **Not a full DAW**: audio sync, latency compensation, source trimming,

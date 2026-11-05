@@ -25,6 +25,9 @@ export class ForgeAudioPlayback<B extends PlaybackBuffer = PlaybackBuffer> {
   private source: PlaybackSource<B> | null = null;
   private generation = 0;
   private disposed = false;
+  /** Context time the current source started at, or null when nothing plays. */
+  private startedAt: number | null = null;
+  private playingDuration = 0;
   private readonly createContext: () => PlaybackContext<B>;
   private readonly report: (state: PlaybackSnapshot) => void;
   constructor(createContext: () => PlaybackContext<B>, report: (state: PlaybackSnapshot) => void) {
@@ -57,9 +60,12 @@ export class ForgeAudioPlayback<B extends PlaybackBuffer = PlaybackBuffer> {
       source.onended = () => {
         if (generation !== this.generation || this.disposed) return;
         this.releaseSource(false);
+        this.startedAt = null;
         this.report({ phase: "stopped", message: "Preview ended", duration: buffer.duration });
       };
       source.start(context.currentTime, 0);
+      this.startedAt = context.currentTime;
+      this.playingDuration = buffer.duration;
       this.report({ phase: "playing", message: "Playing saved recording", duration: buffer.duration });
     } catch (error) {
       if (!this.disposed && generation === this.generation) {
@@ -69,8 +75,19 @@ export class ForgeAudioPlayback<B extends PlaybackBuffer = PlaybackBuffer> {
       throw error;
     }
   }
+  /**
+   * Seconds played of the current preview, read from the audio graph's clock
+   * and clamped to the clip length; 0 when nothing plays.
+   */
+  positionSeconds(): number {
+    const context = this.context;
+    if (this.startedAt === null || !context) return 0;
+    const played = context.currentTime - this.startedAt;
+    if (!Number.isFinite(played) || played < 0) return 0;
+    return Math.min(played, this.playingDuration);
+  }
   stop(): void {
-    ++this.generation; this.releaseSource(true);
+    ++this.generation; this.releaseSource(true); this.startedAt = null;
     if (!this.disposed) this.report({ phase: "stopped", message: "Preview stopped", duration: 0 });
   }
   async dispose(): Promise<void> {

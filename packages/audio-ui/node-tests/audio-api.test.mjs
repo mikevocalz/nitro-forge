@@ -55,3 +55,13 @@ test('capture shutdown waits for pending native start and still stops on rejecte
   await stopAfterStart(Promise.reject(new Error('start failed')),async()=>{events.push('cleanup');});
   assert.equal(events.at(-1),'cleanup');
 });
+
+test('preview position follows the graph clock and resets on stop/end', async () => {
+  const f=fixture(); assert.equal(f.player.positionSeconds(),0);
+  await f.player.play('file:///a.wav',2);
+  f.context.currentTime=6.25; assert.equal(f.player.positionSeconds(),1.25);
+  f.context.currentTime=99; assert.equal(f.player.positionSeconds(),2);
+  f.sources[0].onended({}); assert.equal(f.player.positionSeconds(),0);
+  f.context.currentTime=5; await f.player.play('file:///a.wav',2); f.player.stop(); assert.equal(f.player.positionSeconds(),0);
+  await f.player.dispose();
+});

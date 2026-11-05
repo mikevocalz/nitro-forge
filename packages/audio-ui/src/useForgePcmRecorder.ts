@@ -8,6 +8,9 @@ import { ForgeRecordingController, type RecordingDriver, type RecordingSnapshot 
 import { PcmCaptureSession, SOURCE_COLUMNS } from "./pcmCapture";
 import { recordingFileUri, stopAfterStart } from "./audioApiContracts";
 import type { SourceRecordingFile } from "./sourceRecordingTypes";
+import { configureCaptureSession, releaseCaptureSession } from "./captureSession";
+import { CaptureInterruptions } from "./captureInterruptions";
+import { isPlaybackActive } from "./playbackOwnership";
 
 const FILE_SAMPLE_RATE = 48000;
 const STATUS_POLL_MS = 250;
@@ -69,24 +72,23 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
       return stopping;
     };
 
+    let events: CaptureInterruptions | null = null;
+
     /**
-     * The OS or app lifecycle ended capture. Finalize the partial file now so
-     * the microphone is released, and let the user save it from "interrupted".
+     * The system or app lifecycle ended capture for good (stream stopped, app
+     * left the foreground). Finalize the partial file now so the microphone
+     * is released, and let the user save it from "interrupted". A take paused
+     * by an interruption or a lost input is finalized the same way.
      */
     const interrupt = (message: string) => {
-      if (disposed || !controller) return;
-      const kind = store.getState().phase.kind;
-      if (kind === "preparing" || kind === "requesting-permission") {
+      if (disposed || !controller || !events) return;
+      const phase = store.getState().phase;
+      if (phase.kind === "preparing" || phase.kind === "requesting-permission") {
         pendingInterruption = message;
         return;
       }
-      if (kind !== "recording") return;
-      capture.closeFileWindow();
-      controller.reportInterrupted();
-      void stopNative().catch((error: unknown) => {
-        void controller?.abort("Finalizing interrupted recording failed: " +
-          (error instanceof Error ? error.message : String(error)));
-      });
+      if (phase.kind !== "recording" && !(phase.kind === "interrupted" && phase.cause !== "ended")) return;
+      void events.finalize(message);
     };
 
     const driver: RecordingDriver = {
@@ -102,17 +104,16 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
         if (AppState.currentState && AppState.currentState !== "active") {
           throw new Error("Recording requires the foreground app");
         }
-        AudioManager.setSystemOptions({ ios: { category: "playAndRecord", mode: "default", options: ["defaultToSpeaker"] } });
-        AudioManager.observeAudioInterruptions(true);
+        configureCaptureSession(AudioManager);
       },
-      // Undo configure(). The session is not deactivated: a preview
-      // AudioContext may still own running output I/O, and deactivating an
-      // active session fails on iOS. Returning to the playback category drops
-      // the input route and the receiver-only output of playAndRecord.
-      release: async () => {
-        AudioManager.observeAudioInterruptions(false);
-        AudioManager.setSystemOptions({ ios: { category: "playback", mode: "default", options: [] } });
-      },
+      // The controller calls this after stop(), so deactivating cannot cut a
+      // live recording short. See releaseCaptureSession for the preview case.
+      release: () => releaseCaptureSession(AudioManager, isPlaybackActive()),
+      // The capture window stays open while paused: a paused recorder
+      // delivers no buffers, and keeping it open means buffers already in the
+      // file before the pause still land in the peaks.
+      pause: () => recorder.pause(),
+      resume: () => recorder.resume(),
       prepare: async () => {
         capture.reset();
         confirmedRecording = false;
@@ -136,6 +137,11 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
     };
     const owned = new ForgeRecordingController(driver, store);
     controller = owned;
+    const ownedEvents = new CaptureInterruptions(owned, {
+      finalize: stopNative,
+      availableInputIds: async () => (await AudioManager.getDevicesInfo()).availableInputs.map((device) => device.id),
+    });
+    events = ownedEvents;
 
     recorder.onError(({ message }) => {
       capture.closeFileWindow();
@@ -172,7 +178,17 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
       if (state !== "active") interrupt("Recording stopped when the app left the foreground. Save the partial WAV or start again.");
     });
     const interruption = AudioManager.addSystemEventListener("interruption", (event) => {
-      if (event.type === "began") interrupt("Audio session interrupted. Save the partial WAV or start again.");
+      if (disposed) return;
+      const kind = store.getState().phase.kind;
+      if (event.type === "began" && (kind === "preparing" || kind === "requesting-permission")) {
+        // Not recording yet: the in-flight start fails instead of pausing.
+        pendingInterruption = "Audio session interrupted before recording started. Try again.";
+        return;
+      }
+      void ownedEvents.onInterruption(event);
+    });
+    const routeChange = AudioManager.addSystemEventListener("routeChange", (event) => {
+      if (!disposed) void ownedEvents.onRouteChange(event.reason);
     });
 
     session.current = {
@@ -182,6 +198,7 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
         // An interruption that landed between start() resolving and the
         // "recording" phase is applied now instead of being lost.
         if (started && pendingInterruption) interrupt(pendingInterruption);
+        else if (started) void ownedEvents.snapshotInputs();
         return started;
       },
       stop: async () => {
@@ -201,8 +218,8 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
       },
     };
     return () => {
-      disposed = true; session.current = null; controller = null;
-      clearInterval(poll); appState.remove(); interruption.remove();
+      disposed = true; session.current = null; controller = null; events = null;
+      clearInterval(poll); appState.remove(); interruption.remove(); routeChange.remove();
       recorder.clearOnAudioReady(); recorder.clearOnError();
       // dispose() stops live capture, releases the session and writes any
       // teardown failure into the store.
