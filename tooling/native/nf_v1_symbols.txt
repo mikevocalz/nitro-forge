@@ -1,0 +1,9 @@
+# C ABI entry points cpp/ForgeRustSession.cpp calls. Every Rust archive and
+# every linked app binary must define all of them; keep in sync with nf_v1.h.
+nf_v1_open
+nf_v1_apply_parts
+nf_v1_snapshot
+nf_v1_restore
+nf_v1_close
+nf_v1_free_command_result
+nf_v1_document_size

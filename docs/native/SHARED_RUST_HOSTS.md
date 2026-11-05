@@ -29,9 +29,22 @@ Fabric/Hermes/Qt host remain separate from the document engine.
 | --- | --- | --- |
 | Shared native build | `packages/ignition-native/` | Consume an explicitly built target archive; export the same session/queue targets |
 | Native acceptance probe | `tooling/native/shared_engine_roundtrip.cpp` | Tally edit, formula recomputation, undo/redo, binary save and reopen in another process |
-| CI | `.github/workflows/shared-rust-native-hosts.yml` | Build/link/run native Rust+C++ on Linux and Windows x64; retain saved document |
-| Windows integration | `packages/ignition-windows/`, `WINDOWS_RUST_HOST.md` | RNW host boundary and integration instructions |
-| QNX integration | Separate `mikevocalz/react-native-qnx` branch | Opt-in adapter built against this shared source and a QNX archive |
+| Symbol gate | `tooling/native/nf_v1_symbols.txt`, `tooling/native/verify_nf_v1_host_link.py` | Same symbol list as the Apple/Android gate (PR #44); `nm` on ELF, `dumpbin` plus the linker map on COFF, machine type and CRT checks on Windows |
+| CI | `.github/workflows/shared-rust-native-hosts.yml` | Build, symbol-check, link and run native Rust+C++ on Linux x64, Windows MSVC x64 and Windows MSVC ARM64; reopen every target's saved document on every other target |
+
+Not in this PR (DEFER, recorded 2026-11-05):
+
+- **RNW host adapter.** No `packages/ignition-windows` package or RNW module
+  exists yet. Blocker: a React Native Windows app to register the module in,
+  plus a decision on whether the Nitro v1 bridge or a hand-written RNW
+  TurboModule fronts `ForgeRustSession` there.
+- **QNX adapter.** No `react-native-qnx` branch consumes this package yet.
+  Blocker: a QNX 8 Rust target. The pinned Rust 1.99.1 lists only QNX 7.x
+  targets (`aarch64-unknown-nto-qnx700`, `aarch64-unknown-nto-qnx710`,
+  `aarch64-unknown-nto-qnx710_iosock`, `x86_64-pc-nto-qnx710`,
+  `x86_64-pc-nto-qnx710_iosock`, `i686-pc-nto-qnx700`), all tier 3 with no
+  prebuilt std. A QNX 8 build needs a Rust toolchain that supports QNX 8 plus
+  the SDP's `qcc`, neither of which CI has.
 
 ## Engineering skills applied
 
@@ -52,7 +65,17 @@ native build.
 
 ## Acceptance evidence
 
-Local development machine: Linux x64, Rust/Cargo 1.99.1, GCC 13.3.0, CMake 4.4.4.
+CI (`shared-rust-native-hosts.yml`, Rust 1.99.1) runs on `ubuntu-24.04`
+(x86_64-unknown-linux-gnu), `windows-2022` (MSVC, x86_64-pc-windows-msvc, `/MD`)
+and `windows-11-arm` (MSVC, aarch64-pc-windows-msvc, `/MD`). Each job checks
+that the Rust archive and the linked executable define all seven `nf_v1_*`
+symbols, that Windows objects and executable have the expected machine type
+(8664 or AA64), and that the executable loads the dynamic release CRT. A
+second job reopens the NFD1 file saved by each target on every target and
+requires a byte-identical snapshot after restore.
+
+The original author's local run (Linux x64, Rust/Cargo 1.99.1, GCC 13.3.0,
+CMake 4.4.4) recorded:
 
 - The optimized real `nf-sys` archive builds with the lockfile unchanged.
 - The complete Rust workspace passes 204 tests, including 13 nf-sys boundary,
@@ -73,18 +96,20 @@ observation; it is not a product fix.
 
 ## Target gates still required
 
-1. Run the Windows MSVC CI job and inspect the actual link/runtime results.
-2. Build the RNW integration inside a supported Windows application and exercise
+1. Build an RNW integration inside a supported Windows application and exercise
    JS calls, reload/teardown, disposal, file handling and rendering there.
-3. Build `nf-sys` with the exact QNX Rust/SDP toolchain and link the QNX adapter.
-   Run the same native writer/reader on the target, then exercise the existing
-   React Native QNX runtime and lifecycle.
-4. Transfer the saved NFD1 document between targets and run the reader on each.
+2. Build `nf-sys` with a QNX 8 Rust target and the SDP toolchain, then link the
+   CMake package with `qcc`. The `QNX` link libraries in `CMakeLists.txt`
+   (`m`, `socket`) are unverified until that build runs; confirm them with
+   `--print native-static-libs` for the exact target.
+3. Run the same writer/reader on QNX hardware (aarch64le and/or x86_64), then
+   exercise the React Native QNX runtime and lifecycle.
+4. Reopen a QNX-saved NFD1 file on Linux/Windows and the reverse.
 5. Measure latency, memory and UI responsiveness on actual hardware before making
    performance claims or turning the optional QNX integration on by default.
 
-No QNX compiler or device is available locally. Passing the Linux host tests
-does not clear either QNX or RNW runtime gates. This slice adds no third-party
+Neither CI nor the development machine has a QNX SDP or device. Passing the
+Linux and Windows host tests does not clear either QNX or RNW runtime gates. This slice adds no third-party
 engine dependency and changes no engine serialization or external data service.
 Rollback consists of removing the optional host integration; the prerequisite
 mobile bridge and existing engines remain independent.
