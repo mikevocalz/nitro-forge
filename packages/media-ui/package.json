@@ -19,6 +19,10 @@
     "./waveform": {
       "types": "./src/waveform.ts",
       "default": "./src/waveform.ts"
+    },
+    "./video": {
+      "types": "./src/video.ts",
+      "default": "./src/video.ts"
     }
   },
   "scripts": {
@@ -34,5 +38,8 @@
   "devDependencies": {
     "vitest": "^3.2.7",
     "@types/react": "^19.2.0"
+  },
+  "dependencies": {
+    "zustand": "^5.0.0"
   }
 }

@@ -212,6 +212,9 @@ importers:
       react-native:
         specifier: '>=0.88.0'
         version: 0.88.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
+      zustand:
+        specifier: ^5.0.0
+        version: 5.0.16(@types/react@19.3.0)(react@19.3.0)(use-sync-external-store@1.7.0(react@19.3.0))
     devDependencies:
       '@types/react':
         specifier: ^19.2.0
