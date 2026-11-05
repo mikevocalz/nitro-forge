@@ -56,25 +56,37 @@ dropped without the user saving it; the `interrupted` phase carries a
 - `session`: an OS interruption began (call, Siri, another app taking audio
   focus). The recorder is paused with the WAV still open. When the OS ends
   the interruption with `shouldResume`, capture resumes into the same file
-  and the timer continues. If it ends without `shouldResume`, the partial
-  WAV is finalized and the phase moves to `ended`.
+  and the timer continues once `isRecording()` confirms capture restarted
+  (Audio API's `resume()` returns quietly when it cannot resume). If it ends
+  without `shouldResume`, capture is paused (iOS restarts input on its own)
+  and the partial WAV is finalized; the phase moves to `ended`. After a
+  resume the inputs are compared again, so a headset unplugged during the
+  interruption pauses the take as `input-lost`.
 - `input-lost`: a `routeChange` with `OldDeviceUnavailable` removed an input
   that was present when the take started (a headset mic unplugged; Android
   reports this from its `AudioDeviceCallback`). The recorder pauses so
   nothing is captured from a different microphone. Removing an output-only
   device does not pause. If the device list cannot be read, the take pauses.
-- `ended`: leaving the foreground, or the input stream stopping on its own,
-  finalizes the WAV and releases the microphone.
+- `ended`: the app going to the background, or the input stream stopping on
+  its own, finalizes the WAV and releases the microphone. iOS `inactive`
+  (a call banner, Siri, Control Center) does not end the take. The stream
+  counts as stopped after 2 status polls (500 ms), or 8 polls (2 s) while
+  the recorder reads as paused, because iOS marks the engine interrupted
+  before it delivers the interruption event.
 
-In every case "Save what was recorded" returns the file. Recorder errors and
-unreadable callback buffers abort with a visible error.
+Interruption, route and lifecycle events run one at a time in arrival
+order. A failed native pause or resume finalizes the take into `ended`
+with the reason in the message, so it stays saveable. In every case "Save
+what was recorded" returns the file. Recorder errors and unreadable
+callback buffers abort with a visible error.
 
 After each attempt, once the recorder has stopped, interruption observation
 is turned off and the session is released. With no Forge preview playing,
 the session is deactivated; `notifyOthersOnDeactivation` (set in the capture
 options) lets other apps resume their audio. While a preview plays, the
 session stays active and returns to the `playback` category, because
-deactivating would cut the preview off. `playbackOwnership.ts` is the flag
+deactivating would cut the preview off; it is deactivated when the preview
+ends, unless a new take has configured the session again. `playbackOwnership.ts` is the flag
 the release reads; it goes away once NYC-Tron's platform playback-session
 module (NYC-Tron-UI #45) ships. Browser capture releases tracks
 on stop/error/unmount and caps encoded output at 64 MiB. Browser Blob URLs

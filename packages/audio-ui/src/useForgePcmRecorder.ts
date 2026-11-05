@@ -14,6 +14,15 @@ import { isPlaybackActive } from "./playbackOwnership";
 
 const FILE_SAMPLE_RATE = 48000;
 const STATUS_POLL_MS = 250;
+/** Consecutive not-recording polls before the stream counts as ended. */
+const ENDED_AFTER_POLLS = 2;
+/**
+ * The same, while the recorder reads as paused. iOS marks the engine
+ * interrupted before it delivers the "interruption" began event, and an
+ * interrupted engine reads as paused; this window lets that event pause the
+ * take instead of the poll finalizing it.
+ */
+const ENDED_WHILE_PAUSED_AFTER_POLLS = 8;
 
 interface FinalizedFile {
   readonly uri: string;
@@ -138,6 +147,7 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
     const owned = new ForgeRecordingController(driver, store);
     controller = owned;
     const ownedEvents = new CaptureInterruptions(owned, {
+      pauseCapture: () => recorder.pause(),
       finalize: stopNative,
       availableInputIds: async () => (await AudioManager.getDevicesInfo()).availableInputs.map((device) => device.id),
     });
@@ -166,16 +176,26 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
     const registrationError = subscription.status === "error" ? subscription.message : null;
 
     // Android can end the input stream without an interruption event.
+    let missedPolls = 0;
     const poll = setInterval(() => {
-      if (store.getState().phase.kind !== "recording") return;
+      if (store.getState().phase.kind !== "recording") { missedPolls = 0; return; }
       let running: boolean;
-      try { running = recorder.isRecording(); }
+      let paused: boolean;
+      try { running = recorder.isRecording(); paused = !running && recorder.isPaused(); }
       catch (error) { void owned.reportStatusError(error); return; }
-      if (running) confirmedRecording = true;
-      else if (confirmedRecording) interrupt("Recording stopped by the system. Save the partial WAV or start again.");
+      if (running) { confirmedRecording = true; missedPolls = 0; return; }
+      if (!confirmedRecording) return;
+      missedPolls++;
+      if (missedPolls >= (paused ? ENDED_WHILE_PAUSED_AFTER_POLLS : ENDED_AFTER_POLLS)) {
+        missedPolls = 0;
+        interrupt("Recording stopped by the system. The partial take is kept; save it or record again.");
+      }
     }, STATUS_POLL_MS);
+    // Only "background" ends capture. iOS goes "inactive" for a call, Siri or
+    // Control Center; those either raise an interruption, which pauses and
+    // may resume the take, or leave capture running.
     const appState = AppState.addEventListener("change", (state) => {
-      if (state !== "active") interrupt("Recording stopped when the app left the foreground. Save the partial WAV or start again.");
+      if (state === "background") interrupt("Recording stopped when the app went to the background. The partial take is kept; save it or record again.");
     });
     const interruption = AudioManager.addSystemEventListener("interruption", (event) => {
       if (disposed) return;

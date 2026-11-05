@@ -8,6 +8,7 @@
  * previews register there and this file goes away.
  */
 let claims = 0;
+let idleWaiters: (() => void)[] = [];
 
 /** Marks app playback as active until the returned function is called. Idempotent. */
 export function claimPlayback(): () => void {
@@ -17,7 +18,17 @@ export function claimPlayback(): () => void {
     if (released) return;
     released = true;
     claims--;
+    if (claims > 0) return;
+    const waiters = idleWaiters;
+    idleWaiters = [];
+    for (const waiter of waiters) waiter();
   };
+}
+
+/** Runs `callback` once no preview holds a claim: now, or when the last claim is released. */
+export function whenPlaybackIdle(callback: () => void): void {
+  if (claims === 0) callback();
+  else idleWaiters.push(callback);
 }
 
 /** True while any preview holds a claim. */

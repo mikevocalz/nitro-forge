@@ -11,16 +11,30 @@ import { claimPlayback, isPlaybackActive } from "../src/playbackOwnership";
 
 const FILE = "file:///docs/Forge/take.wav";
 
-/** One native recorder writing one file; counts files opened and closed. */
-function harness(inputs: string[][] = [["built-in", "headset-mic"]]) {
+interface HarnessOptions {
+  /** Device lists returned by successive availableInputIds() calls. */
+  readonly inputs?: string[][];
+  /** resume() resolves but the recorder stays stopped (Audio API no-op). */
+  readonly resumeIsNoop?: boolean;
+  readonly resumeThrows?: boolean;
+  readonly pauseThrows?: boolean;
+  /** Hold driver.pause() until released, to overlap events. */
+  readonly holdPause?: boolean;
+}
+
+/** One native recorder writing one file; counts files opened and finalized. */
+function harness(options: HarnessOptions = {}) {
+  const inputs = options.inputs ?? [["built-in", "headset-mic"]];
   const calls: string[] = [];
   let filesOpened = 0;
+  let running = false;
   let finalized: Promise<string> | null = null;
   let inputReads = 0;
-  let failResume = false;
+  let releasePause: () => void = () => undefined;
   const finalize = () => {
     if (!finalized) {
       calls.push("finalize");
+      running = false;
       finalized = Promise.resolve(FILE);
     }
     return finalized;
@@ -29,19 +43,26 @@ function harness(inputs: string[][] = [["built-in", "headset-mic"]]) {
     requestPermission: async () => true,
     configure: async () => { calls.push("configure"); },
     prepare: async () => { calls.push("prepare"); },
-    record: async () => { calls.push("record"); filesOpened++; },
-    pause: async () => { calls.push("pause"); },
+    record: async () => { calls.push("record"); filesOpened++; running = true; },
+    pause: async () => {
+      calls.push("pause");
+      if (options.holdPause) await new Promise<void>((resolve) => { releasePause = resolve; });
+      if (options.pauseThrows) throw new Error("pause rejected");
+      running = false;
+    },
     resume: async () => {
       calls.push("resume");
-      if (failResume) throw new Error("engine did not restart");
+      if (options.resumeThrows) throw new Error("engine did not restart");
+      if (!options.resumeIsNoop) running = true;
     },
     stop: finalize,
     release: async () => { calls.push("release"); },
-    getStatus: () => ({ isRecording: true, durationMillis: 0 }),
+    getStatus: () => ({ isRecording: running, durationMillis: 0 }),
   };
   const store = createRecordingStore();
   const controller = new ForgeRecordingController(driver, store);
   const events = new CaptureInterruptions(controller, {
+    pauseCapture: async () => { calls.push("pauseCapture"); running = false; },
     finalize,
     availableInputIds: async () => {
       const list = inputs[Math.min(inputReads, inputs.length - 1)]!;
@@ -54,10 +75,15 @@ function harness(inputs: string[][] = [["built-in", "headset-mic"]]) {
     await events.snapshotInputs();
     store.setState({ phase: { kind: "recording", durationMs } });
   };
+  const expectSaveable = async () => {
+    expect(await controller.stop()).toBe(FILE);
+    expect(store.getState().phase.kind).toBe("saved");
+    expect(calls.filter((c) => c === "finalize")).toHaveLength(1);
+  };
   return {
-    calls, store, controller, events, startTake,
+    calls, store, controller, events, startTake, expectSaveable,
     filesOpened: () => filesOpened,
-    failNextResume: () => { failResume = true; },
+    releasePause: () => releasePause(),
   };
 }
 
@@ -75,26 +101,69 @@ describe("OS interruptions keep the take", () => {
     expect(h.store.getState().phase).toEqual({ kind: "recording", durationMs: 1500 });
     expect(h.calls.slice(-2)).toEqual(["pause", "resume"]);
 
-    expect(await h.controller.stop()).toBe(FILE);
+    await h.expectSaveable();
     expect(h.filesOpened()).toBe(1);
-    expect(h.calls.filter((c) => c === "finalize")).toHaveLength(1);
     expect(h.calls.at(-1)).toBe("release");
   });
 
-  it("finalizes the partial take when the interruption ends without shouldResume", async () => {
+  it("pauses capture, then finalizes the partial take, when the interruption ends without shouldResume", async () => {
     const h = harness();
     await h.startTake(900);
     await h.events.onInterruption({ type: "began", shouldResume: false });
     await h.events.onInterruption({ type: "ended", shouldResume: false });
     expect(h.calls).not.toContain("resume");
-    expect(h.calls).toContain("finalize");
+    // iOS restarts input on its own; capture is paused before the file closes.
+    expect(h.calls.slice(-2)).toEqual(["pauseCapture", "finalize"]);
     expect(h.store.getState().phase).toEqual({
       kind: "interrupted", durationMs: 900, message: INTERRUPTION_ENDED_MESSAGE, cause: "ended",
     });
-    // Recoverable: the same take is saved, then a new one can start.
-    expect(await h.controller.stop()).toBe(FILE);
-    expect(h.store.getState().phase).toEqual({ kind: "saved", uri: FILE, durationMs: 900 });
+    await h.expectSaveable();
     expect(await h.controller.start()).toBe(true);
+  });
+
+  it("applies an ended event that arrives while began is still pausing", async () => {
+    const h = harness({ holdPause: true });
+    await h.startTake();
+    const began = h.events.onInterruption({ type: "began", shouldResume: false });
+    const ended = h.events.onInterruption({ type: "ended", shouldResume: true });
+    for (let i = 0; i < 50 && !h.calls.includes("pause"); i++) await Promise.resolve();
+    expect(h.calls).toContain("pause");
+    h.releasePause();
+    await began; await ended;
+    expect(h.store.getState().phase.kind).toBe("recording");
+    expect(h.calls).toContain("resume");
+    expect(h.calls).not.toContain("finalize");
+  });
+
+  it("does not report recording when resume() silently did nothing", async () => {
+    const h = harness({ resumeIsNoop: true });
+    await h.startTake(1200);
+    await h.events.onInterruption({ type: "began", shouldResume: false });
+    await h.events.onInterruption({ type: "ended", shouldResume: true });
+    const phase = h.store.getState().phase;
+    expect(phase.kind === "interrupted" && phase.cause).toBe("ended");
+    expect(phase.kind === "interrupted" && phase.message).toContain("did not restart");
+    await h.expectSaveable();
+  });
+
+  it("keeps a take saveable when resume throws", async () => {
+    const h = harness({ resumeThrows: true });
+    await h.startTake();
+    await h.events.onInterruption({ type: "began", shouldResume: false });
+    await h.events.onInterruption({ type: "ended", shouldResume: true });
+    const phase = h.store.getState().phase;
+    expect(phase.kind === "interrupted" && phase.message).toContain("engine did not restart");
+    await h.expectSaveable();
+  });
+
+  it("keeps a take saveable when pause throws", async () => {
+    const h = harness({ pauseThrows: true });
+    await h.startTake();
+    await h.events.onInterruption({ type: "began", shouldResume: false });
+    const phase = h.store.getState().phase;
+    expect(phase.kind === "interrupted" && phase.cause).toBe("ended");
+    expect(phase.kind === "interrupted" && phase.message).toContain("pause rejected");
+    await h.expectSaveable();
   });
 
   it("ignores an ended event for a take that was not paused by the session", async () => {
@@ -105,23 +174,20 @@ describe("OS interruptions keep the take", () => {
     expect(h.store.getState().phase.kind).toBe("recording");
   });
 
-  it("shows a failed resume as an error and does not finalize twice", async () => {
+  it("finalizes a paused take when capture ends for good (app in background)", async () => {
     const h = harness();
     await h.startTake();
     await h.events.onInterruption({ type: "began", shouldResume: false });
-    h.failNextResume();
+    await h.events.finalize("Recording stopped when the app went to the background.");
     await h.events.onInterruption({ type: "ended", shouldResume: true });
-    const phase = h.store.getState().phase;
-    expect(phase.kind).toBe("error");
-    expect(phase.kind === "error" && phase.message).toContain("engine did not restart");
-    expect(h.calls.filter((c) => c === "finalize")).toHaveLength(1);
-    expect(h.calls.at(-1)).toBe("release");
+    expect(h.calls).not.toContain("resume");
+    await h.expectSaveable();
   });
 });
 
 describe("route changes", () => {
   it("pauses when the headset mic the take could use is unplugged", async () => {
-    const h = harness([["built-in", "headset-mic"], ["built-in"]]);
+    const h = harness({ inputs: [["built-in", "headset-mic"], ["built-in"]] });
     await h.startTake(2000);
     await h.events.onRouteChange("OldDeviceUnavailable");
     expect(h.store.getState().phase).toEqual({
@@ -132,11 +198,23 @@ describe("route changes", () => {
     // A lost input never auto-resumes on an interruption-ended event.
     await h.events.onInterruption({ type: "ended", shouldResume: true });
     expect(h.calls).not.toContain("resume");
-    expect(await h.controller.stop()).toBe(FILE);
+    await h.expectSaveable();
+  });
+
+  it("pauses after a resume when the headset was unplugged during the interruption", async () => {
+    const h = harness({ inputs: [["built-in", "headset-mic"], ["built-in"]] });
+    await h.startTake();
+    await h.events.onInterruption({ type: "began", shouldResume: false });
+    // The route change lands while the take is paused and is not acted on.
+    await h.events.onRouteChange("OldDeviceUnavailable");
+    await h.events.onInterruption({ type: "ended", shouldResume: true });
+    const phase = h.store.getState().phase;
+    expect(phase.kind === "interrupted" && phase.cause).toBe("input-lost");
+    await h.expectSaveable();
   });
 
   it("keeps recording when only an output device went away", async () => {
-    const h = harness([["built-in"], ["built-in"]]);
+    const h = harness({ inputs: [["built-in"], ["built-in"]] });
     await h.startTake();
     await h.events.onRouteChange("OldDeviceUnavailable");
     expect(h.store.getState().phase.kind).toBe("recording");
@@ -152,7 +230,7 @@ describe("route changes", () => {
   });
 
   it("ignores other route reasons", async () => {
-    const h = harness([["built-in"], []]);
+    const h = harness({ inputs: [["built-in"], []] });
     await h.startTake();
     for (const reason of ["NewDeviceAvailable", "CategoryChange", "Override"]) {
       await h.events.onRouteChange(reason);
@@ -172,7 +250,7 @@ describe("capture session release", () => {
     return { p, calls };
   }
 
-  it("asks for notify-others in the capture options", () => {
+  it("asks for notify-others in the capture options", async () => {
     const { p, calls } = port();
     configureCaptureSession(p);
     expect(calls).toEqual([
@@ -181,10 +259,13 @@ describe("capture session release", () => {
     ]);
     expect(CAPTURE_SESSION_OPTIONS.ios?.notifyOthersOnDeactivation).toBe(true);
     expect(CAPTURE_SESSION_OPTIONS.ios?.category).toBe("playAndRecord");
+    await releaseCaptureSession(p, false);
   });
 
   it("deactivates the session, without switching category, when nothing plays", async () => {
     const { p, calls } = port();
+    configureCaptureSession(p);
+    calls.length = 0;
     await releaseCaptureSession(p, false);
     expect(calls).toEqual([
       ["observeAudioInterruptions", false],
@@ -192,13 +273,32 @@ describe("capture session release", () => {
     ]);
   });
 
-  it("hands the session back to playback only while the app plays", async () => {
+  it("hands the session to a playing preview, then deactivates when it ends", async () => {
     const { p, calls } = port();
+    const preview = claimPlayback();
+    configureCaptureSession(p);
+    calls.length = 0;
     await releaseCaptureSession(p, true);
     expect(calls).toEqual([
       ["observeAudioInterruptions", false],
       ["setSystemOptions", PLAYBACK_SESSION_OPTIONS],
     ]);
+    preview();
+    await Promise.resolve();
+    expect(calls.at(-1)).toEqual(["setAudioSessionActivity", false]);
+  });
+
+  it("does not deactivate after a preview if a new take owns the session", async () => {
+    const { p, calls } = port();
+    const preview = claimPlayback();
+    configureCaptureSession(p);
+    await releaseCaptureSession(p, true);
+    configureCaptureSession(p); // next take started while the preview played
+    calls.length = 0;
+    preview();
+    await Promise.resolve();
+    expect(calls).toEqual([]);
+    await releaseCaptureSession(p, false);
   });
 
   it("tracks preview playback claims idempotently", () => {
