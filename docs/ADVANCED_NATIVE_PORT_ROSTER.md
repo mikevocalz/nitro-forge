@@ -1,6 +1,6 @@
 # Advanced native ports — 2026-11-04
 
-NYC-Tron UI is the ONLY shared visual component owner. Nitro Forge owns document state, Rust/FFI/native processing, reliable media operations, saves and undo. Forge adds one real binding to existing Cadence Rust operations and records the remaining source-port integration work. The controls ship in [NYC-Tron `v0.1.0-alpha.1`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v0.1.0-alpha.1) (GitHub Release tarballs, not npm; the controls came in via NYC-Tron PR #2).
+NYC-Tron UI is the ONLY shared visual component owner. Nitro Forge owns document state, Rust/FFI/native processing, reliable media operations, saves and undo. Forge adds one real binding to existing Cadence Rust operations and records the remaining source-port integration work. The controls ship in [NYC-Tron `v0.1.0-alpha.2`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v0.1.0-alpha.2), the release `tooling/nyc-tron.json` pins (GitHub Release tarballs, not npm; the controls came in via NYC-Tron PR #2).
 
 ## Actually implemented in this branch
 
