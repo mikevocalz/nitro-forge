@@ -5,6 +5,9 @@ on:
       - "packages/cadence/**"
       - "packages/ignition/**"
       - "rust/**"
+      - "tooling/nyc-tron.json"
+      - "tooling/verify-nyc-tron-pin.mjs"
+      - "pnpm-lock.yaml"
       - ".github/workflows/cadence-advanced-controls.yml"
   push:
     branches: [master]
@@ -12,6 +15,9 @@ on:
       - "packages/cadence/**"
       - "packages/ignition/**"
       - "rust/**"
+      - "tooling/nyc-tron.json"
+      - "tooling/verify-nyc-tron-pin.mjs"
+      - "pnpm-lock.yaml"
       - ".github/workflows/cadence-advanced-controls.yml"
 permissions:
   contents: read
@@ -26,7 +32,9 @@ jobs:
           node-version: "22"
       - uses: dtolnay/rust-toolchain@stable
       - run: corepack enable
-      - name: Install workspace
+      - name: Verify NYC-Tron pin
+        run: node tooling/verify-nyc-tron-pin.mjs
+      - name: Install workspace (frozen; @nyc-tron/ui from the release tarball)
         run: corepack pnpm install --frozen-lockfile
       - name: Build real Rust host
         run: cargo build -p nf-cli
