@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '26'
-      # Independent of the repository's strict 24h npm release-age gate.
+      # Runs without a workspace install: the pure contracts need only Node.
       # It validates the actual pure TS timebase/scrubber engine contract.
       - name: Test precision, timebases, micro-motion and native overlay policy
         run: node --experimental-strip-types --test packages/studio-workspace/src/instrument-system.test.ts packages/studio-workspace/src/interaction-policy.test.ts

@@ -4,7 +4,10 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { Text, TextInput, Pressable, View } from './ui';
 import { StudioGesture } from './studio-gesture';
 import type { GesturePoint } from './studio-gesture-types';
-import { scrubPrecision, type ScrubMode } from './instrument-system';
+import {
+  advancePrecisionGesture, beginPrecisionGesture, scrubPrecision, snapTypedPrecision,
+  type PrecisionGesture, type ScrubMode,
+} from './instrument-system';
 import { workspaceThemes, type WorkspaceColors } from './theme';
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 
@@ -68,7 +71,7 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
   }
   const store = local.current;
   const state = useStore(store, x => x);
-  const start = useRef<{ point: GesturePoint; value: number } | null>(null);
+  const start = useRef<PrecisionGesture | null>(null);
   const palette = props.colors ?? workspaceThemes.dark;
   const disabled = !!props.disabled || state.pending;
   const percent = bounded((state.preview - props.min) / (props.max - props.min), 0, 1);
@@ -108,22 +111,21 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
   };
   const begin = (point: GesturePoint) => {
     if (disabled) return;
-    start.current = { point, value: ref.current.value };
+    start.current = beginPrecisionGesture(point, ref.current.value);
     store.setState({ active: true, error: null, mode: 'normal' });
   };
-  const calculate = (point: GesturePoint) => {
+  // Advances the pure gesture reducer, which re-anchors on a mode change so
+  // the value stays continuous while the pointer drifts vertically.
+  const calculate = (point: GesturePoint): { next: number; mode: ScrubMode } | null => {
     const gesture = start.current;
     if (!gesture) return null;
-    const mode: ScrubMode = point.y - gesture.point.y < -28 ? 'fine'
-      : point.y - gesture.point.y > 28 ? 'coarse' : 'normal';
     const current = ref.current;
-    const next = scrubPrecision({
-      min: current.min, max: current.max, step: current.step,
-      startValue: gesture.value, deltaPixels: point.x - gesture.point.x,
-      pixelsPerStep: 8, mode,
+    const advanced = advancePrecisionGesture(gesture, point, {
+      min: current.min, max: current.max, step: current.step, pixelsPerStep: 8,
       ...(current.detents === undefined ? {} : { detents: current.detents }),
     });
-    return { next, mode };
+    start.current = advanced;
+    return { next: advanced.value, mode: advanced.mode };
   };
   const move = (point: GesturePoint, touches: number) => {
     if (touches !== 1) { cancel(); return; }
@@ -167,7 +169,8 @@ export function ForgePrecisionScrubber(props: ForgePrecisionScrubberProps) {
       store.setState({ editing: false, draft: format(ref.current.value, ref.current.step), error: 'Enter a valid number' });
       return;
     }
-    void commit(entered);
+    const current = ref.current;
+    void commit(snapTypedPrecision(entered, current.min, current.max, current.step));
   };
   const keys = {
     onKeyDown: (event: StudioKeyboardEvent) => {
