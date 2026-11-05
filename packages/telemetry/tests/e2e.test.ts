@@ -41,7 +41,7 @@ describe("instrumentHost over the real Prism engine", () => {
     const tt = createTestTelemetry();
     const instrumented = instrumentHost(host, tt.telemetry);
     const doc = await PrismDocument.open(instrumented, 2, 2);
-    await expect(instrumented.apply(doc.id, { op: "no_such_op" })).rejects.toBeInstanceOf(EngineError);
+    await expect(instrumented.apply(doc.handle.id, { op: "no_such_op" })).rejects.toBeInstanceOf(EngineError);
     const failure = tt.failures("engine.apply")[0];
     expect(failure?.attrs).toEqual({ engine: "prism", op: "no_such_op" });
     expect(["invalid_command", "unsupported"]).toContain(failure?.code);
