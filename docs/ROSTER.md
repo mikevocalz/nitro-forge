@@ -103,5 +103,5 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 
 ## 2026-11-04 advanced component bridge work
 
-- Cadence typed gain/pan knob adapter **SOURCE IMPLEMENTED** (separate branch). Verified on Ubuntu CI: TypeScript, Vitest + real Rust host passed [run 41902604860](https://github.com/mikevocalz/nitro-forge/actions/runs/41902604860). Native iOS/Android and desktop still NOT RUN.
+- Cadence typed gain/pan knob adapter **SOURCE IMPLEMENTED** (`@nitro-forge/cadence/instrument-adapter`). Verified on Ubuntu CI: TypeScript, Vitest + real Rust host passed [run 41902604860](https://github.com/mikevocalz/nitro-forge/actions/runs/41902604860). Native iOS/Android and desktop still NOT RUN.
 - Graph routing, real crop, MIDI piano roll, Media3/AVFoundation decoder, Ink/Muse and spatial renderer **NOT IMPLEMENTED**. The roster in `ADVANCED_NATIVE_PORT_ROSTER.md` is a plan, not device proof.
