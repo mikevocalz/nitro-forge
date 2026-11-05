@@ -32,3 +32,10 @@ real Rust CLI integration tests. This app uses Zustand only for UI state
 and measures its own host width for phone, tablet and foldable responsiveness.
 
 No Vercel deployments, raw HTML, Expo Audio or Expo Video.
+
+## Integration build findings (November 5, 2026)
+
+- TypeScript cross-repository installation and imports passed GitHub CI.
+- Android initial Gradle configure failure was the demo package identifier ending in Java keyword 'native'. Corrected to ai.nitroforge.cadence.studio.
+- iOS first CocoaPods attempt reached native dependencies but Nitro v1's NitroModules.podspec is deliberately source-empty. Nitro v1 uses SwiftPM. The integration workflow now tries React Native 0.88 experimental spm conversion; Expo SDK 58's SwiftPM path is preview-only. This is a platform integration gate, not evidence that SwiftUI or Forge C++ failed compilation.
+- Neither built app has executed real Forge Rust operations on hardware. Do not claim otherwise.

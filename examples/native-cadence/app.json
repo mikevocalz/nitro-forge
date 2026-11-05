@@ -16,7 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "ai.nitroforge.cadence.native"
+      "package": "ai.nitroforge.cadence.studio"
     }
   }
 }
