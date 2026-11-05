@@ -569,3 +569,12 @@ Pitch 17, Quill 12 and Folio 10 tests pass against a freshly built nf-cli. All t
 23 Splice tests pass against a freshly built nf-cli; Splice TypeScript passes. The consumer contract pins the alpha.3 release tarball. The unreleased second NYC-Tron timeline cluster is still deferred.
 
 These are local source/protocol checks. No new native build or device acceptance was run. The follow-up has not been pushed or merged.
+
+## Phase 1 combined recovery — 2026-11-05
+
+The six alpha.3 follow-ups are combined locally on `codex/phase1-alpha3-integration`.
+The combined workspace passes 245 Rust tests and 394 package tests (one existing native check skipped), all package typechecks, eight audio graph tests and two lab Metro regression checks. Studio, audio-lab and media-lab browser builds pass. Release-pin/hash and UI-boundary checks pass.
+
+Integration fixed lab Metro watch folders so pnpm assets can be exported and preserved existing Expo/Uniwind configuration. Root `test:rust` now targets the actual Cargo workspace. Studio app configuration remains byte-identical to its baseline. No new native/device validation, remote push or PR merge is claimed.
+
+See `docs/recovery/PHASES.md` for phases 2–6 and `docs/recovery/roster-status.tsv` for all 341 rows and 21 status columns.

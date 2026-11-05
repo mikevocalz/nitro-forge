@@ -21,30 +21,21 @@
     },
     "@nyc-tron/reserved-regions": {
       "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-reserved-regions-0.1.0-alpha.3.tgz",
-      "sha256": "fcc4082a2b99d425a597fc91fbd0baeaaf20fda673336309b0545b63bbd31774"
+      "sha256": "fcc4082a2b99d425a597fc91fbd0baeaaf20fda673336309b0545b63bbd31774",
+      "version": "0.1.0-alpha.3",
+      "file": "nyc-tron-reserved-regions-0.1.0-alpha.3.tgz"
     },
     "@nyc-tron/platform-services": {
       "version": "0.1.0-alpha.3",
       "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-platform-services-0.1.0-alpha.3.tgz",
-      "sha256": "fa762e90ef32be9dc0f6b94fad62562c7ca8b67da1d5a4ddac239ab56276fd4a"
-    },
-    "@nyc-tron/geometry": {
-      "version": "0.1.0-alpha.3",
-      "file": "nyc-tron-geometry-0.1.0-alpha.3.tgz",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-geometry-0.1.0-alpha.3.tgz",
-      "sha256": "17bd554b4351360f6e0cc34293675fa327474b8908a098d00084301abc7d9616"
+      "sha256": "fa762e90ef32be9dc0f6b94fad62562c7ca8b67da1d5a4ddac239ab56276fd4a",
+      "file": "nyc-tron-platform-services-0.1.0-alpha.3.tgz"
     },
     "@nyc-tron/native-controls": {
       "version": "0.1.0-alpha.3",
       "file": "nyc-tron-native-controls-0.1.0-alpha.3.tgz",
       "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-native-controls-0.1.0-alpha.3.tgz",
       "sha256": "035e0f29d8a138246e26e791e8453a350c6d2d4442197f124a79ffa60a5665f7"
-    },
-    "@nyc-tron/panes": {
-      "version": "0.1.0-alpha.3",
-      "file": "nyc-tron-panes-0.1.0-alpha.3.tgz",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-panes-0.1.0-alpha.3.tgz",
-      "sha256": "8705e7b224965ec9ecc73de32d05b45343de8858a038322f9116902c7ff0f885"
     }
   },
   "repository": "mikevocalz/NYC-Tron-UI",

@@ -10,10 +10,11 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
-    "test:rust": "cargo test --workspace --manifest-path rust/Cargo.toml",
+    "test:rust": "cargo test --locked --workspace",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "verify:nyc-tron": "node tooling/verify-nyc-tron-pin.mjs"
+    "verify:nyc-tron": "node tooling/verify-nyc-tron-pin.mjs",
+    "test:lab-config": "node --test tooling/lab-metro-config.test.cjs"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

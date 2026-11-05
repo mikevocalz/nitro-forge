@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const pin = JSON.parse(readFileSync(join(root, 'tooling/nyc-tron.json'), 'utf8'));
-const manifests = ['apps', 'packages'].flatMap(dir => readdirSync(join(root, dir)).map(name => join(root, dir, name, 'package.json'))).filter(existsSync);
+const manifests = ['apps', 'packages', 'examples'].flatMap(dir => readdirSync(join(root, dir)).map(name => join(root, dir, name, 'package.json'))).filter(existsSync);
 const used = new Set();
 for (const path of manifests) {
   const pkg = JSON.parse(readFileSync(path, 'utf8'));
