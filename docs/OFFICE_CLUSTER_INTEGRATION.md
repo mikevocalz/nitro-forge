@@ -15,7 +15,7 @@ which the NYC-Tron control shows.
 | ID | NYC-Tron control | Adapter | Engine ops used |
 | --- | --- | --- | --- |
 | J-01 | `slides/SlideFilmstrip` | `@nitro-forge/pitch/office-cluster` `bindPitchSlideList` (`slides`, `onMove`, `onAdd`, `onRemove`) | `describe`, `moveSlide`, `addSlide`, `removeSlide` |
-| J-02 | `slides/SlideSorter` | `bindPitchSlideList` (`onReorder`, `onRemoveMany`), `pitchMovePlan` | `moveSlide` per step, `removeSlide` per slide |
+| J-02 | `slides/SlideSorter` | `bindPitchSlideList` (`onReorder`, `onRemoveMany`), `pitchMovePlan` | `moveSlides`, `removeSlides` (one atomic undo step each) |
 | J-05 | `slides/SlideCanvas` | `bindPitchCanvas`, `readPitchSlideAt` for animation preview, `PITCH_SLIDE_SIZE` | `moveObject`, `resizeObject`, `rotateObject`, `setText`, `removeObject`, `slideAt` |
 | J-09 | `slides/SlideAnimationPane` | `bindPitchAnimations`, `PITCH_ANIMATION_EFFECTS` | `addAnimation`, `removeAnimation` |
 | H-03 | `document/RichTextRibbon` | `@nitro-forge/quill/office-cluster` `bindQuillRibbon`; feed `runs` to NYC-Tron `ribbonStateFor` | `blocks`, `applyStyle`, `setBlockKind` |
@@ -37,7 +37,6 @@ these ops lands, the deferral lifts.
 
 - Pitch (`PITCH_DEFERRED_OPS`):
   - `setSlideSection` (J-01 sections).
-  - `moveSlides` and `removeSlides` (J-02): a block move is one undo step instead of one per slide.
   - `setSlideSize` (J-05): the adapter assumes 960 × 540 units.
   - `setObjectOrder` and `setTextStyle` (J-05).
   - `updateAnimation`, `setAnimationTrigger` and `emphasisAndExitEffects` (J-09): `addAnimation` takes fadeIn, slideInLeft and zoomIn only.
@@ -51,12 +50,16 @@ these ops lands, the deferral lifts.
   - `underlineAnnotation`, `strikeOutAnnotation`, `inkAnnotation` and `shapeAnnotations` (K-06).
   - `annotationAuthor`, `replyAnnotation`, `setAnnotationState` and `setAnnotationContents` (K-07): annotations come back as single comments with no author, replies or resolve.
 
-The type-level consumer contract against NYC-Tron is also deferred. Tally's
-grid adapter pins `@nyc-tron/ui` to a release tarball (`tooling/nyc-tron.json`,
-#47/#50), but the office controls are not in a NYC-Tron release yet (latest:
-`v0.1.0-alpha.1`). Once a release includes NYC-Tron#42, add that pin and a
-`nyc-tron-consumer` type test like Tally's. Until then, the binding shapes
-copy the NYC-Tron prop names, and the unit tests check their keys.
+The office packages pin NYC-Tron UI `v0.1.0-alpha.2`. Each package includes
+`nyc-tron-consumer.test.ts` to check its adapter against the released control
+props during TypeScript validation. This proves the prop contract, not rendering
+or device behavior.
+
+The sorter submits a complete unique slide-ID order or a unique removal set in
+one engine call. The engine validates every ID before mutation, rejects removal
+of the whole deck, and records one undo entry. Empty removal and unchanged order
+emit no event and preserve redo. A stale reorder missing a newly added slide is
+rejected rather than silently dropping it.
 
 ## CI
 

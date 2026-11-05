@@ -360,6 +360,47 @@ impl Engine for PitchEngine {
                 self.state.slides.insert(to, slide);
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
+            "moveSlides" | "removeSlides" => {
+                let reorder = cmd.op == "moveSlides";
+                let key = if reorder { "order" } else { "ids" };
+                let values = field(p, key)?
+                    .as_array()
+                    .ok_or_else(|| EngineError::validation("slide ids must be an array"))?;
+                let mut seen = std::collections::HashSet::new();
+                let mut indices = Vec::with_capacity(values.len());
+                for value in values {
+                    let id = value.as_u64().ok_or_else(|| {
+                        EngineError::validation("slide ids must be unsigned integers")
+                    })?;
+                    if !seen.insert(id) {
+                        return Err(EngineError::validation("duplicate slide id"));
+                    }
+                    indices.push(self.slide_index(id)?);
+                }
+                if reorder && indices.len() != self.state.slides.len() {
+                    return Err(EngineError::validation(
+                        "order must contain every slide exactly once",
+                    ));
+                }
+                if !reorder && indices.len() >= self.state.slides.len() {
+                    return Err(EngineError::validation("deck must keep at least one slide"));
+                }
+                if (reorder && indices.iter().copied().eq(0..self.state.slides.len()))
+                    || (!reorder && indices.is_empty())
+                {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                if reorder {
+                    self.state.slides = indices
+                        .into_iter()
+                        .map(|i| self.state.slides[i].clone())
+                        .collect();
+                } else {
+                    self.state.slides.retain(|slide| !seen.contains(&slide.id));
+                }
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
             "setBackground" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let color = match field(p, "color")? {
@@ -635,6 +676,62 @@ mod tests {
 
     fn slide_id(e: &mut PitchEngine, idx: usize) -> u64 {
         e.state.slides[idx].id
+    }
+
+    #[test]
+    fn bulk_slide_changes_are_atomic_undoable_and_preserve_redo_on_noop() {
+        let mut e = PitchEngine::new();
+        let s2 = apply(&mut e, "addSlide", json!({}))["slide_id"]
+            .as_u64()
+            .unwrap();
+        let s3 = apply(&mut e, "addSlide", json!({}))["slide_id"]
+            .as_u64()
+            .unwrap();
+        let original = e.snapshot().unwrap();
+        for (op, payload) in [
+            ("moveSlides", json!({"order": [1, s2, s2]})),
+            ("moveSlides", json!({"order": [1, s2]})),
+            ("moveSlides", json!({"order": [1, s2, 999]})),
+            ("removeSlides", json!({"ids": [s2, 999]})),
+            ("removeSlides", json!({"ids": [s2, s2]})),
+            ("removeSlides", json!({"ids": [1, s2, s3]})),
+            ("removeSlides", json!({"ids": [s2, -1]})),
+        ] {
+            apply_err(&mut e, op, payload);
+            assert_eq!(e.snapshot().unwrap(), original);
+        }
+        let result = e
+            .apply(cmd("moveSlides", json!({"order": [s3, s2, 1]})))
+            .unwrap();
+        assert_eq!(result.events.len(), 1);
+        let reordered = e.snapshot().unwrap();
+        assert_ne!(reordered, original);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), original);
+        assert!(e
+            .apply(cmd("moveSlides", json!({"order": [1, s2, s3]})))
+            .unwrap()
+            .events
+            .is_empty());
+        assert!(e
+            .apply(cmd("removeSlides", json!({"ids": []})))
+            .unwrap()
+            .events
+            .is_empty());
+        apply_err(&mut e, "removeSlides", json!({"ids": [s2, 999]}));
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), reordered);
+        apply(&mut e, "removeSlides", json!({"ids": [s2, s3]}));
+        assert_eq!(e.state.slides.len(), 1);
+        assert_eq!(e.state.slides[0].id, 1);
+        let removed = e.snapshot().unwrap();
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), reordered);
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), removed);
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&removed).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), removed);
     }
 
     #[test]

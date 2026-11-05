@@ -11,6 +11,8 @@ export const OPS = {
   addSlide: "addSlide",
   removeSlide: "removeSlide",
   moveSlide: "moveSlide",
+  moveSlides: "moveSlides",
+  removeSlides: "removeSlides",
   setBackground: "setBackground",
   addText: "addText",
   setText: "setText",
@@ -73,6 +75,14 @@ export class PitchDocument {
   }
   moveSlide(from: number, to: number) {
     return this.call(OPS.moveSlide, { from, to });
+  }
+  /** Replace the complete slide order in one undoable transaction. */
+  moveSlides(order: readonly number[]) {
+    return this.call(OPS.moveSlides, { order });
+  }
+  /** Remove a unique set of slide IDs in one undoable transaction. */
+  removeSlides(ids: readonly number[]) {
+    return this.call(OPS.removeSlides, { ids });
   }
   setBackground(slide: number, color: Rgba | null) {
     return this.call(OPS.setBackground, { slide, color });

@@ -20,10 +20,16 @@ describe("real Rust Pitch engine behind the NYC-Tron slide controls", () => {
       expect(ids).toHaveLength(3);
       await latest!.onReorder([ids[2]!, ids[0]!, ids[1]!]);
       expect(latest!.slides.map(s => s.id)).toEqual([ids[2], ids[0], ids[1]]);
+      await doc.undo();
+      expect((await readPitchDeck(doc)).slides.map(s => s.id)).toEqual(ids);
+      await doc.redo();
       await latest!.onMove(ids[2]!, 2);
       expect(latest!.slides.map(s => s.id)).toEqual([ids[0], ids[1], ids[2]]);
       await latest!.onRemoveMany([ids[1]!, ids[2]!]);
       expect(latest!.slides.map(s => s.id)).toEqual([ids[0]]);
+      await doc.undo();
+      expect((await readPitchDeck(doc)).slides.map(s => s.id)).toEqual(ids);
+      await doc.redo();
       const before = latest!;
       await expect(before.onRemove(ids[0]!)).rejects.toThrow(/at least one slide/);
       expect(latest).toBe(before);
