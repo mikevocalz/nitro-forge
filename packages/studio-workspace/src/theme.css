@@ -14,6 +14,7 @@
   --color-forge-paper-muted: #797F8D;
   --color-forge-error: #FFAAA7;
   --spacing-forge-target: 44px;
+  --radius-sm: 4px;
   --radius-forge-control: 4px;
   --font-forge-editorial: Georgia, 'Times New Roman', serif;
 }

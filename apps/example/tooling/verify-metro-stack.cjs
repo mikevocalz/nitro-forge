@@ -6,9 +6,8 @@ const host = createRequire(path.resolve(__dirname, '../package.json'));
 const expo = createRequire(host.resolve('expo/package.json'));
 const configRequire = createRequire(expo.resolve('@expo/metro-config/package.json'));
 const metro = createRequire(configRequire.resolve('@expo/metro/package.json'));
-// Expo's own Metro package declares the Metro version it was built against;
-// the workspace overrides must match it exactly.
-const EXPO_METRO = metro('./package.json').dependencies.metro;
+// Deliberate user-requested compatibility candidate, not Expo's upstream pin.
+const EXPO_METRO = '0.87.2';
 for (const name of Object.keys(metro('./package.json').dependencies)) {
   if (!name.startsWith('metro')) continue;
   assert.equal(metro(`${name}/package.json`).version, EXPO_METRO, `${name} must stay coherent`);
@@ -20,3 +19,9 @@ const result = resolver.resolve({
 }, 'forge-test:fixture', 'ios');
 assert.equal(result.filePath, '/resolved/ios/fixture');
 console.log(`PASS: coherent Metro ${EXPO_METRO} family and actual schemeResolvers dispatch`);
+
+const expoFileMap = configRequire("@expo/metro-file-map");
+const FileMap = expoFileMap.default || expoFileMap;
+assert.equal(typeof FileMap.prototype.addRoot, "function");
+assert.equal(typeof FileMap.prototype.getRoots, "function");
+console.log("PASS: Expo file-map exposes real dynamic-root APIs; run watcher tests for semantics");

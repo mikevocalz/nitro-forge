@@ -1,0 +1,3362 @@
+diff --git a/build/Watcher.d.ts b/build/Watcher.d.ts
+--- a/build/Watcher.d.ts
++++ b/build/Watcher.d.ts
+@@ -44,7 +44,8 @@
+     constructor(options: WatcherOptions);
+     crawl(): Promise<CrawlResult>;
+     recrawl(subpath: string, currentFileSystem: CrawlerOptions['previousState']['fileSystem']): Promise<CrawlResult>;
+-    watch(onChange: (change: WatcherBackendChangeEvent) => void): Promise<void>;
++    watch(onChange: (change: WatcherBackendChangeEvent) => void, clocks?: import('./types').WatchmanClocks): Promise<void>;
++    watchRoot(root: string): Promise<void>;
+     close(): Promise<void>;
+     checkHealth(timeout: number): Promise<HealthCheckResult>;
+ }
+diff --git a/build/Watcher.js b/build/Watcher.js
+--- a/build/Watcher.js
++++ b/build/Watcher.js
+@@ -1,284 +1,465 @@
+ /**
+  * Copyright (c) Meta Platforms, Inc. and affiliates.
+- *
+- * This source code is licensed under the MIT license found in the
+- * LICENSE file in the root directory of this source tree.
+- */ "use strict";
++ * Licensed under the MIT license in the package LICENSE file.
++ * Watcher subsystem ported from metro-file-map 0.87.2.
++ */
++"use strict";
++
+ Object.defineProperty(exports, "__esModule", {
+-    value: true
++  value: true,
+ });
+-Object.defineProperty(exports, "Watcher", {
+-    enumerable: true,
+-    get: function() {
+-        return Watcher;
+-    }
+-});
+-function _events() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("events"));
+-    _events = function() {
+-        return data;
++exports.Watcher = void 0;
++var _node = _interopRequireDefault(require("./crawlers/node"));
++var _watchman = _interopRequireDefault(require("./crawlers/watchman"));
++var _normalizePathSeparatorsToPosix = _interopRequireDefault(
++  require("./lib/normalizePathSeparatorsToPosix"),
++);
++var _normalizePathSeparatorsToSystem = _interopRequireDefault(
++  require("./lib/normalizePathSeparatorsToSystem"),
++);
++var _RootPathUtils = require("./lib/RootPathUtils");
++var _common = require("./watchers/common");
++var _FallbackWatcher = _interopRequireDefault(
++  require("./watchers/FallbackWatcher"),
++);
++var _NativeWatcher = _interopRequireDefault(
++  require("./watchers/NativeWatcher"),
++);
++var _WatchmanWatcher = _interopRequireDefault(
++  require("./watchers/WatchmanWatcher"),
++);
++var _debug = _interopRequireDefault(require("debug"));
++var _nodeEvents = _interopRequireDefault(require("node:events"));
++var fs = _interopRequireWildcard(require("node:fs"));
++var path = _interopRequireWildcard(require("node:path"));
++var _nodePerf_hooks = require("node:perf_hooks");
++var _nullthrows = _interopRequireDefault(require("nullthrows"));
++function _interopRequireWildcard(e, t) {
++  if ("function" == typeof WeakMap)
++    var r = new WeakMap(),
++      n = new WeakMap();
++  return (_interopRequireWildcard = function (e, t) {
++    if (!t && e && e.__esModule) return e;
++    var o,
++      i,
++      f = { __proto__: null, default: e };
++    if (null === e || ("object" != typeof e && "function" != typeof e))
++      return f;
++    if ((o = t ? n : r)) {
++      if (o.has(e)) return o.get(e);
++      o.set(e, f);
++    }
++    for (const t in e)
++      "default" !== t &&
++        {}.hasOwnProperty.call(e, t) &&
++        ((i =
++          (o = Object.defineProperty) &&
++          Object.getOwnPropertyDescriptor(e, t)) &&
++        (i.get || i.set)
++          ? o(f, t, i)
++          : (f[t] = e[t]));
++    return f;
++  })(e, t);
++}
++function _interopRequireDefault(e) {
++  return e && e.__esModule ? e : { default: e };
++}
++const debug = (0, _debug.default)("Metro:Watcher");
++const MAX_WAIT_TIME = 240000;
++const LIVE_CHECK_TIMEOUT = 200;
++const MAX_LIVE_WAIT_TIME = 10000;
++let nextInstanceId = 0;
++class Watcher extends _nodeEvents.default {
++  #activeWatcher;
++  #backends = [];
++  #bufferedEvents = [];
++  #closed = false;
++  #closeController = new AbortController();
++  #roots = new Map();
++  #createBackend;
++  #confirmWatches = false;
++  #instanceId;
++  #nextHealthCheckId = 0;
++  #onChange;
++  #options;
++  #pendingHealthChecks = new Map();
++  #useWatchmanWatcher;
++  constructor(options) {
++    super();
++    this.#options = options;
++    this.#instanceId = nextInstanceId++;
++    this.#useWatchmanWatcher = options.useWatchman;
++  }
++  async crawl() {
++    this.#options.perfLogger?.point("crawl_start");
++    const options = this.#options;
++    if (!options.useWatchman) {
++      await this.#startBackendsBeforeCrawl();
++    }
++    const result = await this.#crawl({
++      previousState: options.previousState,
++      roots: options.roots,
++      useWatchman: options.useWatchman,
++    });
++    this.#options.perfLogger?.point("crawl_end");
++    return result;
++  }
++  async #startBackendsBeforeCrawl() {
++    if (!this.#options.watch) {
++      return;
++    }
++    await this.#startBackends();
++    if (this.#options.abortSignal.aborted) {
++      await this.close();
++    }
++  }
++  async recrawl(subpath, currentFileSystem) {
++    return this.#crawl({
++      previousState: {
++        clocks: new Map(),
++        fileSystem: currentFileSystem,
++      },
++      roots: [path.join(this.#options.rootDir, subpath)],
++      subpath,
++      useWatchman: false,
++    });
++  }
++  async #crawl(crawlOptions) {
++    const options = this.#options;
++    const { useWatchman, subpath } = crawlOptions;
++    const ignoreForCrawl = (filePath) =>
++      options.ignoreForCrawl(filePath) ||
++      path.basename(filePath).startsWith(this.#options.healthCheckFilePrefix);
++    const crawl =
++      options.crawl ?? (useWatchman ? _watchman.default : _node.default);
++    let crawler = crawl === _watchman.default ? "watchman" : "node";
++    if (options.crawl != null) {
++      crawler = "custom";
++    }
++    options.abortSignal.throwIfAborted();
++    const crawlerOptions = {
++      abortSignal: options.abortSignal,
++      computeSha1: options.computeSha1,
++      console: options.console,
++      includeSymlinks: options.enableSymlinks,
++      extensions: options.extensions,
++      ignore: ignoreForCrawl,
++      onStatus: (status) => {
++        this.emit("status", status);
++      },
++      perfLogger: options.perfLogger,
++      previousState: crawlOptions.previousState,
++      rootDir: options.rootDir,
++      roots: crawlOptions.roots,
++      subpath,
+     };
+-    return data;
++    debug("Crawling roots: %s with %s crawler.", crawlOptions.roots, crawler);
++    let delta;
++    try {
++      delta = await crawl(crawlerOptions);
++    } catch (firstError) {
++      if (crawl !== _watchman.default) {
++        throw firstError;
++      }
++      crawler = "node";
++      options.console.warn(
++        "metro-file-map: Watchman crawl failed. Retrying once with node " +
++          "crawler.\n" +
++          "  Usually this happens when watchman isn't running. Create an " +
++          "empty `.watchmanconfig` file in your project's root folder or " +
++          "initialize a git or hg repository in your project.\n" +
++          "  " +
++          firstError.toString(),
++      );
++      this.#useWatchmanWatcher = false;
++      await this.#startBackendsBeforeCrawl();
++      try {
++        delta = await (0, _node.default)(crawlerOptions);
++      } catch (retryError) {
++        throw new Error(
++          "Crawler retry failed:\n" +
++            `  Original error: ${firstError.message}\n` +
++            `  Retry error: ${retryError.message}\n`,
++        );
++      }
++    }
++    debug(
++      'Crawler "%s" returned %d added/modified, %d removed, %d clock(s).',
++      crawler,
++      delta.changedFiles.size,
++      delta.removedFiles.size,
++      delta.clocks?.size ?? 0,
++    );
++    return delta;
++  }
++  async watch(onChange, clocks) {
++    this.#closeController.signal.throwIfAborted();
++    this.#onChange = onChange;
++    const bufferedEvents = this.#bufferedEvents;
++    this.#bufferedEvents = [];
++    for (const event of bufferedEvents) {
++      onChange(event);
++    }
++    if (this.#backends.length === 0) {
++      await this.#startBackends(clocks);
++    }
++  }
++  async #startBackends(clocks) {
++    const { extensions, ignorePatternForWatch } = this.#options;
++    const useWatchman = this.#useWatchmanWatcher;
++    const WatcherImpl = useWatchman
++      ? _WatchmanWatcher.default
++      : _NativeWatcher.default.isSupported()
++        ? _NativeWatcher.default
++        : _FallbackWatcher.default;
++    let watcher = "fallback";
++    if (WatcherImpl === _WatchmanWatcher.default) {
++      watcher = "watchman";
++    } else if (WatcherImpl === _NativeWatcher.default) {
++      watcher = "native";
++    }
++    debug(`Using watcher: ${watcher}`);
++    this.#options.perfLogger?.annotate({
++      string: {
++        watcher,
++      },
++    });
++    this.#activeWatcher = watcher;
++    let watchmanClocks;
++    if (useWatchman && clocks != null) {
++      const pathUtils = new _RootPathUtils.RootPathUtils(this.#options.rootDir);
++      watchmanClocks = new Map(
++        [...clocks].map(([root, clockSpec]) => [
++          (0, _normalizePathSeparatorsToPosix.default)(
++            pathUtils.normalToAbsolute(
++              (0, _normalizePathSeparatorsToSystem.default)(root),
++            ),
++          ),
++          clockSpec,
++        ]),
++      );
++    }
++    const createWatcherBackend = (root, rootClocks) => {
++      root = path.resolve(root);
++      this.#closeController.signal.throwIfAborted();
++      const existing = this.#roots.get(root);
++      if (existing != null) return existing;
++      const watcherOptions = {
++        included: {
++          extensions: new Set(extensions),
++          basenames: new Set(["package.json"]),
++          basenamePrefixes: [this.#options.healthCheckFilePrefix],
++        },
++        ignored: ignorePatternForWatch,
++        watchmanDeferStates: this.#options.watchmanDeferStates,
++        clocks: rootClocks,
++      };
++      const watcher = new WatcherImpl(root, watcherOptions);
++      this.#backends.push(watcher);
++      let disposed = false;
++      let rejectTimeout;
++      let abortListener;
++      let rejectStartup;
++      const failed = new Promise((_, reject) => {
++        rejectStartup = reject;
++        rejectTimeout = setTimeout(
++          () => reject(new Error("Failed to start watch mode.")), MAX_WAIT_TIME,
++        );
++        abortListener = () => reject(this.#closeController.signal.reason);
++        this.#closeController.signal.addEventListener("abort", abortListener, { once: true });
++      });
++      watcher.onError((error) => {
++        if (disposed || this.#closed) return;
++        rejectStartup(error);
++        this.#options.console.error("metro-file-map: watcher error:", error);
++      });
++      const started = (async () => {
++        watcher.onFileEvent((change) => {
++          if (disposed || this.#closed || this.#options.abortSignal.aborted) return;
++          const basename = path.basename(change.relativePath);
++          if (basename.startsWith(this.#options.healthCheckFilePrefix)) {
++            if (change.event === _common.TOUCH_EVENT) {
++              debug(
++                "Observed possible health check cookie: %s in %s",
++                change.relativePath,
++                root,
++              );
++              this.#handleHealthCheckObservation(basename);
++            }
++            return;
++          }
++          if (change.event === "recrawl" && useWatchman) {
++            this.#options.console.error(
++              "metro-file-map: Received unexpected recrawl event while using " +
++                "Watchman. Watchman recrawls are not implemented.",
++            );
++            return;
++          }
++          const onChange = this.#onChange;
++          if (onChange != null) {
++            onChange(change);
++          } else {
++            this.#bufferedEvents.push(change);
++          }
++        });
++        try {
++          await watcher.startWatching();
++          return watcher;
++        } finally {
++          // Startup may allocate more resources even after cancellation/timeout.
++          if (disposed || this.#closed) await watcher.stopWatching();
++        }
++      })();
++      const ready = Promise.race([started, failed]).catch(async (error) => {
++        disposed = true;
++        this.#roots.delete(root);
++        this.#backends = this.#backends.filter((backend) => backend !== watcher);
++        await watcher.stopWatching();
++        throw error;
++      }).finally(() => {
++        clearTimeout(rejectTimeout);
++        this.#closeController.signal.removeEventListener("abort", abortListener);
++      });
++      this.#roots.set(root, ready);
++      return ready;
++    };
++    this.#createBackend = (root) => createWatcherBackend(root, null);
++    try {
++      await Promise.all(this.#options.roots.map((root) =>
++        createWatcherBackend(root, watchmanClocks),
++      ));
++    } catch (error) {
++      await this.close();
++      throw error;
++    }
++    this.#confirmWatches = !WatcherImpl.isLiveOnStart();
++    if (this.#confirmWatches) {
++      await Promise.all(
++        this.#options.roots.map((root) => this.#waitUntilLive(root)),
++      );
++    }
++  }
++  async #waitUntilLive(root) {
++    if (this.#closed || this.#options.abortSignal.aborted) return;
++    const deadline = Date.now() + MAX_LIVE_WAIT_TIME;
++    let result;
++    do {
++      result = await this.#checkHealth(root, LIVE_CHECK_TIMEOUT);
++    } while (
++      result.type === "timeout" &&
++      Date.now() < deadline &&
++      !this.#closed &&
++      !this.#options.abortSignal.aborted
++    );
++    debug("Confirming the watch of %s: %s", root, result.type);
++    if (
++      result.type !== "success" &&
++      !this.#closed &&
++      !this.#options.abortSignal.aborted
++    ) {
++      this.#options.console.warn(
++        `metro-file-map: Could not confirm that ${root} is being watched ` +
++          `(${result.type}). Changes made during startup may be missed.`,
++      );
++    }
++  }
++  async watchRoot(root) {
++    this.#closeController.signal.throwIfAborted();
++    const backend = await this.#createBackend?.(root);
++    if (backend == null) {
++      return;
++    }
++    if (this.#closed) {
++      await backend.stopWatching();
++      return;
++    }
++    if (this.#confirmWatches) {
++      await this.#waitUntilLive(root);
++    }
++  }
++  #handleHealthCheckObservation(basename) {
++    const resolveHealthCheck = this.#pendingHealthChecks.get(basename);
++    if (!resolveHealthCheck) {
++      return;
++    }
++    resolveHealthCheck();
++  }
++  async close() {
++    this.#closed = true;
++    this.#closeController.abort();
++    this.#onChange = undefined;
++    this.#bufferedEvents = [];
++    await Promise.all(this.#backends.map((watcher) => watcher.stopWatching()));
++    this.#backends = [];
++    this.#activeWatcher = null;
++  }
++  async checkHealth(timeout) {
++    return this.#checkHealth(this.#options.rootDir, timeout);
++  }
++  async #checkHealth(dir, timeout) {
++    const healthCheckId = this.#nextHealthCheckId++;
++    if (healthCheckId === Number.MAX_SAFE_INTEGER) {
++      this.#nextHealthCheckId = 0;
++    }
++    const watcher = this.#activeWatcher;
++    const basename =
++      this.#options.healthCheckFilePrefix +
++      "-" +
++      process.pid +
++      "-" +
++      this.#instanceId +
++      "-" +
++      healthCheckId;
++    const healthCheckPath = path.join(dir, basename);
++    let result;
++    const timeoutPromise = new Promise((resolve) =>
++      setTimeout(resolve, timeout),
++    ).then(() => {
++      if (!result) {
++        result = {
++          type: "timeout",
++          pauseReason: this.#backends[0]?.getPauseReason(),
++          timeout,
++          watcher,
++        };
++      }
++    });
++    const startTime = _nodePerf_hooks.performance.now();
++    debug("Creating health check cookie: %s", healthCheckPath);
++    const creationPromise = fs.promises
++      .writeFile(healthCheckPath, String(startTime))
++      .catch((error) => {
++        if (!result) {
++          result = {
++            type: "error",
++            error,
++            timeout,
++            watcher,
++          };
++        }
++      });
++    const observationPromise = new Promise((resolve) => {
++      this.#pendingHealthChecks.set(basename, resolve);
++    }).then(() => {
++      if (!result) {
++        result = {
++          type: "success",
++          timeElapsed: _nodePerf_hooks.performance.now() - startTime,
++          timeout,
++          watcher,
++        };
++      }
++    });
++    await Promise.race([
++      timeoutPromise,
++      creationPromise.then(() => observationPromise),
++    ]);
++    this.#pendingHealthChecks.delete(basename);
++    creationPromise.then(() =>
++      fs.promises.unlink(healthCheckPath).catch(() => {}),
++    );
++    debug("Health check result: %o", result);
++    return (0, _nullthrows.default)(result);
++  }
+ }
+-function _fs() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("fs"));
+-    _fs = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-function _path() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("path"));
+-    _path = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-function _perf_hooks() {
+-    const data = require("perf_hooks");
+-    _perf_hooks = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-const _node = /*#__PURE__*/ _interop_require_default(require("./crawlers/node"));
+-const _watchman = /*#__PURE__*/ _interop_require_default(require("./crawlers/watchman"));
+-const _FallbackWatcher = /*#__PURE__*/ _interop_require_default(require("./watchers/FallbackWatcher"));
+-const _NativeWatcher = /*#__PURE__*/ _interop_require_default(require("./watchers/NativeWatcher"));
+-const _WatchmanWatcher = /*#__PURE__*/ _interop_require_default(require("./watchers/WatchmanWatcher"));
+-const _common = require("./watchers/common");
+-function _interop_require_default(obj) {
+-    return obj && obj.__esModule ? obj : {
+-        default: obj
+-    };
+-}
+-const debug = require('debug')('Metro:Watcher');
+-const MAX_WAIT_TIME = 240000;
+-let nextInstanceId = 0;
+-class Watcher extends _events().default {
+-    #activeWatcher;
+-    #backends = [];
+-    #instanceId;
+-    #nextHealthCheckId = 0;
+-    #options;
+-    #pendingHealthChecks = new Map();
+-    constructor(options){
+-        super();
+-        this.#options = options;
+-        this.#instanceId = nextInstanceId++;
+-    }
+-    async crawl() {
+-        this.#options.perfLogger?.point('crawl_start');
+-        const options = this.#options;
+-        const result = await this.#crawl({
+-            previousState: options.previousState,
+-            roots: options.roots,
+-            useWatchman: options.useWatchman
+-        });
+-        this.#options.perfLogger?.point('crawl_end');
+-        return result;
+-    }
+-    async recrawl(subpath, currentFileSystem) {
+-        return this.#crawl({
+-            previousState: {
+-                clocks: new Map(),
+-                fileSystem: currentFileSystem
+-            },
+-            roots: [
+-                _path().default.join(this.#options.rootDir, subpath)
+-            ],
+-            subpath,
+-            useWatchman: false
+-        });
+-    }
+-    async #crawl(crawlOptions) {
+-        const options = this.#options;
+-        const { useWatchman, subpath } = crawlOptions;
+-        const ignoreForCrawl = (()=>{
+-            if (options.ignoreForCrawl && options.healthCheckFilePrefix) {
+-                const baseIgnore = options.ignoreForCrawl;
+-                const prefix = options.healthCheckFilePrefix;
+-                return (filePath)=>baseIgnore(filePath) || filePath.startsWith(prefix, filePath.lastIndexOf(_path().default.sep) + 1);
+-            } else if (options.ignoreForCrawl) {
+-                return options.ignoreForCrawl;
+-            } else if (options.healthCheckFilePrefix) {
+-                const prefix = options.healthCheckFilePrefix;
+-                return (filePath)=>filePath.startsWith(prefix, filePath.lastIndexOf(_path().default.sep) + 1);
+-            } else {
+-                return ()=>false;
+-            }
+-        })();
+-        const crawl = useWatchman ? _watchman.default : _node.default;
+-        let crawler = crawl === _watchman.default ? 'watchman' : 'node';
+-        options.abortSignal.throwIfAborted();
+-        const crawlerOptions = {
+-            abortSignal: options.abortSignal,
+-            computeSha1: options.computeSha1,
+-            console: options.console,
+-            includeSymlinks: options.enableSymlinks,
+-            extensions: options.extensions,
+-            ignore: ignoreForCrawl,
+-            onStatus: (status)=>{
+-                this.emit('status', status);
+-            },
+-            perfLogger: options.perfLogger,
+-            previousState: crawlOptions.previousState,
+-            rootDir: options.rootDir,
+-            roots: crawlOptions.roots,
+-            subpath
+-        };
+-        debug('Crawling roots: %s with %s crawler.', crawlOptions.roots, crawler);
+-        let delta;
+-        try {
+-            delta = await crawl(crawlerOptions);
+-        } catch (firstError) {
+-            if (crawl !== _watchman.default) {
+-                throw firstError;
+-            }
+-            crawler = 'node';
+-            options.console.warn('metro-file-map: Watchman crawl failed. Retrying once with node ' + 'crawler.\n' + "  Usually this happens when watchman isn't running. Create an " + "empty `.watchmanconfig` file in your project's root folder or " + 'initialize a git or hg repository in your project.\n' + '  ' + firstError.toString());
+-            try {
+-                delta = await (0, _node.default)(crawlerOptions);
+-            } catch (retryError) {
+-                throw new Error('Crawler retry failed:\n' + `  Original error: ${firstError.message}\n` + `  Retry error: ${retryError.message}\n`);
+-            }
+-        }
+-        debug('Crawler "%s" returned %d added/modified, %d removed, %d clock(s).', crawler, delta.changedFiles.size, delta.removedFiles.size, 'clocks' in delta ? delta.clocks?.size ?? 0 : 0);
+-        return delta;
+-    }
+-    async watch(onChange) {
+-        const { extensions, ignorePatternForWatch, useWatchman } = this.#options;
+-        // WatchmanWatcher > NativeWatcher > FallbackWatcher
+-        const WatcherImpl = useWatchman ? _WatchmanWatcher.default : _NativeWatcher.default.isSupported() ? _NativeWatcher.default : _FallbackWatcher.default;
+-        let watcher = 'fallback';
+-        if (WatcherImpl === _WatchmanWatcher.default) {
+-            watcher = 'watchman';
+-        } else if (WatcherImpl === _NativeWatcher.default) {
+-            watcher = 'native';
+-        }
+-        debug(`Using watcher: ${watcher}`);
+-        this.#options.perfLogger?.annotate({
+-            string: {
+-                watcher
+-            }
+-        });
+-        this.#activeWatcher = watcher;
+-        const createWatcherBackend = (root)=>{
+-            const watcherOptions = {
+-                included: {
+-                    extensions: new Set(extensions),
+-                    // Ensure we always include package.json files, which are crucial for
+-                    // module resolution.
+-                    basenames: new Set([
+-                        'package.json'
+-                    ]),
+-                    // Ensure we always watch any health check files
+-                    basenamePrefixes: this.#options.healthCheckFilePrefix != null ? [
+-                        this.#options.healthCheckFilePrefix
+-                    ] : []
+-                },
+-                ignored: ignorePatternForWatch,
+-                watchmanDeferStates: this.#options.watchmanDeferStates
+-            };
+-            const watcher = new WatcherImpl(root, watcherOptions);
+-            return new Promise(async (resolve, reject)=>{
+-                const rejectTimeout = setTimeout(()=>reject(new Error('Failed to start watch mode.')), MAX_WAIT_TIME);
+-                const healthCheckFilePrefix = this.#options.healthCheckFilePrefix;
+-                watcher.onFileEvent((change)=>{
+-                    if (healthCheckFilePrefix) {
+-                        const isHealthCheckFile = change.relativePath.startsWith(healthCheckFilePrefix, change.relativePath.lastIndexOf(_path().default.sep) + 1);
+-                        if (isHealthCheckFile) {
+-                            if (change.event === _common.TOUCH_EVENT) {
+-                                debug('Observed possible health check cookie: %s in %s', change.relativePath, root);
+-                                this.#handleHealthCheckObservation(_path().default.basename(change.relativePath));
+-                            }
+-                            return;
+-                        }
+-                    }
+-                    // Watchman handles recrawls internally - receiving a recrawl event
+-                    // when using Watchman would indicate a bug. Log an error and ignore.
+-                    if (change.event === 'recrawl' && useWatchman) {
+-                        this.#options.console.error('metro-file-map: Received unexpected recrawl event while using ' + 'Watchman. Watchman recrawls are not implemented.');
+-                        return;
+-                    }
+-                    onChange(change);
+-                });
+-                await watcher.startWatching();
+-                clearTimeout(rejectTimeout);
+-                resolve(watcher);
+-            });
+-        };
+-        this.#backends = await Promise.all(this.#options.roots.map(createWatcherBackend));
+-    }
+-    #handleHealthCheckObservation(basename) {
+-        const resolveHealthCheck = this.#pendingHealthChecks.get(basename);
+-        if (!resolveHealthCheck) {
+-            return;
+-        }
+-        resolveHealthCheck();
+-    }
+-    async close() {
+-        await Promise.all(this.#backends.map((watcher)=>watcher.stopWatching()));
+-        this.#activeWatcher = null;
+-    }
+-    async checkHealth(timeout) {
+-        const healthCheckId = this.#nextHealthCheckId++;
+-        if (healthCheckId === Number.MAX_SAFE_INTEGER) {
+-            this.#nextHealthCheckId = 0;
+-        }
+-        const watcher = this.#activeWatcher;
+-        const basename = this.#options.healthCheckFilePrefix + '-' + process.pid + '-' + this.#instanceId + '-' + healthCheckId;
+-        const healthCheckPath = _path().default.join(this.#options.rootDir, basename);
+-        let result;
+-        const timeoutPromise = new Promise((resolve)=>setTimeout(resolve, timeout)).then(()=>{
+-            if (!result) {
+-                result = {
+-                    type: 'timeout',
+-                    pauseReason: this.#backends[0]?.getPauseReason(),
+-                    timeout,
+-                    watcher
+-                };
+-            }
+-        });
+-        const startTime = _perf_hooks().performance.now();
+-        debug('Creating health check cookie: %s', healthCheckPath);
+-        const creationPromise = _fs().default.promises.writeFile(healthCheckPath, String(startTime)).catch((error)=>{
+-            if (!result) {
+-                result = {
+-                    type: 'error',
+-                    error,
+-                    timeout,
+-                    watcher
+-                };
+-            }
+-        });
+-        const observationPromise = new Promise((resolve)=>{
+-            this.#pendingHealthChecks.set(basename, resolve);
+-        }).then(()=>{
+-            if (!result) {
+-                result = {
+-                    type: 'success',
+-                    timeElapsed: _perf_hooks().performance.now() - startTime,
+-                    timeout,
+-                    watcher
+-                };
+-            }
+-        });
+-        await Promise.race([
+-            timeoutPromise,
+-            creationPromise.then(()=>observationPromise)
+-        ]);
+-        this.#pendingHealthChecks.delete(basename);
+-        // Chain a deletion to the creation promise (which may not have even settled yet!),
+-        // don't await it, and swallow errors. This is just best-effort cleanup.
+-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+-        creationPromise.then(()=>_fs().default.promises.unlink(healthCheckPath).catch(()=>{}));
+-        debug('Health check result: %o', result);
+-        if (result == null) {
+-            throw new Error('health check result was not set by any promise branch');
+-        }
+-        return result;
+-    }
+-}
+-
+-//# sourceMappingURL=Watcher.js.map
++exports.Watcher = Watcher;
+diff --git a/build/index.d.ts b/build/index.d.ts
+--- a/build/index.d.ts
++++ b/build/index.d.ts
+@@ -130,6 +130,8 @@
+     static create(options: InputOptions): FileMap;
+     constructor(options: InputOptions);
+     build(): Promise<BuildResult>;
++    getRoots(): ReadonlyArray<{ absolutePath: string; rootRelativePath: string; dynamic: boolean }>;
++    addRoot(root: string): Promise<void>;
+     /**
+      * 1. read data from the cache or create an empty structure.
+      */
+diff --git a/build/index.js b/build/index.js
+--- a/build/index.js
++++ b/build/index.js
+@@ -221,7 +221,7 @@
+ // This should be bumped whenever a code change to `metro-file-map` itself
+ // would cause a change to the cache data structure and/or content (for a given
+ // filesystem state and build parameters).
+-const CACHE_BREAKER = '12';
++const CACHE_BREAKER = '12-metro-0.87.2-roots-v1';
+ const CHANGE_INTERVAL = 30;
+ const NODE_MODULES = _path().sep + 'node_modules' + _path().sep;
+ const WATCHMAN_REQUIRED_CAPABILITIES = [
+@@ -237,6 +237,11 @@
+     #cacheManager;
+     #canUseWatchmanPromise;
+     #changeID;
++    #changeQueue = Promise.resolve();
++    #roots;
++    #dynamicRoots = new Map();
++    #fileSystem;
++    #flushPendingChanges;
+     #changeInterval;
+     #console;
+     #crawlerAbortController;
+@@ -315,6 +320,7 @@
+         });
+         this.#buildPromise = null;
+         this.#pathUtils = new _RootPathUtils.RootPathUtils(options.rootDir);
++        this.#roots = this.#options.roots.map((absolutePath) => ({ absolutePath, rootRelativePath: this.#pathUtils.absoluteToNormal(absolutePath), dynamic: false }));
+         this.#startupPerfLogger?.point('constructor_end');
+         this.#crawlerAbortController = new AbortController();
+         this.#changeID = 0;
+@@ -424,6 +430,7 @@
+                 await this.#takeSnapshotAndPersist(fileSystem, watchmanClocks, plugins, changeSize > 0);
+                 debug('Finished mapping files (%d changes).', changeSize);
+                 await this.#watch(fileSystem, watchmanClocks, plugins);
++                this.#fileSystem = fileSystem;
+                 doneBuild('build', {
+                     crawler: this.#usedWatchman ? 'watchman' : 'node',
+                     fromCache: initialData != null
+@@ -438,6 +445,101 @@
+             return result;
+         });
+     }
++  getRoots() {
++    return this.#roots;
++  }
++  #updateRoots() {
++    this.#roots = [
++      ...this.#roots.filter((root) => !root.dynamic),
++      ...Array.from(this.#dynamicRoots.keys(), (absolutePath) => ({
++        absolutePath,
++        rootRelativePath: this.#pathUtils.absoluteToNormal(absolutePath),
++        dynamic: true,
++      })),
++    ];
++  }
++  addRoot(root) {
++    const buildPromise = this.#buildPromise;
++    (0, _invariant().default)(
++      buildPromise != null,
++      "metro-file-map: addRoot() must be called after build()",
++    );
++    const fileSystem = this.#fileSystem;
++    if (fileSystem == null) {
++      return buildPromise.then(() => this.addRoot(root));
++    }
++    this.#crawlerAbortController.signal.throwIfAborted();
++    // Canonicalize real directories, including symlinks outside Expo's lazy tree.
++    // Missing or non-directory roots must not become unwatched phantom roots.
++    const absoluteRoot = _fs().realpathSync.native(_path().default.resolve(root));
++    (0, _invariant().default)(_fs().statSync(absoluteRoot).isDirectory(), 'metro-file-map: root must be a directory');
++    const existing = this.#dynamicRoots.get(absoluteRoot);
++    if (existing != null) {
++      return existing;
++    }
++    if (
++      this.#roots.some((r) => _path().default.resolve(r.absolutePath) === absoluteRoot)
++    ) {
++      return Promise.resolve();
++    }
++    const parent = this.#roots.find((r) =>
++      absoluteRoot.startsWith(_path().default.resolve(r.absolutePath) + _path().default.sep),
++    );
++    const ready =
++      parent != null
++        ? (this.#dynamicRoots.get(parent.absolutePath) ?? Promise.resolve())
++        : this.#crawlAndWatchRoot(absoluteRoot);
++    const added = ready.then(
++      () => {},
++      (error) => {
++        this.#dynamicRoots.delete(absoluteRoot);
++        this.#updateRoots();
++        throw error;
++      },
++    );
++    this.#dynamicRoots.set(absoluteRoot, added);
++    this.#updateRoots();
++    return added;
++  }
++  async #crawlAndWatchRoot(absoluteRoot) {
++    const watcher = this.#watcher;
++    const fileSystem = this.#fileSystem;
++    (0, _invariant().default)(
++      watcher != null && fileSystem != null,
++      "Expected build() to have set #watcher and #fileSystem",
++    );
++    await watcher.watchRoot(absoluteRoot);
++    const crawled = this.#changeQueue.then(async () => {
++      this.#crawlerAbortController.signal.throwIfAborted();
++      this.#flushPendingChanges?.();
++      const crawlResult = await watcher.recrawl(
++        this.#pathUtils.absoluteToNormal(absoluteRoot),
++        fileSystem,
++      );
++      const abortSignal = this.#crawlerAbortController.signal;
++      abortSignal.throwIfAborted();
++      const changeAggregator = await this.#applyFileDelta(
++        fileSystem,
++        this.#plugins,
++        crawlResult,
++      );
++      abortSignal.throwIfAborted();
++      if (changeAggregator.getSize() === 0) {
++        return;
++      }
++      const changeEvent = {
++        changes: changeAggregator.getMappedView((metadata) => ({
++          isSymlink: metadata[_constants.default.SYMLINK] !== 0,
++          modifiedTime: metadata[_constants.default.MTIME] ?? null,
++        })),
++        logger: null,
++        rootDir: this.#options.rootDir,
++      };
++      this.emit("change", changeEvent);
++    });
++    this.#changeQueue = crawled.catch(() => {});
++    await crawled;
++  }
+     /**
+    * 1. read data from the cache or create an empty structure.
+    */ async read() {
+@@ -485,7 +587,7 @@
+             console: this.#console,
+             enableSymlinks,
+             extensions,
+-            healthCheckFilePrefix: this.#options.healthCheck.enabled ? this.#options.healthCheck.filePrefix : null,
++            healthCheckFilePrefix: this.#options.healthCheck.filePrefix ?? '.metro-health-check',
+             ignoreForCrawl,
+             ignorePatternForWatch: ignorePattern,
+             perfLogger: this.#startupPerfLogger,
+@@ -655,6 +757,7 @@
+         const hasWatchedExtension = (filePath)=>this.#options.extensions.some((ext)=>filePath.endsWith(ext));
+         let nextEmit = null;
+         const emitChange = ()=>{
++            if (this.#crawlerAbortController.signal.aborted) { nextEmit = null; return; }
+             if (nextEmit == null) {
+                 // Nothing to emit
+                 return;
+@@ -716,7 +819,6 @@
+             this.emit('change', changeEvent);
+             nextEmit = null;
+         };
+-        let changeQueue = Promise.resolve();
+         const onChange = (change)=>{
+             // Recrawl events bypass normal filtering - they trigger a full subdirectory scan
+             if (change.event !== 'recrawl' && change.metadata && // Ignore all directory events
+@@ -742,7 +844,8 @@
+                 };
+                 nextEmit.events.push(event);
+             };
+-            changeQueue = changeQueue.then(async ()=>{
++            this.#changeQueue = this.#changeQueue.then(async ()=>{
++                if (this.#crawlerAbortController.signal.aborted) return;
+                 // If we get duplicate events for the same file, ignore them.
+                 if (nextEmit != null && nextEmit.events.find((event)=>event.type === change.event && event.relativeFilePath === relativeFilePath && (!('metadata' in event) && !change.metadata || 'metadata' in event && change.metadata && event.metadata[_constants.default.MTIME] != null && change.metadata.modifiedTime != null && event.metadata[_constants.default.MTIME] === change.metadata.modifiedTime))) {
+                     return null;
+@@ -837,9 +940,10 @@
+                 this.#console.error(`metro-file-map: watch error:\n  ${error.stack}\n`);
+             });
+         };
++        this.#flushPendingChanges = emitChange;
+         this.#changeInterval = setInterval(emitChange, CHANGE_INTERVAL);
+         (0, _invariant().default)(this.#watcher != null, 'Expected #watcher to have been initialised by build()');
+-        await this.#watcher.watch(onChange);
++        await this.#watcher.watch(onChange, clocks);
+         if (this.#options.healthCheck.enabled) {
+             const performHealthCheck = ()=>{
+                 if (!this.#watcher) {
+@@ -856,6 +960,7 @@
+         this.#startupPerfLogger?.point('watch_end');
+     }
+     async end() {
++        this.#crawlerAbortController.abort();
+         if (this.#changeInterval) {
+             clearInterval(this.#changeInterval);
+         }
+@@ -863,6 +968,7 @@
+             clearInterval(this.#healthCheckInterval);
+         }
+         this.#crawlerAbortController.abort();
++        await this.#changeQueue;
+         await Promise.all([
+             this.#fileProcessor.end(),
+             this.#watcher?.close(),
+diff --git a/build/watchers/AbstractWatcher.d.ts b/build/watchers/AbstractWatcher.d.ts
+--- a/build/watchers/AbstractWatcher.d.ts
++++ b/build/watchers/AbstractWatcher.d.ts
+@@ -13,6 +13,7 @@
+ }
+ export declare class AbstractWatcher implements WatcherBackend {
+     #private;
++    static isLiveOnStart(): boolean;
+     readonly root: string;
+     readonly ignored: RegExp | undefined | null;
+     readonly included: WatcherIncludedFiles | null | undefined;
+diff --git a/build/watchers/AbstractWatcher.js b/build/watchers/AbstractWatcher.js
+--- a/build/watchers/AbstractWatcher.js
++++ b/build/watchers/AbstractWatcher.js
+@@ -1,123 +1,88 @@
+ /**
+  * Copyright (c) Meta Platforms, Inc. and affiliates.
+- *
+- * This source code is licensed under the MIT license found in the
+- * LICENSE file in the root directory of this source tree.
+- */ "use strict";
++ * Licensed under the MIT license in the package LICENSE file.
++ * Watcher subsystem ported from metro-file-map 0.87.2.
++ */
++"use strict";
++
+ Object.defineProperty(exports, "__esModule", {
+-    value: true
++  value: true,
+ });
+-Object.defineProperty(exports, "AbstractWatcher", {
+-    enumerable: true,
+-    get: function() {
+-        return AbstractWatcher;
++exports.AbstractWatcher = void 0;
++var _common = require("./common");
++var _nodeEvents = _interopRequireDefault(require("node:events"));
++var path = _interopRequireWildcard(require("node:path"));
++function _interopRequireWildcard(e, t) {
++  if ("function" == typeof WeakMap)
++    var r = new WeakMap(),
++      n = new WeakMap();
++  return (_interopRequireWildcard = function (e, t) {
++    if (!t && e && e.__esModule) return e;
++    var o,
++      i,
++      f = { __proto__: null, default: e };
++    if (null === e || ("object" != typeof e && "function" != typeof e))
++      return f;
++    if ((o = t ? n : r)) {
++      if (o.has(e)) return o.get(e);
++      o.set(e, f);
+     }
+-});
+-function _events() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("events"));
+-    _events = function() {
+-        return data;
+-    };
+-    return data;
++    for (const t in e)
++      "default" !== t &&
++        {}.hasOwnProperty.call(e, t) &&
++        ((i =
++          (o = Object.defineProperty) &&
++          Object.getOwnPropertyDescriptor(e, t)) &&
++        (i.get || i.set)
++          ? o(f, t, i)
++          : (f[t] = e[t]));
++    return f;
++  })(e, t);
+ }
+-function _path() {
+-    const data = /*#__PURE__*/ _interop_require_wildcard(require("path"));
+-    _path = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-const _isWatcherExcluded = /*#__PURE__*/ _interop_require_default(require("../lib/isWatcherExcluded"));
+-const _common = require("./common");
+-function _interop_require_default(obj) {
+-    return obj && obj.__esModule ? obj : {
+-        default: obj
+-    };
+-}
+-function _getRequireWildcardCache(nodeInterop) {
+-    if (typeof WeakMap !== "function") return null;
+-    var cacheBabelInterop = new WeakMap();
+-    var cacheNodeInterop = new WeakMap();
+-    return (_getRequireWildcardCache = function(nodeInterop) {
+-        return nodeInterop ? cacheNodeInterop : cacheBabelInterop;
+-    })(nodeInterop);
+-}
+-function _interop_require_wildcard(obj, nodeInterop) {
+-    if (!nodeInterop && obj && obj.__esModule) {
+-        return obj;
+-    }
+-    if (obj === null || typeof obj !== "object" && typeof obj !== "function") {
+-        return {
+-            default: obj
+-        };
+-    }
+-    var cache = _getRequireWildcardCache(nodeInterop);
+-    if (cache && cache.has(obj)) {
+-        return cache.get(obj);
+-    }
+-    var newObj = {
+-        __proto__: null
+-    };
+-    var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor;
+-    for(var key in obj){
+-        if (key !== "default" && Object.prototype.hasOwnProperty.call(obj, key)) {
+-            var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null;
+-            if (desc && (desc.get || desc.set)) {
+-                Object.defineProperty(newObj, key, desc);
+-            } else {
+-                newObj[key] = obj[key];
+-            }
+-        }
+-    }
+-    newObj.default = obj;
+-    if (cache) {
+-        cache.set(obj, newObj);
+-    }
+-    return newObj;
++function _interopRequireDefault(e) {
++  return e && e.__esModule ? e : { default: e };
+ }
+ class AbstractWatcher {
+-    root;
+-    ignored;
+-    included;
+-    doIgnore;
+-    #emitter = new (_events()).default();
+-    constructor(dir, opts){
+-        const { ignored, included } = opts;
+-        this.ignored = ignored;
+-        this.included = included;
+-        this.doIgnore = ignored ? (filePath)=>(0, _isWatcherExcluded.default)(filePath) || (0, _common.posixPathMatchesPattern)(ignored, filePath) : _isWatcherExcluded.default;
+-        this.root = _path().resolve(dir);
+-    }
+-    onFileEvent(listener) {
+-        this.#emitter.on('fileevent', listener);
+-        return ()=>{
+-            this.#emitter.removeListener('fileevent', listener);
+-        };
+-    }
+-    onError(listener) {
+-        this.#emitter.on('error', listener);
+-        return ()=>{
+-            this.#emitter.removeListener('error', listener);
+-        };
+-    }
+-    async startWatching() {
+-    // Must be implemented by subclasses
+-    }
+-    async stopWatching() {
+-        this.#emitter.removeAllListeners();
+-    }
+-    emitFileEvent(event) {
+-        this.#emitter.emit('fileevent', {
+-            ...event,
+-            root: this.root
+-        });
+-    }
+-    emitError(error) {
+-        this.#emitter.emit('error', error);
+-    }
+-    getPauseReason() {
+-        return null;
+-    }
++  #emitter = new _nodeEvents.default();
++  static isLiveOnStart() {
++    return true;
++  }
++  constructor(dir, opts) {
++    const { ignored, included } = opts;
++    this.ignored = ignored;
++    this.included = included;
++    this.doIgnore = ignored
++      ? (filePath) => (0, _common.posixPathMatchesPattern)(ignored, filePath)
++      : () => false;
++    this.root = path.resolve(dir);
++  }
++  onFileEvent(listener) {
++    this.#emitter.on("fileevent", listener);
++    return () => {
++      this.#emitter.removeListener("fileevent", listener);
++    };
++  }
++  onError(listener) {
++    this.#emitter.on("error", listener);
++    return () => {
++      this.#emitter.removeListener("error", listener);
++    };
++  }
++  async startWatching() {}
++  async stopWatching() {
++    this.#emitter.removeAllListeners();
++  }
++  emitFileEvent(event) {
++    this.#emitter.emit("fileevent", {
++      ...event,
++      root: this.root,
++    });
++  }
++  emitError(error) {
++    this.#emitter.emit("error", error);
++  }
++  getPauseReason() {
++    return null;
++  }
+ }
+-
+-//# sourceMappingURL=AbstractWatcher.js.map
++exports.AbstractWatcher = AbstractWatcher;
+diff --git a/build/watchers/FallbackWatcher.d.ts b/build/watchers/FallbackWatcher.d.ts
+--- a/build/watchers/FallbackWatcher.d.ts
++++ b/build/watchers/FallbackWatcher.d.ts
+@@ -9,6 +9,7 @@
+ import { AbstractWatcher } from './AbstractWatcher';
+ export default class FallbackWatcher extends AbstractWatcher {
+     #private;
++    static isLiveOnStart(): boolean;
+     startWatching(): Promise<void>;
+     /**
+      * End watching.
+diff --git a/build/watchers/FallbackWatcher.js b/build/watchers/FallbackWatcher.js
+--- a/build/watchers/FallbackWatcher.js
++++ b/build/watchers/FallbackWatcher.js
+@@ -1,461 +1,440 @@
+ /**
+  * Copyright (c) Meta Platforms, Inc. and affiliates.
+- *
+- * This source code is licensed under the MIT license found in the
+- * LICENSE file in the root directory of this source tree.
+- *
+- * @format
+- */ /**
+- * Originally vendored from https://github.com/amasad/sane/blob/64ff3a870c42e84f744086884bf55a4f9c22d376/src/node_watcher.js
+- */ "use strict";
++ * Licensed under the MIT license in the package LICENSE file.
++ * Watcher subsystem ported from metro-file-map 0.87.2.
++ */
++"use strict";
++
+ Object.defineProperty(exports, "__esModule", {
+-    value: true
++  value: true,
+ });
+-Object.defineProperty(exports, "default", {
+-    enumerable: true,
+-    get: function() {
+-        return FallbackWatcher;
+-    }
+-});
+-function _fs() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("fs"));
+-    _fs = function() {
+-        return data;
++exports.default = void 0;
++var _AbstractWatcher = require("./AbstractWatcher");
++var common = _interopRequireWildcard(require("./common"));
++var _nodeFs = _interopRequireDefault(require("node:fs"));
++var _nodeOs = _interopRequireDefault(require("node:os"));
++var _nodePath = _interopRequireDefault(require("node:path"));
++function _interopRequireDefault(e) {
++  return e && e.__esModule ? e : { default: e };
++}
++function _interopRequireWildcard(e, t) {
++  if ("function" == typeof WeakMap)
++    var r = new WeakMap(),
++      n = new WeakMap();
++  return (_interopRequireWildcard = function (e, t) {
++    if (!t && e && e.__esModule) return e;
++    var o,
++      i,
++      f = { __proto__: null, default: e };
++    if (null === e || ("object" != typeof e && "function" != typeof e))
++      return f;
++    if ((o = t ? n : r)) {
++      if (o.has(e)) return o.get(e);
++      o.set(e, f);
++    }
++    for (const t in e)
++      "default" !== t &&
++        {}.hasOwnProperty.call(e, t) &&
++        ((i =
++          (o = Object.defineProperty) &&
++          Object.getOwnPropertyDescriptor(e, t)) &&
++        (i.get || i.set)
++          ? o(f, t, i)
++          : (f[t] = e[t]));
++    return f;
++  })(e, t);
++}
++const platform = _nodeOs.default.platform();
++const fsPromises = _nodeFs.default.promises;
++const TOUCH_EVENT = common.TOUCH_EVENT;
++const DELETE_EVENT = common.DELETE_EVENT;
++const RECRAWL_EVENT = common.RECRAWL_EVENT;
++const DEBOUNCE_MS = 100;
++const CRAWL_CONCURRENCY = 32;
++class FallbackWatcher extends _AbstractWatcher.AbstractWatcher {
++  #changeTimers = new Map();
++  #dirRegistry = Object.create(null);
++  #watched = Object.create(null);
++  static isLiveOnStart() {
++    return platform !== "darwin";
++  }
++  async startWatching() {
++    this.#watchdir(this.root);
++    await recReaddir(
++      this.root,
++      (dir) => {
++        this.#watchdir(dir);
++      },
++      (filename) => {
++        this.#register(filename, "f");
++      },
++      (symlink) => {
++        this.#register(symlink, "l");
++      },
++      this.#checkedEmitError,
++      this.ignored,
++    );
++    if (platform === "win32") {
++      await new Promise((resolve) => setTimeout(resolve, 1000));
++    }
++  }
++  #register(filepath, type) {
++    const dir = _nodePath.default.dirname(filepath);
++    const filename = _nodePath.default.basename(filepath);
++    if (this.#dirRegistry[dir] && this.#dirRegistry[dir][filename]) {
++      return false;
++    }
++    const relativePath = _nodePath.default.relative(this.root, filepath);
++    if (
++      this.doIgnore(relativePath) ||
++      (type === "f" && !common.isIncluded("f", this.included, relativePath))
++    ) {
++      return false;
++    }
++    if (!this.#dirRegistry[dir]) {
++      this.#dirRegistry[dir] = Object.create(null);
++    }
++    this.#dirRegistry[dir][filename] = true;
++    return true;
++  }
++  #unregister(filepath) {
++    const dir = _nodePath.default.dirname(filepath);
++    if (this.#dirRegistry[dir]) {
++      const filename = _nodePath.default.basename(filepath);
++      delete this.#dirRegistry[dir][filename];
++    }
++  }
++  #unregisterDir(dirpath) {
++    const removedFiles = [];
++    for (const registeredDir of Object.keys(this.#dirRegistry)) {
++      if (
++        registeredDir === dirpath ||
++        registeredDir.startsWith(dirpath + _nodePath.default.sep)
++      ) {
++        for (const filename of Object.keys(this.#dirRegistry[registeredDir])) {
++          removedFiles.push(_nodePath.default.join(registeredDir, filename));
++        }
++        delete this.#dirRegistry[registeredDir];
++      }
++    }
++    return removedFiles;
++  }
++  #registered(fullpath) {
++    const dir = _nodePath.default.dirname(fullpath);
++    return !!(
++      this.#dirRegistry[fullpath] ||
++      (this.#dirRegistry[dir] &&
++        this.#dirRegistry[dir][_nodePath.default.basename(fullpath)])
++    );
++  }
++  #checkedEmitError = (error) => {
++    if (!isIgnorableFileError(error)) {
++      this.emitError(error);
++    }
++  };
++  #watchdir = (dir) => {
++    if (this.#watched[dir]) {
++      return false;
++    }
++    let watcher;
++    try {
++      watcher = _nodeFs.default.watch(
++        dir,
++        {
++          persistent: true,
++        },
++        (event, filename) => {
++          if (filename != null && _nodePath.default.isAbsolute(filename)) {
++            this.#reconcileWatchedDirectory(dir, watcher).catch((error) =>
++              this.emitError(error),
++            );
++            return;
++          }
++          this.#normalizeChange(dir, event, filename);
++        },
++      );
++    } catch (error) {
++      this.#checkedEmitError(error);
++      return false;
++    }
++    this.#watched[dir] = watcher;
++    watcher.on("error", (error) => {
++      if (this.#watched[dir] === watcher) {
++        delete this.#watched[dir];
++      }
++      this.#checkedEmitError(error);
++    });
++    if (this.root !== dir) {
++      this.#register(dir, "d");
++    }
++    return true;
++  };
++  async #stopWatching(dir) {
++    if (this.#watched[dir]) {
++      await new Promise((resolve) => {
++        this.#watched[dir].once("close", () => process.nextTick(resolve));
++        this.#watched[dir].close();
++        delete this.#watched[dir];
++      });
++    }
++  }
++  async #stopWatchingTree(dirpath) {
++    const prefix = dirpath + _nodePath.default.sep;
++    const nested = Object.keys(this.#watched).filter((watchedDir) =>
++      watchedDir.startsWith(prefix),
++    );
++    await Promise.all(
++      [dirpath, ...nested].map((watchedDir) => this.#stopWatching(watchedDir)),
++    );
++  }
++  async #reconcileWatchedDirectory(dir, watcher) {
++    if (this.#watched[dir] !== watcher) {
++      return;
++    }
++    if (dir === this.root) {
++      await this.#stopWatching(dir);
++      return;
++    }
++    await this.#stopWatchingTree(dir);
++    await this.#processChange(
++      _nodePath.default.dirname(dir),
++      "rename",
++      _nodePath.default.basename(dir),
++    );
++  }
++  async stopWatching() {
++    await super.stopWatching();
++    const promises = Object.keys(this.#watched).map((dir) =>
++      this.#stopWatching(dir),
++    );
++    await Promise.all(promises);
++  }
++  #normalizeChange(dir, event, file) {
++    if (!file) {
++      this.#processUnnamedChange(dir).catch((error) => this.emitError(error));
++    } else {
++      this.#processChange(dir, event, _nodePath.default.normalize(file)).catch(
++        (error) => this.emitError(error),
++      );
++    }
++  }
++  async #processUnnamedChange(dir) {
++    await recReaddir(
++      dir,
++      (subdir) => {
++        this.#watchdir(subdir);
++      },
++      (filename) => {
++        this.#register(filename, "f");
++      },
++      (symlink) => {
++        this.#register(symlink, "l");
++      },
++      this.#checkedEmitError,
++      this.ignored,
++    );
++    this.#emitEvent({
++      event: RECRAWL_EVENT,
++      relativePath: _nodePath.default.relative(this.root, dir),
++    });
++  }
++  async #processChange(dir, event, file) {
++    const fullPath = _nodePath.default.join(dir, file);
++    const relativePath = _nodePath.default.join(
++      _nodePath.default.relative(this.root, dir),
++      file,
++    );
++    const registered = this.#registered(fullPath);
++    try {
++      const stat = await fsPromises.lstat(fullPath);
++      if (stat.isDirectory()) {
++        if (event === "change") {
++          return;
++        }
++        if (
++          this.doIgnore(relativePath) ||
++          !common.isIncluded("d", this.included, relativePath)
++        ) {
++          return;
++        }
++        await recReaddir(
++          _nodePath.default.resolve(this.root, relativePath),
++          (dir, stats) => {
++            if (this.#watchdir(dir)) {
++              this.#emitEvent({
++                event: TOUCH_EVENT,
++                relativePath: _nodePath.default.relative(this.root, dir),
++                metadata: {
++                  modifiedTime: stats.mtime.getTime(),
++                  size: stats.size,
++                  type: "d",
++                },
++              });
++            }
++          },
++          (file, stats) => {
++            if (this.#register(file, "f")) {
++              this.#emitEvent({
++                event: TOUCH_EVENT,
++                relativePath: _nodePath.default.relative(this.root, file),
++                metadata: {
++                  modifiedTime: stats.mtime.getTime(),
++                  size: stats.size,
++                  type: "f",
++                },
++              });
++            }
++          },
++          (symlink, stats) => {
++            if (this.#register(symlink, "l")) {
++              this.emitFileEvent({
++                event: TOUCH_EVENT,
++                relativePath: _nodePath.default.relative(this.root, symlink),
++                metadata: {
++                  modifiedTime: stats.mtime.getTime(),
++                  size: stats.size,
++                  type: "l",
++                },
++              });
++            }
++          },
++          this.#checkedEmitError,
++          this.ignored,
++        );
++        if (registered) {
++          this.#emitEvent({
++            event: RECRAWL_EVENT,
++            relativePath,
++          });
++        }
++      } else {
++        const type = common.typeFromStat(stat);
++        if (type == null) {
++          return;
++        }
++        const metadata = {
++          modifiedTime: stat.mtime.getTime(),
++          size: stat.size,
++          type,
++        };
++        if (registered) {
++          this.#emitEvent({
++            event: TOUCH_EVENT,
++            relativePath,
++            metadata,
++          });
++        } else {
++          if (this.#register(fullPath, type)) {
++            this.#emitEvent({
++              event: TOUCH_EVENT,
++              relativePath,
++              metadata,
++            });
++          }
++        }
++      }
++    } catch (error) {
++      if (!isIgnorableFileError(error)) {
++        this.emitError(error);
++        return;
++      }
++      this.#unregister(fullPath);
++      const removedFiles = this.#unregisterDir(fullPath);
++      for (const removedFile of removedFiles) {
++        this.#emitEvent({
++          event: DELETE_EVENT,
++          relativePath: _nodePath.default.relative(this.root, removedFile),
++        });
++      }
++      if (registered) {
++        this.#emitEvent({
++          event: DELETE_EVENT,
++          relativePath,
++        });
++      }
++      if (removedFiles.length > 0 || this.#watched[fullPath]) {
++        await this.#stopWatchingTree(fullPath);
++      }
++    }
++  }
++  #emitEvent(change) {
++    const { event, relativePath } = change;
++    const key = event + "-" + relativePath;
++    const existingTimer = this.#changeTimers.get(key);
++    if (existingTimer) {
++      clearTimeout(existingTimer);
++    }
++    this.#changeTimers.set(
++      key,
++      setTimeout(() => {
++        this.#changeTimers.delete(key);
++        this.emitFileEvent(change);
++      }, DEBOUNCE_MS),
++    );
++  }
++  getPauseReason() {
++    return null;
++  }
++}
++exports.default = FallbackWatcher;
++function isIgnorableFileError(error) {
++  return (
++    error.code === "ENOENT" || (error.code === "EPERM" && platform === "win32")
++  );
++}
++async function recReaddir(
++  root,
++  dirCallback,
++  fileCallback,
++  symlinkCallback,
++  errorCallback,
++  ignored,
++) {
++  const pending = [root];
++  const visit = async (entry) => {
++    let stats;
++    let names;
++    try {
++      stats = await fsPromises.lstat(entry);
++      if (!stats.isDirectory()) {
++        if (stats.isSymbolicLink()) {
++          symlinkCallback(entry, stats);
++        } else if (stats.isFile()) {
++          fileCallback(entry, stats);
++        }
++        return;
++      }
++      if (ignored != null && common.posixPathMatchesPattern(ignored, entry)) {
++        return;
++      }
++      dirCallback(entry, stats);
++      names = await fsPromises.readdir(entry);
++    } catch (error) {
++      errorCallback(error);
++      return;
++    }
++    for (const name of names) {
++      pending.push(_nodePath.default.join(entry, name));
++    }
++  };
++  await new Promise((resolve, reject) => {
++    let active = 0;
++    const pump = () => {
++      while (active < CRAWL_CONCURRENCY) {
++        const entry = pending.pop();
++        if (entry == null) {
++          break;
++        }
++        active++;
++        visit(entry).then(() => {
++          active--;
++          pump();
++        }, reject);
++      }
++      if (active === 0) {
++        resolve();
++      }
+     };
+-    return data;
++    pump();
++  });
+ }
+-function _os() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("os"));
+-    _os = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-function _path() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("path"));
+-    _path = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-const _AbstractWatcher = require("./AbstractWatcher");
+-const _common = /*#__PURE__*/ _interop_require_wildcard(require("./common"));
+-function _interop_require_default(obj) {
+-    return obj && obj.__esModule ? obj : {
+-        default: obj
+-    };
+-}
+-function _getRequireWildcardCache(nodeInterop) {
+-    if (typeof WeakMap !== "function") return null;
+-    var cacheBabelInterop = new WeakMap();
+-    var cacheNodeInterop = new WeakMap();
+-    return (_getRequireWildcardCache = function(nodeInterop) {
+-        return nodeInterop ? cacheNodeInterop : cacheBabelInterop;
+-    })(nodeInterop);
+-}
+-function _interop_require_wildcard(obj, nodeInterop) {
+-    if (!nodeInterop && obj && obj.__esModule) {
+-        return obj;
+-    }
+-    if (obj === null || typeof obj !== "object" && typeof obj !== "function") {
+-        return {
+-            default: obj
+-        };
+-    }
+-    var cache = _getRequireWildcardCache(nodeInterop);
+-    if (cache && cache.has(obj)) {
+-        return cache.get(obj);
+-    }
+-    var newObj = {
+-        __proto__: null
+-    };
+-    var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor;
+-    for(var key in obj){
+-        if (key !== "default" && Object.prototype.hasOwnProperty.call(obj, key)) {
+-            var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null;
+-            if (desc && (desc.get || desc.set)) {
+-                Object.defineProperty(newObj, key, desc);
+-            } else {
+-                newObj[key] = obj[key];
+-            }
+-        }
+-    }
+-    newObj.default = obj;
+-    if (cache) {
+-        cache.set(obj, newObj);
+-    }
+-    return newObj;
+-}
+-// NOTE(@kitten): No typings
+-const walker = require('walker');
+-const platform = _os().default.platform();
+-const fsPromises = _fs().default.promises;
+-const TOUCH_EVENT = _common.TOUCH_EVENT;
+-const DELETE_EVENT = _common.DELETE_EVENT;
+-/**
+- * This setting delays all events. It suppresses 'change' events that
+- * immediately follow an 'add', and debounces successive 'change' events to
+- * only emit the latest.
+- */ const DEBOUNCE_MS = 100;
+-class FallbackWatcher extends _AbstractWatcher.AbstractWatcher {
+-    #changeTimers = new Map();
+-    #dirRegistry = Object.create(null);
+-    #watched = Object.create(null);
+-    async startWatching() {
+-        this.#watchdir(this.root);
+-        await new Promise((resolve)=>{
+-            recReaddir(this.root, (dir)=>{
+-                this.#watchdir(dir);
+-            }, (filename)=>{
+-                this.#register(filename, 'f');
+-            }, (symlink)=>{
+-                this.#register(symlink, 'l');
+-            }, ()=>{
+-                resolve();
+-            }, this.#checkedEmitError, this.ignored);
+-        });
+-    }
+-    /**
+-   * Register files that matches our globs to know what to type of event to
+-   * emit in the future.
+-   *
+-   * Registry looks like the following:
+-   *
+-   *  dirRegister => Map {
+-   *    dirpath => Map {
+-   *       filename => true
+-   *    }
+-   *  }
+-   *
+-   *  Return false if ignored or already registered.
+-   */ #register(filepath, type) {
+-        const dir = _path().default.dirname(filepath);
+-        const filename = _path().default.basename(filepath);
+-        if (this.#dirRegistry[dir] && this.#dirRegistry[dir][filename]) {
+-            return false;
+-        }
+-        const relativePath = _path().default.relative(this.root, filepath);
+-        if (this.doIgnore(relativePath) || type === 'f' && !_common.isIncluded('f', this.included, relativePath)) {
+-            return false;
+-        }
+-        if (!this.#dirRegistry[dir]) {
+-            this.#dirRegistry[dir] = Object.create(null);
+-        }
+-        this.#dirRegistry[dir][filename] = true;
+-        return true;
+-    }
+-    /**
+-   * Removes a file from the registry.
+-   */ #unregister(filepath) {
+-        const dir = _path().default.dirname(filepath);
+-        if (this.#dirRegistry[dir]) {
+-            const filename = _path().default.basename(filepath);
+-            delete this.#dirRegistry[dir][filename];
+-        }
+-    }
+-    /**
+-   * Removes a dir from the registry, returning all files that were registered
+-   * under it (recursively).
+-   */ #unregisterDir(dirpath) {
+-        const removedFiles = [];
+-        // Find and remove all entries under this directory
+-        for (const registeredDir of Object.keys(this.#dirRegistry)){
+-            if (registeredDir === dirpath || registeredDir.startsWith(dirpath + _path().default.sep)) {
+-                // Collect all files in this directory
+-                for (const filename of Object.keys(this.#dirRegistry[registeredDir])){
+-                    removedFiles.push(_path().default.join(registeredDir, filename));
+-                }
+-                delete this.#dirRegistry[registeredDir];
+-            }
+-        }
+-        return removedFiles;
+-    }
+-    /**
+-   * Checks if a file or directory exists in the registry.
+-   */ #registered(fullpath) {
+-        const dir = _path().default.dirname(fullpath);
+-        return !!(this.#dirRegistry[fullpath] || this.#dirRegistry[dir] && this.#dirRegistry[dir][_path().default.basename(fullpath)]);
+-    }
+-    /**
+-   * Emit "error" event if it's not an ignorable event
+-   */ #checkedEmitError = (error)=>{
+-        if (!isIgnorableFileError(error)) {
+-            this.emitError(error);
+-        }
+-    };
+-    /**
+-   * Watch a directory.
+-   */ #watchdir = (dir)=>{
+-        if (this.#watched[dir]) {
+-            return false;
+-        }
+-        let watcher;
+-        try {
+-            watcher = _fs().default.watch(dir, {
+-                persistent: true
+-            }, (event, filename)=>this.#normalizeChange(dir, event, filename));
+-        } catch (error) {
+-            // Directory can vanish before watch; filterDir must not throw.
+-            this.#checkedEmitError(error);
+-            return false;
+-        }
+-        this.#watched[dir] = watcher;
+-        watcher.on('error', (error)=>{
+-            // Node emits no `close` after `error`.
+-            if (this.#watched[dir] === watcher) {
+-                delete this.#watched[dir];
+-            }
+-            watcher.close();
+-            this.#checkedEmitError(error);
+-        });
+-        if (this.root !== dir) {
+-            this.#register(dir, 'd');
+-        }
+-        return true;
+-    };
+-    /**
+-   * Stop watching a directory.
+-   */ async #stopWatching(dir) {
+-        const watcher = this.#watched[dir];
+-        if (!watcher) {
+-            return;
+-        }
+-        delete this.#watched[dir];
+-        await new Promise((resolve)=>{
+-            watcher.once('close', ()=>process.nextTick(resolve));
+-            watcher.once('error', ()=>process.nextTick(resolve));
+-            watcher.close();
+-        });
+-    }
+-    /**
+-   * End watching.
+-   */ async stopWatching() {
+-        await super.stopWatching();
+-        const promises = Object.keys(this.#watched).map((dir)=>this.#stopWatching(dir));
+-        await Promise.all(promises);
+-    }
+-    /**
+-   * On some platforms, as pointed out on the fs docs (most likely just win32)
+-   * the file argument might be missing from the fs event. Try to detect what
+-   * change by detecting if something was deleted or the most recent file change.
+-   */ #detectChangedFile(dir, event, callback) {
+-        if (!this.#dirRegistry[dir]) {
+-            return;
+-        }
+-        let found = false;
+-        let closest = null;
+-        let c = 0;
+-        Object.keys(this.#dirRegistry[dir]).forEach((file, i, arr)=>{
+-            _fs().default.lstat(_path().default.join(dir, file), (error, stat)=>{
+-                if (found) {
+-                    return;
+-                }
+-                if (error) {
+-                    if (isIgnorableFileError(error)) {
+-                        found = true;
+-                        callback(file);
+-                    } else {
+-                        this.emitError(error);
+-                    }
+-                } else {
+-                    if (closest == null || stat.mtime > closest.mtime) {
+-                        closest = {
+-                            file,
+-                            mtime: stat.mtime
+-                        };
+-                    }
+-                    if (arr.length === ++c) {
+-                        callback(closest.file);
+-                    }
+-                }
+-            });
+-        });
+-    }
+-    /**
+-   * Normalize fs events and pass it on to be processed.
+-   */ #normalizeChange(dir, event, file) {
+-        if (!file) {
+-            if (!this.#dirRegistry[dir]) {
+-                // Windows may omit filename; list the new directory.
+-                this.#processChange(dir, event === 'change' ? 'rename' : event, '').catch((error)=>{
+-                    this.emitError(error);
+-                });
+-                return;
+-            }
+-            this.#detectChangedFile(dir, event, (actualFile)=>{
+-                if (actualFile) {
+-                    this.#processChange(dir, event, actualFile).catch((error)=>{
+-                        this.emitError(error);
+-                    });
+-                }
+-            });
+-        } else {
+-            this.#processChange(dir, event, _path().default.normalize(file)).catch((error)=>{
+-                this.emitError(error);
+-            });
+-        }
+-    }
+-    /**
+-   * Process changes.
+-   */ async #processChange(dir, event, file) {
+-        const fullPath = _path().default.join(dir, file);
+-        const relativePath = _path().default.join(_path().default.relative(this.root, dir), file);
+-        const registered = this.#registered(fullPath);
+-        try {
+-            const stat = await fsPromises.lstat(fullPath);
+-            if (stat.isDirectory()) {
+-                // win32 emits useless change events on dirs.
+-                if (event === 'change') {
+-                    return;
+-                }
+-                if (this.doIgnore(relativePath) || !_common.isIncluded('d', this.included, relativePath)) {
+-                    return;
+-                }
+-                recReaddir(_path().default.resolve(this.root, relativePath), (dir, stats)=>{
+-                    if (this.#watchdir(dir)) {
+-                        this.#emitEvent({
+-                            event: TOUCH_EVENT,
+-                            relativePath: _path().default.relative(this.root, dir),
+-                            metadata: {
+-                                modifiedTime: stats.mtime.getTime(),
+-                                size: stats.size,
+-                                type: 'd'
+-                            }
+-                        });
+-                    }
+-                }, (file, stats)=>{
+-                    if (this.#register(file, 'f')) {
+-                        this.#emitEvent({
+-                            event: TOUCH_EVENT,
+-                            relativePath: _path().default.relative(this.root, file),
+-                            metadata: {
+-                                modifiedTime: stats.mtime.getTime(),
+-                                size: stats.size,
+-                                type: 'f'
+-                            }
+-                        });
+-                    }
+-                }, (symlink, stats)=>{
+-                    if (this.#register(symlink, 'l')) {
+-                        this.emitFileEvent({
+-                            event: TOUCH_EVENT,
+-                            relativePath: _path().default.relative(this.root, symlink),
+-                            metadata: {
+-                                modifiedTime: stats.mtime.getTime(),
+-                                size: stats.size,
+-                                type: 'l'
+-                            }
+-                        });
+-                    }
+-                }, function endCallback() {}, this.#checkedEmitError, this.ignored);
+-            } else {
+-                const type = _common.typeFromStat(stat);
+-                if (type == null) {
+-                    return;
+-                }
+-                const metadata = {
+-                    modifiedTime: stat.mtime.getTime(),
+-                    size: stat.size,
+-                    type
+-                };
+-                if (registered) {
+-                    this.#emitEvent({
+-                        event: TOUCH_EVENT,
+-                        relativePath,
+-                        metadata
+-                    });
+-                } else {
+-                    if (this.#register(fullPath, type)) {
+-                        this.#emitEvent({
+-                            event: TOUCH_EVENT,
+-                            relativePath,
+-                            metadata
+-                        });
+-                    }
+-                }
+-            }
+-        } catch (error) {
+-            if (!isIgnorableFileError(error)) {
+-                this.emitError(error);
+-                return;
+-            }
+-            this.#unregister(fullPath);
+-            // When a directory is deleted, emit delete events for all files we
+-            // knew about under that directory
+-            const removedFiles = this.#unregisterDir(fullPath);
+-            for (const removedFile of removedFiles){
+-                this.#emitEvent({
+-                    event: DELETE_EVENT,
+-                    relativePath: _path().default.relative(this.root, removedFile)
+-                });
+-            }
+-            if (registered) {
+-                this.#emitEvent({
+-                    event: DELETE_EVENT,
+-                    relativePath
+-                });
+-            }
+-            await this.#stopWatching(fullPath);
+-        }
+-    }
+-    /**
+-   * Emits the given event after debouncing, to emit only the latest
+-   * information when we receive several events in quick succession. E.g.,
+-   * Linux emits two events for every new file.
+-   *
+-   * See also note above for DEBOUNCE_MS.
+-   */ #emitEvent(change) {
+-        const { event, relativePath } = change;
+-        const key = event + '-' + relativePath;
+-        const existingTimer = this.#changeTimers.get(key);
+-        if (existingTimer) {
+-            clearTimeout(existingTimer);
+-        }
+-        this.#changeTimers.set(key, setTimeout(()=>{
+-            this.#changeTimers.delete(key);
+-            this.emitFileEvent(change);
+-        }, DEBOUNCE_MS));
+-    }
+-    getPauseReason() {
+-        return null;
+-    }
+-}
+-/**
+- * Determine if a given FS error can be ignored
+- */ function isIgnorableFileError(error) {
+-    return error.code === 'ENOENT' || // Workaround Windows EPERM on watched folder deletion, and when
+-    // reading locked files (pending further writes or pending deletion).
+-    // In such cases, we'll receive a subsequent event when the file is
+-    // deleted or ready to read.
+-    // https://github.com/facebook/metro/issues/1001
+-    // https://github.com/nodejs/node-v0.x-archive/issues/4337
+-    error.code === 'EPERM' && platform === 'win32';
+-}
+-/**
+- * Traverse a directory recursively calling `callback` on every directory.
+- */ function recReaddir(dir, dirCallback, fileCallback, symlinkCallback, endCallback, errorCallback, ignored) {
+-    const walk = walker(dir);
+-    // Watch before readdir so a file written in between is not missed.
+-    walk.filterDir((currentDir, stats)=>{
+-        if (ignored && _common.posixPathMatchesPattern(ignored, currentDir)) {
+-            return false;
+-        }
+-        normalizeProxy(dirCallback)(currentDir, stats);
+-        return true;
+-    });
+-    walk.on('file', normalizeProxy(fileCallback)).on('symlink', normalizeProxy(symlinkCallback)).on('error', errorCallback).on('end', ()=>{
+-        if (platform === 'win32') {
+-            setTimeout(endCallback, 1000);
+-        } else {
+-            endCallback();
+-        }
+-    });
+-}
+-/**
+- * Returns a callback that when called will normalize a path and call the
+- * original callback
+- */ function normalizeProxy(callback) {
+-    return (filepath, stats)=>callback(_path().default.normalize(filepath), stats);
+-}
+-
+-//# sourceMappingURL=FallbackWatcher.js.map
+diff --git a/build/watchers/NativeWatcher.d.ts b/build/watchers/NativeWatcher.d.ts
+--- a/build/watchers/NativeWatcher.d.ts
++++ b/build/watchers/NativeWatcher.d.ts
+@@ -28,6 +28,7 @@
+  */
+ export default class NativeWatcher extends AbstractWatcher {
+     #private;
++    static isLiveOnStart(): boolean;
+     static isSupported(): boolean;
+     constructor(dir: string, opts: WatcherBackendOptions);
+     startWatching(): Promise<void>;
+diff --git a/build/watchers/NativeWatcher.js b/build/watchers/NativeWatcher.js
+--- a/build/watchers/NativeWatcher.js
++++ b/build/watchers/NativeWatcher.js
+@@ -1,190 +1,165 @@
+ /**
+  * Copyright (c) Meta Platforms, Inc. and affiliates.
+- *
+- * This source code is licensed under the MIT license found in the
+- * LICENSE file in the root directory of this source tree.
+- */ "use strict";
++ * Licensed under the MIT license in the package LICENSE file.
++ * Watcher subsystem ported from metro-file-map 0.87.2.
++ */
++"use strict";
++
+ Object.defineProperty(exports, "__esModule", {
+-    value: true
++  value: true,
+ });
+-Object.defineProperty(exports, /**
+- * NativeWatcher uses Node's native fs.watch API with recursive: true.
+- *
+- * Supported on macOS (and potentially Windows), because both natively have a
+- * concept of recursive watching, via FSEvents and ReadDirectoryChangesW
+- * respectively. Notably Linux lacks this capability at the OS level.
+- *
+- * Node.js has at times supported the `recursive` option to fs.watch on Linux
+- * by walking the directory tree and creating a watcher on each directory, but
+- * this fits poorly with the synchronous `watch` API - either it must block for
+- * arbitrarily large IO, or it may drop changes after `watch` returns. See:
+- * https://github.com/nodejs/node/issues/48437
+- *
+- * Therefore, we retain a fallback to our own application-level recursive
+- * FallbackWatcher for Linux, which has async `startWatching`.
+- *
+- * On Windows, this watcher could be used in principle, but needs work around
+- * some Windows-specific edge cases handled in FallbackWatcher, like
+- * deduping file change events, ignoring directory changes, and handling EPERM.
+- */ "default", {
+-    enumerable: true,
+-    get: function() {
+-        return NativeWatcher;
++exports.default = void 0;
++var _AbstractWatcher = require("./AbstractWatcher");
++var _common = require("./common");
++var _debug = _interopRequireDefault(require("debug"));
++var _nodeFs = require("node:fs");
++var _nodeOs = require("node:os");
++var path = _interopRequireWildcard(require("node:path"));
++function _interopRequireWildcard(e, t) {
++  if ("function" == typeof WeakMap)
++    var r = new WeakMap(),
++      n = new WeakMap();
++  return (_interopRequireWildcard = function (e, t) {
++    if (!t && e && e.__esModule) return e;
++    var o,
++      i,
++      f = { __proto__: null, default: e };
++    if (null === e || ("object" != typeof e && "function" != typeof e))
++      return f;
++    if ((o = t ? n : r)) {
++      if (o.has(e)) return o.get(e);
++      o.set(e, f);
+     }
+-});
+-function _fs() {
+-    const data = require("fs");
+-    _fs = function() {
+-        return data;
+-    };
+-    return data;
++    for (const t in e)
++      "default" !== t &&
++        {}.hasOwnProperty.call(e, t) &&
++        ((i =
++          (o = Object.defineProperty) &&
++          Object.getOwnPropertyDescriptor(e, t)) &&
++        (i.get || i.set)
++          ? o(f, t, i)
++          : (f[t] = e[t]));
++    return f;
++  })(e, t);
+ }
+-function _os() {
+-    const data = require("os");
+-    _os = function() {
+-        return data;
+-    };
+-    return data;
++function _interopRequireDefault(e) {
++  return e && e.__esModule ? e : { default: e };
+ }
+-function _path() {
+-    const data = /*#__PURE__*/ _interop_require_wildcard(require("path"));
+-    _path = function() {
+-        return data;
+-    };
+-    return data;
++const debug = (0, _debug.default)("Metro:NativeWatcher");
++const TOUCH_EVENT = "touch";
++const DELETE_EVENT = "delete";
++const RECRAWL_EVENT = "recrawl";
++class NativeWatcher extends _AbstractWatcher.AbstractWatcher {
++  #fsWatcher;
++  #emitQueue = Promise.resolve();
++  static isSupported() {
++    return (0, _nodeOs.platform)() === "darwin";
++  }
++  static isLiveOnStart() {
++    return false;
++  }
++  constructor(dir, opts) {
++    if (!NativeWatcher.isSupported()) {
++      throw new Error("This watcher can only be used on macOS");
++    }
++    super(dir, opts);
++  }
++  async startWatching() {
++    this.#fsWatcher = (0, _nodeFs.watch)(
++      this.root,
++      {
++        persistent: false,
++        recursive: true,
++      },
++      (event, relativePath) => {
++        const settled = this.#handleEvent(event, relativePath).then(
++          (change) => ({
++            change,
++            error: null,
++          }),
++          (error) => ({
++            change: null,
++            error,
++          }),
++        );
++        const emitted = this.#emitQueue.then(() =>
++          settled.then(({ change, error }) => {
++            if (error != null) {
++              throw error;
++            }
++            if (change != null) {
++              this.emitFileEvent(change);
++            }
++          }),
++        );
++        this.#emitQueue = emitted.catch(() => {});
++        emitted.catch((error) => {
++          this.emitError(error);
++        });
++      },
++    );
++    debug("Watching %s", this.root);
++  }
++  async stopWatching() {
++    await super.stopWatching();
++    if (this.#fsWatcher) {
++      this.#fsWatcher.close();
++    }
++  }
++  async #handleEvent(event, relativePath) {
++    const absolutePath = path.resolve(this.root, relativePath);
++    if (this.doIgnore(relativePath)) {
++      debug(
++        'Ignoring event "%s" on %s (root: %s)',
++        event,
++        relativePath,
++        this.root,
++      );
++      return null;
++    }
++    debug(
++      'Handling event "%s" on %s (root: %s)',
++      event,
++      relativePath,
++      this.root,
++    );
++    try {
++      const stat = await _nodeFs.promises.lstat(absolutePath);
++      const type = (0, _common.typeFromStat)(stat);
++      if (!type) {
++        return null;
++      }
++      if (!(0, _common.isIncluded)(type, this.included, relativePath)) {
++        return null;
++      }
++      if (type === "d" && event === "rename") {
++        debug(
++          "Directory rename detected on %s, requesting recrawl",
++          relativePath,
++        );
++        return {
++          event: RECRAWL_EVENT,
++          relativePath,
++        };
++      }
++      return {
++        event: TOUCH_EVENT,
++        relativePath,
++        metadata: {
++          type,
++          modifiedTime: stat.mtime.getTime(),
++          size: stat.size,
++        },
++      };
++    } catch (error) {
++      if (error?.code !== "ENOENT") {
++        throw error;
++      }
++      return {
++        event: DELETE_EVENT,
++        relativePath,
++      };
++    }
++  }
+ }
+-const _AbstractWatcher = require("./AbstractWatcher");
+-const _common = require("./common");
+-function _getRequireWildcardCache(nodeInterop) {
+-    if (typeof WeakMap !== "function") return null;
+-    var cacheBabelInterop = new WeakMap();
+-    var cacheNodeInterop = new WeakMap();
+-    return (_getRequireWildcardCache = function(nodeInterop) {
+-        return nodeInterop ? cacheNodeInterop : cacheBabelInterop;
+-    })(nodeInterop);
+-}
+-function _interop_require_wildcard(obj, nodeInterop) {
+-    if (!nodeInterop && obj && obj.__esModule) {
+-        return obj;
+-    }
+-    if (obj === null || typeof obj !== "object" && typeof obj !== "function") {
+-        return {
+-            default: obj
+-        };
+-    }
+-    var cache = _getRequireWildcardCache(nodeInterop);
+-    if (cache && cache.has(obj)) {
+-        return cache.get(obj);
+-    }
+-    var newObj = {
+-        __proto__: null
+-    };
+-    var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor;
+-    for(var key in obj){
+-        if (key !== "default" && Object.prototype.hasOwnProperty.call(obj, key)) {
+-            var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null;
+-            if (desc && (desc.get || desc.set)) {
+-                Object.defineProperty(newObj, key, desc);
+-            } else {
+-                newObj[key] = obj[key];
+-            }
+-        }
+-    }
+-    newObj.default = obj;
+-    if (cache) {
+-        cache.set(obj, newObj);
+-    }
+-    return newObj;
+-}
+-const debug = require('debug')('Metro:NativeWatcher');
+-const TOUCH_EVENT = 'touch';
+-const DELETE_EVENT = 'delete';
+-const RECRAWL_EVENT = 'recrawl';
+-class NativeWatcher extends _AbstractWatcher.AbstractWatcher {
+-    #fsWatcher;
+-    static isSupported() {
+-        return (0, _os().platform)() === 'darwin';
+-    }
+-    // eslint-disable-next-line @typescript-eslint/no-useless-constructor
+-    constructor(dir, opts){
+-        // NOTE(@kitten): `!NativeWatcher.isSupported` was always truthy, so omitting check here
+-        super(dir, opts);
+-    }
+-    async startWatching() {
+-        this.#fsWatcher = (0, _fs().watch)(this.root, {
+-            // Don't hold the process open if we forget to close()
+-            persistent: false,
+-            // FSEvents or ReadDirectoryChangesW should mean this is cheap and
+-            // ~instant on macOS or Windows.
+-            recursive: true
+-        }, (event, relativePath)=>{
+-            this._handleEvent(event, relativePath).catch((error)=>{
+-                this.emitError(error);
+-            });
+-        });
+-        debug('Watching %s', this.root);
+-    }
+-    /**
+-   * End watching.
+-   */ async stopWatching() {
+-        await super.stopWatching();
+-        if (this.#fsWatcher) {
+-            this.#fsWatcher.close();
+-        }
+-    }
+-    async _handleEvent(event, relativePath) {
+-        if (relativePath == null) {
+-            return;
+-        }
+-        const absolutePath = _path().resolve(this.root, relativePath);
+-        if (this.doIgnore(relativePath)) {
+-            debug('Ignoring event "%s" on %s (root: %s)', event, relativePath, this.root);
+-            return;
+-        }
+-        debug('Handling event "%s" on %s (root: %s)', event, relativePath, this.root);
+-        try {
+-            const stat = await _fs().promises.lstat(absolutePath);
+-            const type = (0, _common.typeFromStat)(stat);
+-            // Ignore files of an unrecognized type
+-            if (!type) {
+-                return;
+-            }
+-            if (!(0, _common.isIncluded)(type, this.included, relativePath)) {
+-                return;
+-            }
+-            // For directory "rename" events, notify that we need a recrawl since we
+-            // won't receive events for unmodified files underneath a moved (or
+-            // cloned) directory. Renames are fired by the OS on moves, clones, and
+-            // creations. We ignore "change" events because they indicate a change
+-            // to directory metadata, rather than its path or existence.
+-            if (type === 'd' && event === 'rename') {
+-                debug('Directory rename detected on %s, requesting recrawl', relativePath);
+-                this.emitFileEvent({
+-                    event: RECRAWL_EVENT,
+-                    relativePath
+-                });
+-                return;
+-            }
+-            this.emitFileEvent({
+-                event: TOUCH_EVENT,
+-                relativePath,
+-                metadata: {
+-                    type,
+-                    modifiedTime: stat.mtime.getTime(),
+-                    size: stat.size
+-                }
+-            });
+-        } catch (error) {
+-            if (error?.code !== 'ENOENT') {
+-                this.emitError(error);
+-                return;
+-            }
+-            this.emitFileEvent({
+-                event: DELETE_EVENT,
+-                relativePath
+-            });
+-        }
+-    }
+-}
+-
+-//# sourceMappingURL=NativeWatcher.js.map
++exports.default = NativeWatcher;
+diff --git a/build/watchers/RecrawlWarning.js b/build/watchers/RecrawlWarning.js
+--- a/build/watchers/RecrawlWarning.js
++++ b/build/watchers/RecrawlWarning.js
+@@ -1,65 +1,53 @@
+ /**
+  * Copyright (c) Meta Platforms, Inc. and affiliates.
+- *
+- * This source code is licensed under the MIT license found in the
+- * LICENSE file in the root directory of this source tree.
+- *
+- * Originally vendored from
+- * https://github.com/amasad/sane/blob/64ff3a870c42e84f744086884bf55a4f9c22d376/src/utils/recrawl-warning-dedupe.js
+- */ "use strict";
++ * Licensed under the MIT license in the package LICENSE file.
++ * Watcher subsystem ported from metro-file-map 0.87.2.
++ */
++"use strict";
++
+ Object.defineProperty(exports, "__esModule", {
+-    value: true
++  value: true,
+ });
+-Object.defineProperty(exports, "default", {
+-    enumerable: true,
+-    get: function() {
+-        return RecrawlWarning;
++exports.default = void 0;
++class RecrawlWarning {
++  static RECRAWL_WARNINGS = [];
++  static REGEXP =
++    /Recrawled this watch (\d+) times?, most recently because:\n([^:]+)/;
++  constructor(root, count) {
++    this.root = root;
++    this.count = count;
++  }
++  static findByRoot(root) {
++    for (let i = 0; i < this.RECRAWL_WARNINGS.length; i++) {
++      const warning = this.RECRAWL_WARNINGS[i];
++      if (warning.root === root) {
++        return warning;
++      }
+     }
+-});
+-class RecrawlWarning {
+-    static RECRAWL_WARNINGS = [];
+-    static REGEXP = /Recrawled this watch (\d+) times?, most recently because:\n([^:]+)/;
+-    root;
+-    count;
+-    constructor(root, count){
+-        this.root = root;
+-        this.count = count;
++    return undefined;
++  }
++  static isRecrawlWarningDupe(warningMessage) {
++    if (typeof warningMessage !== "string") {
++      return false;
+     }
+-    static findByRoot(root) {
+-        for(let i = 0; i < this.RECRAWL_WARNINGS.length; i++){
+-            const warning = this.RECRAWL_WARNINGS[i];
+-            if (warning.root === root) {
+-                return warning;
+-            }
+-        }
+-        return undefined;
++    const match = warningMessage.match(this.REGEXP);
++    if (!match) {
++      return false;
+     }
+-    static isRecrawlWarningDupe(warningMessage) {
+-        if (typeof warningMessage !== 'string') {
+-            return false;
+-        }
+-        const match = warningMessage.match(this.REGEXP);
+-        if (!match) {
+-            return false;
+-        }
+-        const count = Number(match[1]);
+-        const root = match[2];
+-        const warning = this.findByRoot(root);
+-        if (warning) {
+-            // only keep the highest count, assume count to either stay the same or
+-            // increase.
+-            if (warning.count >= count) {
+-                return true;
+-            } else {
+-                // update the existing warning to the latest (highest) count
+-                warning.count = count;
+-                return false;
+-            }
+-        } else {
+-            this.RECRAWL_WARNINGS.push(new RecrawlWarning(root, count));
+-            return false;
+-        }
++    const count = Number(match[1]);
++    const root = match[2];
++    const warning = this.findByRoot(root);
++    if (warning) {
++      if (warning.count >= count) {
++        return true;
++      } else {
++        warning.count = count;
++        return false;
++      }
++    } else {
++      this.RECRAWL_WARNINGS.push(new RecrawlWarning(root, count));
++      return false;
+     }
++  }
+ }
+-
+-//# sourceMappingURL=RecrawlWarning.js.map
++exports.default = RecrawlWarning;
+diff --git a/build/watchers/WatchmanWatcher.js b/build/watchers/WatchmanWatcher.js
+--- a/build/watchers/WatchmanWatcher.js
++++ b/build/watchers/WatchmanWatcher.js
+@@ -1,306 +1,314 @@
+ /**
+  * Copyright (c) Meta Platforms, Inc. and affiliates.
+- *
+- * This source code is licensed under the MIT license found in the
+- * LICENSE file in the root directory of this source tree.
+- */ "use strict";
++ * Licensed under the MIT license in the package LICENSE file.
++ * Watcher subsystem ported from metro-file-map 0.87.2.
++ */
++"use strict";
++
+ Object.defineProperty(exports, "__esModule", {
+-    value: true
++  value: true,
+ });
+-Object.defineProperty(exports, /**
+- * Watches `dir`.
+- */ "default", {
+-    enumerable: true,
+-    get: function() {
+-        return WatchmanWatcher;
+-    }
+-});
+-function _assert() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("assert"));
+-    _assert = function() {
+-        return data;
++exports.default = void 0;
++var _normalizePathSeparatorsToPosix = _interopRequireDefault(
++  require("../lib/normalizePathSeparatorsToPosix"),
++);
++var _normalizePathSeparatorsToSystem = _interopRequireDefault(
++  require("../lib/normalizePathSeparatorsToSystem"),
++);
++var _AbstractWatcher = require("./AbstractWatcher");
++var common = _interopRequireWildcard(require("./common"));
++var _RecrawlWarning = _interopRequireDefault(require("./RecrawlWarning"));
++var _debug = _interopRequireDefault(require("debug"));
++var _fbWatchman = _interopRequireDefault(require("fb-watchman"));
++var _invariant = _interopRequireDefault(require("invariant"));
++var _nodeAssert = _interopRequireDefault(require("node:assert"));
++var _nodeCrypto = require("node:crypto");
++function _interopRequireWildcard(e, t) {
++  if ("function" == typeof WeakMap)
++    var r = new WeakMap(),
++      n = new WeakMap();
++  return (_interopRequireWildcard = function (e, t) {
++    if (!t && e && e.__esModule) return e;
++    var o,
++      i,
++      f = { __proto__: null, default: e };
++    if (null === e || ("object" != typeof e && "function" != typeof e))
++      return f;
++    if ((o = t ? n : r)) {
++      if (o.has(e)) return o.get(e);
++      o.set(e, f);
++    }
++    for (const t in e)
++      "default" !== t &&
++        {}.hasOwnProperty.call(e, t) &&
++        ((i =
++          (o = Object.defineProperty) &&
++          Object.getOwnPropertyDescriptor(e, t)) &&
++        (i.get || i.set)
++          ? o(f, t, i)
++          : (f[t] = e[t]));
++    return f;
++  })(e, t);
++}
++function _interopRequireDefault(e) {
++  return e && e.__esModule ? e : { default: e };
++}
++const debug = (0, _debug.default)("Metro:WatchmanWatcher");
++const DELETE_EVENT = common.DELETE_EVENT;
++const TOUCH_EVENT = common.TOUCH_EVENT;
++const SUB_PREFIX = "metro-file-map";
++class WatchmanWatcher extends _AbstractWatcher.AbstractWatcher {
++  #client;
++  #watchProjectInfo;
++  #watchmanDeferStates;
++  #deferringStates = null;
++  #clocks;
++  constructor(dir, opts) {
++    const { watchmanDeferStates, clocks, ...baseOpts } = opts;
++    super(dir, baseOpts);
++    this.#watchmanDeferStates = watchmanDeferStates;
++    this.#clocks = clocks ?? null;
++    const watchKey = (0, _nodeCrypto.createHash)("md5")
++      .update(this.root)
++      .digest("hex");
++    const readablePath = this.root
++      .replace(/[\/\\]/g, "-")
++      .replace(/[^\-\w]/g, "");
++    this.subscriptionName = `${SUB_PREFIX}-${process.pid}-${readablePath}-${watchKey}`;
++  }
++  async startWatching() {
++    await new Promise((resolve, reject) => this.#init(resolve, reject));
++  }
++  #init(onReady, onError) {
++    if (this.#client) {
++      this.#client.removeAllListeners();
++    }
++    const self = this;
++    this.#client = new _fbWatchman.default.Client();
++    this.#client.on("error", (error) => {
++      this.emitError(error);
++    });
++    this.#client.on("subscription", (changeEvent) =>
++      this.#handleChangeEvent(changeEvent),
++    );
++    this.#client.on("end", () => {
++      console.warn(
++        "[metro-file-map] Warning: Lost connection to Watchman, reconnecting..",
++      );
++      self.#init(
++        () => {},
++        (error) => self.emitError(error),
++      );
++    });
++    this.#watchProjectInfo = null;
++    function getWatchRoot() {
++      return self.#watchProjectInfo ? self.#watchProjectInfo.root : self.root;
++    }
++    function onWatchProject(error, resp) {
++      if (error) {
++        onError(error);
++        return;
++      }
++      debug("Received watch-project response: %s", resp.relative_path);
++      handleWarning(resp);
++      self.#watchProjectInfo = {
++        relativePath: resp.relative_path
++          ? (0, _normalizePathSeparatorsToSystem.default)(resp.relative_path)
++          : "",
++        root: (0, _normalizePathSeparatorsToSystem.default)(resp.watch),
++      };
++      const sinceClock = self.#clocks?.get(
++        (0, _normalizePathSeparatorsToPosix.default)(resp.watch),
++      );
++      self.#clocks = null;
++      if (sinceClock != null) {
++        subscribe(sinceClock);
++      } else {
++        self.#client.command(["clock", getWatchRoot()], onClock);
++      }
++    }
++    function onClock(error, resp) {
++      if (error) {
++        onError(error);
++        return;
++      }
++      debug("Received clock response: %s", resp.clock);
++      handleWarning(resp);
++      subscribe(resp.clock);
++    }
++    function subscribe(since) {
++      const watchProjectInfo = self.#watchProjectInfo;
++      (0, _invariant.default)(
++        watchProjectInfo != null,
++        "watch-project response should have been set before subscribing",
++      );
++      const options = {
++        fields: ["name", "exists", "new", "type", "size", "mtime_ms"],
++        since,
++        defer: self.#watchmanDeferStates,
++        relative_root: watchProjectInfo.relativePath,
++      };
++      self.#client.command(
++        ["subscribe", getWatchRoot(), self.subscriptionName, options],
++        onSubscribe,
++      );
++    }
++    const onSubscribe = (error, resp) => {
++      if (error) {
++        onError(error);
++        return;
++      }
++      debug("Received subscribe response: %s", resp.subscribe);
++      handleWarning(resp);
++      if (resp["asserted-states"] != null) {
++        this.#deferringStates = new Set(resp["asserted-states"]);
++      }
++      onReady();
+     };
+-    return data;
++    self.#client.command(["watch-project", getWatchRoot()], onWatchProject);
++  }
++  #handleChangeEvent(resp) {
++    debug(
++      "Received subscription response: %s (fresh: %s, files: %s, enter: %s, leave: %s, clock: %s)",
++      resp.subscription,
++      resp.is_fresh_instance,
++      resp.files?.length,
++      resp["state-enter"],
++      resp["state-leave"],
++      resp.clock,
++    );
++    _nodeAssert.default.equal(
++      resp.subscription,
++      this.subscriptionName,
++      "Invalid subscription event.",
++    );
++    if (Array.isArray(resp.files)) {
++      resp.files.forEach((change) =>
++        this.#handleFileChange(change, resp.clock),
++      );
++    }
++    const { "state-enter": stateEnter, "state-leave": stateLeave } = resp;
++    if (
++      stateEnter != null &&
++      (this.#watchmanDeferStates ?? []).includes(stateEnter)
++    ) {
++      this.#deferringStates?.add(stateEnter);
++      debug(
++        'Watchman reports "%s" just started. Filesystem notifications are paused.',
++        stateEnter,
++      );
++    }
++    if (
++      stateLeave != null &&
++      (this.#watchmanDeferStates ?? []).includes(stateLeave)
++    ) {
++      this.#deferringStates?.delete(stateLeave);
++      debug(
++        'Watchman reports "%s" ended. Filesystem notifications resumed.',
++        stateLeave,
++      );
++    }
++  }
++  #handleFileChange(changeDescriptor, rawClock) {
++    const self = this;
++    const watchProjectInfo = self.#watchProjectInfo;
++    (0, _invariant.default)(
++      watchProjectInfo != null,
++      "watch-project response should have been set before receiving subscription events",
++    );
++    const {
++      name: relativePosixPath,
++      new: isNew = false,
++      exists = false,
++      type,
++      mtime_ms,
++      size,
++    } = changeDescriptor;
++    const relativePath = (0, _normalizePathSeparatorsToSystem.default)(
++      relativePosixPath,
++    );
++    debug(
++      "Handling change to: %s (new: %s, exists: %s, type: %s)",
++      relativePath,
++      isNew,
++      exists,
++      type,
++    );
++    if (type != null && !(type === "f" || type === "d" || type === "l")) {
++      return;
++    }
++    if (
++      this.doIgnore(relativePath) ||
++      !common.isIncluded(type, this.included, relativePath)
++    ) {
++      return;
++    }
++    const clock =
++      typeof rawClock === "string" && this.#watchProjectInfo != null
++        ? [this.#watchProjectInfo.root, rawClock]
++        : undefined;
++    if (!exists) {
++      self.emitFileEvent({
++        event: DELETE_EVENT,
++        clock,
++        relativePath,
++      });
++    } else {
++      (0, _invariant.default)(
++        type != null && mtime_ms != null && size != null,
++        'Watchman file change event for "%s" missing some requested metadata. ' +
++          "Got type: %s, mtime_ms: %s, size: %s",
++        relativePath,
++        type,
++        mtime_ms,
++        size,
++      );
++      if (!(type === "d" && !isNew)) {
++        const mtime = Number(mtime_ms);
++        self.emitFileEvent({
++          event: TOUCH_EVENT,
++          clock,
++          relativePath,
++          metadata: {
++            modifiedTime: mtime !== 0 ? mtime : null,
++            size,
++            type,
++          },
++        });
++      }
++    }
++  }
++  async stopWatching() {
++    await super.stopWatching();
++    if (this.#client) {
++      this.#client.removeAllListeners();
++      this.#client.end();
++    }
++    this.#deferringStates = null;
++  }
++  getPauseReason() {
++    if (this.#deferringStates == null || this.#deferringStates.size === 0) {
++      return null;
++    }
++    const states = [...this.#deferringStates];
++    if (states.length === 1) {
++      return `The watch is in the '${states[0]}' state.`;
++    }
++    return `The watch is in the ${states
++      .slice(0, -1)
++      .map((s) => `'${s}'`)
++      .join(", ")} and '${states[states.length - 1]}' states.`;
++  }
+ }
+-function _crypto() {
+-    const data = require("crypto");
+-    _crypto = function() {
+-        return data;
+-    };
+-    return data;
++exports.default = WatchmanWatcher;
++function handleWarning(resp) {
++  if ("warning" in resp) {
++    if (_RecrawlWarning.default.isRecrawlWarningDupe(resp.warning)) {
++      return true;
++    }
++    console.warn(resp.warning);
++    return true;
++  } else {
++    return false;
++  }
+ }
+-function _fbwatchman() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("fb-watchman"));
+-    _fbwatchman = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-function _invariant() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("invariant"));
+-    _invariant = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-const _normalizePathSeparatorsToSystem = /*#__PURE__*/ _interop_require_default(require("../lib/normalizePathSeparatorsToSystem"));
+-const _AbstractWatcher = require("./AbstractWatcher");
+-const _RecrawlWarning = /*#__PURE__*/ _interop_require_default(require("./RecrawlWarning"));
+-const _common = /*#__PURE__*/ _interop_require_wildcard(require("./common"));
+-function _interop_require_default(obj) {
+-    return obj && obj.__esModule ? obj : {
+-        default: obj
+-    };
+-}
+-function _getRequireWildcardCache(nodeInterop) {
+-    if (typeof WeakMap !== "function") return null;
+-    var cacheBabelInterop = new WeakMap();
+-    var cacheNodeInterop = new WeakMap();
+-    return (_getRequireWildcardCache = function(nodeInterop) {
+-        return nodeInterop ? cacheNodeInterop : cacheBabelInterop;
+-    })(nodeInterop);
+-}
+-function _interop_require_wildcard(obj, nodeInterop) {
+-    if (!nodeInterop && obj && obj.__esModule) {
+-        return obj;
+-    }
+-    if (obj === null || typeof obj !== "object" && typeof obj !== "function") {
+-        return {
+-            default: obj
+-        };
+-    }
+-    var cache = _getRequireWildcardCache(nodeInterop);
+-    if (cache && cache.has(obj)) {
+-        return cache.get(obj);
+-    }
+-    var newObj = {
+-        __proto__: null
+-    };
+-    var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor;
+-    for(var key in obj){
+-        if (key !== "default" && Object.prototype.hasOwnProperty.call(obj, key)) {
+-            var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null;
+-            if (desc && (desc.get || desc.set)) {
+-                Object.defineProperty(newObj, key, desc);
+-            } else {
+-                newObj[key] = obj[key];
+-            }
+-        }
+-    }
+-    newObj.default = obj;
+-    if (cache) {
+-        cache.set(obj, newObj);
+-    }
+-    return newObj;
+-}
+-const debug = require('debug')('Metro:WatchmanWatcher');
+-const DELETE_EVENT = _common.DELETE_EVENT;
+-const TOUCH_EVENT = _common.TOUCH_EVENT;
+-const SUB_PREFIX = 'metro-file-map';
+-class WatchmanWatcher extends _AbstractWatcher.AbstractWatcher {
+-    #client;
+-    subscriptionName;
+-    #watchProjectInfo;
+-    #watchmanDeferStates;
+-    #deferringStates = null;
+-    constructor(dir, opts){
+-        const { watchmanDeferStates, ...baseOpts } = opts;
+-        super(dir, baseOpts);
+-        this.#watchmanDeferStates = watchmanDeferStates;
+-        // Use a unique subscription name per process per watched directory
+-        const watchKey = (0, _crypto().createHash)('md5').update(this.root).digest('hex');
+-        const readablePath = this.root.replace(/[/\\]/g, '-') // \ and / to -
+-        .replace(/[^\-\w]/g, ''); // Remove non-word/hyphen
+-        this.subscriptionName = `${SUB_PREFIX}-${process.pid}-${readablePath}-${watchKey}`;
+-    }
+-    async startWatching() {
+-        await new Promise((resolve, reject)=>this.#init(resolve, reject));
+-    }
+-    /**
+-   * Run the watchman `watch` command on the root and subscribe to changes.
+-   */ #init(onReady, onError) {
+-        if (this.#client) {
+-            this.#client.removeAllListeners();
+-        }
+-        // oxlint-disable-next-line typescript/no-this-alias
+-        const self = this;
+-        this.#client = new (_fbwatchman()).default.Client();
+-        this.#client.on('error', (error)=>{
+-            this.emitError(error);
+-        });
+-        this.#client.on('subscription', (changeEvent)=>this.#handleChangeEvent(changeEvent));
+-        this.#client.on('end', ()=>{
+-            console.warn('[metro-file-map] Warning: Lost connection to Watchman, reconnecting..');
+-            self.#init(()=>{}, (error)=>self.emitError(error));
+-        });
+-        this.#watchProjectInfo = null;
+-        function getWatchRoot() {
+-            return self.#watchProjectInfo ? self.#watchProjectInfo.root : self.root;
+-        }
+-        function onWatchProject(error, resp) {
+-            if (error) {
+-                onError(error);
+-                return;
+-            }
+-            debug('Received watch-project response: %s', resp.relative_path);
+-            handleWarning(resp);
+-            // NB: Watchman outputs posix-separated paths even on Windows, convert
+-            // them to system-native separators.
+-            self.#watchProjectInfo = {
+-                relativePath: resp.relative_path ? (0, _normalizePathSeparatorsToSystem.default)(resp.relative_path) : '',
+-                root: (0, _normalizePathSeparatorsToSystem.default)(resp.watch)
+-            };
+-            self.#client.command([
+-                'clock',
+-                getWatchRoot()
+-            ], onClock);
+-        }
+-        function onClock(error, resp) {
+-            if (error) {
+-                onError(error);
+-                return;
+-            }
+-            debug('Received clock response: %s', resp.clock);
+-            const watchProjectInfo = self.#watchProjectInfo;
+-            (0, _invariant().default)(watchProjectInfo != null, 'watch-project response should have been set before clock response');
+-            handleWarning(resp);
+-            const options = {
+-                fields: [
+-                    'name',
+-                    'exists',
+-                    'new',
+-                    'type',
+-                    'size',
+-                    'mtime_ms'
+-                ],
+-                since: resp.clock,
+-                defer: self.#watchmanDeferStates,
+-                relative_root: watchProjectInfo.relativePath
+-            };
+-            self.#client.command([
+-                'subscribe',
+-                getWatchRoot(),
+-                self.subscriptionName,
+-                options
+-            ], onSubscribe);
+-        }
+-        const onSubscribe = (error, resp)=>{
+-            if (error) {
+-                onError(error);
+-                return;
+-            }
+-            debug('Received subscribe response: %s', resp.subscribe);
+-            handleWarning(resp);
+-            if (resp['asserted-states'] != null) {
+-                this.#deferringStates = new Set(resp['asserted-states']);
+-            }
+-            onReady();
+-        };
+-        self.#client.command([
+-            'watch-project',
+-            getWatchRoot()
+-        ], onWatchProject);
+-    }
+-    /**
+-   * Handles a change event coming from the subscription.
+-   */ #handleChangeEvent(resp) {
+-        debug('Received subscription response: %s (fresh: %s, files: %s, enter: %s, leave: %s, clock: %s)', resp.subscription, resp.is_fresh_instance, resp.files?.length, resp['state-enter'], resp['state-leave'], resp.clock);
+-        _assert().default.equal(resp.subscription, this.subscriptionName, 'Invalid subscription event.');
+-        if (Array.isArray(resp.files)) {
+-            resp.files.forEach((change)=>this.#handleFileChange(change, resp.clock));
+-        }
+-        const { 'state-enter': stateEnter, 'state-leave': stateLeave } = resp;
+-        if (stateEnter != null && (this.#watchmanDeferStates ?? []).includes(stateEnter)) {
+-            this.#deferringStates?.add(stateEnter);
+-            debug('Watchman reports "%s" just started. Filesystem notifications are paused.', stateEnter);
+-        }
+-        if (stateLeave != null && (this.#watchmanDeferStates ?? []).includes(stateLeave)) {
+-            this.#deferringStates?.delete(stateLeave);
+-            debug('Watchman reports "%s" ended. Filesystem notifications resumed.', stateLeave);
+-        }
+-    }
+-    /**
+-   * Handles a single change event record.
+-   */ #handleFileChange(changeDescriptor, rawClock) {
+-        // oxlint-disable-next-line typescript/no-this-alias
+-        const self = this;
+-        const watchProjectInfo = self.#watchProjectInfo;
+-        (0, _invariant().default)(watchProjectInfo != null, 'watch-project response should have been set before receiving subscription events');
+-        const { name: relativePosixPath, new: isNew = false, exists = false, type, mtime_ms, size } = changeDescriptor;
+-        // Watchman emits posix-separated paths on Windows, which is inconsistent
+-        // with other watchers. Normalize to system-native separators.
+-        const relativePath = (0, _normalizePathSeparatorsToSystem.default)(relativePosixPath);
+-        debug('Handling change to: %s (new: %s, exists: %s, type: %s)', relativePath, isNew, exists, type);
+-        // Ignore files of an unrecognized type
+-        if (type != null && !(type === 'f' || type === 'd' || type === 'l')) {
+-            return;
+-        }
+-        if (this.doIgnore(relativePath) || !_common.isIncluded(type, this.included, relativePath)) {
+-            return;
+-        }
+-        const clock = typeof rawClock === 'string' && this.#watchProjectInfo != null ? [
+-            this.#watchProjectInfo.root,
+-            rawClock
+-        ] : undefined;
+-        if (!exists) {
+-            self.emitFileEvent({
+-                event: DELETE_EVENT,
+-                clock,
+-                relativePath
+-            });
+-        } else {
+-            (0, _invariant().default)(type != null && mtime_ms != null && size != null, 'Watchman file change event for "%s" missing some requested metadata. ' + 'Got type: %s, mtime_ms: %s, size: %s', relativePath, type, mtime_ms, size);
+-            if (// Change event on dirs are mostly useless.
+-            !(type === 'd' && !isNew)) {
+-                const mtime = Number(mtime_ms);
+-                self.emitFileEvent({
+-                    event: TOUCH_EVENT,
+-                    clock,
+-                    relativePath,
+-                    metadata: {
+-                        modifiedTime: mtime !== 0 ? mtime : null,
+-                        size,
+-                        type
+-                    }
+-                });
+-            }
+-        }
+-    }
+-    /**
+-   * Closes the watcher.
+-   */ async stopWatching() {
+-        await super.stopWatching();
+-        if (this.#client) {
+-            this.#client.removeAllListeners();
+-            this.#client.end();
+-        }
+-        this.#deferringStates = null;
+-    }
+-    getPauseReason() {
+-        if (this.#deferringStates == null || this.#deferringStates.size === 0) {
+-            return null;
+-        }
+-        const states = [
+-            ...this.#deferringStates
+-        ];
+-        if (states.length === 1) {
+-            return `The watch is in the '${states[0]}' state.`;
+-        }
+-        return `The watch is in the ${states.slice(0, -1).map((s)=>`'${s}'`).join(', ')} and '${states[states.length - 1]}' states.`;
+-    }
+-}
+-/**
+- * Handles a warning in the watchman resp object.
+- */ function handleWarning(resp) {
+-    if ('warning' in resp) {
+-        if (_RecrawlWarning.default.isRecrawlWarningDupe(resp.warning)) {
+-            return true;
+-        }
+-        console.warn(resp.warning);
+-        return true;
+-    } else {
+-        return false;
+-    }
+-}
+-
+-//# sourceMappingURL=WatchmanWatcher.js.map
+diff --git a/build/watchers/common.d.ts b/build/watchers/common.d.ts
+--- a/build/watchers/common.d.ts
++++ b/build/watchers/common.d.ts
+@@ -17,6 +17,7 @@
+     readonly included: WatcherIncludedFiles | null | undefined;
+     readonly ignored: RegExp | null | undefined;
+     readonly watchmanDeferStates: readonly string[];
++    readonly clocks?: import('../types').WatchmanClocks | null;
+     readonly watchman?: unknown;
+     readonly watchmanPath?: string;
+ }
+diff --git a/build/watchers/common.js b/build/watchers/common.js
+--- a/build/watchers/common.js
++++ b/build/watchers/common.js
+@@ -1,97 +1,66 @@
+ /**
+  * Copyright (c) Meta Platforms, Inc. and affiliates.
+- *
+- * This source code is licensed under the MIT license found in the
+- * LICENSE file in the root directory of this source tree.
+- *
+- * Originally vendored from
+- * https://github.com/amasad/sane/blob/64ff3a870c42e84f744086884bf55a4f9c22d376/src/common.js
+- */ "use strict";
++ * Licensed under the MIT license in the package LICENSE file.
++ * Watcher subsystem ported from metro-file-map 0.87.2.
++ */
++"use strict";
++
+ Object.defineProperty(exports, "__esModule", {
+-    value: true
++  value: true,
+ });
+-0 && (module.exports = {
+-    ALL_EVENT: null,
+-    DELETE_EVENT: null,
+-    RECRAWL_EVENT: null,
+-    TOUCH_EVENT: null,
+-    isIncluded: null,
+-    posixPathMatchesPattern: null,
+-    typeFromStat: null
+-});
+-function _export(target, all) {
+-    for(var name in all)Object.defineProperty(target, name, {
+-        enumerable: true,
+-        get: Object.getOwnPropertyDescriptor(all, name).get
+-    });
++exports.TOUCH_EVENT =
++  exports.RECRAWL_EVENT =
++  exports.DELETE_EVENT =
++  exports.ALL_EVENT =
++    void 0;
++exports.isIncluded = isIncluded;
++exports.posixPathMatchesPattern = void 0;
++exports.typeFromStat = typeFromStat;
++var _nodePath = _interopRequireDefault(require("node:path"));
++function _interopRequireDefault(e) {
++  return e && e.__esModule ? e : { default: e };
+ }
+-_export(exports, {
+-    get ALL_EVENT () {
+-        return ALL_EVENT;
+-    },
+-    get DELETE_EVENT () {
+-        return DELETE_EVENT;
+-    },
+-    get RECRAWL_EVENT () {
+-        return RECRAWL_EVENT;
+-    },
+-    get TOUCH_EVENT () {
+-        return TOUCH_EVENT;
+-    },
+-    get isIncluded () {
+-        return isIncluded;
+-    },
+-    get posixPathMatchesPattern () {
+-        return posixPathMatchesPattern;
+-    },
+-    get typeFromStat () {
+-        return typeFromStat;
+-    }
+-});
+-function _path() {
+-    const data = /*#__PURE__*/ _interop_require_default(require("path"));
+-    _path = function() {
+-        return data;
+-    };
+-    return data;
+-}
+-function _interop_require_default(obj) {
+-    return obj && obj.__esModule ? obj : {
+-        default: obj
+-    };
+-}
+-const DELETE_EVENT = 'delete';
+-const TOUCH_EVENT = 'touch';
+-const RECRAWL_EVENT = 'recrawl';
+-const ALL_EVENT = 'all';
++const DELETE_EVENT = (exports.DELETE_EVENT = "delete");
++const TOUCH_EVENT = (exports.TOUCH_EVENT = "touch");
++const RECRAWL_EVENT = (exports.RECRAWL_EVENT = "recrawl");
++const ALL_EVENT = (exports.ALL_EVENT = "all");
+ function isIncluded(type, included, relativePath) {
+-    if (included == null || type !== 'f') {
+-        return true;
+-    }
+-    const basename = _path().default.basename(relativePath);
+-    return hasIncludedExtension(included.extensions, basename) || included.basenames.has(basename) || included.basenamePrefixes.some((prefix)=>basename.startsWith(prefix));
++  if (included == null || type !== "f") {
++    return true;
++  }
++  const basename = _nodePath.default.basename(relativePath);
++  return (
++    hasIncludedExtension(included.extensions, basename) ||
++    included.basenames.has(basename) ||
++    included.basenamePrefixes.some((prefix) => basename.startsWith(prefix))
++  );
+ }
+ function hasIncludedExtension(extensions, basename) {
+-    for(let i = basename.indexOf('.'); i !== -1; i = basename.indexOf('.', i + 1)){
+-        if (extensions.has(basename.slice(i + 1))) {
+-            return true;
+-        }
++  for (
++    let i = basename.indexOf(".");
++    i !== -1;
++    i = basename.indexOf(".", i + 1)
++  ) {
++    if (extensions.has(basename.slice(i + 1))) {
++      return true;
+     }
+-    return false;
++  }
++  return false;
+ }
+-const posixPathMatchesPattern = _path().default.sep === '/' ? (pattern, filePath)=>pattern.test(filePath) : (pattern, filePath)=>pattern.test(filePath.replaceAll(_path().default.sep, '/'));
++const posixPathMatchesPattern = (exports.posixPathMatchesPattern =
++  _nodePath.default.sep === "/"
++    ? (pattern, filePath) => pattern.test(filePath)
++    : (pattern, filePath) =>
++        pattern.test(filePath.replaceAll(_nodePath.default.sep, "/")));
+ function typeFromStat(stat) {
+-    // Note: These tests are not mutually exclusive - a symlink passes isFile
+-    if (stat.isSymbolicLink()) {
+-        return 'l';
+-    }
+-    if (stat.isDirectory()) {
+-        return 'd';
+-    }
+-    if (stat.isFile()) {
+-        return 'f'; // "Regular" file
+-    }
+-    return null;
++  if (stat.isSymbolicLink()) {
++    return "l";
++  }
++  if (stat.isDirectory()) {
++    return "d";
++  }
++  if (stat.isFile()) {
++    return "f";
++  }
++  return null;
+ }
+-
+-//# sourceMappingURL=common.js.map

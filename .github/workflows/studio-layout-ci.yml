@@ -17,6 +17,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'package.json'
       - 'pnpm-workspace.yaml'
+      - 'patches/**'
       - 'tsconfig.base.json'
       - '.github/workflows/studio-layout-ci.yml'
   workflow_dispatch:
@@ -39,7 +40,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: mikevocalz/nyc-mon
-          ref: 75617163382235ed698e2230e9eefb70c8e19e06
+          ref: 2c5b94ba34d391a1ad66325d058d81f4808dc6ad
           path: nyc-mon
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -69,7 +70,7 @@ jobs:
           pnpm --filter @nitro-forge/icons test
           pnpm --filter @nitro-forge/icons typecheck
           pnpm --filter @nitro-forge/studio-workspace build:theme
-          git diff --exit-code -- packages/studio-workspace/src/theme.css
+          git diff --exit-code -- packages/studio-workspace/src/theme.css packages/studio-workspace/src/theme.native.css
       - name: Workspace transitions and strict types
         run: |
           node packages/studio-workspace/verify-ui-boundary.mjs
@@ -116,7 +117,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: mikevocalz/nyc-mon
-          ref: 75617163382235ed698e2230e9eefb70c8e19e06
+          ref: 2c5b94ba34d391a1ad66325d058d81f4808dc6ad
           path: nyc-mon
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -126,9 +127,13 @@ jobs:
         working-directory: nyc-mon
         run: pnpm --filter @acme/ui... install --frozen-lockfile --ignore-scripts
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Metro family matches Expo 58's pin
+      - name: Metro0.87.2 compatibility and native styles
+        run: |
+          node --test apps/example/tooling/metro-dynamic-roots.test.cjs apps/example/tooling/metro-watcher-lifecycle.test.cjs apps/example/tooling/native-theme-source.test.mjs
+          node apps/example/tooling/verify-native-styles.cjs
+      - name: Coherent Metro family and dynamic-root API
         run: node apps/example/tooling/verify-metro-stack.cjs
-      - name: Export iOS and Android JS bundles through Expo's own Metro
+      - name: Export iOS, Android and web bundles through Expo's own Metro
         working-directory: nitro-forge/apps/example
         env:
           CI: '1'
@@ -137,6 +142,8 @@ jobs:
         run: |
           pnpm exec expo export --platform ios --max-workers 2 --no-minify --no-bytecode --output-dir /tmp/export-ios
           pnpm exec expo export --platform android --max-workers 2 --no-minify --no-bytecode --output-dir /tmp/export-android
+          pnpm exec expo export --platform web --max-workers 2 --no-minify --output-dir /tmp/export-web
+          test -s /tmp/export-web/index.html
           test -s "$(ls /tmp/export-ios/_expo/static/js/ios/*.js)"
           test -s "$(ls /tmp/export-android/_expo/static/js/android/*.js)"
           # The design studio's persona turret ships in both native bundles.

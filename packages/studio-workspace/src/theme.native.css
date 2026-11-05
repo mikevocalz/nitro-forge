@@ -1,0 +1,41 @@
+/* Generated from theme.ts; do not edit. Uniwind native variants. */
+@theme {
+  --spacing-forge-target: 44px;
+  --radius-sm: 4px;
+  --radius-forge-control: 4px;
+  --font-forge-editorial: Georgia, 'Times New Roman', serif;
+}
+@layer theme {
+  :root {
+    @variant light {
+  --color-forge-surface: #F4F5F8;
+  --color-forge-raised: #FFFFFF;
+  --color-forge-mat: #E7EAF1;
+  --color-forge-border: #DDE1EB;
+  --color-forge-text: #252A3A;
+  --color-forge-muted: #687287;
+  --color-forge-accent: #6950D1;
+  --color-forge-on-accent: #FFFFFF;
+  --color-forge-tint: #EEE9FF;
+  --color-forge-paper: #FFFEFC;
+  --color-forge-paper-ink: #303440;
+  --color-forge-paper-muted: #797F8D;
+  --color-forge-error: #B33E46;
+    }
+    @variant dark {
+  --color-forge-surface: #1C1E25;
+  --color-forge-raised: #262932;
+  --color-forge-mat: #15171D;
+  --color-forge-border: #393D49;
+  --color-forge-text: #F0F1F7;
+  --color-forge-muted: #ADB3C4;
+  --color-forge-accent: #B7A5FF;
+  --color-forge-on-accent: #211A3D;
+  --color-forge-tint: #38304F;
+  --color-forge-paper: #FFFEFC;
+  --color-forge-paper-ink: #303440;
+  --color-forge-paper-muted: #797F8D;
+  --color-forge-error: #FFAAA7;
+    }
+  }
+}
