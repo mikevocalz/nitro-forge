@@ -97,8 +97,8 @@ and active PRs before assigning final component IDs.
 | Job queue and resource monitor | A-26, D-29, G-15, N-13 | Concurrent job budgets, pause/cancel/retry, progress from real work and resumable exports |
 
 Priority: implement multiwindow/commands/clipboard/IME/overlay coordination first; the
-menu, palette, text and popover rows above all depend on them. Then font tooling, tree grids, resource relink
-and recovery. Extend specialized graphs, pen, color and spatial behavior alongside the
+menu, palette, text and popover rows above all depend on them.
+Then font tooling, tree grids, resource relink and recovery. Extend specialized graphs, pen, color and spatial behavior alongside the
 relevant engine/backend work.
 
 ## Evidence reviewed
@@ -110,7 +110,7 @@ relevant engine/backend work.
 - Forge PR #40 (open) `docs/ADVANCED_NATIVE_PORT_ROSTER.md`: visual ownership and missing backend operations.
 - Forge PR #43 (open): Rust-backed Cadence consumer; platform integration still gated.
 - Forge PR #44 (open): native linkage work; physical-device acceptance remains pending.
-- NYC-Tron main README: shared visual ownership; status "foundational extraction (not
-  published/native-certified release)".
+- NYC-Tron main README: shared visual ownership; status "foundational extraction (not a
+  published/native-certified release)"; the v0.1.0-alpha.1 tarballs are not device-certified.
 
 No runtime changes or physical-device tests are included in this documentation change.
