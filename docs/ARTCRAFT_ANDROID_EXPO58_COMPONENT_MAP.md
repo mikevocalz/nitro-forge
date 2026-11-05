@@ -43,7 +43,7 @@ This is **not** permission to use AGPL as if it were MIT/Apache. Upgrading to Ni
 ### Proposed adoption structure
 
 - **Core Forge UI and engines:** remain independent of CapCraft source by default, until a project-level decision is made to distribute the relevant combination under AGPL-compatible terms. Preserve other already-permissive source provenance.
-- **Optional source-derived AGPL track:** create distinct `@nitro-forge/capcraft-agpl-*` packages only with per-file copyright notices, unchanged upstream licensing where applicable, full LICENSE copy, attribution, provenance pinned to upstream revision, modifications log, source availability statement, and explicit package dependency gates. Even when a package is optional, integrating it into a native app or library can bring the **combined work** within copyleft requirements.
+- **Optional source-derived AGPL track:** create distinct AGPL packages (the first is `@nitro-forge/agpl-speed-curve`) only with per-file copyright notices, unchanged upstream licensing where applicable, full LICENSE copy, attribution, provenance pinned to upstream revision, modifications log, source availability statement, and explicit package dependency gates. Even when a package is optional, integrating it into a native app or library can bring the **combined work** within copyleft requirements.
 - **Integration contracts:** expose a stable `SpeedCurve`, `TimelineLane`, `AutoCaption`, `AudioEffects` interface that works through Expo 58 v2-native methods/views where supported, or Nitro v1 for Rust/C++ DSP/timeline systems. Neither bridge is a license loophole. Preserve Rust as the document source of truth, with atomic begin/update/commit/cancel undo gestures.
 - **Platforms:** Android Compose UI + iOS SwiftUI/UIKit equivalent; Skia v3 for extremely dense drawing; web desktop adapter using Canvas/WASM where appropriate. Never claim that the Android Compose component is already cross-platform.
 - **AGPL vs commercial:** Selling an AGPL application is permitted. Restricting the entire linked AGPL-derived application/SDK as closed-source while distributing that combined work generally is not; if closed distribution is required, obtain an alternative license from the rights holders or implement independently without copying AGPL expression, subject to review.
@@ -63,7 +63,7 @@ This is **not** permission to use AGPL as if it were MIT/Apache. Upgrading to Ni
 
 ## Source-to-component map
 
-Source paths below are from public `main` and are pointers for engineering review, **not source files imported into Forge**.
+Source paths below are from public `main` and are pointers for engineering review. Only one row has code adapted into Forge: `SpeedCurveEditor.kt`, ported into `packages/agpl-speed-curve` under AGPL-3.0-or-later (see its `NOTICE.md`). Every other row is a reference, not imported source.
 
 | Upstream source | Forge controls | Package(s) | Migration disposition |
 | --- | --- | --- | --- |
@@ -118,7 +118,7 @@ All items are **planned, not implemented**, except the source-only native-signal
 
 ## No false positives / test gates
 
-1. Native v2 code compiles for actual Expo 58 iOS Xcode 27 and Android SDK; no `Expo Go` assumption. Current seed is **uncompiled**.
+1. Native v2 code compiles for actual Expo 58 iOS Xcode 27 and Android SDK; no `Expo Go` assumption. Current state: both Kotlin modules compile with kotlinc against expo-modules-v2-react in CI (v2 compiler plugin not applied); the Swift `@ExpoModule` classes are **not compiled**; nothing has run in an Expo 58 app.
 2. Confirm `requireNativeModule("ForgeSignal")` autolinks on both platforms and returns identical peak sequences for stereo/mono fixtures.
 3. No UI controls are labelled native until native view mounted and interacted with on devices.
 4. Canvas/timeline render passes at 60fps target for target devices; no JS-frame audio buffer flood.
