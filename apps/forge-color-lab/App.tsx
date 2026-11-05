@@ -1,9 +1,8 @@
 import { ScrollView, Text } from "react-native";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
-import {
-  NativeHsvPicker, rgbToHsv, type HsvColor,
-} from "@nitro-forge/color-ui";
+import { HsvPicker } from "@nyc-tron/ui/components/forge/color/HsvPicker";
+import { rgbToHsv, type HsvColor } from "@nyc-tron/ui/components/forge/color";
 
 interface DemoState {
   hsv: HsvColor;
@@ -28,7 +27,7 @@ export default function App() {
         Saturation/value field, native hue slider and RGBA channels.
         Interactive on iOS, Android and the web.
       </Text>
-      <NativeHsvPicker
+      <HsvPicker
         value={hsv}
         testID="forge-hsv-picker"
         onValueChange={(next) => store.setState({ hsv: next })}

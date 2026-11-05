@@ -1,11 +1,8 @@
+// NativeColorChannels, HsvPicker and the RGBA/HSV math come from NYC-Tron UI
+// (pinned in tooling/nyc-tron.json); new code should import the NYC-Tron subpaths directly.
 export { NativeColorChannels } from "./NativeColorChannels";
 export type { NativeColorChannelsProps } from "./NativeColorChannels";
-export { alphaPercent, assertRgba, rgbaToHex, parseHexColor, rgbToHsv, hsvToRgb } from "./color";
+export { alphaPercent, assertRgba, assertHsv, rgbaToHex, parseHexColor, rgbToHsv, hsvToRgb } from "./color";
 export type { RgbaColor, HsvColor } from "./color";
-export { NativeHsvPicker } from "./NativeHsvPicker";
-export type { NativeHsvPickerProps } from "./NativeHsvPicker";
-export { pointToHsv, hsvToPoint, assertHsv } from "./fieldGeometry";
-export { createFieldGesture } from "./fieldGesture";
-export type { FieldGestureOptions } from "./fieldGesture";
-export type { FieldPoint, FieldSize } from "./fieldGeometry";
-export { adjustFieldForAccessibility, displayHueDegrees, FIELD_ACCESSIBILITY_STEP } from "./fieldAccessibility";
+export { HsvPicker, pointToHsv, hsvToPoint, createFieldGesture } from "./HsvPicker";
+export type { HsvPickerProps, FieldPoint, FieldSize, FieldGesture, FieldGestureOptions } from "./HsvPicker";

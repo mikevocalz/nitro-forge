@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "description": "Universal native RGBA color controls for Nitro Forge editors on Expo SDK 58",
+  "description": "Forge color controls: re-exports NYC-Tron UI's RGBA channels, HSV picker and color math",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -15,15 +15,14 @@
     "./color": {
       "types": "./src/color.ts",
       "default": "./src/color.ts"
-    },
-    "./field": {
-      "types": "./src/fieldGeometry.ts",
-      "default": "./src/fieldGeometry.ts"
     }
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run tests"
+  },
+  "dependencies": {
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz"
   },
   "peerDependencies": {
     "@expo/ui": "^58.0.0",

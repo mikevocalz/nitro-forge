@@ -1,33 +1,36 @@
-# Native HSV color picker (SDK 58)
+# HSV color picker (SDK 58)
 
-**New source-level color controls**, building on
-[Forge color-ui PR #26](https://github.com/mikevocalz/nitro-forge/pull/26).
+`HsvPicker` is owned by NYC-Tron UI
+(`@nyc-tron/ui/components/forge/color/HsvPicker`, pinned to v0.1.0-alpha.2 in
+`tooling/nyc-tron.json`). `@nitro-forge/color-ui` re-exports it with its field
+helpers: `HsvPicker`, `pointToHsv`, `hsvToPoint`, `createFieldGesture` and
+`assertHsv`. The Forge copy that lived here (`NativeHsvPicker` and its
+`field*` modules) was removed so there is one implementation.
 
-`NativeHsvPicker` is a cross-platform display-color editor with:
-- A touch/stylus/mouse saturation/value field backed by actual
-  `expo-linear-gradient` native views (iOS/Android) and web renderer
-- Exact, bounded saturation/value pointer geometry with clamp-to-field
-  semantics. Touches before the first `onLayout` are ignored.
-- The field keeps the touch for the whole drag: it refuses termination
-  requests and blocks the native responder, so a parent `ScrollView` does not
-  scroll or steal a vertical brightness drag. If the platform still cancels
-  the touch (an incoming call, a system gesture), the field restores the color
-  from the start of that drag, the same as a UIKit or Android touch cancel.
-  A normal release keeps the last color; `onCancel` is how a host discards a
-  previewed color.
-- A hue spectrum preview, native SwiftUI/Compose/web `@expo/ui` Hue,
-  Saturation, Brightness sliders, and RGBA/alpha controls
-- `onValueChange` preview, explicit `onApply` and `onCancel` to let
-  the Rust editor host create **one undo transaction per committed color**
-- A single controlled HSV object; no `useState` or duplicated document
-  state, preserving hue on zero saturation through `rgbToHsv`
+What the NYC-Tron picker does:
+- A saturation/value field drawn with `expo-linear-gradient`, a native
+  `@expo/ui` hue slider (0-359), 44pt saturation and brightness steppers, and
+  optional RGBA channels.
+- The field ignores touches before the first `onLayout`, refuses responder
+  termination during a drag so a parent `ScrollView` cannot steal it, and
+  restores the drag-start color if the platform cancels the touch.
+- One controlled `HsvColor` value. `onValueChange` previews; `onApply` and
+  `onCancel` let the Rust host make one undo transaction per committed color.
 
-The existing color lab now hosts the picker through one Zustand HSV value.
+Screen readers: the field is `adjustable`. Increment and decrement step
+saturation by `step` (default 0.05) and clamp at 0 and 1. Named actions step
+brightness and hue (`hueStep`, default 5 degrees). The announced value and the
+visible label show hue as 0-359; 359.6 reads as 0. The hue slider has no
+accessible name of its own, which is why the field carries the hue actions.
+None of this has run under VoiceOver or TalkBack yet.
+
+The color lab (`apps/forge-color-lab`) hosts the picker through one Zustand
+HSV value and needs `expo-linear-gradient`, `@expo/ui` and Uniwind:
 
 ```tsx
-import { NativeHsvPicker } from "@nitro-forge/color-ui";
+import { HsvPicker } from "@nyc-tron/ui/components/forge/color/HsvPicker";
 
-<NativeHsvPicker
+<HsvPicker
   value={draftColor}
   onValueChange={(next) => colorStore.setState({ hsv: next })}
   onApply={(next) => commitToRust(next)}
@@ -35,13 +38,8 @@ import { NativeHsvPicker } from "@nitro-forge/color-ui";
 />
 ```
 
-**Boundary:** This picker is a display-space sRGB control, not full gamut,
-ICC transform, CMYK, HDR, L*a*b*, spot ink or document color authority.
-Canvas eyedropper sampling requires a real Board pixel-sampling API.
-The field is announced as adjustable: VoiceOver swipe up/down and TalkBack volume keys step brightness by 5%. Saturation, hue and RGBA have their own `@expo/ui` sliders, which are the keyboard and screen-reader path for every channel. None of this has run under VoiceOver or TalkBack yet.
-Actual physical iOS/Android and Playwright web interaction, pen hover and
-Surface Duo hinge/occlusion tests remain required before declaring parity.
-
-Source inspirations are ProCraft/LightCraft under their separate licenses;
-**no upstream Kotlin code or art assets were copied** here. AGPL CapCraft
-code remains isolated in the explicit experimental package.
+**Boundary:** this is a display-space sRGB control, not a gamut, ICC, CMYK,
+HDR, L\*a\*b\*, spot ink or document color authority. Canvas eyedropper
+sampling needs a real Board pixel-sampling API. Physical iOS/Android and
+Playwright web interaction, pen hover and Surface Duo hinge tests are still
+required before claiming parity.
