@@ -1,0 +1,72 @@
+[
+  {
+    "repository": "googlefonts/fontations",
+    "sourcePath": "skrifa/src/variation.rs",
+    "sourceBlobSha": "2550199c023943523c4965525896963b66ca259e",
+    "sourceUrl": "https://github.com/googlefonts/fontations/blob/main/skrifa/src/variation.rs",
+    "licensePath": "LICENSE-MIT",
+    "licenseBlobSha": "2c367404f5b57ebca61bae50816a98e39efa7ba4",
+    "license": "MIT option; also Apache-2.0",
+    "capabilities": "Variable fonts and font metadata",
+    "approach": "Shared Rust font queries via bounded FFI; Expo v2 supplies OS font discovery. Native/WASM shaping and rasterization must match the app renderer.",
+    "status": "source-reviewed-not-ported",
+    "platformVerification": "NOT RUN",
+    "admission": "Selected source and root license reviewed; transitive files, build integration and distribution notices must be reviewed before further copying."
+  },
+  {
+    "repository": "google/ink",
+    "sourcePath": "ink/strokes/input/stroke_input.h",
+    "sourceBlobSha": "8a31dab34e1c5ed2635e6b877ffee4baa77dd927",
+    "sourceUrl": "https://github.com/google/ink/blob/main/ink/strokes/input/stroke_input.h",
+    "licensePath": "LICENSE",
+    "licenseBlobSha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+    "license": "Apache-2.0",
+    "capabilities": "Pressure, tilt, orientation and twist",
+    "approach": "Use C++ input model/ink core through reviewed bridge; Expo v2 owns device lifecycle, not per-sample React renders. Preserve Muse SDK and platform prediction sources.",
+    "status": "source-reviewed-not-ported",
+    "platformVerification": "NOT RUN",
+    "admission": "Selected source and root license reviewed; transitive files, build integration and distribution notices must be reviewed before further copying."
+  },
+  {
+    "repository": "AcademySoftwareFoundation/OpenColorIO",
+    "sourcePath": "include/OpenColorIO/OpenColorIO.h",
+    "sourceBlobSha": "17205cdba01e615a72966cfdd6447aca376d9d6b",
+    "sourceUrl": "https://github.com/AcademySoftwareFoundation/OpenColorIO/blob/main/include/OpenColorIO/OpenColorIO.h",
+    "licensePath": "LICENSE",
+    "licenseBlobSha": "a934d463c1526d2dfe3ba72fb18f1e455d416995",
+    "license": "BSD-3-Clause",
+    "capabilities": "Color transforms and HDR proofing",
+    "approach": "C++ processor through existing Forge bridge; explicit CPU/GPU/WASM strategy. OS display capability detection is additional work; bundled configs/LUTs need separate provenance.",
+    "status": "source-reviewed-not-ported",
+    "platformVerification": "NOT RUN",
+    "admission": "Selected source and root license reviewed; transitive files, build integration and distribution notices must be reviewed before further copying."
+  },
+  {
+    "repository": "automerge/automerge",
+    "sourcePath": "rust/automerge/src/lib.rs",
+    "sourceBlobSha": "e769cf72adaf6b965353fbb683eab727a243092a",
+    "sourceUrl": "https://github.com/automerge/automerge/blob/main/rust/automerge/src/lib.rs",
+    "licensePath": "LICENSE",
+    "licenseBlobSha": "18812465f040a79603e588aec3153f1d68cdeac6",
+    "license": "MIT",
+    "capabilities": "Conflict/history and collaboration",
+    "approach": "Evaluate behind Forge document authority, not a second UI-owned document. Requires schema/undo reconciliation and migration design before adoption.",
+    "status": "source-reviewed-not-ported",
+    "platformVerification": "NOT RUN",
+    "admission": "Selected source and root license reviewed; transitive files, build integration and distribution notices must be reviewed before further copying."
+  },
+  {
+    "repository": "sindresorhus/p-queue",
+    "sourcePath": "source/index.ts",
+    "sourceBlobSha": "2b9b9e54c8e9228f990a909c946f3dad5cd8ca0f",
+    "sourceUrl": "https://github.com/sindresorhus/p-queue/blob/main/source/index.ts",
+    "licensePath": "license",
+    "licenseBlobSha": "fa7ceba3eb4a9657a9db7f3ffca4e4e97a9019de",
+    "license": "MIT",
+    "capabilities": "Bounded job scheduling",
+    "approach": "Reuse queue policy selectively; native worker lifecycle, persistence and encoder cancellation are additional work. Promise concurrency is not native parallel processing.",
+    "status": "source-reviewed-not-ported",
+    "platformVerification": "NOT RUN",
+    "admission": "Selected source and root license reviewed; transitive files, build integration and distribution notices must be reviewed before further copying."
+  }
+]
