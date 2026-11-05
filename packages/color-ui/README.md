@@ -3,17 +3,27 @@
 Cross-platform Expo **SDK 58** native color components for the Nitro Forge
 editor suite, based on the native API, Expo UI, and ArtCraft source research.
 
-## Source-level P0 slice
+## Where the code lives
 
-`NativeColorChannels`: controlled RGB and opacity controls with a live
-color swatch and hex readout. Uses actual **SwiftUI** and **Jetpack Compose**
-sliders via the `@expo/ui` universal API and the same API's web fallback;
-React Native provides the swatch container.
+`ColorChannels` (exported here as `NativeColorChannels`), the RGBA math
+(`RgbaColor`, `assertRgba`, `rgbaToHex`, `alphaPercent`) and the HSV math
+(`HsvColor`, `parseHexColor`, `rgbToHsv`, `hsvToRgb`) are owned by
+[NYC-Tron UI](https://github.com/mikevocalz/NYC-Tron-UI). Forge depends on the
+release tarball pinned in `tooling/nyc-tron.json` (v0.1.0-alpha.2), and
+`node tooling/verify-nyc-tron-pin.mjs --download` checks it. The control uses
+SwiftUI and Jetpack Compose sliders through the `@expo/ui` universal API, with
+that API's web fallback.
 
-`rgbaToHex`, `parseHexColor`, `rgbToHsv`, `hsvToRgb` provide
-deterministic document-agnostic display color calculations. They do **not**
-replace Rust ICC profile management, HDR, P3, CMYK, spot ink or theme color
-references, and must not flatten document colors when saving.
+NYC-Tron styles the panel and swatch with Tailwind v4 classes
+(`bg-surface-raised`, `rounded-control`), so the host needs Uniwind and the
+tokens from NYC-Tron's `docs/THEME_TOKENS.md`. `apps/forge-color-lab`
+(`metro.config.js`, `global.css`) shows the setup. The per-slider testIDs
+(`<testID>-red` and so on) are gone; `testID` lands on the outer View.
+
+The HSV helpers arrived in NYC-Tron v0.1.0-alpha.2 (NYC-Tron-UI PR #21) and
+color-ui re-exports them. None of these replace Rust ICC
+profile management, HDR, P3, CMYK, spot ink or theme color references, and
+they must not flatten document colors when saving.
 
 Hex alpha is 8-bit. `rgbaToHex` writes `Math.round(alpha * 255)`, so an
 opacity of 0.01 becomes `03` and `parseHexColor` returns 3/255, not 0.01.
@@ -23,9 +33,9 @@ whole percent from 0 to 100 reads the same before and after a hex round trip
 exactly.
 
 ```tsx
-import { NativeColorChannels } from '@nitro-forge/color-ui';
+import { ColorChannels } from '@nyc-tron/ui/components/forge/ColorChannels';
 
-<NativeColorChannels
+<ColorChannels
   value={selectedDisplayColor}
   onValueChange={(rgba) => updatePreviewColor(rgba)}
   testID="prism-fill-color"
