@@ -1,5 +1,6 @@
 import type { SystemOptions } from "react-native-audio-api";
-import { whenPlaybackIdle } from "./playbackOwnership";
+import { hasPlaybackIntent, whenPlaybackIdle } from "./playbackSessions";
+import type { PlaybackSession } from "@nyc-tron/platform-services/playback";
 
 /** The slice of Audio API's AudioManager that the capture session drives. */
 export interface CaptureSessionPort {
@@ -50,11 +51,10 @@ export function configureCaptureSession(port: CaptureSessionPort): void {
  */
 export async function releaseCaptureSession(
   port: CaptureSessionPort,
-  ownsPlayback: boolean,
 ): Promise<void> {
   openCaptures = Math.max(0, openCaptures - 1);
   port.observeAudioInterruptions(false);
-  if (!ownsPlayback) {
+  if (!hasPlaybackIntent()) {
     await port.setAudioSessionActivity(false);
     return;
   }
@@ -67,4 +67,9 @@ export async function releaseCaptureSession(
       console.warn("[audio-ui] deactivating the audio session after preview failed", error);
     });
   });
+}
+
+/** A preview must never deactivate an active recorder or another preview. */
+export async function releasePreviewSession(session: PlaybackSession): Promise<void> {
+  if (openCaptures === 0 && !hasPlaybackIntent()) await session.deactivate();
 }

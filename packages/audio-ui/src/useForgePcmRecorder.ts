@@ -10,7 +10,6 @@ import { recordingFileUri, stopAfterStart } from "./audioApiContracts";
 import type { SourceRecordingFile } from "./sourceRecordingTypes";
 import { configureCaptureSession, releaseCaptureSession } from "./captureSession";
 import { CaptureInterruptions } from "./captureInterruptions";
-import { isPlaybackActive } from "./playbackOwnership";
 
 const FILE_SAMPLE_RATE = 48000;
 const STATUS_POLL_MS = 250;
@@ -117,7 +116,7 @@ export function useForgePcmRecorder(store: StoreApi<RecordingSnapshot>) {
       },
       // The controller calls this after stop(), so deactivating cannot cut a
       // live recording short. See releaseCaptureSession for the preview case.
-      release: () => releaseCaptureSession(AudioManager, isPlaybackActive()),
+      release: () => releaseCaptureSession(AudioManager),
       // The capture window stays open while paused: a paused recorder
       // delivers no buffers, and keeping it open means buffers already in the
       // file before the pause still land in the peaks.

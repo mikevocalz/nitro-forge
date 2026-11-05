@@ -86,9 +86,13 @@ the session is deactivated; `notifyOthersOnDeactivation` (set in the capture
 options) lets other apps resume their audio. While a preview plays, the
 session stays active and returns to the `playback` category, because
 deactivating would cut the preview off; it is deactivated when the preview
-ends, unless a new take has configured the session again. `playbackOwnership.ts` is the flag
-the release reads; it goes away once NYC-Tron's platform playback-session
-module (NYC-Tron-UI #45) ships. Browser capture releases tracks
+ends, unless a new take has configured the session again.
+
+NYC-Tron platform playback sessions own preview intent and system
+interruption/output-loss handling. A preview stops on system loss and needs
+a new Play press. The session registry observes those session stores, so
+the last preview releases focus only when no recorder or other preview owns it.
+Browser capture releases tracks
 on stop/error/unmount and caps encoded output at 64 MiB. Browser Blob URLs
 are owned by the recording component and expire on new capture/unmount;
 consumers must persist bytes before relying on them for a project.
@@ -129,7 +133,7 @@ foldable accessibility and Meta hardware are **NOT RUN**.
 | Playback graph | AudioContext, AudioBufferSourceNode | Injected lifecycle contracts; device pending |
 | Waveform | planarPeak, WaveformPeakAccumulator | Pure tests; device callback continuity pending |
 | Project ownership | Rust Cadence addClip/render schema unchanged | ENGINE_OPS inspected; no attachment claim |
-| UI | NYC-Tron RecordingTrack / AudioPreview (v0.1.0-alpha.2) | Typecheck, Metro web render; device pending |
+| UI | NYC-Tron RecordingTrack / AudioPreview (v0.1.0-alpha.3) | Typecheck, Metro web render; device pending |
 | Dependency safety | npm latest + minimumReleaseAge 1440 | Real registry and rejected install |
 
 Reviewed repository AGENTS.md, ARCHITECTURE.md, ENGINE_OPS.md and ROSTER.md;

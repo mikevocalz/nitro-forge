@@ -7,7 +7,14 @@ import {
   CAPTURE_SESSION_OPTIONS, PLAYBACK_SESSION_OPTIONS, configureCaptureSession, releaseCaptureSession,
   type CaptureSessionPort,
 } from "../src/captureSession";
-import { claimPlayback, isPlaybackActive } from "../src/playbackOwnership";
+import { hasPlaybackIntent, registerPlaybackSession } from "../src/playbackSessions";
+import { createPlaybackSession } from "@nyc-tron/platform-services/playback";
+function claimPlayback() {
+  const session = createPlaybackSession(null, { onAction: () => undefined });
+  const unregister = registerPlaybackSession(session);
+  session.setIntent("playing");
+  return () => { session.setIntent("paused"); unregister(); session.dispose(); };
+}
 
 const FILE = "file:///docs/Forge/take.wav";
 
@@ -259,14 +266,14 @@ describe("capture session release", () => {
     ]);
     expect(CAPTURE_SESSION_OPTIONS.ios?.notifyOthersOnDeactivation).toBe(true);
     expect(CAPTURE_SESSION_OPTIONS.ios?.category).toBe("playAndRecord");
-    await releaseCaptureSession(p, false);
+    await releaseCaptureSession(p);
   });
 
   it("deactivates the session, without switching category, when nothing plays", async () => {
     const { p, calls } = port();
     configureCaptureSession(p);
     calls.length = 0;
-    await releaseCaptureSession(p, false);
+    await releaseCaptureSession(p);
     expect(calls).toEqual([
       ["observeAudioInterruptions", false],
       ["setAudioSessionActivity", false],
@@ -278,7 +285,7 @@ describe("capture session release", () => {
     const preview = claimPlayback();
     configureCaptureSession(p);
     calls.length = 0;
-    await releaseCaptureSession(p, true);
+    await releaseCaptureSession(p);
     expect(calls).toEqual([
       ["observeAudioInterruptions", false],
       ["setSystemOptions", PLAYBACK_SESSION_OPTIONS],
@@ -292,22 +299,22 @@ describe("capture session release", () => {
     const { p, calls } = port();
     const preview = claimPlayback();
     configureCaptureSession(p);
-    await releaseCaptureSession(p, true);
+    await releaseCaptureSession(p);
     configureCaptureSession(p); // next take started while the preview played
     calls.length = 0;
     preview();
     await Promise.resolve();
     expect(calls).toEqual([]);
-    await releaseCaptureSession(p, false);
+    await releaseCaptureSession(p);
   });
 
-  it("tracks preview playback claims idempotently", () => {
-    expect(isPlaybackActive()).toBe(false);
+  it("tracks real playback session intents and unregisters idempotently", () => {
+    expect(hasPlaybackIntent()).toBe(false);
     const a = claimPlayback();
     const b = claimPlayback();
     a(); a();
-    expect(isPlaybackActive()).toBe(true);
+    expect(hasPlaybackIntent()).toBe(true);
     b();
-    expect(isPlaybackActive()).toBe(false);
+    expect(hasPlaybackIntent()).toBe(false);
   });
 });

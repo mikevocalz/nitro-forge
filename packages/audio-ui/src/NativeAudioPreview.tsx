@@ -6,7 +6,9 @@ import { useStore } from "zustand";
 import { AudioPreview } from "@nyc-tron/ui/components/forge/audio/AudioPreview";
 import type { WaveformPeak } from "@nitro-forge/media-ui";
 import { ForgeAudioPlayback, type PlaybackContext, type PlaybackSnapshot } from "./audioPlayback";
-import { claimPlayback } from "./playbackOwnership";
+import { createPlatformPlaybackSession } from "@nyc-tron/platform-services/playback";
+import { registerPlaybackSession } from "./playbackSessions";
+import { releasePreviewSession } from "./captureSession";
 import { toPreviewViewState } from "./previewView";
 
 /** Playhead refresh while a preview plays; matches the view's 0.1 s display. */
@@ -42,8 +44,22 @@ export function NativeAudioPreview({
   })), []);
   const state = useStore(store);
   const player = useRef<ForgeAudioPlayback<AudioBuffer> | null>(null);
+  const startPreview = useRef<((uri: string, duration: number) => Promise<void>) | null>(null);
   useEffect(() => {
-    let claim: (() => void) | null = null;
+    let generation = 0;
+    let startingGraph = false;
+    let sessionWork: Promise<unknown> = Promise.resolve();
+    const playbackSession = createPlatformPlaybackSession({
+      // Audition has Stop rather than Pause/Resume. Interruptions, output loss
+      // and media resets stop it; restarting always requires a new press.
+      onAction: action => {
+        if (action !== "resume" && action !== "unduck") current.stop();
+      },
+    });
+    const unregister = registerPlaybackSession(playbackSession);
+    const releaseSession = () => { sessionWork = sessionWork.then(() => releasePreviewSession(playbackSession)).catch((error: unknown) => {
+      console.warn("[audio-ui] releasing preview session failed", error);
+    }); };
     let tick: ReturnType<typeof setInterval> | null = null;
     const stopTicking = () => { if (tick) clearInterval(tick); tick = null; };
     const current = new ForgeAudioPlayback<AudioBuffer>(() => {
@@ -66,11 +82,13 @@ export function NativeAudioPreview({
       };
       return graph;
     }, next => {
-      // The capture session stays active while a preview plays (see captureSession.ts).
+      if (startingGraph && next.phase === "stopped") return;
       if (next.phase === "loading" || next.phase === "playing") {
-        if (!claim) claim = claimPlayback();
+        playbackSession.setIntent("playing");
       } else {
-        claim?.(); claim = null;
+        generation++;
+        playbackSession.setIntent("paused");
+        releaseSession();
       }
       stopTicking();
       if (next.phase === "playing") {
@@ -79,10 +97,47 @@ export function NativeAudioPreview({
       store.setState({ snapshot: next, positionSeconds: 0 });
     });
     player.current = current;
+    startPreview.current = async (nextUri, duration) => {
+      startingGraph = true;
+      current.stop();
+      startingGraph = false;
+      stopTicking();
+      const ticket = ++generation;
+      playbackSession.setIntent("playing");
+      try {
+        if (playbackSession.isAvailable) {
+          sessionWork = sessionWork.catch(() => undefined).then(async () => {
+            if (ticket !== generation) return;
+            if (!await playbackSession.activate({ category: "playback" })) {
+              throw new Error("The system did not grant audio playback");
+            }
+          });
+          await sessionWork;
+        }
+        if (ticket !== generation) { releaseSession(); return; }
+        startingGraph = true;
+        const playing = current.play(nextUri, duration);
+        startingGraph = false;
+        await playing;
+      } catch (error) {
+        startingGraph = false;
+        if (ticket === generation) {
+          playbackSession.setIntent("paused");
+          releaseSession();
+          store.setState({ snapshot: { phase: "error", message: error instanceof Error ? error.message : "Playback failed", duration: 0 } });
+        }
+      }
+    };
     const listener = AppState.addEventListener("change", next => { if (next !== "active") current.stop(); });
     return () => {
+      generation++;
+      startPreview.current = null;
       player.current = null; listener.remove(); stopTicking();
-      claim?.(); claim = null;
+      // Stop the graph before releasing OS focus or notifying capture waiters.
+      current.stop();
+      playbackSession.setIntent("paused");
+      unregister(); playbackSession.dispose();
+      releaseSession();
       void current.dispose().catch((error: unknown) => {
         console.warn("[audio-ui] closing preview AudioContext failed", error);
       });
@@ -91,7 +146,7 @@ export function NativeAudioPreview({
   useEffect(() => { player.current?.stop(); }, [uri, disabled]);
 
   const play = () => {
-    if (uri) void player.current?.play(uri, durationSeconds).catch(() => undefined); // shown as "error"
+    if (uri) void startPreview.current?.(uri, durationSeconds);
   };
   return (
     <AudioPreview
