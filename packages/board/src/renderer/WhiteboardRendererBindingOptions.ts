@@ -2,9 +2,10 @@ import type { ShapeRecord, Store } from "@quickdrawjs/core";
 import type { BoardEditorSource } from "./BoardOverlay";
 import type { WhiteboardRendererTarget } from "./WhiteboardRendererTarget";
 
-/** Cross-platform binding from the single QuickDraw Store to a derived renderer. */
+/** Cross-platform binding from an authoritative document to a derived renderer. */
 export interface WhiteboardRendererBindingOptions {
-  readonly store: Store;
+  /** Read-only source; document edits and undo remain owned by the host. */
+  readonly store: Pick<Store, "getSnapshot" | "listen">;
   readonly renderer: WhiteboardRendererTarget;
   /** Optional renderer decorations/camera, not document authority. */
   readonly board?: BoardEditorSource;

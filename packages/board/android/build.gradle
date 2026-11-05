@@ -6,15 +6,16 @@ buildscript {
 apply plugin: "com.android.library"
 apply plugin: "org.jetbrains.kotlin.android"
 apply from: "../nitrogen/generated/android/NitroForgeBoard+autolinking.gradle"
+apply from: "./viro-canvas-capability.gradle"
 
 def getExtOrDefault(name, fallback) {
   return rootProject.ext.has(name) ? rootProject.ext.get(name) : fallback
 }
 
-// Build the same ABIs as React Native and react-native-nitro-modules. Nitro
-// publishes its prefab only for `reactNativeArchitectures`; building any other
-// ABI here links against a NitroModules target with no library and fails with
-// undefined margelo::nitro symbols.
+// Match NitroModules' ABI selection. Its Prefab package publishes headers for
+// every consumer, but only has a shared library for architectures it built.
+// Without this, an arm64-only host also builds Board for armeabi-v7a and gets
+// a headers-only Nitro target, followed by unresolved margelo::nitro symbols.
 def reactNativeArchitectures() {
   def value = rootProject.getProperties().get("reactNativeArchitectures")
   return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
@@ -39,7 +40,7 @@ try {
 // the Viro-specific source files against a missing AAR. Preserve the generated
 // Nitro v1 API by using a fail-closed no-Viro render-loop implementation.
 def viroAar = viroAndroidDir == null ? null : new File(viroAndroidDir, "react_viro/react_viro-release.aar")
-def hasViroCanvasAar = viroAar != null && viroAar.exists()
+def hasViroCanvasAar = forgeBoardHasViroCanvas(viroAar)
 
 android {
   sourceSets {
@@ -93,6 +94,6 @@ dependencies {
   if (hasViroCanvasAar) {
     compileOnly files(zipTree(viroAar).matching { include "classes.jar" })
   } else {
-    logger.lifecycle("[forge-board] Viro CanvasSurfaces AAR absent: compiling no-Viro XR availability stub; Skia v3 2D is unaffected")
+    logger.lifecycle("[forge-board] Viro CanvasSurfaces class absent: compiling no-Viro XR availability stub; Skia v3 2D is unaffected")
   }
 }

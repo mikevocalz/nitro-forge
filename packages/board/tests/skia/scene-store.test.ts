@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Store } from "@quickdrawjs/core";
 import { createNativeBoardSceneBridge } from "../../src/skia/scene-store";
+import { createInkOutlineEncoder } from "../../src/renderer/createInkOutlineEncoder";
 
 function fakeStore() {
   let snapshot: unknown = { document: { store: {} } };
@@ -21,6 +22,40 @@ function fakeStore() {
   };
 }
 describe("Zustand native board scene subscription", () => {
+  it.each([
+    null,
+    { id: "a", typeName: "shape", type: "draw", x: 0, y: 0, props: null },
+    { id: "a", typeName: "shape", type: "draw", x: 0, y: 0, props: {} },
+  ])("falls back for malformed records or outline failures and recovers without editing the source: %j", (record) => {
+    const s = fakeStore();
+    const original = { document: { store: { a: record } } };
+    const preserved = JSON.stringify(original);
+    s.change(original);
+    const encoder = createInkOutlineEncoder(() => { throw new Error("outline cannot be produced"); });
+    const pending = new Map<number, (now: number) => void>();
+    let next = 0;
+    const bridge = createNativeBoardSceneBridge({
+      source: s.source,
+      encodeSnapshot: encoder.encodeSnapshot,
+      requestFrame(callback) { pending.set(++next, callback); return next; },
+      cancelFrame(handle) { pending.delete(handle); },
+    });
+    expect(bridge.state.getState().scene.kind).toBe("unsupported");
+    expect(JSON.stringify(s.source.getSnapshot())).toBe(preserved);
+    // A subsequent good document recovers; fallback does not poison the owner.
+    s.change({ document: { store: {} } });
+    bridge.flush();
+    expect(bridge.state.getState().scene).toEqual({ kind: "ready", marks: [] });
+    // The same failure after mount must also publish fallback rather than throw.
+    s.change(original);
+    expect(() => bridge.flush()).not.toThrow();
+    expect(bridge.state.getState().scene.kind).toBe("unsupported");
+    expect(JSON.stringify(s.source.getSnapshot())).toBe(preserved);
+    bridge.dispose();
+    expect(pending.size).toBe(0);
+    expect(s.subscribed).toBe(false);
+  });
+
   it("starts from the only document authority and coalesces updates", () => {
     const s = fakeStore();
     const pending = new Map<number, (now: number) => void>();
