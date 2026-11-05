@@ -23,7 +23,7 @@
   "scripts": {
     "start": "expo start",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --experimental-strip-types --test src/persona/*.test.ts"
+    "test": "node --experimental-strip-types --test src/persona/*.test.ts src/native/*.test.ts"
   },
   "dependencies": {
     "@expo/html-elements": "58.0.3",
