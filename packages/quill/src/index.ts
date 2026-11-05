@@ -12,6 +12,7 @@ export const OPS = {
   describe: "describe",
   insertText: "insertText",
   deleteRange: "deleteRange",
+  replaceRange: "replaceRange",
   applyStyle: "applyStyle",
   setBlockKind: "setBlockKind",
   insertBlock: "insertBlock",
@@ -91,6 +92,10 @@ export class QuillDocument {
   }
   deleteRange(from: Pos, to: Pos) {
     return this.call<{ deleted_text: string }>(OPS.deleteRange, { from, to });
+  }
+  /** Replace `from..to` with `text` as one command and one undo step. */
+  replaceRange(from: Pos, to: Pos, text: string) {
+    return this.call<{ deleted_text: string }>(OPS.replaceRange, { from, to, text });
   }
   applyStyle(from: Pos, to: Pos, style: Style) {
     return this.call(OPS.applyStyle, { from, to, style });

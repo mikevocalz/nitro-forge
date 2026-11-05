@@ -7,6 +7,14 @@ on:
   pull_request:
     paths:
       - 'packages/prism/**'
+      - 'packages/cadence/**'
+      - 'packages/splice/**'
+      - 'packages/folio/**'
+      - 'packages/pitch/**'
+      - 'packages/tally/**'
+      - 'packages/quill/**'
+      - 'docs/ENGINE_OPS.md'
+      - 'docs/ux/studio-workspace-layout.v1.schema.json'
       - 'packages/ignition/**'
       - 'rust/**'
       - 'packages/studio-layout/**'
@@ -78,8 +86,7 @@ jobs:
         run: |
           pnpm --filter @nitro-forge/studio-preview test:ui-modules
           pnpm --filter @nitro-forge/studio-preview build
-      - name: Rust engine and contract regression tests
-        run: cargo test --locked --workspace
+      # cargo test --workspace runs once, in rust-session-contracts.
       - name: Build real engine host
         run: cargo build --locked -p nf-cli
       - name: Prism typed API round trips
@@ -94,7 +101,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           path: nitro-forge
-      - name: Rust engine and v1 session contracts independent of npm age gate
+      - name: Rust engine tests and v1 session contracts
         run: |
           cargo test --locked --workspace
           cargo build --locked -p nf-sys
