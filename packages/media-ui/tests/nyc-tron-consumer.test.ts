@@ -14,6 +14,8 @@ describe("media-ui consumes NYC-Tron timebase", () => {
     expect(local.frameToPosition).toBe(tron.frameToPosition);
     expect(local.positionToFrame).toBe(tron.positionToFrame);
     expect(local.assertFrameRate).toBe(tron.assertFrameRate);
+    expect(local.framesToSeconds).toBe(tron.framesToSeconds);
+    expect(local.secondsToFrame).toBe(tron.secondsToFrame);
   });
   it("keeps the SMPTE drop-frame labels Forge displays", () => {
     const { FRAME_RATES, formatTimecode } = local;

@@ -5,8 +5,7 @@ import { NativeSeekBar } from "@nyc-tron/ui/components/forge/NativeSeekBar";
 import { WaveformLane } from "@nyc-tron/ui/components/forge/WaveformLane";
 import { FRAME_RATES } from "@nyc-tron/ui/components/forge/timebase";
 import type { WaveformPeak } from "@nyc-tron/ui/components/forge/waveform";
-// Forge-local until NYC-Tron-UI PR #20 (LevelFader) ships in alpha.2.
-import { NativeLevelSlider } from "@nitro-forge/media-ui";
+import { LevelFader } from "@nyc-tron/ui/components/forge/audio/LevelFader";
 
 interface DemoState { frame: number; gain: number }
 const store = createStore<DemoState>(() => ({ frame: 1800, gain: 0.72 }));
@@ -40,8 +39,8 @@ export default function App() {
           onSeekNormalized={(p) => store.setState({ frame: Math.round(p * 18000) })}
         />
       </View>
-      <NativeLevelSlider value={gain} testID="forge-level"
-        onValueChange={(next) => store.setState({ gain: next })} />
+      <LevelFader value={gain} label="Gain" orientation="horizontal" testID="forge-level"
+        onCommit={(next) => store.setState({ gain: next })} />
       <Text style={{ color: "#9999AF", fontSize: 12 }}>
         This test surface demonstrates control state only. No actual video decoding,
         microphone recording, or Rust timeline mutation is attached.

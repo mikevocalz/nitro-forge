@@ -12,7 +12,7 @@
   "dependencies": {
     "@expo/ui": "^58.0.0",
     "@nitro-forge/media-ui": "workspace:*",
-    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz",
     "expo": "^58.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

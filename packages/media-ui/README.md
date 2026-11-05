@@ -8,10 +8,10 @@ dense timelines belong to the existing **Skia v3** / Board GPU track.
 
 ## Where the components live
 
-`NativeSeekBar`, `WaveformLane`, the timebase math and the waveform math are
+`NativeSeekBar`, `WaveformLane`, `LevelFader`, the timebase math and the waveform math are
 owned by [NYC-Tron UI](https://github.com/mikevocalz/NYC-Tron-UI). Forge
 depends on the release tarball pinned in `tooling/nyc-tron.json`
-(v0.1.0-alpha.1); `node tooling/verify-nyc-tron-pin.mjs --download` checks the
+(v0.1.0-alpha.2); `node tooling/verify-nyc-tron-pin.mjs --download` checks the
 specifiers, the lockfile and the SHA256SUMS digest. NYC-Tron never imports
 Forge.
 
@@ -46,10 +46,12 @@ needs Uniwind and the tokens from NYC-Tron's `docs/THEME_TOKENS.md`;
 old `foregroundColor`/`backgroundColor` props are gone; set `--color-accent`
 and `--color-surface-sunken`, or pass `barClassName`/`className`.
 
-Still local until NYC-Tron v0.1.0-alpha.2:
-
-- `NativeLevelSlider`, replaced by NYC-Tron `LevelFader` (NYC-Tron-UI PR #20).
-- `framesToSeconds` / `secondsToFrame` in `src/timebase.ts` (NYC-Tron-UI PR #20).
+Since v0.1.0-alpha.2 the gain control and seconds helpers come from NYC-Tron
+too. `NativeLevelSlider` is gone; use `LevelFader`
+(`@nyc-tron/ui/components/forge/audio/LevelFader`). It takes a `label`, previews
+through `onChange` and calls `onCommit` once per drag or step, so commit the
+engine change in `onCommit`. `framesToSeconds` and `secondsToFrame` are
+re-exported from `@nyc-tron/ui/components/forge/timebase`.
 
 The host owns the actual decoded media, player state and Rust document
 session. For actual recorded WAV peak data, consume
