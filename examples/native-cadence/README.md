@@ -13,7 +13,7 @@ does not silently upgrade or mix native dependency versions.
 This directory is its own pnpm workspace (`pnpm-workspace.yaml`,
 `pnpm-lock.yaml`). It joins `packages/ignition` and `packages/cadence` from
 this repository's source and installs NYC-Tron from the
-`v0.1.0-alpha.1` release tarballs pinned in `tooling/nyc-tron.json`. There is
+`v0.1.0-alpha.2` release tarballs pinned in `tooling/nyc-tron.json`. There is
 no NYC-Tron checkout and no staging copy. A workspace override keeps every
 `react-native-nitro-modules` at the Nitro v1 alpha the native build links,
 without editing Ignition's own devDependency.

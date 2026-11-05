@@ -4,11 +4,14 @@
 
 The [NYC-Tron-UI](https://github.com/mikevocalz/NYC-Tron-UI) repository owns
 every reusable cross-app UI control, basic and professional, under
-`packages/ui/src/components/`. NYC-Tron-UI `main` holds the packages, and
-[`v0.1.0-alpha.1`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v0.1.0-alpha.1)
-(commit `2e16fee`, 2026-11-05) is the first GitHub Release. It ships six
-tarballs plus `SHA256SUMS`: `@nyc-tron/core`, `geometry`, `ui`, `panes`,
-`native-controls` and `expo-controls`. Every package is still marked
+`packages/ui/src/components/`. NYC-Tron-UI `main` holds the packages and
+ships them as GitHub Releases. Forge pins
+[`v0.1.0-alpha.2`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v0.1.0-alpha.2)
+(commit `ff08d05`, 2026-11-05), which ships eight tarballs plus `SHA256SUMS`;
+Forge uses `@nyc-tron/core`, `geometry`, `ui`, `panes`, `native-controls` and
+`expo-controls`. The first release, `v0.1.0-alpha.1` (`2e16fee`), cannot be
+used for iOS: its `native-controls` imports `ExpoUI`, which Expo SDK 58's
+SwiftPM build of a pure-Swift module cannot resolve (fixed in `d4f350a`). Every package is still marked
 `"private": true` and none is on npm, so Forge installs them by release URL.
 No NYC-Tron package has a validated native production build yet.
 
@@ -41,7 +44,7 @@ was cut from, and for each package the tarball URL and its sha256 from
 exact URL in `package.json`:
 
 ```json
-"@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz"
+"@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz"
 ```
 
 Then run `pnpm install` so the lockfile records it, and check the pin:
@@ -119,12 +122,12 @@ Limits of the dev-link:
 
 ## Package selection
 
-| App capability | Forge dependency | UI import (release `v0.1.0-alpha.1`) |
+| App capability | Forge dependency | UI import (release `v0.1.0-alpha.2`) |
 | --- | --- | --- |
 | Drawing / imaging | `@nitro-forge/prism` | `components/forge/graphics/` planned, not extracted |
 | Music / recording | `@nitro-forge/cadence` | `.../forge/WaveformLane`, `.../forge/inputs/InstrumentKnob`, `@nyc-tron/native-controls/ArcKnob`; mixer and EQ controls not extracted |
 | Video | `@nitro-forge/splice` | `.../forge/NativeSeekBar`; timeline not extracted |
-| Color | any editor | `.../forge/ColorChannels` (RGBA); the HSV picker is on NYC-Tron `main` (PR #21) but not in this release |
+| Color | any editor | `.../forge/ColorChannels` (RGBA), `.../forge/color/HsvPicker` |
 | Word documents | `@nitro-forge/quill` | Document controls not extracted |
 | Grids | `@nitro-forge/tally` | `.../forge/SpreadsheetGrid`, `.../data/DataTable` |
 | Slides | `@nitro-forge/pitch` | Slide/canvas controls not extracted |
@@ -147,8 +150,8 @@ inventory and status table. Update it, not this file, when a component moves.
   tests and review.
 - Forge #35: PCM waveform source. `WaveformLane` is the UI target; the WAV
   decoding stays in Forge.
-- Forge #34: HSV picker. Extracted by NYC-Tron PR #21, merged to `main` after
-  `v0.1.0-alpha.1` was cut, so it ships in the next release, not this one.
+- Forge #34: HSV picker. Extracted by NYC-Tron PR #21 and in the
+  `v0.1.0-alpha.2` release as `components/forge/color/HsvPicker`.
 - Forge #32: Forge 2046 precision scrubber, gestures and instrument system.
   `PrecisionScrubber` and `DragGrabHandle` are extracted (NYC-Tron PR #23) and
   in the release. Editor orchestrators, undo and document commands stay in
