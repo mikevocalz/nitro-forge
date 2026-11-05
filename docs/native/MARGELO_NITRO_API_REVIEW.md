@@ -104,7 +104,7 @@ A `ForgeDocument` owns a single native document and worker, and exposes no unsaf
 
 | ID | Owner role | Deliverable | Test/receipt | Current status |
 | --- | --- | --- | --- | --- |
-| API-01 | TS/API owner | Validate session IDs and in-band response frames | `nitro-host.test.ts`, Vitest CI | Code proposed, CI pending |
+| API-01 | TS/API owner | Validate session IDs and in-band response frames | `nitro-host.test.ts`, Vitest CI | Implemented; `nitro-host.test.ts` runs in `skia-v3-smoke.yml` |
 | API-02 | Nitro architect | Document factory vs session HybridObject ownership; decide v1/v2 strategy | reviewed generated spec + implementation plan | Design only |
 | API-03 | C++ native lead | Generated HybridObject, async work and Rust FFI ownership | Nitrogen + Xcode/Gradle + live device | NOT RUN |
 | API-04 | Rust FFI lead | Per-document execution, panic barriers, allocator/deallocator audit | cargo native tests, concurrency/panic corpus | NOT RUN |

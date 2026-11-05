@@ -13,14 +13,14 @@
 - `rust/ignition-core`: `Engine` trait/atomic command contract; the existing test ledger records completed Rust and `nf-cli` tests, not independently rerun by this PR.
 - `rust/nf-sys`: existing C ABI round-trip test. `packages/ignition/src/Forge.nitro.ts`: a written HybridObject spec with **no generated linked native implementation**.
 - `apps/example`: Expo navigation with per-engine document example screens. Existing editor UI is a debug command view, not Skia-driven design canvas.
-- [PR #1](https://github.com/mikevocalz/nitro-forge/pull/1): `react-native-skia@3.8.1`, `react-native-webgpu@0.19.2`, Expo 58/RN0.88; current lockfile still needs regeneration and actual native builds.
+- [PR #1](https://github.com/mikevocalz/nitro-forge/pull/1): `react-native-skia@3.8.1`, `react-native-webgpu@0.19.2`, Expo 58/RN0.88; lockfile regenerated and frozen-install verified in CI; native builds have not run.
 - This branch adds `GraphiteSmoke` for primitive `Canvas`/rect/circle rendering. It tests *Skia's own path*, intentionally not claiming Rust ↔ Skia texture interop.
 
 ## Engineering roles and sequence
 
 | ID | Owner expertise | Implementable deliverable | Review evidence | Status |
 |---|---|---|---|---|
-| G-01 | Dependency/Expo maintainer | regenerate `pnpm-lock.yaml` frozen; check Expo 58/RN 0.88, CocoaPods + Gradle binary packages | lockfile SHA and `pnpm install --frozen-lockfile` | BLOCKED on #1 lock refresh |
+| G-01 | Dependency/Expo maintainer | regenerate `pnpm-lock.yaml` frozen; check Expo 58/RN 0.88, CocoaPods + Gradle binary packages | lockfile SHA and `pnpm install --frozen-lockfile` | Lockfile DONE (frozen in CI); Expo 58 native builds NOT RUN |
 | G-02 | Graphics engineer | real physical Skia v3 smoke on Metal/Vulkan plus web CanvasKit | screenshot, logs, platform device IDs and source SHA | NOT RUN |
 | G-03 | Rust/FFI engineer | review `nf-sys` open/apply/snapshot/restore/close handles and panic/cancel safety | C++/Rust sanitizer and corpus tests | PLANNED |
 | G-04 | Nitro native engineer | generate Nitrogen from `Forge.nitro.ts`; implement HybridObject Swift/Kotlin/C++ adapter; native engine thread execution | successful compiled codegen, iOS/Android app edit/save/reopen | PLANNED |

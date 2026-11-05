@@ -1,6 +1,6 @@
 # Skia v3 (Graphite) is mandatory
 
-**Status:** package manifest/configuration migration requested on 2026-11-02; device/runtime verification and pnpm lock regeneration pending. Do not treat this document as a passing native build.
+**Status:** manifests and `pnpm-lock.yaml` are migrated and frozen-install verified in CI (see Dependency status below). Native Xcode/Gradle builds and device rendering have not run. Do not treat this document as a passing native build.
 
 ## Canonical packages
 

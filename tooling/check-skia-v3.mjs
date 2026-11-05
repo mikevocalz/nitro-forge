@@ -13,6 +13,7 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { lockfileVersions, storeVersions, versionAtLeast } from "./skia-v3-policy.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
@@ -58,8 +59,15 @@ const properties = app.expo.plugins.find((plugin) =>
   Array.isArray(plugin) && plugin[0] === "expo-build-properties",
 );
 assert.ok(properties, "Skia v3 needs the expo-build-properties native configuration.");
-assert.ok(properties[1]?.android?.minSdkVersion >= 26, "Skia v3 requires Android minSdk 26.");
-assert.ok(Number(properties[1]?.ios?.deploymentTarget) >= 16.4, "Expo SDK 58 requires iOS 16.4+.");
+const buildProps = properties[1] ?? {};
+assert.ok(
+  buildProps.android?.minSdkVersion !== undefined && versionAtLeast(buildProps.android.minSdkVersion, 26),
+  "Skia v3 requires Android minSdk 26.",
+);
+assert.ok(
+  buildProps.ios?.deploymentTarget !== undefined && versionAtLeast(buildProps.ios.deploymentTarget, "16.4"),
+  "Expo SDK 58 requires iOS 16.4+.",
+);
 
 // One Dawn for the whole graph. Skia v3 and react-native-webgpu each depend on
 // react-native-webgpu-dawn; two resolved versions link two Dawn runtimes into
@@ -69,9 +77,7 @@ const lockArg = process.argv.find((a) => a.startsWith("--lockfile="));
 const lockPath = lockArg ? resolve(lockArg.slice("--lockfile=".length)) : join(root, "pnpm-lock.yaml");
 assert.ok(existsSync(lockPath), `No lockfile at ${lockPath}; Dawn resolution cannot be checked.`);
 const lock = readFileSync(lockPath, "utf8");
-const dawnInLock = new Set(
-  [...lock.matchAll(/^ {2}'?react-native-webgpu-dawn@([^:'(\s]+)/gm)].map((m) => m[1]),
-);
+const dawnInLock = lockfileVersions(lock, DAWN);
 assert.ok(dawnInLock.size > 0, `${DAWN} is not in ${lockPath}; Skia v3/WebGPU did not resolve.`);
 assert.equal(
   dawnInLock.size, 1,
@@ -80,8 +86,8 @@ assert.equal(
 // After an install, also count what pnpm actually laid out on disk.
 const store = join(root, "node_modules/.pnpm");
 if (!lockArg && existsSync(store)) {
-  const onDisk = readdirSync(store).filter((d) => d.startsWith(`${DAWN}@`));
-  assert.ok(onDisk.length <= 1, `${DAWN} is installed ${onDisk.length} times: ${onDisk.join(", ")}`);
+  const onDisk = storeVersions(readdirSync(store), DAWN);
+  assert.ok(onDisk.size <= 1, `${DAWN} is installed in ${onDisk.size} versions: ${[...onDisk].join(", ")}`);
 }
 const [dawn] = dawnInLock;
 
