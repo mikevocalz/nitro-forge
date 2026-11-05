@@ -23,7 +23,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    HeapSize, Journal,
+    saturating_sum, HeapSize, Journal,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -212,11 +212,13 @@ impl HeapSize for TextProps {
 
 impl HeapSize for Obj {
     fn heap_size(&self) -> usize {
-        self.text.heap_size() + self.src.heap_size()
+        self.text.heap_size().saturating_add(self.src.heap_size())
     }
 }
 
 impl HeapSize for Anim {
+    const FLAT: bool = true;
+
     fn heap_size(&self) -> usize {
         0
     }
@@ -224,13 +226,13 @@ impl HeapSize for Anim {
 
 impl HeapSize for Slide {
     fn heap_size(&self) -> usize {
-        self.objects.heap_size() + self.animations.heap_size()
+        self.objects.heap_size().saturating_add(self.animations.heap_size())
     }
 }
 
 impl HeapSize for PitchState {
     fn heap_size(&self) -> usize {
-        self.meta.title.heap_size() + self.slides.heap_size()
+        self.meta.title.heap_size().saturating_add(self.slides.heap_size())
     }
 }
 
@@ -324,10 +326,12 @@ impl Engine for PitchEngine {
     fn heap_size_estimate(&self) -> usize {
         let live = self.state.heap_size();
         // The engine itself lives in a host-owned Box.
-        std::mem::size_of::<Self>()
-            + live
-            + self.journal.reserved_bytes()
-            + self.journal.entries().count() * live
+        saturating_sum([
+            std::mem::size_of::<Self>(),
+            live,
+            self.journal.reserved_bytes(),
+            self.journal.entries().count().saturating_mul(live),
+        ])
     }
 
     fn kind(&self) -> EngineKind {
