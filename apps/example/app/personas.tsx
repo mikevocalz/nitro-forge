@@ -12,7 +12,8 @@ export default function PersonaSheet() {
   const { session: key } = useLocalSearchParams<{ session?: string }>();
   const router = useRouter();
   const session = findPersonaSession(key);
-  const close = () => { if (router.canGoBack()) router.back(); };
+  // Opened by a link there is nothing to go back to; Close then goes home.
+  const close = () => { if (router.canGoBack()) router.back(); else router.replace('/'); };
   // Sheet content is presented outside the root view's gesture tree on Android.
   return <GestureHandlerRootView style={{ flex: 1, backgroundColor: forgeDirections.workbench.materials.dark.panelSolid }}>
     {session

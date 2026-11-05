@@ -14,7 +14,8 @@ export default function PersonaComposerScreen() {
   const theme = useColorScheme() === 'light' ? 'light' : 'dark';
   const colors = prismThemes[theme];
   const session = findPersonaSession(key);
-  const close = () => { if (router.canGoBack()) router.back(); };
+  // Opened by a link there is nothing to go back to; Close then goes home.
+  const close = () => { if (router.canGoBack()) router.back(); else router.replace('/'); };
   if (!session) return <View style={{ flex: 1, padding: scale.space.group, gap: scale.space.element, backgroundColor: colors.base }}>
     <Text accessibilityRole="alert" style={{ color: colors.text, fontSize: scale.type.body }}>No design document is open.</Text>
     <Button title="Close" onPress={close} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />
