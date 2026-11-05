@@ -12,7 +12,7 @@ mod docx;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    HeapSize, Journal,
+    saturating_sum, HeapSize, Journal,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -383,13 +383,13 @@ impl StylePatch {
 
 impl HeapSize for Style {
     fn heap_size(&self) -> usize {
-        self.color.heap_size() + self.link.heap_size()
+        self.color.heap_size().saturating_add(self.link.heap_size())
     }
 }
 
 impl HeapSize for Inline {
     fn heap_size(&self) -> usize {
-        self.text.heap_size() + self.style.heap_size()
+        self.text.heap_size().saturating_add(self.style.heap_size())
     }
 }
 
@@ -401,7 +401,7 @@ impl HeapSize for Block {
 
 impl HeapSize for UndoEntry {
     fn heap_size(&self) -> usize {
-        self.removed.heap_size() + self.inserted.heap_size()
+        self.removed.heap_size().saturating_add(self.inserted.heap_size())
     }
 }
 
@@ -859,10 +859,12 @@ impl Engine for QuillEngine {
     /// Undo entries are inverse diffs, so they are walked directly.
     fn heap_size_estimate(&self) -> usize {
         // The engine itself lives in a host-owned Box.
-        std::mem::size_of::<Self>()
-            + self.blocks.heap_size()
-            + self.journal.reserved_bytes()
-            + self.journal.entries().map(HeapSize::heap_size).sum::<usize>()
+        saturating_sum([
+            std::mem::size_of::<Self>(),
+            self.blocks.heap_size(),
+            self.journal.reserved_bytes(),
+            saturating_sum(self.journal.entries().map(HeapSize::heap_size)),
+        ])
     }
 
     fn kind(&self) -> EngineKind {

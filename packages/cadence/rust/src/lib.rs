@@ -9,7 +9,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Event, HeapSize, Journal,
+    Event, saturating_sum, HeapSize, Journal,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -246,6 +246,8 @@ fn base64_encode(bytes: &[u8]) -> String {
 
 /// DAW document engine. See ENGINE_OPS.md § `cadence-engine`.
 impl HeapSize for Note {
+    const FLAT: bool = true;
+
     fn heap_size(&self) -> usize {
         0
     }
@@ -259,7 +261,7 @@ impl HeapSize for Clip {
 
 impl HeapSize for Track {
     fn heap_size(&self) -> usize {
-        self.name.heap_size() + self.clips.heap_size()
+        self.name.heap_size().saturating_add(self.clips.heap_size())
     }
 }
 
@@ -316,10 +318,12 @@ impl Engine for CadenceEngine {
     fn heap_size_estimate(&self) -> usize {
         let live = self.doc.heap_size();
         // The engine itself lives in a host-owned Box.
-        std::mem::size_of::<Self>()
-            + live
-            + self.journal.reserved_bytes()
-            + self.journal.entries().count() * live
+        saturating_sum([
+            std::mem::size_of::<Self>(),
+            live,
+            self.journal.reserved_bytes(),
+            self.journal.entries().count().saturating_mul(live),
+        ])
     }
 
     fn kind(&self) -> EngineKind {
