@@ -132,3 +132,24 @@ seven engines and their journals together (docs/ARCHITECTURE.md contract).
 Estimating from snapshots after each command would serialize the whole
 document on every edit. Until then a dropped, unclosed document is freed when
 the HybridObject is collected, without memory pressure to collect it sooner.
+
+## Shared Rust Windows/QNX work — 2026-11-05
+
+The entries above are historical receipts. This slice starts from PR #10 at
+`9279c9852448645f440a2481d1ae30d8a27f5438`, which already includes the document
+memory estimates and worker-side meter. It reuses that exact C++ session and
+queue; platform hosts do not add another engine or change the NFD1 format.
+
+| Check | Observed result | Scope |
+| --- | --- | --- |
+| `cargo build -p nf-sys --release --locked -j 2` | PASS | Linux x64 Rust archive; Rust 1.99.1 |
+| `cargo test --workspace --locked -j 2` | 204 tests PASS | All seven engines, Ignition contracts and 13 nf-sys tests |
+| CMake Release build of `packages/ignition-native` | PASS | GCC 13.3.0, CMake 4.4.4, real `libnf_sys.a` |
+| `forge_tally_write` + `forge_tally_reopen` | 2/2 PASS | Separate processes; formula/edit/undo/redo, isolation, malformed input, binary save/reopen, disposal; 145-byte NFD1 file |
+| `forge_serial_queue` | PASS | 500 tasks in order, maximum concurrent drain count 1 |
+| Windows MSVC native job | PENDING | Added in `shared-rust-native-hosts.yml`; report CI separately |
+| RNW app/JS integration | NOT RUN | Requires a Windows host app and runtime |
+| QNX native build/device | NOT RUN | QNX SDP/qcc and target device are unavailable in this development environment |
+
+See [`SHARED_RUST_HOSTS.md`](native/SHARED_RUST_HOSTS.md) for source boundaries,
+skill decisions and the remaining acceptance gates.

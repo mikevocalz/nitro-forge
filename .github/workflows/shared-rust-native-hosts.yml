@@ -1,0 +1,70 @@
+name: Shared Rust native hosts
+
+on:
+  push:
+    branches:
+      - feat/shared-rust-windows-qnx-2026-11-05
+  pull_request:
+    paths:
+      - 'packages/ignition-native/**'
+      - 'packages/ignition-windows/**'
+      - 'packages/ignition-v1-lab/cpp/ForgeRustSession.*'
+      - 'packages/ignition-v1-lab/cpp/ForgeSerialQueue.*'
+      - 'rust/**'
+      - 'packages/*/rust/**'
+      - 'Cargo.lock'
+      - 'tooling/native/shared_engine_roundtrip.cpp'
+      - 'tooling/native/serial_queue_test.cpp'
+      - '.github/workflows/shared-rust-native-hosts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_BUILD_JOBS: 2
+
+jobs:
+  native-engine:
+    name: Native engine (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rust-target: x86_64-unknown-linux-gnu
+            library: libnf_sys.a
+          - os: windows-2022
+            rust-target: x86_64-pc-windows-msvc
+            library: nf_sys.lib
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal --target ${{ matrix.rust-target }}
+      - name: Report build toolchains
+        run: |
+          rustc +1.99.1 --version --verbose
+          cargo +1.99.1 --version
+          cmake --version
+      - name: Verify Rust ABI and document isolation
+        run: cargo +1.99.1 test -p nf-sys --locked --target ${{ matrix.rust-target }}
+      - name: Build actual target Rust archive
+        run: cargo +1.99.1 build -p nf-sys --release --locked --target ${{ matrix.rust-target }}
+      - name: Configure shared C++ host
+        run: cmake -S packages/ignition-native -B target/native-host -DNF_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL "-DNF_RUST_LIBRARY=${{ github.workspace }}/target/${{ matrix.rust-target }}/release/${{ matrix.library }}"
+      - name: Link the shared C++ wrapper to Rust
+        run: cmake --build target/native-host --config Release --parallel 2
+      - name: Run edit, undo, save, reopen and queue tests
+        run: ctest --test-dir target/native-host -C Release --output-on-failure
+      - name: Keep the real document for cross-target interchange checks
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tally-nfd1-${{ matrix.rust-target }}
+          path: target/native-host/tally-roundtrip.nfd
+          if-no-files-found: error
+          retention-days: 14
+
+# This is native engine evidence. It does not claim RNW app registration,
+# QNX compiler/device execution, Expo module support, or native UI rendering.
