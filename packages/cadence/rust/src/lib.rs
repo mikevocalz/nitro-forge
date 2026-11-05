@@ -272,6 +272,23 @@ impl CadenceEngine {
         }
     }
 
+    /// Resolve `{clip, index}` to (track_idx, clip_idx, note_idx). Missing
+    /// clip is NotFound; an index past the clip's notes is OutOfBounds.
+    fn note_location(&self, p: &Value) -> Result<(usize, usize, usize), EngineError> {
+        let clip_id = req_u64(p, "clip")?;
+        let index = req_u64(p, "index")?;
+        let (ti, ci) = self
+            .doc
+            .clip_location(clip_id)
+            .ok_or_else(|| EngineError::not_found(format!("no clip {clip_id}")))?;
+        if index >= self.doc.tracks[ti].clips[ci].notes.len() as u64 {
+            return Err(EngineError::out_of_bounds(format!(
+                "note index {index} out of range"
+            )));
+        }
+        Ok((ti, ci, index as usize))
+    }
+
     fn read_only(data: Value) -> CommandResult {
         CommandResult {
             events: vec![],
@@ -607,6 +624,62 @@ impl Engine for CadenceEngine {
                 }
                 self.record();
                 self.doc.tracks[ti].clips[ci].notes.remove(index as usize);
+                Ok(Self::changed(json!({ "ok": true })))
+            }
+            // Note edits keep the note at its index, so an editor's selection
+            // and the index it holds stay valid across move/resize/velocity.
+            "moveNote" => {
+                let (ti, ci, ni) = self.note_location(p)?;
+                let start = req_ticks(p, "start_ticks")?;
+                let note = &self.doc.tracks[ti].clips[ci].notes[ni];
+                // Pitch is optional so a time-only drag cannot clobber a pitch
+                // the caller never read; a piano-roll drag sends both at once.
+                let pitch = match p.get("pitch") {
+                    None | Some(Value::Null) => note.pitch,
+                    Some(_) => {
+                        let pitch = req_i64(p, "pitch")?;
+                        if !(0..=127).contains(&pitch) {
+                            return Err(EngineError::validation("pitch must be in 0..=127"));
+                        }
+                        pitch as u8
+                    }
+                };
+                let clip_len = self.doc.tracks[ti].clips[ci].length_ticks;
+                if start.saturating_add(note.length_ticks) > clip_len {
+                    return Err(EngineError::out_of_bounds(
+                        "note would extend past the end of the clip",
+                    ));
+                }
+                self.record();
+                let note = &mut self.doc.tracks[ti].clips[ci].notes[ni];
+                note.start_ticks = start;
+                note.pitch = pitch;
+                Ok(Self::changed(json!({ "ok": true })))
+            }
+            "resizeNote" => {
+                let (ti, ci, ni) = self.note_location(p)?;
+                let len = req_ticks(p, "length_ticks")?;
+                if len == 0 {
+                    return Err(EngineError::validation("length_ticks must be > 0"));
+                }
+                let start = self.doc.tracks[ti].clips[ci].notes[ni].start_ticks;
+                if start.saturating_add(len) > self.doc.tracks[ti].clips[ci].length_ticks {
+                    return Err(EngineError::out_of_bounds(
+                        "note would extend past the end of the clip",
+                    ));
+                }
+                self.record();
+                self.doc.tracks[ti].clips[ci].notes[ni].length_ticks = len;
+                Ok(Self::changed(json!({ "ok": true })))
+            }
+            "setVelocity" => {
+                let (ti, ci, ni) = self.note_location(p)?;
+                let velocity = req_i64(p, "velocity")?;
+                if !(0..=127).contains(&velocity) {
+                    return Err(EngineError::validation("velocity must be in 0..=127"));
+                }
+                self.record();
+                self.doc.tracks[ti].clips[ci].notes[ni].velocity = velocity as u8;
                 Ok(Self::changed(json!({ "ok": true })))
             }
 
@@ -1141,6 +1214,180 @@ mod tests {
         );
         assert_eq!(err.code, ErrorCode::Validation);
         assert_eq!(describe(&e), before);
+    }
+
+    /// Clip [0, 960) holding notes 60 @ [0,240) v100 and 64 @ [240,480) v90.
+    fn doc_with_notes(e: &mut CadenceEngine) -> u64 {
+        let (_, c) = doc_with_clip(e);
+        apply(
+            e,
+            "addNote",
+            json!({"clip": c, "pitch": 60, "velocity": 100, "start_ticks": 0, "length_ticks": 240}),
+        )
+        .unwrap();
+        apply(
+            e,
+            "addNote",
+            json!({"clip": c, "pitch": 64, "velocity": 90, "start_ticks": 240, "length_ticks": 240}),
+        )
+        .unwrap();
+        c
+    }
+
+    fn note(e: &CadenceEngine, i: usize) -> Value {
+        describe(e)["tracks"][0]["clips"][0]["notes"][i].clone()
+    }
+
+    #[test]
+    fn move_note_changes_time_and_pitch_in_place() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        apply(
+            &mut e,
+            "moveNote",
+            json!({"clip": c, "index": 0, "start_ticks": 480, "pitch": 67}),
+        )
+        .unwrap();
+        let n = note(&e, 0);
+        assert_eq!(n["start_ticks"], 480);
+        assert_eq!(n["pitch"], 67);
+        assert_eq!(n["length_ticks"], 240, "move keeps length");
+        assert_eq!(n["velocity"], 100, "move keeps velocity");
+        // index identity: the other note did not shift
+        assert_eq!(note(&e, 1)["pitch"], 64);
+
+        // time-only move keeps pitch
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 0, "start_ticks": 0})).unwrap();
+        assert_eq!(note(&e, 0)["pitch"], 67);
+        assert_eq!(note(&e, 0)["start_ticks"], 0);
+
+        // last legal start: 960 - 240
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 0, "start_ticks": 720})).unwrap();
+        assert_eq!(note(&e, 0)["start_ticks"], 720);
+    }
+
+    #[test]
+    fn move_note_rejects_without_mutating() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        for (bad, code) in [
+            (json!({"clip": c, "index": 0, "start_ticks": 721}), ErrorCode::OutOfBounds),
+            (json!({"clip": c, "index": 0, "start_ticks": 0, "pitch": 128}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 0, "start_ticks": 0, "pitch": -1}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 0, "start_ticks": -5}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 2, "start_ticks": 0}), ErrorCode::OutOfBounds),
+            (json!({"clip": 4242, "index": 0, "start_ticks": 0}), ErrorCode::NotFound),
+            (json!({"clip": c, "start_ticks": 0}), ErrorCode::InvalidCommand),
+            (json!({"clip": c, "index": 0}), ErrorCode::InvalidCommand),
+        ] {
+            let before = describe(&e);
+            let err = expect_err(&mut e, "moveNote", bad.clone());
+            assert_eq!(err.code, code, "{bad}");
+            assert_eq!(describe(&e), before, "moveNote mutated on {bad}");
+        }
+        // nothing recorded: the only undo steps are the setup ops
+        assert!(e.undo().unwrap()); // second addNote
+        assert_eq!(describe(&e)["tracks"][0]["clips"][0]["notes"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn resize_note_bounds_and_identity() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        apply(&mut e, "resizeNote", json!({"clip": c, "index": 1, "length_ticks": 720})).unwrap();
+        let n = note(&e, 1);
+        assert_eq!(n["length_ticks"], 720); // 240 + 720 == clip end
+        assert_eq!(n["start_ticks"], 240);
+        assert_eq!(n["pitch"], 64);
+        assert_eq!(note(&e, 0)["length_ticks"], 240);
+        for (bad, code) in [
+            (json!({"clip": c, "index": 1, "length_ticks": 721}), ErrorCode::OutOfBounds),
+            (json!({"clip": c, "index": 1, "length_ticks": 0}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 9, "length_ticks": 10}), ErrorCode::OutOfBounds),
+            (json!({"clip": 4242, "index": 0, "length_ticks": 10}), ErrorCode::NotFound),
+        ] {
+            let before = describe(&e);
+            assert_eq!(expect_err(&mut e, "resizeNote", bad.clone()).code, code, "{bad}");
+            assert_eq!(describe(&e), before);
+        }
+    }
+
+    #[test]
+    fn set_velocity_validates() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 1, "velocity": 0})).unwrap();
+        assert_eq!(note(&e, 1)["velocity"], 0);
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 1, "velocity": 127})).unwrap();
+        assert_eq!(note(&e, 1)["velocity"], 127);
+        assert_eq!(note(&e, 0)["velocity"], 100);
+        for (bad, code) in [
+            (json!({"clip": c, "index": 1, "velocity": 128}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 1, "velocity": -1}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 1, "velocity": 1.5}), ErrorCode::InvalidCommand),
+            (json!({"clip": c, "index": 1}), ErrorCode::InvalidCommand),
+            (json!({"clip": c, "index": 7, "velocity": 1}), ErrorCode::OutOfBounds),
+        ] {
+            let before = describe(&e);
+            assert_eq!(expect_err(&mut e, "setVelocity", bad.clone()).code, code, "{bad}");
+            assert_eq!(describe(&e), before);
+        }
+    }
+
+    #[test]
+    fn note_edits_undo_and_redo_one_step_each() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        let base = describe(&e);
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 0, "start_ticks": 480, "pitch": 72})).unwrap();
+        let moved = describe(&e);
+        apply(&mut e, "resizeNote", json!({"clip": c, "index": 0, "length_ticks": 480})).unwrap();
+        let resized = describe(&e);
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 0, "velocity": 30})).unwrap();
+        let final_state = describe(&e);
+
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&e), resized);
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&e), moved);
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&e), base, "move undo restores pitch and start together");
+        assert!(e.redo().unwrap());
+        assert!(e.redo().unwrap());
+        assert!(e.redo().unwrap());
+        assert_eq!(describe(&e), final_state);
+        assert!(!e.redo().unwrap());
+    }
+
+    #[test]
+    fn note_edits_reach_the_render() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        // Velocity 0 on both notes renders silence.
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 0, "velocity": 0})).unwrap();
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 1, "velocity": 0})).unwrap();
+        let r = apply(&mut e, "render", json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 8000})).unwrap();
+        assert!(f32s(&b64_decode(r["samples_b64"].as_str().unwrap())).iter().all(|&v| v == 0.0));
+        // Restore one note, move it into the last quarter: only that window sounds.
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 0, "velocity": 127})).unwrap();
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 0, "start_ticks": 720})).unwrap();
+        let early = apply(&mut e, "render", json!({"from_ticks": 0, "to_ticks": 720, "sample_rate": 8000})).unwrap();
+        assert!(f32s(&b64_decode(early["samples_b64"].as_str().unwrap())).iter().all(|&v| v == 0.0));
+        let late = apply(&mut e, "render", json!({"from_ticks": 720, "to_ticks": 960, "sample_rate": 8000})).unwrap();
+        assert!(f32s(&b64_decode(late["samples_b64"].as_str().unwrap())).iter().any(|&v| v != 0.0));
+    }
+
+    #[test]
+    fn note_edits_survive_snapshot() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 1, "start_ticks": 600, "pitch": 48})).unwrap();
+        apply(&mut e, "resizeNote", json!({"clip": c, "index": 1, "length_ticks": 360})).unwrap();
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 1, "velocity": 12})).unwrap();
+        let snap = e.snapshot().unwrap();
+        let mut e2 = eng();
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&e2), describe(&e));
     }
 
     // ---- project ----------------------------------------------------------

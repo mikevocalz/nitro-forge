@@ -6,7 +6,10 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./instrument-adapter": "./src/instrument-adapter.ts",
+    "./instrument-session": "./src/instrument-session.ts",
+    "./editor-adapter": "./src/editor-adapter.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -17,6 +20,10 @@
   },
   "devDependencies": {
     "typescript": "7.0.2",
-    "vitest": "5.1.0"
+    "vitest": "5.1.0",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-ui-0.1.0-alpha.3.tgz",
+    "@types/react": "~19.3.0",
+    "react": "19.3.0",
+    "react-native": "0.88.1"
   }
 }

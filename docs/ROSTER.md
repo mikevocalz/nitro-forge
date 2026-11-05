@@ -554,4 +554,13 @@ See packages/audio-ui/README.md for API/skill roster and exact boundaries.
 
 Pitch 17, Quill 12 and Folio 10 tests pass against a freshly built nf-cli. All three package typechecks and the release URL/lockfile/SHA256 pin check pass. Includes the local #53/#55 stack.
 
+## 2026-11-04 advanced component bridge work
+
+- Cadence typed gain/pan knob adapter **SOURCE IMPLEMENTED** (`@nitro-forge/cadence/instrument-adapter`). Verified on Ubuntu CI: TypeScript, Vitest + real Rust host passed [run 41902604860](https://github.com/mikevocalz/nitro-forge/actions/runs/41902604860). Native iOS/Android and desktop still NOT RUN.
+- Graph routing, real crop, MIDI piano roll, Media3/AVFoundation decoder, Ink/Muse and spatial renderer **NOT IMPLEMENTED**. The roster in `ADVANCED_NATIVE_PORT_ROSTER.md` is a plan, not device proof.
+
+## Recovered alpha.3 Mixer consumer (2026-11-05)
+
+22 Cadence tests pass against a freshly built nf-cli. Cadence and native-cadence example typechecks pass. Root and example lockfiles and all release hashes pass the pin verifier.
+
 These are local source/protocol checks. No new native build or device acceptance was run. The follow-up has not been pushed or merged.

@@ -1,0 +1,104 @@
+name: Cadence + NYC-Tron native consumer
+on:
+  pull_request:
+    paths:
+      - "packages/cadence/**"
+      - "packages/ignition/**"
+      - "examples/native-cadence/**"
+      - "tooling/nyc-tron.json"
+      - "tooling/nyc-tron-metro.cjs"
+      - "tooling/verify-nyc-tron-pin.mjs"
+      - "tooling/native/**"
+      - ".github/workflows/cadence-native-consumer.yml"
+  workflow_dispatch:
+concurrency:
+  group: cadence-native-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  EXPO_NO_TELEMETRY: "1"
+  CI: "1"
+# examples/native-cadence is its own pnpm workspace (Expo 58 / RN 0.88) that
+# joins packages/ignition and packages/cadence from source and installs
+# @nyc-tron/* from the release tarballs pinned in tooling/nyc-tron.json.
+# No NYC-Tron checkout, no staging copy.
+jobs:
+  consumer-types:
+    name: Native consumer install, TypeScript and bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Verify NYC-Tron pin and re-hash release assets
+        run: node tooling/verify-nyc-tron-pin.mjs --download
+      - name: Frozen install from release tarballs
+        working-directory: examples/native-cadence
+        run: corepack pnpm install --frozen-lockfile
+      - name: Typecheck
+        working-directory: examples/native-cadence
+        run: corepack pnpm typecheck
+      - name: Bundle with Metro and check one copy of each shared runtime
+        working-directory: examples/native-cadence
+        run: |
+          for platform in android ios; do
+            corepack pnpm exec expo export --platform "$platform" --dump-sourcemap \
+              --output-dir "$RUNNER_TEMP/export-$platform"
+            node ../../tooling/native/check-bundle-singletons.mjs "$RUNNER_TEMP/export-$platform" "$platform"
+          done
+  android:
+    name: Expo 58 Android consumer compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    needs: consumer-types
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: corepack enable
+      - working-directory: examples/native-cadence
+        run: |
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm exec expo prebuild --platform android --no-install --non-interactive
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+  ios:
+    name: Expo 58 iOS consumer compile
+    # Nitro v1's Package.swift declares swift-tools-version 6.4; its README says
+    # iOS builds require Swift 6.4 or newer. macos-latest ships Xcode 26.6 with
+    # Swift 6.3.3, which cannot resolve the package. xcode-27 carries Swift 6.4.
+    runs-on: xcode-27
+    timeout-minutes: 60
+    needs: consumer-types
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - working-directory: examples/native-cadence
+        run: |
+          corepack pnpm install --frozen-lockfile
+          xcodebuild -version
+          node "$GITHUB_WORKSPACE/tooling/native/check-swift-tools.mjs" .
+          corepack pnpm exec expo prebuild --platform ios --no-install --non-interactive
+          # Nitro v1 is SwiftPM-only; its Podspec is intentionally empty.
+          # Expo SDK 58 SwiftPM integration is preview/experimental, not default.
+          corepack pnpm exec react-native spm add --deintegrate --yes
+          cd ios
+          project=$(find . -maxdepth 1 -name '*.xcodeproj' -print -quit)
+          test -n "$project"
+          scheme=$(basename "$project" .xcodeproj)
+          xcodebuild -project "$project" -scheme "$scheme" -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build

@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./cli": "./src/host-cli.ts",
-    "./nitro": "./src/specs/ForgeFactory.nitro.ts"
+    "./nitro": "./src/specs/ForgeFactory.nitro.ts",
+    "./v1-host": "./src/v1-host.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

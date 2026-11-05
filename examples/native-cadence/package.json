@@ -1,0 +1,33 @@
+{
+  "name": "@nitro-forge/native-cadence-lab",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
+  },
+  "dependencies": {
+    "@expo/ui": "58.0.27",
+    "@nitro-forge/cadence": "workspace:*",
+    "@nitro-forge/ignition": "workspace:*",
+    "@nyc-tron/native-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-native-controls-0.1.0-alpha.3.tgz",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-ui-0.1.0-alpha.3.tgz",
+    "expo": "58.0.23",
+    "expo-constants": "58.0.15",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "zustand": "5.0.16"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3",
+    "@react-native-community/cli": "20.2.0",
+    "@react-native-community/cli-platform-ios": "20.2.0",
+    "@react-native-community/cli-platform-android": "20.2.0"
+  },
+  "packageManager": "pnpm@10.32.1"
+}
