@@ -5,8 +5,31 @@ import type { RefAttributes } from 'react';
 export type StudioViewRef = ComponentRef<typeof NativeViewComponent>;
 export type StudioViewProps = ViewProps & { className?: string };
 export type StudioMenuAction = { id: string; title: string; disabled?: boolean; destructive?: boolean };
+export type StudioPopoverProps = {
+  /** Presentation is controlled by a real host-native UI component. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  trigger: ReactNode;
+  children: ReactNode;
+  accessibleLabel: string;
+  title?: string;
+  /** An action menu uses Menu instead; this popover holds rich instrument content. */
+  placement?: 'auto' | 'above' | 'below';
+};
 export type StudioMenuProps = { children: ReactNode; actions: readonly StudioMenuAction[]; onAction: (id: string) => void; title?: string; triggerLabel?: string; placement?: 'down' | 'up'; className?: string };
 export type StudioSelectProps = { label: string; value: string; options: readonly { label: string; value: string }[]; onValueChange: (value: string) => void; disabled?: boolean };
+/** Canonical source-owned expressive single choice, not an editor-local picker. */
+export type StudioDropdownProps = {
+  label: string;
+  value: string;
+  groups: readonly { id: string; label?: string; options: readonly {
+    value: string; label: string; supportingText?: string; disabled?: boolean;
+  }[] }[];
+  onValueChange: (value: string) => void;
+  disabled?: boolean;
+  hint?: string;
+  testID?: string;
+};
 export type StudioSegmentedControlProps = {
   options: readonly { value: string; label: string }[];
   value: string; onChange: (value: string) => void;
@@ -44,6 +67,10 @@ export interface StudioUIComponents {
   TextInput: ComponentType<TextInputProps & RefAttributes<NativeTextInput>>;
   Image: ComponentType<ImageProps>;
   Menu: ComponentType<StudioMenuProps>;
+  /** Optional until the canonical @acme/ui rich Popover is implemented. Never fall back to a fake RN modal. */
+  Popover?: ComponentType<StudioPopoverProps>;
+  /** Offered only when @acme/ui/NativeDropdown is available in the host. */
+  NativeDropdown?: ComponentType<StudioDropdownProps>;
   Select: ComponentType<StudioSelectProps>;
   SegmentedControl: ComponentType<StudioSegmentedControlProps>;
   TabBar: ComponentType<StudioTabBarProps>;
@@ -78,6 +105,18 @@ export const ScrollView = forwardRef<NativeScrollView, ScrollViewProps>((props, 
 export const TextInput: ForwardRefExoticComponent<PropsWithoutRef<TextInputProps> & RefAttributes<NativeTextInput>> = forwardRef<NativeTextInput, TextInputProps>((props, ref) => { const C = useComponents().TextInput; return <C {...props} ref={ref} />; });
 export const Image = (props: ImageProps) => { const C = useComponents().Image; return <C {...props} />; };
 export const Menu = (props: StudioMenuProps) => { const C = useComponents().Menu; return <C {...props} />; };
+/** Rich floating tool surface. Host must supply the same canonical @acme/ui source on native and web. */
+export const Popover = (props: StudioPopoverProps) => {
+  const C = useComponents().Popover;
+  if (!C) throw new Error('Forge Popover requires a source-owned @acme/ui Popover host adapter. No generic popup is substituted.');
+  return <C {...props} />;
+};
+/** Grouped single-select native UI is supplied exclusively by @acme/ui. */
+export const NativeDropdown = (props: StudioDropdownProps) => {
+  const C = useComponents().NativeDropdown;
+  if (!C) throw new Error('Forge NativeDropdown requires source-owned @acme/ui/NativeDropdown (Expo SDK 58.0.26+).');
+  return <C {...props} />;
+};
 export const Select = (props: StudioSelectProps) => { const C = useComponents().Select; return <C {...props} />; };
 
 export const SegmentedControl = (props: StudioSegmentedControlProps) => { const C = useComponents().SegmentedControl; return <C {...props} />; };
