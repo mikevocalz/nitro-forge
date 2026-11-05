@@ -124,7 +124,7 @@ Limits of the dev-link:
 | Drawing / imaging | `@nitro-forge/prism` | `components/forge/graphics/` planned, not extracted |
 | Music / recording | `@nitro-forge/cadence` | `.../forge/WaveformLane`, `.../forge/inputs/InstrumentKnob`, `@nyc-tron/native-controls/ArcKnob`; mixer and EQ controls not extracted |
 | Video | `@nitro-forge/splice` | `.../forge/NativeSeekBar`; timeline not extracted |
-| Color | any editor | `.../forge/ColorChannels` (RGBA); HSV wheel not extracted |
+| Color | any editor | `.../forge/ColorChannels` (RGBA); the HSV picker is on NYC-Tron `main` (PR #21) but not in this release |
 | Word documents | `@nitro-forge/quill` | Document controls not extracted |
 | Grids | `@nitro-forge/tally` | `.../forge/SpreadsheetGrid`, `.../data/DataTable` |
 | Slides | `@nitro-forge/pitch` | Slide/canvas controls not extracted |
@@ -147,8 +147,8 @@ inventory and status table. Update it, not this file, when a component moves.
   tests and review.
 - Forge #35: PCM waveform source. `WaveformLane` is the UI target; the WAV
   decoding stays in Forge.
-- Forge #34: HSV picker. Extraction is open as NYC-Tron PR #21; not in the
-  release.
+- Forge #34: HSV picker. Extracted by NYC-Tron PR #21, merged to `main` after
+  `v0.1.0-alpha.1` was cut, so it ships in the next release, not this one.
 - Forge #32: Forge 2046 precision scrubber, gestures and instrument system.
   `PrecisionScrubber` and `DragGrabHandle` are extracted (NYC-Tron PR #23) and
   in the release. Editor orchestrators, undo and document commands stay in
