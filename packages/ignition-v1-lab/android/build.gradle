@@ -1,0 +1,62 @@
+buildscript {
+  repositories { google(); mavenCentral() }
+  dependencies { classpath "com.android.tools.build:gradle:9.3.1" }
+}
+
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+apply from: "../nitrogen/generated/android/NitroForgeV1+autolinking.gradle"
+
+def architectures() {
+  def configured = rootProject.properties["reactNativeArchitectures"]
+  return configured ? configured.toString().split(",") : ["arm64-v8a"]
+}
+def rootVersion(key, fallback) {
+  return rootProject.ext.has(key) ? rootProject.ext.get(key) : fallback
+}
+
+android {
+  namespace "com.margelo.nitro.nitroforge.ignitionv1"
+  ndkVersion rootVersion("ndkVersion", "27.1.12297006")
+  compileSdkVersion rootVersion("compileSdkVersion", 37)
+
+  defaultConfig {
+    // Follow the app's minSdk. Nothing in cpp/ or nf-sys needs an API above
+    // React Native 0.88's floor of 24, and a hidden floor here broke the
+    // manifest merge for every app below it.
+    minSdkVersion rootVersion("minSdkVersion", 24)
+    targetSdkVersion rootVersion("targetSdkVersion", 36)
+    externalNativeBuild {
+      cmake {
+        cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters (*architectures())
+      }
+    }
+  }
+  externalNativeBuild {
+    cmake { path "CMakeLists.txt" }
+  }
+  buildFeatures { prefab true }
+  packagingOptions {
+    excludes = ["META-INF", "META-INF/**", "**/libc++_shared.so",
+      "**/libfbjni.so", "**/libjsi.so", "**/libreactnative.so"]
+  }
+  buildTypes { release { minifyEnabled false } }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+repositories { google(); mavenCentral() }
+dependencies {
+  implementation "com.facebook.react:react-android"
+  implementation project(":react-native-nitro-modules")
+}
+react {
+  jsRootDir = file("../src")
+  libraryName = "NitroForgeV1"
+  codegenJavaPackageName = "com.margelo.nitro.nitroforge.ignitionv1"
+}
