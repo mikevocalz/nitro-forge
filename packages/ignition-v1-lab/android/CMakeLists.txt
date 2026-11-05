@@ -25,7 +25,7 @@ add_library(nf_sys STATIC IMPORTED GLOBAL)
 set_target_properties(nf_sys PROPERTIES IMPORTED_LOCATION "${NF_RUST_STATIC}")
 
 find_library(LOG_LIB log)
-target_link_libraries(${PACKAGE_NAME} PRIVATE
+target_link_libraries(${PACKAGE_NAME}
   nf_sys
   ${LOG_LIB}
   android

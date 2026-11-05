@@ -112,6 +112,10 @@ jobs:
         run: corepack pnpm --filter @nitro-forge/ignition-v1-lab codegen
       - name: Build actual Apple device and simulator Rust static XCFramework
         run: bash tooling/native/build_nf_v1_artifacts.sh apple
+      - name: Install Swift 6.4 toolchain required by Nitro v1
+        uses: swift-actions/setup-swift@v3
+        with:
+          swift-version: "6.4.2"
       - name: Verify SwiftPM native package manifest with real Rust artifacts
         run: |
           swift --version
