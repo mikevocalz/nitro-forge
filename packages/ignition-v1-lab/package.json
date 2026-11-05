@@ -14,7 +14,9 @@
   "scripts": {
     "codegen": "nitrogen",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "check:generated": "node ../../tooling/nitro-v1/verify-generated.mjs"
+    "check:generated": "node ../../tooling/nitro-v1/verify-generated.mjs",
+    "prepare:android": "bash ../../tooling/native/build_nf_v1_artifacts.sh android",
+    "prepare:apple": "bash ../../tooling/native/build_nf_v1_artifacts.sh apple"
   },
   "peerDependencies": {
     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
@@ -30,5 +32,18 @@
     "dependencies": [
       "react-native-nitro-modules"
     ]
-  }
+  },
+  "files": [
+    "src",
+    "cpp",
+    "android",
+    "Package.swift",
+    "NitroForgeV1.podspec",
+    "react-native.config.js",
+    "nitrogen/generated",
+    "native",
+    "README.md"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/mikevocalz/nitro-forge"
 }
