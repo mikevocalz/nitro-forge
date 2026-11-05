@@ -70,6 +70,27 @@ if (process.argv.includes("--resolve")) {
   assert.deepEqual(failures, [], `Pinned skill links that do not resolve:\n  ${failures.join("\n  ")}`);
   console.log(`${new Set(links).size} pinned skill links resolve to an existing commit and path.`);
 }
+// Every repo doc the guidance tells an agent to read must exist. A doc that
+// arrives with an open PR is allowed only when its line says which PR, and the
+// label must go once the doc lands.
+{
+  const { existsSync } = await import("node:fs");
+  const guidance = { "AGENTS.md": agent, "docs/ENGINEERING_SKILLS.md": registry,
+    "docs/WORKSTREAM_ROSTER.md": roster, ".github/PULL_REQUEST_TEMPLATE.md": template,
+    ...Object.fromEntries(skills.map((s) => [`.agents/skills/${s}/SKILL.md`, read(`.agents/skills/${s}/SKILL.md`)])) };
+  const problems = [];
+  for (const [file, text] of Object.entries(guidance)) {
+    for (const line of text.split("\n")) {
+      for (const [, doc, label] of line.matchAll(/`(docs\/[A-Za-z0-9_./-]+\.md)`( \(lands with PR #\d+\))?/g)) {
+        const pending = label !== undefined;
+        const exists = existsSync(join(root, doc));
+        if (!exists && !pending) problems.push(`${file}: ${doc} does not exist`);
+        if (exists && pending) problems.push(`${file}: ${doc} exists; drop its "lands with PR" label`);
+      }
+    }
+  }
+  assert.deepEqual(problems, [], `Guidance references broken docs:\n  ${problems.join("\n  ")}`);
+}
 for (let i = 0; i <= 14; i++) {
   const tag = "NF-" + String(i).padStart(2, "0");
   assert.ok(roster.includes(tag), `Workstream roster missing ${tag}`);

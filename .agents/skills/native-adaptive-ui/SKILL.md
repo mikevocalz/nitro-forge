@@ -1,6 +1,6 @@
 ---
 name: native-adaptive-ui
-description: Build one product-neutral NitroForge Studio component implementation for Expo UI/SwiftUI, Jetpack Compose, Meta spatial compatibility, Tailwind v4 and responsive web/tablet/foldable layouts; safely extract real Moyo components.
+description: Compose NitroForge Studio screens from NYC-Tron UI's released controls across Expo UI/SwiftUI, Jetpack Compose, Meta spatial, Tailwind v4 and responsive web/tablet/foldable layouts, without a second Forge copy of any control.
 ---
 # NitroForge shared cross-platform native UI skill
 
@@ -9,10 +9,10 @@ description: Build one product-neutral NitroForge Studio component implementatio
 2. Read [Moyo's pinned foldable skill](https://github.com/mikevocalz/universal-spatial-starter/blob/256a97b132803fd2fb8049f7a120cef9cb641f41/.agents/skills/mikevocalz-foldable-layouts/SKILL.md) in full, including the 18 acceptance scenarios.
 3. Read [Expo overview](https://github.com/expo/skills/blob/a9e5bd3fa00b4e61f632e43f85da73aee1942582/plugins/expo/skills/expo-overview/SKILL.md), [expo-ui](https://github.com/expo/skills/blob/a9e5bd3fa00b4e61f632e43f85da73aee1942582/plugins/expo/skills/expo-ui/SKILL.md), [expo-design-system](https://github.com/expo/skills/blob/a9e5bd3fa00b4e61f632e43f85da73aee1942582/plugins/expo/skills/expo-design-system/SKILL.md), [expo-native-ui](https://github.com/expo/skills/blob/a9e5bd3fa00b4e61f632e43f85da73aee1942582/plugins/expo/skills/expo-native-ui/SKILL.md).
 4. For spatial UI, read [Meta Layout SDK React Native API](https://github.com/meta-quest/agentic-tools/blob/3a8553d10a5a1bd1bf9beaaa950243fbbed3b9ea/skills/hz-metavrx-layout-sdk/references/react-native-api-reference.md). It is *Meta XR spatial-window* functionality, not a substitute for Android Jetpack WindowManager folding features.
-5. Read `docs/STUDIO_UI.md`, Moyo's actual token generation and `docs/ENGINEERING_SKILLS.md`.
+5. Read `docs/STUDIO_UI.md` (lands with PR #1), Moyo's actual token generation and `docs/ENGINEERING_SKILLS.md`.
 
 ## Dependency rules
-- Source-own product-neutral controls once under a standalone NitroForge UI package and make Moyo consume them through its `@acme/ui` adapter. Do not copy separate implementations or import Moyo business/auth/brand state into the SDK.
+- Product-neutral controls are owned once by [NYC-Tron UI](https://github.com/mikevocalz/NYC-Tron-UI) and ship as its GitHub Release tarballs (`v0.1.0-alpha.1` is the first). Forge and Moyo both install the release by URL. Forge never creates its own UI package or copy of a control, and never imports Moyo business/auth/brand state into the SDK. A missing control is extracted into NYC-Tron first.
 - React Native/Expo provides the shared authoring surface; `@expo/ui` universal `Host` and `RNHostView` preserve SwiftUI-backed iOS and Compose-backed Android native UI where appropriate. Use RN-native semantic controls for features Expo UI does not expose; accessible web implementation from same public API.
 - Tailwind CSS v4 is mandatory for styling contracts. Preserve Moyo's existing `Uniwind` on native and `react-native-css` on Next.js web behind its semantic wrappers; don't blindly swap to NativeWind or claim `className` styles an arbitrary SwiftUI modifier.
 - Shared tokens for spacing, sizing, typography, surfaces, focus, border, radius, elevation and motion. Hosts inject their own brand palette; NitroForge ships neutral defaults. Use design-system audit; eliminate arbitrary hex, giant gradient hero, emoji menu icon, excessive cards.
@@ -27,7 +27,7 @@ description: Build one product-neutral NitroForge Studio component implementatio
 - Host Meta XR SpatialScene/SpatialWindow through verified `@metavr/layout-compat` / `@metavr/layout-window-compat` APIs only where supported. XR compositor panels are not generic 2D screen dimensions.
 
 ## Acceptance
-- One source implementation imported by independent NitroForge sample and Moyo branded adapter, verified with source identity rather than screenshots alone.
+- One NYC-Tron release tarball imported by an independent NitroForge sample and by Moyo, verified by the pinned tarball hash rather than screenshots alone.
 - iOS SwiftUI native controls and Android Compose native controls, correctly nested `Host`/`RNHostView`, accessible screen reader navigation, input, keyboard/pointer and touch.
 - 18 tailored foldable scenarios, actual iPad resizes/Stage Manager, Surface Duo book/tabletop/RTL/multiple hinge fixtures, web browser phone/tablet/desktop, SSR hydration and reduced motion.
 - No native lazy list inside unbounded parent scroller (Android Compose measurement crash). Reusable Inspector must never cover the active canvas or become unclosable on compact windows.

@@ -8,7 +8,7 @@ description: Review and integrate selected ArtCraft Rust engine features into Ni
 ArtCraft's PhotoCraft, WordCraft, GridCraft, DeckCraft, PdfCraft, FilmCraft, SoundCraft and optional VectorCraft, DesignCraft, EffectCraft, FigCraft are **candidate sources**, not the same as NitroForge's Prism, Quill, Tally, Pitch, Folio, Splice or Cadence engines. Do not vendor them into Moyo or rename current `@nitro-forge/*` public APIs.
 
 ## Required sequence
-1. Read `docs/ARCHITECTURE.md`, `docs/ENGINE_OPS.md`, `docs/ROSTER.md`, `docs/UPSTREAM.md` and the repo's current source candidate lock.
+1. Read `docs/ARCHITECTURE.md`, `docs/ENGINE_OPS.md`, `docs/ROSTER.md`, `docs/UPSTREAM.md` (lands with PR #1) and the repo's current source candidate lock.
 2. Resolve the exact GitHub repository, immutable commit SHA, base branch, licensing files, NOTICE, toolchain, transitive crates, optional fonts/media/codecs and security notices. Different upstream sources may have different licenses.
 3. Classify changed upstream PRs as bugfix/feature/ABI/binary/license/security; inspect actual merged source, not PR titles. Record minimum Rust version, target flags and dependencies.
 4. Adapt only specific reviewed engine operations behind the existing typed Ignition contract. Unknown commands and arbitrary filesystem paths, plug-ins, remote scripting or MCP exposure are denied by default. Never promise that every upstream feature is available.
