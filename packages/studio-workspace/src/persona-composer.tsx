@@ -14,7 +14,7 @@ import { PERSONA_SURFACES, type PersonaSpec, type PersonaSurface } from './perso
 import type { PersonaStore } from './persona-store';
 import {
   BUILT_IN_CAPTION, COMPOSER_TILE_MIN, EMPTY_COMPOSER_DRAFT, PERSONA_NAME_MAX, SURFACE_LABELS, capabilityTag, capabilityToggleName, composerCapabilities,
-  composerLayout, designStudioInstruments, disclosureCount, dragTargetIndex, draftManifest, instrumentLabel, instrumentToggleName,
+  composerLayout, designStudioInstruments, disclosureCount, dragTargetIndex, draftManifest, instrumentLabel, instrumentTag, instrumentToggleName,
   moveAnnouncement, moveRailItem, nameCounter, personaSummary, railPosition, requestedImportLabel, saveBlocker, savedMessage,
   SURFACE_PROSE, toPersonaDraft, toggleGrid, toggleId, type ComposerDraft, type SurfaceMode,
 } from './persona-composer-model';
@@ -275,7 +275,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
   const railSection = section(
     <View style={{ gap: scale.space.element }}>
       {heading('Rail')}
-      {label('Top to bottom, as the rail shows them. Drag the handle or use the row controls to reorder.')}
+      {label('Top to bottom, the order the rail will show them. Instruments marked Not in this build keep their place until they ship. Drag the handle or use the row controls to reorder.')}
       {draft.rail.length === 0
         ? <View testID="composer-rail-empty" style={{ minHeight: scale.size.target, justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: c.line, borderRadius: scale.radius.control, paddingHorizontal: scale.space.inset }}>
           <Text style={{ color: c.muted, fontSize: scale.type.label }}>{phone ? 'The rail is empty. Open Instruments below and pick one.' : 'The rail is empty. Pick an instrument below.'}</Text>
@@ -322,8 +322,9 @@ export function PersonaComposer(props: PersonaComposerProps) {
         {foldTitle('instruments', 'Instruments', disclosureCount('rail', draft.rail.length, designStudioInstruments.length))}
         {unfolded('instruments') && tileGrid('composer-instruments', designStudioInstruments.map(i => {
           const position = railPosition(draft.rail, i.id);
+          const tag = instrumentTag(i);
           return tile(i.id, {
-            on: position !== undefined, title: i.label, name: instrumentToggleName(i.label, position), testID: `composer-instrument-${i.id}`,
+            on: position !== undefined, title: i.label, name: instrumentToggleName(i.label, position, tag), testID: `composer-instrument-${i.id}`, ...(tag ? { note: tag } : {}),
             ...(position !== undefined ? { mark: <Text style={{ color: c.accent, fontSize: scale.type.label, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{String(position)}</Text> } : {}),
             onPress: () => setDraft({ rail: toggleId(draft.rail, i.id) }),
           });

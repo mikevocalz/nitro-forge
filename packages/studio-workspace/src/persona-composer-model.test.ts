@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   BUILT_IN_CAPTION, EMPTY_COMPOSER_DRAFT, capabilityTag, capabilityToggleName, composerCapabilities, composerLayout, designStudioInstruments,
-  COMPOSER_TILE_MIN, disclosureCount, dragTargetIndex, draftManifest, instrumentToggleName, personaSummary, railPosition, toggleGrid,
+  COMPOSER_TILE_MIN, disclosureCount, dragTargetIndex, draftManifest, instrumentTag, instrumentToggleName, personaSummary, railPosition, toggleGrid,
   moveAnnouncement, moveRailItem, nameCounter, requestedImportLabel, saveBlocker, savedMessage, toPersonaDraft, toggleId,
 } from './persona-composer-model.ts';
 import { createPersonaStore } from './persona-store.ts';
@@ -133,4 +133,10 @@ test('off the phone, toggle tiles are wide enough for a one-line name', () => {
     assert.ok(grid.columns >= 3, `${width}: ${grid.columns} columns`);
   }
   assert.equal(toggleGrid(358, 8).columns, 2, 'a phone keeps two columns');
+});
+
+test('unshipped instruments are tagged and say so when spoken', () => {
+  assert.equal(instrumentTag({ releaseVerified: false }), 'Not in this build');
+  assert.equal(instrumentTag({ releaseVerified: true }), undefined);
+  assert.equal(instrumentToggleName('Ink Deck', undefined, 'Not in this build'), 'Add Ink Deck to the rail, not in this build');
 });

@@ -190,9 +190,16 @@ export function railPosition(rail: readonly string[], id: string): number | unde
   return i < 0 ? undefined : i + 1;
 }
 
+/** Tag for an instrument that has not shipped. The persona keeps its place on
+ * the rail, but the editor does not draw instruments until they do. */
+export function instrumentTag(instrument: Pick<InstrumentBlueprint, 'releaseVerified'>): string | undefined {
+  return instrument.releaseVerified ? undefined : 'Not in this build';
+}
+
 /** Spoken name for an instrument tile. Contains the visible label. */
-export function instrumentToggleName(label: string, position: number | undefined): string {
-  return position === undefined ? `Add ${label} to the rail` : `${label}, position ${position} on the rail. Press to remove`;
+export function instrumentToggleName(label: string, position: number | undefined, tag?: string): string {
+  const base = position === undefined ? `Add ${label} to the rail` : `${label}, position ${position} on the rail. Press to remove`;
+  return tag ? `${base}, ${tag.toLowerCase()}` : base;
 }
 
 /** Spoken name for a capability tile: "Include Paths and nodes, not in this build". Contains the visible label. */
