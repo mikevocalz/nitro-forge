@@ -37,6 +37,14 @@ const MIN_SPEED: f64 = 0.1;
 const MAX_SPEED: f64 = 10.0;
 /// Tolerance for float comparisons on timeline boundaries.
 const EPS: f64 = 1e-9;
+/// Longest timeline or source position Splice accepts (about 115 days). Far
+/// past any real edit, and small enough that `start + len` never rounds away
+/// a clip's length.
+const MAX_TIME_S: f64 = 1e7;
+/// Ids cross into JavaScript as numbers, so they stay within its safe integers.
+const MAX_ID: u64 = (1 << 53) - 1;
+/// Longest track name, in characters.
+const MAX_TRACK_NAME_CHARS: usize = 120;
 
 // ---------------------------------------------------------------------------
 // Document model
@@ -273,6 +281,12 @@ impl Doc {
                 }
                 check_speed(c.speed)?;
                 check_span(c.in_s, c.out_s, self.source_of(c)?)?;
+                if c.timeline_end() > MAX_TIME_S {
+                    return Err(EngineError::out_of_bounds(format!(
+                        "clip {} would end past {MAX_TIME_S} s",
+                        c.id
+                    )));
+                }
             }
             for w in clips.windows(2) {
                 if w[1].timeline_start_s < w[0].timeline_end() - EPS {
@@ -286,22 +300,83 @@ impl Doc {
         Ok(())
     }
 
-    /// Every transition fits its cut (used by transition ops and `restore`).
+    /// Every transition fits its cut, one per cut (used by transition ops
+    /// and `restore`).
     fn validate_transitions(&self) -> Result<(), EngineError> {
         for t in &self.tracks {
-            for tr in &t.transitions {
-                transitions::check(self, t, tr)?;
+            for (i, tr) in t.transitions.iter().enumerate() {
+                if t.transitions[..i]
+                    .iter()
+                    .any(|o| o.left_id == tr.left_id && o.right_id == tr.right_id)
+                {
+                    return Err(EngineError::validation("that cut already has a transition"));
+                }
+                transitions::check(self, t, &t.transitions, tr)?;
             }
         }
         Ok(())
     }
 
-    /// Snap starts that float math left a hair below 0 and re-sort clips.
+    /// Everything a snapshot must satisfy beyond the clip and transition
+    /// invariants: rate, source lengths, unique ids below `next_id`, header
+    /// flags that fit the track kind, marker and loop-range bounds.
+    fn validate_restored(&self) -> Result<(), EngineError> {
+        if !(self.fps.is_finite() && self.fps > 0.0) {
+            return Err(EngineError::validation("fps must be > 0"));
+        }
+        if self.next_id > MAX_ID {
+            return Err(EngineError::validation("next_id is out of range"));
+        }
+        let mut ids = std::collections::BTreeSet::new();
+        let mut claim = |id: u64| -> Result<(), EngineError> {
+            if id >= self.next_id || !ids.insert(id) {
+                return Err(EngineError::validation(format!("id {id} is duplicated or not below next_id")));
+            }
+            Ok(())
+        };
+        for (id, s) in &self.sources {
+            claim(*id)?;
+            check_duration(s.duration_s)?;
+        }
+        for t in &self.tracks {
+            claim(t.id)?;
+            if t.kind == TrackKind::Audio && t.hidden {
+                return Err(EngineError::validation("hidden is set on an audio track"));
+            }
+            if t.kind != TrackKind::Audio && (t.muted || t.solo) {
+                return Err(EngineError::validation("muted or solo is set on a video or overlay track"));
+            }
+            if let Some(name) = &t.name {
+                if name.trim().is_empty() || name.chars().count() > MAX_TRACK_NAME_CHARS {
+                    return Err(EngineError::validation("track name is empty or too long"));
+                }
+            }
+            for c in &t.clips {
+                claim(c.id)?;
+            }
+            for x in &t.transitions {
+                claim(x.id)?;
+            }
+        }
+        for m in &self.markers {
+            claim(m.id)?;
+            annotations::check_marker(m)?;
+        }
+        if let Some(r) = self.loop_range {
+            annotations::check_loop(r.in_s, r.out_s)?;
+        }
+        Ok(())
+    }
+
+    /// Snap positions that float math left a hair below 0 and re-sort clips.
     fn normalize(&mut self) {
         for t in &mut self.tracks {
             for c in &mut t.clips {
                 if c.timeline_start_s < 0.0 && c.timeline_start_s > -EPS {
                     c.timeline_start_s = 0.0;
+                }
+                if c.in_s < 0.0 && c.in_s > -EPS {
+                    c.in_s = 0.0;
                 }
             }
             t.sort_clips();
@@ -310,7 +385,9 @@ impl Doc {
 
     fn alloc_id(&mut self) -> u64 {
         let id = self.next_id;
-        self.next_id += 1;
+        // `restore` keeps next_id at or below MAX_ID, so this never saturates
+        // in practice; saturating keeps it panic-free regardless.
+        self.next_id = self.next_id.saturating_add(1);
         id
     }
 
@@ -390,6 +467,18 @@ fn opt_str(p: &Value, key: &str) -> Result<Option<String>, EngineError> {
             .map(|s| Some(s.to_string()))
             .ok_or_else(|| EngineError::invalid(format!("invalid '{key}'"))),
     }
+}
+
+fn check_duration(duration_s: f64) -> Result<(), EngineError> {
+    if duration_s <= 0.0 {
+        return Err(EngineError::validation("duration_s must be > 0"));
+    }
+    if duration_s > MAX_TIME_S {
+        return Err(EngineError::out_of_bounds(format!(
+            "duration_s must be at most {MAX_TIME_S}"
+        )));
+    }
+    Ok(())
 }
 
 fn check_speed(speed: f64) -> Result<(), EngineError> {
@@ -488,9 +577,7 @@ impl SpliceEngine {
             // ---- sources ---------------------------------------------------
             "addSource" => {
                 let duration = req_f64(p, "duration_s")?;
-                if duration <= 0.0 {
-                    return Err(EngineError::validation("duration_s must be > 0"));
-                }
+                check_duration(duration)?;
                 let name = opt_str(p, "name")?;
                 self.record();
                 let id = self.doc.alloc_id();
@@ -821,7 +908,12 @@ impl SpliceEngine {
             structural |= r.events.iter().any(|e| e.kind == "timeline:changed");
             results.push(r.data);
         }
-        Ok(self.commit(scratch.doc, json!({ "results": results }), structural))
+        let data = json!({ "results": results });
+        if scratch.doc == self.doc {
+            // Nothing changed (read-only or no-op ops): no undo entry, no event.
+            return Ok(Self::read_only(data));
+        }
+        Ok(self.commit(scratch.doc, data, structural))
     }
 }
 
@@ -868,6 +960,7 @@ impl Engine for SpliceEngine {
             .unwrap_or(0);
         doc.next_id = doc.next_id.max(max_id.saturating_add(1));
         // A well-formed envelope can still carry an inconsistent timeline.
+        doc.validate_restored()?;
         doc.validate()?;
         doc.validate_transitions()?;
         self.doc = doc;
@@ -1491,6 +1584,105 @@ mod tests {
         let before = describe(&e);
         assert_eq!(e.restore(&bytes).unwrap_err().code, ErrorCode::Validation);
         assert_eq!(describe(&e), before);
+    }
+
+    #[test]
+    fn restore_rejects_broken_snapshot_fields() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let l = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 2.0, "out_s": 4.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        let r = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 4.0, "out_s": 6.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        apply(&mut e, "addTransition", json!({"left": l, "right": r, "kind": "cross_dissolve", "duration_s": 1.0})).unwrap();
+        apply(&mut e, "addMarker", json!({"time_s": 1.0})).unwrap();
+        let good = describe(&e);
+        apply(&mut e, "addTrack", json!({"kind": "audio"})).unwrap();
+        let with_audio = describe(&e);
+        type Breaker = fn(&mut Value);
+        let breakers: [(&str, Breaker); 9] = [
+            ("next_id past 2^53", |d| d["next_id"] = json!(u64::MAX)),
+            ("duplicate clip id", |d| {
+                let first = d["tracks"][0]["clips"][0]["id"].clone();
+                d["tracks"][0]["clips"][1]["id"] = first;
+            }),
+            ("fps 0", |d| d["fps"] = json!(0.0)),
+            ("source duration 0", |d| {
+                let k = d["sources"].as_object().unwrap().keys().next().unwrap().clone();
+                d["sources"][k]["duration_s"] = json!(0.0);
+            }),
+            ("hidden audio", |d| d["tracks"][1]["hidden"] = json!(true)),
+            ("solo video", |d| d["tracks"][0]["solo"] = json!(true)),
+            ("negative marker", |d| d["markers"][0]["time_s"] = json!(-1.0)),
+            ("reversed loop", |d| d["loop_range"] = json!({"in_s": 3.0, "out_s": 1.0})),
+            ("two transitions on one cut", |d| {
+                let mut dup = d["tracks"][0]["transitions"][0].clone();
+                let next = d["next_id"].as_u64().unwrap();
+                dup["id"] = json!(next);
+                d["next_id"] = json!(next + 1);
+                d["tracks"][0]["transitions"].as_array_mut().unwrap().push(dup);
+            }),
+        ];
+        let before = describe(&e);
+        for (what, brk) in breakers {
+            let mut doc = with_audio.clone();
+            brk(&mut doc);
+            let bytes = encode_envelope(&serde_json::to_vec(&doc).unwrap());
+            assert!(e.restore(&bytes).is_err(), "{what} was accepted");
+            assert_eq!(describe(&e), before, "{what}");
+        }
+        // The untouched documents restore.
+        for doc in [good, with_audio] {
+            e.restore(&encode_envelope(&serde_json::to_vec(&doc).unwrap())).unwrap();
+        }
+    }
+
+    #[test]
+    fn huge_positions_are_out_of_bounds() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let before = describe(&e);
+        for (op, p) in [
+            ("addClip", json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 1.0, "start_s": 1.7e308})),
+            ("addSource", json!({"duration_s": 1e300})),
+            ("addMarker", json!({"time_s": 1e12})),
+            ("setLoopRange", json!({"in_s": 0.0, "out_s": 1e12})),
+        ] {
+            assert_eq!(expect_err(&mut e, op, p).code, ErrorCode::OutOfBounds, "{op}");
+            assert_eq!(describe(&e), before, "{op}");
+        }
+    }
+
+    #[test]
+    fn unchanged_batch_records_nothing() {
+        let mut e = eng();
+        let (_, tid) = setup(&mut e);
+        let r = apply_full(
+            &mut e,
+            "batch",
+            json!({"ops": [{"op": "describe"}, {"op": "setTrackFlags", "payload": {"id": tid, "locked": false}}]}),
+        )
+        .unwrap();
+        assert!(r.events.is_empty());
+        assert_eq!(r.data["results"].as_array().unwrap().len(), 2);
+        assert!(e.undo().unwrap()); // addTrack
+        assert!(e.undo().unwrap()); // addSource
+        assert!(!e.undo().unwrap());
+    }
+
+    #[test]
+    fn roll_back_to_the_first_media_frame_is_accepted() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        // Right clip at speed 3 with its in-point 0.3 s into the media: rolling
+        // the cut 0.1 s earlier puts the in-point at 0.3 - 0.1 * 3, which is
+        // -5.6e-17 in floating point.
+        let l = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 5.0, "out_s": 6.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        let r = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 0.3, "out_s": 3.3, "speed": 3.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        apply(&mut e, "rollEdit", json!({"left": l, "right": r, "delta_s": -0.1})).unwrap();
+        assert_eq!(describe(&e)["tracks"][0]["clips"][1]["in_s"], 0.0);
     }
 
     #[test]

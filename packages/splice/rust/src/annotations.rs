@@ -3,7 +3,7 @@
 //! markers do in other editors; a host that wants markers to follow a clip
 //! moves them in the same `batch`.
 
-use crate::{opt_f64, opt_str, req_f64, req_u64, Doc};
+use crate::{opt_f64, opt_str, req_f64, req_u64, Doc, MAX_TIME_S};
 use ignition_core::EngineError;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -50,6 +50,37 @@ fn check_time(time_s: f64, duration_s: f64) -> Result<(), EngineError> {
     }
     if duration_s < 0.0 {
         return Err(EngineError::validation("duration_s must be >= 0"));
+    }
+    if time_s + duration_s > MAX_TIME_S {
+        return Err(EngineError::out_of_bounds(format!(
+            "marker must end by {MAX_TIME_S} s"
+        )));
+    }
+    Ok(())
+}
+
+/// Marker invariants, for `restore`.
+pub(crate) fn check_marker(m: &Marker) -> Result<(), EngineError> {
+    check_time(m.time_s, m.duration_s)?;
+    if m.name.trim().is_empty() {
+        return Err(EngineError::validation("name must not be empty"));
+    }
+    check_text(&m.name, "name", MAX_NAME_CHARS)?;
+    check_text(&m.note, "note", MAX_NOTE_CHARS)
+}
+
+/// `0 <= in_s < out_s <= MAX_TIME_S`.
+pub(crate) fn check_loop(in_s: f64, out_s: f64) -> Result<(), EngineError> {
+    if in_s < 0.0 {
+        return Err(EngineError::validation("in_s must be >= 0"));
+    }
+    if in_s >= out_s {
+        return Err(EngineError::validation("in_s must be < out_s"));
+    }
+    if out_s > MAX_TIME_S {
+        return Err(EngineError::out_of_bounds(format!(
+            "out_s must be at most {MAX_TIME_S}"
+        )));
     }
     Ok(())
 }
@@ -150,12 +181,7 @@ fn remove_marker(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
 fn set_loop(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
     let in_s = req_f64(p, "in_s")?;
     let out_s = req_f64(p, "out_s")?;
-    if in_s < 0.0 {
-        return Err(EngineError::validation("in_s must be >= 0"));
-    }
-    if in_s >= out_s {
-        return Err(EngineError::validation("in_s must be < out_s"));
-    }
+    check_loop(in_s, out_s)?;
     doc.loop_range = Some(LoopRange { in_s, out_s });
     Ok(json!({ "ok": true }))
 }

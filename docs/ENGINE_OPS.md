@@ -181,7 +181,12 @@ Atomicity: multi-clip ops edit a copy and check clip invariants on it (starts
 After any op that emits `timeline:changed`, transitions that no longer fit
 their cut are dropped in the same undo entry and listed in the op's
 `removed_transitions`. Markers and the loop range never move with clip edits.
-`restore` rejects snapshots that break these invariants.
+Positions are bounded: clip ends, source durations, markers and the loop range
+stay within 1e7 s (OutOfBounds past it), and ids stay below 2^53 so they survive
+JavaScript numbers. `restore` rejects snapshots that break these invariants or
+carry duplicate ids, two transitions on one cut, `fps` ≤ 0, empty sources,
+header flags that do not fit the track kind, or invalid markers and loop range.
+A `batch` whose ops change nothing records no undo entry and emits no event.
 
 Undo: whole-document snapshot per op (capacity 64). Event `timeline:changed`
 on structural ops; marker and loop ops emit `document:changed` only.
