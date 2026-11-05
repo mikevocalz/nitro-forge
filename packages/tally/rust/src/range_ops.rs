@@ -1,5 +1,10 @@
 //! Atomic range writes: validate and stage everything before recording undo.
 use super::*;
+use formula::{SHEET_MAX_COLUMNS, SHEET_MAX_ROWS};
+
+fn off_sheet() -> EngineError {
+    EngineError::out_of_bounds("range extends past the sheet (XFD1048576)")
+}
 
 #[derive(Clone, Copy)]
 struct Rect {
@@ -18,6 +23,9 @@ impl Rect {
             c1: c0.max(c1),
             r1: r0.max(r1),
         };
+        if rect.c1 >= SHEET_MAX_COLUMNS || rect.r1 >= SHEET_MAX_ROWS {
+            return Err(off_sheet());
+        }
         let count =
             (u64::from(rect.c1 - rect.c0) + 1).saturating_mul(u64::from(rect.r1 - rect.r0) + 1);
         if count > MAX_GET_RANGE_CELLS {
@@ -87,10 +95,10 @@ impl TallyEngine {
         if rows.len().saturating_mul(width) > MAX_GET_RANGE_CELLS as usize {
             return Err(EngineError::out_of_bounds("range exceeds 16384 cells"));
         }
-        if u64::from(c0) + width as u64 - 1 > u64::from(u32::MAX)
-            || u64::from(r0) + rows.len() as u64 > u64::from(u32::MAX)
+        if u64::from(c0) + width as u64 > u64::from(SHEET_MAX_COLUMNS)
+            || u64::from(r0) + rows.len() as u64 > u64::from(SHEET_MAX_ROWS)
         {
-            return Err(EngineError::out_of_bounds("range exceeds address bounds"));
+            return Err(off_sheet());
         }
         let mut staged = Vec::with_capacity(rows.len() * width);
         for (r, row) in rows.iter().enumerate() {
@@ -306,5 +314,55 @@ mod tests {
         assert_eq!(raw(&mut e, "XFD1"), "x");
         e.undo().unwrap();
         assert_eq!(e.snapshot().unwrap(), before);
+    }
+    #[test]
+    fn references_and_writes_stay_on_the_sheet() {
+        // Last row/column shift off the sheet; locked axes do not move.
+        assert_eq!(formula::shift_references("=A1048576", 0, 1).unwrap(), "=#REF!");
+        assert_eq!(formula::shift_references("=XFD1", 1, 0).unwrap(), "=#REF!");
+        assert_eq!(formula::shift_references("=A$1048576", 0, 1).unwrap(), "=A$1048576");
+        assert_eq!(formula::shift_references("=$XFD1", 1, 0).unwrap(), "=$XFD1");
+        assert_eq!(formula::shift_references("=A1048575", 0, 1).unwrap(), "=A1048576");
+        // A range with one endpoint off the sheet becomes a single #REF!.
+        assert_eq!(formula::shift_references("=SUM(A1:A3)+A2", 0, -1).unwrap(), "=SUM(#REF!)+A1");
+        assert_eq!(
+            formula::shift_references("=SUM( A1 : $B$2 )", 1, 1).unwrap(),
+            "=SUM( B2 : $B$2 )"
+        );
+        let mut e = TallyEngine::new();
+        run(&mut e, "setCell", json!({"addr":"C2","value":"=SUM(C1:C3)"}));
+        run(
+            &mut e,
+            "fillRange",
+            json!({"source":{"from":"C2","to":"C2"},"target":{"from":"C1","to":"C2"}}),
+        );
+        let c1 = run(&mut e, "getCell", json!({"addr":"C1"})).data;
+        assert_eq!(c1["raw"], "=SUM(#REF!)");
+        assert_eq!(c1["computed"], "#REF!");
+        let before = e.snapshot().unwrap();
+        for (op, p) in [
+            ("setRange", json!({"from":"A1048576","values":[["a"],["b"]]})),
+            ("setRange", json!({"from":"XFD1","values":[["a","b"]]})),
+            ("setRange", json!({"from":"XFE1","values":[["a"]]})),
+            (
+                "fillRange",
+                json!({"source":{"from":"A1048570","to":"A1048570"},"target":{"from":"A1048570","to":"A1048577"}}),
+            ),
+            (
+                "fillRange",
+                json!({"source":{"from":"XFD1","to":"XFD1"},"target":{"from":"XFD1","to":"XFE1"}}),
+            ),
+        ] {
+            assert!(e.apply(Command::new(op, p)).is_err(), "{op} wrote off the sheet");
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        run(&mut e, "setRange", json!({"from":"XFD1048575","values":[["=XFD1048575"],["x"]]}));
+        assert_eq!(raw(&mut e, "XFD1048576"), "x");
+        run(
+            &mut e,
+            "fillRange",
+            json!({"source":{"from":"XFD1048575","to":"XFD1048575"},"target":{"from":"XFD1048575","to":"XFD1048576"}}),
+        );
+        assert_eq!(raw(&mut e, "XFD1048576"), "=XFD1048576");
     }
 }

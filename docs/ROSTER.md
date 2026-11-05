@@ -110,6 +110,11 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Local Tally Vitest: 24 passed, including two new live `nf-cli` range-operation
   tests and a callback routing test. Workspace TypeScript: 9/9 packages passed.
 - Frozen pnpm 10.32.1 install and fresh `cargo build -p nf-cli`: passed.
+- Review fix: references and range writes are bounded to the sheet
+  (XFD1048576), not the u32 address domain; a range with an off-sheet endpoint
+  shifts to a single `#REF!` instead of the unparseable `#REF!:A2`. After the
+  fix: Rust workspace 192 passed (Tally 35), Tally Vitest 25 passed (three live
+  `nf-cli` range-operation tests), workspace TypeScript 9/9.
 - Rust/CLI evidence only. Native JSI hosts, clipboard OS APIs, hardware and
   the unreleased NYC-Tron fill prop's installed consumer contract: NOT RUN.
 - Adds no UI copy or dependency upgrade; stack remains based on Tally grid

@@ -175,7 +175,11 @@ export interface TallyFillPlan {
   readonly target: TallyFillRange;
   readonly direction: "up" | "down" | "left" | "right";
 }
-/** Pass as SpreadsheetGrid.onFillRange. Exactly one engine call per gesture. */
+/**
+ * Pass as SpreadsheetGrid.onFillRange. Exactly one engine call per gesture.
+ * `direction` is not sent: the engine tiles the source block across the whole
+ * target, which gives the same cells for every direction NYC-Tron produces.
+ */
 export function commitTallyFill(document: Pick<TallyDocument, "fillRange">, plan: TallyFillPlan) {
   const rect = (range: TallyFillRange) => {
     if (range.endRow < range.startRow || range.endColumn < range.startColumn)

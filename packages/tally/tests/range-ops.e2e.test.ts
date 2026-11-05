@@ -44,3 +44,34 @@ it("rejects partial paste/fill without changing state or consuming redo", async 
     expect((await doc.getCell("A1")).data?.raw).toBe("after");
   } finally { await doc.close(); }
 });
+
+it("fills mixed sources upward and keeps references on the sheet", async () => {
+  const doc = await TallyDocument.open(host);
+  try {
+    // Number, text, empty and formula cells in one source row.
+    await doc.setRange("A5", [["1", "x", "", "=A5+$A$5"]]);
+    await doc.setCell("C3", "stale");
+    const up = await commitTallyFill(doc, {
+      source: { startRow: 4, endRow: 4, startColumn: 0, endColumn: 3 },
+      target: { startRow: 2, endRow: 4, startColumn: 0, endColumn: 3 }, direction: "up",
+    });
+    expect(up.data?.changed).toBe(7);
+    expect((await doc.getCell("A3")).data).toEqual({ raw: "1", computed: 1 });
+    expect((await doc.getCell("B3")).data?.raw).toBe("x");
+    expect((await doc.getCell("C3")).data?.raw).toBe("");
+    expect((await doc.getCell("D3")).data).toEqual({ raw: "=A3+$A$5", computed: 2 });
+
+    // Filling down from the last row's neighbour shifts a reference off the sheet.
+    await doc.setCell("B1048575", "=B1048576");
+    await commitTallyFill(doc, {
+      source: { startRow: 1048574, endRow: 1048574, startColumn: 1, endColumn: 1 },
+      target: { startRow: 1048574, endRow: 1048575, startColumn: 1, endColumn: 1 }, direction: "down",
+    });
+    expect((await doc.getCell("B1048576")).data).toEqual({ raw: "=#REF!", computed: "#REF!" });
+
+    const before = await doc.save();
+    await expect(doc.setRange("A1048576", [["a"], ["b"]])).rejects.toMatchObject({ code: "out_of_bounds" });
+    await expect(doc.fillRange({ from: "XFD1", to: "XFD1" }, { from: "XFD1", to: "XFE1" })).rejects.toMatchObject({ code: "out_of_bounds" });
+    expect(await doc.save()).toEqual(before);
+  } finally { await doc.close(); }
+});

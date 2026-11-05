@@ -161,7 +161,11 @@ Do not implement paste by looping over `setCell`.
 The source block repeats; this does not extrapolate numeric/date series. All
 source cells are read before any write. Relative references shift; `$` locks,
 strings, whitespace, scientific notation and function identifiers are preserved.
-A shifted reference outside Tally's address domain becomes `#REF!`. Unsupported
+A reference shifted past row 1,048,576 or column XFD becomes `#REF!`; a range
+with either endpoint off the sheet becomes one `#REF!`, so `=SUM(A1:A3)` filled
+up one row reads `=SUM(#REF!)`. Paste and fill targets must fit inside
+XFD1048576. `commitTallyFill` does not send the plan's `direction`, because
+tiling the source over the target gives the same cells for every direction. Unsupported
 lexical syntax rejects the entire fill, rather than rewriting unknown formulas.
 Each source/target or pasted matrix is limited to 16,384 cells. Unchanged range
 writes return `changed: 0` with no event or undo entry. There is no clipboard OS
