@@ -39,7 +39,7 @@ export const tempoFeedsPrecisionScrubber = (t: CadenceTempoBindings): ScrubberCo
   ({ min: t.min, max: t.max, step: t.step, onCommit: t.onTempoCommit });
 export const precisionScrubberPropsAreTyped: IsAny<PrecisionScrubberProps> extends false ? true : never = true;
 
-// Mixer and MIDI editors (NYC-Tron-UI #41, released in v0.1.0-alpha.2): every
+// Mixer and MIDI editors (NYC-Tron-UI #41, released in v0.1.0-alpha.3): every
 // Cadence binding must be assignable to the released props it is spread into.
 export const mixerFeedsMixingConsole = (
   m: CadenceMixerBindings, channels: readonly CadenceMixerChannel[],
