@@ -35,6 +35,17 @@ describe("native 2D pen/touch board coordinates", () => {
     router.handle("up", event(1, 10, 10));
     expect(out).toHaveLength(3);
   });
+  it("keeps a stroke that runs off the canvas and discards an OS-cancelled one", () => {
+    const { out, router } = create();
+    router.handle("down", event(1, 40, 40));
+    router.handle("leave", event(1, 400, 50));
+    expect(out.map(s => s.phase)).toEqual(["begin", "end"]);
+    expect(out[1]).toMatchObject({ x: 1000, y: 250 });
+    router.handle("down", event(2, 40, 40));
+    router.handle("cancel", event(2, 50, 50));
+    expect(out.map(s => s.phase)).toEqual(["begin", "end", "begin", "cancel"]);
+    router.dispose();
+  });
   it("rejects another palm while the pen is captured and remembers pen preference", () => {
     const { out, router } = create();
     router.handle("down", event(1, 0, 0, "pen"));

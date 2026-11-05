@@ -121,8 +121,18 @@ export function createNativeBoardPointerRouter(options: NativeBoardPointerOption
         return;
       }
       if (active === null || event.pointerId !== active.id) return;
-      if (phase === "cancel" || phase === "leave") { cancel(); return; }
+      // The OS cancelled the gesture: discard it. Leaving the canvas is the
+      // user drawing off the edge: keep the stroke, ended at the last
+      // clamped point, as every paint app does.
+      if (phase === "cancel") { cancel(); return; }
       const xy = coords(event, true);
+      if (phase === "leave") {
+        if (xy !== null) { active.x = xy[0]; active.y = xy[1]; }
+        const terminal = active;
+        active = null;
+        send("end", event, terminal.x, terminal.y);
+        return;
+      }
       if (xy !== null) { active.x = xy[0]; active.y = xy[1]; }
       if (phase === "move") {
         if (xy !== null) send("move", event, active.x, active.y);

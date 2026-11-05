@@ -1,7 +1,8 @@
 import { Canvas, DashPathEffect, Fill, Group, Path, Skia } from "react-native-skia";
-import type { ReactElement, ReactNode } from "react";
+import { useRef, type ReactElement, type ReactNode } from "react";
 import type { SceneResult } from "./scene";
 import { boardTransform } from "../ink/geometry";
+import { createSvgPathCache, type SvgPathCache } from "./svg-path-cache";
 
 /**
  * A genuine React Native Skia v3 Graphite canvas. No HTML, WebView, bitmap
@@ -25,6 +26,8 @@ export function NativeBoardCanvas({
   scene, width, height, boardWidth, boardHeight,
   backgroundColor = "#FFFFFF", fallback,
 }: NativeBoardCanvasProps): ReactElement {
+  const cache = useRef<SvgPathCache | null>(null);
+  if (cache.current === null) cache.current = createSvgPathCache((svg) => Skia.Path.MakeFromSVGString(svg));
   if (scene.kind !== "ready" ||
       ![width, height, boardWidth, boardHeight].every(
         (n) => Number.isFinite(n) && n > 0
@@ -35,6 +38,9 @@ export function NativeBoardCanvas({
   // foldable panes. Nonuniform scaling changes brush shape and input mapping.
   const transform = boardTransform(boardWidth, boardHeight, width, height);
   if (transform === null) return <>{fallback}</>;
+  const paths = cache.current.resolve(scene.marks);
+  // A path Skia cannot parse would draw an incomplete document: fall back.
+  if (paths === null) return <>{fallback}</>;
   return (
     <Canvas
       style={{ width, height }}
@@ -45,7 +51,7 @@ export function NativeBoardCanvas({
           { translateX: transform.offsetX }, { translateY: transform.offsetY },
           { scaleX: transform.scale }, { scaleY: transform.scale },
         ]}>
-        {scene.marks.map((m) => (
+        {scene.marks.map((m, index) => (
           <Group key={m.id}
             {...(m.rotation === undefined ? {} : {
               origin: { x: m.rotation.centerX, y: m.rotation.centerY },
@@ -53,7 +59,7 @@ export function NativeBoardCanvas({
             })}
           >
           <Path
-            path={m.path}
+            path={paths[index]!}
             color={m.color}
             style={m.mode}
             strokeWidth={m.width}
