@@ -1,0 +1,169 @@
+import type { CellInfo, TallyDocument } from "./index";
+import {
+  TALLY_GRID_MAX_COLUMNS,
+  TALLY_GRID_MAX_ROWS,
+  TALLY_GRID_MAX_WINDOW_CELLS,
+  commitTallyGridCell,
+  parseTallyCellAddress,
+  readTallyWindow,
+  type TallyGridData,
+} from "./grid-adapter";
+
+/**
+ * Engine side of NYC-Tron's spreadsheet cluster (Forge roster I-01, I-02,
+ * I-06, I-08, I-13, I-14, I-17, I-20). Like `grid-adapter`, this file imports
+ * no React and no `@nyc-tron/*` package: it returns plain data and callbacks
+ * whose shapes match the NYC-Tron props, and the app passes them through.
+ *
+ * Callbacks exist only for operations the Rust Tally engine has. NYC-Tron
+ * draws a control only when its callback is supplied, so the operations in
+ * {@link TALLY_DEFERRED_OPS} never appear as dead buttons.
+ */
+
+/** A worksheet as NYC-Tron `SheetTabs` takes it. `id` is the engine's sheet index. */
+export interface TallySheetTab {
+  readonly id: string;
+  readonly name: string;
+}
+
+/** `SheetTabs` props this adapter can back with real engine operations. */
+export interface TallySheetTabsBinding {
+  readonly tabs: readonly TallySheetTab[];
+  readonly activeId: string;
+  readonly onSelect: (id: string) => Promise<void>;
+  readonly onAdd: () => Promise<void>;
+  readonly onRename: (id: string, name: string) => Promise<void>;
+  readonly onRemove: (id: string) => Promise<void>;
+}
+
+export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | "addSheet" | "renameSheet" | "removeSheet">;
+
+/**
+ * Engine operations the cluster's UI can express but Tally does not have yet.
+ * Each is a DEFER: the matching NYC-Tron callback is left out, so its control
+ * is not drawn. Adding the op to `packages/tally/rust` and `OPS` is what
+ * lifts the deferral.
+ */
+export const TALLY_DEFERRED_OPS = {
+  /** I-02 fill handle (`onFillRange`): needs relative-reference shifting in the engine, and one undo entry per fill. */
+  fillRange: "I-02",
+  /** I-02/I-01 paste into a range: batch write with one undo entry. */
+  setRange: "I-02",
+  /** I-08 `onDuplicate`. */
+  duplicateSheet: "I-08",
+  /** I-08 `onMove`: sheet reorder. */
+  moveSheet: "I-08",
+  /** I-08 `onProtectedChange`. */
+  protectSheet: "I-08",
+  /** I-08 `onToneChange`: tab color stored in the workbook. */
+  setSheetColor: "I-08",
+  /** I-13 `onInsert`: a chart object saved in the workbook. */
+  insertChart: "I-13",
+  /** I-14 `onApply`/`onRemove`: sparkline groups saved in the workbook. */
+  setSparkline: "I-14",
+  /** I-17: freeze panes and split saved with the sheet; today they are app view state only. */
+  setSheetView: "I-17",
+} as const;
+export type TallyDeferredOp = keyof typeof TALLY_DEFERRED_OPS;
+
+function requireData<T>(response: { data?: T }, op: string): T {
+  if (response.data === undefined || response.data === null) throw new Error(`Tally ${op} returned no data`);
+  return response.data;
+}
+
+/** Tabs and the active sheet from `workbook`. */
+export async function readTallySheetTabs(document: Pick<TallyDocument, "workbook">): Promise<{
+  readonly tabs: readonly TallySheetTab[];
+  readonly activeId: string;
+}> {
+  const info = requireData(await document.workbook(), "workbook");
+  if (!Array.isArray(info.sheets) || !Number.isSafeInteger(info.active)) throw new Error("Tally returned an invalid workbook");
+  const tabs = info.sheets.map((sheet, index) => {
+    if (!sheet || typeof sheet.name !== "string") throw new Error("Tally returned a malformed sheet");
+    return { id: String(index), name: sheet.name };
+  });
+  if (info.active < 0 || info.active >= tabs.length) throw new Error("Tally active sheet is out of range");
+  return { tabs, activeId: String(info.active) };
+}
+
+function sheetIndex(id: string): number {
+  const index = Number(id);
+  if (!/^(0|[1-9][0-9]*)$/.test(id) || !Number.isSafeInteger(index)) throw new RangeError(`Unknown sheet id "${id}"`);
+  return index;
+}
+
+/**
+ * Reads the workbook and returns `SheetTabs` props wired to `setActive`,
+ * `addSheet`, `renameSheet` and `removeSheet`. Every callback writes through
+ * the engine, then calls `onChanged` with a fresh binding; an engine error
+ * rejects with the engine's message, which `SheetTabs` shows. Nothing is
+ * applied optimistically.
+ */
+export async function bindTallySheetTabs(
+  document: TallySheetDocument,
+  onChanged: (next: TallySheetTabsBinding) => void,
+): Promise<TallySheetTabsBinding> {
+  const { tabs, activeId } = await readTallySheetTabs(document);
+  const after = async (write: () => Promise<unknown>) => {
+    await write();
+    onChanged(await bindTallySheetTabs(document, onChanged));
+  };
+  return {
+    tabs,
+    activeId,
+    onSelect: id => after(() => document.setActive(sheetIndex(id))),
+    // Tally names new sheets itself; passing no name keeps its default.
+    onAdd: () => after(() => document.addSheet()),
+    onRename: (id, name) => after(() => document.renameSheet(sheetIndex(id), name)),
+    onRemove: id => after(() => document.removeSheet(sheetIndex(id))),
+  };
+}
+
+/** A1 range text (`B2:M2`, `$A$1:C9`, `E4`) as a 0-based end-exclusive window. */
+export function tallyRangeWindow(range: string): {
+  readonly startRow: number; readonly endRow: number; readonly startColumn: number; readonly endColumn: number;
+} {
+  const parts = range.trim().replaceAll("$", "").toUpperCase().split(":");
+  if (parts.length > 2 || parts[0] === "") throw new RangeError(`"${range}" is not a cell range`);
+  const a = parseTallyCellAddress(parts[0]!);
+  const b = parts.length === 2 ? parseTallyCellAddress(parts[1]!) : a;
+  return {
+    startRow: Math.min(a.row, b.row), endRow: Math.max(a.row, b.row) + 1,
+    startColumn: Math.min(a.column, b.column), endColumn: Math.max(a.column, b.column) + 1,
+  };
+}
+
+/**
+ * Cells of an A1 range on the active sheet, for `ChartBuilder` (I-13),
+ * `SparklineEditor` (I-14) and `SpreadsheetCardsView` (I-20). Same bounds and
+ * cell budget as {@link readTallyWindow}.
+ */
+export function readTallyRange(
+  document: Pick<TallyDocument, "getRange" | "setCell">, range: string,
+): Promise<TallyGridData> {
+  return readTallyWindow(document, tallyRangeWindow(range));
+}
+
+/**
+ * `SpreadsheetCardsView.onCommitField` (I-20): one card field is one cell, so
+ * it writes through `setCell` like the grid's formula bar.
+ */
+export function commitTallyCardField(
+  document: Pick<TallyDocument, "getRange" | "setCell">, address: string, raw: string,
+): Promise<unknown> {
+  return commitTallyGridCell(document, address, raw);
+}
+
+/**
+ * Reference colors (I-06), freeze and split (I-17) and the bounded viewport
+ * (I-01) need no engine call beyond `getRange`/`setCell`: references come from
+ * the formula text the grid already shows, and freeze/split are view state.
+ * These bounds are what the app passes as `rowCount`/`columnCount`.
+ */
+export const TALLY_SHEET_BOUNDS = {
+  rowCount: TALLY_GRID_MAX_ROWS,
+  columnCount: TALLY_GRID_MAX_COLUMNS,
+  maxWindowCells: TALLY_GRID_MAX_WINDOW_CELLS,
+} as const;
+
+export type { CellInfo };

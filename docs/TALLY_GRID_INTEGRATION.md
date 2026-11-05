@@ -105,3 +105,56 @@ See [NYC-Tron responsive tables](https://github.com/mikevocalz/NYC-Tron-UI/blob/
 Phone/split-pane source and viewport tests pass on that repository's
 GitHub CI. These tests do not replace physical Surface Duo,
 TalkBack/VoiceOver, keyboard/IME and 1M-row scroll performance acceptance.
+
+## Spreadsheet cluster (roster I-01, I-02, I-06, I-08, I-13, I-14, I-17, I-20)
+
+The controls live in NYC-Tron UI under
+`@nyc-tron/ui/components/forge/spreadsheet/*`
+([NYC-Tron-UI #40](https://github.com/mikevocalz/NYC-Tron-UI/pull/40)).
+`@nitro-forge/tally/grid-cluster` is the engine side. Like `grid-adapter` it
+imports no React and no `@nyc-tron/*`; it returns data and callbacks shaped
+like the NYC-Tron props.
+
+| ID | NYC-Tron control | Engine side (`grid-cluster` / `grid-adapter`) | Status |
+| --- | --- | --- | --- |
+| I-01 | `forge/SpreadsheetGrid` | `readTallyWindow`, `TALLY_SHEET_BOUNDS` | BUILD |
+| I-02 | `SpreadsheetGrid` `onFillRange` | none | **DEFER** on ops `fillRange` and `setRange` (reference shifting and one undo entry belong in the engine). Leave `onFillRange` unset; the handle is not drawn. |
+| I-06 | `SpreadsheetGrid` outlines, `forge/spreadsheet/FormulaReferenceText` | none needed: references come from the formula text | BUILD |
+| I-08 | `forge/spreadsheet/SheetTabs` | `bindTallySheetTabs` → `onSelect`/`onAdd`/`onRename`/`onRemove` over `setActive`/`addSheet`/`renameSheet`/`removeSheet` | BUILD; duplicate, move, protect and tab color **DEFER** on ops `duplicateSheet`, `moveSheet`, `protectSheet`, `setSheetColor` |
+| I-13 | `forge/spreadsheet/ChartBuilder` | `readTallyRange` for the data | BUILD for building and previewing; saving **DEFER** on op `insertChart` (leave `onInsert` unset) |
+| I-14 | `forge/spreadsheet/SparklineEditor`, `Sparkline` | `readTallyRange` | BUILD for editing and drawing in a cell; saving **DEFER** on op `setSparkline` |
+| I-17 | `forge/spreadsheet/FreezeSplitControls`, `SplitSpreadsheetView` | none: app view state feeding `frozenRows`/`frozenColumns` | BUILD; saving with the workbook **DEFER** on op `setSheetView` |
+| I-20 | `forge/spreadsheet/SpreadsheetCardsView` | `readTallyRange`, `commitTallyCardField` (`setCell`) | BUILD |
+
+`TALLY_DEFERRED_OPS` lists the deferred op names in code; a unit test checks
+none of them is in `OPS`, so the list has to change when an op lands.
+
+```tsx
+import { SheetTabs } from "@nyc-tron/ui/components/forge/spreadsheet/SheetTabs";
+import { bindTallySheetTabs } from "@nitro-forge/tally/grid-cluster";
+
+// In the app's Zustand store: tabs come from the engine after every write.
+const binding = await bindTallySheetTabs(document, next => useSheet.setState({ tabs: next }));
+useSheet.setState({ tabs: binding });
+
+<SheetTabs {...useSheet(s => s.tabs)} />;
+```
+
+Sheet ids are the engine's sheet indexes. `setActive` changes the sheet that
+`getRange`/`setCell` act on, so refetch the grid window after `onSelect`.
+Tally records `setActive` in its undo history.
+
+### NYC-Tron release pin
+
+`tooling/nyc-tron.json` pins `@nyc-tron/ui` to the `v0.1.0-alpha.1` release
+tarball (same file as
+[#47](https://github.com/mikevocalz/nitro-forge/pull/47)), checked by
+`tooling/verify-nyc-tron-pin.mjs --download`. `@nitro-forge/tally` takes it as a
+devDependency only, for `tests/nyc-tron-consumer.test.ts`, which typechecks the
+adapter against the released `SpreadsheetGrid` props.
+
+alpha.1 ships `forge/SpreadsheetGrid` but none of the `forge/spreadsheet/*`
+controls; those are in NYC-Tron-UI #40 and not released yet. Until a release
+carries them, the contract test covers SpreadsheetGrid only, and the cluster
+bindings match the #40 prop shapes by structure. Move the pin to the release
+that includes #40 and extend the contract test to the new subpaths.
