@@ -11,6 +11,8 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - "docs/OFFICE_CLUSTER_INTEGRATION.md"
+      - "tooling/nyc-tron.json"
+      - "tooling/verify-nyc-tron-pin.mjs"
       - "pnpm-lock.yaml"
       - ".github/workflows/office-bridge.yml"
   push:
@@ -24,6 +26,8 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - "docs/OFFICE_CLUSTER_INTEGRATION.md"
+      - "tooling/nyc-tron.json"
+      - "tooling/verify-nyc-tron-pin.mjs"
       - "pnpm-lock.yaml"
       - ".github/workflows/office-bridge.yml"
 
@@ -42,16 +46,18 @@ jobs:
       - run: corepack enable
       - name: Install Forge workspace
         run: corepack pnpm install --frozen-lockfile
-      - name: Typecheck Pitch, Quill and Folio with their office adapters
+      - name: Verify the NYC-Tron release pin (URL, lockfile, tarball sha256)
+        run: node tooling/verify-nyc-tron-pin.mjs --download
+      - name: Typecheck Pitch, Quill and Folio adapters and the NYC-Tron consumer contract
         run: |
           corepack pnpm --filter @nitro-forge/pitch typecheck
           corepack pnpm --filter @nitro-forge/quill typecheck
           corepack pnpm --filter @nitro-forge/folio typecheck
       - name: Test adapter bindings and deferred ops (mock documents)
         run: |
-          corepack pnpm --filter @nitro-forge/pitch exec vitest run tests/office-cluster.test.ts
-          corepack pnpm --filter @nitro-forge/quill exec vitest run tests/office-cluster.test.ts
-          corepack pnpm --filter @nitro-forge/folio exec vitest run tests/office-cluster.test.ts
+          corepack pnpm --filter @nitro-forge/pitch exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
+          corepack pnpm --filter @nitro-forge/quill exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
+          corepack pnpm --filter @nitro-forge/folio exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
       - name: Compile real Rust engine host
         run: cargo build -p nf-cli
       - name: Test adapters and existing engine e2e against real Rust
