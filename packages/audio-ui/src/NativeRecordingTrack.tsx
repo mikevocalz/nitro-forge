@@ -17,9 +17,10 @@ export interface NativeRecordingTrackProps {
 }
 
 /**
- * Forge's recording controller drawn with NYC-Tron's RecordingTrack. The
- * controller owns the microphone and file; this component maps its phase and
- * meter history onto the view and routes the view's callbacks back to it.
+ * Forge's recording controller drawn with NYC-Tron's RecordingTrack: Audio
+ * API PCM capture on native, browser MediaRecorder on web (no live browser
+ * peaks). The controller owns the microphone and file; this component maps
+ * its phase and meter history onto the view and routes callbacks back to it.
  */
 export function NativeRecordingTrack({
   store, onSaved, title, testID, disabled = false,

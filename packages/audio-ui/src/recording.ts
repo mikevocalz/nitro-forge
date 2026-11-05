@@ -8,13 +8,46 @@ export type RecordingPhase =
   | { readonly kind: "preparing" }
   | { readonly kind: "recording"; readonly durationMs: number }
   /**
-   * The OS stopped the native recorder (phone call, route loss, another app
-   * taking the session). The partial file can still be finalized with stop().
+   * Capture stopped without the user asking. The take is never discarded:
+   * stop() saves what was recorded. {@linkcode InterruptionCause} says
+   * whether the file is still open and whether capture can resume into it.
    */
-  | { readonly kind: "interrupted"; readonly durationMs: number; readonly message: string }
+  | {
+      readonly kind: "interrupted";
+      readonly durationMs: number;
+      readonly message: string;
+      readonly cause: InterruptionCause;
+    }
   | { readonly kind: "stopping"; readonly durationMs: number }
   | { readonly kind: "saved"; readonly uri: string; readonly durationMs: number }
   | { readonly kind: "error"; readonly message: string };
+
+/**
+ * Why a take is in the "interrupted" phase.
+ * - "session": the OS interrupted the audio session (call, Siri, another
+ *   app). The recorder is paused with its file open; when the OS ends the
+ *   interruption with shouldResume, capture continues into the same file.
+ * - "input-lost": the input device went away (headset unplugged). The
+ *   recorder is paused with its file open so nothing is captured from a
+ *   different microphone; the user saves what was recorded.
+ * - "ended": native capture is over and the file is (or is being)
+ *   finalized. Only saving remains.
+ */
+export type InterruptionCause = "session" | "input-lost" | "ended";
+
+/**
+ * Result of {@linkcode ForgeRecordingController.pauseForInterruption} and
+ * {@linkcode ForgeRecordingController.resumeAfterInterruption}.
+ * - "done": the native recorder paused or is capturing again.
+ * - "skipped": the take was not in a state the step applies to, or another
+ *   controller action was in flight; nothing changed.
+ * - "failed": the native call threw or did not take effect; the take is
+ *   "interrupted" and saveable, and the caller should finalize it.
+ */
+export type InterruptionStep =
+  | { readonly kind: "done" }
+  | { readonly kind: "skipped" }
+  | { readonly kind: "failed"; readonly reason: string };
 
 export interface RecordingSnapshot {
   readonly phase: RecordingPhase;
@@ -38,6 +71,10 @@ export interface RecordingDriver {
   configure(): Promise<void>;
   prepare(): Promise<void>;
   record(): void | Promise<void>;
+  /** Pause capture without closing the file. */
+  pause(): Promise<void>;
+  /** Continue capture into the file opened by record(). */
+  resume(): Promise<void>;
   /** Must return a URI referencing an actual finalized recording. */
   stop(): Promise<string>;
   /**
@@ -84,6 +121,9 @@ export function createRecordingStore(): StoreApi<RecordingSnapshot> {
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Recording failed";
 }
+
+const DONE: InterruptionStep = { kind: "done" };
+const SKIPPED: InterruptionStep = { kind: "skipped" };
 
 export const INTERRUPTED_MESSAGE =
   "Recording stopped by the system (call, route change or another app).";
@@ -187,14 +227,69 @@ export class ForgeRecordingController {
     this.store.setState({ phase: { kind: "recording", durationMs }, levelHistory });
   }
 
-  /** The OS stopped native capture while this controller was recording. */
-  reportInterrupted(): void {
+  /**
+   * Native capture ended without the user asking (system stop, app left the
+   * foreground, or an interruption that may not resume). Moves a recording
+   * or paused take to cause "ended"; the caller finalizes the file.
+   */
+  reportInterrupted(message = INTERRUPTED_MESSAGE): void {
     if (this.disposed || this.busy) return;
     const phase = this.store.getState().phase;
-    if (phase.kind !== "recording") return;
+    if (phase.kind !== "recording" && !(phase.kind === "interrupted" && phase.cause !== "ended")) return;
     this.store.setState({
-      phase: { kind: "interrupted", durationMs: phase.durationMs, message: INTERRUPTED_MESSAGE },
+      phase: { kind: "interrupted", durationMs: phase.durationMs, message, cause: "ended" },
     });
+  }
+
+  /**
+   * Pause a live take with its file open: an OS session interruption
+   * ("session") or a lost input device ("input-lost"). The phase moves to
+   * "interrupted" before the native call, so the take stays saveable even
+   * when pausing fails; the caller then finalizes it.
+   */
+  async pauseForInterruption(cause: "session" | "input-lost", message: string): Promise<InterruptionStep> {
+    if (this.disposed || this.busy) return SKIPPED;
+    const phase = this.store.getState().phase;
+    if (phase.kind !== "recording") return SKIPPED;
+    this.busy = true;
+    const generation = ++this.generation;
+    this.store.setState({ phase: { kind: "interrupted", durationMs: phase.durationMs, message, cause } });
+    try {
+      await this.driver.pause();
+      return this.isCurrent(generation) ? DONE : SKIPPED;
+    } catch (error) {
+      return { kind: "failed", reason: "Pausing the recorder failed: " + errorMessage(error) };
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /**
+   * Continue a take paused by an OS interruption ("session" cause) into the
+   * same file. Audio API's resume() returns without error when it cannot
+   * resume (no stream, already finalized), so the result is confirmed with
+   * getStatus() before the phase returns to "recording". On failure the take
+   * stays "interrupted" and saveable; the caller finalizes it.
+   */
+  async resumeAfterInterruption(): Promise<InterruptionStep> {
+    if (this.disposed || this.busy) return SKIPPED;
+    const phase = this.store.getState().phase;
+    if (phase.kind !== "interrupted" || phase.cause !== "session") return SKIPPED;
+    this.busy = true;
+    const generation = ++this.generation;
+    let failure: string | null = null;
+    try {
+      await this.driver.resume();
+      if (!this.driver.getStatus().isRecording) failure = "The recorder did not restart after the interruption";
+    } catch (error) {
+      failure = "Resuming the recorder failed: " + errorMessage(error);
+    } finally {
+      this.busy = false;
+    }
+    if (!this.isCurrent(generation)) return SKIPPED;
+    if (failure !== null) return { kind: "failed", reason: failure };
+    this.store.setState({ phase: { kind: "recording", durationMs: phase.durationMs } });
+    return DONE;
   }
 
   /** The native status read threw while recording: show it, don't freeze. */

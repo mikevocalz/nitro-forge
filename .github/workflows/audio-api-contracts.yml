@@ -1,0 +1,28 @@
+name: Audio API lifecycle contracts
+on:
+  pull_request:
+    paths:
+      - 'packages/audio-ui/**'
+      - 'apps/forge-audio-lab/**'
+      - '.github/workflows/audio-api-contracts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      # Dependency-free: runs before react-native-audio-api clears the
+      # minimumReleaseAge gate, so no install step is needed here.
+      - run: node --experimental-strip-types --test packages/audio-ui/node-tests/audio-api.test.mjs
+      - name: Reject retired audio dependencies
+        run: |
+          if grep -R -E 'from ["\x27]expo-audio|"expo-audio"' packages/audio-ui/src packages/audio-ui/package.json apps/forge-audio-lab; then
+            echo 'Forge audio must use Audio API, not Expo Audio'; exit 1
+          fi

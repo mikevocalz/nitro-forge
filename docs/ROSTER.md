@@ -100,3 +100,14 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
 - No git remote → commits are local; no PRs.
+
+## Audio API migration draft — November 4, 2026
+
+Audio lab and audio-ui migrate native capture and shared playback to
+react-native-audio-api 1.0.0; browser capture directly uses MediaRecorder
+because upstream has no browser recorder. Seven dependency-free audio graph /
+PCM contracts pass locally. Full install correctly blocked by the 24-hour
+package-age policy until 18:01:08.810 UTC; lockfile, TypeScript, Metro, native
+builds and hardware capture/playback are pending. No Cadence project attachment,
+multitrack DAW, Meta runtime or production readiness is asserted.
+See packages/audio-ui/README.md for API/skill roster and exact boundaries.

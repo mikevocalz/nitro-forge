@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { AudioContext, type AudioBuffer } from "react-native-audio-api";
 import { NativeRecordingTrack } from "./NativeRecordingTrack";
 import { WaveformPeakAccumulator } from "./pcmPeaks";
 import { postDecodeRejection, preDecodeRejection } from "./webDecodeBounds";
@@ -84,6 +86,8 @@ async function decodeWebRecording(uri: string): Promise<SourceRecordingFile> {
 export function NativeSourceRecordingTrack({
   store, disabled, title, testID, onSaved,
 }: NativeSourceRecordingTrackProps) {
+  const generation = useRef(0);
+  useEffect(() => { generation.current++; return () => { generation.current++; }; }, [store]);
   return (
     <NativeRecordingTrack
       store={store}
@@ -91,12 +95,16 @@ export function NativeSourceRecordingTrack({
       {...(title === undefined ? {} : { title })}
       {...(testID ? { testID } : {})}
       onSaved={(uri) => {
-        void decodeWebRecording(uri)
-          .then((result) => onSaved?.(result))
-          .catch((error: unknown) => onSaved?.({
-            kind: "compressed-web", uri, peaks: [], waveform: "unavailable",
-            reason: error instanceof Error ? error.message : String(error),
-          }));
+        const token = generation.current;
+        const deliver = (result: SourceRecordingFile) => {
+          // A later recording, a store swap or unmount makes this decode stale.
+          const latest = store.getState().phase;
+          if (generation.current === token && latest.kind === "saved" && latest.uri === uri) onSaved?.(result);
+        };
+        void decodeWebRecording(uri).then(deliver, (error: unknown) => deliver({
+          kind: "compressed-web", uri, peaks: [], waveform: "unavailable",
+          reason: error instanceof Error ? error.message : String(error),
+        }));
       }}
     />
   );

@@ -13,10 +13,15 @@
     },
     "plugins": [
       [
-        "expo-audio",
+        "react-native-audio-api",
         {
-          "microphonePermission": "Allow Nitro Forge Audio Lab to record sound for your studio project.",
-          "enableBackgroundRecording": false
+          "iosMicrophonePermission": "Allow Nitro Forge to record audio for your project.",
+          "iosBackgroundMode": false,
+          "androidPermissions": [
+            "android.permission.RECORD_AUDIO"
+          ],
+          "androidForegroundService": false,
+          "enableFFmpeg": false
         }
       ]
     ]

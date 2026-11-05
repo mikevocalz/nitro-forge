@@ -5,11 +5,12 @@ import { inputLevel, toRecordingViewState } from "./recordingView";
 import type { NativeSourceRecordingTrackProps } from "./sourceRecordingTypes";
 
 /**
- * iOS/Android: Forge's PCM recorder drawn with NYC-Tron's RecordingTrack.
- * Peaks come from the captured PCM buffers; no synthesized bars. While
- * recording the lane shows the last 160 live buffer peaks; after saving it
- * shows the 512 full-recording columns from stop(), resampled to the lane's
- * 128-column maximum (each column keeps its min/max).
+ * iOS/Android: Forge's Audio API PCM recorder drawn with NYC-Tron's
+ * RecordingTrack. Audio API delivers planar Float32 buffers to JS for peaks
+ * while the native recorder writes a mono 48kHz 16-bit WAV file; no
+ * synthesized bars. While recording the lane shows the last 160 live buffer
+ * peaks; after saving it shows the 512 full-recording columns from stop(),
+ * resampled to the lane's 128-column maximum (each column keeps its min/max).
  */
 export function NativeSourceRecordingTrack({
   store, onSaved, disabled = false, title, testID,

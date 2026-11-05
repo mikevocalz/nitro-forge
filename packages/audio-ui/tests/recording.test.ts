@@ -21,6 +21,8 @@ function mockRecorder(permission = true) {
     configure: async () => { calls.push("configure"); },
     prepare: async () => { calls.push("prepare"); },
     record: () => { calls.push("record"); isRecording = true; },
+    pause: async () => { calls.push("pause"); isRecording = false; },
+    resume: async () => { calls.push("resume"); isRecording = true; },
     stop: async () => {
       calls.push("stop");
       isRecording = false;
@@ -135,6 +137,7 @@ describe("host lifecycle re-runs and interruptions", () => {
     expect(controller.store.getState().phase).toEqual({
       kind: "interrupted", durationMs: 900,
       message: "Recording stopped by the system (call, route change or another app).",
+      cause: "ended",
     });
   });
 
