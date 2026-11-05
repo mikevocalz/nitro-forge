@@ -28,7 +28,7 @@ The same approved ArtCraft fix can eventually reach Moyo, DVNT, NYC-MON, Pa'Casa
 
 | ID | Expertise / owner | Required outcome | Evidence | Status |
 | --- | --- | --- | --- | --- |
-| UP-01 | GitHub automation | Source watcher and observed-only PR | Node offline tests + workflow, changed HEAD PR | Code proposed; tests unverified |
+| UP-01 | GitHub automation | Source watcher and observed-only PR | Node offline tests + workflow, changed HEAD PR | Offline tests and `--validate` PASS in PR CI; live `--check` PASS locally 2026-11-05; bot PR NOT RUN (schedule runs only from `master`) |
 | UP-02 | Source reviewer | inspect all changed commits/merged PRs, stable SHA, license, NOTICE, transitive crates, codegen | signed-off candidate report | PLANNED |
 | UP-03 | Rust engineer | admit reviewed source by exact SHA only after ABI/feature tests | cargo host/iOS/Android/WASM compile & execution | PLANNED |
 | UP-04 | Engine maintainer | map upstream functionality to Ignition typed ops without breaking existing APIs | op-level regression/negative tests and docs/ENGINE_OPS updates | PLANNED |
@@ -36,7 +36,7 @@ The same approved ArtCraft fix can eventually reach Moyo, DVNT, NYC-MON, Pa'Casa
 | UP-06 | Formats engineer | prove binary/document import/export fidelity, metadata and undo/redo | real fixture corpus per format | PLANNED |
 | UP-07 | Graphics/native reviewer | render with Skia **v3 Graphite**, and verified Dawn/TypeGPU interop only as appropriate | device screenshot/parity, memory and GPU-loss traces | PLANNED |
 | UP-08 | Browser/WASM reviewer | independently compile and run web adapter | browser edits/snapshots/worker cancellation | PLANNED |
-| UP-09 | Release engineer | semver SDK, provenance, npm pack artifacts, feature manifest | package install + native/web matrix and changelog | PLANNED |
+| UP-09 | Release engineer | semver SDK, provenance, GitHub Release tarballs with `SHA256SUMS` (never npm), feature manifest | package install + native/web matrix and changelog | PLANNED |
 | UP-10 | App consumer leads | Moyo and second app adopt same released package through review PRs | CI+device acceptance per host; rollback instructions | PLANNED |
 
 ## Admission gates and mandatory skills
@@ -58,4 +58,4 @@ node tooling/upstream/watch.mjs --write
 `--write` intentionally changes candidate observed SHA metadata and creates a summary file only when upstream changed; it is **not** an engine upgrade. The workflow opens an approval PR; it never uses a force-push or silently ships Rust source to app consumers.
 
 ### Current limits
-The reference SHAs are **observations on 2026-11-02**, not accepted engine pins. Online fetching requires GitHub network and optional GITHUB_TOKEN. We have not run the watcher in the user's GitHub Actions environment or seen a bot PR created. The existing local/CLI Ignition test ledger remains separate from this source-monitoring evidence.
+The reference SHAs are **observations on 2026-11-02**, not accepted engine pins. Online fetching requires GitHub network and optional GITHUB_TOKEN. On 2026-11-05 a local `--check` with a token reached all 11 repositories, reported 11 drifted heads, exited 2 and wrote nothing. The scheduled job has not run, because schedules only fire from `master`, so no bot PR has been created yet. The existing local/CLI Ignition test ledger remains separate from this source-monitoring evidence.
