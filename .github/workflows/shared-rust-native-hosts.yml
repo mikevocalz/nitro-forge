@@ -1,17 +1,21 @@
 name: Shared Rust native hosts
 
 on:
-  push:
-    branches:
-      - feat/shared-rust-windows-qnx-2026-11-05
   pull_request:
     paths:
       - 'packages/ignition-native/**'
+      - 'packages/ignition-windows/**'
+      - 'packages/ignition/**'
       - 'packages/ignition-v1-lab/cpp/ForgeRustSession.*'
       - 'packages/ignition-v1-lab/cpp/ForgeSerialQueue.*'
       - 'rust/**'
       - 'packages/*/rust/**'
+      - 'Cargo.toml'
       - 'Cargo.lock'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.base.json'
       - 'tooling/native/shared_engine_roundtrip.cpp'
       - 'tooling/native/serial_queue_test.cpp'
       - 'tooling/native/nf_v1_symbols.txt'
@@ -26,6 +30,24 @@ env:
   CARGO_BUILD_JOBS: 2
 
 jobs:
+  windows-transport-contract:
+    name: Windows transport TypeScript contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.22.1'
+      - name: Enable the repository's pinned pnpm
+        run: corepack enable
+      - name: Install the committed workspace graph
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check the Windows EngineHost implementation
+        run: pnpm --filter @nitro-forge/ignition-windows typecheck
+      - name: Check transport mapping and lifecycle
+        run: pnpm --filter @nitro-forge/ignition-windows test
+
   native-engine:
     name: Native engine (${{ matrix.rust-target }})
     runs-on: ${{ matrix.os }}
@@ -98,6 +120,12 @@ jobs:
             --binary "$exe" "${map_args[@]}"
       - name: Run edit, undo, save, reopen and queue tests
         run: ctest --test-dir target/native-host -C Release --output-on-failure
+      - name: Configure the Windows transport worker
+        run: cmake -S packages/ignition-windows -B target/ignition-windows -DNF_WINDOWS_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake-args }} "-DNF_RUST_LIBRARY=${{ github.workspace }}/target/${{ matrix.rust-target }}/release/${{ matrix.library }}"
+      - name: Build the transport worker and platform codec
+        run: cmake --build target/ignition-windows --config Release --parallel 2
+      - name: Check worker lifecycle and native snapshot encoding
+        run: ctest --test-dir target/ignition-windows -C Release --output-on-failure
       - name: Keep the real document for cross-target interchange checks
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

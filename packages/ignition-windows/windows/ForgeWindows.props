@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Import in the RNW application's vcxproj before Microsoft.Cpp.targets.
+       Set ForgeNativeBuildDir and ForgeRustLibrary to absolute paths first. -->
+  <PropertyGroup>
+    <ForgeWindowsPackageDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</ForgeWindowsPackageDir>
+    <ForgeRustSystemLibraries Condition="'$(ForgeRustSystemLibraries)' == ''">advapi32.lib;bcrypt.lib;dbghelp.lib;kernel32.lib;ntdll.lib;userenv.lib;ws2_32.lib</ForgeRustSystemLibraries>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ForgeWindowsPackageDir)cpp;$(ForgeWindowsPackageDir)..\ignition-v1-lab\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>$(ForgeNativeBuildDir)\Release\forge_windows_worker.lib;$(ForgeNativeBuildDir)\Release\forge_windows_codec.lib;$(ForgeNativeBuildDir)\native\Release\forge_rust_session.lib;$(ForgeRustLibrary);$(ForgeRustSystemLibraries);crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="$(ForgeWindowsPackageDir)cpp\ForgeWindowsModule.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+    </ClCompile>
+  </ItemGroup>
+  <Target Name="ValidateForgeWindowsNativeBuild" BeforeTargets="ClCompile">
+    <Error Condition="'$(Configuration)' != 'Release'" Text="ForgeWindows currently requires a Release /MD native build. Build and link the documented configuration." />
+    <Error Condition="'$(ForgeNativeBuildDir)' == '' or !Exists('$(ForgeNativeBuildDir)\Release\forge_windows_worker.lib')" Text="Set ForgeNativeBuildDir to the CMake build directory for packages/ignition-windows and build Release first." />
+    <Error Condition="!Exists('$(ForgeNativeBuildDir)\Release\forge_windows_codec.lib')" Text="ForgeWindows snapshot codec library is missing; build packages/ignition-windows on Windows first." />
+    <Error Condition="!Exists('$(ForgeNativeBuildDir)\native\Release\forge_rust_session.lib')" Text="The common Forge Rust session library is missing from the Windows CMake build." />
+    <Error Condition="'$(ForgeRustLibrary)' == '' or !Exists('$(ForgeRustLibrary)')" Text="Set ForgeRustLibrary to the matching target's release nf_sys.lib." />
+  </Target>
+</Project>

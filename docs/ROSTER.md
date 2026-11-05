@@ -147,8 +147,16 @@ queue; platform hosts do not add another engine or change the NFD1 format.
 | CMake Release build of `packages/ignition-native` | PASS | GCC 13.3.0, CMake 4.4.4, real `libnf_sys.a` |
 | `forge_tally_write` + `forge_tally_reopen` | 2/2 PASS | Separate processes; formula/edit/undo/redo, isolation, malformed input, binary save/reopen, disposal; 145-byte NFD1 file |
 | `forge_serial_queue` | PASS | 500 tasks in order, maximum concurrent drain count 1 |
-| Windows MSVC native job | PENDING | Added in `shared-rust-native-hosts.yml`; report CI separately |
-| RNW app/JS integration | NOT RUN | Requires a Windows host app and runtime |
+| Windows MSVC native job | PASS | MSVC 19.44.35229.0; 13 nf-sys tests and 3 native CTest cases; [run 42119257282](https://github.com/mikevocalz/nitro-forge/actions/runs/42119257282), commit `2f33f2fb204077c4a493788ee36890c76f03b31a` |
+| Linux CI native job | PASS | Same 13 Rust ABI tests and 3 CTest cases in run 42119257282 |
+| Windows ARM64, ABI gate and three-target interchange | PASS | Incoming commit `88ef06e2a5d0977d3de643fbaf368f32dbcacdb6`; all six jobs in [run 42121532215](https://github.com/mikevocalz/nitro-forge/actions/runs/42121532215); new worker/codec steps require the next run |
+| Windows-created NFD1 reopened on Linux | PASS | Downloaded Windows CI artifact; byte-identical to the Linux file; real native reader recomputes 42 and edits/undoes successfully |
+| Windows transport TypeScript | 10/10 PASS | Boundary/lifecycle tests; fake native module, not RNW runtime evidence |
+| `pnpm -r test` and `pnpm -r typecheck` | 48 tests PASS; all package typechecks PASS | pnpm 10.32.1; includes existing real-engine CLI suites, new Windows transport and v1 codegen |
+| Console all-engine workflow | PASS via `node --import tsx src/main.ts` in `apps/console` | The normal `tsx` CLI cannot create its IPC socket in this sandbox (`EPERM`); direct entry executes all seven engine workflows |
+| Frozen workspace install | PASS | Lockfile adds only the Windows adapter workspace importer; no existing dependency versions change |
+| Windows owned worker on Linux | 1/1 PASS | Actual Rust archive; FIFO, error recovery, close and teardown |
+| RNW app/JS integration | NOT RUN | Requires RNW 0.85.0 host with the template's v145 toolset and runtime |
 | QNX native build/device | NOT RUN | QNX SDP/qcc and target device are unavailable in this development environment |
 
 See [`SHARED_RUST_HOSTS.md`](native/SHARED_RUST_HOSTS.md) for source boundaries,
