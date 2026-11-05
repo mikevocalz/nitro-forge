@@ -47,6 +47,8 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
     /** Hardware safety bound; JS scanDurationMs is capped at the same 30 s. */
     private const val MAX_SCAN_DURATION_MS = 30_000L
     private const val CONNECT_TIMEOUT_MS = 15_000L
+    /** Devices kept per scan; JS shows the same count. */
+    private const val MAX_DEVICES = 50
   }
 
   private data class Seen(val device: BluetoothDevice, val name: String, val rssi: Int)
@@ -114,7 +116,7 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
         val name = cachedName?.takeIf { it.isNotBlank() } ?: result.scanRecord?.deviceName
         if (name.isNullOrBlank()) return
         val id = device.address
-        if (id.isNotBlank() && discovered.size < 50) discovered[id] = Seen(device, name, result.rssi)
+        if (id.isNotBlank()) remember(id, Seen(device, name, result.rssi))
       }
       override fun onScanFailed(errorCode: Int) {
         scanFailure = "Android Bluetooth scan failed, code " + errorCode
@@ -154,9 +156,32 @@ class HybridForgeBluetooth : HybridForgeBluetoothSpec() {
     }
   }
 
+  /**
+   * Keeps at most [MAX_DEVICES] devices. When full, a stronger new device
+   * replaces the weakest one, so in a room with many advertisers the pen
+   * held next to the phone is not dropped for arriving after the 50th.
+   */
+  private fun remember(id: String, seen: Seen) {
+    synchronized(discovered) {
+      if (discovered.containsKey(id) || discovered.size < MAX_DEVICES) {
+        discovered[id] = seen
+        return
+      }
+      val weakest = discovered.entries.minByOrNull { it.value.rssi } ?: return
+      if (seen.rssi > weakest.value.rssi) {
+        discovered.remove(weakest.key)
+        discovered[id] = seen
+      }
+    }
+  }
+
+  /** Strongest signal first, so the nearest device leads the list. */
   override fun getDevicesJson(): String {
     val array = JSONArray()
-    for ((id, seen) in discovered.entries.sortedBy { it.key }.take(50)) {
+    val ordered = synchronized(discovered) {
+      discovered.entries.map { it.key to it.value }.sortedByDescending { it.second.rssi }
+    }
+    for ((id, seen) in ordered) {
       array.put(JSONObject().put("id", id).put("name", seen.name).put("rssi", seen.rssi))
     }
     return array.toString()

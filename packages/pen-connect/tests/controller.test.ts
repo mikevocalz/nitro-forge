@@ -45,7 +45,18 @@ describe("Pen pairing and verified-ready controller", () => {
     expect(c.state.getState()).toMatchObject({kind:"error",code:"disconnected"});
     c.dispose();
   });
-  it("never scans or pairs after denied permissions", async () => {
+  it("exposes its connect mode and goes from the tap straight to the OS prompt", async () => {
+const f=fakePort(), c=createPenConnectionController(f.port);
+expect(c.mode).toBe("bluetooth-le");
+const seen: string[]=[];
+const stop=c.state.subscribe((s)=>{seen.push(s.kind);});
+await c.begin();
+stop();
+expect(seen[0]).toBe("requesting-permission");
+expect(seen).not.toContain("explaining-permission");
+c.dispose();
+});
+it("never scans or pairs after denied permissions", async () => {
     const f=fakePort(), c=createPenConnectionController(f.port);
     f.setAllowed(false); await c.begin();
     expect(c.state.getState()).toMatchObject({kind:"error",code:"permission"});

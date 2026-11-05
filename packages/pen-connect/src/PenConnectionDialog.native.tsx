@@ -1,10 +1,10 @@
 import { useStore } from "zustand";
-import type { ReactElement, ReactNode } from "react";
+import { useEffect, type ReactElement, type ReactNode } from "react";
 import {
-  ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View,
+  AccessibilityInfo, ActivityIndicator, FlatList, Modal, Platform, Pressable, StyleSheet, Text, View,
 } from "react-native";
 import type { PenConnectionController } from "./controller";
-import type { PenConnectionState, PenDevice } from "./types";
+import type { PenConnectMode, PenConnectionState, PenDevice } from "./types";
 
 /**
  * The animation is a view of VERIFIED status, never the source of truth.
@@ -21,9 +21,11 @@ export interface PenConnectionDialogProps {
     phase: "searching" | "pairing" | "linked" | "connected" | "error",
   ) => ReactNode;
 }
-const describe = (state: PenConnectionState): string => {
+const describe = (state: PenConnectionState, mode: PenConnectMode): string => {
   switch (state.kind) {
-    case "idle": return "Connect a pen to draw.";
+    case "idle": return mode === "bluetooth-le"
+      ? "Connect a pen to draw. Connect asks for Bluetooth access so this app can find nearby pens."
+      : "Connect a pen to draw. Pairing happens in your headset's Bluetooth Settings.";
     case "explaining-permission": return "Bluetooth access is needed to find compatible pens.";
     case "requesting-permission": return "Waiting for the system Bluetooth permission dialog…";
     case "system-pairing": return "Pair in your headset's Bluetooth Settings. The pen is ready only when tracking is available.";
@@ -56,6 +58,12 @@ export function PenConnectionDialog({
   const state = useStore(controller.state, (s) => s);
   const phase = stateAnimation(state);
   const busy = state.kind === "requesting-permission" || state.kind === "scanning" || state.kind === "connecting";
+  const description = describe(state, controller.mode);
+  // Android reads the live region below; iOS has no live regions, so
+  // status changes (found, linked, error) are announced explicitly.
+  useEffect(() => {
+    if (visible && Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(description);
+  }, [visible, description]);
   const finish = () => {
     // Closing an established link is not a disconnect action.
     if (state.kind !== "ready" && state.kind !== "linked") void controller.cancel();
@@ -76,7 +84,7 @@ export function PenConnectionDialog({
               ? <ActivityIndicator accessibilityLabel="Connecting" size="large" color="#8F7AFF" />
               : <Text style={styles.glyph}>{state.kind === "ready" ? "✓" : state.kind === "error" ? "!" : "✎"}</Text>}
           </View>
-          <Text style={styles.description}>{describe(state)}</Text>
+          <Text accessibilityLiveRegion="polite" style={styles.description}>{description}</Text>
           {state.kind === "system-pairing" ? (
             <View style={styles.steps}>
               {state.instructions.map((step, i) => (

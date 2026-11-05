@@ -1,9 +1,14 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
-import type { BlePenPort, PenConnectionPort, PenConnectionState, PenDevice, PenLink, PenVerification } from "./types";
+import type { BlePenPort, PenConnectMode, PenConnectionPort, PenConnectionState, PenDevice, PenLink, PenVerification } from "./types";
 
 export interface PenConnectionController {
   readonly state: StoreApi<PenConnectionState>;
-  /** Show rationale and request a real OS permission only after a tap. */
+  /** How this platform connects; the dialog explains it before {@linkcode begin}. */
+  readonly mode: PenConnectMode;
+  /**
+   * Requests the OS Bluetooth permission. Call it from the Connect tap only;
+   * the rationale is the idle copy shown before that tap.
+   */
   begin(): Promise<void>;
   /** Start another foreground scan with previously granted permissions. */
   rescan(): Promise<void>;
@@ -63,6 +68,7 @@ export function createPenConnectionController(port: PenConnectionPort): PenConne
   };
   return {
     state,
+    mode: port.mode,
     async begin() {
       if (disposed) return;
       const generation = ++epoch;
@@ -74,8 +80,8 @@ export function createPenConnectionController(port: PenConnectionPort): PenConne
         transition({kind:"system-pairing",deviceName:port.deviceName,instructions:port.pairingInstructions});
         return;
       }
-      transition({kind:"explaining-permission",mode:port.mode});
-      // Permission is only requested once user explicitly presses Connect.
+      // begin() is the Connect tap, so the system dialog opens right away;
+      // the rationale was the idle copy the user read before tapping.
       transition({kind:"requesting-permission"});
       try {
         granted = await port.requestAccess();
