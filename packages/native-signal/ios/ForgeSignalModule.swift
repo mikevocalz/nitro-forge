@@ -12,25 +12,38 @@ public class ForgeSignalModule: Module {
 }
 
 private enum WavPeaks {
-  enum Problem: Error {
+  // LocalizedError so the JS rejection carries a readable message instead of
+  // "WavPeaks.Problem error 3"; the Kotlin side throws the same sentences.
+  enum Problem: LocalizedError {
     case invalidColumns
     case invalidUri
     case outsideSandbox
     case fileTooLarge
     case malformedWav
     case unsupportedPcm
+
+    var errorDescription: String? {
+      switch self {
+      case .invalidColumns: return "columns must be between 1 and 4096"
+      case .invalidUri: return "Only sandbox-local file:// WAV URIs are supported"
+      case .outsideSandbox: return "WAV file must be inside the app's Caches or Documents directory"
+      case .fileTooLarge: return "WAV file missing or larger than 64 MiB"
+      case .malformedWav: return "Expected a well-formed RIFF/WAVE file"
+      case .unsupportedPcm: return "Only mono/stereo 16-bit integer PCM WAV is supported"
+      }
+    }
   }
 
-  static func read16(_ bytes: [UInt8], _ at: Int) -> Int {
+  static func read16(_ bytes: UnsafeRawBufferPointer, _ at: Int) -> Int {
     Int(bytes[at]) | (Int(bytes[at + 1]) << 8)
   }
 
-  static func read32(_ bytes: [UInt8], _ at: Int) -> Int {
+  static func read32(_ bytes: UnsafeRawBufferPointer, _ at: Int) -> Int {
     Int(bytes[at]) | (Int(bytes[at + 1]) << 8) |
       (Int(bytes[at + 2]) << 16) | (Int(bytes[at + 3]) << 24)
   }
 
-  static func code(_ bytes: [UInt8], _ at: Int) -> String {
+  static func code(_ bytes: UnsafeRawBufferPointer, _ at: Int) -> String {
     String(decoding: bytes[at..<(at + 4)], as: UTF8.self)
   }
 
@@ -64,8 +77,13 @@ private enum WavPeaks {
     guard let size = attributes[.size] as? NSNumber, size.int64Value <= 64 * 1024 * 1024 else {
       throw Problem.fileTooLarge
     }
+    // Read the mapped file in place: copying it into [UInt8] doubled peak
+    // memory to 128 MiB at the size limit.
     let data = try Data(contentsOf: url, options: .mappedIfSafe)
-    let bytes = Array(data)
+    return try data.withUnsafeBytes { try peaks($0, columns: columns) }
+  }
+
+  static func peaks(_ bytes: UnsafeRawBufferPointer, columns: Int) throws -> [[Double]] {
     guard bytes.count >= 44,
           code(bytes, 0) == "RIFF",
           code(bytes, 8) == "WAVE" else {
