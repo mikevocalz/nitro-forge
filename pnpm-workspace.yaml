@@ -26,3 +26,6 @@ overrides:
 
 patchedDependencies:
   "@expo/metro-file-map@58.0.5": patches/@expo__metro-file-map@58.0.5.patch
+
+# No release-age quarantine: CI and local installs take new versions immediately.
+minimumReleaseAge: 0
