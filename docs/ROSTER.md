@@ -550,4 +550,8 @@ See packages/audio-ui/README.md for API/skill roster and exact boundaries.
 
 31 tests pass, including atomic paste/fill against a freshly built nf-cli. Tally TypeScript and the release URL/lockfile/SHA256 pin check pass. Includes the local #50/#54 stack.
 
+## Recovered alpha.3 Office consumer (2026-11-05)
+
+Pitch 17, Quill 12 and Folio 10 tests pass against a freshly built nf-cli. All three package typechecks and the release URL/lockfile/SHA256 pin check pass. Includes the local #53/#55 stack.
+
 These are local source/protocol checks. No new native build or device acceptance was run. The follow-up has not been pushed or merged.

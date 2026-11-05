@@ -1,0 +1,69 @@
+name: Office adapters (Pitch, Quill, Folio Rust bridge)
+
+on:
+  pull_request:
+    paths:
+      - "packages/pitch/**"
+      - "packages/quill/**"
+      - "packages/folio/**"
+      - "packages/ignition/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docs/OFFICE_CLUSTER_INTEGRATION.md"
+      - "tooling/nyc-tron.json"
+      - "tooling/verify-nyc-tron-pin.mjs"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/office-bridge.yml"
+  push:
+    branches: [master]
+    paths:
+      - "packages/pitch/**"
+      - "packages/quill/**"
+      - "packages/folio/**"
+      - "packages/ignition/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docs/OFFICE_CLUSTER_INTEGRATION.md"
+      - "tooling/nyc-tron.json"
+      - "tooling/verify-nyc-tron-pin.mjs"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/office-bridge.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  adapters:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Install Forge workspace
+        run: corepack pnpm install --frozen-lockfile
+      - name: Verify the NYC-Tron release pin (URL, lockfile, tarball sha256)
+        run: node tooling/verify-nyc-tron-pin.mjs --download
+      - name: Typecheck Pitch, Quill and Folio adapters and the NYC-Tron consumer contract
+        run: |
+          corepack pnpm --filter @nitro-forge/pitch typecheck
+          corepack pnpm --filter @nitro-forge/quill typecheck
+          corepack pnpm --filter @nitro-forge/folio typecheck
+      - name: Test adapter bindings and deferred ops (mock documents)
+        run: |
+          corepack pnpm --filter @nitro-forge/pitch exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
+          corepack pnpm --filter @nitro-forge/quill exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
+          corepack pnpm --filter @nitro-forge/folio exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
+      - name: Compile real Rust engine host
+        run: cargo build -p nf-cli
+      - name: Test adapters and existing engine e2e against real Rust
+        run: |
+          corepack pnpm --filter @nitro-forge/pitch exec vitest run
+          corepack pnpm --filter @nitro-forge/quill exec vitest run
+          corepack pnpm --filter @nitro-forge/folio exec vitest run
+      # This compiles Rust on Linux and checks the command protocol, not a
+      # native Nitro JSI/Swift/Compose component or a device renderer.
