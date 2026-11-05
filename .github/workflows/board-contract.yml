@@ -1,0 +1,39 @@
+name: Forge Board draft source + codegen checks
+on:
+  pull_request:
+    paths:
+      - 'packages/board/**'
+      - 'docs/native/NATIVE_BOARD_EXTRACTION.md'
+      - 'docs/native/BOARD_IMPLEMENTATION_ROSTER.md'
+      - '.github/workflows/board-contract.yml'
+  push:
+    branches:
+      - 'feat/native-whiteboard-*'
+    paths:
+      - 'packages/board/**'
+      - '.github/workflows/board-contract.yml'
+jobs:
+  native-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies (new package needs lockfile reconciliation)
+        run: pnpm install --frozen-lockfile
+      - name: Nitro v1 code generation
+        run: pnpm --filter @nitro-forge/board codegen
+      - name: Typecheck portable contracts and Nitro-generated signatures
+        run: pnpm --filter @nitro-forge/board typecheck
+      - name: Native-renderer binding replay tests (no device claim)
+        run: pnpm --filter @nitro-forge/board test
+      - name: Verify codegen outputs
+        run: |
+          test -f packages/board/nitrogen/generated/android/NitroForgeBoard+autolinking.gradle
+          test -f packages/board/nitrogen/generated/android/NitroForgeBoard+autolinking.cmake
+          test -f packages/board/nitrogen/generated/shared/javascript/WhiteboardRendererFactory.cjs
