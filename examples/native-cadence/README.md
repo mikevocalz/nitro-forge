@@ -49,3 +49,12 @@ This screen now calls createRegisteredForgeV1Host from the v1-native adapter. Wh
     registerForgeV1Factory(new ForgeFactory());
 
 Do not import legacy NitroModules.createHybridObject or mock a factory. Until native generated/C++ and Rust code is packaged, registration is absent and the screen intentionally shows a real error.
+
+## Verified integration CI evidence
+
+- [Android source/native UI compile passed — run 41961359554](https://github.com/mikevocalz/nitro-forge/actions/runs/41961359554) after fixing the invalid Java namespace. This does not prove Forge's native v1 C++/Rust registration.
+- [Rust engine session and host tests passed — run 41961979522](https://github.com/mikevocalz/nitro-forge/actions/runs/41961979522), including the v1 wire adapter backed by the real Rust CLI.
+- iOS native combined build remains blocked on the experimental SwiftPM integration; the first CocoaPods failure was caused by Nitro v1's intentionally empty Podspec. The first SPM attempt lacked the React Native CLI; the integration now pins RN 0.88-matched community CLI packages, pending a verified re-run.
+- The cross-repository consumer TypeScript test passed on the combined sources. This is neither a device test nor proof of native JS-to-Rust linkage.
+
+To avoid duplicate expensive native builds, the CI workflow now uses one PR trigger (plus manual dispatch) with a single latest-branch concurrency group.

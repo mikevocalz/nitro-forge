@@ -6,13 +6,10 @@ on:
       - "examples/native-cadence/**"
       - "tooling/native/stage-cadence-consumer.mjs"
       - ".github/workflows/cadence-native-consumer.yml"
-  push:
-    branches: [feat/cadence-native-editor-session-2026-11-05]
-    paths:
-      - "packages/cadence/**"
-      - "examples/native-cadence/**"
-      - "tooling/native/stage-cadence-consumer.mjs"
-      - ".github/workflows/cadence-native-consumer.yml"
+  workflow_dispatch:
+concurrency:
+  group: cadence-native-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 env:
