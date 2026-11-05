@@ -1,3 +1,4 @@
+import type { ReservedRegion } from '@nyc-tron/core/folds';
 /** Where the persona panel lives on this window.
  *
  * - `dock`: a separating hinge splits the window. The panel sits in one pane,
@@ -6,19 +7,13 @@
  * - `inline`: regular width; PrismEditor's own anchored panel is fine.
  *
  * Geometry is window coordinates in RN layout units, the shape
- * `useReservedRegions()` from `@acme/ui/adaptive-panes` returns.
+ * `useReservedRegions()` from `@nyc-tron/reserved-regions` returns.
  */
 export type DockRect = Readonly<{ x: number; y: number; width: number; height: number }>;
 export type DockInsets = Readonly<{ top: number; right: number; bottom: number; left: number }>;
 
-/** Structural subset of @acme/ui's ReservedRegion that the planner reads. */
-export type DockRegion = Readonly<{
-  kind: 'division' | 'occlusion';
-  x: number; y: number; width: number; height: number;
-  active: boolean;
-  orientation?: 'vertical' | 'horizontal';
-  separating?: boolean;
-}>;
+/** The fields of NYC-Tron's ReservedRegion the planner reads. */
+export type DockRegion = Readonly<Pick<ReservedRegion, 'kind' | 'x' | 'y' | 'width' | 'height' | 'active' | 'orientation' | 'separating'>>;
 
 export type PersonaPlacement =
   | Readonly<{ mode: 'inline' }>

@@ -1,9 +1,0 @@
-ai.nitroforge.reservedregions.reserved-regions-pngs-0 /Users/mikevocalz/nitro-forge/apps/example/modules/reserved-regions/android/build/generated/res/pngs/debug
-ai.nitroforge.reservedregions.reserved-regions-updated_navigation_xml-1 /Users/mikevocalz/nitro-forge/apps/example/modules/reserved-regions/android/build/generated/updated_navigation_xml/debug
-ai.nitroforge.reservedregions.reserved-regions-mergeDebugResources-2 /Users/mikevocalz/nitro-forge/apps/example/modules/reserved-regions/android/build/intermediates/incremental/debug/mergeDebugResources/merged.dir
-ai.nitroforge.reservedregions.reserved-regions-mergeDebugResources-3 /Users/mikevocalz/nitro-forge/apps/example/modules/reserved-regions/android/build/intermediates/incremental/debug/mergeDebugResources/stripped.dir
-ai.nitroforge.reservedregions.reserved-regions-debug-4 /Users/mikevocalz/nitro-forge/apps/example/modules/reserved-regions/android/build/intermediates/merged_res/debug/mergeDebugResources
-ai.nitroforge.reservedregions.reserved-regions-debug-5 /Users/mikevocalz/nitro-forge/apps/example/modules/reserved-regions/android/build/intermediates/packaged_res/debug/packageDebugResources
-ai.nitroforge.reservedregions.reserved-regions-debug-6 /Users/mikevocalz/nitro-forge/apps/example/modules/reserved-regions/android/src/debug/res
-ai.nitroforge.reservedregions.reserved-regions-main-7 /Users/mikevocalz/nitro-forge/apps/example/modules/reserved-regions/android/src/main/res
-gradleHome-0 /Users/mikevocalz/.gradle

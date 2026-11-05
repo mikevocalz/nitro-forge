@@ -1,6 +1,7 @@
 import type { LayerRow } from '@nyc-tron/ui/components/forge/layers/layer-model';
 import type { CanvasLayer } from './prism-canvas-model.ts';
 import { prismLayerLabel } from './prism-layer-label.ts';
+import type { CanvasShape } from './prism-canvas-model.ts';
 
 /**
  * Prism engine adapter for NYC-Tron's `LayerStack`.
@@ -23,7 +24,8 @@ export type PrismLayerCommand =
   | { op: 'moveLayer'; payload: { id: number; to_index: number }; label: string }
   | { op: 'setLayerOpacity'; payload: { id: number; opacity: number }; label: string }
   | { op: 'setLayerVisible'; payload: { id: number; visible: boolean }; label: string }
-  | { op: 'renameLayer'; payload: { id: number; name: string }; label: string };
+  | { op: 'renameLayer'; payload: { id: number; name: string }; label: string }
+  | { op: 'removeLayer'; payload: { id: number }; label: string };
 
 /** Row id for an engine layer id. */
 export const prismLayerRowId = (id: number): string => String(id);
@@ -40,15 +42,36 @@ function layerForRow(layers: readonly PrismLayer[], rowId: string): { layer: Pri
   return { layer, index };
 }
 
-/** Rows for `LayerStack`, topmost layer first. A blank engine name reads as its kind and id. */
+const channel = (value: number | undefined) => Math.min(255, Math.max(0, Math.round(Number.isFinite(value) ? value! : 0)));
+
+/** A shape's engine RGBA fill (0-255 per channel) as a CSS colour, or
+ * `undefined` when the engine sent no usable fill. */
+export function prismFillColour(shape: CanvasShape | undefined): string | undefined {
+  const fill = shape?.fill;
+  if (!fill || fill.length < 3) return undefined;
+  const [r, g, b, a = 255] = fill;
+  return `rgba(${channel(r)}, ${channel(g)}, ${channel(b)}, ${+(channel(a) / 255).toFixed(3)})`;
+}
+
+/**
+ * Rows for `LayerStack`, topmost layer first. A blank engine name reads as its
+ * kind and id. The detail line names Prism's kind ("Rectangle", "Ellipse",
+ * "Raster"), and a shape row shows its fill. A raster row has no thumbnail:
+ * its pixels have no single colour, and a scaled preview is not built yet.
+ */
 export function prismLayerRows(layers: readonly PrismLayer[]): LayerRow[] {
-  return layers.map(layer => ({
-    id: prismLayerRowId(layer.id),
-    name: layer.name.trim() ? layer.name : `${prismLayerLabel(layer)} ${layer.id}`,
-    visible: layer.visible,
-    opacity: Math.min(1, Math.max(0, Number.isFinite(layer.opacity) ? layer.opacity : 1)),
-    kind: layer.content?.type === 'shape' ? 'vector' as const : 'raster' as const,
-  })).reverse();
+  return layers.map(layer => {
+    const fill = layer.content?.type === 'shape' ? prismFillColour(layer.content.shape) : undefined;
+    return {
+      id: prismLayerRowId(layer.id),
+      name: layer.name.trim() ? layer.name : `${prismLayerLabel(layer)} ${layer.id}`,
+      visible: layer.visible,
+      opacity: Math.min(1, Math.max(0, Number.isFinite(layer.opacity) ? layer.opacity : 1)),
+      kind: layer.content?.type === 'shape' ? 'vector' as const : 'raster' as const,
+      kindLabel: prismLayerLabel(layer),
+      ...(fill ? { thumbnail: { fill } } : {}),
+    };
+  }).reverse();
 }
 
 /** The engine layer id for a selected row id, or `undefined` when no row is selected. */
@@ -89,4 +112,10 @@ export function prismRenameCommand(layers: readonly PrismLayer[], rowId: string,
   const next = name.trim();
   if (!next) throw new RangeError('A layer name needs at least one character');
   return next === layer.name ? undefined : { op: 'renameLayer', payload: { id: layer.id, name: next }, label: 'Layer renamed' };
+}
+
+/** `removeLayer` for the row's remove control, its screen-reader action or Delete on the focused row. The engine's undo restores it. */
+export function prismRemoveCommand(layers: readonly PrismLayer[], rowId: string): PrismLayerCommand {
+  const { layer } = layerForRow(layers, rowId);
+  return { op: 'removeLayer', payload: { id: layer.id }, label: 'Layer removed' };
 }

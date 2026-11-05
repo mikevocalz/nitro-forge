@@ -26,7 +26,7 @@ test('web/Next Image and unrelated packages retain the existing resolver', () =>
   const context = { resolveRequest: (...args) => fallback.push(args) };
   const resolver = createHostNativeResolver('/host', (_context, name, platform) => { original.push([name, platform]); return name; }, () => { throw new Error('must not resolve native package'); });
   for (const name of ['expo-image', 'next/image', 'solito/image', 'react-native-gesture-handler', 'expo-image-other']) assert.equal(resolver(context, name, 'web'), name);
-  assert.equal(resolver(context, '@acme/ui/Image', 'android'), '@acme/ui/Image');
+  assert.equal(resolver(context, '@nyc-tron/ui/components/Button', 'android'), '@nyc-tron/ui/components/Button');
   assert.equal(original.length, 6); assert.equal(fallback.length, 0);
 });
 

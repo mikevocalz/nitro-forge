@@ -13,7 +13,7 @@ import { prismLayerLabel } from './prism-layer-label';
 import { PrismCanvas } from './prism-canvas';
 import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
 import { LayerStack } from '@nyc-tron/ui/components/forge/layers/LayerStack';
-import { prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismSelectedRowId, prismVisibilityCommand, type PrismLayer, type PrismLayerCommand } from './prism-layers';
+import { prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismRemoveCommand, prismSelectedRowId, prismVisibilityCommand, type PrismLayer, type PrismLayerCommand } from './prism-layers';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
 import { Platform } from 'react-native';
 import { PersonaTurret, documentRtl, turretBoxWidth, useForgeRenderPrefs, useStudioTextScale, useTurretShortcut, type PersonaTurretHandle } from './persona-turret';
@@ -223,12 +223,16 @@ export function PrismEditor(props: PrismEditorProps) {
           onToggleVisible={id => runLayerCommand(rows => prismVisibilityCommand(rows, id))}
           onOpacityCommit={(id, value) => runLayerCommand(rows => prismOpacityCommand(rows, id, value))}
           onMove={(id, toIndex) => runLayerCommand(rows => prismMoveCommand(rows, id, toIndex))}
-          onRename={(id, name) => runLayerCommand(rows => prismRenameCommand(rows, id, name))} />
+          onRename={(id, name) => runLayerCommand(rows => prismRenameCommand(rows, id, name))}
+          onRemove={id => runLayerCommand(rows => prismRemoveCommand(rows, id))} />
         : <EmptyState title="No layers" description="Add a shape or raster layer to begin." className="p-3" tone="carolina" action={<Button title="Add rectangle" onPress={() => addShape('rect')} disabled={busy || !!props.busy || !doc} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />} />}
     </TokenScope>
-      {/* The last layer row already draws the rule above these. */}
+      {/* Each row removes its own layer (button, screen-reader action, Delete).
+          LayerStack reorders only by drag and screen-reader actions, so Raise
+          and Lower stay for keyboard and pointer users. The last row already
+          draws the rule above them. */}
       {selected && <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}{control('Remove', () => { void run('removeLayer', { id: selected.id }, 'Layer removed'); })}</View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}</View>
       </View>}
   </View>;
 

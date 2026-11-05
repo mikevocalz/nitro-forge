@@ -129,7 +129,7 @@ const packages = iosPackages();
 
 test('autolinking resolves the packages this contract is meant to cover', () => {
   const names = new Set(packages.map(p => p.name));
-  for (const expected of ['@nitro-forge/ignition', 'react-native-svg', 'react-native-safe-area-context', 'react-native-screens', '@expo/ui', 'reserved-regions']) {
+  for (const expected of ['@nitro-forge/ignition', 'react-native-svg', 'react-native-safe-area-context', 'react-native-screens', '@expo/ui', '@nyc-tron/reserved-regions']) {
     assert.ok(names.has(expected), `${expected} missing from autolinking output: ${[...names].join(', ')}`);
   }
 });

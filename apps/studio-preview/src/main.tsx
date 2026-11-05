@@ -9,9 +9,10 @@ import { getEditorConfig } from '../../example/src/editors';
 import { useEditorDoc } from './useDocument';
 import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { AppLauncher } from './app-launcher';
-import { Page, Main, Nav, Link, Text as SemanticText } from '@acme/ui/html';
+import { Page, Main, Nav, Link, Text as SemanticText } from '@nyc-tron/ui/components/html';
+import { FilePicker } from '@nyc-tron/ui/components/files/FilePicker';
 import { Text, View, Menu, Button, Banner, DropZone, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
-import { studioControls, FilePicker } from '@acme/ui/studio-controls/web';
+import { studioUI } from './studio-ui';
 import { TurretLab, isTurretLabRoute } from './turret-lab';
 import { ComposerLab, isComposerLabRoute, COMPOSER_LAB_HASH } from './composer-lab';
 import { ComposerGlyph } from '@nitro-forge/studio-workspace/composer';
@@ -64,11 +65,11 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
   };
   const leadingActions = <Page className="document-actions">
     <DropZone disableObjectUrl includeBase64={false} accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
-      // The kit's drop well is a night surface; Open sits in the editor's own
-      // toolbar, so the well is cleared and the label takes the theme's ink.
-      className="border-0 p-0 md:p-0 gap-0 rounded-[4px] bg-transparent"
+      // Open sits in the editor's own toolbar, so the drop target draws no
+      // well of its own and the label takes the theme's ink.
+      unstyled
       onDrop={({ assets }) => { const file = assets.find(asset => asset.file)?.file; if (file) void openFile(file).catch(() => {}); }}>
-    <FilePicker className="document-action" label="Open" disabled={busy || !editor.doc}
+    <FilePicker unstyled className="document-action min-h-11 px-3 flex-row items-center justify-center rounded-control hover:bg-surface-sunken" labelClassName="text-text text-sm font-semibold" label="Open" disabled={busy || !editor.doc}
       accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
       onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} /></DropZone>
       {studio === 'quill' && <Button aria-label="Export Word document" title="Export Word" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
@@ -85,7 +86,7 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
 
   </Page>;
   return <>
-    <ForgeWorkspace headerLeading={<Link className="back-link" href="#/"><SemanticText className="back-chevron" aria-hidden="true"><ComposerGlyph name="chevron-left" size={14} color="currentColor" /></SemanticText>All apps</Link>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
+    <ForgeWorkspace headerLeading={<Link className="back-link" href="#/"><SemanticText className="back-chevron" aria-hidden><ComposerGlyph name="chevron-left" size={14} color="currentColor" /></SemanticText>All apps</Link>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
       theme={theme} loadPreset={loadPreset} persistPreset={persistPreset}
       state={editor.state} rows={config.rows(editor.state)}
       actions={config.actions.map(action => ({ title: action.title, run: () => run(() => action.run(editor)) }))}
@@ -130,7 +131,7 @@ function App() {
   if (isComposerLabRoute()) return <Main dataSet={{ theme }}><ComposerLab theme={theme} /></Main>;
   return <Main dataSet={{ theme }}>
     {!app && <Nav className="launcher-nav" aria-label="App navigation">
-      <Link className="suite-label" href="#/"><SemanticText className="suite-mark" aria-hidden="true">N</SemanticText>NitroForge <SemanticText className="suite-caption">The creative collection</SemanticText></Link>
+      <Link className="suite-label" href="#/"><SemanticText className="suite-mark" aria-hidden>N</SemanticText>NitroForge <SemanticText className="suite-caption">The creative collection</SemanticText></Link>
       {themeToggle}
     </Nav>}
     {opened.map(id => <Page key={id} className="workspace-container" data-host-width={hostWidth} hidden={app !== id}
@@ -141,4 +142,4 @@ function App() {
   </Main>;
 }
 
-createRoot(document.getElementById('root')!).render(<StudioUIProvider components={studioControls}>{isTurretLabRoute() ? <TurretLab /> : <App />}</StudioUIProvider>);
+createRoot(document.getElementById('root')!).render(<StudioUIProvider components={studioUI}>{isTurretLabRoute() ? <TurretLab /> : <App />}</StudioUIProvider>);

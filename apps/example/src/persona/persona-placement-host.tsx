@@ -3,7 +3,7 @@ import { I18nManager, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from 'zustand';
-import { useReservedRegions } from '@acme/ui/adaptive-panes';
+import { useReservedRegions } from '@nyc-tron/reserved-regions';
 import { View } from '@nitro-forge/studio-workspace/ui';
 import { TURRET_SIZE } from '@nitro-forge/studio-workspace/turret';
 import { workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';

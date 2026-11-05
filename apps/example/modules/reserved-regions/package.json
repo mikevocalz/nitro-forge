@@ -1,7 +1,0 @@
-{
-  "name": "reserved-regions",
-  "version": "0.1.0",
-  "description": "Fold geometry for @acme/ui's useReservedRegions: Jetpack WindowManager FoldingFeature on Android, UIKit reserved regions on iOS 27.1+.",
-  "private": true,
-  "platforms": ["ios", "android"]
-}

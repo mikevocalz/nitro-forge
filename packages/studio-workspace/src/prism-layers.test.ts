@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { moveLayer, validateLayers } from '@nyc-tron/ui/components/forge/layers/layer-model';
 import {
   prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismSelectedRowId,
-  prismVisibilityCommand, type PrismLayer,
+  prismVisibilityCommand, prismRemoveCommand, prismFillColour, type PrismLayer,
 } from './prism-layers.ts';
 
-const shape = (id: number, name: string): PrismLayer => ({ id, name, visible: true, opacity: 1, content: { type: 'shape', shape: { kind: 'rect', x: 0, y: 0, w: 1, h: 1, fill: [0, 0, 0, 255] } } });
+const shape = (id: number, name: string, kind = 'rect', fill: readonly number[] = [0, 0, 0, 255]): PrismLayer => ({ id, name, visible: true, opacity: 1, content: { type: 'shape', shape: { kind, x: 0, y: 0, w: 1, h: 1, fill } } });
 const raster = (id: number, name: string): PrismLayer => ({ id, name, visible: false, opacity: 0.4, content: { type: 'raster', pixels_b64: '' } });
 // Engine order: bottom to top.
-const doc = [raster(7, 'Paper'), shape(3, 'Rectangle 2'), shape(9, 'Ellipse 3')];
+const doc = [raster(7, 'Paper'), shape(3, 'Rectangle 2'), shape(9, 'Ellipse 3', 'ellipse', [105, 80, 209, 128])];
 
 test('rows list the top engine layer first and pass LayerStack validation', () => {
   const rows = prismLayerRows(doc);
@@ -72,4 +72,24 @@ test('a callback for a layer the document no longer has throws', () => {
 test('selection is the editor store id as a row id', () => {
   assert.equal(prismSelectedRowId(9), '9');
   assert.equal(prismSelectedRowId(null), undefined);
+});
+
+test('rows name the Prism kind and show a shape fill; a raster row has no thumbnail', () => {
+  const rows = prismLayerRows(doc);
+  assert.deepEqual(rows.map(row => row.kindLabel), ['Ellipse', 'Rectangle', 'Raster']);
+  assert.deepEqual(rows[0]!.thumbnail, { fill: 'rgba(105, 80, 209, 0.502)' });
+  assert.deepEqual(rows[1]!.thumbnail, { fill: 'rgba(0, 0, 0, 1)' });
+  assert.equal(rows[2]!.thumbnail, undefined);
+  validateLayers(rows);
+});
+
+test('a fill outside 0..255 is clamped and a missing fill gives no colour', () => {
+  assert.equal(prismFillColour({ kind: 'rect', x: 0, y: 0, w: 1, h: 1, fill: [300, -4, 12.6] }), 'rgba(255, 0, 13, 1)');
+  assert.equal(prismFillColour(undefined), undefined);
+  assert.equal(prismFillColour({ kind: 'rect', x: 0, y: 0, w: 1, h: 1, fill: [] }), undefined);
+});
+
+test('remove is one removeLayer for the row, and a stale row throws', () => {
+  assert.deepEqual(prismRemoveCommand(doc, '3'), { op: 'removeLayer', payload: { id: 3 }, label: 'Layer removed' });
+  assert.throws(() => prismRemoveCommand(doc, '42'), RangeError);
 });

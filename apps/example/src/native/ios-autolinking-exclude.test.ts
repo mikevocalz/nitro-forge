@@ -1,21 +1,25 @@
-// Contract: nothing the app or the shared UI kit imports for native UI may be
+// Contract: nothing the app or NYC-Tron UI imports for native UI may be
 // dropped from iOS autolinking.
 //
 // expo.autolinking.ios.exclude removes a module from the SwiftPM graph without any
 // build error. The JS still calls requireNativeModule('ExpoUI') and the app dies at
 // launch with "Cannot find native module 'ExpoUI'". Commit a1d0cee did exactly that
-// to @expo/ui, which @acme/ui imports (Menu.native.tsx, segmented control, SwiftUI
+// to @expo/ui, which NYC-Tron's expo-controls import (NativeActionMenu, Select, SwiftUI
 // host views). These checks fail at test time instead.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 
 const appRoot = resolve(import.meta.dirname, '..', '..');
 const repoRoot = resolve(appRoot, '..', '..');
-const kitRoot = process.env.STUDIO_UI_ROOT || resolve(appRoot, '../../../nyc-mon/packages/ui');
 const hostRequire = createRequire(join(appRoot, 'package.json'));
+/** NYC-Tron packages the host installs, from the release pinned in tooling/nyc-tron.json. */
+const kitRoots = (JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf8')) as { dependencies: Record<string, string> }).dependencies;
+const nycTronRoots = Object.keys(kitRoots).filter(name => name.startsWith('@nyc-tron/'))
+  // The packages export no ./package.json, so read the host's own link.
+  .map(name => realpathSync(join(appRoot, 'node_modules', name)));
 
 type AutolinkingConfig = { exclude?: string[]; ios?: { exclude?: string[] } };
 type AppPackageJson = { expo?: { autolinking?: AutolinkingConfig } };
@@ -104,14 +108,11 @@ test('no native package the app or workspace packages import is excluded from iO
   assert.deepEqual(nativeImportsExcluded(dirs, iosExcluded(appPkg)), []);
 });
 
-test('no native package the shared UI kit imports is excluded from iOS autolinking', t => {
-  if (!existsSync(join(kitRoot, 'package.json'))) {
-    t.skip(`shared UI kit not found at ${kitRoot}; set STUDIO_UI_ROOT`);
-    return;
-  }
-  const kitImports = importedPackages([kitRoot]);
-  assert.ok(kitImports.has('@expo/ui'), 'the kit is expected to import @expo/ui; if it stopped, update this contract');
-  assert.deepEqual(nativeImportsExcluded([kitRoot], iosExcluded(appPkg)), []);
+test('no native package NYC-Tron UI imports is excluded from iOS autolinking', () => {
+  const dist = nycTronRoots.map(root => join(root, 'dist'));
+  const kitImports = importedPackages(dist);
+  assert.ok(kitImports.has('@expo/ui'), 'expo-controls is expected to import @expo/ui; if it stopped, update this contract');
+  assert.deepEqual(nativeImportsExcluded(dist, iosExcluded(appPkg)), []);
 });
 
 test('@expo/ui carries the SwiftPM manifest Expo autolinking needs to build it', () => {

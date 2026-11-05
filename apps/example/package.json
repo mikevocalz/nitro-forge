@@ -50,7 +50,6 @@
     "expo-linking": "58.0.16",
     "expo-router": "58.0.30",
     "expo-status-bar": "58.0.4",
-    "next": "16.4.5",
     "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -68,7 +67,11 @@
     "react-native-worklets": "0.13.1",
     "tailwindcss": "4.3.4",
     "uniwind": "1.13.1",
-    "zustand": "5.0.16"
+    "zustand": "5.0.16",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz",
+    "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-core-0.1.0-alpha.2.tgz",
+    "@nyc-tron/expo-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-expo-controls-0.1.0-alpha.2.tgz",
+    "@nyc-tron/reserved-regions": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-reserved-regions-0.1.0-alpha.2.tgz"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

@@ -1,17 +1,12 @@
 @import 'tailwindcss';
 @import 'uniwind';
-@import '../../../nyc-mon/packages/theme/theme-native.css';
+/* Forge chrome plus the semantic variables NYC-Tron UI reads, light and dark. */
 @import '../../packages/studio-workspace/src/theme.native.css';
 
 @source './app';
 @source './src';
 @source '../../packages/studio-workspace/src';
 @source '../../packages/icons/src';
-/* The NYC-Tron release publishes only dist/; its recipes' classes live there. */
-@source '../../packages/studio-workspace/node_modules/@nyc-tron/ui/dist/components';
-@source '../../../nyc-mon/packages/ui';
-/* Keep platform-specific .web sources for the shared Expo input. */
-@source not '../../../nyc-mon/packages/ui/**/*.stories.*';
-@source not '../../../nyc-mon/packages/ui/**/*.test.*';
-@source not '../../../nyc-mon/packages/ui/**/*.md';
-@source not '../../../nyc-mon/packages/ui/**/story-*';
+/* NYC-Tron releases publish only dist/; their recipes' classes live there. */
+@source './node_modules/@nyc-tron/ui/dist/components';
+@source './node_modules/@nyc-tron/expo-controls/dist/components';

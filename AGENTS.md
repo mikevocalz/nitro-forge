@@ -34,7 +34,9 @@ pnpm --filter @nitro-forge/console demo   # all-engines workflow demo
 
 ## Existing UI controls first
 
-User requirement (2026-11-03): use the canonical `nyc-mon/packages/ui` inventory
+User requirement (2026-11-03), moved to NYC-Tron UI by rule #38 (2026-11-05:
+Forge imports NYC-Tron): use the NYC-Tron UI inventory (release pinned in
+`tooling/nyc-tron.json`, bound in `packages/studio-workspace/src/nyc-tron-host.tsx`)
 before assembling custom controls. Use its TabBar for tab panels and its
 SegmentedControl for mutually exclusive choices, alongside the existing native
 Menu/Select, semantic ui/html and input components. Extend the strict Studio UI

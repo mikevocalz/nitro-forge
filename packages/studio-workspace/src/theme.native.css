@@ -4,6 +4,7 @@
   --radius-sm: 4px;
   --radius-forge-control: 4px;
   --radius-control: 4px;
+  --radius-card: 4px;
   --font-forge-editorial: Georgia, 'Times New Roman', serif;
 }
 @layer theme {
@@ -22,6 +23,19 @@
   --color-forge-paper-ink: #303440;
   --color-forge-paper-muted: #797F8D;
   --color-forge-error: #B33E46;
+  --color-primary: #6950D1;
+  --color-on-primary: #FFFFFF;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-sunken: #E7EAF1;
+  --color-border: #DDE1EB;
+  --color-text: #252A3A;
+  --color-text-muted: #687287;
+  --color-danger: #B33E46;
+  --color-on-danger: #FFFFFF;
+  --color-accent: #6950D1;
+  --color-info: #1D5FA8;
+  --color-success: #1E7A3C;
+  --color-focus: #6950D1;
     }
     @variant dark {
   --color-forge-surface: #1C1E25;
@@ -37,6 +51,19 @@
   --color-forge-paper-ink: #303440;
   --color-forge-paper-muted: #797F8D;
   --color-forge-error: #FFAAA7;
+  --color-primary: #B7A5FF;
+  --color-on-primary: #211A3D;
+  --color-surface-raised: #262932;
+  --color-surface-sunken: #15171D;
+  --color-border: #393D49;
+  --color-text: #F0F1F7;
+  --color-text-muted: #ADB3C4;
+  --color-danger: #FFAAA7;
+  --color-on-danger: #2B0703;
+  --color-accent: #B7A5FF;
+  --color-info: #8AB8FF;
+  --color-success: #6FD08C;
+  --color-focus: #B7A5FF;
     }
   }
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { prismViewportLayout } from './prism-layout.ts';
+import { prismViewportLayout, PRISM_LAYERS_PANEL_WIDTH } from './prism-layout.ts';
 
 test('short landscape retains a useful artboard instead of the previous 26px result', () => {
   const layout = prismViewportLayout(844, 286, 1, true, false);
@@ -72,10 +72,9 @@ test('grown chrome at 200 % text moves the rail, panel and artboard below and be
   assert.equal(wide.panelTop, 12, 'a docked desktop panel stays at the top edge');
 });
 
-test('the Layers panel leaves layer names room: 320 pt on tablets, right of the rail on phones', () => {
-  assert.equal(prismViewportLayout(1024, 768, 1, true, false).panelWidth, 320);
-  const phone = prismViewportLayout(390, 844, 1, true, false);
-  assert.equal(phone.panelWidth, 302);
-  assert.ok(390 - 12 - phone.panelWidth >= 64 + 12, 'the phone panel clears the tool rail');
-  assert.equal(prismViewportLayout(320, 600, 1, true, false).panelWidth, 280);
+test('the Layers panel is as wide as a LayerStack row with a remove button, up to the editor width', () => {
+  assert.equal(PRISM_LAYERS_PANEL_WIDTH, 356);
+  assert.equal(prismViewportLayout(1024, 768, 1, true, false).panelWidth, 356);
+  assert.equal(prismViewportLayout(390, 844, 1, true, false).panelWidth, 356);
+  assert.equal(prismViewportLayout(320, 600, 1, true, false).panelWidth, 296);
 });

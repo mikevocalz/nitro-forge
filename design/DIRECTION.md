@@ -13,7 +13,7 @@ Round 1, 2026-11-04, branch `ui/turret-directions`.
 | Precision | The exact persona, named in full. A peek never commits. One detent per stop: a drag, an arrow key or a screen-reader swipe moves exactly one persona; release, Enter or double-tap commits; Escape or a cancelled gesture returns to the committed persona |
 | Three words | machined, exact, quiet |
 | References | `design/references/mobbin-studio-switch-{ios,web}.md`: We.Inc lathe-turned detent dial (O1), TentUI rotary knob change/commit split (O2), Tactile UI detent dial state list (O3), GoPro Quik arc dial (iOS 19), Apple Photos tick ruler (iOS 15), Binance commit-to-switch sheet (iOS 23). Hardware: a Teenage Engineering OP-1 encoder, a lathe-turned camera mode dial |
-| What exists | `turret.ts` reducer (peek, commit, cancel, end stop), `persona.ts` manifests, `persona-store.ts`, the StudioUIProvider controls from `nyc-mon/packages/ui`, `ForgePrecisionScrubber`, `workspaceScale` tokens |
+| What exists | `turret.ts` reducer (peek, commit, cancel, end stop), `persona.ts` manifests, `persona-store.ts`, the StudioUIProvider controls from NYC-Tron UI (`nycTronStudioUI`), `ForgePrecisionScrubber`, `workspaceScale` tokens |
 | Surfaces this round | Web (studio-preview, Chrome) at 390, 768 and 1440 px, dark and light. Native iOS/Android are not captured this round |
 
 ### References broken down (moves taken, never UI)
