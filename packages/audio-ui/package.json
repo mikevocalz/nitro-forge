@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "@nitro-forge/media-ui": "workspace:*",
-    "zustand": "^5.0.0"
+    "zustand": "^5.0.0",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz"
   },
   "peerDependencies": {
     "@expo/ui": "^58.0.0",

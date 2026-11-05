@@ -84,7 +84,7 @@ async function decodeWebRecording(uri: string): Promise<SourceRecordingFile> {
 
 /** Web: real browser MediaRecorder; decode actual saved clip for source peaks when supported. */
 export function NativeSourceRecordingTrack({
-  store, disabled, testID, onSaved,
+  store, disabled, title, testID, onSaved,
 }: NativeSourceRecordingTrackProps) {
   const generation = useRef(0);
   useEffect(() => { generation.current++; return () => { generation.current++; }; }, [store]);
@@ -92,6 +92,7 @@ export function NativeSourceRecordingTrack({
     <NativeRecordingTrack
       store={store}
       {...(disabled === undefined ? {} : { disabled })}
+      {...(title === undefined ? {} : { title })}
       {...(testID ? { testID } : {})}
       onSaved={(uri) => {
         const token = generation.current;

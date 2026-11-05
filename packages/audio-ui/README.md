@@ -5,6 +5,14 @@ registry metadata and the published package source on November 4, 2026.
 There is no Expo Audio runtime, import, dependency or config plugin here.
 Expo SDK 58 remains the app/build system, not the audio engine.
 
+The view is NYC-Tron UI's `RecordingTrack`
+(`@nyc-tron/ui/components/forge/audio/RecordingTrack`, pinned in
+`tooling/nyc-tron.json`). Forge keeps the recorder: `NativeRecordingTrack` and
+`NativeSourceRecordingTrack` map the controller's phase onto the view with
+`toRecordingViewState` and feed the newest measured peak to its `LevelMeter`.
+The host app must compile NYC-Tron's class names with Uniwind; see
+`apps/forge-audio-lab/global.css` for the tokens.
+
 ## Actual implementation
 
 - Native iOS/Android: `AudioRecorder` writes mono 48 kHz 16-bit WAV into the

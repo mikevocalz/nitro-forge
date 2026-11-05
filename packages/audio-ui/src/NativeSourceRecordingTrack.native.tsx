@@ -1,67 +1,41 @@
-import { Button, Column, Host, Text } from "@expo/ui";
-import { View } from "react-native";
 import { useStore } from "zustand";
-import { WaveformLane } from "@nitro-forge/media-ui";
+import { RecordingTrack } from "@nyc-tron/ui/components/forge/audio/RecordingTrack";
 import { useForgePcmRecorder } from "./useForgePcmRecorder";
+import { inputLevel, toRecordingViewState } from "./recordingView";
 import type { NativeSourceRecordingTrackProps } from "./sourceRecordingTypes";
 
 /**
- * iOS/Android: Audio API delivers planar Float32 buffers to JS for peaks,
- * while the native recorder writes a mono 48kHz 16-bit WAV file.
- * Displayed peaks are sampled from that PCM; no synthesized bars.
+ * iOS/Android: Forge's Audio API PCM recorder drawn with NYC-Tron's
+ * RecordingTrack. Audio API delivers planar Float32 buffers to JS for peaks
+ * while the native recorder writes a mono 48kHz 16-bit WAV file; no
+ * synthesized bars. While recording the lane shows the last 160 live buffer
+ * peaks; after saving it shows the 512 full-recording columns from stop(),
+ * resampled to the lane's 128-column maximum (each column keeps its min/max).
  */
 export function NativeSourceRecordingTrack({
-  store, onSaved, disabled = false, testID,
+  store, onSaved, disabled = false, title, testID,
 }: NativeSourceRecordingTrackProps) {
   const phase = useStore(store, (s) => s.phase);
   const history = useStore(store, (s) => s.levelHistory);
   const { controller, stop } = useForgePcmRecorder(store);
-  const active = phase.kind === "recording";
-  const canSave = active || phase.kind === "interrupted";
-  const busy = ["requesting-permission", "preparing", "stopping"].includes(phase.kind);
-  const duration = active || phase.kind === "stopping" || phase.kind === "saved" ||
-    phase.kind === "interrupted"
-    ? phase.durationMs : 0;
-  const label = phase.kind === "error" || phase.kind === "interrupted"
-    ? phase.message : phase.kind === "permission-denied"
-      ? "Microphone permission required"
-      : phase.kind === "saved" ? "WAV saved: " + phase.uri
-        : active ? "Recording PCM audio" : busy ? "Preparing native audio" : "Ready to record";
+  const level = phase.kind === "recording" ? inputLevel(history) : undefined;
 
-  const toggle = () => {
-    if (disabled || busy) return;
-    if (canSave) {
-      void stop().then(onSaved).catch(() => undefined);
-    } else {
-      void controller.start().catch(() => undefined);
-    }
-  };
+  // Failures land in the store as an "error" phase, which the view shows.
+  const start = () => { void controller.start().catch(() => undefined); };
+  const save = () => { void stop().then((file) => onSaved?.(file)).catch(() => undefined); };
 
   return (
-    <View style={{ width: "100%", gap: 10 }} {...(testID ? { testID } : {})}>
-      <Host style={{ width: "100%" }}>
-        <Column spacing={8}>
-          <Text>{label}</Text>
-          <Text>{`Elapsed: ${(duration / 1000).toFixed(1)}s`}</Text>
-          <Button
-            label={active
-              ? "Stop and save WAV"
-              : phase.kind === "interrupted" ? "Save interrupted WAV" : "Record PCM WAV"}
-            disabled={disabled || busy}
-            onPress={toggle}
-            {...(testID ? { testID: testID + "-toggle" } : {})}
-          />
-        </Column>
-      </Host>
-      {/* While recording: the last 160 live buffer peaks. After saving: the
-          512 full-recording source columns from stop(), drawn at the lane's
-          128-column maximum (resampling keeps each column's min/max). */}
-      <WaveformLane
-        peaks={history}
-        height={72}
-        columns={phase.kind === "saved" ? 128 : 96}
-        {...(testID ? { testID: testID + "-waveform" } : {})}
-      />
-    </View>
+    <RecordingTrack
+      state={toRecordingViewState(phase)}
+      peaks={history}
+      columns={phase.kind === "saved" ? 128 : 96}
+      height={72}
+      onStart={start}
+      onStop={save}
+      disabled={disabled}
+      {...(level === undefined ? {} : { level })}
+      {...(title === undefined ? {} : { title })}
+      {...(testID === undefined ? {} : { testID })}
+    />
   );
 }

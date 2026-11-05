@@ -25,6 +25,9 @@ export type SourceRecordingFile =
 export interface NativeSourceRecordingTrackProps {
   readonly store: StoreApi<RecordingSnapshot>;
   readonly onSaved?: (result: SourceRecordingFile) => void;
+  /** Blocks starting a take. Stopping and saving a live take stay enabled. */
   readonly disabled?: boolean;
+  /** Track name shown above the status. */
+  readonly title?: string;
   readonly testID?: string;
 }

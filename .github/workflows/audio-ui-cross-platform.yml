@@ -6,6 +6,8 @@ on:
       - 'packages/audio-ui/**'
       - 'apps/forge-audio-lab/**'
       - '.github/workflows/audio-ui-cross-platform.yml'
+      - 'tooling/nyc-tron.json'
+      - 'tooling/verify-nyc-tron-pin.mjs'
   workflow_dispatch:
 
 permissions:
@@ -30,6 +32,8 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
+      - name: NYC-Tron release pin (URL, lockfile, SHA256SUMS)
+        run: node tooling/verify-nyc-tron-pin.mjs --download
       - name: Audio UI TypeScript
         run: pnpm --filter @nitro-forge/audio-ui typecheck
       - name: Audio recording state-machine tests
