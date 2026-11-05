@@ -1,6 +1,11 @@
 import type { EngineHost } from "@nitro-forge/ignition";
 import { CadenceDocument } from "./index";
-import { createCadenceTrackInstrumentBindings } from "./instrument-adapter";
+import {
+  createCadenceTrackInstrumentBindings,
+  toNativeKnobBinding,
+  type CadenceKnobBinding,
+  type CadenceNativeKnobBinding,
+} from "./instrument-adapter";
 
 /** One real Cadence track. Every value comes from the latest Rust describe() result. */
 export interface CadenceInstrumentState {
@@ -108,23 +113,31 @@ export class CadenceInstrumentSession {
     return () => { this.listeners.delete(listener); };
   }
 
-  /** React Native / native controls receive these values and commit callbacks. */
-  get controls() {
+  /**
+   * Props for `InstrumentKnob` (`@nyc-tron/ui`). Each commit is serialized,
+   * applied to the Rust document and followed by describe().
+   */
+  get knobs(): {
+    readonly gain: CadenceKnobBinding<Readonly<CadenceInstrumentState>>;
+    readonly pan: CadenceKnobBinding<Readonly<CadenceInstrumentState>>;
+  } {
     const bindings = createCadenceTrackInstrumentBindings(this.document, this.trackId);
     return {
-      gain: {
-        minimum: bindings.gain.min,
-        maximum: bindings.gain.max,
-        step: bindings.gain.step,
-        onCommit: (value: number) => this.setGain(value),
-      },
-      pan: {
-        minimum: bindings.pan.min,
-        maximum: bindings.pan.max,
-        step: bindings.pan.step,
-        onCommit: (value: number) => this.setPan(value),
-      },
-    } as const;
+      gain: { ...bindings.gain, onCommit: (value: number) => this.setGain(value) },
+      pan: { ...bindings.pan, onCommit: (value: number) => this.setPan(value) },
+    };
+  }
+
+  /** Props for the SwiftUI / Compose `ArcKnob` (`@nyc-tron/native-controls`). Same commit path as {@linkcode knobs}. */
+  get controls(): {
+    readonly gain: CadenceNativeKnobBinding<Readonly<CadenceInstrumentState>>;
+    readonly pan: CadenceNativeKnobBinding<Readonly<CadenceInstrumentState>>;
+  } {
+    const knobs = this.knobs;
+    return {
+      gain: toNativeKnobBinding(knobs.gain, knobs.gain.onCommit),
+      pan: toNativeKnobBinding(knobs.pan, knobs.pan.onCommit),
+    };
   }
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {

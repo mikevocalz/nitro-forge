@@ -1,8 +1,19 @@
 import type { CadenceDocument } from "./index";
 
 /**
- * Bind visual NYC-Tron rotary controls to existing Cadence Rust document ops.
+ * Bind NYC-Tron rotary controls to existing Cadence Rust document ops.
  * Visual previews stay in UI; the engine remains the only committed state.
+ *
+ * Two control families consume these bindings:
+ * - `InstrumentKnob` from `@nyc-tron/ui` (React Native views) takes
+ *   {@linkcode CadenceKnobBinding} as-is: `min`, `max`, `step`, `unit`, `onCommit`.
+ * - `ArcKnob` from `@nyc-tron/native-controls` (SwiftUI / Compose) takes
+ *   {@linkcode CadenceNativeKnobBinding}: `minimum`, `maximum`, `step`, `onCommit`.
+ *
+ * The shapes are structural so Cadence builds without NYC-Tron installed.
+ * tests/nyc-tron-props.typecheck.ts checks them against the released
+ * `@nyc-tron/ui` declarations, and the native example's typecheck checks
+ * the ArcKnob shape. NYC-Tron never imports Cadence.
  */
 type TrackCommands = Pick<CadenceDocument, "setTrackGain" | "setTrackPan">;
 type TrackCommandResult = Awaited<ReturnType<CadenceDocument["setTrackGain"]>>;
@@ -10,12 +21,32 @@ type TrackCommandResult = Awaited<ReturnType<CadenceDocument["setTrackGain"]>>;
 /** Commit one completed gesture; resolves with the engine's result or rejects. */
 export type InstrumentCommit = (value: number) => Promise<TrackCommandResult>;
 
-export interface CadenceKnobBinding {
+/** Range and commit props for `InstrumentKnob` (`@nyc-tron/ui`). */
+export interface CadenceKnobBinding<R = TrackCommandResult> {
   readonly min: number;
   readonly max: number;
   readonly step: number;
   readonly unit: string;
-  readonly onCommit: InstrumentCommit;
+  readonly onCommit: (value: number) => Promise<R>;
+}
+
+/**
+ * Range and commit props for the native `ArcKnob` (`@nyc-tron/native-controls`).
+ * @see {@linkcode toNativeKnobBinding}
+ */
+export interface CadenceNativeKnobBinding<R = unknown> {
+  readonly minimum: number;
+  readonly maximum: number;
+  readonly step: number;
+  readonly onCommit: (value: number) => Promise<R>;
+}
+
+/** Map an `InstrumentKnob` binding onto the native `ArcKnob` prop names. */
+export function toNativeKnobBinding<R>(
+  binding: Pick<CadenceKnobBinding, "min" | "max" | "step">,
+  onCommit: (value: number) => Promise<R>,
+): CadenceNativeKnobBinding<R> {
+  return { minimum: binding.min, maximum: binding.max, step: binding.step, onCommit };
 }
 
 export interface CadenceTrackInstrumentBindings {

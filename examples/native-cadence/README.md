@@ -1,22 +1,44 @@
 # Cadence Native Instrument Consumer
 
-The screen uses a real CadenceInstrumentSession and real SwiftUI/Compose
-ArcKnob controls from NYC-Tron UI. It is a separate Expo SDK 58 integration
-app so the legacy Expo 54 example does not silently upgrade or mix native
-dependency versions.
+The screen uses a real CadenceInstrumentSession and NYC-Tron UI's knobs, fed
+by Cadence's adapter: the SwiftUI/Compose `ArcKnob` from
+`@nyc-tron/native-controls` takes `session.controls`, and the React Native
+`InstrumentKnob` from `@nyc-tron/ui` takes `session.knobs`. A two-option
+switch picks the renderer; both commit through the same serialized Rust path.
+It is a separate Expo SDK 58 integration app so the legacy Expo 54 example
+does not silently upgrade or mix native dependency versions.
+
+## Dependencies
+
+This directory is its own pnpm workspace (`pnpm-workspace.yaml`,
+`pnpm-lock.yaml`). It joins `packages/ignition` and `packages/cadence` from
+this repository's source and installs NYC-Tron from the
+`v0.1.0-alpha.2` release tarballs pinned in `tooling/nyc-tron.json`. There is
+no NYC-Tron checkout and no staging copy. A workspace override keeps every
+`react-native-nitro-modules` at the Nitro v1 alpha the native build links,
+without editing Ignition's own devDependency.
+
+`metro.config.js` resolves React, React Native, Nitro, Zustand and `@expo/ui`
+from this app for every importer, including the Forge source packages, and
+supports `NYC_TRON_ROOT` dev-linking (see `docs/NYC_TRON_UI_HANDOFF.md`).
+
+Installing here and installing at the repository root both write
+`packages/ignition/node_modules` and `packages/cadence/node_modules`. Rerun
+`pnpm install` in whichever workspace you switch to.
 
 ## Build
 
-Check out Nitro Forge PR #43 and NYC-Tron UI PR #8. From the Forge root:
+From this directory:
 
-    node tooling/native/stage-cadence-consumer.mjs ../NYC-Tron-UI /tmp/cadence-lab
-    cd /tmp/cadence-lab
-    corepack pnpm install --no-frozen-lockfile
-    corepack pnpm --dir app typecheck
-    corepack pnpm --dir app exec expo prebuild --platform android --no-install
+    pnpm install --frozen-lockfile
+    pnpm typecheck
+    pnpm exec expo export --platform android --dump-sourcemap --output-dir /tmp/cadence-export
+    node ../../tooling/native/check-bundle-singletons.mjs /tmp/cadence-export android
+    pnpm exec expo prebuild --platform android --no-install
 
-Cross-repository GitHub Actions runs Android and iOS compile checks from a
-pinned NYC-Tron commit. The temporary workspace is not committed or published.
+CI (`.github/workflows/cadence-native-consumer.yml`) runs the same frozen
+install, re-hashes the release assets, typechecks, bundles both platforms
+with the one-copy check, and compiles Android and iOS.
 
 ## Engine limitation
 
@@ -35,9 +57,11 @@ No Vercel deployments, raw HTML, Expo Audio or Expo Video.
 
 ## Integration build findings (November 5, 2026)
 
-- TypeScript cross-repository installation and imports passed GitHub CI.
+- TypeScript cross-repository installation and imports passed GitHub CI
+  (then from a pinned NYC-Tron commit; now from the release tarballs).
 - Android initial Gradle configure failure was the demo package identifier ending in Java keyword 'native'. Corrected to ai.nitroforge.cadence.studio.
 - iOS first CocoaPods attempt reached native dependencies but Nitro v1's NitroModules.podspec is deliberately source-empty. Nitro v1 uses SwiftPM. The integration workflow now tries React Native 0.88 experimental spm conversion; Expo SDK 58's SwiftPM path is preview-only. This is a platform integration gate, not evidence that SwiftUI or Forge C++ failed compilation.
+- With NYC-Tron v0.1.0-alpha.2 the native-controls pod no longer imports ExpoUI, and the iOS compile got past it ([run 42104754906](https://github.com/mikevocalz/nitro-forge/actions/runs/42104754906)). It then stopped in Expo's SwiftPM app-config script phase, which resolves `expo-constants` from the app root. This workspace is an isolated pnpm install, where `expo-constants` only exists under `expo`, so the app now lists `expo-constants` directly at the locked 58.0.15. Keep it even though App.tsx never imports it.
 - Neither built app has executed real Forge Rust operations on hardware. Do not claim otherwise.
 
 ## Nitro v1 constructor registration

@@ -12,7 +12,8 @@
     "test": "turbo run test",
     "test:rust": "cargo test --workspace --manifest-path rust/Cargo.toml",
     "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "verify:nyc-tron": "node tooling/verify-nyc-tron-pin.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
