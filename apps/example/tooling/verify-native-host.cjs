@@ -27,8 +27,8 @@ for (const name of ['expo-image', 'react-native-gesture-handler']) {
   console.log(`${name}@${installed.version}: host declaration and Metro resolution passed`);
 }
 for (const name of ['react', 'react-native']) {
-  const context = { resolveRequest: (_context, target) => target };
-  const root = path.dirname(hostRequire.resolve(`${name}/package.json`));
+  const context = { originModulePath: path.join(root, 'node_modules/react-native/Libraries/Image/Image.js'), resolveRequest: (_context, target) => target };
+  hostRequire.resolve(`${name}/package.json`);
   assert.equal(config.resolver.resolveRequest(context, name, 'android'), name);
   assert.equal(config.resolver.resolveRequest(context, name, 'ios'), name);
 }
@@ -73,3 +73,15 @@ for (const platform of ['ios', 'android']) {
   else assert.equal(dependency.platforms.android.packageInstance, 'new NitroForgePackage()');
   console.log(`Ignition v1 ${platform} packaging discovered (not a native compile/link)`);
 }
+// Canonical DropZone and haptics JS must have matching native host modules.
+for (const platform of ['apple', 'android']) {
+  const modules = autolink('resolve', platform).modules.filter(module => module.packageName === 'expo-drag-drop-content-view');
+  assert.equal(modules.length, 1, `one DropZone module for ${platform}`);
+  assert.equal(modules[0].packageVersion, hostRequire('expo-drag-drop-content-view/package.json').version);
+}
+for (const platform of ['ios', 'android']) {
+  const dependency = autolink('react-native-config', platform).dependencies['react-native-pulsar'];
+  assert.equal(dependency.root, path.dirname(hostRequire.resolve('react-native-pulsar/package.json')));
+  assert.ok(dependency.platforms[platform]);
+}
+console.log('Canonical DropZone and Pulsar native modules discovered (not device validation)');
