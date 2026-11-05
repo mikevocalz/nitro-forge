@@ -1,0 +1,27 @@
+{
+  "name": "@nitro-forge/native-cadence-lab",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
+  },
+  "dependencies": {
+    "@nitro-forge/ignition": "workspace:*",
+    "@nitro-forge/cadence": "workspace:*",
+    "@nyc-tron/native-controls": "workspace:*",
+    "@expo/ui": "58.0.27",
+    "expo": "58.0.23",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "zustand": "5.0.16"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3"
+  }
+}
