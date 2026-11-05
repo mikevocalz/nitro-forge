@@ -5,6 +5,9 @@ on:
     paths:
       - 'packages/agpl-speed-curve/**'
       - 'packages/native-signal/**'
+      - 'apps/*/package.json'
+      - 'packages/*/package.json'
+      - 'scripts/check-agpl-isolation.mjs'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
@@ -33,6 +36,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: AGPL package stays opt-in
+        run: node scripts/check-agpl-isolation.mjs
       - name: Typecheck
         run: pnpm --filter @nitro-forge/agpl-speed-curve --filter @nitro-forge/native-signal typecheck
       - name: Speed-curve tests
