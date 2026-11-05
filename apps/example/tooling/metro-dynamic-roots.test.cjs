@@ -14,7 +14,8 @@ async function until(check) {
   while (!check()) { assert.ok(Date.now() < deadline, 'timed out waiting for filesystem event'); await pause(20); }
 }
 function fixture(t, fallback, watch = false) {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'expo-roots-'));
+  // Real path: macOS os.tmpdir() is under /var, a symlink to /private/var, and the file map reports real paths.
+  const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'expo-roots-')));
   const project = path.join(base, 'project');
   const external = path.join(base, 'external');
   fs.mkdirSync(project); fs.mkdirSync(external);
