@@ -22,6 +22,7 @@ export default function App() {
       </Text>
       <NativeSourceRecordingTrack
         store={track}
+        title="Microphone"
         testID="forge-recording-track"
         onSaved={(result) => {
           // Studio host receives the real media URI. Rust must explicitly

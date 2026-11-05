@@ -2,9 +2,12 @@
 
 **P0 native microphone recording and live level history** for Nitro Forge.
 Uses the verified **Expo SDK 58** `expo-audio` API (AVAudioRecorder on iOS,
-MediaRecorder on Android and browser MediaRecorder on web). The UI is shared:
-**SwiftUI / Jetpack Compose** `@expo/ui` buttons, plus React Native views for
-audio-level history.
+MediaRecorder on Android and browser MediaRecorder on web). The view is
+NYC-Tron UI's `RecordingTrack` (`@nyc-tron/ui/components/forge/audio/RecordingTrack`,
+pinned in `tooling/nyc-tron.json`). Forge keeps the recorder: `NativeRecordingTrack`
+maps the controller's phase onto the view with `toRecordingViewState` and feeds
+the newest meter peak to its `LevelMeter`. The host app must compile NYC-Tron's
+class names with Uniwind; see `apps/forge-audio-lab/global.css` for the tokens.
 
 The parent `@nitro-forge/media-ui` package supplies the initial bounded
 `WaveformLane`; the native `@nitro-forge/native-signal` package in #24
