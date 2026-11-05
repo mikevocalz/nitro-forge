@@ -35,8 +35,14 @@ export function WaveformLane({
   return (
     <View
       testID={testID}
-      accessibilityRole={onSeekNormalized ? "adjustable" : "image"}
+      // Not "adjustable": the lane has no current position to step from, so
+      // VoiceOver/TalkBack increment and decrement would do nothing. Seeking
+      // for screen readers and keyboards goes through NativeSeekBar.
+      accessibilityRole="image"
       accessibilityLabel="Audio waveform"
+      {...(onSeekNormalized
+        ? { accessibilityHint: "Touch the waveform to seek. Use the seek bar to seek with a screen reader." }
+        : {})}
       style={{
         height,
         width: "100%",
