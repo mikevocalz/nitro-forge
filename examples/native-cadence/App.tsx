@@ -4,7 +4,7 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import { useStore } from "zustand";
 import { ArcKnob } from "@nyc-tron/native-controls/ArcKnob";
 import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-forge/cadence/instrument-session";
-import { createNitroHost } from "@nitro-forge/ignition";
+import { createRegisteredForgeV1Host } from "@nitro-forge/ignition/v1-host";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -44,7 +44,7 @@ export default function App() {
       gainPreview: null, panPreview: null, savedBytes: null });
     const connect = async () => {
       try {
-        const host = createNitroHost();
+        const host = createRegisteredForgeV1Host();
         const session = await CadenceInstrumentSession.open(host, {
           trackName: "Native instrument 01",
         });
@@ -116,7 +116,7 @@ export default function App() {
           <Text style={{ color: colors.danger, fontWeight: "700" }}>Native engine unavailable</Text>
           <Text selectable style={{ color: colors.text }}>{state.error}</Text>
           <Text style={{ color: colors.muted }}>
-            Real Nitro Forge v1 registration is required. This screen never creates a fake document.
+            Register a real generated Nitro v1 ForgeFactory at app startup. No fake or legacy Nitro 0.x document is used.
           </Text>
           <Action label="Retry connection" onPress={() =>
             store.setState(s => ({ attempt: s.attempt + 1 }))}/>

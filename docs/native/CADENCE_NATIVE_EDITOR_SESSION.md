@@ -47,3 +47,7 @@ Native references: official Expo SDK 58 \`expo-ui\`, \`expo-module\`, \`expo-mig
 - [ ] Real touch, stylus, VoiceOver/TalkBack, release/cancel behavior, 44-point hit area and disabled states.
 - [ ] Surface Duo fold/unfold, orientation and multiple window sizes with selected track retained.
 - [ ] Kinetrell native motion review and error recovery; no duplicate source of truth.
+
+## Nitro v1 host compatibility
+
+The new ignition/v1-host adapter accepts generated ForgeFactory.open() and ForgeDocument methods, translates validated JSON payloads and command events, copies native ArrayBuffer snapshots and restore bytes, and is lifecycle/close-safe. A real Rust CLI-backed facsimile of the generated v1 wire contract is tested in Cadence CI, but the generated classes still need SwiftPM/Gradle packaging from Forge PR #10. This native example no longer calls the old Nitro 0.x createHybridObject API.

@@ -39,3 +39,13 @@ No Vercel deployments, raw HTML, Expo Audio or Expo Video.
 - Android initial Gradle configure failure was the demo package identifier ending in Java keyword 'native'. Corrected to ai.nitroforge.cadence.studio.
 - iOS first CocoaPods attempt reached native dependencies but Nitro v1's NitroModules.podspec is deliberately source-empty. Nitro v1 uses SwiftPM. The integration workflow now tries React Native 0.88 experimental spm conversion; Expo SDK 58's SwiftPM path is preview-only. This is a platform integration gate, not evidence that SwiftUI or Forge C++ failed compilation.
 - Neither built app has executed real Forge Rust operations on hardware. Do not claim otherwise.
+
+## Nitro v1 constructor registration
+
+This screen now calls createRegisteredForgeV1Host from the v1-native adapter. When the generated module in Forge's separate Ignition v1 branch is actually linked and native registered, add the following at the application startup:
+
+    import { ForgeFactory } from '@nitro-forge/ignition-v1-lab';
+    import { registerForgeV1Factory } from '@nitro-forge/ignition/v1-host';
+    registerForgeV1Factory(new ForgeFactory());
+
+Do not import legacy NitroModules.createHybridObject or mock a factory. Until native generated/C++ and Rust code is packaged, registration is absent and the screen intentionally shows a real error.
