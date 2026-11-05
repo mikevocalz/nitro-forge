@@ -35,3 +35,12 @@ describe("cross-platform waveform geometry", () => {
     expect(() => peaksToBars([], Infinity)).toThrow();
   });
 });
+
+describe("WaveformLane accessibility", () => {
+  it("never announces itself as adjustable without step actions", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync(new URL("../src/WaveformLane.tsx", import.meta.url), "utf8");
+    expect(source).not.toMatch(/accessibilityRole=\{?[^}\n]*"adjustable"/);
+    expect(source).toContain('accessibilityRole="image"');
+  });
+});
