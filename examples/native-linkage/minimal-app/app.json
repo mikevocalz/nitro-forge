@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Nitro Forge V1 Link",
+    "slug": "nitro-forge-v1-link",
+    "version": "0.0.0",
+    "newArchEnabled": true,
+    "platforms": ["ios", "android"],
+    "ios": { "bundleIdentifier": "ai.nitroforge.v1link" },
+    "android": { "package": "ai.nitroforge.v1link" },
+    "experiments": { "swiftPackageManager": true }
+  }
+}

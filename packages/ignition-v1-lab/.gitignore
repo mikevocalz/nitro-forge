@@ -3,3 +3,4 @@ nitrogen/generated/
 native/apple/
 native/android/
 cpp/nf_v1.h
+native/include/

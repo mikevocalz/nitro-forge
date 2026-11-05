@@ -6,7 +6,7 @@
  *   3. NYC-Tron PR #8 (native SwiftUI/Compose controls).
  * No npm publishing, UI vendoring, or Nitro v0.x runtime.
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -72,19 +72,48 @@ writeFileSync(join(app, "index.js"),
   'import App from "./App";\n' +
   'registerRootComponent(App);\n');
 
+// Nitro v1 is SwiftPM-only (its podspec is empty), so the iOS app must use
+// Expo's SwiftPM integration.
+const appConfigPath = join(app, "app.json");
+const appConfig = readJSON(appConfigPath);
+appConfig.expo.experiments = { ...(appConfig.expo.experiments ?? {}), swiftPackageManager: true };
+writeJSON(appConfigPath, appConfig);
+
+// pnpm patches for app dependencies that cannot build under SwiftPM as
+// published, such as @expo/ui 58.0.27 (no Package.swift, Swift mixed with
+// Objective-C++; the same patch as PRs #36 and #43). A patch is applied only
+// when the staged app depends on that package, and pnpm fails the install if
+// the version does not match, so a stale patch cannot pass silently.
+const patchSource = join(root, "examples/native-linkage/patches");
+const appDependencies = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+const patched = [];
+for (const file of existsSync(patchSource) ? readdirSync(patchSource).sort() : []) {
+  if (!file.endsWith(".patch")) continue;
+  const match = /^(.+)@([^@]+)\.patch$/.exec(file);
+  if (!match) throw new Error("Patch file is not named <package>@<version>.patch: " + file);
+  const name = match[1].replaceAll("__", "/");
+  if (!(name in appDependencies)) continue;
+  mkdirSync(join(app, "patches"), { recursive: true });
+  cpSync(join(patchSource, file), join(app, "patches", file));
+  patched.push([name + "@" + match[2], "app/patches/" + file]);
+}
+
 writeJSON(join(stage, "package.json"), {
   name: "nitro-forge-v1-native-lab", private: true, version: "0.0.0",
   type: "module", packageManager: "pnpm@10.32.1",
 });
 writeFileSync(join(stage, "pnpm-workspace.yaml"),
-  "packages:\n  - 'packages/*'\n  - 'app'\n");
+  "packages:\n  - 'packages/*'\n  - 'app'\n" +
+  (patched.length === 0 ? "" : "patchedDependencies:\n" +
+    patched.map(([spec, file]) => "  " + JSON.stringify(spec) + ": " + JSON.stringify(file) + "\n").join("")));
 
 // No generated stub substitutes for actual archive packaging.
-const androidArtifact = join(stage,
-  "packages/ignition-v1-lab/native/android/arm64-v8a/libnf_sys.a");
+const androidRoot = join(stage, "packages/ignition-v1-lab/native/android");
+const androidArtifact = existsSync(androidRoot) &&
+  readdirSync(androidRoot).some(abi => existsSync(join(androidRoot, abi, "libnf_sys.a")));
 const appleArtifact = join(stage,
   "packages/ignition-v1-lab/native/apple/NitroForgeRust.xcframework");
-if (!existsSync(androidArtifact) && !existsSync(appleArtifact)) {
+if (!androidArtifact && !existsSync(appleArtifact)) {
   throw new Error("Refusing to stage a Nitro v1 consumer without a real Rust archive");
 }
 process.stdout.write("Prepared generated factory + native Rust archive: " + stage + "\n");
