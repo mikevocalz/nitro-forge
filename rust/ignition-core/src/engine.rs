@@ -69,9 +69,10 @@ pub trait Engine: Send + 'static {
     /// Estimated bytes this document owns on the heap: the live document plus
     /// its undo/redo journal. Hosts report it to the JS garbage collector.
     ///
-    /// Must be cheap and must not allocate: it is read after every mutating
-    /// command. Whole-document undo snapshots may be charged at the live
-    /// document's size instead of being walked one by one.
+    /// Must not allocate or panic, and should cost at most O(live document):
+    /// hosts read it after every command. Whole-document undo snapshots may be
+    /// charged at the live document's size instead of being walked one by one.
+    /// Use saturating arithmetic (see `HeapSize`).
     ///
     /// The default 0 means "not measured". Every engine linked into nf-sys
     /// overrides it, and nf-sys tests fail if a linked engine reports 0.

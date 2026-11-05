@@ -276,6 +276,16 @@ mod tests {
                 "64 KiB cell must be counted: {empty} -> {edited}"
             );
             assert_eq!(nf_v1_document_size(h), edited, "query must not mutate");
+            // Shrinking the cell keeps the 64 KiB value alive in the undo
+            // journal, so the estimate must not drop back to the empty size.
+            assert_eq!(
+                apply(h, r#"{"op":"setCell","payload":{"addr":"A1","value":"1"}}"#)["ok"],
+                true
+            );
+            assert!(
+                nf_v1_document_size(h) >= empty + value.len(),
+                "undo journal must be counted"
+            );
             assert_eq!(nf_v1_close(h), 1);
             assert_eq!(nf_v1_document_size(h), 0);
             assert_eq!(nf_v1_document_size(0), 0);

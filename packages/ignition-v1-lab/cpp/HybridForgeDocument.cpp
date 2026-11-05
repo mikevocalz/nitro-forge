@@ -20,13 +20,22 @@ namespace {
 using ::nitroforge::native::ForgeRustSession;
 using ::nitroforge::native::ForgeSerialQueue;
 
-/** Re-measures the Rust document from its own queue, never the JS thread. */
+/**
+ * Re-measures the Rust document from its own queue, never the JS thread.
+ * A session left without a meter (read-only tasks) skips the measurement.
+ *
+ * documentSize() is 0 once the engine is gone, including after a panic or
+ * non-recoverable error that closed it while this session still holds the
+ * handle. That 0 is accurate: Rust has already dropped the document.
+ */
 struct MemoryMeter final {
   std::shared_ptr<ForgeRustSession> session;
   std::shared_ptr<std::atomic<size_t>> bytes;
 
   void refresh() const noexcept {
-    bytes->store(session->documentSize(), std::memory_order_relaxed);
+    if (session) {
+      bytes->store(session->documentSize(), std::memory_order_relaxed);
+    }
   }
 };
 
@@ -37,8 +46,9 @@ std::shared_ptr<ForgeSerialQueue> makeDocumentQueue() {
 
 /**
  * Like Promise::async, but ordered behind every earlier call on this document.
- * The memory estimate is refreshed before the promise settles, on success and
- * on failure (a terminal engine error closes the document).
+ * For mutating tasks the memory estimate is refreshed before the promise
+ * settles, on success and on failure (a terminal engine error closes the
+ * document).
  */
 template <typename TResult, typename Run>
 Promise<TResult> enqueue(ForgeSerialQueue& queue, MemoryMeter meter, Run&& run) {
@@ -116,7 +126,8 @@ Promise<ForgeCommandResult> HybridForgeDocument::apply(const ForgeCommand& comma
 
 Promise<ArrayBuffer> HybridForgeDocument::snapshot() {
   const auto session = _session;
-  return enqueue<ArrayBuffer>(*_queue, MemoryMeter{session, _externalMemory}, [session]() {
+  // A snapshot reads the document without changing it, so its size is unchanged.
+  return enqueue<ArrayBuffer>(*_queue, MemoryMeter{}, [session]() {
     return ArrayBuffer::move(session->snapshot());
   });
 }
