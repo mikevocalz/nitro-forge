@@ -1,0 +1,70 @@
+diff --git a/Package.swift b/Package.swift
+new file mode 100644
+index 0000000000000000000000000000000000000000..aa229bde6a7b02eb181ca500691ecf3a9d623ae3
+--- /dev/null
++++ b/Package.swift
+@@ -0,0 +1,40 @@
++// swift-tools-version: 6.0
++import PackageDescription
++
++// SwiftPM manifest for ExpoUI, read by Expo's SwiftPM autolinking plugin.
++// @expo/ui ships spm.config.json but no prebuilt XCFramework, so without this
++// manifest the plugin refuses the module ("has no prebuilt XCFramework").
++// SwiftPM cannot compile Swift and Objective-C++ in one target, so the touch
++// handler helper gets its own target, the split expo-constants ships.
++// ExpoModulesCore, ExpoModulesWorklets and the React headers are injected by the
++// plugin when it mirrors this manifest. CocoaPods keeps using ExpoUI.podspec,
++// whose recursive glob still finds both directories.
++let package = Package(
++  name: "expo-ui",
++  platforms: [
++    .iOS("16.4"),
++  ],
++  products: [
++    .library(name: "ExpoUI", targets: ["ExpoUI", "ExpoUIObjC"])
++  ],
++  dependencies: [],
++  targets: [
++    .target(
++      name: "ExpoUI",
++      dependencies: ["ExpoUIObjC"],
++      path: "ios",
++      exclude: ["ExpoUIObjC", "ExpoUI.podspec"],
++      swiftSettings: [.define("RCT_NEW_ARCH_ENABLED")]
++    ),
++    .target(
++      name: "ExpoUIObjC",
++      dependencies: [],
++      path: "ios/ExpoUIObjC",
++      publicHeadersPath: "include",
++      // CocoaPods gets RCT_NEW_ARCH_ENABLED from the React pods; SwiftPM does
++      // not, and React's Fabric headers read it.
++      cSettings: [.define("RCT_NEW_ARCH_ENABLED", to: "1")],
++      cxxSettings: [.define("RCT_NEW_ARCH_ENABLED", to: "1")]
++    ),
++  ]
++)
+diff --git a/ios/ExpoUITouchHandlerHelper.mm b/ios/ExpoUIObjC/ExpoUITouchHandlerHelper.mm
+similarity index 100%
+rename from ios/ExpoUITouchHandlerHelper.mm
+rename to ios/ExpoUIObjC/ExpoUITouchHandlerHelper.mm
+diff --git a/ios/ExpoUITouchHandlerHelper.h b/ios/ExpoUIObjC/include/ExpoUITouchHandlerHelper.h
+similarity index 100%
+rename from ios/ExpoUITouchHandlerHelper.h
+rename to ios/ExpoUIObjC/include/ExpoUITouchHandlerHelper.h
+diff --git a/ios/RNHostView.swift b/ios/RNHostView.swift
+index f2d5a184732bc9027e801f76d97654d4b83501af..150893bb5c9ee39a3097e8325739e0e68cdd03eb 100644
+--- a/ios/RNHostView.swift
++++ b/ios/RNHostView.swift
+@@ -2,6 +2,11 @@
+ 
+ import SwiftUI
+ import ExpoModulesCore
++// SwiftPM builds the Objective-C++ touch handler helper as its own module (see
++// Package.swift); CocoaPods compiles it into ExpoUI, where no import is needed.
++#if canImport(ExpoUIObjC)
++import ExpoUIObjC
++#endif
+ 
+ internal final class RNHostViewProps: ExpoSwiftUI.ViewProps {
+   @Field var matchContentsHorizontal: Bool = false
