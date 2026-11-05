@@ -5,10 +5,11 @@ editor suite, based on the native API, Expo UI, and ArtCraft source research.
 
 ## Where the code lives
 
-`ColorChannels` (exported here as `NativeColorChannels`) and the RGBA math
-(`RgbaColor`, `assertRgba`, `rgbaToHex`, `alphaPercent`) are owned by
+`ColorChannels` (exported here as `NativeColorChannels`), the RGBA math
+(`RgbaColor`, `assertRgba`, `rgbaToHex`, `alphaPercent`) and the HSV math
+(`HsvColor`, `parseHexColor`, `rgbToHsv`, `hsvToRgb`) are owned by
 [NYC-Tron UI](https://github.com/mikevocalz/NYC-Tron-UI). Forge depends on the
-release tarball pinned in `tooling/nyc-tron.json` (v0.1.0-alpha.1), and
+release tarball pinned in `tooling/nyc-tron.json` (v0.1.0-alpha.2), and
 `node tooling/verify-nyc-tron-pin.mjs --download` checks it. The control uses
 SwiftUI and Jetpack Compose sliders through the `@expo/ui` universal API, with
 that API's web fallback.
@@ -19,8 +20,8 @@ tokens from NYC-Tron's `docs/THEME_TOKENS.md`. `apps/forge-color-lab`
 (`metro.config.js`, `global.css`) shows the setup. The per-slider testIDs
 (`<testID>-red` and so on) are gone; `testID` lands on the outer View.
 
-Still local until NYC-Tron v0.1.0-alpha.2 (NYC-Tron-UI PR #21): `HsvColor`,
-`parseHexColor`, `rgbToHsv`, `hsvToRgb`. None of these replace Rust ICC
+The HSV helpers arrived in NYC-Tron v0.1.0-alpha.2 (NYC-Tron-UI PR #21) and
+color-ui re-exports them. None of these replace Rust ICC
 profile management, HDR, P3, CMYK, spot ink or theme color references, and
 they must not flatten document colors when saving.
 

@@ -1,5 +1,5 @@
-// HSV and hex parsing are Forge-local until NYC-Tron-UI PR #21 (alpha.2).
-// The hex round trips also check them against NYC-Tron's rgbaToHex/alphaPercent.
+// color-ui re-exports NYC-Tron's RGBA and HSV math. The round trips below pin
+// the hex and HSV behavior Forge's color panels rely on.
 import { describe, expect, it } from "vitest";
 import * as tron from "@nyc-tron/ui/components/forge/color";
 import {
@@ -11,6 +11,9 @@ describe("color-ui consumes NYC-Tron RGBA math", () => {
     expect(rgbaToHex).toBe(tron.rgbaToHex);
     expect(alphaPercent).toBe(tron.alphaPercent);
     expect(assertRgba).toBe(tron.assertRgba);
+    expect(parseHexColor).toBe(tron.parseHexColor);
+    expect(rgbToHsv).toBe(tron.rgbToHsv);
+    expect(hsvToRgb).toBe(tron.hsvToRgb);
   });
 });
 
