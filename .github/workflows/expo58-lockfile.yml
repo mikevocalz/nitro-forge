@@ -1,41 +1,53 @@
-name: Reconcile Expo 58 / Skia 3 lockfile
+name: Expo 58 / Skia 3 lockfile check
+
+# Frozen-lockfile check, not a lockfile bot. It used to trigger only on its own
+# feature branch and push a resolved lockfile there, so it stopped running once
+# that branch merged. Now every PR and every master push that touches a
+# manifest or the lockfile must already carry a lockfile that matches. Fix a
+# failure locally with `pnpm install --lockfile-only --ignore-scripts` and
+# commit pnpm-lock.yaml.
 
 on:
-  push:
-    branches:
-      - feat/studio-suite-upstream-monitor-2026-11-02
+  pull_request:
     paths:
       - 'package.json'
-      - 'apps/example/package.json'
+      - 'apps/*/package.json'
+      - 'packages/*/package.json'
       - 'pnpm-workspace.yaml'
       - 'pnpm-lock.yaml'
+      - 'tooling/check-skia-v3.mjs'
+      - '.github/workflows/expo58-lockfile.yml'
+  push:
+    branches:
+      - master
+    paths:
+      - 'package.json'
+      - 'apps/*/package.json'
+      - 'packages/*/package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tooling/check-skia-v3.mjs'
       - '.github/workflows/expo58-lockfile.yml'
   workflow_dispatch:
 
 concurrency:
-  group: nitroforge-expo58-lockfile
-  cancel-in-progress: false
+  group: expo58-lockfile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
-env:
-  BRANCH: feat/studio-suite-upstream-monitor-2026-11-02
-
 jobs:
-  # Resolve and verify with read-only credentials. Every check that a normal
-  # CI run would apply to the lockfile runs here, against the exact bytes that
-  # the commit job later pushes.
-  resolve:
-    if: github.repository == 'mikevocalz/nitro-forge' && github.ref == 'refs/heads/feat/studio-suite-upstream-monitor-2026-11-02'
+  frozen:
+    name: Frozen install and Skia v3 graph policy
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    outputs:
-      changed: ${{ steps.diff.outputs.changed }}
-      base: ${{ steps.diff.outputs.base }}
     steps:
+      # Check the PR head itself, not GitHub's synthetic merge commit, so the
+      # result describes the lockfile bytes that are actually on the branch.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -44,70 +56,12 @@ jobs:
         run: |
           corepack enable
           pnpm --version
-      - name: Resolve the Expo 58 / Skia 3 dependency graph without package scripts
-        run: pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
-      - name: Validate the resolved lockfile with a clean frozen install
+      - name: Install from the committed lockfile without package scripts
+        # --frozen-lockfile fails when any manifest disagrees with pnpm-lock.yaml.
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Verify Skia v3 policy and a single Dawn against the resolved graph
         # Fails on more than one react-native-webgpu-dawn version in the
         # lockfile or in node_modules/.pnpm (pnpm why alone always exits 0).
         run: pnpm check:skia-v3
-      - name: Record whether the lockfile changed
-        id: diff
-        run: |
-          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          if git diff --quiet -- pnpm-lock.yaml; then
-            echo 'changed=false' >> "$GITHUB_OUTPUT"
-          else
-            echo 'changed=true' >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/upload-artifact@v4
-        if: steps.diff.outputs.changed == 'true'
-        with:
-          name: verified-pnpm-lock
-          path: pnpm-lock.yaml
-          retention-days: 7
 
-  # The only job with write access. It pushes the verified lockfile and nothing
-  # else. A push made with GITHUB_TOKEN starts no workflow runs, so the
-  # resolve job above is the CI evidence for that commit; its run URL goes into
-  # the commit message. If the branch moved and changed any manifest, the push
-  # is skipped: that newer push starts its own run of this workflow.
-  commit:
-    needs: resolve
-    if: needs.resolve.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ env.BRANCH }}
-          fetch-depth: 0
-          persist-credentials: true
-      - uses: actions/download-artifact@v4
-        with:
-          name: verified-pnpm-lock
-          path: ${{ runner.temp }}/verified
-      - name: Commit the verified lockfile if manifests are unchanged since resolution
-        env:
-          BASE: ${{ needs.resolve.outputs.base }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          if ! git diff --quiet "$BASE" HEAD -- package.json pnpm-workspace.yaml pnpm-lock.yaml 'apps/*/package.json' 'packages/*/package.json'; then
-            echo "::notice::Manifests changed after $BASE; skipping. The newer push re-runs this workflow."
-            exit 0
-          fi
-          cp "$RUNNER_TEMP/verified/pnpm-lock.yaml" pnpm-lock.yaml
-          git add pnpm-lock.yaml
-          if git diff --cached --quiet; then
-            echo 'Lockfile already matches current manifests.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'chore(lockfile): resolve Expo 58 and Skia v3 dependency graph' \
-            -m "Frozen install and pnpm check:skia-v3 passed on these bytes in $RUN_URL (resolved against $BASE). Pushed with GITHUB_TOKEN, so no CI run follows this commit."
-          git push origin "HEAD:$BRANCH"
-# This reconciles and verifies install resolution, NOT a native or web runtime.
+# This checks install resolution, NOT a native or web runtime.
