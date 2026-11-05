@@ -1,6 +1,7 @@
 export { NativeRecordingTrack } from "./NativeRecordingTrack";
 export type { NativeRecordingTrackProps } from "./NativeRecordingTrack";
 export { useForgeAudioRecorder } from "./useForgeAudioRecorder";
+export { fileLabel, inputLevel, toRecordingViewState } from "./recordingView";
 export {
   ForgeRecordingController,
   INTERRUPTED_MESSAGE,
