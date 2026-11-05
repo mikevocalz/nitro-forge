@@ -1,0 +1,48 @@
+name: Prism canvas/layers ops
+
+on:
+  pull_request:
+    paths:
+      - "packages/prism/**"
+      - "packages/ignition/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/prism-canvas.yml"
+  push:
+    branches: [master]
+    paths:
+      - "packages/prism/**"
+      - "packages/ignition/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/prism-canvas.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  prism:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Install Forge workspace
+        run: corepack pnpm install --frozen-lockfile
+      - name: Rust unit and op tests (prism-engine)
+        run: cargo test -p prism-engine
+      - name: Typecheck the Prism binding
+        run: corepack pnpm --filter @nitro-forge/prism typecheck
+      - name: Compile the real Rust engine host
+        run: cargo build -p nf-cli
+      - name: Prism ops through nf-cli
+        run: corepack pnpm --filter @nitro-forge/prism exec vitest run
+      # Linux, Node and the JSON-lines host only. No Nitro JSI, Swift,
+      # Compose or device renderer is exercised here.
