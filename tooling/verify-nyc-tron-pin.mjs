@@ -53,4 +53,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log(`NYC-Tron pin ${pin.release}: ${consumers} workspace dependencies match.`);
+console.log(`NYC-Tron pin ${pin.tag}: ${consumers} workspace dependencies match.`);

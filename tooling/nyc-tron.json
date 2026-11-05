@@ -1,6 +1,6 @@
 {
+  "tag": "v0.1.0-alpha.1",
   "repository": "mikevocalz/NYC-Tron-UI",
-  "release": "v0.1.0-alpha.1",
   "commit": "2e16fee2262a5db3e0aa3aff458562fe279e2b70",
   "packages": {
     "@nyc-tron/ui": {
