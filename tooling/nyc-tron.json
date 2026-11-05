@@ -1,0 +1,44 @@
+{
+  "repository": "https://github.com/mikevocalz/NYC-Tron-UI",
+  "tag": "v0.1.0-alpha.1",
+  "commit": "2e16fee2262a5db3e0aa3aff458562fe279e2b70",
+  "sha256sumsUrl": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/SHA256SUMS",
+  "packages": {
+    "@nyc-tron/core": {
+      "version": "0.1.0-alpha.1",
+      "file": "nyc-tron-core-0.1.0-alpha.1.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-core-0.1.0-alpha.1.tgz",
+      "sha256": "6713e127c9a0911890fd9f7fb25d9e4cb41083f55d554c4a13e7c21bed19aee4"
+    },
+    "@nyc-tron/expo-controls": {
+      "version": "0.1.0-alpha.1",
+      "file": "nyc-tron-expo-controls-0.1.0-alpha.1.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-expo-controls-0.1.0-alpha.1.tgz",
+      "sha256": "643a3d67dadc1429cde9b3df2a94182e2a84a0427883fec00b592d5cf77337e3"
+    },
+    "@nyc-tron/geometry": {
+      "version": "0.1.0-alpha.1",
+      "file": "nyc-tron-geometry-0.1.0-alpha.1.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-geometry-0.1.0-alpha.1.tgz",
+      "sha256": "26aa3bc58b8e64ed966640b2a980c7e27ef0c0117821f96d52f3f23e7f1c7020"
+    },
+    "@nyc-tron/native-controls": {
+      "version": "0.1.0-alpha.1",
+      "file": "nyc-tron-native-controls-0.1.0-alpha.1.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-native-controls-0.1.0-alpha.1.tgz",
+      "sha256": "7a523f039087ae3eac59df5b1e0af4eae3cffabfbcd07b8c807e97fff70a31bd"
+    },
+    "@nyc-tron/panes": {
+      "version": "0.1.0-alpha.1",
+      "file": "nyc-tron-panes-0.1.0-alpha.1.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-panes-0.1.0-alpha.1.tgz",
+      "sha256": "7fd89491e821d9f01b7194564db17101f0351547e859c32681e7a9983c6c7e2a"
+    },
+    "@nyc-tron/ui": {
+      "version": "0.1.0-alpha.1",
+      "file": "nyc-tron-ui-0.1.0-alpha.1.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz",
+      "sha256": "45fcb7e6e13032dadeadace754033d138bf856e963309d94040670c59a577e21"
+    }
+  }
+}
