@@ -1,9 +1,9 @@
 diff --git a/Package.swift b/Package.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..ccffd2b18af6aaff943e012d4fabc5a59e8b3a54
+index 0000000000000000000000000000000000000000..09a64e3a8e0cd59c5672fcbde1a73594206a4c4b
 --- /dev/null
 +++ b/Package.swift
-@@ -0,0 +1,245 @@
+@@ -0,0 +1,250 @@
 +// swift-tools-version: 6.0
 +// AUTO-SCAFFOLDED by react-native spm scaffold — safe to edit & commit via patch-package.
 +// AUTO-SCAFFOLDED-VERSION: 20
@@ -18,6 +18,11 @@ index 0000000000000000000000000000000000000000..ccffd2b18af6aaff943e012d4fabc5a5
 +// (dropping the file) anyway.
 +
 +import PackageDescription
++
++// RCT_NEW_ARCH_ENABLED: the podspec gets it from install_modules_dependencies; SwiftPM
++// has no such hook. Without it the Fabric component views compile as plain UIViews with
++// no +componentDescriptorProvider, React Native falls back to UIView's default (a
++// provider with a null constructor), and the first render of the component crashes.
 +
 +let package = Package(
 +    name: "RNSVG",
@@ -242,8 +247,8 @@ index 0000000000000000000000000000000000000000..ccffd2b18af6aaff943e012d4fabc5a5
 +                "common/cpp/react/renderer/components/rnsvg/RNSVGShadowNodes.h",
 +            ],
 +            publicHeadersPath: "apple",
-+            cSettings: [.define("REACT_NATIVE_MINOR_VERSION", to: "88"), .headerSearchPath("common/cpp"), .headerSearchPath("apple/Brushes"), .headerSearchPath("apple/Elements"), .headerSearchPath("apple/Filters/MetalCI"), .headerSearchPath("apple/Filters"), .headerSearchPath("apple"), .headerSearchPath("apple/Shapes"), .headerSearchPath("apple/Text"), .headerSearchPath("apple/Utils"), .headerSearchPath("apple/ViewManagers"), .headerSearchPath("common/cpp/react/renderer/components/rnsvg"), .headerSearchPath("."), .unsafeFlags(["-include", "react-native-spm-prefix.h"])],
-+            cxxSettings: [.define("REACT_NATIVE_MINOR_VERSION", to: "88"), .headerSearchPath("common/cpp"), .headerSearchPath("apple/Brushes"), .headerSearchPath("apple/Elements"), .headerSearchPath("apple/Filters/MetalCI"), .headerSearchPath("apple/Filters"), .headerSearchPath("apple"), .headerSearchPath("apple/Shapes"), .headerSearchPath("apple/Text"), .headerSearchPath("apple/Utils"), .headerSearchPath("apple/ViewManagers"), .headerSearchPath("common/cpp/react/renderer/components/rnsvg"), .headerSearchPath("."), .unsafeFlags(["-include", "react-native-spm-prefix.h"]), .define("DEBUG", .when(configuration: .debug)), .define("NDEBUG", .when(configuration: .release))],
++            cSettings: [.define("RCT_NEW_ARCH_ENABLED", to: "1"), .define("REACT_NATIVE_MINOR_VERSION", to: "88"), .headerSearchPath("common/cpp"), .headerSearchPath("apple/Brushes"), .headerSearchPath("apple/Elements"), .headerSearchPath("apple/Filters/MetalCI"), .headerSearchPath("apple/Filters"), .headerSearchPath("apple"), .headerSearchPath("apple/Shapes"), .headerSearchPath("apple/Text"), .headerSearchPath("apple/Utils"), .headerSearchPath("apple/ViewManagers"), .headerSearchPath("common/cpp/react/renderer/components/rnsvg"), .headerSearchPath("common/cpp/react/renderer/components"), .headerSearchPath("."), .unsafeFlags(["-include", "react-native-spm-prefix.h"])],
++            cxxSettings: [.define("RCT_NEW_ARCH_ENABLED", to: "1"), .define("REACT_NATIVE_MINOR_VERSION", to: "88"), .headerSearchPath("common/cpp"), .headerSearchPath("apple/Brushes"), .headerSearchPath("apple/Elements"), .headerSearchPath("apple/Filters/MetalCI"), .headerSearchPath("apple/Filters"), .headerSearchPath("apple"), .headerSearchPath("apple/Shapes"), .headerSearchPath("apple/Text"), .headerSearchPath("apple/Utils"), .headerSearchPath("apple/ViewManagers"), .headerSearchPath("common/cpp/react/renderer/components/rnsvg"), .headerSearchPath("common/cpp/react/renderer/components"), .headerSearchPath("."), .unsafeFlags(["-include", "react-native-spm-prefix.h"]), .define("DEBUG", .when(configuration: .debug)), .define("NDEBUG", .when(configuration: .release))],
 +            linkerSettings: [.linkedFramework("UIKit"), .linkedFramework("Foundation"), .linkedFramework("CoreGraphics")]
 +        ),
 +    ],
