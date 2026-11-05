@@ -1,21 +1,21 @@
 {
-  "tag": "v0.1.0-alpha.2",
+  "tag": "v0.1.0-alpha.3",
   "packages": {
     "@nyc-tron/ui": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz",
-      "sha256": "b59fdff86a131847f6a26dd19081aee5c6c90a3134fac0a9e26cef5e2ba5b587"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-ui-0.1.0-alpha.3.tgz",
+      "sha256": "13b2c46390ffd54e2713447f9e2c79df5b35a883c29f87050a6a94b5cc5b9db7"
     },
     "@nyc-tron/core": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-core-0.1.0-alpha.2.tgz",
-      "sha256": "6d228a66a5888545d819b325cab7ce5462c3750d25614f0d382ebe5fd9b74507"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-core-0.1.0-alpha.3.tgz",
+      "sha256": "21124020e236c48f165ef717aa02572f11efcfa62da1df0a5073fc147d2be6ce"
     },
     "@nyc-tron/expo-controls": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-expo-controls-0.1.0-alpha.2.tgz",
-      "sha256": "ad586fce6f4d746c44af7f6061bb3cbb764ea65d719ab72c2b0e5c0ab53f8db8"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-expo-controls-0.1.0-alpha.3.tgz",
+      "sha256": "a713c4d5954809986b0a75645b1e156dcbe11d56a47e09142857daff54fa5837"
     },
     "@nyc-tron/reserved-regions": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-reserved-regions-0.1.0-alpha.2.tgz",
-      "sha256": "c8b22f1227f1e6ace64ba0cf7bc5b7171de9c79a3962ee0d45e14c044ecffdd7"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-reserved-regions-0.1.0-alpha.3.tgz",
+      "sha256": "fcc4082a2b99d425a597fc91fbd0baeaaf20fda673336309b0545b63bbd31774"
     }
   }
 }

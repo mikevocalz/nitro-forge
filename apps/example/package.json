@@ -68,10 +68,10 @@
     "tailwindcss": "4.3.4",
     "uniwind": "1.13.1",
     "zustand": "5.0.16",
-    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz",
-    "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-core-0.1.0-alpha.2.tgz",
-    "@nyc-tron/expo-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-expo-controls-0.1.0-alpha.2.tgz",
-    "@nyc-tron/reserved-regions": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-reserved-regions-0.1.0-alpha.2.tgz"
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-ui-0.1.0-alpha.3.tgz",
+    "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-core-0.1.0-alpha.3.tgz",
+    "@nyc-tron/expo-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-expo-controls-0.1.0-alpha.3.tgz",
+    "@nyc-tron/reserved-regions": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-reserved-regions-0.1.0-alpha.3.tgz"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

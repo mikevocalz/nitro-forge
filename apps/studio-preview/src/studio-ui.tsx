@@ -5,6 +5,7 @@
 // One React Native Web copy: the binding re-exports the rest of RNW (Image).
 import { Image, Pressable, ScrollView, Text, TextInput, View } from './react-native-classname';
 import { Select } from '@nyc-tron/expo-controls/Select';
+import { NativePopover } from '@nyc-tron/expo-controls/NativePopover';
 import { NativeActionMenu } from '@nyc-tron/expo-controls/NativeActionMenu';
 import { nycTronStudioUI } from '@nitro-forge/studio-workspace/nyc-tron-host';
 import type { StudioUIComponents } from '@nitro-forge/studio-workspace/ui';
@@ -19,5 +20,5 @@ export const studioUI: StudioUIComponents = nycTronStudioUI({
   ScrollView: ScrollView as unknown as Parts['ScrollView'],
   TextInput: TextInput as unknown as Parts['TextInput'],
   Image: Image as unknown as Parts['Image'],
-  Select, ActionMenu: NativeActionMenu,
+  Select, ActionMenu: NativeActionMenu, NativePopover, GroupedSelect: Select,
 });

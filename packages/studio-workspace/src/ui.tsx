@@ -73,9 +73,9 @@ export interface StudioUIComponents {
   TextInput: ComponentType<TextInputProps & RefAttributes<NativeTextInput>>;
   Image: ComponentType<ImageProps>;
   Menu: ComponentType<StudioMenuProps>;
-  /** Optional: no NYC-Tron popover takes a trigger yet (see nyc-tron-host.tsx). Never fall back to a fake RN modal. */
+  /** Optional for custom hosts; the NYC-Tron host supplies its measured trigger popover. */
   Popover?: ComponentType<StudioPopoverProps>;
-  /** Optional: offered only when the host has a grouped native dropdown (see nyc-tron-host.tsx). */
+  /** Optional for custom hosts; the NYC-Tron host supplies grouped platform choices. */
   NativeDropdown?: ComponentType<StudioDropdownProps>;
   Select: ComponentType<StudioSelectProps>;
   SegmentedControl: ComponentType<StudioSegmentedControlProps>;

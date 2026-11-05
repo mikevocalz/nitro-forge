@@ -1,13 +1,7 @@
 /** Below this editor width, contextual Layers overlays rather than resizing the artboard. */
 export const PRISM_DOCKED_LAYERS_MIN_WIDTH = 1100;
-/**
- * Widest Layers panel, in points. NYC-Tron's LayerStack row (v0.1.0-alpha.2)
- * has a fixed floor once it shows a thumbnail and a remove button: 3 selection
- * bar + 44 grip + 44 eye + 32 thumbnail + 96 name + 88 opacity + 44 remove =
- * 351, plus the panel's 2 pt border. Narrower, the row overflows and the
- * remove button is clipped.
- */
-export const PRISM_LAYERS_PANEL_WIDTH = 356;
+/** Compact panel width; alpha.3 LayerStack collapses row opacity when space is tight. */
+export const PRISM_LAYERS_PANEL_WIDTH = 280;
 
 /** Geometry belongs to the editor viewport, never the native app window contract. */
 /** Measured chrome, in editor coordinates. Larger text (200 %) grows the
@@ -29,11 +23,7 @@ export function prismViewportLayout(width: number, height: number, ratio: number
   const aspect = Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
   const toolbarBottom = Math.max(PRISM_DEFAULT_TOOLBAR_BOTTOM, chrome.toolbarBottom ?? 0);
   const railRight = Math.max(PRISM_DEFAULT_RAIL_RIGHT, chrome.railRight ?? 0);
-  // The panel is as wide as the row floor whenever the editor allows it. On a
-  // phone that covers the tool rail while Layers is open (Close returns it):
-  // the room right of the rail (302 pt at 390) would clip every row's remove
-  // button. Below 380 pt the row still overflows; Delete and the screen-reader
-  // Remove action keep removal reachable there.
+  // The compact row keeps its name and remove action reachable at this width.
   const panelWidth = Math.max(1, Math.min(PRISM_LAYERS_PANEL_WIDTH, width - 24));
   // Grown chrome pushes the panel, rail and artboard down by the same amount.
   const grown = toolbarBottom - PRISM_DEFAULT_TOOLBAR_BOTTOM;

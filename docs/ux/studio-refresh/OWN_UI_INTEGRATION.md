@@ -14,7 +14,7 @@ explicit integration error. The boundary check is
 ## Release
 
 `tooling/nyc-tron.json` pins `@nyc-tron/ui`, `core`, `expo-controls` and
-`reserved-regions` at v0.1.0-alpha.2, each with the sha256 from the release's
+`reserved-regions` at v0.1.0-alpha.3, each with the sha256 from the release's
 `SHA256SUMS`. `node tooling/verify-nyc-tron.mjs` fails if a workspace manifest
 uses another URL or a tarball no longer matches.
 
@@ -36,19 +36,29 @@ every slot. Each host adds its primitives (`apps/example/src/studio-ui.tsx`,
 | DropZone | `files/DropZone` (the preview's FilePicker is `files/FilePicker`) |
 | View, Text, Pressable, ScrollView, TextInput, Image | the host's React Native primitives; on web, the className binding |
 | TokenScope | Uniwind `ScopedVariables` on native; a `display: contents` view on web |
-| Popover, NativeDropdown | not supplied (DEFER, see below) |
+| Popover | `@nyc-tron/expo-controls/NativePopover`, measured trigger form |
+| NativeDropdown | grouped `@nyc-tron/expo-controls/Select`; uses native dropdowns where supported |
 
 The browser launcher and host envelope use `@nyc-tron/ui/components/html`.
 Forge's `tone` and `surface` props are accepted and ignored: colour comes from
 the semantic variables, which `packages/studio-workspace/build-theme.mjs`
 writes next to Forge's own (`src/theme.css`, `src/theme.native.css`).
 
-**Popover and NativeDropdown: DEFER (2026-11-05).** NYC-Tron's `NativePopover`
-places itself from an anchor rect and the usable regions the fold owner
-reports; Forge's trigger-based Popover contract cannot supply those honestly.
-NYC-Tron's `NativeDropdown` takes flat options where Forge's groups carry
-headings. No studio renders either today. They return when Forge's contracts
-take an anchor rect and flat options, or NYC-Tron ships grouped options.
+**Popover and NativeDropdown (alpha.3).** Both slots are bound. Popover
+passes the controlled trigger and rich content to NYC-Tron's measured trigger
+form. NYC-Tron chooses placement within its available region; the Studio's
+optional above/below preference does not override native placement. Hosts that
+supply fold regions must retain that geometry ownership.
+
+Dropdown maps Studio group labels (or stable IDs) to NYC-Tron headings. Its
+canonical Select retains disabled choices and includes supporting text in the
+option label. On native it delegates to NativeDropdown when its selection can
+be represented; NYC-Tron keeps its accessible token picker for placeholder or
+disabled-option cases. No local popup implementation is introduced.
+
+Layers returns to its original 280-point panel: alpha.3 collapses row opacity
+on narrow rows instead of requiring Forge's temporary 356-point workaround.
+This changes editor geometry only, with no app-window configuration changes.
 
 ## React Native Web
 

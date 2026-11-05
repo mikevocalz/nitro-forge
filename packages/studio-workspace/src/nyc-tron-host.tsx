@@ -14,7 +14,10 @@ import { ErrorMessage } from '@nyc-tron/ui/components/feedback/ErrorMessage';
 import { KeyValueList } from '@nyc-tron/ui/components/content/KeyValueList';
 import { NightScope } from '@nyc-tron/ui/components/theme/NightScope';
 import { DropZone } from '@nyc-tron/ui/components/files/DropZone';
-import type { StudioButtonProps, StudioCardProps, StudioMenuProps, StudioUIComponents } from './ui';
+import type { PopoverProps } from '@nyc-tron/ui/components/overlays/AnchoredPopover';
+import type { SelectProps } from '@nyc-tron/ui/components/Select';
+import type { StudioButtonProps, StudioCardProps, StudioMenuProps, StudioPopoverProps, StudioDropdownProps, StudioUIComponents } from './ui';
+import { studioDropdownGroups } from './nyc-tron-options';
 
 /**
  * The action menu a host passes in: `@nyc-tron/expo-controls/NativeActionMenu`
@@ -32,6 +35,8 @@ export type HostActionMenu = ComponentType<{
  * Select and action menu, and optionally a token scope. */
 export type NycTronHostParts = Pick<StudioUIComponents, 'View' | 'Text' | 'Pressable' | 'ScrollView' | 'TextInput' | 'Image' | 'Select' | 'TokenScope'> & {
   ActionMenu: HostActionMenu;
+  NativePopover: ComponentType<PopoverProps>;
+  GroupedSelect: ComponentType<SelectProps>;
 };
 
 /** Forge's `outline` is NYC-Tron's bordered `secondary`. `tone` is ignored:
@@ -51,20 +56,23 @@ function Card({ surface, ...props }: StudioCardProps) {
 /**
  * The Studio UI contract on NYC-Tron UI (rule #38: Forge imports NYC-Tron).
  *
- * Popover and NativeDropdown are left unset (DEFER, 2026-11-05). NYC-Tron's
- * NativePopover places itself from an anchor rect and the usable regions the
- * fold owner reports, which Forge's trigger-based Popover cannot supply, and
- * its NativeDropdown takes flat options where Forge's groups carry headings.
- * No studio renders either today; `ui.tsx` throws if one is used without a
- * host component.
+ * Alpha.3 supplies trigger measurement and grouped choices. Grouped Select
+ * delegates to the native dropdown where supported and retains disabled
+ * choices through NYC-Tron's canonical Select implementation.
  */
 export function nycTronStudioUI(host: NycTronHostParts): StudioUIComponents {
-  const { ActionMenu, ...parts } = host;
+  const { ActionMenu, NativePopover, GroupedSelect, ...parts } = host;
   // NYC-Tron menus have no title row or placement; the trigger label names the menu.
   const Menu = ({ children, actions, onAction, title, triggerLabel }: StudioMenuProps) =>
     <ActionMenu trigger={children} actions={actions} onAction={onAction} accessibilityLabel={triggerLabel ?? title ?? 'Actions'} />;
+  // Placement is chosen by NYC-Tron's measured usable region. The optional
+  // Studio preference cannot override clipping or native presentation.
+  const Popover = ({ accessibleLabel, title, placement: _placement, ...props }: StudioPopoverProps) =>
+    <NativePopover {...props} accessibilityLabel={title ? `${accessibleLabel}: ${title}` : accessibleLabel} />;
+  const NativeDropdown = ({ groups, ...props }: StudioDropdownProps) =>
+    <GroupedSelect {...props} groups={studioDropdownGroups(groups)} />;
   return {
-    ...parts, Menu, Button, Card, SegmentedControl, TabBar, Toolbar, List, ListItem, IconButton, FieldGroup,
+    ...parts, Menu, Popover, NativeDropdown, Button, Card, SegmentedControl, TabBar, Toolbar, List, ListItem, IconButton, FieldGroup,
     Banner, Badge, EmptyState, ErrorMessage, KeyValueList, NightScope, DropZone,
   };
 }

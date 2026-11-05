@@ -72,9 +72,9 @@ test('grown chrome at 200 % text moves the rail, panel and artboard below and be
   assert.equal(wide.panelTop, 12, 'a docked desktop panel stays at the top edge');
 });
 
-test('the Layers panel is as wide as a LayerStack row with a remove button, up to the editor width', () => {
-  assert.equal(PRISM_LAYERS_PANEL_WIDTH, 356);
-  assert.equal(prismViewportLayout(1024, 768, 1, true, false).panelWidth, 356);
-  assert.equal(prismViewportLayout(390, 844, 1, true, false).panelWidth, 356);
-  assert.equal(prismViewportLayout(320, 600, 1, true, false).panelWidth, 296);
+test('the compact Layers panel fits without the alpha.2 row-width workaround', () => {
+  assert.equal(PRISM_LAYERS_PANEL_WIDTH, 280);
+  assert.equal(prismViewportLayout(1024, 768, 1, true, false).panelWidth, 280);
+  assert.equal(prismViewportLayout(390, 844, 1, true, false).panelWidth, 280);
+  assert.equal(prismViewportLayout(320, 600, 1, true, false).panelWidth, 280);
 });

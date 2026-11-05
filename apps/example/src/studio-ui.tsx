@@ -1,6 +1,7 @@
 import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { ScopedVariables } from 'uniwind';
 import { Select } from '@nyc-tron/expo-controls/Select';
+import { NativePopover } from '@nyc-tron/expo-controls/NativePopover';
 import { NativeActionMenu } from '@nyc-tron/expo-controls/NativeActionMenu';
 import { nycTronStudioUI } from '@nitro-forge/studio-workspace/nyc-tron-host';
 import type { StudioTokenScopeProps, StudioUIComponents } from '@nitro-forge/studio-workspace/ui';
@@ -13,7 +14,7 @@ const TokenScope = ({ variables, children }: StudioTokenScopeProps) => <ScopedVa
  * ScrollView and TextInput refs as instance interfaces where the Studio
  * contract names the classes; the runtime refs are the same objects. */
 export const studioUI = nycTronStudioUI({
-  View, Text, Pressable, Image, Select, ActionMenu: NativeActionMenu, TokenScope,
+  View, Text, Pressable, Image, Select, ActionMenu: NativeActionMenu, NativePopover, GroupedSelect: Select, TokenScope,
   ScrollView: ScrollView as unknown as StudioUIComponents['ScrollView'],
   TextInput: TextInput as unknown as StudioUIComponents['TextInput'],
 });

@@ -493,3 +493,11 @@ the workspace sets `minimumReleaseAge: 0` as of 2026-11-04.)
 Do not treat this as native-ready, a clean-install pass, or complete parity.
 See docs/native/SDK58_METRO_UPGRADE.md for exact versions, reproduction,
 source checks, native autolinking evidence and remaining release gates.
+
+## Recovered alpha.3 Studio integration (2026-11-05)
+
+- NYC-Tron release pins and SHA256SUMS verified against all four consumed tarballs.
+- Studio suite: 148 tests passed; Studio and preview TypeScript passed; example TypeScript passed.
+- Preview production build passed; UI boundary check passed.
+- NativePopover and grouped Select are bound in both hosts; Layers uses its original 280pt width.
+- No device, screen-reader, foldable, or native rebuild acceptance was performed for this change.
