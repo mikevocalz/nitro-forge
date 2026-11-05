@@ -1,3 +1,4 @@
+import { commitTallyFill } from "../src/grid-cluster";
 import { describe, expect, it, vi } from "vitest";
 import {
   bindTallySheetTabs, readTallySheetTabs, readTallyRange, tallyRangeWindow, commitTallyCardField,
@@ -86,4 +87,17 @@ describe("I-13/I-14/I-20 range reads and card commits", () => {
     expect(setCell).toHaveBeenCalledWith("B3", "=4+5");
     await expect(commitTallyCardField({ getRange: vi.fn(), setCell } as never, "b3", "1")).rejects.toThrow();
   });
+});
+
+
+it("commits an inclusive UI fill plan through one engine call", async () => {
+  const fillRange = vi.fn(async () => ({ data: { changed: 4 }, events: [] }));
+  const source = { startRow: 1, endRow: 2, startColumn: 0, endColumn: 1 };
+  const plan = { source, target: { ...source, endRow: 4 }, direction: "down" as const };
+  await commitTallyFill({ fillRange } as never, plan);
+  expect(fillRange).toHaveBeenCalledExactlyOnceWith({ from: "A2", to: "B3" }, { from: "A2", to: "B5" });
+  expect(() => commitTallyFill({ fillRange } as never, { ...plan, target: { ...source, endRow: 0 } })).toThrow();
+  expect(fillRange).toHaveBeenCalledTimes(1);
+  fillRange.mockRejectedValueOnce(new Error("engine rejected"));
+  await expect(commitTallyFill({ fillRange } as never, plan)).rejects.toThrow("engine rejected");
 });
