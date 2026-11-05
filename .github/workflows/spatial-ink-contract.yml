@@ -4,6 +4,7 @@ on:
     paths:
       - 'packages/spatial-ink/**'
       - 'docs/native/SPATIAL_INK_MUSE.md'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/spatial-ink-contract.yml'
   push:
     branches:
@@ -23,8 +24,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - name: Install new workspace package
-        run: pnpm install --no-frozen-lockfile
+      - name: Install from the committed lockfile
+        run: pnpm install --frozen-lockfile
       - name: Typecheck spatial input
         run: pnpm --filter @nitro-forge/spatial-ink typecheck
       - name: Replay hover, press, pressure, cancel, buttons, and timestamps
