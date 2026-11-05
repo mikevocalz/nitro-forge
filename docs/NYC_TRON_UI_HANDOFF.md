@@ -4,14 +4,16 @@
 
 The [NYC-Tron-UI](https://github.com/mikevocalz/NYC-Tron-UI) repository owns
 every reusable cross-app UI control, basic and professional, under
-`packages/ui/src/components/`. As of 2026-11-04 that code is on open PRs only:
-[PR #1](https://github.com/mikevocalz/NYC-Tron-UI/pull/1) is the baseline and
-PRs #2, #3 and #8 to #10 build on it. NYC-Tron-UI `main` contains only a
-README. The repository itself is public, but every package is marked
-`"private": true`, none is on npm, and none has a validated native production
-build.
+`packages/ui/src/components/`. NYC-Tron-UI `main` holds the packages, and
+[`v0.1.0-alpha.1`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v0.1.0-alpha.1)
+(commit `2e16fee`, 2026-11-05) is the first GitHub Release. It ships six
+tarballs plus `SHA256SUMS`: `@nyc-tron/core`, `geometry`, `ui`, `panes`,
+`native-controls` and `expo-controls`. Every package is still marked
+`"private": true` and none is on npm, so a Forge package installs them by
+release tarball URL. The pin file and its verifier land with Forge #49. No
+NYC-Tron package has a validated native production build yet.
 
-Subpaths that exist in the PR #1 `packages/ui/package.json` exports map:
+Some subpaths in the released `@nyc-tron/ui` exports map:
 
 ```text
 Consumer (Moyo, NYC-MON, Forge, other)
@@ -22,6 +24,9 @@ Consumer (Moyo, NYC-MON, Forge, other)
   ├── @nyc-tron/ui/components/forge/ColorChannels   (needs the optional @expo/ui ^58 peer)
   ├── @nyc-tron/ui/components/forge/SpreadsheetGrid
   ├── @nyc-tron/ui/components/data/DataTable
+  ├── @nyc-tron/ui/components/forge/inputs/InstrumentKnob
+  ├── @nyc-tron/ui/components/forge/inputs/PrecisionScrubber
+  ├── @nyc-tron/native-controls/ArcKnob            (SwiftUI / Compose; needs @expo/ui ^58)
   └── @nitro-forge/cadence, @nitro-forge/prism, ...  (document engines)
 ```
 
@@ -32,12 +37,12 @@ persistence, file I/O, engine state or undo.
 
 ## Package selection
 
-| App capability | Forge dependency | UI import (PR #1 unless marked) |
+| App capability | Forge dependency | UI import (release `v0.1.0-alpha.1`) |
 | --- | --- | --- |
-| Drawing / imaging | `@nitro-forge/prism` | `components/forge/graphics/` planned, not extracted |
-| Music / recording | `@nitro-forge/cadence` | `.../forge/WaveformLane`; mixer and EQ controls not extracted |
+| Drawing / imaging | `@nitro-forge/prism` | `.../forge/graphics/ImageCropOverlay` (UI only; Prism has no crop op yet) |
+| Music / recording | `@nitro-forge/cadence` | `.../forge/WaveformLane`, `.../forge/inputs/InstrumentKnob`, `@nyc-tron/native-controls/ArcKnob`; mixer and EQ controls not extracted |
 | Video | `@nitro-forge/splice` | `.../forge/NativeSeekBar`; timeline not extracted |
-| Color | any editor | `.../forge/ColorChannels` (RGBA); HSV wheel not extracted |
+| Color | any editor | `.../forge/ColorChannels` (RGBA); the HSV picker is on NYC-Tron `main` (PR #21) but not in this release |
 | Word documents | `@nitro-forge/quill` | Document controls not extracted |
 | Grids | `@nitro-forge/tally` | `.../forge/SpreadsheetGrid`, `.../data/DataTable` |
 | Slides | `@nitro-forge/pitch` | Slide/canvas controls not extracted |
@@ -49,22 +54,22 @@ integration, not of every UI component. A per-editor package may ship an
 adapter for convenience only if it does not copy UI source or pull all seven
 editors into each consumer.
 
-NYC-Tron-UI `docs/COMPONENT_OWNERSHIP.md` (PR #1) is the authoritative
+NYC-Tron-UI `docs/COMPONENT_OWNERSHIP.md` is the authoritative
 inventory and status table. Update it, not this file, when a component moves.
 
 ## Forge PR mapping
 
 - Forge #25 and #26: seek bar, waveform lane and RGBA channel controls.
-  NYC-Tron PR #1 holds the extracted `WaveformLane`, `NativeSeekBar` and
+  The release holds the extracted `WaveformLane`, `NativeSeekBar` and
   `ColorChannels`. Remove the Forge copies only after consumer integration
   tests and review.
 - Forge #35: PCM waveform source. `WaveformLane` is the UI target; the WAV
   decoding stays in Forge.
-- Forge #34: HSV picker. No NYC-Tron target exists yet (`components/forge/color/`
-  is planned).
+- Forge #34: HSV picker. Extracted by NYC-Tron PR #21, merged to `main` after
+  `v0.1.0-alpha.1` was cut, so it ships in the next release, not this one.
 - Forge #32: Forge 2046 precision scrubber, gestures and instrument system.
-  Extract the reusable controls to NYC-Tron (`PrecisionScrubber` is planned,
-  not extracted). Editor orchestrators, undo and document commands stay in
+  `PrecisionScrubber` and `DragGrabHandle` are extracted (NYC-Tron PR #23) and
+  in the release. Editor orchestrators, undo and document commands stay in
   Forge.
 - Forge #15 and #18 to #20: whiteboard, ink and Muse BLE. Hardware-native and
   engine work stays in Forge; the reusable UI surfaces move to NYC-Tron
@@ -73,13 +78,16 @@ inventory and status table. Update it, not this file, when a component moves.
   NYC-Tron export (`components/icons/` is planned). Keep the Rive runtime and
   asset limits.
 - Forge #5: studio navigation and workspace. `@nyc-tron/core/navigation`
-  (PR #1) defines the shell policy: a collapsible left drawer on Windows and a
+  defines the shell policy: a collapsible left drawer on Windows and a
   right-hand rail on Android foldables. The native Windows `NavigationView`
   adapter is not implemented. Each app owns route selection, pane intent and
   session state.
 - Forge #39: Tally spreadsheet windows. `SpreadsheetGrid` is the UI target.
-- Forge #7 and #23: npm distribution must keep per-package installation and
-  native compatibility, not bundle every editor into one runtime.
+- Forge #40 and #43: Cadence instrument bindings and the native editor
+  session. `InstrumentKnob` and the native `ArcKnob` consume Cadence's adapter.
+- Forge #7 and #23: package distribution must keep per-package installation
+  and native compatibility, not bundle every editor into one runtime. Like
+  NYC-Tron, Forge packages ship as GitHub Release tarballs, not npm.
 
 ## Moyo and NYC-MON themes stay distinct
 
@@ -87,7 +95,7 @@ Moyo keeps its Tailwind v4/Uniwind tokens for neubrutalist buttons and cards.
 NYC-MON keeps its NeonBlade port and day/night theme. NYC-Tron components
 accept `className` and an `unstyled` switch, so an app can supply its own full
 Tailwind recipe instead of fighting the default classes. Native controls take
-the `TronTheme` semantic resources from `@nyc-tron/core` (PR #1). Native
+the `TronTheme` semantic resources from `@nyc-tron/core`. Native
 WinUI, AppKit, SwiftUI and Compose adapters can only map values those OS
 controls expose; they cannot honor arbitrary CSS.
 
