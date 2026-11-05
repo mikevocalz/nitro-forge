@@ -12,8 +12,8 @@ import type { HybridObject } from "react-native-nitro-modules";
  * Errors reject with a message embedding the serialized EngineError JSON.
  */
 export interface Forge extends HybridObject {
-  /** Open a document engine. Returns its handle (u64). */
-  openEngine(kind: string): number;
+  /** Create a ready engine on a native-owned worker; returns a positive JS-safe handle. */
+  openEngine(kind: string): Promise<number>;
   /** Apply a JSON-serialized Command. Resolves to JSON CommandResult. */
   applyJson(handle: number, commandJson: string): Promise<string>;
   /** Serialize the document to the NFD1 envelope, base64-encoded. */
@@ -22,6 +22,6 @@ export interface Forge extends HybridObject {
   restoreB64(handle: number, bytesB64: string): Promise<void>;
   undo(handle: number): Promise<boolean>;
   redo(handle: number): Promise<boolean>;
-  /** Close a document and free its engine. */
-  closeEngine(handle: number): boolean;
+  /** Close a document on its worker and deterministically release the engine. */
+  closeEngine(handle: number): Promise<boolean>;
 }

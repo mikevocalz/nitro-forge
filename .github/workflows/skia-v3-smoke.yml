@@ -1,0 +1,50 @@
+name: NitroForge Studio Skia 3 web and JS smoke
+
+on:
+  push:
+    branches:
+      - feat/skia-v3-runtime-validation-2026-11-02
+  pull_request:
+    paths:
+      - 'apps/example/**'
+      - 'packages/ignition/**'
+      - 'packages/prism/**'
+      - '.github/workflows/skia-v3-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  js-web-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          pnpm --version
+      - name: Install the committed Expo 58 lockfile exactly
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Enforce Skia v3 + Dawn compatibility policy
+        run: |
+          pnpm check:skia-v3
+          pnpm why react-native-webgpu-dawn
+      - name: Type-check all seven engine public JS APIs and Expo example
+        run: pnpm -r typecheck
+      - name: Test NitroHost JS-to-native contract, safe handles and engine errors
+        run: pnpm --filter @nitro-forge/ignition exec vitest run tests/nitro-host.test.ts
+      - name: Compile Expo web bundle (not a browser pixel test)
+        run: pnpm --filter @nitro-forge/example exec expo export --platform web
+        env:
+          CI: '1'
+      - name: Bundle iOS JS (not an Xcode, Skia or Nitro native build)
+        run: pnpm --filter @nitro-forge/example exec expo export --platform ios
+        env:
+          CI: '1'
+# Native Gradle/Xcode builds, actual Metal/Vulkan rendering, Web CanvasKit pixels,
+# Nitro/C++ bindings and on-device Prism editing still require separate jobs.

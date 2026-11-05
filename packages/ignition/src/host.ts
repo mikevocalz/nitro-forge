@@ -32,66 +32,115 @@ export interface EngineHost {
  * blocks the UI thread.
  */
 export interface ForgeNitro {
-  openEngine(kind: string): number;
+  openEngine(kind: string): Promise<number>;
   applyJson(handle: number, commandJson: string): Promise<string>;
   snapshotB64(handle: number): Promise<string>;
   restoreB64(handle: number, bytesB64: string): Promise<void>;
   undo(handle: number): Promise<boolean>;
   redo(handle: number): Promise<boolean>;
-  closeEngine(handle: number): boolean;
+  closeEngine(handle: number): Promise<boolean>;
+}
+
+/**
+ * The current v1 Nitro surface transports Rust u64 session IDs as JS numbers.
+ * Reject any value outside JS's exact integer range before allowing it to
+ * address an engine. A future generated HybridDocument API can eliminate
+ * numeric handle transport entirely; never silently round a Rust handle.
+ */
+export function assertSafeEngineHandle(handle: number): void {
+  if (!Number.isSafeInteger(handle) || handle <= 0) {
+    throw new EngineError({
+      code: "validation",
+      message: "Invalid or unsafe native document handle",
+      recoverable: false,
+    });
+  }
 }
 
 export class NitroHost implements EngineHost {
   constructor(private forge: ForgeNitro) {}
 
   async open(kind: EngineKind): Promise<number> {
-    return this.forge.openEngine(kind);
+    const handle = await native(this.forge.openEngine(kind));
+    assertSafeEngineHandle(handle);
+    return handle;
   }
 
   async apply<T>(handle: number, cmd: Command): Promise<CommandResult<T>> {
-    const raw = await this.forge
-      .applyJson(handle, JSON.stringify(cmd))
-      .catch((e: unknown) => {
-        throw parseNativeError(e);
-      });
-    const res = JSON.parse(raw) as {
+    assertSafeEngineHandle(handle);
+    const raw = await native(this.forge.applyJson(handle, JSON.stringify(cmd)));
+    let res: {
       ok?: boolean;
       data?: T;
       events?: ForgeEvent[];
       error?: EngineErrorShape;
-    };
-    // The C ABI reports engine failures in-band ({"ok":false,"error":{…}}),
-    // not as rejections. Without this check every engine error reads as a
-    // successful apply with undefined data.
-    if (res.ok === false) {
+    } | null;
+    try {
+      res = JSON.parse(raw) as typeof res;
+    } catch {
+      throw new EngineError({
+        code: "internal",
+        message: "Malformed native engine response",
+        recoverable: false,
+      });
+    }
+    // Native failures arrive in-band; a missing status is never successful.
+    if (res?.ok === false) {
       throw new EngineError(
         res.error ?? { code: "internal", message: "empty error", recoverable: false },
       );
+    }
+    if (res?.ok !== true || (res.events !== undefined &&
+      (!Array.isArray(res.events) || res.events.some((e) =>
+        e === null || typeof e !== "object" || typeof e.kind !== "string")))) {
+      throw new EngineError({
+        code: "internal",
+        message: "Invalid native engine response shape",
+        recoverable: false,
+      });
     }
     return { data: res.data as T, events: res.events ?? [] };
   }
 
   async snapshot(handle: number): Promise<Uint8Array> {
-    return base64ToBytes(await this.forge.snapshotB64(handle));
+    assertSafeEngineHandle(handle);
+    return base64ToBytes(await native(this.forge.snapshotB64(handle)));
   }
 
   async restore(handle: number, bytes: Uint8Array): Promise<void> {
-    await this.forge.restoreB64(handle, bytesToBase64(bytes));
+    assertSafeEngineHandle(handle);
+    await native(this.forge.restoreB64(handle, bytesToBase64(bytes)));
   }
 
-  undo(handle: number): Promise<boolean> {
-    return this.forge.undo(handle);
+  async undo(handle: number): Promise<boolean> {
+    assertSafeEngineHandle(handle);
+    return native(this.forge.undo(handle));
   }
 
-  redo(handle: number): Promise<boolean> {
-    return this.forge.redo(handle);
+  async redo(handle: number): Promise<boolean> {
+    assertSafeEngineHandle(handle);
+    return native(this.forge.redo(handle));
   }
 
   async close(handle: number): Promise<boolean> {
-    return this.forge.closeEngine(handle);
+    assertSafeEngineHandle(handle);
+    return native(this.forge.closeEngine(handle));
   }
 
   async dispose(): Promise<void> {}
+}
+
+/**
+ * Every native call rejects with an Error whose message embeds the EngineError
+ * JSON. Route all of them through one mapper so callers always receive an
+ * EngineError, whichever method failed.
+ */
+async function native<T>(call: Promise<T>): Promise<T> {
+  try {
+    return await call;
+  } catch (e: unknown) {
+    throw parseNativeError(e);
+  }
 }
 
 /** Native errors surface as rejections whose message embeds the EngineError JSON. */
