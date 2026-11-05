@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Cross-platform native transport, frame seek bar and waveform primitives for Nitro Forge Studio",
+  "description": "Forge media controls: re-exports NYC-Tron UI's seek bar and waveform lane, plus the gain slider and seconds helpers pending NYC-Tron alpha.2",
   "license": "UNLICENSED",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -15,15 +15,14 @@
     "./math": {
       "types": "./src/timebase.ts",
       "default": "./src/timebase.ts"
-    },
-    "./waveform": {
-      "types": "./src/waveform.ts",
-      "default": "./src/waveform.ts"
     }
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run tests"
+  },
+  "dependencies": {
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz"
   },
   "peerDependencies": {
     "@expo/ui": "^58.0.0",

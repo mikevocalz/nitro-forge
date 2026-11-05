@@ -1,6 +1,10 @@
 import { Column, Host, Slider, Text } from "@expo/ui";
 
-/** Stateless native gain/level control. Gain is linear [0,1], not decibels. */
+/**
+ * Stateless native gain/level control. Gain is linear [0,1], not decibels.
+ * Stays in Forge until NYC-Tron-UI PR #20 (LevelFader) ships in alpha.2;
+ * then delete this file and import LevelFader from NYC-Tron.
+ */
 export interface NativeLevelSliderProps {
   readonly value: number;
   readonly onValueChange: (nextValue: number) => void;

@@ -6,18 +6,21 @@ Universal `@expo/ui` controls render real **SwiftUI** on iOS,
 A bounded waveform view uses React Native views (native iOS/Android; RN Web);
 dense timelines belong to the existing **Skia v3** / Board GPU track.
 
-## Source-level components in this batch
+## Where the components live
 
-- `NativeSeekBar` — controlled, integer-frame native seekbar using a normalized native slider (no huge Compose step count) with optional NTSC
-  drop-frame timecode, frame stepping and disabled semantics.
-- `NativeLevelSlider` — controlled native gain slider (linear 0..1).
-- `WaveformLane` — real min/max peak display with up to 128 column native RN
-  bars, optional normalized seek callback. Does **not** simulate microphone data.
-- `timebase` — exact rational frame rates and timecode/seconds conversion.
-- `waveform` — bounded min/max resampling and plot geometry.
+`NativeSeekBar`, `WaveformLane`, the timebase math and the waveform math are
+owned by [NYC-Tron UI](https://github.com/mikevocalz/NYC-Tron-UI). Forge
+depends on the release tarball pinned in `tooling/nyc-tron.json`
+(v0.1.0-alpha.1); `node tooling/verify-nyc-tron-pin.mjs --download` checks the
+specifiers, the lockfile and the SHA256SUMS digest. NYC-Tron never imports
+Forge.
+
+New code imports the NYC-Tron subpaths directly:
 
 ```tsx
-import { FRAME_RATES, NativeSeekBar, WaveformLane } from '@nitro-forge/media-ui';
+import { NativeSeekBar } from '@nyc-tron/ui/components/forge/NativeSeekBar';
+import { WaveformLane } from '@nyc-tron/ui/components/forge/WaveformLane';
+import { FRAME_RATES } from '@nyc-tron/ui/components/forge/timebase';
 
 <NativeSeekBar
   frame={currentFrame}
@@ -30,9 +33,23 @@ import { FRAME_RATES, NativeSeekBar, WaveformLane } from '@nitro-forge/media-ui'
 <WaveformLane
   peaks={realRecordedWavPeaks}
   height={68}
+  position={playheadFraction}
   onSeekNormalized={(fraction) => player.seekToFraction(fraction)}
 />;
 ```
+
+`@nitro-forge/media-ui` re-exports those names so existing call sites keep
+working. NYC-Tron styles them with Tailwind v4 classes (`bg-accent`,
+`bg-surface-sunken`, `bg-surface-raised`, `rounded-control`), so the host app
+needs Uniwind and the tokens from NYC-Tron's `docs/THEME_TOKENS.md`;
+`apps/forge-media-lab` (`metro.config.js`, `global.css`) shows the setup. The
+old `foregroundColor`/`backgroundColor` props are gone; set `--color-accent`
+and `--color-surface-sunken`, or pass `barClassName`/`className`.
+
+Still local until NYC-Tron v0.1.0-alpha.2:
+
+- `NativeLevelSlider`, replaced by NYC-Tron `LevelFader` (NYC-Tron-UI PR #20).
+- `framesToSeconds` / `secondsToFrame` in `src/timebase.ts` (NYC-Tron-UI PR #20).
 
 The host owns the actual decoded media, player state and Rust document
 session. For actual recorded WAV peak data, consume

@@ -1,13 +1,12 @@
 import { ScrollView, Text, View } from "react-native";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
-import {
-  FRAME_RATES,
-  NativeLevelSlider,
-  NativeSeekBar,
-  WaveformLane,
-  type WaveformPeak,
-} from "@nitro-forge/media-ui";
+import { NativeSeekBar } from "@nyc-tron/ui/components/forge/NativeSeekBar";
+import { WaveformLane } from "@nyc-tron/ui/components/forge/WaveformLane";
+import { FRAME_RATES } from "@nyc-tron/ui/components/forge/timebase";
+import type { WaveformPeak } from "@nyc-tron/ui/components/forge/waveform";
+// Forge-local until NYC-Tron-UI PR #20 (LevelFader) ships in alpha.2.
+import { NativeLevelSlider } from "@nitro-forge/media-ui";
 
 interface DemoState { frame: number; gain: number }
 const store = createStore<DemoState>(() => ({ frame: 1800, gain: 0.72 }));
@@ -36,6 +35,7 @@ export default function App() {
         <Text style={{ color: "white" }}>Waveform display fixture (not live audio)</Text>
         <WaveformLane
           peaks={syntheticPeakFixture}
+          position={frame / 18000}
           height={74} columns={96} testID="forge-waveform"
           onSeekNormalized={(p) => store.setState({ frame: Math.round(p * 18000) })}
         />

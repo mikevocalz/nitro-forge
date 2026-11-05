@@ -1,0 +1,12 @@
+{
+  "repository": "mikevocalz/NYC-Tron-UI",
+  "release": "v0.1.0-alpha.1",
+  "commit": "2e16fee2262a5db3e0aa3aff458562fe279e2b70",
+  "packages": {
+    "@nyc-tron/ui": {
+      "version": "0.1.0-alpha.1",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz",
+      "sha256": "45fcb7e6e13032dadeadace754033d138bf856e963309d94040670c59a577e21"
+    }
+  }
+}
