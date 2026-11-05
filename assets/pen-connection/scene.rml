@@ -1,0 +1,68 @@
+<Rive version="1" kind="fragment">
+  <Artboard width="192" height="192" name="Searching" id="0:2">
+    <Shape x="96" y="96" name="Searching" id="0:3">
+      <Ellipse width="112" height="112" originX="0.5" originY="0.5" name="Ring"/>
+      <Fill name="Purple"><SolidColor name="Color" colorValue="FF9182EE"/></Fill>
+    </Shape>
+    <Shape x="96" y="44" name="Searching Indicator" id="0:4">
+      <Triangle width="26" height="40" originX="0.5" originY="0.5" name="Indicator"/>
+      <Fill name="White"><SolidColor name="Color" colorValue="FFF5F1FF"/></Fill>
+    </Shape>
+    <LinearAnimation duration="90" loopValue="loop" name="Search pulse" id="0:10">
+      <KeyedObject objectId="0:4">
+        <KeyedProperty propertyKey="15">
+          <KeyFrameDouble value="0" interpolationType="linear"/>
+          <KeyFrameDouble value="6.2831855" interpolationType="linear" frame="90"/>
+        </KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+  </Artboard>
+  <Artboard width="192" height="192" name="Pairing" id="0:12">
+    <Shape x="96" y="96" name="Pairing" id="0:13">
+      <Ellipse width="112" height="112" originX="0.5" originY="0.5" name="Ring"/>
+      <Fill name="Purple"><SolidColor name="Color" colorValue="FF9182EE"/></Fill>
+    </Shape>
+    <Shape x="96" y="46" name="Pairing Indicator" id="0:14">
+      <Triangle width="26" height="40" originX="0.5" originY="0.5" name="Indicator"/>
+      <Fill name="White"><SolidColor name="Color" colorValue="FFF5F1FF"/></Fill>
+    </Shape>
+    <LinearAnimation duration="90" loopValue="loop" name="Pair pulse" id="0:20">
+      <KeyedObject objectId="0:14">
+        <KeyedProperty propertyKey="15">
+          <KeyFrameDouble value="0" interpolationType="linear"/>
+          <KeyFrameDouble value="6.2831855" interpolationType="linear" frame="90"/>
+        </KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+  </Artboard>
+  <Artboard width="192" height="192" name="Linked" id="0:22">
+    <Shape x="96" y="96" name="Awaiting Native Input" id="0:23">
+      <Ellipse width="112" height="112" originX="0.5" originY="0.5" name="Ring"/>
+      <Fill name="Amber"><SolidColor name="Color" colorValue="FFF2B56B"/></Fill>
+    </Shape>
+  </Artboard>
+  <Artboard width="192" height="192" name="Connected" id="0:32">
+    <Shape x="96" y="96" name="Connection Verified" id="0:33">
+      <Ellipse width="112" height="112" originX="0.5" originY="0.5" name="Success Ring"/>
+      <Fill name="Green"><SolidColor name="Color" colorValue="FF60C59B"/></Fill>
+    </Shape>
+    <Shape x="96" y="96" name="Verified Symbol" id="0:34">
+      <Triangle width="30" height="32" originX="0.5" originY="0.5" name="Check Indicator"/>
+      <Fill name="White"><SolidColor name="Color" colorValue="FFFFFFFF"/></Fill>
+    </Shape>
+    <LinearAnimation duration="40" loopValue="oneShot" name="Success" id="0:40">
+      <KeyedObject objectId="0:34">
+        <KeyedProperty propertyKey="15">
+          <KeyFrameDouble value="-0.4" interpolationType="linear"/>
+          <KeyFrameDouble value="0" interpolationType="linear" frame="40"/>
+        </KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+  </Artboard>
+  <Artboard width="192" height="192" name="Error" id="0:42">
+    <Shape x="96" y="96" name="Failed Connection" id="0:43">
+      <Ellipse width="112" height="112" originX="0.5" originY="0.5" name="Ring"/>
+      <Fill name="Red"><SolidColor name="Color" colorValue="FFF07272"/></Fill>
+    </Shape>
+  </Artboard>
+</Rive>

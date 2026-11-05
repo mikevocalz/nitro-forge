@@ -1,0 +1,20 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "environment": "react-native",
+  "cxxNamespace": [
+    "forgebluetooth"
+  ],
+  "apple": {
+    "moduleName": "NitroForgeBluetoothV1"
+  },
+  "android": {
+    "namespace": [
+      "forgebluetooth"
+    ],
+    "cxxLibName": "NitroForgeBluetoothV1"
+  },
+  "ignorePaths": [
+    "**/node_modules",
+    "**/tests"
+  ]
+}

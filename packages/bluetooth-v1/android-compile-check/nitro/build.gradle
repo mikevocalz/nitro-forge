@@ -1,0 +1,25 @@
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.plugin.serialization"
+
+// pnpm links the peer into the package's node_modules.
+def nitro = file("../../node_modules/react-native-nitro-modules/android").canonicalPath
+def sources = ["$nitro/core/main/java", "$nitro/src/main/java", "stub"]
+
+android {
+  namespace "com.margelo.nitro"
+  compileSdk 36
+  defaultConfig { minSdk 26 }
+  sourceSets {
+    main {
+      java.srcDirs = sources
+      kotlin.srcDirs = sources
+      manifest.srcFile "m/AndroidManifest.xml"
+    }
+  }
+}
+
+dependencies {
+  api "com.facebook.react:react-android:0.88.0"
+  api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+  api "org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0"
+}
