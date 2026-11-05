@@ -1,5 +1,7 @@
 # Forge 2046 — living micro-interactions, native menus and responsive popovers
 
+> **Superseded source, November 5 2026:** Studio controls now come from NYC-Tron UI (rule #38), not `@acme/ui`. The Studio Menu is NYC-Tron's `NativeActionMenu`; Popover and NativeDropdown are deferred (see `studio-refresh/OWN_UI_INTEGRATION.md`). The `@acme/ui` references below are the November 4 record. The motion and placement policy still applies.
+
 > **Status, November 4 2026:** source-backed Menu is already consumed by the Studio host; the shared motion/placement POLICY and a strict **optional** rich-Popover host slot exist in PR #32. The rich @acme/ui Popover implementation and physical cross-platform UX QA are **pending**. Motion budgets below are design targets, not measured runtime animations.
 
 ## One authoritative UI source

@@ -9,7 +9,9 @@ import { DOCKS, type Dock, type DockAction, type Rect, type Studio } from '@nitr
 import { createStudioWorkspaceStore, MIN_STAGE_HEIGHT, MIN_STAGE_WIDTH, PANEL_IDS, actOnPanel } from './model';
 import { ForgeDocumentStage } from './stage';
 import { ForgeIcon } from '@nitro-forge/icons/native';
-import { DragGrabHandle } from './drag-grab-handle';
+import { DragGrabHandle } from '@nyc-tron/ui/components/DragGrabHandle';
+import { forgeDragTransport } from './drag-transport';
+import { useStudioTextScale } from './persona-turret';
 import { workspaceThemes, prismThemes, workspaceScale as scale, type WorkspaceColors } from './theme';
 export { createStudioWorkspaceStore } from './model';
 export { ForgeDocumentStage } from './stage';
@@ -62,7 +64,11 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
   const outerWidth = useStore(ui, s => s.width);
   const outerHeight = useStore(ui, s => s.height);
   const compact = outerWidth < 700;
-  const separateHostControls = canvasStudio && outerWidth < 380 && !!props.headerTrailing;
+  // The header's kit controls grow with the text size, so the width that fits
+  // them on one row grows too: at 200 % a 390 pt phone gives the host
+  // controls their own row instead of clipping Save.
+  const textScale = useStudioTextScale();
+  const separateHostControls = canvasStudio && outerWidth < 380 * textScale && !!props.headerTrailing;
   // A short landscape host keeps its existing toolbar height. Host menus stay
   // outside the horizontal scroller so their platform popup can open normally.
   const packHostControls = separateHostControls && outerHeight < 500;
@@ -101,7 +107,8 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
       selectedColor={primary ? colors.ink : colors.accent} surfaceColor={primary ? colors.accent : selected ? colors.soft : colors.base} reducedMotion={reducedMotion} /> : undefined;
     const shared = { onPress, disabled, ...(toggled === undefined ? {} : { selected: toggled }), cornerRadius: scale.radius.control,
       variant: primary ? 'primary' as const : 'ghost' as const, tone: 'carolina' as const,
-      className: selected && !primary ? 'rounded-[4px] bg-ink-800' : 'rounded-[4px]' };
+      // A transparent edge keeps each button's shape under Windows High Contrast.
+      className: selected && !primary ? 'rounded-[4px] border border-transparent bg-ink-800' : 'rounded-[4px] border border-transparent' };
     return iconOnly ? <IconButton key={label} {...shared} size={primary ? 'md' : 'sm'} aria-label={label} icon={icon} />
       : <Button key={label} {...shared} size={small ? 'sm' : 'md'} title={label} icon={icon} />;
   };
@@ -135,7 +142,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
           <View style={{ flexDirection: 'row', gap: 8 }}>{button('Undo', () => { void perform('Undo', props.onUndo); }, false, props.busy)}{button('Redo', () => { void perform('Redo', props.onRedo); }, false, props.busy)}</View>
         </View>}
         {arranging && <View style={{ borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 12, gap: 4 }}>
-          <Text style={{ color: colors.muted, fontSize: 10, letterSpacing: 1 }}>PANEL POSITION</Text>
+          <Text style={{ color: colors.muted, fontSize: 11, letterSpacing: 1 }}>PANEL POSITION</Text>
           <SegmentedControl aria-label={`Dock position for ${panelNames[id] ?? id}`} value={dock ?? ''}
             options={DOCKS.map(zone => ({ value: zone, label: zone[0]!.toUpperCase() + zone.slice(1) }))}
             onChange={zone => { if (DOCKS.includes(zone as Dock)) action(id, `move-${zone as Dock}`); }}
@@ -195,7 +202,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
         <ForgeIcon name={appIcons[props.studioId]} size={separateHostControls ? 20 : 23} selected color={colors.accent} selectedColor={colors.accent} surfaceColor={colors.soft} reducedMotion={reducedMotion} />
       </View>
       <View style={{ flex: 1, minWidth: 40, gap: 4 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 10, fontWeight: '600', letterSpacing: .4, flexShrink: 1 }}>{props.title}</Text>{!compact && <><Text style={{ color: colors.line, fontSize: 10 }}> / </Text><Text style={{ color: colors.muted, fontSize: 10 }}>{props.busy ? 'Working…' : 'Document'}</Text></>}</View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11, fontWeight: '600', letterSpacing: .4, flexShrink: 1 }}>{props.title}</Text>{!compact && <><Text style={{ color: colors.line, fontSize: 11 }}> / </Text><Text style={{ color: colors.muted, fontSize: 11 }}>{props.busy ? 'Working…' : 'Document'}</Text></>}</View>
         <Text numberOfLines={1} style={{ color: colors.text, fontWeight: '600', fontSize: compact ? 13 : 15 }}>{props.documentTitle}</Text>
       </View>
       {!separateHostControls && props.headerTrailing}
@@ -236,7 +243,8 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
           {props.children ?? <ForgeDocumentStage studioId={props.studioId} state={props.state} theme={appearance} />}
         </View>
         {dockView('right', { width: `${layout.sizes.rightFraction * 100}%` })}
-        {canvasStudio && !compact && <View accessibilityLabel="Studio panels" style={{ width: 52, alignItems: 'center', gap: 4, paddingTop: 12, backgroundColor: colors.deep }}>
+        {/* Sized by its buttons, so grown text widens the column and the stage gives way, rather than the buttons spilling over the stage. */}
+        {canvasStudio && !compact && <View accessibilityLabel="Studio panels" style={{ minWidth: 52, paddingHorizontal: 3, alignItems: 'center', gap: 4, paddingTop: 12, backgroundColor: colors.deep }}>
           <View style={{ paddingVertical: 4, gap: 2, backgroundColor: colors.base, borderWidth: 1, borderColor: colors.line, borderRadius: scale.radius.control }}>
             {(['properties', 'actions', 'history'] as const).map(id => button(panelNames[id]!, () => action(id, layout.collapsed.includes(id) ? 'activate' : 'collapse'), !layout.collapsed.includes(id), false, true, true, panelIcons[id]))}
           </View>
@@ -265,12 +273,12 @@ function DragHandle({ id, store, measure, hostRect, blockedRegions, color }: {
   id: string; store: ReturnType<typeof createStudioWorkspaceStore>; measure: () => void;
   hostRect: { current: Rect }; blockedRegions: readonly Rect[] | undefined; color: string;
 }) {
-  return <DragGrabHandle label={`Drag ${panelNames[id]} to a dock edge`} color={color}
+  return <DragGrabHandle label={`Drag ${panelNames[id]} to a dock edge`} transport={forgeDragTransport}
     onStart={() => { measure(); store.getState().beginDrag(id); }}
     onMove={point => store.getState().previewDrag({ point, host: hostRect.current,
       ...(blockedRegions ? { blockedRegions } : {}) })}
     onCommit={() => { store.getState().commitDrag(); }}
-    onCancel={() => store.getState().cancelDrag()} />;
+    onCancel={() => store.getState().cancelDrag()}><ForgeIcon name="menu" size={16} color={color} reducedMotion /></DragGrabHandle>;
 }
 
 export { QuillTextEditor, type QuillTextEditorHandle, type QuillTextEditorProps } from './text-editor';

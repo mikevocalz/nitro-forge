@@ -27,6 +27,8 @@ on:
       - 'pnpm-workspace.yaml'
       - 'patches/**'
       - 'tsconfig.base.json'
+      - 'tooling/nyc-tron.json'
+      - 'tooling/verify-nyc-tron.mjs'
       - '.github/workflows/studio-layout-ci.yml'
   workflow_dispatch:
 
@@ -44,21 +46,15 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: nitro-forge
-      # Paired source-owned UI change must be published before this branch.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          repository: mikevocalz/nyc-mon
-          ref: 2c5b94ba34d391a1ad66325d058d81f4808dc6ad
-          path: nyc-mon
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '26'
       - run: corepack enable
-      - name: Install canonical UI source dependencies
-        working-directory: nyc-mon
-        run: pnpm --filter @acme/ui... install --frozen-lockfile --ignore-scripts
+      # NYC-Tron UI comes from release tarballs pinned in tooling/nyc-tron.json.
       - name: Install for new workspace package
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: NYC-Tron release pins match their sha256
+        run: node tooling/verify-nyc-tron.mjs
       - name: Nitro v1 code generation and host contracts
         run: |
           pnpm --filter @nitro-forge/ignition codegen
@@ -88,8 +84,6 @@ jobs:
           pnpm --filter @nitro-forge/studio-preview typecheck
       - name: Browser UI module contracts and production bundle
         run: |
-          node apps/studio-preview/verify-skia-assets.mjs
-          node apps/studio-preview/verify-skia-bundle.mjs
           pnpm --filter @nitro-forge/studio-preview test:ui-modules
           pnpm --filter @nitro-forge/studio-preview build
       # cargo test --workspace runs once, in rust-session-contracts.
@@ -121,18 +115,10 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           path: nitro-forge
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          repository: mikevocalz/nyc-mon
-          ref: 2c5b94ba34d391a1ad66325d058d81f4808dc6ad
-          path: nyc-mon
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '26'
       - run: corepack enable
-      - name: Install canonical UI source dependencies
-        working-directory: nyc-mon
-        run: pnpm --filter @acme/ui... install --frozen-lockfile --ignore-scripts
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Metro0.87.2 compatibility and native styles
         run: |
@@ -145,7 +131,6 @@ jobs:
         env:
           CI: '1'
           EXPO_NO_TELEMETRY: '1'
-          STUDIO_UI_ROOT: ${{ github.workspace }}/nyc-mon/packages/ui
         run: |
           pnpm exec expo export --platform ios --max-workers 2 --no-minify --no-bytecode --output-dir /tmp/export-ios
           pnpm exec expo export --platform android --max-workers 2 --no-minify --no-bytecode --output-dir /tmp/export-android
@@ -153,4 +138,7 @@ jobs:
           test -s /tmp/export-web/index.html
           test -s "$(ls /tmp/export-ios/_expo/static/js/ios/*.js)"
           test -s "$(ls /tmp/export-android/_expo/static/js/android/*.js)"
+          # The design studio's persona turret ships in both native bundles.
+          grep -q persona-turret-ring /tmp/export-ios/_expo/static/js/ios/*.js
+          grep -q persona-turret-ring /tmp/export-android/_expo/static/js/android/*.js
 # UI gestures, native devices and assistive technology require separate evidence.

@@ -1,6 +1,7 @@
 import { createContext, forwardRef, useContext, type ForwardRefExoticComponent, type PropsWithoutRef, type ComponentRef, type ComponentType, type ReactNode } from 'react';
 import type { View as NativeViewComponent, ViewProps, TextProps, PressableProps, ScrollView as NativeScrollView, ScrollViewProps, TextInput as NativeTextInput, TextInputProps, ImageProps } from 'react-native';
 import type { RefAttributes } from 'react';
+import { Platform } from 'react-native';
 
 export type StudioViewRef = ComponentRef<typeof NativeViewComponent>;
 export type StudioViewProps = ViewProps & { className?: string };
@@ -57,8 +58,13 @@ export type StudioCardProps = { children?: ReactNode; surface?: 'page' | 'night'
 export type StudioToolbarProps = { title?: string; leading?: ReactNode; actions?: ReactNode; tone?: 'royal' | 'carolina'; density?: 'default' | 'compact'; className?: string };
 export type StudioListProps = { children?: ReactNode; className?: string; tone?: 'royal' | 'carolina' };
 export type StudioListItemProps = { children?: ReactNode; supportingText?: string; leading?: ReactNode; trailing?: ReactNode; onPress?: () => void; selected?: boolean; className?: string };
-export type StudioDropZoneProps = { children?: ReactNode; onDrop?: (event: { assets: { file?: File; uri?: string; type: string; fileName?: string }[] }) => void; disableObjectUrl?: boolean; includeBase64?: boolean; className?: string; style?: ViewProps['style']; accept?: string };
-/** Implementations are supplied by the host's source-owned semantic/native UI kit. */
+export type StudioDropZoneProps = { children?: ReactNode; onDrop?: (event: { assets: { file?: File; uri?: string; type: string; fileName?: string }[] }) => void; disableObjectUrl?: boolean; includeBase64?: boolean; className?: string; style?: ViewProps['style']; accept?: string;
+  /** Draw no well of its own; the children are the whole visual. */
+  unstyled?: boolean };
+/** Semantic variables for one subtree, such as the NYC-Tron tokens from `nycTronTokens`. */
+export type StudioTokenScopeProps = { variables: Readonly<Record<`--${string}`, string>>; children: ReactNode };
+/** Implementations are supplied by the host; `nycTronStudioUI` (./nyc-tron-host) builds them from NYC-Tron UI.
+ * `tone` and `surface` props are accepted for older call sites and ignored: colour comes from theme tokens. */
 export interface StudioUIComponents {
   View: ComponentType<StudioViewProps & RefAttributes<StudioViewRef>>;
   Text: ComponentType<TextProps>;
@@ -67,14 +73,17 @@ export interface StudioUIComponents {
   TextInput: ComponentType<TextInputProps & RefAttributes<NativeTextInput>>;
   Image: ComponentType<ImageProps>;
   Menu: ComponentType<StudioMenuProps>;
-  /** Optional until the canonical @acme/ui rich Popover is implemented. Never fall back to a fake RN modal. */
+  /** Optional: no NYC-Tron popover takes a trigger yet (see nyc-tron-host.tsx). Never fall back to a fake RN modal. */
   Popover?: ComponentType<StudioPopoverProps>;
-  /** Offered only when @acme/ui/NativeDropdown is available in the host. */
+  /** Optional: offered only when the host has a grouped native dropdown (see nyc-tron-host.tsx). */
   NativeDropdown?: ComponentType<StudioDropdownProps>;
   Select: ComponentType<StudioSelectProps>;
   SegmentedControl: ComponentType<StudioSegmentedControlProps>;
   TabBar: ComponentType<StudioTabBarProps>;
   NightScope: ComponentType<{ children: ReactNode }>;
+  /** Sets CSS variables for one subtree (Uniwind `ScopedVariables` on native).
+   * Optional: web falls back to a `display: contents` view carrying the variables. */
+  TokenScope?: ComponentType<StudioTokenScopeProps>;
   DropZone: ComponentType<StudioDropZoneProps>;
   Card: ComponentType<StudioCardProps>;
   Toolbar: ComponentType<StudioToolbarProps>;
@@ -105,16 +114,16 @@ export const ScrollView = forwardRef<NativeScrollView, ScrollViewProps>((props, 
 export const TextInput: ForwardRefExoticComponent<PropsWithoutRef<TextInputProps> & RefAttributes<NativeTextInput>> = forwardRef<NativeTextInput, TextInputProps>((props, ref) => { const C = useComponents().TextInput; return <C {...props} ref={ref} />; });
 export const Image = (props: ImageProps) => { const C = useComponents().Image; return <C {...props} />; };
 export const Menu = (props: StudioMenuProps) => { const C = useComponents().Menu; return <C {...props} />; };
-/** Rich floating tool surface. Host must supply the same canonical @acme/ui source on native and web. */
+/** Rich floating tool surface. The host supplies one implementation for native and web. */
 export const Popover = (props: StudioPopoverProps) => {
   const C = useComponents().Popover;
-  if (!C) throw new Error('Forge Popover requires a source-owned @acme/ui Popover host adapter. No generic popup is substituted.');
+  if (!C) throw new Error('Forge Popover requires a host Popover in StudioUIProvider. No generic popup is substituted.');
   return <C {...props} />;
 };
-/** Grouped single-select native UI is supplied exclusively by @acme/ui. */
+/** Grouped single-select native UI, supplied only by the host. */
 export const NativeDropdown = (props: StudioDropdownProps) => {
   const C = useComponents().NativeDropdown;
-  if (!C) throw new Error('Forge NativeDropdown requires source-owned @acme/ui/NativeDropdown (Expo SDK 58.0.26+).');
+  if (!C) throw new Error('Forge NativeDropdown requires a host NativeDropdown in StudioUIProvider.');
   return <C {...props} />;
 };
 export const Select = (props: StudioSelectProps) => { const C = useComponents().Select; return <C {...props} />; };
@@ -142,3 +151,16 @@ export const ListItem = (props: StudioListItemProps) => { const C = useComponent
 export const DropZone = (props: StudioDropZoneProps) => { const C = useComponents().DropZone; return <C {...props} />; };
 
 export const NightScope = ({ children }: { children: ReactNode }) => { const C = useComponents().NightScope; return <C>{children}</C>; };
+
+/**
+ * Scopes semantic CSS variables to its children. A host without a TokenScope
+ * keeps its own theme on native, where a plain view cannot carry variables.
+ */
+export const TokenScope = ({ variables, children }: StudioTokenScopeProps) => {
+  const components = useComponents();
+  const C = components.TokenScope;
+  if (C) return <C variables={variables}>{children}</C>;
+  if (Platform.OS !== 'web') return <>{children}</>;
+  const V = components.View;
+  return <V style={{ display: 'contents', ...variables } as never}>{children}</V>;
+};

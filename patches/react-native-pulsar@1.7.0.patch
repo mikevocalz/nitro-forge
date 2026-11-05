@@ -1,0 +1,1925 @@
+diff --git a/Package.swift b/Package.swift
+new file mode 100644
+index 0000000000000000000000000000000000000000..35fd1c4e1750af76b3705b4654d4d5b11127b74a
+--- /dev/null
++++ b/Package.swift
+@@ -0,0 +1,67 @@
++// swift-tools-version: 6.0
++// AUTO-SCAFFOLDED by react-native spm scaffold — safe to edit & commit via patch-package.
++// AUTO-SCAFFOLDED-VERSION: 20
++// Cache slot: 0.88.1/dual-flavor
++// Edit the contents below if needed and re-run `npx patch-package <dep-name>`
++// to persist across `npm install`. To regenerate from the podspec, remove
++// this file (or just this marker) and re-run `npx react-native spm scaffold`.
++//
++// Package references are plain relative paths, computed when this file was
++// scaffolded. They stay correct because the file is re-scaffolded per app
++// and cache slot, and any node_modules relayout reinstalls this package
++// (dropping the file) anyway.
++//
++// Hand-edited after scaffolding:
++// - Pulsar.podspec depends on the PulsarHaptics 1.4.0 CocoaPod. Its SwiftPM
++//   mirror is github.com/software-mansion-labs/pulsar-ios (the "swiftPackageUrl"
++//   in pulsar's sdk-versions.json), pinned here to the matching 1.4.0 tag. It
++//   compiles the Swift into a module named `Pulsar`.
++// - ios/Haptics.mm (Objective-C++) needs that module's generated
++//   `Pulsar-Swift.h`. Xcode only exposes it to dependents as a clang module,
++//   which Objective-C++ cannot import with C++ modules off, and SwiftPM rejects
++//   `$(GENERATED_MODULEMAP_DIR)` in any setting. spm/Pulsar-Swift.h is that
++//   header as generated from the pinned 1.4.0 tag; with spm/ on the search path
++//   the bridge's existing `#import "Pulsar-Swift.h"` branch resolves to it.
++//   Regenerate it whenever the pin moves (steps are in the file).
++// - That package already owns the target and product name `Pulsar`, so this
++//   package is named RNPulsar (swiftpmConfig.name in package.json) and its
++//   ObjC++ target is RNPulsarObjC.
++// - Only ios/ is compiled. The scaffold's `path: "."` with no `sources` would
++//   pull in src/, lib/ and android/.
++
++import PackageDescription
++
++let package = Package(
++    name: "RNPulsar",
++    platforms: [.iOS("16.4")],
++    products: [
++        .library(name: "RNPulsar", targets: ["RNPulsarObjC"]),
++    ],
++    dependencies: [
++        .package(name: "ReactNative", path: "../../../../xcframeworks"),
++        .package(name: "React-GeneratedCode", path: "../../../ios"),
++        .package(url: "https://github.com/software-mansion-labs/pulsar-ios", exact: "1.4.0"),
++    ],
++    targets: [
++        .target(
++            name: "RNPulsarObjC",
++            dependencies: [
++                .product(name: "ReactHeaders", package: "ReactNative"),
++                .product(name: "ReactNativeHeaders", package: "ReactNative"),
++                .product(name: "ReactNativeDependenciesHeaders", package: "ReactNative"),
++                .product(name: "ReactAppHeaders", package: "React-GeneratedCode"),
++                .product(name: "Pulsar", package: "pulsar-ios"),
++            ],
++            path: ".",
++            sources: [
++                "ios/Haptics.h",
++                "ios/Haptics.mm",
++            ],
++            publicHeadersPath: "ios",
++            cSettings: [.headerSearchPath("ios"), .headerSearchPath("spm"), .headerSearchPath("."), .unsafeFlags(["-include", "react-native-spm-prefix.h"])],
++            cxxSettings: [.headerSearchPath("ios"), .headerSearchPath("spm"), .headerSearchPath("."), .unsafeFlags(["-include", "react-native-spm-prefix.h"]), .define("DEBUG", .when(configuration: .debug)), .define("NDEBUG", .when(configuration: .release))],
++            linkerSettings: [.linkedFramework("UIKit"), .linkedFramework("Foundation"), .linkedFramework("CoreGraphics"), .linkedFramework("AVFoundation"), .linkedFramework("CoreHaptics")]
++        ),
++    ],
++    cxxLanguageStandard: .cxx20
++)
+diff --git a/package.json b/package.json
+index fbd4576438171fb80b0a7a046dc0da8f7d24e1e0..9effcd0cb5259ff474b89839b731f86401256d58 100644
+--- a/package.json
++++ b/package.json
+@@ -22,6 +22,9 @@
+     "ios",
+     "cpp",
+     "*.podspec",
++    "Package.swift",
++    "react-native-spm-prefix.h",
++    "spm",
+     "react-native.config.js",
+     "!ios/build",
+     "!android/build",
+@@ -162,5 +165,8 @@
+     "languages": "kotlin-objc",
+     "type": "turbo-module",
+     "version": "0.54.3"
++  },
++  "swiftpmConfig": {
++    "name": "RNPulsar"
+   }
+ }
+\ No newline at end of file
+diff --git a/react-native-spm-prefix.h b/react-native-spm-prefix.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..af5cea0557f2f4aa957419f0fc3f250fd55dbaf5
+--- /dev/null
++++ b/react-native-spm-prefix.h
+@@ -0,0 +1,10 @@
++// AUTO-SCAFFOLDED by react-native spm scaffold — mirrors CocoaPods' default
++// prefix header so ObjC sources that rely on an implicit Foundation/UIKit
++// import compile under SPM (which has no prefix-header mechanism). Safe to
++// delete + regenerate via `npx react-native spm scaffold`.
++#ifdef __OBJC__
++#import <Foundation/Foundation.h>
++#if __has_include(<UIKit/UIKit.h>)
++#import <UIKit/UIKit.h>
++#endif
++#endif
+diff --git a/spm/Pulsar-Swift.h b/spm/Pulsar-Swift.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..8664b621d054ad957b164124a30fd7403d3bda05
+--- /dev/null
++++ b/spm/Pulsar-Swift.h
+@@ -0,0 +1,1806 @@
++// Objective-C interface of the `Pulsar` Swift module from
++// github.com/software-mansion-labs/pulsar-ios at tag 1.4.0 (the SwiftPM mirror
++// of the PulsarHaptics 1.4.0 pod that Pulsar.podspec depends on). Everything
++// below this comment is the header Xcode generated for that module, unedited.
++//
++// Why it is checked in: under SwiftPM, Xcode writes `Pulsar-Swift.h` to
++// $(GENERATED_MODULEMAP_DIR) and only exposes it to dependents as a clang
++// module. ios/Haptics.mm is Objective-C++ and React Native builds with C++
++// modules off, so it can neither `@import Pulsar` nor find the file, and
++// SwiftPM refuses `$(...)` build settings in a manifest, so Package.swift
++// cannot add that directory to the search path. Package.swift puts spm/ on
++// RNPulsarObjC's header search path instead, which makes Haptics.mm's existing
++// `#import "Pulsar-Swift.h"` branch resolve to this file.
++//
++// It must match the pinned package version. To regenerate after changing the
++// pin: build the app for a device, then copy
++// <DerivedData>/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/Pulsar-Swift.h
++// over the content below. Generated for arm64 (devices and Apple silicon
++// simulators); any other architecture stops at the header's #error.
++
++#if 0
++#elif defined(__arm64__) && __arm64__
++// Generated by Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)
++#ifndef PULSAR_SWIFT_H
++#define PULSAR_SWIFT_H
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wgcc-compat"
++
++#if !defined(__has_include)
++# define __has_include(x) 0
++#endif
++#if !defined(__has_attribute)
++# define __has_attribute(x) 0
++#endif
++#if !defined(__has_feature)
++# define __has_feature(x) 0
++#endif
++#if !defined(__has_warning)
++# define __has_warning(x) 0
++#endif
++
++#if __has_include(<swift/objc-prologue.h>)
++# include <swift/objc-prologue.h>
++#endif
++
++#pragma clang diagnostic ignored "-Wauto-import"
++#if defined(__OBJC__)
++#include <Foundation/Foundation.h>
++#endif // defined(__OBJC__)
++#if defined(__cplusplus)
++#include <cstdint>
++#include <cstddef>
++#include <cstring>
++#include <stdlib.h>
++#include <new>
++#include <type_traits>
++#else
++#include <stdint.h>
++#include <stddef.h>
++#include <stdbool.h>
++#include <string.h>
++#endif
++#if defined(__cplusplus)
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wnon-modular-include-in-framework-module"
++#if defined(__arm64e__) && __has_include(<ptrauth.h>)
++# include <ptrauth.h>
++#else
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wreserved-macro-identifier"
++# ifndef __ptrauth_swift_value_witness_function_pointer
++#  define __ptrauth_swift_value_witness_function_pointer(x)
++# endif
++# ifndef __ptrauth_swift_class_method_pointer
++#  define __ptrauth_swift_class_method_pointer(x)
++# endif
++#pragma clang diagnostic pop
++#endif
++#pragma clang diagnostic pop
++#endif
++
++#if !defined(SWIFT_TYPEDEFS)
++# define SWIFT_TYPEDEFS 1
++# if __has_include(<uchar.h>)
++#  include <uchar.h>
++# elif !defined(__cplusplus)
++typedef unsigned char char8_t;
++typedef uint_least16_t char16_t;
++typedef uint_least32_t char32_t;
++# endif
++typedef float swift_float2  __attribute__((__ext_vector_type__(2)));
++typedef float swift_float3  __attribute__((__ext_vector_type__(3)));
++typedef float swift_float4  __attribute__((__ext_vector_type__(4)));
++typedef double swift_double2  __attribute__((__ext_vector_type__(2)));
++typedef double swift_double3  __attribute__((__ext_vector_type__(3)));
++typedef double swift_double4  __attribute__((__ext_vector_type__(4)));
++typedef int swift_int2  __attribute__((__ext_vector_type__(2)));
++typedef int swift_int3  __attribute__((__ext_vector_type__(3)));
++typedef int swift_int4  __attribute__((__ext_vector_type__(4)));
++typedef unsigned int swift_uint2  __attribute__((__ext_vector_type__(2)));
++typedef unsigned int swift_uint3  __attribute__((__ext_vector_type__(3)));
++typedef unsigned int swift_uint4  __attribute__((__ext_vector_type__(4)));
++#endif
++
++#if !defined(SWIFT_PASTE)
++# define SWIFT_PASTE_HELPER(x, y) x##y
++# define SWIFT_PASTE(x, y) SWIFT_PASTE_HELPER(x, y)
++#endif
++#if !defined(SWIFT_METATYPE)
++# define SWIFT_METATYPE(X) Class
++#endif
++#if !defined(SWIFT_CLASS_PROPERTY)
++# if __has_feature(objc_class_property)
++#  define SWIFT_CLASS_PROPERTY(...) __VA_ARGS__
++# else
++#  define SWIFT_CLASS_PROPERTY(...) 
++# endif
++#endif
++#if !defined(SWIFT_RUNTIME_NAME)
++# if __has_attribute(objc_runtime_name)
++#  define SWIFT_RUNTIME_NAME(X) __attribute__((objc_runtime_name(X)))
++# else
++#  define SWIFT_RUNTIME_NAME(X) 
++# endif
++#endif
++#if !defined(SWIFT_COMPILE_NAME)
++# if __has_attribute(swift_name)
++#  define SWIFT_COMPILE_NAME(X) __attribute__((swift_name(X)))
++# else
++#  define SWIFT_COMPILE_NAME(X) 
++# endif
++#endif
++#if !defined(SWIFT_METHOD_FAMILY)
++# if __has_attribute(objc_method_family)
++#  define SWIFT_METHOD_FAMILY(X) __attribute__((objc_method_family(X)))
++# else
++#  define SWIFT_METHOD_FAMILY(X) 
++# endif
++#endif
++#if !defined(SWIFT_NOESCAPE)
++# if __has_attribute(noescape)
++#  define SWIFT_NOESCAPE __attribute__((noescape))
++# else
++#  define SWIFT_NOESCAPE 
++# endif
++#endif
++#if !defined(SWIFT_RELEASES_ARGUMENT)
++# if __has_attribute(ns_consumed)
++#  define SWIFT_RELEASES_ARGUMENT __attribute__((ns_consumed))
++# else
++#  define SWIFT_RELEASES_ARGUMENT 
++# endif
++#endif
++#if !defined(SWIFT_WARN_UNUSED_RESULT)
++# if __has_attribute(warn_unused_result)
++#  define SWIFT_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
++# else
++#  define SWIFT_WARN_UNUSED_RESULT 
++# endif
++#endif
++#if !defined(SWIFT_NORETURN)
++# if __has_attribute(noreturn)
++#  define SWIFT_NORETURN __attribute__((noreturn))
++# else
++#  define SWIFT_NORETURN 
++# endif
++#endif
++#if !defined(SWIFT_CLASS_EXTRA)
++# define SWIFT_CLASS_EXTRA 
++#endif
++#if !defined(SWIFT_PROTOCOL_EXTRA)
++# define SWIFT_PROTOCOL_EXTRA 
++#endif
++#if !defined(SWIFT_ENUM_EXTRA)
++# define SWIFT_ENUM_EXTRA 
++#endif
++#if !defined(SWIFT_CLASS)
++# if __has_attribute(objc_subclassing_restricted)
++#  define SWIFT_CLASS(SWIFT_NAME) SWIFT_RUNTIME_NAME(SWIFT_NAME) __attribute__((objc_subclassing_restricted)) SWIFT_CLASS_EXTRA
++#  define SWIFT_CLASS_NAMED(SWIFT_NAME) __attribute__((objc_subclassing_restricted)) SWIFT_COMPILE_NAME(SWIFT_NAME) SWIFT_CLASS_EXTRA
++# else
++#  define SWIFT_CLASS(SWIFT_NAME) SWIFT_RUNTIME_NAME(SWIFT_NAME) SWIFT_CLASS_EXTRA
++#  define SWIFT_CLASS_NAMED(SWIFT_NAME) SWIFT_COMPILE_NAME(SWIFT_NAME) SWIFT_CLASS_EXTRA
++# endif
++#endif
++#if !defined(SWIFT_RESILIENT_CLASS)
++# if __has_attribute(objc_class_stub)
++#  define SWIFT_RESILIENT_CLASS(SWIFT_NAME) SWIFT_CLASS(SWIFT_NAME) __attribute__((objc_class_stub))
++#  define SWIFT_RESILIENT_CLASS_NAMED(SWIFT_NAME) __attribute__((objc_class_stub)) SWIFT_CLASS_NAMED(SWIFT_NAME)
++# else
++#  define SWIFT_RESILIENT_CLASS(SWIFT_NAME) SWIFT_CLASS(SWIFT_NAME)
++#  define SWIFT_RESILIENT_CLASS_NAMED(SWIFT_NAME) SWIFT_CLASS_NAMED(SWIFT_NAME)
++# endif
++#endif
++#if !defined(SWIFT_PROTOCOL)
++# define SWIFT_PROTOCOL(SWIFT_NAME) SWIFT_RUNTIME_NAME(SWIFT_NAME) SWIFT_PROTOCOL_EXTRA
++# define SWIFT_PROTOCOL_NAMED(SWIFT_NAME) SWIFT_COMPILE_NAME(SWIFT_NAME) SWIFT_PROTOCOL_EXTRA
++#endif
++#if !defined(SWIFT_EXTENSION)
++# define SWIFT_EXTENSION(M) SWIFT_PASTE(M##_Swift_, __LINE__)
++#endif
++#if !defined(OBJC_DESIGNATED_INITIALIZER)
++# if __has_attribute(objc_designated_initializer)
++#  define OBJC_DESIGNATED_INITIALIZER __attribute__((objc_designated_initializer))
++# else
++#  define OBJC_DESIGNATED_INITIALIZER 
++# endif
++#endif
++#if !defined(SWIFT_ENUM_ATTR)
++# if __has_attribute(enum_extensibility)
++#  define SWIFT_ENUM_ATTR(_extensibility) __attribute__((enum_extensibility(_extensibility)))
++# else
++#  define SWIFT_ENUM_ATTR(_extensibility) 
++# endif
++#endif
++#if !defined(SWIFT_ENUM)
++# if (defined(__cplusplus) && __cplusplus >= 201103L) ||      (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||      __has_feature(objc_fixed_enum)
++#  define SWIFT_ENUM(_type, _name, _extensibility) enum _name : _type _name; enum SWIFT_ENUM_ATTR(_extensibility) SWIFT_ENUM_EXTRA _name : _type
++#  if __has_feature(generalized_swift_name)
++#   define SWIFT_ENUM_NAMED(_type, _name, SWIFT_NAME, _extensibility) enum _name : _type _name SWIFT_COMPILE_NAME(SWIFT_NAME); enum SWIFT_COMPILE_NAME(SWIFT_NAME) SWIFT_ENUM_ATTR(_extensibility) SWIFT_ENUM_EXTRA _name : _type
++#  else
++#   define SWIFT_ENUM_NAMED(_type, _name, SWIFT_NAME, _extensibility) SWIFT_ENUM(_type, _name, _extensibility)
++#  endif
++# else
++#  define SWIFT_ENUM(_type, _name, _extensibility) _type _name; enum 
++#  define SWIFT_ENUM_NAMED(_type, _name, SWIFT_NAME, _extensibility) SWIFT_ENUM(_type, _name, _extensibility)
++# endif
++#endif
++#if !defined(SWIFT_ENUM_TAG)
++# if (defined(__cplusplus) && __cplusplus >= 201103L) ||      (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||      __has_feature(objc_fixed_enum)
++#  define SWIFT_ENUM_TAG enum
++# else
++#  define SWIFT_ENUM_TAG
++# endif
++#endif
++#if !defined(SWIFT_ENUM_FWD_DECL)
++# if (defined(__cplusplus) && __cplusplus >= 201103L) ||      (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||      __has_feature(objc_fixed_enum)
++#  define SWIFT_ENUM_FWD_DECL(_type, _name) enum _name : _type;
++# else
++#  define SWIFT_ENUM_FWD_DECL(_type, _name) typedef _type _name;
++# endif
++#endif
++#if !defined(SWIFT_UNAVAILABLE)
++# define SWIFT_UNAVAILABLE __attribute__((unavailable))
++#endif
++#if !defined(SWIFT_UNAVAILABLE_MSG)
++# define SWIFT_UNAVAILABLE_MSG(msg) __attribute__((unavailable(msg)))
++#endif
++#if !defined(SWIFT_AVAILABILITY)
++# define SWIFT_AVAILABILITY(plat, ...) __attribute__((availability(plat, __VA_ARGS__)))
++#endif
++#if !defined(SWIFT_AVAILABILITY_DOMAIN)
++# define SWIFT_AVAILABILITY_DOMAIN(dom, ...) __attribute__((availability(domain: dom, __VA_ARGS__)))
++#endif
++#if !defined(SWIFT_WEAK_IMPORT)
++# define SWIFT_WEAK_IMPORT __attribute__((weak_import))
++#endif
++#if !defined(SWIFT_DEPRECATED)
++# define SWIFT_DEPRECATED __attribute__((deprecated))
++#endif
++#if !defined(SWIFT_DEPRECATED_MSG)
++# define SWIFT_DEPRECATED_MSG(...) __attribute__((deprecated(__VA_ARGS__)))
++#endif
++#if !defined(SWIFT_DEPRECATED_OBJC)
++# if __has_feature(attribute_diagnose_if_objc)
++#  define SWIFT_DEPRECATED_OBJC(Msg) __attribute__((diagnose_if(1, Msg, "warning")))
++# else
++#  define SWIFT_DEPRECATED_OBJC(Msg) SWIFT_DEPRECATED_MSG(Msg)
++# endif
++#endif
++#if defined(__OBJC__)
++#if !defined(IBSegueAction)
++# define IBSegueAction 
++#endif
++#endif
++#if !defined(SWIFT_EXTERN)
++# if defined(__cplusplus)
++#  define SWIFT_EXTERN extern "C"
++# else
++#  define SWIFT_EXTERN extern
++# endif
++#endif
++#if !defined(SWIFT_CALL)
++# define SWIFT_CALL __attribute__((swiftcall))
++#endif
++#if !defined(SWIFT_INDIRECT_RESULT)
++# define SWIFT_INDIRECT_RESULT __attribute__((swift_indirect_result))
++#endif
++#if !defined(SWIFT_CONTEXT)
++# define SWIFT_CONTEXT __attribute__((swift_context))
++#endif
++#if !defined(SWIFT_ERROR_RESULT)
++# define SWIFT_ERROR_RESULT __attribute__((swift_error_result))
++#endif
++#if defined(__cplusplus)
++# define SWIFT_NOEXCEPT noexcept
++#else
++# define SWIFT_NOEXCEPT 
++#endif
++#if !defined(SWIFT_C_INLINE_THUNK)
++# if __has_attribute(always_inline)
++# if __has_attribute(nodebug)
++#  define SWIFT_C_INLINE_THUNK inline __attribute__((always_inline)) __attribute__((nodebug))
++# else
++#  define SWIFT_C_INLINE_THUNK inline __attribute__((always_inline))
++# endif
++# else
++#  define SWIFT_C_INLINE_THUNK inline
++# endif
++#endif
++#if defined(_WIN32)
++#if !defined(SWIFT_IMPORT_STDLIB_SYMBOL)
++# define SWIFT_IMPORT_STDLIB_SYMBOL __declspec(dllimport)
++#endif
++#else
++#if !defined(SWIFT_IMPORT_STDLIB_SYMBOL)
++# define SWIFT_IMPORT_STDLIB_SYMBOL 
++#endif
++#endif
++#if !__has_feature(nullability)
++# define _Nonnull
++# define _Nullable
++# define _Null_unspecified
++#elif !defined(__OBJC__)
++# pragma clang diagnostic ignored "-Wnullability-extension"
++#endif
++#if !__has_feature(nullability_nullable_result)
++# define _Nullable_result _Nullable
++#endif
++#if __has_feature(objc_modules)
++#if __has_warning("-Watimport-in-framework-header")
++#pragma clang diagnostic ignored "-Watimport-in-framework-header"
++#endif
++#endif
++
++#pragma clang diagnostic ignored "-Wproperty-attribute-mismatch"
++#pragma clang diagnostic ignored "-Wduplicate-method-arg"
++#if __has_warning("-Wpragma-clang-attribute")
++# pragma clang diagnostic ignored "-Wpragma-clang-attribute"
++#endif
++#pragma clang diagnostic ignored "-Wunknown-pragmas"
++#pragma clang diagnostic ignored "-Wnullability"
++#pragma clang diagnostic ignored "-Warc-bridge-casts-disallowed-in-nonarc"
++#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
++#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
++
++#if __has_attribute(external_source_symbol)
++# pragma push_macro("any")
++# undef any
++# pragma clang attribute push(__attribute__((external_source_symbol(language="Swift", defined_in="Pulsar",generated_declaration))), apply_to=any(function,enum,objc_interface,objc_category,objc_protocol))
++# pragma pop_macro("any")
++#endif
++
++#if defined(__cplusplus)
++extern "C" {
++#endif
++
++#if defined(__cplusplus)
++} // extern "C"
++#endif
++#if __has_attribute(external_source_symbol)
++# pragma clang attribute pop
++#endif
++#if defined(__OBJC__)
++#if __has_feature(objc_modules)
++#if __has_warning("-Watimport-in-framework-header")
++#pragma clang diagnostic ignored "-Watimport-in-framework-header"
++#endif
++@import Foundation;
++@import ObjectiveC;
++#endif
++
++#endif // defined(__OBJC__)
++#pragma clang diagnostic ignored "-Wproperty-attribute-mismatch"
++#pragma clang diagnostic ignored "-Wduplicate-method-arg"
++#if __has_warning("-Wpragma-clang-attribute")
++# pragma clang diagnostic ignored "-Wpragma-clang-attribute"
++#endif
++#pragma clang diagnostic ignored "-Wunknown-pragmas"
++#pragma clang diagnostic ignored "-Wnullability"
++#pragma clang diagnostic ignored "-Warc-bridge-casts-disallowed-in-nonarc"
++#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
++#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
++
++#if __has_attribute(external_source_symbol)
++# pragma push_macro("any")
++# undef any
++# pragma clang attribute push(__attribute__((external_source_symbol(language="Swift", defined_in="Pulsar",generated_declaration))), apply_to=any(function,enum,objc_interface,objc_category,objc_protocol))
++# pragma pop_macro("any")
++#endif
++
++#if defined(__OBJC__)
++
++@class Pulsar;
++@class NSString;
++SWIFT_PROTOCOL("_TtP6Pulsar6Preset_")
++@protocol Preset
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar6Player")
++@interface Player : NSObject
++- (void)play;
++- (void)stop;
++- (nonnull instancetype)init SWIFT_UNAVAILABLE;
+++ (nonnull instancetype)new SWIFT_UNAVAILABLE_MSG("-init is unavailable");
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15AfterglowPreset")
++@interface AfterglowPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16AftershockPreset")
++@interface AftershockPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11AlarmPreset")
++@interface AlarmPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11AnvilPreset")
++@interface AnvilPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14ApplausePreset")
++@interface ApplausePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12AscentPreset")
++@interface AscentPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14AudioSimulator")
++@interface AudioSimulator : NSObject
++- (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16BalloonPopPreset")
++@interface BalloonPopPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13BarragePreset")
++@interface BarragePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14BassDropPreset")
++@interface BassDropPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12BatterPreset")
++@interface BatterPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14BellTollPreset")
++@interface BellTollPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10BlipPreset")
++@interface BlipPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11BloomPreset")
++@interface BloomPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11BongoPreset")
++@interface BongoPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13BoulderPreset")
++@interface BoulderPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar18BreakingWavePreset")
++@interface BreakingWavePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12BreathPreset")
++@interface BreathPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13BuildupPreset")
++@interface BuildupPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11BurstPreset")
++@interface BurstPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10BuzzPreset")
++@interface BuzzPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13CadencePreset")
++@interface CadencePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar19CameraShutterPreset")
++@interface CameraShutterPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12CanterPreset")
++@interface CanterPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13CascadePreset")
++@interface CascadePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15CastanetsPreset")
++@interface CastanetsPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12CatPawPreset")
++@interface CatPawPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12ChargePreset")
++@interface ChargePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11ChimePreset")
++@interface ChimePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10ChipPreset")
++@interface ChipPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11ChirpPreset")
++@interface ChirpPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12ClamorPreset")
++@interface ClamorPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11ClaspPreset")
++@interface ClaspPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12CleavePreset")
++@interface CleavePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10CoilPreset")
++@interface CoilPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14CoinDropPreset")
++@interface CoinDropPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar21CombinationLockPreset")
++@interface CombinationLockPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++@class ValuePoint;
++SWIFT_CLASS("_TtC6Pulsar17ContinuousPattern")
++@interface ContinuousPattern : NSObject
++- (nonnull instancetype)initWithAmplitude:(NSArray<ValuePoint *> * _Nonnull)amplitude frequency:(NSArray<ValuePoint *> * _Nonnull)frequency OBJC_DESIGNATED_INITIALIZER;
++- (nonnull instancetype)init SWIFT_UNAVAILABLE;
+++ (nonnull instancetype)new SWIFT_UNAVAILABLE_MSG("-init is unavailable");
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15CrescendoPreset")
++@interface CrescendoPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13DewdropPreset")
++@interface DewdropPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11DirgePreset")
++@interface DirgePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++/// Represents a discrete haptic event
++/// <ul>
++///   <li>
++///     time: Time in milliseconds (ms)
++///   </li>
++///   <li>
++///     amplitude: Intensity of the haptic (0.0 - 1.0)
++///   </li>
++///   <li>
++///     frequency: Sharpness of the haptic (0.0 - 1.0)
++///   </li>
++/// </ul>
++SWIFT_CLASS("_TtC6Pulsar13DiscretePoint")
++@interface DiscretePoint : NSObject
++- (nonnull instancetype)initWithTime:(double)time amplitude:(float)amplitude frequency:(float)frequency OBJC_DESIGNATED_INITIALIZER;
++- (nonnull instancetype)init SWIFT_UNAVAILABLE;
+++ (nonnull instancetype)new SWIFT_UNAVAILABLE_MSG("-init is unavailable");
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14DissolvePreset")
++@interface DissolvePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13DogBarkPreset")
++@interface DogBarkPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11DronePreset")
++@interface DronePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15EngineRevPreset")
++@interface EngineRevPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12ExhalePreset")
++@interface ExhalePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15ExplosionPreset")
++@interface ExplosionPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13FadeOutPreset")
++@interface FadeOutPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13FanfarePreset")
++@interface FanfarePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13FeatherPreset")
++@interface FeatherPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12FinalePreset")
++@interface FinalePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16FingerDrumPreset")
++@interface FingerDrumPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar17FirecrackerPreset")
++@interface FirecrackerPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10FizzPreset")
++@interface FizzPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11FlarePreset")
++@interface FlarePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11FlickPreset")
++@interface FlickPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12FlinchPreset")
++@interface FlinchPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14FlourishPreset")
++@interface FlourishPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12FlurryPreset")
++@interface FlurryPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11FlushPreset")
++@interface FlushPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12GallopPreset")
++@interface GallopPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11GavelPreset")
++@interface GavelPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12GlitchPreset")
++@interface GlitchPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar17GuitarStrumPreset")
++@interface GuitarStrumPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10HailPreset")
++@interface HailPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12HammerPreset")
++@interface HammerPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15HeartbeatPreset")
++@interface HeartbeatPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12HeraldPreset")
++@interface HeraldPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14HoofBeatPreset")
++@interface HoofBeatPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14IgnitionPreset")
++@interface IgnitionPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12ImpactPreset")
++@interface ImpactPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10JoltPreset")
++@interface JoltPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar24KeyboardMechanicalPreset")
++@interface KeyboardMechanicalPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar22KeyboardMembranePreset")
++@interface KeyboardMembranePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11KnellPreset")
++@interface KnellPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11KnockPreset")
++@interface KnockPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12LamentPreset")
++@interface LamentPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11LatchPreset")
++@interface LatchPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16LighthousePreset")
++@interface LighthousePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10LiltPreset")
++@interface LiltPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10LockPreset")
++@interface LockPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10LopePreset")
++@interface LopePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11MarchPreset")
++@interface MarchPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15MetronomePreset")
++@interface MetronomePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12MurmurPreset")
++@interface MurmurPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11NudgePreset")
++@interface NudgePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16PassingCarPreset")
++@interface PassingCarPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12PatterPreset")
++@interface PatterPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++@class PatternData;
++SWIFT_CLASS("_TtC6Pulsar15PatternComposer")
++@interface PatternComposer : NSObject
++- (void)parsePatternWithHapticsData:(PatternData * _Nonnull)hapticsData;
++- (void)play;
++- (void)playAudioOnly;
++- (void)stop;
++- (void)dispose;
++- (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11PatternData")
++@interface PatternData : NSObject
++- (nonnull instancetype)initWithContinuousPattern:(ContinuousPattern * _Nonnull)continuousPattern discretePattern:(NSArray<DiscretePoint *> * _Nonnull)discretePattern OBJC_DESIGNATED_INITIALIZER;
++- (nonnull instancetype)init SWIFT_UNAVAILABLE;
+++ (nonnull instancetype)new SWIFT_UNAVAILABLE_MSG("-init is unavailable");
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10PealPreset")
++@interface PealPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10PeckPreset")
++@interface PeckPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14PendulumPreset")
++@interface PendulumPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10PingPreset")
++@interface PingPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar9PipPreset")
++@interface PipPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12PistonPreset")
++@interface PistonPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11PlinkPreset")
++@interface PlinkPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13PlummetPreset")
++@interface PlummetPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11PlunkPreset")
++@interface PlunkPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10PokePreset")
++@interface PokePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11PoundPreset")
++@interface PoundPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15PowerDownPreset")
++@interface PowerDownPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14PresetsWrapper")
++@interface PresetsWrapper : NSObject
++- (id <Preset> _Nullable)getByName:(NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init SWIFT_UNAVAILABLE;
+++ (nonnull instancetype)new SWIFT_UNAVAILABLE_MSG("-init is unavailable");
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12PropelPreset")
++@interface PropelPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++@class RealtimeComposer;
++SWIFT_CLASS("_TtC6Pulsar6Pulsar")
++@interface Pulsar : NSObject
++- (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
++- (PresetsWrapper * _Nonnull)getPresets SWIFT_WARN_UNUSED_RESULT;
++- (PatternComposer * _Nonnull)getPatternComposer SWIFT_WARN_UNUSED_RESULT;
++- (RealtimeComposer * _Nonnull)getRealtimeComposer SWIFT_WARN_UNUSED_RESULT;
++- (void)preloadPresetsWithPresetNames:(NSArray<NSString *> * _Nonnull)presetNames;
++@property (nonatomic, readonly) BOOL isHapticsEnabled;
++- (void)enableHapticsWithState:(BOOL)state;
++- (void)enableSoundWithState:(BOOL)state;
++- (void)enableCacheWithState:(BOOL)state;
++- (void)clearCache;
++- (void)stopHaptics;
++- (void)shutDownEngine;
++- (BOOL)isHapticsSupported SWIFT_WARN_UNUSED_RESULT;
++- (BOOL)canPlayHaptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11PulsePreset")
++@interface PulsePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12PummelPreset")
++@interface PummelPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10PushPreset")
++@interface PushPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11RadarPreset")
++@interface RadarPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10RainPreset")
++@interface RainPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10RampPreset")
++@interface RampPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar9RapPreset")
++@interface RapPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13RatchetPreset")
++@interface RatchetPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16RealtimeComposer")
++@interface RealtimeComposer : NSObject
++- (void)setWithAmplitude:(float)amplitude frequency:(float)frequency;
++- (void)stop;
++@property (nonatomic, readonly) BOOL isActive;
++- (void)playDiscreteWithAmplitude:(float)amplitude frequency:(float)frequency;
++- (nonnull instancetype)init SWIFT_UNAVAILABLE;
+++ (nonnull instancetype)new SWIFT_UNAVAILABLE_MSG("-init is unavailable");
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13ReboundPreset")
++@interface ReboundPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12RipplePreset")
++@interface RipplePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11RivetPreset")
++@interface RivetPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12RustlePreset")
++@interface RustlePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15ShockwavePreset")
++@interface ShockwavePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10SnapPreset")
++@interface SnapPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11SonarPreset")
++@interface SonarPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11SparkPreset")
++@interface SparkPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10SpinPreset")
++@interface SpinPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13StaggerPreset")
++@interface StaggerPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11StampPreset")
++@interface StampPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14StampedePreset")
++@interface StampedePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11StompPreset")
++@interface StompPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15StoneSkipPreset")
++@interface StoneSkipPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12StrikePreset")
++@interface StrikePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12SummonPreset")
++@interface SummonPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11SurgePreset")
++@interface SurgePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10SwayPreset")
++@interface SwayPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11SweepPreset")
++@interface SweepPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11SwellPreset")
++@interface SwellPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15SyncopatePreset")
++@interface SyncopatePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar23SystemImpactHeavyPreset")
++@interface SystemImpactHeavyPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar23SystemImpactLightPreset")
++@interface SystemImpactLightPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar24SystemImpactMediumPreset")
++@interface SystemImpactMediumPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar23SystemImpactRigidPreset")
++@interface SystemImpactRigidPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar22SystemImpactSoftPreset")
++@interface SystemImpactSoftPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar29SystemNotificationErrorPreset")
++@interface SystemNotificationErrorPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar31SystemNotificationSuccessPreset")
++@interface SystemNotificationSuccessPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar31SystemNotificationWarningPreset")
++@interface SystemNotificationWarningPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar21SystemSelectionPreset")
++@interface SystemSelectionPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (void)play;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11ThrobPreset")
++@interface ThrobPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10ThudPreset")
++@interface ThudPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar11ThumpPreset")
++@interface ThumpPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13ThunderPreset")
++@interface ThunderPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar17ThunderRollPreset")
++@interface ThunderRollPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar14TickTockPreset")
++@interface TickTockPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16TidalSurgePreset")
++@interface TidalSurgePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15TideSwellPreset")
++@interface TideSwellPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12TremorPreset")
++@interface TremorPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13TriggerPreset")
++@interface TriggerPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13TriumphPreset")
++@interface TriumphPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13TrumpetPreset")
++@interface TrumpetPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16TypewriterPreset")
++@interface TypewriterPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12UnfurlPreset")
++@interface UnfurlPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++/// Represents a point in a haptic pattern’s continuous curve
++/// <ul>
++///   <li>
++///     time: Time in milliseconds (ms)
++///   </li>
++///   <li>
++///     value: Normalized value between 0.0 and 1.0
++///   </li>
++/// </ul>
++SWIFT_CLASS("_TtC6Pulsar10ValuePoint")
++@interface ValuePoint : NSObject
++- (nonnull instancetype)initWithTime:(double)time value:(float)value OBJC_DESIGNATED_INITIALIZER;
++- (nonnull instancetype)init SWIFT_UNAVAILABLE;
+++ (nonnull instancetype)new SWIFT_UNAVAILABLE_MSG("-init is unavailable");
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12VortexPreset")
++@interface VortexPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10WanePreset")
++@interface WanePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar13WarDrumPreset")
++@interface WarDrumPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar15WaterfallPreset")
++@interface WaterfallPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10WavePreset")
++@interface WavePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar10WispPreset")
++@interface WispPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12WobblePreset")
++@interface WobblePreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar16WoodpeckerPreset")
++@interface WoodpeckerPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++SWIFT_CLASS("_TtC6Pulsar12ZipperPreset")
++@interface ZipperPreset : Player <Preset>
++SWIFT_CLASS_PROPERTY(@property (nonatomic, class, readonly, copy) NSString * _Nonnull name;)
+++ (NSString * _Nonnull)name SWIFT_WARN_UNUSED_RESULT;
++- (nonnull instancetype)init:(Pulsar * _Nonnull)haptics OBJC_DESIGNATED_INITIALIZER;
+++ (id <Preset> _Nonnull)getInstanceWithHaptics:(Pulsar * _Nonnull)haptics SWIFT_WARN_UNUSED_RESULT;
++@end
++
++#endif // defined(__OBJC__)
++#if __has_attribute(external_source_symbol)
++# pragma clang attribute pop
++#endif
++#if defined(__cplusplus)
++#endif
++#pragma clang diagnostic pop
++#endif
++
++#else
++#error unsupported Swift architecture
++#endif

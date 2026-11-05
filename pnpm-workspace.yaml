@@ -26,6 +26,15 @@ overrides:
 
 patchedDependencies:
   "@expo/metro-file-map@58.0.5": patches/@expo__metro-file-map@58.0.5.patch
+  '@expo/ui@58.0.27': patches/@expo__ui@58.0.27.patch
+  '@react-native-masked-view/masked-view@0.3.2': patches/@react-native-masked-view__masked-view@0.3.2.patch
+  expo-router@58.0.30: patches/expo-router@58.0.30.patch
+  react-native-pulsar@1.7.0: patches/react-native-pulsar@1.7.0.patch
+  react-native-safe-area-context@5.11.1: patches/react-native-safe-area-context@5.11.1.patch
+  react-native-screens@4.30.1: patches/react-native-screens@4.30.1.patch
+  react-native-skia@3.9.1: patches/react-native-skia@3.9.1.patch
+  react-native-svg@15.16.0: patches/react-native-svg@15.16.0.patch
+  react-native-webgpu@0.21.0: patches/react-native-webgpu@0.21.0.patch
 
 # No release-age quarantine: CI and local installs take new versions immediately.
 minimumReleaseAge: 0

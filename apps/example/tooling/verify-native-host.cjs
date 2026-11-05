@@ -1,3 +1,4 @@
+const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { createRequire } = require('node:module');
@@ -81,7 +82,8 @@ for (const platform of ['apple', 'android']) {
 }
 for (const platform of ['ios', 'android']) {
   const dependency = autolink('react-native-config', platform).dependencies['react-native-pulsar'];
-  assert.equal(dependency.root, path.dirname(hostRequire.resolve('react-native-pulsar/package.json')));
+  // Autolinking reports the app's node_modules symlink; require resolves pnpm's real path.
+  assert.equal(fs.realpathSync(dependency.root), fs.realpathSync(path.dirname(hostRequire.resolve('react-native-pulsar/package.json'))));
   assert.ok(dependency.platforms[platform]);
 }
 console.log('Canonical DropZone and Pulsar native modules discovered (not device validation)');

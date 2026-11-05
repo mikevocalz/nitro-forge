@@ -34,8 +34,7 @@ The current browser entry is an app list, with independent `#/apps/<app>` routes
 Opened sessions survive navigation through the list; browser reload ends them.
 Quill now has a writable stage and DOCX import/export in the browser harness.
 
-Studio's canonical UI is the adjacent `../nyc-mon/packages/ui`, selected by the
-user. Browser builds require that checkout and its installed dependencies.
-Vite and Metro bindings support `STUDIO_UI_ROOT`; current browser CSS expects
-the adjacent checkout. See `docs/ux/studio-refresh/OWN_UI_INTEGRATION.md` for
-the exact paired source commit and native SDK/runtime limitations.
+Studio's UI is NYC-Tron UI, installed from the release tarballs pinned with
+their sha256 in `tooling/nyc-tron.json` (`node tooling/verify-nyc-tron.mjs`
+checks the pins). No sibling checkout is needed. See
+`docs/ux/studio-refresh/OWN_UI_INTEGRATION.md` for the slot map.

@@ -12,7 +12,11 @@
     "./ui": "./src/ui.tsx",
     "./instruments": "./src/instrument-system.ts",
     "./interaction": "./src/interaction-policy.ts",
-    "./precision": "./src/precision-scrubber.tsx"
+    "./personas": "./src/persona-store.ts",
+    "./turret": "./src/persona-turret.tsx",
+    "./composer": "./src/persona-composer.tsx",
+    "./directions": "./src/forge-directions.ts",
+    "./nyc-tron-host": "./src/nyc-tron-host.tsx"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",
@@ -24,12 +28,14 @@
     "zustand": "5.0.16",
     "@nitro-forge/icons": "workspace:*",
     "react-native-svg": "15.16.0",
-    "@nitro-forge/ignition": "workspace:*"
+    "@nitro-forge/ignition": "workspace:*",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz"
   },
   "peerDependencies": {
     "react": ">=19",
     "react-native": ">=0.81",
-    "react-native-gesture-handler": ">=3.4.0 <4"
+    "react-native-gesture-handler": ">=3.4.0 <4",
+    "react-native-reanimated": ">=4.7.1 <5"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
@@ -37,6 +43,13 @@
     "react-native": "0.88.1",
     "react-native-gesture-handler": "3.4.0",
     "esbuild": "0.28.2",
-    "@babel/parser": "8.1.0"
+    "@babel/parser": "8.1.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-worklets": "0.13.1"
+  },
+  "peerDependenciesMeta": {
+    "react-native-reanimated": {
+      "optional": true
+    }
   }
 }

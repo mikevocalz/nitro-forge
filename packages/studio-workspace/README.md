@@ -42,14 +42,23 @@ require a permanent app/mode switcher.
 ## Required application UI
 
 Wrap Studio with `StudioUIProvider` from `@nitro-forge/studio-workspace/ui` and
-pass your application's actual components. This project uses the source-owned
-`studioControls` export from `nyc-mon/packages/ui` (`@acme/ui/studio-controls`).
-There is no raw-native visual fallback and no copied Studio UI kit. The browser
-host uses `@acme/ui/studio-controls/web` for its canonical semantic file picker.
-Menu and layer opacity use the existing Menu/Select adapters, with native OS/kit
-implementations selected by the consuming host. See
-`docs/ux/studio-refresh/OWN_UI_INTEGRATION.md` for checkout and runtime boundaries.
+pass your application's actual components. Both hosts here build them with
+`nycTronStudioUI` from `@nitro-forge/studio-workspace/nyc-tron-host`, which
+maps every slot to NYC-Tron UI (release pinned in `tooling/nyc-tron.json`).
+The host supplies only its platform primitives, `Select` and `NativeActionMenu`
+from `@nyc-tron/expo-controls`, and an optional `TokenScope`. There is no
+raw-native visual fallback. The browser host takes its file picker from
+`@nyc-tron/ui/components/files/FilePicker`. NYC-Tron's colour variables are
+generated with Forge's own in `src/theme.css` and `src/theme.native.css`
+(`pnpm build:theme`). See `docs/ux/studio-refresh/OWN_UI_INTEGRATION.md`.
 
-Dock and layer handles reuse `DragGrabHandle`. Layers preview a measured
-destination and submit a single engine move only after release. Fast release
-waits for native measurement callbacks; cancellation wins while waiting.
+The Prism layer panel is NYC-Tron UI's `LayerStack`
+(`@nyc-tron/ui/components/forge/layers/LayerStack`, release pinned in
+`tooling/nyc-tron.json`). `src/prism-layers.ts` maps Prism's bottom-to-top
+layers to its top-first rows and turns each move, visibility toggle, rename
+released opacity drag and row removal into one engine operation, so one
+undo step. Rows carry Prism's kind ("Rectangle", "Ellipse", "Raster") and a
+shape's fill as the thumbnail.
+Selection stays in the editor store. Dock and Composer handles use NYC-Tron's
+`DragGrabHandle`, and layer opacity uses its `PrecisionScrubber`; NYC-Tron's
+colour variables come from `nycTronTokens` through the host's `TokenScope`.

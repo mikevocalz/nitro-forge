@@ -1,12 +1,13 @@
 /**
  * Forge 2046 interaction and adaptive overlay POLICY.
  *
- * Rendering/ownership: the host's canonical @acme/ui Menu, ResponsiveDialog,
- * and future source-owned Popover. This module never creates a React Native
- * Modal, browser portal or duplicate popup implementation.
+ * Rendering/ownership: the host's NYC-Tron menu and sheet components, and a
+ * future host Popover. This module never creates a React Native Modal,
+ * browser portal or duplicate popup implementation.
  *
  * The host passes a measured, occlusion-free PANE (not the whole window);
- * fold/hinge, safe-area and window-inset geometry belong to @acme/ui.
+ * fold/hinge geometry comes from @nyc-tron/reserved-regions, and safe-area
+ * and window insets from the host.
  * No screen coordinates are persisted as workspace settings.
  */
 export type ForgeMotionEvent =
@@ -115,7 +116,7 @@ export function planForgeOverlay(query: ForgeOverlayQuery): ForgeOverlayPlan {
     return { presentation: 'sheet', reason: 'occluded', usable };
   }
   // Inspector/palette content needs working room. A small phone or soft
-  // keyboard converts it into a canonical @acme/ui responsive sheet.
+  // keyboard converts it into the host's responsive sheet.
   if (query.kind !== 'actions' && (usable.width < 600 || usable.height < 350)) {
     return { presentation: 'sheet', reason: 'compact', usable };
   }

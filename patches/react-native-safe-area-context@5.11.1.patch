@@ -1,0 +1,29 @@
+diff --git a/Package.swift b/Package.swift
+index 5ed439fa3695fc012f65bdcd8aa95b8ceaa7b83e..1bd9fe7635b1e83ac55ff137a4be1b520b1b2d08 100644
+--- a/Package.swift
++++ b/Package.swift
+@@ -1,6 +1,11 @@
+ // swift-tools-version: 6.0
+ import PackageDescription
+ 
++// RCT_NEW_ARCH_ENABLED: the podspec gets it from install_modules_dependencies; SwiftPM
++// has no such hook. Without it the Fabric component views compile as plain UIViews with
++// no +componentDescriptorProvider, React Native falls back to UIView's default (a
++// provider with a null constructor), and the first render of the component crashes.
++
+ // Swift Package Manager support for React Native's SwiftPM autolinking
+ // (react-native >= 0.87). CocoaPods users are unaffected; see the podspec.
+ // The two React Native packages are resolved by the autolinker relative to
+@@ -29,10 +34,12 @@ let package = Package(
+             sources: ["ios", "common/cpp"],
+             publicHeadersPath: "ios",
+             cSettings: [
++                .define("RCT_NEW_ARCH_ENABLED", to: "1"),
+                 .headerSearchPath("common/cpp"),
+                 .headerSearchPath("ios"),
+             ],
+             cxxSettings: [
++                .define("RCT_NEW_ARCH_ENABLED", to: "1"),
+                 .headerSearchPath("common/cpp"),
+                 .headerSearchPath("ios"),
+                 .define("DEBUG", .when(configuration: .debug)),

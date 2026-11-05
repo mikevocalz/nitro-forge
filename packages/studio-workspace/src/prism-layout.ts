@@ -1,19 +1,51 @@
 /** Below this editor width, contextual Layers overlays rather than resizing the artboard. */
 export const PRISM_DOCKED_LAYERS_MIN_WIDTH = 1100;
+/**
+ * Widest Layers panel, in points. NYC-Tron's LayerStack row (v0.1.0-alpha.2)
+ * has a fixed floor once it shows a thumbnail and a remove button: 3 selection
+ * bar + 44 grip + 44 eye + 32 thumbnail + 96 name + 88 opacity + 44 remove =
+ * 351, plus the panel's 2 pt border. Narrower, the row overflows and the
+ * remove button is clipped.
+ */
+export const PRISM_LAYERS_PANEL_WIDTH = 356;
 
 /** Geometry belongs to the editor viewport, never the native app window contract. */
-export function prismViewportLayout(width: number, height: number, ratio: number, layersOpen: boolean, hasFillAction: boolean) {
+/** Measured chrome, in editor coordinates. Larger text (200 %) grows the
+ * toolbar and the tool rail, so the artboard and panels start below and
+ * beside what was really laid out instead of at fixed offsets. */
+export type PrismChromeMeasure = Readonly<{ toolbarBottom?: number; railRight?: number }>;
+
+/** Toolbar and rail as drawn at 100 % text: a 48 pt toolbar at 12 pt and a 52 pt rail at 12 pt. */
+export const PRISM_TOOLBAR_TOP = 12;
+export const PRISM_DEFAULT_TOOLBAR_BOTTOM = 60;
+export const PRISM_DEFAULT_RAIL_RIGHT = 64;
+/** Gap between a piece of chrome and what sits below or beside it. */
+const CHROME_GAP = 8;
+
+export function prismViewportLayout(width: number, height: number, ratio: number, layersOpen: boolean, hasFillAction: boolean, chrome: PrismChromeMeasure = {}) {
   const narrow = width < 700;
   const short = height < 400;
   const dockedLayers = width >= PRISM_DOCKED_LAYERS_MIN_WIDTH;
   const aspect = Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
-  const panelWidth = Math.min(280, Math.max(1, width - 24));
-  const panelTop = short ? 8 : narrow ? 76 : 12;
+  const toolbarBottom = Math.max(PRISM_DEFAULT_TOOLBAR_BOTTOM, chrome.toolbarBottom ?? 0);
+  const railRight = Math.max(PRISM_DEFAULT_RAIL_RIGHT, chrome.railRight ?? 0);
+  // The panel is as wide as the row floor whenever the editor allows it. On a
+  // phone that covers the tool rail while Layers is open (Close returns it):
+  // the room right of the rail (302 pt at 390) would clip every row's remove
+  // button. Below 380 pt the row still overflows; Delete and the screen-reader
+  // Remove action keep removal reachable there.
+  const panelWidth = Math.max(1, Math.min(PRISM_LAYERS_PANEL_WIDTH, width - 24));
+  // Grown chrome pushes the panel, rail and artboard down by the same amount.
+  const grown = toolbarBottom - PRISM_DEFAULT_TOOLBAR_BOTTOM;
+  const railTop = toolbarBottom + (short ? CHROME_GAP : CHROME_GAP * 2);
+  const panelTop = short ? 8 : narrow ? toolbarBottom + 16 : 12;
   const panelMaxHeight = Math.max(1, height - panelTop - (short ? 8 : 108));
   const layerListMaxHeight = Math.max(0, Math.min(245, panelMaxHeight - 184));
-  const canvasLeft = narrow ? 76 : 88;
-  const canvasRight = layersOpen && dockedLayers ? panelWidth + 32 : 20;
-  const canvasTop = short ? 68 : 80;
+  const canvasLeft = railRight + (narrow ? 12 : 24);
+  // On a phone the artboard is centred on the screen: the right margin
+  // matches the rail side, so the margins balance instead of 76 against 20.
+  const canvasRight = layersOpen && dockedLayers ? panelWidth + 32 : narrow ? canvasLeft : 20;
+  const canvasTop = (short ? 68 : 80) + grown;
   const canvasBottom = short ? 76 : 100;
   const availableWidth = Math.max(1, width - canvasLeft - canvasRight);
   const availableHeight = Math.max(1, height - canvasTop - canvasBottom);
@@ -24,7 +56,7 @@ export function prismViewportLayout(width: number, height: number, ratio: number
   const paletteSpace = Math.max(1, width - (short && narrow ? 88 : 24));
   const fillWidth = Math.min(hasFillAction ? 384 : narrow ? 220 : 320, paletteSpace);
   const fillLeft = short && narrow ? width - fillWidth - 12 : (width - fillWidth) / 2;
-  return { narrow, short, dockedLayers, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight,
+  return { narrow, short, dockedLayers, panelWidth, panelTop, panelMaxHeight, layerListMaxHeight, railTop,
     canvasLeft, canvasRight, canvasTop, canvasBottom, canvasWidth, canvasHeight,
     availableWidth, availableHeight, fillWidth, fillLeft };
 }

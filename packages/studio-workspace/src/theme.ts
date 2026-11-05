@@ -15,6 +15,15 @@ export const workspaceScale = {
   size: { target: 44, rail: 72, header: 60, toolbar: 52, status: 28 },
 } as const;
 
+/** Status roles NYC-Tron's Banner, Badge and danger Button read. The chrome
+ * above has no info or success colour of its own, so these are NYC-Tron's
+ * reference values (docs/THEME_TOKENS.md, at least 5.4:1 on a white or
+ * #1B1F26 surface); `onError` is text on the `error` fill. */
+export const workspaceStatus = {
+  dark: { info: '#8AB8FF', success: '#6FD08C', onError: '#2B0703' },
+  light: { info: '#1D5FA8', success: '#1E7A3C', onError: '#FFFFFF' },
+} as const;
+
 /** Canvas studio: graphite chrome and blue active tools, separate from suite branding. */
 export const prismThemes = {
   dark: { ...workspaceThemes.dark, base: '#232428', raised: '#303136', deep: '#18191D', line: '#424348', text: '#F2F3F5', muted: '#B8BBC4', accent: '#66B9FF', ink: '#081D2F', soft: '#173C59' },
