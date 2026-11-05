@@ -20,6 +20,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
 | Typecheck: ignition + 7 product packages + apps/console + apps/example | clean | `pnpm -r exec tsc --noEmit` |
 | Post-review full workspace retest | 184 Rust + 32 vitest pass | `cargo test --workspace && pnpm -r test` |
+| N-18 telemetry: consent, redaction, buffer, sink, `instrumentHost` (fake host) + e2e over real Prism via nf-cli | 12 pass | `pnpm --filter @nitro-forge/telemetry exec vitest run` |
 
 ## Transport status
 

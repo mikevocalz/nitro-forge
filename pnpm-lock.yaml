@@ -216,6 +216,22 @@ importers:
         specifier: ^3.1.0
         version: 3.2.7(@types/node@26.6.5)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
 
+  packages/telemetry:
+    dependencies:
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
+    devDependencies:
+      '@nitro-forge/prism':
+        specifier: workspace:*
+        version: link:../prism
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.1.0
+        version: 3.2.7(@types/node@26.6.5)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
 packages:
 
   '@0no-co/graphql.web@1.3.4':
