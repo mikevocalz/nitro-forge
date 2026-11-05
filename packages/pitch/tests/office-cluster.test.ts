@@ -20,7 +20,7 @@ function fake() {
   const calls: unknown[][] = [];
   const rec = (name: string) => vi.fn((...args: unknown[]) => { calls.push([name, ...args]); return ok({ ok: true }); });
   const doc = {
-    describe: vi.fn(() => ok(state)), addSlide: rec("addSlide"), removeSlide: rec("removeSlide"), moveSlide: rec("moveSlide"),
+    describe: vi.fn(() => ok(state)), addSlide: rec("addSlide"), removeSlide: rec("removeSlide"), moveSlide: rec("moveSlide"), moveSlides: rec("moveSlides"), removeSlides: rec("removeSlides"),
     moveObject: rec("moveObject"), resizeObject: rec("resizeObject"), rotateObject: rec("rotateObject"), setText: rec("setText"),
     removeObject: rec("removeObject"), addAnimation: rec("addAnimation"), removeAnimation: rec("removeAnimation"), slideAt: rec("slideAt"),
   };
@@ -49,12 +49,12 @@ describe("Pitch deck read for J-01/J-02/J-05/J-09", () => {
 });
 
 describe("slide list binding", () => {
-  it("turns an order into single moveSlide calls and re-reads", async () => {
+  it("commits the complete order atomically and re-reads", async () => {
     const { doc, calls } = fake();
     const changed = vi.fn();
     const b = await bindPitchSlideList(doc, changed);
     await b.onReorder(["6", "1", "2"]);
-    expect(calls).toEqual([["moveSlide", 2, 0]]);
+    expect(calls).toEqual([["moveSlides", [6, 1, 2]]]);
     expect(changed).toHaveBeenCalledTimes(1);
     await b.onMove("1", 2);
     expect(calls.at(-1)).toEqual(["moveSlide", 0, 2]);
@@ -72,14 +72,24 @@ describe("slide list binding", () => {
       expect(cur).toEqual(after);
     }
     expect(() => pitchMovePlan(ids, ["a"])).toThrow(RangeError);
+    expect(() => pitchMovePlan(ids, ["a", "a", "b", "c"])).toThrow(RangeError);
   });
 
-  it("refuses to remove every slide before any engine call", async () => {
+  it("refuses duplicate and unknown ids before any engine call", async () => {
     const { doc, calls } = fake();
     const b = await bindPitchSlideList(doc, () => {});
-    await expect(b.onRemoveMany(["1", "2", "6"])).rejects.toThrow(/at least one slide/);
+    await expect(b.onRemoveMany(["1", "2", "99"])).rejects.toThrow(/Unknown slide "99"/);
+    await expect(b.onRemoveMany(["2", "2"])).rejects.toThrow(/Duplicate slide id/);
     await expect(b.onMove("9", 0)).rejects.toThrow(RangeError);
     expect(calls).toEqual([]);
+  });
+
+  it("leaves the keep-one rule and order validation to the engine", async () => {
+    const { doc, calls } = fake();
+    const b = await bindPitchSlideList(doc, () => {});
+    await b.onRemoveMany(["1", "2", "6"]);
+    await b.onReorder(["6", "1"]);
+    expect(calls).toEqual([["removeSlides", [1, 2, 6]], ["moveSlides", [6, 1]]]);
   });
 });
 

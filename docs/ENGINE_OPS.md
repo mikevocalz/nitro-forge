@@ -175,6 +175,8 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `addSlide` | `{layout?}` | `{slide_id}` | |
 | `removeSlide` | `{id}` | `{ok}` | must keep ≥1 slide |
 | `moveSlide` | `{from,to}` | `{ok}` | |
+| `moveSlides` | `{order:number[]}` | `{ok}` | Complete unique slide-ID permutation; one undo entry. Identical order is a no-op. |
+| `removeSlides` | `{ids:number[]}` | `{ok}` | Unique existing slide IDs; must keep ≥1 slide; one undo entry. Empty selection is a no-op. |
 | `setBackground` | `{slide,color|null}` | `{ok}` | slide = id |
 | `addText` | `{slide,x,y,w,h,text,font_size?}` | `{object_id}` | |
 | `setText` | `{slide,id,text}` | `{ok}` | |

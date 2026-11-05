@@ -22,9 +22,6 @@ import type { AnimKind, PitchDocument } from "./index";
 export const PITCH_DEFERRED_OPS = {
   /** J-01 sections in the filmstrip: Pitch slides carry no section. */
   setSlideSection: "J-01",
-  /** J-02 move/remove several slides as one undo entry. Until then the sorter's block move is several `moveSlide` calls, each its own undo step. */
-  moveSlides: "J-02",
-  removeSlides: "J-02",
   /** J-05: the deck's coordinate space. Pitch stores none, so the adapter uses {@link PITCH_SLIDE_SIZE}. */
   setSlideSize: "J-05",
   /** J-05 bring forward / send backward: objects keep insertion order. */
@@ -96,7 +93,7 @@ export interface PitchDeck {
 }
 
 export type PitchOfficeDocument = Pick<PitchDocument,
-  "describe" | "addSlide" | "removeSlide" | "moveSlide" | "moveObject" | "resizeObject" | "rotateObject" |
+  "describe" | "addSlide" | "removeSlide" | "moveSlide" | "moveSlides" | "removeSlides" | "moveObject" | "resizeObject" | "rotateObject" |
   "setText" | "removeObject" | "addAnimation" | "removeAnimation" | "slideAt">;
 
 interface RawObj {
@@ -154,7 +151,7 @@ export async function readPitchDeck(document: Pick<PitchDocument, "describe">): 
 
 /** Single from/to moves (valid indexes at each step) that turn `before` into `after`. */
 export function pitchMovePlan(before: readonly string[], after: readonly string[]): { from: number; to: number }[] {
-  if (before.length !== after.length || new Set(before).size !== before.length || !after.every(id => before.includes(id)))
+  if (before.length !== after.length || new Set(before).size !== before.length || new Set(after).size !== after.length || !after.every(id => before.includes(id)))
     throw new RangeError("Slide orders must hold the same ids");
   const cur = [...before];
   const out: { from: number; to: number }[] = [];
@@ -173,13 +170,13 @@ export interface PitchSlideListBinding {
   readonly slides: readonly PitchSlideSummary[];
   /** Filmstrip: one `moveSlide`. */
   readonly onMove: (id: string, toIndex: number) => Promise<void>;
-  /** Sorter: the new order as `moveSlide` calls (one undo step each until `moveSlides` exists). */
+  /** Sorter: the complete order as one atomic undo step. */
   readonly onReorder: (order: string[]) => Promise<void>;
   /** Appends a blank slide (Pitch appends; it has no insert-at). */
   readonly onAdd: () => Promise<void>;
   /** Filmstrip: one slide. Pitch refuses to remove the last slide. */
   readonly onRemove: (id: string) => Promise<void>;
-  /** Sorter: several slides, one `removeSlide` each. Refused up front when it would empty the deck. */
+  /** Sorter: several slides as one atomic undo step. Pitch refuses to remove every slide. */
   readonly onRemoveMany: (ids: string[]) => Promise<void>;
 }
 
@@ -201,14 +198,16 @@ export async function bindPitchSlideList(
   return {
     slides: deck.slides,
     onMove: (id, toIndex) => after(() => document.moveSlide(indexOf(id), toIndex)),
-    onReorder: next => after(async () => {
-      for (const { from, to } of pitchMovePlan(order, next)) await document.moveSlide(from, to);
-    }),
+    // The engine checks the order is a complete permutation of the current deck.
+    onReorder: next => after(() => document.moveSlides(next.map(pitchId))),
     onAdd: () => after(() => document.addSlide("blank")),
     onRemove: id => after(() => document.removeSlide(pitchId(id))),
     onRemoveMany: ids => after(async () => {
-      if (new Set(ids).size >= order.length) throw new RangeError("A deck keeps at least one slide");
-      for (const id of ids) { indexOf(id); await document.removeSlide(pitchId(id)); }
+      if (new Set(ids).size !== ids.length) throw new RangeError("Duplicate slide id");
+      ids.forEach(indexOf);
+      // The keep-one rule is the engine's: this binding's snapshot may be stale,
+      // and the engine refuses a whole-deck removal against the current deck.
+      await document.removeSlides(ids.map(pitchId));
     }),
   };
 }
