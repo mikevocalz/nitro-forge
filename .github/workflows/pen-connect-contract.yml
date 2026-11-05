@@ -3,6 +3,10 @@ on:
   pull_request:
     paths:
       - 'packages/pen-connect/**'
+      - 'apps/pen-connect-lab/**'
+      - 'tooling/nyc-tron.json'
+      - 'tooling/verify-nyc-tron-pin.mjs'
+      - 'pnpm-lock.yaml'
       - 'assets/pen-connection/**'
       - '.github/workflows/pen-connect-contract.yml'
   push:
@@ -20,9 +24,15 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+      - name: NYC-Tron release pin (URL, lockfile, SHA256SUMS)
+        run: node tooling/verify-nyc-tron-pin.mjs --download
       - run: pnpm --filter @nitro-forge/pen-connect typecheck
       - run: pnpm --filter @nitro-forge/pen-connect test
+      - name: Pairing lab TypeScript against NYC-Tron
+        run: pnpm --filter @nitro-forge/pen-connect-lab typecheck
+      - name: Pairing lab web bundle (Uniwind + NYC-Tron tokens)
+        run: pnpm --filter @nitro-forge/pen-connect-lab export:web
       - name: Verify authored Rive CLI source
         run: |
           test -f assets/pen-connection/scene.rml

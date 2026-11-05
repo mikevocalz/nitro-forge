@@ -19,6 +19,52 @@ Munum/munim-bluetooth 0.10.2 and react-native-ble-nitro are useful upstream API 
 
 There is no invented headset compatibility, fake spinner-to-success timeout, auto-connect, invented UUID, or unconsented device scan. Permission denial, disabled Bluetooth, errors, disconnects, stale scans and cancellation all remain explicit.
 
+## Dialog: NYC-Tron DevicePairingDialog
+
+Reusable UI lives in NYC-Tron (#38). `PenConnectionDialog` renders
+`@nyc-tron/ui/components/forge/devices/DevicePairingDialog` from the
+v0.1.0-alpha.2 release tarball, pinned in `tooling/nyc-tron.json` and checked by
+`tooling/verify-nyc-tron-pin.mjs --download` against the release SHA256SUMS. The
+controller stays in Forge; `src/pairing-state.ts` maps its states onto
+NYC-Tron's `PairingState`:
+
+| Controller | NYC-Tron | Why |
+| --- | --- | --- |
+| idle, explaining-permission | idle | |
+| requesting-permission, scanning | scanning | No waiting-for-permission state; the scan follows the grant. |
+| found | found | `rssi` becomes `signalDbm` only when finite (NYC-Tron throws on NaN). |
+| connecting, linked | connecting | An unverified Bluetooth link never shows Connected. |
+| system-pairing | connecting | Waiting for Viro tracking; see gaps. |
+| ready | connected | The only success state. |
+| error permission / disabled / connection | permission-denied / radio-off / connection-failed | NYC-Tron's own guidance copy. |
+| error disconnected | connection-failed + controller message | |
+| error scan / unsupported | unknown + controller message | |
+
+Before a verified pen, the dialog's Close and Cancel both call
+`controller.cancel()` and close; NYC-Tron labels Close "Cancel and close" and
+gives both the same callback. Closing a verified pen is not a disconnect.
+`apps/pen-connect-lab` renders every state on web with a fixture transport (no
+Bluetooth) for review at phone and tablet widths in light and dark.
+
+Gaps in NYC-Tron v0.1.0-alpha.2, recorded instead of keeping a Forge copy of
+the dialog (DEFER until NYC-Tron adds them):
+
+- Mode explanation: the idle copy is the generic "Turn on your pen and put it
+  in pairing mode, then search." It no longer says that Connect asks for
+  Bluetooth access (bluetooth-le), or that pairing happens in system
+  Bluetooth Settings (system-spatial). `controller.mode` is kept but unused
+  by the dialog. Needs an idle body or intro override in NYC-Tron.
+- System-owned pairing: no state carries the visionOS pairing steps, so the
+  instructions in `system-pairing` are not shown; the dialog shows
+  "Connecting to Logitech Muse…" while it waits for tracking.
+- Linked, unverified: shown as "Connecting to <pen>…". The old "Bluetooth
+  linked, waiting for pen input" sentence has no NYC-Tron slot; the `linked`
+  Rive artboard still plays through `renderAnimation`.
+- Stop searching closes the dialog: NYC-Tron routes it and Close to the same
+  `onCancel`.
+- Live-region status is covered: the body is an Android/web live region and
+  NYC-Tron announces each change on iOS.
+
 ## Rive CLI design
 
 Source: assets/pen-connection/rive.yaml and scene.rml. Artboards: Searching, Pairing, Linked, Connected, Error. The PenConnectionDialog renderAnimation slot lets the app use its existing compatible Rive-native panels. The green Connected artboard is reserved for verified READY; an unverified GATT link shows amber Linked.
@@ -29,7 +75,7 @@ To verify and build with the official Rive CLI once installed:
     rive pen-connection --verify
     rive pen-connection
 
-Rive CLI source and tests were authored, but CLI execution, binary .riv compilation, published asset, real-device view rendering and reduced-motion playback were NOT RUN. The UI has a native spinner/check text fallback. Do not install a second Nitro 0.x Rive runtime in an app built against Nitro v1.
+Rive CLI source and tests were authored, but CLI execution, binary .riv compilation, published asset, real-device view rendering and reduced-motion playback were NOT RUN. Without `renderAnimation`, NYC-Tron shows a spinner while busy and no art otherwise. Do not install a second Nitro 0.x Rive runtime in an app built against Nitro v1.
 
 ## Consumer wiring
 

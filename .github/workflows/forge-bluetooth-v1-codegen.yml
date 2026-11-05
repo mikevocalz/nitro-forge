@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @nitro-forge/bluetooth-v1 codegen
       - run: pnpm --filter @nitro-forge/bluetooth-v1 typecheck
       - name: Check generated native code exists
