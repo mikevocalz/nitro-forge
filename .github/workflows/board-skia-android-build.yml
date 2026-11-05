@@ -1,0 +1,78 @@
+name: Forge Skia v3 real Android compile (isolated Expo 58 lab)
+on:
+  # Full native Android compilation is expensive. Trigger only on native source
+  # changes to this preview branch, or explicit manual dispatch, not every
+  # TS offline test/doc change in a long-lived stacked PR.
+  push:
+    branches:
+      - feat/board-skia3-native-canvas-2026-11-02
+    paths:
+      - 'packages/board/android/**'
+      - 'packages/board/nitro.json'
+      - 'packages/board/package.json'
+      - 'packages/board/src/skia/NativeBoardCanvas.tsx'
+      - 'packages/board/src/skia/NativeBoardCanvasWithInput.tsx'
+      - 'apps/board-native-lab/**'
+      - '.github/workflows/board-skia-android-build.yml'
+  workflow_dispatch:
+concurrency:
+  group: board-native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  android-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: '1'
+      ORG_GRADLE_PROJECT_reactNativeArchitectures: arm64-v8a
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android API 37.0 (Expo SDK 58 AAR requirement) and NDK
+        run: |
+          # Android 37 uses minor-versioned platform package IDs, not
+          # platforms;android-37 (which sdkmanager cannot find).
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-37.0' 'build-tools;37.0.0' \
+            'ndk;28.2.13676358' 'cmake;3.22.1'
+          test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --list_installed | grep 'platforms;android-37.0'
+      - name: Install workspace packages
+        run: pnpm install --frozen-lockfile
+      - name: Generate Nitro v1 native board Gradle and CMake registration
+        run: pnpm --filter @nitro-forge/board codegen
+      - name: Verify generated Nitro v1 Android build scripts
+        run: |
+          test -f packages/board/nitrogen/generated/android/NitroForgeBoard+autolinking.gradle
+          test -f packages/board/nitrogen/generated/android/NitroForgeBoard+autolinking.cmake
+      - name: Validate Viro-free Skia 2D autolink mode
+        run: |
+          NITRO_FORGE_BOARD_VIRO_ANDROID=off node -e "const c=require('./packages/board/react-native.config.cjs'); if (c.dependency.platforms.android !== null) process.exit(1)"
+      - name: Typecheck Expo native lab, including generic Ink scene
+
+        run: pnpm --filter @nitro-forge/board-native-lab typecheck
+      - name: Generate real Expo 58 Android project
+        working-directory: apps/board-native-lab
+        run: pnpm exec expo prebuild --platform android --non-interactive --no-install
+      - name: Compile and link native Android Skia v3 (no emulator)
+        working-directory: apps/board-native-lab/android
+        run: ./gradlew :app:assembleDebug --no-daemon --max-workers=1 --stacktrace '-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g'
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-board-native-android-build-diagnostics
+          path: |
+            apps/board-native-lab/android/build/reports
+            apps/board-native-lab/android/app/build/reports
+          if-no-files-found: ignore

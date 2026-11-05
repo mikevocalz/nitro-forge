@@ -11,6 +11,15 @@ def getExtOrDefault(name, fallback) {
   return rootProject.ext.has(name) ? rootProject.ext.get(name) : fallback
 }
 
+// Build the same ABIs as React Native and react-native-nitro-modules. Nitro
+// publishes its prefab only for `reactNativeArchitectures`; building any other
+// ABI here links against a NitroModules target with no library and fails with
+// undefined margelo::nitro symbols.
+def reactNativeArchitectures() {
+  def value = rootProject.getProperties().get("reactNativeArchitectures")
+  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+}
+
 // No Viro assets are bundled. Consumer's Viro AAR supplies CanvasSurfaces;
 // this is a compile-only dependency, and runtime checks gate missing APIs.
 def viroAndroidDir = null
@@ -26,10 +35,26 @@ try {
   logger.warn("[forge-board] Viro package unresolved; current Android XR renderer requires it: ${e.message}")
 }
 
+// Viro's CanvasSurfaces class is optional. A Skia-only app must not compile
+// the Viro-specific source files against a missing AAR. Preserve the generated
+// Nitro v1 API by using a fail-closed no-Viro render-loop implementation.
+def viroAar = viroAndroidDir == null ? null : new File(viroAndroidDir, "react_viro/react_viro-release.aar")
+def hasViroCanvasAar = viroAar != null && viroAar.exists()
+
 android {
+  sourceSets {
+    main {
+      java {
+        // Select exactly one renderer implementation at configuration time.
+        // Kotlin excludes on src/main/java are not reliable under AGP 9;
+        // place the two Viro-bound files in an opt-in source root instead.
+        srcDir(hasViroCanvasAar ? "src/viro/java" : "src/noViro/java")
+      }
+    }
+  }
   namespace "com.margelo.nitro.forgeboard"
   ndkVersion getExtOrDefault("ndkVersion", "27.2.12479018")
-  compileSdkVersion getExtOrDefault("compileSdkVersion", 36)
+  compileSdkVersion getExtOrDefault("compileSdkVersion", 37)
 
   defaultConfig {
     minSdkVersion Math.max(getExtOrDefault("minSdkVersion", 26).toInteger(), 26)
@@ -38,6 +63,7 @@ android {
       cmake {
         cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
         arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters (*reactNativeArchitectures())
       }
     }
   }
@@ -64,12 +90,9 @@ dependencies {
   testImplementation "junit:junit:4.13.2"
   testImplementation "org.json:json:20250517"
 
-  if (viroAndroidDir != null) {
-    def a = new File(viroAndroidDir, "react_viro/react_viro-release.aar")
-    if (a.exists()) {
-      compileOnly files(zipTree(a).matching { include "classes.jar" })
-    } else {
-      logger.warn("[forge-board] No react_viro AAR at ${a}; native Kotlin compile requires CanvasSurfaces")
-    }
+  if (hasViroCanvasAar) {
+    compileOnly files(zipTree(viroAar).matching { include "classes.jar" })
+  } else {
+    logger.lifecycle("[forge-board] Viro CanvasSurfaces AAR absent: compiling no-Viro XR availability stub; Skia v3 2D is unaffected")
   }
 }

@@ -2,7 +2,7 @@
   "name": "@nitro-forge/board",
   "version": "0.1.0",
   "private": true,
-  "description": "Standalone native QuickDraw-compatible whiteboard/canvas renderer for Nitro-Forge",
+  "description": "Universal canvas with reusable ink geometry and optional native Skia v3 and XR renderers",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -12,14 +12,22 @@
   "exports": {
     ".": "./src/index.ts",
     "./native": "./src/native.ts",
-    "./specs/*": "./src/specs/*.nitro.ts"
+    "./specs/*": "./src/specs/*.nitro.ts",
+    "./skia": "./src/skia/index.ts",
+    "./skia/native": "./src/skia/native.ts",
+    "./ink": "./src/ink/index.ts",
+    "./offline": "./src/offline.ts",
+    "./offline/mmkv": "./src/offline-mmkv.ts",
+    "./offline/yjs": "./src/offline-yjs.ts",
+    "./scene": "./src/universal-scene.ts",
+    "./offline/sync": "./src/offline-sync.ts"
   },
   "files": [
     "src",
     "android",
     "nitro.json",
     "nitrogen",
-    "react-native.config.js",
+    "react-native.config.cjs",
     "README.md"
   ],
   "scripts": {
@@ -28,16 +36,16 @@
     "test": "vitest run",
     "test:android": "cd android && ./gradlew testDebugUnitTest"
   },
-  "dependencies": {
-    "@quickdrawjs/core": "0.2.0",
-    "zustand": "^5.0.16"
-  },
   "peerDependencies": {
     "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "react": ">=19.0.0",
     "react-native": ">=0.88.0",
-    "@reactvision/react-viro": ">=3.0.3-moyo.1 <4.0.0"
+    "@reactvision/react-viro": ">=3.0.3-moyo.1 <4.0.0",
+    "react-native-skia": "^3.8.1",
+    "yjs": ">=13.6.32 <14",
+    "@quickdrawjs/core": "0.2.0",
+    "zustand": ">=5.0.16 <6"
   },
   "peerDependenciesMeta": {
     "@reactvision/react-viro": {
@@ -48,6 +56,18 @@
     },
     "react-native": {
       "optional": true
+    },
+    "react-native-skia": {
+      "optional": true
+    },
+    "yjs": {
+      "optional": true
+    },
+    "@quickdrawjs/core": {
+      "optional": true
+    },
+    "zustand": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -56,6 +76,10 @@
     "nitrogen": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "typescript": "^6.0.3",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "react-native-skia": "3.8.1",
+    "yjs": "13.6.32",
+    "@quickdrawjs/core": "0.2.0",
+    "zustand": "5.0.16"
   }
 }

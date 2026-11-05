@@ -1,0 +1,39 @@
+name: Forge native Skia v3 canvas
+on:
+  pull_request:
+    paths:
+      - 'packages/board/**'
+      - 'apps/board-native-lab/**'
+      - 'docs/native/BOARD_SKIA3.md'
+      - '.github/workflows/board-skia3.yml'
+  push:
+    branches:
+      - 'feat/board-skia3-*'
+jobs:
+  skia3-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install only updated workspace dependency tree
+        run: pnpm install --frozen-lockfile
+      - name: Validate v3-only dependency
+        run: |
+          node -e "const p=require('./packages/board/package.json'); if(!p.peerDependencies['react-native-skia'] || p.peerDependencies['@shopify/react-native-skia']) process.exit(1)"
+      - name: Generate upstream Forge board Nitro v1 types
+        run: pnpm --filter @nitro-forge/board codegen
+      - name: Typecheck renderer with published Skia v3 types
+        run: pnpm --filter @nitro-forge/board typecheck
+      - name: Run QuickDraw scene fidelity tests
+        run: pnpm --filter @nitro-forge/board test
+      - name: Verify live Android ink sample types and behavior
+        run: |
+          pnpm --filter @nitro-forge/board-native-lab typecheck
+          pnpm --filter @nitro-forge/board-native-lab test
