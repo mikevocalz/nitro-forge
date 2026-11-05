@@ -74,7 +74,10 @@ jobs:
           ./gradlew assembleDebug --no-daemon
   ios:
     name: Expo 58 iOS consumer compile
-    runs-on: macos-latest
+    # Nitro v1's Package.swift declares swift-tools-version 6.4; its README says
+    # iOS builds require Swift 6.4 or newer. macos-latest ships Xcode 26.6 with
+    # Swift 6.3.3, which cannot resolve the package. xcode-27 carries Swift 6.4.
+    runs-on: xcode-27
     timeout-minutes: 60
     needs: consumer-types
     steps:
@@ -86,6 +89,8 @@ jobs:
       - working-directory: examples/native-cadence
         run: |
           corepack pnpm install --frozen-lockfile
+          xcodebuild -version
+          node "$GITHUB_WORKSPACE/tooling/native/check-swift-tools.mjs" .
           corepack pnpm exec expo prebuild --platform ios --no-install --non-interactive
           # Nitro v1 is SwiftPM-only; its Podspec is intentionally empty.
           # Expo SDK 58 SwiftPM integration is preview/experimental, not default.
