@@ -6,6 +6,9 @@ on:
       - 'packages/color-ui/**'
       - '.github/workflows/color-ui-cross-platform.yml'
       - 'apps/forge-color-lab/**'
+      - 'tooling/nyc-tron.json'
+      - 'tooling/verify-nyc-tron-pin.mjs'
+      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 permissions:
@@ -30,6 +33,8 @@ jobs:
           cache: pnpm
       - name: Install SDK 58 peer-isolated contract dependencies
         run: pnpm install --frozen-lockfile
+      - name: NYC-Tron release pin (URL, lockfile, SHA256SUMS)
+        run: node tooling/verify-nyc-tron-pin.mjs --download
       - name: Strict public API typecheck
         run: pnpm --filter @nitro-forge/color-ui typecheck
       - name: Pure behavior contract tests

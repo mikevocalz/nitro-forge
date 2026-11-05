@@ -10,13 +10,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nitro-forge/color-ui": "workspace:*",
     "@expo/ui": "^58.0.0",
+    "@nitro-forge/color-ui": "workspace:*",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz",
     "expo": "^58.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
     "react-native-web": "~0.21.4",
+    "expo-linear-gradient": "^58.0.0",
+    "tailwindcss": "4.3.4",
+    "uniwind": "1.13.2",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

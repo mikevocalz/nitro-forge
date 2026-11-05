@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@import "uniwind";
+
+/* NYC-Tron components ship no colors; the app defines the tokens listed in
+   NYC-Tron-UI docs/THEME_TOKENS.md. This lab is dark-only
+   (app.json userInterfaceStyle "dark"), so one set covers both appearances. */
+@theme {
+  --color-primary: #a78bfa;
+  --color-on-primary: #101018;
+  --color-surface-raised: #1c1c28;
+  --color-surface-sunken: #191919;
+  --color-border: #3a3a4c;
+  --color-text: #f6f6fd;
+  --color-text-muted: #9999af;
+  --color-danger: #f87171;
+  --color-on-danger: #101018;
+  --color-accent: #a78bfa;
+  --color-focus: #c4b5fd;
+  --radius-control: 8px;
+  --radius-card: 12px;
+}
+
+@source "./node_modules/@nyc-tron/ui/dist/components";
