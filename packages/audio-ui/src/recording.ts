@@ -37,7 +37,7 @@ export interface RecordingDriver {
   requestPermission(): Promise<boolean>;
   configure(): Promise<void>;
   prepare(): Promise<void>;
-  record(): void;
+  record(): void | Promise<void>;
   /** Must return a URI referencing an actual finalized recording. */
   stop(): Promise<string>;
   /**
@@ -148,7 +148,7 @@ export class ForgeRecordingController {
       await this.driver.prepare();
       if (!this.isCurrent(generation)) return await this.abandon();
       this.stopped = false;
-      this.driver.record();
+      await this.driver.record();
       if (!this.isCurrent(generation)) return await this.abandon();
       this.store.setState({ phase: { kind: "recording", durationMs: 0 } });
       return true;
@@ -174,15 +174,7 @@ export class ForgeRecordingController {
     if (!status.isRecording) {
       // Only a recorder that was seen running can be "interrupted"; the first
       // poll may land before the native recorder reports its started state.
-      if (this.confirmedRecording) {
-        this.store.setState({
-          phase: {
-            kind: "interrupted",
-            durationMs: state.phase.durationMs,
-            message: INTERRUPTED_MESSAGE,
-          },
-        });
-      }
+      if (this.confirmedRecording) this.reportInterrupted();
       return;
     }
     this.confirmedRecording = true;
@@ -193,6 +185,16 @@ export class ForgeRecordingController {
       ? state.levelHistory
       : pushMeterLevel(state.levelHistory, status.metering);
     this.store.setState({ phase: { kind: "recording", durationMs }, levelHistory });
+  }
+
+  /** The OS stopped native capture while this controller was recording. */
+  reportInterrupted(): void {
+    if (this.disposed || this.busy) return;
+    const phase = this.store.getState().phase;
+    if (phase.kind !== "recording") return;
+    this.store.setState({
+      phase: { kind: "interrupted", durationMs: phase.durationMs, message: INTERRUPTED_MESSAGE },
+    });
   }
 
   /** The native status read threw while recording: show it, don't freeze. */

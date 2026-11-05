@@ -16,3 +16,10 @@ export type {
   RecordingSnapshot,
   RecordingStatus,
 } from "./recording";
+
+export { NativeSourceRecordingTrack } from "./NativeSourceRecordingTrack";
+export type { NativeSourceRecordingTrackProps, SourceRecordingFile } from "./sourceRecordingTypes";
+export { WaveformPeakAccumulator, peakFromPcmBuffer } from "./pcmPeaks";
+export { PcmCaptureSession, SOURCE_COLUMNS } from "./pcmCapture";
+export type { PcmBuffer } from "./pcmCapture";
+export type { PcmEncoding, PcmPeakChunk } from "./pcmPeaks";
