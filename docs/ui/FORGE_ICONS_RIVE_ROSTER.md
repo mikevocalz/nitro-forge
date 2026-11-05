@@ -35,8 +35,8 @@ Do not copy any source SVG, vendor artwork or trademarked design.
 
 | ID | Deliverable | Current stage |
 | -- | -- | -- |
-| IC-01 | Shared catalog across 25 groups, 1000+ named semantic actions | source |
-| IC-02 | First paired original outline and filled glyphs | source |
+| IC-01 | Shared catalog: 1,463 IDs across 25 groups (1,444 distinct slugs; 19 slugs such as `delete`, `cloud` and `star` appear in two groups) | source |
+| IC-02 | 47 paired outline/filled artworks, drawing 48 catalog IDs | source |
 | IC-03 | Native/web SVG component with real selection/press/loading animation | source |
 | IC-04 | 44pt accessible icon-button wrapper | source |
 | IC-05 | Node tests, syntax validation and GitHub Actions | new CI |
@@ -48,3 +48,12 @@ Do not copy any source SVG, vendor artwork or trademarked design.
 The semantic catalog is an inventory, not a claim that every named vector
 glyph or animation has been drawn. The getGlyph API must return undefined
 for names that lack finished original artwork. No fake icons.
+
+## Ownership: NYC-Tron UI
+
+Nitro Forge #38 makes NYC-Tron UI the owner of reusable controls. NYC-Tron-UI
+PR #15 (`feat/shared-icons-extraction-20261105`, open) moves this same
+catalog, glyph set, state model and `ForgeIcon` renderer into NYC-Tron's
+`packages/icons`. Until that lands, this package and NYC-Tron #15 carry two
+copies; fixes made here (catalog-ID-only `getGlyph`, mask-based knockouts,
+`ForgeIcon` types) need to be carried into NYC-Tron #15 before it merges.
