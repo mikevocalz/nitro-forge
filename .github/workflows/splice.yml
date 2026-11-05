@@ -1,0 +1,54 @@
+name: Splice timeline engine
+
+on:
+  pull_request:
+    paths:
+      - "packages/splice/**"
+      - "packages/ignition/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docs/ENGINE_OPS.md"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/splice.yml"
+  push:
+    branches: [master]
+    paths:
+      - "packages/splice/**"
+      - "packages/ignition/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docs/ENGINE_OPS.md"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/splice.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  splice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Install Forge workspace
+        run: corepack pnpm install --frozen-lockfile
+      - name: Splice engine unit tests
+        run: cargo test -p splice-engine
+      - name: Format check for the new Splice modules
+        run: rustfmt --check --edition 2021 packages/splice/rust/src/annotations.rs packages/splice/rust/src/timeline_edits.rs packages/splice/rust/src/track_ops.rs packages/splice/rust/src/transitions.rs
+      - name: Workspace Rust tests (other engines, FFI) still pass
+        run: cargo test --workspace
+      - name: Compile real Rust engine host
+        run: cargo build -p nf-cli
+      - name: Typecheck the Splice API
+        run: corepack pnpm --filter @nitro-forge/splice typecheck
+      - name: Splice e2e against real Rust via nf-cli
+        run: corepack pnpm --filter @nitro-forge/splice exec vitest run
+      # Linux only: this checks the engine and the command protocol, not a
+      # native Nitro build, a decoder or a renderer.
