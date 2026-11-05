@@ -22,7 +22,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    saturating_sum, Journal,
 };
 use lopdf::content::Content;
 use lopdf::dictionary;
@@ -299,6 +299,73 @@ fn ro(data: Value) -> CommandResult {
 // ---------------------------------------------------------------------------
 // FolioEngine
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Heap estimate. lopdf types are foreign, so these are free functions.
+// ---------------------------------------------------------------------------
+
+/// Nesting deeper than this is not walked. Restored PDFs are untrusted input,
+/// and the walk must not recurse without bound. PDF streams are always
+/// indirect objects, so lopdf keeps every stream at the top of
+/// `Document::objects`, where the walk starts at depth 0: the cap can only
+/// skip inline names, strings and arrays nested more than 64 levels deep.
+/// The node at the cap still charges the bytes it holds directly.
+const HEAP_WALK_MAX_DEPTH: usize = 64;
+
+fn dictionary_heap(dict: &lopdf::Dictionary, depth: usize) -> usize {
+    let entries = dict
+        .len()
+        .saturating_mul(std::mem::size_of::<Vec<u8>>() + std::mem::size_of::<Object>());
+    entries.saturating_add(saturating_sum(dict.iter().map(|(key, value)| {
+        key.capacity().saturating_add(object_heap(value, depth + 1))
+    })))
+}
+
+/// Bytes an object holds itself, without visiting children.
+fn object_own_heap(object: &Object) -> usize {
+    match object {
+        Object::Null
+        | Object::Boolean(_)
+        | Object::Integer(_)
+        | Object::Real(_)
+        | Object::Reference(_) => 0,
+        Object::Name(bytes) | Object::String(bytes, _) => bytes.capacity(),
+        Object::Array(items) => items.capacity().saturating_mul(std::mem::size_of::<Object>()),
+        Object::Dictionary(dict) => dict
+            .len()
+            .saturating_mul(std::mem::size_of::<Vec<u8>>() + std::mem::size_of::<Object>()),
+        Object::Stream(stream) => stream.content.capacity(),
+    }
+}
+
+fn object_heap(object: &Object, depth: usize) -> usize {
+    if depth > HEAP_WALK_MAX_DEPTH {
+        return object_own_heap(object);
+    }
+    match object {
+        Object::Array(items) => object_own_heap(object).saturating_add(saturating_sum(
+            items.iter().map(|item| object_heap(item, depth + 1)),
+        )),
+        Object::Dictionary(dict) => dictionary_heap(dict, depth),
+        Object::Stream(stream) => {
+            object_own_heap(object).saturating_add(dictionary_heap(&stream.dict, depth))
+        }
+        _ => object_own_heap(object),
+    }
+}
+
+fn document_heap(doc: &Document) -> usize {
+    let entry = std::mem::size_of::<ObjectId>()
+        + std::mem::size_of::<Object>()
+        + std::mem::size_of::<usize>();
+    saturating_sum([
+        doc.version.capacity(),
+        doc.binary_mark.capacity(),
+        dictionary_heap(&doc.trailer, 0),
+        doc.objects.len().saturating_mul(entry),
+        saturating_sum(doc.objects.values().map(|object| object_heap(object, 0))),
+    ])
+}
+
 pub struct FolioEngine {
     doc: Document,
     journal: Journal<Document>,
@@ -382,6 +449,19 @@ impl Default for FolioEngine {
 }
 
 impl Engine for FolioEngine {
+    /// Undo entries are whole `Document` clones, each charged at the live
+    /// document's size rather than walked: O(live doc), no allocation.
+    fn heap_size_estimate(&self) -> usize {
+        let live = document_heap(&self.doc);
+        // The engine itself lives in a host-owned Box.
+        saturating_sum([
+            std::mem::size_of::<Self>(),
+            live,
+            self.journal.reserved_bytes(),
+            self.journal.entries().count().saturating_mul(live),
+        ])
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Folio
     }
@@ -719,6 +799,26 @@ impl Engine for FolioEngine {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn heap_walk_charges_top_level_streams() {
+        let mut doc = build_blank_doc(1);
+        let before = document_heap(&doc);
+        doc.add_object(Object::Stream(Stream::new(dictionary! {}, vec![0u8; 100_000])));
+        assert!(document_heap(&doc) >= before + 100_000);
+    }
+
+    #[test]
+    fn heap_walk_stops_at_the_depth_cap() {
+        let mut object = Object::Array(Vec::with_capacity(16));
+        for _ in 0..1_000 {
+            object = Object::Array(vec![object]);
+        }
+        // Terminates without walking 1000 levels, and still charges the outer
+        // arrays it does visit.
+        let charged = object_heap(&object, 0);
+        assert!(charged >= std::mem::size_of::<Object>() * HEAP_WALK_MAX_DEPTH);
+    }
 
     fn cmd(op: &str, payload: Value) -> Command {
         Command::new(op, payload)

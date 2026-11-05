@@ -56,6 +56,17 @@ impl<T> Journal<T> {
     pub fn redo_len(&self) -> usize {
         self.redo.len()
     }
+
+    /// Every retained entry, undo stack first. Used for heap estimates; it
+    /// borrows and never allocates.
+    pub fn entries(&self) -> impl Iterator<Item = &T> {
+        self.undo.iter().chain(self.redo.iter())
+    }
+
+    /// Bytes the two stacks reserve for entries, excluding what entries own.
+    pub fn reserved_bytes(&self) -> usize {
+        (self.undo.capacity() + self.redo.capacity()) * std::mem::size_of::<T>()
+    }
 }
 
 #[cfg(test)]

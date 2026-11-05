@@ -23,7 +23,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    saturating_sum, HeapSize, Journal,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -204,6 +204,38 @@ fn ro(data: Value) -> CommandResult {
 // ---------------------------------------------------------------------------
 // PitchEngine
 // ---------------------------------------------------------------------------
+impl HeapSize for TextProps {
+    fn heap_size(&self) -> usize {
+        self.content.heap_size()
+    }
+}
+
+impl HeapSize for Obj {
+    fn heap_size(&self) -> usize {
+        self.text.heap_size().saturating_add(self.src.heap_size())
+    }
+}
+
+impl HeapSize for Anim {
+    const FLAT: bool = true;
+
+    fn heap_size(&self) -> usize {
+        0
+    }
+}
+
+impl HeapSize for Slide {
+    fn heap_size(&self) -> usize {
+        self.objects.heap_size().saturating_add(self.animations.heap_size())
+    }
+}
+
+impl HeapSize for PitchState {
+    fn heap_size(&self) -> usize {
+        self.meta.title.heap_size().saturating_add(self.slides.heap_size())
+    }
+}
+
 pub struct PitchEngine {
     state: PitchState,
     journal: Journal<PitchState>,
@@ -289,6 +321,19 @@ impl Default for PitchEngine {
 }
 
 impl Engine for PitchEngine {
+    /// Undo entries here are whole-document clones, so each is charged at the
+    /// live document's size rather than walked: O(live doc), no allocation.
+    fn heap_size_estimate(&self) -> usize {
+        let live = self.state.heap_size();
+        // The engine itself lives in a host-owned Box.
+        saturating_sum([
+            std::mem::size_of::<Self>(),
+            live,
+            self.journal.reserved_bytes(),
+            self.journal.entries().count().saturating_mul(live),
+        ])
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Pitch
     }

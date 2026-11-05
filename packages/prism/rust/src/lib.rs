@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    saturating_sum, HeapSize, Journal,
 };
 use serde_json::{json, Value};
 
@@ -52,6 +52,31 @@ enum UndoEntry {
         h: u32,
         prev: Vec<u8>,
     },
+}
+
+impl HeapSize for Layer {
+    /// Raster buffers are `Arc`-shared between live layers and undo entries.
+    /// Each reference is charged `capacity / strong_count`; while every
+    /// reference lives inside this engine the shares sum to each distinct
+    /// buffer once. Invariant: no raster `Arc` escapes the engine (snapshots
+    /// copy bytes); a clone held elsewhere would make this undercount.
+    /// Shapes own no heap.
+    fn heap_size(&self) -> usize {
+        let pixels = match &self.content {
+            Content::Raster(buffer) => buffer.capacity() / Arc::strong_count(buffer),
+            Content::Shape(_) => 0,
+        };
+        self.name.heap_size().saturating_add(pixels)
+    }
+}
+
+impl HeapSize for UndoEntry {
+    fn heap_size(&self) -> usize {
+        match self {
+            UndoEntry::Doc(state) => state.layers.heap_size(),
+            UndoEntry::Pixels { prev, .. } => prev.heap_size(),
+        }
+    }
 }
 
 pub struct PrismEngine {
@@ -679,6 +704,17 @@ impl PrismEngine {
 }
 
 impl Engine for PrismEngine {
+    /// Undo entries are inverse diffs, so they are walked directly.
+    fn heap_size_estimate(&self) -> usize {
+        // The engine itself lives in a host-owned Box.
+        saturating_sum([
+            std::mem::size_of::<Self>(),
+            self.layers.heap_size(),
+            self.journal.reserved_bytes(),
+            saturating_sum(self.journal.entries().map(HeapSize::heap_size)),
+        ])
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Prism
     }
@@ -782,6 +818,21 @@ impl Engine for PrismEngine {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn heap_estimate_counts_a_shared_raster_once() {
+        let mut e = PrismEngine::new(256, 256);
+        let raster = 256 * 256 * 4;
+        let empty = e.heap_size_estimate();
+        let id = add_raster(&mut e);
+        let with_layer = e.heap_size_estimate();
+        assert!(with_layer >= empty + raster, "{empty} -> {with_layer}");
+        // renameLayer records a whole-stack undo entry whose layer shares the
+        // live raster through an Arc; the buffer must not be charged twice.
+        apply(&mut e, "renameLayer", json!({"id": id, "name": "renamed"}));
+        let after_rename = e.heap_size_estimate();
+        assert!(after_rename < with_layer + raster / 2, "{with_layer} -> {after_rename}");
+    }
 
     // -- helpers ------------------------------------------------------------
 

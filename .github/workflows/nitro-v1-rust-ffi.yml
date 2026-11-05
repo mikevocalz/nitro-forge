@@ -1,0 +1,41 @@
+name: Rust native v1 ABI and session isolation
+
+on:
+  push:
+    branches:
+      - feat/rust-per-document-ffi-2026-11-02
+  pull_request:
+    paths:
+      - 'rust/nf-sys/**'
+      - 'tooling/native/nf_v1_smoke.c'
+      - '.github/workflows/nitro-v1-rust-ffi.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-ffi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Report Rust toolchain
+        run: |
+          rustc --version
+          cargo --version
+      - name: Verify formatting
+        run: rustfmt --edition 2021 --check rust/nf-sys/src/session_registry.rs rust/nf-sys/src/ffi_v1.rs rust/nf-sys/src/ffi_v1_parts.rs
+      - name: Test independent document locks and native ABI boundaries
+        run: cargo test -p nf-sys --locked -- --nocapture
+      - name: Regression test all Ignition Rust engines
+        run: cargo test --workspace --locked
+      - name: Compile optimized Rust C ABI
+        run: cargo build -p nf-sys --release --locked
+      - name: Compile and run independent C callsite
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -I rust/nf-sys/include tooling/native/nf_v1_smoke.c target/release/libnf_sys.a -ldl -lpthread -lm -o /tmp/nf-v1-ffi-smoke
+          /tmp/nf-v1-ffi-smoke
+
+# This is Linux C ABI and Rust integration evidence, not a linked Nitro v1
+# HybridObject, Xcode, Android JNI, WebAssembly or Skia v3 runtime test.

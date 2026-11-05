@@ -1,0 +1,46 @@
+name: Format new Nitro v1 Rust FFI files
+
+on:
+  push:
+    branches:
+      - feat/rust-per-document-ffi-2026-11-02
+    paths:
+      - rust/nf-sys/src/ffi_v1.rs
+      - rust/nf-sys/src/ffi_v1_parts.rs
+      - rust/nf-sys/src/session_registry.rs
+      - .github/workflows/nitro-v1-rustfmt.yml
+  workflow_dispatch:
+
+concurrency:
+  group: nitro-v1-rustfmt
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  scope-only-rustfmt:
+    if: github.repository == 'mikevocalz/nitro-forge' && github.ref == 'refs/heads/feat/rust-per-document-ffi-2026-11-02'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: true
+      - name: Format only the two newly added Rust modules
+        run: rustfmt --edition 2021 rust/nf-sys/src/session_registry.rs rust/nf-sys/src/ffi_v1.rs rust/nf-sys/src/ffi_v1_parts.rs
+      - name: Commit scoped formatting without rewriting existing Rust engines
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin feat/rust-per-document-ffi-2026-11-02
+          git merge --no-edit origin/feat/rust-per-document-ffi-2026-11-02
+          rustfmt --edition 2021 rust/nf-sys/src/session_registry.rs rust/nf-sys/src/ffi_v1.rs rust/nf-sys/src/ffi_v1_parts.rs
+          git add rust/nf-sys/src/session_registry.rs rust/nf-sys/src/ffi_v1.rs rust/nf-sys/src/ffi_v1_parts.rs rust/nf-sys/src/ffi_v1_parts.rs
+          if git diff --cached --quiet; then
+            echo 'Native v1 modules already match rustfmt.'
+          else
+            git commit -m 'style(ffi): rustfmt new per-session v1 modules only'
+            git push origin HEAD:feat/rust-per-document-ffi-2026-11-02
+          fi

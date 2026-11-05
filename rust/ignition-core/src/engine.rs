@@ -65,4 +65,18 @@ pub trait Engine: Send + 'static {
 
     fn undo(&mut self) -> Result<bool, EngineError>;
     fn redo(&mut self) -> Result<bool, EngineError>;
+
+    /// Estimated bytes this document owns on the heap: the live document plus
+    /// its undo/redo journal. Hosts report it to the JS garbage collector.
+    ///
+    /// Must not allocate or panic, and should cost at most O(live document):
+    /// hosts read it after every command. Whole-document undo snapshots may be
+    /// charged at the live document's size instead of being walked one by one.
+    /// Use saturating arithmetic (see `HeapSize`).
+    ///
+    /// The default 0 means "not measured". Every engine linked into nf-sys
+    /// overrides it, and nf-sys tests fail if a linked engine reports 0.
+    fn heap_size_estimate(&self) -> usize {
+        0
+    }
 }
