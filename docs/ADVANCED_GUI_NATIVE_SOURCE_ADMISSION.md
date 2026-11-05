@@ -8,15 +8,16 @@ Cross-platform acceptance: https://github.com/mikevocalz/nitro-forge/pull/45
 
 | Source | License reviewed | Use | Integration constraints |
 | --- | --- | --- | --- |
-| [googlefonts/fontations](https://github.com/googlefonts/fontations) | MIT option; also Apache-2.0 | Variable fonts and font metadata | Shared Rust font queries via bounded FFI; Expo v2 supplies OS font discovery. Native/WASM shaping and rasterization must match the app renderer. |
+| [googlefonts/fontations](https://github.com/googlefonts/fontations) | MIT OR Apache-2.0 | Variable fonts and font metadata | Shared Rust font queries via bounded FFI; Expo v2 supplies OS font discovery. Native/WASM shaping and rasterization must match the app renderer. |
 | [google/ink](https://github.com/google/ink) | Apache-2.0 | Pressure, tilt, orientation and twist | Use C++ input model/ink core through reviewed bridge; Expo v2 owns device lifecycle, not per-sample React renders. Preserve Muse SDK and platform prediction sources. |
-| [AcademySoftwareFoundation/OpenColorIO](https://github.com/AcademySoftwareFoundation/OpenColorIO) | BSD-3-Clause | Color transforms and HDR proofing | C++ processor through existing Forge bridge; explicit CPU/GPU/WASM strategy. OS display capability detection is additional work; bundled configs/LUTs need separate provenance. |
+| [AcademySoftwareFoundation/OpenColorIO](https://github.com/AcademySoftwareFoundation/OpenColorIO) | BSD-3-Clause | Color transforms and HDR proofing | Issue #42 already plans OpenColorIO; extend it. C++ processor through existing Forge bridge; explicit CPU/GPU/WASM strategy. OS display capability detection is additional work; bundled configs/LUTs need separate provenance. |
 | [automerge/automerge](https://github.com/automerge/automerge) | MIT | Conflict/history and collaboration | Evaluate behind Forge document authority, not a second UI-owned document. Requires schema/undo reconciliation and migration design before adoption. |
 | [sindresorhus/p-queue](https://github.com/sindresorhus/p-queue) | MIT | Bounded job scheduling | Reuse queue policy selectively; native worker lifecycle, persistence and encoder cancellation are additional work. Promise concurrency is not native parallel processing. |
 
-Exact source file and license Git blob hashes are recorded in advanced-gui-native-sources.json.
-Blob hashes are content identity, not commit pins. Resolve an immutable repository commit
-and review the selected files' dependency closure before importing or linking code.
+advanced-gui-native-sources.json records each source file and license blob hash, and the
+`main` commit at which both blobs were re-checked on 2026-11-05 (`verifiedAtCommit`; URLs
+are pinned to it). Only the single listed file and the root license were reviewed. Review
+the selected files' dependency closure before importing or linking code.
 Retain copyright, license text, NOTICE where present and modification notices.
 Do not assume fonts, LUTs, test fixtures or example assets share the code license.
 
@@ -42,7 +43,7 @@ Do not assume fonts, LUTs, test fixtures or example assets share the code licens
 
 - Resource relinking: stable asset IDs/content hashes, user-approved native file handles,
   missing-media/font detection, proxy/original relationship, validation before atomic relink.
-  Superlist clipboard/file transfer is a reference for transfer mechanics, not a complete
+  Superlist clipboard/file transfer (NYC-Tron PR #26 source map) is a reference for transfer mechanics, not a complete
   project dependency/relink engine.
 - Numeric expressions: a bounded parser for arithmetic and known units, exact dimension
   validation and transactional commit. No eval/Function or unrestricted expression engine.
@@ -62,13 +63,14 @@ erases source licensing or creates cross-platform behavior.
 Every workstream requires its own iOS/iPadOS, Android/Duo, web, macOS, Windows, visionOS,
 Meta Quest and PICO evidence rows. Desktop uses supported native host adapters rather
 than assumed Expo support. Web requires actual WASM/worker or equivalent processing.
-XR input and compositor support need actual headset tests. Spark SDK55 must not load
-Expo58-only modules. All status starts NOT RUN until evidence exists.
+XR input and compositor support need actual headset tests. Spark (Expo SDK 55 / RN 0.83,
+see the PR #38 handoff) must not load Expo58-only modules. All status starts NOT RUN until evidence exists.
 
 ## Reviewed context and status
 
-Read Forge AGENTS, ARCHITECTURE, ENGINE_OPS and ROSTER in the preceding acceptance work;
-preserve their ownership/transaction rules. Existing #40/#43/#44 integration work and
-#41/#42 source work must be extended rather than duplicated.
+Forge master AGENTS.md, docs/ARCHITECTURE.md, docs/ENGINE_OPS.md and docs/ROSTER.md set the
+ownership and transaction rules kept here. Extend open PRs #40, #43 and #44 and open
+issues #41 (AudioKit/FilmCraft media ports) and #42 (MetalPetal/OpenColorIO/Prism) rather
+than duplicating them.
 No dependencies installed, native wrappers compiled, benchmarks or device tests run.
 This draft records source evidence and concrete integration boundaries, not finished ports.
