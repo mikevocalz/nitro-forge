@@ -6,8 +6,15 @@
 //! `Arc` so structural undo entries are cheap.
 
 mod b64;
+mod geom;
 mod model;
+mod ops;
 mod raster;
+mod render;
+mod select;
+mod vector;
+#[cfg(test)]
+mod tests_v2;
 
 use std::sync::Arc;
 
@@ -17,7 +24,7 @@ use ignition_core::{
 };
 use serde_json::{json, Value};
 
-use model::{Content, DocWire, Layer, Shape, ShapeKind};
+use model::{Artboard, Content, DocWire, Layer, Shape, ShapeKind};
 use raster::Filter;
 
 /// Journal depth per ENGINE_OPS.md ("capacity 64").
@@ -36,6 +43,9 @@ struct DocState {
     height: u32,
     next_id: u64,
     layers: Vec<Layer>,
+    artboards: Vec<Artboard>,
+    selection: Option<Arc<Vec<u8>>>,
+    selected: Vec<u64>,
 }
 
 /// Undo entries, recorded before mutation (ENGINE_OPS.md, prism "Undo"):
@@ -59,6 +69,11 @@ pub struct PrismEngine {
     height: u32,
     next_id: u64,
     layers: Vec<Layer>,
+    artboards: Vec<Artboard>,
+    /// Pixel selection, canvas-sized `w*h` alpha; `None` = nothing selected.
+    selection: Option<Arc<Vec<u8>>>,
+    /// Object selection (layer ids), in selection order.
+    selected: Vec<u64>,
     journal: Journal<UndoEntry>,
 }
 
@@ -71,6 +86,9 @@ impl PrismEngine {
             height,
             next_id: 1,
             layers: Vec::new(),
+            artboards: Vec::new(),
+            selection: None,
+            selected: Vec::new(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
@@ -83,6 +101,9 @@ impl PrismEngine {
             height: self.height,
             next_id: self.next_id,
             layers: self.layers.clone(),
+            artboards: self.artboards.clone(),
+            selection: self.selection.clone(),
+            selected: self.selected.clone(),
         }
     }
 
@@ -91,6 +112,9 @@ impl PrismEngine {
         self.height = s.height;
         self.next_id = s.next_id;
         self.layers = s.layers;
+        self.artboards = s.artboards;
+        self.selection = s.selection;
+        self.selected = s.selected;
     }
 
     /// Canvas buffer length (`w*h*4`), 0 on overflow — callers guard.
@@ -104,7 +128,9 @@ impl PrismEngine {
 
     fn alloc_id(&mut self) -> u64 {
         // Snapshots could carry a stale next_id; skip in-use ids defensively.
-        while self.layers.iter().any(|l| l.id == self.next_id) {
+        while self.layers.iter().any(|l| l.id == self.next_id)
+            || self.artboards.iter().any(|a| a.id == self.next_id)
+        {
             self.next_id = self.next_id.saturating_add(1);
         }
         let id = self.next_id;
@@ -157,6 +183,9 @@ impl PrismEngine {
             height: self.height,
             next_id: self.next_id,
             layers: self.layers.iter().map(Layer::to_wire).collect(),
+            artboards: self.artboards.clone(),
+            selected: self.selected.clone(),
+            selection_b64: self.selection.as_ref().map(|s| b64::encode(s)),
         }
     }
 
@@ -293,6 +322,9 @@ impl PrismEngine {
         self.height = h;
         self.next_id = 1;
         self.layers.clear();
+        self.artboards.clear();
+        self.selection = None;
+        self.selected.clear();
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -307,6 +339,12 @@ impl PrismEngine {
                 let resized = raster::resize_canvas(px, sw, sh, dw, dh);
                 *px = Arc::new(resized);
             }
+            if let Some(mask) = &mut layer.mask {
+                mask.alpha = Arc::new(ops::resize_alpha(&mask.alpha, sw, sh, dw, dh));
+            }
+        }
+        if let Some(sel) = &self.selection {
+            self.selection = Some(Arc::new(ops::resize_alpha(sel, sw, sh, dw, dh)));
         }
         self.width = w;
         self.height = h;
@@ -318,13 +356,11 @@ impl PrismEngine {
         let name = Self::opt_name(p)?;
         self.journal.record(UndoEntry::Doc(self.capture()));
         let id = self.alloc_id();
-        let layer = Layer {
+        let layer = Layer::new(
             id,
-            name: name.unwrap_or_else(|| format!("Layer {id}")),
-            opacity: 1.0,
-            visible: true,
-            content: Content::Raster(Arc::new(vec![0u8; self.pixel_len()])),
-        };
+            name.unwrap_or_else(|| format!("Layer {id}")),
+            Content::Raster(Arc::new(vec![0u8; self.pixel_len()])),
+        );
         self.layers.push(layer);
         Ok(CommandResult::data(json!({ "layer_id": id })))
     }
@@ -335,21 +371,23 @@ impl PrismEngine {
         let name = Self::opt_name(p)?;
         self.journal.record(UndoEntry::Doc(self.capture()));
         let id = self.alloc_id();
-        self.layers.push(Layer {
+        self.layers.push(Layer::new(
             id,
-            name: name.unwrap_or_else(|| format!("Shape {id}")),
-            opacity: 1.0,
-            visible: true,
-            content: Content::Shape(shape),
-        });
+            name.unwrap_or_else(|| format!("Shape {id}")),
+            Content::Shape(shape),
+        ));
         Ok(CommandResult::data(json!({ "layer_id": id })))
     }
 
     /// `removeLayer {id}`.
     fn op_remove_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
+        let id = self.layers[idx].id;
+        let doomed = self.subtree_ids(id);
         self.journal.record(UndoEntry::Doc(self.capture()));
-        self.layers.remove(idx);
+        self.layers.retain(|l| !doomed.contains(&l.id));
+        self.selected.retain(|s| !doomed.contains(s));
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -386,6 +424,7 @@ impl PrismEngine {
         if !opacity.is_finite() || !(0.0..=1.0).contains(&opacity) {
             return Err(EngineError::validation("opacity must be in 0..=1"));
         }
+        self.ensure_unlocked(idx)?;
         self.journal.record(UndoEntry::Doc(self.capture()));
         self.layers[idx].opacity = opacity;
         Ok(CommandResult::data(json!({ "ok": true })))
@@ -404,6 +443,7 @@ impl PrismEngine {
     /// canvas. `data` is `w*h*4` RGBA. Raster layers only.
     fn op_draw_pixels(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.raster_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
         let x = Self::req_f64(p, "x")?;
         let y = Self::req_f64(p, "y")?;
         let w = Self::req_f64(p, "w")?;
@@ -501,6 +541,7 @@ impl PrismEngine {
     fn op_fill_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.raster_index(Self::req_id(p)?)?;
         let color = Self::req_color(p, "color")?;
+        self.ensure_unlocked(idx)?;
         self.record_full_layer_pixels(idx)?;
         let buf = self
             .raster_mut(idx)
@@ -542,6 +583,7 @@ impl PrismEngine {
                 )))
             }
         };
+        self.ensure_unlocked(idx)?;
         self.record_full_layer_pixels(idx)?;
         let buf = self
             .raster_mut(idx)
@@ -553,11 +595,7 @@ impl PrismEngine {
     /// `flatten {}` — composite bottom→top honoring opacity/visible; shapes
     /// rasterized. Read-only: no undo entry, no `document:changed`.
     fn op_flatten(&self) -> Result<CommandResult, EngineError> {
-        let pixels = raster::flatten(
-            self.width as usize,
-            self.height as usize,
-            &self.layers,
-        );
+        let pixels = self.scene().flatten();
         Ok(CommandResult {
             events: Vec::new(),
             data: json!({
@@ -706,7 +744,7 @@ impl Engine for PrismEngine {
             "flatten" => self.op_flatten(),
             "getLayer" => self.op_get_layer(&cmd.payload),
             "describe" => self.op_describe(),
-            other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
+            other => self.apply_v2(other, &cmd.payload),
         }
     }
 
@@ -732,10 +770,35 @@ impl Engine for PrismEngine {
         for lw in wire.layers {
             layers.push(Layer::from_wire(lw, pixel_len)?);
         }
+        ops::validate_tree(&layers)?;
+        for a in &wire.artboards {
+            a.validate()
+                .map_err(|_| EngineError::serialization("invalid artboard in snapshot"))?;
+        }
+        let selection = match &wire.selection_b64 {
+            None => None,
+            Some(s) => {
+                let bytes = b64::decode(s)?;
+                if bytes.len() != pixel_len / 4 {
+                    return Err(EngineError::serialization(
+                        "selection length does not match canvas",
+                    ));
+                }
+                Some(Arc::new(bytes))
+            }
+        };
+        let selected: Vec<u64> = wire
+            .selected
+            .into_iter()
+            .filter(|id| layers.iter().any(|l| l.id == *id))
+            .collect();
         self.width = wire.width;
         self.height = wire.height;
         self.next_id = wire.next_id;
         self.layers = layers;
+        self.artboards = wire.artboards;
+        self.selection = selection;
+        self.selected = selected;
         // Undo entries refer to pre-restore state; the document is replaced.
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
