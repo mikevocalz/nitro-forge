@@ -2,7 +2,7 @@
 //! canvas-region helpers. All functions are panic-free for any buffer
 //! contents; callers guarantee region bounds before calling read/write.
 
-use crate::model::{Content, Layer, Shape, ShapeKind};
+use crate::model::{Shape, ShapeKind};
 
 /// Source-over alpha blend of one straight-alpha RGBA `src` pixel onto `dst`
 /// (a 4-byte slice), with the source alpha pre-scaled by `opacity` (0..=1).
@@ -53,39 +53,6 @@ pub fn shape_covers(shape: &Shape, px: f64, py: f64) -> bool {
             dx * dx + dy * dy <= 1.0
         }
     }
-}
-
-/// Composite all visible layers bottom→top (vec order) into a fresh
-/// canvas-sized RGBA buffer. Per-layer opacity scales source alpha.
-/// Shapes are rasterized on the fly; fully transparent output otherwise.
-pub fn flatten(width: usize, height: usize, layers: &[Layer]) -> Vec<u8> {
-    let mut out = vec![0u8; width * height * 4];
-    for layer in layers {
-        if !layer.visible {
-            continue;
-        }
-        match &layer.content {
-            Content::Raster(px) => {
-                let n = px.len().min(out.len());
-                for (dst, src) in out[..n].chunks_exact_mut(4).zip(px[..n].chunks_exact(4)) {
-                    let s = [src[0], src[1], src[2], src[3]];
-                    blend_pixel(dst, &s, layer.opacity);
-                }
-            }
-            Content::Shape(shape) => {
-                let src = shape.fill;
-                for py in 0..height {
-                    for px in 0..width {
-                        if shape_covers(shape, px as f64 + 0.5, py as f64 + 0.5) {
-                            let off = (py * width + px) * 4;
-                            blend_pixel(&mut out[off..off + 4], &src, layer.opacity);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    out
 }
 
 /// Per-channel filters applied in place to an RGBA buffer. Alpha is never
