@@ -1,0 +1,101 @@
+name: Cadence + NYC-Tron native consumer
+on:
+  pull_request:
+    paths:
+      - "packages/cadence/**"
+      - "examples/native-cadence/**"
+      - "tooling/native/stage-cadence-consumer.mjs"
+      - ".github/workflows/cadence-native-consumer.yml"
+  push:
+    branches: [feat/cadence-native-editor-session-2026-11-05]
+    paths:
+      - "packages/cadence/**"
+      - "examples/native-cadence/**"
+      - "tooling/native/stage-cadence-consumer.mjs"
+      - ".github/workflows/cadence-native-consumer.yml"
+permissions:
+  contents: read
+env:
+  EXPO_NO_TELEMETRY: "1"
+  CI: "1"
+  NYC_TRON_REF: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+jobs:
+  consumer-types:
+    name: Native consumer workspace and TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: mikevocalz/NYC-Tron-UI
+          ref: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+          path: dependency-nyc-tron
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Stage real source packages without vendoring
+        run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
+      - name: Install and typecheck
+        run: |
+          cd "$RUNNER_TEMP/cadence-lab"
+          corepack pnpm install --no-frozen-lockfile
+          corepack pnpm --dir app typecheck
+  android:
+    name: Expo 58 Android consumer compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    needs: consumer-types
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: mikevocalz/NYC-Tron-UI
+          ref: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+          path: dependency-nyc-tron
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: corepack enable
+      - run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
+      - run: |
+          cd "$RUNNER_TEMP/cadence-lab"
+          corepack pnpm install --no-frozen-lockfile
+          corepack pnpm --dir app exec expo prebuild --platform android --no-install --non-interactive
+          cd app/android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+  ios:
+    name: Expo 58 iOS consumer compile
+    runs-on: macos-latest
+    timeout-minutes: 60
+    needs: consumer-types
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: mikevocalz/NYC-Tron-UI
+          ref: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+          path: dependency-nyc-tron
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
+      - run: |
+          cd "$RUNNER_TEMP/cadence-lab"
+          corepack pnpm install --no-frozen-lockfile
+          corepack pnpm --dir app exec expo prebuild --platform ios --no-install --non-interactive
+          cd app/ios
+          pod install
+          workspace=$(find . -maxdepth 1 -name '*.xcworkspace' -print -quit)
+          test -n "$workspace"
+          scheme=$(basename "$workspace" .xcworkspace)
+          xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
