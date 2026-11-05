@@ -115,6 +115,11 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
   shifts to a single `#REF!` instead of the unparseable `#REF!:A2`. After the
   fix: Rust workspace 192 passed (Tally 35), Tally Vitest 25 passed (three live
   `nf-cli` range-operation tests), workspace TypeScript 9/9.
+- Same bound for every address-taking op: `setCell`, `clearCell`, `getCell`
+  and `getRange` past XFD1048576 return `out_of_bounds` with no mutation or
+  journal entry; formula references past the sheet evaluate to `#REF!`;
+  `restore` rejects off-sheet cell keys. Rust workspace 193 passed (Tally 36),
+  Tally Vitest 26 passed (four live `nf-cli` range-operation tests).
 - Rust/CLI evidence only. Native JSI hosts, clipboard OS APIs, hardware and
   the unreleased NYC-Tron fill prop's installed consumer contract: NOT RUN.
 - Adds no UI copy or dependency upgrade; stack remains based on Tally grid

@@ -174,9 +174,17 @@ impl TallyEngine {
 
     fn addr_coords(p: &Value, key: &str) -> Result<(u32, u32), EngineError> {
         let s = Self::str_field(p, key)?;
-        parse_addr(s).ok_or_else(|| {
+        let (c, r) = parse_addr(s).ok_or_else(|| {
             EngineError::validation(format!("invalid cell address '{s}'"))
-        })
+        })?;
+        // Every address-taking op reads through here, so nothing can read or
+        // write a cell the grid cannot show.
+        if !formula::on_sheet(c, r) {
+            return Err(EngineError::out_of_bounds(format!(
+                "cell address '{s}' is past the sheet (XFD1048576)"
+            )));
+        }
+        Ok((c, r))
     }
 
     /// `sheet` payload param: string → case-insensitive name, number → index.
@@ -644,9 +652,11 @@ impl Engine for TallyEngine {
                 return Err(EngineError::serialization("duplicate sheet name"));
             }
             for key in std::mem::take(&mut s.cells).into_iter() {
-                let (col, row) = formula::parse_addr(&key.0).ok_or_else(|| {
-                    EngineError::serialization(format!("invalid cell key '{}'", key.0))
-                })?;
+                let (col, row) = formula::parse_addr(&key.0)
+                    .filter(|&(c, r)| formula::on_sheet(c, r))
+                    .ok_or_else(|| {
+                        EngineError::serialization(format!("invalid cell key '{}'", key.0))
+                    })?;
                 s.cells.insert(formula::fmt_addr(col, row), key.1);
             }
         }
@@ -1148,5 +1158,55 @@ mod tests {
         assert!(r.events.is_empty());
         let r = apply(&mut e, "describe", json!({}));
         assert!(r.events.is_empty());
+    }
+
+    #[test]
+    fn every_address_op_stops_at_the_sheet_edge() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"XFD1048576","value":"7"}));
+        let before = e.snapshot().unwrap();
+        let mut undo_depth = 0;
+        while e.undo().unwrap() {
+            undo_depth += 1;
+        }
+        for _ in 0..undo_depth {
+            e.redo().unwrap();
+        }
+        for (op, payload) in [
+            ("setCell", json!({"addr":"A1048577","value":"x"})),
+            ("setCell", json!({"addr":"XFE1","value":"x"})),
+            ("clearCell", json!({"addr":"XFE1048577"})),
+            ("getCell", json!({"addr":"A4294967295"})),
+            ("getRange", json!({"from":"XFD1048576","to":"XFE1048576"})),
+            ("setRange", json!({"from":"A1048577","values":[["x"]]})),
+            ("fillRange", json!({"source":{"from":"A1","to":"A1"},"target":{"from":"A1","to":"A1048577"}})),
+        ] {
+            assert_eq!(apply_err(&mut e, op, payload).code, ErrorCode::OutOfBounds, "{op}");
+            assert_eq!(e.snapshot().unwrap(), before, "{op} mutated the document");
+        }
+        // Nothing above was journaled: undo still reaches only the XFD1048576 write.
+        let mut depth = 0;
+        while e.undo().unwrap() {
+            depth += 1;
+        }
+        assert_eq!(depth, undo_depth);
+        for _ in 0..depth {
+            e.redo().unwrap();
+        }
+        assert_eq!(data(&mut e, "getCell", json!({"addr":"xfd1048576"}))["computed"], 7.0);
+        // Formula references past the sheet evaluate to #REF!, not to an empty cell.
+        for formula in ["=A1048577", "=XFE1+1", "=SUM(A1:A1048577)", "=SUM(XFD1048576:XFE1048576)"] {
+            assert_eq!(data(&mut e, "evaluate", json!({"formula":formula}))["value"], "#REF!", "{formula}");
+        }
+        assert_eq!(data(&mut e, "evaluate", json!({"formula":"=XFD1048576*2"}))["value"], 14.0);
+        // A snapshot holding an off-sheet key is rejected, like any other unreachable key.
+        let mut doc = data(&mut e, "describe", json!({}));
+        let mut reopened = TallyEngine::new();
+        assert!(reopened.restore(&encode_envelope(&serde_json::to_vec(&doc).unwrap())).is_ok());
+        doc["sheets"][0]["cells"]["A1048577"] = json!({"raw":"x"});
+        let err = reopened
+            .restore(&encode_envelope(&serde_json::to_vec(&doc).unwrap()))
+            .unwrap_err();
+        assert_eq!(err.code, ErrorCode::Serialization);
     }
 }

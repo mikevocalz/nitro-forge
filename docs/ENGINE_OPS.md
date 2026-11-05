@@ -56,7 +56,11 @@ Undo: structural ops record prior `Vec<Layer>` (cheap — pixels are `Arc`);
 State `{ next_sheet, sheets: [Sheet], active: idx }`,
 `Sheet = { id, name, cells: { "A1": { raw: string } } }` — computed values are
 derived, not stored. Cell addresses: `$?[A-Z]+$?[0-9]+` (case-insensitive), abs
-markers accepted and normalized to plain `A1`.
+markers accepted and normalized to plain `A1`. Every op that takes an address
+(`setCell`, `clearCell`, `getCell`, `getRange`, `setRange`, `fillRange`) returns
+`out_of_bounds` for an address past `XFD1048576` (16,384 columns × 1,048,576
+rows) and changes nothing. A formula reference past the sheet evaluates to
+`#REF!`. `restore` rejects a snapshot whose cell keys fall outside the sheet.
 
 | op | payload | data | notes |
 |---|---|---|---|

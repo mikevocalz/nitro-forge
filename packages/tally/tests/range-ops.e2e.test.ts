@@ -75,3 +75,25 @@ it("fills mixed sources upward and keeps references on the sheet", async () => {
     expect(await doc.save()).toEqual(before);
   } finally { await doc.close(); }
 });
+
+it("rejects every address past XFD1048576 before mutating and evaluates such references as #REF!", async () => {
+  const doc = await TallyDocument.open(host);
+  try {
+    const empty = await doc.save();
+    await doc.setCell("XFD1048576", "7");
+    const before = await doc.save();
+    const offSheet = { code: "out_of_bounds" };
+    await expect(doc.setCell("A1048577", "x")).rejects.toMatchObject(offSheet);
+    await expect(doc.setCell("XFE1", "x")).rejects.toMatchObject(offSheet);
+    await expect(doc.clearCell("XFE1048577")).rejects.toMatchObject(offSheet);
+    await expect(doc.getCell("A1048577")).rejects.toMatchObject(offSheet);
+    await expect(doc.getRange("XFD1048576", "XFE1048576")).rejects.toMatchObject(offSheet);
+    expect(await doc.save()).toEqual(before);
+    expect((await doc.evaluate("=SUM(A1:A1048577)")).data?.value).toBe("#REF!");
+    expect((await doc.evaluate("=XFD1048576*2")).data?.value).toBe(14);
+    // The rejected calls left no journal entries: one undo removes the
+    // on-sheet write and returns the document to its state before it.
+    expect(await doc.undo()).toBe(true);
+    expect(await doc.save()).toEqual(empty);
+  } finally { await doc.close(); }
+});

@@ -507,6 +507,11 @@ pub const SHEET_MAX_COLUMNS: u32 = 16_384;
 /// Sheet size range edits and reference shifting stay inside (XFD1048576).
 pub const SHEET_MAX_ROWS: u32 = 1_048_576;
 
+/// Whether a parsed address lies inside the sheet (A1:XFD1048576).
+pub fn on_sheet(col: u32, row: u32) -> bool {
+    col < SHEET_MAX_COLUMNS && row < SHEET_MAX_ROWS
+}
+
 /// Shift one reference token, keeping its `$` locks. `None` when the result
 /// would leave the sheet.
 fn shift_reference(word: &str, dc: i64, dr: i64) -> Option<String> {
@@ -850,14 +855,14 @@ impl Parser {
 
 fn cell_expr(text: &str) -> Expr {
     match parse_addr(text) {
-        Some((c, r)) => Expr::Cell(fmt_addr(c, r)),
-        None => Expr::BadRef,
+        Some((c, r)) if on_sheet(c, r) => Expr::Cell(fmt_addr(c, r)),
+        _ => Expr::BadRef,
     }
 }
 
 fn range_expr(a: &str, b: &str) -> Expr {
     match (parse_addr(a), parse_addr(b)) {
-        (Some((ca, ra)), Some((cb, rb))) => Expr::Range {
+        (Some((ca, ra)), Some((cb, rb))) if on_sheet(ca, ra) && on_sheet(cb, rb) => Expr::Range {
             c0: ca.min(cb),
             r0: ra.min(rb),
             c1: ca.max(cb),
