@@ -8,9 +8,14 @@ import { describe, expect, it } from "vitest";
 import type {
   SpreadsheetGridProps, SpreadsheetWindowRequest,
 } from "@nyc-tron/ui/components/forge/SpreadsheetGrid";
+import type { SheetTabsProps } from "@nyc-tron/ui/components/forge/spreadsheet/SheetTabs";
+import type { ChartBuilderProps } from "@nyc-tron/ui/components/forge/spreadsheet/ChartBuilder";
+import type { SparklineEditorProps } from "@nyc-tron/ui/components/forge/spreadsheet/SparklineEditor";
+import type { SpreadsheetCardsViewProps } from "@nyc-tron/ui/components/forge/spreadsheet/SpreadsheetCardsView";
 import type { TallyGridData, TallyGridDocument } from "../src/grid-adapter";
 import { commitTallyGridCell, readTallyWindow } from "../src/grid-adapter";
-import { TALLY_SHEET_BOUNDS } from "../src/grid-cluster";
+import type { TallySheetTabsBinding } from "../src/grid-cluster";
+import { commitTallyCardField, TALLY_SHEET_BOUNDS } from "../src/grid-cluster";
 
 // The adapter's window read feeds SpreadsheetGrid.cells (I-01).
 export const cellsFit = (data: TallyGridData): SpreadsheetGridProps["cells"] => data;
@@ -21,6 +26,20 @@ export const windowFits = (document: TallyGridDocument, range: SpreadsheetWindow
 export const commitFits = (document: TallyGridDocument): NonNullable<SpreadsheetGridProps["onCommitCell"]> =>
   (address, raw) => commitTallyGridCell(document, address, raw);
 export const boundsFit: Pick<SpreadsheetGridProps, "rowCount" | "columnCount"> = TALLY_SHEET_BOUNDS;
+
+// forge/spreadsheet subpaths (alpha.2). The sheet-tab binding spreads straight
+// into SheetTabs (I-08); deferred callbacks are absent, so their controls hide.
+export const sheetTabsFit = (binding: TallySheetTabsBinding): Pick<
+  SheetTabsProps, "tabs" | "activeId" | "onSelect" | "onAdd" | "onRename" | "onRemove"
+> => binding;
+// readTallyRange output feeds ChartBuilder (I-13), SparklineEditor (I-14) and
+// SpreadsheetCardsView (I-20).
+export const chartCellsFit = (data: TallyGridData): ChartBuilderProps["cells"] => data;
+export const sparklineCellsFit = (data: TallyGridData): SparklineEditorProps["cells"] => data;
+export const cardCellsFit = (data: TallyGridData): SpreadsheetCardsViewProps["cells"] => data;
+// A card field commit is one setCell (I-20).
+export const cardCommitFits = (document: TallyGridDocument): NonNullable<SpreadsheetCardsViewProps["onCommitField"]> =>
+  (address, raw) => commitTallyCardField(document, address, raw);
 
 describe("NYC-Tron pin", () => {
   it("installs @nyc-tron/ui from the release tarball recorded in tooling/nyc-tron.json", () => {
