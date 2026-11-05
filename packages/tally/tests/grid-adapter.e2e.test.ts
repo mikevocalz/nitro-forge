@@ -34,4 +34,25 @@ describe("real Rust Tally engine to NYC-Tron window adapter", () => {
       await document.close();
     }
   });
+
+  it("fills frozen rows and columns from the engine when the body is scrolled", async () => {
+    const document = await TallyDocument.open(host);
+    try {
+      await commitTallyGridCell(document, "A1", "Region");
+      await commitTallyGridCell(document, "C1", "Q3");
+      await commitTallyGridCell(document, "A200", "West");
+      await commitTallyGridCell(document, "C200", "=2*21");
+      const loaded = await readTallyWindow(document, {
+        startRow: 128, endRow: 256, startColumn: 2, endColumn: 18,
+        frozenRows: 1, frozenColumns: 1,
+      });
+      expect(loaded.C200?.computed).toBe(42); // body
+      expect(loaded.C1?.raw).toBe("Q3");      // frozen header row
+      expect(loaded.A200?.raw).toBe("West");  // frozen first column
+      expect(loaded.A1?.raw).toBe("Region");  // frozen corner
+      expect(loaded.A2).toBeUndefined();      // not on screen
+    } finally {
+      await document.close();
+    }
+  });
 });

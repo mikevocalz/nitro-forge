@@ -20,7 +20,8 @@ describe("Tally viewport adapter for NYC-Tron native SpreadsheetGrid",()=>{
 
   it("rejects impossible or oversized reads",()=>{
     expect(()=>windowToA1Range({startRow:-1,endRow:3,startColumn:0,endColumn:9})).toThrow();
-    expect(()=>windowToA1Range({startRow:0,endRow:99,startColumn:0,endColumn:99})).toThrow();
+    // Engine cap is 16384 cells per getRange: 200 x 100 = 20000.
+    expect(()=>windowToA1Range({startRow:0,endRow:200,startColumn:0,endColumn:100})).toThrow(/budget/);
     expect(()=>tallyCellAddress(0,16384)).toThrow();
   });
 
@@ -68,5 +69,49 @@ describe("Tally viewport adapter for NYC-Tron native SpreadsheetGrid",()=>{
     const doc={getRange,setCell:vi.fn()} as unknown as TallyGridDocument;
     await expect(readTallyWindow(doc,{startRow:0,endRow:1,startColumn:0,endColumn:1}))
       .rejects.toThrow(/outside the requested window/);
+  });
+
+  it("accepts a scrolled SpreadsheetGrid prefetch window (64x16 blocks, one block of lookahead)",async()=>{
+    // Viewport at row 100 with 8 visible columns: the grid asks for 0..192 x 0..32.
+    const getRange=vi.fn().mockResolvedValue({events:[],data:{cells:[]}});
+    const doc={getRange,setCell:vi.fn()} as unknown as TallyGridDocument;
+    await readTallyWindow(doc,{startRow:0,endRow:192,startColumn:0,endColumn:32});
+    expect(getRange).toHaveBeenCalledWith("A1","AF192");
+  });
+
+  it("also reads the frozen rows and columns the grid pins outside the body",async()=>{
+    const getRange=vi.fn(async(from:string,to:string)=>({events:[],data:{cells:[[
+      {addr:from,raw:`${from}:${to}`,computed:null}
+    ]]}}));
+    const doc={getRange,setCell:vi.fn()} as unknown as TallyGridDocument;
+    const out=await readTallyWindow(doc,{
+      startRow:64,endRow:128,startColumn:16,endColumn:32,frozenRows:1,frozenColumns:2,
+    });
+    expect(getRange.mock.calls).toEqual([
+      ["Q65","AF128"], // body
+      ["Q1","AF1"],    // frozen top rows over the body columns
+      ["A65","B128"],  // frozen left columns over the body rows
+      ["A1","B1"],     // frozen corner
+    ]);
+    expect(Object.keys(out).sort()).toEqual(["A1","A65","Q1","Q65"]);
+  });
+
+  it("does not re-read frozen rows already inside the body window",async()=>{
+    const getRange=vi.fn().mockResolvedValue({events:[],data:{cells:[]}});
+    const doc={getRange,setCell:vi.fn()} as unknown as TallyGridDocument;
+    await readTallyWindow(doc,{startRow:0,endRow:64,startColumn:0,endColumn:16,frozenRows:3,frozenColumns:1});
+    expect(getRange).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects bad frozen counts and duplicate engine cells before trusting the data",async()=>{
+    const getRange=vi.fn().mockResolvedValue({events:[],data:{cells:[[
+      {addr:"A1",raw:"1",computed:1},{addr:"a1",raw:"2",computed:2}
+    ]]}});
+    const doc={getRange,setCell:vi.fn()} as unknown as TallyGridDocument;
+    await expect(readTallyWindow(doc,{startRow:5,endRow:6,startColumn:0,endColumn:1,frozenRows:-1}))
+      .rejects.toThrow(/frozenRows/);
+    expect(getRange).not.toHaveBeenCalled();
+    await expect(readTallyWindow(doc,{startRow:0,endRow:1,startColumn:0,endColumn:2}))
+      .rejects.toThrow(/twice/);
   });
 });
