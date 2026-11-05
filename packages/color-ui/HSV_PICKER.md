@@ -38,7 +38,7 @@ import { NativeHsvPicker } from "@nitro-forge/color-ui";
 **Boundary:** This picker is a display-space sRGB control, not full gamut,
 ICC transform, CMYK, HDR, L*a*b*, spot ink or document color authority.
 Canvas eyedropper sampling requires a real Board pixel-sampling API.
-Native keyboard/screen-reader alternatives use the `@expo/ui` sliders.
+The field is announced as adjustable: VoiceOver swipe up/down and TalkBack volume keys step brightness by 5%. Saturation, hue and RGBA have their own `@expo/ui` sliders, which are the keyboard and screen-reader path for every channel. None of this has run under VoiceOver or TalkBack yet.
 Actual physical iOS/Android and Playwright web interaction, pen hover and
 Surface Duo hinge/occlusion tests remain required before declaring parity.
 

@@ -7,6 +7,7 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 import { hsvToRgb, rgbaToHex, rgbToHsv, type HsvColor } from "./color";
+import { adjustFieldForAccessibility, displayHueDegrees } from "./fieldAccessibility";
 import { assertHsv } from "./fieldGeometry";
 import { createFieldGesture } from "./fieldGesture";
 import { NativeColorChannels } from "./NativeColorChannels";
@@ -92,6 +93,14 @@ export function NativeHsvPicker({
         accessibilityRole="adjustable"
         accessibilityLabel="Saturation and brightness"
         accessibilityValue={{ text: `Saturation ${Math.round(value.s * 100)} percent, brightness ${Math.round(value.v * 100)} percent` }}
+        accessibilityHint="Adjusts brightness. Use the saturation slider for saturation."
+        accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+        onAccessibilityAction={(event) => {
+          if (disabled) return;
+          const next = adjustFieldForAccessibility(value, event.nativeEvent.actionName);
+          if (next) onValueChange(next);
+        }}
+        accessibilityState={{ disabled }}
         style={{
           width: "100%", height: fieldHeight,
           borderRadius: 9, overflow: "hidden",
@@ -134,7 +143,7 @@ export function NativeHsvPicker({
       />
       <Host style={{ width: "100%" }}>
         <Column spacing={5}>
-          <Text>{`Hue ${Math.round(value.h)}°`}</Text>
+          <Text>{`Hue ${displayHueDegrees(value.h)}°`}</Text>
           <Slider
             value={((value.h % 360) + 360) % 360}
             min={0} max={359} step={1}
