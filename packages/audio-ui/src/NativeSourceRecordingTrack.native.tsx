@@ -6,8 +6,9 @@ import { useForgePcmRecorder } from "./useForgePcmRecorder";
 import type { NativeSourceRecordingTrackProps } from "./sourceRecordingTypes";
 
 /**
- * iOS/Android: actual 16-bit PCM buffers and a native-generated WAV file.
- * Displayed peaks are sampled from actual PCM; no synthesized bars.
+ * iOS/Android: Audio API delivers planar Float32 buffers to JS for peaks,
+ * while the native recorder writes a mono 48kHz 16-bit WAV file.
+ * Displayed peaks are sampled from that PCM; no synthesized bars.
  */
 export function NativeSourceRecordingTrack({
   store, onSaved, disabled = false, testID,
