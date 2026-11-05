@@ -28,6 +28,13 @@ check("analyze rejects file outside real Caches/Documents", r)
 let real = WavPeaks.sandboxRoots()[0].appendingPathComponent("forge-signal-check-\(getpid()).wav")
 try! d.write(to: real)
 let peaks = try! WavPeaks.analyze(uri: real.absoluteString, columns: 2)
-try? fm.removeItem(at: real)
 check("analyze inside Caches returns real peaks \(peaks)", peaks == [[-0.5, 0.0], [0.25, 0.5]])
+// Truncated data chunk: declared size runs past end of file.
+var bad = d; bad.removeLast(2); try! bad.write(to: real)
+do { _ = try WavPeaks.analyze(uri: real.absoluteString, columns: 2); check("truncated WAV rejected", false) }
+catch { check("truncated WAV rejected with message: \(error.localizedDescription)",
+              error.localizedDescription == "Expected a well-formed RIFF/WAVE file") }
+try? fm.removeItem(at: real)
+do { _ = try WavPeaks.analyze(uri: good.absoluteString, columns: 0); check("columns=0 rejected", false) }
+catch { check("columns=0 rejected with message", error.localizedDescription == "columns must be between 1 and 4096") }
 exit(fails == 0 ? 0 : 1)
