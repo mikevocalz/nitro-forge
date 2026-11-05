@@ -24,8 +24,13 @@ case "$ARCH" in
     }
     : "${ANDROID_NDK_HOME:?ANDROID_NDK_HOME must point to an installed Android NDK}"
     rustup target add aarch64-linux-android
-    cargo ndk --target arm64-v8a --output "$LAB/native/android" \
+    cargo ndk --target arm64-v8a \
       build --manifest-path "$MANIFEST" --package nf-sys --release
+    # cargo-ndk -o copies shared .so libraries, not the static .a CMake needs.
+    mkdir -p "$LAB/native/android/arm64-v8a"
+    test -s "$ROOT/target/aarch64-linux-android/release/libnf_sys.a"
+    cp "$ROOT/target/aarch64-linux-android/release/libnf_sys.a" \
+      "$LAB/native/android/arm64-v8a/libnf_sys.a"
     test -s "$LAB/native/android/arm64-v8a/libnf_sys.a"
     echo "Real Android arm64 Rust static library built."
     ;;
