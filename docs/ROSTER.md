@@ -100,3 +100,35 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
 - No git remote → commits are local; no PRs.
+
+## Nitro v1 stack review fixes — 2026-11-04
+
+Fixes from a native review of #8, #9 and #10, each on its own branch and merged
+down the stack.
+
+- #8: `check:generated` in `packages/ignition-v1-lab` called a script that does
+  not exist (`check-generated.mjs`); it now calls `verify-generated.mjs`.
+- #9: the 256 MiB snapshot cap only guarded `nf_v1_snapshot`. The `__snapshot`
+  op through `nf_v1_apply` or `nf_v1_apply_parts` returned an unbounded,
+  base64-encoded snapshot. All three paths now share `bounded_snapshot`. The
+  structured result conversion unwrapped `CString::new` outside
+  `catch_unwind`, so an event kind containing NUL would abort the process; it
+  is now fallible, inside `catch_unwind`, and leak-free on failure.
+- #10: `Promise::async` uses Nitro's shared ThreadPool (3 to 10 workers), so
+  unawaited calls on one document could reach Rust out of order. Each
+  `HybridForgeDocument` now submits to a per-document `ForgeSerialQueue`.
+
+Verified locally: `cargo test --locked --workspace` 194 passed; nf-sys 11
+passed including new cap and NUL-kind tests; `serial_queue_test` 500 tasks in
+order, plain and under ThreadSanitizer, and a per-submit-drain variant fails
+it; Nitrogen codegen plus `-Wall -Wextra -Werror` syntax check of the C++
+against generated headers; the C++ to Rust smoke test (macOS link needs
+`-framework CoreFoundation`; CI links on Linux). Not verified: Xcode, Gradle,
+or any device run.
+
+Deferred: `getExternalMemorySize` for `HybridForgeDocument`. The `Engine`
+trait has no size method, so reporting a real size means adding one to all
+seven engines and their journals together (docs/ARCHITECTURE.md contract).
+Estimating from snapshots after each command would serialize the whole
+document on every edit. Until then a dropped, unclosed document is freed when
+the HybridObject is collected, without memory pressure to collect it sooner.

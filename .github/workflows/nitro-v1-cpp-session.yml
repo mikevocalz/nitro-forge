@@ -1,0 +1,57 @@
+name: Nitro v1 C++ Rust session integration
+
+on:
+  push:
+    branches:
+      - feat/nitro-v1-cpp-rust-session-2026-11-02
+  pull_request:
+    paths:
+      - 'packages/ignition-v1-lab/cpp/**'
+      - 'tooling/native/nf_v1_cpp_smoke.cpp'
+      - 'tooling/native/serial_queue_test.cpp'
+      - '.github/workflows/nitro-v1-cpp-session.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpp-ffi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Report native compilers
+        run: |
+          rustc --version
+          clang++ --version | head -1
+      - name: Verify the structured C ABI Rust engine tests
+        run: cargo test -p nf-sys --locked
+      - name: Build optimized Rust library
+        run: cargo build -p nf-sys --release --locked
+      - name: Compile actual C++ RAII adapter against Rust ABI
+        run: |
+          clang++ -std=c++20 -Wall -Wextra -Werror -pthread \
+            -I rust/nf-sys/include -I packages/ignition-v1-lab/cpp \
+            packages/ignition-v1-lab/cpp/ForgeRustSession.cpp \
+            tooling/native/nf_v1_cpp_smoke.cpp target/release/libnf_sys.a \
+            -ldl -lm -o /tmp/nitroforge-v1-cpp
+      - name: Run native C++ open/edit/restore/close and malformed payload cases
+        run: /tmp/nitroforge-v1-cpp
+      - name: Per-document command queue keeps call order under a multi-thread pool
+        run: |
+          clang++ -std=c++20 -Wall -Wextra -Werror -pthread \
+            -I packages/ignition-v1-lab/cpp \
+            packages/ignition-v1-lab/cpp/ForgeSerialQueue.cpp \
+            tooling/native/serial_queue_test.cpp -o /tmp/nitroforge-serial-queue
+          /tmp/nitroforge-serial-queue
+      - name: Same queue under ThreadSanitizer
+        run: |
+          clang++ -std=c++20 -g -fsanitize=thread -pthread \
+            -I packages/ignition-v1-lab/cpp \
+            packages/ignition-v1-lab/cpp/ForgeSerialQueue.cpp \
+            tooling/native/serial_queue_test.cpp -o /tmp/nitroforge-serial-queue-tsan
+          /tmp/nitroforge-serial-queue-tsan
+
+# Compiles the native session adapter against Rust, not the generated Nitro v1
+# HybridObject or iOS/Android packaging. Those need separate native app CI.
