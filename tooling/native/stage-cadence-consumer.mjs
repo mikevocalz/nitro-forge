@@ -5,7 +5,7 @@
  *
  * node tooling/native/stage-cadence-consumer.mjs <nyc-tron-source> <stage-dir>
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,8 +48,22 @@ ignition.devDependencies["react-native-nitro-modules"] =
   "1.0.0-alpha.nightly.120.g33ef045b96c0";
 writeFileSync(ignitionPath, JSON.stringify(ignition, null, 2) + "\n");
 
+// The app's patches/ directory holds `pnpm patch` output for dependencies that
+// need fixes to build, such as SwiftPM manifests for Expo modules that ship no
+// prebuilt XCFramework. Register every one; pnpm fails the install if a patch
+// does not match an installed version, so a stale patch cannot pass silently.
+const patchDir = join(stage, "app/patches");
+const patched = existsSync(patchDir)
+  ? readdirSync(patchDir).filter((file) => file.endsWith(".patch")).sort().map((file) => {
+      const match = /^(.+)@([^@]+)\.patch$/.exec(file);
+      if (!match) throw new Error("Patch file is not named <package>@<version>.patch: " + file);
+      return [match[1].replaceAll("__", "/") + "@" + match[2], "app/patches/" + file];
+    })
+  : [];
 writeFileSync(join(stage, "pnpm-workspace.yaml"),
-  "packages:\n  - 'packages/*'\n  - 'app'\n");
+  "packages:\n  - 'packages/*'\n  - 'app'\n" +
+  (patched.length === 0 ? "" : "patchedDependencies:\n" +
+    patched.map(([spec, file]) => "  " + JSON.stringify(spec) + ": " + JSON.stringify(file) + "\n").join("")));
 writeFileSync(join(stage, "package.json"), JSON.stringify({
   name: "cadence-native-integration-workspace",
   version: "0.0.0", private: true, type: "module",
