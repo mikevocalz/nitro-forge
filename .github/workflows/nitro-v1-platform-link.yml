@@ -1,0 +1,119 @@
+name: Nitro v1 real native registration and Rust linkage
+on:
+  pull_request:
+    paths:
+      - "packages/ignition-v1-lab/**"
+      - "tooling/native/stage_nf_v1_consumer.mjs"
+      - "tooling/native/build_nf_v1_artifacts.sh"
+      - "tooling/native/verify_nf_v1_linkage.mjs"
+      - ".github/workflows/nitro-v1-platform-link.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: nitro-v1-native-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: "1"
+  EXPO_NO_TELEMETRY: "1"
+
+jobs:
+  contracts:
+    name: Generate Nitro v1 classes and verify native registration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Install the exact isolated v1 toolchain
+        run: corepack pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: Generate Nitro v1 classes and platform bindings
+        run: corepack pnpm --filter @nitro-forge/ignition-v1-lab codegen
+      - name: Verify native module linkage source and generated registry
+        run: node tooling/native/verify_nf_v1_linkage.mjs
+      - name: Check generated TS factory/document contract
+        run: corepack pnpm --filter @nitro-forge/ignition-v1-lab typecheck
+
+  android:
+    name: Build Android Rust archive + Expo 58 registered JNI consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    needs: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: mikevocalz/nitro-forge
+          ref: 6cd336324019a096517967ef77dbdb43e56ee045
+          path: dependency-cadence
+      - uses: actions/checkout@v4
+        with:
+          repository: mikevocalz/NYC-Tron-UI
+          ref: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+          path: dependency-tron
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install real Android Rust toolchain
+        run: |
+          cargo install cargo-ndk --locked
+          rustup target add aarch64-linux-android
+          ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.1.12297006" "cmake;3.22.1"
+          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/27.1.12297006" >> "$GITHUB_ENV"
+      - run: corepack enable
+      - run: corepack pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: Generate actual native v1 bindings
+        run: corepack pnpm --filter @nitro-forge/ignition-v1-lab codegen
+      - name: Build and verify real Rust arm64-v8a staticlib
+        run: bash tooling/native/build_nf_v1_artifacts.sh android
+      - name: Stage independently owned Forge and NYC-Tron sources
+        run: |
+          node tooling/native/stage_nf_v1_consumer.mjs \
+            dependency-cadence dependency-tron "$RUNNER_TEMP/nitro-v1-native-lab"
+      - name: Typecheck registered factory and actual Cadence native consumer
+        run: |
+          cd "$RUNNER_TEMP/nitro-v1-native-lab"
+          corepack pnpm install --no-frozen-lockfile --ignore-scripts
+          corepack pnpm --dir app typecheck
+      - name: Compile Android app, JNI OnLoad and real Rust archive
+        run: |
+          cd "$RUNNER_TEMP/nitro-v1-native-lab"
+          corepack pnpm --dir app exec expo prebuild --platform android --no-install --non-interactive
+          cd app/android
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon \
+            -PreactNativeArchitectures=arm64-v8a --stacktrace
+
+  apple-artifacts:
+    name: Build Apple Rust XCFramework + generated SwiftPM package
+    runs-on: macos-latest
+    timeout-minutes: 75
+    needs: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - uses: dtolnay/rust-toolchain@stable
+      - run: corepack enable
+      - run: corepack pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: Generate actual Nitro v1 SwiftPM package targets
+        run: corepack pnpm --filter @nitro-forge/ignition-v1-lab codegen
+      - name: Build actual Apple device and simulator Rust static XCFramework
+        run: bash tooling/native/build_nf_v1_artifacts.sh apple
+      - name: Verify SwiftPM native package manifest with real Rust artifacts
+        run: |
+          swift --version
+          swift package --package-path packages/ignition-v1-lab dump-package
+          test -f packages/ignition-v1-lab/native/apple/NitroForgeRust.xcframework/Info.plist
