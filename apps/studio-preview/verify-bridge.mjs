@@ -62,9 +62,11 @@ for (const [before, after] of [
   try {
     if (before) await call('apply', handle, { op: 'insertText', payload: { at: { block: 0, offset: 0 }, text: before } });
     const edit = textEdit(before, after);
-    if (edit.remove) await call('apply', handle, { op: 'deleteRange', payload: { from: edit.from, to: edit.to } });
-    if (edit.insert) await call('apply', handle, { op: 'insertText', payload: { at: edit.from, text: edit.insert } });
+    await call('apply', handle, { op: 'replaceRange', payload: { from: edit.from, to: edit.to, text: edit.insert } });
     assert.equal(plainText((await call('apply', handle, { op: 'describe' })).data), after);
+    // One user edit is one undo step.
+    assert.equal(await call('undo', handle), true);
+    assert.equal(plainText((await call('apply', handle, { op: 'describe' })).data), before);
   } finally { await call('close', handle); }
 }
 const essay = await call('open', 'quill');

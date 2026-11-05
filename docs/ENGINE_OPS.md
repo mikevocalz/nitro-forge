@@ -206,6 +206,7 @@ concatenated text). Ranges `{ start:Pos, end:Pos }`, `end` exclusive.
 | `new` | `{}` | `{ok}` | one empty para |
 | `insertText` | `{at:Pos,text}` | `{ok}` | inherits style of char to the left (or right if at 0); `\n` splits block |
 | `deleteRange` | `{from:Pos,to:Pos}` | `{deleted_text}` | cross-block merges survivors |
+| `replaceRange` | `{from:Pos,to:Pos,text}` | `{deleted_text}` | `deleteRange` then `insertText` at `from` as one command; validates before mutating; one undo entry |
 | `applyStyle` | `{from,to,style:{bold?,italic?,...}}` | `{ok}` | re-splits inlines at range bounds |
 | `setBlockKind` | `{block,kind}` | `{ok}` | |
 | `insertBlock` | `{index,kind?}` | `{block_index}` | |
@@ -219,7 +220,7 @@ concatenated text). Ranges `{ start:Pos, end:Pos }`, `end` exclusive.
 
 Deps: `zip = "2"`, `quick-xml = "0.37"` (adjust to versions that resolve).
 Undo: prior `Vec<Block>` for structural ops; for `applyStyle`/`insertText`/
-`deleteRange` record affected block range's previous content.
+`deleteRange`/`replaceRange` record affected block range's previous content.
 
 ---
 
