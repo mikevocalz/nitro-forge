@@ -84,7 +84,26 @@ export const OPS = {
   setBooleanOp: "setBooleanOp",
   rasterizeLayer: "rasterizeLayer",
   floodFill: "floodFill",
+  setColors: "setColors",
+  swapColors: "swapColors",
+  clearRecentColors: "clearRecentColors",
+  getColors: "getColors",
 } as const;
+
+/** Document palette returned by `getColors` and included in `describe`. */
+export interface PrismColors {
+  foreground: Rgba;
+  background: Rgba;
+  /** Newest first, at most 16, deduplicated. */
+  recent: Rgba[];
+}
+
+/** `changed` is false when the op matched the current palette and recorded nothing. */
+export interface PrismColorChange {
+  ok: true;
+  changed: boolean;
+}
+
 
 export interface RectShape {
   kind: "rect";
@@ -191,6 +210,19 @@ export class PrismDocument {
   }
   getLayer(id: number) {
     return this.call(OPS.getLayer, { id });
+  }
+  /** Commit foreground and/or background; one undo step. `remember` (default true) adds them to `recent`. */
+  setColors(colors: { foreground?: Rgba; background?: Rgba; remember?: boolean }) {
+    return this.call<PrismColorChange>(OPS.setColors, colors);
+  }
+  swapColors() {
+    return this.call<PrismColorChange>(OPS.swapColors, {});
+  }
+  clearRecentColors() {
+    return this.call<PrismColorChange>(OPS.clearRecentColors, {});
+  }
+  getColors() {
+    return this.call<PrismColors>(OPS.getColors, {});
   }
   describe<T = unknown>() {
     return this.call<T>(OPS.describe);

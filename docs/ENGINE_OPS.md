@@ -25,7 +25,8 @@ increasing counter (survives undo via restore of prior value).
 
 ## prism-engine — `PrismEngine::new(width: u32, height: u32)`
 
-State `{ width, height, next_id, layers: [Layer] }`.
+State `{ width, height, next_id, layers: [Layer], colors: {foreground, background, recent} }`.
+`colors` defaults to black on white with no recent colors (also for snapshots written before it existed); `new` keeps it.
 `Layer = { id, name, opacity: 0..=1, visible: bool, content }` where
 `content = {"type":"raster","pixels_b64": "…RGBA w*h*4"}` stored internally as
 `Arc<Vec<u8>>` (serialize via `ignition_core::protocol::base64_encode/decode`) or
@@ -49,9 +50,14 @@ State `{ width, height, next_id, layers: [Layer] }`.
 | `applyFilter` | `{id,filter:{type,amount?}}` | `{ok}` | types: `grayscale`,`invert`,`brightness`(amount -1..=1); raster only |
 | `flatten` | `{}` | `{pixels_b64,width,height}` | composited bottom→top honoring opacity/visible; shapes rasterized; read-only |
 | `getLayer` | `{id}` | layer object | read-only |
+| `setColors` | `{foreground?,background?,remember?}` | `{ok,changed}` | document palette; at least one color `[r,g,b,a]` u8; `remember` (default true) moves committed colors to the front of `recent` (dedup, max 16); identical palette → `changed:false`, no undo entry, no event |
+| `swapColors` | `{}` | `{ok,changed}` | exchange foreground/background; equal colors → `changed:false` |
+| `clearRecentColors` | `{}` | `{ok,changed}` | empty `recent` |
+| `getColors` | `{}` | `{foreground,background,recent}` | read-only |
 
 Undo: structural ops record prior `Vec<Layer>` (cheap — pixels are `Arc`);
 `drawPixels`/`fillLayer`/`applyFilter` record `{layer_id, rect, prev_b64}`.
+Palette ops record the prior palette.
 
 ### Canvas and layers (B cluster)
 

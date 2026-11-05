@@ -7,6 +7,7 @@
 
 mod b64;
 mod geom;
+mod colors;
 mod model;
 mod ops;
 mod raster;
@@ -25,6 +26,7 @@ use ignition_core::{
 use serde_json::{json, Value};
 
 use model::{Artboard, Content, DocWire, Layer, Shape, ShapeKind};
+use colors::DocColors;
 use raster::Filter;
 
 /// Journal depth per ENGINE_OPS.md ("capacity 64").
@@ -62,6 +64,8 @@ enum UndoEntry {
         h: u32,
         prev: Vec<u8>,
     },
+    /// Prior document palette (setColors / swapColors / clearRecentColors).
+    Colors(DocColors),
 }
 
 pub struct PrismEngine {
@@ -74,6 +78,7 @@ pub struct PrismEngine {
     selection: Option<Arc<Vec<u8>>>,
     /// Object selection (layer ids), in selection order.
     selected: Vec<u64>,
+    colors: DocColors,
     journal: Journal<UndoEntry>,
 }
 
@@ -89,6 +94,7 @@ impl PrismEngine {
             artboards: Vec::new(),
             selection: None,
             selected: Vec::new(),
+            colors: DocColors::default(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
@@ -186,6 +192,7 @@ impl PrismEngine {
             artboards: self.artboards.clone(),
             selected: self.selected.clone(),
             selection_b64: self.selection.as_ref().map(|s| b64::encode(s)),
+            colors: self.colors.clone(),
         }
     }
 
@@ -663,6 +670,68 @@ impl PrismEngine {
     }
 
     /// `describe` — complete document state. Read-only.
+    // -- document colors (C-01) -------------------------------------------
+
+    fn opt_color(p: &Value, key: &str) -> Result<Option<[u8; 4]>, EngineError> {
+        match p.get(key) {
+            None | Some(Value::Null) => Ok(None),
+            Some(_) => Self::req_color(p, key).map(Some),
+        }
+    }
+
+    /// Commit a new palette, recording the old one. `None` means the op
+    /// changed nothing: no undo entry and no `document:changed`.
+    fn commit_colors(&mut self, next: Option<DocColors>) -> CommandResult {
+        let Some(next) = next else {
+            return CommandResult {
+                events: Vec::new(),
+                data: json!({ "ok": true, "changed": false }),
+            };
+        };
+        let prev = std::mem::replace(&mut self.colors, next);
+        self.journal.record(UndoEntry::Colors(prev));
+        CommandResult::data(json!({ "ok": true, "changed": true }))
+    }
+
+    fn op_set_colors(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let fg = Self::opt_color(p, "foreground")?;
+        let bg = Self::opt_color(p, "background")?;
+        if fg.is_none() && bg.is_none() {
+            return Err(EngineError::invalid(
+                "setColors needs 'foreground' and/or 'background'",
+            ));
+        }
+        let remember = match p.get("remember") {
+            None | Some(Value::Null) => true,
+            Some(Value::Bool(b)) => *b,
+            Some(_) => return Err(EngineError::invalid("field 'remember' must be a boolean")),
+        };
+        let next = self.colors.committed(fg, bg, remember);
+        Ok(self.commit_colors(next))
+    }
+
+    fn op_swap_colors(&mut self) -> Result<CommandResult, EngineError> {
+        let next = self.colors.swapped();
+        Ok(self.commit_colors(next))
+    }
+
+    fn op_clear_recent_colors(&mut self) -> Result<CommandResult, EngineError> {
+        let next = (!self.colors.recent.is_empty()).then(|| DocColors {
+            recent: Vec::new(),
+            ..self.colors.clone()
+        });
+        Ok(self.commit_colors(next))
+    }
+
+    fn op_get_colors(&self) -> Result<CommandResult, EngineError> {
+        let data =
+            serde_json::to_value(&self.colors).map_err(|e| EngineError::internal(e.to_string()))?;
+        Ok(CommandResult {
+            events: Vec::new(),
+            data,
+        })
+    }
+
     fn op_describe(&self) -> Result<CommandResult, EngineError> {
         let data = serde_json::to_value(self.to_wire())
             .map_err(|e| EngineError::internal(e.to_string()))?;
@@ -790,6 +859,10 @@ impl Engine for PrismEngine {
             "flatten" => self.op_flatten(),
             "getLayer" => self.op_get_layer(&cmd.payload),
             "describe" => self.op_describe(),
+            "setColors" => self.op_set_colors(&cmd.payload),
+            "swapColors" => self.op_swap_colors(),
+            "clearRecentColors" => self.op_clear_recent_colors(),
+            "getColors" => self.op_get_colors(),
             other => self.apply_v2(other, &cmd.payload),
         }
     }
@@ -845,6 +918,7 @@ impl Engine for PrismEngine {
         self.artboards = wire.artboards;
         self.selection = selection;
         self.selected = selected;
+        self.colors = wire.colors.normalized();
         // Undo entries refer to pre-restore state; the document is replaced.
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
@@ -864,6 +938,10 @@ impl Engine for PrismEngine {
                 let inverse = self.invert_pixels(pixels);
                 self.journal.push_redo(inverse);
             }
+            UndoEntry::Colors(prev) => {
+                let cur = std::mem::replace(&mut self.colors, prev);
+                self.journal.push_redo(UndoEntry::Colors(cur));
+            }
         }
         Ok(true)
     }
@@ -881,6 +959,10 @@ impl Engine for PrismEngine {
             pixels @ UndoEntry::Pixels { .. } => {
                 let inverse = self.invert_pixels(pixels);
                 self.journal.push_undo(inverse);
+            }
+            UndoEntry::Colors(prev) => {
+                let cur = std::mem::replace(&mut self.colors, prev);
+                self.journal.push_undo(UndoEntry::Colors(cur));
             }
         }
         Ok(true)
@@ -2036,5 +2118,109 @@ mod tests {
         assert!(e.undo().unwrap());
         assert!(!e.undo().unwrap());
         drop(undo_depth_before);
+    }
+
+    // -- document colors (C-01) -------------------------------------------
+
+    #[test]
+    fn set_colors_commits_records_and_undoes() {
+        let mut e = eng();
+        let r = apply(
+            &mut e,
+            "setColors",
+            json!({"foreground": [10, 20, 30, 255]}),
+        );
+        assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
+        let c = apply(&mut e, "getColors", json!({})).data;
+        assert_eq!(c["foreground"], json!([10, 20, 30, 255]));
+        assert_eq!(c["recent"], json!([[10, 20, 30, 255]]));
+        assert_eq!(
+            describe(&mut e)["colors"]["foreground"],
+            json!([10, 20, 30, 255])
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["foreground"],
+            json!([0, 0, 0, 255])
+        );
+        assert!(e.redo().unwrap());
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["foreground"],
+            json!([10, 20, 30, 255])
+        );
+    }
+
+    #[test]
+    fn set_colors_is_atomic_on_bad_channel() {
+        let mut e = eng();
+        let before = apply(&mut e, "getColors", json!({})).data;
+        let err = apply_err(
+            &mut e,
+            "setColors",
+            json!({"foreground": [1, 2, 3, 255], "background": [1, 2, 300, 255]}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+        assert_eq!(apply(&mut e, "getColors", json!({})).data, before);
+        assert!(!e.undo().unwrap());
+    }
+
+    #[test]
+    fn set_colors_requires_a_color_and_unchanged_commit_records_nothing() {
+        let mut e = eng();
+        let err = apply_err(&mut e, "setColors", json!({}));
+        assert_eq!(err.code, ignition_core::ErrorCode::InvalidCommand);
+        let r = apply(
+            &mut e,
+            "setColors",
+            json!({"foreground": [0, 0, 0, 255], "remember": false}),
+        );
+        assert_eq!(r.data["changed"], json!(false));
+        assert!(r.events.is_empty());
+        assert!(!e.undo().unwrap());
+    }
+
+    #[test]
+    fn swap_and_clear_recent_are_single_undo_steps() {
+        let mut e = eng();
+        apply(&mut e, "setColors", json!({"background": [9, 9, 9, 255]}));
+        apply(&mut e, "swapColors", json!({}));
+        let c = apply(&mut e, "getColors", json!({})).data;
+        assert_eq!(c["foreground"], json!([9, 9, 9, 255]));
+        assert_eq!(c["background"], json!([0, 0, 0, 255]));
+        apply(&mut e, "clearRecentColors", json!({}));
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["recent"],
+            json!([])
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["recent"],
+            json!([[9, 9, 9, 255]])
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["foreground"],
+            json!([0, 0, 0, 255])
+        );
+    }
+
+    #[test]
+    fn colors_survive_snapshot_and_old_snapshots_get_defaults() {
+        let mut e = eng();
+        apply(&mut e, "setColors", json!({"foreground": [1, 2, 3, 4]}));
+        let bytes = e.snapshot().unwrap();
+        let mut f = eng();
+        f.restore(&bytes).unwrap();
+        assert_eq!(
+            apply(&mut f, "getColors", json!({})).data["foreground"],
+            json!([1, 2, 3, 4])
+        );
+
+        let legacy = encode_envelope(br#"{"width":2,"height":2,"next_id":1,"layers":[]}"#);
+        let mut g = eng();
+        g.restore(&legacy).unwrap();
+        let c = apply(&mut g, "getColors", json!({})).data;
+        assert_eq!(c["foreground"], json!([0, 0, 0, 255]));
+        assert_eq!(c["background"], json!([255, 255, 255, 255]));
     }
 }

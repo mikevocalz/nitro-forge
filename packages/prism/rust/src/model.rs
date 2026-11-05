@@ -534,6 +534,9 @@ pub struct DocWire {
     /// Pixel selection, `w*h` alpha bytes; absent when nothing is selected.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selection_b64: Option<String>,
+    /// Absent in snapshots written before document colors existed.
+    #[serde(default)]
+    pub colors: crate::colors::DocColors,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
