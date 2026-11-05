@@ -8,6 +8,7 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'tooling/check-skia-v3.mjs'
+      - 'tooling/skia-v3-policy*.mjs'
       - '.github/workflows/skia-v3-policy.yml'
   pull_request:
     paths:
@@ -16,6 +17,7 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'tooling/check-skia-v3.mjs'
+      - 'tooling/skia-v3-policy*.mjs'
       - '.github/workflows/skia-v3-policy.yml'
   workflow_dispatch:
   schedule:
@@ -33,6 +35,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Unit-test the policy rules (version compare, Dawn counting)
+        run: node --test tooling/skia-v3-policy.test.mjs
       - name: Validate Skia v3 only, matched WebGPU, one Dawn and Expo requirements
         run: node tooling/check-skia-v3.mjs
 
