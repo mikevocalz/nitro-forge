@@ -13,7 +13,17 @@ use ignition_core::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::f64::consts::PI;
+
+mod analysis;
+mod dsp;
+mod mix_ops;
+mod mixer_model;
+mod presets;
+mod render;
+#[cfg(test)]
+mod mix_ops_tests;
+
+use mixer_model::{Metronome, Send as TrackSend, Insert, TrackAutomation};
 
 const PPQ: u32 = 960;
 const JOURNAL_CAPACITY: usize = 64;
@@ -22,7 +32,7 @@ const MAX_BPM: f64 = 400.0;
 const DEFAULT_BPM: f64 = 120.0;
 const DEFAULT_VELOCITY: u8 = 100;
 /// Note attack/release ramp length, seconds.
-const ENVELOPE_S: f64 = 0.020;
+pub(crate) const ENVELOPE_S: f64 = 0.020;
 
 // ---------------------------------------------------------------------------
 // Document model
@@ -33,6 +43,8 @@ const ENVELOPE_S: f64 = 0.020;
 pub enum TrackKind {
     Midi,
     Audio,
+    /// Sums source tracks routed or sent to it; has no clips.
+    Bus,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -41,6 +53,9 @@ pub struct Note {
     pub velocity: u8,
     pub start_ticks: u64,
     pub length_ticks: u64,
+    /// MIDI channel 0..=15 (shown as 1-16).
+    #[serde(default)]
+    pub channel: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -71,6 +86,23 @@ pub struct Track {
     pub solo: bool,
     #[serde(default)]
     pub clips: Vec<Clip>,
+    /// Bus id this track feeds; `None` is the master.
+    #[serde(default)]
+    pub output: Option<u64>,
+    /// Post-fader sends to buses.
+    #[serde(default)]
+    pub sends: Vec<TrackSend>,
+    /// Insert effects, processed in order before the fader.
+    #[serde(default)]
+    pub inserts: Vec<Insert>,
+    /// Mix group name, for group solo and mute.
+    #[serde(default)]
+    pub group: Option<String>,
+    /// Keeps sounding while other tracks are soloed (unless muted).
+    #[serde(default)]
+    pub solo_safe: bool,
+    #[serde(default)]
+    pub automation: TrackAutomation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -81,6 +113,8 @@ struct Doc {
     playhead_ticks: u64,
     next_id: u64,
     tracks: Vec<Track>,
+    #[serde(default)]
+    metronome: Metronome,
 }
 
 impl Doc {
@@ -92,6 +126,7 @@ impl Doc {
             playhead_ticks: 0,
             next_id: 1,
             tracks: Vec::new(),
+            metronome: Metronome::default(),
         }
     }
 
@@ -139,20 +174,20 @@ impl Doc {
 // violations are Validation/OutOfBounds/NotFound per the shared rules.
 // ---------------------------------------------------------------------------
 
-fn req_u64(p: &Value, key: &str) -> Result<u64, EngineError> {
+pub(crate) fn req_u64(p: &Value, key: &str) -> Result<u64, EngineError> {
     p.get(key)
         .and_then(Value::as_u64)
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
 }
 
-fn req_i64(p: &Value, key: &str) -> Result<i64, EngineError> {
+pub(crate) fn req_i64(p: &Value, key: &str) -> Result<i64, EngineError> {
     p.get(key)
         .and_then(Value::as_i64)
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
 }
 
 /// Tick fields: must be an integer ≥ 0.
-fn req_ticks(p: &Value, key: &str) -> Result<u64, EngineError> {
+pub(crate) fn req_ticks(p: &Value, key: &str) -> Result<u64, EngineError> {
     match p.get(key) {
         Some(v) => {
             if let Some(u) = v.as_u64() {
@@ -167,14 +202,14 @@ fn req_ticks(p: &Value, key: &str) -> Result<u64, EngineError> {
     }
 }
 
-fn req_f64(p: &Value, key: &str) -> Result<f64, EngineError> {
+pub(crate) fn req_f64(p: &Value, key: &str) -> Result<f64, EngineError> {
     p.get(key)
         .and_then(Value::as_f64)
         .filter(|f| f.is_finite())
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
 }
 
-fn opt_f64(p: &Value, key: &str) -> Result<Option<f64>, EngineError> {
+pub(crate) fn opt_f64(p: &Value, key: &str) -> Result<Option<f64>, EngineError> {
     match p.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(v) => v
@@ -185,13 +220,13 @@ fn opt_f64(p: &Value, key: &str) -> Result<Option<f64>, EngineError> {
     }
 }
 
-fn req_bool(p: &Value, key: &str) -> Result<bool, EngineError> {
+pub(crate) fn req_bool(p: &Value, key: &str) -> Result<bool, EngineError> {
     p.get(key)
         .and_then(Value::as_bool)
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
 }
 
-fn req_str<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
+pub(crate) fn req_str<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
     p.get(key)
         .and_then(Value::as_str)
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
@@ -261,11 +296,11 @@ impl CadenceEngine {
     }
 
     /// Record undo *after* validation, immediately before mutation.
-    fn record(&mut self) {
+    pub(crate) fn record(&mut self) {
         self.journal.record(self.doc.clone());
     }
 
-    fn changed(data: Value) -> CommandResult {
+    pub(crate) fn changed(data: Value) -> CommandResult {
         CommandResult {
             events: vec![Event::new("document:changed", Value::Null)],
             data,
@@ -274,7 +309,7 @@ impl CadenceEngine {
 
     /// Resolve `{clip, index}` to (track_idx, clip_idx, note_idx). Missing
     /// clip is NotFound; an index past the clip's notes is OutOfBounds.
-    fn note_location(&self, p: &Value) -> Result<(usize, usize, usize), EngineError> {
+    pub(crate) fn note_location(&self, p: &Value) -> Result<(usize, usize, usize), EngineError> {
         let clip_id = req_u64(p, "clip")?;
         let index = req_u64(p, "index")?;
         let (ti, ci) = self
@@ -289,7 +324,7 @@ impl CadenceEngine {
         Ok((ti, ci, index as usize))
     }
 
-    fn read_only(data: Value) -> CommandResult {
+    pub(crate) fn read_only(data: Value) -> CommandResult {
         CommandResult {
             events: vec![],
             data,
@@ -380,15 +415,19 @@ impl Engine for CadenceEngine {
                     None | Some(Value::Null) => TrackKind::Midi,
                     Some(Value::String(s)) if s == "midi" => TrackKind::Midi,
                     Some(Value::String(s)) if s == "audio" => TrackKind::Audio,
+                    Some(Value::String(s)) if s == "bus" => TrackKind::Bus,
                     Some(_) => {
                         return Err(EngineError::validation(
-                            "kind must be \"midi\" or \"audio\"",
+                            "kind must be \"midi\", \"audio\" or \"bus\"",
                         ))
                     }
                 };
                 self.record();
                 let id = self.doc.alloc_id();
-                let name = name.unwrap_or_else(|| format!("Track {}", self.doc.tracks.len() + 1));
+                let name = name.unwrap_or_else(|| match kind {
+                    TrackKind::Bus => format!("Bus {}", self.doc.tracks.iter().filter(|t| t.kind == TrackKind::Bus).count() + 1),
+                    _ => format!("Track {}", self.doc.tracks.len() + 1),
+                });
                 self.doc.tracks.push(Track {
                     id,
                     name,
@@ -398,6 +437,12 @@ impl Engine for CadenceEngine {
                     muted: false,
                     solo: false,
                     clips: Vec::new(),
+                    output: None,
+                    sends: Vec::new(),
+                    inserts: Vec::new(),
+                    group: None,
+                    solo_safe: false,
+                    automation: TrackAutomation::default(),
                 });
                 Ok(Self::changed(json!({ "track_id": id })))
             }
@@ -409,6 +454,14 @@ impl Engine for CadenceEngine {
                     .ok_or_else(|| EngineError::not_found(format!("no track {id}")))?;
                 self.record();
                 self.doc.tracks.remove(idx);
+                // Removing a bus reroutes what fed it to the master and drops
+                // sends to it, in the same undo step.
+                for t in &mut self.doc.tracks {
+                    if t.output == Some(id) {
+                        t.output = None;
+                    }
+                    t.sends.retain(|s| s.bus != id);
+                }
                 Ok(Self::changed(json!({ "ok": true })))
             }
             "renameTrack" => {
@@ -485,6 +538,9 @@ impl Engine for CadenceEngine {
                     .doc
                     .track_index(track_id)
                     .ok_or_else(|| EngineError::not_found(format!("no track {track_id}")))?;
+                if self.doc.tracks[ti].kind == TrackKind::Bus {
+                    return Err(EngineError::validation("buses hold no clips"));
+                }
                 if self.doc.overlaps(ti, start, len, None) {
                     return Err(EngineError::validation(
                         "clip overlaps an existing clip on this track",
@@ -579,6 +635,16 @@ impl Engine for CadenceEngine {
                 };
                 let start = req_ticks(p, "start_ticks")?;
                 let len = req_ticks(p, "length_ticks")?;
+                let channel = match p.get("channel") {
+                    None | Some(Value::Null) => 0,
+                    Some(_) => {
+                        let ch = req_i64(p, "channel")?;
+                        if !(0..=15).contains(&ch) {
+                            return Err(EngineError::validation("channel must be in 0..=15 (MIDI channels 1-16)"));
+                        }
+                        ch as u8
+                    }
+                };
                 if !(0..=127).contains(&pitch) {
                     return Err(EngineError::validation("pitch must be in 0..=127"));
                 }
@@ -607,6 +673,7 @@ impl Engine for CadenceEngine {
                     velocity,
                     start_ticks: start,
                     length_ticks: len,
+                    channel,
                 });
                 Ok(Self::changed(json!({ "index": index })))
             }
@@ -714,15 +781,21 @@ impl Engine for CadenceEngine {
                 if sample_rate == 0 {
                     return Err(EngineError::validation("sample_rate must be > 0"));
                 }
-                let (bytes, frames) = render_audio(&self.doc, from, to, sample_rate)?;
+                let click = match p.get("include_metronome") {
+                    None | Some(Value::Null) => false,
+                    Some(_) => req_bool(p, "include_metronome")?,
+                };
+                let mix = render::mixdown(&self.doc, from, to, sample_rate, click, false)?;
                 Ok(Self::read_only(json!({
-                    "samples_b64": base64_encode(&bytes),
-                    "frames": frames,
+                    "samples_b64": base64_encode(&render::to_f32le(&mix.master)),
+                    "frames": mix.frames,
                     "channels": 2,
                 })))
             }
 
-            other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
+            other => self
+                .apply_mixer(other, p)
+                .unwrap_or_else(|| Err(EngineError::invalid(format!("unknown op '{other}'")))),
         }
     }
 
@@ -740,6 +813,7 @@ impl Engine for CadenceEngine {
             .iter()
             .map(|t| t.id)
             .chain(doc.tracks.iter().flat_map(|t| t.clips.iter().map(|c| c.id)))
+            .chain(doc.tracks.iter().flat_map(|t| t.inserts.iter().map(|i| i.id)))
             .max()
             .unwrap_or(0);
         doc.next_id = doc.next_id.max(max_id.saturating_add(1));
@@ -771,96 +845,6 @@ impl Engine for CadenceEngine {
             None => Ok(false),
         }
     }
-}
-
-// ---------------------------------------------------------------------------
-// Offline render — sine-oscillator mixdown, f32le stereo interleaved.
-// ---------------------------------------------------------------------------
-
-/// Synthesize `[from_ticks, to_ticks)` into interleaved f32 stereo frames.
-/// Sample-accurate: note boundaries are converted to fractional sample
-/// positions via `seconds = ticks / (ppq * bpm / 60)`; a note contributes to
-/// output frame `i` while `i` falls inside its (fractional) sample span.
-fn render_audio(
-    doc: &Doc,
-    from_ticks: u64,
-    to_ticks: u64,
-    sample_rate: u64,
-) -> Result<(Vec<u8>, usize), EngineError> {
-    let sr = sample_rate as f64;
-    let seconds_per_tick = 60.0 / (doc.ppq as f64 * doc.tempo_bpm);
-    let frames = ((to_ticks - from_ticks) as f64 * seconds_per_tick * sr).round();
-    if frames > (usize::MAX / 16) as f64 {
-        return Err(EngineError::validation("render range too large"));
-    }
-    let frames = frames as usize;
-    let mut mix = vec![0.0f64; frames * 2];
-
-    let any_solo = doc.tracks.iter().any(|t| t.solo);
-    let ramp_samples = ENVELOPE_S * sr;
-
-    for track in &doc.tracks {
-        // Solo takes precedence over mute: with any soloed track only soloed
-        // tracks sound; otherwise every non-muted track sounds.
-        let audible = if any_solo { track.solo } else { !track.muted };
-        if !audible {
-            continue;
-        }
-        // Equal-power pan: pan -1..1 → angle 0..π/2.
-        let angle = (track.pan.clamp(-1.0, 1.0) + 1.0) * PI / 4.0;
-        let gain_l = angle.cos() * track.volume;
-        let gain_r = angle.sin() * track.volume;
-
-        for clip in &track.clips {
-            let clip_start = clip.start_ticks;
-            let clip_end = clip.end_ticks();
-            if clip_end <= from_ticks || clip_start >= to_ticks {
-                continue;
-            }
-            for note in &clip.notes {
-                let note_start = clip_start.saturating_add(note.start_ticks);
-                // Clip the note's sounding end to the clip boundary.
-                let note_end = note_start.saturating_add(note.length_ticks).min(clip_end);
-                if note_end <= note_start {
-                    continue;
-                }
-                // Fractional sample positions relative to the render window.
-                let s0 = (note_start as f64 - from_ticks as f64) * seconds_per_tick * sr;
-                let s1 = (note_end as f64 - from_ticks as f64) * seconds_per_tick * sr;
-                let i0 = s0.ceil().max(0.0) as usize;
-                let i1 = s1.ceil().min(frames as f64) as usize;
-                if i0 >= i1 {
-                    continue;
-                }
-                let freq = 440.0 * 2f64.powf((note.pitch as f64 - 69.0) / 12.0);
-                let vel = note.velocity as f64 / 127.0;
-                for i in i0..i1 {
-                    let x = i as f64 - s0; // samples since note-on (fractional)
-                    let attack = if x < ramp_samples {
-                        (x / ramp_samples).max(0.0)
-                    } else {
-                        1.0
-                    };
-                    let rel = s1 - i as f64;
-                    let release = if rel < ramp_samples {
-                        (rel / ramp_samples).max(0.0)
-                    } else {
-                        1.0
-                    };
-                    let env = attack.min(release);
-                    let s = (2.0 * PI * freq * x / sr).sin() * env * vel;
-                    mix[i * 2] += s * gain_l;
-                    mix[i * 2 + 1] += s * gain_r;
-                }
-            }
-        }
-    }
-
-    let mut bytes = Vec::with_capacity(frames * 8);
-    for v in &mix {
-        bytes.extend_from_slice(&(*v as f32).to_le_bytes());
-    }
-    Ok((bytes, frames))
 }
 
 // ---------------------------------------------------------------------------
