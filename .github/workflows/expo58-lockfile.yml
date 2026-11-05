@@ -1,0 +1,67 @@
+name: Expo 58 / Skia 3 lockfile check
+
+# Frozen-lockfile check, not a lockfile bot. It used to trigger only on its own
+# feature branch and push a resolved lockfile there, so it stopped running once
+# that branch merged. Now every PR and every master push that touches a
+# manifest or the lockfile must already carry a lockfile that matches. Fix a
+# failure locally with `pnpm install --lockfile-only --ignore-scripts` and
+# commit pnpm-lock.yaml.
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'apps/*/package.json'
+      - 'packages/*/package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tooling/check-skia-v3.mjs'
+      - '.github/workflows/expo58-lockfile.yml'
+  push:
+    branches:
+      - master
+    paths:
+      - 'package.json'
+      - 'apps/*/package.json'
+      - 'packages/*/package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tooling/check-skia-v3.mjs'
+      - '.github/workflows/expo58-lockfile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: expo58-lockfile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frozen:
+    name: Frozen install and Skia v3 graph policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      # Check the PR head itself, not GitHub's synthetic merge commit, so the
+      # result describes the lockfile bytes that are actually on the branch.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Activate exact pnpm version through Corepack
+        run: |
+          corepack enable
+          pnpm --version
+      - name: Install from the committed lockfile without package scripts
+        # --frozen-lockfile fails when any manifest disagrees with pnpm-lock.yaml.
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify Skia v3 policy and a single Dawn against the resolved graph
+        # Fails on more than one react-native-webgpu-dawn version in the
+        # lockfile or in node_modules/.pnpm (pnpm why alone always exits 0).
+        run: pnpm check:skia-v3
+
+# This checks install resolution, NOT a native or web runtime.

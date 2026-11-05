@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+      time: "09:10"
+      timezone: America/New_York
+    open-pull-requests-limit: 12
+    groups:
+      skia-v3-webgpu:
+        patterns:
+          - react-native-skia
+          - react-native-webgpu
+          - react-native-webgpu-dawn
+      expo-native-ui:
+        patterns:
+          - expo
+          - expo-*
+          - "@expo/*"
+          - react
+          - react-dom
+          - react-native
+          - react-native-*
+    labels:
+      - dependencies
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+
+# Dependency PRs are review-only. Never bypass the Skia v3 native and Dawn
+# compatibility gates or auto-merge platform upgrades.

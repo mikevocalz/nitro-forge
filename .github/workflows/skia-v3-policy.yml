@@ -1,0 +1,82 @@
+name: Skia v3 & npm release gate
+
+on:
+  push:
+    paths:
+      - 'apps/example/package.json'
+      - 'apps/example/app.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tooling/check-skia-v3.mjs'
+      - 'tooling/skia-v3-policy*.mjs'
+      - '.github/workflows/skia-v3-policy.yml'
+  pull_request:
+    paths:
+      - 'apps/example/package.json'
+      - 'apps/example/app.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tooling/check-skia-v3.mjs'
+      - 'tooling/skia-v3-policy*.mjs'
+      - '.github/workflows/skia-v3-policy.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '13 9 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  skia-v3-manifest:
+    name: Graphite v3 package and platform policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Unit-test the policy rules (version compare, Dawn counting)
+        run: node --test tooling/skia-v3-policy.test.mjs
+      - name: Validate Skia v3 only, matched WebGPU, one Dawn and Expo requirements
+        run: node tooling/check-skia-v3.mjs
+
+  # Scheduled/manual drift report. A new upstream release is information, not a
+  # broken build: this job reports drift in the run summary and one tracking
+  # issue, and stays green. Bump the Skia/WebGPU pair together in a dependency
+  # PR (see .github/dependabot.yml) after checking that both share one Dawn.
+  npm-drift-report:
+    name: Skia/WebGPU npm drift report
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Compare pins with npm latest
+        id: drift
+        env:
+          DRIFT_REPORT: ${{ runner.temp }}/skia-drift.md
+        run: node tooling/check-skia-v3.mjs --registry
+      - name: Open or update the drift tracking issue
+        if: steps.drift.outputs.drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: 'deps: react-native-skia / react-native-webgpu npm drift'
+          DRIFT_REPORT: ${{ runner.temp }}/skia-drift.md
+        run: |
+          body="$(cat "$DRIFT_REPORT")
+
+          Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          number="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$TITLE\" in:title" --json number,title --jq ".[] | select(.title == env.TITLE) | .number" | head -n1)"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$body"
+          fi
+
+# This validates manifest, lockfile Dawn resolution and registry versions only.
+# Separate native build, WebGPU/Dawn linkage, browser and device CI is required.
