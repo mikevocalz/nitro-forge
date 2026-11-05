@@ -12,10 +12,12 @@ import type { SheetTabsProps } from "@nyc-tron/ui/components/forge/spreadsheet/S
 import type { ChartBuilderProps } from "@nyc-tron/ui/components/forge/spreadsheet/ChartBuilder";
 import type { SparklineEditorProps } from "@nyc-tron/ui/components/forge/spreadsheet/SparklineEditor";
 import type { SpreadsheetCardsViewProps } from "@nyc-tron/ui/components/forge/spreadsheet/SpreadsheetCardsView";
+import type { FillPlan } from "@nyc-tron/ui/components/forge/spreadsheet/fill-handle";
 import type { TallyGridData, TallyGridDocument } from "../src/grid-adapter";
 import { commitTallyGridCell, readTallyWindow } from "../src/grid-adapter";
-import type { TallySheetTabsBinding } from "../src/grid-cluster";
-import { commitTallyCardField, TALLY_SHEET_BOUNDS } from "../src/grid-cluster";
+import type { TallyFillPlan, TallySheetTabsBinding } from "../src/grid-cluster";
+import { commitTallyCardField, commitTallyFill, TALLY_SHEET_BOUNDS } from "../src/grid-cluster";
+import type { TallyDocument } from "../src/index";
 
 // The adapter's window read feeds SpreadsheetGrid.cells (I-01).
 export const cellsFit = (data: TallyGridData): SpreadsheetGridProps["cells"] => data;
@@ -37,6 +39,10 @@ export const sheetTabsFit = (binding: TallySheetTabsBinding): Pick<
 export const chartCellsFit = (data: TallyGridData): ChartBuilderProps["cells"] => data;
 export const sparklineCellsFit = (data: TallyGridData): SparklineEditorProps["cells"] => data;
 export const cardCellsFit = (data: TallyGridData): SpreadsheetCardsViewProps["cells"] => data;
+// The fill handle's plan is the engine's fill plan (I-02), one fillRange call.
+export const fillPlanFits = (plan: FillPlan): TallyFillPlan => plan;
+export const fillFits = (document: Pick<TallyDocument, "fillRange">): NonNullable<SpreadsheetGridProps["onFillRange"]> =>
+  plan => commitTallyFill(document, plan);
 // A card field commit is one setCell (I-20).
 export const cardCommitFits = (document: TallyGridDocument): NonNullable<SpreadsheetCardsViewProps["onCommitField"]> =>
   (address, raw) => commitTallyCardField(document, address, raw);
