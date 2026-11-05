@@ -4,9 +4,9 @@ import type {
   EngineErrorShape,
   EngineKind,
   ForgeEvent,
-} from "./types";
-import { EngineError } from "./types";
-import { base64ToBytes, bytesToBase64 } from "./base64";
+} from "./types.js";
+import { EngineError } from "./types.js";
+import { base64ToBytes, bytesToBase64 } from "./base64.js";
 
 /**
  * EngineHost — the transport contract between TypeScript and Rust engines.
@@ -120,3 +120,4 @@ export function createNitroHost(): EngineHost {
   };
   return new NitroHost(NitroModules.createHybridObject<ForgeNitro>("Forge"));
 }
+

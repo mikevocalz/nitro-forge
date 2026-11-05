@@ -10,9 +10,12 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
-    "test:rust": "cargo test --workspace --manifest-path rust/Cargo.toml",
+    "test:rust": "cargo test --workspace",
     "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "build:packages": "pnpm --filter \"./packages/**\" -r run build",
+    "pack:packages": "node tooling/packages/pack.mjs",
+    "check:packages": "pnpm run build:packages && pnpm run pack:packages && node tooling/packages/verify.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

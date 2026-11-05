@@ -1,5 +1,5 @@
-import type { Command, CommandResult, EngineKind, ForgeEvent } from "./types";
-import type { EngineHost } from "./host";
+import type { Command, CommandResult, EngineKind, ForgeEvent } from "./types.js";
+import type { EngineHost } from "./host.js";
 
 export type ForgeListener = (e: ForgeEvent) => void;
 
@@ -90,3 +90,4 @@ export class DocumentHandle {
     await this.host.close(this.id);
   }
 }
+

@@ -8,13 +8,13 @@ export {
   type EngineKind,
   type ErrorCode,
   type ForgeEvent,
-} from "./types";
-export { base64ToBytes, bytesToBase64 } from "./base64";
+} from "./types.js";
+export { base64ToBytes, bytesToBase64 } from "./base64.js";
 export {
   NitroHost,
   createNitroHost,
   type EngineHost,
   type ForgeNitro,
-} from "./host";
-export { DocumentHandle, type ForgeListener } from "./document";
-export type { Forge } from "./Forge.nitro";
+} from "./host.js";
+export { DocumentHandle, type ForgeListener } from "./document.js";
+
