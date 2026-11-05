@@ -53,6 +53,74 @@ State `{ width, height, next_id, layers: [Layer] }`.
 Undo: structural ops record prior `Vec<Layer>` (cheap — pixels are `Arc`);
 `drawPixels`/`fillLayer`/`applyFilter` record `{layer_id, rect, prev_b64}`.
 
+### Canvas and layers (B cluster)
+
+Layers also carry `locked`, `blend`, `parent` (group or boolean id, or null),
+`clipped`, `transform {tx,ty,sx,sy,rotation,ox,oy}` and `mask
+{enabled,inverted,mask_b64}` (canvas-sized alpha, or null). Content adds
+`{"type":"group"}`, `{"type":"path","path":{subpaths,fill,stroke,fill_rule,paint_order}}`
+and `{"type":"boolean","op","fill"}`. The document adds `artboards`,
+`selected` (layer ids) and `selection_b64` (canvas-sized alpha; absent when
+nothing is selected). Older snapshots without these fields restore with
+defaults. Layers and artboards share one id counter.
+
+A transform maps a content point `p` to `t + o + R(rotation)·S(sx,sy)·(p - o)`.
+Children render through their ancestors' transforms. A locked layer, or one
+inside a locked group, rejects pixel, transform, mask, path, fill/stroke,
+blend, opacity, removal and reparent edits with `Validation`; rename,
+visibility and lock stay allowed.
+
+| op | payload | data | notes |
+|---|---|---|---|
+| `setLayerTransform` | `{id,transform:{tx?,ty?,sx?,sy?,rotation?}}` | `{ok}` | partial merge; scale non-zero, within ±10000 |
+| `translateLayers` | `{ids,dx,dy}` | `{ok}` | canvas delta, one step; a child moving with its ancestor is carried once |
+| `setTransformOrigin` | `{id,ox,oy}` | `{ok}` | pivot in content coords; `tx/ty` compensated so nothing moves |
+| `layerBounds` | `{ids?}` | `{bounds:[{id,x,y,w,h,corners}\|{id,empty}]}` | canvas space; read-only |
+| `hitTest` | `{x,y}` | `{layer_id,top_level_id}` | topmost painted leaf and its top-level ancestor; read-only |
+| `alignLayers` | `{ids,align,to?}` | `{ok}` | `align`: left/hcenter/right/top/vcenter/bottom; `to`: `"selection"` (default, ≥2 ids), `"canvas"`, `{artboard}` |
+| `distributeLayers` | `{ids,axis,mode?,spacing?}` | `{ok}` | ≥3 ids, or ≥2 with `spacing`; `mode` `spacing` (default) or `centers` |
+| `selectLayers` | `{ids,mode?}` | `{ok}` | object selection; replace/add/remove/toggle |
+| `selectRegion` | `{shape,mode?,feather?}` | `{ok}` | `shape` rect/ellipse `{x,y,w,h}` or polygon `{points}` (≥3); mode replace/add/subtract/intersect; feather 0..=250 |
+| `selectAll` / `deselect` / `invertSelection` | `{}` | `{ok}` | deselecting nothing records nothing |
+| `magicWand` | `{x,y,tolerance?,contiguous?,sample?,mode?}` | `{ok}` | tolerance 0..=255 (default 32) on max channel difference; `sample` `"composite"` (default) or `{layer}` |
+| `modifySelection` | `{op,radius}` | `{ok}` | grow/shrink (exact distance transform, hard edge) or feather; needs a selection |
+| `getSelection` | `{}` | `{empty}` or `{bounds,mask_b64,width,height}` | read-only |
+| `groupLayers` | `{ids,name?}` | `{layer_id}` | siblings only; group sits above the topmost member |
+| `ungroupLayer` | `{id}` | `{ok}` | group or boolean; group transform baked into children (rejects if that would skew), group opacity multiplied in; a masked group is rejected |
+| `setLayerParent` | `{id,parent}` | `{ok}` | parent group/boolean or null; keeps the on-canvas position; no cycles |
+| `setLayerLocked` / `setLayerBlend` / `setClipped` | `{id,locked}` / `{id,blend}` / `{id,clipped}` | `{ok}` | 13 W3C blend modes; a clipped layer clips to the nearest unclipped sibling below |
+| `layerThumbnail` | `{id,max}` | `{width,height,pixels_b64}` | canvas extent, area-averaged to fit `max` (1..=1024); read-only |
+| `renderRegion` | `{x,y,w,h,max}` | `{width,height,pixels_b64}` | composite crop, transparent outside the canvas; read-only |
+| `addMask` | `{id,fill?}` | `{ok}` | reveal (default), hide, or selection |
+| `removeMask` | `{id,apply?}` | `{ok}` | `apply` bakes into raster alpha (raster only) |
+| `setMaskEnabled` / `invertMask` | `{id,enabled}` / `{id}` | `{ok}` | |
+| `paintMask` | `{id,x,y,w,h,data_b64,mode?}` | `{ok}` | `w*h` alpha; replace/add/subtract; clipped to canvas |
+| `refineMask` | `{id,feather,grow}` | `{ok}` | grow -250..=250 then feather 0..=250 |
+| `maskThumbnail` | `{id,max}` | `{width,height,pixels_b64}` | grayscale; read-only |
+| `addArtboard` / `removeArtboard` / `updateArtboard` / `moveArtboard` | `{name?,x,y,w,h}` / `{id}` / `{id,name?,x?,y?,w?,h?}` / `{id,to_index}` | `{artboard_id}` / `{ok}` | |
+| `artboardThumbnail` | `{id,max}` | `{width,height,pixels_b64}` | read-only |
+| `addPath` | `{path:{subpaths},fill?,stroke?,fill_rule?,name?}` | `{layer_id}` | node `{x,y,in?,out?,kind}`; handles are offsets |
+| `setPathNodes` / `setPathNode` / `insertPathNode` / `removePathNode` | `{id,subpaths}` / `{id,subpath,index,node}` / same / `{id,subpath,index}` | `{ok}` | removing a subpath's last node removes the subpath; a path keeps one node |
+| `setNodeKind` | `{id,subpath,index,kind}` | `{ok}` | smooth keeps handles collinear, symmetric mirrors length; handles derived from neighbors when absent |
+| `setSubpathClosed` | `{id,subpath,closed}` | `{ok}` | |
+| `setFill` | `{id,fill}` | `{ok}` | paint solid/linear/radial (focal `fx,fy` strictly inside); shapes take solid only |
+| `setStroke` | `{id,stroke}` | `{ok}` | `{paint,width,join,cap,miter_limit,dash,dash_offset}`; null clears |
+| `setFillRule` / `setPaintOrder` | `{id,rule}` / `{id,order}` | `{ok}` | nonzero/evenodd; fill-stroke/stroke-fill |
+| `convertToPath` | `{id}` | `{ok}` | rect/ellipse shape to an editable path |
+| `booleanLayers` | `{ids,op,name?}` | `{layer_id}` | ≥2 sibling shapes/paths stay editable children; fill from the bottom operand |
+| `setBooleanOp` | `{id,op}` | `{ok}` | union/subtract/intersect/exclude |
+| `rasterizeLayer` | `{id}` | `{ok}` | bakes content and transform into raster; descendants removed; mask, opacity, blend kept |
+| `floodFill` | `{id,x,y,color,tolerance?,contiguous?,sample?}` | `{ok,filled}` | raster target; region scaled by the pixel selection; empty region records nothing |
+
+Rendering: path fills are 4×4 supersampled scanlines; strokes are
+anti-aliased with miter/round/bevel joins, butt/round/square caps and dashes
+(widths scale by the transform's mean scale). Boolean coverage combines per
+pixel (max, a·(1-b), min, xor). Normal-mode compositing keeps the original
+`src-over` arithmetic, so existing documents render byte-identically.
+
+Brush engine ops (B-15, B-16, B-29, B-33) are not here: they wait on the
+google/ink source admission (#46).
+
 ## tally-engine — `TallyEngine::new()`
 
 State `{ next_sheet, sheets: [Sheet], active: idx }`,
