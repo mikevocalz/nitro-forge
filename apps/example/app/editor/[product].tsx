@@ -44,7 +44,7 @@ function StudioEditor({ studioId }: { studioId: Studio }) {
       actions={config.actions.map(action => ({ title: action.title, run: () => action.run(doc) }))}
       onUndo={doc.undo} onRedo={doc.redo} onSave={save} onRefresh={doc.reload}
       busy={!doc.state} error={doc.error}>
-      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={`Untitled ${config.title} document`} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} personas={personas.personas} onPersonaEffect={playTurretHaptic} {...(openPersonas ? { onOpenPersonas: openPersonas } : {})} /> : undefined}
+      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={`Untitled ${config.title} document`} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} personas={personas.personas} onPersonaEffect={playTurretHaptic} onComposePersona={() => router.push({ pathname: '/persona-composer', params: { session: personaKey } })} {...(openPersonas ? { onOpenPersonas: openPersonas } : {})} /> : undefined}
     </ForgeWorkspace>
     {prism && <PersonaDock session={personas} sessionKey={personaKey} placement={placement} />}
   </SafeAreaView>;

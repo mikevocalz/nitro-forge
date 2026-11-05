@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react';
-import { AccessibilityInfo, Platform } from 'react-native';
+import { AccessibilityInfo, Keyboard, Platform } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -132,6 +132,8 @@ export function PersonaComposer(props: PersonaComposerProps) {
       const saved = props.store.getState().compose(toPersonaDraft(draft));
       const title = savedMessage('Saved', draft.label, saved);
       ui.setState({ draft: EMPTY_COMPOSER_DRAFT, notice: { tone: 'success', title } });
+      // The name field resets, so its keyboard would cover the result.
+      Keyboard.dismiss();
       announceNative(title);
     } catch (e) { ui.setState({ notice: { tone: 'danger', title: 'Not saved', description: message(e) } }); announceNative(`Not saved. ${message(e)}`); }
   };
@@ -229,7 +231,9 @@ export function PersonaComposer(props: PersonaComposerProps) {
     </Pressable>;
   };
   const unfolded = (which: 'instruments' | 'capabilities') => !phone || s.open[which];
-  const rowMenu = (labelText: string) => <View accessibilityLabel={labelText} style={{ minWidth: scale.size.target, minHeight: scale.size.target, alignItems: 'center', justifyContent: 'center' }}>
+  // The kit's native Menu drops triggerLabel, so the trigger names itself. A
+  // screen reader's double-tap lands on this view's centre, inside the menu.
+  const rowMenu = (labelText: string) => <View accessible accessibilityRole="button" accessibilityLabel={labelText} style={{ minWidth: scale.size.target, minHeight: scale.size.target, alignItems: 'center', justifyContent: 'center' }}>
     <ComposerGlyph name="more" color={c.muted} />
   </View>;
   /** Rows share the toggle tiles' material and type, so the rail, the grid and
@@ -240,7 +244,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
       {...(onLayout ? { onLayout: (e: { nativeEvent: { layout: { height: number } } }) => onLayout(e.nativeEvent.layout.height) } : {})}
       style={{ gap: scale.space.stack }}>{children}</View>;
   const row = (key: string, parts: { on?: boolean; leading?: ReactNode; title: string; note?: string; trailing?: ReactNode }) =>
-    <View key={key} accessibilityRole={'listitem' as never} style={{
+    <View key={key} role="listitem" style={{
       minHeight: scale.size.target, flexDirection: 'row', alignItems: 'center', gap: scale.space.element,
       paddingLeft: parts.leading ? scale.space.stack : scale.space.inset, paddingRight: scale.space.stack, paddingVertical: scale.space.stack,
       borderRadius: scale.radius.control, borderWidth: 1, borderColor: parts.on ? c.accent : c.line, backgroundColor: parts.on ? c.soft : c.deep,
