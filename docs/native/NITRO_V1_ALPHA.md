@@ -4,10 +4,10 @@
 
 ## Version and official source evidence
 
-- [Margelo Nitro v1 release `v1.0.0-alpha.nightly.115.gcdaf72e60229`](https://github.com/margelo/nitro/releases/tag/v1.0.0-alpha.nightly.115.gcdaf72e60229), published 2026-11-02. This is a **prerelease**; stable npm `latest` remains 0.37.1 until verified otherwise.
+- [Margelo Nitro v1 release `v1.0.0-alpha.nightly.120.g33ef045b96c0`](https://github.com/margelo/nitro/releases/tag/v1.0.0-alpha.nightly.120.g33ef045b96c0), published 2026-11-02, is the build `packages/ignition-v1-lab` pins for `nitrogen`, `nitro-core` and `react-native-nitro-modules` (first drafted against nightly 115). This is a **prerelease**; stable npm `latest` remains 0.37.1 until verified otherwise.
 - The v1 implementation package, `nitro-core`, and `nitrogen` generator must use the **same exact alpha** build. Do not mix v0 generated code with v1 native runtime.
-- [Official v1 Nitrogen README at release tag](https://github.com/margelo/nitro/blob/v1.0.0-alpha.nightly.115.gcdaf72e60229/packages/nitrogen/README.md) is authoritative for this alpha. The [Margelo skill repository](https://github.com/margelo/react-native-skills/tree/1e9e17be6f41c838db472d6a4b943fc26355a3be) is essential for API design, C++, Swift/Kotlin and native lifecycle; where its examples describe the **old interface/HybridObject style**, follow the exact v1 source instead.
-- [Nitro v1 template](https://github.com/margelo/nitro/tree/v1.0.0-alpha.nightly.115.gcdaf72e60229/packages/template) specifies `@Apple` / `@Android` decorators, `export declare class ... extends HybridObject`, `#nitro/*` package import map, `nitro.json.apple/android`, and generated class modules. The previous `nitro.json.ios` /`autolinking` and `createHybridObject<T>()` approach are not interchangeable.
+- [Official v1 Nitrogen README at release tag](https://github.com/margelo/nitro/blob/v1.0.0-alpha.nightly.120.g33ef045b96c0/packages/nitrogen/README.md) is authoritative for this alpha. The [Margelo skill repository](https://github.com/margelo/react-native-skills/tree/1e9e17be6f41c838db472d6a4b943fc26355a3be) is essential for API design, C++, Swift/Kotlin and native lifecycle; where its examples describe the **old interface/HybridObject style**, follow the exact v1 source instead.
+- [Nitro v1 template](https://github.com/margelo/nitro/tree/v1.0.0-alpha.nightly.120.g33ef045b96c0/packages/template) specifies `@Apple` / `@Android` decorators, `export declare class ... extends HybridObject`, `#nitro/*` package import map, `nitro.json.apple/android`, and generated class modules. The previous `nitro.json.ios` /`autolinking` and `createHybridObject<T>()` approach are not interchangeable.
 
 ## Why this is a different API, not a version bump
 
