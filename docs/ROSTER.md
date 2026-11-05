@@ -100,3 +100,9 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
 - No git remote → commits are local; no PRs.
+
+## Recovered alpha.3 Office consumer (2026-11-05)
+
+Pitch 17, Quill 12 and Folio 10 tests pass against a freshly built nf-cli. All three package typechecks and the release URL/lockfile/SHA256 pin check pass. Includes the local #53/#55 stack.
+
+These are local source/protocol checks. No new native build or device acceptance was run. The follow-up has not been pushed or merged.

@@ -1,12 +1,12 @@
 {
-  "tag": "v0.1.0-alpha.2",
+  "tag": "v0.1.0-alpha.3",
   "repository": "mikevocalz/NYC-Tron-UI",
-  "commit": "ff08d05b8d42ecffddc71ee674016bf10c47d2c6",
+  "commit": "e63e4840719f08d1177a0dab01ad181c77769103",
   "packages": {
     "@nyc-tron/ui": {
-      "version": "0.1.0-alpha.2",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.2/nyc-tron-ui-0.1.0-alpha.2.tgz",
-      "sha256": "b59fdff86a131847f6a26dd19081aee5c6c90a3134fac0a9e26cef5e2ba5b587"
+      "version": "0.1.0-alpha.3",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-ui-0.1.0-alpha.3.tgz",
+      "sha256": "13b2c46390ffd54e2713447f9e2c79df5b35a883c29f87050a6a94b5cc5b9db7"
     }
   }
 }
