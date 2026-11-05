@@ -124,3 +124,9 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
   the unreleased NYC-Tron fill prop's installed consumer contract: NOT RUN.
 - Adds no UI copy or dependency upgrade; stack remains based on Tally grid
   cluster PR #50, with the released NYC-Tron alpha.1 pin unchanged.
+
+## Recovered alpha.3 Tally consumer (2026-11-05)
+
+31 tests pass, including atomic paste/fill against a freshly built nf-cli. Tally TypeScript and the release URL/lockfile/SHA256 pin check pass. Includes the local #50/#54 stack.
+
+These are local source/protocol checks. No new native build or device acceptance was run. The follow-up has not been pushed or merged.
