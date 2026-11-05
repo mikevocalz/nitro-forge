@@ -6,6 +6,7 @@ import {
   commitTallyGridCell,
   parseTallyCellAddress,
   readTallyWindow,
+  tallyCellAddress,
   type TallyGridData,
 } from "./grid-adapter";
 
@@ -45,10 +46,6 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * lifts the deferral.
  */
 export const TALLY_DEFERRED_OPS = {
-  /** I-02 fill handle (`onFillRange`): needs relative-reference shifting in the engine, and one undo entry per fill. */
-  fillRange: "I-02",
-  /** I-02/I-01 paste into a range: batch write with one undo entry. */
-  setRange: "I-02",
   /** I-08 `onDuplicate`. */
   duplicateSheet: "I-08",
   /** I-08 `onMove`: sheet reorder. */
@@ -167,3 +164,23 @@ export const TALLY_SHEET_BOUNDS = {
 } as const;
 
 export type { CellInfo };
+
+/** Inclusive cell coordinates, matching NYC-Tron's FillPlan (not its viewport). */
+export interface TallyFillRange {
+  readonly startRow: number; readonly endRow: number;
+  readonly startColumn: number; readonly endColumn: number;
+}
+export interface TallyFillPlan {
+  readonly source: TallyFillRange;
+  readonly target: TallyFillRange;
+  readonly direction: "up" | "down" | "left" | "right";
+}
+/** Pass as SpreadsheetGrid.onFillRange. Exactly one engine call per gesture. */
+export function commitTallyFill(document: Pick<TallyDocument, "fillRange">, plan: TallyFillPlan) {
+  const rect = (range: TallyFillRange) => {
+    if (range.endRow < range.startRow || range.endColumn < range.startColumn)
+      throw new RangeError("Fill range must be ordered");
+    return { from: tallyCellAddress(range.startRow, range.startColumn), to: tallyCellAddress(range.endRow, range.endColumn) };
+  };
+  return document.fillRange(rect(plan.source), rect(plan.target));
+}

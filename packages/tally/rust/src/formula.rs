@@ -318,6 +318,10 @@ fn is_ref_word(w: &str) -> bool {
 }
 
 fn tokenize(src: &str) -> Result<Vec<Tok>, ()> {
+    tokenize_refs(src, None)
+}
+
+fn tokenize_refs(src: &str, mut refs: Option<&mut Vec<(usize, usize)>>) -> Result<Vec<Tok>, ()> {
     let b = src.as_bytes();
     let mut i = 0usize;
     let mut out = Vec::new();
@@ -482,6 +486,11 @@ fn tokenize(src: &str) -> Result<Vec<Tok>, ()> {
                 }
                 let w = &src[start..i];
                 if is_ref_word(w) {
+                    if let Some(refs) = refs.as_mut() {
+                        if !src[i..].trim_start().starts_with('(') {
+                            refs.push((start, i));
+                        }
+                    }
                     out.push(Tok::Ref(w.to_string()));
                 } else {
                     out.push(Tok::Name(w.to_string()));
@@ -492,6 +501,52 @@ fn tokenize(src: &str) -> Result<Vec<Tok>, ()> {
     }
     Ok(out)
 }
+
+/// Shift only lexed reference tokens, preserving literals, whitespace, names,
+/// scientific notation and function identifiers. Malformed lexical input is
+/// rejected by the caller before any workbook mutation.
+pub fn shift_references(raw: &str, dc: i64, dr: i64) -> Result<String, ()> {
+    if !raw.starts_with('=') {
+        return Ok(raw.to_string());
+    }
+    let mut refs = Vec::new();
+    tokenize_refs(raw, Some(&mut refs))?;
+    let mut result = String::with_capacity(raw.len());
+    let mut previous = 0;
+    for (start, end) in refs {
+        result.push_str(&raw[previous..start]);
+        let word = &raw[start..end];
+        let fixed_col = word.starts_with('$');
+        let letters = word.trim_start_matches('$');
+        let fixed_row = letters.contains('$');
+        let shifted = parse_addr(word).and_then(|(c, r)| {
+            let c = i64::from(c) + if fixed_col { 0 } else { dc };
+            let r = i64::from(r) + if fixed_row { 0 } else { dr };
+            if c < 0 || c > i64::from(u32::MAX) || r < 0 || r >= i64::from(u32::MAX) {
+                return None;
+            }
+            Some((c as u32, r as u32))
+        });
+        if let Some((c, r)) = shifted {
+            let address = fmt_addr(c, r);
+            let split = address.find(|ch: char| ch.is_ascii_digit()).unwrap();
+            if fixed_col {
+                result.push('$');
+            }
+            result.push_str(&address[..split]);
+            if fixed_row {
+                result.push('$');
+            }
+            result.push_str(&address[split..]);
+        } else {
+            result.push_str(ERR_REF);
+        }
+        previous = end;
+    }
+    result.push_str(&raw[previous..]);
+    Ok(result)
+}
+
 
 // ---------------------------------------------------------------------------
 // AST + parser

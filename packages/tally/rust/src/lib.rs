@@ -28,6 +28,7 @@
 //!   `new` reset the journal's view of the world appropriately.
 
 mod formula;
+mod range_ops;
 
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
 use ignition_core::{
@@ -104,6 +105,11 @@ impl CellLookup for Sheet {
 /// an entry and returns the entry describing the opposite direction, so undo
 /// and redo share one code path.
 enum UndoEntry {
+    /// One inverse entry for an atomic multi-cell edit.
+    Cells {
+        sheet: u64,
+        cells: Vec<(String, Option<String>)>,
+    },
     /// Previous raw text of a cell (`None` = the cell was empty).
     Cell {
         sheet: u64,
@@ -477,6 +483,19 @@ impl TallyEngine {
     /// inverts *that* (pushed onto the opposite journal stack).
     fn invert(&mut self, e: UndoEntry) -> UndoEntry {
         match e {
+            UndoEntry::Cells { sheet, cells } => {
+                let inverse = cells
+                    .into_iter()
+                    .map(|(addr, prev)| match self.invert(UndoEntry::Cell { sheet, addr, prev }) {
+                        UndoEntry::Cell { addr, prev, .. } => (addr, prev),
+                        _ => unreachable!(),
+                    })
+                    .collect();
+                UndoEntry::Cells {
+                    sheet,
+                    cells: inverse,
+                }
+            }
             UndoEntry::Cell { sheet, addr, prev } => {
                 let cur = self
                     .doc
@@ -578,6 +597,8 @@ impl Engine for TallyEngine {
             "removeSheet" => self.op_remove_sheet(p),
             "setActive" => self.op_set_active(p),
             "setCell" => self.op_set_cell(p),
+            "setRange" => self.op_set_range(p),
+            "fillRange" => self.op_fill_range(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),

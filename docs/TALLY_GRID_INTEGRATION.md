@@ -108,7 +108,7 @@ like the NYC-Tron props.
 | ID | NYC-Tron control | Engine side (`grid-cluster` / `grid-adapter`) | Status |
 | --- | --- | --- | --- |
 | I-01 | `forge/SpreadsheetGrid` | `readTallyWindow`, `TALLY_SHEET_BOUNDS` | BUILD |
-| I-02 | `SpreadsheetGrid` `onFillRange` | none | **DEFER** on ops `fillRange` and `setRange` (reference shifting and one undo entry belong in the engine). Leave `onFillRange` unset; the handle is not drawn. |
+| I-02 | `SpreadsheetGrid` `onFillRange` | `commitTallyFill` → `fillRange`; rectangular paste via `setRange` | Implemented in the engine: reference shifting and one undo entry per edit. Callback shape matches the unreleased UI cluster; release-pin update remains pending. |
 | I-06 | `SpreadsheetGrid` outlines, `forge/spreadsheet/FormulaReferenceText` | none needed: references come from the formula text | BUILD |
 | I-08 | `forge/spreadsheet/SheetTabs` | `bindTallySheetTabs` → `onSelect`/`onAdd`/`onRename`/`onRemove` over `setActive`/`addSheet`/`renameSheet`/`removeSheet` | BUILD; duplicate, move, protect and tab color **DEFER** on ops `duplicateSheet`, `moveSheet`, `protectSheet`, `setSheetColor` |
 | I-13 | `forge/spreadsheet/ChartBuilder` | `readTallyRange` for the data | BUILD for building and previewing; saving **DEFER** on op `insertChart` (leave `onInsert` unset) |
@@ -148,3 +148,25 @@ controls; those are in NYC-Tron-UI #40 and not released yet. Until a release
 carries them, the contract test covers SpreadsheetGrid only, and the cluster
 bindings match the #40 prop shapes by structure. Move the pin to the release
 that includes #40 and extend the contract test to the new subpaths.
+
+
+## Atomic paste and fill
+
+`TallyDocument.setRange(from, values)` commits a rectangular matrix of raw
+strings. An empty string clears a cell. `commitTallyFill(document, plan)` maps
+NYC-Tron's inclusive `FillPlan` coordinates to `fillRange`. Re-fetch the visible
+window after success; rejection leaves committed cells and redo history intact.
+Do not implement paste by looping over `setCell`.
+
+The source block repeats; this does not extrapolate numeric/date series. All
+source cells are read before any write. Relative references shift; `$` locks,
+strings, whitespace, scientific notation and function identifiers are preserved.
+A shifted reference outside Tally's address domain becomes `#REF!`. Unsupported
+lexical syntax rejects the entire fill, rather than rewriting unknown formulas.
+Each source/target or pasted matrix is limited to 16,384 cells. Unchanged range
+writes return `changed: 0` with no event or undo entry. There is no clipboard OS
+bridge in this engine change.
+
+The released NYC-Tron alpha.1 does not yet expose `onFillRange`; consumers need
+the spreadsheet cluster from NYC-Tron #40/#43 before supplying the callback.
+No native or device validation is implied by the Rust/CLI tests.
