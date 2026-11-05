@@ -70,7 +70,6 @@ validated. JS export does not establish native readiness.
 ## Installation
 
 Register patches/@expo__metro-file-map@58.0.5.patch under patchedDependencies and
-let pnpm generate the lockfile normally. Do not invent patch hashes, weaken
-release-age policy, or add exemptions. Reading pristine source archives for this
-port was not an installation or execution of fresh dependencies. The latest-host
-candidate's independent installation-age gate remains in force.
+let pnpm generate the lockfile normally. Do not invent patch hashes. Reading
+pristine source archives for this port was not an installation or execution of
+fresh dependencies.
