@@ -1,0 +1,61 @@
+name: Nitro v1 alpha lockfile check
+
+# Frozen-lockfile check, not a lockfile bot. It used to trigger only on its own
+# feature branch and push a resolved lockfile there, so it stopped running once
+# that branch merged. Now every PR and every master push that touches the v1
+# lab manifest or the lockfile must already carry a matching lockfile. Fix a
+# failure locally with `pnpm install --lockfile-only --ignore-scripts` and
+# commit pnpm-lock.yaml.
+
+on:
+  pull_request:
+    paths:
+      - 'packages/ignition-v1-lab/package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tooling/nitro-v1/verify-generated.mjs'
+      - '.github/workflows/nitro-v1-lockfile.yml'
+  push:
+    branches:
+      - master
+    paths:
+      - 'packages/ignition-v1-lab/package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tooling/nitro-v1/verify-generated.mjs'
+      - '.github/workflows/nitro-v1-lockfile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: nitro-v1-lockfile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frozen:
+    name: Frozen install, v1 codegen and generated-class check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Check the PR head itself, not GitHub's synthetic merge commit, so the
+      # result describes the lockfile bytes that are actually on the branch.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Enable exact pnpm via Corepack
+        run: corepack enable
+      - name: Install from the committed lockfile without native install scripts
+        # --frozen-lockfile fails when any manifest disagrees with pnpm-lock.yaml.
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Regenerate exact v1 alpha specs
+        run: pnpm --filter @nitro-forge/ignition-v1-lab codegen
+      - name: Check generated classes and stable app isolation
+        run: node tooling/nitro-v1/verify-generated.mjs
+
+# This installs/builds no native v1 library and does not modify Moyo or apps/example.

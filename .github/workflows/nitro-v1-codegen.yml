@@ -1,0 +1,51 @@
+name: Nitro v1 alpha API and Nitrogen codegen
+
+on:
+  push:
+    branches:
+      - feat/ignition-nitro-v1-preview-2026-11-02
+  pull_request:
+    paths:
+      - 'packages/ignition-v1-lab/**'
+      - 'tooling/nitro-v1/**'
+      - '.github/workflows/nitro-v1-codegen.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  v1-generator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install the committed lockfile exactly (Nitro v1 alpha included)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Ensure v1 runtime and code generator are the same published release
+        run: |
+          pnpm --filter @nitro-forge/ignition-v1-lab exec node -p "require('nitrogen/package.json').version"
+          pnpm --filter @nitro-forge/ignition-v1-lab exec node -p "require('nitro-core/package.json').version"
+      - name: Generate Nitro v1 native classes (not a native build)
+        run: pnpm --filter @nitro-forge/ignition-v1-lab codegen
+      - name: Validate class output and prevent premature alpha native autolinking
+        run: node tooling/nitro-v1/verify-generated.mjs
+      - name: Typecheck new v1 API
+        run: pnpm --filter @nitro-forge/ignition-v1-lab typecheck
+      - name: Check existing stable engine APIs
+        run: pnpm --filter @nitro-forge/ignition typecheck
+      - name: Keep generated v1 C++/Apple/Android/JS contracts for native review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nitro-v1-generated-contracts
+          path: packages/ignition-v1-lab/nitrogen/generated
+          retention-days: 14
+
+# This job intentionally DOES NOT build an Expo app with both Nitro 0.x and 1.x.
+# A separately isolated native sample must prove C++/Rust linkage and device
+# behavior before changing any stable app or publishing the v1 bridge.
