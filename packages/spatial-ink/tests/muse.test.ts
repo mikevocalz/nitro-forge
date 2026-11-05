@@ -56,7 +56,7 @@ describe("native Logitech Muse input adapter", () => {
     s.send(base());
     s.send({ ...base(), tipPressed: true });
     expect(s.events.map((e) => e.phase))
-      .toEqual(["down", "cancel", "hover", "hover", "down"]);
+      .toEqual(["down", "cancel", "hover-exit", "hover", "hover", "down"]);
     s.dispose();
   });
 
@@ -81,8 +81,50 @@ describe("native Logitech Muse input adapter", () => {
     s.dispose();
     s.dispose();
     s.send({ ...base(), tipPressed: true });
-    expect(s.events.map((e) => e.phase)).toEqual(["down", "cancel"]);
+    expect(s.events.map((e) => e.phase)).toEqual(["down", "cancel", "hover-exit"]);
     expect(s.disconnected()).toBe(1);
+  });
+
+  it("rejects malformed runtime poses from a native provider without crashing", () => {
+    const s = setup();
+    s.send({ ...base(), position: {} as MuseNativeSample["position"], tipPressed: true });
+    s.send({ ...base(), position: [0, 2] as unknown as MuseNativeSample["position"], tipPressed: true });
+    s.send({ ...base(), position: ["x", 1, 2] as unknown as MuseNativeSample["position"], tipPressed: true });
+    expect(s.events).toHaveLength(0);
+    s.send({ ...base(), tipPressed: true });
+    // A malformed press blocks the stroke until a real release; never resume
+    // a drawing mid-stroke after lost spatial tracking.
+    s.send(base());
+    s.send({ ...base(), tipPressed: true });
+    expect(s.events.map(e => e.phase)).toEqual(["hover", "hover", "down"]);
+    s.dispose();
+  });
+
+  it("ends hover once when tracking is lost while the pen hovers", () => {
+    const s = setup();
+    s.send(base());
+    s.send({ ...base(), position: [0.1, 1, 2] });
+    s.send({ ...base(), tracked: false, position: null });
+    s.send({ ...base(), tracked: false, position: null });
+    s.send({ ...base(), position: [Number.NaN, 0, 0] });
+    expect(s.events.map((e) => e.phase)).toEqual(["hover", "hover", "hover-exit"]);
+    // The exit carries no stale or malformed point for the host to draw at.
+    expect(s.events[2]?.position).toBeNull();
+    s.send(base());
+    expect(s.events.at(-1)?.phase).toBe("hover");
+    s.dispose();
+    expect(s.events.at(-1)?.phase).toBe("hover-exit");
+  });
+
+  it("orders cancel before hover exit, and both after a malformed pose", () => {
+    const s = setup();
+    s.send({ ...base(), tipPressed: true });
+    s.send({ ...base(), tipPressed: true, position: {} as MuseNativeSample["position"] });
+    expect(s.events.map((e) => e.phase)).toEqual(["down", "cancel", "hover-exit"]);
+    expect(s.events[1]?.position).toBeNull();
+    expect(s.events[2]?.position).toBeNull();
+    s.dispose();
+    expect(s.events).toHaveLength(3);
   });
 
   it("never moves timestamps backwards when the host clock jitters", () => {

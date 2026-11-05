@@ -76,8 +76,8 @@ converter at a single integration seam after a separate Moyo/Viro change.
 | Pose | Metres, Viro session world frame; no normalized UV until router projection. |
 | Pressure | Zero is real; missing/invalid is undefined, not a synthesized 0.5. |
 | Buttons | Raw states stay separate. Side-button drawing explicitly opted in. |
-| Hover | Valid unpressed tracked pose; drawing surface applies hover distance. |
-| Stroke lifecycle | Down/move/up; cancel on tracking loss, bad pose or disposal. |
+| Hover | Valid unpressed tracked pose; drawing surface applies hover distance. `hover-exit` (no position) fires once when tracking is lost or the subscriber is disposed, so the host drops its hover cursor. |
+| Stroke lifecycle | Down/move/up; cancel on tracking loss, bad pose or disposal, always before `hover-exit`. |
 | Reconnection | Held pen cannot resume after a loss until release observed. |
 | Time | Receive clock is monotonic, same clock domain as board router. |
 | Ownership | Native subscribe/unsubscribe once per consumer; no duplicate listeners. |

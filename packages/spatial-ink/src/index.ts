@@ -5,7 +5,12 @@
  * not with a second Bluetooth implementation in Nitro-Forge.
  * No direct Muse compatibility is claimed on Android, Quest or PICO.
  */
-export type SpatialPenPhase = "hover" | "down" | "move" | "up" | "cancel";
+/**
+ * `hover-exit` ends the pen's presence over the surface: the host removes its
+ * hover cursor. It follows `cancel` when tracking is lost mid-stroke and is
+ * emitted once per presence, never with a position.
+ */
+export type SpatialPenPhase = "hover" | "down" | "move" | "up" | "cancel" | "hover-exit";
 export type Vec3 = readonly [number, number, number];
 
 export interface MuseNativeSample {
@@ -43,7 +48,8 @@ export interface MuseSubscriptionOptions {
 }
 
 const validPoint = (p: Vec3 | null): p is Vec3 =>
-  p !== null && p.length === 3 && p.every(Number.isFinite);
+  Array.isArray(p) && p.length === 3 &&
+  p.every((n) => typeof n === "number" && Number.isFinite(n));
 
 function normalizedPressure(sample: MuseNativeSample): number | undefined {
   return Number.isFinite(sample.pressure) &&
@@ -56,13 +62,17 @@ function normalizedPressure(sample: MuseNativeSample): number | undefined {
  * world points to the board using their existing surface input router.
  *
  * The adapter cancels an active stroke if tracking is lost, the tip disappears
- * or the subscriber is disposed. A pen that remains pressed after tracking
+ * or the subscriber is disposed, then emits `hover-exit` so a host hover
+ * cursor never stays pinned to the last tracked point. Events emitted for an
+ * invalid pose carry `position: null`. A pen that remains pressed after tracking
  * loss cannot silently resume the old stroke: it must be released before a new
  * down event. Side buttons remain available separately for tools/gestures.
  */
 export function subscribeMuseSpatialInk(options: MuseSubscriptionOptions): () => void {
   const now = options.now ?? (() => performance.now());
   let drawing = false;
+  /** True from the first valid pose until `hover-exit`. */
+  let present = false;
   let blockedUntilRelease = false;
   let lastSample: MuseNativeSample | undefined;
   let disposed = false;
@@ -94,13 +104,17 @@ export function subscribeMuseSpatialInk(options: MuseSubscriptionOptions): () =>
     const valid = sample.tracked && validPoint(sample.position);
 
     if (!valid) {
-      if (drawing) emit("cancel", sample);
+      const lost: MuseNativeSample = { ...sample, position: null };
+      if (drawing) emit("cancel", lost);
       drawing = false;
+      if (present) emit("hover-exit", lost);
+      present = false;
       if (pressed) blockedUntilRelease = true;
       else blockedUntilRelease = false;
       return;
     }
 
+    present = true;
     if (!pressed) {
       blockedUntilRelease = false;
       if (drawing) {
@@ -126,10 +140,63 @@ export function subscribeMuseSpatialInk(options: MuseSubscriptionOptions): () =>
     if (disposed) return;
     disposed = true;
     try {
-      if (drawing && lastSample !== undefined) emit("cancel", lastSample);
+      if (lastSample !== undefined) {
+        if (drawing) emit("cancel", lastSample);
+        if (present) emit("hover-exit", { ...lastSample, position: null });
+      }
     } finally {
       drawing = false;
+      present = false;
       unsubscribe();
     }
   };
+}
+
+/**
+ * The existing Vision Pro Viro stream -> existing QuickDraw BoardInputRouter
+ * compatibility boundary. Viro owns native GameController/ARKit; the board owns
+ * projection, tool selection and the SINGLE editable document.
+ *
+ * Replace the old MusePenInput converter when adopting this adapter: do not
+ * mount two subscriptions to one pen/board at the same time.
+ */
+export interface MuseBoardPointerSample extends MuseNativeSample {
+  readonly phase: SpatialPenPhase;
+  /** Actual normalized pressure, or NaN if native measurement is missing. */
+  readonly pressure: number;
+  readonly timestampMs: number;
+  /** Deprecated legacy field required by existing Viro router consumers. */
+  readonly timestamp: number;
+}
+export interface MuseBoardRouterTarget {
+  handlePenSample(sample: MuseBoardPointerSample): void;
+}
+export interface MuseBoardBridgeOptions
+  extends Pick<MuseSubscriptionOptions, "subscribe" | "now" | "sideButtonsDraw"> {
+  readonly router: MuseBoardRouterTarget;
+  readonly wallClock?: () => number;
+}
+
+/** Returns the ONE native stream unsubscribe, with deterministic cancellation. */
+export function connectMuseToBoardRouter(options: MuseBoardBridgeOptions): () => void {
+  const wallClock = options.wallClock ?? (() => Date.now());
+  return subscribeMuseSpatialInk({
+    subscribe: options.subscribe,
+    ...(options.now ? { now: options.now } : {}),
+    sideButtonsDraw: options.sideButtonsDraw ?? false,
+    onEvent: (event) => {
+      options.router.handlePenSample({
+        tracked: event.tracked,
+        position: event.position,
+        headPosition: event.headPosition,
+        tipPressed: event.tipPressed,
+        primaryPressed: event.primaryPressed,
+        secondaryPressed: event.secondaryPressed,
+        phase: event.phase,
+        pressure: event.normalizedPressure ?? Number.NaN,
+        timestamp: wallClock(),
+        timestampMs: event.timestampMs,
+      });
+    },
+  });
 }
