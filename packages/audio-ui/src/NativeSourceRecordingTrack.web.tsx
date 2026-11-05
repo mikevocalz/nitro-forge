@@ -82,12 +82,13 @@ async function decodeWebRecording(uri: string): Promise<SourceRecordingFile> {
 
 /** Web: real browser MediaRecorder; decode actual saved clip for source peaks when supported. */
 export function NativeSourceRecordingTrack({
-  store, disabled, testID, onSaved,
+  store, disabled, title, testID, onSaved,
 }: NativeSourceRecordingTrackProps) {
   return (
     <NativeRecordingTrack
       store={store}
       {...(disabled === undefined ? {} : { disabled })}
+      {...(title === undefined ? {} : { title })}
       {...(testID ? { testID } : {})}
       onSaved={(uri) => {
         void decodeWebRecording(uri)
