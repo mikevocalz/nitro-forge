@@ -8,7 +8,6 @@
     "autolinking": {
       "ios": {
         "exclude": [
-          "@expo/ui",
           "expo-dev-client",
           "expo-dev-launcher",
           "expo-dev-menu",
