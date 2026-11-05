@@ -39,3 +39,10 @@ test("identifies latest published v1 alpha independent of stable 0.x releases", 
   assert.equal(newestV1Release(released),v120);
   assert.throws(()=>newestV1Release([]),/No published/);
 });
+
+test("rejects range specifiers that would float to another v1 nightly", () => {
+  for (const spec of ["^"+v120, "~"+v120, ">="+v120, "npm:react-native-nitro-modules@^"+v120]) {
+    const pkgs=[{path:"packages/native/package.json",pkg:{dependencies:{"react-native-nitro-modules":spec}}}];
+    assert.throws(()=>assertCoherentNitroV1(pkgs,v120),/must match/, spec);
+  }
+});

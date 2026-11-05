@@ -24,7 +24,10 @@ export function assertCoherentNitroV1(manifests, baseline) {
     for (const section of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
       for (const name of NITRO_V1_NAMES) {
         const version = pkg[section]?.[name];
-        if (version?.startsWith("1.")) declared.push({ name, version, section });
+        // Any specifier that can resolve to v1 (exact, ^1, ~1, >=1, v1, npm:...@1)
+        // must be the exact baseline; a range would float to a newer nightly.
+        if (typeof version === "string" && /(^|[\s@^~=<>v])1\./.test(version))
+          declared.push({ name, version, section });
       }
     }
     for (const pin of declared) {

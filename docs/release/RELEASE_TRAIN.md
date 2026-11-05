@@ -1,9 +1,10 @@
-# NitroForge SDK publishing, npm freshness and multi-app release train
+# NitroForge SDK release train: GitHub Release tarballs and npm dependency freshness
 
-**Status:** specification plus scripts; no npm artifacts, ABI binaries or platform-specific editor renderers have been published from this PR. Existing Ignition Rust/`nf-cli` test evidence is recorded separately in `docs/ROSTER.md`.
+**Status:** specification plus scripts; no release tarballs, ABI binaries or platform-specific editor renderers have been published from this PR. Existing Ignition Rust/`nf-cli` test evidence is recorded separately in `docs/ROSTER.md`.
 
 ## Invariants
-- NitroForge owns a **standalone SDK repo**, public API and release train. Moyo, NYC-MON, DVNT, Pa'Casa, Harlem Might and outside consumers install signed/reproducible packages. No consumer source copies.
+- **Distribution is GitHub Release tarballs only**, the same model as NYC-Tron UI `v0.1.0-alpha.1`: each release attaches one `pnpm pack` tarball per package (built and verified by `pnpm run check:packages`) plus `SHA256SUMS`. Forge never publishes to npm. In this document npm is read-only: the registry is where third-party dependency freshness is checked.
+- NitroForge owns a **standalone SDK repo**, public API and release train. Moyo, NYC-MON, DVNT, Pa'Casa, Harlem Might and outside consumers install pinned release tarballs by URL and verify them against `SHA256SUMS`. No consumer source copies.
 - The seven `@nitro-forge/{prism,cadence,splice,folio,pitch,tally,quill}` engine packages and `@nitro-forge/ignition` remain headless. A future `@nitro-forge/renderer-skia`, `native-ui`, `adaptive-layout`, `editor-ui` are independently installable optional dependencies. A headless consumer does not pay for Skia, Expo or bundled editors.
 - Native renderer requires **`react-native-skia` v3 Graphite**, `react-native-webgpu` compatible matching Dawn; never `@shopify/react-native-skia` v2. Keep Expo SDK and RN versions as an admitted, tested family.
 - “Latest npm” has two meanings: `npm dist-tag latest` (available) and **latest admitted compatible** with Expo/RN/Nitro/Dawn (safe to install). Check both; a new registry tag is not a blank check to break a working app.
@@ -44,7 +45,7 @@
 | REL-05 | GPU lead | Skia v3 Graphite renderer, Dawn compatibility, bounds/CPU parity | real Metal/Vulkan logs, pixel diff | PLANNED |
 | REL-06 | UI lead | native Expo UI, shared Tailwind v4, adaptive panes, Mobbin-reviewed original suite | iOS/Android/web Storybook + device | PLANNED |
 | REL-07 | Licensing/security | crate and upstream notices, source provenance, archive/image bounds and sandbox | SBOM, risk disposition, malformed-file tests | PLANNED |
-| REL-08 | Packaging | npm exports/types/source maps/d.ts, native binaries, Podspec/Gradle config, web assets | `pnpm pack` and install in clean external apps | PLANNED |
+| REL-08 | Packaging | tarball exports/types/source maps/d.ts, native binaries, Podspec/Gradle config, web assets | `pnpm pack` tarballs attached to a GitHub Release, installed by URL in clean external apps | PLANNED |
 | REL-09 | Versioning | semver, changelog, ABI/feature manifest, rollback and signing | release candidate checks and provenance | PLANNED |
 | REL-10 | Moyo integrator | Moyo Business native/Next.js import of same SDK/UI | cross-app offline/file/permissions suite | PLANNED |
 | REL-11 | Second app integrator | NYC-MON or DVNT use same release without importing Moyo code | separate app build/device evidence | PLANNED |
@@ -54,11 +55,11 @@
 1. Run npm registry audit; classify new stable versions and native graph changes. Handle security updates quickly but not without tests.
 2. Commit audited package manifest and `pnpm-lock.yaml` together. `pnpm install --frozen-lockfile` must pass without ignored peer errors or dual Dawn.
 3. Run `node tooling/release/check-package-boundaries.mjs`, Rust workspace tests, `pnpm -r test`, `pnpm -r typecheck`, package build, source license/SBOM and native codegen.
-4. For each selected engine, verify opening, mutation, undo/redo, NFD1 snapshot, reopen, export and corrupt-source handling through the **published** artifact, not a workspace path.
+4. For each selected engine, verify opening, mutation, undo/redo, NFD1 snapshot, reopen, export and corrupt-source handling through the **release tarball**, not a workspace path.
 5. Validate iOS/Android native development builds on actual hardware, plus web WASM and Skia CanvasKit as appropriate. Verify device availability and list unsupported environments.
 6. Package and install `@nitro-forge/ignition`, one engine and optional UI/render packages into two clean example apps with no monorepo aliases. Confirm host auth/storage remain external dependencies.
-7. Tag semver release with changelog, upstream source SHA provenance, build receipts, compatibility feature manifest and rollback steps; publish artifacts only after approval.
-8. Let Dependabot/Renovate open **consumer** version-bump PRs, canary a safe app, then roll out across Moyo, NYC-MON, DVNT and others after independent CI/device checks. No mandatory same-day upgrade on incompatible apps.
+7. Tag a semver GitHub Release with changelog, upstream source SHA provenance, build receipts, compatibility feature manifest and rollback steps. Attach the tarballs and `SHA256SUMS` only after approval. Never `npm publish`.
+8. Each consumer moves its pinned tarball URLs and hashes in its own PR (Dependabot and Renovate do not track URL tarballs), canaries a safe app, then rolls out across Moyo, NYC-MON, DVNT and others after independent CI/device checks. No mandatory same-day upgrade on incompatible apps.
 
 ## Skills and standards
 - [No AI Slop](https://github.com/petergyang/no-ai-slop/blob/000650b156983f5159695b441477f4e63b25dc85/skills/no-ai-slop/SKILL.md) + [Everything Claude Code verification loop](https://github.com/WorldFlowAI/everything-claude-code/blob/432485ba6b92c14fb357276a98957f348bcff9ee/skills/verification-loop/SKILL.md).
@@ -67,4 +68,4 @@
 - [Moyo shared UI source and foldable skill](https://github.com/mikevocalz/universal-spatial-starter/blob/256a97b132803fd2fb8049f7a120cef9cb641f41/.agents/skills/mikevocalz-foldable-layouts/SKILL.md), [Argent device testing](https://github.com/software-mansion/argent/blob/1a17fd5755247b540b3f812e7e4b736c33c74c40/packages/skills/skills/argent-device-interact/SKILL.md).
 
 ### Status and limitations
-Only manifest inspection and npm audit scripts are included here. They do not upgrade any package, rebuild Nitro, create native binaries, or release to npm. Need CI to verify the offline tests, then additional implementation PRs for packaging and native execution.
+Only manifest inspection and npm audit scripts are included here. They do not upgrade any package, rebuild Nitro, create native binaries, or cut a release. Need CI to verify the offline tests, then additional implementation PRs for packaging and native execution.

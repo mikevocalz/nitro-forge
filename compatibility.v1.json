@@ -3,6 +3,11 @@
   "generatedFrom": "NitroForge docs/ROSTER.md reviewed 2026-11-02; statuses are historical or planned and do not certify a release",
   "product": "nitro-forge",
   "status": "not-released",
+  "distribution": {
+    "channel": "github-release-tarballs",
+    "checksums": "SHA256SUMS",
+    "npm": "not-used"
+  },
   "engineApis": [
     "ignition",
     "prism",
