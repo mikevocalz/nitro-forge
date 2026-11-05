@@ -39,7 +39,7 @@ missing pressure goes to NaN in the legacy router and must not be fabricated.
 | VP-03 | Pair actual Logitech Muse in Apple Vision Pro Settings; verify tracked native events | NOT RUN |
 | VP-04 | Hover, tip contact, pressure zero/full, primary and secondary buttons, measured latency | NOT RUN |
 | VP-05 | Calibrate tip-to-board projection; no off-paper drawing; no controller/pen double stroke | NOT RUN |
-| VP-06 | Tracking loss cancels once; held-tip release before new stroke; reconnect, focus, immersion change | SOURCE TESTS |
+| VP-06 | Tracking loss cancels once, then ends hover once (cursor hidden); held-tip release before new stroke; reconnect, focus, immersion change | SOURCE TESTS |
 | VP-07 | Pointer samples reach the real Yjs/QuickDraw authority, paint Skia/Viro pixels, undo and redo | NOT RUN |
 | VP-08 | Background/kill/restart, scoped MMKV 4 persistence, sync and conflict resolution | NOT RUN |
 | VP-09 | Skia Graphite or Viro geometry backend renders consistent ink with readable fallback | NOT RUN |
@@ -59,7 +59,8 @@ AND a rendered+saved stroke.
 3. Select Pen; draw slowly with 0 / 0.25 / 0.75 / 1 measured pressure.
 4. Select Highlighter, then Eraser; verify pressure/geometry and undo/redo.
 5. Lift pen, move outside board, reenter, deliberately lose tracking while pressed,
-   then release and reconnect; verify exactly one cancel and no ghost line.
+   then release and reconnect; verify exactly one cancel, no ghost line, and no
+   hover cursor left at the last tracked point.
 6. Save, terminate app, reopen same scoped account/board. Confirm identical marks.
 7. Toggle offline/online and rejoin collaboration. Confirm no duplicate strokes.
 8. Repeat with accessibility enabled, dark/light theme, Rive reduced-motion,

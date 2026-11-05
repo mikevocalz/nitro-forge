@@ -55,11 +55,25 @@ describe("existing Viro Muse -> canonical BoardInputRouter integration",()=>{
    native.send(sample());
    native.send({...sample(),tipPressed:true});
    expect(events.map(x=>x.phase)).toEqual([
-     "down","move","cancel","hover","hover","down"
+     "down","move","cancel","hover-exit","hover","hover","down"
    ]);
    expect(Number.isNaN(events[1]?.pressure)).toBe(true);
    cleanup();
-   expect(events.at(-1)?.phase).toBe("cancel");
+   expect(events.slice(-2).map(x=>x.phase)).toEqual(["cancel","hover-exit"]);
+ });
+ it("forwards hover exit so the board can drop its hover cursor on tracking loss",()=>{
+   const native=createSource();
+   const events:MuseBoardPointerSample[]=[];
+   const cleanup=connectMuseToBoardRouter({
+     subscribe:native.subscribe,now:()=>5,
+     router:{handlePenSample:e=>events.push(e)}
+   });
+   native.send(sample());
+   native.send({...sample(),tracked:false,position:null});
+   expect(events.map(x=>x.phase)).toEqual(["hover","hover-exit"]);
+   expect(events[1]?.position).toBeNull();
+   cleanup();
+   expect(events).toHaveLength(2);
  });
  it("side buttons never start a stroke unless host explicitly opts in",()=>{
    const native=createSource();
