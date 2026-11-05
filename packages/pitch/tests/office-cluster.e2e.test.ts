@@ -38,6 +38,42 @@ describe("real Rust Pitch engine behind the NYC-Tron slide controls", () => {
     }
   });
 
+  it("rejects stale or invalid bulk changes without touching the deck or redo", async () => {
+    const doc = await PitchDocument.open(host, "Board");
+    try {
+      await doc.addSlide("blank");
+      await doc.addSlide("blank");
+      const stale = await bindPitchSlideList(doc, () => {});
+      const old = stale.slides.map(s => s.id);
+      const added = String((await doc.addSlide("blank")).data.slide_id);
+      let latest: PitchSlideListBinding | undefined;
+      const fresh = await bindPitchSlideList(doc, next => { latest = next; });
+      const all = fresh.slides.map(s => s.id);
+      expect(all).toEqual([...old, added]);
+      // Non-contiguous block (2nd and 4th) moved to the front, then undone so redo is live.
+      await fresh.onReorder([all[1]!, all[3]!, all[0]!, all[2]!]);
+      const moved = latest!.slides.map(s => s.id);
+      expect(moved).toEqual([all[1], all[3], all[0], all[2]]);
+      expect(await doc.undo()).toBe(true);
+
+      const ids = async () => (await readPitchDeck(doc)).slides.map(s => s.id);
+      // The stale sorter does not know the added slide: the engine refuses instead of dropping it.
+      await expect(stale.onReorder([old[2]!, old[0]!, old[1]!])).rejects.toThrow(/every slide exactly once/);
+      await expect(doc.moveSlides([Number(all[0]), Number(all[0]), Number(all[2]), Number(added)])).rejects.toThrow(/duplicate slide id/);
+      await expect(doc.removeSlides([Number(all[1]), 999])).rejects.toThrow(/no slide with id 999/);
+      await expect(doc.removeSlides(all.map(Number))).rejects.toThrow(/at least one slide/);
+      expect(await ids()).toEqual(all);
+      // A no-op (empty removal, unchanged order) leaves redo alone too.
+      await doc.removeSlides([]);
+      await doc.moveSlides(all.map(Number));
+      expect(await doc.redo()).toBe(true);
+      expect(await ids()).toEqual(moved);
+      expect(await doc.redo()).toBe(false);
+    } finally {
+      await doc.close();
+    }
+  });
+
   it("drives the canvas and animation pane, and previews with slideAt", async () => {
     const doc = await PitchDocument.open(host, "Board");
     try {

@@ -205,9 +205,11 @@ export async function bindPitchSlideList(
     onAdd: () => after(() => document.addSlide("blank")),
     onRemove: id => after(() => document.removeSlide(pitchId(id))),
     onRemoveMany: ids => after(async () => {
-      if (new Set(ids).size >= order.length) throw new RangeError("A deck keeps at least one slide");
+      // Check duplicates and unknown ids before the keep-one rule, so an
+      // unknown id is reported as unknown rather than as an empty deck.
       if (new Set(ids).size !== ids.length) throw new RangeError("Duplicate slide id");
       ids.forEach(indexOf);
+      if (ids.length >= order.length) throw new RangeError("A deck keeps at least one slide");
       await document.removeSlides(ids.map(pitchId));
     }),
   };

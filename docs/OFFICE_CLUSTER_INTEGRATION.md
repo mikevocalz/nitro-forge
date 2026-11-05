@@ -59,7 +59,11 @@ The sorter submits a complete unique slide-ID order or a unique removal set in
 one engine call. The engine validates every ID before mutation, rejects removal
 of the whole deck, and records one undo entry. Empty removal and unchanged order
 emit no event and preserve redo. A stale reorder missing a newly added slide is
-rejected rather than silently dropping it.
+rejected rather than silently dropping it. The Rust unit test covers these
+cases in the engine, and `packages/pitch/tests/office-cluster.e2e.test.ts`
+runs the refusals, the no-ops and undo/redo through `nf-cli`. The adapter
+checks duplicates and unknown IDs before the keep-one rule, so a bad ID is
+reported as unknown.
 
 ## CI
 

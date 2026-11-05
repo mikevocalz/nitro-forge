@@ -79,6 +79,9 @@ describe("slide list binding", () => {
     const { doc, calls } = fake();
     const b = await bindPitchSlideList(doc, () => {});
     await expect(b.onRemoveMany(["1", "2", "6"])).rejects.toThrow(/at least one slide/);
+    await expect(b.onRemoveMany(["1", "2", "99"])).rejects.toThrow(/Unknown slide "99"/);
+    await expect(b.onRemoveMany(["2", "2"])).rejects.toThrow(/Duplicate slide id/);
+    await expect(b.onReorder(["6", "1", "1"])).rejects.toThrow(RangeError);
     await expect(b.onMove("9", 0)).rejects.toThrow(RangeError);
     expect(calls).toEqual([]);
   });
