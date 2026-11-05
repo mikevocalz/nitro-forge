@@ -101,3 +101,9 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
 - No git remote → commits are local; no PRs.
+
+## Recovered alpha.3 Timeline consumer (2026-11-05)
+
+23 Splice tests pass against a freshly built nf-cli; Splice TypeScript passes. The consumer contract pins the alpha.3 release tarball. The unreleased second NYC-Tron timeline cluster is still deferred.
+
+These are local source/protocol checks. No new native build or device acceptance was run. The follow-up has not been pushed or merged.
