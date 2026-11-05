@@ -77,7 +77,7 @@ describe("I-13/I-14/I-20 range reads and card commits", () => {
     expect(getRange).toHaveBeenCalledWith("B2", "C2");
     expect(cells.B2?.computed).toBe(5);
     await expect(readTallyRange(doc, "A1:Z1000")).rejects.toThrow(/cell budget/);
-    expect(TALLY_SHEET_BOUNDS).toEqual({ rowCount: 1_048_576, columnCount: 16_384, maxWindowCells: 4096 });
+    expect(TALLY_SHEET_BOUNDS).toEqual({ rowCount: 1_048_576, columnCount: 16_384, maxWindowCells: 16_384 });
   });
 
   it("commits a card field through setCell", async () => {
