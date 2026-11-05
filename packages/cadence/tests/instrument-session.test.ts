@@ -38,8 +38,8 @@ describe("native instrument session (real Rust host, no fake UI document)", () =
     await session.close();
     const reopened = await CadenceDocument.openSnapshot(host, bytes);
     const state = (await reopened.describe<{ tracks: Array<{ volume: number; pan: number }> }>()).data;
-    expect(state.tracks[0].volume).toBe(0.41);
-    expect(state.tracks[0].pan).toBe(-0.35);
+    expect(state.tracks[0]?.volume).toBe(0.41);
+    expect(state.tracks[0]?.pan).toBe(-0.35);
     await reopened.close();
     await expect(session.setGain(0.9)).rejects.toThrow(/closed/);
   });
