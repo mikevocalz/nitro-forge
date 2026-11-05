@@ -10,10 +10,11 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
-    "@nitro-forge/ignition": "workspace:*",
-    "@nitro-forge/cadence": "workspace:*",
-    "@nyc-tron/native-controls": "workspace:*",
     "@expo/ui": "58.0.27",
+    "@nitro-forge/cadence": "workspace:*",
+    "@nitro-forge/ignition": "workspace:*",
+    "@nyc-tron/native-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-native-controls-0.1.0-alpha.1.tgz",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz",
     "expo": "58.0.23",
     "react": "19.3.0",
     "react-native": "0.88.1",
@@ -26,5 +27,6 @@
     "@react-native-community/cli": "20.2.0",
     "@react-native-community/cli-platform-ios": "20.2.0",
     "@react-native-community/cli-platform-android": "20.2.0"
-  }
+  },
+  "packageManager": "pnpm@10.32.1"
 }

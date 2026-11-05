@@ -1,5 +1,5 @@
 import {describe,it,expect,vi} from "vitest";
-import {createCadenceTrackInstrumentBindings} from "../src/instrument-adapter";
+import {createCadenceTrackInstrumentBindings,toNativeKnobBinding} from "../src/instrument-adapter";
 
 describe("NYC-Tron instrument to Cadence engine adapter",()=>{
  it("maps each knob commit to exactly one real engine op",async()=>{
@@ -26,5 +26,15 @@ describe("NYC-Tron instrument to Cadence engine adapter",()=>{
   await expect(binding.pan.onCommit(-2)).rejects.toThrow(/range/);
   expect(setTrackGain).not.toHaveBeenCalled();
   expect(setTrackPan).not.toHaveBeenCalled();
+ });
+ it("maps InstrumentKnob ranges onto native ArcKnob prop names without a second commit path",async()=>{
+  const setTrackGain=vi.fn(async()=>({data:{ok:true},events:[]}));
+  const setTrackPan=vi.fn(async()=>({data:{ok:true},events:[]}));
+  const binding=createCadenceTrackInstrumentBindings({setTrackGain,setTrackPan},4);
+  const native=toNativeKnobBinding(binding.pan,binding.pan.onCommit);
+  expect(native).toEqual({minimum:-1,maximum:1,step:.01,onCommit:binding.pan.onCommit});
+  await native.onCommit(.5);
+  expect(setTrackPan).toHaveBeenCalledTimes(1);
+  expect(setTrackPan).toHaveBeenCalledWith(4,.5);
  });
 });

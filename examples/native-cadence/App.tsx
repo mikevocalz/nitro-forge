@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { useStore } from "zustand";
 import { ArcKnob } from "@nyc-tron/native-controls/ArcKnob";
+import { InstrumentKnob } from "@nyc-tron/ui/components/forge/inputs/InstrumentKnob";
 import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-forge/cadence/instrument-session";
 import { createRegisteredForgeV1Host } from "@nitro-forge/ignition/v1-host";
 
@@ -16,14 +17,17 @@ type ScreenState = {
   savedBytes: number | null;
   gainPreview: number | null;
   panPreview: number | null;
+  /** Which NYC-Tron knob renders the controls. Both commit through the same Cadence adapter. */
+  renderer: "native" | "react-native";
 };
 const initial: ScreenState = {
   phase: "loading", actual: null, error: null, pending: false,
   width: 360, attempt: 0, savedBytes: null, gainPreview: null, panPreview: null,
+  renderer: "native",
 };
 const colors = {
   background: "#101017", surface: "#1B1B25", text: "#F7F7FA",
-  muted: "#AAAABB", accent: "#B2A7FF", danger: "#FB7185", border: "#48485C",
+  muted: "#AAAABB", accent: "#B2A7FF", danger: "#FB7185", border: "#48485C", paper: "#F7F7FA",
 };
 
 /**
@@ -92,6 +96,10 @@ export default function App() {
   };
 
   const actual = state.actual;
+  const session = currentSession.current;
+  const reportError = (error: unknown) => store.setState({
+    error: error instanceof Error ? error.message : String(error),
+  });
   const size = Math.min(164, Math.max(104, Math.floor((state.width - 72) / 2)));
   const enabled = state.phase === "ready" && !state.pending;
   return <ScrollView
@@ -126,22 +134,34 @@ export default function App() {
       ? <View style={{ gap: 16 }}>
           <View style={{ flexDirection: "row", flexWrap: "wrap",
             alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <ArcKnob label="Gain" value={actual.gain} minimum={0} maximum={1}
-              step={0.01} enabled={enabled} size={size}
-              accentColor={colors.accent} textColor={colors.text}
-              onPreview={gainPreview => store.setState({ gainPreview })}
-              onCommit={value => execute(s => s.setGain(value))}
-              onError={error => store.setState({
-                error: error instanceof Error ? error.message : String(error),
-              })}/>
-            <ArcKnob label="Pan" value={actual.pan} minimum={-1} maximum={1}
-              step={0.01} enabled={enabled} size={size}
-              accentColor={colors.accent} textColor={colors.text}
-              onPreview={panPreview => store.setState({ panPreview })}
-              onCommit={value => execute(s => s.setPan(value))}
-              onError={error => store.setState({
-                error: error instanceof Error ? error.message : String(error),
-              })}/>
+            {session && state.renderer === "native" ? <>
+              <ArcKnob label="Gain" value={actual.gain} {...session.controls.gain}
+                enabled={enabled} size={size}
+                accentColor={colors.accent} textColor={colors.text}
+                onPreview={gainPreview => store.setState({ gainPreview })}
+                onCommit={value => execute(s => s.controls.gain.onCommit(value))}
+                onError={reportError}/>
+              <ArcKnob label="Pan" value={actual.pan} {...session.controls.pan}
+                enabled={enabled} size={size}
+                accentColor={colors.accent} textColor={colors.text}
+                onPreview={panPreview => store.setState({ panPreview })}
+                onCommit={value => execute(s => s.controls.pan.onCommit(value))}
+                onError={reportError}/>
+            </> : null}
+            {session && state.renderer === "react-native" ? <>
+              {/* InstrumentKnob is themed by the app's Tailwind classes. This lab has
+                  none, so it renders unstyled on a light surface where default text reads. */}
+              <InstrumentKnob label="Gain" value={actual.gain} {...session.knobs.gain}
+                disabled={!enabled} size={size} unstyled accentColor={colors.accent}
+                style={{ backgroundColor: colors.paper, borderRadius: 12, padding: 12 }}
+                onPreview={gainPreview => store.setState({ gainPreview })}
+                onCommit={value => execute(s => s.knobs.gain.onCommit(value)).catch(() => undefined)}/>
+              <InstrumentKnob label="Pan" value={actual.pan} {...session.knobs.pan}
+                disabled={!enabled} size={size} unstyled accentColor={colors.accent}
+                style={{ backgroundColor: colors.paper, borderRadius: 12, padding: 12 }}
+                onPreview={panPreview => store.setState({ panPreview })}
+                onCommit={value => execute(s => s.knobs.pan.onCommit(value)).catch(() => undefined)}/>
+            </> : null}
           </View>
           <View style={{ backgroundColor: colors.surface, borderWidth: 1,
             borderColor: colors.border, borderRadius: 12, padding: 14, gap: 4 }}>
@@ -154,6 +174,13 @@ export default function App() {
                   Preview (not saved): {String(state.gainPreview ?? actual.gain)}
                   {" / "}{String(state.panPreview ?? actual.pan)}
                 </Text> : null}
+          </View>
+          <View accessibilityRole="radiogroup" accessibilityLabel="Knob renderer"
+            style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            <Action label="SwiftUI / Compose knob" selected={state.renderer === "native"}
+              onPress={() => store.setState({ renderer: "native" })}/>
+            <Action label="React Native knob" selected={state.renderer === "react-native"}
+              onPress={() => store.setState({ renderer: "react-native" })}/>
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             <Action label="Undo" disabled={state.pending} onPress={() => action(s => s.undo())}/>
@@ -176,15 +203,17 @@ export default function App() {
         </Text> : null}
   </ScrollView>;
 }
-function Action({ label, disabled = false, onPress }: {
-  label: string; disabled?: boolean; onPress: () => void;
+function Action({ label, disabled = false, selected, onPress }: {
+  label: string; disabled?: boolean; selected?: boolean; onPress: () => void;
 }) {
   return <Pressable
-    accessibilityRole="button" accessibilityLabel={label}
-    accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
+    accessibilityRole={selected === undefined ? "button" : "radio"} accessibilityLabel={label}
+    accessibilityState={selected === undefined ? { disabled } : { disabled, selected }}
+    disabled={disabled} onPress={onPress}
     style={({ pressed }) => ({
       minHeight: 48, minWidth: 94, paddingHorizontal: 14, borderWidth: 1,
-      borderColor: colors.border, borderRadius: 9, backgroundColor: colors.surface,
+      borderColor: selected ? colors.accent : colors.border, borderRadius: 9,
+      backgroundColor: colors.surface,
       justifyContent: "center", alignItems: "center",
       opacity: disabled ? 0.5 : pressed ? 0.7 : 1,
     })}>
