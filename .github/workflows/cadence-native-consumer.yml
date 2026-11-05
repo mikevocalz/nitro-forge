@@ -15,7 +15,9 @@ permissions:
 env:
   EXPO_NO_TELEMETRY: "1"
   CI: "1"
-  NYC_TRON_REF: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+  # NYC-Tron v0.1.0-alpha.2. alpha.1 imported ExpoUI from the native-controls
+  # module, which Expo SDK 58 SwiftPM source builds cannot resolve (fixed in d4f350a).
+  NYC_TRON_REF: ff08d05b8d42ecffddc71ee674016bf10c47d2c6
 jobs:
   consumer-types:
     name: Native consumer workspace and TypeScript
@@ -26,12 +28,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: mikevocalz/NYC-Tron-UI
-          ref: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+          ref: ff08d05b8d42ecffddc71ee674016bf10c47d2c6
           path: dependency-nyc-tron
       - uses: actions/setup-node@v4
         with:
           node-version: "24.19.0"
       - run: corepack enable
+      - name: Build NYC-Tron native-controls (exports dist only)
+        working-directory: dependency-nyc-tron
+        run: |
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm --filter @nyc-tron/native-controls build
       - name: Stage real source packages without vendoring
         run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
       - name: Install and typecheck
@@ -49,7 +56,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: mikevocalz/NYC-Tron-UI
-          ref: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+          ref: ff08d05b8d42ecffddc71ee674016bf10c47d2c6
           path: dependency-nyc-tron
       - uses: actions/setup-node@v4
         with:
@@ -59,6 +66,11 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: corepack enable
+      - name: Build NYC-Tron native-controls (exports dist only)
+        working-directory: dependency-nyc-tron
+        run: |
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm --filter @nyc-tron/native-controls build
       - run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
       - run: |
           cd "$RUNNER_TEMP/cadence-lab"
@@ -80,12 +92,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: mikevocalz/NYC-Tron-UI
-          ref: de7bde8aad73f3de59c89ca52d0a6052689aeb48
+          ref: ff08d05b8d42ecffddc71ee674016bf10c47d2c6
           path: dependency-nyc-tron
       - uses: actions/setup-node@v4
         with:
           node-version: "24.19.0"
       - run: corepack enable
+      - name: Build NYC-Tron native-controls (exports dist only)
+        working-directory: dependency-nyc-tron
+        run: |
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm --filter @nyc-tron/native-controls build
       - run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
       - run: |
           cd "$RUNNER_TEMP/cadence-lab"

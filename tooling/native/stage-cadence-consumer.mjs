@@ -27,16 +27,24 @@ for (const [source] of sources) {
     throw new Error("Required package is missing: " + source);
   }
 }
+// NYC-Tron exports only built dist/ files, so its package must be built in the
+// NYC-Tron checkout (pnpm install && pnpm --filter @nyc-tron/native-controls build)
+// before staging. Forge packages export src/ and their dist/ is never copied.
+const tronControls = join(tron, "packages/native-controls");
+if (!existsSync(join(tronControls, "dist/index.js"))) {
+  throw new Error("Build @nyc-tron/native-controls in the NYC-Tron checkout first: " + join(tronControls, "dist"));
+}
 if (stage === root || stage === tron || root.startsWith(stage + "/") || tron.startsWith(stage + "/")) {
   throw new Error("Staging cannot overwrite a source checkout");
 }
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
 for (const [source, target] of sources) {
+  const skip = ["node_modules", ".git", ".expo", "ios-build", "android-build"];
+  if (source !== tronControls) skip.push("dist");
   cpSync(source, join(stage, target), {
     recursive: true,
-    filter: (path) => !path.split("/").some((part) =>
-      ["node_modules", ".git", ".expo", "ios-build", "android-build", "dist"].includes(part)),
+    filter: (path) => !path.split("/").some((part) => skip.includes(part)),
   });
 }
 const ignitionPath = join(stage, "packages/ignition/package.json");
