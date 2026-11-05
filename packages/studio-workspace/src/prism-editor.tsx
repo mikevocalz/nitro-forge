@@ -336,6 +336,7 @@ export function PrismEditor(props: PrismEditorProps) {
   // Keep the popover on the editor; the arrow keeps pointing at the trigger.
   const popoverLeft = Math.max(Math.min(POPOVER_MIN_LEFT, width - 24 - popoverWidth), Math.min(triggerCentre - popoverWidth / 2, width - 24 - popoverWidth));
   const arrowLeft = Math.max(PERSONA_ARROW, Math.min(popoverWidth - PERSONA_ARROW * 2, triggerCentre - popoverLeft - PERSONA_ARROW / 2));
+  // Toolbar coordinates; the popover adds the toolbar's offset and 1 px border.
   const popoverTop = toolbarHeight + PERSONA_ARROW / 2 + 6;
   // The toast sits over the fill bar, centred. While the persona popover is
   // open it moves clear of the popover's right edge when the editor has room;
@@ -400,7 +401,7 @@ export function PrismEditor(props: PrismEditorProps) {
     closePersonas();
   } };
   const personaSurface = !personaOpen || props.onOpenPersonas ? null : sheet
-    ? <View key="persona-sheet" testID="persona-sheet-layer" style={{ position: 'absolute', left: -13, top: -13, width, height }}>
+    ? <View key="persona-sheet" testID="persona-sheet-layer" style={{ position: 'absolute', zIndex: 70, left: 0, top: 0, width, height }}>
       <Pressable testID="persona-scrim" focusable={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden
         onPress={() => closePersonas()} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, backgroundColor: '#000000', opacity: 0.45 }} />
       <View testID="persona-panel" role="dialog" aria-modal aria-label="Personas" accessibilityViewIsModal {...personaKeys}
@@ -409,7 +410,7 @@ export function PrismEditor(props: PrismEditorProps) {
       </View>
     </View>
     : <View key="persona-popover" testID="persona-panel" role="dialog" aria-label="Personas" {...personaKeys}
-      style={{ position: 'absolute', top: popoverTop, left: popoverLeft, width: popoverWidth, maxHeight: Math.max(160, height - PRISM_TOOLBAR_TOP - popoverTop - popoverFloor), borderWidth: 1, borderRadius: scale.radius.panel, ...panelSurface } as never}>
+      style={{ position: 'absolute', zIndex: 70, top: PRISM_TOOLBAR_TOP + 1 + popoverTop, left: PRISM_TOOLBAR_TOP + 1 + popoverLeft, width: popoverWidth, maxHeight: Math.max(160, height - PRISM_TOOLBAR_TOP - popoverTop - popoverFloor), borderWidth: 1, borderRadius: scale.radius.panel, ...panelSurface } as never}>
       {/* The notch: a square turned 45°, its top edges in the panel's edge colour. */}
       <View aria-hidden pointerEvents="none" style={{ position: 'absolute', top: -PERSONA_ARROW / 2 - 1, left: arrowLeft, width: PERSONA_ARROW, height: PERSONA_ARROW, backgroundColor: chrome.body, borderLeftWidth: 1, borderTopWidth: 1, borderColor: chrome.edge, transform: [{ rotate: '45deg' }] }} />
       {/* The content's own height, not the capped panel's, decides whether the toast must move. */}
@@ -447,9 +448,12 @@ export function PrismEditor(props: PrismEditorProps) {
         </View>
       </Menu>}
       {personaTrigger}
-      {personaSurface}
       {control('Layers', () => store.setState({ layersOpen: !layersOpen }), false, layersOpen, 'layers', undefined, width < 420)}
     </View>
+    {/* Persona surfaces sit on the editor, not inside the toolbar: Android
+        hit-tests children only within their parent's bounds, so a popover
+        drawn past the toolbar row could be seen but not touched. */}
+    {personaSurface}
     <View accessibilityLabel="Creation tools" onLayout={event => { const w = Math.round(event.nativeEvent.layout.width); if (w > 0 && w !== store.getState().railWidth) store.setState({ railWidth: w }); }}
       style={{ position: 'absolute', zIndex: 20, left: 12, top: railTop, minWidth: 52, alignItems: 'center', padding: 3, gap: 3, ...chromeSurface }}>
       {activeCaps.has('shapes') && <>
@@ -461,7 +465,7 @@ export function PrismEditor(props: PrismEditorProps) {
       {!activeCaps.has('shapes') && !activeCaps.has('raster-layers') && <Text accessibilityRole="text" style={{ color: colors.muted, fontSize: scale.type.label, textAlign: 'center', paddingVertical: 6 }}>No tools in this build</Text>}
     </View>
     {layersOpen && panel}
-    <View testID="prism-fill-bar" onLayout={event => { const h = Math.round(event.nativeEvent.layout.height); if (h > 0 && h !== store.getState().fillHeight) store.setState({ fillHeight: h }); }} style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, ...chromeSurface }}>
+    <View testID="prism-fill-bar" accessibilityLabel={selected ? 'Fill' : 'New shape fill'} onLayout={event => { const h = Math.round(event.nativeEvent.layout.height); if (h > 0 && h !== store.getState().fillHeight) store.setState({ fillHeight: h }); }} style={{ position: 'absolute', zIndex: 25, left: fillLeft, bottom: 20, width: fillWidth, minHeight: 52, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, ...chromeSurface }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minHeight: 50, alignItems: 'center', flexDirection: 'row', gap: 2 }} style={{ flex: 1 }}>
       {!narrow && <Text style={{ color: colors.muted, fontSize: scale.type.label, marginRight: 8 }}>{selected ? 'Fill' : 'New shape fill'}</Text>}
       {/* Each chip sits in a 44 pt target. The chosen one is ringed with a gap,
