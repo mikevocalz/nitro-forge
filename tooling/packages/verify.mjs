@@ -31,6 +31,18 @@ try {
       else if (value) Object.values(value).forEach(checkTargets);
     };
     checkTargets(pkg.exports);
+    // Workspace manifests point at src/ so tests and Metro run without a build;
+    // pnpm pack must swap in publishConfig's compiled entry points.
+    // ./nitro is the one deliberate source export (Nitrogen reads the spec).
+    const compiled = target => /^\.\/dist\/.+\.(js|d\.ts)$/.test(target);
+    assert(compiled(pkg.main) && compiled(pkg.types), `${name}: main/types must be compiled dist files`);
+    for (const [subpath, value] of Object.entries(pkg.exports)) {
+      if (subpath === './package.json' || subpath === './nitro') continue;
+      const targets = [];
+      const collect = v => typeof v === 'string' ? targets.push(v) : v && Object.values(v).forEach(collect);
+      collect(value);
+      assert(targets.length && targets.every(compiled), `${name} export ${subpath} must resolve to dist, got ${targets}`);
+    }
     assert(!readdirSync(dir).includes('rust'), 'unbuilt Rust sources are not runtime assets');
     assert(!readdirSync(dir).includes('tests'), 'tests must not ship');
   }

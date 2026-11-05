@@ -3,27 +3,13 @@
   "version": "0.1.0",
   "description": "Nitro-Forge native integration layer: engine session contracts, Nitro HybridObject spec, and host transports.",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "react-native": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
+    ".": "./src/index.ts",
     "./package.json": "./package.json",
-    "./cli": {
-      "types": "./dist/host-cli.d.ts",
-      "node": {
-        "import": "./dist/host-cli.js"
-      },
-      "default": null
-    },
-    "./nitro": {
-      "types": "./dist/Forge.nitro.d.ts",
-      "default": "./src/Forge.nitro.ts"
-    }
+    "./cli": "./src/host-cli.ts",
+    "./nitro": "./src/Forge.nitro.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -44,7 +30,29 @@
   ],
   "sideEffects": false,
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "react-native": "./dist/index.js",
+        "import": "./dist/index.js",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json",
+      "./cli": {
+        "types": "./dist/host-cli.d.ts",
+        "node": {
+          "import": "./dist/host-cli.js"
+        },
+        "default": null
+      },
+      "./nitro": {
+        "types": "./dist/Forge.nitro.d.ts",
+        "default": "./src/Forge.nitro.ts"
+      }
+    }
   },
   "peerDependencies": {
     "react-native-nitro-modules": "^0.29.8"
@@ -54,7 +62,6 @@
       "optional": true
     }
   },
-  "react-native": "./dist/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mikevocalz/nitro-forge.git",

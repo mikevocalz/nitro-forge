@@ -2,7 +2,8 @@
 
 Nitro-Forge splice document API.
 
-ESM JavaScript and TypeScript declarations are in `dist/`. Metro selects the
+In the packed tarball, ESM JavaScript and TypeScript declarations are in `dist/`
+(the workspace manifest points at `src/`; see docs/PACKAGING.md). Metro selects the
 same compiled ESM using the `react-native` export condition. CommonJS `require`
 is not supported.
 

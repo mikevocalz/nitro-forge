@@ -116,9 +116,9 @@ Nitro type leak, compiled Metro exports, codegen output exclusion and Folio exam
 | Strict external TS consumer, no Nitro/React and no skipLibCheck | PASS | same verifier |
 | Eight package source/test typechecks | PASS | `pnpm --filter './packages/**' -r run typecheck` |
 | Frozen lockfile validation | PASS | `pnpm install --lockfile-only --frozen-lockfile --ignore-scripts --offline` |
-| Packaged APIs against seven Rust engines | NOT RUN locally: Rust/Cargo unavailable; CI stage added | `NF_CLI=... node tooling/packages/verify.mjs --engines` |
+| Packaged APIs against seven Rust engines | PASS in CI; PASS locally 2026-11-05 (macOS, pnpm 10.32.1) | `NF_CLI=... node tooling/packages/verify.mjs --engines` |
 | Metro bundling, iOS/Android, WASM and native ownership tests | NOT RUN | separate native workstreams |
-| npm publishing | NOT RUN | preview tarballs only |
+| GitHub Release of the tarballs | NOT RUN | preview CI artifacts only; npm is not a distribution channel |
 
 These results cover JavaScript/TypeScript distribution only. The new CI workflow
 adds packaged real-engine round-trips; a passing local export-condition check
