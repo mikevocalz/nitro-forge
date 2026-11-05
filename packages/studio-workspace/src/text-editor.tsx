@@ -72,9 +72,11 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
           throw new Error('The document changed. Your draft is preserved; copy it before loading the latest document.');
         }
         const edit = textEdit(draft.base, draft.text);
-        if (edit.remove) { await api.apply('deleteRange', { from: edit.from, to: edit.to }); mutated = true; }
-        if (!mounted.current) throw new Error('The editor was closed');
-        if (edit.insert) { await api.apply('insertText', { at: edit.from, text: edit.insert }); mutated = true; }
+        // One engine command: the replace is atomic and one undo step.
+        if (edit.remove || edit.insert) {
+          await api.apply('replaceRange', { from: edit.from, to: edit.to, text: edit.insert });
+          mutated = true;
+        }
         const applied = await api.apply('describe') as { data: unknown };
         if (plainText(applied.data) !== draft.text) {
           if (mounted.current) store.setState({ conflict: true });
@@ -90,8 +92,9 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
           try { await api.reload(); } catch { /* Keep the original edit failure. */ }
         }
         if (mounted.current) {
-          // A multi-command edit may have applied its deletion. Keep the draft
-          // and report a conflict rather than retrying against stale offsets.
+          // The replace itself is atomic, but the post-edit check can still
+          // find a concurrent change. Keep the draft and report a conflict
+          // rather than retrying against stale offsets.
           store.setState({ error: errorMessage(e), conflict: store.getState().conflict || mutated, status: 'Text was not fully applied.' });
         }
         throw e;

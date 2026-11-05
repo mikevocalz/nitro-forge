@@ -176,3 +176,18 @@ test("small windows decline magnetic drops that would consume the canvas", () =>
   assert.deepEqual(base.layout.docks.right,[]);
   assert.deepEqual(after.layout.docks.right,["inspector"]);
 });
+
+test("the published preset schema requires exactly what parsePreset requires", async () => {
+  const { readFileSync } = await import("node:fs");
+  const schema = JSON.parse(readFileSync(new URL("../../../docs/ux/studio-workspace-layout.v1.schema.json", import.meta.url), "utf8"));
+  const preset = JSON.parse(serializePreset(withLayers(), known));
+  assert.deepEqual([...schema.required].sort(), Object.keys(preset).sort(),
+    "every field parsePreset needs must be schema-required, and nothing more");
+  assert.equal(schema.properties.activeTabs.additionalProperties, false);
+  assert.deepEqual(Object.keys(schema.properties.activeTabs.properties).sort(), ["bottom", "left", "right"]);
+  for (const field of ["activeTabs", "floating"]) {
+    const copy = { ...preset };
+    delete copy[field];
+    assert.equal(parsePreset(JSON.stringify(copy), known), null, `${field} is required at runtime`);
+  }
+});
