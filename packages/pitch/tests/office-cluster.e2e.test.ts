@@ -69,6 +69,31 @@ describe("real Rust Pitch engine behind the NYC-Tron slide controls", () => {
       expect(await doc.redo()).toBe(true);
       expect(await ids()).toEqual(moved);
       expect(await doc.redo()).toBe(false);
+
+      // Through the adapter, the engine's refusals reach the caller and change nothing.
+      const now = (await bindPitchSlideList(doc, () => {}));
+      const cur = now.slides.map(s => s.id);
+      await expect(now.onRemoveMany(cur)).rejects.toThrow(/at least one slide/);
+      await expect(now.onReorder([cur[0]!, cur[0]!, cur[1]!, cur[2]!])).rejects.toThrow(/duplicate slide id/);
+      expect(await ids()).toEqual(cur);
+    } finally {
+      await doc.close();
+    }
+  });
+
+  it("lets a stale sorter remove slides that leave the current deck non-empty", async () => {
+    const doc = await PitchDocument.open(host, "Board");
+    try {
+      const second = String((await doc.addSlide("blank")).data.slide_id);
+      const stale = await bindPitchSlideList(doc, () => {});
+      const old = stale.slides.map(s => s.id);
+      expect(old).toHaveLength(2);
+      const added = String((await doc.addSlide("blank")).data.slide_id);
+      // The stale snapshot holds two slides, but the deck now has three, so removing both is valid.
+      await stale.onRemoveMany([old[0]!, second]);
+      expect((await readPitchDeck(doc)).slides.map(s => s.id)).toEqual([added]);
+      expect(await doc.undo()).toBe(true);
+      expect((await readPitchDeck(doc)).slides.map(s => s.id)).toEqual([...old, added]);
     } finally {
       await doc.close();
     }

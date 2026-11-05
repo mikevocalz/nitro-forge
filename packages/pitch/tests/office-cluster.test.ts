@@ -75,15 +75,21 @@ describe("slide list binding", () => {
     expect(() => pitchMovePlan(ids, ["a", "a", "b", "c"])).toThrow(RangeError);
   });
 
-  it("refuses to remove every slide before any engine call", async () => {
+  it("refuses duplicate and unknown ids before any engine call", async () => {
     const { doc, calls } = fake();
     const b = await bindPitchSlideList(doc, () => {});
-    await expect(b.onRemoveMany(["1", "2", "6"])).rejects.toThrow(/at least one slide/);
     await expect(b.onRemoveMany(["1", "2", "99"])).rejects.toThrow(/Unknown slide "99"/);
     await expect(b.onRemoveMany(["2", "2"])).rejects.toThrow(/Duplicate slide id/);
-    await expect(b.onReorder(["6", "1", "1"])).rejects.toThrow(RangeError);
     await expect(b.onMove("9", 0)).rejects.toThrow(RangeError);
     expect(calls).toEqual([]);
+  });
+
+  it("leaves the keep-one rule and order validation to the engine", async () => {
+    const { doc, calls } = fake();
+    const b = await bindPitchSlideList(doc, () => {});
+    await b.onRemoveMany(["1", "2", "6"]);
+    await b.onReorder(["6", "1"]);
+    expect(calls).toEqual([["removeSlides", [1, 2, 6]], ["moveSlides", [6, 1]]]);
   });
 });
 

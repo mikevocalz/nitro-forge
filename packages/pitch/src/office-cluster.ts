@@ -176,7 +176,7 @@ export interface PitchSlideListBinding {
   readonly onAdd: () => Promise<void>;
   /** Filmstrip: one slide. Pitch refuses to remove the last slide. */
   readonly onRemove: (id: string) => Promise<void>;
-  /** Sorter: several slides as one atomic undo step. */
+  /** Sorter: several slides as one atomic undo step. Pitch refuses to remove every slide. */
   readonly onRemoveMany: (ids: string[]) => Promise<void>;
 }
 
@@ -198,18 +198,15 @@ export async function bindPitchSlideList(
   return {
     slides: deck.slides,
     onMove: (id, toIndex) => after(() => document.moveSlide(indexOf(id), toIndex)),
-    onReorder: next => after(async () => {
-      pitchMovePlan(order, next); // Validate the complete permutation before dispatch.
-      await document.moveSlides(next.map(pitchId));
-    }),
+    // The engine checks the order is a complete permutation of the current deck.
+    onReorder: next => after(() => document.moveSlides(next.map(pitchId))),
     onAdd: () => after(() => document.addSlide("blank")),
     onRemove: id => after(() => document.removeSlide(pitchId(id))),
     onRemoveMany: ids => after(async () => {
-      // Check duplicates and unknown ids before the keep-one rule, so an
-      // unknown id is reported as unknown rather than as an empty deck.
       if (new Set(ids).size !== ids.length) throw new RangeError("Duplicate slide id");
       ids.forEach(indexOf);
-      if (ids.length >= order.length) throw new RangeError("A deck keeps at least one slide");
+      // The keep-one rule is the engine's: this binding's snapshot may be stale,
+      // and the engine refuses a whole-deck removal against the current deck.
       await document.removeSlides(ids.map(pitchId));
     }),
   };

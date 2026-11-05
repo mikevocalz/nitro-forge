@@ -15,7 +15,7 @@ which the NYC-Tron control shows.
 | ID | NYC-Tron control | Adapter | Engine ops used |
 | --- | --- | --- | --- |
 | J-01 | `slides/SlideFilmstrip` | `@nitro-forge/pitch/office-cluster` `bindPitchSlideList` (`slides`, `onMove`, `onAdd`, `onRemove`) | `describe`, `moveSlide`, `addSlide`, `removeSlide` |
-| J-02 | `slides/SlideSorter` | `bindPitchSlideList` (`onReorder`, `onRemoveMany`), `pitchMovePlan` | `moveSlides`, `removeSlides` (one atomic undo step each) |
+| J-02 | `slides/SlideSorter` | `bindPitchSlideList` (`onReorder`, `onRemoveMany`) | `moveSlides`, `removeSlides` (one atomic undo step each) |
 | J-05 | `slides/SlideCanvas` | `bindPitchCanvas`, `readPitchSlideAt` for animation preview, `PITCH_SLIDE_SIZE` | `moveObject`, `resizeObject`, `rotateObject`, `setText`, `removeObject`, `slideAt` |
 | J-09 | `slides/SlideAnimationPane` | `bindPitchAnimations`, `PITCH_ANIMATION_EFFECTS` | `addAnimation`, `removeAnimation` |
 | H-03 | `document/RichTextRibbon` | `@nitro-forge/quill/office-cluster` `bindQuillRibbon`; feed `runs` to NYC-Tron `ribbonStateFor` | `blocks`, `applyStyle`, `setBlockKind` |
@@ -62,8 +62,10 @@ emit no event and preserve redo. A stale reorder missing a newly added slide is
 rejected rather than silently dropping it. The Rust unit test covers these
 cases in the engine, and `packages/pitch/tests/office-cluster.e2e.test.ts`
 runs the refusals, the no-ops and undo/redo through `nf-cli`. The adapter
-checks duplicates and unknown IDs before the keep-one rule, so a bad ID is
-reported as unknown.
+refuses duplicate and unknown removal IDs itself. It leaves order validation
+and the keep-one rule to the engine, which checks them against the current
+deck, so a sorter bound before another client added a slide can still remove
+every slide it shows. The engine's error reaches the caller.
 
 ## CI
 
