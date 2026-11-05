@@ -16,10 +16,10 @@
 
 | Workstream | Role | Changed files | Evidence needed | Status |
 | --- | --- | --- | --- | --- |
-| RUST-01 | Rust concurrency reviewer | session_registry.rs | simultaneous slow+fast sessions; panic isolation; close-vs-apply; no global lock during engine operation | CI pending |
-| RUST-02 | Rust FFI/security reviewer | ffi_v1.rs, nf_v1.h | null/length/bounds validation, handle exhaustion, panic barriers, allocator pairs, malformed NFD1 | CI pending |
-| RUST-03 | C ABI integration reviewer | nf_v1_smoke.c | external C program links libnf_sys.a; open/edit/snapshot/restore/close | CI pending |
-| NITRO-01 | C++ bridge reviewer | future HybridForgeFactory/Document | compile against generated v1 exact headers, RAII native ownership and Promise resolution | NOT RUN |
+| RUST-01 | Rust concurrency reviewer | session_registry.rs | simultaneous slow+fast sessions; panic isolation; close-vs-apply; no global lock during engine operation | Passed in CI ([run 41469291190](https://github.com/mikevocalz/nitro-forge/actions/runs/41469291190)) |
+| RUST-02 | Rust FFI/security reviewer | ffi_v1.rs, nf_v1.h | null/length/bounds validation, handle exhaustion, panic barriers, allocator pairs, malformed NFD1 | Passed in CI ([run 41469291190](https://github.com/mikevocalz/nitro-forge/actions/runs/41469291190)) |
+| RUST-03 | C ABI integration reviewer | nf_v1_smoke.c | external C program links libnf_sys.a; open/edit/snapshot/restore/close | Passed in CI ([run 41469291190](https://github.com/mikevocalz/nitro-forge/actions/runs/41469291190)) |
+| NITRO-01 | C++ bridge reviewer | HybridForgeFactory/Document (PR #10) | compile against generated v1 exact headers, RAII native ownership and Promise resolution | Header syntax check and C++/Rust smoke in PR #10; no device run |
 | APPLE-01 | Swift/Apple reviewer | future native packaging | SDK58 iOS16.4+, Swift/C++, physical Metal iPad | NOT RUN |
 | ANDROID-01 | Kotlin/Android reviewer | future native packaging | Android API26+, JNI/CMake/Gradle, Vulkan device, Duo lifecycle | NOT RUN |
 | QA-01 | Security/perf reviewer | CI, device tests | stress sessions, malicious imports, cancellation, leaks, branch SHA receipts | NOT RUN |
