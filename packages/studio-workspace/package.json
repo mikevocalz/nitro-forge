@@ -12,7 +12,6 @@
     "./ui": "./src/ui.tsx",
     "./instruments": "./src/instrument-system.ts",
     "./interaction": "./src/interaction-policy.ts",
-    "./precision": "./src/precision-scrubber.tsx",
     "./personas": "./src/persona-store.ts",
     "./turret": "./src/persona-turret.tsx",
     "./composer": "./src/persona-composer.tsx",
@@ -28,7 +27,8 @@
     "zustand": "5.0.16",
     "@nitro-forge/icons": "workspace:*",
     "react-native-svg": "15.16.0",
-    "@nitro-forge/ignition": "workspace:*"
+    "@nitro-forge/ignition": "workspace:*",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz"
   },
   "peerDependencies": {
     "react": ">=19",

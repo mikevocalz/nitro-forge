@@ -1,6 +1,7 @@
 import { createContext, forwardRef, useContext, type ForwardRefExoticComponent, type PropsWithoutRef, type ComponentRef, type ComponentType, type ReactNode } from 'react';
 import type { View as NativeViewComponent, ViewProps, TextProps, PressableProps, ScrollView as NativeScrollView, ScrollViewProps, TextInput as NativeTextInput, TextInputProps, ImageProps } from 'react-native';
 import type { RefAttributes } from 'react';
+import { Platform } from 'react-native';
 
 export type StudioViewRef = ComponentRef<typeof NativeViewComponent>;
 export type StudioViewProps = ViewProps & { className?: string };
@@ -58,6 +59,8 @@ export type StudioToolbarProps = { title?: string; leading?: ReactNode; actions?
 export type StudioListProps = { children?: ReactNode; className?: string; tone?: 'royal' | 'carolina' };
 export type StudioListItemProps = { children?: ReactNode; supportingText?: string; leading?: ReactNode; trailing?: ReactNode; onPress?: () => void; selected?: boolean; className?: string };
 export type StudioDropZoneProps = { children?: ReactNode; onDrop?: (event: { assets: { file?: File; uri?: string; type: string; fileName?: string }[] }) => void; disableObjectUrl?: boolean; includeBase64?: boolean; className?: string; style?: ViewProps['style']; accept?: string };
+/** Semantic variables for one subtree, such as the NYC-Tron tokens from `nycTronTokens`. */
+export type StudioTokenScopeProps = { variables: Readonly<Record<`--${string}`, string>>; children: ReactNode };
 /** Implementations are supplied by the host's source-owned semantic/native UI kit. */
 export interface StudioUIComponents {
   View: ComponentType<StudioViewProps & RefAttributes<StudioViewRef>>;
@@ -75,6 +78,9 @@ export interface StudioUIComponents {
   SegmentedControl: ComponentType<StudioSegmentedControlProps>;
   TabBar: ComponentType<StudioTabBarProps>;
   NightScope: ComponentType<{ children: ReactNode }>;
+  /** Sets CSS variables for one subtree (Uniwind `ScopedVariables` on native).
+   * Optional: web falls back to a `display: contents` view carrying the variables. */
+  TokenScope?: ComponentType<StudioTokenScopeProps>;
   DropZone: ComponentType<StudioDropZoneProps>;
   Card: ComponentType<StudioCardProps>;
   Toolbar: ComponentType<StudioToolbarProps>;
@@ -142,3 +148,16 @@ export const ListItem = (props: StudioListItemProps) => { const C = useComponent
 export const DropZone = (props: StudioDropZoneProps) => { const C = useComponents().DropZone; return <C {...props} />; };
 
 export const NightScope = ({ children }: { children: ReactNode }) => { const C = useComponents().NightScope; return <C>{children}</C>; };
+
+/**
+ * Scopes semantic CSS variables to its children. A host without a TokenScope
+ * keeps its own theme on native, where a plain view cannot carry variables.
+ */
+export const TokenScope = ({ variables, children }: StudioTokenScopeProps) => {
+  const components = useComponents();
+  const C = components.TokenScope;
+  if (C) return <C variables={variables}>{children}</C>;
+  if (Platform.OS !== 'web') return <>{children}</>;
+  const V = components.View;
+  return <V style={{ display: 'contents', ...variables } as never}>{children}</V>;
+};

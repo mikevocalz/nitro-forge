@@ -50,6 +50,11 @@ Menu and layer opacity use the existing Menu/Select adapters, with native OS/kit
 implementations selected by the consuming host. See
 `docs/ux/studio-refresh/OWN_UI_INTEGRATION.md` for checkout and runtime boundaries.
 
-Dock and layer handles reuse `DragGrabHandle`. Layers preview a measured
-destination and submit a single engine move only after release. Fast release
-waits for native measurement callbacks; cancellation wins while waiting.
+The Prism layer panel is NYC-Tron UI's `LayerStack`
+(`@nyc-tron/ui/components/forge/layers/LayerStack`, release pinned in
+`tooling/nyc-tron.json`). `src/prism-layers.ts` maps Prism's bottom-to-top
+layers to its top-first rows and turns each move, visibility toggle, rename
+and released opacity drag into one engine operation, so one undo step.
+Selection stays in the editor store. Dock and Composer handles use NYC-Tron's
+`DragGrabHandle`, and layer opacity uses its `PrecisionScrubber`; NYC-Tron's
+colour variables come from `nycTronTokens` through the host's `TokenScope`.

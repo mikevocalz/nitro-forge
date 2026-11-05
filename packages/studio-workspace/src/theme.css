@@ -16,6 +16,7 @@
   --spacing-forge-target: 44px;
   --radius-sm: 4px;
   --radius-forge-control: 4px;
+  --radius-control: 4px;
   --font-forge-editorial: Georgia, 'Times New Roman', serif;
 }
 [data-theme="light"] {

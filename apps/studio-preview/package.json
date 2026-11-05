@@ -22,7 +22,8 @@
     "@nitro-forge/icons": "workspace:*",
     "react-native-svg": "15.16.0",
     "next": "16.4.5",
-    "react-native-skia": "3.9.1"
+    "react-native-skia": "3.9.1",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

@@ -58,13 +58,35 @@ function engineBridge(): Plugin {
   };
 }
 
+/** NYC-Tron styles RN primitives with `className`; route its `react-native`
+ * imports to the RNW binding that forwards it (src/react-native-classname.tsx). */
+function nycTronClassName(): Plugin {
+  const shim = fileURLToPath(new URL('./src/react-native-classname.tsx', import.meta.url));
+  // The react-native alias below runs first, so the id may already be RNW's entry.
+  const rnw = createRequire(import.meta.url).resolve('react-native-web');
+  return {
+    name: 'nyc-tron-classname',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      const from = importer?.replaceAll('\\', '/') ?? '';
+      if ((source === 'react-native' || source === rnw) && from.includes('/@nyc-tron/ui/')) return shim;
+      // One React Native Web for the app and the binding: two copies run two responder systems.
+      if (source === 'react-native-web' && from.endsWith('/react-native-classname.tsx')) return rnw;
+      return null;
+    },
+  };
+}
+
 const webExtensions = ['.web.mjs', '.mjs', '.web.js', '.js', '.web.ts', '.ts', '.web.tsx', '.tsx', '.json'];
 
 export default defineConfig({
   // React Native Web Animated uses the RN global alias in lifecycle cleanup.
   define: { global: 'globalThis', 'process.env.NEXT_PUBLIC_BASE_PATH': JSON.stringify('') },
-  plugins: [tailwindcss(), engineBridge(), skiaWebAssets(fileURLToPath(new URL('./package.json', import.meta.url)))],
-  optimizeDeps: { rolldownOptions: { resolve: { extensions: webExtensions } } },
+  plugins: [nycTronClassName(), tailwindcss(), engineBridge(), skiaWebAssets(fileURLToPath(new URL('./package.json', import.meta.url)))],
+  // Dependency pre-bundling resolves NYC-Tron's imports too, so it needs the same routing.
+  // Listed up front: a late discovery re-optimizes mid-session and mixes dependency versions.
+  optimizeDeps: { include: ['@nyc-tron/ui/components/forge/layers/LayerStack', '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber',
+    '@nyc-tron/ui/components/DragGrabHandle', '@nyc-tron/ui/components/gestures/PanResponderDrag'], rolldownOptions: { resolve: { extensions: webExtensions }, plugins: [nycTronClassName()] } },
   resolve: {
     // React Native packages publish platform siblings without browser exports.
     extensions: webExtensions,

@@ -9,7 +9,8 @@ import { DOCKS, type Dock, type DockAction, type Rect, type Studio } from '@nitr
 import { createStudioWorkspaceStore, MIN_STAGE_HEIGHT, MIN_STAGE_WIDTH, PANEL_IDS, actOnPanel } from './model';
 import { ForgeDocumentStage } from './stage';
 import { ForgeIcon } from '@nitro-forge/icons/native';
-import { DragGrabHandle } from './drag-grab-handle';
+import { DragGrabHandle } from '@nyc-tron/ui/components/DragGrabHandle';
+import { forgeDragTransport } from './drag-transport';
 import { useStudioTextScale } from './persona-turret';
 import { workspaceThemes, prismThemes, workspaceScale as scale, type WorkspaceColors } from './theme';
 export { createStudioWorkspaceStore } from './model';
@@ -272,12 +273,12 @@ function DragHandle({ id, store, measure, hostRect, blockedRegions, color }: {
   id: string; store: ReturnType<typeof createStudioWorkspaceStore>; measure: () => void;
   hostRect: { current: Rect }; blockedRegions: readonly Rect[] | undefined; color: string;
 }) {
-  return <DragGrabHandle label={`Drag ${panelNames[id]} to a dock edge`} color={color}
+  return <DragGrabHandle label={`Drag ${panelNames[id]} to a dock edge`} transport={forgeDragTransport}
     onStart={() => { measure(); store.getState().beginDrag(id); }}
     onMove={point => store.getState().previewDrag({ point, host: hostRect.current,
       ...(blockedRegions ? { blockedRegions } : {}) })}
     onCommit={() => { store.getState().commitDrag(); }}
-    onCancel={() => store.getState().cancelDrag()} />;
+    onCancel={() => store.getState().cancelDrag()}><ForgeIcon name="menu" size={16} color={color} reducedMotion /></DragGrabHandle>;
 }
 
 export { QuillTextEditor, type QuillTextEditorHandle, type QuillTextEditorProps } from './text-editor';

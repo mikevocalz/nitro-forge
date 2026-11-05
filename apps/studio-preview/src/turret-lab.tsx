@@ -1,13 +1,13 @@
 import { useEffect, useMemo } from 'react';
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
-import { Button, NightScope, Pressable, SegmentedControl, Text, View, type StudioViewProps } from '@nitro-forge/studio-workspace/ui';
+import { Button, NightScope, Pressable, SegmentedControl, Text, TokenScope, View, type StudioViewProps } from '@nitro-forge/studio-workspace/ui';
 
 import { BUILT_IN_PERSONAS, PersonaTurret, useForgeRenderPrefs, type PersonaSurface } from '@nitro-forge/studio-workspace/turret';
-import { ForgePrecisionScrubber } from '@nitro-forge/studio-workspace/precision';
+import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
 import { workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
 import {
-  FORGE_DIRECTION_IDS, directionPalette, forgeDirections, glassAllowed, isForgeDirection, labCanvas, prismFillSwatches,
+  FORGE_DIRECTION_IDS, directionPalette, forgeDirections, glassAllowed, isForgeDirection, labCanvas, nycTronTokensFor, prismFillSwatches,
   type ForgeDirectionId, type ForgeScheme,
 } from '@nitro-forge/studio-workspace/directions';
 
@@ -88,8 +88,10 @@ export function TurretLab() {
   </View>;
 
   const inspector = <View testID="lab-inspector" style={style(chrome({ width: phone ? s.width - 32 : 340 }))}>
-    <ForgePrecisionScrubber label="Layer opacity" value={s.opacity} min={0} max={100} step={1} unit="%" detents={[0, 25, 50, 75, 100]}
-      colors={palette} onCommit={value => store.setState({ opacity: Math.round(value) })} />
+    <TokenScope variables={nycTronTokensFor(palette)}>
+      <PrecisionScrubber label="Layer opacity" value={s.opacity} min={0} max={100} step={1} unit="%" detents={[0, 25, 50, 75, 100]}
+        forcedColors={!!prefs.forcedColors} onCommit={value => store.setState({ opacity: Math.round(value) })} />
+    </TokenScope>
     <View testID="lab-fill-row" style={{ flexDirection: 'row', alignItems: 'center', gap: 2, borderTopWidth: 1, borderTopColor: m.panelEdge, paddingTop: scale.space.element }}>
       <Text style={{ color: m.muted, fontSize: scale.type.label, marginRight: scale.space.element }}>Fill</Text>
       {prismFillSwatches.map((swatch, index) => <Pressable key={swatch.name} accessibilityRole="button" accessibilityLabel={`Choose ${swatch.name} fill`}

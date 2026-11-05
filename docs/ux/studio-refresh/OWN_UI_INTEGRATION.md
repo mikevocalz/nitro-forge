@@ -43,12 +43,12 @@ No SDK, app window, manifest or orientation changes were made.
 
 ## Reused layer drag
 
-Dock and layer bars share `DragGrabHandle` and its controller. Layers measure
-actual row/window viewport frames. A drag previews only, validates unchanged
-state, maps top-to-bottom rows to bottom-to-top engine indices, then releases
-one `moveLayer` command. Cancel, termination, scroll, resize, panel close,
-stale documents and Escape discard the transaction. Raise/Lower remain for
-keyboard and assistive-technology operation.
+Dock and Composer bars use NYC-Tron UI's `DragGrabHandle` with Forge's
+platform transport (`src/drag-transport.ts`: the browser responder on web,
+Gesture Handler on native). Prism layers are NYC-Tron's `LayerStack`: a row
+drag previews in the list and lands one `moveLayer` on release; a cancelled
+drag never reorders. Raise/Lower remain for keyboard operation, and the rows
+carry move-up and move-down screen-reader actions.
 
 NYC DropZone handles incoming files/content; it is not an internal list sorter.
 No exported NYC row sorter with pointer/touch parity was found, so Studio reuses

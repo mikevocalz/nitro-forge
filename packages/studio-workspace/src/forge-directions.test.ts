@@ -94,3 +94,14 @@ test('forced-colour system colours survive React Native Web: var() with the keyw
   // React Native Web passes colours through only when they start with var( (isWebColor).
   for (const name of ['Canvas', 'CanvasText', 'Highlight', 'GrayText'] as const) assert.ok(systemColor(name).startsWith('var('));
 });
+
+test('NYC-Tron layer rows read at 4.5:1 on the list ground and on the selected row', async () => {
+  const { nycTronTokens } = await import('./forge-directions.ts');
+  for (const scheme of schemes) {
+    const t = nycTronTokens(scheme);
+    for (const ground of [t['--color-surface-sunken']!, t['--color-surface-raised']!]) for (const ink of [t['--color-text']!, t['--color-text-muted']!]) {
+      const ratio = contrastRatio(luminance(ink), luminance(ground));
+      assert.ok(ratio >= 4.5, `${scheme} ${ink} on ${ground}: ${ratio.toFixed(2)}`);
+    }
+  }
+});

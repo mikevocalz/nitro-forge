@@ -71,3 +71,11 @@ test('grown chrome at 200 % text moves the rail, panel and artboard below and be
   const wide = prismViewportLayout(1388, 796, 1, true, false, { toolbarBottom: 80 });
   assert.equal(wide.panelTop, 12, 'a docked desktop panel stays at the top edge');
 });
+
+test('the Layers panel leaves layer names room: 320 pt on tablets, right of the rail on phones', () => {
+  assert.equal(prismViewportLayout(1024, 768, 1, true, false).panelWidth, 320);
+  const phone = prismViewportLayout(390, 844, 1, true, false);
+  assert.equal(phone.panelWidth, 302);
+  assert.ok(390 - 12 - phone.panelWidth >= 64 + 12, 'the phone panel clears the tool rail');
+  assert.equal(prismViewportLayout(320, 600, 1, true, false).panelWidth, 280);
+});

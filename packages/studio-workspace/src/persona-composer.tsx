@@ -9,7 +9,8 @@ import {
   Banner, Button, FieldGroup, IconButton, Menu, NightScope, Pressable, SegmentedControl, Text, TextInput, View,
 } from './ui';
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
-import { DragGrabHandle } from './drag-grab-handle';
+import { DragGrabHandle } from '@nyc-tron/ui/components/DragGrabHandle';
+import { forgeDragTransport } from './drag-transport';
 import { PERSONA_SURFACES, type PersonaSpec, type PersonaSurface } from './persona';
 import type { PersonaStore } from './persona-store';
 import {
@@ -286,7 +287,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
             return row(id, {
               on: s.drag?.index === index || target, title: name,
               leading: <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {draft.rail.length > 1 ? <DragGrabHandle label={`Drag ${name} to reorder`} color={c.muted}
+                {draft.rail.length > 1 ? <DragGrabHandle label={`Drag ${name} to reorder`} transport={forgeDragTransport}
                   onStart={() => ui.setState({ drag: { index, originY: null, target: index } })}
                   onMove={point => ui.setState(st => {
                     if (!st.drag) return {};
@@ -294,7 +295,7 @@ export function PersonaComposer(props: PersonaComposerProps) {
                     return { drag: { ...st.drag, originY, target: dragTargetIndex(st.drag.index, point.y - originY, rowHeights) } };
                   })}
                   onCommit={() => { const d = ui.getState().drag; ui.setState({ drag: null }); if (d && d.target !== d.index) move(d.index, d.target - d.index); }}
-                  onCancel={() => ui.setState({ drag: null })} /> : null}
+                  onCancel={() => ui.setState({ drag: null })}><ForgeIcon name="menu" size={16} color={c.muted} reducedMotion /></DragGrabHandle> : null}
                 {/* The same numeral the chosen tile carries. */}
                 <Text style={{ color: c.accent, fontSize: scale.type.label, fontWeight: '700', fontVariant: ['tabular-nums'], minWidth: 18, textAlign: 'center' }}>{String(index + 1)}</Text>
               </View>,

@@ -3,6 +3,8 @@
 @source "../../../../nyc-mon/packages/ui";
 /* The studio packages pass kit classes too (danger notice ground, light Surfaces well). */
 @source "../../../packages/studio-workspace/src";
+/* The NYC-Tron release publishes only dist/; its recipes' classes live there. */
+@source "../node_modules/@nyc-tron/ui/dist/components";
 @import "../../../packages/studio-workspace/src/theme.css";
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; min-height: 100%; background: #17191b; }

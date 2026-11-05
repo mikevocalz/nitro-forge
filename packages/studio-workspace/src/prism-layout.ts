@@ -1,5 +1,7 @@
 /** Below this editor width, contextual Layers overlays rather than resizing the artboard. */
 export const PRISM_DOCKED_LAYERS_MIN_WIDTH = 1100;
+/** Widest Layers panel, in points. */
+export const PRISM_LAYERS_PANEL_WIDTH = 320;
 
 /** Geometry belongs to the editor viewport, never the native app window contract. */
 /** Measured chrome, in editor coordinates. Larger text (200 %) grows the
@@ -19,9 +21,14 @@ export function prismViewportLayout(width: number, height: number, ratio: number
   const short = height < 400;
   const dockedLayers = width >= PRISM_DOCKED_LAYERS_MIN_WIDTH;
   const aspect = Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
-  const panelWidth = Math.min(280, Math.max(1, width - 24));
   const toolbarBottom = Math.max(PRISM_DEFAULT_TOOLBAR_BOTTOM, chrome.toolbarBottom ?? 0);
   const railRight = Math.max(PRISM_DEFAULT_RAIL_RIGHT, chrome.railRight ?? 0);
+  // A layer row spends 208 pt on its grip, eye and opacity track; 320 leaves
+  // the name about 100 pt. A phone panel takes the room right of the rail when
+  // that is wider than the old 280, so it never covers the tools for nothing.
+  const panelWidth = Math.max(1, Math.min(PRISM_LAYERS_PANEL_WIDTH, narrow
+    ? Math.max(Math.min(280, width - 24), width - railRight - 24)
+    : width - 24));
   // Grown chrome pushes the panel, rail and artboard down by the same amount.
   const grown = toolbarBottom - PRISM_DEFAULT_TOOLBAR_BOTTOM;
   const railTop = toolbarBottom + (short ? CHROME_GAP : CHROME_GAP * 2);

@@ -3,7 +3,7 @@
  * depths. A direction may change material, light, depth and motion; it never
  * changes what a control does. Rationale: design/DIRECTION.md.
  */
-import { prismThemes, type WorkspaceColors } from './theme.ts';
+import { prismThemes, workspaceScale, type WorkspaceColors } from './theme.ts';
 
 export type ForgeDirectionId = 'workbench' | 'optics' | 'atelier';
 export type ForgeScheme = 'dark' | 'light';
@@ -273,6 +273,31 @@ export const workbenchChrome: Readonly<Record<ForgeScheme, ForgeChrome>> = {
 export function chromePalette(scheme: ForgeScheme): WorkspaceColors {
   const c = workbenchChrome[scheme];
   return { ...prismThemes[scheme], base: c.body, raised: c.body, deep: c.well, line: c.rule, text: c.text, muted: c.muted, accent: c.accent };
+}
+
+/**
+ * NYC-Tron UI ships no colours; its recipes read these semantic variables
+ * (docs/THEME_TOKENS.md in NYC-Tron-UI). Forge fills them from the Workbench
+ * chrome so NYC-Tron parts inside an editor panel match the panel around them:
+ * the list ground is the panel body, the selected row is the chrome's
+ * selection, rules are the panel's rules.
+ */
+export function nycTronTokens(scheme: ForgeScheme): Readonly<Record<`--${string}`, string>> {
+  return nycTronTokensFor(chromePalette(scheme), workbenchChrome[scheme].selected);
+}
+
+/** The same variables from any studio palette; `selected` grounds the chosen row and active controls. */
+export function nycTronTokensFor(colors: WorkspaceColors, selected = colors.raised): Readonly<Record<`--${string}`, string>> {
+  return {
+    '--color-surface-sunken': colors.base,
+    '--color-surface-raised': selected,
+    '--color-border': colors.line,
+    '--color-text': colors.text,
+    '--color-text-muted': colors.muted,
+    '--color-accent': colors.accent,
+    '--color-focus': colors.accent,
+    '--radius-control': `${workspaceScale.radius.control}px`,
+  };
 }
 
 /** Lab backdrop: the Prism mat and an 800 x 600 artboard behind the chrome. */

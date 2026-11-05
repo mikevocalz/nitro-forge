@@ -7,6 +7,8 @@
 @source './src';
 @source '../../packages/studio-workspace/src';
 @source '../../packages/icons/src';
+/* The NYC-Tron release publishes only dist/; its recipes' classes live there. */
+@source '../../packages/studio-workspace/node_modules/@nyc-tron/ui/dist/components';
 @source '../../../nyc-mon/packages/ui';
 /* Keep platform-specific .web sources for the shared Expo input. */
 @source not '../../../nyc-mon/packages/ui/**/*.stories.*';

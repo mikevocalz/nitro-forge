@@ -22,3 +22,14 @@ declare module '@acme/ui/studio-controls/web' {
   export const studioControls: import('@nitro-forge/studio-workspace/ui').StudioUIComponents;
   export const FilePicker: ComponentType<{ label: string; className?: string; accept?: string; multiple?: boolean; disabled?: boolean; onFiles: (files: File[]) => void; testID?: string }>;
 }
+
+/** React Native Web ships no types. Declared narrowly: the primitives
+ * src/react-native-classname.tsx wraps. */
+declare module 'react-native-web' {
+  import type { ComponentType } from 'react';
+  export const View: ComponentType<object>;
+  export const Text: ComponentType<object>;
+  export const Pressable: ComponentType<object>;
+  export const TextInput: ComponentType<object>;
+  export const ScrollView: ComponentType<object>;
+}

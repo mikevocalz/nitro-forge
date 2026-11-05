@@ -1,0 +1,9 @@
+{
+  "tag": "v0.1.0-alpha.1",
+  "packages": {
+    "@nyc-tron/ui": {
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.1/nyc-tron-ui-0.1.0-alpha.1.tgz",
+      "sha256": "45fcb7e6e13032dadeadace754033d138bf856e963309d94040670c59a577e21"
+    }
+  }
+}

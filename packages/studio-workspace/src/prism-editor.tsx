@@ -1,7 +1,7 @@
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 import type { StudioViewRef } from './ui';
 import { useEffect, useRef } from 'react';
-import { Image, Pressable, ScrollView, Text, View, Menu, Button, IconButton, Banner, Badge, EmptyState, NightScope } from './ui';
+import { Image, Pressable, ScrollView, Text, View, Menu, Button, IconButton, Banner, Badge, EmptyState, NightScope, TokenScope } from './ui';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { base64ToBytes, bytesToBase64 } from '@nitro-forge/ignition';
@@ -9,26 +9,23 @@ import { ForgeIcon } from '@nitro-forge/icons/native';
 import { encodeRgbaPng, validatePreviewSize } from './rgba-png';
 import { prismThemes, workspaceScale as scale } from './theme';
 import { prismViewportLayout, PRISM_DOCKED_LAYERS_MIN_WIDTH, PRISM_TOOLBAR_TOP } from './prism-layout';
-import { PRISM_LAYER_ICONS, prismLayerKind, prismLayerLabel } from './prism-layer-label';
+import { prismLayerLabel } from './prism-layer-label';
 import { PrismCanvas } from './prism-canvas';
-import { ForgePrecisionScrubber } from './precision-scrubber';
-import type { CanvasLayer } from './prism-canvas-model';
+import { PrecisionScrubber } from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
+import { LayerStack } from '@nyc-tron/ui/components/forge/layers/LayerStack';
+import { prismLayerRows, prismMoveCommand, prismOpacityCommand, prismRenameCommand, prismSelectedRowId, prismVisibilityCommand, type PrismLayer, type PrismLayerCommand } from './prism-layers';
 import { SHAPE_TRANSFORMS, shapeTransformPayload } from './prism-transform';
-import { DragGrabHandle, type DragPoint } from './drag-grab-handle';
 import { Platform } from 'react-native';
 import { PersonaTurret, documentRtl, turretBoxWidth, useForgeRenderPrefs, useStudioTextScale, useTurretShortcut, type PersonaTurretHandle } from './persona-turret';
-import { chromePalette, forgeDirections, forgeFeedbackMotion, systemColor, workbenchChrome } from './forge-directions';
+import { chromePalette, forgeDirections, forgeFeedbackMotion, nycTronTokens, systemColor, workbenchChrome } from './forge-directions';
 import { turretDisplayAngle } from './turret';
 import { personasOn } from './persona';
 import { createPersonaStore, type PersonaStore } from './persona-store';
 import type { PersonaSurface } from './persona';
 import type { TurretEffect } from './turret';
-import { layerDropIndex, awaitLayerDrop, type LayerMeasurements, type MeasuredLayer } from './layer-drop';
 
-type Layer = CanvasLayer & { name: string };
-type PrismState = { width: number; height: number; layers: Layer[] };
-type LayerDrag = { id: number; target: number | null };
-type LocalState = { drag: LayerDrag | null; selectedId: number | null; uri: string | null; rendering: boolean; busy: boolean; error: string | null; previewError: string | null; notice: string; layersOpen: boolean; personaOpen: boolean; personaStatus: string; trigger: { x: number; width: number }; toolbarHeight: number; railWidth: number; fillHeight: number; feedbackHeight: number; popoverHeight: number; width: number; height: number; retry: number; color: number };
+type PrismState = { width: number; height: number; layers: PrismLayer[] };
+type LocalState = { selectedId: number | null; uri: string | null; rendering: boolean; busy: boolean; error: string | null; previewError: string | null; notice: string; layersOpen: boolean; personaOpen: boolean; personaStatus: string; trigger: { x: number; width: number }; toolbarHeight: number; railWidth: number; fillHeight: number; feedbackHeight: number; popoverHeight: number; width: number; height: number; retry: number; color: number };
 /** A real-engine Prism canvas. Selection and panel state are local; all edits use engine commands. */
 export interface PrismEditorProps {
   state: unknown;
@@ -86,9 +83,8 @@ export function PrismEditor(props: PrismEditorProps) {
   const activePersona = persona.personas.find(p => p.id === persona.activeId);
   const activeCaps = new Set(activePersona?.capabilities ?? []);
   const localRef = useRef<StoreApi<LocalState> | null>(null);
-  if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ drag: null, selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, personaOpen: false, personaStatus: '', trigger: { x: 0, width: 0 }, toolbarHeight: 48, railWidth: 52, fillHeight: 52, feedbackHeight: 0, popoverHeight: 0, width: 800, height: 600, retry: 0, color: 0 }));
+  if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, personaOpen: false, personaStatus: '', trigger: { x: 0, width: 0 }, toolbarHeight: 48, railWidth: 52, fillHeight: 52, feedbackHeight: 0, popoverHeight: 0, width: 800, height: 600, retry: 0, color: 0 }));
   const store = localRef.current;
-  const drag = useStore(store, s => s.drag);
   const selectedId = useStore(store, s => s.selectedId);
   const uri = useStore(store, s => s.uri);
   const rendering = useStore(store, s => s.rendering);
@@ -106,24 +102,14 @@ export function PrismEditor(props: PrismEditorProps) {
   current.current = props;
   const mounted = useRef(true);
   const firstMeasurement = useRef(true);
-  const rowViews = useRef(new Map<number, StudioViewRef>());
-  const layerViewport = useRef<StudioViewRef>(null);
-  const dragSequence = useRef(0);
-  const dragSession = useRef<{ token: number; id: number; signature: string; rows: MeasuredLayer[]; viewport: MeasuredLayer | null; point: DragPoint | null; ready: Promise<LayerMeasurements> | null } | null>(null);
-  const cancelLayerDrag = () => {
-    ++dragSequence.current;
-    dragSession.current = null;
-    if (mounted.current && store.getState().drag) store.setState({ drag: null, notice: 'Layer move cancelled' });
-  };
-  useEffect(() => { cancelLayerDrag(); }, [props.state, width, height, layersOpen]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
-    if (!notice || drag) return;
+    if (!notice) return;
     const timer = setTimeout(() => {
       if (mounted.current && store.getState().notice === notice) store.setState({ notice: '' });
     }, 2500);
     return () => clearTimeout(timer);
-  }, [notice, drag, store]);
+  }, [notice, store]);
   const doc = readState(props.state);
   const layers = doc?.layers ?? [];
   const selected = layers.find(layer => layer.id === selectedId);
@@ -139,10 +125,6 @@ export function PrismEditor(props: PrismEditorProps) {
     canvasLeft, canvasRight, canvasTop, canvasBottom, canvasWidth, canvasHeight, fillWidth, fillLeft
   } = prismViewportLayout(width, height, ratio, layersOpen, !!selected, { toolbarBottom: PRISM_TOOLBAR_TOP + measuredToolbar, railRight: 12 + railWidth });
   const feedback = error ?? previewError ?? (rendering ? 'Updating engine composite…' : notice);
-  const dropRows = drag ? layers.slice().reverse().filter(layer => layer.id !== drag.id) : [];
-  const dropVisualIndex = drag?.target === null || !drag ? null : layers.length - 1 - drag.target;
-  const dropBefore = dropVisualIndex === null ? null : dropRows[dropVisualIndex]?.id;
-  const dropAtEnd = dropVisualIndex !== null && dropVisualIndex === dropRows.length;
 
   useEffect(() => {
     const next = readState(props.state);
@@ -179,55 +161,17 @@ export function PrismEditor(props: PrismEditorProps) {
     } catch (cause) { if (mounted.current) store.setState({ error: message(cause) }); }
     finally { if (mounted.current) store.setState({ busy: false }); }
   };
-  const previewLayerDrag = (point: DragPoint) => {
-    const session = dragSession.current;
-    if (!session) return;
-    session.point = point;
-    if (!session.viewport || session.rows.length === 0) return;
-    const target = layerDropIndex(session.rows, session.id, point, session.viewport);
-    store.setState({ drag: { id: session.id, target } });
+  /** One LayerStack callback becomes at most one engine operation (one undo step). */
+  const runLayerCommand = (build: (layers: readonly PrismLayer[]) => PrismLayerCommand | undefined) => {
+    if (store.getState().busy || current.current.busy) { store.setState({ notice: 'Wait for the current edit to finish' }); return; }
+    let command: PrismLayerCommand | undefined;
+    try { command = build(readState(current.current.state)?.layers ?? []); }
+    catch (cause) { store.setState({ error: message(cause) }); return; }
+    return command ? run(command.op, command.payload, command.label) : undefined;
   };
-  const beginLayerDrag = (id: number) => {
-    cancelLayerDrag();
-    if (store.getState().busy || current.current.busy) return;
-    const snapshot = readState(current.current.state);
-    if (!snapshot || snapshot.layers.length < 2) return;
-    const token = ++dragSequence.current;
-    const session = { token, id, signature: JSON.stringify(current.current.state), rows: [] as MeasuredLayer[], viewport: null as MeasuredLayer | null, point: null as DragPoint | null, ready: null as Promise<LayerMeasurements> | null };
-    dragSession.current = session;
-    store.setState({ selectedId: id, drag: { id, target: null }, notice: 'Moving layer…' });
-    const measure = (view: { measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void } | null, rowId: number) => new Promise<MeasuredLayer | null>(resolve => {
-      if (!view) { resolve(null); return; }
-      const timeout = setTimeout(() => resolve(null), 500);
-      try { view.measureInWindow((x, y, width, height) => { clearTimeout(timeout); resolve(width > 0 && height > 0 ? { id: rowId, x, y, width, height } : null); }); }
-      catch { clearTimeout(timeout); resolve(null); }
-    });
-    session.ready = Promise.all([measure(layerViewport.current, -1), ...snapshot.layers.slice().reverse().map(layer => measure(rowViews.current.get(layer.id) ?? null, layer.id))]).then(([viewport, ...rows]) => {
-      const measured = { viewport: rows.some(row => !row) ? null : viewport ?? null, rows: rows.filter((row): row is MeasuredLayer => !!row) };
-      if (mounted.current && dragSession.current === session && token === dragSequence.current) {
-        session.viewport = measured.viewport;
-        session.rows = measured.rows;
-        if (session.point) previewLayerDrag(session.point);
-      }
-      return measured;
-    });
-  };
-  const commitLayerDrag = async () => {
-    const session = dragSession.current;
-    if (!session?.ready || !session.point) { cancelLayerDrag(); store.setState({ notice: 'Layer move cancelled' }); return; }
-    const isCurrent = () => mounted.current && dragSession.current === session
-      && session.token === dragSequence.current && session.signature === JSON.stringify(current.current.state);
-    const target = await awaitLayerDrop(session.ready, session.id, session.point, isCurrent);
-    if (!isCurrent()) return;
-    cancelLayerDrag();
-    if (target === null) { store.setState({ notice: 'Layer move cancelled' }); return; }
-    const snapshot = readState(current.current.state);
-    const index = snapshot?.layers.findIndex(layer => layer.id === session.id) ?? -1;
-    if (index < 0 || index === target) { store.setState({ notice: 'Layer order unchanged' }); return; }
-    await run('moveLayer', { id: session.id, to_index: target }, 'Layer reordered');
-  };
+  const selectedRow = prismSelectedRowId(selectedId);
   const control = (label: string, onPress: () => void, disabled = false, selected = false, glyph?: string, visibleLabel?: string, iconOnly = false, hint?: string) => {
-    const unavailable = disabled || busy || !!props.busy || !!drag;
+    const unavailable = disabled || busy || !!props.busy;
     const icon = glyph ? <ForgeIcon name={glyph} size={17} color={unavailable ? chrome.disabledInk : selected ? colors.accent : colors.muted} reducedMotion /> : undefined;
     // `opacity-100` keeps a host's blanket disabled fade off the kit's own
     // disabled ink, which is drawn to be read at full strength.
@@ -254,10 +198,12 @@ export function PrismEditor(props: PrismEditorProps) {
       <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 }}>Layers</Text><Badge label={String(layers.length)} tone="neutral" size="xs" className="self-center mr-2 rounded-[4px] overflow-hidden" />
       {control('Close layers', () => store.setState({ layersOpen: false }), false, false, 'close', undefined, true)}
     </View>
+    {/* NYC-Tron parts read semantic variables; these are cut from the same Workbench chrome. */}
+    <TokenScope variables={nycTronTokens(scheme)}>
     {/* Layer opacity uses the same precision instrument as every studio;
         only its released value becomes a Rust document operation. */}
     {selected && <View style={{ paddingHorizontal: 12, paddingVertical: 8, zIndex: 10 }}>
-      <ForgePrecisionScrubber
+      <PrecisionScrubber
         label="Layer opacity"
         value={selected.opacity * 100}
         min={0}
@@ -265,32 +211,25 @@ export function PrismEditor(props: PrismEditorProps) {
         step={1}
         unit="%"
         detents={[0, 25, 50, 75, 100]}
-        disabled={busy || !!props.busy || !!drag}
-        colors={colors}
+        disabled={busy || !!props.busy}
+        forcedColors={forced}
         onCommit={value => run('setLayerOpacity', { id: selected.id, opacity: value / 100 }, 'Layer opacity changed')}
       />
     </View>}
-      <View ref={layerViewport} collapsable={false} style={{ maxHeight: layerListMaxHeight, flexShrink: 1 }}><ScrollView nestedScrollEnabled removeClippedSubviews={false} scrollEnabled={!drag} onScroll={cancelLayerDrag} scrollEventThrottle={16} style={{ maxHeight: layerListMaxHeight, flexShrink: 1 }}>
-        {[...layers].reverse().map(layer => <View key={layer.id} ref={view => { if (view) rowViews.current.set(layer.id, view); else rowViews.current.delete(layer.id); }} collapsable={false} style={{ position: 'relative', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, backgroundColor: selectedId === layer.id ? chrome.selected : 'transparent', borderBottomWidth: 1, borderBottomColor: chrome.rule }}>
-          {(dropBefore === layer.id || (dropAtEnd && dropRows.at(-1)?.id === layer.id)) && <View pointerEvents="none" style={{ position: 'absolute', left: 4, right: 4, height: 2, backgroundColor: colors.accent, ...(dropBefore === layer.id ? { top: 0 } : { bottom: 0 }) }} />}
-          <DragGrabHandle label={`Drag layer ${layer.name} to reorder`} color={selectedId === layer.id ? chrome.selectedMuted : colors.muted} disabled={busy || props.busy || layers.length < 2}
-            onStart={() => beginLayerDrag(layer.id)} onMove={previewLayerDrag} onCommit={() => { void commitLayerDrag(); }} onCancel={cancelLayerDrag} />
-          <Pressable accessibilityRole="button" accessibilityLabel={`Select layer ${layer.name}`} accessibilityState={{ selected: selectedId === layer.id }} onPress={() => store.setState({ selectedId: layer.id })} style={{ flex: 1, minWidth: 0, minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 2, borderWidth: 1, borderColor: 'transparent', borderRadius: scale.radius.control }}>
-            {/* The thumbnail is the layer's own fill; the selected one is ringed in the accent. */}
-            <View style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: scale.radius.control + 2, borderWidth: 2, borderColor: selectedId === layer.id ? (forced ? systemColor('Highlight') : chrome.accent) : 'transparent', ...keepColour }}>
-              <View style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: forced ? systemColor('CanvasText') : chrome.chipEdge, borderRadius: scale.radius.control, backgroundColor: layer.content?.type === 'shape' && layer.content.shape?.fill ? `rgba(${layer.content.shape.fill.slice(0, 3).join(',')},${(layer.content.shape.fill[3] ?? 255) / 255})` : chrome.well, ...keepColour }}><ForgeIcon name={PRISM_LAYER_ICONS[prismLayerKind(layer)]} size={15} color={layer.content?.type === 'shape' ? '#FFFFFF' : colors.muted} reducedMotion /></View>
-            </View>
-            <View style={{ flex: 1, gap: 4 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: selectedId === layer.id ? '600' : '400' }}>{layer.name}</Text><Text style={{ color: selectedId === layer.id ? chrome.selectedMuted : colors.muted, fontSize: scale.type.label }}>{prismLayerLabel(layer)} · {Math.round(layer.opacity * 100)}%</Text></View>
-          </Pressable>
-          {control(`${layer.visible ? 'Hide' : 'Show'} ${layer.name}`, () => { void run('setLayerVisible', { id: layer.id, visible: !layer.visible }, layer.visible ? 'Layer hidden' : 'Layer shown'); }, false, false, undefined, layer.visible ? 'Hide' : 'Show')}
-        </View>)}
-        {!layers.length && <EmptyState title="No layers" description="Add a shape or raster layer to begin." className="p-3" tone="carolina" action={<Button title="Add rectangle" onPress={() => addShape('rect')} disabled={busy || !!props.busy || !doc} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />} />}
-      </ScrollView></View>
-      {selected && <View style={{ padding: 12, gap: 8 }}>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: chrome.rule, paddingTop: 5 }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}{control('Remove', () => { void run('removeLayer', { id: selected.id }, 'Layer removed'); })}</View>
+      {layers.length
+        ? <LayerStack testID="prism-layer-stack" layers={prismLayerRows(layers)} {...(selectedRow === undefined ? {} : { selectedId: selectedRow })} accentColor={forced ? systemColor('Highlight') : chrome.accent}
+          style={{ maxHeight: layerListMaxHeight, flexShrink: 1, borderRadius: 0 }}
+          onSelect={id => store.setState({ selectedId: Number(id) })}
+          onToggleVisible={id => runLayerCommand(rows => prismVisibilityCommand(rows, id))}
+          onOpacityCommit={(id, value) => runLayerCommand(rows => prismOpacityCommand(rows, id, value))}
+          onMove={(id, toIndex) => runLayerCommand(rows => prismMoveCommand(rows, id, toIndex))}
+          onRename={(id, name) => runLayerCommand(rows => prismRenameCommand(rows, id, name))} />
+        : <EmptyState title="No layers" description="Add a shape or raster layer to begin." className="p-3" tone="carolina" action={<Button title="Add rectangle" onPress={() => addShape('rect')} disabled={busy || !!props.busy || !doc} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" />} />}
+    </TokenScope>
+      {/* The last layer row already draws the rule above these. */}
+      {selected && <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{control('Raise', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex + 1 }, 'Layer raised'); }, selectedIndex === layers.length - 1)}{control('Lower', () => { void run('moveLayer', { id: selected.id, to_index: selectedIndex - 1 }, 'Layer lowered'); }, selectedIndex <= 0)}{control('Remove', () => { void run('removeLayer', { id: selected.id }, 'Layer removed'); })}</View>
       </View>}
-    {drag && <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2, padding: 10, gap: 4, backgroundColor: chrome.body, borderTopWidth: 1, borderTopColor: chrome.rule }}><Text accessibilityLiveRegion="polite" style={{ color: colors.accent, fontSize: 11 }}>{drag.target === null ? 'Drag within the layer list to choose a position' : `Move to layer position ${drag.target + 1} from bottom`}</Text><Button title="Cancel move" aria-label="Cancel layer move" onPress={cancelLayerDrag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /></View>}
   </View>;
 
   // Persona: a mode control in the toolbar. Its panel follows it in reading
@@ -417,7 +356,7 @@ export function PrismEditor(props: PrismEditorProps) {
       <ScrollView onContentSizeChange={(_, h) => { const next = Math.round(h) + 2; if (next !== store.getState().popoverHeight) store.setState({ popoverHeight: next }); }}
         contentContainerStyle={{ paddingHorizontal: PANEL_GUTTER, paddingTop: 4, paddingBottom: 12, gap: 8, alignItems: 'center' }}>{personaBody}</ScrollView>
     </View>;
-  const editor = <View className={scheme === 'dark' ? 'scheme-dark' : 'scheme-light'} {...{ onKeyDown: (event: StudioKeyboardEvent) => { if (keyboardKey(event) === 'Escape') cancelLayerDrag(); } }} testID="prism-editor" onLayout={event => {
+  const editor = <View className={scheme === 'dark' ? 'scheme-dark' : 'scheme-light'} testID="prism-editor" onLayout={event => {
     const { width, height } = event.nativeEvent.layout;
     if (width <= 0 || height <= 0) return;
     if (firstMeasurement.current) { firstMeasurement.current = false; store.setState({ width, height, layersOpen: width >= PRISM_DOCKED_LAYERS_MIN_WIDTH }); }
@@ -425,7 +364,7 @@ export function PrismEditor(props: PrismEditorProps) {
   }} style={{ flex: 1, minHeight: 0, position: 'relative', backgroundColor: mat.deep }}>
     <View pointerEvents="box-none" style={{ position: 'absolute', left: canvasLeft, top: canvasTop, right: canvasRight, bottom: canvasBottom, alignItems: 'center', justifyContent: 'center' }}>
       {doc && <PrismCanvas document={doc} width={canvasWidth} height={canvasHeight} selectedId={selectedId}
-        disabled={busy || !!props.busy || !!drag || rendering || !!previewError} color={colors.accent}
+        disabled={busy || !!props.busy || rendering || !!previewError} color={colors.accent}
         onSelect={id => store.setState({ selectedId: id })}
         onMoveShape={(id, dx, dy) => { void run('transformShape', { id, dx, dy, scale_x: 1, scale_y: 1 }, 'Shape moved'); }}>
         {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}><Text style={{ color: colors.paperInk, fontSize: 12, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}
@@ -434,16 +373,16 @@ export function PrismEditor(props: PrismEditorProps) {
     <View ref={personaToolbar} onLayout={event => store.setState({ toolbarHeight: event.nativeEvent.layout.height })} style={{ position: 'absolute', zIndex: personaOpen ? 70 : 20, top: 12, left: 12, width: toolbarWidth, minHeight: 48, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 10, ...chromeSurface }}>
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}><Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{selected?.name ?? 'Artboard'}</Text><Text numberOfLines={1} style={{ color: colors.muted, fontSize: scale.type.label }}>{selected ? `${prismLayerLabel(selected)} layer` : 'Prism document'}{doc ? ` · ${doc.width} × ${doc.height} px` : ''}</Text></View>
       {selected?.content?.type === 'shape' && !props.busy && <Menu key={selected.id} title="Transform shape" triggerLabel="Transform shape"
-        actions={SHAPE_TRANSFORMS.map(({ id, title }) => ({ id, title, disabled: busy || !!props.busy || !!drag }))}
+        actions={SHAPE_TRANSFORMS.map(({ id, title }) => ({ id, title, disabled: busy || !!props.busy }))}
         onAction={action => {
           const selection = store.getState().selectedId;
           // Reject stale callbacks. Keep the trigger mounted across our own
           // relative edits so repeated keyboard actions retain focus.
-          if (selection !== selected.id || current.current.state !== props.state || store.getState().drag) return;
+          if (selection !== selected.id || current.current.state !== props.state) return;
           const payload = shapeTransformPayload(selected.id, action);
           if (payload) void run('transformShape', payload, 'Shape transformed');
         }}>
-        <View style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8, opacity: busy || props.busy || drag ? .4 : 1 }}>
+        <View style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8, opacity: busy || props.busy ? .4 : 1 }}>
           <Text style={{ color: colors.muted, fontSize: 11 }}>Transform</Text>
         </View>
       </Menu>}
@@ -481,7 +420,7 @@ export function PrismEditor(props: PrismEditorProps) {
     {!!feedback && <View onLayout={event => { const h = Math.round(event.nativeEvent.layout.height); if (h !== store.getState().feedbackHeight) store.setState({ feedbackHeight: h }); }}
       style={{ position: 'absolute', zIndex: 35, bottom: toastBottom, left: toastLeft, width: toastWidth }}>
       <Banner tone={error || previewError ? 'danger' : 'info'} title={feedback} live={error || previewError ? 'alert' : 'status'} className="rounded-[4px]"
-        {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy || !!drag} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /> } : {})} />
+        {...(previewError ? { action: <Button title="Retry preview" onPress={() => store.setState(s => ({ retry: s.retry + 1 }))} disabled={busy || !!props.busy} variant="ghost" size="sm" tone="carolina" cornerRadius={4} className="rounded-[4px]" /> } : {})} />
     </View>}
     {/* The one live region for persona changes. It stays mounted, so the commit is read after the panel closes. */}
     <Text testID="persona-status" accessibilityLiveRegion="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}>{personaStatus}</Text>
