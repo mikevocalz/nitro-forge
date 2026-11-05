@@ -1,5 +1,6 @@
 #include "ForgeSerialQueue.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 
@@ -16,18 +17,38 @@ ForgeSerialQueue::ForgeSerialQueue(Scheduler scheduler) : _scheduler(std::move(s
 
 void ForgeSerialQueue::submit(Task task) {
   bool startDrain = false;
+  uint64_t id = 0;
   {
     std::lock_guard<std::mutex> lock(_mutex);
-    _tasks.push_back(std::move(task));
+    id = ++_nextId;
+    _tasks.emplace_back(id, std::move(task));
     if (!_draining) {
       _draining = true;
       startDrain = true;
     }
   }
-  if (startDrain) {
-    // The drain keeps the queue alive until it has emptied it.
-    _scheduler([self = shared_from_this()]() { self->drain(); });
+  if (!startDrain) {
+    return;
   }
+  try {
+    scheduleDrain();
+  } catch (...) {
+    // No drain is running. Withdraw this caller's task (it is reporting the
+    // failure synchronously) and release the drain flag, so the next submit
+    // schedules a drain for anything another thread queued meanwhile.
+    std::lock_guard<std::mutex> lock(_mutex);
+    _tasks.erase(
+        std::remove_if(_tasks.begin(), _tasks.end(),
+                       [id](const auto& entry) { return entry.first == id; }),
+        _tasks.end());
+    _draining = false;
+    throw;
+  }
+}
+
+void ForgeSerialQueue::scheduleDrain() {
+  // The drain keeps the queue alive until it has emptied it.
+  _scheduler([self = shared_from_this()]() { self->drain(); });
 }
 
 void ForgeSerialQueue::drain() {
@@ -39,10 +60,27 @@ void ForgeSerialQueue::drain() {
         _draining = false;
         return;
       }
-      task = std::move(_tasks.front());
+      task = std::move(_tasks.front().second);
       _tasks.pop_front();
     }
-    task();
+    try {
+      task();
+    } catch (...) {
+      // Tasks must not throw. If one does, hand the rest of the queue to a new
+      // drain (still one at a time) before the exception leaves this worker.
+      bool more = false;
+      {
+        std::lock_guard<std::mutex> lock(_mutex);
+        more = !_tasks.empty();
+        if (!more) {
+          _draining = false;
+        }
+      }
+      if (more) {
+        scheduleDrain();
+      }
+      throw;
+    }
   }
 }
 

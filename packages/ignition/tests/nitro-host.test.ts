@@ -43,8 +43,9 @@ describe("NitroHost native Rust u64 handle boundary", () => {
     await expect(host.snapshot(unsafe)).rejects.toBeInstanceOf(EngineError);
     await expect(host.restore(unsafe, new Uint8Array([1]))).rejects.toBeInstanceOf(EngineError);
     await expect(host.close(unsafe)).rejects.toBeInstanceOf(EngineError);
-    expect(() => host.undo(unsafe)).toThrowError(EngineError);
-    expect(() => host.redo(unsafe)).toThrowError(EngineError);
+    // Every EngineHost method is async: invalid input rejects, never throws synchronously.
+    await expect(host.undo(unsafe)).rejects.toBeInstanceOf(EngineError);
+    await expect(host.redo(unsafe)).rejects.toBeInstanceOf(EngineError);
     expect(methods.applyJson).not.toHaveBeenCalled();
     expect(methods.snapshotB64).not.toHaveBeenCalled();
     expect(methods.restoreB64).not.toHaveBeenCalled();
@@ -79,5 +80,28 @@ describe("NitroHost native Rust u64 handle boundary", () => {
       code: "validation", recoverable: true,
     });
     expect(await host.close(7)).toBe(true);
+  });
+
+  it("maps native rejections from every method to EngineError", async () => {
+    const shaped = () => Promise.reject(new Error(
+      'native: {"code":"not_found","message":"no such document","recoverable":false}',
+    ));
+    const methods = bridge(5);
+    const host = new NitroHost(methods);
+    methods.openEngine.mockImplementationOnce(shaped);
+    methods.snapshotB64.mockImplementationOnce(shaped);
+    methods.restoreB64.mockImplementationOnce(shaped);
+    methods.undo.mockImplementationOnce(shaped);
+    methods.redo.mockImplementationOnce(shaped);
+    methods.closeEngine.mockImplementationOnce(shaped);
+    const expected = { code: "not_found", recoverable: false };
+    await expect(host.open("prism")).rejects.toMatchObject(expected);
+    await expect(host.snapshot(5)).rejects.toMatchObject(expected);
+    await expect(host.restore(5, new Uint8Array([1]))).rejects.toMatchObject(expected);
+    await expect(host.undo(5)).rejects.toMatchObject(expected);
+    await expect(host.redo(5)).rejects.toMatchObject(expected);
+    await expect(host.close(5)).rejects.toMatchObject(expected);
+    methods.undo.mockImplementationOnce(() => Promise.reject(new Error("plain failure")));
+    await expect(host.undo(5)).rejects.toMatchObject({ code: "internal", message: "plain failure" });
   });
 });

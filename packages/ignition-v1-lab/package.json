@@ -13,7 +13,7 @@
   },
   "scripts": {
     "codegen": "nitrogen",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "nitrogen && tsc --noEmit -p tsconfig.json",
     "check:generated": "node ../../tooling/nitro-v1/verify-generated.mjs",
     "prepare:android": "bash ../../tooling/native/build_nf_v1_artifacts.sh android",
     "prepare:apple": "bash ../../tooling/native/build_nf_v1_artifacts.sh apple"

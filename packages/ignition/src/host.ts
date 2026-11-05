@@ -61,18 +61,14 @@ export class NitroHost implements EngineHost {
   constructor(private forge: ForgeNitro) {}
 
   async open(kind: EngineKind): Promise<number> {
-    const handle = await this.forge.openEngine(kind);
+    const handle = await native(this.forge.openEngine(kind));
     assertSafeEngineHandle(handle);
     return handle;
   }
 
   async apply<T>(handle: number, cmd: Command): Promise<CommandResult<T>> {
     assertSafeEngineHandle(handle);
-    const raw = await this.forge
-      .applyJson(handle, JSON.stringify(cmd))
-      .catch((e: unknown) => {
-        throw parseNativeError(e);
-      });
+    const raw = await native(this.forge.applyJson(handle, JSON.stringify(cmd)));
     let res: {
       ok?: boolean;
       data?: T;
@@ -108,30 +104,43 @@ export class NitroHost implements EngineHost {
 
   async snapshot(handle: number): Promise<Uint8Array> {
     assertSafeEngineHandle(handle);
-    return base64ToBytes(await this.forge.snapshotB64(handle));
+    return base64ToBytes(await native(this.forge.snapshotB64(handle)));
   }
 
   async restore(handle: number, bytes: Uint8Array): Promise<void> {
     assertSafeEngineHandle(handle);
-    await this.forge.restoreB64(handle, bytesToBase64(bytes));
+    await native(this.forge.restoreB64(handle, bytesToBase64(bytes)));
   }
 
-  undo(handle: number): Promise<boolean> {
+  async undo(handle: number): Promise<boolean> {
     assertSafeEngineHandle(handle);
-    return this.forge.undo(handle);
+    return native(this.forge.undo(handle));
   }
 
-  redo(handle: number): Promise<boolean> {
+  async redo(handle: number): Promise<boolean> {
     assertSafeEngineHandle(handle);
-    return this.forge.redo(handle);
+    return native(this.forge.redo(handle));
   }
 
   async close(handle: number): Promise<boolean> {
     assertSafeEngineHandle(handle);
-    return this.forge.closeEngine(handle);
+    return native(this.forge.closeEngine(handle));
   }
 
   async dispose(): Promise<void> {}
+}
+
+/**
+ * Every native call rejects with an Error whose message embeds the EngineError
+ * JSON. Route all of them through one mapper so callers always receive an
+ * EngineError, whichever method failed.
+ */
+async function native<T>(call: Promise<T>): Promise<T> {
+  try {
+    return await call;
+  } catch (e: unknown) {
+    throw parseNativeError(e);
+  }
 }
 
 /** Native errors surface as rejections whose message embeds the EngineError JSON. */
