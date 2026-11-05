@@ -13,14 +13,14 @@ export * from "#nitro/ForgeFactory";
 @Apple({
   language: "c++",
   implementation: {
-    include: "<NitroForgeV1/HybridForgeFactory.hpp>",
+    include: "\"HybridForgeFactory.hpp\"",
     className: "HybridForgeFactory",
   },
 })
 @Android({
   language: "c++",
   implementation: {
-    include: "<NitroForgeV1/HybridForgeFactory.hpp>",
+    include: "\"HybridForgeFactory.hpp\"",
     className: "HybridForgeFactory",
   },
 })
