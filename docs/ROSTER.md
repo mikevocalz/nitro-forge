@@ -521,3 +521,33 @@ See packages/audio-ui/README.md for API/skill roster and exact boundaries.
 - Expo autolinking resolves NYCTronPlatformServices alpha.3 on Apple and Android. Android uses the package's Expo Modules v2 path; an empty legacy modules array is expected.
 - Preview intent now lives in NYC-Tron's session store. Audition stops on interruptions, output loss and resets and requires a new Play press. Recorders keep their own capture lifecycle.
 - No native rebuild, microphone/device, routing or interruption acceptance was run for this follow-up.
+
+
+## Tally atomic range edits — November 5, 2026
+
+- Added `setRange`, `fillRange`, grouped inverse journal entries, reference-token
+  shifting, TypeScript methods and the `commitTallyFill` UI callback adapter.
+- Local Rust workspace tests: 191 passed, including Tally's 34 tests.
+- Local Tally Vitest: 24 passed, including two new live `nf-cli` range-operation
+  tests and a callback routing test. Workspace TypeScript: 9/9 packages passed.
+- Frozen pnpm 10.32.1 install and fresh `cargo build -p nf-cli`: passed.
+- Review fix: references and range writes are bounded to the sheet
+  (XFD1048576), not the u32 address domain; a range with an off-sheet endpoint
+  shifts to a single `#REF!` instead of the unparseable `#REF!:A2`. After the
+  fix: Rust workspace 192 passed (Tally 35), Tally Vitest 25 passed (three live
+  `nf-cli` range-operation tests), workspace TypeScript 9/9.
+- Same bound for every address-taking op: `setCell`, `clearCell`, `getCell`
+  and `getRange` past XFD1048576 return `out_of_bounds` with no mutation or
+  journal entry; formula references past the sheet evaluate to `#REF!`;
+  `restore` rejects off-sheet cell keys. Rust workspace 193 passed (Tally 36),
+  Tally Vitest 26 passed (four live `nf-cli` range-operation tests).
+- Rust/CLI evidence only. Native JSI hosts, clipboard OS APIs, hardware and
+  the unreleased NYC-Tron fill prop's installed consumer contract: NOT RUN.
+- Adds no UI copy or dependency upgrade; stack remains based on Tally grid
+  cluster PR #50, with the released NYC-Tron alpha.1 pin unchanged.
+
+## Recovered alpha.3 Tally consumer (2026-11-05)
+
+31 tests pass, including atomic paste/fill against a freshly built nf-cli. Tally TypeScript and the release URL/lockfile/SHA256 pin check pass. Includes the local #50/#54 stack.
+
+These are local source/protocol checks. No new native build or device acceptance was run. The follow-up has not been pushed or merged.

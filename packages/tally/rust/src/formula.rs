@@ -318,6 +318,10 @@ fn is_ref_word(w: &str) -> bool {
 }
 
 fn tokenize(src: &str) -> Result<Vec<Tok>, ()> {
+    tokenize_refs(src, None)
+}
+
+fn tokenize_refs(src: &str, mut refs: Option<&mut Vec<(usize, usize)>>) -> Result<Vec<Tok>, ()> {
     let b = src.as_bytes();
     let mut i = 0usize;
     let mut out = Vec::new();
@@ -482,6 +486,11 @@ fn tokenize(src: &str) -> Result<Vec<Tok>, ()> {
                 }
                 let w = &src[start..i];
                 if is_ref_word(w) {
+                    if let Some(refs) = refs.as_mut() {
+                        if !src[i..].trim_start().starts_with('(') {
+                            refs.push((start, i));
+                        }
+                    }
                     out.push(Tok::Ref(w.to_string()));
                 } else {
                     out.push(Tok::Name(w.to_string()));
@@ -491,6 +500,91 @@ fn tokenize(src: &str) -> Result<Vec<Tok>, ()> {
         }
     }
     Ok(out)
+}
+
+/// Sheet size range edits and reference shifting stay inside (XFD1048576).
+pub const SHEET_MAX_COLUMNS: u32 = 16_384;
+/// Sheet size range edits and reference shifting stay inside (XFD1048576).
+pub const SHEET_MAX_ROWS: u32 = 1_048_576;
+
+/// Whether a parsed address lies inside the sheet (A1:XFD1048576).
+pub fn on_sheet(col: u32, row: u32) -> bool {
+    col < SHEET_MAX_COLUMNS && row < SHEET_MAX_ROWS
+}
+
+/// Shift one reference token, keeping its `$` locks. `None` when the result
+/// would leave the sheet.
+fn shift_reference(word: &str, dc: i64, dr: i64) -> Option<String> {
+    let fixed_col = word.starts_with('$');
+    let fixed_row = word.trim_start_matches('$').contains('$');
+    let (c, r) = parse_addr(word)?;
+    let c = i64::from(c) + if fixed_col { 0 } else { dc };
+    let r = i64::from(r) + if fixed_row { 0 } else { dr };
+    if !(0..i64::from(SHEET_MAX_COLUMNS)).contains(&c) || !(0..i64::from(SHEET_MAX_ROWS)).contains(&r) {
+        return None;
+    }
+    let address = fmt_addr(c as u32, r as u32);
+    let split = address.find(|ch: char| ch.is_ascii_digit())?;
+    let mut out = String::with_capacity(address.len() + 2);
+    if fixed_col {
+        out.push('$');
+    }
+    out.push_str(&address[..split]);
+    if fixed_row {
+        out.push('$');
+    }
+    out.push_str(&address[split..]);
+    Some(out)
+}
+
+/// Shift only lexed reference tokens, preserving literals, whitespace, names,
+/// scientific notation and function identifiers. A reference that would leave
+/// the sheet becomes `#REF!`; a range with either endpoint off the sheet
+/// becomes one `#REF!`, so the result still parses. Malformed lexical input is
+/// rejected by the caller before any workbook mutation.
+pub fn shift_references(raw: &str, dc: i64, dr: i64) -> Result<String, ()> {
+    if !raw.starts_with('=') {
+        return Ok(raw.to_string());
+    }
+    let mut refs = Vec::new();
+    tokenize_refs(raw, Some(&mut refs))?;
+    let mut result = String::with_capacity(raw.len());
+    let mut previous = 0;
+    let mut k = 0;
+    while k < refs.len() {
+        let (start, end) = refs[k];
+        result.push_str(&raw[previous..start]);
+        // `A1 : B2` is one range when only a colon and whitespace separate two
+        // reference tokens; the parser reads it the same way.
+        let pair = refs.get(k + 1).copied().filter(|&(next, _)| raw[end..next].trim() == ":");
+        match pair {
+            Some((next_start, next_end)) => {
+                match (
+                    shift_reference(&raw[start..end], dc, dr),
+                    shift_reference(&raw[next_start..next_end], dc, dr),
+                ) {
+                    (Some(a), Some(b)) => {
+                        result.push_str(&a);
+                        result.push_str(&raw[end..next_start]);
+                        result.push_str(&b);
+                    }
+                    _ => result.push_str(ERR_REF),
+                }
+                previous = next_end;
+                k += 2;
+            }
+            None => {
+                match shift_reference(&raw[start..end], dc, dr) {
+                    Some(shifted) => result.push_str(&shifted),
+                    None => result.push_str(ERR_REF),
+                }
+                previous = end;
+                k += 1;
+            }
+        }
+    }
+    result.push_str(&raw[previous..]);
+    Ok(result)
 }
 
 // ---------------------------------------------------------------------------
@@ -761,14 +855,14 @@ impl Parser {
 
 fn cell_expr(text: &str) -> Expr {
     match parse_addr(text) {
-        Some((c, r)) => Expr::Cell(fmt_addr(c, r)),
-        None => Expr::BadRef,
+        Some((c, r)) if on_sheet(c, r) => Expr::Cell(fmt_addr(c, r)),
+        _ => Expr::BadRef,
     }
 }
 
 fn range_expr(a: &str, b: &str) -> Expr {
     match (parse_addr(a), parse_addr(b)) {
-        (Some((ca, ra)), Some((cb, rb))) => Expr::Range {
+        (Some((ca, ra)), Some((cb, rb))) if on_sheet(ca, ra) && on_sheet(cb, rb) => Expr::Range {
             c0: ca.min(cb),
             r0: ra.min(rb),
             c1: ca.max(cb),

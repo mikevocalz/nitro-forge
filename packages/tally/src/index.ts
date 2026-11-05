@@ -13,6 +13,8 @@ export const OPS = {
   removeSheet: "removeSheet",
   setActive: "setActive",
   setCell: "setCell",
+  setRange: "setRange",
+  fillRange: "fillRange",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -84,6 +86,14 @@ export class TallyDocument {
       addr,
       value,
     });
+  }
+  /** Atomic rectangular paste; empty strings clear cells. */
+  setRange(from: string, values: readonly (readonly string[])[]) {
+    return this.call<{ changed: number }>(OPS.setRange, { from, values });
+  }
+  /** Repeat the source into a containing target, shifting relative formulas. */
+  fillRange(source: { from: string; to: string }, target: { from: string; to: string }) {
+    return this.call<{ changed: number }>(OPS.fillRange, { source, target });
   }
   clearCell(addr: string) {
     return this.call(OPS.clearCell, { addr });
