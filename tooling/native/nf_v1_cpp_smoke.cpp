@@ -35,9 +35,18 @@ int main() {
   assert(document->apply("getCell", std::string_view("{\"addr\":\"A1\"}"))
     .dataJson.find("42") != std::string::npos);
 
+  const size_t before = document->documentSize();
+  assert(before > 0);
+  const std::string wide(64 * 1024, 'x');
+  document->apply("setCell", std::string_view("{\"addr\":\"B2\",\"value\":\"" + wide + "\"}"));
+  const size_t after = document->documentSize();
+  assert(after >= before + wide.size());
+  assert(document->documentSize() == after);
+
   document->close();
   document->close();
   assert(!document->isOpen());
+  assert(document->documentSize() == 0);
   bool closedRejected = false;
   try {
     document->snapshot();

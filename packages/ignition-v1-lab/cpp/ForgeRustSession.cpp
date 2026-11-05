@@ -162,6 +162,11 @@ void ForgeRustSession::restore(std::span<const uint8_t> bytes) const {
   }
 }
 
+size_t ForgeRustSession::documentSize() const noexcept {
+  const auto handle = _handle.load(std::memory_order_acquire);
+  return handle > 0 ? nf_v1_document_size(handle) : 0;
+}
+
 void ForgeRustSession::close() noexcept {
   const int64_t handle = _handle.exchange(0, std::memory_order_acq_rel);
   if (handle > 0) {

@@ -50,6 +50,13 @@ class ForgeRustSession final {
   /** Restores from readable bytes whose lifetime covers this call. */
   void restore(std::span<const uint8_t> bytes) const;
 
+  /**
+   * Estimated heap bytes the Rust document owns (live state plus undo
+   * journal). 0 once closed. Waits behind an in-flight command on the same
+   * document, so call it from the document's worker, never the JS thread.
+   */
+  [[nodiscard]] size_t documentSize() const noexcept;
+
   /** Idempotent; concurrent operations either complete or reject as closed. */
   void close() noexcept;
 
