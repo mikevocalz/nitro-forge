@@ -84,11 +84,31 @@ Undo: per-cell previous `{addr, prev_raw}` (or removal).
 ## cadence-engine — `CadenceEngine::new()`
 
 State `{ tempo_bpm, time_sig: [n,d], ppq: 960, playhead_ticks, next_id,
-tracks: [Track] }`. `Track = { id, name, kind:"midi"|"audio", volume 0..=1,
-pan -1..=1, muted, solo, clips: [Clip] }`.
+tracks: [Track], metronome: {enabled, volume 0..=1} }`. `Track = { id, name,
+kind:"midi"|"audio"|"bus", volume 0..=1, pan -1..=1, muted, solo, clips: [Clip],
+output: bus id|null, sends: [{bus, level 0..=1}], inserts: [Insert],
+group: string|null, solo_safe, automation: {gain: Lane, pan: Lane} }`.
 `Clip = { id, start_ticks, length_ticks, notes: [Note] }` (midi tracks only;
-audio track clips have no notes — `addNote` → Validation).
-`Note = { pitch 0..127, velocity 0..127, start_ticks, length_ticks }` (clip-relative).
+audio track clips have no notes — `addNote` → Validation; buses hold no clips).
+`Note = { pitch 0..127, velocity 0..127, start_ticks, length_ticks, channel 0..15 }` (clip-relative).
+`Insert = { id, bypassed, kind:"gain"|"eq"|"compressor", params }`; gain
+`{gain_db -24..24}`; eq `{bands: [{type: peak|low_shelf|high_shelf|low_pass|high_pass,
+freq_hz 20..20000, gain_db -24..24, q 0.1..18, enabled}]}` (≤8 bands); compressor
+`{threshold_db -60..0, ratio 1..20, knee_db 0..24, attack_ms 0.1..200,
+release_ms 5..2000, makeup_db 0..24}`. ≤8 inserts per track.
+`Lane = { mode:"off"|"read", points: [{ticks, value}] }`, sorted, one point per tick;
+gain values 0..=1, pan -1..=1. Fields added after the first release default on
+restore, so older snapshots load unchanged.
+
+Signal flow: source track notes → inserts → fader+pan (or read-mode automation,
+linear between points, held at the ends) → its `output` (bus or master), plus
+post-fader sends. Buses sum inputs → inserts → fader + balance (pan on a bus
+attenuates the far side only) → master. Buses feed the master only. Audibility:
+with anything soloed, a track sounds when soloed, solo-safe and unmuted, or
+routed/sent into a soloed bus; a bus sounds when soloed, solo-safe and unmuted,
+or fed by a soloed track; otherwise every unmuted track sounds. The metronome
+(30 ms click per beat, 1.5 kHz on the downbeat) is mixed only when the read op
+passes `include_metronome: true`.
 
 | op | payload | data | notes |
 |---|---|---|---|
@@ -113,7 +133,35 @@ audio track clips have no notes — `addNote` → Validation).
 | `resizeNote` | `{clip,index,length_ticks}` | `{ok}` | length > 0; start+length past clip end → OutOfBounds |
 | `setVelocity` | `{clip,index,velocity}` | `{ok}` | 0..127 integer |
 | `project` | `{}` | meta: tempo, sig, track/clip/note counts, length_ticks | read-only |
-| `render` | `{from_ticks,to_ticks,sample_rate}` | `{samples_b64,frames,channels:2}` | f32le stereo; sine osc, 20ms linear attack/release, equal-power pan, track gain, mute/solo |
+| `render` | `{from_ticks,to_ticks,sample_rate,include_metronome?}` | `{samples_b64,frames,channels:2}` | f32le stereo mixdown per the signal flow above; ≤10 min at 48 kHz |
+| `addTrack` kind `bus` | `{name?,kind:"bus"}` | `{track_id}` | default name `Bus N` |
+| `removeTrack` (bus) | `{id}` | `{ok}` | tracks routed or sending to it fall back to the master in the same step |
+| `setTrackOutput` | `{id,output}` | `{ok}` | `output` bus id or `null` (master); buses and missing ids rejected |
+| `setSend` | `{track,bus,level}` | `{ok}` | adds or updates; level 0..1; source tracks only |
+| `removeSend` | `{track,bus}` | `{ok}` | NotFound without that send |
+| `addInsert` | `{track,kind,index?,params?}` | `{insert_id,index}` | defaults per kind, merged params validated; ≤8 |
+| `removeInsert` | `{id}` | `{ok}` | |
+| `moveInsert` | `{id,index}` | `{ok}` | index within the chain |
+| `setInsertBypass` | `{id,bypassed}` | `{ok}` | |
+| `setInsertParams` | `{id,params}` | `{ok}` | partial merge; unknown key or any out-of-range value rejects all |
+| `insertPresets` | `{kind}` | `{presets:[{id,label,kind,params}]}` | read-only factory presets |
+| `applyInsertPreset` | `{id,preset}` | `{ok}` | preset id of the insert's own kind |
+| `eqResponse` | `{id,points?=128,sample_rate?=48000}` | `{points:[{hz,db}]}` | read-only; log-spaced 20 Hz..min(20 kHz, 0.49·sr) |
+| `dynamicsCurve` | `{id}` | `{points:[{in_db,out_db}]}` | read-only; -60..0 dBFS, 1 dB steps, soft knee |
+| `setTrackGroup` | `{id,group}` | `{ok}` | 1..=64 bytes trimmed, `null` clears |
+| `setGroupSolo` | `{group,solo}` | `{tracks}` | every member, one undo step; NotFound for an empty group |
+| `setGroupMuted` | `{group,muted}` | `{tracks}` | same |
+| `setSoloSafe` | `{id,safe}` | `{ok}` | |
+| `addAutomationPoint` | `{track,param,ticks,value}` | `{index}` | param `gain`/`pan`; duplicate tick → Validation |
+| `moveAutomationPoint` | `{track,param,index,ticks,value}` | `{ok}` | stays between its neighbours (keeps its index) |
+| `removeAutomationPoint` | `{track,param,index}` | `{ok}` | |
+| `setAutomationMode` | `{track,param,mode}` | `{ok}` | `off`/`read`; write/touch/latch need live transport (Validation) |
+| `setVelocities` | `{clip,changes:[{index,velocity}]}` | `{changed}` | all-or-nothing, one undo step; duplicate index → Validation |
+| `setNoteChannel` | `{clip,index,channel}` | `{ok}` | 0..15; `addNote` also takes `channel?` |
+| `setMetronome` | `{enabled,volume?}` | `{ok}` | volume 0..1 |
+| `meter` | `{from_ticks,to_ticks,sample_rate,window_ms?=50,include_metronome?}` | `{window_frames,window_seconds,tracks:[{id,peak[],rms[],max_peak,clipped}],master}` | read-only; post-fader per track/bus; sample_rate 8000..192000; ≤4096 windows |
+| `loudness` | same range | `{integrated_lufs,momentary_max_lufs,short_term_max_lufs,sample_peak_dbfs,momentary_lufs[],step_seconds}` | read-only BS.1770 K-weighted, gated; `null` = silent/too short |
+| `spectrogram` | range + `{fft_size?=2048,hop?,bands?=64}` | `{bands_hz,hop_seconds,frames}` | read-only; Hann STFT of mono master, log bands, dB floored -120; ≤2048 frames |
 
 Ticks→seconds: `ticks / (ppq * bpm / 60)`. Undo: prior field values / removed entities.
 

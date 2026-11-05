@@ -50,8 +50,8 @@ describe("note edit ops against the real Rust Cadence engine", () => {
       await doc.resizeNote(clip, 0, 360);
       await doc.setVelocity(clip, 0, 12);
       const [a, b] = await notes(doc);
-      expect(a).toEqual({ pitch: 67, velocity: 12, start_ticks: 480, length_ticks: 360 });
-      expect(b).toEqual({ pitch: 64, velocity: 90, start_ticks: 240, length_ticks: 240 });
+      expect(a).toEqual({ pitch: 67, velocity: 12, start_ticks: 480, length_ticks: 360, channel: 0 });
+      expect(b).toEqual({ pitch: 64, velocity: 90, start_ticks: 240, length_ticks: 240, channel: 0 });
 
       // A time-only move leaves the pitch alone.
       await doc.moveNote(clip, 0, 0);
