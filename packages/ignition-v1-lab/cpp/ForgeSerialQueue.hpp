@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <utility>
 
 namespace nitroforge::native {
 
@@ -19,6 +21,13 @@ namespace nitroforge::native {
  * production). At most one drain is scheduled at a time and no worker blocks
  * waiting for its turn. Tasks must not throw; callers resolve or reject their
  * Promise inside the task. The lock is never held while a task runs.
+ *
+ * Failure paths keep the queue usable instead of leaving `_draining` stuck,
+ * which would strand every later Promise on the document:
+ * - If the scheduler throws, submit() removes the task it just added and
+ *   rethrows, so a call that failed synchronously never runs later.
+ * - If a task throws anyway, the remaining tasks move to a fresh drain before
+ *   the exception propagates on the worker thread.
  */
 class ForgeSerialQueue final : public std::enable_shared_from_this<ForgeSerialQueue> {
  public:
@@ -35,10 +44,12 @@ class ForgeSerialQueue final : public std::enable_shared_from_this<ForgeSerialQu
  private:
   explicit ForgeSerialQueue(Scheduler scheduler);
   void drain();
+  void scheduleDrain();
 
   const Scheduler _scheduler;
   std::mutex _mutex;
-  std::deque<Task> _tasks;
+  std::deque<std::pair<uint64_t, Task>> _tasks;
+  uint64_t _nextId = 0;
   bool _draining = false;
 };
 

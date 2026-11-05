@@ -81,6 +81,63 @@ int main() {
   }
   require(threw, "a null scheduler is rejected");
 
+  // A scheduler failure must not wedge the queue or run the rejected task later.
+  {
+    std::vector<ForgeSerialQueue::Task> pending;
+    bool failNext = true;
+    auto flaky = ForgeSerialQueue::create([&](ForgeSerialQueue::Task task) {
+      if (failNext) {
+        failNext = false;
+        throw std::runtime_error("scheduler unavailable");
+      }
+      pending.push_back(std::move(task));
+    });
+    std::vector<int> ran;
+    bool submitThrew = false;
+    try {
+      flaky->submit([&]() { ran.push_back(1); });
+    } catch (const std::runtime_error&) {
+      submitThrew = true;
+    }
+    require(submitThrew, "scheduler failure reaches the caller");
+    flaky->submit([&]() { ran.push_back(2); });
+    require(pending.size() == 1, "the next submit schedules a fresh drain");
+    while (!pending.empty()) {
+      auto run = std::move(pending.back());
+      pending.pop_back();
+      run();
+    }
+    require(ran.size() == 1 && ran[0] == 2, "the withdrawn task never runs; the next one does");
+  }
+
+  // A throwing task must not strand the tasks queued behind it.
+  {
+    std::vector<ForgeSerialQueue::Task> pending;
+    auto inline_queue = ForgeSerialQueue::create([&](ForgeSerialQueue::Task task) {
+      pending.push_back(std::move(task));
+    });
+    std::vector<int> ran;
+    inline_queue->submit([&]() { throw std::logic_error("task broke its contract"); });
+    inline_queue->submit([&]() { ran.push_back(2); });
+    inline_queue->submit([&]() { ran.push_back(3); });
+    int escaped = 0;
+    while (!pending.empty()) {
+      auto run = std::move(pending.front());
+      pending.erase(pending.begin());
+      try {
+        run();
+      } catch (const std::logic_error&) {
+        ++escaped;
+      }
+    }
+    require(escaped == 1, "the task's exception still propagates");
+    require(ran.size() == 2 && ran[0] == 2 && ran[1] == 3, "later tasks run in order after a throw");
+    inline_queue->submit([&]() { ran.push_back(4); });
+    require(pending.size() == 1, "the queue accepts and schedules new work afterwards");
+    pending.front()();
+    require(ran.back() == 4, "new work runs");
+  }
+
   std::printf("serial queue: %d tasks in order, max concurrency %d\n", kTasks, maxRunning.load());
   return 0;
 }
