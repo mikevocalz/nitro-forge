@@ -1,0 +1,199 @@
+name: Shared Rust native hosts
+
+on:
+  pull_request:
+    paths:
+      - 'packages/ignition-native/**'
+      - 'packages/ignition-windows/**'
+      - 'packages/ignition/**'
+      - 'packages/ignition-v1-lab/cpp/ForgeRustSession.*'
+      - 'packages/ignition-v1-lab/cpp/ForgeSerialQueue.*'
+      - 'rust/**'
+      - 'packages/*/rust/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.base.json'
+      - 'tooling/native/shared_engine_roundtrip.cpp'
+      - 'tooling/native/serial_queue_test.cpp'
+      - 'tooling/native/nf_v1_symbols.txt'
+      - 'tooling/native/verify_nf_v1_host_link.py'
+      - '.github/workflows/shared-rust-native-hosts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_BUILD_JOBS: 2
+
+jobs:
+  windows-transport-contract:
+    name: Windows transport TypeScript contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.22.1'
+      - name: Enable the repository's pinned pnpm
+        run: corepack enable
+      - name: Install the committed workspace graph
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check the Windows EngineHost implementation
+        run: pnpm --filter @nitro-forge/ignition-windows typecheck
+      - name: Check transport mapping and lifecycle
+        run: pnpm --filter @nitro-forge/ignition-windows test
+
+  native-engine:
+    name: Native engine (${{ matrix.rust-target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rust-target: x86_64-unknown-linux-gnu
+            library: libnf_sys.a
+            exe-dir: ''
+            exe-suffix: ''
+            cmake-args: ''
+            gate-args: ''
+          - os: windows-2022
+            rust-target: x86_64-pc-windows-msvc
+            library: nf_sys.lib
+            exe-dir: Release/
+            exe-suffix: .exe
+            cmake-args: -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
+            gate-args: --machine x64
+          - os: windows-11-arm
+            rust-target: aarch64-pc-windows-msvc
+            library: nf_sys.lib
+            exe-dir: Release/
+            exe-suffix: .exe
+            cmake-args: -A ARM64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
+            gate-args: --machine ARM64
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install rustup where the runner image has none
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Get-Command rustup -ErrorAction SilentlyContinue) { exit 0 }
+          $host_triple = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'aarch64-pc-windows-msvc' } else { 'x86_64-pc-windows-msvc' }
+          Invoke-WebRequest "https://static.rust-lang.org/rustup/dist/$host_triple/rustup-init.exe" -OutFile "$env:RUNNER_TEMP\rustup-init.exe"
+          & "$env:RUNNER_TEMP\rustup-init.exe" -y --profile minimal --default-toolchain none --no-modify-path
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal --target ${{ matrix.rust-target }}
+      - name: Report build toolchains
+        run: |
+          rustc +1.99.1 --version --verbose
+          cargo +1.99.1 --version
+          cmake --version
+          python --version
+      - name: Verify Rust ABI and document isolation
+        run: cargo +1.99.1 test -p nf-sys --locked --target ${{ matrix.rust-target }}
+      - name: Build actual target Rust archive
+        run: cargo +1.99.1 build -p nf-sys --release --locked --target ${{ matrix.rust-target }}
+      - name: Report the archive's native link requirements
+        run: cargo +1.99.1 rustc -p nf-sys --release --locked --target ${{ matrix.rust-target }} --crate-type staticlib -- --print native-static-libs
+      - name: Configure shared C++ host
+        run: cmake -S packages/ignition-native -B target/native-host -DNF_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake-args }} "-DNF_RUST_LIBRARY=${{ github.workspace }}/target/${{ matrix.rust-target }}/release/${{ matrix.library }}"
+      - name: Link the shared C++ wrapper to Rust
+        run: cmake --build target/native-host --config Release --parallel 2
+      - name: Prove the archive and executable define every nf_v1 symbol
+        shell: bash
+        run: |
+          exe="target/native-host/${{ matrix.exe-dir }}forge_shared_engine_roundtrip${{ matrix.exe-suffix }}"
+          map_args=()
+          if [[ -n "${{ matrix.gate-args }}" ]]; then
+            map_args=(--map target/native-host/forge_shared_engine_roundtrip.map ${{ matrix.gate-args }})
+          fi
+          python tooling/native/verify_nf_v1_host_link.py \
+            --archive "target/${{ matrix.rust-target }}/release/${{ matrix.library }}" \
+            --binary "$exe" "${map_args[@]}"
+      - name: Run edit, undo, save, reopen and queue tests
+        run: ctest --test-dir target/native-host -C Release --output-on-failure
+      - name: Configure the Windows transport worker
+        run: cmake -S packages/ignition-windows -B target/ignition-windows -DNF_WINDOWS_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake-args }} "-DNF_RUST_LIBRARY=${{ github.workspace }}/target/${{ matrix.rust-target }}/release/${{ matrix.library }}"
+      - name: Build the transport worker and platform codec
+        run: cmake --build target/ignition-windows --config Release --parallel 2
+      - name: Check worker lifecycle and native snapshot encoding
+        run: ctest --test-dir target/ignition-windows -C Release --output-on-failure
+      - name: Keep the real document for cross-target interchange checks
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tally-nfd1-${{ matrix.rust-target }}
+          path: target/native-host/tally-roundtrip.nfd
+          if-no-files-found: error
+          retention-days: 14
+
+  document-interchange:
+    name: Reopen each target's saved document on every other target
+    needs: native-engine
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rust-target: x86_64-unknown-linux-gnu
+            library: libnf_sys.a
+            exe: target/native-host/forge_shared_engine_roundtrip
+            cmake-args: ''
+          - os: windows-2022
+            rust-target: x86_64-pc-windows-msvc
+            library: nf_sys.lib
+            exe: target/native-host/Release/forge_shared_engine_roundtrip.exe
+            cmake-args: -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
+          - os: windows-11-arm
+            rust-target: aarch64-pc-windows-msvc
+            library: nf_sys.lib
+            exe: target/native-host/Release/forge_shared_engine_roundtrip.exe
+            cmake-args: -A ARM64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install rustup where the runner image has none
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Get-Command rustup -ErrorAction SilentlyContinue) { exit 0 }
+          $host_triple = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'aarch64-pc-windows-msvc' } else { 'x86_64-pc-windows-msvc' }
+          Invoke-WebRequest "https://static.rust-lang.org/rustup/dist/$host_triple/rustup-init.exe" -OutFile "$env:RUNNER_TEMP\rustup-init.exe"
+          & "$env:RUNNER_TEMP\rustup-init.exe" -y --profile minimal --default-toolchain none --no-modify-path
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal --target ${{ matrix.rust-target }}
+      - name: Build the target archive and reader
+        shell: bash
+        run: |
+          cargo +1.99.1 build -p nf-sys --release --locked --target ${{ matrix.rust-target }}
+          cmake -S packages/ignition-native -B target/native-host -DNF_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake-args }} \
+            "-DNF_RUST_LIBRARY=$GITHUB_WORKSPACE/target/${{ matrix.rust-target }}/release/${{ matrix.library }}"
+          cmake --build target/native-host --config Release --parallel 2 --target forge_shared_engine_roundtrip
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: tally-nfd1-*
+          path: interchange
+      - name: Reopen every saved document
+        shell: bash
+        run: |
+          shopt -s nullglob
+          docs=(interchange/*/tally-roundtrip.nfd)
+          [[ ${#docs[@]} -eq 3 ]] || { echo "expected 3 saved documents, found ${#docs[@]}" >&2; exit 1; }
+          for doc in "${docs[@]}"; do
+            echo "== ${{ matrix.rust-target }} reads $doc"
+            "${{ matrix.exe }}" read "$doc"
+          done
+
+# Native engine evidence for Linux x64 and Windows MSVC x64/ARM64. It does not
+# claim RNW app registration, QNX compiler/device execution, Expo module
+# support, or native UI rendering. No QNX SDP is available to CI.
