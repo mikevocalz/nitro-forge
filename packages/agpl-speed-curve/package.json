@@ -10,6 +10,16 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "src",
+    "ios",
+    "android",
+    "expo-module.config.json",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md",
+    "UPSTREAM-NOTICE.txt"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
