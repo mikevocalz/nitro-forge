@@ -35,6 +35,8 @@ jobs:
         run: corepack pnpm install --no-frozen-lockfile --ignore-scripts
       - name: Generate Nitro v1 classes and platform bindings
         run: corepack pnpm --filter @nitro-forge/ignition-v1-lab codegen
+      - name: Committed Package.swift matches Nitrogen output
+        run: git diff --exit-code -- packages/ignition-v1-lab/Package.swift
       - name: Verify native module linkage source and generated registry
         run: node tooling/native/verify_nf_v1_linkage.mjs
       - name: Check generated TS factory/document contract
@@ -65,6 +67,9 @@ jobs:
         with:
           node-version: "24.19.0"
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-nf-sys
       - name: Install real Android Rust toolchain
         run: |
           cargo install cargo-ndk --locked
@@ -76,6 +81,8 @@ jobs:
       - name: Generate actual native v1 bindings
         run: corepack pnpm --filter @nitro-forge/ignition-v1-lab codegen
       - name: Build and verify real Rust arm64-v8a staticlib
+        env:
+          NF_ANDROID_API: "24"
         run: bash tooling/native/build_nf_v1_artifacts.sh android
       - name: Stage independently owned Forge and NYC-Tron sources
         run: |
@@ -94,6 +101,19 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:assembleDebug --no-daemon \
             -PreactNativeArchitectures=arm64-v8a --stacktrace
+      - name: Prove the linked libNitroForgeV1.so defines the Rust entry points
+        run: |
+          cd "$RUNNER_TEMP/nitro-v1-native-lab"
+          NM="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -path '*/bin/llvm-nm' | head -1)"
+          SO="$(find packages/ignition-v1-lab/android/build -path '*arm64-v8a/libNitroForgeV1.so' | head -1)"
+          test -n "$SO" || { echo "libNitroForgeV1.so was not built" >&2; exit 1; }
+          APK="$(find app/android/app/build/outputs/apk/debug -name '*.apk' | head -1)"
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libNitroForgeV1.so'
+          for sym in nf_v1_open nf_v1_apply_parts nf_v1_snapshot nf_v1_restore nf_v1_close nf_v1_free_command_result; do
+            "$NM" --defined-only "$SO" | grep -Eq " T ${sym}$" || { echo "$SO does not define $sym" >&2; exit 1; }
+          done
+          echo "nf_v1 symbols defined in $SO:"
+          "$NM" --defined-only "$SO" | grep -E ' T nf_v1_'
 
   apple-artifacts:
     name: Build Apple Rust XCFramework + generated SwiftPM package
@@ -106,6 +126,9 @@ jobs:
         with:
           node-version: "24.19.0"
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: apple-nf-sys
       - run: corepack enable
       - run: corepack pnpm install --no-frozen-lockfile --ignore-scripts
       - name: Generate actual Nitro v1 SwiftPM package targets
@@ -121,3 +144,7 @@ jobs:
           swift --version
           swift package --package-path packages/ignition-v1-lab dump-package
           test -f packages/ignition-v1-lab/native/apple/NitroForgeRust.xcframework/Info.plist
+      # dump-package only parses the manifest. The generated targets resolve
+      # ReactNative from the app's autolinking output, so compiling the C++
+      # and linking it against the XCFramework needs an Expo app build; that
+      # gate is not in this workflow.

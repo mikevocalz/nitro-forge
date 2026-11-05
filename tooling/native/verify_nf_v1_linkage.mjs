@@ -21,6 +21,8 @@ assert.match(load("android/CMakeLists.txt"), /HybridForgeFactory\.cpp/);
 assert.match(load("android/CMakeLists.txt"), /HybridForgeDocument\.cpp/);
 assert.match(load("android/CMakeLists.txt"), /nf_sys/);
 assert.match(load("android/src/main/cpp/cpp-adapter.cpp"), /registerAllNatives/);
+// The library must not raise the app's minSdk; a hidden floor broke manifest merge.
+assert.doesNotMatch(load("android/build.gradle"), /Math\.max\(rootVersion\("minSdkVersion"/);
 assert.match(load("android/src/main/java/com/margelo/nitro/nitroforge/ignitionv1/NitroForgeV1Package.kt"),
   /NitroForgeV1OnLoad\.initializeNative/);
 assert.match(load("react-native.config.js"), /ios: \{\}/);
