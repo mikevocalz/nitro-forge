@@ -127,29 +127,80 @@ Ticks→seconds: `ticks / (ppq * bpm / 60)`. Undo: prior field values / removed 
 
 ## splice-engine — `SpliceEngine::new()`
 
-State `{ fps, next_id, sources: {id: {name, duration_s}}, tracks: [Track] }`,
-`Track = { id, kind:"video"|"audio", clips: [Clip] }`,
-`Clip = { id, source_id, timeline_start_s, in_s, out_s, speed }`.
-Clip's timeline length = `(out_s - in_s) / speed`.
+State `{ fps, next_id, sources: {id: {name, duration_s}}, tracks: [Track], markers: [Marker], loop_range? }`,
+`Track = { id, kind:"video"|"audio"|"overlay", name?, locked, hidden, muted, solo, clips: [Clip], transitions: [Transition] }`,
+`Clip = { id, source_id, timeline_start_s, in_s, out_s, speed }`,
+`Transition = { id, left_id, right_id, kind, duration_s }`,
+`Marker = { id, time_s, duration_s, name, note? }`, `loop_range = { in_s, out_s }`.
+Clip's timeline length = `(out_s - in_s) / speed`. Overlay tracks hold source
+clips composited above the video tracks; track order is stack order.
+
+Locked tracks refuse every clip and transition edit (and `removeTrack`) with
+`Validation` ("track N is locked"); ripples with `scope:"all"` leave them in
+place. Header ops (`setTrackFlags`, `renameTrack`, `moveTrack`) still work on a
+locked track.
 
 | op | payload | data | notes |
 |---|---|---|---|
 | `new` | `{fps?}` | `{ok}` | default 30 |
 | `addSource` | `{duration_s,name?}` | `{source_id}` | duration > 0 |
 | `removeSource` | `{id}` | `{ok}` | Validation if referenced by a clip |
-| `addTrack` | `{kind}` | `{track_id}` | video or audio |
+| `addTrack` | `{kind}` | `{track_id}` | video, audio or overlay |
 | `removeTrack` | `{id}` | `{ok}` | |
-| `addClip` | `{track,source,in_s,out_s,speed?,start_s?}` | `{clip_id}` | `start_s` defaults to end of track; reject overlap; `in<out≤source.duration` |
+| `setTrackFlags` | `{id,locked?,hidden?,muted?,solo?}` | `{ok,changed}` | at least one flag; `hidden` on video/overlay only, `muted`/`solo` on audio only; `changed:false` records no undo and emits nothing |
+| `renameTrack` | `{id,name}` | `{ok,changed}` | trimmed, 1..=120 chars |
+| `moveTrack` | `{id,index}` | `{ok,changed}` | `index` < track count (OutOfBounds) |
+| `addClip` | `{track,source,in_s,out_s,speed?,start_s?,mode?,scope?}` | `{clip_id,created}` | `start_s` defaults to end of track; `in<out≤source.duration`; `mode` below |
 | `removeClip` | `{id}` | `{ok}` | |
-| `moveClip` | `{id,start_s}` | `{ok}` | reject overlap |
+| `moveClip` | `{id,start_s,track?,mode?,scope?}` | `{ok,created}` | `track` moves across tracks of the same media class (audio↔audio, video↔overlay) |
 | `trimClip` | `{id,in_s?,out_s?}` | `{ok}` | bounds vs source, in<out, reject overlap |
-| `splitClip` | `{id,at_s}` | `{left_id,right_id}` | `at_s` timeline time strictly inside clip; right half keeps speed |
+| `splitClip` | `{id,at_s}` | `{left_id,right_id}` | `at_s` timeline time strictly inside clip; right half keeps speed and takes over a transition on the clip's tail |
 | `setSpeed` | `{id,speed}` | `{ok}` | 0.1..=10; adjusts timeline footprint; reject overlap |
+| `rippleDelete` | `{id,scope?}` | `{ok}` | removes the clip and shifts clips starting at or after its end left by its length |
+| `rippleTrim` | `{id,edge:"head"\|"tail",delta_s,scope?}` | `{ok}` | `delta_s` moves that edge (positive = later); head keeps the clip's start and moves `in_s`; later clips shift by the change in length |
+| `rollEdit` | `{left,right,delta_s}` | `{ok}` | clips must touch on one track; moves the cut only |
+| `slipClip` | `{id,delta_s}` | `{ok}` | `delta_s` is media time: `in_s` and `out_s` both move |
+| `slideClip` | `{id,delta_s}` | `{ok}` | moves the clip; a touching previous clip's `out_s` and a touching next clip's `in_s`/start follow |
+| `addTransition` | `{left,right,kind,duration_s}` | `{transition_id}` | clips touch on one track; centred on the cut; needs `duration_s/2` of clip length and media handle on each side; one per cut |
+| `setTransition` | `{id,kind?,duration_s?}` | `{ok}` | same checks |
+| `removeTransition` | `{id}` | `{ok}` | |
+| `addMarker` | `{time_s,duration_s?,name?,note?}` | `{marker_id}` | `duration_s` 0 = point marker; name defaults to "Marker N"; name ≤120, note ≤2000 chars |
+| `updateMarker` | `{id,time_s?,duration_s?,name?,note?}` | `{ok}` | at least one field |
+| `removeMarker` | `{id}` | `{ok}` | |
+| `setLoopRange` | `{in_s,out_s}` | `{ok}` | `0 ≤ in_s < out_s`; may run past the last clip |
+| `clearLoopRange` | `{}` | `{ok}` | Validation when none is set |
+| `batch` | `{ops:[{op,payload?}]}` | `{results:[data…]}` | 1..=256 ops, not `new` or `batch`; all apply or none; one undo entry; error message prefixed `ops[i] <op>:` |
 | `duration` | `{}` | `{seconds}` | max clip end across tracks |
 | `timeline` | `{}` | full structure | read-only |
-| `renderPlan` | `{}` | `{tracks:[[clip refs in time order]]}` | ordered, resolved source spans — what an encoder consumes |
+| `renderPlan` | `{}` | `{tracks:[[clip refs in time order]], transitions:[[…per track]]}` | clip refs carry `track_active` (video/overlay: not hidden; audio: soloed if any track is soloed, else not muted); transitions carry `kind, left_clip_id, right_clip_id, cut_s, start_s, end_s, duration_s` |
 
-Undo: prior clip/track/source state. Event `timeline:changed` on structural ops.
+`mode` (`addClip`, `moveClip`): `reject` (default) refuses an overlap;
+`insert` splits a clip straddling `start_s` and pushes clips at or after it
+right by the clip's length; `overwrite` trims, splits or removes whatever lies
+under the new span. `created` lists clips that splits produced and that
+survive. `scope` (`rippleDelete`, `rippleTrim`, insert): `track` (default) or
+`all` unlocked tracks; an `all` ripple that would overlap a clip on another
+track fails with Validation.
+
+Transition kinds: `cross_dissolve`, `dip_to_black`, `dip_to_white`,
+`wipe_left`, `wipe_right`, `push_left`, `push_right` on video/overlay tracks;
+`cross_fade` on audio tracks. Splice stores them for the renderer; it does not
+draw them.
+
+Atomicity: multi-clip ops edit a copy and check clip invariants on it (starts
+≥ 0, spans inside sources, speeds in range, no overlaps) before committing.
+After any op that emits `timeline:changed`, transitions that no longer fit
+their cut are dropped in the same undo entry and listed in the op's
+`removed_transitions`. Markers and the loop range never move with clip edits.
+Positions are bounded: clip ends, source durations, markers and the loop range
+stay within 1e7 s (OutOfBounds past it), and ids stay below 2^53 so they survive
+JavaScript numbers. `restore` rejects snapshots that break these invariants or
+carry duplicate ids, two transitions on one cut, `fps` ≤ 0, empty sources,
+header flags that do not fit the track kind, or invalid markers and loop range.
+A `batch` whose ops change nothing records no undo entry and emits no event.
+
+Undo: whole-document snapshot per op (capacity 64). Event `timeline:changed`
+on structural ops; marker and loop ops emit `document:changed` only.
 
 ## folio-engine — `FolioEngine::new()`
 

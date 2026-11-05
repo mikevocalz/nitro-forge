@@ -11,7 +11,8 @@ output actually exists; anything not executed is marked NOT RUN.
 | prism-engine unit tests | 55 pass | `cargo test -p prism-engine` |
 | tally-engine unit + formula tests | 27 pass | `cargo test -p tally-engine` |
 | cadence-engine tests (incl. real PCM render) | 21 pass | `cargo test -p cadence-engine` |
-| splice-engine tests | 16 pass | `cargo test -p splice-engine` |
+| splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch) | 44 pass | `cargo test -p splice-engine` |
+| splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
 | folio-engine tests (real PDF round-trip via lopdf) | 17 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
 | quill-engine tests (incl. real DOCX zip round-trip) | 25 pass | `cargo test -p quill-engine` |
@@ -41,7 +42,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Prism engine | Graphics eng (subagent 3ba36e7a) | layers, pixels, filters, flatten | ✅ 55 tests |
 | Tally engine | Spreadsheet eng (subagent ddf87203) | formula parser/evaluator | ✅ 27 tests |
 | Cadence engine | Audio/DSP eng (subagent 75836ea5) | MIDI clips, transport, PCM render | ✅ 21 tests |
-| Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed | ✅ 16 tests |
+| Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch | ✅ 44 tests |
 | Folio engine | PDF eng (subagent bdd8014e) | lopdf parse/annotate/save | ✅ 17 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
 | Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX | ✅ 25 tests |
@@ -562,5 +563,9 @@ Pitch 17, Quill 12 and Folio 10 tests pass against a freshly built nf-cli. All t
 ## Recovered alpha.3 Mixer consumer (2026-11-05)
 
 22 Cadence tests pass against a freshly built nf-cli. Cadence and native-cadence example typechecks pass. Root and example lockfiles and all release hashes pass the pin verifier.
+
+## Recovered alpha.3 Timeline consumer (2026-11-05)
+
+23 Splice tests pass against a freshly built nf-cli; Splice TypeScript passes. The consumer contract pins the alpha.3 release tarball. The unreleased second NYC-Tron timeline cluster is still deferred.
 
 These are local source/protocol checks. No new native build or device acceptance was run. The follow-up has not been pushed or merged.
