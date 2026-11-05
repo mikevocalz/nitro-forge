@@ -501,3 +501,23 @@ source checks, native autolinking evidence and remaining release gates.
 - Preview production build passed; UI boundary check passed.
 - NativePopover and grouped Select are bound in both hosts; Layers uses its original 280pt width.
 - No device, screen-reader, foldable, or native rebuild acceptance was performed for this change.
+
+## Audio API migration draft — November 4, 2026
+
+Audio lab and audio-ui migrate native capture and shared playback to
+react-native-audio-api 1.0.0; browser capture directly uses MediaRecorder
+because upstream has no browser recorder. Seven dependency-free audio graph /
+PCM contracts pass locally. Full install correctly blocked by the 24-hour
+package-age policy until 18:01:08.810 UTC; lockfile, TypeScript, Metro, native
+builds and hardware capture/playback are pending. No Cadence project attachment,
+multitrack DAW, Meta runtime or production readiness is asserted.
+See packages/audio-ui/README.md for API/skill roster and exact boundaries.
+
+## Recovered alpha.3 audio integration (2026-11-05)
+
+- All six NYC-Tron dependency references use v0.1.0-alpha.3; the UI and platform-services tarballs were downloaded and checked against release SHA256SUMS.
+- Audio UI: 68 tests pass, including native policy-action ordering and capture/preview ownership. The eight dependency-free graph tests pass.
+- Audio UI and audio-lab TypeScript pass; the audio-lab web export passes.
+- Expo autolinking resolves NYCTronPlatformServices alpha.3 on Apple and Android. Android uses the package's Expo Modules v2 path; an empty legacy modules array is expected.
+- Preview intent now lives in NYC-Tron's session store. Audition stops on interruptions, output loss and resets and requires a new Play press. Recorders keep their own capture lifecycle.
+- No native rebuild, microphone/device, routing or interruption acceptance was run for this follow-up.

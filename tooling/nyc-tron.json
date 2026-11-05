@@ -2,6 +2,7 @@
   "tag": "v0.1.0-alpha.3",
   "packages": {
     "@nyc-tron/ui": {
+      "version": "0.1.0-alpha.3",
       "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-ui-0.1.0-alpha.3.tgz",
       "sha256": "13b2c46390ffd54e2713447f9e2c79df5b35a883c29f87050a6a94b5cc5b9db7"
     },
@@ -16,6 +17,13 @@
     "@nyc-tron/reserved-regions": {
       "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-reserved-regions-0.1.0-alpha.3.tgz",
       "sha256": "fcc4082a2b99d425a597fc91fbd0baeaaf20fda673336309b0545b63bbd31774"
+    },
+    "@nyc-tron/platform-services": {
+      "version": "0.1.0-alpha.3",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-platform-services-0.1.0-alpha.3.tgz",
+      "sha256": "fa762e90ef32be9dc0f6b94fad62562c7ca8b67da1d5a4ddac239ab56276fd4a"
     }
-  }
+  },
+  "repository": "mikevocalz/NYC-Tron-UI",
+  "commit": "e63e4840719f08d1177a0dab01ad181c77769103"
 }
