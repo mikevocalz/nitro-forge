@@ -25,8 +25,8 @@ jobs:
           node-version: '24'
       - name: Enable pnpm
         run: corepack enable
-      - name: Resolve isolated Nitro v1 alpha dependencies
-        run: pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: Install the committed lockfile exactly (Nitro v1 alpha included)
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Ensure v1 runtime and code generator are the same published release
         run: |
           pnpm --filter @nitro-forge/ignition-v1-lab exec node -p "require('nitrogen/package.json').version"
