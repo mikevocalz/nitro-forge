@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./instrument-adapter": "./src/instrument-adapter.ts",
-    "./instrument-session": "./src/instrument-session.ts"
+    "./instrument-session": "./src/instrument-session.ts",
+    "./editor-adapter": "./src/editor-adapter.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
