@@ -1,0 +1,19 @@
+# Standalone Expo 58 / RN 0.88 workspace. It is not part of the root
+# workspace, so the Expo 54 example and the Node test lanes never resolve
+# against Expo 58 native packages. The two Forge packages join from source.
+packages:
+  - "."
+  - "../../packages/ignition"
+  - "../../packages/cadence"
+# Ignition's own devDependency is the legacy Nitro 0.x used for its spec
+# typecheck. Inside this app every copy must be the Nitro v1 alpha the
+# native build links, or Metro bundles a second react-native-nitro-modules.
+overrides:
+  react-native-nitro-modules: "1.0.0-alpha.nightly.120.g33ef045b96c0"
+minimumReleaseAge: 0
+allowBuilds:
+  esbuild: false
+# @expo/ui 58.0.27 ships spm.config.json but no prebuilt XCFramework, so Expo's
+# SwiftPM plugin refuses it. The patch adds its Package.swift (see the file).
+patchedDependencies:
+  "@expo/ui@58.0.27": patches/@expo__ui@58.0.27.patch

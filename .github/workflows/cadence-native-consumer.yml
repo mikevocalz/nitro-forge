@@ -3,8 +3,12 @@ on:
   pull_request:
     paths:
       - "packages/cadence/**"
+      - "packages/ignition/**"
       - "examples/native-cadence/**"
-      - "tooling/native/stage-cadence-consumer.mjs"
+      - "tooling/nyc-tron.json"
+      - "tooling/nyc-tron-metro.cjs"
+      - "tooling/verify-nyc-tron-pin.mjs"
+      - "tooling/native/**"
       - ".github/workflows/cadence-native-consumer.yml"
   workflow_dispatch:
 concurrency:
@@ -15,37 +19,37 @@ permissions:
 env:
   EXPO_NO_TELEMETRY: "1"
   CI: "1"
-  # NYC-Tron v0.1.0-alpha.2. alpha.1 imported ExpoUI from the native-controls
-  # module, which Expo SDK 58 SwiftPM source builds cannot resolve (fixed in d4f350a).
-  NYC_TRON_REF: ff08d05b8d42ecffddc71ee674016bf10c47d2c6
+# examples/native-cadence is its own pnpm workspace (Expo 58 / RN 0.88) that
+# joins packages/ignition and packages/cadence from source and installs
+# @nyc-tron/* from the release tarballs pinned in tooling/nyc-tron.json.
+# No NYC-Tron checkout, no staging copy.
 jobs:
   consumer-types:
-    name: Native consumer workspace and TypeScript
+    name: Native consumer install, TypeScript and bundle
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: mikevocalz/NYC-Tron-UI
-          ref: ff08d05b8d42ecffddc71ee674016bf10c47d2c6
-          path: dependency-nyc-tron
       - uses: actions/setup-node@v4
         with:
           node-version: "24.19.0"
       - run: corepack enable
-      - name: Build NYC-Tron native-controls (exports dist only)
-        working-directory: dependency-nyc-tron
+      - name: Verify NYC-Tron pin and re-hash release assets
+        run: node tooling/verify-nyc-tron-pin.mjs --download
+      - name: Frozen install from release tarballs
+        working-directory: examples/native-cadence
+        run: corepack pnpm install --frozen-lockfile
+      - name: Typecheck
+        working-directory: examples/native-cadence
+        run: corepack pnpm typecheck
+      - name: Bundle with Metro and check one copy of each shared runtime
+        working-directory: examples/native-cadence
         run: |
-          corepack pnpm install --frozen-lockfile
-          corepack pnpm --filter @nyc-tron/native-controls build
-      - name: Stage real source packages without vendoring
-        run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
-      - name: Install and typecheck
-        run: |
-          cd "$RUNNER_TEMP/cadence-lab"
-          corepack pnpm install --no-frozen-lockfile
-          corepack pnpm --dir app typecheck
+          for platform in android ios; do
+            corepack pnpm exec expo export --platform "$platform" --dump-sourcemap \
+              --output-dir "$RUNNER_TEMP/export-$platform"
+            node ../../tooling/native/check-bundle-singletons.mjs "$RUNNER_TEMP/export-$platform" "$platform"
+          done
   android:
     name: Expo 58 Android consumer compile
     runs-on: ubuntu-latest
@@ -53,11 +57,6 @@ jobs:
     needs: consumer-types
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: mikevocalz/NYC-Tron-UI
-          ref: ff08d05b8d42ecffddc71ee674016bf10c47d2c6
-          path: dependency-nyc-tron
       - uses: actions/setup-node@v4
         with:
           node-version: "24.19.0"
@@ -66,17 +65,11 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: corepack enable
-      - name: Build NYC-Tron native-controls (exports dist only)
-        working-directory: dependency-nyc-tron
+      - working-directory: examples/native-cadence
         run: |
           corepack pnpm install --frozen-lockfile
-          corepack pnpm --filter @nyc-tron/native-controls build
-      - run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
-      - run: |
-          cd "$RUNNER_TEMP/cadence-lab"
-          corepack pnpm install --no-frozen-lockfile
-          corepack pnpm --dir app exec expo prebuild --platform android --no-install --non-interactive
-          cd app/android
+          corepack pnpm exec expo prebuild --platform android --no-install --non-interactive
+          cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
   ios:
@@ -89,28 +82,16 @@ jobs:
     needs: consumer-types
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: mikevocalz/NYC-Tron-UI
-          ref: ff08d05b8d42ecffddc71ee674016bf10c47d2c6
-          path: dependency-nyc-tron
       - uses: actions/setup-node@v4
         with:
           node-version: "24.19.0"
       - run: corepack enable
-      - name: Build NYC-Tron native-controls (exports dist only)
-        working-directory: dependency-nyc-tron
+      - working-directory: examples/native-cadence
         run: |
           corepack pnpm install --frozen-lockfile
-          corepack pnpm --filter @nyc-tron/native-controls build
-      - run: node tooling/native/stage-cadence-consumer.mjs dependency-nyc-tron "$RUNNER_TEMP/cadence-lab"
-      - run: |
-          cd "$RUNNER_TEMP/cadence-lab"
-          corepack pnpm install --no-frozen-lockfile
           xcodebuild -version
-          node "$GITHUB_WORKSPACE/tooling/native/check-swift-tools.mjs" app
-          corepack pnpm --dir app exec expo prebuild --platform ios --no-install --non-interactive
-          cd app
+          node "$GITHUB_WORKSPACE/tooling/native/check-swift-tools.mjs" .
+          corepack pnpm exec expo prebuild --platform ios --no-install --non-interactive
           # Nitro v1 is SwiftPM-only; its Podspec is intentionally empty.
           # Expo SDK 58 SwiftPM integration is preview/experimental, not default.
           corepack pnpm exec react-native spm add --deintegrate --yes

@@ -27,6 +27,17 @@ describe("native instrument session (real Rust host, no fake UI document)", () =
     expect(session.state.pan).toBe(-0.35);
     expect(seen).toHaveLength(2);
 
+    // InstrumentKnob (@nyc-tron/ui) props share the same serialized Rust path.
+    const knob = session.knobs.gain;
+    expect(knob).toMatchObject({ min: 0, max: 1, step: 0.01, unit: "" });
+    expect(gain).toMatchObject({ minimum: 0, maximum: 1, step: 0.01 });
+    const committed = await knob.onCommit(0.52);
+    expect(committed.gain).toBe(0.52);
+    expect(session.state.gain).toBe(0.52);
+    expect(seen).toHaveLength(3);
+    expect(await session.undo()).toBe(true);
+    expect(session.state.gain).toBe(0.41);
+
     expect(await session.undo()).toBe(true);
     expect(session.state.pan).toBe(0);
     expect(await session.redo()).toBe(true);
