@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Nitro Forge Audio Lab",
+    "slug": "forge-audio-lab",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Nitro Forge Audio Lab to record sound for your studio project.",
+          "enableBackgroundRecording": false
+        }
+      ]
+    ]
+  }
+}
