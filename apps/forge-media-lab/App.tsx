@@ -1,13 +1,11 @@
 import { ScrollView, Text, View } from "react-native";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
-import {
-  FRAME_RATES,
-  NativeLevelSlider,
-  NativeSeekBar,
-  WaveformLane,
-  type WaveformPeak,
-} from "@nitro-forge/media-ui";
+import { NativeSeekBar } from "@nyc-tron/ui/components/forge/NativeSeekBar";
+import { WaveformLane } from "@nyc-tron/ui/components/forge/WaveformLane";
+import { FRAME_RATES } from "@nyc-tron/ui/components/forge/timebase";
+import type { WaveformPeak } from "@nyc-tron/ui/components/forge/waveform";
+import { LevelFader } from "@nyc-tron/ui/components/forge/audio/LevelFader";
 
 interface DemoState { frame: number; gain: number }
 const store = createStore<DemoState>(() => ({ frame: 1800, gain: 0.72 }));
@@ -36,12 +34,13 @@ export default function App() {
         <Text style={{ color: "white" }}>Waveform display fixture (not live audio)</Text>
         <WaveformLane
           peaks={syntheticPeakFixture}
+          position={frame / 18000}
           height={74} columns={96} testID="forge-waveform"
           onSeekNormalized={(p) => store.setState({ frame: Math.round(p * 18000) })}
         />
       </View>
-      <NativeLevelSlider value={gain} testID="forge-level"
-        onValueChange={(next) => store.setState({ gain: next })} />
+      <LevelFader value={gain} label="Gain" orientation="horizontal" testID="forge-level"
+        onCommit={(next) => store.setState({ gain: next })} />
       <Text style={{ color: "#9999AF", fontSize: 12 }}>
         This test surface demonstrates control state only. No actual video decoding,
         microphone recording, or Rust timeline mutation is attached.
