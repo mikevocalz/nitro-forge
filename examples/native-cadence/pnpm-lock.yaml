@@ -34,6 +34,9 @@ importers:
       expo:
         specifier: 58.0.23
         version: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      expo-constants:
+        specifier: 58.0.15
+        version: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -3337,6 +3340,7 @@ snapshots:
   2g@1.0.1(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
+    optional: true
 
   2g@1.0.1(typescript@6.0.3):
     optionalDependencies:
@@ -3953,6 +3957,7 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
+    optional: true
 
   '@expo/cli@58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)':
     dependencies:
@@ -4056,6 +4061,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   '@expo/config-plugins@58.0.12(typescript@6.0.3)':
     dependencies:
@@ -4092,6 +4098,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   '@expo/config@58.0.11(typescript@6.0.3)':
     dependencies:
@@ -4122,6 +4129,7 @@ snapshots:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0)
+    optional: true
 
   '@expo/devtools@58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
     dependencies:
@@ -4136,6 +4144,7 @@ snapshots:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0)
+    optional: true
 
   '@expo/dom-webview@58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
     dependencies:
@@ -4179,6 +4188,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   '@expo/image-utils@0.12.6(typescript@6.0.3)':
     dependencies:
@@ -4199,6 +4209,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   '@expo/inline-modules@0.2.9(typescript@6.0.3)':
     dependencies:
@@ -4219,6 +4230,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   '@expo/local-build-cache-provider@58.0.11(typescript@6.0.3)':
     dependencies:
@@ -4240,6 +4252,7 @@ snapshots:
       stacktrace-parser: 0.1.11
     optionalDependencies:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
+    optional: true
 
   '@expo/log-box@58.0.15(@expo/dom-webview@58.0.2)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
     dependencies:
@@ -4289,6 +4302,7 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
+    optional: true
 
   '@expo/metro-config@58.0.21(expo@58.0.23)(typescript@6.0.3)':
     dependencies:
@@ -4339,6 +4353,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   '@expo/metro-file-map@58.0.5(typescript@6.0.3)':
     dependencies:
@@ -4421,6 +4436,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   '@expo/prebuild-config@58.0.19(typescript@6.0.3)':
     dependencies:
@@ -4447,6 +4463,7 @@ snapshots:
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   '@expo/require-utils@58.0.5(typescript@6.0.3)':
     dependencies:
@@ -4461,7 +4478,7 @@ snapshots:
   '@expo/router-server@58.0.21(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react@19.3.0)':
     dependencies:
       debug: 4.4.3
-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
+      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       expo-constants: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)
       expo-font: 58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       expo-server: 58.0.6
@@ -5221,7 +5238,7 @@ snapshots:
       react-refresh: 0.14.2
     optionalDependencies:
       '@babel/runtime': 7.29.13
-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
+      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -5589,6 +5606,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   expo-asset@58.0.20(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3):
     dependencies:
@@ -5610,6 +5628,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3):
     dependencies:
@@ -5625,6 +5644,7 @@ snapshots:
     dependencies:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0)
+    optional: true
 
   expo-file-system@58.0.13(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
@@ -5636,6 +5656,7 @@ snapshots:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0)
+    optional: true
 
   expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
     dependencies:
@@ -5645,7 +5666,7 @@ snapshots:
 
   expo-keep-awake@58.0.3(expo@58.0.23)(react@19.3.0):
     dependencies:
-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
+      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       react: 19.3.0
 
   expo-modules-autolinking@58.0.17(typescript@5.9.3):
@@ -5658,6 +5679,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   expo-modules-autolinking@58.0.17(typescript@6.0.3):
     dependencies:
@@ -5682,6 +5704,7 @@ snapshots:
       invariant: 2.2.4
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0)
+    optional: true
 
   expo-modules-core@58.0.30(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
     dependencies:
@@ -5694,6 +5717,7 @@ snapshots:
   expo-modules-jsi@58.0.22(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@types/react@19.3.0)(react@19.3.0)
+    optional: true
 
   expo-modules-jsi@58.0.22(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
@@ -5749,6 +5773,7 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
+    optional: true
 
   expo@58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3):
     dependencies:

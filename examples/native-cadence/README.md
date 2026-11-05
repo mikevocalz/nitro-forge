@@ -61,6 +61,7 @@ No Vercel deployments, raw HTML, Expo Audio or Expo Video.
   (then from a pinned NYC-Tron commit; now from the release tarballs).
 - Android initial Gradle configure failure was the demo package identifier ending in Java keyword 'native'. Corrected to ai.nitroforge.cadence.studio.
 - iOS first CocoaPods attempt reached native dependencies but Nitro v1's NitroModules.podspec is deliberately source-empty. Nitro v1 uses SwiftPM. The integration workflow now tries React Native 0.88 experimental spm conversion; Expo SDK 58's SwiftPM path is preview-only. This is a platform integration gate, not evidence that SwiftUI or Forge C++ failed compilation.
+- With NYC-Tron v0.1.0-alpha.2 the native-controls pod no longer imports ExpoUI, and the iOS compile got past it ([run 42104754906](https://github.com/mikevocalz/nitro-forge/actions/runs/42104754906)). It then stopped in Expo's SwiftPM app-config script phase, which resolves `expo-constants` from the app root. This workspace is an isolated pnpm install, where `expo-constants` only exists under `expo`, so the app now lists `expo-constants` directly at the locked 58.0.15. Keep it even though App.tsx never imports it.
 - Neither built app has executed real Forge Rust operations on hardware. Do not claim otherwise.
 
 ## Nitro v1 constructor registration
