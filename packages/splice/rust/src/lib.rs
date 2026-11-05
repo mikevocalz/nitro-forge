@@ -9,7 +9,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Event, Journal,
+    Event, HeapSize, Journal,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -203,6 +203,30 @@ fn check_span(in_s: f64, out_s: f64, src: &Source) -> Result<(), EngineError> {
 // ---------------------------------------------------------------------------
 
 /// Video timeline engine. See ENGINE_OPS.md § `splice-engine`.
+impl HeapSize for Source {
+    fn heap_size(&self) -> usize {
+        self.name.heap_size()
+    }
+}
+
+impl HeapSize for Clip {
+    fn heap_size(&self) -> usize {
+        0
+    }
+}
+
+impl HeapSize for Track {
+    fn heap_size(&self) -> usize {
+        self.clips.heap_size()
+    }
+}
+
+impl HeapSize for Doc {
+    fn heap_size(&self) -> usize {
+        self.sources.heap_size() + self.tracks.heap_size()
+    }
+}
+
 pub struct SpliceEngine {
     doc: Doc,
     /// Whole-doc snapshots as undo entries (capacity 64).
@@ -244,6 +268,17 @@ impl Default for SpliceEngine {
 }
 
 impl Engine for SpliceEngine {
+    /// Undo entries here are whole-document clones, so each is charged at the
+    /// live document's size rather than walked: O(live doc), no allocation.
+    fn heap_size_estimate(&self) -> usize {
+        let live = self.doc.heap_size();
+        // The engine itself lives in a host-owned Box.
+        std::mem::size_of::<Self>()
+            + live
+            + self.journal.reserved_bytes()
+            + self.journal.entries().count() * live
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Splice
     }

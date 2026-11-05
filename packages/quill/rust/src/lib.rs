@@ -12,7 +12,7 @@ mod docx;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    HeapSize, Journal,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -380,6 +380,30 @@ impl StylePatch {
 // ---------------------------------------------------------------------------
 // Engine
 // ---------------------------------------------------------------------------
+
+impl HeapSize for Style {
+    fn heap_size(&self) -> usize {
+        self.color.heap_size() + self.link.heap_size()
+    }
+}
+
+impl HeapSize for Inline {
+    fn heap_size(&self) -> usize {
+        self.text.heap_size() + self.style.heap_size()
+    }
+}
+
+impl HeapSize for Block {
+    fn heap_size(&self) -> usize {
+        self.inlines.heap_size()
+    }
+}
+
+impl HeapSize for UndoEntry {
+    fn heap_size(&self) -> usize {
+        self.removed.heap_size() + self.inserted.heap_size()
+    }
+}
 
 pub struct QuillEngine {
     blocks: Vec<Block>,
@@ -832,6 +856,15 @@ impl Default for QuillEngine {
 }
 
 impl Engine for QuillEngine {
+    /// Undo entries are inverse diffs, so they are walked directly.
+    fn heap_size_estimate(&self) -> usize {
+        // The engine itself lives in a host-owned Box.
+        std::mem::size_of::<Self>()
+            + self.blocks.heap_size()
+            + self.journal.reserved_bytes()
+            + self.journal.entries().map(HeapSize::heap_size).sum::<usize>()
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Quill
     }

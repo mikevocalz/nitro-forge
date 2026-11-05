@@ -172,6 +172,23 @@ pub unsafe extern "C" fn nf_v1_restore(handle: i64, bytes: *const u8, len: usize
     }
 }
 
+/// Estimated heap bytes owned by one document (live state plus undo journal),
+/// for the host's GC memory-pressure hint. Returns 0 for an invalid or closed
+/// handle and after a caught panic; 0 never means "free".
+///
+/// Takes only this document's lock, never allocates, and is safe to call
+/// often. It still waits behind an in-flight command on the same document,
+/// so hosts call it from their document worker, not the JS thread.
+#[no_mangle]
+pub extern "C" fn nf_v1_document_size(handle: i64) -> usize {
+    catch_unwind(AssertUnwindSafe(|| {
+        registry()
+            .with_engine(handle, |engine| Ok(engine.heap_size_estimate()))
+            .unwrap_or(0)
+    }))
+    .unwrap_or(0)
+}
+
 /// Close waits for in-flight document work and returns true exactly once.
 #[no_mangle]
 pub extern "C" fn nf_v1_close(handle: i64) -> i32 {
@@ -238,6 +255,45 @@ mod tests {
             assert_eq!(restored["data"]["computed"].as_f64(), Some(42.0));
             assert_eq!(nf_v1_close(h), 1);
             assert_eq!(nf_v1_close(h), 0);
+        }
+    }
+
+    #[test]
+    fn document_size_tracks_edits_and_is_zero_once_closed() {
+        unsafe {
+            let mut error: *mut c_char = std::ptr::null_mut();
+            let h = nf_v1_open(b"tally".as_ptr(), 5, &mut error);
+            assert!(h > 0 && error.is_null());
+            let empty = nf_v1_document_size(h);
+            assert!(empty > 0, "a live tally document owns heap");
+            let value = "x".repeat(64 * 1024);
+            let command =
+                format!(r#"{{"op":"setCell","payload":{{"addr":"A1","value":"{value}"}}}}"#);
+            assert_eq!(apply(h, &command)["ok"], true);
+            let edited = nf_v1_document_size(h);
+            assert!(
+                edited >= empty + value.len(),
+                "64 KiB cell must be counted: {empty} -> {edited}"
+            );
+            assert_eq!(nf_v1_document_size(h), edited, "query must not mutate");
+            assert_eq!(nf_v1_close(h), 1);
+            assert_eq!(nf_v1_document_size(h), 0);
+            assert_eq!(nf_v1_document_size(0), 0);
+            assert_eq!(nf_v1_document_size(-7), 0);
+        }
+    }
+
+    #[test]
+    fn every_linked_engine_reports_a_measured_size() {
+        for name in [
+            "prism", "cadence", "splice", "folio", "pitch", "tally", "quill",
+        ] {
+            let kind = EngineKind::parse(name).expect("known engine kind");
+            let engine = factory(kind).expect("engine linked into nf-sys");
+            assert!(
+                engine.heap_size_estimate() > 0,
+                "{name} relies on the unmeasured default of 0"
+            );
         }
     }
 

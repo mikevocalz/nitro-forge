@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    HeapSize, Journal,
 };
 use serde_json::{json, Value};
 
@@ -52,6 +52,29 @@ enum UndoEntry {
         h: u32,
         prev: Vec<u8>,
     },
+}
+
+impl HeapSize for Layer {
+    /// Raster buffers are `Arc`-shared between live layers and undo entries.
+    /// Each reference is charged `capacity / strong_count`; every reference
+    /// lives inside this engine, so the shares sum to each distinct buffer
+    /// once. Shapes own no heap.
+    fn heap_size(&self) -> usize {
+        let pixels = match &self.content {
+            Content::Raster(buffer) => buffer.capacity() / Arc::strong_count(buffer),
+            Content::Shape(_) => 0,
+        };
+        self.name.heap_size() + pixels
+    }
+}
+
+impl HeapSize for UndoEntry {
+    fn heap_size(&self) -> usize {
+        match self {
+            UndoEntry::Doc(state) => state.layers.heap_size(),
+            UndoEntry::Pixels { prev, .. } => prev.heap_size(),
+        }
+    }
 }
 
 pub struct PrismEngine {
@@ -679,6 +702,15 @@ impl PrismEngine {
 }
 
 impl Engine for PrismEngine {
+    /// Undo entries are inverse diffs, so they are walked directly.
+    fn heap_size_estimate(&self) -> usize {
+        // The engine itself lives in a host-owned Box.
+        std::mem::size_of::<Self>()
+            + self.layers.heap_size()
+            + self.journal.reserved_bytes()
+            + self.journal.entries().map(HeapSize::heap_size).sum::<usize>()
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Prism
     }
