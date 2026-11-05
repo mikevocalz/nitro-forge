@@ -1,0 +1,5 @@
+# Nitro codegen and real platform Rust build outputs; regenerated in CI.
+nitrogen/generated/
+native/apple/
+native/android/
+cpp/nf_v1.h
