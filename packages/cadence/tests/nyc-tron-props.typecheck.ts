@@ -8,6 +8,7 @@ import type { InstrumentKnobProps } from "@nyc-tron/ui/components/forge/inputs/I
 import type { PrecisionScrubberProps } from "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber";
 import type { CadenceKnobBinding } from "../src/instrument-adapter";
 import type { MixingConsoleProps } from "@nyc-tron/ui/components/forge/audio/MixingConsole";
+import type { LevelFaderProps } from "@nyc-tron/ui/components/forge/audio/LevelFader";
 import type { TempoAndMetronomeProps } from "@nyc-tron/ui/components/forge/audio/TempoAndMetronome";
 import type { MIDIPianoRollProps } from "@nyc-tron/ui/components/forge/midi/MIDIPianoRoll";
 import type { MIDIVelocityLaneProps } from "@nyc-tron/ui/components/forge/midi/MIDIVelocityLane";
@@ -44,6 +45,13 @@ export const mixerFeedsMixingConsole = (
   m: CadenceMixerBindings, channels: readonly CadenceMixerChannel[],
 ): Pick<MixingConsoleProps, "channels" | "onGainCommit" | "onPanCommit" | "onMutedCommit" | "onSoloCommit"> =>
   ({ channels, ...m });
+// A single channel's gain drives a standalone LevelFader: the engine's linear
+// 0..1 volume is LevelFader's linear gain, and one commit is one engine write.
+export const channelFeedsLevelFader = (
+  m: CadenceMixerBindings, channel: CadenceMixerChannel,
+): Pick<LevelFaderProps, "value" | "label" | "onCommit"> =>
+  ({ value: channel.gain, label: channel.name, onCommit: (gain) => m.onGainCommit(channel.id, gain) });
+export const levelFaderPropsAreTyped: IsAny<LevelFaderProps> extends false ? true : never = true;
 export const tempoFeedsTempoAndMetronome = (
   t: CadenceTempoBindings,
 ): Pick<TempoAndMetronomeProps, "onTempoCommit" | "onTimeSignatureCommit"> => t;
