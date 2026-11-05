@@ -4,12 +4,9 @@
 //! document changed, `None` when the request matched the current state (the
 //! engine then records no undo entry and emits no event).
 
-use crate::{req_u64, Doc, TrackKind};
+use crate::{req_u64, Doc, TrackKind, MAX_TRACK_NAME_CHARS as MAX_NAME_CHARS};
 use ignition_core::EngineError;
 use serde_json::{json, Value};
-
-/// Longest track name `renameTrack` accepts, in characters.
-const MAX_NAME_CHARS: usize = 120;
 
 pub(crate) fn apply(doc: &mut Doc, op: &str, p: &Value) -> Result<Option<Value>, EngineError> {
     match op {

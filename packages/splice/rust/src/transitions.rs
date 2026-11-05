@@ -51,7 +51,14 @@ pub struct Transition {
 
 /// Whether `tr` still fits on `track`: both clips present and touching, and
 /// enough clip length and media handle on each side.
-pub(crate) fn check(doc: &Doc, track: &Track, tr: &Transition) -> Result<(), EngineError> {
+/// `others` are the transitions that share the track's clips with `tr`
+/// (it may include `tr` itself, which is skipped).
+pub(crate) fn check(
+    doc: &Doc,
+    track: &Track,
+    others: &[Transition],
+    tr: &Transition,
+) -> Result<(), EngineError> {
     let (left, right) = match (track.clip(tr.left_id), track.clip(tr.right_id)) {
         (Some(l), Some(r)) => (l, r),
         _ => {
@@ -78,8 +85,7 @@ pub(crate) fn check(doc: &Doc, track: &Track, tr: &Transition) -> Result<(), Eng
     let half = tr.duration_s / 2.0;
     // Each clip's other transition shares its length.
     let used = |clip_id: u64| -> f64 {
-        track
-            .transitions
+        others
             .iter()
             .filter(|o| o.id != tr.id && (o.left_id == clip_id || o.right_id == clip_id))
             .map(|o| o.duration_s / 2.0)
@@ -161,7 +167,7 @@ fn add(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
         kind,
         duration_s,
     };
-    check(doc, &doc.tracks[lt], &tr)?;
+    check(doc, &doc.tracks[lt], &doc.tracks[lt].transitions, &tr)?;
     doc.tracks[lt].transitions.push(tr);
     Ok(json!({ "transition_id": id }))
 }
@@ -183,7 +189,7 @@ fn set(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
     let mut tr = doc.tracks[ti].transitions[i].clone();
     tr.kind = kind.unwrap_or(tr.kind);
     tr.duration_s = duration_s.unwrap_or(tr.duration_s);
-    check(doc, &doc.tracks[ti], &tr)?;
+    check(doc, &doc.tracks[ti], &doc.tracks[ti].transitions, &tr)?;
     doc.tracks[ti].transitions[i] = tr;
     Ok(json!({ "ok": true }))
 }
@@ -205,11 +211,10 @@ pub(crate) fn prune(doc: &mut Doc) -> Vec<u64> {
     for ti in 0..doc.tracks.len() {
         let mut i = 0;
         while i < doc.tracks[ti].transitions.len() {
-            let tr = doc.tracks[ti].transitions[i].clone();
             // Check against the transitions kept so far plus this one.
-            let mut probe = doc.tracks[ti].clone();
-            probe.transitions.truncate(i + 1);
-            if check(doc, &probe, &tr).is_ok() {
+            let track = &doc.tracks[ti];
+            let tr = &track.transitions[i];
+            if check(doc, track, &track.transitions[..=i], tr).is_ok() {
                 i += 1;
             } else {
                 removed.push(tr.id);
