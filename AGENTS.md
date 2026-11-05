@@ -31,3 +31,29 @@ pnpm --filter @nitro-forge/console demo   # all-engines workflow demo
 - Op names live in `docs/ENGINE_OPS.md` — change the doc and every engine together.
 - No `unsafe` inside product engines (FFI lives in `rust/nf-sys` only).
 - Never claim verification that wasn't run; update `docs/ROSTER.md` truthfully.
+
+## Shared UI ownership: NYC-Tron UI (2026-11-04)
+
+Reusable presentational components and native controls belong to the separate
+`mikevocalz/NYC-Tron-UI` repository, under `packages/ui/src/components/`. That
+source is on NYC-Tron-UI `main` and ships as `v0.1.0-alpha.1` GitHub Release
+tarballs (one per package, with `SHA256SUMS`). Forge instruments sit in
+`packages/ui/src/components/forge/` and are imported by named subpath
+(`@nyc-tron/ui/components/forge/<Component>`). The `@nyc-tron/ui` package is
+`"private": true` and is not on npm; install it by release tarball URL.
+
+**Do not create a second permanent generic or Forge UI implementation in this
+engine repository.** Keep `@nitro-forge/ignition`, `prism`, `cadence`,
+`splice`, `folio`, `pitch`, `tally` and `quill` focused on document state,
+commands, transport and per-editor composition. The suite may install all
+engines; an embedded consumer installs only the engines it needs.
+
+Draft PRs opened before the extraction (#1 to #37) stay as source references.
+Do not delete their branches or migrate them automatically. Once the NYC-Tron
+controls are released and validated on native builds, replace each UI
+implementation in a dedicated integration PR that keeps behavior, source
+ownership and test evidence. Dependencies point one way: Nitro Forge imports
+NYC-Tron UI, and NYC-Tron UI never imports Nitro Forge. Keep app-provided theme
+CSS, and do not depend on the NYC-MON palette.
+
+Read `docs/NYC_TRON_UI_HANDOFF.md` before any Forge controls or studio UI work.
