@@ -148,17 +148,22 @@ internal class WhiteboardRenderLoop(
     isFrameQueued = false
     if (isDisposed) return
     var failure: Throwable? = null
-    slot.withSurface { entry ->
+    val drew = slot.withSurface { entry ->
       failure = drawInto(entry)
     }
     estimatedBytes = document.estimatedBytes() + frames.bitmapBytes()
-    failure?.let {
-      Log.w(TAG, "Drawing into surface ${config.surfaceId} failed", it)
+    // Transitions notify JS listeners, so they run only after the slot lock
+    // is released: Viro's onSurfaceRevoked waits on that lock.
+    val drawFailure = failure
+    if (drawFailure != null) {
+      Log.w(TAG, "Drawing into surface ${config.surfaceId} failed", drawFailure)
       transition(lifecycle.onDrawFailed())
+    } else if (drew && lifecycle.state == WhiteboardRendererState.LOST) {
+      transition(lifecycle.onSurfaceProvided())
     }
   }
 
-  /** Caller holds the slot lock. @return the failure, or null on success. */
+  /** Caller holds the slot lock, so this must not notify listeners. @return the failure, or null on success. */
   private fun drawInto(entry: CanvasSurfaces.Entry): Throwable? {
     val surface = entry.surface
     if (!surface.isValid) return IllegalStateException("Surface ${entry.id} is no longer valid")
@@ -194,9 +199,6 @@ internal class WhiteboardRenderLoop(
       }
     }
     unlockFailure?.let { return it }
-    if (failure == null && lifecycle.state == WhiteboardRendererState.LOST) {
-      transition(lifecycle.onSurfaceProvided())
-    }
     return failure
   }
 
