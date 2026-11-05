@@ -1,7 +1,8 @@
 import { ScrollView, Text } from "react-native";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
-import { NativeColorChannels, type RgbaColor } from "@nitro-forge/color-ui";
+import { ColorChannels } from "@nyc-tron/ui/components/forge/ColorChannels";
+import type { RgbaColor } from "@nyc-tron/ui/components/forge/color";
 
 interface DemoState { color: RgbaColor }
 const store = createStore<DemoState>(() => ({
@@ -18,7 +19,7 @@ export default function App() {
       <Text style={{ color: "#CBCBDE" }}>
         Universal SwiftUI / Compose / web display-color editor
       </Text>
-      <NativeColorChannels
+      <ColorChannels
         value={color}
         testID="forge-color-channels"
         onValueChange={(next) => store.setState({ color: next })}

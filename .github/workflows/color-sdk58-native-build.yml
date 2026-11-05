@@ -6,6 +6,8 @@ on:
       - 'packages/color-ui/**'
       - 'apps/forge-color-lab/**'
       - '.github/workflows/color-sdk58-native-build.yml'
+      - 'tooling/nyc-tron.json'
+      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 permissions:

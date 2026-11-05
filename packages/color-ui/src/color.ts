@@ -1,54 +1,20 @@
-/** Document-agnostic display color. Not a replacement for ICC/CMYK/spot colors. */
-export interface RgbaColor {
-  /** Integer red channel [0, 255]. */
-  readonly r: number;
-  /** Integer green channel [0, 255]. */
-  readonly g: number;
-  /** Integer blue channel [0, 255]. */
-  readonly b: number;
-  /** Floating alpha [0, 1]. */
-  readonly alpha: number;
-}
+/**
+ * RgbaColor, assertRgba, rgbaToHex and alphaPercent are owned by NYC-Tron UI
+ * (@nyc-tron/ui/components/forge/color). The HSV model, parseHexColor,
+ * rgbToHsv and hsvToRgb stay here until NYC-Tron-UI PR #21 ships them in
+ * v0.1.0-alpha.2; then delete this file's local code and re-export.
+ */
+import { assertRgba, type RgbaColor } from "@nyc-tron/ui/components/forge/color";
+
+export { alphaPercent, assertRgba, rgbaToHex } from "@nyc-tron/ui/components/forge/color";
+export type { RgbaColor } from "@nyc-tron/ui/components/forge/color";
+
 export interface HsvColor {
   /** Hue angle in degrees [0, 360), retained when saturation is zero by caller. */
   readonly h: number;
   readonly s: number;
   readonly v: number;
   readonly alpha: number;
-}
-
-export function assertRgba(color: RgbaColor): void {
-  for (const channel of [color.r, color.g, color.b]) {
-    if (!Number.isInteger(channel) || channel < 0 || channel > 255) {
-      throw new RangeError("RGB channels must be integer values 0..255");
-    }
-  }
-  if (!Number.isFinite(color.alpha) || color.alpha < 0 || color.alpha > 1) {
-    throw new RangeError("Alpha must be in [0, 1]");
-  }
-}
-
-/**
- * Whole opacity percent shown in the UI for a stored alpha.
- *
- * `#RRGGBBAA` stores alpha as one byte (0..255), so a slider value of 0.01
- * is written as `03` and parses back as 3/255 (about 0.0118). The byte step
- * (0.39%) is finer than 1%, so every whole percent 0..100 survives a hex
- * round trip under this rounding. Callers that need the exact float must keep
- * it outside the hex string.
- */
-export function alphaPercent(alpha: number): number {
-  if (!Number.isFinite(alpha) || alpha < 0 || alpha > 1) {
-    throw new RangeError("Alpha must be in [0, 1]");
-  }
-  return Math.round(alpha * 100);
-}
-
-export function rgbaToHex(color: RgbaColor, includeAlpha = true): string {
-  assertRgba(color);
-  const hex = (value: number) => Math.round(value).toString(16).padStart(2, "0").toUpperCase();
-  const rgb = "#" + hex(color.r) + hex(color.g) + hex(color.b);
-  return includeAlpha ? rgb + hex(color.alpha * 255) : rgb;
 }
 
 export function parseHexColor(value: string): RgbaColor {
