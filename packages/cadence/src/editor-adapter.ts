@@ -5,12 +5,10 @@ import type { CadenceDocument } from "./index";
  *
  * Consumers: `MixingConsole`/`ChannelStrip`/`PanControl`/`SoloMuteButtons`,
  * `TempoAndMetronome`, `MIDIPianoRoll`, `MIDIVelocityLane` and
- * `StepSequencer` from `@nyc-tron/ui` (NYC-Tron-UI #41). Those components
- * are not in a NYC-Tron release yet (the pin in tooling/nyc-tron.json is
- * v0.1.0-alpha.1), so the shapes here are structural and Cadence builds
- * without them. Only the tempo range is checked against a released type
- * (`PrecisionScrubber`, tests/nyc-tron-props.typecheck.ts); the rest gets
- * the same check once a release carries #41.
+ * `StepSequencer` from `@nyc-tron/ui` (NYC-Tron-UI #41, released in the
+ * v0.1.0-alpha.2 pin in tooling/nyc-tron.json). Cadence's runtime does not
+ * import them; tests/nyc-tron-props.typecheck.ts checks every binding here
+ * against the released props.
  *
  * Every callback is one engine command, so one UI gesture is one undo step.
  * Values are validated before the command; a rejected promise means the

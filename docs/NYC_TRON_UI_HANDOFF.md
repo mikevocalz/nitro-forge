@@ -174,13 +174,11 @@ inventory and status table. Update it, not this file, when a component moves.
 - Forge mixer/MIDI adapter (`@nitro-forge/cadence/editor-adapter`) and the
   note ops in #51: `MixingConsole`, `PanControl`, `SoloMuteButtons`,
   `TempoAndMetronome`, `MIDIPianoRoll`, `MIDIVelocityLane`, `StepSequencer`
-  and the `WaveformLane` viewport are NYC-Tron PR #41, **not in a release
-  yet** (the pin is v0.1.0-alpha.1, which also lacks `LevelFader`). The
-  adapter's shapes are structural; only the tempo range is checked against a
-  released type (`PrecisionScrubber`). When a release carries #41, bump
-  `tooling/nyc-tron.json` and extend `tests/nyc-tron-props.typecheck.ts` to
-  the new props. The metronome switch stays unbound until Cadence has audio
-  output.
+  and the `WaveformLane` viewport are NYC-Tron PR #41, released in
+  `v0.1.0-alpha.2` together with `LevelFader`. `tests/nyc-tron-props.typecheck.ts`
+  checks the mixer, tempo, piano roll, velocity lane and step sequencer
+  bindings against the released props. The metronome switch stays unbound
+  until Cadence has audio output.
 - Forge #7 and #23: npm distribution must keep per-package installation and
   native compatibility, not bundle every editor into one runtime.
 
