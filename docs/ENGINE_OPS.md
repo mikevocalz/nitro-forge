@@ -109,6 +109,9 @@ audio track clips have no notes — `addNote` → Validation).
 | `resizeClip` | `{id,length_ticks}` | `{ok}` | notes outside trimmed |
 | `addNote` | `{clip,pitch,velocity?,start_ticks,length_ticks}` | `{index}` | pitch 0..127; bounds-checked vs clip length |
 | `removeNote` | `{clip,index}` | `{ok}` | |
+| `moveNote` | `{clip,index,start_ticks,pitch?}` | `{ok}` | note keeps its index; omitted pitch is unchanged; start+length past clip end → OutOfBounds; pitch 0..127 |
+| `resizeNote` | `{clip,index,length_ticks}` | `{ok}` | length > 0; start+length past clip end → OutOfBounds |
+| `setVelocity` | `{clip,index,velocity}` | `{ok}` | 0..127 integer |
 | `project` | `{}` | meta: tempo, sig, track/clip/note counts, length_ticks | read-only |
 | `render` | `{from_ticks,to_ticks,sample_rate}` | `{samples_b64,frames,channels:2}` | f32le stereo; sine osc, 20ms linear attack/release, equal-power pan, track gain, mute/solo |
 

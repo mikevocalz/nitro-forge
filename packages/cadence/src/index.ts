@@ -25,6 +25,9 @@ export const OPS = {
   resizeClip: "resizeClip",
   addNote: "addNote",
   removeNote: "removeNote",
+  moveNote: "moveNote",
+  resizeNote: "resizeNote",
+  setVelocity: "setVelocity",
   project: "project",
   render: "render",
 } as const;
@@ -126,6 +129,27 @@ export class CadenceDocument {
   }
   removeNote(clip: number, index: number) {
     return this.call(OPS.removeNote, { clip, index });
+  }
+  /**
+   * Move one note to a clip-relative start and, when `pitch` is given, to a
+   * new pitch in the same command, so a piano-roll drag is one undo step.
+   * The note keeps its index. Rejects with `out_of_bounds` past the clip end.
+   */
+  moveNote(clip: number, index: number, startTicks: number, pitch?: number) {
+    return this.call(OPS.moveNote, {
+      clip,
+      index,
+      start_ticks: startTicks,
+      ...(pitch === undefined ? {} : { pitch }),
+    });
+  }
+  /** Set one note's length in ticks (> 0, ending at or before the clip end). */
+  resizeNote(clip: number, index: number, lengthTicks: number) {
+    return this.call(OPS.resizeNote, { clip, index, length_ticks: lengthTicks });
+  }
+  /** Set one note's MIDI velocity, 0..127. */
+  setVelocity(clip: number, index: number, velocity: number) {
+    return this.call(OPS.setVelocity, { clip, index, velocity });
   }
   project() {
     return this.call<ProjectInfo>(OPS.project);
