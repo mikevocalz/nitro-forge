@@ -19,7 +19,10 @@ type StatusState = { status: WhiteboardRendererStatus };
  * Returns `{ kind: "unavailable" }` where no native renderer exists (iOS
  * today, Android below API 29, or a Viro build without the Surface
  * registry); render the application fallback then. The renderer is disposed on
- * unmount and whenever an option other than `onError` changes.
+ * unmount and whenever an option other than `onError` or `getInkOutline`
+ * changes. Both callbacks are read through refs, so passing a new function
+ * each render does not recreate the native renderer and its render thread;
+ * outlines already computed for a record are kept until that record changes.
  *
  * @example
  * ```tsx
@@ -31,13 +34,15 @@ type StatusState = { status: WhiteboardRendererStatus };
  * ```
  */
 export function useWhiteboardRenderer(options: UseWhiteboardRendererOptions): WhiteboardRendererStatus {
-  const { store, board, getInkOutline, surfaceId, widthPx, heightPx, pixelRatio, cornerRadiusPx, backgroundColor } = options;
+  const { store, board, surfaceId, widthPx, heightPx, pixelRatio, cornerRadiusPx, backgroundColor } = options;
   const statusStore = useRef<StoreApi<StatusState> | undefined>(undefined);
   if (statusStore.current === undefined) {
     statusStore.current = createStore<StatusState>(() => ({ status: { kind: "creating" } }));
   }
   const onErrorRef = useRef(options.onError);
   onErrorRef.current = options.onError;
+  const getInkOutlineRef = useRef(options.getInkOutline);
+  getInkOutlineRef.current = options.getInkOutline;
   const status = useStore(statusStore.current, (s) => s.status);
 
   useEffect(() => {
@@ -72,7 +77,7 @@ export function useWhiteboardRenderer(options: UseWhiteboardRendererOptions): Wh
             store,
             ...(board === undefined ? {} : { board }),
             renderer: created,
-            getInkOutline,
+            getInkOutline: (shape) => getInkOutlineRef.current(shape),
             requestFrame: (callback) => requestAnimationFrame(callback),
             cancelFrame: (handle) => cancelAnimationFrame(handle),
             onError: (error) => onErrorRef.current?.(error),
@@ -91,7 +96,7 @@ export function useWhiteboardRenderer(options: UseWhiteboardRendererOptions): Wh
       binding?.dispose();
       renderer?.dispose();
     };
-  }, [store, board, getInkOutline, surfaceId, widthPx, heightPx, pixelRatio, cornerRadiusPx, backgroundColor]);
+  }, [store, board, surfaceId, widthPx, heightPx, pixelRatio, cornerRadiusPx, backgroundColor]);
 
   return status;
 }
