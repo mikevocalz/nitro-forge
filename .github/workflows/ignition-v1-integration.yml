@@ -6,6 +6,8 @@ on:
       - 'rust/nf-sys/**'
       - 'tooling/native/**'
       - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'apps/example/package.json'
       - '.github/workflows/ignition-v1-integration.yml'
   workflow_dispatch:
 permissions:

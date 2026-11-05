@@ -10,7 +10,9 @@
     "studioId",
     "docks",
     "collapsed",
-    "sizes"
+    "sizes",
+    "activeTabs",
+    "floating"
   ],
   "properties": {
     "schemaVersion": {
@@ -52,12 +54,24 @@
     },
     "activeTabs": {
       "type": "object",
-      "additionalProperties": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 80
-      },
-      "maxProperties": 50
+      "additionalProperties": false,
+      "properties": {
+        "left": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "right": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "bottom": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      }
     },
     "sizes": {
       "type": "object",

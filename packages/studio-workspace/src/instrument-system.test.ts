@@ -4,6 +4,9 @@ import {
   forgeInstrumentBlueprints,
   instrumentsForStudio,
   scrubPrecision,
+  beginPrecisionGesture,
+  advancePrecisionGesture,
+  snapTypedPrecision,
   nearestTimeUnit,
   timeAtUnit,
   temporalRulerTicks,
@@ -82,4 +85,50 @@ test('invalid time ruler inputs fail before generating anything', () => {
   assert.throws(() => temporalRulerTicks({ timebase: beats, startSeconds: 2, endSeconds: 1, pixelsPerSecond: 100 }), RangeError);
   assert.throws(() => temporalRulerTicks({ timebase: beats, startSeconds: 0, endSeconds: 1, pixelsPerSecond: 0 }), RangeError);
   assert.throws(() => temporalRulerTicks({ timebase: beats, startSeconds: 0, endSeconds: 1, pixelsPerSecond: 100, maxTicks: 5000 }), RangeError);
+});
+
+test('switching scrub mode mid-drag continues from the current value', () => {
+  const config = { min: 0, max: 100, step: 1, pixelsPerStep: 8 };
+  let g = beginPrecisionGesture({ x: 0, y: 0 }, 10);
+  g = advancePrecisionGesture(g, { x: 80, y: 0 }, config);
+  assert.equal(g.value, 20);
+  g = advancePrecisionGesture(g, { x: 80, y: -29 }, config); // drift into fine
+  assert.equal(g.mode, 'fine');
+  assert.equal(g.value, 20, 'entering fine mode must not rescale the earlier travel');
+  g = advancePrecisionGesture(g, { x: 160, y: -29 }, config);
+  assert.equal(g.value, 21);
+  g = advancePrecisionGesture(g, { x: 160, y: 40 }, config); // drift into coarse
+  assert.equal(g.value, 21);
+  g = advancePrecisionGesture(g, { x: 168, y: 40 }, config);
+  assert.equal(g.value, 31);
+});
+
+test('detents catch within a pixel window that rounding alone does not reach', () => {
+  const base = { min: 0, max: 100, step: 1, startValue: 40, deltaPixels: 75, pixelsPerStep: 8 };
+  assert.equal(scrubPrecision(base), 49); // unbounded 49.375
+  assert.equal(scrubPrecision({ ...base, detents: [50] }), 50);
+  assert.equal(scrubPrecision({ ...base, deltaPixels: 64, detents: [50] }), 48, 'too far to catch');
+  assert.equal(scrubPrecision({ ...base, detents: [50], detentPixels: 0 }), 49);
+  assert.equal(scrubPrecision({ ...base, deltaPixels: 750, mode: 'fine', detents: [50] }), 49.4,
+    'fine mode lands beside a detent');
+  assert.throws(() => scrubPrecision({ ...base, detents: [50], detentPixels: -1 }), RangeError);
+});
+
+test('typed entry snaps to the finest grid a drag can reach', () => {
+  assert.equal(snapTypedPrecision(33.333, 0, 100, 1), 33.3);
+  assert.equal(snapTypedPrecision(250, 0, 100, 1), 100);
+  assert.throws(() => snapTypedPrecision(Number.NaN, 0, 100, 1), RangeError);
+});
+
+test('ruler majors fall on bar lines and on timecode seconds', () => {
+  const bars = temporalRulerTicks({ timebase: beats, startSeconds: 0, endSeconds: 60, pixelsPerSecond: 20 });
+  const barMajors = bars.filter(t => t.major);
+  assert.ok(barMajors.length > 1);
+  for (const tick of barMajors) assert.equal(tick.unit % 4, 0, `beat ${tick.unit} is not a bar line`);
+  const zoomedIn = temporalRulerTicks({ timebase: beats, startSeconds: 0, endSeconds: 8, pixelsPerSecond: 400 });
+  assert.ok(zoomedIn.some(t => t.major && t.unit % 4 !== 0), 'at high zoom every beat can be major');
+  const film = temporalRulerTicks({ timebase: frames, startSeconds: 0, endSeconds: 60, pixelsPerSecond: 20 });
+  const filmMajors = film.filter(t => t.major);
+  assert.ok(filmMajors.length > 1);
+  for (const tick of filmMajors) assert.equal(tick.unit % 24, 0, `frame ${tick.unit} is not on a second`);
 });

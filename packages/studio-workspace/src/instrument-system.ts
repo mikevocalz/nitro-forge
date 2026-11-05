@@ -61,6 +61,12 @@ export type PrecisionScrub = Readonly<{
   pixelsPerStep?: number;
   mode?: ScrubMode;
   detents?: readonly number[];
+  /**
+   * Pointer travel, in pixels, inside which a detent catches the value in
+   * normal and coarse mode. Fine mode ignores detents so it can land beside
+   * them. Default 6.
+   */
+  detentPixels?: number;
 }>;
 
 const assertFinite = (value: number, name: string) => {
@@ -89,9 +95,71 @@ export function scrubPrecision(input: PrecisionScrub): number {
   const quantum = step * (mode === 'fine' ? 0.1 : 1);
   const unbounded = startValue + deltaPixels / px * step * factor;
   const snapped = min + Math.round((unbounded - min) / quantum) * quantum;
-  const detent = (input.detents ?? []).find(value => Number.isFinite(value)
-    && value >= min && value <= max && Math.abs(value - unbounded) <= quantum * 0.5);
+  // A detent must catch from farther away than rounding does, or a detent on
+  // the step grid would never change the result.
+  const detentPixels = input.detentPixels ?? 6;
+  assertFinite(detentPixels, 'detentPixels');
+  if (detentPixels < 0) throw new RangeError('detentPixels must be nonnegative');
+  const reach = mode === 'fine' ? 0 : detentPixels / px * step * factor;
+  let detent: number | undefined;
+  for (const value of input.detents ?? []) {
+    if (!Number.isFinite(value) || value < min || value > max) continue;
+    const distance = Math.abs(value - unbounded);
+    if (distance <= reach && (detent === undefined || distance < Math.abs(detent - unbounded))) detent = value;
+  }
   return clean(clamp(detent ?? snapped, min, max));
+}
+
+/** Vertical offset from the press point selects the scrub mode. */
+export function scrubModeForOffset(deltaY: number, threshold = 28): ScrubMode {
+  assertFinite(deltaY, 'deltaY');
+  return deltaY < -threshold ? 'fine' : deltaY > threshold ? 'coarse' : 'normal';
+}
+
+export type PrecisionGesturePoint = Readonly<{ x: number; y: number }>;
+/**
+ * In-flight drag. `anchorX`/`anchorValue` move whenever the mode changes, so
+ * switching between fine, normal and coarse continues from the current value
+ * instead of rescaling the whole drag from the press point.
+ */
+export type PrecisionGesture = Readonly<{
+  originY: number;
+  anchorX: number;
+  anchorValue: number;
+  mode: ScrubMode;
+  value: number;
+}>;
+export type PrecisionGestureConfig = Omit<PrecisionScrub, 'startValue' | 'deltaPixels' | 'mode'>;
+
+export function beginPrecisionGesture(point: PrecisionGesturePoint, value: number): PrecisionGesture {
+  assertFinite(point.x, 'x');
+  assertFinite(point.y, 'y');
+  assertFinite(value, 'value');
+  return { originY: point.y, anchorX: point.x, anchorValue: value, mode: 'normal', value };
+}
+
+export function advancePrecisionGesture(
+  gesture: PrecisionGesture,
+  point: PrecisionGesturePoint,
+  config: PrecisionGestureConfig,
+): PrecisionGesture {
+  assertFinite(point.x, 'x');
+  const mode = scrubModeForOffset(point.y - gesture.originY);
+  const anchored = mode === gesture.mode
+    ? gesture
+    : { ...gesture, mode, anchorX: point.x, anchorValue: gesture.value };
+  const value = scrubPrecision({
+    ...config, startValue: anchored.anchorValue, deltaPixels: point.x - anchored.anchorX, mode,
+  });
+  return { ...anchored, value };
+}
+
+/** Typed entry lands on the finest grid a drag can reach (fine mode, step / 10). */
+export function snapTypedPrecision(value: number, min: number, max: number, step: number): number {
+  for (const [name, v] of Object.entries({ value, min, max, step })) assertFinite(v, name);
+  if (min >= max || step <= 0) throw new RangeError('invalid precision range or step');
+  const quantum = step / 10;
+  return clean(clamp(min + Math.round((value - min) / quantum) * quantum, min, max));
 }
 
 /** Exact rational frame rate is supported. Drop-frame DISPLAY rules belong to
@@ -137,11 +205,37 @@ export type RulerQuery = Readonly<{
   maxTicks?: number;
 }>;
 
-function niceStep(needed: number): number {
-  const exponent = Math.floor(Math.log10(Math.max(1, needed)));
-  const base = 10 ** exponent;
-  for (const factor of [1, 2, 5, 10]) if (base * factor >= needed) return base * factor;
-  return base * 10;
+/**
+ * Major-tick ladder in timebase units. Beats step through whole bars (1 beat,
+ * then 1, 2, 4, 8... bars); frames step through divisors of the nominal frame
+ * rate below one second, then whole timecode seconds and minutes. The minor
+ * step is the largest earlier rung that divides the major one.
+ */
+function rulerLadder(timebase: ForgeTimebase): readonly number[] {
+  if (timebase.kind === 'beats') {
+    const bar = timebase.beatsPerBar;
+    const rungs = [1];
+    for (let bars = 1; bars <= 2 ** 20; bars *= 2) if (bar * bars > 1) rungs.push(bar * bars);
+    return rungs;
+  }
+  const nominal = Math.max(1, Math.round(timebase.rate.numerator / timebase.rate.denominator));
+  const rungs: number[] = [];
+  for (let d = 1; d < nominal; d++) if (nominal % d === 0) rungs.push(d);
+  for (const seconds of [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600]) rungs.push(seconds * nominal);
+  for (let hours = 2; hours <= 2 ** 12; hours *= 2) rungs.push(hours * 3600 * nominal);
+  return rungs;
+}
+
+function rulerSteps(timebase: ForgeTimebase, needed: number): { major: number; minor: number } {
+  const ladder = rulerLadder(timebase);
+  const index = ladder.findIndex(step => step >= needed);
+  const at = index === -1 ? ladder.length - 1 : index;
+  const major = ladder[at]!;
+  let minor = major;
+  for (let i = at - 1; i >= 0; i--) {
+    if (major % ladder[i]! === 0 && major / ladder[i]! <= 10) { minor = ladder[i]!; break; }
+  }
+  return { major, minor };
 }
 
 /** Bounded, zoom-stable major/minor tick model for both NLE and DAW surfaces.
@@ -157,8 +251,7 @@ export function temporalRulerTicks(query: RulerQuery): readonly RulerTick[] {
   const cap = query.maxTicks ?? 512;
   if (!Number.isFinite(majorPx) || majorPx <= 0 || !Number.isInteger(cap) || cap < 2 || cap > 4096)
     throw new RangeError('invalid ruler limits');
-  const majorStep = niceStep(majorPx * ups / pixelsPerSecond);
-  const minorStep = majorStep >= 5 ? majorStep / 5 : majorStep;
+  const { major: majorStep, minor: minorStep } = rulerSteps(query.timebase, majorPx * ups / pixelsPerSecond);
   const first = Math.ceil(startSeconds * ups / minorStep) * minorStep;
   const last = Math.floor(endSeconds * ups);
   const ticks: RulerTick[] = [];
