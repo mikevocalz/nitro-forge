@@ -47,12 +47,18 @@ int main(void) {
   assert(typed.event_count == 0);
   nf_v1_free_command_result(typed);
 
+  size_t before = nf_v1_document_size(handle);
+  assert(before > 0);
+  apply_checked(handle, "{\"op\":\"setCell\",\"payload\":{\"addr\":\"B2\",\"value\":\"a longer cell value that owns heap\"}}");
+  assert(nf_v1_document_size(handle) > before);
+
   assert(nf_v1_close(handle) == 1);
   assert(nf_v1_close(handle) == 0);
+  assert(nf_v1_document_size(handle) == 0);
   char* result = nf_v1_apply(handle, (const uint8_t*)"{\"op\":\"describe\"}", 17);
   assert(result != NULL);
   assert(strstr(result, "\"ok\":false") != NULL);
   nf_free_string(result);
-  puts("NitroForge v1 C ABI smoke: open/edit/NFD1/restore/close passed");
+  puts("NitroForge v1 C ABI smoke: open/edit/NFD1/restore/size/close passed");
   return 0;
 }

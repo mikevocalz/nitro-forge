@@ -32,7 +32,7 @@ mod formula;
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    HeapSize, Journal,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -127,6 +127,36 @@ enum UndoEntry {
 // ---------------------------------------------------------------------------
 // Engine
 // ---------------------------------------------------------------------------
+
+impl HeapSize for Cell {
+    fn heap_size(&self) -> usize {
+        self.raw.heap_size()
+    }
+}
+
+impl HeapSize for Sheet {
+    fn heap_size(&self) -> usize {
+        self.name.heap_size() + self.cells.heap_size()
+    }
+}
+
+impl HeapSize for Workbook {
+    fn heap_size(&self) -> usize {
+        self.sheets.heap_size()
+    }
+}
+
+impl HeapSize for UndoEntry {
+    fn heap_size(&self) -> usize {
+        match self {
+            UndoEntry::Cell { addr, prev, .. } => addr.heap_size() + prev.heap_size(),
+            UndoEntry::AddSheet { .. } | UndoEntry::SetActive { .. } => 0,
+            UndoEntry::RemoveSheet { sheet, .. } => sheet.heap_size(),
+            UndoEntry::RenameSheet { prev_name, .. } => prev_name.heap_size(),
+            UndoEntry::Reset { prev } => prev.heap_size(),
+        }
+    }
+}
 
 pub struct TallyEngine {
     doc: Workbook,
@@ -558,6 +588,15 @@ impl TallyEngine {
 }
 
 impl Engine for TallyEngine {
+    /// Undo entries are inverse diffs, so they are walked directly.
+    fn heap_size_estimate(&self) -> usize {
+        // The engine itself lives in a host-owned Box.
+        std::mem::size_of::<Self>()
+            + self.doc.heap_size()
+            + self.journal.reserved_bytes()
+            + self.journal.entries().map(HeapSize::heap_size).sum::<usize>()
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Tally
     }

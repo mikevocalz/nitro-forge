@@ -9,7 +9,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Event, Journal,
+    Event, HeapSize, Journal,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -245,6 +245,30 @@ fn base64_encode(bytes: &[u8]) -> String {
 // ---------------------------------------------------------------------------
 
 /// DAW document engine. See ENGINE_OPS.md § `cadence-engine`.
+impl HeapSize for Note {
+    fn heap_size(&self) -> usize {
+        0
+    }
+}
+
+impl HeapSize for Clip {
+    fn heap_size(&self) -> usize {
+        self.notes.heap_size()
+    }
+}
+
+impl HeapSize for Track {
+    fn heap_size(&self) -> usize {
+        self.name.heap_size() + self.clips.heap_size()
+    }
+}
+
+impl HeapSize for Doc {
+    fn heap_size(&self) -> usize {
+        self.tracks.heap_size()
+    }
+}
+
 pub struct CadenceEngine {
     doc: Doc,
     /// Undo entries are whole-doc snapshots: simple, exhaustive, and correct
@@ -287,6 +311,17 @@ impl Default for CadenceEngine {
 }
 
 impl Engine for CadenceEngine {
+    /// Undo entries here are whole-document clones, so each is charged at the
+    /// live document's size rather than walked: O(live doc), no allocation.
+    fn heap_size_estimate(&self) -> usize {
+        let live = self.doc.heap_size();
+        // The engine itself lives in a host-owned Box.
+        std::mem::size_of::<Self>()
+            + live
+            + self.journal.reserved_bytes()
+            + self.journal.entries().count() * live
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Cadence
     }

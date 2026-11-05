@@ -299,6 +299,58 @@ fn ro(data: Value) -> CommandResult {
 // ---------------------------------------------------------------------------
 // FolioEngine
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Heap estimate. lopdf types are foreign, so these are free functions.
+// ---------------------------------------------------------------------------
+
+/// Nesting deeper than this is charged shallowly. Restored PDFs are untrusted
+/// input, and the walk must not recurse without bound.
+const HEAP_WALK_MAX_DEPTH: usize = 64;
+
+fn dictionary_heap(dict: &lopdf::Dictionary, depth: usize) -> usize {
+    dict.len() * (std::mem::size_of::<Vec<u8>>() + std::mem::size_of::<Object>())
+        + dict
+            .iter()
+            .map(|(key, value)| key.capacity() + object_heap(value, depth + 1))
+            .sum::<usize>()
+}
+
+fn object_heap(object: &Object, depth: usize) -> usize {
+    if depth > HEAP_WALK_MAX_DEPTH {
+        return 0;
+    }
+    match object {
+        Object::Null
+        | Object::Boolean(_)
+        | Object::Integer(_)
+        | Object::Real(_)
+        | Object::Reference(_) => 0,
+        Object::Name(bytes) | Object::String(bytes, _) => bytes.capacity(),
+        Object::Array(items) => {
+            items.capacity() * std::mem::size_of::<Object>()
+                + items
+                    .iter()
+                    .map(|item| object_heap(item, depth + 1))
+                    .sum::<usize>()
+        }
+        Object::Dictionary(dict) => dictionary_heap(dict, depth),
+        Object::Stream(stream) => stream.content.capacity() + dictionary_heap(&stream.dict, depth),
+    }
+}
+
+fn document_heap(doc: &Document) -> usize {
+    let entry = std::mem::size_of::<ObjectId>() + std::mem::size_of::<Object>() + std::mem::size_of::<usize>();
+    doc.version.capacity()
+        + doc.binary_mark.capacity()
+        + dictionary_heap(&doc.trailer, 0)
+        + doc.objects.len() * entry
+        + doc
+            .objects
+            .values()
+            .map(|object| object_heap(object, 0))
+            .sum::<usize>()
+}
+
 pub struct FolioEngine {
     doc: Document,
     journal: Journal<Document>,
@@ -382,6 +434,17 @@ impl Default for FolioEngine {
 }
 
 impl Engine for FolioEngine {
+    /// Undo entries are whole `Document` clones, each charged at the live
+    /// document's size rather than walked: O(live doc), no allocation.
+    fn heap_size_estimate(&self) -> usize {
+        let live = document_heap(&self.doc);
+        // The engine itself lives in a host-owned Box.
+        std::mem::size_of::<Self>()
+            + live
+            + self.journal.reserved_bytes()
+            + self.journal.entries().count() * live
+    }
+
     fn kind(&self) -> EngineKind {
         EngineKind::Folio
     }

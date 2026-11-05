@@ -8,6 +8,7 @@ mod command;
 mod engine;
 mod envelope;
 mod error;
+mod heap;
 mod journal;
 mod protocol;
 mod session;
@@ -18,6 +19,7 @@ pub use command::{
 pub use engine::{Engine, EngineKind};
 pub use envelope::{decode_envelope, encode_envelope, ENVELOPE_FORMAT_JSON, ENVELOPE_MAGIC, ENVELOPE_VERSION};
 pub use error::{EngineError, ErrorCode};
+pub use heap::HeapSize;
 pub use journal::Journal;
 pub use protocol::{
     base64_decode, base64_encode, run_stdio, FrameRequest, FrameResponse,
