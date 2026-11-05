@@ -17,6 +17,13 @@ export interface TallyWindowRange {
   readonly endRow: number;
   readonly startColumn: number;
   readonly endColumn: number;
+  /**
+   * Frozen panes from NYC-Tron's `SpreadsheetWindowRequest`. The grid always
+   * draws rows `0..frozenRows` and columns `0..frozenColumns`, which sit
+   * outside the scrolled body window, so they are read as well.
+   */
+  readonly frozenRows?: number;
+  readonly frozenColumns?: number;
 }
 export type TallyGridData = Readonly<Record<string, CellInfo>>;
 export type TallyGridDocument = Pick<TallyDocument, "getRange" | "setCell">;
@@ -24,8 +31,13 @@ export type TallyGridDocument = Pick<TallyDocument, "getRange" | "setCell">;
 /** Grid bounds the adapter exposes (Excel-compatible: XFD1048576). */
 export const TALLY_GRID_MAX_ROWS = 1_048_576;
 export const TALLY_GRID_MAX_COLUMNS = 16_384;
-/** Default cell budget for one viewport fetch. */
-export const TALLY_GRID_MAX_WINDOW_CELLS = 4096;
+/**
+ * Cell budget for one `getRange` call. It equals the Rust engine's
+ * `MAX_GET_RANGE_CELLS`. NYC-Tron's SpreadsheetGrid prefetches in 64-row by
+ * 16-column blocks with one block of lookahead on each side, so a scrolled
+ * window is routinely 192 x 32 cells; a smaller budget throws mid-scroll.
+ */
+export const TALLY_GRID_MAX_WINDOW_CELLS = 16_384;
 
 export function tallyColumnName(index: number): string {
   if (!Number.isSafeInteger(index) || index < 0 || index >= TALLY_GRID_MAX_COLUMNS)
@@ -90,22 +102,43 @@ export function windowToA1Range(
   };
 }
 
-/**
- * Query only the visible range. Blank engine cells remain blank. Rejects if
- * the engine returns a cell outside the requested window or more cells than
- * the window holds.
- */
-export async function readTallyWindow(
+interface CellRect {
+  readonly startRow: number;
+  readonly endRow: number;
+  readonly startColumn: number;
+  readonly endColumn: number;
+}
+
+function frozenCount(value: number | undefined, label: string): number {
+  if (value === undefined) return 0;
+  if (!Number.isSafeInteger(value) || value < 0)
+    throw new RangeError(`Tally ${label} must be a nonnegative integer`);
+  return value;
+}
+
+/** Body window plus the frozen strips the grid draws outside it. */
+function windowRects(range: TallyWindowRange): CellRect[] {
+  const { startRow, endRow, startColumn, endColumn } = range;
+  const fr = Math.min(frozenCount(range.frozenRows, "frozenRows"), startRow);
+  const fc = Math.min(frozenCount(range.frozenColumns, "frozenColumns"), startColumn);
+  const rects: CellRect[] = [{ startRow, endRow, startColumn, endColumn }];
+  if (fr > 0) rects.push({ startRow: 0, endRow: fr, startColumn, endColumn });
+  if (fc > 0) rects.push({ startRow, endRow, startColumn: 0, endColumn: fc });
+  if (fr > 0 && fc > 0) rects.push({ startRow: 0, endRow: fr, startColumn: 0, endColumn: fc });
+  return rects;
+}
+
+async function readRect(
   document: TallyGridDocument,
-  range: TallyWindowRange,
-): Promise<TallyGridData> {
-  const a1 = windowToA1Range(range);
-  if (!a1) return {};
-  const expected = (range.endRow - range.startRow) * (range.endColumn - range.startColumn);
+  rect: CellRect,
+  result: Record<string, CellInfo>,
+): Promise<void> {
+  const a1 = windowToA1Range(rect);
+  if (!a1) return;
+  const expected = (rect.endRow - rect.startRow) * (rect.endColumn - rect.startColumn);
   const response = await document.getRange(a1.from, a1.to);
   const cells = response.data?.cells;
   if (!Array.isArray(cells)) throw new Error("Tally returned an invalid range");
-  const result: Record<string, CellInfo> = Object.create(null) as Record<string, CellInfo>;
   let count = 0;
   for (const row of cells) {
     if (!Array.isArray(row)) throw new Error("Tally returned a malformed row");
@@ -116,16 +149,35 @@ export async function readTallyWindow(
       const addr = cell.addr.toUpperCase();
       const at = parseTallyCellAddress(addr);
       if (
-        at.row < range.startRow ||
-        at.row >= range.endRow ||
-        at.column < range.startColumn ||
-        at.column >= range.endColumn
+        at.row < rect.startRow ||
+        at.row >= rect.endRow ||
+        at.column < rect.startColumn ||
+        at.column >= rect.endColumn
       ) {
         throw new RangeError(`Tally returned ${addr} outside the requested window`);
       }
+      if (Object.prototype.hasOwnProperty.call(result, addr))
+        throw new RangeError(`Tally returned ${addr} twice`);
       result[addr] = cell;
     }
   }
+}
+
+/**
+ * Query only the visible range, plus any frozen rows and columns the grid
+ * pins outside it (one `getRange` per rectangle, each within the cell
+ * budget). Blank engine cells remain blank. Rejects if the engine returns a
+ * cell outside a requested rectangle, a duplicate address, or more cells than
+ * a rectangle holds.
+ */
+export async function readTallyWindow(
+  document: TallyGridDocument,
+  range: TallyWindowRange,
+): Promise<TallyGridData> {
+  const rects = windowRects(range);
+  for (const rect of rects) windowToA1Range(rect);
+  const result: Record<string, CellInfo> = Object.create(null) as Record<string, CellInfo>;
+  for (const rect of rects) await readRect(document, rect, result);
   return result;
 }
 
