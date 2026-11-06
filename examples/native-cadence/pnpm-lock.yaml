@@ -15,7 +15,7 @@ patchedDependencies:
     hash: d9496df15ade7c40c91bef806eef49908eb8b0e18d70f3dea4a585f66cd94e5e
     path: patches/@nyc-tron__hardware-keys.patch
   '@nyc-tron/platform-services':
-    hash: 1b5ebf31585cb1400f7d8af6caa94c6b180c44d99f7ee4679367753bd882b1db
+    hash: d64ac031559a17b81b6cc9227162b64bcc692d438a1a1e258dc3f26c08a3be9a
     path: patches/@nyc-tron__platform-services.patch
   '@nyc-tron/reserved-regions':
     hash: f783ad7251e3d776f4fcfc7a41fa9c6ae629a9533b5d4eb5ae9a37a02d5e54cc
@@ -51,7 +51,7 @@ importers:
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       '@nyc-tron/platform-services':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz
-        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz(patch_hash=1b5ebf31585cb1400f7d8af6caa94c6b180c44d99f7ee4679367753bd882b1db)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
+        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz(patch_hash=d64ac031559a17b81b6cc9227162b64bcc692d438a1a1e258dc3f26c08a3be9a)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
       '@nyc-tron/reserved-regions':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz(patch_hash=f783ad7251e3d776f4fcfc7a41fa9c6ae629a9533b5d4eb5ae9a37a02d5e54cc)(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
@@ -3580,7 +3580,6 @@ snapshots:
   2g@1.0.1(typescript@7.0.2):
     optionalDependencies:
       typescript: 7.0.2
-    optional: true
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -4273,7 +4272,6 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
-    optional: true
 
   '@expo/code-signing-certificates@0.0.7':
     dependencies:
@@ -4316,7 +4314,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   '@expo/config-types@58.0.3': {}
 
@@ -4349,7 +4346,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   '@expo/devcert@1.2.2':
     dependencies:
@@ -4373,7 +4369,6 @@ snapshots:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
-    optional: true
 
   '@expo/dom-webview@58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
     dependencies:
@@ -4386,7 +4381,6 @@ snapshots:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
-    optional: true
 
   '@expo/env@2.5.4':
     dependencies:
@@ -4437,7 +4431,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   '@expo/inline-modules@0.2.9(typescript@6.0.3)':
     dependencies:
@@ -4452,7 +4445,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   '@expo/json-file@11.2.1':
     dependencies:
@@ -4474,7 +4466,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   '@expo/log-box-utils@58.0.2': {}
 
@@ -4499,7 +4490,6 @@ snapshots:
       stacktrace-parser: 0.1.11
     optionalDependencies:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
-    optional: true
 
   '@expo/metro-config@58.0.21(expo@58.0.23)(typescript@6.0.3)':
     dependencies:
@@ -4576,7 +4566,6 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
-    optional: true
 
   '@expo/metro-file-map@58.0.5(typescript@6.0.3)':
     dependencies:
@@ -4601,7 +4590,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   '@expo/metro@58.0.0':
     dependencies:
@@ -4688,7 +4676,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   '@expo/require-utils@58.0.5(typescript@6.0.3)':
     dependencies:
@@ -4709,12 +4696,11 @@ snapshots:
       typescript: 7.0.2
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   '@expo/router-server@58.0.21(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react@19.3.0)':
     dependencies:
       debug: 4.4.3
-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       expo-constants: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)
       expo-font: 58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       expo-server: 58.0.6
@@ -4860,7 +4846,7 @@ snapshots:
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
 
-  '@nyc-tron/platform-services@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz(patch_hash=1b5ebf31585cb1400f7d8af6caa94c6b180c44d99f7ee4679367753bd882b1db)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))':
+  '@nyc-tron/platform-services@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz(patch_hash=d64ac031559a17b81b6cc9227162b64bcc692d438a1a1e258dc3f26c08a3be9a)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))':
     dependencies:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       react: 19.3.0
@@ -5539,7 +5525,7 @@ snapshots:
       react-refresh: 0.14.2
     optionalDependencies:
       '@babel/runtime': 7.29.13
-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -5918,7 +5904,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3):
     dependencies:
@@ -5939,7 +5924,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   expo-file-system@58.0.13(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
@@ -5950,7 +5934,6 @@ snapshots:
     dependencies:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
-    optional: true
 
   expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
     dependencies:
@@ -5963,11 +5946,10 @@ snapshots:
       expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
-    optional: true
 
   expo-keep-awake@58.0.3(expo@58.0.23)(react@19.3.0):
     dependencies:
-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       react: 19.3.0
 
   expo-modules-autolinking@58.0.17(typescript@6.0.3):
@@ -5991,7 +5973,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    optional: true
 
   expo-modules-cli@0.4.0:
     dependencies:
@@ -6013,7 +5994,6 @@ snapshots:
       invariant: 2.2.4
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
-    optional: true
 
   expo-modules-jsi@58.0.22(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
@@ -6022,7 +6002,6 @@ snapshots:
   expo-modules-jsi@58.0.22(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
-    optional: true
 
   expo-modules-macros@0.29.0:
     optionalDependencies:
@@ -6116,7 +6095,6 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
-    optional: true
 
   exponential-backoff@3.1.3: {}
 

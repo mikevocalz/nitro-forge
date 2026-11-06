@@ -1,1 +1,9 @@
-Saved: /var/folders/37/s0s6qm2x3cx1mdsr_fv0y1pr0000gn/T/simserver-i3A1ko/media/762278000-1793978923770.png
+Native tool observation excerpt, 2026-11-06.
+Environment: Android API36 arm64 emulator-5554, ForgeCompletion_API36.
+App: ai.nitroforge.cadence.studio; current Rust Cadence document, canonical PrecisionScrubber.
+Tapped “Decrease Gain”: TextField “Gain value” value="0.99";
+StaticText “Gain 0.99 · Pan 0.00 · 120 BPM”.
+Injected F7: StaticText “Shortcut: Undo”; TextField “Gain value” value="1".
+Injected F8: StaticText “Shortcut: Redo”; TextField “Gain value” value="0.99";
+StaticText “Gain 0.99 · Pan 0.00 · 120 BPM”.
+Observed through Argent android-devtools. Simulator-injected keys, not physical keyboard or TalkBack acceptance.

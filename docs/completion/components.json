@@ -71,7 +71,7 @@
         "P02"
       ],
       "exitCriteria": "Implement real Android/iOS/web media decoding, native video playback and frame-accurate seek; validate cancellation, bounds, codec failures and lifecycle.",
-      "status": "pending",
+      "status": "in-progress",
       "components": [
         "D-01",
         "D-05",

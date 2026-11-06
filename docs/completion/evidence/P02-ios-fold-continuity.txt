@@ -1,29 +1,9 @@
---- Elements after action (describe) ---
-Source: ax-service
-Mode: flat
-Coordinates are normalized [0,1] fractions of the screen (x, y, width, height), not pixels.
-Pass them straight to gesture-tap / gesture-swipe / gesture-pinch, which expect this same space.
-To tap an element, use its centre: tap_x = frame.x + frame.width / 2, tap_y = frame.y + frame.height / 2.
-
-ROOT  AXGroup (0.000, 0.000, 1.000, 1.000)
-
-  AXGroup "Cadence native instrument editor"  (0.000, 0.251, 1.000, 0.749)
-  AXAdjustable "Vertical scroll bar, 3 pages" value="0%"  (0.929, 0.251, 0.064, 0.662)
-  AXStaticText "Cadence / Native"  (0.034, 0.295, 0.931, 0.050)
-  AXStaticText "SwiftUI · Jetpack Compose · Rust-owned document"  (0.034, 0.356, 0.931, 0.025)
-  AXStaticText "Reserved regions: linked; 2 reported."  (0.034, 0.408, 0.931, 0.025)
-  AXStaticText "Diagnostics: off"  (0.034, 0.460, 0.931, 0.025)
-  AXStaticText "Local mode keeps up to 200 events in memory. Nothing uploads automatically. Off clears the trace."  (0.034, 0.497, 0.931, 0.050)
-  AXGroup "Off" value="radio button, checked"  (0.034, 0.558, 0.117, 0.065)
-  AXGroup "Local only" value="radio button, unchecked"  (0.169, 0.558, 0.212, 0.065)
-  AXStaticText "Retained events: 0"  (0.034, 0.635, 0.931, 0.025)
-  AXButton "Share diagnostic trace"  (0.034, 0.672, 0.931, 0.071)
-  AXStaticText "Hardware keys: linked. F6 decreases gain, F7 Undo, F8 Redo."  (0.034, 0.754, 0.931, 0.025)
-  AXStaticText "Shortcut: Decrease gain"  (0.034, 0.791, 0.931, 0.025)
-  AXAdjustable "Gain" value="0.9"  (0.034, 0.843, 0.352, 0.157)
-  AXAdjustable "Pan" value="0"  (0.614, 0.843, 0.206, 0.157)
-  AXStaticText "0.9"  (0.173, 0.907, 0.075, 0.039)
-  AXStaticText "0"  (0.705, 0.914, 0.024, 0.029)
-  AXStaticText "Pan"  (0.697, 0.946, 0.039, 0.018)
-  AXStaticText "Gain"  (0.183, 0.949, 0.055, 0.021)
-  AXAdjustable "Horizontal scroll bar, 1 page" value="0%"  (0.017, 0.951, 0.856, 0.044)
+Native tool observation excerpt, 2026-11-06.
+Environment: iOS 27.1 iPhone Duo simulator BBCC4078-E64D-4642-893B-ACF80ACB29A1.
+App: ai.nitroforge.cadence.native; linked UIKit reserved-regions bridge.
+Injected F6 before folding: AXAdjustable “Gain” value="0.9".
+Argent fold open: inner panel, angle180; “Reserved regions: linked; 3 reported.”; Gain0.9.
+Argent fold half-open: inner panel, angle120; three regions; Gain0.9.
+Argent fold closed: cover panel, angle0; “Reserved regions: linked; 2 reported.”; Gain0.9.
+Document/session remained mounted above adaptive viewport. App orientation remains default.
+Simulator geometry/continuity evidence only; no physical foldable acceptance.

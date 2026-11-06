@@ -19,7 +19,7 @@ try {
       typeRoots: [join(app, "node_modules/@types")],
       paths: { "@nyc-tron/platform-services/checkpoints": [declaration] },
     },
-    include: [join(app, "CheckpointAcceptance.tsx"), join(app, "verify-checkpoints.ts"),
+    include: [join(app, "MediaAcceptance.tsx"), join(app, "verify-media.ts"), join(app, "CheckpointAcceptance.tsx"), join(app, "verify-checkpoints.ts"),
       join(app, "TransactionsAcceptance.tsx"), join(app, "verify-transactions.ts"),
       join(app, "TelemetryAcceptance.tsx"), join(app, "verify-telemetry.ts"),
       join(app, "CollaborationAcceptance.tsx"), join(app, "verify-collaboration.ts")],

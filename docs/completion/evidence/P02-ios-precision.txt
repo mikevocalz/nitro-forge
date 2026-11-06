@@ -1,41 +1,9 @@
---- Elements after action (describe) ---
-Source: ax-service
-Mode: flat
-Coordinates are normalized [0,1] fractions of the screen (x, y, width, height), not pixels.
-Pass them straight to gesture-tap / gesture-swipe / gesture-pinch, which expect this same space.
-To tap an element, use its centre: tap_x = frame.x + frame.width / 2, tap_y = frame.y + frame.height / 2.
-
-ROOT  AXGroup (0.000, 0.000, 1.000, 1.000)
-
-  AXGroup "Cadence native instrument editor"  (0.000, 0.000, 1.000, 1.000)
-  AXStaticText "Local mode keeps up to 200 events in memory. Nothing uploads automatically. Off clears the trace."  (0.034, 0.000, 0.931, 0.013)
-  AXGroup "Off" value="radio button, checked"  (0.034, 0.025, 0.117, 0.065)
-  AXGroup "Local only" value="radio button, unchecked"  (0.169, 0.025, 0.212, 0.065)
-  AXAdjustable "Vertical scroll bar, 2 pages" value="31%"  (0.929, 0.087, 0.064, 0.826)
-  AXStaticText "Retained events: 0"  (0.034, 0.101, 0.931, 0.025)
-  AXButton "Share diagnostic trace"  (0.034, 0.138, 0.931, 0.071)
-  AXStaticText "Hardware keys: linked. F6 decreases gain, F7 Undo, F8 Redo."  (0.034, 0.221, 0.931, 0.025)
-  AXStaticText "Shortcut: Redo"  (0.034, 0.258, 0.931, 0.025)
-  AXTextField "Gain value" value="0.99"  (0.781, 0.338, 0.137, 0.043)
-  AXStaticText "Gain"  (0.060, 0.347, 0.678, 0.025)
-  AXButton "Decrease Gain"  (0.060, 0.392, 0.094, 0.065)
-  AXAdjustable "Gain" value="0.99"  (0.167, 0.392, 0.665, 0.065)
-  AXButton "Increase Gain"  (0.845, 0.392, 0.094, 0.065)
-  AXStaticText "Drag: up for fine, down for coarse"  (0.060, 0.457, 0.466, 0.025)
-  AXStaticText "0 – 1"  (0.869, 0.457, 0.071, 0.025)
-  AXTextField "Pan value" value="0"  (0.781, 0.493, 0.137, 0.043)
-  AXStaticText "Pan"  (0.060, 0.501, 0.678, 0.025)
-  AXButton "Decrease Pan"  (0.060, 0.547, 0.094, 0.065)
-  AXAdjustable "Pan" value="0"  (0.167, 0.547, 0.665, 0.065)
-  AXButton "Increase Pan"  (0.845, 0.547, 0.094, 0.065)
-  AXStaticText "Drag: up for fine, down for coarse"  (0.060, 0.612, 0.466, 0.025)
-  AXStaticText "-1 – 1"  (0.855, 0.612, 0.085, 0.025)
-  AXStaticText "Native instrument 01"  (0.067, 0.700, 0.867, 0.025)
-  AXStaticText "Gain 0.99 · Pan 0.00 · 120 BPM"  (0.067, 0.731, 0.867, 0.025)
-  AXGroup "SwiftUI / Compose knob" value="radio button"  (0.034, 0.802, 0.420, 0.071)
-  AXGroup "React Native knob" value="radio button"  (0.476, 0.802, 0.333, 0.071)
-  AXGroup "Precision scrubbers" value="radio button"  (0.034, 0.887, 0.361, 0.071)
-  AXGroup "Gain / Pan pad" value="radio button"  (0.416, 0.887, 0.274, 0.071)
-  AXAdjustable "Horizontal scroll bar, 1 page" value="0%"  (0.017, 0.951, 0.856, 0.044)
-  AXButton "Reconnect native engine"  (0.034, 0.982, 0.428, 0.018)
-  AXButton "Verify native engines"  (0.484, 0.982, 0.375, 0.018)
+Native tool observation excerpt, 2026-11-06.
+Environment: iOS 27.1 iPhone Duo simulator BBCC4078-E64D-4642-893B-ACF80ACB29A1.
+App: ai.nitroforge.cadence.native; current Rust Cadence document, canonical PrecisionScrubber.
+Tapped “Decrease Gain”: AXTextField “Gain value” value="0.99";
+AXStaticText “Gain 0.99 · Pan 0.00 · 120 BPM”.
+Injected F7: AXStaticText “Shortcut: Undo”; AXTextField “Gain value” value="1".
+Injected F8: AXStaticText “Shortcut: Redo”; AXTextField “Gain value” value="0.99";
+AXStaticText “Gain 0.99 · Pan 0.00 · 120 BPM”.
+Observed through Argent ax-service. Simulator-injected keys, not physical keyboard or VoiceOver acceptance.

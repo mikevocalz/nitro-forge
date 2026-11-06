@@ -20,7 +20,7 @@ config.watchFolders = [
 
 // Explicit lab mode serves a separate acceptance entry. Normal consumers keep
 // their released dependency graph; candidate-only exports are isolated here.
-const acceptanceEntry = { checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance", collaboration: "collaboration-acceptance" }[process.env.FORGE_ACCEPTANCE];
+const acceptanceEntry = { media: "media-acceptance", checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance", collaboration: "collaboration-acceptance" }[process.env.FORGE_ACCEPTANCE];
 if (acceptanceEntry) {
   const rewrite = config.server?.rewriteRequestUrl;
   config.server = {

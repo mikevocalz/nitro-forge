@@ -16,6 +16,10 @@ acceptance, Android recipient delivery, wider provider cases and other required
 host/platform evidence. Realtime object merging and presence are separate later
 work. See [P02](reports/P02.md) and [N-11](N11-collaboration.md) for evidence/limits.
 
+P03 is in progress. Genuine Android decoding and corrected iOS audio trimming
+pass the generated native H.264/AAC frame/PCM fixture on both simulators.
+Playback and frame-accurate scrubber integration remain active work.
+
 No component has been promoted to fully accepted across all required platforms.
 Each phase appends its report, evidence and commit checkpoint.
 

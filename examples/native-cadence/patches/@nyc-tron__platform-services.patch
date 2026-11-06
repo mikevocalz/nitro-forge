@@ -80,6 +80,43 @@ diff --git a/ios/NYCTronDocumentsModule.swift b/ios/NYCTronDocumentsModule.swift
      let current = stale ? (url.bookmarkString ?? bookmark) : bookmark
      return RestoredAccessRecord(uri: url.absoluteString, bookmark: current, stale: stale)
    }
+diff --git a/ios/Extensions/AVURLAsset+decodedAudio.swift b/ios/Extensions/AVURLAsset+decodedAudio.swift
+--- a/ios/Extensions/AVURLAsset+decodedAudio.swift
++++ b/ios/Extensions/AVURLAsset+decodedAudio.swift
+@@ -37,7 +37,11 @@
+       throw MediaDecodeFailure(.unsupportedFormat, "This audio cannot be converted to Float32 PCM")
+     }
+     reader.add(output)
+-    reader.timeRange = CMTimeRange(start: CMTime(microseconds: request.startUs), duration: CMTime(microseconds: request.durationUs))
++    // Decode preroll and converter tail, then trim using the output PCM timestamps.
++    // Starting a resampler exactly at the requested boundary loses its filter delay.
++    let readStart = max(Int64(0), request.startUs - 1_000_000)
++    let readEnd = min(duration, request.startUs + request.durationUs + 100_000)
++    reader.timeRange = CMTimeRange(start: CMTime(microseconds: readStart), duration: CMTime(microseconds: readEnd - readStart))
+     guard reader.startReading() else {
+       throw MediaDecodeFailure(avError: reader.error ?? MediaDecodeFailure(.decodeFailed, "The reader did not start"))
+     }
+@@ -57,11 +61,18 @@
+     while frames < maxFrames, let buffer = output.copyNextSampleBuffer() {
+       guard let block = CMSampleBufferGetDataBuffer(buffer) else { continue }
+       let available = CMBlockBufferGetDataLength(block) / bytesPerFrame
+-      let take = min(available, maxFrames - frames)
++      let bufferTime = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
++      guard bufferTime.isFinite else { throw MediaDecodeFailure(.decodeFailed, "PCM timestamp is invalid") }
++      let nextTime = Double(request.startUs) / 1_000_000 + Double(frames) / sampleRate
++      let offsetFrames = max(0, Int(((nextTime - bufferTime) * sampleRate).rounded()))
++      if bufferTime - nextTime > 1.5 / sampleRate {
++        throw MediaDecodeFailure(.unsupportedFormat, "Discontinuous PCM timestamps require an edit-aware decoder")
++      }
++      let take = min(max(0, available - offsetFrames), maxFrames - frames)
+       guard take > 0 else { continue }
+       var bytes = Data(count: take * bytesPerFrame)
+       let status = bytes.withUnsafeMutableBytes { raw in
+-        CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: raw.count, destination: raw.baseAddress!)
++        CMBlockBufferCopyDataBytes(block, atOffset: offsetFrames * bytesPerFrame, dataLength: raw.count, destination: raw.baseAddress!)
+       }
+       guard status == kCMBlockBufferNoErr else {
+         throw MediaDecodeFailure(.decodeFailed, "Could not read a PCM buffer (\(status))")
 diff --git a/dist/playback/session.js b/dist/playback/session.js
 --- a/dist/playback/session.js
 +++ b/dist/playback/session.js
@@ -199,3 +236,514 @@ diff --git a/dist/haptics/haptics.js b/dist/haptics/haptics.js
          },
          setEnabled(enabled) {
              store.setState({ enabled });
+diff --git a/dist/media/platform.native.js b/dist/media/platform.native.js
+--- a/dist/media/platform.native.js
++++ b/dist/media/platform.native.js
+@@ -4,7 +4,7 @@
+ export { MEDIA_DECODER_MODULE_NAME } from "../module-names.js";
+ /**
+  * {@linkcode MediaDecoder} over AVAssetImageGenerator and AVAssetReader on
+- * iOS. Android has no registered decoder and reports isAvailable false.
++ * iOS, and MediaExtractor/MediaCodec on Android.
+  * Frames and PCM are written to the app's caches directory.
+  */
+ export function createPlatformMediaDecoder() {
+diff --git a/android/src/main/java/com/nyctron/platformservices/DecodedFrameRecord.kt b/android/src/main/java/com/nyctron/platformservices/DecodedFrameRecord.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/DecodedFrameRecord.kt
+@@ -0,0 +1,11 @@
++package com.nyctron.platformservices
++
++import io.github.expo.modules.v2.Record
++
++@Record
++data class DecodedFrameRecord(
++  val uri: String,
++  val actualTimeUs: Double,
++  val width: Double,
++  val height: Double,
++)
+diff --git a/android/src/main/java/com/nyctron/platformservices/MediaDecodeFailure.kt b/android/src/main/java/com/nyctron/platformservices/MediaDecodeFailure.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/MediaDecodeFailure.kt
+@@ -0,0 +1,4 @@
++package com.nyctron.platformservices
++
++/** Stable JS-readable prefix, without echoing source paths or platform messages. */
++internal class MediaDecodeFailure(code: String, message: String) : Exception("[$code] $message")
+diff --git a/android/src/main/java/com/nyctron/platformservices/DecodedAudioRecord.kt b/android/src/main/java/com/nyctron/platformservices/DecodedAudioRecord.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/DecodedAudioRecord.kt
+@@ -0,0 +1,11 @@
++package com.nyctron.platformservices
++
++import io.github.expo.modules.v2.Record
++
++@Record
++data class DecodedAudioRecord(
++  val uri: String,
++  val sampleRate: Double,
++  val channels: Double,
++  val frames: Double,
++)
+diff --git a/android/src/main/java/com/nyctron/platformservices/AndroidDecodedPcm.kt b/android/src/main/java/com/nyctron/platformservices/AndroidDecodedPcm.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/AndroidDecodedPcm.kt
+@@ -0,0 +1,80 @@
++package com.nyctron.platformservices
++
++import android.media.AudioFormat
++import android.media.MediaCodec
++import android.media.MediaFormat
++import android.net.Uri
++import java.io.BufferedOutputStream
++import java.io.Closeable
++import java.io.File
++import java.nio.ByteBuffer
++import java.nio.ByteOrder
++import kotlin.math.ceil
++
++/** Streaming interleaved Float32 writer. Linear resampling retains phase across codec buffers. */
++internal class AndroidDecodedPcm(private val file: File, private val startUs: Long,
++  private val durationUs: Long, private val requestedRate: Int) : Closeable {
++  private val stream = BufferedOutputStream(file.outputStream())
++  private var rate = 0
++  private var channels = 0
++  private var sourceRate = 0
++  private var frames = 0L
++  private var nextTime = startUs.toDouble()
++  private var previousTime = Double.NaN
++  private var previous = FloatArray(0)
++  private val scalar = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
++
++  fun accept(buffer: ByteBuffer, info: MediaCodec.BufferInfo, format: MediaFormat, check: () -> Unit) {
++    val inputRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
++    val inputChannels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
++    val encoding = if (format.containsKey(MediaFormat.KEY_PCM_ENCODING)) format.getInteger(MediaFormat.KEY_PCM_ENCODING) else AudioFormat.ENCODING_PCM_16BIT
++    if (inputRate !in 8000..192000 || inputChannels !in 1..32 ||
++      encoding !in listOf(AudioFormat.ENCODING_PCM_16BIT, AudioFormat.ENCODING_PCM_FLOAT))
++      throw MediaDecodeFailure("unsupported-format", "Unsupported decoded PCM format.")
++    if (rate == 0) {
++      sourceRate = inputRate; channels = inputChannels; rate = if (requestedRate == 0) inputRate else requestedRate
++      if (ceil(durationUs * rate / 1_000_000.0) * channels * 4 > 128 * 1024 * 1024)
++        throw MediaDecodeFailure("out-of-range", "PCM exceeds the 128 MiB output budget.")
++      previous = FloatArray(channels)
++    } else if (inputRate != sourceRate || inputChannels != channels)
++      throw MediaDecodeFailure("unsupported-format", "Midstream audio format changes are unsupported.")
++    val bytes = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN)
++    bytes.position(info.offset); bytes.limit(info.offset + info.size)
++    val stride = channels * if (encoding == AudioFormat.ENCODING_PCM_FLOAT) 4 else 2
++    if (info.size % stride != 0) throw MediaDecodeFailure("decode-failed", "PCM buffer is not frame-aligned.")
++    val sample = FloatArray(channels)
++    for (i in 0 until info.size / stride) {
++      if (i % 1024 == 0) check()
++      for (channel in 0 until channels) sample[channel] = if (encoding == AudioFormat.ENCODING_PCM_FLOAT) bytes.float else bytes.short / 32768f
++      val time = info.presentationTimeUs + i * 1_000_000.0 / sourceRate
++      if (time >= startUs + durationUs) return
++      if (previousTime.isNaN()) {
++        if (nextTime < time) nextTime = startUs + ceil((time - startUs) * rate / 1_000_000.0) * 1_000_000.0 / rate
++        previousTime = time
++        sample.copyInto(previous)
++      }
++      while (nextTime <= time + .0001 && nextTime < startUs + durationUs) {
++        val span = time - previousTime
++        if (span > 2_000_000.0 / sourceRate) throw MediaDecodeFailure("unsupported-format", "Discontinuous audio timestamps require an edit-aware decoder.")
++        val fraction = if (span > 0) ((nextTime - previousTime) / span).coerceIn(0.0, 1.0) else 1.0
++        for (channel in 0 until channels) {
++          val value = (previous[channel] + (sample[channel] - previous[channel]) * fraction).toFloat()
++          if (!value.isFinite()) throw MediaDecodeFailure("decode-failed", "PCM contains non-finite samples.")
++          scalar.putFloat(0, value); stream.write(scalar.array())
++        }
++        frames++
++        if (frames * channels * 4 > 128 * 1024 * 1024) throw MediaDecodeFailure("out-of-range", "PCM output limit exceeded.")
++        nextTime += 1_000_000.0 / rate
++      }
++      previousTime = time; sample.copyInto(previous)
++    }
++  }
++
++  fun record(): DecodedAudioRecord {
++    if (rate == 0) throw MediaDecodeFailure("out-of-range", "No audio samples exist at this media time.")
++    stream.flush()
++    return DecodedAudioRecord(Uri.fromFile(file).toString(), rate.toDouble(), channels.toDouble(), frames.toDouble())
++  }
++
++  override fun close() { stream.close() }
++}
+diff --git a/android/src/main/java/com/nyctron/platformservices/AudioRequestRecord.kt b/android/src/main/java/com/nyctron/platformservices/AudioRequestRecord.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/AudioRequestRecord.kt
+@@ -0,0 +1,10 @@
++package com.nyctron.platformservices
++
++import io.github.expo.modules.v2.Record
++
++@Record
++data class AudioRequestRecord(
++  val startUs: Double,
++  val durationUs: Double,
++  val sampleRate: Double,
++)
+diff --git a/android/src/main/java/com/nyctron/platformservices/MediaProbeRecord.kt b/android/src/main/java/com/nyctron/platformservices/MediaProbeRecord.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/MediaProbeRecord.kt
+@@ -0,0 +1,17 @@
++package com.nyctron.platformservices
++
++import io.github.expo.modules.v2.Record
++
++@Record
++data class MediaProbeRecord(
++  val durationUs: Double,
++  val hasVideo: Boolean,
++  val width: Double,
++  val height: Double,
++  val frameRate: Double,
++  val videoCodec: String,
++  val hasAudio: Boolean,
++  val sampleRate: Double,
++  val channels: Double,
++  val audioCodec: String,
++)
+diff --git a/android/src/main/java/com/nyctron/platformservices/NYCTronMediaDecoderModule.kt b/android/src/main/java/com/nyctron/platformservices/NYCTronMediaDecoderModule.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/NYCTronMediaDecoderModule.kt
+@@ -0,0 +1,28 @@
++package com.nyctron.platformservices
++
++import io.github.expo.modules.v2.ExpoModule
++import io.github.expo.modules.v2.JS
++import io.github.expo.modules.v2.Module
++import io.github.expo.modules.v2.react.androidContextOrNull
++
++/** Bounded local decoding; the worker owns codecs, extractor and cache lifetime. */
++@ExpoModule("NYCTronMediaDecoder")
++class NYCTronMediaDecoderModule : Module() {
++  private val worker = AndroidMediaDecoder { androidContextOrNull }
++
++  @JS
++  suspend fun probe(uri: String): MediaProbeRecord = worker.run { probe(uri) }
++
++  @JS
++  suspend fun decodeFrame(uri: String, options: FrameRequestRecord): DecodedFrameRecord =
++    worker.run { frame(uri, options) }
++
++  @JS
++  suspend fun decodeAudio(uri: String, options: AudioRequestRecord): DecodedAudioRecord =
++    worker.run { audio(uri, options) }
++
++  @JS
++  suspend fun clearCache() { worker.run { clearCache() } }
++
++  override fun onDestroy() { worker.close() }
++}
+diff --git a/android/src/main/java/com/nyctron/platformservices/AndroidMediaDecoder.kt b/android/src/main/java/com/nyctron/platformservices/AndroidMediaDecoder.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/AndroidMediaDecoder.kt
+@@ -0,0 +1,211 @@
++package com.nyctron.platformservices
++
++import android.content.Context
++import android.media.MediaCodec
++import android.media.MediaCodecInfo
++import android.media.MediaExtractor
++import android.media.MediaFormat
++import android.net.Uri
++import android.os.SystemClock
++import kotlinx.coroutines.asCoroutineDispatcher
++import kotlinx.coroutines.ensureActive
++import kotlinx.coroutines.withContext
++import java.io.File
++import java.io.FileNotFoundException
++import java.util.UUID
++import java.util.concurrent.Executors
++import kotlin.coroutines.CoroutineContext
++
++/** One serial owner: no cache deletion races with a codec writing an output. */
++internal class AndroidMediaDecoder(private val context: () -> Context?) {
++  private val dispatcher = Executors.newSingleThreadExecutor { work ->
++    Thread(work, "NYCTronMediaDecoder").apply { isDaemon = true }
++  }.asCoroutineDispatcher()
++  @Volatile private var closed = false
++  private var activeContext: CoroutineContext? = null
++  private var deadline = 0L
++
++  suspend fun <T> run(work: AndroidMediaDecoder.() -> T): T = withContext(dispatcher) {
++    if (closed) throw MediaDecodeFailure("decode-failed", "Decoder is closed.")
++    activeContext = coroutineContext
++    deadline = SystemClock.elapsedRealtime() + 30_000
++    try { return@withContext work() }
++    catch (failure: MediaDecodeFailure) { throw failure }
++    catch (failure: kotlinx.coroutines.CancellationException) { throw failure }
++    catch (_: SecurityException) { throw MediaDecodeFailure("permission", "Media access was denied.") }
++    catch (_: FileNotFoundException) { throw MediaDecodeFailure("not-found", "Media source is unavailable.") }
++    catch (_: Exception) { throw MediaDecodeFailure("decode-failed", "Media could not be decoded.") }
++    finally { activeContext = null }
++  }
++
++  fun close() { closed = true; dispatcher.close() }
++
++  fun checkActive() {
++    activeContext?.ensureActive()
++    if (closed || SystemClock.elapsedRealtime() > deadline)
++      throw MediaDecodeFailure("decode-failed", "Decoding stopped or exceeded its time budget.")
++  }
++
++  private fun extractor(uri: String): MediaExtractor {
++    val parsed = Uri.parse(uri)
++    if (parsed.scheme !in listOf("file", "content"))
++      throw MediaDecodeFailure("unsupported-format", "A local file or granted content URI is required.")
++    val ctx = context() ?: throw MediaDecodeFailure("decode-failed", "Application context is unavailable.")
++    if (parsed.scheme == "file" && !File(parsed.path ?: "").isFile)
++      throw MediaDecodeFailure("not-found", "Media source is unavailable.")
++    val result = MediaExtractor()
++    try { result.setDataSource(ctx, parsed, null); return result }
++    catch (failure: Exception) { result.release(); throw failure }
++  }
++
++  fun probe(uri: String): MediaProbeRecord {
++    val source = extractor(uri)
++    try {
++      var video: MediaFormat? = null; var audio: MediaFormat? = null; var duration = 0L
++      for (i in 0 until source.trackCount) {
++        checkActive()
++        val format = source.getTrackFormat(i)
++        if (format.containsKey(MediaFormat.KEY_DURATION)) duration = maxOf(duration, format.getLong(MediaFormat.KEY_DURATION))
++        val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
++        if (mime.startsWith("video/") && video == null) video = format
++        if (mime.startsWith("audio/") && audio == null) audio = format
++      }
++      if (video == null && audio == null) throw MediaDecodeFailure("unsupported-format", "No audio or video track was found.")
++      return MediaProbeRecord(duration.toDouble(), video != null,
++        number(video, MediaFormat.KEY_WIDTH), number(video, MediaFormat.KEY_HEIGHT), number(video, MediaFormat.KEY_FRAME_RATE),
++        video?.getString(MediaFormat.KEY_MIME) ?: "", audio != null,
++        number(audio, MediaFormat.KEY_SAMPLE_RATE), number(audio, MediaFormat.KEY_CHANNEL_COUNT), audio?.getString(MediaFormat.KEY_MIME) ?: "")
++    } finally { source.release() }
++  }
++
++  private fun number(format: MediaFormat?, key: String): Double {
++    if (format == null || !format.containsKey(key)) return 0.0
++    return try { format.getInteger(key).toDouble() } catch (_: ClassCastException) { format.getFloat(key).toDouble() }
++  }
++
++  fun output(extension: String): File {
++    val ctx = context() ?: throw MediaDecodeFailure("decode-failed", "Application context is unavailable.")
++    val directory = File(ctx.cacheDir, "nyc-tron-decoder")
++    if (!directory.isDirectory && !directory.mkdirs()) throw MediaDecodeFailure("decode-failed", "Decoder cache is unavailable.")
++    return File(directory, UUID.randomUUID().toString() + extension)
++  }
++
++  private fun trim(current: File) {
++    val files = current.parentFile?.listFiles()?.filter { it.isFile }?.sortedBy { it.lastModified() } ?: return
++    var bytes = files.sumOf { it.length() }
++    var count = files.size
++    for (file in files) {
++      if (bytes <= 256L * 1024 * 1024 && count <= 256) break
++      if (file == current) continue
++      checkActive()
++      val size = file.length()
++      if (!file.delete()) throw MediaDecodeFailure("decode-failed", "Decoder cache could not be trimmed.")
++      bytes -= size; count--
++    }
++  }
++
++  fun clearCache() {
++    val ctx = context() ?: return
++    val directory = File(ctx.cacheDir, "nyc-tron-decoder")
++    directory.listFiles()?.forEach { file -> checkActive(); if (file.isFile && !file.delete()) throw MediaDecodeFailure("decode-failed", "Decoder cache could not be cleared.") }
++  }
++
++  private fun micros(value: Double): Long {
++    if (!value.isFinite() || value < 0 || value % 1 != 0.0 || value > 9_007_199_254_740_991.0)
++      throw MediaDecodeFailure("out-of-range", "Media time must be a nonnegative integer.")
++    return value.toLong()
++  }
++
++  fun frame(uri: String, request: FrameRequestRecord): DecodedFrameRecord {
++    val time = micros(request.timeUs)
++    if (request.maxWidth !in 1.0..4096.0 || request.maxHeight !in 1.0..4096.0 || request.maxWidth % 1 != 0.0 || request.maxHeight % 1 != 0.0)
++      throw MediaDecodeFailure("out-of-range", "Frame bounds must be integers from 1 to 4096.")
++    var result: DecodedFrameRecord? = null
++    decode(uri, "video/", time, { format ->
++      format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
++    }) { codec, index, info, format ->
++      if (info.size == 0 || info.presentationTimeUs < time) return@decode false
++      val image = codec.getOutputImage(index) ?: throw MediaDecodeFailure("unsupported-format", "Codec does not expose YUV frames.")
++      image.use { frame ->
++        val output = output(".jpg")
++        try {
++          val dimensions = AndroidDecodedImage.write(frame, format, request, output, ::checkActive)
++          trim(output)
++          result = DecodedFrameRecord(Uri.fromFile(output).toString(), info.presentationTimeUs.toDouble(), dimensions.first.toDouble(), dimensions.second.toDouble())
++        } catch (failure: Exception) { output.delete(); throw failure }
++      }
++      true
++    }
++    return result ?: throw MediaDecodeFailure("out-of-range", "No video frame exists at this media time.")
++  }
++
++  fun audio(uri: String, request: AudioRequestRecord): DecodedAudioRecord {
++    val start = micros(request.startUs); val duration = micros(request.durationUs)
++    if (duration !in 1..60_000_000L || (request.sampleRate != 0.0 && (request.sampleRate !in 8000.0..192000.0 || request.sampleRate % 1 != 0.0)))
++      throw MediaDecodeFailure("out-of-range", "Invalid audio span or sample rate.")
++    val output = output(".f32")
++    try {
++      AndroidDecodedPcm(output, start, duration, request.sampleRate.toInt()).use { sink ->
++        decode(uri, "audio/", start, {}) { codec, index, info, format ->
++          if (info.size > 0) {
++            val bytes = codec.getOutputBuffer(index) ?: throw MediaDecodeFailure("decode-failed", "Audio buffer is unavailable.")
++            sink.accept(bytes, info, format, ::checkActive)
++          }
++          info.presentationTimeUs >= start + duration
++        }
++        val record = sink.record()
++        trim(output)
++        return record
++      }
++    } catch (failure: Exception) { output.delete(); throw failure }
++  }
++
++  /** Decode from a preceding sync sample; report actual output PTS, never a guessed seek target. */
++  private fun decode(uri: String, prefix: String, start: Long, configure: (MediaFormat) -> Unit,
++    consume: (MediaCodec, Int, MediaCodec.BufferInfo, MediaFormat) -> Boolean) {
++    val source = extractor(uri)
++    var codec: MediaCodec? = null
++    try {
++      val track = (0 until source.trackCount).firstOrNull { source.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith(prefix) == true }
++        ?: throw MediaDecodeFailure("unsupported-format", "The requested media track is absent.")
++      val format = source.getTrackFormat(track)
++      if (format.containsKey(MediaFormat.KEY_DURATION) && start >= format.getLong(MediaFormat.KEY_DURATION))
++        throw MediaDecodeFailure("out-of-range", "Media time is past the track duration.")
++      if (prefix == "video/" && number(format, MediaFormat.KEY_WIDTH) * number(format, MediaFormat.KEY_HEIGHT) > 33_554_432)
++        throw MediaDecodeFailure("unsupported-format", "Source frame exceeds the decoder memory budget.")
++      source.selectTrack(track)
++      // AAC/Opus decoders need preroll; trimming begins only after decoded PTS reaches the requested interval.
++      val seek = if (prefix == "audio/") maxOf(0L, start - 1_000_000) else start
++      source.seekTo(seek, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
++      configure(format)
++      val mime = format.getString(MediaFormat.KEY_MIME) ?: throw MediaDecodeFailure("unsupported-format", "Track codec is absent.")
++      val decoder = MediaCodec.createDecoderByType(mime); codec = decoder
++      decoder.configure(format, null, null, 0); decoder.start()
++      var endedInput = false
++      val info = MediaCodec.BufferInfo()
++      while (true) {
++        checkActive()
++        if (!endedInput) {
++          val input = decoder.dequeueInputBuffer(10_000)
++          if (input >= 0) {
++            val buffer = decoder.getInputBuffer(input) ?: throw MediaDecodeFailure("decode-failed", "Input buffer is unavailable.")
++            val size = source.readSampleData(buffer, 0)
++            if (size < 0) {
++              decoder.queueInputBuffer(input, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM); endedInput = true
++            } else {
++              if (source.sampleFlags and MediaExtractor.SAMPLE_FLAG_ENCRYPTED != 0)
++                throw MediaDecodeFailure("unsupported-format", "Encrypted tracks require an application DRM session.")
++              decoder.queueInputBuffer(input, 0, size, source.sampleTime, 0); source.advance()
++            }
++          }
++        }
++        val index = decoder.dequeueOutputBuffer(info, 10_000)
++        if (index >= 0) {
++          val done = try { consume(decoder, index, info, decoder.outputFormat) }
++            finally { decoder.releaseOutputBuffer(index, false) }
++          if (done || info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
++        }
++      }
++    } finally { try { codec?.release() } finally { source.release() } }
++  }
++}
+diff --git a/android/src/main/java/com/nyctron/platformservices/AndroidDecodedImage.kt b/android/src/main/java/com/nyctron/platformservices/AndroidDecodedImage.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/AndroidDecodedImage.kt
+@@ -0,0 +1,67 @@
++package com.nyctron.platformservices
++
++import android.graphics.Bitmap
++import android.graphics.ImageFormat
++import android.graphics.Matrix
++import android.media.Image
++import android.media.MediaFormat
++import java.io.File
++import kotlin.math.min
++import kotlin.math.roundToInt
++
++/** Bounded SDR YUV conversion honoring row/pixel strides, crop, range and rotation. */
++internal object AndroidDecodedImage {
++  fun write(image: Image, format: MediaFormat, request: FrameRequestRecord, output: File, check: () -> Unit): Pair<Int, Int> {
++    if (image.format != ImageFormat.YUV_420_888 || image.planes.size != 3)
++      throw MediaDecodeFailure("unsupported-format", "Only flexible 8-bit YUV frames are supported.")
++    val transfer = if (format.containsKey(MediaFormat.KEY_COLOR_TRANSFER)) format.getInteger(MediaFormat.KEY_COLOR_TRANSFER) else 0
++    if (transfer == MediaFormat.COLOR_TRANSFER_ST2084 || transfer == MediaFormat.COLOR_TRANSFER_HLG)
++      throw MediaDecodeFailure("unsupported-format", "HDR requires a color-managed rendering pipeline.")
++    val crop = image.cropRect
++    val rotation = if (format.containsKey(MediaFormat.KEY_ROTATION)) format.getInteger(MediaFormat.KEY_ROTATION) else 0
++    val swapped = rotation % 180 != 0
++    val maxWidth = if (swapped) request.maxHeight else request.maxWidth
++    val maxHeight = if (swapped) request.maxWidth else request.maxHeight
++    val scale = min(1.0, min(maxWidth / crop.width(), maxHeight / crop.height()))
++    val width = maxOf(1, (crop.width() * scale).toInt()); val height = maxOf(1, (crop.height() * scale).toInt())
++    val pixels = IntArray(width * height)
++    val planes = image.planes
++    val buffers = planes.map { it.buffer.duplicate() }
++    val standard = if (format.containsKey(MediaFormat.KEY_COLOR_STANDARD)) format.getInteger(MediaFormat.KEY_COLOR_STANDARD) else MediaFormat.COLOR_STANDARD_BT601_NTSC
++    if (standard !in listOf(0, MediaFormat.COLOR_STANDARD_BT601_NTSC, MediaFormat.COLOR_STANDARD_BT601_PAL, MediaFormat.COLOR_STANDARD_BT709))
++      throw MediaDecodeFailure("unsupported-format", "Unsupported video color standard.")
++    val full = format.containsKey(MediaFormat.KEY_COLOR_RANGE) && format.getInteger(MediaFormat.KEY_COLOR_RANGE) == MediaFormat.COLOR_RANGE_FULL
++    val kr = if (standard == MediaFormat.COLOR_STANDARD_BT709) .2126 else .299
++    val kb = if (standard == MediaFormat.COLOR_STANDARD_BT709) .0722 else .114
++    fun sample(plane: Int, x: Int, y: Int): Int {
++      val buffer = buffers[plane]
++      val offset = buffer.position() + y * planes[plane].rowStride + x * planes[plane].pixelStride
++      return buffer.get(offset).toInt() and 255
++    }
++    fun channel(value: Double) = (value * 255).roundToInt().coerceIn(0, 255)
++    for (y in 0 until height) {
++      check()
++      val sy = crop.top + min(crop.height() - 1, (y / scale).toInt())
++      for (x in 0 until width) {
++        val sx = crop.left + min(crop.width() - 1, (x / scale).toInt())
++        val luma = (sample(0, sx, sy) - if (full) 0 else 16).toDouble() / if (full) 255 else 219
++        val u = (sample(1, sx / 2, sy / 2) - 128).toDouble() / if (full) 255 else 224
++        val v = (sample(2, sx / 2, sy / 2) - 128).toDouble() / if (full) 255 else 224
++        val red = luma + 2 * (1 - kr) * v
++        val blue = luma + 2 * (1 - kb) * u
++        val green = (luma - kr * red - kb * blue) / (1 - kr - kb)
++        pixels[y * width + x] = (255 shl 24) or (channel(red) shl 16) or (channel(green) shl 8) or channel(blue)
++      }
++    }
++    val bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
++    var rotated: Bitmap? = null
++    try {
++      val result = if (rotation % 360 != 0) Bitmap.createBitmap(bitmap, 0, 0, width, height,
++        Matrix().apply { postRotate(rotation.toFloat()) }, true).also { rotated = it } else bitmap
++      output.outputStream().use { stream ->
++        if (!result.compress(Bitmap.CompressFormat.JPEG, 90, stream)) throw MediaDecodeFailure("decode-failed", "Frame encoding failed.")
++      }
++      return result.width to result.height
++    } finally { if (rotated !== bitmap) rotated?.recycle(); bitmap.recycle() }
++  }
++}
+diff --git a/android/src/main/java/com/nyctron/platformservices/FrameRequestRecord.kt b/android/src/main/java/com/nyctron/platformservices/FrameRequestRecord.kt
+new file mode 100644
+--- /dev/null
++++ b/android/src/main/java/com/nyctron/platformservices/FrameRequestRecord.kt
+@@ -0,0 +1,10 @@
++package com.nyctron.platformservices
++
++import io.github.expo.modules.v2.Record
++
++@Record
++data class FrameRequestRecord(
++  val timeUs: Double,
++  val maxWidth: Double,
++  val maxHeight: Double,
++)

@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-06",
+  "tronCommit": "c903eba674c5a1f18d1333e1c50861eb9e51f987",
+  "forgeBaseCommit": "3ba3b49219362542b622acbcdcd8e1edfb4ebaad",
+  "delivery": "Debug native binaries; verification TypeScript served by local Metro in FORGE_ACCEPTANCE=media mode",
+  "files": {
+    "androidApk": {
+      "path": "/Users/mikevocalz/recovered-work/2026-11-05/native-artifacts/P03-native-media.apk",
+      "sha256": "b2d70c10c7618fcd70738cac484e170518b56abd9cf7d6ccf140cb3423bc2a85"
+    },
+    "iosExecutable": {
+      "path": "/Users/mikevocalz/recovered-work/2026-11-05/native-artifacts/P03-NitroForgeCadenceNative.app/NitroForgeCadenceNative",
+      "sha256": "327e56661848af244fb251a6fea05af743d004870fef7dbb81a52117e5774e41"
+    },
+    "fixture": {
+      "path": "/Users/mikevocalz/recovered-work/2026-11-05/forge-complete/examples/native-cadence/fixtures/decoder.mp4",
+      "sha256": "4c9905522ec7710bbe0a7f02404cc2a957b037c2de3c67c4469df904b7207b0a"
+    },
+    "metroVerification": {
+      "path": "/Users/mikevocalz/recovered-work/2026-11-05/forge-complete/examples/native-cadence/verify-media.ts",
+      "sha256": "749076c77a25960edd0deed17980aa4e117fc7e313125516bbfbfc74bb7e9086"
+    }
+  },
+  "results": {
+    "android": "frame150000us 96x64; PCM12000frames/24000Hz/440crossings; bounds/cache passed",
+    "ios": "frame100000us 96x64; PCM12000frames/24000Hz/440crossings; bounds/cache passed"
+  },
+  "limits": [
+    "Simulator/runtime fixture only; not all codec/color profiles or physical hardware",
+    "Playback, cancellation and remaining required hosts remain unfinished"
+  ]
+}
