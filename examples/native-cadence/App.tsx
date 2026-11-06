@@ -7,6 +7,7 @@ import { InstrumentKnob } from "@nyc-tron/ui/components/forge/inputs/InstrumentK
 import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-forge/cadence/instrument-session";
 import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
 import { verifyNativeEngines } from "./verify-engines";
+import { verifyNativeServices } from "./verify-services";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -201,6 +202,13 @@ export default function App() {
               action(async () => {
                 store.setState({ verification: null });
                 const verification = await verifyNativeEngines();
+                console.info(verification);
+                store.setState({ verification });
+              })}/>
+            <Action label="Verify native services" disabled={state.pending} onPress={() =>
+              action(async () => {
+                store.setState({ verification: null });
+                const verification = await verifyNativeServices();
                 console.info(verification);
                 store.setState({ verification });
               })}/>

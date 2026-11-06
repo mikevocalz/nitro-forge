@@ -5,6 +5,7 @@ import type {
   EngineKind,
 } from "./types";
 import { EngineError } from "./types";
+import type { ForgeFactory } from "./specs/ForgeFactory.nitro";
 
 /**
  * EngineHost — the transport contract between TypeScript and Rust engines.
@@ -147,14 +148,19 @@ function parseNativeError(e: unknown): EngineError {
 }
 
 /**
- * Create the production host. Resolves `react-native-nitro-modules` lazily so
- * this module stays importable where Nitro doesn't exist (Node tooling).
+ * Create the production factory, including native tasks and media caches.
+ * Resolve the generated constructor lazily so Node/web imports have no native
+ * runtime side effects. Callers own and must close documents and caches.
  */
-export function createNitroHost(): EngineHost {
+export function createNativeForgeFactory(): ForgeFactory {
   // Generated v1 constructor uses getHybridClass, never the removed v0 API.
   // Loading it only here preserves Node tooling and web host isolation.
   const { ForgeFactory } = require("#nitro/ForgeFactory") as {
-    ForgeFactory: new () => ForgeFactoryNative;
+    ForgeFactory: new () => ForgeFactory;
   };
-  return new NitroHost(new ForgeFactory());
+  return new ForgeFactory();
+}
+
+export function createNitroHost(): EngineHost {
+  return new NitroHost(createNativeForgeFactory());
 }
