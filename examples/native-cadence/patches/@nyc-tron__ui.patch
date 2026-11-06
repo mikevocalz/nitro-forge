@@ -1,3 +1,4 @@
+diff --git a/dist/components/SegmentedControl.js b/dist/components/SegmentedControl.js
 --- a/dist/components/SegmentedControl.js
 +++ b/dist/components/SegmentedControl.js
 @@ -10,7 +10,7 @@
@@ -25,6 +26,7 @@
  }
  //# sourceMappingURL=SegmentedControl.js.map
 \ No newline at end of file
+diff --git a/dist/components/SegmentedControl.d.ts b/dist/components/SegmentedControl.d.ts
 --- a/dist/components/SegmentedControl.d.ts
 +++ b/dist/components/SegmentedControl.d.ts
 @@ -1,4 +1,4 @@
@@ -55,4 +57,46 @@
 -export declare function SegmentedControl<T extends string = string>({ options, value, onChange, disabled, className, segmentClassName, labelClassName, unstyled, "aria-label": ariaLabel, "aria-labelledby": ariaLabelledBy, ...rest }: SegmentedControlProps<T>): import("react").JSX.Element;
 +export declare function SegmentedControl<T extends string = string>({ options, value, onChange, disabled, className, segmentClassName, labelClassName, segmentStyle, labelStyle, unstyled, style, "aria-label": ariaLabel, "aria-labelledby": ariaLabelledBy, ...rest }: SegmentedControlProps<T>): import("react").JSX.Element;
  //# sourceMappingURL=SegmentedControl.d.ts.map
+\ No newline at end of file
+diff --git a/dist/components/forge/inputs/PrecisionScrubber.js b/dist/components/forge/inputs/PrecisionScrubber.js
+--- a/dist/components/forge/inputs/PrecisionScrubber.js
++++ b/dist/components/forge/inputs/PrecisionScrubber.js
+@@ -22,7 +22,7 @@
+  * pointer to cancel. Text entry, arrow keys, +/- buttons and screen-reader
+  * increment/decrement all commit once through `onCommit`.
+  */
+-export function PrecisionScrubber({ label, value, min, max, step, detents, unit, disabled = false, onPreview, onCommit, forcedColors = false, transport: Transport = PanResponderDrag, className, unstyled = false, style, ...rest }) {
++export function PrecisionScrubber({ label, value, min, max, step, detents, unit, disabled = false, onPreview, onCommit, forcedColors = false, transport: Transport = PanResponderDrag, className, unstyled = false, scaleColor, accentColor, style, ...rest }) {
+     const latest = useRef({ value, min, max, step, detents, disabled, onPreview, onCommit });
+     latest.current = { value, min, max, step, detents, disabled, onPreview, onCommit };
+     const local = useRef(null);
+@@ -41,7 +41,7 @@
+     const reached = normalize(state.preview, min, max);
+     const forced = forcedColors && Platform.OS === "web";
+     const styled = !unstyled;
+-    const ink = forced ? { line: { backgroundColor: CANVAS_TEXT, ...SYSTEM_INK }, accent: { backgroundColor: HIGHLIGHT, ...SYSTEM_INK } } : undefined;
++    const ink = forced ? { line: { backgroundColor: CANVAS_TEXT, ...SYSTEM_INK }, accent: { backgroundColor: HIGHLIGHT, ...SYSTEM_INK } } : { line: { backgroundColor: scaleColor }, accent: { backgroundColor: accentColor } };
+     const lineClass = joinClasses(styled && !forced && "bg-border");
+     const accentClass = joinClasses(styled && !forced && "bg-accent");
+     const scaleBorder = state.active ? "border-accent" : focused ? "border-focus" : hovered ? "border-text-muted" : "border-border";
+diff --git a/dist/components/forge/inputs/PrecisionScrubber.d.ts b/dist/components/forge/inputs/PrecisionScrubber.d.ts
+--- a/dist/components/forge/inputs/PrecisionScrubber.d.ts
++++ b/dist/components/forge/inputs/PrecisionScrubber.d.ts
+@@ -25,6 +25,9 @@
+     transport?: DragTransport;
+     className?: string;
+     unstyled?: boolean;
++    /** App-owned scale ink for native hosts without a CSS class pipeline. */
++    scaleColor?: string;
++    accentColor?: string;
+ }
+ /**
+  * Controlled numeric instrument: drag horizontally to adjust, move up for fine
+@@ -32,5 +35,5 @@
+  * pointer to cancel. Text entry, arrow keys, +/- buttons and screen-reader
+  * increment/decrement all commit once through `onCommit`.
+  */
+-export declare function PrecisionScrubber({ label, value, min, max, step, detents, unit, disabled, onPreview, onCommit, forcedColors, transport: Transport, className, unstyled, style, ...rest }: PrecisionScrubberProps): import("react").JSX.Element;
++export declare function PrecisionScrubber({ label, value, min, max, step, detents, unit, disabled, onPreview, onCommit, forcedColors, transport: Transport, className, unstyled, scaleColor, accentColor, style, ...rest }: PrecisionScrubberProps): import("react").JSX.Element;
+ //# sourceMappingURL=PrecisionScrubber.d.ts.map
 \ No newline at end of file

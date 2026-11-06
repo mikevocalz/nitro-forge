@@ -1,9 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ComponentRef } from "react";
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { useStore } from "zustand";
 import { ArcKnob } from "@nyc-tron/native-controls/ArcKnob";
 import { InstrumentKnob } from "@nyc-tron/ui/components/forge/inputs/InstrumentKnob";
+import { focusForScreenReader } from "@nyc-tron/ui/components/shell/screen-reader-focus";
+import { PrecisionScrubber } from "@nyc-tron/ui/components/forge/inputs/PrecisionScrubber";
 import { InstrumentXYPad } from "@nyc-tron/ui/components/forge/inputs/InstrumentXYPad";
 import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-forge/cadence/instrument-session";
 import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
@@ -11,6 +13,8 @@ import { createTelemetry, instrumentHost, type Telemetry } from "@nitro-forge/te
 import { SegmentedControl } from "@nyc-tron/ui/components/SegmentedControl";
 import { createKeyboardMap } from "@nyc-tron/ui/components/shell/keyboard-map";
 import { useHardwareKeyboard, isHardwareKeysAvailable } from "@nyc-tron/hardware-keys";
+import { useReservedRegions, isReservedRegionsAvailable } from "@nyc-tron/reserved-regions";
+import { foldFeaturesFromRegions, resolveUsableRegions, type Rect } from "@nyc-tron/core/folds";
 import { shareDiagnosticTrace } from "./verify-documents";
 import { verifyNativeEngines } from "./verify-engines";
 import { verifyNativeServices } from "./verify-services";
@@ -24,6 +28,7 @@ type ScreenState = {
   error: string | null;
   pending: boolean;
   width: number;
+  viewport: Rect | null;
   attempt: number;
   savedBytes: number | null;
   gainPreview: number | null;
@@ -33,11 +38,11 @@ type ScreenState = {
   diagnosticEvents: number;
   lastShortcut: string | null;
   /** NYC-Tron instrument renderer. All share the same authoritative Cadence session. */
-  renderer: "native" | "react-native" | "xy";
+  renderer: "native" | "react-native" | "xy" | "precision";
 };
 const initial: ScreenState = {
   phase: "loading", actual: null, error: null, pending: false,
-  width: 360, attempt: 0, savedBytes: null, gainPreview: null, panPreview: null,
+  width: 360, viewport: null, attempt: 0, savedBytes: null, gainPreview: null, panPreview: null,
   renderer: "native",
   verification: null, consent: "off", diagnosticEvents: 0, lastShortcut: null,
 };
@@ -55,6 +60,19 @@ export default function App() {
   if (!localRef.current) localRef.current = createStore<ScreenState>(() => ({ ...initial }));
   const store = localRef.current;
   const state = useStore(store, (s) => s);
+  const headingRef = useRef<ComponentRef<typeof Text> | null>(null);
+  useEffect(() => {
+    if (state.phase !== "ready") return;
+    const frame = requestAnimationFrame(() => focusForScreenReader(headingRef.current));
+    return () => cancelAnimationFrame(frame);
+  }, [state.phase]);
+  const viewportRef = useRef<ComponentRef<typeof View> | null>(null);
+  const reservedRegions = useReservedRegions();
+  // Keep the document/session above geometry changes. Only the scroll viewport moves.
+  const usable = state.viewport ? resolveUsableRegions({ container: state.viewport,
+    features: foldFeaturesFromRegions(reservedRegions, { includeOcclusions: true }) }) : [];
+  const pane = usable.reduce<Rect | null>((best, rect) =>
+    !best || rect.width * rect.height > best.width * best.height ? rect : best, null);
   const currentSession = useRef<CadenceInstrumentSession | null>(null);
   const telemetryRef = useRef<Telemetry | null>(null);
   if (!telemetryRef.current) telemetryRef.current = createTelemetry({ consent: "off", maxEvents: 200 });
@@ -147,9 +165,15 @@ export default function App() {
   });
   const size = Math.min(164, Math.max(104, Math.floor((state.width - 72) / 2)));
   const enabled = state.phase === "ready" && !state.pending;
-  return <ScrollView
+  return <View ref={viewportRef} style={{ flex: 1, backgroundColor: colors.background }}
+    onLayout={() => viewportRef.current?.measureInWindow((x, y, width, height) => {
+      if ([x, y, width, height].every(Number.isFinite) && width > 0 && height > 0)
+        store.setState({ viewport: { x, y, width, height } });
+    })}>
+    <ScrollView
     accessibilityLabel="Cadence native instrument editor"
-    style={{ flex: 1, backgroundColor: colors.background }}
+    style={[{ flex: 1, backgroundColor: colors.background }, pane ? { position: "absolute",
+      left: pane.x, top: pane.y, width: pane.width, height: pane.height } : null]}
     contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 30, gap: 18 }}
     onLayout={event => {
       const width = event.nativeEvent.layout.width;
@@ -157,9 +181,10 @@ export default function App() {
         store.setState({ width });
     }}>
     <View style={{ gap: 8 }}>
-      <Text style={{ color: colors.text, fontWeight: "800", fontSize: 28 }}>Cadence / Native</Text>
+      <Text ref={headingRef} accessibilityRole="header" style={{ color: colors.text, fontWeight: "800", fontSize: 28 }}>Cadence / Native</Text>
       <Text style={{ color: colors.muted }}>SwiftUI · Jetpack Compose · Rust-owned document</Text>
     </View>
+    <Text style={{ color: colors.muted }}>Reserved regions: {isReservedRegionsAvailable() ? "linked" : "unavailable"}; {reservedRegions.length} reported.</Text>
     <View style={{ gap: 8 }}>
       <Text style={{ color: colors.text }}>Diagnostics: {state.consent === "off" ? "off" : "local only"}</Text>
       <Text style={{ color: colors.muted }}>Local mode keeps up to 200 events in memory. Nothing uploads automatically. Off clears the trace.</Text>
@@ -227,6 +252,17 @@ export default function App() {
                 onPreview={panPreview => store.setState({ panPreview })}
                 onCommit={value => execute(s => s.knobs.pan.onCommit(value)).catch(() => undefined)}/>
             </> : null}
+            {session && state.renderer === "precision" ? <View style={{ flex: 1, minWidth: 240,
+              backgroundColor: colors.paper, borderRadius: 12, padding: 12 }}>
+              <PrecisionScrubber label="Gain" value={actual.gain} {...session.knobs.gain}
+                unstyled scaleColor={colors.border} accentColor={colors.accent} disabled={!enabled}
+                onPreview={gainPreview => store.setState({ gainPreview })}
+                onCommit={value => execute(s => s.setGain(value))}/>
+              <PrecisionScrubber label="Pan" value={actual.pan} {...session.knobs.pan}
+                unstyled scaleColor={colors.border} accentColor={colors.accent} disabled={!enabled}
+                onPreview={panPreview => store.setState({ panPreview })}
+                onCommit={value => execute(s => s.setPan(value))}/>
+            </View> : null}
             {session && state.renderer === "xy" ? <InstrumentXYPad
               label="Gain and pan" {...session.xyPad} disabled={!enabled} size={size}
               unstyled accentColor={colors.accent}
@@ -253,6 +289,8 @@ export default function App() {
               onPress={() => store.setState({ renderer: "native" })}/>
             <Action label="React Native knob" selected={state.renderer === "react-native"}
               onPress={() => store.setState({ renderer: "react-native" })}/>
+            <Action label="Precision scrubbers" selected={state.renderer === "precision"}
+              onPress={() => store.setState({ renderer: "precision" })}/>
             <Action label="Gain / Pan pad" selected={state.renderer === "xy"}
               onPress={() => store.setState({ renderer: "xy" })}/>
           </View>
@@ -312,7 +350,7 @@ export default function App() {
       ? <Text accessibilityLiveRegion="polite" style={{ color: colors.danger }}>
           {state.error}
         </Text> : null}
-  </ScrollView>;
+  </ScrollView></View>;
 }
 function Action({ label, disabled = false, selected, onPress }: {
   label: string; disabled?: boolean; selected?: boolean; onPress: () => void;

@@ -2,17 +2,19 @@
 
 P00 and P01 are complete. Fresh iOS/Android builds and native engine/edit/undo/reopen checks pass on both targets; see [P01](reports/P01.md) for provenance.
 
-P02 is in progress. Native task/cache/binary, checkpoint recovery and atomic
-transaction probes pass on iOS/Android. Web checkpoint transaction/reload checks
-pass. Revision-gated collaboration now passes real-engine tests for all seven
-engines; deployed transport, realtime merging and presence remain unfinished.
-Native telemetry consent/error/payload-isolation probes pass on both simulators;
-product consent/export UI and external sink delivery remain unfinished. Native
-picker cancellation, generated fixture import and open-in-place access across
-process relaunch pass on both simulators. iOS Save to Files passes; Android
-recipient delivery and provider failure cases remain unverified.
-Keyboard/accessibility and other required host acceptance still need work.
-See [P02](reports/P02.md) and [N-11](N11-collaboration.md) for evidence and limits.
+P02 is in progress. Native task/cache/binary, checkpoint recovery, atomic edits,
+telemetry consent/export, picker import and bookmark recovery pass on iOS/Android.
+The real SQLite/HTTP collaboration service passes restart/conflict checks, and
+both native apps recover ambiguous uploads plus later edits across relaunch.
+The native lab now links reserved regions and uses the existing precision
+scrubber with Cadence-owned ranges/commits. Simulator decrement and undo/redo
+pass on both targets; iOS Duo fold transitions preserve the document. Shared
+playback disposal preserves preview/capture focus arbitration.
+
+Remaining work includes product recovery/playback integration, assistive-technology
+acceptance, Android recipient delivery, wider provider cases and other required
+host/platform evidence. Realtime object merging and presence are separate later
+work. See [P02](reports/P02.md) and [N-11](N11-collaboration.md) for evidence/limits.
 
 No component has been promoted to fully accepted across all required platforms.
 Each phase appends its report, evidence and commit checkpoint.

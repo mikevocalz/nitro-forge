@@ -80,3 +80,122 @@ diff --git a/ios/NYCTronDocumentsModule.swift b/ios/NYCTronDocumentsModule.swift
      let current = stale ? (url.bookmarkString ?? bookmark) : bookmark
      return RestoredAccessRecord(uri: url.absoluteString, bookmark: current, stale: stale)
    }
+diff --git a/dist/playback/session.js b/dist/playback/session.js
+--- a/dist/playback/session.js
++++ b/dist/playback/session.js
+@@ -6,7 +6,19 @@
+  */
+ export function createPlaybackSession(native, options) {
+     const store = createStore(() => IDLE_PLAYBACK);
++    let closed = false;
++    let tail = Promise.resolve();
++    let disposal;
++    const enqueue = (work) => {
++        if (closed)
++            return Promise.reject(new Error("Playback session is disposed"));
++        const result = tail.then(work);
++        tail = result.catch(() => undefined);
++        return result;
++    };
+     const dispatch = (event) => {
++        if (closed)
++            return "none";
+         const { state, action } = nextPlaybackState(store.getState(), event);
+         store.setState(state, true);
+         if (action !== "none")
+@@ -21,21 +33,28 @@
+     return {
+         isAvailable: native !== null,
+         store,
+-        async activate({ category, mixWithOthers = false }) {
+-            if (!native)
+-                return false;
+-            return await native.activate({ category, mixWithOthers });
++        activate({ category, mixWithOthers = false }) {
++            return enqueue(() => native ? native.activate({ category, mixWithOthers }) : false);
+         },
+-        async deactivate() {
+-            if (native)
+-                await native.deactivate();
++        deactivate() {
++            return enqueue(async () => { if (native)
++                await native.deactivate(); });
+         },
+         setIntent(intent) {
++            if (closed)
++                return;
+             store.setState(setPlaybackIntent(store.getState(), intent), true);
+         },
+         dispatch,
+-        dispose() {
++        dispose({ releaseFocus = false } = {}) {
++            if (disposal)
++                return disposal;
++            closed = true;
+             sub?.remove();
++            store.setState(IDLE_PLAYBACK, true);
++            disposal = tail.then(async () => { if (native && releaseFocus)
++                await native.deactivate(); });
++            return disposal;
+         },
+     };
+ }
+diff --git a/dist/playback/session.d.ts b/dist/playback/session.d.ts
+--- a/dist/playback/session.d.ts
++++ b/dist/playback/session.d.ts
+@@ -44,8 +44,14 @@
+     setIntent(intent: "playing" | "paused"): void;
+     /** Feeds one event through the policy, as the native listener does. Returns the action taken. */
+     dispatch(event: AudioSessionEvent): PlaybackAction;
+-    /** Stops listening. */
+-    dispose(): void;
++    /**
++     * Stops listening immediately and drains accepted operations. Idempotent.
++     * releaseFocus is opt-in: only the app's sole session owner may release the
++     * process-wide OS session; preview/capture coordinators arbitrate it themselves.
++     */
++    dispose(options?: {
++        releaseFocus?: boolean;
++    }): Promise<void>;
+ }
+ /** Options for {@linkcode createPlaybackSession}. */
+ export interface PlaybackSessionOptions {
+diff --git a/dist/haptics/haptics.js b/dist/haptics/haptics.js
+--- a/dist/haptics/haptics.js
++++ b/dist/haptics/haptics.js
+@@ -9,6 +9,8 @@
+ export function createHaptics(native, options = {}) {
+     const key = options.storageKey ?? "nyc-tron.haptics.enabled";
+     const minInterval = options.minIntervalMs ?? 30;
++    if (!Number.isFinite(minInterval) || minInterval < 0)
++        throw new RangeError("minIntervalMs must be finite and nonnegative");
+     const now = options.now ?? (() => globalThis.performance?.now?.() ?? Date.now());
+     const stored = options.storage?.getString(key);
+     const store = createStore(() => ({ enabled: stored !== "false" }));
+@@ -30,13 +32,22 @@
+                 return false;
+             last.set(kind, t);
+             // A rejected play is a missed tap, not an app error.
+-            Promise.resolve(native.play(kind)).catch(ignore);
+-            return true;
++            try {
++                Promise.resolve(native.play(kind)).catch(ignore);
++                return true;
++            }
++            catch {
++                return false;
++            }
+         },
+         prepare(kind) {
+             check(kind);
+-            if (native?.prepare && store.getState().enabled)
+-                Promise.resolve(native.prepare(kind)).catch(ignore);
++            if (native?.prepare && store.getState().enabled) {
++                try {
++                    Promise.resolve(native.prepare(kind)).catch(ignore);
++                }
++                catch { /* A missed warmup is harmless. */ }
++            }
+         },
+         setEnabled(enabled) {
+             store.setState({ enabled });
