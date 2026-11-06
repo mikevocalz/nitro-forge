@@ -461,3 +461,31 @@ export class SpliceTimelineAdapter {
     return this.doc.redo();
   }
 }
+
+/**
+ * Controlled timeline callbacks bound to one adapter instance. Each resolves
+ * with the authoritative engine view; the host publishes that view only on
+ * success and handles rejected engine edits in its existing error surface.
+ * Player rate/looping and UI selection remain owned by the host.
+ */
+export function timelineClusterCallbacks(adapter: SpliceTimelineAdapter) {
+  return {
+    onEdit: (edit: TimelineEditInput) => adapter.applyEdit(edit),
+    onApply: (edits: readonly BatchEditInput[]) => adapter.applyBatch(edits),
+    onSetFlag: (id: string, flag: TrackFlag, value: boolean) => adapter.setTrackFlag(id, flag, value),
+    onRename: (id: string, name: string) => adapter.renameTrack(id, name),
+    onMoveTrack: (id: string, index: number) => adapter.moveTrack(id, index),
+    onAddTrack: (kind: TrackKind) => adapter.addTrack(kind),
+    onAddTransition: (request: { leftClipId: string; rightClipId: string; kind: string; durationSeconds: number }) => {
+      const preset = SPLICE_TRANSITION_PRESETS.find(p => p.kind === request.kind);
+      if (!preset) return Promise.reject(new RangeError(`Unsupported transition: ${request.kind}`));
+      return adapter.addTransition({ ...request, kind: preset.kind });
+    },
+    onChangeTransition: (id: string, change: { durationSeconds: number }) => adapter.setTransition(id, change),
+    onRemoveTransition: (id: string) => adapter.removeTransition(id),
+    onAddMarker: (at: { seconds: number }) => adapter.addMarker(at),
+    onUpdateMarker: (id: string, change: { seconds: number; durationSeconds?: number; name?: string; note?: string }) => adapter.updateMarker(id, change),
+    onRemoveMarker: (id: string) => adapter.removeMarker(id),
+    onCommitLoop: (range: { inSeconds: number; outSeconds: number } | undefined) => adapter.setLoopRange(range),
+  };
+}

@@ -14,7 +14,8 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "verify:nyc-tron": "node tooling/verify-nyc-tron-pin.mjs",
-    "test:lab-config": "node --test tooling/lab-metro-config.test.cjs"
+    "test:lab-config": "node --test tooling/lab-metro-config.test.cjs",
+    "verify:timeline-source": "node tooling/verify-timeline-source.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

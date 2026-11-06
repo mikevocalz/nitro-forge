@@ -7,7 +7,9 @@
 // video and audio tracks). The second cluster's edits (ripple, roll, slip,
 // slide, insert/overwrite), the overlay track kind and the header, marker,
 // transition, loop and batch props arrive in the next release; when the pin
-// moves to it, add those components' props here.
+// moves to it, add those components' props here. Until then,
+// contracts/timeline-cluster2.ts checks the built source checkout through
+// tooling/verify-timeline-source.mjs without changing the release pin.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";

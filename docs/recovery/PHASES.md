@@ -7,8 +7,8 @@ Each phase finishes with integrated source, required exports and engine document
 | Phase | Work | Exit criteria | Status |
 | --- | --- | --- | --- |
 | 1 | Alpha.3 release consumers | Combine the six follow-ups, reconcile runtime/config/exports and lockfile, pass combined tests/types and browser builds | COMPLETE locally |
-| 2 | Timeline cluster 2 | Finish recovered clD-tron controls, exports, component/browser gates and matching Forge timeline adapter contracts | Next |
-| 3 | Canvas and layers | Integrate U1-U4 into clB-tron; finish exports, source notices, browser acceptance and Prism bindings to #60 operations | Pending |
+| 2 | Timeline cluster 2 | Finish recovered clD-tron controls, exports, component/browser gates and matching Forge timeline adapter contracts | COMPLETE locally; unpublished |
+| 3 | Canvas and layers | Integrate U1-U4 into clB-tron; finish exports, source notices, browser acceptance and Prism bindings to #60 operations | Next |
 | 4 | Audio cluster 2 | Finish clE-tron exports and browser gates, then bind the #58 Cadence operations with engine-backed tests | Pending |
 | 5 | Workspace, color and transfers | Finish shell/color/presenter work and clACJN-forge workspace/import/export adapters against real engines | Pending |
 | 6 | Native tasks, decoding and desktop review | Finish native task/cache/binary transport, decoder and recovery dialog coverage; complete #57 source review; record actual supported platform gates | Pending |

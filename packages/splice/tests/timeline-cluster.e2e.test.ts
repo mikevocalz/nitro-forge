@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { EngineError } from "@nitro-forge/ignition";
 import { CliHost } from "@nitro-forge/ignition/cli";
 import { SpliceDocument } from "../src/index";
-import { SpliceTimelineAdapter } from "../src/timeline-cluster";
+import { SpliceTimelineAdapter, timelineClusterCallbacks } from "../src/timeline-cluster";
 
 let host: CliHost;
 beforeAll(() => {
@@ -109,5 +109,37 @@ describe("SpliceTimelineAdapter e2e", () => {
     // Clip 0 split at 1 s; the moved clip sits at 1..3; the rest shift 2 s.
     expect(startsOf(v)).toEqual([0, 24, 72, 96]);
     await doc.close();
+  });
+});
+
+
+describe("bound timeline cluster callbacks", () => {
+  it("keeps adapter ownership when callbacks are passed directly to controls", async () => {
+    const { doc, a, ids, trackId } = await setup();
+    try {
+      const c = timelineClusterCallbacks(a);
+      const rename = c.onRename;
+      expect((await rename(trackId, "Picture")).tracks[0]!.label).toBe("Picture");
+      const mark = await c.onAddMarker({ seconds: 1 });
+      const markerId = mark.markers[0]!.id;
+      const changed = await c.onUpdateMarker(markerId, { seconds: 1.5, name: "Cue", note: "Cut here" });
+      expect(changed.markers[0]).toMatchObject({ frame: 36, name: "Cue", note: "Cut here" });
+      const t = await c.onAddTransition({ leftClipId: ids[0]!, rightClipId: ids[1]!, kind: "cross_dissolve", durationSeconds: 0.5 });
+      expect(t.transitions[0]!.durationFrames).toBe(12);
+      expect((await c.onCommitLoop({ inSeconds: 1, outSeconds: 3 })).loopRange).toEqual({ inFrame: 24, outFrame: 72 });
+    } finally { await doc.close(); }
+  });
+
+  it("rejects an unavailable preset or a locked edit without publishing changed state", async () => {
+    const { doc, a, ids, trackId } = await setup();
+    try {
+      const c = timelineClusterCallbacks(a);
+      const before = await a.read();
+      await expect(c.onAddTransition({ leftClipId: ids[0]!, rightClipId: ids[1]!, kind: "unavailable", durationSeconds: 1 })).rejects.toThrow(/Unsupported transition/);
+      expect(await a.read()).toEqual(before);
+      const locked = await c.onSetFlag(trackId, "locked", true);
+      await expect(c.onEdit({ kind: "slip", clipId: ids[1]!, deltaSeconds: 1 })).rejects.toThrow(/locked/);
+      expect(await a.read()).toEqual(locked);
+    } finally { await doc.close(); }
   });
 });

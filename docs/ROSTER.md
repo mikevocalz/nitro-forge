@@ -578,3 +578,9 @@ The combined workspace passes 245 Rust tests and 394 package tests (one existing
 Integration fixed lab Metro watch folders so pnpm assets can be exported and preserved existing Expo/Uniwind configuration. Root `test:rust` now targets the actual Cargo workspace. Studio app configuration remains byte-identical to its baseline. No new native/device validation, remote push or PR merge is claimed.
 
 See `docs/recovery/PHASES.md` for phases 2–6 and `docs/recovery/roster-status.tsv` for all 341 rows and 21 status columns.
+
+## Phase 2 timeline source completion — 2026-11-05
+
+NYC-Tron's local second timeline cluster is integrated and tested: 544 source/model/render tests, 254 full-lane Chromium checks, workspace build/types and package export/pack checks pass. Track/marker text commits are deduplicated across Enter and blur while the engine response is pending.
+
+Forge's bound timeline callbacks pass 25 Splice tests against real Rust and TypeScript. The explicit `verify:timeline-source` command checks the actual built, unreleased component declarations while production pins stay on alpha.3. No new Rust code was added. No new release/native/device acceptance is claimed. See `docs/recovery/PHASE2.md` and the updated 341-row status table.
