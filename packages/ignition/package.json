@@ -13,7 +13,8 @@
     "./workspace": "./src/workspace.ts",
     "./transfer": "./src/transfer.ts",
     "./workspace-ui": "./src/workspace-ui.ts",
-    "./transfer-ui": "./src/transfer-ui.ts"
+    "./transfer-ui": "./src/transfer-ui.ts",
+    "./autosave": "./src/autosave.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

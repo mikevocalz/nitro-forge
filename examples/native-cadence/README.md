@@ -91,3 +91,31 @@ runtime evidence, native binary provenance and outstanding acceptance gates.
 - The cross-repository consumer TypeScript test passed on the combined sources. This is neither a device test nor proof of native JS-to-Rust linkage.
 
 To avoid duplicate expensive native builds, the CI workflow now uses one PR trigger (plus manual dispatch) with a single latest-branch concurrency group.
+
+## Companion checkpoint acceptance
+
+The normal entry uses the released exports. Test the new storage API in an
+explicit companion mode:
+
+```sh
+# In the companion NYC-Tron checkout:
+pnpm --filter @nyc-tron/platform-services build
+# In Forge, using your actual companion checkout path:
+NYC_TRON_ROOT=/path/to/NYC-Tron-UI node tooling/typecheck-checkpoint-acceptance.mjs
+# In this directory, after building/installing native dependencies:
+EXPO_NO_TYPESCRIPT_SETUP=1 NYC_TRON_ROOT=/path/to/NYC-Tron-UI \
+NYC_TRON_PACKAGES=@nyc-tron/platform-services FORGE_ACCEPTANCE=checkpoints \
+pnpm start --port 8081 --localhost
+```
+
+This mode serves `checkpoint-acceptance.js` instead of `index.js`, links only
+the candidate platform-services JavaScript and resolves Expo's runtime and
+FileSystem from the app. The native app must include Expo FileSystem 58.0.13.
+The lab checks actual disk persistence, undo/redo, corruption fallback,
+interrupted temporary writes, real I/O failure/retry and process relaunch.
+Both iOS and Android passed; P02 reports retain exact provenance.
+
+The persisted platform-services patch supplies alpha.4's missing SwiftPM
+manifest, preserving the Podspec's iOS floor and frameworks. The companion
+source includes that manifest; remove the patch when adopting the future
+release containing it. Release assets remain pinned.

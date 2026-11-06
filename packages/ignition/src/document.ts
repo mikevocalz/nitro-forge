@@ -73,14 +73,18 @@ export class DocumentHandle {
     this.emit([{ kind: "document:restored" }]);
   }
 
-  undo(): Promise<boolean> {
+  async undo(): Promise<boolean> {
     this.assertOpen();
-    return this.host.undo(this.id);
+    const changed = await this.host.undo(this.id);
+    if (changed) this.emit([{ kind: "document:changed" }]);
+    return changed;
   }
 
-  redo(): Promise<boolean> {
+  async redo(): Promise<boolean> {
     this.assertOpen();
-    return this.host.redo(this.id);
+    const changed = await this.host.redo(this.id);
+    if (changed) this.emit([{ kind: "document:changed" }]);
+    return changed;
   }
 
   async close(): Promise<void> {

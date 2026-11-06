@@ -23,6 +23,8 @@ const SHARED_RUNTIME = [
   "react",
   "react-native",
   "@expo/ui",
+  "expo-modules-core",
+  "expo-file-system",
   "zustand",
   "@tanstack/react-table",
   "react-native-gesture-handler",
@@ -84,7 +86,7 @@ function pinToApp(config, options) {
 
 /**
  * @param {import("metro-config").MetroConfig} config
- * @param {{ projectRoot: string, nycTronRoot?: string, sharedRuntime?: string[] }} options
+ * @param {{ projectRoot: string, nycTronRoot?: string, sharedRuntime?: string[], includePackages?: string[] }} options
  */
 function withNycTronDevLink(config, options) {
   const nycTronRoot = options.nycTronRoot ?? process.env.NYC_TRON_ROOT;
@@ -101,7 +103,8 @@ function withNycTronDevLink(config, options) {
     const manifestPath = path.join(linkedRoot, "packages", dir, "package.json");
     if (!fs.existsSync(manifestPath)) continue;
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    if (manifest.name && manifest.name.startsWith("@nyc-tron/"))
+    if (manifest.name && manifest.name.startsWith("@nyc-tron/") &&
+        (!options.includePackages || options.includePackages.includes(manifest.name)))
       linkedPackages.set(manifest.name, { dir: path.dirname(manifestPath), manifest });
   }
 
