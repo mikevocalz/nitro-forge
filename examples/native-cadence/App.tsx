@@ -5,7 +5,8 @@ import { useStore } from "zustand";
 import { ArcKnob } from "@nyc-tron/native-controls/ArcKnob";
 import { InstrumentKnob } from "@nyc-tron/ui/components/forge/inputs/InstrumentKnob";
 import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-forge/cadence/instrument-session";
-import { createRegisteredForgeV1Host } from "@nitro-forge/ignition/v1-host";
+import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
+import { verifyNativeEngines } from "./verify-engines";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -17,6 +18,7 @@ type ScreenState = {
   savedBytes: number | null;
   gainPreview: number | null;
   panPreview: number | null;
+  verification: string | null;
   /** Which NYC-Tron knob renders the controls. Both commit through the same Cadence adapter. */
   renderer: "native" | "react-native";
 };
@@ -24,6 +26,7 @@ const initial: ScreenState = {
   phase: "loading", actual: null, error: null, pending: false,
   width: 360, attempt: 0, savedBytes: null, gainPreview: null, panPreview: null,
   renderer: "native",
+  verification: null,
 };
 const colors = {
   background: "#101017", surface: "#1B1B25", text: "#F7F7FA",
@@ -44,15 +47,19 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     let unsubscribe: (() => void) | undefined;
+    let host: EngineHost | undefined;
     store.setState({ phase: "loading", actual: null, error: null,
       gainPreview: null, panPreview: null, savedBytes: null });
     const connect = async () => {
       try {
-        const host = createRegisteredForgeV1Host();
+        host = createNitroHost();
         const session = await CadenceInstrumentSession.open(host, {
           trackName: "Native instrument 01",
         });
-        if (cancelled) { await session.close(); return; }
+        if (cancelled) {
+          try { await session.close(); } finally { await host.dispose(); }
+          return;
+        }
         currentSession.current = session;
         unsubscribe = session.subscribe((actual) => {
           if (!cancelled) store.setState({
@@ -62,6 +69,9 @@ export default function App() {
         });
         store.setState({ actual: session.state, phase: "ready" });
       } catch (error) {
+        // Opening can allocate native documents before initialization fails.
+        // Dispose even when no session was published to the screen.
+        await host?.dispose().catch(cleanupError => console.error("Cadence cleanup failed", cleanupError));
         if (!cancelled) store.setState({
           phase: "error",
           error: error instanceof Error ? error.message : String(error),
@@ -74,7 +84,9 @@ export default function App() {
       unsubscribe?.();
       const session = currentSession.current;
       currentSession.current = null;
-      if (session) void session.close();
+      void (async () => {
+        try { await session?.close(); } finally { await host?.dispose(); }
+      })().catch(error => console.error("Cadence cleanup failed", error));
     };
   }, [state.attempt, store]);
 
@@ -124,7 +136,7 @@ export default function App() {
           <Text style={{ color: colors.danger, fontWeight: "700" }}>Native engine unavailable</Text>
           <Text selectable style={{ color: colors.text }}>{state.error}</Text>
           <Text style={{ color: colors.muted }}>
-            Register a real generated Nitro v1 ForgeFactory at app startup. No fake or legacy Nitro 0.x document is used.
+            Rebuild the native app with the generated ForgeFactory and engine libraries, then retry the connection.
           </Text>
           <Action label="Retry connection" onPress={() =>
             store.setState(s => ({ attempt: s.attempt + 1 }))}/>
@@ -183,6 +195,13 @@ export default function App() {
               onPress={() => store.setState({ renderer: "react-native" })}/>
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            <Action label="Verify native engines" disabled={state.pending} onPress={() =>
+              action(async () => {
+                store.setState({ verification: null });
+                const verification = await verifyNativeEngines();
+                console.info(verification);
+                store.setState({ verification });
+              })}/>
             <Action label="Undo" disabled={state.pending} onPress={() => action(s => s.undo())}/>
             <Action label="Redo" disabled={state.pending} onPress={() => action(s => s.redo())}/>
             <Action label="Snapshot" disabled={state.pending} onPress={() =>
@@ -195,6 +214,9 @@ export default function App() {
             ? <Text accessibilityLiveRegion="polite" style={{ color: colors.muted }}>
                 NFD1 snapshot: {state.savedBytes} bytes. Not saved to device storage.
               </Text> : null}
+          {state.verification ? <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>
+            {state.verification}
+          </Text> : null}
         </View>
       : null}
     {state.error && state.phase === "ready"
