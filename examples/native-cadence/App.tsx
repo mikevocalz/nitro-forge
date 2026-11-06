@@ -9,6 +9,7 @@ import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-fo
 import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
 import { verifyNativeEngines } from "./verify-engines";
 import { verifyNativeServices } from "./verify-services";
+import { verifyNativeTelemetry } from "./verify-telemetry";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -220,6 +221,12 @@ export default function App() {
                 store.setState({ verification: null });
                 const verification = await verifyNativeServices();
                 console.info(verification);
+                store.setState({ verification });
+              })}/>
+            <Action label="Verify native telemetry" disabled={state.pending} onPress={() =>
+              action(async () => {
+                store.setState({ verification: null });
+                const verification = await verifyNativeTelemetry();
                 store.setState({ verification });
               })}/>
             <Action label="Undo" disabled={state.pending} onPress={() => action(s => s.undo())}/>

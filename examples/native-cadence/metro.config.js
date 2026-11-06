@@ -15,11 +15,12 @@ config.watchFolders = [
   ...(config.watchFolders ?? []),
   path.join(forgeRoot, "packages/ignition"),
   path.join(forgeRoot, "packages/cadence"),
+  path.join(forgeRoot, "packages/telemetry"),
 ];
 
 // Explicit lab mode serves a separate acceptance entry. Normal consumers keep
 // their released dependency graph; candidate-only exports are isolated here.
-const acceptanceEntry = { checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance" }[process.env.FORGE_ACCEPTANCE];
+const acceptanceEntry = { checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance" }[process.env.FORGE_ACCEPTANCE];
 if (acceptanceEntry) {
   const rewrite = config.server?.rewriteRequestUrl;
   config.server = {

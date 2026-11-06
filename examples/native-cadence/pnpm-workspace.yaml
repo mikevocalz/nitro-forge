@@ -1,10 +1,12 @@
 # Standalone Expo 58 / RN 0.88 workspace. It is not part of the root
 # workspace, so the Expo 54 example and the Node test lanes never resolve
-# against Expo 58 native packages. The two Forge packages join from source.
+# against Expo 58 native packages. The Forge packages join from source.
 packages:
   - "."
   - "../../packages/ignition"
   - "../../packages/cadence"
+  - "../../packages/telemetry"
+  - "../../packages/prism"
 # Keep the app and shared Ignition dependency on the same Nitro v1 nightly.
 # Metro must bundle a single react-native-nitro-modules runtime.
 overrides:

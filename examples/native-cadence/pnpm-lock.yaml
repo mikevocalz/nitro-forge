@@ -28,6 +28,9 @@ importers:
       '@nitro-forge/ignition':
         specifier: workspace:*
         version: link:../../packages/ignition
+      '@nitro-forge/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
       '@nyc-tron/native-controls':
         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz
         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
@@ -111,6 +114,35 @@ importers:
       react-native-nitro-modules:
         specifier: 1.0.0-alpha.nightly.120.g33ef045b96c0
         version: 1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 5.1.0
+        version: 5.1.0(@types/node@26.6.6)(vite@7.3.7(@types/node@26.6.6)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1))
+
+  ../../packages/prism:
+    dependencies:
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
+    devDependencies:
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 5.1.0
+        version: 5.1.0(@types/node@26.6.6)(vite@7.3.7(@types/node@26.6.6)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1))
+
+  ../../packages/telemetry:
+    dependencies:
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
+    devDependencies:
+      '@nitro-forge/prism':
+        specifier: workspace:*
+        version: link:../prism
       typescript:
         specifier: 7.0.2
         version: 7.0.2

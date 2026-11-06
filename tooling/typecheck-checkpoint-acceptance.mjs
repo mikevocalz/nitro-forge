@@ -20,7 +20,8 @@ try {
       paths: { "@nyc-tron/platform-services/checkpoints": [declaration] },
     },
     include: [join(app, "CheckpointAcceptance.tsx"), join(app, "verify-checkpoints.ts"),
-      join(app, "TransactionsAcceptance.tsx"), join(app, "verify-transactions.ts")],
+      join(app, "TransactionsAcceptance.tsx"), join(app, "verify-transactions.ts"),
+      join(app, "TelemetryAcceptance.tsx"), join(app, "verify-telemetry.ts")],
   }, null, 2));
   const result = spawnSync(join(app, "node_modules/.bin/tsc"), ["--project", config], { stdio: "inherit" });
   if (result.error) throw result.error;

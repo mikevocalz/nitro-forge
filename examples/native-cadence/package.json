@@ -22,7 +22,8 @@
     "react": "19.3.0",
     "react-native": "0.88.1",
     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
-    "zustand": "5.0.16"
+    "zustand": "5.0.16",
+    "@nitro-forge/telemetry": "workspace:*"
   },
   "devDependencies": {
     "@react-native-community/cli": "20.2.0",
