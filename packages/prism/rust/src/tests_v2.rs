@@ -691,3 +691,63 @@ fn legacy_shape_edits_obey_layer_kind_and_ancestor_locks() {
     one_step(&mut e, "transformShape", json!({"id":a,"dx":1,"dy":0,"scale_x":1,"scale_y":1}));
     one_step(&mut e, "setShapeFill", json!({"id":a,"color":[0,255,0,255]}));
 }
+
+#[test]
+fn translations_validate_all_results_before_recording_history() {
+    let mut e = eng(64, 8);
+    let a = rect(&mut e, 0.0, 0.0, 2.0, 1.0, RED);
+    let b = rect(&mut e, 4.0, 0.0, 1.0, 1.0, BLUE);
+    run(&mut e, "setLayerTransform", json!({"id":b,"transform":{"tx":10000000}}));
+    run(&mut e,"selectLayers",json!({"ids":[a]}));
+    e.undo().unwrap();
+    let snapshot = e.snapshot().unwrap();
+    let redo_depth = e.journal.redo_len();
+    rejects(&mut e,"translateLayers",json!({"ids":[a,b],"dx":1,"dy":0}),ErrorCode::Validation);
+    assert_eq!(e.journal.redo_len(),redo_depth);
+    assert_eq!(e.snapshot().unwrap(),snapshot);
+    eng(1,1).restore(&snapshot).unwrap();
+    run(&mut e,"setLayerTransform",json!({"id":b,"transform":{"tx":0}}));
+    run(&mut e,"setLayerTransform",json!({"id":a,"transform":{"tx":-10}}));
+    let group = id(&run(&mut e,"groupLayers",json!({"ids":[b]})));
+    run(&mut e,"setLayerTransform",json!({"id":group,"transform":{"sx":0.000001}}));
+    rejects(&mut e,"translateLayers",json!({"ids":[a,b],"dx":20,"dy":0}),ErrorCode::Validation);
+    rejects(&mut e,"distributeLayers",json!({"ids":[a,b],"axis":"horizontal","spacing":20}),ErrorCode::Validation);
+    rejects(&mut e,"alignLayers",json!({"ids":[a,b],"align":"right","to":"canvas"}),ErrorCode::Validation);
+    eng(1,1).restore(&e.snapshot().unwrap()).unwrap();
+}
+
+#[test]
+fn flood_fill_projects_canvas_coverage_into_the_translated_raster() {
+    let mut e=eng(5,1);
+    let l=id(&run(&mut e,"addRasterLayer",json!({})));
+    run(&mut e,"drawPixels",json!({"id":l,"x":0,"y":0,"w":2,"h":1,"data_b64":b64::encode(&[255,0,0,255,0,255,0,255])}));
+    run(&mut e,"setLayerTransform",json!({"id":l,"transform":{"tx":1}}));
+    one_step(&mut e,"floodFill",json!({"id":l,"x":1,"y":0,"color":BLUE,"tolerance":0}));
+    let f=flat(&mut e);assert_eq!(px(&f,5,1,0),BLUE);assert_eq!(px(&f,5,2,0),[0,255,0,255]);
+    let mut restored=eng(1,1);restored.restore(&e.snapshot().unwrap()).unwrap();assert_eq!(flat(&mut restored),f);
+}
+
+#[test]
+fn flood_fill_honors_ancestor_rotation_and_canvas_selection() {
+    let mut e=eng(8,4);
+    let l=id(&run(&mut e,"addRasterLayer",json!({})));
+    run(&mut e,"drawPixels",json!({"id":l,"x":0,"y":0,"w":2,"h":1,"data_b64":b64::encode(&[255,0,0,255,255,0,0,255])}));
+    run(&mut e,"setLayerTransform",json!({"id":l,"transform":{"tx":1}}));
+    let g=id(&run(&mut e,"groupLayers",json!({"ids":[l]})));
+    run(&mut e,"setLayerTransform",json!({"id":g,"transform":{"tx":4,"rotation":90}}));
+    run(&mut e,"selectRegion",json!({"shape":{"kind":"rect","x":3,"y":1,"w":1,"h":1}}));
+    one_step(&mut e,"floodFill",json!({"id":l,"x":3,"y":1,"color":BLUE,"tolerance":0,"sample":"composite"}));
+    let f=flat(&mut e);assert_eq!(px(&f,8,3,1),BLUE);assert_eq!(px(&f,8,3,2),RED);
+}
+
+#[test]
+fn scaled_fill_pulls_back_selection_coverage_and_blends_each_texel_once() {
+    let mut e=eng(4,1);
+    let l=id(&run(&mut e,"addRasterLayer",json!({})));
+    run(&mut e,"drawPixels",json!({"id":l,"x":0,"y":0,"w":1,"h":1,"data_b64":b64::encode(&RED)}));
+    run(&mut e,"setLayerTransform",json!({"id":l,"transform":{"sx":2}}));
+    run(&mut e,"selectRegion",json!({"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1}}));
+    one_step(&mut e,"floodFill",json!({"id":l,"x":0,"y":0,"color":BLUE,"tolerance":0}));
+    let d=describe(&mut e);let raw=b64::decode(layer(&d,l)["content"]["pixels_b64"].as_str().unwrap()).unwrap();
+    assert_eq!(px(&raw,4,0,0),[127,0,128,255]);assert_eq!(px(&raw,4,1,0),[0,0,0,0]);
+}

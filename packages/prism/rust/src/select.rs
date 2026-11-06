@@ -334,3 +334,29 @@ mod tests {
         assert!(f[5 * 10 + 4] < 255 && f[5 * 10 + 5] > 0);
     }
 }
+
+/// Pull canvas coverage into raster-local texels. Sampling the mask once per
+/// local pixel avoids repeated blending when a transformed pixel spans several
+/// canvas pixels. Bilinear coverage preserves feathered/partial selections.
+pub fn pullback_coverage(canvas: &[u8], w: usize, h: usize, local_to_canvas: &Affine) -> Vec<u8> {
+    let mut local = vec![0; w * h];
+    for y in 0..h {
+        for x in 0..w {
+            let (cx, cy) = local_to_canvas.apply(x as f64 + 0.5, y as f64 + 0.5);
+            if !cx.is_finite() || !cy.is_finite() || cx < 0.0 || cy < 0.0 || cx >= w as f64 || cy >= h as f64 {
+                continue;
+            }
+            let fx = (cx - 0.5).clamp(0.0, (w - 1) as f64);
+            let fy = (cy - 0.5).clamp(0.0, (h - 1) as f64);
+            let (x0, y0) = (fx.floor() as usize, fy.floor() as usize);
+            let (x1, y1) = ((x0 + 1).min(w - 1), (y0 + 1).min(h - 1));
+            let (tx, ty) = (fx - x0 as f64, fy - y0 as f64);
+            let coverage = canvas[y0 * w + x0] as f64 * (1.0 - tx) * (1.0 - ty)
+                + canvas[y0 * w + x1] as f64 * tx * (1.0 - ty)
+                + canvas[y1 * w + x0] as f64 * (1.0 - tx) * ty
+                + canvas[y1 * w + x1] as f64 * tx * ty;
+            local[y * w + x] = coverage.round().clamp(0.0, 255.0) as u8;
+        }
+    }
+    local
+}

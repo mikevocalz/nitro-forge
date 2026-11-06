@@ -294,12 +294,15 @@ impl PrismEngine {
 
     /// Move a layer by a canvas-space delta, converting through its
     /// ancestors' transforms.
-    fn translate_by(&mut self, idx: usize, dx: f64, dy: f64) {
+    fn translated_transform(&self, idx: usize, dx: f64, dy: f64) -> Result<Transform, EngineError> {
         let parent = self.scene().parent_affine(&self.layers[idx]);
-        let (lx, ly) = parent.invert().map_or((dx, dy), |inv| inv.apply_vec(dx, dy));
-        let t = &mut self.layers[idx].transform;
-        t.tx += lx;
-        t.ty += ly;
+        let inverse = parent.invert().ok_or_else(|| EngineError::validation("ancestor transform cannot be inverted"))?;
+        let (lx, ly) = inverse.apply_vec(dx, dy);
+        let mut next = self.layers[idx].transform;
+        next.tx += lx;
+        next.ty += ly;
+        next.validate()?;
+        Ok(next)
     }
 
     pub(crate) fn apply_v2(&mut self, op: &str, p: &Value) -> Result<CommandResult, EngineError> {
@@ -402,9 +405,11 @@ impl PrismEngine {
             .into_iter()
             .filter(|&i| !ids.iter().any(|&a| self.is_ancestor(a, self.layers[i].id)))
             .collect();
+        let staged = moving.into_iter().map(|i| self.translated_transform(i, dx, dy).map(|t| (i, t)))
+            .collect::<Result<Vec<_>, _>>()?;
         self.record();
-        for i in moving {
-            self.translate_by(i, dx, dy);
+        for (i, transform) in staged {
+            self.layers[i].transform = transform;
         }
         ok()
     }
@@ -509,7 +514,7 @@ impl PrismEngine {
         for &i in &idxs {
             self.ensure_unlocked(i)?;
         }
-        self.record();
+        let mut staged = Vec::with_capacity(idxs.len());
         for (&i, r) in idxs.iter().zip(&rects) {
             let (dx, dy) = match align {
                 "left" => (to.x - r.x, 0.0),
@@ -519,7 +524,11 @@ impl PrismEngine {
                 "vcenter" => (0.0, to.y + to.h / 2.0 - (r.y + r.h / 2.0)),
                 _ => (0.0, to.bottom() - r.bottom()),
             };
-            self.translate_by(i, dx, dy);
+            staged.push((i, self.translated_transform(i, dx, dy)?));
+        }
+        self.record();
+        for (i, transform) in staged {
+            self.layers[i].transform = transform;
         }
         ok()
     }
@@ -577,14 +586,19 @@ impl PrismEngine {
                 at += it.2 + gap;
             }
         }
-        self.record();
+        let mut staged = Vec::with_capacity(items.len());
         for (it, t) in items.iter().zip(targets) {
             let d = t - it.1;
-            if horizontal {
-                self.translate_by(it.0, d, 0.0);
+            let transform = if horizontal {
+                self.translated_transform(it.0, d, 0.0)?
             } else {
-                self.translate_by(it.0, 0.0, d);
-            }
+                self.translated_transform(it.0, 0.0, d)?
+            };
+            staged.push((it.0, transform));
+        }
+        self.record();
+        for (i, transform) in staged {
+            self.layers[i].transform = transform;
         }
         ok()
     }
@@ -1572,6 +1586,10 @@ impl PrismEngine {
         let tol = req_tolerance(p)?;
         let contiguous = opt_bool(p, "contiguous", true)?;
         self.ensure_unlocked(idx)?;
+        let transform = self.scene().effective_affine(&self.layers[idx]);
+        if transform.invert().is_none() {
+            return Err(EngineError::validation("raster transform cannot be inverted"));
+        }
         let buf = self.sample_buffer(p, Some(idx))?;
         let (w, h) = (self.width as usize, self.height as usize);
         let mut region = select::color_region(&buf, w, h, x, y, tol, contiguous);
@@ -1580,6 +1598,9 @@ impl PrismEngine {
                 *r = ((*r as u32 * *s as u32 + 127) / 255) as u8;
             }
         }
+        // Region and selection are canvas-space. Pull their coverage back
+        // through the complete layer/ancestor transform before editing pixels.
+        let region = if transform.is_identity() { region } else { select::pullback_coverage(&region, w, h, &transform) };
         if select::is_empty(&region) {
             return read(json!({ "ok": true, "filled": 0 }));
         }

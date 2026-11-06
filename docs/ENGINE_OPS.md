@@ -79,7 +79,7 @@ visibility and lock stay allowed.
 | op | payload | data | notes |
 |---|---|---|---|
 | `setLayerTransform` | `{id,transform:{tx?,ty?,sx?,sy?,rotation?}}` | `{ok}` | partial merge; scale non-zero, within ±10000 |
-| `translateLayers` | `{ids,dx,dy}` | `{ok}` | canvas delta, one step; a child moving with its ancestor is carried once |
+| `translateLayers` | `{ids,dx,dy}` | `{ok}` | canvas delta, one step; all resulting local transforms validate before history/mutation; a child moving with its ancestor is carried once |
 | `setTransformOrigin` | `{id,ox,oy}` | `{ok}` | pivot in content coords; `tx/ty` compensated so nothing moves |
 | `layerBounds` | `{ids?}` | `{bounds:[{id,x,y,w,h,corners}\|{id,empty}]}` | canvas space; read-only |
 | `hitTest` | `{x,y}` | `{layer_id,top_level_id}` | topmost painted leaf and its top-level ancestor; read-only |
@@ -116,7 +116,7 @@ visibility and lock stay allowed.
 | `booleanLayers` | `{ids,op,name?}` | `{layer_id}` | ≥2 sibling shapes/paths stay editable children; fill from the bottom operand |
 | `setBooleanOp` | `{id,op}` | `{ok}` | union/subtract/intersect/exclude |
 | `rasterizeLayer` | `{id}` | `{ok}` | bakes content and transform into raster; descendants removed; mask, opacity, blend kept |
-| `floodFill` | `{id,x,y,color,tolerance?,contiguous?,sample?}` | `{ok,filled}` | raster target; region scaled by the pixel selection; empty region records nothing |
+| `floodFill` | `{id,x,y,color,tolerance?,contiguous?,sample?}` | `{ok,filled}` | raster target; canvas region and pixel selection are bilinearly pulled back through layer/ancestor transforms; each local texel blends once; filled counts local texels; empty local coverage records nothing |
 
 Rendering: path fills are 4×4 supersampled scanlines; strokes are
 anti-aliased with miter/round/bevel joins, butt/round/square caps and dashes
