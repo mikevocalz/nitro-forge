@@ -73,7 +73,7 @@ export async function retainTestBookmark(): Promise<string> {
     if (picked.length !== 1 || picked[0]!.name !== "forge-completion-share-fixture.nfd" || !picked[0]!.bookmark)
       throw new Error("Select only the generated fixture; no selected file was read");
     record.create({ overwrite: false });
-    record.write(JSON.stringify({ version: 1, bookmark: picked[0]!.bookmark }));
+    record.write(JSON.stringify({ version: 1, bookmark: picked[0]!.bookmark, uri: picked[0]!.uri, fixture: picked[0]!.name }));
     retained = true;
     return "Native fixture bookmark retained. Restart this app, then Restore test bookmark to verify persisted access.";
   } finally {
@@ -105,4 +105,50 @@ export async function restoreTestBookmark(): Promise<string> {
   }
   record.delete();
   return "Native fixture bookmark restore passed: persisted access read the real NFD1 document at 137 BPM; access released and private bookmark removed.";
+}
+
+/** Explicit user-initiated export of the current local diagnostic buffer. */
+export async function shareDiagnosticTrace(trace: import("@nitro-forge/telemetry").TraceExport): Promise<string> {
+  if (trace.consent === "off" || !trace.events.length) throw new Error("Enable local diagnostics and record an action first");
+  const documents = createPlatformDocuments();
+  if (!documents.isAvailable) throw new Error("Native sharing module is not linked");
+  const file = new File(Paths.cache, `forge-diagnostics-${Date.now()}.json`);
+  file.create(); file.write(JSON.stringify(trace, null, 2));
+  const completed = await documents.share({ uris: [file.uri], title: "Forge local diagnostic trace" });
+  return `Diagnostic share sheet result: ${completed}. ${trace.events.length} local events; cache file retained for recipient access.`;
+}
+
+/** Deletes only this workflow's retained generated fixture, then checks that
+ * a retained OS grant/bookmark cannot masquerade as an existing resource. */
+export async function verifyMissingFixture(): Promise<string> {
+  const documents = createPlatformDocuments();
+  const record = bookmarkFile();
+  if (!documents.isAvailable || !record.exists || record.size > 1024 * 1024)
+    throw new Error("Retain the generated test fixture first");
+  const saved: unknown = JSON.parse(await record.text());
+  if (!saved || typeof saved !== "object" || !("bookmark" in saved) || typeof saved.bookmark !== "string")
+    throw new Error("Invalid retained fixture bookmark");
+  const access = await documents.restoreAccess(saved.bookmark);
+  if (!access) throw new Error("Fixture must exist before the missing-resource test");
+  try {
+    const file = new File(access.uri);
+    if (!("fixture" in saved) || saved.fixture !== "forge-completion-share-fixture.nfd" || file.size > 1024)
+      throw new Error("Refusing to delete anything except the generated test fixture");
+    const host = createNitroHost();
+    try {
+      const document = await DocumentHandle.openInitialized(host, "cadence", async d => d.restore(await file.bytes()));
+      const actual = await document.apply<{ tempo_bpm: number }>("describe");
+      if (actual.data.tempo_bpm !== 137) throw new Error("Refusing to delete a non-fixture document");
+    } finally { await host.dispose(); }
+    file.delete();
+    const missing = await documents.restoreAccess(saved.bookmark);
+    if (missing) {
+      await documents.releaseAccess(missing.uri);
+      throw new Error("Deleted provider file still returned restored access");
+    }
+    return "Native missing fixture passed: deleted generated provider file returned no restored access despite its retained bookmark/grant.";
+  } finally {
+    await documents.releaseAccess(access.uri);
+    record.delete();
+  }
 }

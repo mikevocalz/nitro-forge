@@ -23,7 +23,8 @@
     "react-native": "0.88.1",
     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "zustand": "5.0.16",
-    "@nitro-forge/telemetry": "workspace:*"
+    "@nitro-forge/telemetry": "workspace:*",
+    "@nyc-tron/hardware-keys": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz"
   },
   "devDependencies": {
     "@react-native-community/cli": "20.2.0",

@@ -27,3 +27,56 @@ new file mode 100644
 +    )
 +  ]
 +)
+diff --git a/android/src/main/java/com/nyctron/platformservices/NYCTronDocumentsModule.kt b/android/src/main/java/com/nyctron/platformservices/NYCTronDocumentsModule.kt
+--- a/android/src/main/java/com/nyctron/platformservices/NYCTronDocumentsModule.kt
++++ b/android/src/main/java/com/nyctron/platformservices/NYCTronDocumentsModule.kt
+@@ -10,6 +10,7 @@
+ import io.github.expo.modules.v2.react.currentActivity
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.withContext
++import java.io.IOException
+ 
+ /**
+  * Android side of @nyc-tron/platform-services/documents (N-12).
+@@ -49,13 +50,23 @@
+     }
+   }
+ 
+-  /** Null when the app no longer holds a read grant for the bookmark. */
++  /** A retained grant can outlive a deleted or unavailable provider file. */
+   @JS
+-  fun restoreAccess(bookmark: String): RestoredAccessRecord? {
++  suspend fun restoreAccess(bookmark: String): RestoredAccessRecord? {
+     val resolver = androidContextOrNull?.contentResolver ?: return null
+     val uri = Uri.parse(bookmark)
++    if (uri.scheme != "content") return null
+     val held = resolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
+-    return if (held) RestoredAccessRecord(uri = bookmark, bookmark = bookmark, stale = false) else null
++    if (!held) return null
++    return withContext(Dispatchers.IO) {
++      try {
++        resolver.openAssetFileDescriptor(uri, "r")?.use {
++          RestoredAccessRecord(uri = bookmark, bookmark = bookmark, stale = false)
++        }
++      } catch (_: IOException) { null }
++        catch (_: SecurityException) { null }
++        catch (_: IllegalArgumentException) { null }
++    }
+   }
+ 
+   @JS
+diff --git a/ios/NYCTronDocumentsModule.swift b/ios/NYCTronDocumentsModule.swift
+--- a/ios/NYCTronDocumentsModule.swift
++++ b/ios/NYCTronDocumentsModule.swift
+@@ -37,6 +37,11 @@
+     guard let url = try? URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale),
+       SecurityScopedAccess.shared.start(url)
+     else { return nil }
++    let reachable = await Task.detached { (try? url.checkResourceIsReachable()) == true }.value
++    guard reachable else {
++      SecurityScopedAccess.shared.release(url.absoluteString)
++      return nil
++    }
+     let current = stale ? (url.bookmarkString ?? bookmark) : bookmark
+     return RestoredAccessRecord(uri: url.absoluteString, bookmark: current, stale: stale)
+   }

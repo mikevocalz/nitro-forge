@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { useStore } from "zustand";
 import { ArcKnob } from "@nyc-tron/native-controls/ArcKnob";
@@ -7,11 +7,16 @@ import { InstrumentKnob } from "@nyc-tron/ui/components/forge/inputs/InstrumentK
 import { InstrumentXYPad } from "@nyc-tron/ui/components/forge/inputs/InstrumentXYPad";
 import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-forge/cadence/instrument-session";
 import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
+import { createTelemetry, instrumentHost, type Telemetry } from "@nitro-forge/telemetry";
+import { SegmentedControl } from "@nyc-tron/ui/components/SegmentedControl";
+import { createKeyboardMap } from "@nyc-tron/ui/components/shell/keyboard-map";
+import { useHardwareKeyboard, isHardwareKeysAvailable } from "@nyc-tron/hardware-keys";
+import { shareDiagnosticTrace } from "./verify-documents";
 import { verifyNativeEngines } from "./verify-engines";
 import { verifyNativeServices } from "./verify-services";
 import { verifyNativeTelemetry } from "./verify-telemetry";
 import { verifyPickerCancellation, shareTestSnapshot, importTestSnapshot,
-  retainTestBookmark, restoreTestBookmark } from "./verify-documents";
+  retainTestBookmark, restoreTestBookmark, verifyMissingFixture } from "./verify-documents";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -24,6 +29,9 @@ type ScreenState = {
   gainPreview: number | null;
   panPreview: number | null;
   verification: string | null;
+  consent: "off" | "local";
+  diagnosticEvents: number;
+  lastShortcut: string | null;
   /** NYC-Tron instrument renderer. All share the same authoritative Cadence session. */
   renderer: "native" | "react-native" | "xy";
 };
@@ -31,7 +39,7 @@ const initial: ScreenState = {
   phase: "loading", actual: null, error: null, pending: false,
   width: 360, attempt: 0, savedBytes: null, gainPreview: null, panPreview: null,
   renderer: "native",
-  verification: null,
+  verification: null, consent: "off", diagnosticEvents: 0, lastShortcut: null,
 };
 const colors = {
   background: "#101017", surface: "#1B1B25", text: "#F7F7FA",
@@ -48,6 +56,25 @@ export default function App() {
   const store = localRef.current;
   const state = useStore(store, (s) => s);
   const currentSession = useRef<CadenceInstrumentSession | null>(null);
+  const telemetryRef = useRef<Telemetry | null>(null);
+  if (!telemetryRef.current) telemetryRef.current = createTelemetry({ consent: "off", maxEvents: 200 });
+  const telemetry = telemetryRef.current;
+  useEffect(() => () => telemetry.setConsent("off"), [telemetry]);
+  const keyboard = useRef<ReturnType<typeof createKeyboardMap> | null>(null);
+  if (!keyboard.current) keyboard.current = createKeyboardMap([
+    { id: "gain-down", label: "Decrease gain", binding: "F6" },
+    { id: "undo", label: "Undo", binding: "F7" },
+    { id: "redo", label: "Redo", binding: "F8" },
+    { id: "undo-standard", label: "Undo", binding: "Mod+Z" },
+    { id: "redo-standard", label: "Redo", binding: "Mod+Shift+Z" },
+  ], Platform.OS === "ios");
+  useHardwareKeyboard({ map: keyboard.current, enabled: state.phase === "ready" && !state.pending,
+    onCommand: entry => {
+      store.setState({ lastShortcut: entry.label });
+      if (entry.id === "gain-down") action(s => s.setGain(Math.max(0, s.state.gain - .1)));
+      else if (entry.id.startsWith("undo")) action(s => s.undo());
+      else action(s => s.redo());
+    } });
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +84,7 @@ export default function App() {
       gainPreview: null, panPreview: null, savedBytes: null, verification: null });
     const connect = async () => {
       try {
-        host = createNitroHost();
+        host = instrumentHost(createNitroHost(), telemetry);
         const session = await CadenceInstrumentSession.open(host, {
           trackName: "Native instrument 01",
         });
@@ -93,7 +120,7 @@ export default function App() {
         try { await session?.close(); } finally { await host?.dispose(); }
       })().catch(error => console.error("Cadence cleanup failed", error));
     };
-  }, [state.attempt, store]);
+  }, [state.attempt, store, telemetry]);
 
   const execute = async (run: (session: CadenceInstrumentSession) => Promise<unknown>) => {
     const session = currentSession.current;
@@ -105,7 +132,8 @@ export default function App() {
       store.setState({ error: error instanceof Error ? error.message : String(error) });
       throw error;
     } finally {
-      store.setState({ pending: false, gainPreview: null, panPreview: null });
+      store.setState({ pending: false, gainPreview: null, panPreview: null,
+        diagnosticEvents: telemetry.exportTrace().events.length });
     }
   };
   const action = (run: (session: CadenceInstrumentSession) => Promise<unknown>) => {
@@ -131,6 +159,26 @@ export default function App() {
     <View style={{ gap: 8 }}>
       <Text style={{ color: colors.text, fontWeight: "800", fontSize: 28 }}>Cadence / Native</Text>
       <Text style={{ color: colors.muted }}>SwiftUI · Jetpack Compose · Rust-owned document</Text>
+    </View>
+    <View style={{ gap: 8 }}>
+      <Text style={{ color: colors.text }}>Diagnostics: {state.consent === "off" ? "off" : "local only"}</Text>
+      <Text style={{ color: colors.muted }}>Local mode keeps up to 200 events in memory. Nothing uploads automatically. Off clears the trace.</Text>
+      <SegmentedControl unstyled aria-label="Diagnostic consent" value={state.consent}
+        options={[{value:"off",label:"Off"},{value:"local",label:"Local only"}]}
+        labelStyle={{ color: colors.text }} style={{ gap: 8 }}
+        segmentStyle={({selected})=>({ paddingHorizontal: 16, borderWidth: 1, borderRadius: 4,
+          borderColor: selected ? colors.accent : colors.border, backgroundColor: colors.surface })}
+        onChange={consent => {
+          telemetry.setConsent(consent);
+          store.setState({ consent, diagnosticEvents: telemetry.exportTrace().events.length });
+        }}/>
+      <Text style={{ color: colors.muted }}>Retained events: {state.diagnosticEvents}</Text>
+      <Action label="Share diagnostic trace" disabled={state.pending || state.consent === "off" || !state.diagnosticEvents}
+        onPress={() => action(async () => { store.setState({ verification: await shareDiagnosticTrace(telemetry.exportTrace()) }); })}/>
+      <Text style={{ color: colors.muted }}>
+        Hardware keys: {isHardwareKeysAvailable() ? "linked" : "unavailable in this binary"}. F6 decreases gain, F7 Undo, F8 Redo.
+      </Text>
+      {state.lastShortcut ? <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>Shortcut: {state.lastShortcut}</Text> : null}
     </View>
     {state.phase === "loading"
       ? <ActivityIndicator accessibilityLabel="Connecting to Cadence" color={colors.accent}/>
@@ -241,6 +289,8 @@ export default function App() {
               action(async () => { store.setState({ verification: await retainTestBookmark() }); })}/>
             <Action label="Restore test bookmark" disabled={state.pending} onPress={() =>
               action(async () => { store.setState({ verification: await restoreTestBookmark() }); })}/>
+            <Action label="Test missing fixture" disabled={state.pending} onPress={() =>
+              action(async () => { store.setState({ verification: await verifyMissingFixture() }); })}/>
             <Action label="Undo" disabled={state.pending} onPress={() => action(s => s.undo())}/>
             <Action label="Redo" disabled={state.pending} onPress={() => action(s => s.redo())}/>
             <Action label="Snapshot" disabled={state.pending} onPress={() =>
