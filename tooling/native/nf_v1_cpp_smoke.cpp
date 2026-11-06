@@ -1,4 +1,6 @@
 #include <NitroForgeV1/ForgeRustSession.hpp>
+// SwiftPM can expose the same ABI header through a copied XCFramework path.
+#include "../../rust/nf-sys/include/nf_v1.h"
 #include <NitroForgeV1/TaskControl.hpp>
 #include <NitroForgeV1/ByteCache.hpp>
 

@@ -104,7 +104,7 @@ jobs:
           node-version: "24.19.0"
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-ios,aarch64-apple-ios-sim
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
       - run: corepack enable
       - name: Build current Rust XCFramework before SwiftPM resolution
         run: bash packages/ignition/scripts/build-apple.sh

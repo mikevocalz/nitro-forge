@@ -1,4 +1,6 @@
 #pragma once
+#ifndef NITRO_FORGE_NF_V1_H
+#define NITRO_FORGE_NF_V1_H
 /*
  * NitroForge Ignition v1 C ABI. Rust 2021 implementation: nf-sys/ffi_v1.rs.
  * This is a native boundary, NOT a JS API. Strings return UTF-8 JSON errors.
@@ -80,3 +82,5 @@ void nf_free_bytes(NfBytes bytes);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // NITRO_FORGE_NF_V1_H
