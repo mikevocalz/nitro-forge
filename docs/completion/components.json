@@ -44,7 +44,7 @@
         "P01"
       ],
       "exitCriteria": "Complete task/cancellation/cache/binary APIs, autosave/recovery, atomic gesture transactions, collaboration, file/share, keyboard and accessibility infrastructure.",
-      "status": "pending",
+      "status": "in-progress",
       "components": [
         "N-05",
         "N-06",

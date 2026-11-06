@@ -1,0 +1,21 @@
+{
+  "sourceRevision": "defae632b6a00d58eff28c9eaff255501db49e3c",
+  "artifacts": {
+    "native-artifacts/cadence-completion-P01.apk": "7901de060be97878491c27ddac745d5ea54a823a256463dbafdf573a9b9b4534",
+    "completion-ios-derived/Build/Products/Debug-iphonesimulator/NitroForgeCadenceNative.app/NitroForgeCadenceNative": "989db2bae2e4567f366c0419513931fc2763360365c4c73505fbf0092352eb29",
+    "completion-ios-derived/Build/Products/Debug-iphonesimulator/NitroForgeCadenceNative.app/NitroForgeCadenceNative.debug.dylib": "da3ba85844bcfd9394ee86fe079f319740ad2f2507d16ac16484e68aa89db892",
+    "forge-complete/packages/ignition/native/ForgeRust.xcframework/ios-arm64_x86_64-simulator/libnf_sys.a": "64bc79854a25e4ca1b1bf813b21bc3edae0463ebc885baeb07c9377735fd5c28"
+  },
+  "ios": {
+    "runtime": "iOS 27.1",
+    "device": "iPhone Duo",
+    "udid": "BBCC4078-E64D-4642-893B-ACF80ACB29A1",
+    "probeResult": "All seven engines: initialize, describe, snapshot, restore, invalid restore unchanged, close; Cadence edit, undo, redo and reopened snapshot passed",
+    "evidenceKind": "simulator"
+  },
+  "android": {
+    "build": "passed, 243 tasks",
+    "runtime": "unverified",
+    "gate": "emulator userdata creation requires 7372.8 MB free; about 2.4 GiB available"
+  }
+}
