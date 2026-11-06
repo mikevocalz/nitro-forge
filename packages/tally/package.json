@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./grid-adapter": "./src/grid-adapter.ts",
-    "./grid-cluster": "./src/grid-cluster.ts"
+    "./grid-cluster": "./src/grid-cluster.ts",
+    "./transfer": "./src/transfer.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

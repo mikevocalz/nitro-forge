@@ -48,6 +48,7 @@ struct DocState {
     artboards: Vec<Artboard>,
     selection: Option<Arc<Vec<u8>>>,
     selected: Vec<u64>,
+    colors: DocColors,
 }
 
 /// Undo entries, recorded before mutation (ENGINE_OPS.md, prism "Undo"):
@@ -110,6 +111,7 @@ impl PrismEngine {
             artboards: self.artboards.clone(),
             selection: self.selection.clone(),
             selected: self.selected.clone(),
+            colors: self.colors.clone(),
         }
     }
 
@@ -121,6 +123,7 @@ impl PrismEngine {
         self.artboards = s.artboards;
         self.selection = s.selection;
         self.selected = s.selected;
+        self.colors = s.colors;
     }
 
     /// Canvas buffer length (`w*h*4`), 0 on overflow — callers guard.

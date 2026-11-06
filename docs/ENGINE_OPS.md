@@ -418,3 +418,7 @@ Undo: prior `Vec<Block>` for structural ops; for `applyStyle`/`insertText`/
 - Keep deps minimal: workspace `ignition-core`, `serde`, `serde_json`, plus the
   product-specific crates listed. No async, no I/O, no `unsafe`, no `unwrap` on
   untrusted input.
+
+### Prism palette and document reset integration
+
+Prism `new` preserves the palette while resetting layers/artboards/selections, as the recovered color contract specifies. Undo/redo restores the prior canvas state with its palette. Palette edits remain separate atomic history entries; a dialog commit to a selected shape/path uses `setFill` and does not also change the palette in a second command.

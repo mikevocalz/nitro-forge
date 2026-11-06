@@ -592,3 +592,7 @@ Recovered canvas/layers/selection/vector controls and the Prism engine operation
 ## Phase 4 audio source completion — 2026-11-05
 
 Recovered audio routing/inserts/automation/analysis and MIDI batch/channel controls are integrated locally with Cadence engine ops and a serialized mixer adapter. NYC-Tron passes 692 source tests and 414 Chromium tests, workspace build/types and export/pack checks. Forge passes 317 Rust tests and 421 package tests (one existing native skip), all workspace types and the actual built-source contract. Cadence passes 35 tests including five new real-engine adapter cases. Offline engine evidence does not establish realtime device audio, native builds or physical-device acceptance. Pins stay alpha.3. See `docs/recovery/PHASE4.md` and the updated 341-row table.
+
+## Phase 5 workspace/color/transfer completion — 2026-11-05
+
+Workspace/presets, contextual overflow, file transfer, color dialog and presenter session ink controls are integrated locally. NYC-Tron passes 713 source tests, 427 Chromium tests, builds/types, 351 export checks and 13 local packs. Forge passes 327 Rust tests and 446 package tests (one existing native skip), workspace types and the actual built-source consumer contract. WorkspaceSession keeps one document, formats produce real bytes and explicit delivery errors, Prism palette/new/fill history is tested, and WAV effect output is continuous. Presenter persistence/remote transport and native/device acceptance remain pending. See `docs/recovery/PHASE5.md` and the 341-row table.

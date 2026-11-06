@@ -10,8 +10,8 @@ Each phase finishes with integrated source, required exports and engine document
 | 2 | Timeline cluster 2 | Finish recovered clD-tron controls, exports, component/browser gates and matching Forge timeline adapter contracts | COMPLETE locally; unpublished |
 | 3 | Canvas and layers | Integrate U1-U4 into clB-tron; finish exports, source notices, browser acceptance and Prism bindings to #60 operations | COMPLETE locally; unpublished |
 | 4 | Audio cluster 2 | Finish clE-tron exports and browser gates, then bind the #58 Cadence operations with engine-backed tests | COMPLETE locally; unpublished |
-| 5 | Workspace, color and transfers | Finish shell/color/presenter work and clACJN-forge workspace/import/export adapters against real engines | Next |
-| 6 | Native tasks, decoding and desktop review | Finish native task/cache/binary transport, decoder and recovery dialog coverage; complete #57 source review; record actual supported platform gates | Pending |
+| 5 | Workspace, color and transfers | Finish shell/color/presenter work and clACJN-forge workspace/import/export adapters against real engines | COMPLETE; unpublished |
+| 6 | Native tasks, decoding and desktop review | Finish native task/cache/binary transport, decoder and recovery dialog coverage; complete #57 source review; record actual supported platform gates | Next |
 
 ## Phase 1 evidence
 
@@ -44,4 +44,8 @@ See [PHASE3.md](PHASE3.md) for canvas integration, Prism bindings, checks and re
 
 ## Phase 4 evidence
 
-See [PHASE4.md](PHASE4.md) for audio controls, Cadence bindings, validation and remaining platform/backend boundaries. Phase 5 is next.
+See [PHASE4.md](PHASE4.md) for audio controls, Cadence bindings, validation and remaining platform/backend boundaries. Phase 5 is complete; see PHASE5.md.
+
+## Phase 5 evidence
+
+See [PHASE5.md](PHASE5.md) for workspace, transfer/color bindings and host session ink, validation and explicit backend/platform limits. Push each completed phase under the user’s standing instruction. Phase 6 is next.

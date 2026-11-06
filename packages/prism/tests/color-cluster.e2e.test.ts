@@ -4,6 +4,7 @@ import { CliHost } from "@nitro-forge/ignition/cli";
 import { OPS, PrismDocument } from "../src/index";
 import {
   PRISM_COLOR_DEFERRED_OPS,
+  commitPrismFill,
   PRISM_COLOR_OPS,
   bindPrismColors,
   fromEngineColor,
@@ -81,4 +82,14 @@ describe("prism color cluster (real Rust via nf-cli)", () => {
     expect(fromEngineColor([1, 2, 3, 255])).toEqual({ r: 1, g: 2, b: 3, alpha: 1 });
     expect(() => toEngineColor({ r: 1.5, g: 0, b: 0, alpha: 1 })).toThrow(RangeError);
   });
+});
+
+it('new canvas preserves the palette through undo/redo and fill commits',async()=>{
+ const doc=await PrismDocument.open(host,8,8);try{
+ const layer=(await doc.addShape({kind:'rect',x:1,y:1,w:3,h:3,fill:[1,2,3,255]})).data.layer_id;
+ await doc.setColors({foreground:[20,30,40,255]});const before=(await doc.describe()).data;
+ await doc.handle.apply('new',{width:4,height:4});expect((await doc.getColors()).data.foreground).toEqual([20,30,40,255]);
+ await doc.undo();expect((await doc.describe()).data).toEqual(before);await doc.redo();expect((await doc.getColors()).data.foreground).toEqual([20,30,40,255]);await doc.undo();
+ await commitPrismFill(doc,layer,{r:255,g:0,b:0,alpha:1});await doc.undo();expect((await doc.describe()).data).toEqual(before);
+ }finally{await doc.close();}
 });

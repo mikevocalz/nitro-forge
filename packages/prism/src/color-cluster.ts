@@ -39,11 +39,12 @@ export interface PrismColorBinding {
  * Ops a color control could call that the engine does not have yet. The
  * matching control prop is left unset so no dead button is drawn.
  */
-export const PRISM_COLOR_DEFERRED_OPS = {
-  // Committing a picked color into a selected shape/path fill needs the
-  // prism vector model's `setFill`, which lands with the Canvas/Layers ops.
-  setFill: "C-01 commit target: selected layer fill",
-} as const;
+export const PRISM_COLOR_DEFERRED_OPS = {} as const;
+
+/** Commits the dialog RGBA value to an existing shape/path fill in one undo step. */
+export function commitPrismFill(doc:PrismDocument,layerId:number,color:ColorValue){
+  return doc.setFill(layerId,{type:'solid',color:toEngineColor(color)});
+}
 
 export function toEngineColor(c: ColorValue): Rgba {
   for (const [k, v] of [["r", c.r], ["g", c.g], ["b", c.b]] as const) {

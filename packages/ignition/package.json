@@ -9,7 +9,11 @@
     ".": "./src/index.ts",
     "./cli": "./src/host-cli.ts",
     "./nitro": "./src/specs/ForgeFactory.nitro.ts",
-    "./v1-host": "./src/v1-host.ts"
+    "./v1-host": "./src/v1-host.ts",
+    "./workspace": "./src/workspace.ts",
+    "./transfer": "./src/transfer.ts",
+    "./workspace-ui": "./src/workspace-ui.ts",
+    "./transfer-ui": "./src/transfer-ui.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

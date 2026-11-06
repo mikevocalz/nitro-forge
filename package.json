@@ -17,7 +17,8 @@
     "test:lab-config": "node --test tooling/lab-metro-config.test.cjs",
     "verify:timeline-source": "node tooling/verify-timeline-source.mjs",
     "verify:canvas-source": "node tooling/verify-canvas-source.mjs",
-    "verify:audio-source": "node tooling/verify-audio-source.mjs"
+    "verify:audio-source": "node tooling/verify-audio-source.mjs",
+    "verify:workspace-source": "node tooling/verify-workspace-source.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.6",
