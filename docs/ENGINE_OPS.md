@@ -6,6 +6,15 @@ Every product engine implements `ignition_core::Engine` and supports these ops v
 Universal ops every engine MUST support in `apply`:
 - `new` — reset the document from `payload` (engine-specific params). Returns `{ ok: true }`.
 - `describe` — return the complete document state as JSON in `data`. Read-only; records no undo.
+- `__batch` — `{commands:[{op,payload?,v?},...]}` with 1..64 schema-v1 commands.
+  Executes sequentially against an isolated staged document, then commits once
+  with one undo entry. Failure preserves document state, IDs, prior undo and
+  redo. Results are `{results:[stepData,...]}` in input order. Read-only batches
+  create no history and preserve redo. Mutating batches emit one full-invalidation
+  `document:changed` event plus their other domain events. Nested/reserved `__*`
+  operations, unknown step fields and binary sidecars are rejected. Input and
+  aggregate output JSON are bounded to 32 MiB. Binary output is available through
+  the existing single-command transport, not nested batch steps.
 
 Snapshot/undo protocol (implemented by host, engines implement trait):
 `snapshot()` → `encode_envelope(json(doc))`; `restore(bytes)` → `decode_envelope` then

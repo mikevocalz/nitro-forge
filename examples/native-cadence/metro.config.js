@@ -19,13 +19,14 @@ config.watchFolders = [
 
 // Explicit lab mode serves a separate acceptance entry. Normal consumers keep
 // their released dependency graph; candidate-only exports are isolated here.
-if (process.env.FORGE_ACCEPTANCE === "checkpoints") {
+const acceptanceEntry = { checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance" }[process.env.FORGE_ACCEPTANCE];
+if (acceptanceEntry) {
   const rewrite = config.server?.rewriteRequestUrl;
   config.server = {
     ...config.server,
     rewriteRequestUrl(url) {
       const rewritten = rewrite ? rewrite(url) : url;
-      return rewritten.replace(/\/index\.bundle(?=\?|$)/, "/checkpoint-acceptance.bundle");
+      return rewritten.replace(/\/index\.bundle(?=\?|$)/, `/${acceptanceEntry}.bundle`);
     },
   };
 }

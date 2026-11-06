@@ -4,6 +4,7 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import { useStore } from "zustand";
 import { ArcKnob } from "@nyc-tron/native-controls/ArcKnob";
 import { InstrumentKnob } from "@nyc-tron/ui/components/forge/inputs/InstrumentKnob";
+import { InstrumentXYPad } from "@nyc-tron/ui/components/forge/inputs/InstrumentXYPad";
 import { CadenceInstrumentSession, type CadenceInstrumentState } from "@nitro-forge/cadence/instrument-session";
 import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
 import { verifyNativeEngines } from "./verify-engines";
@@ -20,8 +21,8 @@ type ScreenState = {
   gainPreview: number | null;
   panPreview: number | null;
   verification: string | null;
-  /** Which NYC-Tron knob renders the controls. Both commit through the same Cadence adapter. */
-  renderer: "native" | "react-native";
+  /** NYC-Tron instrument renderer. All share the same authoritative Cadence session. */
+  renderer: "native" | "react-native" | "xy";
 };
 const initial: ScreenState = {
   phase: "loading", actual: null, error: null, pending: false,
@@ -175,6 +176,13 @@ export default function App() {
                 onPreview={panPreview => store.setState({ panPreview })}
                 onCommit={value => execute(s => s.knobs.pan.onCommit(value)).catch(() => undefined)}/>
             </> : null}
+            {session && state.renderer === "xy" ? <InstrumentXYPad
+              label="Gain and pan" {...session.xyPad} disabled={!enabled} size={size}
+              unstyled accentColor={colors.accent}
+              style={{ backgroundColor: colors.paper, borderRadius: 12, padding: 12 }}
+              onPreview={point => store.setState({ gainPreview: point.y, panPreview: point.x * 2 - 1 })}
+              onCommit={point => execute(s => s.xyPad.onCommit(point)).catch(() => undefined)}/>
+              : null}
           </View>
           <View style={{ backgroundColor: colors.surface, borderWidth: 1,
             borderColor: colors.border, borderRadius: 12, padding: 14, gap: 4 }}>
@@ -194,6 +202,8 @@ export default function App() {
               onPress={() => store.setState({ renderer: "native" })}/>
             <Action label="React Native knob" selected={state.renderer === "react-native"}
               onPress={() => store.setState({ renderer: "react-native" })}/>
+            <Action label="Gain / Pan pad" selected={state.renderer === "xy"}
+              onPress={() => store.setState({ renderer: "xy" })}/>
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             <Action label="Reconnect native engine" disabled={state.pending} onPress={() =>

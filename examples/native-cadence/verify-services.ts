@@ -1,4 +1,4 @@
-import { createNativeForgeFactory } from "@nitro-forge/ignition";
+import { createNativeForgeFactory, normalizeNativeEngineError } from "@nitro-forge/ignition";
 
 function check(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message);
@@ -75,7 +75,7 @@ export async function verifyNativeServices(): Promise<string> {
     task.cancel();
     let cancelled = false;
     try { await task.result(); }
-    catch (error) { cancelled = String(error).toLowerCase().includes("cancel"); }
+    catch (error) { const native = normalizeNativeEngineError(error); cancelled = native.code === "cancelled" && native.recoverable; }
     check(cancelled, "Long native render did not report cancellation");
     check((await cadence.apply({ op: "describe" })).dataJson === before,
       "Cancelled read-only render changed document state");

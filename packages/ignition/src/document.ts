@@ -60,6 +60,15 @@ export class DocumentHandle {
     return res;
   }
 
+  /** One atomic engine edit and one history entry. A failed step leaves the
+   * document and both history stacks intact. Reserved operations cannot nest. */
+  applyBatch(commands: readonly Command[]): Promise<CommandResult<{ results: unknown[] }>> {
+    this.assertOpen();
+    if (!Array.isArray(commands) || commands.length < 1 || commands.length > 64)
+      return Promise.reject(new RangeError("A transaction requires 1..64 commands"));
+    return this.apply("__batch", { commands });
+  }
+
   /** Serialize the whole document into the versioned NFD1 envelope. */
   snapshot(): Promise<Uint8Array> {
     this.assertOpen();

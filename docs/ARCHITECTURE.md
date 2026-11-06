@@ -71,7 +71,16 @@ pub trait Engine: Send + 'static {
   *before* mutation (e.g. a cell's previous value, a clip's previous span, the pixel
   region about to be overwritten).
 - `undo`/`redo` return `Ok(false)` when the respective stack is empty — never an error.
-- A new `apply` clears the redo stack.
+- A new mutating `apply` clears the redo stack; read-only commands preserve it.
+
+`__batch` is an engine-level atomic boundary for compound gestures. Each engine
+stages its document state with a temporary one-entry journal, applies the bounded
+command plan there, and records its original state once before publishing a
+successful mutation. Original history is neither copied nor cleared while
+staging. Read-only and rejected plans leave the original journal untouched.
+Prism's shared raster buffers retain copy-on-write ownership. Native queues
+already serialize the whole command, so no other document operation observes
+an intermediate step. This adds no C ABI layout or generated Nitro type changes.
 
 ### Errors
 `EngineError { code, message, recoverable }` with a closed `ErrorCode` enum:

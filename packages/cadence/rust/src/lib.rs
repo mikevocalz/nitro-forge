@@ -378,6 +378,16 @@ impl Engine for CadenceEngine {
     }
 
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            let batch = ignition_core::parse_batch(cmd)?;
+            let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
+            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
+            if result.events.iter().any(|event| event.kind == "document:changed") {
+                self.journal.record(self.doc.clone());
+                self.doc = staged.doc;
+            }
+            return Ok(result);
+        }
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
                 "unsupported command version {}",

@@ -14,6 +14,7 @@ export {
   NitroHost,
   createNitroHost,
   createNativeForgeFactory,
+  normalizeNativeEngineError,
   type EngineHost,
   type ForgeFactoryNative,
   type ForgeDocumentNative,

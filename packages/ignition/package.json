@@ -14,7 +14,8 @@
     "./transfer": "./src/transfer.ts",
     "./workspace-ui": "./src/workspace-ui.ts",
     "./transfer-ui": "./src/transfer-ui.ts",
-    "./autosave": "./src/autosave.ts"
+    "./autosave": "./src/autosave.ts",
+    "./transactions": "./src/transactions.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

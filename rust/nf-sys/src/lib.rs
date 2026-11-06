@@ -16,6 +16,8 @@ mod ffi_binary;
 mod ffi_v1;
 mod ffi_v1_parts;
 mod session_registry;
+#[cfg(test)]
+mod batch_tests;
 
 use ignition_core::{
     base64_decode,

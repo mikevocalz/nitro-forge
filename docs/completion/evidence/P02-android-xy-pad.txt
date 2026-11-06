@@ -1,0 +1,46 @@
+Android API 36 ARM64 native application, 2026-11-06.
+Real touch drag changed Rust-described gain from 1.00 to 0.50 and pan from 0.00 to 0.61.
+One Undo restored both gain 1.00 and pan 0.00. Redo result follows.
+{
+  "tapped": true,
+  "timestampMs": 1793974523908
+}
+--- Screen after action ---
+Saved: /var/folders/37/s0s6qm2x3cx1mdsr_fv0y1pr0000gn/T/simserver-i3A1ko/media/220913000-1793974525228.png
+--- Elements after action (describe) ---
+Source: android-devtools
+Mode: nested
+Coordinates are normalized [0,1] fractions of the screen (x, y, width, height), not pixels.
+Pass them straight to gesture-tap / gesture-swipe / gesture-pinch, which expect this same space.
+To tap an element, use its centre: tap_x = frame.x + frame.width / 2, tap_y = frame.y + frame.height / 2.
+
+ROOT  Screen (0.000, 0.000, 1.000, 1.000)
+
+  Image "Back" id="com.android.launcher3:id/back" [clickable,long-clickable]  (0.152, 0.950, 0.174, 0.048)
+  Image "Home" id="com.android.launcher3:id/home" [clickable,long-clickable]  (0.402, 0.950, 0.194, 0.048)
+  Image "Recents" id="com.android.launcher3:id/recent_apps" [clickable,long-clickable]  (0.672, 0.950, 0.174, 0.048)
+  ScrollView "Cadence native instrument editor" [scrollable]  (0.000, 0.000, 1.000, 1.000)
+    StaticText "Cadence / Native"  (0.039, 0.033, 0.922, 0.042)
+    StaticText "SwiftUI · Jetpack Compose · Rust-owned document"  (0.039, 0.083, 0.922, 0.021)
+    StaticText "Gain and pan"  (0.068, 0.137, 0.465, 0.021)
+    SeekBar "Gain and pan X and Y controller, X 81%, Y 50%"  (0.069, 0.159, 0.398, 0.179)
+    Button "Decrease Gain and pan X" [clickable]  (0.069, 0.338, 0.106, 0.048)
+      StaticText "←"  (0.105, 0.351, 0.034, 0.021)
+    StaticText "X 81% · Y 50%"  (0.194, 0.351, 0.212, 0.021)
+    Button "Increase Gain and pan X" [clickable]  (0.427, 0.338, 0.107, 0.048)
+      StaticText "→"  (0.463, 0.351, 0.034, 0.021)
+    Button "Decrease Gain and pan Y" [clickable]  (0.069, 0.386, 0.106, 0.048)
+      StaticText "↓"  (0.113, 0.400, 0.018, 0.021)
+    Button "Increase Gain and pan Y" [clickable]  (0.215, 0.386, 0.107, 0.048)
+      StaticText "↑"  (0.259, 0.400, 0.018, 0.021)
+    StaticText "Native instrument 01"  (0.075, 0.481, 0.850, 0.021)
+    StaticText "Gain 0.50 · Pan 0.61 · 120 BPM"  (0.075, 0.507, 0.850, 0.021)
+    RadioButton "SwiftUI / Compose knob" [clickable]  (0.039, 0.562, 0.446, 0.052)
+    RadioButton "React Native knob" [clickable]  (0.509, 0.562, 0.354, 0.052)
+    RadioButton "Gain / Pan pad" [clickable]  (0.039, 0.625, 0.298, 0.052)
+    Button "Reconnect native engine" [clickable]  (0.039, 0.695, 0.453, 0.052)
+    Button "Verify native engines" [clickable]  (0.516, 0.695, 0.397, 0.052)
+    Button "Verify native services" [clickable]  (0.039, 0.759, 0.405, 0.052)
+    Button "Undo" [clickable]  (0.468, 0.759, 0.229, 0.052)
+    Button "Redo" [clickable]  (0.720, 0.759, 0.229, 0.052)
+    Button "Snapshot" [clickable]  (0.039, 0.823, 0.229, 0.052)

@@ -912,6 +912,18 @@ impl Engine for QuillEngine {
     }
 
     fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            let batch = ignition_core::parse_batch(cmd)?;
+            let staged = Self { blocks: self.blocks.clone(), journal: Journal::new(1) };
+            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
+            if result.events.iter().any(|event| event.kind == "document:changed") {
+                let inserted = staged.blocks.clone();
+                let removed = self.blocks.clone();
+                self.journal.record(UndoEntry { index: 0, removed, inserted });
+                self.blocks = staged.blocks;
+            }
+            return Ok(result);
+        }
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
                 "command version {} not supported",

@@ -8,6 +8,20 @@ beforeAll(() => { host = new CliHost(); });
 afterAll(async () => { await host.dispose(); });
 
 describe("native instrument session (real Rust host, no fake UI document)", () => {
+  it("keeps initialization out of history and commits both XY axes as one undo entry", async () => {
+    const session = await CadenceInstrumentSession.open(host);
+    expect(await session.undo()).toBe(false);
+    expect(session.state).toMatchObject({ gain: 1, pan: 0 });
+    expect(session.xyPad).toMatchObject({ x: 0.5, y: 1 });
+    await session.xyPad.onCommit({ x: 0.75, y: 0.4 });
+    expect(session.state).toMatchObject({ gain: 0.4, pan: 0.5 });
+    await session.undo(); expect(session.state).toMatchObject({ gain: 1, pan: 0 });
+    expect(await session.undo()).toBe(false);
+    await session.redo(); expect(session.state).toMatchObject({ gain: 0.4, pan: 0.5 });
+    await expect(session.setGainAndPan(0.8, 2)).rejects.toThrow("range");
+    expect(session.state).toMatchObject({ gain: 0.4, pan: 0.5 });
+    await session.close();
+  });
   it("reads acknowledged gain/pan, serializes edits, and correctly undoes/redoes", async () => {
     const session = await CadenceInstrumentSession.open(host, {
       tempoBpm: 128,
