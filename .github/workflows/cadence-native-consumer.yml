@@ -75,8 +75,12 @@ jobs:
         run: |
           set -euo pipefail
           ndk_version=$(cd examples/native-cadence && node -e 'const fs=require("node:fs"),p=require("node:path");const rn=p.dirname(require.resolve("react-native/package.json"));const text=fs.readFileSync(p.join(rn,"gradle/libs.versions.toml"),"utf8");const match=text.match(/^ndkVersion\s*=\s*"([^"]+)"/m);if(!match)throw new Error("Missing RN NDK version");console.log(match[1]);')
-          sdkmanager "ndk;$ndk_version"
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ndk_version"
+          if [[ ! -f "$ANDROID_NDK_HOME/source.properties" ]]; then
+            sdk_manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            test -x "$sdk_manager"
+            "$sdk_manager" "ndk;$ndk_version"
+          fi
           cargo install cargo-ndk --version 4.1.2 --locked
           bash packages/ignition/scripts/build-android.sh
       - working-directory: examples/native-cadence
