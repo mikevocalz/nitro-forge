@@ -725,6 +725,8 @@ impl Engine for FolioEngine {
         let doc = Document::load_mem(&bytes).map_err(ser_err)?;
         // Only commit after every decode step succeeded.
         self.doc = doc;
+        // A replacement document cannot reuse the previous document history.
+        self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
     }
 

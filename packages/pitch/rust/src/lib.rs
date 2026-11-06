@@ -642,6 +642,8 @@ impl Engine for PitchEngine {
         let state: PitchState = serde_json::from_slice(payload)?;
         // Commit only after the payload fully decoded.
         self.state = state;
+        // A replacement document cannot reuse the previous document history.
+        self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
     }
 

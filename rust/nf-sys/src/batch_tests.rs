@@ -107,3 +107,28 @@ fn pixel_mutations_and_output_budget_failures_leave_shared_raster_bytes_unchange
     assert!(engine.undo().unwrap(), "prior pixel history was erased");
     assert_ne!(engine.snapshot().unwrap(), before);
 }
+
+#[test]
+fn restore_replaces_history_but_failed_restore_preserves_it_for_every_engine() {
+    for kind in [EngineKind::Prism, EngineKind::Cadence, EngineKind::Splice,
+        EngineKind::Folio, EngineKind::Pitch, EngineKind::Tally, EngineKind::Quill] {
+        let mut engine = factory(kind).unwrap();
+        let initial = match kind {
+            EngineKind::Prism => json!({"width":4,"height":4}),
+            EngineKind::Folio => json!({"pages":1}),
+            _ => json!({}),
+        };
+        engine.apply(Command::new("new", initial)).unwrap();
+        let snapshot = engine.snapshot().unwrap();
+        let described = engine.apply(Command::new("describe", json!({}))).unwrap().data;
+        // Every engine records the initialization as a mutation.
+        assert!(engine.restore(b"invalid snapshot").is_err());
+        assert_eq!(engine.snapshot().unwrap(), snapshot);
+        assert!(engine.undo().unwrap(), "failed restore erased history {kind:?}");
+        assert!(engine.redo().unwrap());
+        engine.restore(&snapshot).unwrap();
+        assert_eq!(engine.apply(Command::new("describe", json!({}))).unwrap().data, described);
+        assert!(!engine.undo().unwrap(), "old undo survived restore {kind:?}");
+        assert!(!engine.redo().unwrap(), "old redo survived restore {kind:?}");
+    }
+}
