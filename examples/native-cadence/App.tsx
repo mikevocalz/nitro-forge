@@ -10,6 +10,7 @@ import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
 import { verifyNativeEngines } from "./verify-engines";
 import { verifyNativeServices } from "./verify-services";
 import { verifyNativeTelemetry } from "./verify-telemetry";
+import { verifyPickerCancellation, shareTestSnapshot, importTestSnapshot } from "./verify-documents";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -229,6 +230,12 @@ export default function App() {
                 const verification = await verifyNativeTelemetry();
                 store.setState({ verification });
               })}/>
+            <Action label="Test picker cancellation" disabled={state.pending} onPress={() =>
+              action(async () => { store.setState({ verification: await verifyPickerCancellation() }); })}/>
+            <Action label="Share test snapshot" disabled={state.pending} onPress={() =>
+              action(async () => { store.setState({ verification: await shareTestSnapshot() }); })}/>
+            <Action label="Import test snapshot" disabled={state.pending} onPress={() =>
+              action(async () => { store.setState({ verification: await importTestSnapshot() }); })}/>
             <Action label="Undo" disabled={state.pending} onPress={() => action(s => s.undo())}/>
             <Action label="Redo" disabled={state.pending} onPress={() => action(s => s.redo())}/>
             <Action label="Snapshot" disabled={state.pending} onPress={() =>
