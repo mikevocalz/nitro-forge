@@ -49,7 +49,7 @@ export default function App() {
     let unsubscribe: (() => void) | undefined;
     let host: EngineHost | undefined;
     store.setState({ phase: "loading", actual: null, error: null,
-      gainPreview: null, panPreview: null, savedBytes: null });
+      gainPreview: null, panPreview: null, savedBytes: null, verification: null });
     const connect = async () => {
       try {
         host = createNitroHost();
@@ -195,6 +195,8 @@ export default function App() {
               onPress={() => store.setState({ renderer: "react-native" })}/>
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            <Action label="Reconnect native engine" disabled={state.pending} onPress={() =>
+              store.setState(s => ({ attempt: s.attempt + 1 }))}/>
             <Action label="Verify native engines" disabled={state.pending} onPress={() =>
               action(async () => {
                 store.setState({ verification: null });
