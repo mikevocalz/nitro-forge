@@ -15,7 +15,10 @@
   },
   "android": {
     "build": "passed, 243 tasks",
-    "runtime": "unverified",
-    "gate": "emulator userdata creation requires 7372.8 MB free; about 2.4 GiB available"
+    "runtime": "passed",
+    "device": "ForgeCompletion_API36",
+    "serial": "emulator-5554",
+    "evidenceKind": "simulator",
+    "result": "Seven native engines and Cadence edit/undo/redo/reopen passed, including reconnect; manual Compose gain drag/undo/redo/snapshot passed"
   }
 }

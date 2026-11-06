@@ -34,7 +34,7 @@
         "P00"
       ],
       "exitCriteria": "Start the canonical generated factory in the native consumer; exercise seven engines, snapshots and Cadence edits through actual JS/native calls; verify cleanup and errors on iOS/Android.",
-      "status": "in-progress",
+      "status": "complete",
       "components": []
     },
     {
