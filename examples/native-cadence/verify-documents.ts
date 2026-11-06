@@ -57,3 +57,52 @@ export async function importTestSnapshot(): Promise<string> {
     finally { await host.dispose(); }
   }
 }
+
+const bookmarkFile = () => new File(Paths.document, "forge-completion-fixture-bookmark.json");
+
+/** Retains the generated fixture's access for the explicit relaunch check. */
+export async function retainTestBookmark(): Promise<string> {
+  const documents = createPlatformDocuments();
+  if (!documents.isAvailable) throw new Error("Native document picker is not linked");
+  const record = bookmarkFile();
+  if (record.exists) throw new Error("Restore the retained test bookmark before creating another");
+  const picked = await documents.pick({ types: [".nfd"], mode: "open-in-place" });
+  if (!picked.length) return "Native open-in-place fixture check cancelled.";
+  let retained = false;
+  try {
+    if (picked.length !== 1 || picked[0]!.name !== "forge-completion-share-fixture.nfd" || !picked[0]!.bookmark)
+      throw new Error("Select only the generated fixture; no selected file was read");
+    record.create({ overwrite: false });
+    record.write(JSON.stringify({ version: 1, bookmark: picked[0]!.bookmark }));
+    retained = true;
+    return "Native fixture bookmark retained. Restart this app, then Restore test bookmark to verify persisted access.";
+  } finally {
+    if (!retained) for (const item of picked) await documents.releaseAccess(item.uri);
+  }
+}
+
+/** Restores only this workflow's private saved bookmark, verifies real engine
+ * contents, then releases access and removes its private bookkeeping file. */
+export async function restoreTestBookmark(): Promise<string> {
+  const documents = createPlatformDocuments();
+  if (!documents.isAvailable) throw new Error("Native document picker is not linked");
+  const record = bookmarkFile();
+  if (!record.exists || record.size > 1024 * 1024) throw new Error("No valid retained fixture bookmark");
+  const saved: unknown = JSON.parse(await record.text());
+  if (!saved || typeof saved !== "object" || !("version" in saved) || saved.version !== 1 ||
+    !("bookmark" in saved) || typeof saved.bookmark !== "string") throw new Error("Invalid retained bookmark record");
+  const access = await documents.restoreAccess(saved.bookmark);
+  if (!access) throw new Error("Retained fixture access is no longer available");
+  const host = createNitroHost();
+  try {
+    const file = new File(access.uri);
+    if (file.size > 1024) throw new Error("Unexpected retained fixture size");
+    const document = await DocumentHandle.openInitialized(host, "cadence", async d => d.restore(await file.bytes()));
+    const result = await document.apply<{ tempo_bpm: number }>("describe");
+    if (result.data.tempo_bpm !== 137) throw new Error("Retained fixture content changed");
+  } finally {
+    try { await host.dispose(); } finally { await documents.releaseAccess(access.uri); }
+  }
+  record.delete();
+  return "Native fixture bookmark restore passed: persisted access read the real NFD1 document at 137 BPM; access released and private bookmark removed.";
+}

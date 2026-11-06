@@ -7,8 +7,11 @@ transaction probes pass on iOS/Android. Web checkpoint transaction/reload checks
 pass. Revision-gated collaboration now passes real-engine tests for all seven
 engines; deployed transport, realtime merging and presence remain unfinished.
 Native telemetry consent/error/payload-isolation probes pass on both simulators;
-product consent/export UI and external sink delivery remain unfinished. File/share,
-keyboard/accessibility and other required host acceptance still need work.
+product consent/export UI and external sink delivery remain unfinished. Native
+picker cancellation, generated fixture import and open-in-place access across
+process relaunch pass on both simulators. iOS Save to Files passes; Android
+recipient delivery and provider failure cases remain unverified.
+Keyboard/accessibility and other required host acceptance still need work.
 See [P02](reports/P02.md) and [N-11](N11-collaboration.md) for evidence and limits.
 
 No component has been promoted to fully accepted across all required platforms.

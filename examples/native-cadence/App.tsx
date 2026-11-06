@@ -10,7 +10,8 @@ import { createNitroHost, type EngineHost } from "@nitro-forge/ignition";
 import { verifyNativeEngines } from "./verify-engines";
 import { verifyNativeServices } from "./verify-services";
 import { verifyNativeTelemetry } from "./verify-telemetry";
-import { verifyPickerCancellation, shareTestSnapshot, importTestSnapshot } from "./verify-documents";
+import { verifyPickerCancellation, shareTestSnapshot, importTestSnapshot,
+  retainTestBookmark, restoreTestBookmark } from "./verify-documents";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -236,6 +237,10 @@ export default function App() {
               action(async () => { store.setState({ verification: await shareTestSnapshot() }); })}/>
             <Action label="Import test snapshot" disabled={state.pending} onPress={() =>
               action(async () => { store.setState({ verification: await importTestSnapshot() }); })}/>
+            <Action label="Retain test bookmark" disabled={state.pending} onPress={() =>
+              action(async () => { store.setState({ verification: await retainTestBookmark() }); })}/>
+            <Action label="Restore test bookmark" disabled={state.pending} onPress={() =>
+              action(async () => { store.setState({ verification: await restoreTestBookmark() }); })}/>
             <Action label="Undo" disabled={state.pending} onPress={() => action(s => s.undo())}/>
             <Action label="Redo" disabled={state.pending} onPress={() => action(s => s.redo())}/>
             <Action label="Snapshot" disabled={state.pending} onPress={() =>
