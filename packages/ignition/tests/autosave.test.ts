@@ -96,3 +96,11 @@ it("rejects foreign/corrupt recovery and closes a session when engine decoding f
   expect(close).toHaveBeenCalledTimes(1);
   await autosave.close(); await doc.close();
 });
+
+it("rejects object-prototype names instead of mistagging an unknown engine", async () => {
+  const storage = { read: async () => undefined, write: vi.fn(async () => {}) };
+  const store = createCheckpointStore(storage);
+  const bytes = new Uint8Array([78,70,68,49,0,2,0,0,0,123,125]);
+  await expect(store.write("invalid", { kind: "toString" as never, bytes })).rejects.toThrow("Unknown checkpoint engine");
+  expect(storage.write).not.toHaveBeenCalled();
+});

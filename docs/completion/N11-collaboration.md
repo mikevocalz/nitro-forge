@@ -27,8 +27,12 @@ credentials, network service or external sink is created by this implementation.
   network failure, the exact sent bytes are retained. A subsequent read can
   recognize their durable acceptance, even for Folio PDFs whose reserialization
   may differ. Later local edits remain dirty and upload against that recovered
-  base. A process restart may require explicit conflict resolution; pending upload
-  metadata is not yet durably journaled.
+  base. `checkpoint()` captures the exact pending upload and whether later edits
+  exist. The NCC1 private recovery store persists it together with the local
+  document and remote base; `recover()` reopens a new unpublished Rust session.
+  Bind the storage key to the service/account/document and persist before closing
+  or acknowledging background/shutdown. Imported user files are not trusted
+  collaboration metadata.
 - `acceptRemote()` explicitly discards local changes and resets history. A product
   must obtain the user's discard choice before invoking it. It is never an
   automatic conflict fallback.
@@ -39,8 +43,25 @@ credentials, network service or external sink is created by this implementation.
 The board's existing Yjs adapter remains separately owned on its recovered branch.
 This implementation does not replace it, wrap whole snapshots in a CRDT, or claim
 text/object merging, presence or a deployed collaboration backend. Those remain
-N-11/P16 work. Product conflict UI, durable offline upload recovery, network/device
-acceptance and performance budgets remain unverified.
+N-11/P16 work. Product conflict UI, remaining host/hardware acceptance and performance budgets
+remain unverified; native network and recovery acceptance are recorded below.
+
+## Durable recovery format
+
+NCC1 stores fixed engine identity, scoped document ID, remote revision, dirty
+state, the local NFD1 frame and an optional exact pending upload with a later-edit
+flag. One CRC protects metadata and both frames; computation yields each MiB.
+The total record is bounded to 256 MiB including any pending upload. A record
+past that bound rejects instead of claiming a save. Provider failures retain the
+previous good record. Recovery rejects a mismatched document ID before opening
+an engine; semantic restore failures close the unpublished native session.
+
+Both mobile simulators passed two full launches through real native storage and
+the SQLite-backed service: a durable revision 1 upload was acknowledged, the
+client deterministically simulated losing that ACK, and a later offline edit at
+181 BPM was checkpointed. After process termination/relaunch, the exact pending
+upload was recognized and the later edit uploaded as clean revision 2. This is
+explicit client-boundary ACK-loss injection, not a physical network-loss claim.
 
 ## Verification
 

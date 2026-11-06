@@ -21,7 +21,8 @@ export interface CheckpointStore {
   write(key: string, checkpoint: Checkpoint): Promise<void>;
 }
 
-/** Structural boundary implemented by real platform storage adapters. */
+/** Structural boundary implemented by real platform storage adapters. Writes
+ * replace a record atomically and retain the previous good record on rejection. */
 export interface BinaryCheckpointStorage {
   read(key: string): Promise<Uint8Array | undefined>;
   write(key: string, bytes: Uint8Array): Promise<void>;
@@ -43,6 +44,7 @@ export function createCheckpointStore(storage: BinaryCheckpointStorage): Checkpo
     },
     async write(key, checkpoint) {
       validateCheckpoint(checkpoint.bytes);
+      if (!Object.hasOwn(ENGINE_TAGS, checkpoint.kind)) throw new Error("Unknown checkpoint engine");
       const kind = ENGINE_TAGS[checkpoint.kind];
       if (kind === undefined) throw new Error("Unknown checkpoint engine");
       const bytes = new Uint8Array(checkpoint.bytes.byteLength + 5);

@@ -1,4 +1,5 @@
 import { ownedJson } from "./owned-json";
+import { ownCollaborationCheckpoint, type CollaborationCheckpoint } from "./collaboration-checkpoint";
 import { DocumentHandle } from "./document";
 import { validateCheckpoint } from "./autosave";
 import type { EngineHost } from "./host";
@@ -31,6 +32,14 @@ export interface CollaborationState {
   readonly dirty: boolean;
   readonly syncing: boolean;
   readonly closed: boolean;
+}
+/** Restore options for DocumentCollaboration.recover. Checkpoints belong to
+ * private application storage scoped to the service/account/document. */
+export interface RecoverCollaborationOptions {
+  readonly host: EngineHost;
+  readonly transport: CollaborationTransport;
+  readonly documentId: string;
+  readonly checkpoint: CollaborationCheckpoint;
 }
 
 /** Owns one authoritative Rust session. All edits/history flow through this
@@ -69,6 +78,29 @@ export class DocumentCollaboration {
       await d.restore(await d.snapshot());
     });
     return new DocumentCollaboration(document, transport, documentId);
+  }
+
+  /** Reopens an unpublished Rust session with its durable remote base and exact
+   * ambiguous upload. Later offline edits remain dirty after lost-ACK recovery. */
+  static async recover(options: RecoverCollaborationOptions): Promise<DocumentCollaboration> {
+    const value = ownCollaborationCheckpoint(options.checkpoint);
+    if (value.documentId !== options.documentId) throw new Error("Checkpoint belongs to another collaboration document");
+    const document = await DocumentHandle.openInitialized(options.host, value.kind, d => d.restore(value.bytes));
+    const owner = new DocumentCollaboration(document, options.transport, options.documentId);
+    owner.revision = value.revision;
+    owner.dirty = value.dirty;
+    owner.generation = value.pending && !value.pending.matchesCurrent ? 1 : 0;
+    if (value.pending) owner.attempted = { bytes: value.pending.bytes, generation: 0, base: value.revision };
+    return owner;
+  }
+
+  /** Captures one atomic private recovery record. Snapshot bytes remain owned
+   * by the caller. Persist it before closing the owner or acknowledging shutdown. */
+  checkpoint(): Promise<CollaborationCheckpoint> {
+    return this.enqueue(async () => ownCollaborationCheckpoint({ version: 1, documentId: this.documentId,
+      kind: this.document.kind, revision: this.revision, dirty: this.dirty, bytes: await this.document.snapshot(),
+      ...(this.attempted ? { pending: { bytes: this.attempted.bytes,
+        matchesCurrent: this.attempted.generation === this.generation } } : {}) }));
   }
 
   get state(): CollaborationState {
