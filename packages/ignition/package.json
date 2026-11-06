@@ -16,7 +16,8 @@
     "./transfer-ui": "./src/transfer-ui.ts",
     "./autosave": "./src/autosave.ts",
     "./transactions": "./src/transactions.ts",
-    "./collaboration": "./src/collaboration.ts"
+    "./collaboration": "./src/collaboration.ts",
+    "./collaboration-http": "./src/collaboration-http.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
