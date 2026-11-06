@@ -673,3 +673,21 @@ fn old_snapshots_without_new_fields_restore() {
     assert_eq!(d["layers"][0]["locked"], false);
     assert_eq!(d["artboards"], json!([]));
 }
+
+#[test]
+fn legacy_shape_edits_obey_layer_kind_and_ancestor_locks() {
+    let mut e = eng(16, 16);
+    let a = rect(&mut e, 1.0, 1.0, 4.0, 4.0, [255, 0, 0, 255]);
+    let b = rect(&mut e, 6.0, 1.0, 4.0, 4.0, [0, 0, 255, 255]);
+    let group = id(&run(&mut e, "groupLayers", json!({"ids":[a,b]})));
+    for lid in [group] {
+        rejects(&mut e, "transformShape", json!({"id":lid,"dx":1,"dy":0,"scale_x":1,"scale_y":1}), ErrorCode::Validation);
+        rejects(&mut e, "setShapeFill", json!({"id":lid,"color":[0,255,0,255]}), ErrorCode::Validation);
+    }
+    run(&mut e, "setLayerLocked", json!({"id":group,"locked":true}));
+    rejects(&mut e, "transformShape", json!({"id":a,"dx":1,"dy":0,"scale_x":1,"scale_y":1}), ErrorCode::Validation);
+    rejects(&mut e, "setShapeFill", json!({"id":a,"color":[0,255,0,255]}), ErrorCode::Validation);
+    run(&mut e, "setLayerLocked", json!({"id":group,"locked":false}));
+    one_step(&mut e, "transformShape", json!({"id":a,"dx":1,"dy":0,"scale_x":1,"scale_y":1}));
+    one_step(&mut e, "setShapeFill", json!({"id":a,"color":[0,255,0,255]}));
+}

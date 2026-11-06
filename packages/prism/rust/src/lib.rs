@@ -383,9 +383,10 @@ impl PrismEngine {
     /// Validate computed bounds before touching the document or its history.
     fn op_transform_shape(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
         let mut shape = match &self.layers[idx].content {
             Content::Shape(shape) => shape.clone(),
-            Content::Raster(_) => {
+            _ => {
                 return Err(EngineError::validation("transformShape requires a shape layer"));
             }
         };
@@ -410,8 +411,9 @@ impl PrismEngine {
     /// `setShapeFill {id,color}` — edits only the fill, preserving geometry and identity.
     fn op_set_shape_fill(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
         let color = Self::req_color(p, "color")?;
-        if self.layers[idx].is_raster() {
+        if !matches!(self.layers[idx].content, Content::Shape(_)) {
             return Err(EngineError::validation("setShapeFill requires a shape layer"));
         }
         self.journal.record(UndoEntry::Doc(self.capture()));
@@ -1041,7 +1043,7 @@ mod tests {
         let mut e = eng();
         let raster = add_raster(&mut e);
         let id = apply(&mut e, "addShape", json!({"shape": {
-            "kind": "rect", "x": 1e308, "y": 1e308, "w": 1e308, "h": 1e308,
+            "kind": "rect", "x": 1e7, "y": 1e7, "w": 1e7, "h": 1e7,
             "fill": [255,0,0,255]
         }})).data["layer_id"].as_u64().unwrap();
         apply(&mut e, "transformShape", json!({

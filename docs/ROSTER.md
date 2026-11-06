@@ -584,3 +584,7 @@ See `docs/recovery/PHASES.md` for phases 2–6 and `docs/recovery/roster-status.
 NYC-Tron's local second timeline cluster is integrated and tested: 544 source/model/render tests, 254 full-lane Chromium checks, workspace build/types and package export/pack checks pass. Track/marker text commits are deduplicated across Enter and blur while the engine response is pending.
 
 Forge's bound timeline callbacks pass 25 Splice tests against real Rust and TypeScript. The explicit `verify:timeline-source` command checks the actual built, unreleased component declarations while production pins stay on alpha.3. No new Rust code was added. No new release/native/device acceptance is claimed. See `docs/recovery/PHASE2.md` and the updated 341-row status table.
+
+## Phase 3 canvas source completion — 2026-11-05
+
+Recovered canvas/layers/selection/vector controls and the Prism engine operations are integrated locally. NYC-Tron passes 617 source tests and 323 Chromium tests, builds/types/exports and local packing. Forge passes 286 Rust tests, 408 package tests (one existing native skip), workspace types and the actual built-source canvas contract. Prism includes five new real-engine adapter scenarios. Production pins stay alpha.3; native/device acceptance and publication remain pending. See `docs/recovery/PHASE3.md` and the updated 341-row table.

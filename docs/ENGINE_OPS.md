@@ -37,8 +37,8 @@ State `{ width, height, next_id, layers: [Layer] }`.
 | `resize` | `{width,height}` | `{ok}` | raster layers crop/pad with transparent |
 | `addRasterLayer` | `{name?}` | `{layer_id}` | transparent, top of stack |
 | `addShape` | `{shape, name?}` | `{layer_id}` | |
-| `setShapeFill` | `{id,color:[r,g,b,a]}` | `{ok}` | shape only; preserves geometry/ID, one undo step; NotFound if absent, Validation for raster/channels >255, InvalidCommand for malformed RGBA (including negative/non-integer channels) |
-| `transformShape` | `{id,dx,dy,scale_x,scale_y}` | `{ok}` | shape only; translate by dx/dy and scale positive w/h about top-left; finite computed bounds required; one undo step; permits off-canvas geometry |
+| `setShapeFill` | `{id,color:[r,g,b,a]}` | `{ok}` | shape only; preserves geometry/ID, one undo step; NotFound if absent, Validation for non-shape content/channels >255, InvalidCommand for malformed RGBA (including negative/non-integer channels) |
+| `transformShape` | `{id,dx,dy,scale_x,scale_y}` | `{ok}` | shape only; translate by dx/dy and scale positive w/h about top-left; finite computed bounds within ±1e7 required; one undo step; permits off-canvas geometry |
 | `removeLayer` | `{id}` | `{ok}` | NotFound if absent |
 | `moveLayer` | `{id,to_index}` | `{ok}` | index 0 = bottom |
 | `renameLayer` | `{id,name}` | `{ok}` | |
@@ -65,7 +65,7 @@ nothing is selected). Older snapshots without these fields restore with
 defaults. Layers and artboards share one id counter.
 
 A transform maps a content point `p` to `t + o + R(rotation)·S(sx,sy)·(p - o)`.
-Children render through their ancestors' transforms. A locked layer, or one
+Coordinates and dimensions are bounded by ±1e7 (positive sizes where required); finite values alone are insufficient. Children render through their ancestors' transforms. A locked layer, or one
 inside a locked group, rejects pixel, transform, mask, path, fill/stroke,
 blend, opacity, removal and reparent edits with `Validation`; rename,
 visibility and lock stay allowed.
