@@ -1,4 +1,4 @@
-// Checked explicitly against a built NYC-Tron checkout, never the alpha.3 pin.
+// Checked against the installed alpha.4 release by verify:released-ui; also usable with the source verifier.
 import type { TimelineEdit } from '@nyc-tron/ui/components/forge/timeline/edits';
 import type { TrackHeadersProps } from '@nyc-tron/ui/components/forge/timeline/TrackHeaders';
 import type { LoopRangeBarProps } from '@nyc-tron/ui/components/forge/timeline/LoopRangeBar';

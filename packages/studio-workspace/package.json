@@ -29,7 +29,7 @@
     "@nitro-forge/icons": "workspace:*",
     "react-native-svg": "15.16.0",
     "@nitro-forge/ignition": "workspace:*",
-    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-ui-0.1.0-alpha.3.tgz"
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz"
   },
   "peerDependencies": {
     "react": ">=19",

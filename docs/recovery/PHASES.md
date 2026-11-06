@@ -1,5 +1,7 @@
 # Recovery phases
 
+Latest integration/publication: see [MERGE.md](MERGE.md). Phase checkpoints below retain their historical evidence.
+
 Scope: finish the interrupted local NYC-Tron and Nitro-Forge work from the durable recovery copies. The 341-component table includes broader backlog; absent, deferred and struck work outside the interrupted branches is not silently added to this recovery scope.
 
 Each phase finishes with integrated source, required exports and engine documentation, passing relevant checks, a status-table update and a local commit. Physical-device acceptance remains distinct from source, browser and native compilation evidence. Local completion does not imply pushed or merged PRs.

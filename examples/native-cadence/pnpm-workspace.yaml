@@ -5,9 +5,8 @@ packages:
   - "."
   - "../../packages/ignition"
   - "../../packages/cadence"
-# Ignition's own devDependency is the legacy Nitro 0.x used for its spec
-# typecheck. Inside this app every copy must be the Nitro v1 alpha the
-# native build links, or Metro bundles a second react-native-nitro-modules.
+# Keep the app and shared Ignition dependency on the same Nitro v1 nightly.
+# Metro must bundle a single react-native-nitro-modules runtime.
 overrides:
   react-native-nitro-modules: "1.0.0-alpha.nightly.120.g33ef045b96c0"
 minimumReleaseAge: 0

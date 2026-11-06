@@ -53,6 +53,8 @@ jobs:
       # NYC-Tron UI comes from release tarballs pinned in tooling/nyc-tron.json.
       - name: Install for new workspace package
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check recovered adapters against the published NYC-Tron declarations
+        run: pnpm verify:released-ui
       - name: NYC-Tron release pins match their sha256
         run: node tooling/verify-nyc-tron.mjs
       - name: Nitro v1 code generation and host contracts

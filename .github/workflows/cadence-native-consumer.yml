@@ -64,10 +64,23 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
       - run: corepack enable
       - working-directory: examples/native-cadence
+        run: corepack pnpm install --frozen-lockfile
+      - name: Build Rust archives with the React Native app's NDK
+        shell: bash
         run: |
-          corepack pnpm install --frozen-lockfile
+          set -euo pipefail
+          ndk_version=$(cd examples/native-cadence && node -e 'const fs=require("node:fs"),p=require("node:path");const rn=p.dirname(require.resolve("react-native/package.json"));const text=fs.readFileSync(p.join(rn,"gradle/libs.versions.toml"),"utf8");const match=text.match(/^ndkVersion\s*=\s*"([^"]+)"/m);if(!match)throw new Error("Missing RN NDK version");console.log(match[1]);')
+          sdkmanager "ndk;$ndk_version"
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ndk_version"
+          cargo install cargo-ndk --version 4.1.2 --locked
+          bash packages/ignition/scripts/build-android.sh
+      - working-directory: examples/native-cadence
+        run: |
           corepack pnpm exec expo prebuild --platform android --no-install --non-interactive
           cd android
           chmod +x gradlew
@@ -85,7 +98,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24.19.0"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
       - run: corepack enable
+      - name: Build current Rust XCFramework before SwiftPM resolution
+        run: bash packages/ignition/scripts/build-apple.sh
       - working-directory: examples/native-cadence
         run: |
           corepack pnpm install --frozen-lockfile

@@ -1,44 +1,44 @@
 {
-  "tag": "v0.1.0-alpha.3",
+  "tag": "v0.1.0-alpha.4",
   "packages": {
     "@nyc-tron/ui": {
-      "version": "0.1.0-alpha.3",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-ui-0.1.0-alpha.3.tgz",
-      "sha256": "13b2c46390ffd54e2713447f9e2c79df5b35a883c29f87050a6a94b5cc5b9db7",
-      "file": "nyc-tron-ui-0.1.0-alpha.3.tgz"
+      "version": "0.1.0-alpha.4",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
+      "sha256": "5c8e34cbe826136fdd105d0859e0cd307075aa62fe1b05ce50efd0e36874953a",
+      "file": "nyc-tron-ui-0.1.0-alpha.4.tgz"
     },
     "@nyc-tron/core": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-core-0.1.0-alpha.3.tgz",
-      "sha256": "21124020e236c48f165ef717aa02572f11efcfa62da1df0a5073fc147d2be6ce",
-      "version": "0.1.0-alpha.3",
-      "file": "nyc-tron-core-0.1.0-alpha.3.tgz"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz",
+      "sha256": "6425aeda73bdab7a91f5a1b02c62a9919a1b7af1516a4338522fb8154b2fe857",
+      "version": "0.1.0-alpha.4",
+      "file": "nyc-tron-core-0.1.0-alpha.4.tgz"
     },
     "@nyc-tron/expo-controls": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-expo-controls-0.1.0-alpha.3.tgz",
-      "sha256": "a713c4d5954809986b0a75645b1e156dcbe11d56a47e09142857daff54fa5837",
-      "version": "0.1.0-alpha.3",
-      "file": "nyc-tron-expo-controls-0.1.0-alpha.3.tgz"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-expo-controls-0.1.0-alpha.4.tgz",
+      "sha256": "abc79ec42771256833561c0312e75eee93a1523e1f1961e8c7f60950978ac3d6",
+      "version": "0.1.0-alpha.4",
+      "file": "nyc-tron-expo-controls-0.1.0-alpha.4.tgz"
     },
     "@nyc-tron/reserved-regions": {
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-reserved-regions-0.1.0-alpha.3.tgz",
-      "sha256": "fcc4082a2b99d425a597fc91fbd0baeaaf20fda673336309b0545b63bbd31774",
-      "version": "0.1.0-alpha.3",
-      "file": "nyc-tron-reserved-regions-0.1.0-alpha.3.tgz"
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz",
+      "sha256": "9fd017e259bd80fd9030f73d6ad9e5734a9a099d78ced79a06b26b79463832c2",
+      "version": "0.1.0-alpha.4",
+      "file": "nyc-tron-reserved-regions-0.1.0-alpha.4.tgz"
     },
     "@nyc-tron/platform-services": {
-      "version": "0.1.0-alpha.3",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-platform-services-0.1.0-alpha.3.tgz",
-      "sha256": "fa762e90ef32be9dc0f6b94fad62562c7ca8b67da1d5a4ddac239ab56276fd4a",
-      "file": "nyc-tron-platform-services-0.1.0-alpha.3.tgz"
+      "version": "0.1.0-alpha.4",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz",
+      "sha256": "9f774727efa8ab88ea25f06c42b48fce52a3d28e3fe1ba0532c27b2067feae51",
+      "file": "nyc-tron-platform-services-0.1.0-alpha.4.tgz"
     },
     "@nyc-tron/native-controls": {
-      "version": "0.1.0-alpha.3",
-      "file": "nyc-tron-native-controls-0.1.0-alpha.3.tgz",
-      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/nyc-tron-native-controls-0.1.0-alpha.3.tgz",
-      "sha256": "035e0f29d8a138246e26e791e8453a350c6d2d4442197f124a79ffa60a5665f7"
+      "version": "0.1.0-alpha.4",
+      "file": "nyc-tron-native-controls-0.1.0-alpha.4.tgz",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz",
+      "sha256": "e9fca1947ea29278b3b2016fbb38a3a4ec38939220f8d46a883df357a9ee6b8c"
     }
   },
   "repository": "mikevocalz/NYC-Tron-UI",
-  "commit": "e63e4840719f08d1177a0dab01ad181c77769103",
-  "sha256sumsUrl": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.3/SHA256SUMS"
+  "commit": "0554d190c211b224e3f894d63466bf9880efe539",
+  "sha256sumsUrl": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/SHA256SUMS"
 }
