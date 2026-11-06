@@ -821,6 +821,22 @@ importers:
         specifier: 5.1.0
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/telemetry:
+    dependencies:
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
+    devDependencies:
+      '@nitro-forge/prism':
+        specifier: workspace:*
+        version: link:../prism
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 5.1.0
+        version: 5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+
 packages:
 
   2g@1.0.1:
