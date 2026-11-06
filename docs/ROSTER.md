@@ -588,3 +588,7 @@ Forge's bound timeline callbacks pass 25 Splice tests against real Rust and Type
 ## Phase 3 canvas source completion — 2026-11-05
 
 Recovered canvas/layers/selection/vector controls and the Prism engine operations are integrated locally. NYC-Tron passes 617 source tests and 323 Chromium tests, builds/types/exports and local packing. Forge passes 286 Rust tests, 408 package tests (one existing native skip), workspace types and the actual built-source canvas contract. Prism includes five new real-engine adapter scenarios. Production pins stay alpha.3; native/device acceptance and publication remain pending. See `docs/recovery/PHASE3.md` and the updated 341-row table.
+
+## Phase 4 audio source completion — 2026-11-05
+
+Recovered audio routing/inserts/automation/analysis and MIDI batch/channel controls are integrated locally with Cadence engine ops and a serialized mixer adapter. NYC-Tron passes 692 source tests and 414 Chromium tests, workspace build/types and export/pack checks. Forge passes 317 Rust tests and 421 package tests (one existing native skip), all workspace types and the actual built-source contract. Cadence passes 35 tests including five new real-engine adapter cases. Offline engine evidence does not establish realtime device audio, native builds or physical-device acceptance. Pins stay alpha.3. See `docs/recovery/PHASE4.md` and the updated 341-row table.

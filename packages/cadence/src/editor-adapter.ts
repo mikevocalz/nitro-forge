@@ -6,7 +6,7 @@ import type { CadenceDocument } from "./index";
  * Consumers: `MixingConsole`/`ChannelStrip`/`PanControl`/`SoloMuteButtons`,
  * `TempoAndMetronome`, `MIDIPianoRoll`, `MIDIVelocityLane` and
  * `StepSequencer` from `@nyc-tron/ui` (NYC-Tron-UI #41, released in the
- * v0.1.0-alpha.2 pin in tooling/nyc-tron.json). Cadence's runtime does not
+ * v0.1.0-alpha.3 pin in tooling/nyc-tron.json). Cadence's runtime does not
  * import them; tests/nyc-tron-props.typecheck.ts checks every binding here
  * against the released props.
  *
@@ -15,8 +15,8 @@ import type { CadenceDocument } from "./index";
  * engine kept its previous state.
  *
  * Not mapped, on purpose:
- * - the metronome switch: Cadence has no click or audio output yet (E-01),
- *   so a binding would be a dead control. Leave `metronome` unset.
+ * - the metronome switch: use CadenceMixerAdapter.metronome() from
+ *   ./mixer-cluster for the new engine click; the host owns audio output.
  * - `WaveformLane.visibleRange`: a view window, not document state.
  */
 

@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./instrument-adapter": "./src/instrument-adapter.ts",
     "./instrument-session": "./src/instrument-session.ts",
-    "./editor-adapter": "./src/editor-adapter.ts"
+    "./editor-adapter": "./src/editor-adapter.ts",
+    "./mixer-cluster": "./src/mixer-cluster.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

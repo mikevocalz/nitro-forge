@@ -9,8 +9,8 @@ Each phase finishes with integrated source, required exports and engine document
 | 1 | Alpha.3 release consumers | Combine the six follow-ups, reconcile runtime/config/exports and lockfile, pass combined tests/types and browser builds | COMPLETE locally |
 | 2 | Timeline cluster 2 | Finish recovered clD-tron controls, exports, component/browser gates and matching Forge timeline adapter contracts | COMPLETE locally; unpublished |
 | 3 | Canvas and layers | Integrate U1-U4 into clB-tron; finish exports, source notices, browser acceptance and Prism bindings to #60 operations | COMPLETE locally; unpublished |
-| 4 | Audio cluster 2 | Finish clE-tron exports and browser gates, then bind the #58 Cadence operations with engine-backed tests | Next |
-| 5 | Workspace, color and transfers | Finish shell/color/presenter work and clACJN-forge workspace/import/export adapters against real engines | Pending |
+| 4 | Audio cluster 2 | Finish clE-tron exports and browser gates, then bind the #58 Cadence operations with engine-backed tests | COMPLETE locally; unpublished |
+| 5 | Workspace, color and transfers | Finish shell/color/presenter work and clACJN-forge workspace/import/export adapters against real engines | Next |
 | 6 | Native tasks, decoding and desktop review | Finish native task/cache/binary transport, decoder and recovery dialog coverage; complete #57 source review; record actual supported platform gates | Pending |
 
 ## Phase 1 evidence
@@ -40,4 +40,8 @@ No new native build or physical-device/screen-reader/foldable acceptance was run
 
 ## Phase 3 evidence
 
-See [PHASE3.md](PHASE3.md) for canvas integration, Prism bindings, checks and remaining platform/backend boundaries. Phase 4 is next.
+See [PHASE3.md](PHASE3.md) for canvas integration, Prism bindings, checks and remaining platform/backend boundaries. Phase 4 is complete locally; see PHASE4.md.
+
+## Phase 4 evidence
+
+See [PHASE4.md](PHASE4.md) for audio controls, Cadence bindings, validation and remaining platform/backend boundaries. Phase 5 is next.
