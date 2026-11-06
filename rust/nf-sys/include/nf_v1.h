@@ -51,6 +51,19 @@ NfV1CommandResult nf_v1_apply_parts(
 );
 void nf_v1_free_command_result(NfV1CommandResult result);
 
+/* Additive binary/task ABI. Borrowed inputs live through the synchronous call.
+ * Task controls may be observed/cancelled concurrently, and must outlive work. */
+typedef struct NfTaskContext NfTaskContext;
+typedef struct NfBinaryResult { NfV1CommandResult command; NfBytes output; } NfBinaryResult;
+NfTaskContext* nf_task_create(void);
+void nf_task_cancel(const NfTaskContext* task);
+float nf_task_progress(const NfTaskContext* task);
+void nf_task_free(NfTaskContext* task);
+NfBinaryResult nf_v1_apply_binary(int64_t handle, const uint8_t* op, size_t op_len,
+ const uint8_t* payload, size_t payload_len, uint32_t version,
+ const uint8_t* input, size_t input_len, uint8_t has_input, const NfTaskContext* task);
+void nf_v1_free_binary_result(NfBinaryResult result);
+
 /* Returns owned NFD1 bytes (max 256 MiB), or {NULL,0} and *out_err. */
 NfBytes nf_v1_snapshot(int64_t handle, char** out_err);
 

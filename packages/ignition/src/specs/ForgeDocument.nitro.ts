@@ -1,6 +1,7 @@
+import type {ForgeTask} from "./ForgeTask.nitro";
 import { Apple, Android, type HybridObject } from "nitro-core";
 import type {
-  ForgeEngineKind, ForgeCommand, ForgeCommandResult,
+  ForgeEngineKind, ForgeCommand, ForgeCommandResult, ForgeBinaryCommandResult,
 } from "../contracts";
 
 export * from "#nitro/ForgeDocument";
@@ -38,6 +39,10 @@ export declare class ForgeDocument extends HybridObject {
    * payloadJson remains serialized JSON pending verified nested-AnyJSON support.
    */
   apply(command: ForgeCommand): Promise<ForgeCommandResult>;
+  /** Copies input before queueing; returns raw output bytes without base64. */
+  applyBinary(command:ForgeCommand,input?:ArrayBuffer):Promise<ForgeBinaryCommandResult>;
+  /** Ready native task handle. Input is copied; accepted jobs share the document FIFO. */
+  startTask(command:ForgeCommand,input?:ArrayBuffer):ForgeTask;
 
   /**
    * Return an owned NFD1 byte snapshot through ArrayBuffer, not base64.

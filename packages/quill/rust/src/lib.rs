@@ -12,7 +12,7 @@ mod docx;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    Journal, TaskContext,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -427,6 +427,7 @@ impl QuillEngine {
         CommandResult {
             events: Vec::new(),
             data,
+            output: None,
         }
     }
 
@@ -850,16 +851,25 @@ impl QuillEngine {
         Ok(Self::read_only(json!({ "pages": pages })))
     }
 
-    fn op_export_docx(&self) -> Result<CommandResult, EngineError> {
+    /// `exportDocx {}` → `.docx` bytes as `bytes_b64`, or as binary output.
+    /// As a task: stage 1 builds the archive (progress 0.5), stage 2 returns
+    /// it; cancellation between stages returns nothing. Read-only.
+    fn op_export_docx(
+        &self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let bytes = docx::export_docx(&self.blocks)?;
-        Ok(Self::read_only(json!({
-            "bytes_b64": base64_encode(&bytes)
-        })))
+        if let Some(ctx) = ctx {
+            ctx.set_progress(0.5);
+            ctx.checkpoint()?;
+        }
+        Ok(Self::read_only(json!({ "size": bytes.len() })).with_bytes(cmd, "bytes_b64", bytes))
     }
 
-    fn op_import_docx(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
-        let b64 = as_str(field(p, "bytes_b64")?, "bytes_b64")?;
-        let bytes = base64_decode(b64)?;
+    /// `importDocx {bytes_b64}`, or the `.docx` as binary input.
+    fn op_import_docx(&mut self, cmd: &mut Command) -> Result<CommandResult, EngineError> {
+        let bytes = cmd.bytes_input("bytes_b64", base64_decode)?;
         let blocks = docx::import_docx(&bytes)?;
         let old = std::mem::replace(&mut self.blocks, blocks);
         self.journal.record(UndoEntry {
@@ -884,7 +894,24 @@ impl Engine for QuillEngine {
         EngineKind::Quill
     }
 
-    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+    fn binary_input_ops(&self) -> &'static [&'static str] {
+        &["importDocx"]
+    }
+
+    /// `exportDocx` checks for cancellation between building and returning
+    /// the archive. Other ops run to completion once started.
+    fn apply_long(&mut self, cmd: Command, ctx: &TaskContext) -> Result<CommandResult, EngineError> {
+        ctx.checkpoint()?;
+        let result = if cmd.op == "exportDocx" && cmd.v == 1 {
+            self.op_export_docx(&cmd, Some(ctx))
+        } else {
+            self.apply(cmd)
+        }?;
+        ctx.set_progress(1.0);
+        Ok(result)
+    }
+
+    fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
                 "command version {} not supported",
@@ -905,8 +932,8 @@ impl Engine for QuillEngine {
             "text" => self.op_text(&cmd.payload),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
-            "exportDocx" => self.op_export_docx(),
-            "importDocx" => self.op_import_docx(&cmd.payload),
+            "exportDocx" => self.op_export_docx(&cmd, None),
+            "importDocx" => self.op_import_docx(&mut cmd),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
     }
@@ -1136,6 +1163,7 @@ mod tests {
                 v: 2,
                 op: "text".into(),
                 payload: json!({}),
+                input: None, binary_output: false,
             })
             .unwrap_err();
         assert_eq!(er.code, ErrorCode::Unsupported);

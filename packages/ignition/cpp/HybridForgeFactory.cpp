@@ -1,3 +1,5 @@
+#include <NitroForgeV1/HybridForgeMediaCache.hpp>
+#include <cmath>
 #include <NitroForgeV1/HybridForgeFactory.hpp>
 #include <NitroForgeV1/HybridForgeDocument.hpp>
 #include <NitroForgeV1/ForgeRustSession.hpp>
@@ -23,6 +25,11 @@ std::string_view kindName(ForgeEngineKind kind) {
 }
 
 } // namespace
+
+std::shared_ptr<HybridForgeMediaCacheSpec> HybridForgeFactory::createMediaCache(double capacity){
+ if(!std::isfinite(capacity)||capacity<1||capacity>256u*1024u*1024u||std::trunc(capacity)!=capacity)throw std::invalid_argument("Cache capacity must be an integer 1..256 MiB");
+ return std::make_shared<HybridForgeMediaCache>(static_cast<size_t>(capacity));
+}
 
 Promise<std::shared_ptr<HybridForgeDocumentSpec>>
 HybridForgeFactory::open(ForgeEngineKind kind) {

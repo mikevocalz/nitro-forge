@@ -1,5 +1,6 @@
 use crate::command::{Command, CommandResult};
 use crate::error::EngineError;
+use crate::TaskContext;
 use serde::{Deserialize, Serialize};
 
 /// Identity of an engine implementation.
@@ -65,4 +66,24 @@ pub trait Engine: Send + 'static {
 
     fn undo(&mut self) -> Result<bool, EngineError>;
     fn redo(&mut self) -> Result<bool, EngineError>;
+    /// Ops that read `Command::input` (the binary sidecar). Hosts reject a
+    /// command that carries input bytes for any other op, so bytes are never
+    /// silently dropped. Default: none.
+    fn binary_input_ops(&self) -> &'static [&'static str] {
+        &[]
+    }
+
+    /// Run a command as a cancelable task. Same atomicity contract as
+    /// `apply`: a cancelled command returns `ErrorCode::Cancelled` and leaves
+    /// the document unchanged.
+    ///
+    /// The default checks for cancellation once, then runs `apply` to
+    /// completion. Engines with long ops override it to check `ctx` between
+    /// chunks or stages and report progress through `ctx.set_progress`.
+    fn apply_long(&mut self, cmd: Command, ctx: &TaskContext) -> Result<CommandResult, EngineError> {
+        ctx.checkpoint()?;
+        let result = self.apply(cmd)?;
+        ctx.set_progress(1.0);
+        Ok(result)
+    }
 }

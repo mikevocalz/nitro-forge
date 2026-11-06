@@ -18,7 +18,8 @@ export type ErrorCode =
   | "serialization"
   | "out_of_bounds"
   | "unsupported"
-  | "internal";
+  | "internal"
+  | "cancelled";
 
 export interface EngineErrorShape {
   code: ErrorCode;

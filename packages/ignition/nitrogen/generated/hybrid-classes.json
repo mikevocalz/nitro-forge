@@ -32,6 +32,38 @@
         },
         "language": "c++"
       }
+    },
+    "ForgeMediaCache": {
+      "android": {
+        "implementation": {
+          "className": "HybridForgeMediaCache",
+          "include": "<NitroForgeV1/HybridForgeMediaCache.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridForgeMediaCache",
+          "include": "<NitroForgeV1/HybridForgeMediaCache.hpp>"
+        },
+        "language": "c++"
+      }
+    },
+    "ForgeTask": {
+      "android": {
+        "implementation": {
+          "className": "HybridForgeTask",
+          "include": "<NitroForgeV1/HybridForgeTask.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridForgeTask",
+          "include": "<NitroForgeV1/HybridForgeTask.hpp>"
+        },
+        "language": "c++"
+      }
     }
   }
 }

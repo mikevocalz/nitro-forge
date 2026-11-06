@@ -118,3 +118,13 @@ Nitro is the production transport. For CI and TS-side tests, `nf-cli` (a workspa
 binary in `rust/nf-cli`) exposes every engine over stdin/stdout JSON-lines. Vitest
 suites spawn it and drive real open → modify → save → reopen → undo flows against
 compiled Rust. iOS/Android/WASM packaging is tracked in `docs/ROSTER.md`.
+
+## Additive native tasks and binary commands (recovery phase 6)
+
+The pinned Nitro nightly-120 factory returns `ForgeDocument` and `ForgeMediaCache` resources. `document.applyBinary(command, input?)` returns `{dataJson, events, output?: ArrayBuffer}`; `startTask(command, input?)` returns a native-owned `ForgeTask` with `progress`, `cancel()` and `result()`. Document work retains FIFO order with snapshot/restore/close. Cancellation uses atomic control outside that queue, so it can reach a running task. Dropping the JS resource does not free control while the accepted job holds it. These methods do not change the JSON EngineHost transport.
+
+The additive C ABI in `nf_v1.h` preserves existing result layouts. Binary inputs and outputs are capped at 256 MiB; command JSON remains capped at 32 MiB. Input is copied before leaving JS to prevent caller mutation; Rust results are copied to owned native storage and transferred as ArrayBuffer. This is not a zero-copy claim. Callers must free each C result exactly once and retain the opaque task through all worker/observer calls.
+
+`Engine::apply_long` checks cancellation before atomic operations. Cadence synthesis checks every 8192 samples and between mix stages; EQ/compressor processing retains continuous state and is not interrupted mid-stage. Folio save and Quill DOCX export add safe read-only checkpoints. Other commands may finish after cancellation was requested; a successful atomic mutation is never reported as cancelled. `cancelled` is a recoverable error. Progress is monotonic checkpoint progress, not elapsed-time estimation. Media decoding is a separate Expo queue and is not cancelled by ForgeTask.
+
+The media cache owns derived bytes only. Capacity is 1..256 MiB, with at most 4096 entries and 1024-byte keys. Put copies input before queueing; get returns a copy and updates LRU order. Close drains earlier work, clears bytes and rejects later operations. Keys must encode source revision and decode options. It neither persists engine documents nor generates waveforms/thumbnails itself. See recovery/PHASE6.md for executed checks and platform gates.

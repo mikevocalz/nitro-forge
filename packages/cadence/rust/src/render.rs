@@ -8,7 +8,7 @@
 use crate::dsp::apply_effect;
 use crate::mixer_model::AutomationParam;
 use crate::{Doc, Track, TrackKind, ENVELOPE_S};
-use ignition_core::EngineError;
+use ignition_core::{EngineError,TaskContext};
 use std::f64::consts::PI;
 
 /// One stereo signal.
@@ -87,6 +87,12 @@ pub fn mixdown(
     include_metronome: bool,
     keep_stems: bool,
 ) -> Result<Mixdown, EngineError> {
+    mixdown_with_context(doc,from_ticks,to_ticks,sample_rate,include_metronome,keep_stems,None)
+}
+
+pub fn mixdown_with_context(doc:&Doc,from_ticks:u64,to_ticks:u64,sample_rate:u64,include_metronome:bool,keep_stems:bool,ctx:Option<&TaskContext>)->Result<Mixdown,EngineError>{
+    if let Some(ctx)=ctx{ctx.checkpoint()?;}
+    let mut processed=0usize;
     let sr = sample_rate as f64;
     let frames = render_range_frames(doc, from_ticks, to_ticks, sr)?;
     let seconds_per_tick = 60.0 / (doc.ppq as f64 * doc.tempo_bpm);
@@ -107,9 +113,10 @@ pub fn mixdown(
         if track.kind == TrackKind::Bus {
             continue;
         }
+        if let Some(ctx)=ctx{ctx.checkpoint()?;}
         let mut out = Stereo::silent(frames);
         if heard[ti] {
-            let dry = synthesize(track, from_ticks, to_ticks, frames, seconds_per_tick, sr);
+            let dry = synthesize(track, from_ticks, to_ticks, frames, seconds_per_tick, sr,ctx)?;
             out.l.copy_from_slice(&dry);
             out.r.copy_from_slice(&dry);
             run_inserts(track, &mut out, sr);
@@ -124,6 +131,8 @@ pub fn mixdown(
                 }
             }
         }
+        processed+=1;
+        if let Some(ctx)=ctx{ctx.checkpoint()?;ctx.set_progress(processed as f32/(doc.tracks.len()+1) as f32);}
         if keep_stems {
             stems.push((track.id, out));
         }
@@ -142,6 +151,8 @@ pub fn mixdown(
         } else {
             sig = Stereo::silent(frames);
         }
+        processed+=1;
+        if let Some(ctx)=ctx{ctx.checkpoint()?;ctx.set_progress(processed as f32/(doc.tracks.len()+1) as f32);}
         if keep_stems {
             stems.push((track.id, sig));
         }
@@ -152,6 +163,7 @@ pub fn mixdown(
     if include_metronome && doc.metronome.enabled {
         click_track(doc, &mut master, from_ticks, to_ticks, seconds_per_tick, sr);
     }
+    if let Some(ctx)=ctx{ctx.checkpoint()?;}
     Ok(Mixdown { frames, master, stems })
 }
 
@@ -162,7 +174,8 @@ fn synthesize(
     frames: usize,
     seconds_per_tick: f64,
     sr: f64,
-) -> Vec<f64> {
+    ctx:Option<&TaskContext>,
+) -> Result<Vec<f64>,EngineError> {
     let mut dry = vec![0.0f64; frames];
     let ramp_samples = ENVELOPE_S * sr;
     for clip in &track.clips {
@@ -187,6 +200,7 @@ fn synthesize(
             let freq = 440.0 * 2f64.powf((note.pitch as f64 - 69.0) / 12.0);
             let vel = note.velocity as f64 / 127.0;
             for (i, out) in dry.iter_mut().enumerate().take(i1).skip(i0) {
+                if i%8192==0{if let Some(ctx)=ctx{ctx.checkpoint()?;ctx.set_progress(0.5*i as f32/frames.max(1) as f32);}}
                 let x = i as f64 - s0;
                 let attack = if x < ramp_samples { (x / ramp_samples).max(0.0) } else { 1.0 };
                 let rel = s1 - i as f64;
@@ -195,7 +209,7 @@ fn synthesize(
             }
         }
     }
-    dry
+    Ok(dry)
 }
 
 fn run_inserts(track: &Track, sig: &mut Stereo, sr: f64) {

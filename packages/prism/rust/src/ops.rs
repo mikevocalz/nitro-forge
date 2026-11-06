@@ -104,7 +104,7 @@ fn ok() -> Result<CommandResult, EngineError> {
 }
 
 fn read(data: Value) -> Result<CommandResult, EngineError> {
-    Ok(CommandResult { events: Vec::new(), data })
+    Ok(CommandResult { output: None, events: Vec::new(), data })
 }
 
 fn parse<T: DeserializeOwned>(v: &Value, what: &str) -> Result<T, EngineError> {

@@ -9,7 +9,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Event, Journal,
+    Event, Journal, TaskContext,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -302,6 +302,7 @@ impl CadenceEngine {
 
     pub(crate) fn changed(data: Value) -> CommandResult {
         CommandResult {
+            output: None,
             events: vec![Event::new("document:changed", Value::Null)],
             data,
         }
@@ -326,6 +327,7 @@ impl CadenceEngine {
 
     pub(crate) fn read_only(data: Value) -> CommandResult {
         CommandResult {
+            output: None,
             events: vec![],
             data,
         }
@@ -338,9 +340,41 @@ impl Default for CadenceEngine {
     }
 }
 
+impl CadenceEngine {
+ fn render_command(&self,cmd:&Command,ctx:Option<&TaskContext>)->Result<CommandResult,EngineError>{
+ let p=&cmd.payload;
+                let from = req_ticks(p, "from_ticks")?;
+                let to = req_ticks(p, "to_ticks")?;
+                let sample_rate = req_u64(p, "sample_rate")?;
+                if to <= from {
+                    return Err(EngineError::validation("to_ticks must be > from_ticks"));
+                }
+                if sample_rate == 0 {
+                    return Err(EngineError::validation("sample_rate must be > 0"));
+                }
+                let click = match p.get("include_metronome") {
+                    None | Some(Value::Null) => false,
+                    Some(_) => req_bool(p, "include_metronome")?,
+                };
+                let mix = render::mixdown_with_context(&self.doc, from, to, sample_rate, click, false,ctx)?;
+                Ok(Self::read_only(json!({
+
+                    "frames": mix.frames,
+                    "channels": 2,
+                })).with_bytes(cmd,"samples_b64",render::to_f32le(&mix.master)))
+
+ }
+}
+
 impl Engine for CadenceEngine {
     fn kind(&self) -> EngineKind {
         EngineKind::Cadence
+    }
+
+    fn apply_long(&mut self,cmd:Command,ctx:&TaskContext)->Result<CommandResult,EngineError>{
+        ctx.checkpoint()?;
+        let result=if cmd.op=="render"&&cmd.v==1{self.render_command(&cmd,Some(ctx))}else{self.apply(cmd)}?;
+        ctx.set_progress(1.0);Ok(result)
     }
 
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
@@ -771,27 +805,7 @@ impl Engine for CadenceEngine {
                     "length_ticks": self.doc.length_ticks(),
                 })))
             }
-            "render" => {
-                let from = req_ticks(p, "from_ticks")?;
-                let to = req_ticks(p, "to_ticks")?;
-                let sample_rate = req_u64(p, "sample_rate")?;
-                if to <= from {
-                    return Err(EngineError::validation("to_ticks must be > from_ticks"));
-                }
-                if sample_rate == 0 {
-                    return Err(EngineError::validation("sample_rate must be > 0"));
-                }
-                let click = match p.get("include_metronome") {
-                    None | Some(Value::Null) => false,
-                    Some(_) => req_bool(p, "include_metronome")?,
-                };
-                let mix = render::mixdown(&self.doc, from, to, sample_rate, click, false)?;
-                Ok(Self::read_only(json!({
-                    "samples_b64": base64_encode(&render::to_f32le(&mix.master)),
-                    "frames": mix.frames,
-                    "channels": 2,
-                })))
-            }
+            "render" => self.render_command(&cmd,None),
 
             other => self
                 .apply_mixer(other, p)

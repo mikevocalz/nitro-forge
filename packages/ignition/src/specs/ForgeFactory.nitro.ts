@@ -1,3 +1,4 @@
+import type {ForgeMediaCache} from "./ForgeMediaCache.nitro";
 import { Apple, Android, type HybridObject } from "nitro-core";
 import type { ForgeEngineKind } from "../contracts";
 import type { ForgeDocument } from "./ForgeDocument.nitro";
@@ -27,6 +28,8 @@ export * from "#nitro/ForgeFactory";
 export declare class ForgeFactory extends HybridObject {
   /** Construct a lightweight factory; it owns no active Rust document. */
   constructor();
+  /** Creates an empty native cache with a 1..256 MiB capacity; caller must close it. */
+  createMediaCache(capacityBytes:number):ForgeMediaCache;
 
   /**
    * Opens a new document on a dedicated native worker and resolves when ready.

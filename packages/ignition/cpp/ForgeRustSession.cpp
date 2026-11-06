@@ -84,6 +84,19 @@ class RustCommandResult final {
 
 } // namespace
 
+BinaryCommandResult ForgeRustSession::applyBinary(std::string_view op,std::optional<std::string_view> payload,uint32_t version,std::optional<std::span<const uint8_t>> input,const NfTaskContext* task) const {
+ if(op.empty()||op.size()>128||(payload&&payload->size()>32u*1024u*1024u)||(input&&input->size()>256u*1024u*1024u))throw std::invalid_argument("Binary command exceeds bounds");
+ auto result=nf_v1_apply_binary(checkedHandle(),reinterpret_cast<const uint8_t*>(op.data()),op.size(),
+   payload?reinterpret_cast<const uint8_t*>(payload->data()):nullptr,payload?payload->size():0,version,
+   input?input->data():nullptr,input?input->size():0,input?1:0,task);
+ // Existing RAII frees the command strings; this guard owns only the binary allocation.
+ RustBytes output(result.output);RustCommandResult command(result.command);
+ if(command.failed())throwNativeError("applyBinary",command.error());
+ BinaryCommandResult owned{command.copyToOwned(),std::nullopt};
+ if(output.data()!=nullptr)owned.output=output.size()?std::vector<uint8_t>(output.data(),output.data()+output.size()):std::vector<uint8_t>{};
+ return owned;
+}
+
 ForgeRustSession::ForgeRustSession(int64_t handle) noexcept : _handle(handle) {}
 
 std::shared_ptr<ForgeRustSession> ForgeRustSession::open(std::string_view engineKind) {

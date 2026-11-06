@@ -422,3 +422,17 @@ Undo: prior `Vec<Block>` for structural ops; for `applyStyle`/`insertText`/
 ### Prism palette and document reset integration
 
 Prism `new` preserves the palette while resetting layers/artboards/selections, as the recovered color contract specifies. Undo/redo restores the prior canvas state with its palette. Palette edits remain separate atomic history entries; a dialog commit to a selected shape/path uses `setFill` and does not also change the palette in a second command.
+
+## Binary sidecar form (native v1 additive ABI)
+
+Existing JSON/base64 commands remain compatible. `applyBinary`/`startTask` ask for raw output; only these input operations accept an optional raw sidecar:
+
+| Engine | Input operation | Replaced JSON field | Raw output operation |
+| --- | --- | --- | --- |
+| Prism | drawPixels | data_b64 | flatten |
+| Folio | open | bytes_b64 | save |
+| Quill | importDocx | bytes_b64 | exportDocx |
+| Cadence | none | none | render (interleaved little-endian Float32 stereo) |
+| All | none for reserved operations | none | __snapshot (NFD1) |
+
+Exactly one byte input source is required for an input operation. Supplying both a base64 field and sidecar rejects before mutation; unrelated operations reject sidecars. Raw output omits its base64 field and keeps other metadata/events. Version 1 is required. Binary fields are not serialized by serde. Tasks preserve the same operation/undo semantics; cancellation is cooperative at documented safe checkpoints, not a new engine operation.

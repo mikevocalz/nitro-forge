@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include "nf_v1.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -21,6 +22,8 @@ struct CommandResult final {
   std::string dataJson;
   std::vector<CommandEvent> events;
 };
+
+struct BinaryCommandResult final { CommandResult command; std::optional<std::vector<uint8_t>> output; };
 
 /**
  * Owns one C FFI document handle and releases it deterministically.
@@ -43,6 +46,9 @@ class ForgeRustSession final {
       std::string_view operation,
       std::optional<std::string_view> payloadJson = std::nullopt,
       uint32_t commandVersion = 1) const;
+
+  BinaryCommandResult applyBinary(std::string_view operation,std::optional<std::string_view> payloadJson,
+      uint32_t version,std::optional<std::span<const uint8_t>> input,const NfTaskContext* task=nullptr) const;
 
   /** Returns an owned NFD1 byte vector. */
   std::vector<uint8_t> snapshot() const;

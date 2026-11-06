@@ -10,6 +10,7 @@ class HybridForgeFactory final : public HybridForgeFactorySpec {
   HybridForgeFactory() = default;
   ~HybridForgeFactory() override = default;
 
+  std::shared_ptr<HybridForgeMediaCacheSpec> createMediaCache(double capacityBytes) override;
   Promise<std::shared_ptr<HybridForgeDocumentSpec>> open(ForgeEngineKind kind) override;
 };
 

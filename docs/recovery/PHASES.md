@@ -11,7 +11,7 @@ Each phase finishes with integrated source, required exports and engine document
 | 3 | Canvas and layers | Integrate U1-U4 into clB-tron; finish exports, source notices, browser acceptance and Prism bindings to #60 operations | COMPLETE locally; unpublished |
 | 4 | Audio cluster 2 | Finish clE-tron exports and browser gates, then bind the #58 Cadence operations with engine-backed tests | COMPLETE locally; unpublished |
 | 5 | Workspace, color and transfers | Finish shell/color/presenter work and clACJN-forge workspace/import/export adapters against real engines | COMPLETE; unpublished |
-| 6 | Native tasks, decoding and desktop review | Finish native task/cache/binary transport, decoder and recovery dialog coverage; complete #57 source review; record actual supported platform gates | Next |
+| 6 | Native tasks, decoding and desktop review | Finish native task/cache/binary transport, decoder and recovery dialog coverage; complete #57 source review; record actual supported platform gates | COMPLETE within documented platform limits |
 
 ## Phase 1 evidence
 
@@ -49,3 +49,7 @@ See [PHASE4.md](PHASE4.md) for audio controls, Cadence bindings, validation and 
 ## Phase 5 evidence
 
 See [PHASE5.md](PHASE5.md) for workspace, transfer/color bindings and host session ink, validation and explicit backend/platform limits. Push each completed phase under the user’s standing instruction. Phase 6 is next.
+
+## Phase 6 evidence
+
+See [PHASE6.md](PHASE6.md) for native runtime, decoding/recovery checks, PR #57 source audit and remaining Android/RNW/QNX/device gates. Both phase branches are pushed under the standing instruction.

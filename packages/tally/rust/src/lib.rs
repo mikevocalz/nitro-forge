@@ -275,6 +275,7 @@ impl TallyEngine {
         CommandResult {
             events: vec![],
             data,
+            output: None,
         }
     }
 

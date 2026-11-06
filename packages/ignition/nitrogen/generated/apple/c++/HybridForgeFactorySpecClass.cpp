@@ -7,6 +7,7 @@
 
 #include <NitroForgeV1/HybridForgeFactorySpec.hpp>
 #include <memory>
+#include <NitroForgeV1/HybridForgeMediaCacheSpec.hpp>
 #include <NitroForgeV1/HybridForgeDocumentSpec.hpp>
 #include <NitroModules/Promise.hpp>
 #include <NitroForgeV1/ForgeEngineKind.hpp>
@@ -29,6 +30,7 @@ namespace margelo::nitro::nitroforge::ignitionv1 {
 
   const std::shared_ptr<const HybridClass>& HybridForgeFactorySpec::Class::get() {
     static const auto hybridClass = HybridClass::create<Class>([](HybridClass& clazz) {
+      clazz.registerHybridMethod("createMediaCache", &HybridForgeFactorySpec::createMediaCache);
       clazz.registerHybridMethod("open", &HybridForgeFactorySpec::open);
       clazz.registerHybridConstructor(&HybridForgeFactorySpecBindings::constructor);
     });

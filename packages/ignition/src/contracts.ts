@@ -25,3 +25,10 @@ export interface ForgeCommandResult {
   dataJson: string;
   events: ForgeEvent[];
 }
+
+/** Bytes are returned separately from scalar/event JSON; absent for ops without byte output. */
+export interface ForgeBinaryCommandResult {
+  dataJson:string;
+  events:ForgeEvent[];
+  output?:ArrayBuffer;
+}

@@ -15,11 +15,16 @@ target_sources(NitroForgeV1 PRIVATE
   "${CMAKE_CURRENT_LIST_DIR}/NitroForgeV1OnLoad.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../android/c++/HybridForgeDocumentSpecClass.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../android/c++/HybridForgeFactorySpecClass.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/../android/c++/HybridForgeMediaCacheSpecClass.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/../android/c++/HybridForgeTaskSpecClass.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/ForgeBinaryCommandResult.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/ForgeCommand.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/ForgeCommandResult.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/ForgeEvent.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/HybridForgeDocumentSpec.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/HybridForgeFactorySpec.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/HybridForgeMediaCacheSpec.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/HybridForgeTaskSpec.cpp"
 )
 
 find_package(fbjni REQUIRED CONFIG)

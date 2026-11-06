@@ -9,6 +9,8 @@
 #include <NitroModules/HybridClassRegistry.hpp>
 #include <NitroForgeV1/HybridForgeDocumentSpec.hpp>
 #include <NitroForgeV1/HybridForgeFactorySpec.hpp>
+#include <NitroForgeV1/HybridForgeMediaCacheSpec.hpp>
+#include <NitroForgeV1/HybridForgeTaskSpec.hpp>
 
 namespace margelo::nitro::nitroforge::ignitionv1 {
   void registerAllNatives() {
@@ -16,5 +18,7 @@ namespace margelo::nitro::nitroforge::ignitionv1 {
 
     HybridClassRegistry::registerHybridClass("nitroforge.ignitionv1.ForgeDocument", HybridForgeDocumentSpec::Class::get());
     HybridClassRegistry::registerHybridClass("nitroforge.ignitionv1.ForgeFactory", HybridForgeFactorySpec::Class::get());
+    HybridClassRegistry::registerHybridClass("nitroforge.ignitionv1.ForgeMediaCache", HybridForgeMediaCacheSpec::Class::get());
+    HybridClassRegistry::registerHybridClass("nitroforge.ignitionv1.ForgeTask", HybridForgeTaskSpec::Class::get());
   }
 }

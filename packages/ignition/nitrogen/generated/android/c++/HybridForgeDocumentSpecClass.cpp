@@ -10,7 +10,11 @@
 #include <NitroForgeV1/ForgeCommandResult.hpp>
 #include <NitroModules/Promise.hpp>
 #include <NitroForgeV1/ForgeCommand.hpp>
+#include <NitroForgeV1/ForgeBinaryCommandResult.hpp>
 #include <NitroModules/ArrayBuffer.hpp>
+#include <optional>
+#include <memory>
+#include <NitroForgeV1/HybridForgeTaskSpec.hpp>
 
 
 namespace margelo::nitro::nitroforge::ignitionv1 {
@@ -21,6 +25,8 @@ namespace margelo::nitro::nitroforge::ignitionv1 {
     static const auto hybridClass = HybridClass::create<Class>([](HybridClass& clazz) {
       clazz.registerHybridProperty("kind", &HybridForgeDocumentSpec::getKind);
       clazz.registerHybridMethod("apply", &HybridForgeDocumentSpec::apply);
+      clazz.registerHybridMethod("applyBinary", &HybridForgeDocumentSpec::applyBinary);
+      clazz.registerHybridMethod("startTask", &HybridForgeDocumentSpec::startTask);
       clazz.registerHybridMethod("snapshot", &HybridForgeDocumentSpec::snapshot);
       clazz.registerHybridMethod("restore", &HybridForgeDocumentSpec::restore);
       clazz.registerHybridMethod("undo", &HybridForgeDocumentSpec::undo);

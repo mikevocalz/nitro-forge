@@ -534,3 +534,33 @@ fn snapshots_from_before_the_mixer_fields_restore() {
     assert_eq!(d["tracks"][0]["automation"]["gain"]["mode"], "off");
     assert_eq!(d["tracks"][0]["clips"][0]["notes"][0]["channel"], 0);
 }
+
+#[test]
+fn task_render_can_cancel_inside_synthesis(){
+ use ignition_core::{Engine,TaskContext};
+ let mut e=CadenceEngine::new();
+ let track=e.apply(Command::new("addTrack",json!({"kind":"midi"}))).unwrap().data["track_id"].as_u64().unwrap();
+ let clip=e.apply(Command::new("addClip",json!({"track":track,"start_ticks":0,"length_ticks":57600}))).unwrap().data["clip_id"].as_u64().unwrap();
+ e.apply(Command::new("addNote",json!({"clip":clip,"pitch":69,"velocity":100,"start_ticks":0,"length_ticks":57600}))).unwrap();
+ let before=e.snapshot().unwrap();let ctx=TaskContext::new();let observer=ctx.clone();
+ let worker=std::thread::spawn(move||{let result=e.apply_long(Command::new("render",json!({"from_ticks":0,"to_ticks":57600,"sample_rate":48000})).with_binary(None),&ctx);(e,result)});
+ while observer.progress()==0.0 && !worker.is_finished(){std::thread::yield_now();}
+ observer.cancel();let (e,result)=worker.join().unwrap();assert_eq!(result.unwrap_err().code,ignition_core::ErrorCode::Cancelled);assert_eq!(e.snapshot().unwrap(),before);
+}
+
+#[test]
+fn task_and_legacy_render_keep_identical_effect_output() {
+    use ignition_core::{base64_decode, TaskContext};
+    let mut e = CadenceEngine::new();
+    let (track, _) = tone_track(&mut e);
+    ok(&mut e, "addInsert", json!({"track":track,"kind":"eq"}));
+    ok(&mut e, "addInsert", json!({"track":track,"kind":"compressor"}));
+    let payload = json!({"from_ticks":0,"to_ticks":960,"sample_rate":48000});
+    let before = e.snapshot().unwrap();
+    let legacy = e.apply(Command::new("render",payload.clone())).unwrap();
+    let context = TaskContext::new();
+    let task = e.apply_long(Command::new("render",payload).with_binary(None), &context).unwrap();
+    assert_eq!(task.output.unwrap(), base64_decode(legacy.data["samples_b64"].as_str().unwrap()).unwrap());
+    assert_eq!(context.progress(),1.0);
+    assert_eq!(e.snapshot().unwrap(),before);
+}

@@ -22,7 +22,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    Journal, TaskContext,
 };
 use lopdf::content::Content;
 use lopdf::dictionary;
@@ -293,6 +293,7 @@ fn ro(data: Value) -> CommandResult {
     CommandResult {
         events: vec![],
         data,
+        output: None,
     }
 }
 
@@ -375,6 +376,20 @@ impl FolioEngine {
     }
 }
 
+impl FolioEngine {
+    /// `save {}` → `{size}` plus the PDF as `bytes_b64` or binary output.
+    /// Read-only. As a task: stage 1 serializes (progress 0.5), stage 2
+    /// returns the bytes; cancellation between stages returns nothing.
+    fn op_save(&self, cmd: &Command, ctx: Option<&TaskContext>) -> Result<CommandResult, EngineError> {
+        let bytes = self.serialize_doc()?;
+        if let Some(ctx) = ctx {
+            ctx.set_progress(0.5);
+            ctx.checkpoint()?;
+        }
+        Ok(ro(json!({ "size": bytes.len() })).with_bytes(cmd, "bytes_b64", bytes))
+    }
+}
+
 impl Default for FolioEngine {
     fn default() -> Self {
         Self::new()
@@ -386,7 +401,24 @@ impl Engine for FolioEngine {
         EngineKind::Folio
     }
 
-    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+    fn binary_input_ops(&self) -> &'static [&'static str] {
+        &["open"]
+    }
+
+    /// `save` checks for cancellation before serializing and again before
+    /// handing back the bytes. Other ops run to completion once started.
+    fn apply_long(&mut self, cmd: Command, ctx: &TaskContext) -> Result<CommandResult, EngineError> {
+        ctx.checkpoint()?;
+        let result = if cmd.op == "save" && cmd.v == 1 {
+            self.op_save(&cmd, Some(ctx))
+        } else {
+            self.apply(cmd)
+        }?;
+        ctx.set_progress(1.0);
+        Ok(result)
+    }
+
+    fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
                 "command version {} is not supported (only v1)",
@@ -413,7 +445,7 @@ impl Engine for FolioEngine {
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
             "open" => {
-                let bytes = b64_decode(req_str(p, "bytes_b64")?)?;
+                let bytes = cmd.bytes_input("bytes_b64", b64_decode)?;
                 let doc = Document::load_mem(&bytes).map_err(ser_err)?;
                 let pages = doc.get_pages().len();
                 self.journal.record(self.doc.clone());
@@ -658,13 +690,7 @@ impl Engine for FolioEngine {
                 }
                 Ok(ro(json!({ "annots": annots })))
             }
-            "save" => {
-                let bytes = self.serialize_doc()?;
-                Ok(ro(json!({
-                    "bytes_b64": b64_encode(&bytes),
-                    "size": bytes.len(),
-                })))
-            }
+            "save" => self.op_save(&cmd, None),
             "info" => Ok(ro(json!({
                 "pages": self.page_count(),
                 "has_annots": self.has_annots()?,
@@ -1036,6 +1062,7 @@ mod tests {
                 v: 2,
                 op: "new".into(),
                 payload: json!({}),
+                input: None, binary_output: false,
             })
             .unwrap_err();
         assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);

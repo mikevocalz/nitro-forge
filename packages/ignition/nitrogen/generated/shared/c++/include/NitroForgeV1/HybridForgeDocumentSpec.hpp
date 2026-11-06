@@ -13,7 +13,12 @@
 #include <NitroForgeV1/ForgeCommandResult.hpp>
 #include <NitroModules/Promise.hpp>
 #include <NitroForgeV1/ForgeCommand.hpp>
+#include <NitroForgeV1/ForgeBinaryCommandResult.hpp>
 #include <NitroModules/ArrayBuffer.hpp>
+#include <optional>
+#include <memory>
+// Forward declaration of `HybridForgeTaskSpec` to properly resolve imports.
+namespace margelo::nitro::nitroforge::ignitionv1 { class HybridForgeTaskSpec; }
 
 namespace margelo::nitro::nitroforge::ignitionv1 {
 
@@ -53,6 +58,8 @@ namespace margelo::nitro::nitroforge::ignitionv1 {
     public:
       // Methods
       virtual Promise<ForgeCommandResult> apply(const ForgeCommand& command) = 0;
+      virtual Promise<ForgeBinaryCommandResult> applyBinary(const ForgeCommand& command, const std::optional<ArrayBuffer>& input) = 0;
+      virtual std::shared_ptr<HybridForgeTaskSpec> startTask(const ForgeCommand& command, const std::optional<ArrayBuffer>& input) = 0;
       virtual Promise<ArrayBuffer> snapshot() = 0;
       virtual Promise<void> restore(const ArrayBuffer& bytes) = 0;
       virtual Promise<bool> undo() = 0;

@@ -19,6 +19,8 @@ class HybridForgeDocument final : public HybridForgeDocumentSpec {
 
   ForgeEngineKind getKind() override;
   Promise<ForgeCommandResult> apply(const ForgeCommand& command) override;
+  Promise<ForgeBinaryCommandResult> applyBinary(const ForgeCommand&,const std::optional<ArrayBuffer>&) override;
+  std::shared_ptr<HybridForgeTaskSpec> startTask(const ForgeCommand&,const std::optional<ArrayBuffer>&) override;
   Promise<ArrayBuffer> snapshot() override;
   Promise<void> restore(const ArrayBuffer& bytes) override;
   Promise<bool> undo() override;

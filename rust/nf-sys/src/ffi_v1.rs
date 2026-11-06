@@ -11,6 +11,10 @@ use std::sync::OnceLock;
 const MAX_COMMAND_BYTES: usize = 32 * 1024 * 1024;
 const MAX_SNAPSHOT_BYTES: usize = 256 * 1024 * 1024;
 
+pub(crate) fn bounded_snapshot(engine:&mut dyn Engine)->Result<Vec<u8>,EngineError>{
+ let bytes=engine.snapshot()?;if bytes.len()>MAX_SNAPSHOT_BYTES{return Err(EngineError::validation("native snapshot exceeds 256 MiB"));}Ok(bytes)
+}
+
 fn registry() -> &'static ConcurrentSessions {
     static REGISTRY: OnceLock<ConcurrentSessions> = OnceLock::new();
     REGISTRY.get_or_init(ConcurrentSessions::new)
@@ -85,16 +89,7 @@ pub unsafe extern "C" fn nf_v1_apply(handle: i64, bytes: *const u8, len: usize) 
             let input = std::slice::from_raw_parts(bytes, len);
             let cmd: Command = serde_json::from_slice(input)
                 .map_err(|error| EngineError::invalid(format!("invalid command JSON: {error}")))?;
-            registry().with_engine(handle, |engine| match cmd.op.as_str() {
-            OP_UNDO => engine.undo().map(|undone|
-                serde_json::json!({"ok":true,"data":{"undone":undone},"events":[]})),
-            OP_REDO => engine.redo().map(|redone|
-                serde_json::json!({"ok":true,"data":{"redone":redone},"events":[]})),
-            OP_SNAPSHOT => engine.snapshot().map(|snapshot|
-                serde_json::json!({"ok":true,"data":{"bytes":ignition_core::base64_encode(&snapshot)},"events":[]})),
-            _ => engine.apply(cmd).map(|result|
-                serde_json::json!({"ok":true,"data":result.data,"events":result.events})),
-        })
+            registry().with_engine(handle, |engine| crate::dispatch::run_command(engine,cmd,None).map(|result|serde_json::json!({"ok":true,"data":result.data,"events":result.events})))
         },
     ));
     match result {
@@ -113,7 +108,7 @@ pub unsafe extern "C" fn nf_v1_apply(handle: i64, bytes: *const u8, len: usize) 
 #[no_mangle]
 pub unsafe extern "C" fn nf_v1_snapshot(handle: i64, out_err: *mut *mut c_char) -> NfBytes {
     let result = catch_unwind(AssertUnwindSafe(|| {
-        registry().with_engine(handle, |engine| engine.snapshot())
+        registry().with_engine(handle, bounded_snapshot)
     }));
     match result {
         Ok(Ok(bytes)) => {

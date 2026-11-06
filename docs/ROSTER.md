@@ -596,3 +596,7 @@ Recovered audio routing/inserts/automation/analysis and MIDI batch/channel contr
 ## Phase 5 workspace/color/transfer completion — 2026-11-05
 
 Workspace/presets, contextual overflow, file transfer, color dialog and presenter session ink controls are integrated locally. NYC-Tron passes 713 source tests, 427 Chromium tests, builds/types, 351 export checks and 13 local packs. Forge passes 327 Rust tests and 446 package tests (one existing native skip), workspace types and the actual built-source consumer contract. WorkspaceSession keeps one document, formats produce real bytes and explicit delivery errors, Prism palette/new/fill history is tested, and WAV effect output is continuous. Presenter persistence/remote transport and native/device acceptance remain pending. See `docs/recovery/PHASE5.md` and the 341-row table.
+
+## Recovery phase 6
+
+See [PHASE6](recovery/PHASE6.md): 340 Rust / 446 Forge package tests pass, one pre-existing native check skipped. Actual linked C++ task/binary/cache and FIFO tests and generated-header compilation pass. NYC-Tron has 716 source tests, 435 full Chromium tests and an actual iOS simulator app build. Native runtime, Android decoder, complete RNW app and QNX gates remain explicitly open.

@@ -494,17 +494,16 @@ impl PrismEngine {
     }
 
     /// `drawPixels {id,x,y,w,h,data_b64}` — real src-over blend, clipped to
-    /// canvas. `data` is `w*h*4` RGBA. Raster layers only.
-    fn op_draw_pixels(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    /// canvas. `data` is `w*h*4` RGBA. Raster layers only. The pixels may
+    /// instead arrive as the command's binary input, with `data_b64` omitted.
+    fn op_draw_pixels(&mut self, cmd: &mut Command) -> Result<CommandResult, EngineError> {
+        let p = &cmd.payload;
         let idx = self.raster_index(Self::req_id(p)?)?;
         self.ensure_unlocked(idx)?;
         let x = Self::req_f64(p, "x")?;
         let y = Self::req_f64(p, "y")?;
         let w = Self::req_f64(p, "w")?;
         let h = Self::req_f64(p, "h")?;
-        let data_b64 = Self::field(p, "data_b64")?
-            .as_str()
-            .ok_or_else(|| EngineError::invalid("field 'data_b64' must be a string"))?;
         if !x.is_finite() || !y.is_finite() {
             return Err(EngineError::validation("x/y must be finite"));
         }
@@ -521,12 +520,13 @@ impl PrismEngine {
         if w.fract() != 0.0 || h.fract() != 0.0 || w > i64::MAX as f64 || h > i64::MAX as f64 {
             return Err(EngineError::validation("w/h must be integers"));
         }
-        let data = b64::decode(data_b64)
-            .map_err(|_| EngineError::validation("data_b64 is not valid base64"))?;
+        let data = cmd.bytes_input("data_b64", |text| {
+            b64::decode(text).map_err(|_| EngineError::validation("data_b64 is not valid base64"))
+        })?;
         let expected = (w as u128) * (h as u128) * 4;
         if expected != data.len() as u128 {
             return Err(EngineError::validation(format!(
-                "data_b64 length {} does not equal w*h*4 ({expected})",
+                "pixel data length {} does not equal w*h*4 ({expected})",
                 data.len()
             )));
         }
@@ -544,6 +544,7 @@ impl PrismEngine {
             return Ok(CommandResult {
                 events: Vec::new(),
                 data: json!({ "ok": true }),
+                output: None,
             });
         }
         let (cx, cy) = (x0 as u32, y0 as u32);
@@ -647,17 +648,15 @@ impl PrismEngine {
     }
 
     /// `flatten {}` — composite bottom→top honoring opacity/visible; shapes
-    /// rasterized. Read-only: no undo entry, no `document:changed`.
-    fn op_flatten(&self) -> Result<CommandResult, EngineError> {
+    /// rasterized. Read-only: no undo entry, no `document:changed`. A binary
+    /// command gets the RGBA bytes as output instead of `pixels_b64`.
+    fn op_flatten(&self, cmd: &Command) -> Result<CommandResult, EngineError> {
         let pixels = self.scene().flatten();
-        Ok(CommandResult {
-            events: Vec::new(),
-            data: json!({
-                "pixels_b64": b64::encode(&pixels),
-                "width": self.width,
-                "height": self.height,
-            }),
-        })
+        Ok(CommandResult::read_only(json!({
+            "width": self.width,
+            "height": self.height,
+        }))
+        .with_bytes(cmd, "pixels_b64", pixels))
     }
 
     /// `getLayer {id}` — the layer object. Read-only.
@@ -667,6 +666,7 @@ impl PrismEngine {
         let data = serde_json::to_value(&wire)
             .map_err(|e| EngineError::internal(e.to_string()))?;
         Ok(CommandResult {
+            output: None,
             events: Vec::new(),
             data,
         })
@@ -687,6 +687,7 @@ impl PrismEngine {
     fn commit_colors(&mut self, next: Option<DocColors>) -> CommandResult {
         let Some(next) = next else {
             return CommandResult {
+                output: None,
                 events: Vec::new(),
                 data: json!({ "ok": true, "changed": false }),
             };
@@ -730,6 +731,7 @@ impl PrismEngine {
         let data =
             serde_json::to_value(&self.colors).map_err(|e| EngineError::internal(e.to_string()))?;
         Ok(CommandResult {
+            output: None,
             events: Vec::new(),
             data,
         })
@@ -739,6 +741,7 @@ impl PrismEngine {
         let data = serde_json::to_value(self.to_wire())
             .map_err(|e| EngineError::internal(e.to_string()))?;
         Ok(CommandResult {
+            output: None,
             events: Vec::new(),
             data,
         })
@@ -837,7 +840,11 @@ impl Engine for PrismEngine {
         EngineKind::Prism
     }
 
-    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+    fn binary_input_ops(&self) -> &'static [&'static str] {
+        &["drawPixels"]
+    }
+
+    fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.v != COMMAND_VERSION {
             return Err(EngineError::unsupported(format!(
                 "unsupported command version {}",
@@ -856,10 +863,10 @@ impl Engine for PrismEngine {
             "renameLayer" => self.op_rename_layer(&cmd.payload),
             "setLayerOpacity" => self.op_set_opacity(&cmd.payload),
             "setLayerVisible" => self.op_set_visible(&cmd.payload),
-            "drawPixels" => self.op_draw_pixels(&cmd.payload),
+            "drawPixels" => self.op_draw_pixels(&mut cmd),
             "fillLayer" => self.op_fill_layer(&cmd.payload),
             "applyFilter" => self.op_apply_filter(&cmd.payload),
-            "flatten" => self.op_flatten(),
+            "flatten" => self.op_flatten(&cmd),
             "getLayer" => self.op_get_layer(&cmd.payload),
             "describe" => self.op_describe(),
             "setColors" => self.op_set_colors(&cmd.payload),
@@ -1805,6 +1812,7 @@ mod tests {
                 v: 2,
                 op: "describe".into(),
                 payload: json!({}),
+                input: None, binary_output: false,
             })
             .unwrap_err();
         assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);

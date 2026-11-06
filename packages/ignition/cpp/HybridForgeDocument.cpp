@@ -1,3 +1,4 @@
+#include <NitroForgeV1/HybridForgeTask.hpp>
 #include <NitroForgeV1/HybridForgeDocument.hpp>
 
 #include <cmath>
@@ -51,6 +52,39 @@ Promise<ForgeCommandResult> HybridForgeDocument::apply(const ForgeCommand& comma
     }
     return ForgeCommandResult(std::move(native.dataJson), std::move(events));
   });
+}
+
+namespace {
+uint32_t schemaVersion(const ForgeCommand& command){
+ const double n=command.v.value_or(1);if(!std::isfinite(n)||n<1||n>std::numeric_limits<uint32_t>::max()||std::trunc(n)!=n)throw std::invalid_argument("Invalid command schema version");return static_cast<uint32_t>(n);
+}
+ForgeBinaryCommandResult binaryResult(::nitroforge::native::BinaryCommandResult result){
+ std::vector<ForgeEvent> events;for(auto& e:result.command.events)events.emplace_back(std::move(e.kind),std::move(e.detailJson));
+ std::optional<ArrayBuffer> output;if(result.output)output=ArrayBuffer::move(std::move(*result.output));
+ return ForgeBinaryCommandResult(std::move(result.command.dataJson),std::move(events),std::move(output));
+}
+std::optional<ArrayBuffer> copiedInput(const std::optional<ArrayBuffer>& input){
+ if(input&&input->size()>256u*1024u*1024u)throw std::invalid_argument("Binary input exceeds 256 MiB");
+ return input?std::optional<ArrayBuffer>(ArrayBuffer::copy(*input)):std::nullopt;
+}
+}
+Promise<ForgeBinaryCommandResult> HybridForgeDocument::applyBinary(const ForgeCommand& command,const std::optional<ArrayBuffer>& input){
+ const auto owned=copiedInput(input);const auto session=_session;const auto version=schemaVersion(command);
+ return enqueue<ForgeBinaryCommandResult>([session,owned,command,version](){
+  const auto payload=command.payloadJson?std::optional<std::string_view>(*command.payloadJson):std::nullopt;
+  const auto bytes=owned?std::optional<std::span<const uint8_t>>({owned->data(),owned->size()}):std::nullopt;
+  return binaryResult(session->applyBinary(command.op,payload,version,bytes));
+ });
+}
+std::shared_ptr<HybridForgeTaskSpec> HybridForgeDocument::startTask(const ForgeCommand& command,const std::optional<ArrayBuffer>& input){
+ const auto owned=copiedInput(input);const auto session=_session;const auto version=schemaVersion(command);
+ const auto control=std::make_shared<::nitroforge::native::TaskControl>();
+ auto result=enqueue<ForgeBinaryCommandResult>([session,owned,command,version,control](){
+  const auto payload=command.payloadJson?std::optional<std::string_view>(*command.payloadJson):std::nullopt;
+  const auto bytes=owned?std::optional<std::span<const uint8_t>>({owned->data(),owned->size()}):std::nullopt;
+  return binaryResult(session->applyBinary(command.op,payload,version,bytes,control->native()));
+ });
+ return std::make_shared<HybridForgeTask>(control,std::move(result));
 }
 
 Promise<ArrayBuffer> HybridForgeDocument::snapshot() {

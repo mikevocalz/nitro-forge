@@ -535,13 +535,14 @@ impl SpliceEngine {
         if structural {
             events.push(Event::new("timeline:changed", Value::Null));
         }
-        CommandResult { events, data }
+        CommandResult { events, data, output: None }
     }
 
     fn read_only(data: Value) -> CommandResult {
         CommandResult {
             events: vec![],
             data,
+            output: None,
         }
     }
 }

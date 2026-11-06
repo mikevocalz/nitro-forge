@@ -10,6 +10,8 @@
 #include <NitroModules/HybridObject.hpp>
 #include <NitroModules/HybridClass.hpp>
 #include <memory>
+// Forward declaration of `HybridForgeMediaCacheSpec` to properly resolve imports.
+namespace margelo::nitro::nitroforge::ignitionv1 { class HybridForgeMediaCacheSpec; }
 // Forward declaration of `HybridForgeDocumentSpec` to properly resolve imports.
 namespace margelo::nitro::nitroforge::ignitionv1 { class HybridForgeDocumentSpec; }
 #include <NitroModules/Promise.hpp>
@@ -52,6 +54,7 @@ namespace margelo::nitro::nitroforge::ignitionv1 {
 
     public:
       // Methods
+      virtual std::shared_ptr<HybridForgeMediaCacheSpec> createMediaCache(double capacityBytes) = 0;
       virtual Promise<std::shared_ptr<HybridForgeDocumentSpec>> open(ForgeEngineKind kind) = 0;
 
     protected:

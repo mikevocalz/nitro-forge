@@ -198,6 +198,7 @@ fn ro(data: Value) -> CommandResult {
     CommandResult {
         events: vec![],
         data,
+        output: None,
     }
 }
 
@@ -1119,6 +1120,7 @@ mod tests {
                 v: 99,
                 op: "deck".into(),
                 payload: json!({}),
+                input: None, binary_output: false,
             })
             .unwrap_err();
         assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
