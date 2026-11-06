@@ -167,8 +167,8 @@ export class CadenceDocument {
   private constructor(private doc: DocumentHandle) {}
 
   static async open(host: EngineHost, tempoBpm = 120): Promise<CadenceDocument> {
-    const doc = await DocumentHandle.open(host, "cadence");
-    await doc.apply(OPS.newDoc, { tempo_bpm: tempoBpm });
+    const doc = await DocumentHandle.openInitialized(host, "cadence",
+      (document) => document.apply(OPS.newDoc, { tempo_bpm: tempoBpm }));
     return new CadenceDocument(doc);
   }
 
@@ -176,8 +176,8 @@ export class CadenceDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<CadenceDocument> {
-    const doc = await DocumentHandle.open(host, "cadence");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openInitialized(host, "cadence",
+      (document) => document.restore(bytes));
     return new CadenceDocument(doc);
   }
 

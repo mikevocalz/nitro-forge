@@ -36,8 +36,8 @@ export class FolioDocument {
 
   /** Create a new PDF document with `pages` blank letter pages. */
   static async create(host: EngineHost, pages = 1): Promise<FolioDocument> {
-    const doc = await DocumentHandle.open(host, "folio");
-    await doc.apply(OPS.newDoc, { pages });
+    const doc = await DocumentHandle.openInitialized(host, "folio",
+      (document) => document.apply(OPS.newDoc, { pages }));
     return new FolioDocument(doc);
   }
 
@@ -46,8 +46,8 @@ export class FolioDocument {
     host: EngineHost,
     pdfBytes: Uint8Array,
   ): Promise<FolioDocument> {
-    const doc = await DocumentHandle.open(host, "folio");
-    await doc.apply(OPS.open, { bytes_b64: bytesToBase64(pdfBytes) });
+    const doc = await DocumentHandle.openInitialized(host, "folio",
+      (document) => document.apply(OPS.open, { bytes_b64: bytesToBase64(pdfBytes) }));
     return new FolioDocument(doc);
   }
 
@@ -55,8 +55,8 @@ export class FolioDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<FolioDocument> {
-    const doc = await DocumentHandle.open(host, "folio");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openInitialized(host, "folio",
+      (document) => document.restore(bytes));
     return new FolioDocument(doc);
   }
 

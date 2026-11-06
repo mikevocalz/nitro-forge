@@ -56,8 +56,8 @@ export class QuillDocument {
   private constructor(private doc: DocumentHandle) {}
 
   static async open(host: EngineHost): Promise<QuillDocument> {
-    const doc = await DocumentHandle.open(host, "quill");
-    await doc.apply(OPS.newDoc, {});
+    const doc = await DocumentHandle.openInitialized(host, "quill",
+      (document) => document.apply(OPS.newDoc, {}));
     return new QuillDocument(doc);
   }
 
@@ -66,8 +66,8 @@ export class QuillDocument {
     host: EngineHost,
     docxBytes: Uint8Array,
   ): Promise<QuillDocument> {
-    const doc = await DocumentHandle.open(host, "quill");
-    await doc.apply(OPS.importDocx, { bytes_b64: bytesToBase64(docxBytes) });
+    const doc = await DocumentHandle.openInitialized(host, "quill",
+      (document) => document.apply(OPS.importDocx, { bytes_b64: bytesToBase64(docxBytes) }));
     return new QuillDocument(doc);
   }
 
@@ -75,8 +75,8 @@ export class QuillDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<QuillDocument> {
-    const doc = await DocumentHandle.open(host, "quill");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openInitialized(host, "quill",
+      (document) => document.restore(bytes));
     return new QuillDocument(doc);
   }
 

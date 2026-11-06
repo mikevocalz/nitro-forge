@@ -46,8 +46,8 @@ export class TallyDocument {
   private constructor(private doc: DocumentHandle) {}
 
   static async open(host: EngineHost): Promise<TallyDocument> {
-    const doc = await DocumentHandle.open(host, "tally");
-    await doc.apply(OPS.newDoc, {});
+    const doc = await DocumentHandle.openInitialized(host, "tally",
+      (document) => document.apply(OPS.newDoc, {}));
     return new TallyDocument(doc);
   }
 
@@ -56,8 +56,8 @@ export class TallyDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<TallyDocument> {
-    const doc = await DocumentHandle.open(host, "tally");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openInitialized(host, "tally",
+      (document) => document.restore(bytes));
     return new TallyDocument(doc);
   }
 

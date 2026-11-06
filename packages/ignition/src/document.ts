@@ -22,6 +22,27 @@ export class DocumentHandle {
     return new DocumentHandle(host, kind, id);
   }
 
+  /** Publish a document only after initialization succeeds. Failed imports and
+   * restores release their native session without masking the original error. */
+  static async openInitialized(
+    host: EngineHost,
+    kind: EngineKind,
+    initialize: (document: DocumentHandle) => Promise<unknown>,
+  ): Promise<DocumentHandle> {
+    const document = await DocumentHandle.open(host, kind);
+    try {
+      await initialize(document);
+      return document;
+    } catch (error) {
+      try {
+        await document.close();
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], "Document initialization and cleanup failed", { cause: error });
+      }
+      throw error;
+    }
+  }
+
   private assertOpen() {
     if (this.closed) {
       throw new Error(`document handle ${this.id} is closed`);

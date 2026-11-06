@@ -46,8 +46,8 @@ export class PitchDocument {
   private constructor(private doc: DocumentHandle) {}
 
   static async open(host: EngineHost, title = "Untitled"): Promise<PitchDocument> {
-    const doc = await DocumentHandle.open(host, "pitch");
-    await doc.apply(OPS.newDoc, { title });
+    const doc = await DocumentHandle.openInitialized(host, "pitch",
+      (document) => document.apply(OPS.newDoc, { title }));
     return new PitchDocument(doc);
   }
 
@@ -55,8 +55,8 @@ export class PitchDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<PitchDocument> {
-    const doc = await DocumentHandle.open(host, "pitch");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openInitialized(host, "pitch",
+      (document) => document.restore(bytes));
     return new PitchDocument(doc);
   }
 

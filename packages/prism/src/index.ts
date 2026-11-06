@@ -139,8 +139,8 @@ export class PrismDocument {
     width = 1024,
     height = 1024,
   ): Promise<PrismDocument> {
-    const doc = await DocumentHandle.open(host, "prism");
-    await doc.apply(OPS.newDoc, { width, height });
+    const doc = await DocumentHandle.openInitialized(host, "prism",
+      (document) => document.apply(OPS.newDoc, { width, height }));
     return new PrismDocument(doc);
   }
 
@@ -148,8 +148,8 @@ export class PrismDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<PrismDocument> {
-    const doc = await DocumentHandle.open(host, "prism");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openInitialized(host, "prism",
+      (document) => document.restore(bytes));
     return new PrismDocument(doc);
   }
 
