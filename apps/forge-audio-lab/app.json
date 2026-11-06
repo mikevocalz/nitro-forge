@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Nitro Forge Audio Lab",
+    "slug": "forge-audio-lab",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "react-native-audio-api",
+        {
+          "iosMicrophonePermission": "Allow Nitro Forge to record audio for your project.",
+          "iosBackgroundMode": false,
+          "androidPermissions": [
+            "android.permission.RECORD_AUDIO"
+          ],
+          "androidForegroundService": false,
+          "enableFFmpeg": false
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+node_modules
+native/
+android/.cxx/
+android/build/

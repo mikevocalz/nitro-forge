@@ -14,7 +14,9 @@ export {
   NitroHost,
   createNitroHost,
   type EngineHost,
-  type ForgeNitro,
+  type ForgeFactoryNative,
+  type ForgeDocumentNative,
 } from "./host";
 export { DocumentHandle, type ForgeListener } from "./document";
-export type { Forge } from "./Forge.nitro";
+export type { ForgeFactory } from "./specs/ForgeFactory.nitro";
+export type { ForgeDocument } from "./specs/ForgeDocument.nitro";

@@ -1,0 +1,61 @@
+diff --git a/Package.swift b/Package.swift
+new file mode 100644
+index 0000000000000000000000000000000000000000..552ead38514067375f4dc44f6f29f61e6da9ee3f
+--- /dev/null
++++ b/Package.swift
+@@ -0,0 +1,43 @@
++// swift-tools-version: 6.0
++import PackageDescription
++
++// SwiftPM manifest for Expo's SwiftPM autolinking plugin, built as it stands.
++// The plugin links this package at ios/build/generated/autolinking/expo/direct/expo-router,
++// and every relative path below resolves from that link:
++//   ../ExpoModulesCoreHeaders  the compile-only ExpoModulesCore package the plugin writes
++//   ../../../libs/RNScreens    React Native's autolinked react-native-screens package
++//   ../../../../../xcframeworks and ../../../../ios  React Native's header packages
++// A generated pure-Swift package cannot depend on RNScreens (the plugin refuses local
++// path packages in mirrored manifests), and ExpoRouter imports it, so the module ships
++// its own manifest, as the plugin's README asks of modules with sibling dependencies.
++let package = Package(
++  name: "ExpoRouter",
++  platforms: [.iOS("16.4")],
++  products: [
++    .library(name: "ExpoRouter", targets: ["ExpoRouter"])
++  ],
++  dependencies: [
++    .package(name: "ExpoModulesCoreHeaders", path: "../ExpoModulesCoreHeaders"),
++    .package(name: "RNScreens", path: "../../../libs/RNScreens"),
++    .package(name: "ReactNative", path: "../../../../../xcframeworks"),
++    .package(name: "React-GeneratedCode", path: "../../../../ios"),
++  ],
++  targets: [
++    .target(
++      name: "ExpoRouter",
++      dependencies: [
++        .product(name: "ExpoModulesCoreHeaders", package: "ExpoModulesCoreHeaders"),
++        .product(name: "RNScreens", package: "RNScreens"),
++        .product(name: "ReactHeaders", package: "ReactNative"),
++        .product(name: "ReactNativeHeaders", package: "ReactNative"),
++        .product(name: "ReactNativeDependenciesHeaders", package: "ReactNative"),
++        .product(name: "ReactAppHeaders", package: "React-GeneratedCode"),
++      ],
++      path: "ios",
++      exclude: ["Tests", "ExpoRouter.podspec"],
++      swiftSettings: [.define("RCT_NEW_ARCH_ENABLED")]
++    )
++  ],
++  swiftLanguageModes: [.v5],
++  cxxLanguageStandard: .cxx20
++)
+diff --git a/package.json b/package.json
+index 060cbf32d22492d879dbc9ca6276bf229c3b7edf..ca1075978e4c34494bc3548457c7bd5a68d2d91b 100644
+--- a/package.json
++++ b/package.json
+@@ -18,6 +18,7 @@
+     "directory": "packages/expo-router"
+   },
+   "files": [
++    "Package.swift",
+     "link",
+     "android",
+     "!android/.gitignore",

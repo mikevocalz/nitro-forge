@@ -12,7 +12,7 @@ mod docx;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    Journal, TaskContext,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -427,6 +427,7 @@ impl QuillEngine {
         CommandResult {
             events: Vec::new(),
             data,
+            output: None,
         }
     }
 
@@ -544,6 +545,54 @@ impl QuillEngine {
             index: from.block,
             removed,
             inserted: new_span,
+        });
+        Ok(CommandResult::data(json!({ "deleted_text": deleted_text })))
+    }
+
+    /// Replace `from..to` with `text` as one command and one undo entry, so a
+    /// selection replace never leaves the deletion applied without the insert.
+    fn op_replace_range(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        // Validate everything before touching the document.
+        let from = parse_pos(field(p, "from")?)?;
+        let to = parse_pos(field(p, "to")?)?;
+        let text = as_str(field(p, "text")?, "text")?.to_string();
+        self.check_range(from, to)?;
+        let deletes = from != to;
+        let inserts = !text.is_empty();
+        if !deletes && !inserts {
+            return Ok(CommandResult::data(json!({ "deleted_text": "" })));
+        }
+
+        let removed: Vec<Block> = self.blocks[from.block..=to.block].to_vec();
+        let total_before = self.blocks.len();
+        let mut deleted_text = String::new();
+        if deletes {
+            let r = self.op_delete_range(&json!({
+                "from": { "block": from.block, "offset": from.offset },
+                "to": { "block": to.block, "offset": to.offset },
+            }))?;
+            deleted_text = r.data["deleted_text"].as_str().unwrap_or_default().to_string();
+            self.journal.pop_undo();
+        }
+        // After the delete, `from` is still a valid position in the merged block.
+        let span_after_delete = if deletes { 1 } else { removed.len() };
+        if inserts {
+            let at = json!({ "block": from.block, "offset": from.offset });
+            if let Err(e) = self.op_insert_text(&json!({ "at": at, "text": text })) {
+                let end = from.block + span_after_delete;
+                self.blocks.splice(from.block..end, removed);
+                return Err(e);
+            }
+            self.journal.pop_undo();
+        }
+        // Everything outside the original span is untouched, so the new span
+        // is whatever the block count grew or shrank by.
+        let inserted_len = self.blocks.len() + removed.len() - total_before;
+        let inserted = self.blocks[from.block..from.block + inserted_len].to_vec();
+        self.journal.record(UndoEntry {
+            index: from.block,
+            removed,
+            inserted,
         });
         Ok(CommandResult::data(json!({ "deleted_text": deleted_text })))
     }
@@ -802,16 +851,25 @@ impl QuillEngine {
         Ok(Self::read_only(json!({ "pages": pages })))
     }
 
-    fn op_export_docx(&self) -> Result<CommandResult, EngineError> {
+    /// `exportDocx {}` → `.docx` bytes as `bytes_b64`, or as binary output.
+    /// As a task: stage 1 builds the archive (progress 0.5), stage 2 returns
+    /// it; cancellation between stages returns nothing. Read-only.
+    fn op_export_docx(
+        &self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let bytes = docx::export_docx(&self.blocks)?;
-        Ok(Self::read_only(json!({
-            "bytes_b64": base64_encode(&bytes)
-        })))
+        if let Some(ctx) = ctx {
+            ctx.set_progress(0.5);
+            ctx.checkpoint()?;
+        }
+        Ok(Self::read_only(json!({ "size": bytes.len() })).with_bytes(cmd, "bytes_b64", bytes))
     }
 
-    fn op_import_docx(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
-        let b64 = as_str(field(p, "bytes_b64")?, "bytes_b64")?;
-        let bytes = base64_decode(b64)?;
+    /// `importDocx {bytes_b64}`, or the `.docx` as binary input.
+    fn op_import_docx(&mut self, cmd: &mut Command) -> Result<CommandResult, EngineError> {
+        let bytes = cmd.bytes_input("bytes_b64", base64_decode)?;
         let blocks = docx::import_docx(&bytes)?;
         let old = std::mem::replace(&mut self.blocks, blocks);
         self.journal.record(UndoEntry {
@@ -836,7 +894,24 @@ impl Engine for QuillEngine {
         EngineKind::Quill
     }
 
-    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+    fn binary_input_ops(&self) -> &'static [&'static str] {
+        &["importDocx"]
+    }
+
+    /// `exportDocx` checks for cancellation between building and returning
+    /// the archive. Other ops run to completion once started.
+    fn apply_long(&mut self, cmd: Command, ctx: &TaskContext) -> Result<CommandResult, EngineError> {
+        ctx.checkpoint()?;
+        let result = if cmd.op == "exportDocx" && cmd.v == 1 {
+            self.op_export_docx(&cmd, Some(ctx))
+        } else {
+            self.apply(cmd)
+        }?;
+        ctx.set_progress(1.0);
+        Ok(result)
+    }
+
+    fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
                 "command version {} not supported",
@@ -848,6 +923,7 @@ impl Engine for QuillEngine {
             "describe" => self.op_describe(),
             "insertText" => self.op_insert_text(&cmd.payload),
             "deleteRange" => self.op_delete_range(&cmd.payload),
+            "replaceRange" => self.op_replace_range(&cmd.payload),
             "applyStyle" => self.op_apply_style(&cmd.payload),
             "setBlockKind" => self.op_set_block_kind(&cmd.payload),
             "insertBlock" => self.op_insert_block(&cmd.payload),
@@ -856,8 +932,8 @@ impl Engine for QuillEngine {
             "text" => self.op_text(&cmd.payload),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
-            "exportDocx" => self.op_export_docx(),
-            "importDocx" => self.op_import_docx(&cmd.payload),
+            "exportDocx" => self.op_export_docx(&cmd, None),
+            "importDocx" => self.op_import_docx(&mut cmd),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
     }
@@ -1087,6 +1163,7 @@ mod tests {
                 v: 2,
                 op: "text".into(),
                 payload: json!({}),
+                input: None, binary_output: false,
             })
             .unwrap_err();
         assert_eq!(er.code, ErrorCode::Unsupported);
@@ -1703,6 +1780,77 @@ mod tests {
     }
 
     // -- undo/redo ------------------------------------------------------------
+
+    #[test]
+    fn replace_range_is_one_undo_step() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "hello foo world");
+        let before = describe(&mut e);
+        let r = apply(
+            &mut e,
+            "replaceRange",
+            json!({"from": {"block":0,"offset":6}, "to": {"block":0,"offset":9}, "text": "bar"}),
+        );
+        assert_eq!(r.data["deleted_text"], "foo");
+        assert_eq!(text(&mut e), "hello bar world");
+        let after = describe(&mut e);
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&mut e), before, "one undo restores the original text");
+        assert!(e.redo().unwrap());
+        assert_eq!(describe(&mut e), after);
+    }
+
+    #[test]
+    fn replace_range_across_blocks_with_newlines_undoes_atomically() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "one\ntwo\nthree");
+        let before = describe(&mut e);
+        apply(
+            &mut e,
+            "replaceRange",
+            json!({"from": {"block":0,"offset":1}, "to": {"block":2,"offset":2}, "text": "X\nY\nZ\nW"}),
+        );
+        assert_eq!(text(&mut e), "oX\nY\nZ\nWree");
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&mut e), before);
+        assert!(e.redo().unwrap());
+        assert_eq!(text(&mut e), "oX\nY\nZ\nWree");
+        assert!(e.undo().unwrap());
+        assert!(e.undo().unwrap(), "the setup insert is still its own entry");
+        assert_eq!(text(&mut e), "");
+    }
+
+    #[test]
+    fn replace_range_pure_insert_and_pure_delete_record_one_entry() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "replaceRange", json!({"from": {"block":0,"offset":1}, "to": {"block":0,"offset":1}, "text": "Z"}));
+        assert_eq!(text(&mut e), "aZbc");
+        apply(&mut e, "replaceRange", json!({"from": {"block":0,"offset":0}, "to": {"block":0,"offset":2}, "text": ""}));
+        assert_eq!(text(&mut e), "bc");
+        assert!(e.undo().unwrap());
+        assert_eq!(text(&mut e), "aZbc");
+        assert!(e.undo().unwrap());
+        assert_eq!(text(&mut e), "abc");
+    }
+
+    #[test]
+    fn replace_range_rejects_bad_input_without_mutating() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        let before = describe(&mut e);
+        for payload in [
+            json!({"from": {"block":0,"offset":2}, "to": {"block":0,"offset":1}, "text": "x"}),
+            json!({"from": {"block":0,"offset":0}, "to": {"block":5,"offset":0}, "text": "x"}),
+            json!({"from": {"block":0,"offset":0}, "to": {"block":0,"offset":1}, "text": 7}),
+            json!({"from": {"block":0,"offset":0}, "to": {"block":0,"offset":1}}),
+        ] {
+            err(&mut e, "replaceRange", payload);
+            assert_eq!(describe(&mut e), before);
+        }
+        assert!(e.undo().unwrap(), "only the setup insert is recorded");
+        assert!(!e.undo().unwrap());
+    }
 
     #[test]
     fn undo_redo_text_edits() {

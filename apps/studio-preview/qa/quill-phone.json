@@ -1,0 +1,63 @@
+{
+  "launch": true,
+  "headless": true,
+  "capture_network": false,
+  "capture": {
+    "after_each_step": [
+      "screenshot"
+    ],
+    "at_end": [
+      "screenshot"
+    ],
+    "events": []
+  },
+  "screenshot_each_step": false,
+  "keep_bodies": {
+    "header_values": false,
+    "request_body": false,
+    "response_body": false
+  },
+  "environment": {
+    "width": 390,
+    "height": 667,
+    "device_scale_factor": 1,
+    "locale": "en-US",
+    "timezone": "America/New_York",
+    "color_scheme": "dark",
+    "reduced_motion": true,
+    "bypass_service_workers": true
+  },
+  "actions": [
+    {
+      "kind": "goto",
+      "url": "http://127.0.0.1:4173/#/apps/quill",
+      "wait_ms": 1600,
+      "step_id": "open-quill"
+    },
+    {
+      "kind": "fill",
+      "role": "textbox",
+      "name": "Essay text",
+      "value": "Clear ideas make thoughtful writing easier.",
+      "step_id": "fill-essay"
+    },
+    {
+      "kind": "wait",
+      "ms": 300,
+      "step_id": "essay-draft"
+    },
+    {
+      "kind": "click",
+      "role": "button",
+      "name": "Apply essay text",
+      "step_id": "apply-essay"
+    },
+    {
+      "kind": "wait",
+      "ms": 1000,
+      "step_id": "essay-applied"
+    }
+  ],
+  "action_timeout_ms": 6000,
+  "timeout_secs": 45
+}

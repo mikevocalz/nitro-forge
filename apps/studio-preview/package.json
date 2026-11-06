@@ -1,0 +1,35 @@
+{
+  "name": "@nitro-forge/studio-preview",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test:bridge": "node verify-bridge.mjs",
+    "test:integration": "node verify-local.mjs",
+    "test:ui-modules": "node verify-ui-modules.mjs"
+  },
+  "dependencies": {
+    "@nitro-forge/studio-workspace": "workspace:*",
+    "@nitro-forge/studio-layout": "workspace:*",
+    "@nitro-forge/ignition": "workspace:*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-native-web": "0.21.4",
+    "zustand": "5.0.16",
+    "@nitro-forge/icons": "workspace:*",
+    "react-native-svg": "15.16.0",
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
+    "@nyc-tron/expo-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-expo-controls-0.1.0-alpha.4.tgz"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "vite": "8.3.5",
+    "typescript": "7.0.2",
+    "tailwindcss": "4.3.4",
+    "@tailwindcss/vite": "4.3.4"
+  }
+}

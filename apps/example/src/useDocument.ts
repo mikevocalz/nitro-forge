@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { useStore } from "zustand";
+import { createStore, type StoreApi } from "zustand/vanilla";
 import {
   DocumentHandle,
   createNitroHost,
@@ -28,86 +30,111 @@ export interface EditorDoc {
   reload: () => Promise<void>;
 }
 
-/**
- * Binds a product document to React state: opens it, subscribes to engine
- * events, and re-reads `describe` after every document:changed.
- */
+interface EditorState {
+  ready: boolean;
+  state: unknown;
+  error: string | null;
+}
+
+const message = (error: unknown) => error instanceof Error ? error.message : String(error);
+
+/** Opens a document and keeps a serializable view of its latest engine state. */
 export function useEditorDoc(
   open: (host: EngineHost) => Promise<{ handle: DocumentHandle }>,
 ): EditorDoc {
-  const [doc, setDoc] = useState<{ handle: DocumentHandle } | null>(null);
-  const [state, setState] = useState<unknown>(null);
-  const [error, setError] = useState<string | null>(null);
+  const storeRef = useRef<StoreApi<EditorState> | null>(null);
+  if (!storeRef.current) {
+    storeRef.current = createStore<EditorState>(() => ({ ready: false, state: null, error: null }));
+  }
+  const store = storeRef.current;
+  const ready = useStore(store, (s) => s.ready);
+  const state = useStore(store, (s) => s.state);
+  const error = useStore(store, (s) => s.error);
   const docRef = useRef<{ handle: DocumentHandle } | null>(null);
+  const generationRef = useRef(0);
+  const reloadRef = useRef(0);
 
   const reload = useCallback(async () => {
     const d = docRef.current;
     if (!d) return;
-    const res = await d.handle.apply("describe");
-    setState(res.data);
-  }, []);
+    const generation = generationRef.current;
+    const request = ++reloadRef.current;
+    const current = () => generation === generationRef.current && d === docRef.current && request === reloadRef.current;
+    try {
+      const res = await d.handle.apply("describe");
+      if (current()) store.setState({ state: res.data, error: null });
+    } catch (e) {
+      if (current()) store.setState({ error: message(e) });
+    }
+  }, [store]);
 
   useEffect(() => {
-    let cancelled = false;
+    const generation = ++generationRef.current;
+    let owned: { handle: DocumentHandle } | null = null;
     let off: (() => void) | undefined;
-    open(getHost())
-      .then((d) => {
-        if (cancelled) {
-          void d.handle.close();
+    store.setState({ ready: false, state: null, error: null });
+    void (async () => {
+      try {
+        const d = await open(getHost());
+        if (generation !== generationRef.current) {
+          await d.handle.close();
           return;
         }
+        owned = d;
         docRef.current = d;
-        setDoc(d);
         off = d.handle.on((e: ForgeEvent) => {
-          if (e.kind === "document:changed" || e.kind === "document:restored") {
-            void reload();
-          }
+          if (e.kind === "document:changed" || e.kind === "document:restored") void reload();
         });
-        void reload();
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      });
+        store.setState({ ready: true });
+        await reload();
+      } catch (e) {
+        if (generation === generationRef.current) store.setState({ error: message(e) });
+      }
+    })();
     return () => {
-      cancelled = true;
+      ++generationRef.current;
+      ++reloadRef.current;
       off?.();
-      void docRef.current?.handle.close();
-      docRef.current = null;
+      if (docRef.current === owned) docRef.current = null;
+      // Closing is best-effort during teardown; never reject an unobserved promise.
+      if (owned) void owned.handle.close().catch(() => {});
     };
-  }, [open, reload]);
+  }, [open, reload, store]);
 
   const apply = useCallback(
     async <T,>(op: string, payload?: unknown): Promise<CommandResult<T>> => {
       const d = docRef.current;
       if (!d) throw new Error("no document");
+      const generation = generationRef.current;
       try {
         return await d.handle.apply<T>(op, payload);
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        if (generation === generationRef.current && d === docRef.current) store.setState({ error: message(e) });
         throw e;
       }
     },
-    [],
+    [store],
   );
 
-  return {
-    doc,
-    state,
-    error,
-    apply,
-    undo: async () => {
-      await docRef.current?.handle.undo();
-      await reload();
-    },
-    redo: async () => {
-      await docRef.current?.handle.redo();
-      await reload();
-    },
-    save: async () => {
-      const d = docRef.current;
-      if (!d) throw new Error("no document");
-      return d.handle.snapshot();
-    },
-    reload,
-  };
+  const history = useCallback(async (op: "undo" | "redo") => {
+    const d = docRef.current;
+    if (!d) return;
+    const generation = generationRef.current;
+    try {
+      await d.handle[op]();
+      if (generation === generationRef.current && d === docRef.current) await reload();
+    } catch (e) {
+      if (generation === generationRef.current && d === docRef.current) store.setState({ error: message(e) });
+      throw e;
+    }
+  }, [reload, store]);
+  const undo = useCallback(() => history("undo"), [history]);
+  const redo = useCallback(() => history("redo"), [history]);
+  const save = useCallback(async () => {
+    const d = docRef.current;
+    if (!d) throw new Error("no document");
+    return d.handle.snapshot();
+  }, []);
+
+  return { doc: ready ? docRef.current : null, state, error, apply, undo, redo, save, reload };
 }

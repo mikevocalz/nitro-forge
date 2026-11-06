@@ -1,0 +1,1143 @@
+diff --git a/Package.swift b/Package.swift
+new file mode 100644
+index 0000000000000000000000000000000000000000..361a85b8e6543c133c635b5f9790414356f8127d
+--- /dev/null
++++ b/Package.swift
+@@ -0,0 +1,254 @@
++// swift-tools-version: 6.0
++// AUTO-SCAFFOLDED by react-native spm scaffold — safe to edit & commit via patch-package.
++// AUTO-SCAFFOLDED-VERSION: 20
++// Cache slot: 0.88.1/dual-flavor
++// Edit the contents below if needed and re-run `npx patch-package <dep-name>`
++// to persist across `npm install`. To regenerate from the podspec, remove
++// this file (or just this marker) and re-run `npx react-native spm scaffold`.
++//
++// Package references are plain relative paths, computed when this file was
++// scaffolded. They stay correct because the file is re-scaffolded per app
++// and cache slot, and any node_modules relayout reinstalls this package
++// (dropping the file) anyway.
++
++import PackageDescription
++
++let package = Package(
++    name: "RNScreens",
++    platforms: [.iOS("16.4")],
++    products: [
++        .library(name: "RNScreens", targets: ["RNScreens"]),
++    ],
++    dependencies: [
++        .package(name: "ReactNative", path: "../../../../xcframeworks"),
++        .package(name: "React-GeneratedCode", path: "../../../ios"),
++    ],
++    targets: [
++        .target(
++            name: "RNScreens",
++            dependencies: [.product(name: "ReactHeaders", package: "ReactNative"), .product(name: "ReactNativeHeaders", package: "ReactNative"), .product(name: "ReactNativeDependenciesHeaders", package: "ReactNative"), .product(name: "ReactAppHeaders", package: "React-GeneratedCode")],
++            path: ".",
++            exclude: ["ios/RNScreens.xcodeproj"],
++            sources: [
++                "common/cpp/react/renderer/components/rnscreens/FrameCorrectionModes.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSFormSheetHostComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSFormSheetHostShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSFormSheetHostShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSFormSheetHostState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSFormSheetHostState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSFullWindowOverlayComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSFullWindowOverlayShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSFullWindowOverlayShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSFullWindowOverlayState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSModalScreenComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSModalScreenShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSModalScreenShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSSafeAreaViewComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSSafeAreaViewShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSSafeAreaViewShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSSafeAreaViewState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSSafeAreaViewState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderConfigComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderConfigShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderConfigShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderConfigState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderConfigState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderSubviewComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderSubviewShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderSubviewShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderSubviewState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenStackHeaderSubviewState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSScreenState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSSplitScreenComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSSplitScreenShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSSplitScreenShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSSplitScreenState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderConfigComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderConfigShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderConfigShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderConfigState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderConfigState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderItemComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderItemShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderItemShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderItemState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderItemState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderSubviewComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderSubviewShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderSubviewShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderSubviewState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackHeaderSubviewState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackScreenComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackScreenShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackScreenShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackScreenState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSStackScreenState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsBottomAccessoryComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsBottomAccessoryShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsBottomAccessoryShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsBottomAccessoryState.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsHostComponentDescriptor.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsHostShadowNode.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsHostShadowNode.h",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsHostState.cpp",
++                "common/cpp/react/renderer/components/rnscreens/RNSTabsHostState.h",
++                "common/cpp/react/renderer/components/rnscreens/utils/RectUtil.h",
++                "cpp/RNSScreenRemovalListener.cpp",
++                "cpp/RNSScreenRemovalListener.h",
++                "cpp/RNScreensTurboModule.cpp",
++                "cpp/RNScreensTurboModule.h",
++                "ios/RCTImageComponentView+RNSScreenStackHeaderConfig.h",
++                "ios/RCTImageComponentView+RNSScreenStackHeaderConfig.mm",
++                "ios/RNSBarButtonItem.h",
++                "ios/RNSBarButtonItem.mm",
++                "ios/RNSConvert.h",
++                "ios/RNSConvert.mm",
++                "ios/RNSEnums.h",
++                "ios/RNSFullWindowOverlay.h",
++                "ios/RNSFullWindowOverlay.mm",
++                "ios/RNSModalScreen.h",
++                "ios/RNSModalScreen.mm",
++                "ios/RNSModule.h",
++                "ios/RNSModule.mm",
++                "ios/RNSNavigationBar.h",
++                "ios/RNSNavigationBar.mm",
++                "ios/RNSOrientationProviding.h",
++                "ios/RNSPercentDrivenInteractiveTransition.h",
++                "ios/RNSPercentDrivenInteractiveTransition.mm",
++                "ios/RNSReactMountingTransactionObserving.h",
++                "ios/RNSScreen.h",
++                "ios/RNSScreen.mm",
++                "ios/RNSScreenContainer.h",
++                "ios/RNSScreenContainer.mm",
++                "ios/RNSScreenContentWrapper.h",
++                "ios/RNSScreenContentWrapper.mm",
++                "ios/RNSScreenFooter.h",
++                "ios/RNSScreenFooter.mm",
++                "ios/RNSScreenNavigationContainer.h",
++                "ios/RNSScreenNavigationContainer.mm",
++                "ios/RNSScreenStack.h",
++                "ios/RNSScreenStack.mm",
++                "ios/RNSScreenStackAnimator.h",
++                "ios/RNSScreenStackAnimator.mm",
++                "ios/RNSScreenStackHeaderConfig.h",
++                "ios/RNSScreenStackHeaderConfig.mm",
++                "ios/RNSScreenStackHeaderSubview.h",
++                "ios/RNSScreenStackHeaderSubview.mm",
++                "ios/RNSScreenWindowTraits.h",
++                "ios/RNSScreenWindowTraits.mm",
++                "ios/RNSScrollViewBehaviorOverriding.h",
++                "ios/RNSSearchBar.h",
++                "ios/RNSSearchBar.mm",
++                "ios/RNScreens-Bridging-Header.h",
++                "ios/UIScrollView+RNScreens.h",
++                "ios/UIScrollView+RNScreens.mm",
++                "ios/UIViewController+RNScreens.h",
++                "ios/UIViewController+RNScreens.mm",
++                "ios/UIWindow+RNScreens.h",
++                "ios/UIWindow+RNScreens.mm",
++                "ios/bridging/RNSReactBaseView.h",
++                "ios/bridging/RNSReactBaseView.mm",
++                "ios/conversion/RNSConversions-Fabric.mm",
++                "ios/conversion/RNSConversions-ScrollViewMarker.h",
++                "ios/conversion/RNSConversions-ScrollViewMarker.mm",
++                "ios/conversion/RNSConversions-SplitView.mm",
++                "ios/conversion/RNSConversions-Stack.h",
++                "ios/conversion/RNSConversions-Stack.mm",
++                "ios/conversion/RNSConversions-Tabs.mm",
++                "ios/conversion/RNSConversions.h",
++                "ios/conversion/RNSConversions.mm",
++                "ios/conversion/always_false.h",
++                "ios/events/RNSHeaderHeightChangeEvent.h",
++                "ios/events/RNSHeaderHeightChangeEvent.mm",
++                "ios/events/RNSScreenViewEvent.h",
++                "ios/events/RNSScreenViewEvent.mm",
++                "ios/helpers/container/RNSContainer.h",
++                "ios/helpers/container/RNSContainerHelpers.h",
++                "ios/helpers/container/RNSContainerHelpers.mm",
++                "ios/helpers/container/RNSContainerItem.h",
++                "ios/helpers/container/RNSContainerItemSupport.h",
++                "ios/helpers/container/RNSContainerItemSupport.mm",
++                "ios/helpers/container/RNSParentContainerItemRegistry.h",
++                "ios/helpers/container/RNSParentContainerItemRegistry.mm",
++                "ios/helpers/image/RNSImageLoading.h",
++                "ios/helpers/image/RNSImageLoadingHelper.h",
++                "ios/helpers/image/RNSImageLoadingHelper.mm",
++                "ios/helpers/scroll-view/RNSContentScrollViewProviding.h",
++                "ios/helpers/scroll-view/RNSScrollEdgeEffectApplicator.h",
++                "ios/helpers/scroll-view/RNSScrollEdgeEffectApplicator.mm",
++                "ios/helpers/scroll-view/RNSScrollViewFinder.h",
++                "ios/helpers/scroll-view/RNSScrollViewFinder.mm",
++                "ios/helpers/scroll-view/RNSScrollViewHelper.h",
++                "ios/helpers/scroll-view/RNSScrollViewHelper.mm",
++                "ios/integrations/RNSDismissibleModalProtocol.h",
++                "ios/safe-area/RNSSafeAreaProviding.h",
++                "ios/safe-area/RNSSafeAreaViewComponentView.h",
++                "ios/safe-area/RNSSafeAreaViewComponentView.mm",
++                "ios/safe-area/RNSSafeAreaViewNotifications.h",
++                "ios/stubs/RNSGammaStubs.h",
++                "ios/stubs/RNSGammaStubs.mm",
++                "ios/tabs/RCTConvert+RNSTabs.h",
++                "ios/tabs/RCTConvert+RNSTabs.mm",
++                "ios/tabs/RNSTabBarAppearanceCoordinator.h",
++                "ios/tabs/RNSTabBarAppearanceCoordinator.mm",
++                "ios/tabs/RNSTabBarItemCoordinator.h",
++                "ios/tabs/RNSTabBarItemCoordinator.mm",
++                "ios/tabs/RNSTabsSpecialEffectsSupporting.h",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryComponentView.h",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryComponentView.mm",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryContentComponentView.h",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryContentComponentView.mm",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryEventEmitter.h",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryEventEmitter.mm",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryHelper.h",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryHelper.mm",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryShadowStateProxy.h",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryShadowStateProxy.mm",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryWrapperView.h",
++                "ios/tabs/bottom-accessory/RNSTabsBottomAccessoryWrapperView.mm",
++                "ios/tabs/extensions/RNSTabsHostComponentView+RNSImageLoader.h",
++                "ios/tabs/extensions/RNSTabsHostComponentView+RNSImageLoader.mm",
++                "ios/tabs/host/RNSTabBarController.h",
++                "ios/tabs/host/RNSTabBarController.mm",
++                "ios/tabs/host/RNSTabsHostComponentView.h",
++                "ios/tabs/host/RNSTabsHostComponentView.mm",
++                "ios/tabs/host/RNSTabsHostEventEmitter.h",
++                "ios/tabs/host/RNSTabsHostEventEmitter.mm",
++                "ios/tabs/host/RNSTabsNavigationState.h",
++                "ios/tabs/host/RNSTabsNavigationState.mm",
++                "ios/tabs/host/RNSTabsNavigationStateObserverRegistry.h",
++                "ios/tabs/host/RNSTabsNavigationStateObserverRegistry.mm",
++                "ios/tabs/screen/RNSTabsScreenComponentView.h",
++                "ios/tabs/screen/RNSTabsScreenComponentView.mm",
++                "ios/tabs/screen/RNSTabsScreenEventEmitter.h",
++                "ios/tabs/screen/RNSTabsScreenEventEmitter.mm",
++                "ios/tabs/screen/RNSTabsScreenViewController.h",
++                "ios/tabs/screen/RNSTabsScreenViewController.mm",
++                "ios/utils/NSString+RNSUtility.h",
++                "ios/utils/NSString+RNSUtility.mm",
++                "ios/utils/RCTSurfaceTouchHandler+RNSUtility.h",
++                "ios/utils/RCTSurfaceTouchHandler+RNSUtility.mm",
++                "ios/utils/RNSBackBarButtonItem.h",
++                "ios/utils/RNSBackBarButtonItem.mm",
++                "ios/utils/RNSDefines.h",
++                "ios/utils/RNSLog.h",
++                "ios/utils/UINavigationBar+RNSUtility.h",
++                "ios/utils/UINavigationBar+RNSUtility.mm",
++                "ios/utils/UIView+RNSUtility.h",
++                "ios/utils/UIView+RNSUtility.mm",
++                "ios/utils/extensions/RCTImageSource+AccessHiddenMembers.h",
++            ],
++            publicHeadersPath: "spm-include",
++            cSettings: [.headerSearchPath("spm-include"), .headerSearchPath("common/cpp"), .headerSearchPath("common/cpp/react/renderer/components"), .headerSearchPath("common/cpp/react/renderer/components/rnscreens"), .headerSearchPath("common/cpp/react/renderer/components/rnscreens/utils"), .headerSearchPath("cpp"), .headerSearchPath("ios"), .headerSearchPath("ios/bridging"), .headerSearchPath("ios/conversion"), .headerSearchPath("ios/events"), .headerSearchPath("ios/helpers/container"), .headerSearchPath("ios/helpers/image"), .headerSearchPath("ios/helpers/scroll-view"), .headerSearchPath("ios/integrations"), .headerSearchPath("ios/safe-area"), .headerSearchPath("ios/stubs"), .headerSearchPath("ios/tabs"), .headerSearchPath("ios/tabs/bottom-accessory"), .headerSearchPath("ios/tabs/extensions"), .headerSearchPath("ios/tabs/host"), .headerSearchPath("ios/tabs/screen"), .headerSearchPath("ios/utils"), .headerSearchPath("ios/utils/extensions"), .headerSearchPath("."), .unsafeFlags(["-include", "react-native-spm-prefix.h"])],
++            cxxSettings: [.headerSearchPath("spm-include"), .headerSearchPath("common/cpp"), .headerSearchPath("common/cpp/react/renderer/components"), .headerSearchPath("common/cpp/react/renderer/components/rnscreens"), .headerSearchPath("common/cpp/react/renderer/components/rnscreens/utils"), .headerSearchPath("cpp"), .headerSearchPath("ios"), .headerSearchPath("ios/bridging"), .headerSearchPath("ios/conversion"), .headerSearchPath("ios/events"), .headerSearchPath("ios/helpers/container"), .headerSearchPath("ios/helpers/image"), .headerSearchPath("ios/helpers/scroll-view"), .headerSearchPath("ios/integrations"), .headerSearchPath("ios/safe-area"), .headerSearchPath("ios/stubs"), .headerSearchPath("ios/tabs"), .headerSearchPath("ios/tabs/bottom-accessory"), .headerSearchPath("ios/tabs/extensions"), .headerSearchPath("ios/tabs/host"), .headerSearchPath("ios/tabs/screen"), .headerSearchPath("ios/utils"), .headerSearchPath("ios/utils/extensions"), .headerSearchPath("."), .unsafeFlags(["-include", "react-native-spm-prefix.h"]), .define("DEBUG", .when(configuration: .debug)), .define("NDEBUG", .when(configuration: .release))],
++            linkerSettings: [.linkedFramework("UIKit"), .linkedFramework("Foundation"), .linkedFramework("CoreGraphics")]
++        ),
++    ],
++    cxxLanguageStandard: .cxx20
++)
+diff --git a/package.json b/package.json
+index ded33af42ab36e1f15f3aea38770d4a21cf66f0a..98931469d909fbe5d1200badefffc46891b11904 100644
+--- a/package.json
++++ b/package.json
+@@ -27,6 +27,9 @@
+   "source": "src/index",
+   "types": "lib/typescript/index.d.ts",
+   "files": [
++    "Package.swift",
++    "spm-include/",
++    "react-native-spm-prefix.h",
+     "src/",
+     "common/",
+     "lib/",
+diff --git a/react-native-spm-prefix.h b/react-native-spm-prefix.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..af5cea0557f2f4aa957419f0fc3f250fd55dbaf5
+--- /dev/null
++++ b/react-native-spm-prefix.h
+@@ -0,0 +1,10 @@
++// AUTO-SCAFFOLDED by react-native spm scaffold — mirrors CocoaPods' default
++// prefix header so ObjC sources that rely on an implicit Foundation/UIKit
++// import compile under SPM (which has no prefix-header mechanism). Safe to
++// delete + regenerate via `npx react-native spm scaffold`.
++#ifdef __OBJC__
++#import <Foundation/Foundation.h>
++#if __has_include(<UIKit/UIKit.h>)
++#import <UIKit/UIKit.h>
++#endif
++#endif
+diff --git a/spm-include/NSString+RNSUtility.h b/spm-include/NSString+RNSUtility.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..d5a08fa6bf1eb594bdf12ccfe6d0f5bc65f98dcc
+--- /dev/null
++++ b/spm-include/NSString+RNSUtility.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/utils/NSString+RNSUtility.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/utils/NSString+RNSUtility.h"
+diff --git a/spm-include/RCTConvert+RNSTabs.h b/spm-include/RCTConvert+RNSTabs.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..c54991f60bc13e32b148c6f13802a037c2f9781a
+--- /dev/null
++++ b/spm-include/RCTConvert+RNSTabs.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/RCTConvert+RNSTabs.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/RCTConvert+RNSTabs.h"
+diff --git a/spm-include/RCTImageComponentView+RNSScreenStackHeaderConfig.h b/spm-include/RCTImageComponentView+RNSScreenStackHeaderConfig.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..c97bda7d161d495157eaa2d65e50eb0ca218c204
+--- /dev/null
++++ b/spm-include/RCTImageComponentView+RNSScreenStackHeaderConfig.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RCTImageComponentView+RNSScreenStackHeaderConfig.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RCTImageComponentView+RNSScreenStackHeaderConfig.h"
+diff --git a/spm-include/RCTImageSource+AccessHiddenMembers.h b/spm-include/RCTImageSource+AccessHiddenMembers.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..733f6d026cb2179d949ee430070f85746462d3b0
+--- /dev/null
++++ b/spm-include/RCTImageSource+AccessHiddenMembers.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/utils/extensions/RCTImageSource+AccessHiddenMembers.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/utils/extensions/RCTImageSource+AccessHiddenMembers.h"
+diff --git a/spm-include/RCTSurfaceTouchHandler+RNSUtility.h b/spm-include/RCTSurfaceTouchHandler+RNSUtility.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..c93b98e383f26f9818360484edf9a771bb7c48b8
+--- /dev/null
++++ b/spm-include/RCTSurfaceTouchHandler+RNSUtility.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/utils/RCTSurfaceTouchHandler+RNSUtility.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/utils/RCTSurfaceTouchHandler+RNSUtility.h"
+diff --git a/spm-include/RNSBackBarButtonItem.h b/spm-include/RNSBackBarButtonItem.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..067edbae17db99c71823d743d5fbbdd84092f8c0
+--- /dev/null
++++ b/spm-include/RNSBackBarButtonItem.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/utils/RNSBackBarButtonItem.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/utils/RNSBackBarButtonItem.h"
+diff --git a/spm-include/RNSBarButtonItem.h b/spm-include/RNSBarButtonItem.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..705bece4f0cdc43b08820f0b3ccb3e6e84fbef67
+--- /dev/null
++++ b/spm-include/RNSBarButtonItem.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSBarButtonItem.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSBarButtonItem.h"
+diff --git a/spm-include/RNSContainer.h b/spm-include/RNSContainer.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..ef51599ea85afb8267de0df6301df4a84ff83a79
+--- /dev/null
++++ b/spm-include/RNSContainer.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/container/RNSContainer.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/container/RNSContainer.h"
+diff --git a/spm-include/RNSContainerHelpers.h b/spm-include/RNSContainerHelpers.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..a439d2bd6262be441fca1b1951653da2f121db2e
+--- /dev/null
++++ b/spm-include/RNSContainerHelpers.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/container/RNSContainerHelpers.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/container/RNSContainerHelpers.h"
+diff --git a/spm-include/RNSContainerItem.h b/spm-include/RNSContainerItem.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..609ddd1f27e520e92ca117fb0db02342418b1a38
+--- /dev/null
++++ b/spm-include/RNSContainerItem.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/container/RNSContainerItem.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/container/RNSContainerItem.h"
+diff --git a/spm-include/RNSContainerItemSupport.h b/spm-include/RNSContainerItemSupport.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..0aab98b58be0975498fc8a94467a3e566189512c
+--- /dev/null
++++ b/spm-include/RNSContainerItemSupport.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/container/RNSContainerItemSupport.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/container/RNSContainerItemSupport.h"
+diff --git a/spm-include/RNSContentScrollViewProviding.h b/spm-include/RNSContentScrollViewProviding.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..1cbb29fc57ed4dbafdfb4810a2a1fb21a8915cef
+--- /dev/null
++++ b/spm-include/RNSContentScrollViewProviding.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/scroll-view/RNSContentScrollViewProviding.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/scroll-view/RNSContentScrollViewProviding.h"
+diff --git a/spm-include/RNSConversions-ScrollViewMarker.h b/spm-include/RNSConversions-ScrollViewMarker.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..bbb6946fd0f7cfed0a7b6f17533d19e4b75ca205
+--- /dev/null
++++ b/spm-include/RNSConversions-ScrollViewMarker.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/conversion/RNSConversions-ScrollViewMarker.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/conversion/RNSConversions-ScrollViewMarker.h"
+diff --git a/spm-include/RNSConversions-Stack.h b/spm-include/RNSConversions-Stack.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..7b959341b7b7ec84f7fdc7342c355907ddec8981
+--- /dev/null
++++ b/spm-include/RNSConversions-Stack.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/conversion/RNSConversions-Stack.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/conversion/RNSConversions-Stack.h"
+diff --git a/spm-include/RNSConversions.h b/spm-include/RNSConversions.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..adf86d6dbb82f52096761c99b2a20b8d0ae4f658
+--- /dev/null
++++ b/spm-include/RNSConversions.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/conversion/RNSConversions.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/conversion/RNSConversions.h"
+diff --git a/spm-include/RNSConvert.h b/spm-include/RNSConvert.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..cd49ce3aa169f8c4e80fe75b0f26227c5b218eb9
+--- /dev/null
++++ b/spm-include/RNSConvert.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSConvert.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSConvert.h"
+diff --git a/spm-include/RNSDefines.h b/spm-include/RNSDefines.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..0fe57f73ddd6c21d0fdd9a36ffa8e99f70bc4461
+--- /dev/null
++++ b/spm-include/RNSDefines.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/utils/RNSDefines.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/utils/RNSDefines.h"
+diff --git a/spm-include/RNSDismissibleModalProtocol.h b/spm-include/RNSDismissibleModalProtocol.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..ba2d6cd8e4b96ce63cd9c3d46f5726e4c9efff90
+--- /dev/null
++++ b/spm-include/RNSDismissibleModalProtocol.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/integrations/RNSDismissibleModalProtocol.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/integrations/RNSDismissibleModalProtocol.h"
+diff --git a/spm-include/RNSEnums.h b/spm-include/RNSEnums.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..fd6dad2ecb7406f5bb40fcbc8c396f5a9e60ca93
+--- /dev/null
++++ b/spm-include/RNSEnums.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSEnums.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSEnums.h"
+diff --git a/spm-include/RNSFullWindowOverlay.h b/spm-include/RNSFullWindowOverlay.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..f85819ba3049f44c55ad5edd90823681dba8778e
+--- /dev/null
++++ b/spm-include/RNSFullWindowOverlay.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSFullWindowOverlay.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSFullWindowOverlay.h"
+diff --git a/spm-include/RNSGammaStubs.h b/spm-include/RNSGammaStubs.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..7238961339ad4ec883ae650fa8ce1d4958f3a514
+--- /dev/null
++++ b/spm-include/RNSGammaStubs.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/stubs/RNSGammaStubs.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/stubs/RNSGammaStubs.h"
+diff --git a/spm-include/RNSHeaderHeightChangeEvent.h b/spm-include/RNSHeaderHeightChangeEvent.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..913e3826cfca2eb65b5d0472d8a19c046c9045ca
+--- /dev/null
++++ b/spm-include/RNSHeaderHeightChangeEvent.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/events/RNSHeaderHeightChangeEvent.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/events/RNSHeaderHeightChangeEvent.h"
+diff --git a/spm-include/RNSImageLoading.h b/spm-include/RNSImageLoading.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..35b2b15b3407fa9e12079b91658ebee474579817
+--- /dev/null
++++ b/spm-include/RNSImageLoading.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/image/RNSImageLoading.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/image/RNSImageLoading.h"
+diff --git a/spm-include/RNSImageLoadingHelper.h b/spm-include/RNSImageLoadingHelper.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..01446042dd117603ada88f3cc183006a1f27e6db
+--- /dev/null
++++ b/spm-include/RNSImageLoadingHelper.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/image/RNSImageLoadingHelper.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/image/RNSImageLoadingHelper.h"
+diff --git a/spm-include/RNSLog.h b/spm-include/RNSLog.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..7139b52158025e140932473bcc614e7b84d6e2ef
+--- /dev/null
++++ b/spm-include/RNSLog.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/utils/RNSLog.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/utils/RNSLog.h"
+diff --git a/spm-include/RNSModalScreen.h b/spm-include/RNSModalScreen.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..4609e9973c83e922596b6b9673ac42a7b31f85df
+--- /dev/null
++++ b/spm-include/RNSModalScreen.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSModalScreen.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSModalScreen.h"
+diff --git a/spm-include/RNSModule.h b/spm-include/RNSModule.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..ddf9dd99f5d110c4dd9d498d54da53368020b0b6
+--- /dev/null
++++ b/spm-include/RNSModule.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSModule.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSModule.h"
+diff --git a/spm-include/RNSNavigationBar.h b/spm-include/RNSNavigationBar.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..fff1b1f5d057cfbbb9dfa628216dda6831a9ab04
+--- /dev/null
++++ b/spm-include/RNSNavigationBar.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSNavigationBar.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSNavigationBar.h"
+diff --git a/spm-include/RNSOrientationProviding.h b/spm-include/RNSOrientationProviding.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..25f8d956d2914968e2dfc527fcee35451d620944
+--- /dev/null
++++ b/spm-include/RNSOrientationProviding.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSOrientationProviding.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSOrientationProviding.h"
+diff --git a/spm-include/RNSParentContainerItemRegistry.h b/spm-include/RNSParentContainerItemRegistry.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..ffe14316d064af56840470d74c29d9dd15f786c0
+--- /dev/null
++++ b/spm-include/RNSParentContainerItemRegistry.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/container/RNSParentContainerItemRegistry.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/container/RNSParentContainerItemRegistry.h"
+diff --git a/spm-include/RNSPercentDrivenInteractiveTransition.h b/spm-include/RNSPercentDrivenInteractiveTransition.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..a9a7567e2470f9ab8a9b953d589edc6ab18529f2
+--- /dev/null
++++ b/spm-include/RNSPercentDrivenInteractiveTransition.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSPercentDrivenInteractiveTransition.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSPercentDrivenInteractiveTransition.h"
+diff --git a/spm-include/RNSReactBaseView.h b/spm-include/RNSReactBaseView.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..8db3a8b8e133c8617eddd8c1d0cea132007fe1c6
+--- /dev/null
++++ b/spm-include/RNSReactBaseView.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/bridging/RNSReactBaseView.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/bridging/RNSReactBaseView.h"
+diff --git a/spm-include/RNSReactMountingTransactionObserving.h b/spm-include/RNSReactMountingTransactionObserving.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..83a1fff0a7b6f0663bb8a8b69e53a625b683a428
+--- /dev/null
++++ b/spm-include/RNSReactMountingTransactionObserving.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSReactMountingTransactionObserving.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSReactMountingTransactionObserving.h"
+diff --git a/spm-include/RNSSafeAreaProviding.h b/spm-include/RNSSafeAreaProviding.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..9a9a086fe64af8a5c28bc41015cf8916ff63bbae
+--- /dev/null
++++ b/spm-include/RNSSafeAreaProviding.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/safe-area/RNSSafeAreaProviding.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/safe-area/RNSSafeAreaProviding.h"
+diff --git a/spm-include/RNSSafeAreaViewComponentView.h b/spm-include/RNSSafeAreaViewComponentView.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..7fc76825593172ddb6c71af4a3931d4eac19e0c4
+--- /dev/null
++++ b/spm-include/RNSSafeAreaViewComponentView.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/safe-area/RNSSafeAreaViewComponentView.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/safe-area/RNSSafeAreaViewComponentView.h"
+diff --git a/spm-include/RNSSafeAreaViewNotifications.h b/spm-include/RNSSafeAreaViewNotifications.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..11847675ede1d67aa703d9e95ad6e32a78fbba35
+--- /dev/null
++++ b/spm-include/RNSSafeAreaViewNotifications.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/safe-area/RNSSafeAreaViewNotifications.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/safe-area/RNSSafeAreaViewNotifications.h"
+diff --git a/spm-include/RNSScreen.h b/spm-include/RNSScreen.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..4a455d50f4fc2aa43826cc33c0288f83ecf71e26
+--- /dev/null
++++ b/spm-include/RNSScreen.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreen.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreen.h"
+diff --git a/spm-include/RNSScreenContainer.h b/spm-include/RNSScreenContainer.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..cbc4880160558f364763ca940d82756d275ebe6f
+--- /dev/null
++++ b/spm-include/RNSScreenContainer.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenContainer.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenContainer.h"
+diff --git a/spm-include/RNSScreenContentWrapper.h b/spm-include/RNSScreenContentWrapper.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..aa039a20d441091d3629d686b8b6999151159d18
+--- /dev/null
++++ b/spm-include/RNSScreenContentWrapper.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenContentWrapper.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenContentWrapper.h"
+diff --git a/spm-include/RNSScreenFooter.h b/spm-include/RNSScreenFooter.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..7c01b86ba901a8c1a8060d48d569cbcf7ebafa07
+--- /dev/null
++++ b/spm-include/RNSScreenFooter.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenFooter.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenFooter.h"
+diff --git a/spm-include/RNSScreenNavigationContainer.h b/spm-include/RNSScreenNavigationContainer.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..4dc380c1517f6cde176b80989188985936159a06
+--- /dev/null
++++ b/spm-include/RNSScreenNavigationContainer.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenNavigationContainer.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenNavigationContainer.h"
+diff --git a/spm-include/RNSScreenStack.h b/spm-include/RNSScreenStack.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..5ae5275fdc7ea941bb4a0bd01541577c92c68a7b
+--- /dev/null
++++ b/spm-include/RNSScreenStack.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenStack.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenStack.h"
+diff --git a/spm-include/RNSScreenStackAnimator.h b/spm-include/RNSScreenStackAnimator.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2f4dbefe22bd7a6cf2e3deb89109e70b04ebca8
+--- /dev/null
++++ b/spm-include/RNSScreenStackAnimator.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenStackAnimator.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenStackAnimator.h"
+diff --git a/spm-include/RNSScreenStackHeaderConfig.h b/spm-include/RNSScreenStackHeaderConfig.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..35692231ac43a6fb52740c588217a876f48ae7fd
+--- /dev/null
++++ b/spm-include/RNSScreenStackHeaderConfig.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenStackHeaderConfig.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenStackHeaderConfig.h"
+diff --git a/spm-include/RNSScreenStackHeaderSubview.h b/spm-include/RNSScreenStackHeaderSubview.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..80a0181871f7a15619ad49c8ea233df101136fa3
+--- /dev/null
++++ b/spm-include/RNSScreenStackHeaderSubview.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenStackHeaderSubview.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenStackHeaderSubview.h"
+diff --git a/spm-include/RNSScreenViewEvent.h b/spm-include/RNSScreenViewEvent.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..29fa087d276e409500f1abbd7a2f5a0d02e69670
+--- /dev/null
++++ b/spm-include/RNSScreenViewEvent.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/events/RNSScreenViewEvent.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/events/RNSScreenViewEvent.h"
+diff --git a/spm-include/RNSScreenWindowTraits.h b/spm-include/RNSScreenWindowTraits.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..951f36dbb7be25d7260ae0e6e8cc9cf8169fc4fa
+--- /dev/null
++++ b/spm-include/RNSScreenWindowTraits.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScreenWindowTraits.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScreenWindowTraits.h"
+diff --git a/spm-include/RNSScrollEdgeEffectApplicator.h b/spm-include/RNSScrollEdgeEffectApplicator.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..efd79039eeef7e52ae2c23ffb72212dde97825fb
+--- /dev/null
++++ b/spm-include/RNSScrollEdgeEffectApplicator.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/scroll-view/RNSScrollEdgeEffectApplicator.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/scroll-view/RNSScrollEdgeEffectApplicator.h"
+diff --git a/spm-include/RNSScrollViewBehaviorOverriding.h b/spm-include/RNSScrollViewBehaviorOverriding.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..ec69863cc6ad2f8d1d4c617e663cf155e642086b
+--- /dev/null
++++ b/spm-include/RNSScrollViewBehaviorOverriding.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSScrollViewBehaviorOverriding.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSScrollViewBehaviorOverriding.h"
+diff --git a/spm-include/RNSScrollViewFinder.h b/spm-include/RNSScrollViewFinder.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..976972596066277790b100fd2410b74d59bc9259
+--- /dev/null
++++ b/spm-include/RNSScrollViewFinder.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/scroll-view/RNSScrollViewFinder.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/scroll-view/RNSScrollViewFinder.h"
+diff --git a/spm-include/RNSScrollViewHelper.h b/spm-include/RNSScrollViewHelper.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..80d65b54cac8da1821ef6eb73156ac6101e5e99b
+--- /dev/null
++++ b/spm-include/RNSScrollViewHelper.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/helpers/scroll-view/RNSScrollViewHelper.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/helpers/scroll-view/RNSScrollViewHelper.h"
+diff --git a/spm-include/RNSSearchBar.h b/spm-include/RNSSearchBar.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..d7991f2a2d238e0e8be8f8b10609efb4d058ddf6
+--- /dev/null
++++ b/spm-include/RNSSearchBar.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/RNSSearchBar.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/RNSSearchBar.h"
+diff --git a/spm-include/RNSTabBarAppearanceCoordinator.h b/spm-include/RNSTabBarAppearanceCoordinator.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..827f62262117588482a80dd03f4ca65d67ba4d3c
+--- /dev/null
++++ b/spm-include/RNSTabBarAppearanceCoordinator.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/RNSTabBarAppearanceCoordinator.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/RNSTabBarAppearanceCoordinator.h"
+diff --git a/spm-include/RNSTabBarController.h b/spm-include/RNSTabBarController.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..701b70fb0961dacb412ed617b87118ce19ba960b
+--- /dev/null
++++ b/spm-include/RNSTabBarController.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/host/RNSTabBarController.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/host/RNSTabBarController.h"
+diff --git a/spm-include/RNSTabBarItemCoordinator.h b/spm-include/RNSTabBarItemCoordinator.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..533d81cb7d73db8b7290e77c25086a9b24d39b8b
+--- /dev/null
++++ b/spm-include/RNSTabBarItemCoordinator.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/RNSTabBarItemCoordinator.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/RNSTabBarItemCoordinator.h"
+diff --git a/spm-include/RNSTabsBottomAccessoryComponentView.h b/spm-include/RNSTabsBottomAccessoryComponentView.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..39df7984f676935b8fa0c9d630bcd86098e5bba1
+--- /dev/null
++++ b/spm-include/RNSTabsBottomAccessoryComponentView.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/bottom-accessory/RNSTabsBottomAccessoryComponentView.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/bottom-accessory/RNSTabsBottomAccessoryComponentView.h"
+diff --git a/spm-include/RNSTabsBottomAccessoryContentComponentView.h b/spm-include/RNSTabsBottomAccessoryContentComponentView.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..856908bced6a45f7dd3f0e6aade9d2d8c6411fef
+--- /dev/null
++++ b/spm-include/RNSTabsBottomAccessoryContentComponentView.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/bottom-accessory/RNSTabsBottomAccessoryContentComponentView.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/bottom-accessory/RNSTabsBottomAccessoryContentComponentView.h"
+diff --git a/spm-include/RNSTabsBottomAccessoryEventEmitter.h b/spm-include/RNSTabsBottomAccessoryEventEmitter.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..e034f2b6fa3305aab4286a3b76fa81ceaee136c7
+--- /dev/null
++++ b/spm-include/RNSTabsBottomAccessoryEventEmitter.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/bottom-accessory/RNSTabsBottomAccessoryEventEmitter.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/bottom-accessory/RNSTabsBottomAccessoryEventEmitter.h"
+diff --git a/spm-include/RNSTabsBottomAccessoryHelper.h b/spm-include/RNSTabsBottomAccessoryHelper.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..53fcb8dfd620aedf8c57096d61b697ae85640b7d
+--- /dev/null
++++ b/spm-include/RNSTabsBottomAccessoryHelper.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/bottom-accessory/RNSTabsBottomAccessoryHelper.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/bottom-accessory/RNSTabsBottomAccessoryHelper.h"
+diff --git a/spm-include/RNSTabsBottomAccessoryShadowStateProxy.h b/spm-include/RNSTabsBottomAccessoryShadowStateProxy.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..8b9e3b5be21a46e90b054a3de29efb6dc94de026
+--- /dev/null
++++ b/spm-include/RNSTabsBottomAccessoryShadowStateProxy.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/bottom-accessory/RNSTabsBottomAccessoryShadowStateProxy.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/bottom-accessory/RNSTabsBottomAccessoryShadowStateProxy.h"
+diff --git a/spm-include/RNSTabsBottomAccessoryWrapperView.h b/spm-include/RNSTabsBottomAccessoryWrapperView.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..8d5c332e97db39a62b23d1207711e0717302fa18
+--- /dev/null
++++ b/spm-include/RNSTabsBottomAccessoryWrapperView.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/bottom-accessory/RNSTabsBottomAccessoryWrapperView.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/bottom-accessory/RNSTabsBottomAccessoryWrapperView.h"
+diff --git a/spm-include/RNSTabsHostComponentView+RNSImageLoader.h b/spm-include/RNSTabsHostComponentView+RNSImageLoader.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..0b8ac0d374a5a935a22b481d15dec5d401a891c1
+--- /dev/null
++++ b/spm-include/RNSTabsHostComponentView+RNSImageLoader.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/extensions/RNSTabsHostComponentView+RNSImageLoader.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/extensions/RNSTabsHostComponentView+RNSImageLoader.h"
+diff --git a/spm-include/RNSTabsHostComponentView.h b/spm-include/RNSTabsHostComponentView.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..6b862618090adab1590bbcf5e3b5628388c0d70a
+--- /dev/null
++++ b/spm-include/RNSTabsHostComponentView.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/host/RNSTabsHostComponentView.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/host/RNSTabsHostComponentView.h"
+diff --git a/spm-include/RNSTabsHostEventEmitter.h b/spm-include/RNSTabsHostEventEmitter.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..ebdd9720070f9b2acc2f02554235da976d629d49
+--- /dev/null
++++ b/spm-include/RNSTabsHostEventEmitter.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/host/RNSTabsHostEventEmitter.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/host/RNSTabsHostEventEmitter.h"
+diff --git a/spm-include/RNSTabsNavigationState.h b/spm-include/RNSTabsNavigationState.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..ef2bdbfea2910de76d0aca9e1bd33c0ab81d58cc
+--- /dev/null
++++ b/spm-include/RNSTabsNavigationState.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/host/RNSTabsNavigationState.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/host/RNSTabsNavigationState.h"
+diff --git a/spm-include/RNSTabsNavigationStateObserverRegistry.h b/spm-include/RNSTabsNavigationStateObserverRegistry.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..87b103b49c5adaf7ccae90e3600df55e3de331d2
+--- /dev/null
++++ b/spm-include/RNSTabsNavigationStateObserverRegistry.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/host/RNSTabsNavigationStateObserverRegistry.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/host/RNSTabsNavigationStateObserverRegistry.h"
+diff --git a/spm-include/RNSTabsScreenComponentView.h b/spm-include/RNSTabsScreenComponentView.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..c0a5ed29c0b78e56c0bc3ecc4a439d742aa864e7
+--- /dev/null
++++ b/spm-include/RNSTabsScreenComponentView.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/screen/RNSTabsScreenComponentView.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/screen/RNSTabsScreenComponentView.h"
+diff --git a/spm-include/RNSTabsScreenEventEmitter.h b/spm-include/RNSTabsScreenEventEmitter.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..c86987b3e49f0fb02ad0ea6b15d5545b45d916e7
+--- /dev/null
++++ b/spm-include/RNSTabsScreenEventEmitter.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/screen/RNSTabsScreenEventEmitter.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/screen/RNSTabsScreenEventEmitter.h"
+diff --git a/spm-include/RNSTabsScreenViewController.h b/spm-include/RNSTabsScreenViewController.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..5b1484ea1f262ee82849aa39849ee61726c2b21e
+--- /dev/null
++++ b/spm-include/RNSTabsScreenViewController.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/screen/RNSTabsScreenViewController.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/screen/RNSTabsScreenViewController.h"
+diff --git a/spm-include/RNSTabsSpecialEffectsSupporting.h b/spm-include/RNSTabsSpecialEffectsSupporting.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..7e3c6a239a622d5583295559f4fe9bd81d0e3188
+--- /dev/null
++++ b/spm-include/RNSTabsSpecialEffectsSupporting.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/tabs/RNSTabsSpecialEffectsSupporting.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/tabs/RNSTabsSpecialEffectsSupporting.h"
+diff --git a/spm-include/RNScreens-umbrella.h b/spm-include/RNScreens-umbrella.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..47949f30f2466c3e944e5c0a5d406effcf2e3b38
+--- /dev/null
++++ b/spm-include/RNScreens-umbrella.h
+@@ -0,0 +1,77 @@
++#import <UIKit/UIKit.h>
++#import "RCTImageComponentView+RNSScreenStackHeaderConfig.h"
++#import "RNSBarButtonItem.h"
++#import "RNSConvert.h"
++#import "RNSEnums.h"
++#import "RNSFullWindowOverlay.h"
++#import "RNSModalScreen.h"
++#import "RNSModule.h"
++#import "RNSNavigationBar.h"
++#import "RNSOrientationProviding.h"
++#import "RNSPercentDrivenInteractiveTransition.h"
++#import "RNSReactMountingTransactionObserving.h"
++#import "RNSScreen.h"
++#import "RNSScreenContainer.h"
++#import "RNSScreenContentWrapper.h"
++#import "RNSScreenFooter.h"
++#import "RNSScreenNavigationContainer.h"
++#import "RNSScreenStack.h"
++#import "RNSScreenStackAnimator.h"
++#import "RNSScreenStackHeaderConfig.h"
++#import "RNSScreenStackHeaderSubview.h"
++#import "RNSScreenWindowTraits.h"
++#import "RNSScrollViewBehaviorOverriding.h"
++#import "RNSSearchBar.h"
++#import "UIScrollView+RNScreens.h"
++#import "UIViewController+RNScreens.h"
++#import "UIWindow+RNScreens.h"
++#import "RNSReactBaseView.h"
++#import "RNSConversions-ScrollViewMarker.h"
++#import "RNSConversions-Stack.h"
++#import "RNSConversions.h"
++#import "always_false.h"
++#import "RNSHeaderHeightChangeEvent.h"
++#import "RNSScreenViewEvent.h"
++#import "RNSContainer.h"
++#import "RNSContainerHelpers.h"
++#import "RNSContainerItem.h"
++#import "RNSContainerItemSupport.h"
++#import "RNSParentContainerItemRegistry.h"
++#import "RNSImageLoading.h"
++#import "RNSImageLoadingHelper.h"
++#import "RNSContentScrollViewProviding.h"
++#import "RNSScrollEdgeEffectApplicator.h"
++#import "RNSScrollViewFinder.h"
++#import "RNSScrollViewHelper.h"
++#import "RNSDismissibleModalProtocol.h"
++#import "RNSSafeAreaProviding.h"
++#import "RNSSafeAreaViewComponentView.h"
++#import "RNSSafeAreaViewNotifications.h"
++#import "RNSGammaStubs.h"
++#import "RCTConvert+RNSTabs.h"
++#import "RNSTabBarAppearanceCoordinator.h"
++#import "RNSTabBarItemCoordinator.h"
++#import "RNSTabsSpecialEffectsSupporting.h"
++#import "RNSTabsBottomAccessoryComponentView.h"
++#import "RNSTabsBottomAccessoryContentComponentView.h"
++#import "RNSTabsBottomAccessoryEventEmitter.h"
++#import "RNSTabsBottomAccessoryHelper.h"
++#import "RNSTabsBottomAccessoryShadowStateProxy.h"
++#import "RNSTabsBottomAccessoryWrapperView.h"
++#import "RNSTabsHostComponentView+RNSImageLoader.h"
++#import "RNSTabBarController.h"
++#import "RNSTabsHostComponentView.h"
++#import "RNSTabsHostEventEmitter.h"
++#import "RNSTabsNavigationState.h"
++#import "RNSTabsNavigationStateObserverRegistry.h"
++#import "RNSTabsScreenComponentView.h"
++#import "RNSTabsScreenEventEmitter.h"
++#import "RNSTabsScreenViewController.h"
++#import "NSString+RNSUtility.h"
++#import "RCTSurfaceTouchHandler+RNSUtility.h"
++#import "RNSBackBarButtonItem.h"
++#import "RNSDefines.h"
++#import "RNSLog.h"
++#import "UINavigationBar+RNSUtility.h"
++#import "UIView+RNSUtility.h"
++#import "RCTImageSource+AccessHiddenMembers.h"
+diff --git a/spm-include/UINavigationBar+RNSUtility.h b/spm-include/UINavigationBar+RNSUtility.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..d868e88293f39922607f15e8999971d5c3f098b0
+--- /dev/null
++++ b/spm-include/UINavigationBar+RNSUtility.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/utils/UINavigationBar+RNSUtility.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/utils/UINavigationBar+RNSUtility.h"
+diff --git a/spm-include/UIScrollView+RNScreens.h b/spm-include/UIScrollView+RNScreens.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..20239f3f33278b1e147387e451d08177ac4acc5c
+--- /dev/null
++++ b/spm-include/UIScrollView+RNScreens.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/UIScrollView+RNScreens.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/UIScrollView+RNScreens.h"
+diff --git a/spm-include/UIView+RNSUtility.h b/spm-include/UIView+RNSUtility.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..6a463c0204f3402152300d9dff3bb3e9b67d1f99
+--- /dev/null
++++ b/spm-include/UIView+RNSUtility.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/utils/UIView+RNSUtility.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/utils/UIView+RNSUtility.h"
+diff --git a/spm-include/UIViewController+RNScreens.h b/spm-include/UIViewController+RNScreens.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..e8f21cf01b9d15d61db38ba24ad94601dac94075
+--- /dev/null
++++ b/spm-include/UIViewController+RNScreens.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/UIViewController+RNScreens.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/UIViewController+RNScreens.h"
+diff --git a/spm-include/UIWindow+RNScreens.h b/spm-include/UIWindow+RNScreens.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..15369aed8c71385c7594e027afde2d6f3d3dfc90
+--- /dev/null
++++ b/spm-include/UIWindow+RNScreens.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/UIWindow+RNScreens.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/UIWindow+RNScreens.h"
+diff --git a/spm-include/always_false.h b/spm-include/always_false.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..11c7da45f7c1f3efe35426882a5ecde30c73ff71
+--- /dev/null
++++ b/spm-include/always_false.h
+@@ -0,0 +1,4 @@
++// Forwards to ios/conversion/always_false.h. CocoaPods flattens RNScreens headers into one public
++// directory, and the sources include each other by bare name; SwiftPM
++// needs the same flat directory to build the RNScreens module for Swift.
++#import "../ios/conversion/always_false.h"
+diff --git a/spm-include/module.modulemap b/spm-include/module.modulemap
+new file mode 100644
+index 0000000000000000000000000000000000000000..d4618d24374d5837cecff8a5d6f32433ea82e5ea
+--- /dev/null
++++ b/spm-include/module.modulemap
+@@ -0,0 +1,4 @@
++module RNScreens {
++  umbrella header "RNScreens-umbrella.h"
++  export *
++}

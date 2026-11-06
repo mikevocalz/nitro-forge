@@ -1,50 +1,60 @@
-import { Link } from "expo-router";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Link, Stack } from 'expo-router';
+import { useColorScheme, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View, Card } from '@nitro-forge/studio-workspace/ui';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ForgeIcon } from '@nitro-forge/icons/native';
+import { workspaceThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
+import { APP_MANIFESTS } from '@nitro-forge/studio-workspace/apps';
+import type { Studio } from '@nitro-forge/studio-layout';
 
-const PRODUCTS = [
-  { id: "prism", name: "Prism", tagline: "Image & vector" },
-  { id: "cadence", name: "Cadence", tagline: "Audio workstation" },
-  { id: "splice", name: "Splice", tagline: "Video timeline" },
-  { id: "folio", name: "Folio", tagline: "PDF documents" },
-  { id: "pitch", name: "Pitch", tagline: "Presentations" },
-  { id: "tally", name: "Tally", tagline: "Spreadsheets" },
-  { id: "quill", name: "Quill", tagline: "Rich text" },
-] as const;
+const APPS = (Object.keys(APP_MANIFESTS) as Studio[]).map(id => ({
+  id, name: id[0]!.toUpperCase() + id.slice(1), ...APP_MANIFESTS[id],
+}));
 
 export default function Home() {
-  return (
-    <FlatList
-      data={PRODUCTS}
-      keyExtractor={(p) => p.id}
-      contentContainerStyle={styles.list}
-      renderItem={({ item }) => (
-        <Link href={`/editor/${item.id}`} asChild>
-          <Pressable style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-            <View>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.tagline}>{item.tagline}</Text>
-            </View>
-            <Text style={styles.chevron}>›</Text>
-          </Pressable>
-        </Link>
-      )}
-    />
-  );
+  const theme = useColorScheme() === 'light' ? 'light' : 'dark';
+  const colors = workspaceThemes[theme];
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const columns = width >= 760;
+  const compact = width < 440;
+  return <>
+    <Stack.Screen options={{ title: 'NitroForge', headerStyle: { backgroundColor: colors.raised }, headerTintColor: colors.text, headerShadowVisible: false }} />
+    <ScrollView style={{ flex: 1, backgroundColor: colors.base }} contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={{ paddingLeft: Math.max(compact ? 16 : 24, insets.left), paddingRight: Math.max(compact ? 16 : 24, insets.right), paddingTop: 26, paddingBottom: Math.max(32, insets.bottom + 20), alignItems: 'center' }}>
+      <View style={{ width: '100%', maxWidth: 1040 }}>
+        <View style={{ gap: 10, marginBottom: 28 }}>
+          <Text style={{ color: colors.muted, fontSize: 11 }}>NitroForge / Your collection</Text>
+          <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 28, lineHeight: 34, letterSpacing: -.8, fontWeight: '600' }}>Apps</Text>
+          <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 21 }}>A dedicated space for everything you create.</Text>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
+          <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>All applications</Text>
+          {!compact && <Text style={{ color: colors.muted, fontSize: 11 }}>Choose where to work</Text>}
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' }}>
+          {APPS.map(app => <Link key={app.id} href={`/editor/${app.id}`} asChild>
+            <Pressable accessibilityRole="link" accessibilityLabel={`Open ${app.name}: ${app.task}`}
+              style={{ width: columns ? '48.8%' : '100%', minHeight: scale.size.target }}>
+              {({ pressed }) => <Card surface="page" padded={false} style={{ width: '100%', borderRadius: scale.radius.panel, borderColor: pressed ? colors.accent : colors.line, backgroundColor: pressed ? colors.soft : colors.raised }}>
+              <View style={{ padding: compact ? 17 : 22, flexDirection: 'row', alignItems: 'flex-start', gap: compact ? 14 : 18 }}>
+              <View accessible={false} importantForAccessibility="no-hide-descendants" style={{ width: compact ? 48 : 54, height: compact ? 48 : 54, borderRadius: scale.radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.soft }}>
+                <ForgeIcon name={app.glyph} size={29} color={colors.accent} appearance={theme} surfaceColor={colors.soft} reducedMotion />
+              </View>
+              <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <Text style={{ color: colors.text, fontSize: 19, lineHeight: 25, letterSpacing: -.4, fontWeight: '600' }}>{app.name}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 10 }}>{app.category}</Text>
+                </View>
+                <Text style={{ color: colors.text, fontSize: 12, lineHeight: 19 }}>{app.task}</Text>
+                <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '500', marginTop: 10 }}>Open app →</Text>
+              </View>
+              </View></Card>}
+            </Pressable>
+          </Link>)}
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 18, marginTop: 24 }}>Your apps, separate workspaces.</Text>
+      </View>
+    </ScrollView>
+  </>;
 }
-
-const styles = StyleSheet.create({
-  list: { padding: 16 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    marginBottom: 8,
-  },
-  pressed: { opacity: 0.6 },
-  name: { fontSize: 17, fontWeight: "600" },
-  tagline: { fontSize: 13, color: "#6b7280", marginTop: 2 },
-  chevron: { fontSize: 22, color: "#9ca3af" },
-});

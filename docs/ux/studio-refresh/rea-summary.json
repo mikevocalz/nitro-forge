@@ -1,0 +1,60 @@
+{
+  "status": "complete-with-partial-graph-coverage",
+  "analysisExecuted": true,
+  "exitCode": 0,
+  "reaVersion": "6.8.0",
+  "temporaryNode": "26.12.1",
+  "systemNode": "26.12.0",
+  "command": "npm exec --yes --package=node@26.12.1 --package=rea-agents@6.8.0 -- rea-agents analyze-javascript-application /Users/mikevocalz/nitro-forge/apps/studio-preview/src --json",
+  "cwd": "/tmp",
+  "evidenceId": "ev_b2dac73d33785b90803181f9f9342b0392c58ee9ad0e3f930ee303e43f3d2b84",
+  "rootArtifactSha256": "67d4f2aed5925435ab25d867824f02a707a1fbb2b3debb2481312cd2dad3bfb1",
+  "statistics": {
+    "relevant_files": 5,
+    "nested_asar_containers": 0,
+    "text_bytes_read": 16644,
+    "invalid_utf8_files": 0,
+    "parsed_javascript_files": 5,
+    "skipped_javascript_files": 0,
+    "visited_ast_nodes": 3048,
+    "findings": 68,
+    "modules": 0,
+    "parse_failures": 0
+  },
+  "graphCoverage": {
+    "status": "partial",
+    "truncated": false,
+    "omitted_count": null,
+    "limits": []
+  },
+  "graphNodeKinds": {
+    "javascript-module": 45,
+    "endpoint": 8,
+    "artifact": 1,
+    "storage": 2,
+    "javascript-asset": 5
+  },
+  "graphEdgeKinds": {
+    "null": 67
+  },
+  "observedBoundaryFacts": [
+    "fetch endpoint /api/engine",
+    "localStorage getItem/setItem",
+    "browserHost and useEditorDoc exports"
+  ],
+  "limitations": [
+    "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+    "Graph coverage is incomplete; unavailable facts remain explicit and must not be read as absence.",
+    "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+    "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+    "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+    "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code."
+  ],
+  "notes": [
+    "68 findings are retained static observations, not 68 bugs or security vulnerabilities.",
+    "Seven request operation strings are heuristic endpoint candidates, not seven actual network URLs.",
+    "Source imports outside src were not inventoried; package/workspace dependency resolution remains partial.",
+    "No target code executed, no agent setup/global configuration changed, no system Node upgrade.",
+    "First app-root run included generated bundles and was interrupted (exit143); it is not a completed analysis."
+  ]
+}

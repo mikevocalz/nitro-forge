@@ -1,0 +1,47 @@
+name: Forge audio SDK 58 cross-platform contracts
+
+on:
+  pull_request:
+    paths:
+      - 'packages/audio-ui/**'
+      - 'apps/forge-audio-lab/**'
+      - '.github/workflows/audio-ui-cross-platform.yml'
+      - 'tooling/nyc-tron.json'
+      - 'tooling/verify-nyc-tron-pin.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    name: audio TS + lifecycle contracts (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: NYC-Tron release pin (URL, lockfile, SHA256SUMS)
+        run: node tooling/verify-nyc-tron-pin.mjs --download
+      - name: Audio UI TypeScript
+        run: pnpm --filter @nitro-forge/audio-ui typecheck
+      - name: Audio recording state-machine tests
+        run: pnpm --filter @nitro-forge/audio-ui test
+      - name: Expo SDK 58 lab typecheck
+        run: pnpm --filter @nitro-forge/audio-lab typecheck
+      - name: Bundle Expo Metro web app
+        if: runner.os == 'Linux'
+        run: pnpm --filter @nitro-forge/audio-lab export:web
+      - name: Scope statement
+        run: echo "CI validates source, typecheck and web bundling only; permission/mic/device runtime E2E remains required."

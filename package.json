@@ -10,19 +10,26 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
-    "test:rust": "cargo test --workspace --manifest-path rust/Cargo.toml",
+    "test:rust": "cargo test --locked --workspace",
     "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "verify:nyc-tron": "node tooling/verify-nyc-tron-pin.mjs",
+    "test:lab-config": "node --test tooling/lab-metro-config.test.cjs",
+    "verify:timeline-source": "node tooling/verify-timeline-source.mjs",
+    "verify:canvas-source": "node tooling/verify-canvas-source.mjs",
+    "verify:audio-source": "node tooling/verify-audio-source.mjs",
+    "verify:workspace-source": "node tooling/verify-workspace-source.mjs",
+    "verify:released-ui": "node tooling/verify-released-ui.mjs"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
-    "tsx": "^4.23.15",
-    "turbo": "^2.11.7",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.7"
+    "@types/node": "26.6.6",
+    "tsx": "4.23.15",
+    "turbo": "2.11.10",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
   },
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@12.16.1",
   "engines": {
-    "node": ">=20"
+    "node": ">=24.3.0"
   }
 }

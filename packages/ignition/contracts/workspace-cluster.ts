@@ -1,0 +1,18 @@
+import {workspaceUiBindings,workspaceUiView} from '../src/workspace-ui';
+import {createTransferUiBindings,transferUiFormats,transferUiImports,type TransferUiOptions} from '../src/transfer-ui';
+import type {WorkspaceSession} from '../src/workspace';
+import type {DockLayout} from '@nyc-tron/ui/components/shell/dock-model';
+import type {WorkspaceHostProps} from '@nyc-tron/ui/components/shell/WorkspaceHost';
+import type {WorkspacePresetSwitcherProps} from '@nyc-tron/ui/components/shell/WorkspacePresetSwitcher';
+import type {FileImportExportSheetProps} from '@nyc-tron/ui/components/files/FileImportExportSheet';
+import type {ColorPickerDialogProps} from '@nyc-tron/ui/components/forge/color/ColorPickerDialog';
+import {hsvToRgb} from '@nyc-tron/ui/components/forge/color';
+import {bindPrismColors} from '../../prism/src/color-cluster';
+import type {PrismDocument} from '../../prism/src/index';
+declare const session:WorkspaceSession,parseLayout:(value:unknown)=>DockLayout,options:TransferUiOptions,doc:PrismDocument;
+const view=workspaceUiView(session,parseLayout),bindings=workspaceUiBindings(session,()=>{});
+const host:Pick<WorkspaceHostProps,'activeModeId'|'layouts'|'onModeChange'|'onLayoutChange'>={...view,...bindings};
+const presets:Pick<WorkspacePresetSwitcherProps,'activeId'|'presets'|'onSelect'|'onSaveAs'|'onRename'|'onDelete'|'onDuplicate'|'onReset'>={...view,...bindings};
+const transfer:Pick<FileImportExportSheetProps,'formats'|'importFormats'|'onExport'>={formats:transferUiFormats(options.exports),importFormats:transferUiImports(options.imports),onExport:createTransferUiBindings(options).onExport};
+const color:ColorPickerDialogProps['onCommit']=value=>{void bindPrismColors(doc,()=>{}).commit('foreground',hsvToRgb(value));};
+void [host,presets,transfer,color];

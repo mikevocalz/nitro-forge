@@ -3,10 +3,8 @@ import type {
   CommandResult,
   EngineErrorShape,
   EngineKind,
-  ForgeEvent,
 } from "./types";
 import { EngineError } from "./types";
-import { base64ToBytes, bytesToBase64 } from "./base64";
 
 /**
  * EngineHost — the transport contract between TypeScript and Rust engines.
@@ -25,77 +23,116 @@ export interface EngineHost {
   dispose(): Promise<void>;
 }
 
-/**
- * The Forge HybridObject's native surface (see Forge.nitro.ts). Commands and
- * results cross as JSON strings; snapshots as base64. The native side runs
- * every engine call on the document's dedicated worker so `apply` never
- * blocks the UI thread.
- */
-export interface ForgeNitro {
-  openEngine(kind: string): number;
-  applyJson(handle: number, commandJson: string): Promise<string>;
-  snapshotB64(handle: number): Promise<string>;
-  restoreB64(handle: number, bytesB64: string): Promise<void>;
-  undo(handle: number): Promise<boolean>;
-  redo(handle: number): Promise<boolean>;
-  closeEngine(handle: number): boolean;
+/** Structural v1 contracts keep CLI/web imports free of native runtime effects. */
+export interface ForgeDocumentNative {
+  apply(command: { op: string; v?: number; payloadJson?: string }): Promise<{
+    dataJson: string; events: { kind: string; detailJson?: string }[];
+  }>;
+  snapshot(): Promise<ArrayBuffer>;
+  restore(bytes: ArrayBuffer): Promise<void>;
+  undo(): Promise<boolean>;
+  redo(): Promise<boolean>;
+  close(): Promise<void>;
+}
+export interface ForgeFactoryNative {
+  open(kind: EngineKind): Promise<ForgeDocumentNative>;
 }
 
+/** Adapts native per-document ownership to the existing public handle API. */
 export class NitroHost implements EngineHost {
-  constructor(private forge: ForgeNitro) {}
+  private documents = new Map<number, ForgeDocumentNative>();
+  private nextHandle = 1;
+  private disposed = false;
+  private pending = new Set<Promise<number>>();
+  private closing = new Set<Promise<boolean>>();
+  private disposing?: Promise<void>;
+  constructor(private factory: ForgeFactoryNative) {}
 
-  async open(kind: EngineKind): Promise<number> {
-    return this.forge.openEngine(kind);
+  open(kind: EngineKind): Promise<number> {
+    if (this.disposed) return Promise.reject(new Error("NitroHost is disposed"));
+    const opening = this.factory.open(kind).then(async (document) => {
+      if (this.disposed || !Number.isSafeInteger(this.nextHandle)) {
+        await document.close();
+        throw new Error("NitroHost is disposed or handles are exhausted");
+      }
+      const handle = this.nextHandle++;
+      this.documents.set(handle, document);
+      return handle;
+    }).catch((error: unknown) => { throw parseNativeError(error); });
+    this.pending.add(opening);
+    void opening.then(() => this.pending.delete(opening), () => this.pending.delete(opening));
+    return opening;
+  }
+
+  private document(handle: number): ForgeDocumentNative {
+    const document = this.documents.get(handle);
+    if (!Number.isSafeInteger(handle) || !document) {
+      throw new EngineError({ code: "not_found", message: "Document is closed or unknown", recoverable: true });
+    }
+    return document;
   }
 
   async apply<T>(handle: number, cmd: Command): Promise<CommandResult<T>> {
-    const raw = await this.forge
-      .applyJson(handle, JSON.stringify(cmd))
-      .catch((e: unknown) => {
-        throw parseNativeError(e);
+    try {
+      const result = await this.document(handle).apply({
+        op: cmd.op,
+        ...(cmd.v === undefined ? {} : { v: cmd.v }),
+        ...(cmd.payload === undefined ? {} : { payloadJson: JSON.stringify(cmd.payload) }),
       });
-    const res = JSON.parse(raw) as {
-      ok?: boolean;
-      data?: T;
-      events?: ForgeEvent[];
-      error?: EngineErrorShape;
-    };
-    // The C ABI reports engine failures in-band ({"ok":false,"error":{…}}),
-    // not as rejections. Without this check every engine error reads as a
-    // successful apply with undefined data.
-    if (res.ok === false) {
-      throw new EngineError(
-        res.error ?? { code: "internal", message: "empty error", recoverable: false },
-      );
-    }
-    return { data: res.data as T, events: res.events ?? [] };
+      return {
+        data: JSON.parse(result.dataJson) as T,
+        events: result.events.map(({ kind, detailJson }) => ({
+          kind, ...(detailJson === undefined ? {} : { detail: JSON.parse(detailJson) }),
+        })),
+      };
+    } catch (error) { throw parseNativeError(error); }
   }
 
   async snapshot(handle: number): Promise<Uint8Array> {
-    return base64ToBytes(await this.forge.snapshotB64(handle));
+    try { return new Uint8Array(await this.document(handle).snapshot()); }
+    catch (error) { throw parseNativeError(error); }
   }
-
   async restore(handle: number, bytes: Uint8Array): Promise<void> {
-    await this.forge.restoreB64(handle, bytesToBase64(bytes));
+    // Copy the view, not its backing buffer (which can include unrelated bytes).
+    try { await this.document(handle).restore(new Uint8Array(bytes).buffer); }
+    catch (error) { throw parseNativeError(error); }
   }
-
-  undo(handle: number): Promise<boolean> {
-    return this.forge.undo(handle);
+  async undo(handle: number): Promise<boolean> {
+    try { return await this.document(handle).undo(); }
+    catch (error) { throw parseNativeError(error); }
   }
-
-  redo(handle: number): Promise<boolean> {
-    return this.forge.redo(handle);
+  async redo(handle: number): Promise<boolean> {
+    try { return await this.document(handle).redo(); }
+    catch (error) { throw parseNativeError(error); }
   }
-
-  async close(handle: number): Promise<boolean> {
-    return this.forge.closeEngine(handle);
+  close(handle: number): Promise<boolean> {
+    const document = this.documents.get(handle);
+    if (!document) return Promise.resolve(false);
+    this.documents.delete(handle);
+    // Queue through a Promise so even synchronous native throws are tracked.
+    const closing = Promise.resolve().then(() => document.close()).then(() => true)
+      .catch((error: unknown) => { throw parseNativeError(error); });
+    this.closing.add(closing);
+    void closing.then(() => this.closing.delete(closing), () => this.closing.delete(closing));
+    return closing;
   }
-
-  async dispose(): Promise<void> {}
+  dispose(): Promise<void> {
+    if (this.disposing) return this.disposing;
+    this.disposed = true;
+    for (const handle of this.documents.keys()) void this.close(handle);
+    this.disposing = (async () => {
+      const results = await Promise.allSettled([...this.closing]);
+      await Promise.allSettled([...this.pending]);
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
+    })();
+    return this.disposing;
+  }
 }
 
 /** Native errors surface as rejections whose message embeds the EngineError JSON. */
 function parseNativeError(e: unknown): EngineError {
+  if (e instanceof EngineError) return e;
   const msg = e instanceof Error ? e.message : String(e);
   const start = msg.indexOf("{");
   if (start >= 0) {
@@ -114,9 +151,10 @@ function parseNativeError(e: unknown): EngineError {
  * this module stays importable where Nitro doesn't exist (Node tooling).
  */
 export function createNitroHost(): EngineHost {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { NitroModules } = require("react-native-nitro-modules") as {
-    NitroModules: { createHybridObject<T>(name: string): T };
+  // Generated v1 constructor uses getHybridClass, never the removed v0 API.
+  // Loading it only here preserves Node tooling and web host isolation.
+  const { ForgeFactory } = require("#nitro/ForgeFactory") as {
+    ForgeFactory: new () => ForgeFactoryNative;
   };
-  return new NitroHost(NitroModules.createHybridObject<ForgeNitro>("Forge"));
+  return new NitroHost(new ForgeFactory());
 }
