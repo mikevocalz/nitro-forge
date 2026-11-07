@@ -36,6 +36,10 @@ impl Rect {
     fn contains(self, c: u32, r: u32) -> bool {
         c >= self.c0 && c <= self.c1 && r >= self.r0 && r <= self.r1
     }
+    /// Inclusive `(c0, r0, c1, r1)` for canonicalization by sibling ops.
+    pub(super) fn coords(self) -> (u32, u32, u32, u32) {
+        (self.c0, self.r0, self.c1, self.r1)
+    }
     /// Canonical "A1" addresses of every cell in the rectangle, row-major.
     /// `read` caps the count at `MAX_GET_RANGE_CELLS`.
     pub(super) fn addrs(self) -> Vec<String> {

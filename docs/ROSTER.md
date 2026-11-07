@@ -670,3 +670,40 @@ Motion layers now carry an optional `effects` stack (at most 16 typed entries: `
 ## P14 Pitch morph transitions source checkpoint (2026-11-07)
 
 Pitch slide transitions now admit `kind:"morph"` and objects carry an optional `morph_name` tag set via `setMorphName`/`clearMorphName`. Names are non-blank, <=128 UTF-8 bytes and unique per slide (the same name on different slides is the intended cross-slide pairing); equal re-tags and absent clears are eventless no-ops, tags die with their objects, and hostile restores reject duplicate or out-of-bound names. DATA ONLY: the engine stores the morph kind and the tags for the host to match objects across adjacent slides; it performs no morph evaluation, interpolation or rendering. Snapshots carrying morph data use the new `{kind:"pitch",schema:5}` wrapper because `morph_name` is an additive field old readers would silently drop (the `"morph"` kind variant already fails closed); readers accept schema:2 through schema:5. Local evidence: `cargo test -p pitch-engine` 71 passed (3 new morph tests), `pnpm --filter @nitro-forge/pitch test` 36 passed across 8 files (2 new nf-cli morph cases), package typecheck clean, `cargo build -p nf-cli` clean. No native target run, morph pixel evaluation or full P14 completion is implied.
+
+## Tally data validation source checkpoint (2026-11-07)
+
+Tally persists workbook-level data-validation rules (`{id, sheet, range,
+criteria}`) through new `setValidation`/`clearValidation` ops and the
+read-only `validateCell` op. Criteria are bounded to what the engine honestly
+evaluates: `number` (optional inclusive min/max, `integer` flag), `list`
+(1–512 exact case-sensitive text-form entries, matching the NYC-Tron
+ValidationDropdown caps) and `text` (optional inclusive length bounds).
+Date bounds, custom formulas, whole-row/column ranges and the dropdown's
+allowOther/allowBlank commit policy are deferred and documented in
+`docs/ENGINE_OPS.md`. Rules cannot overlap per sheet; same sheet+range
+replaces criteria in place keeping the id. Sheet removal cascade-drops rules
+into the same undo entry and undo re-admits them only while they satisfy the
+restore invariants. Snapshots carrying rules emit `{kind:"tally",schema:2}`
+because `Workbook` does not deny unknown fields and schema:1 readers would
+silently drop them; `restore` accepts schema 1 and 2 and re-validates rule
+count, id uniqueness, bound sheets, canonical in-bounds ranges, criteria
+invariants and per-sheet overlap atomically. Mutations are protection-checked
+against the bound sheet like name ops. Local evidence: `cargo test -p
+tally-engine` 85 passed (9 new), `pnpm --filter @nitro-forge/tally` typecheck
+clean and 49 Vitest tests passed including four new live `nf-cli`
+data-validation tests, `cargo build -p nf-cli` clean. No UI wiring, XLSX or
+native/device acceptance is claimed.
+
+Review follow-up on the same slice: `validateCell`'s `text` criteria now
+rejects error values before consulting the text form (previously `=1/0`
+could satisfy a length rule via the literal `"#DIV/0!"` text), and the
+blank check narrowed to "no stored raw" so a formula computing to `Empty`
+no longer passes every rule (both match the already-documented semantics).
+`clearValidation {id, sheet}` now rejects the mixed selectors, and
+`validateCell {addr:null, cell}` treats explicit null as absent like
+`sheet:null`. `describe` vs op-result `sheet` key semantics (durable id vs
+current name + `sheet_id`) are documented in `docs/ENGINE_OPS.md`. Local
+evidence: `cargo test -p tally-engine` 87 passed (2 new), `pnpm --filter
+@nitro-forge/tally test` 49 passed, typecheck clean, `cargo build -p
+nf-cli` clean.
