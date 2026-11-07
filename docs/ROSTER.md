@@ -621,3 +621,5 @@ See [native persona implementation status](../native/persona/README.md).
 - The adapters remain separate from the Nitro v1 performance bridge and document engines.
 
 - Follow-up: XR-to-session clock mapping, validity-aware rig mapping and source-aware fusion implemented; sparse mesh to bound-splat CPU evaluation added. CMake/CTest 5/5 pass locally. Device and GPU tests remain NOT RUN.
+
+- Persona capture lifecycle: CMake/CTest 6/6 locally. Craft Anything 0.5.0 installed/checksummed; brief/report ran, browser capture blocked by socket permission. No visual-parity evidence. Native guide UI, camera quality and fitting still pending.

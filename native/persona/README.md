@@ -138,3 +138,12 @@ adapters compiled against real Khronos headers. See [integration and limitations
 invalid/stale channels fall back to audio or neutral. The provider outputs must
 be calibrated and clock-aligned by the host before selection. Device capture,
 PICO, GNM retargeting assets and renderer binding are not yet verified.
+
+## Capture experience
+
+`capture_session.hpp` implements guided capture lifecycle with host quality
+acceptance, accessible optional-step skipping, explicit generated-asset review,
+retry, cancellation and protection against stale asynchronous results. It keeps
+the previous saved avatar until a new reviewed candidate is accepted. Camera
+capture, UI, fitting and persistence stay with explicit host adapters.
+See [Craft Anything study and execution limitations](research/craft-anything/STUDY.md).
