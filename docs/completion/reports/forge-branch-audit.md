@@ -71,3 +71,53 @@ MERGE-CANDIDATE (selective port only, never whole-branch merge):
   `feat/ignition-v1-binary-tasks-cache-20261105` share head/content.
 - Stale-base branches: whole-branch merge would likely regress
   completion — selective file ports only.
+
+## File-level verification (2026-11-11, git log/diff/ls-tree confirmed)
+
+Stack topology verified via merge-base:
+
+```
+studio-suite-upstream-monitor (746727b)
+  └─ skia-v3-runtime-validation (b70fc6e)   [file set ⊂ shared-rust]
+       └─ shared-rust-windows-qnx (4503912) [140 commits]
+spatial-ink-logitech-muse (1500a81)
+  └─ pen-connect-bluetooth-rive (77f2806)   [muse ⊂ pen-connect]
+native-whiteboard-canvas (8c07e4a)
+  └─ fix/board-nitro-v1-link-moyo (f72a9de) [canvas ⊂ fix except 3 renames]
+wip-nitro-forge-moyo-board (798203a) ⊂ fix (unique commit = generated only)
+native-whiteboard-skia3-ink (4c5c42e) — ORPHAN: 5 commits in no other branch
+```
+
+Ref `feat/ignition-v1-binary-tasks-cache-20261105` does not exist in this
+repo — that audit follow-up is unresolvable as stated.
+
+### Refined recommendations
+
+- **PORT-FILES** `feat/shared-rust-windows-qnx-2026-11-05` (superset of
+  skia-v3 + studio-suite rows): `packages/ignition-windows/**`,
+  `ignition-v1-lab/**`, nf-sys/ignition-core diffs, per-engine rust
+  additions, `packages/ignition` Forge.nitro/host hardening,
+  `tooling/native/*` smoke tools, skia-v3 policy tooling, workflows,
+  `docs/native/*`. P18 work; selective file ports only.
+- **PORT-FILES** `fix/board-nitro-v1-link-moyo` — best board base
+  (contains canvas): `packages/board/**` (regen nitrogen/ post-port),
+  `apps/board-native-lab/**` (not generated android/), `tooling/
+  board-kotlin-core`, verify scripts, board workflows, board docs.
+- **DECISION NEEDED** `feat/native-whiteboard-skia3-ink-2026-11-02` —
+  orphan `packages/native-board` (Skia v3 Graphite) competes with
+  `packages/board`; compare `docs/native/NATIVE_BOARD_INK.md` vs
+  `BOARD_SKIA3.md` before porting; spatial-ink changes conflict with
+  pen-connect's version — prefer pen-connect.
+- **PORT-FILES** `feat/pen-connect-bluetooth-rive-2026-11-02` (contains
+  muse): `packages/{pen-connect,bluetooth-v1,spatial-ink}`,
+  `apps/pen-connect-lab`, assets, workflows, docs. Caution: touches
+  `tooling/nyc-tron.json` + pin verifier — review before porting.
+- **PORT-FILES** `feat/artcraft-source-monitor-2026-11-02` — cleanest
+  candidate, all-new paths: `tooling/upstream/*`, candidates json,
+  intake roster doc, observer workflow.
+- **CONTAINED (no port)**: skia-v3-runtime-validation, studio-suite-
+  upstream-monitor (⊂ shared-rust); native-whiteboard-canvas,
+  wip-nitro-forge-moyo-board (⊂ fix-board); spatial-ink-logitech-muse
+  (⊂ pen-connect).
+- Do NOT port `pnpm-lock.yaml` wholesale from any branch — stale-base
+  artifact; regenerate.
