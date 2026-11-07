@@ -4,11 +4,13 @@ mod curve;
 mod effects;
 mod particles;
 mod path;
+mod transform3d;
 use assets::RasterAsset;
 use curve::{evaluate, Key};
 use effects::{apply_effects, LayerEffect};
 use particles::{ParticleEmitter, ParticleSprite};
 use path::MotionPath;
+use transform3d::Transform3D;
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -83,6 +85,12 @@ enum Property {
     /// snake_case convention of the transform properties.
     #[serde(rename = "path_progress")]
     PathProgress,
+    /// 3D orientation/depth channels (slice G1): X/Y euler degrees and view
+    /// depth. Curves on these require `Layer.transform3d`; `rotation` stays
+    /// the Z-axis roll. Wire names are `rx`/`ry`/`z`.
+    Rx,
+    Ry,
+    Z,
 }
 impl Property {
     fn bounds(self) -> (f64, f64) {
@@ -103,6 +111,11 @@ impl Property {
             Self::Oy => l.transform.oy,
             Self::Opacity => l.opacity,
             Self::PathProgress => l.path_progress,
+            // Absent transform3d reads as identity; validate rejects 3D
+            // curves without one, so this only serves defensive paths.
+            Self::Rx => l.transform3d.map_or(0., |t| t.rx),
+            Self::Ry => l.transform3d.map_or(0., |t| t.ry),
+            Self::Z => l.transform3d.map_or(0., |t| t.z),
         }
     }
     fn write(self, l: &mut Layer, v: f64) {
@@ -116,7 +129,15 @@ impl Property {
             Self::Oy => l.transform.oy = v,
             Self::Opacity => l.opacity = v,
             Self::PathProgress => l.path_progress = v,
+            Self::Rx => l.transform3d.get_or_insert_with(Transform3D::default).rx = v,
+            Self::Ry => l.transform3d.get_or_insert_with(Transform3D::default).ry = v,
+            Self::Z => l.transform3d.get_or_insert_with(Transform3D::default).z = v,
         }
+    }
+    /// 3D channels require `Layer.transform3d` (validated); used to strip
+    /// them atomically when the 3D transform is cleared.
+    fn is_3d(self) -> bool {
+        matches!(self, Self::Rx | Self::Ry | Self::Z)
     }
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -259,6 +280,13 @@ struct Layer {
     /// nonzero values and `path_progress` curves when `path` is absent.
     #[serde(default, skip_serializing_if = "is_zero_f64")]
     path_progress: f64,
+    /// Optional 3D orientation/depth (slice G1): `rx`/`ry` euler degrees and
+    /// `z` view depth; `rotation` remains the Z roll. Presence marks the
+    /// layer 3D-enabled and is required by `rx`/`ry`/`z` curves. Storage and
+    /// evaluation only — `renderFrame` ignores it until G2 projection
+    /// rendering. Additive serde default keeps schema at 2.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    transform3d: Option<Transform3D>,
     transform: Transform,
     opacity: f64,
     curves: Vec<Curve>,
@@ -447,6 +475,26 @@ fn decompose(m: &Affine) -> Option<Transform> {
         ox: 0.,
         oy: 0.,
     })
+}
+/// Serialize evaluated layers for the `evaluate` op, adding the read-only
+/// `projected_transform` orthographic affine to layers carrying a
+/// `transform3d`. The field is compute-on-read only — it is never stored,
+/// never part of `describe`/snapshots, and never affects `renderFrame`.
+fn evaluated_json(layers: &[Layer]) -> Result<Vec<Value>, EngineError> {
+    layers
+        .iter()
+        .map(|l| {
+            let mut v = serde_json::to_value(l)?;
+            if let Some(t3) = &l.transform3d {
+                let p = transform3d::projected_affine(&l.transform, t3);
+                v["projected_transform"] = json!({
+                    "a": p[0], "b": p[1], "c": p[2],
+                    "d": p[3], "e": p[4], "f": p[5],
+                });
+            }
+            Ok(v)
+        })
+        .collect()
 }
 /// Effective affine of a layer: parent chain transforms compose outermost-first.
 /// Only the transform inherits; opacity/visibility/curves stay per-layer.
@@ -694,6 +742,18 @@ fn validate(s: &State) -> Result<(), EngineError> {
                     .any(|c| c.property == Property::PathProgress)
             {
                 return Err(bad("path progress requires a motion path"));
+            }
+            // 3D curves require the transform3d they animate; the transform
+            // itself re-checks its own bounds for hostile restores.
+            if l.transform3d.is_none()
+                && l.curves.iter().any(|c| c.property.is_3d())
+            {
+                return Err(bad("3D curves require a transform3d"));
+            }
+            if let Some(t3) = &l.transform3d {
+                if !t3.valid() {
+                    return Err(bad("invalid 3D transform"));
+                }
             }
             match (l.kind, &l.shape, l.asset_id, l.comp_id) {
                 (Some(LayerKind::Shape), Some(sh), None, None) => {
@@ -1560,12 +1620,14 @@ impl Engine for MotionEngine {
                         "height": comp.height,
                         "duration_s": comp.duration_s,
                         "frame_rate": comp.frame_rate,
-                        "layers": self.evaluated_layers(&comp.layers, comp.duration_s, local)?,
+                        "layers": evaluated_json(&self.evaluated_layers(
+                            &comp.layers, comp.duration_s, local,
+                        )?)?,
                     }),
                 );
             }
             return Ok(CommandResult::read_only(
-                json!({"layers":root,"compositions":compositions}),
+                json!({"layers":evaluated_json(&root)?,"compositions":compositions}),
             ));
         }
         if cmd.op == "readRasterAsset" {
@@ -1762,6 +1824,7 @@ impl Engine for MotionEngine {
                     effects: vec![],
                     path: None,
                     path_progress: 0.,
+                    transform3d: None,
                     emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
@@ -1988,6 +2051,36 @@ impl Engine for MotionEngine {
                 nl.emitter = emitter;
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
+            "setLayer3D" => {
+                let layer_id = id(p, "layer")?;
+                // `transform3d:null` (or absent) clears the 3D transform and
+                // any rx/ry/z curves atomically — the setMotionPath precedent;
+                // otherwise a full Transform3D replacement whose absent fields
+                // default to 0 (identity orientation/depth).
+                let t3 = match p.get("transform3d") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => {
+                        let t: Transform3D = serde_json::from_value(v.clone())
+                            .map_err(|_| bad("invalid transform3d"))?;
+                        if !t.valid() {
+                            return Err(bad("invalid transform3d"));
+                        }
+                        Some(t)
+                    }
+                };
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                let mut nl = (*arc).clone();
+                nl.transform3d = t3;
+                if nl.transform3d.is_none() {
+                    nl.curves.retain(|c| !c.property.is_3d());
+                }
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
             "addShapeLayer" => {
                 let shape: Shape = serde_json::from_value(
                     p.get("shape")
@@ -2018,6 +2111,7 @@ impl Engine for MotionEngine {
                     effects: vec![],
                     path: None,
                     path_progress: 0.,
+                    transform3d: None,
                     emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
@@ -2054,6 +2148,7 @@ impl Engine for MotionEngine {
                     effects: vec![],
                     path: None,
                     path_progress: 0.,
+                    transform3d: None,
                     emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
@@ -2086,6 +2181,7 @@ impl Engine for MotionEngine {
                     effects: vec![],
                     path: None,
                     path_progress: 0.,
+                    transform3d: None,
                     emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
@@ -2643,3 +2739,5 @@ mod comp_tests;
 mod path_tests;
 #[cfg(test)]
 mod particles_tests;
+#[cfg(test)]
+mod transform3d_tests;

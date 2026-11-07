@@ -1,5 +1,5 @@
 import {DocumentHandle,bytesToBase64,type EngineHost} from '@nitro-forge/ignition';
-export type MotionProperty='tx'|'ty'|'sx'|'sy'|'rotation'|'ox'|'oy'|'opacity'|'path_progress';
+export type MotionProperty='tx'|'ty'|'sx'|'sy'|'rotation'|'ox'|'oy'|'opacity'|'path_progress'|'rx'|'ry'|'z';
 /** A motion-path node mirroring Prism's node wire shape: `x`/`y` anchor plus optional cubic handles as offsets from the node (`in` leads into the node, `out` leaves toward the next). A segment with neither handle is a straight line. */
 export interface MotionPathNode{x:number;y:number;in?:[number,number];out?:[number,number]}
 /** A single-subpath motion path in the layer's transform space (1..=256 nodes, coordinates/handles bounded). `closed` connects last node to first; `auto_orient` adds the path tangent angle in degrees to evaluated rotation. Progress is arc-length fraction via the `path_progress` property (0..=1). */
@@ -8,6 +8,10 @@ export interface CurvePoint{time:number;value:number}
 export interface MotionKey extends CurvePoint{id:number;interpolation:'hold'|'linear'|'bezier';in_handle:CurvePoint|null;out_handle:CurvePoint|null}
 export type MotionKeyInput=Omit<MotionKey,'id'>&{id?:number};
 export interface Transform{tx:number;ty:number;sx:number;sy:number;rotation:number;ox:number;oy:number}
+/** Optional per-layer 3D orientation/depth (engine slice G1). `rx`/`ry` are X/Y euler rotations in degrees about the layer's anchor; `z` is depth along the view axis (positive toward the viewer). `rotation` remains the Z-axis roll and `tx`/`ty`/`sx`/`sy`/`ox`/`oy` are unchanged. Presence marks the layer 3D-enabled and is required by `rx`/`ry`/`z` curves; all fields are bounded |.|<=1e7, not angle-wrapped. Storage/eval only: `renderFrame` ignores it until G2 projection rendering. */
+export interface Transform3D{rx:number;ry:number;z:number}
+/** Read-only `evaluate` output on layers carrying `transform3d`: the orthographic projection (view axis = layer-local Z, depth dropped) of the evaluated local transform as a 2x3 affine, `x'=a*x+c*y+e`, `y'=b*x+d*y+f`. May carry shear the 2D `Transform` fields cannot express; `z` does not affect it and parent composition stays local-only. Never stored, never in `describe`/snapshots, never affects `renderFrame`. */
+export interface ProjectedTransform2D{a:number;b:number;c:number;d:number;e:number;f:number}
 export interface Shape{kind:'rect'|'ellipse';x:number;y:number;w:number;h:number;fill:[number,number,number,number]}
 export type LayerKind='shape'|'raster'|'comp'|'particles';
 /** The 13 W3C Compositing Level 1 blend modes Prism implements; `null`/`"normal"` is the default source-over. */
@@ -32,7 +36,7 @@ export type MotionSprite=
  |{kind:'asset';asset_id:number};
 /** Deterministic particle emitter on a `particles` layer (engine slice F). Particle `n` is born at `n/rate` seconds and lives `lifetime_s`; position is closed-form `spawn + v*tau + 0.5*gravity*tau^2` with per-particle attributes hashed from `seed` — no sim state, so any `time_s` reproduces identically. Bounds: rate 0..=8192 with rate*lifetime_s<=511 (<=512 alive sprites/emitter/frame), lifetime<=3600, speed<=1e5, spread<=360, speed/size jitter 0..=1, grow -0.9..=8, fade 0..=0.5, sprite dims<=512, spawn rect coords |.|<=1e7. `spawn` omitted = containing composition canvas mapped into layer space. At most 64 emitters per document and 512 summed alive sprites per composition. */
 export interface MotionEmitter{seed?:number;rate?:number;lifetime_s?:number;angle_deg?:number;spread_deg?:number;speed?:number;speed_jitter?:number;gravity?:[number,number];spawn?:{x:number;y:number;w:number;h:number};sprite:MotionSprite;size_jitter?:number;grow?:number;fade?:number}
-interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[];path?:MotionPath;path_progress?:number;emitter?:MotionEmitter}
+interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[];path?:MotionPath;path_progress?:number;emitter?:MotionEmitter;transform3d?:Transform3D;projected_transform?:ProjectedTransform2D}
 /** Exactly one real content source; no placeholder shape for raster or comp layers. `comp` is the composition id a comp layer instantiates (0 is never a valid target). Particles layers carry only the optional `emitter` spec. */
 export type MotionLayer=MotionLayerCommon&({shape:Shape;asset_id?:never;comp_id?:never;emitter?:never}|{asset_id:number;shape?:never;comp_id?:never;emitter?:never}|{comp_id:number;shape?:never;asset_id?:never;emitter?:never}|{emitter?:MotionEmitter;shape?:never;asset_id?:never;comp_id?:never});
 export const MOTION_RASTER_FORMAT='rgba8-straight-srgb' as const;
@@ -85,11 +89,13 @@ export class MotionDocument{
  reparentLayer(layer:number,comp:number,index:number){return this.document.apply<{ok:boolean}>('reparentLayer',{layer,comp,index});}
  /** Attach/replace/clear the layer's motion path; null clears the path, its progress base and any `path_progress` curve atomically. Animate position along it with `setPropertyKeys(layer,'path_progress',...)` keys in 0..=1; the sampled offset adds to tx/ty and `auto_orient` adds the tangent angle to rotation. */
  setMotionPath(layer:number,path:MotionPath|null){return this.document.apply<{ok:boolean}>('setMotionPath',{layer,path});}
+ /** Attach/replace/clear the layer's 3D transform; null clears `transform3d` and any `rx`/`ry`/`z` curves atomically. Absent fields default to 0 (identity). `rx`/`ry`/`z` are also `MotionProperty` curve names once transform3d is set. Storage/eval only — renderFrame ignores 3D until G2; `evaluate` adds `projected_transform` (orthographic 2x3 affine) to 3D layers. */
+ setLayer3D(layer:number,transform3d:Transform3D|null){return this.document.apply<{ok:boolean}>('setLayer3D',{layer,transform3d});}
  updateLayer(id:number,patch:Partial<Pick<MotionLayer,'name'|'visible'|'locked'|'opacity'|'shape'|'asset_id'>>&{transform?:Partial<Transform>}){return this.document.apply<{ok:boolean}>('updateLayer',{...patch,id});}
  removeLayer(id:number){return this.document.apply<{ok:boolean}>('removeLayer',{id});}
  setLayerOrder(order:readonly number[]){return this.document.apply<{ok:boolean}>('setLayerOrder',{order});}
  setPropertyKeys(layer:number,property:MotionProperty,keys:readonly MotionKeyInput[]){return this.document.apply<{key_ids:number[]}>('setPropertyKeys',{layer,property,keys});}
- /** Root layers plus each composition evaluated at its duration-scaled local time; curves are cleared in output. */
+ /** Root layers plus each composition evaluated at its duration-scaled local time; curves are cleared in output and 3D layers carry `projected_transform`. */
  evaluate(time_s:number){return this.document.apply<MotionEvaluation>('evaluate',{time_s});}
  /** One real bounded RGBA frame; no encoding, file delivery or render queue. */
  renderFrame(time_s:number){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',{time_s});}
