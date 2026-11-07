@@ -171,3 +171,10 @@ present, not that acceptance is proven. No slice is marked complete.
   release) — start immediately, parallel with S5 web/lifecycle design
   and S6 fixture prep; S2→S3→S4 is the acceptance chain; S7 unblocks
   P08.
+
+## Decisions recorded (user, 2026-11-11)
+
+- **P02-S5 collaboration scope: DEFERRED.** Stay on revision-CAS for
+  now; CRDT/Yjs/Automerge admission revisited before P19 acceptance.
+- **P02-S7 telemetry sink: DEFERRED.** Consent Off/Local/diagnostics is
+  the shipped state; no remote sink this program unless revisited.
