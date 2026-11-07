@@ -19,6 +19,11 @@ mod sections;
 use sections::{default_sections, is_default_sections, validate_sections, Section};
 mod tables;
 use tables::{validate_tables, Table};
+mod format;
+use format::{
+    style_has_paragraph_props, style_paragraph_patch, validate_format, ParagraphFormat,
+    ParagraphFormatPatch,
+};
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -132,6 +137,12 @@ pub struct Block {
     /// Cell blocks are reachable only through table ops, never through `Pos`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub table: Option<Table>,
+    /// Paragraph-level formatting (alignment, indents, tab stops — P12
+    /// slice 9). `Block` has no `deny_unknown_fields`, so old readers
+    /// silently ignore this field: any snapshot carrying it emits the
+    /// `schema:4` wrapper, which schema≤3 readers reject.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub format: Option<ParagraphFormat>,
 }
 
 impl Block {
@@ -142,6 +153,7 @@ impl Block {
             style_id: None,
             inlines: Vec::new(),
             table: None,
+            format: None,
         }
     }
 }
@@ -666,6 +678,16 @@ fn validate_styles(styles: &[StyleDef], blocks: &[Block]) -> Result<(), EngineEr
         }
         // Rejects non-object properties and out-of-range style fields.
         StylePatch::parse(&def.properties)?;
+        // `properties.paragraph` is the paragraph-format patch grammar
+        // (P12 slice 9); it is only meaningful on paragraph-kind styles.
+        // Parsing validates the grammar and bounds; the result is not
+        // stored — style defs keep `properties` verbatim.
+        if def.kind == NamedStyleKind::Character && style_has_paragraph_props(&def.properties) {
+            return Err(EngineError::validation(
+                "character styles cannot carry paragraph properties",
+            ));
+        }
+        style_paragraph_patch(&def.properties)?;
     }
     for block in all_blocks(blocks) {
         if let Some(id) = &block.style_id {
@@ -1226,6 +1248,7 @@ impl QuillEngine {
                     style_id: old.style_id.clone(),
                     inlines: normalize_inlines(std::mem::take(&mut head)),
                     table: None,
+                    format: old.format.clone(),
                 });
             }
             if !seg.is_empty() {
@@ -1242,6 +1265,7 @@ impl QuillEngine {
             style_id: old.style_id.clone(),
             inlines: normalize_inlines(head),
             table: None,
+            format: old.format.clone(),
         });
 
         let inserted = out.clone();
@@ -1295,6 +1319,7 @@ impl QuillEngine {
                 style_id: b.style_id.clone(),
                 inlines: normalize_inlines(inlines),
                 table: b.table.clone(),
+                format: b.format.clone(),
             }];
         } else {
             let first = &self.blocks[from.block];
@@ -1319,6 +1344,7 @@ impl QuillEngine {
                 style_id: first.style_id.clone(),
                 inlines: normalize_inlines(inlines),
                 table: first.table.clone(),
+                format: first.format.clone(),
             }];
         }
 
@@ -1418,6 +1444,7 @@ impl QuillEngine {
                 style_id: b.style_id.clone(),
                 inlines: normalize_inlines(inlines),
                 table: b.table.clone(),
+                format: b.format.clone(),
             });
         }
         (removed, new_span)
@@ -1515,6 +1542,7 @@ impl QuillEngine {
                 style_id: old.style_id.clone(),
                 inlines: normalize_inlines(head),
                 table: old.table.clone(),
+                format: old.format.clone(),
             },
             Block {
                 kind: old.kind,
@@ -1522,6 +1550,7 @@ impl QuillEngine {
                 style_id: old.style_id.clone(),
                 inlines: normalize_inlines(tail),
                 table: old.table.clone(),
+                format: old.format.clone(),
             },
         ];
         self.validate_list_splice(at.block, 1, &new_span)?;
@@ -1577,6 +1606,7 @@ impl QuillEngine {
             style_id: self.blocks[index - 1].style_id.clone(),
             inlines: normalize_inlines(inlines),
             table: self.blocks[index - 1].table.clone(),
+            format: self.blocks[index - 1].format.clone(),
         }];
         self.blocks
             .splice(index - 1..=index, merged.iter().cloned());
@@ -2103,6 +2133,12 @@ impl QuillEngine {
         validate_style_token(&id, "id")?;
         validate_style_token(&name, "name")?;
         StylePatch::parse(&properties)?;
+        if kind == NamedStyleKind::Character && style_has_paragraph_props(&properties) {
+            return Err(EngineError::validation(
+                "character styles cannot carry paragraph properties",
+            ));
+        }
+        style_paragraph_patch(&properties)?;
         if self.styles.len() >= STYLES_MAX {
             return Err(EngineError::validation("style limit reached"));
         }
@@ -2144,6 +2180,14 @@ impl QuillEngine {
         }
         if let Some(v) = p.get("properties") {
             StylePatch::parse(v)?;
+            if self.styles[index].kind == NamedStyleKind::Character
+                && style_has_paragraph_props(v)
+            {
+                return Err(EngineError::validation(
+                    "character styles cannot carry paragraph properties",
+                ));
+            }
+            style_paragraph_patch(v)?;
             updated.properties = v.clone();
         }
         if p.get("name").is_none() && p.get("properties").is_none() {
@@ -2281,7 +2325,10 @@ impl QuillEngine {
                 "cannot apply a block style to a table block",
             ));
         }
-        let patch = match &style_id {
+        // `properties.paragraph` (P12 slice 9) patches the block's paragraph
+        // format with the same present-wins/absent-untouched snapshot
+        // semantics as the inline stamp below.
+        let (patch, paragraph_patch) = match &style_id {
             Some(id) => {
                 let def = self
                     .find_style(id)
@@ -2291,9 +2338,12 @@ impl QuillEngine {
                         "style '{id}' is a character style; use applyNamedStyle"
                     )));
                 }
-                Some(StylePatch::parse(&def.properties)?)
+                (
+                    Some(StylePatch::parse(&def.properties)?),
+                    style_paragraph_patch(&def.properties)?,
+                )
             }
-            None => None,
+            None => (None, None),
         };
         let mut new = old.clone();
         new.style_id = style_id;
@@ -2305,6 +2355,47 @@ impl QuillEngine {
                 new.inlines = normalize_inlines(new.inlines);
             }
         }
+        if let Some(paragraph_patch) = &paragraph_patch {
+            paragraph_patch.apply(&mut new.format);
+        }
+        if new == old {
+            return Ok(Self::read_only(json!({ "ok": true })));
+        }
+        self.blocks[index] = new.clone();
+        self.record_undo(index, vec![old], vec![new], Collections::default());
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// `setParagraphFormat {block, alignment?, indent_left?, indent_right?,
+    /// indent_first?, tabs?}` — partial patch on one block's paragraph
+    /// format (P12 slice 9). Alignment is `"left"|"center"|"right"|
+    /// "justify"`; indents and tab positions are twips (indents
+    /// 0..=31680, `indent_first` -31680..=31680 with negative meaning
+    /// hanging); `tabs` is a list of `{position,alignment,leader?}` stops
+    /// (≤64, strictly increasing positions ≤31680 twips, leader one of
+    /// `dot|hyphen|underscore|heavy`). Present keys set, `null` clears,
+    /// absent keys are untouched; `tabs:[]` or `tabs:null` clears the stop
+    /// list. Rejects table blocks (their cells hold strict plain paras no
+    /// op can address) and out-of-range blocks; equal values are eventless.
+    /// Storage-only: no layout consumes the values yet.
+    fn op_set_paragraph_format(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let index = as_usize(field(p, "block")?, "block")?;
+        let patch = ParagraphFormatPatch::parse(p)?;
+        let Some(old) = self.blocks.get(index).cloned() else {
+            return Err(EngineError::out_of_bounds(format!(
+                "block {index} out of range"
+            )));
+        };
+        if old.kind == BlockKind::Table {
+            return Err(EngineError::validation(
+                "cannot format a table block; cell paragraph formatting is not supported",
+            ));
+        }
+        if patch.is_empty() {
+            return Ok(Self::read_only(json!({ "ok": true })));
+        }
+        let mut new = old.clone();
+        patch.apply(&mut new.format);
         if new == old {
             return Ok(Self::read_only(json!({ "ok": true })));
         }
@@ -2514,6 +2605,7 @@ impl Engine for QuillEngine {
             "listComments" => self.op_list_comments(),
             "applyNamedStyle" => self.op_apply_named_style(&cmd.payload),
             "setBlockStyle" => self.op_set_block_style(&cmd.payload),
+            "setParagraphFormat" => self.op_set_paragraph_format(&cmd.payload),
             "insertTable" => self.op_insert_table(&cmd.payload),
             "deleteTable" => self.op_delete_table(&cmd.payload),
             "setCellText" => self.op_set_cell_text(&cmd.payload),
@@ -2587,15 +2679,45 @@ impl Engine for QuillEngine {
         // schema:3 wrapper so pre-feature readers fail closed on
         // `schema != 2`/`!= 3` rather than silently dropping them (the
         // schema:3 document is `deny_unknown_fields`, so a `comments` key
-        // also fails schema:3-era readers closed — no schema:4 bump).
-        // `styles`/`sections`/`comments` are omitted from the document when
-        // empty/default, keeping earlier schema:3 payloads byte-identical.
+        // also fails schema:3-era readers closed — no schema:4 bump for
+        // those). `styles`/`sections`/`comments` are omitted from the
+        // document when empty/default, keeping earlier schema:3 payloads
+        // byte-identical.
+        //
+        // Paragraph formatting (P12 slice 9) is different: `Block` itself
+        // has no `deny_unknown_fields`, so schema≤3 readers would silently
+        // drop a `format` field — the same reason `list` needed schema:2.
+        // Any block carrying `format`, or any style def whose
+        // `properties.paragraph` is non-null, therefore emits schema:4
+        // (same document shape as schema:3; schema≤3 readers reject on the
+        // version). Restore rejects v4 features inside schema<4 payloads.
         let needs_v3 = !self.bookmarks.is_empty()
             || !self.comments.is_empty()
             || !self.styles.is_empty()
             || !is_default_sections(&self.sections)
             || self.blocks.iter().any(|b| b.style_id.is_some());
-        let payload = if needs_v3 {
+        // schema:4 is emitted only for paragraph-format features; a doc
+        // with bookmarks/comments/styles/sections but no format stays on
+        // schema:3 byte-identically (schema:4's document carries the same
+        // collections, so mixed documents lose nothing).
+        let needs_v4 = self.blocks.iter().any(|b| b.format.is_some())
+            || self
+                .styles
+                .iter()
+                .any(|d| style_has_paragraph_props(&d.properties));
+        let payload = if needs_v4 {
+            serde_json::to_vec(&Schema3SnapshotRef {
+                kind: "quill",
+                schema: 4,
+                document: Schema3DocSnapshotRef {
+                    blocks: &self.blocks,
+                    bookmarks: &self.bookmarks,
+                    styles: &self.styles,
+                    sections: &self.sections,
+                    comments: &self.comments,
+                },
+            })?
+        } else if needs_v3 {
             serde_json::to_vec(&Schema3SnapshotRef {
                 kind: "quill",
                 schema: 3,
@@ -2627,6 +2749,8 @@ impl Engine for QuillEngine {
                 .iter()
                 .any(|key| object.contains_key(*key))
         });
+        // 0 = unwrapped legacy payload; otherwise the wrapper's schema.
+        let mut schema_level = 0u32;
         let (state_blocks, bookmarks, comments, styles, sections): (
             Vec<Block>,
             Vec<Bookmark>,
@@ -2640,6 +2764,7 @@ impl Engine for QuillEngine {
                     "unsupported Quill snapshot kind/schema",
                 ));
             }
+            schema_level = wrapper.schema;
             match wrapper.schema {
                 2 => {
                     // A schema:2 document has neither bookmark, style, nor
@@ -2664,7 +2789,7 @@ impl Engine for QuillEngine {
                         default_sections(),
                     )
                 }
-                3 => {
+                3 | 4 => {
                     let doc: Schema3DocState = serde_json::from_value(wrapper.document)?;
                     // Absent `sections` means the single default section;
                     // an explicit list (even empty) is validated strictly.
@@ -2693,9 +2818,27 @@ impl Engine for QuillEngine {
             let doc: DocState = serde_json::from_value(value)?;
             (doc.blocks, Vec::new(), Vec::new(), Vec::new(), default_sections())
         };
+        // Paragraph formatting (P12 slice 9) requires schema:4: schema≤3
+        // and legacy readers silently drop `Block.format`, and schema≤3
+        // readers would drop `properties.paragraph` semantics. A payload
+        // carrying either under an older version is mislabeled or hostile —
+        // reject rather than silently accept it.
+        if schema_level < 4
+            && (state_blocks.iter().any(|b| b.format.is_some())
+                || styles
+                    .iter()
+                    .any(|d| style_has_paragraph_props(&d.properties)))
+        {
+            return Err(EngineError::unsupported(
+                "unsupported Quill snapshot kind/schema",
+            ));
+        }
         lists::validate(&state_blocks)?;
         validate_tables(&state_blocks)?;
         for block in all_blocks(&state_blocks) {
+            if let Some(format) = &block.format {
+                validate_format(format)?;
+            }
             for inline in &block.inlines {
                 if let Some(highlight) = &inline.style.highlight {
                     validate_highlight(highlight)?;

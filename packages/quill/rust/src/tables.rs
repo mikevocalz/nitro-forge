@@ -95,7 +95,7 @@ pub struct Table {
 /// (so only offset 0 is a valid `Pos` on it), no `style_id` (`setBlockStyle`
 /// rejects tables, so a reference is unreachable by design), and no `list`
 /// membership. Cell paragraphs are strict `para` blocks with no `style_id`,
-/// `list` or stray `table` payload; their inlines get the same restore
+/// `list`, `format`, or stray `table` payload; their inlines get the same restore
 /// validation as top-level inlines (`setCellText` only ever writes
 /// default-style text and no op can reach inside a cell):
 /// `setCellText` builds `Block::empty(Para)` paragraphs and cell blocks are
@@ -126,6 +126,11 @@ pub fn validate_tables(blocks: &[Block]) -> Result<(), EngineError> {
                 if b.list.is_some() {
                     return Err(EngineError::validation(
                         "table blocks cannot be list members",
+                    ));
+                }
+                if b.format.is_some() {
+                    return Err(EngineError::validation(
+                        "table blocks cannot carry paragraph formatting",
                     ));
                 }
                 validate_table(table, &mut cell_blocks_total)?;
@@ -194,6 +199,14 @@ fn validate_table(table: &Table, total: &mut usize) -> Result<(), EngineError> {
             if cb.style_id.is_some() {
                 return Err(EngineError::validation(
                     "named styles are not supported inside table cells",
+                ));
+            }
+            // Paragraph formatting (alignment/indents/tab stops) is
+            // rejected for the same reason: no op can address a cell
+            // paragraph's format, so a stored value would be unreachable.
+            if cb.format.is_some() {
+                return Err(EngineError::validation(
+                    "paragraph formatting is not supported inside table cells",
                 ));
             }
             // A stray payload on a cell block would hide its inner blocks
@@ -399,6 +412,7 @@ impl QuillEngine {
                 cells,
                 merges: Vec::new(),
             }),
+            format: None,
             inlines: Vec::new(),
         };
         let mut next = self.blocks.clone();
@@ -1167,6 +1181,7 @@ mod tests {
                 }],
                 merges: Vec::new(),
             }),
+            format: None,
             inlines: Vec::new(),
         }];
         assert!(err(&mut one, "deleteTable", json!({"block": 0})).code == ErrorCode::Validation);
@@ -1544,6 +1559,7 @@ mod tests {
             list: None,
             style_id: style_id.map(str::to_string),
             table: Some(table()),
+            format: None,
             inlines,
         };
         // Baseline: a clean table block validates.
@@ -1701,6 +1717,7 @@ mod tests {
                 cells,
                 merges: Vec::new(),
             }),
+            format: None,
             inlines: Vec::new(),
         }];
         apply(&mut e, "insertTableRow", json!({"block":0,"row":60}));

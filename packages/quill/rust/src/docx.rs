@@ -447,6 +447,7 @@ fn parse_document_with_numbering(
                         list: None,
                         style_id: None,
                         table: None,
+                        format: None,
                         inlines: Vec::new(),
                     });
                 }
@@ -581,6 +582,7 @@ fn parse_document_with_numbering(
                             list,
                             style_id: None,
                             table: None,
+                            format: None,
                             inlines: normalize_inlines(std::mem::take(&mut inlines)),
                         });
                     }
@@ -597,6 +599,7 @@ fn parse_document_with_numbering(
             list: None,
             style_id: None,
             table: None,
+            format: None,
             inlines: Vec::new(),
         });
     }
