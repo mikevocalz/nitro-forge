@@ -20,7 +20,9 @@ fn constraint(e: &mut DraftEngine, d: Value) -> u64 {
         .unwrap()
 }
 fn state(e: &DraftEngine) -> model::State {
-    serde_json::from_slice(decode_envelope(&e.snapshot().unwrap()).unwrap().1).unwrap()
+    let value: Value =
+        serde_json::from_slice(decode_envelope(&e.snapshot().unwrap()).unwrap().1).unwrap();
+    serde_json::from_value(value.get("document").cloned().unwrap_or(value)).unwrap()
 }
 fn viewport() -> Value {
     json!({"width":3,"height":1,"origin_x":0,"origin_y":0,"scale":1})
@@ -462,7 +464,7 @@ fn command_line_creates_actual_geometry_and_one_history_entry() {
     let changed = e.snapshot().unwrap();
     assert!(e.undo().unwrap());
     for text in [
-        "CIRCLE 0 0 1",
+        "SPHERE 0 0 1",
         "POINT 1 2; DELETE POINT 1",
         "POINT (1+2) 3",
         "POINT NaN 1",
@@ -520,4 +522,403 @@ fn command_snap_keeps_batch_revision_guard_and_failed_line_staging_is_atomic() {
     assert!(!state(&e).snaps.ortho);
     assert!(!state(&e).snaps.polar);
     assert_eq!(state(&e).snaps.polar_increment, 45.);
+}
+
+#[test]
+fn circular_analytic_intersections_tangents_and_directed_arcs() {
+    use crate::circular::Geometry;
+    let c = Geometry {
+        id: 1,
+        center: (0., 0.),
+        radius: 1.,
+        start: 0.,
+        sweep: 360.,
+        closed: true,
+    };
+    let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-10, "{a} != {b}");
+    assert_eq!(c.segment_hits((-2., 0.), (2., 0.)).len(), 2);
+    assert_eq!(c.segment_hits((-2., 1.), (2., 1.)).len(), 1);
+    assert!(c
+        .segment_hits((-2., 1.00000001), (2., 1.00000001))
+        .is_empty());
+    assert!(c.segment_hits((1., 0.), (1., 0.)).is_empty());
+    for (x, r, n) in [
+        (2., 1., 1),
+        (1., 1., 2),
+        (0.5, 0.5, 1),
+        (0., 1., 0),
+        (0., 0.5, 0),
+        (3., 1., 0),
+    ] {
+        let other = Geometry {
+            center: (x, 0.),
+            radius: r,
+            ..c
+        };
+        let hits = c.circle_hits(&other);
+        assert_eq!(hits.len(), n);
+        for (px, py) in hits {
+            near(px.hypot(py), 1.);
+            near((px - x).hypot(py), r);
+        }
+    }
+    assert_eq!(
+        c.circle_hits(&Geometry {
+            center: (1e-12, 0.),
+            ..c
+        })
+        .len(),
+        2
+    );
+    assert!(c.tangents((0.999999999, 0.)).is_empty());
+    assert_eq!(c.tangents((1., 0.)).len(), 1);
+    let ts = c.tangents((2., 0.));
+    assert_eq!(ts.len(), 2);
+    for (x, y) in ts {
+        near(x.hypot(y), 1.);
+        near(x * (2. - x) - y * y, 0.);
+    }
+    let a = Geometry {
+        start: 10.,
+        sweep: -100.,
+        closed: false,
+        ..c
+    };
+    assert!(a.contains(a.point(-45.)));
+    assert!(!a.contains(a.point(90.)));
+    assert_eq!(a.ends().len(), 2);
+    let closest = a.closest((-2., 0.));
+    near(closest.0, 0.);
+    near(closest.1, -1.);
+    assert_eq!(a.nodes().len(), 3);
+    let full = Geometry { sweep: -360., ..a };
+    assert_eq!(full.ends().len(), 1);
+    let nodes = full.nodes();
+    near(nodes[0].x, nodes[4].x);
+    near(nodes[0].y, nodes[4].y);
+    let tiny = Geometry { radius: 1e-6, ..c };
+    assert!(tiny
+        .segment_hits((-1e-5, 1.0001e-6), (1e-5, 1.0001e-6))
+        .is_empty());
+}
+
+#[test]
+fn circular_entities_locks_order_history_and_corrupt_restore_are_atomic() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 0.);
+    let s1 = segment(&mut e, a, b);
+    let circle = apply(&mut e, "addCircle", json!({"center":a,"radius":1})).data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let arc = apply(
+        &mut e,
+        "addArc",
+        json!({"center":a,"radius":2,"start_deg":30,"sweep_deg":-180}),
+    )
+    .data["arc_id"]
+        .as_u64()
+        .unwrap();
+    let s2 = segment(&mut e, a, b);
+    apply(&mut e, "setSegmentOrder", json!({"order":[s2,s1]}));
+    assert_eq!(state(&e).order, vec![s2, circle, arc, s1]);
+    apply(
+        &mut e,
+        "setEntityOrder",
+        json!({"order":[arc,s1,circle,s2]}),
+    );
+    apply(&mut e, "updateCircle", json!({"id":circle,"locked":true}));
+    let original = e.snapshot().unwrap();
+    for (op, p) in [
+        ("updatePoint", json!({"id":a,"x":1})),
+        ("updateCircle", json!({"id":circle,"radius":2})),
+        ("removeCircle", json!({"id":circle})),
+        ("removePoint", json!({"id":a})),
+        ("updateArc", json!({"id":arc,"sweep_deg":0})),
+        ("updateArc", json!({"id":arc,"radius":1000001})),
+    ] {
+        assert!(e.apply(Command::new(op, p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), original);
+    }
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["scope"], "point_coordinates");
+    assert_eq!(state(&e).points[&a].x, 0.);
+    apply(&mut e, "updateCircle", json!({"id":circle,"locked":false}));
+    let unlocked = e.snapshot().unwrap();
+    apply(&mut e, "updateCircle", json!({"id":circle,"radius":2}));
+    let changed = e.snapshot().unwrap();
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), unlocked);
+    apply(&mut e, "updateCircle", json!({"id":circle,"radius":1}));
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), changed);
+    let mut corrupt = serde_json::to_value(state(&e)).unwrap();
+    corrupt["circles"][circle.to_string()]["center"] = json!(999);
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&corrupt).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), changed);
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&changed).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), changed);
+    apply(&mut e, "removeCircle", json!({"id":circle}));
+    apply(&mut e, "removeArc", json!({"id":arc}));
+    assert!(state(&e).points.contains_key(&a));
+}
+
+#[test]
+fn circular_commands_pixels_snap_defaults_and_projection_limits() {
+    let mut e = DraftEngine::new();
+    let empty = e.snapshot().unwrap();
+    let described = apply(&mut e, "describe", json!({}));
+    assert_eq!(described.data["circles"], json!({}));
+    assert_eq!(described.data["snaps"]["tangent"], false);
+    apply(
+        &mut e,
+        "executeCommand",
+        json!({"command":"CIRCLE 2.5 2.5 1.5"}),
+    );
+    let saved = e.snapshot().unwrap();
+    assert_eq!(state(&e).points.len(), 1);
+    assert_eq!(state(&e).circles.len(), 1);
+    let v = json!({"width":5,"height":5,"origin_x":0,"origin_y":0,"scale":1});
+    let pixels = e
+        .apply(Command::new("renderFrame", v.clone()).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert_eq!(pixels[3], 0);
+    assert!(pixels[(1 * 5 + 2) * 4 + 3] > pixels[(2 * 5 + 2) * 4 + 3]);
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), empty);
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), saved);
+    for command in [
+        "CIRCLE 0 0 -1",
+        "ARC 0 0 1 0 0",
+        "ARC 0 0 1 0 361",
+        "CIRCLE 1000000 0 1",
+    ] {
+        assert!(e
+            .apply(Command::new("executeCommand", json!({"command":command})))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), saved);
+    }
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"grid":false,"endpoint":false,"midpoint":false,"projection":false,"intersection":false,"center":true,"nearest_circle":false}),
+    );
+    assert_eq!(
+        apply(
+            &mut e,
+            "querySnap",
+            json!({"x":2.5,"y":2.5,"tolerance":1e-9})
+        )
+        .data["candidate"]["kind"],
+        "center"
+    );
+    assert!(e
+        .apply(Command::new(
+            "renderFrame",
+            json!({"width":1,"height":1,"origin_x":-1000000,"origin_y":0,"scale":10000})
+        ))
+        .is_err());
+    let mut arc_engine = DraftEngine::new();
+    apply(
+        &mut arc_engine,
+        "executeCommand",
+        json!({"command":"ARC 2.5 2.5 1 0 90"}),
+    );
+    let p = arc_engine
+        .apply(Command::new("renderFrame", v.clone()).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert!(p[(3 * 5 + 3) * 4 + 3] > 0);
+    assert_eq!(p[(1 * 5 + 1) * 4 + 3], 0);
+    apply(
+        &mut arc_engine,
+        "updateArc",
+        json!({"id":2,"sweep_deg":-90}),
+    );
+    let p = arc_engine
+        .apply(Command::new("renderFrame", v.clone()).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert!(p[(1 * 5 + 3) * 4 + 3] > 0);
+    assert_eq!(p[(3 * 5 + 1) * 4 + 3], 0);
+    apply(
+        &mut arc_engine,
+        "updateArc",
+        json!({"id":2,"sweep_deg":360}),
+    );
+    arc_engine
+        .apply(Command::new("renderFrame", v).with_binary(None))
+        .unwrap();
+}
+
+#[test]
+fn circular_query_returns_actual_center_nearest_tangent_and_intersection_sources() {
+    let mut e = DraftEngine::new();
+    let c = point(&mut e, 0., 0.);
+    let circle = apply(&mut e, "addCircle", json!({"center":c,"radius":1})).data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let a = point(&mut e, -2., 0.);
+    let b = point(&mut e, 2., 0.);
+    let seg = segment(&mut e, a, b);
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"grid":false,"endpoint":false,"midpoint":false,"projection":false,"intersection":true}),
+    );
+    let hit = apply(&mut e, "querySnap", json!({"x":1,"y":0,"tolerance":1e-9}));
+    assert_eq!(hit.data["candidate"]["kind"], "intersection");
+    let mut sources = vec![circle, seg];
+    sources.sort();
+    assert_eq!(hit.data["candidate"]["sources"], json!(sources));
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"intersection":false,"nearest_circle":true}),
+    );
+    let hit = apply(&mut e, "querySnap", json!({"x":2,"y":0,"tolerance":1}));
+    assert_eq!(hit.data["candidate"]["x"], 1.);
+    assert_eq!(hit.data["candidate"]["kind"], "nearest_circle");
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"nearest_circle":false,"tangent":true}),
+    );
+    assert!(apply(
+        &mut e,
+        "querySnap",
+        json!({"x":0.5,"y":0.8660254037844386,"tolerance":0.01})
+    )
+    .data["candidate"]
+        .is_null());
+    let hit = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":0.5,"y":0.8660254037844386,"tolerance":0.01,"anchor":{"x":2,"y":0}}),
+    );
+    assert_eq!(hit.data["candidate"]["kind"], "tangent");
+    assert!((hit.data["candidate"]["x"].as_f64().unwrap() - 0.5).abs() < 1e-12);
+    apply(&mut e, "updateCircle", json!({"id":circle,"visible":false}));
+    assert!(apply(
+        &mut e,
+        "querySnap",
+        json!({"x":0.5,"y":0.8660254037844386,"tolerance":1,"anchor":{"x":2,"y":0}})
+    )
+    .data["candidate"]
+        .is_null());
+}
+
+#[test]
+fn legacy_snapshot_defaults_and_locked_curve_solver_scope_are_explicit() {
+    let mut e = DraftEngine::new();
+    let empty = e.snapshot().unwrap();
+    let payload: Value = serde_json::from_slice(decode_envelope(&empty).unwrap().1).unwrap();
+    assert!(payload.get("circles").is_none());
+    assert!(payload.get("arcs").is_none());
+    for key in ["center", "nearest_circle", "tangent"] {
+        assert!(payload["snaps"].get(key).is_none());
+    }
+    e.restore(&empty).unwrap();
+    assert_eq!(e.snapshot().unwrap(), empty);
+    let center = point(&mut e, 0., 0.);
+    apply(
+        &mut e,
+        "addArc",
+        json!({"center":center,"radius":1,"start_deg":0,"sweep_deg":-360,"locked":true}),
+    );
+    constraint(
+        &mut e,
+        json!({"kind":"fixed","point":center,"x":0.0001,"y":0}),
+    );
+    let before = e.snapshot().unwrap();
+    let result = apply(&mut e, "solve", json!({"tolerance":0.0000001}));
+    assert_eq!(result.data["scope"], "point_coordinates");
+    assert_eq!(result.data["status"], "inconsistent");
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert_eq!(state(&e).points[&center].x, 0.);
+    assert!(e
+        .apply(Command::new(
+            "addConstraint",
+            json!({"definition":{"kind":"radius","circle":2,"value":3}})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+
+#[test]
+fn extended_snapshots_require_matching_readers_without_changing_legacy_or_envelope() {
+    // Even an old reader permissive about unknown keys must find its original required fields.
+    #[derive(serde::Deserialize)]
+    #[allow(dead_code)]
+    struct LegacyRoot {
+        kind: String,
+        schema: u32,
+        units: String,
+        next_id: u64,
+        points: Value,
+        segments: Value,
+        order: Value,
+        constraints: Value,
+        snaps: Value,
+    }
+    let mut e = DraftEngine::new();
+    let legacy = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&legacy).unwrap();
+    assert!(serde_json::from_slice::<LegacyRoot>(payload).is_ok());
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&legacy).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), legacy);
+    for flag in ["center", "nearest_circle", "tangent"] {
+        apply(&mut e, "setSnapSettings", json!({flag:true}));
+        let extended = e.snapshot().unwrap();
+        let (_, payload) = decode_envelope(&extended).unwrap();
+        assert!(serde_json::from_slice::<LegacyRoot>(payload).is_err());
+        let value: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(value["kind"], "draft");
+        assert_eq!(value["schema"], 2);
+        assert_eq!(value["document"]["schema"], 1);
+        reopened.restore(&extended).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), extended);
+        apply(&mut e, "setSnapSettings", json!({flag:false}));
+        assert_eq!(e.snapshot().unwrap(), legacy);
+    }
+    apply(&mut e, "executeCommand", json!({"command":"CIRCLE 0 0 1"}));
+    let extended = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&extended).unwrap();
+    assert!(serde_json::from_slice::<LegacyRoot>(payload).is_err());
+    let wrapped: Value = serde_json::from_slice(payload).unwrap();
+    reopened.restore(&extended).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), extended);
+    let before = reopened.snapshot().unwrap();
+    let mut wrong_kind = wrapped.clone();
+    wrong_kind["kind"] = json!("motion");
+    let mut wrong_schema = wrapped.clone();
+    wrong_schema["schema"] = json!(3);
+    let mut extra = wrapped.clone();
+    extra["units"] = json!("mm");
+    for invalid in [wrong_kind, wrong_schema, extra, wrapped["document"].clone()] {
+        assert!(reopened
+            .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+            .is_err());
+        assert_eq!(reopened.snapshot().unwrap(), before);
+    }
+    let mut arcs = DraftEngine::new();
+    apply(
+        &mut arcs,
+        "executeCommand",
+        json!({"command":"ARC 0 0 1 0 90"}),
+    );
+    let arc_snapshot = arcs.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&arc_snapshot).unwrap();
+    assert!(serde_json::from_slice::<LegacyRoot>(payload).is_err());
+    reopened.restore(&arc_snapshot).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), arc_snapshot);
 }

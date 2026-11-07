@@ -12,6 +12,7 @@ struct Row {
 }
 #[derive(Debug, Serialize)]
 pub struct Report {
+    pub scope: &'static str,
     pub status: &'static str,
     pub rank: usize,
     pub dof: usize,
@@ -196,6 +197,7 @@ pub fn solve(s: &State, tolerance: f64) -> Result<Solved, EngineError> {
         .collect();
     Ok(Solved {
         report: Report {
+            scope: "point_coordinates",
             status,
             rank,
             dof: n - rank,

@@ -1,4 +1,5 @@
 //! Bounded persistent 2D drafting, world snaps, linear coordinate constraints and actual Prism paths.
+mod circular;
 mod commands;
 mod constraints;
 mod engine;

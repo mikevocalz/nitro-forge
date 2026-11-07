@@ -1,5 +1,5 @@
 //! World-space finite-geometry candidates; no screen transform is guessed.
-use crate::model::*;
+use crate::{circular, model::*};
 use ignition_core::EngineError;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -50,7 +50,7 @@ pub fn query(
                     kind: "ortho",
                     x: px,
                     y: py,
-                    priority: 4,
+                    priority: 7,
                     sources: vec![],
                     angle_degrees: Some(angle),
                 });
@@ -84,7 +84,7 @@ pub fn query(
                     kind: "polar",
                     x: anchor.x + along * ux,
                     y: anchor.y + along * uy,
-                    priority: 5,
+                    priority: 8,
                     sources: vec![],
                     angle_degrees: Some(angle),
                 });
@@ -99,7 +99,7 @@ pub fn query(
                 + ((x - settings.origin_x) / settings.spacing).round() * settings.spacing,
             y: settings.origin_y
                 + ((y - settings.origin_y) / settings.spacing).round() * settings.spacing,
-            priority: 6,
+            priority: 9,
             sources: vec![],
             angle_degrees: None,
         });
@@ -124,7 +124,7 @@ pub fn query(
                 kind: "midpoint",
                 x: (a.x + b.x) / 2.,
                 y: (a.y + b.y) / 2.,
-                priority: 2,
+                priority: 3,
                 sources: vec![seg.id],
                 angle_degrees: None,
             });
@@ -138,7 +138,7 @@ pub fn query(
                     kind: "projection",
                     x: a.x + t * dx,
                     y: a.y + t * dy,
-                    priority: 3,
+                    priority: 4,
                     sources: vec![seg.id],
                     angle_degrees: None,
                 });
@@ -164,8 +164,76 @@ pub fn query(
                         kind: "intersection",
                         x: p.x + alpha * u,
                         y: p.y + alpha * v,
-                        priority: 1,
+                        priority: 2,
                         sources: vec![a.id, b.id],
+                        angle_degrees: None,
+                    });
+                }
+            }
+        }
+    }
+    let curved = circular::geometries(s);
+    for curve in &curved {
+        let mut push = |kind, point: (f64, f64), priority| {
+            candidates.push(Candidate {
+                kind,
+                x: point.0,
+                y: point.1,
+                priority,
+                sources: vec![curve.id],
+                angle_degrees: None,
+            })
+        };
+        if settings.center {
+            push("center", curve.center, 1);
+        }
+        if settings.endpoint {
+            for point in curve.ends() {
+                push("endpoint", point, 0);
+            }
+        }
+        if settings.midpoint && !curve.closed {
+            push("midpoint", curve.point(curve.start + curve.sweep / 2.), 3);
+        }
+        if settings.nearest_circle {
+            push("nearest_circle", curve.closest((x, y)), 5);
+        }
+        if settings.tangent {
+            if let Some(anchor) = anchor {
+                for point in curve.tangents((anchor.x, anchor.y)) {
+                    push("tangent", point, 6);
+                }
+            }
+        }
+    }
+    if settings.intersection {
+        for curve in &curved {
+            for segment in s.segments.values().filter(|seg| seg.visible) {
+                let a = s.point(segment.a)?;
+                let b = s.point(segment.b)?;
+                for point in curve.segment_hits((a.x, a.y), (b.x, b.y)) {
+                    let mut sources = vec![curve.id, segment.id];
+                    sources.sort_unstable();
+                    candidates.push(Candidate {
+                        kind: "intersection",
+                        x: point.0,
+                        y: point.1,
+                        priority: 2,
+                        sources,
+                        angle_degrees: None,
+                    });
+                }
+            }
+        }
+        for (i, first) in curved.iter().enumerate() {
+            for second in &curved[i + 1..] {
+                for point in first.circle_hits(second) {
+                    candidates.push(Candidate {
+                        kind: "intersection",
+                        x: point.0,
+                        y: point.1,
+                        priority: 2,
+                        sources: vec![first.id, second.id],
                         angle_degrees: None,
                     });
                 }
@@ -184,6 +252,8 @@ pub fn query(
                     .unwrap_or(-1.)
                     .total_cmp(&b.angle_degrees.unwrap_or(-1.))
             })
+            .then(a.x.total_cmp(&b.x))
+            .then(a.y.total_cmp(&b.y))
     });
     Ok(candidates.first().map(|c| Snap {
         kind: c.kind,

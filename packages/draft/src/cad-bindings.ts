@@ -15,8 +15,10 @@ export interface DraftCommandHost{
 }
 export const DRAFT_COMMAND_COMPLETIONS=[
  {id:'point',label:'POINT x y',replacement:'POINT '},{id:'line',label:'LINE x1 y1 x2 y2',replacement:'LINE '},
+ {id:'circle',label:'CIRCLE centerX centerY radius',replacement:'CIRCLE '},{id:'arc',label:'ARC centerX centerY radius startDegrees sweepDegrees',replacement:'ARC '},
  {id:'segment',label:'SEGMENT pointIdA pointIdB',replacement:'SEGMENT '},{id:'move',label:'MOVE pointId x y',replacement:'MOVE '},
  {id:'delete-point',label:'DELETE POINT id',replacement:'DELETE POINT '},{id:'delete-segment',label:'DELETE SEGMENT id',replacement:'DELETE SEGMENT '},
+ {id:'delete-circle',label:'DELETE CIRCLE id',replacement:'DELETE CIRCLE '},{id:'delete-arc',label:'DELETE ARC id',replacement:'DELETE ARC '},
  {id:'delete-constraint',label:'DELETE CONSTRAINT id',replacement:'DELETE CONSTRAINT '},{id:'solve',label:'SOLVE [tolerance]',replacement:'SOLVE'},
  {id:'snap',label:'SNAP x y tolerance [anchorX anchorY]',replacement:'SNAP '},
 ] as const;
@@ -38,23 +40,23 @@ export function bindDraftingCommandLine(document:Pick<DraftDocument,'executeComm
   },
  };
 }
-export const DRAFT_SNAP_MODES=[{id:'endpoint',label:'Endpoint',available:true},{id:'midpoint',label:'Midpoint',available:true},{id:'projection',label:'Finite-segment projection',available:true},{id:'intersection',label:'Unique finite intersection',available:true}] as const;
+export const DRAFT_SNAP_MODES=[{id:'endpoint',label:'Endpoint',available:true},{id:'midpoint',label:'Midpoint',available:true},{id:'projection',label:'Finite-segment projection',available:true},{id:'intersection',label:'Unique finite intersection',available:true},{id:'center',label:'Circle/arc center',available:true},{id:'nearest_circle',label:'Closest circle/arc point',available:true},{id:'tangent',label:'Tangent from world anchor',available:false}] as const;
 interface CanonicalSettings{ortho:boolean;polar:boolean;polarIncrement:number;grid:boolean;gridSpacing:number;enabled:Readonly<Record<string,boolean>>}
 export interface DraftSnapHost<Feedback>{
- state:DraftState;sourceRevision:number;query:DraftSnapQuery;isCurrent:()=>boolean;
+ state:DraftState;sourceRevision:number;query:DraftSnapQuery;anchorAvailable?:boolean;isCurrent:()=>boolean;
  perform:(action:()=>Promise<unknown>)=>Promise<void>;
  /** The caller supplies its real viewport feedback; this binding creates no second canvas. */
  renderFeedback:()=>Feedback;
 }
-export interface DraftSnapBinding<Feedback>{settings:CanonicalSettings;modes:typeof DRAFT_SNAP_MODES;candidate:{kind:string;label:string;world:readonly[number,number,number];distance:number}|null;renderFeedback:()=>Feedback;onCommit:(settings:CanonicalSettings,signal?:AbortSignal)=>Promise<void>}
+export interface DraftSnapBinding<Feedback>{settings:CanonicalSettings;modes:readonly {id:typeof DRAFT_SNAP_MODES[number]['id'];label:string;available:boolean}[];candidate:{kind:string;label:string;world:readonly[number,number,number];distance:number}|null;renderFeedback:()=>Feedback;onCommit:(settings:CanonicalSettings,signal?:AbortSignal)=>Promise<void>}
 export function bindDraftingSnaps<Feedback>(document:Pick<DraftDocument,'setSnapSettings'>,host:DraftSnapHost<Feedback>):DraftSnapBinding<Feedback>{
  if(!Number.isSafeInteger(host.sourceRevision)||host.sourceRevision<0)throw new RangeError('Invalid authoritative source revision');
  const s=host.state.snaps,candidate=host.isCurrent()&&host.query.source_revision===host.sourceRevision?host.query.candidate:null;
- return{settings:{ortho:s.ortho,polar:s.polar,polarIncrement:s.polar_increment,grid:s.grid,gridSpacing:s.spacing,enabled:{endpoint:s.endpoint,midpoint:s.midpoint,projection:s.projection,intersection:s.intersection}},modes:DRAFT_SNAP_MODES,
+ return{settings:{ortho:s.ortho,polar:s.polar,polarIncrement:s.polar_increment,grid:s.grid,gridSpacing:s.spacing,enabled:{endpoint:s.endpoint,midpoint:s.midpoint,projection:s.projection,intersection:s.intersection,center:s.center??false,nearest_circle:s.nearest_circle??false,tangent:s.tangent??false}},modes:DRAFT_SNAP_MODES.map(mode=>mode.id==='tangent'?{...mode,available:host.anchorAvailable===true}:mode),
   candidate:candidate?{kind:candidate.kind,label:candidate.angle_degrees===undefined?candidate.kind:`${candidate.kind} ${candidate.angle_degrees}°`,world:[candidate.x,candidate.y,0],distance:candidate.distance}:null,
   renderFeedback:host.renderFeedback,
   onCommit:async(settings,signal)=>{if(!host.isCurrent()||signal?.aborted)throw new Error('Drafting settings are unavailable for the current document');if(Object.keys(settings.enabled).some(id=>!DRAFT_SNAP_MODES.some(mode=>mode.id===id)))throw new RangeError('Unsupported snap mode');
-   await host.perform(()=>{if(!host.isCurrent()||signal?.aborted)throw new Error('Drafting settings cancelled before dispatch');return document.setSnapSettings({ortho:settings.ortho,polar:settings.polar,polar_increment:settings.polarIncrement,grid:settings.grid,spacing:settings.gridSpacing,endpoint:settings.enabled.endpoint??false,midpoint:settings.enabled.midpoint??false,projection:settings.enabled.projection??false,intersection:settings.enabled.intersection??false});});
+   await host.perform(()=>{if(!host.isCurrent()||signal?.aborted)throw new Error('Drafting settings cancelled before dispatch');return document.setSnapSettings({ortho:settings.ortho,polar:settings.polar,polar_increment:settings.polarIncrement,grid:settings.grid,spacing:settings.gridSpacing,endpoint:settings.enabled.endpoint??false,midpoint:settings.enabled.midpoint??false,projection:settings.enabled.projection??false,intersection:settings.enabled.intersection??false,center:settings.enabled.center??false,nearest_circle:settings.enabled.nearest_circle??false,tangent:settings.enabled.tangent??false});});
   },
  };
 }

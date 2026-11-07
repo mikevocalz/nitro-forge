@@ -34,6 +34,35 @@ pub struct Segment {
     pub locked: bool,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Circle {
+    pub id: u64,
+    pub center: u64,
+    pub radius: f64,
+    pub name: String,
+    pub color: [u8; 4],
+    pub width: f64,
+    pub visible: bool,
+    pub locked: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ArcEntity {
+    pub id: u64,
+    pub center: u64,
+    pub radius: f64,
+    pub start_deg: f64,
+    pub sweep_deg: f64,
+    pub name: String,
+    pub color: [u8; 4],
+    pub width: f64,
+    pub visible: bool,
+    pub locked: bool,
+}
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Definition {
     Fixed { point: u64, x: f64, y: f64 },
@@ -67,6 +96,12 @@ pub struct SnapSettings {
     pub polar: bool,
     #[serde(default = "default_polar_increment")]
     pub polar_increment: f64,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub center: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub nearest_circle: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub tangent: bool,
 }
 fn default_polar_increment() -> f64 {
     45.
@@ -85,6 +120,9 @@ impl Default for SnapSettings {
             ortho: false,
             polar: false,
             polar_increment: default_polar_increment(),
+            center: false,
+            nearest_circle: false,
+            tangent: false,
         }
     }
 }
@@ -97,6 +135,10 @@ pub struct State {
     pub next_id: u64,
     pub points: BTreeMap<u64, Arc<Point>>,
     pub segments: BTreeMap<u64, Arc<Segment>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub circles: BTreeMap<u64, Arc<Circle>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub arcs: BTreeMap<u64, Arc<ArcEntity>>,
     pub order: Vec<u64>,
     pub constraints: BTreeMap<u64, Arc<Constraint>>,
     pub snaps: SnapSettings,
@@ -110,6 +152,8 @@ impl Default for State {
             next_id: 1,
             points: BTreeMap::new(),
             segments: BTreeMap::new(),
+            circles: BTreeMap::new(),
+            arcs: BTreeMap::new(),
             order: vec![],
             constraints: BTreeMap::new(),
             snaps: SnapSettings::default(),
@@ -138,7 +182,9 @@ impl State {
             .ok_or_else(|| bad("unknown segment"))
     }
     pub fn point_fixed(&self, id: u64) -> bool {
-        self.points.get(&id).is_some_and(|p| p.locked)
+        self.circles.values().any(|c| c.locked && c.center == id)
+            || self.arcs.values().any(|a| a.locked && a.center == id)
+            || self.points.get(&id).is_some_and(|p| p.locked)
             || self
                 .segments
                 .values()
@@ -156,6 +202,36 @@ impl State {
             }
         })
     }
+    fn validate_circle(
+        &self,
+        key: u64,
+        id: u64,
+        center: u64,
+        radius: f64,
+        width: f64,
+        name: &str,
+        ids: &mut BTreeSet<u64>,
+    ) -> Result<(), EngineError> {
+        let p = self.point(center)?;
+        if key != id
+            || id == 0
+            || id >= self.next_id
+            || !ids.insert(id)
+            || name.len() > 512
+            || !radius.is_finite()
+            || !(1e-6..=LIMIT).contains(&radius)
+            || ![p.x - radius, p.x + radius, p.y - radius, p.y + radius]
+                .iter()
+                .all(|v| coord(*v))
+            || !width.is_finite()
+            || !(1e-6..=1000.).contains(&width)
+        {
+            return Err(bad(
+                "invalid circular entity identity, center, radius, extent or style",
+            ));
+        }
+        Ok(())
+    }
     pub fn validate(&self) -> Result<(), EngineError> {
         if self.kind != "draft"
             || self.schema != 1
@@ -163,7 +239,9 @@ impl State {
             || self.next_id == 0
             || self.next_id > SAFE_ID
             || self.points.len() > 64
-            || self.segments.len() > 128
+            || self.segments.len() + self.circles.len() + self.arcs.len() > 128
+            || self.circles.len() > 64
+            || self.arcs.len() > 64
             || self.constraints.len() > 128
         {
             return Err(bad("invalid draft header or count budget"));
@@ -196,11 +274,40 @@ impl State {
             self.point(s.a)?;
             self.point(s.b)?;
         }
-        if self.order.len() != self.segments.len()
-            || self.order.iter().copied().collect::<BTreeSet<_>>()
-                != self.segments.keys().copied().collect()
+        for (&id, c) in &self.circles {
+            self.validate_circle(id, c.id, c.center, c.radius, c.width, &c.name, &mut ids)?;
+        }
+        for (&id, a) in &self.arcs {
+            self.validate_circle(id, a.id, a.center, a.radius, a.width, &a.name, &mut ids)?;
+            if !a.start_deg.is_finite()
+                || a.start_deg.abs() > 360000.
+                || !a.sweep_deg.is_finite()
+                || a.sweep_deg.abs() < 1e-6
+                || a.sweep_deg.abs() > 360.
+            {
+                return Err(bad("invalid directed arc angles"));
+            }
+            let p = self.point(a.center)?;
+            let start = a.start_deg.rem_euclid(360.).to_radians();
+            let end = (a.start_deg + a.sweep_deg).rem_euclid(360.).to_radians();
+            if a.sweep_deg.abs() < 360.
+                && (p.x + a.radius * start.cos(), p.y + a.radius * start.sin())
+                    == (p.x + a.radius * end.cos(), p.y + a.radius * end.sin())
+            {
+                return Err(bad("arc endpoints indistinguishable at world precision"));
+            }
+        }
+        let entities: BTreeSet<u64> = self
+            .segments
+            .keys()
+            .chain(self.circles.keys())
+            .chain(self.arcs.keys())
+            .copied()
+            .collect();
+        if self.order.len() != entities.len()
+            || self.order.iter().copied().collect::<BTreeSet<_>>() != entities
         {
-            return Err(bad("segment order must be an exact permutation"));
+            return Err(bad("entity order must be an exact permutation"));
         }
         for (&id, c) in &self.constraints {
             if id != c.id || id == 0 || id >= self.next_id || !ids.insert(id) {

@@ -3,6 +3,11 @@ use crate::model::{bad, coord, SAFE_ID};
 use ignition_core::EngineError;
 use serde_json::{json, Value};
 pub enum Plan {
+    Circular {
+        center: [f64; 2],
+        radius: f64,
+        arc: Option<(f64, f64)>,
+    },
     Command {
         op: &'static str,
         payload: Value,
@@ -58,11 +63,13 @@ pub fn parse(text: &str) -> Result<Plan, EngineError> {
     match(verb.as_str(),words.len()){
   ("POINT",3)=>command("addPoint",json!({"x":world(words[1])?,"y":world(words[2])?}),"Point created"),
   ("LINE",5)=>Ok(Plan::Line{a:[world(words[1])?,world(words[2])?],b:[world(words[3])?,world(words[4])?]}),
+  ("CIRCLE",4)=>Ok(Plan::Circular{center:[world(words[1])?,world(words[2])?],radius:world(words[3])?,arc:None}),
+  ("ARC",6)=>Ok(Plan::Circular{center:[world(words[1])?,world(words[2])?],radius:world(words[3])?,arc:Some((number(words[4])?,number(words[5])?))}),
   ("SEGMENT",3)=>command("addSegment",json!({"a":id(words[1])?,"b":id(words[2])?}),"Segment created"),
   ("MOVE",4)=>command("updatePoint",json!({"id":id(words[1])?,"x":world(words[2])?,"y":world(words[3])?}),"Point position updated"),
-  ("DELETE",3)=>{let op=match words[1].to_ascii_uppercase().as_str(){"POINT"=>"removePoint","SEGMENT"=>"removeSegment","CONSTRAINT"=>"removeConstraint",_=>return Err(bad("DELETE supports POINT, SEGMENT or CONSTRAINT"))};command(op,json!({"id":id(words[2])?}),"Entity removed")},
+  ("DELETE",3)=>{let op=match words[1].to_ascii_uppercase().as_str(){"POINT"=>"removePoint","SEGMENT"=>"removeSegment","CONSTRAINT"=>"removeConstraint","CIRCLE"=>"removeCircle","ARC"=>"removeArc",_=>return Err(bad("DELETE supports POINT, SEGMENT, CIRCLE, ARC or CONSTRAINT"))};command(op,json!({"id":id(words[2])?}),"Entity removed")},
   ("SOLVE",1|2)=>command("solve",if words.len()==2{json!({"tolerance":number(words[1])?})}else{json!({})},"Linear solve evaluated"),
   ("SNAP",4|6)=>{let mut payload=json!({"x":world(words[1])?,"y":world(words[2])?,"tolerance":number(words[3])?});if words.len()==6{payload["anchor"]=json!({"x":world(words[4])?,"y":world(words[5])?})}command("querySnap",payload,"Snap query evaluated")},
-  _=>Err(bad("unsupported command or argument count; use POINT, LINE, SEGMENT, MOVE, DELETE, SOLVE or SNAP"))
+  _=>Err(bad("unsupported command or argument count; use POINT, LINE, CIRCLE, ARC, SEGMENT, MOVE, DELETE, SOLVE or SNAP"))
  }
 }

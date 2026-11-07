@@ -3,10 +3,25 @@ use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::{collections::BTreeSet, sync::Arc};
 const HISTORY: usize = 16;
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExtendedSnapshot<T> {
+    kind: String,
+    schema: u32,
+    document: T,
+}
+fn requires_matching_reader(state: &State) -> bool {
+    !state.circles.is_empty()
+        || !state.arcs.is_empty()
+        || state.snaps.center
+        || state.snaps.nearest_circle
+        || state.snaps.tangent
+}
+
 fn get<T: DeserializeOwned>(p: &Value, key: &str) -> Result<T, EngineError> {
     Ok(serde_json::from_value(
         p.get(key)
@@ -103,6 +118,36 @@ impl DraftEngine {
                 result.data = json!({"message":message,"result":result.data});
                 Ok(result)
             }
+            commands::Plan::Circular {
+                center,
+                radius,
+                arc,
+            } => {
+                let mut staged = Self {
+                    state: self.state.clone(),
+                    journal: Journal::new(1),
+                    revision: self.revision,
+                    in_batch: true,
+                };
+                let center = staged
+                    .apply(Command::new(
+                        "addPoint",
+                        json!({"x":center[0],"y":center[1]}),
+                    ))?
+                    .data["point_id"]
+                    .as_u64()
+                    .ok_or_else(|| bad("center creation returned no ID"))?;
+                let mut payload = json!({"center":center,"radius":radius});
+                let op = if let Some((start, sweep)) = arc {
+                    payload["start_deg"] = json!(start);
+                    payload["sweep_deg"] = json!(sweep);
+                    "addArc"
+                } else {
+                    "addCircle"
+                };
+                let result = staged.apply(Command::new(op, payload))?;
+                self.publish((*staged.state).clone(),json!({"message":if arc.is_some(){"Arc created"}else{"Circle created"},"result":{"center_id":center,"entity":result.data}}))
+            }
             commands::Plan::Line { a, b } => {
                 let mut staged = Self {
                     state: self.state.clone(),
@@ -172,13 +217,25 @@ impl Engine for DraftEngine {
             "describe" => {
                 fields(p, &[])?;
                 let mut value = serde_json::to_value(&*self.state)?;
+                for key in ["circles", "arcs"] {
+                    if value.get(key).is_none() {
+                        value[key] = json!({})
+                    }
+                }
+                for (key, enabled) in [
+                    ("center", self.state.snaps.center),
+                    ("nearest_circle", self.state.snaps.nearest_circle),
+                    ("tangent", self.state.snaps.tangent),
+                ] {
+                    value["snaps"][key] = json!(enabled)
+                }
                 value["source_revision"] = json!(self.revision);
                 return Ok(CommandResult::read_only(value));
             }
             "evaluate" => {
                 fields(p, &[])?;
                 return Ok(CommandResult::read_only(
-                    json!({"points":self.state.points,"segments":self.state.segments,"order":self.state.order,"source_revision":self.revision}),
+                    json!({"points":self.state.points,"segments":self.state.segments,"circles":self.state.circles,"arcs":self.state.arcs,"order":self.state.order,"source_revision":self.revision}),
                 ));
             }
             "querySnap" => {
@@ -238,8 +295,12 @@ impl Engine for DraftEngine {
                 fields(p, &["id"])?;
                 let id = get(p, "id")?;
                 next.point(id)?;
-                if next.point_fixed(id) || next.segments.values().any(|s| s.a == id || s.b == id) {
-                    return Err(bad("point is locked or referenced by a segment"));
+                if next.point_fixed(id)
+                    || next.segments.values().any(|s| s.a == id || s.b == id)
+                    || next.circles.values().any(|c| c.center == id)
+                    || next.arcs.values().any(|a| a.center == id)
+                {
+                    return Err(bad("point is locked or referenced by geometry"));
                 }
                 for c in next.constraints.values() {
                     if next.definition_points(&c.definition)?.contains(&id) {
@@ -308,7 +369,174 @@ impl Engine for DraftEngine {
             }
             "setSegmentOrder" => {
                 fields(p, &["order"])?;
+                let order: Vec<u64> = get(p, "order")?;
+                if order.len() != next.segments.len()
+                    || order.iter().copied().collect::<BTreeSet<_>>()
+                        != next.segments.keys().copied().collect()
+                {
+                    return Err(bad("segment order must contain every segment once"));
+                }
+                let mut replacement = order.into_iter();
+                for id in &mut next.order {
+                    if next.segments.contains_key(id) {
+                        *id = replacement
+                            .next()
+                            .ok_or_else(|| bad("segment order lost a slot"))?;
+                    }
+                }
+            }
+            "setEntityOrder" => {
+                fields(p, &["order"])?;
                 next.order = get(p, "order")?;
+            }
+            "addCircle" => {
+                fields(
+                    p,
+                    &[
+                        "center", "radius", "name", "color", "width", "visible", "locked",
+                    ],
+                )?;
+                let id = next.allocate()?;
+                next.circles.insert(
+                    id,
+                    Arc::new(Circle {
+                        id,
+                        center: get(p, "center")?,
+                        radius: get(p, "radius")?,
+                        name: optional(p, "name", "Circle".into())?,
+                        color: optional(p, "color", [0, 0, 0, 255])?,
+                        width: optional(p, "width", 1.)?,
+                        visible: optional(p, "visible", true)?,
+                        locked: optional(p, "locked", false)?,
+                    }),
+                );
+                next.order.push(id);
+                data = json!({"circle_id":id});
+            }
+            "addArc" => {
+                fields(
+                    p,
+                    &[
+                        "center",
+                        "radius",
+                        "start_deg",
+                        "sweep_deg",
+                        "name",
+                        "color",
+                        "width",
+                        "visible",
+                        "locked",
+                    ],
+                )?;
+                let id = next.allocate()?;
+                next.arcs.insert(
+                    id,
+                    Arc::new(ArcEntity {
+                        id,
+                        center: get(p, "center")?,
+                        radius: get(p, "radius")?,
+                        start_deg: get(p, "start_deg")?,
+                        sweep_deg: get(p, "sweep_deg")?,
+                        name: optional(p, "name", "Arc".into())?,
+                        color: optional(p, "color", [0, 0, 0, 255])?,
+                        width: optional(p, "width", 1.)?,
+                        visible: optional(p, "visible", true)?,
+                        locked: optional(p, "locked", false)?,
+                    }),
+                );
+                next.order.push(id);
+                data = json!({"arc_id":id});
+            }
+            "updateCircle" => {
+                let id = get(p, "id")?;
+                let c = next.circles.get(&id).ok_or_else(|| bad("unknown circle"))?;
+                fields(
+                    p,
+                    &[
+                        "id", "center", "radius", "name", "color", "width", "visible", "locked",
+                    ],
+                )?;
+                if c.locked
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| !["id", "locked"].contains(&k.as_str()))
+                {
+                    return Err(bad("circle is locked"));
+                }
+                let c = patch(
+                    &**c,
+                    p,
+                    &[
+                        "id", "center", "radius", "name", "color", "width", "visible", "locked",
+                    ],
+                )?;
+                next.circles.insert(id, Arc::new(c));
+            }
+            "updateArc" => {
+                let id = get(p, "id")?;
+                let a = next.arcs.get(&id).ok_or_else(|| bad("unknown arc"))?;
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "center",
+                        "radius",
+                        "start_deg",
+                        "sweep_deg",
+                        "name",
+                        "color",
+                        "width",
+                        "visible",
+                        "locked",
+                    ],
+                )?;
+                if a.locked
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| !["id", "locked"].contains(&k.as_str()))
+                {
+                    return Err(bad("arc is locked"));
+                }
+                let a = patch(
+                    &**a,
+                    p,
+                    &[
+                        "id",
+                        "center",
+                        "radius",
+                        "start_deg",
+                        "sweep_deg",
+                        "name",
+                        "color",
+                        "width",
+                        "visible",
+                        "locked",
+                    ],
+                )?;
+                next.arcs.insert(id, Arc::new(a));
+            }
+            "removeCircle" | "removeArc" => {
+                fields(p, &["id"])?;
+                let id = get(p, "id")?;
+                if cmd.op == "removeCircle" {
+                    if next
+                        .circles
+                        .get(&id)
+                        .ok_or_else(|| bad("unknown circle"))?
+                        .locked
+                    {
+                        return Err(bad("circle is locked"));
+                    }
+                    next.circles.remove(&id);
+                } else {
+                    if next.arcs.get(&id).ok_or_else(|| bad("unknown arc"))?.locked {
+                        return Err(bad("arc is locked"));
+                    }
+                    next.arcs.remove(&id);
+                }
+                next.order.retain(|v| *v != id);
             }
             "setSnapSettings" => {
                 next.snaps = patch(
@@ -326,6 +554,9 @@ impl Engine for DraftEngine {
                         "ortho",
                         "polar",
                         "polar_increment",
+                        "center",
+                        "nearest_circle",
+                        "tangent",
                     ],
                 )?;
             }
@@ -406,14 +637,36 @@ impl Engine for DraftEngine {
         Ok(result)
     }
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        Ok(encode_envelope(&serde_json::to_vec(&*self.state)?))
+        let payload = if requires_matching_reader(&self.state) {
+            serde_json::to_vec(&ExtendedSnapshot {
+                kind: "draft".to_owned(),
+                schema: 2,
+                document: &*self.state,
+            })?
+        } else {
+            serde_json::to_vec(&*self.state)?
+        };
+        Ok(encode_envelope(&payload))
     }
     fn restore(&mut self, bytes: &[u8]) -> Result<(), EngineError> {
         let (_, payload) = decode_envelope(bytes)?;
         if payload.len() > MAX_BYTES {
             return Err(bad("draft state exceeds 8 MiB"));
         }
-        let state: State = serde_json::from_slice(payload)?;
+        let value: Value = serde_json::from_slice(payload)?;
+        let state = if value.get("document").is_some() || value.get("schema") == Some(&json!(2)) {
+            let wrapped: ExtendedSnapshot<State> = serde_json::from_value(value)?;
+            if wrapped.kind != "draft" || wrapped.schema != 2 {
+                return Err(bad("unsupported draft snapshot wrapper"));
+            }
+            wrapped.document
+        } else {
+            let state: State = serde_json::from_value(value)?;
+            if requires_matching_reader(&state) {
+                return Err(bad("extended draft snapshot requires schema2 wrapper"));
+            }
+            state
+        };
         state.validate()?;
         let revision = self.next_revision()?;
         self.state = Arc::new(state);

@@ -31,3 +31,11 @@ it('withholds a late snap query from an older authoritative revision or closed s
  expect(bindDraftingSnaps(doc,host).candidate).toBeNull();expect(bindDraftingSnaps(doc,host).renderFeedback()).toBe(viewport);
  expect(bindDraftingSnaps(doc,{...host,sourceRevision:1,isCurrent:()=>false}).candidate).toBeNull();
 });
+it('exposes real circular modes while tangent availability requires the actual world anchor',async()=>{
+ const state={snaps:{grid:false,spacing:10,origin_x:0,origin_y:0,endpoint:false,midpoint:false,projection:false,intersection:true,ortho:false,polar:false,polar_increment:45,center:true,nearest_circle:true,tangent:true}} as DraftState;
+ const setSnapSettings=vi.fn(async()=>ok({ok:true}));const doc={setSnapSettings} as Pick<DraftDocument,'setSnapSettings'>;
+ const host={state,sourceRevision:2,query:{source_revision:2,candidate:null},isCurrent:()=>true,perform:async(action:()=>Promise<unknown>)=>{await action();},renderFeedback:()=>null};
+ const noAnchor=bindDraftingSnaps(doc,host);expect(noAnchor.modes.find(m=>m.id==='tangent')?.available).toBe(false);
+ const bound=bindDraftingSnaps(doc,{...host,anchorAvailable:true});expect(bound.modes.find(m=>m.id==='tangent')?.available).toBe(true);
+ await bound.onCommit(bound.settings);expect(setSnapSettings).toHaveBeenCalledWith(expect.objectContaining({center:true,nearest_circle:true,tangent:true}));
+});
