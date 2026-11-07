@@ -25,6 +25,12 @@ export const OPS = {
   removeInkStroke: "removeInkStroke",
   clearInk: "clearInk",
   slideInk: "slideInk",
+  setSlideTransition: "setSlideTransition",
+  clearSlideTransition: "clearSlideTransition",
+  slideTransition: "slideTransition",
+  setSlideTiming: "setSlideTiming",
+  clearSlideTiming: "clearSlideTiming",
+  slideTiming: "slideTiming",
   addText: "addText",
   setText: "setText",
   setTextStyle: "setTextStyle",
@@ -82,6 +88,34 @@ export interface PitchInkStrokePatch {
   width?: number;
   color?: Rgba;
   opacity?: number | null;
+}
+/**
+ * Slide-to-slide transition descriptor stored per slide. This is DATA for the
+ * host renderer: the engine stores and resolves it but never animates
+ * transitions itself. `kind` is bounded to the catalog below; `"none"` in
+ * `setSlideTransition` clears the transition. `duration_ms` is a whole
+ * millisecond integer within 1..=60,000; `direction` is an optional hint
+ * ("left"|"right"|"up"|"down"), meaningful for `wipe`.
+ */
+export type PitchTransitionKind =
+  | "fade"
+  | "slideLeft"
+  | "slideRight"
+  | "slideUp"
+  | "slideDown"
+  | "wipe"
+  | "zoom";
+export type PitchTransitionDirection = "left" | "right" | "up" | "down";
+export interface PitchSlideTransition {
+  kind: PitchTransitionKind;
+  duration_ms: number;
+  direction?: PitchTransitionDirection;
+}
+/** Per-slide rehearsal/advance timing; `duration_ms` is 1..=3,600,000. */
+export type PitchAdvanceMode = "manual" | "after";
+export interface PitchSlideTiming {
+  duration_ms: number;
+  advance: PitchAdvanceMode;
 }
 export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn" | "pulse" | "spin" | "fadeOut" | "zoomOut";
 export type PitchAnimationTrigger = {type:"absolute"}|{type:"on-click";click_index:number}|{type:"with-previous"}|{type:"after-previous"};
@@ -197,6 +231,34 @@ export class PitchDocument {
   /** Read-only; `strokes` is empty when the slide has no persistent ink. */
   slideInk(slide: number) {
     return this.call<{ strokes: PitchInkStroke[] }>(OPS.slideInk, { slide });
+  }
+  /**
+   * Store slide-transition data for the host to animate; the engine does not
+   * render transitions. `kind: "none"` clears (same as clearSlideTransition).
+   * Equal patches are eventless no-ops.
+   */
+  setSlideTransition(slide: number, transition: PitchSlideTransition | { kind: "none" }) {
+    return this.call<{ ok: boolean }>(OPS.setSlideTransition, { slide, ...transition });
+  }
+  /** Remove the slide's transition data; absent is an eventless no-op. */
+  clearSlideTransition(slide: number) {
+    return this.call<{ ok: boolean }>(OPS.clearSlideTransition, { slide });
+  }
+  /** Read-only; `transition` is null when the slide has no transition data. */
+  slideTransition(slide: number) {
+    return this.call<{ transition: PitchSlideTransition | null }>(OPS.slideTransition, { slide });
+  }
+  /** Per-slide rehearsal/advance timing; equal patches are eventless no-ops. */
+  setSlideTiming(slide: number, timing: PitchSlideTiming) {
+    return this.call<{ ok: boolean }>(OPS.setSlideTiming, { slide, ...timing });
+  }
+  /** Remove the slide's timing override; absent is an eventless no-op. */
+  clearSlideTiming(slide: number) {
+    return this.call<{ ok: boolean }>(OPS.clearSlideTiming, { slide });
+  }
+  /** Read-only; `timing` is null when the slide uses host-default timing. */
+  slideTiming(slide: number) {
+    return this.call<{ timing: PitchSlideTiming | null }>(OPS.slideTiming, { slide });
   }
   addText(slide: number, x: number, y: number, w: number, h: number, text: string, fontSize?: number) {
     return this.call<{ object_id: number }>(OPS.addText, {

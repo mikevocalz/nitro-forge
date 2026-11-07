@@ -155,4 +155,62 @@ describe("pitch engine e2e (real Rust via nf-cli)", () => {
     await re.close();
     await doc.close();
   });
+
+  it("slide transitions and rehearsal timing persist through snapshots", async () => {
+    const doc = await PitchDocument.open(host, "Transitions");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    expect((await doc.slideTransition(slide)).data.transition).toBeNull();
+    expect((await doc.slideTiming(slide)).data.timing).toBeNull();
+
+    await doc.setSlideTransition(slide, {
+      kind: "wipe",
+      duration_ms: 500,
+      direction: "left",
+    });
+    await doc.setSlideTiming(slide, { duration_ms: 45000, advance: "after" });
+    expect((await doc.slideTransition(slide)).data.transition).toEqual({
+      kind: "wipe",
+      duration_ms: 500,
+      direction: "left",
+    });
+    expect((await doc.slideTiming(slide)).data.timing).toEqual({
+      duration_ms: 45000,
+      advance: "after",
+    });
+    const described = await doc.describe<any>();
+    expect(described.data.slides[0].transition.kind).toBe("wipe");
+    expect(described.data.slides[0].timing.advance).toBe("after");
+
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    expect((await re.slideTransition(slide)).data.transition?.kind).toBe("wipe");
+    expect((await re.slideTiming(slide)).data.timing?.duration_ms).toBe(45000);
+
+    // kind "none" clears like clearSlideTransition; undo restores
+    await re.setSlideTransition(slide, { kind: "none" });
+    expect((await re.slideTransition(slide)).data.transition).toBeNull();
+    await re.undo();
+    expect((await re.slideTransition(slide)).data.transition?.kind).toBe("wipe");
+    await re.clearSlideTiming(slide);
+    expect((await re.slideTiming(slide)).data.timing).toBeNull();
+    await re.undo();
+    expect((await re.slideTiming(slide)).data.timing?.advance).toBe("after");
+
+    // bounds and hostile payloads reject without mutating
+    await expect(
+      re.setSlideTransition(slide, { kind: "fade", duration_ms: 0 }),
+    ).rejects.toThrow();
+    await expect(
+      re.setSlideTransition(slide, { kind: "morph" as never, duration_ms: 100 }),
+    ).rejects.toThrow();
+    await expect(
+      re.setSlideTiming(slide, { duration_ms: 3600001, advance: "manual" }),
+    ).rejects.toThrow();
+    await expect(
+      re.setSlideTiming(slide, { duration_ms: 1000, advance: "auto" as never }),
+    ).rejects.toThrow();
+    expect((await re.slideTransition(slide)).data.transition?.kind).toBe("wipe");
+    await re.close();
+    await doc.close();
+  });
 });

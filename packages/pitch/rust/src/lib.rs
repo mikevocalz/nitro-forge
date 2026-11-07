@@ -39,6 +39,12 @@ const MAX_INK_POINTS_PER_STROKE: usize = 2_048;
 /// finite and within ±this bound. Width is finite, >0 and at most this bound.
 const MAX_INK_COORD: f64 = 1_000_000.0;
 const MAX_INK_WIDTH: f64 = 10_000.0;
+/// Slide transitions are bounded descriptors stored per slide; the engine
+/// never renders them — hosts animate from this data (same honesty boundary
+/// as the prototype runtime).
+const MAX_TRANSITION_MS: u32 = 60_000;
+/// Per-slide rehearsal/advance timing is bounded to one hour per slide.
+const MAX_SLIDE_TIMING_MS: u32 = 3_600_000;
 const SLIDE_IN_OFFSET: f64 = 200.0;
 const ZOOM_START_SCALE: f64 = 0.5;
 
@@ -155,6 +161,98 @@ pub struct InkStroke {
     pub opacity: Option<f64>,
 }
 
+/// Bounded slide-to-slide transition catalog. Serialized camelCase like the
+/// other pitch enums; `"none"` is accepted by `setSlideTransition` as the
+/// clear spelling and is never stored.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransitionKind {
+    Fade,
+    SlideLeft,
+    SlideRight,
+    SlideUp,
+    SlideDown,
+    Wipe,
+    Zoom,
+}
+
+impl TransitionKind {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "fade" => Some(Self::Fade),
+            "slideLeft" => Some(Self::SlideLeft),
+            "slideRight" => Some(Self::SlideRight),
+            "slideUp" => Some(Self::SlideUp),
+            "slideDown" => Some(Self::SlideDown),
+            "wipe" => Some(Self::Wipe),
+            "zoom" => Some(Self::Zoom),
+            _ => None,
+        }
+    }
+}
+
+/// Optional direction hint for directional transitions (meaningful for
+/// `wipe`; hosts may honor or ignore it for other kinds).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransitionDirection {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+impl TransitionDirection {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "left" => Some(Self::Left),
+            "right" => Some(Self::Right),
+            "up" => Some(Self::Up),
+            "down" => Some(Self::Down),
+            _ => None,
+        }
+    }
+}
+
+/// Per-slide transition descriptor: DATA for the host to animate. The engine
+/// stores and round-trips it but performs no transition rendering or timing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SlideTransition {
+    pub kind: TransitionKind,
+    /// Whole milliseconds, 1..=MAX_TRANSITION_MS.
+    pub duration_ms: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction: Option<TransitionDirection>,
+}
+
+/// Whether the host auto-advances after the slide's dwell time or waits for
+/// an explicit advance (manual click/keypress).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AdvanceMode {
+    Manual,
+    After,
+}
+
+impl AdvanceMode {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "manual" => Some(Self::Manual),
+            "after" => Some(Self::After),
+            _ => None,
+        }
+    }
+}
+
+/// Per-slide rehearsal/advance timing. `duration_ms` is the slide dwell time
+/// in whole milliseconds (1..=MAX_SLIDE_TIMING_MS): the rehearsal clock
+/// reading and the auto-advance delay when `advance` is `"after"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SlideTiming {
+    pub duration_ms: u32,
+    pub advance: AdvanceMode,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Slide {
     pub id: u64,
@@ -168,6 +266,12 @@ pub struct Slide {
     /// Persistent annotation strokes; absent (empty) for un-inked slides.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ink: Vec<InkStroke>,
+    /// Optional slide-to-slide transition; absent means no transition data.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transition: Option<SlideTransition>,
+    /// Optional per-slide rehearsal/advance timing; absent means host default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timing: Option<SlideTiming>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -217,6 +321,8 @@ impl PitchState {
                 animations: Vec::new(),
                 notes: None,
                 ink: Vec::new(),
+                transition: None,
+                timing: None,
             }],
         }
     }
@@ -392,6 +498,30 @@ fn parse_ink_stroke(v: &Value) -> Result<InkStroke, EngineError> {
     Ok(stroke)
 }
 
+/// Bounded whole-millisecond field: non-negative integer within `1..=max`.
+fn parse_bounded_ms(v: &Value, max: u32, what: &str) -> Result<u32, EngineError> {
+    let n = v
+        .as_u64()
+        .ok_or_else(|| EngineError::invalid(format!("{what} must be an integer")))?;
+    let ms = u32::try_from(n)
+        .map_err(|_| EngineError::out_of_bounds(format!("{what} is too large")))?;
+    if ms == 0 || ms > max {
+        return Err(EngineError::validation(format!(
+            "{what} must be within 1..={max}"
+        )));
+    }
+    Ok(ms)
+}
+
+fn parse_transition_direction(v: &Value) -> Result<TransitionDirection, EngineError> {
+    TransitionDirection::parse(v.as_str().ok_or_else(|| {
+        EngineError::invalid("transition direction must be \"left\"|\"right\"|\"up\"|\"down\"")
+    })?)
+    .ok_or_else(|| {
+        EngineError::validation("transition direction must be \"left\"|\"right\"|\"up\"|\"down\"")
+    })
+}
+
 fn ro(data: Value) -> CommandResult {
     CommandResult {
         events: vec![],
@@ -540,6 +670,8 @@ impl Engine for PitchEngine {
                     animations: Vec::new(),
                     notes: None,
                     ink: Vec::new(),
+                    transition: None,
+                    timing: None,
                 });
                 Ok(CommandResult::data(json!({ "slide_id": id })))
             }
@@ -958,6 +1090,69 @@ impl Engine for PitchEngine {
                 self.state.slides[slide].ink.clear();
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
+            "setSlideTransition" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                // kind "none" is the clear spelling; it stores no transition.
+                if req_str(p, "kind")? == "none" {
+                    if self.state.slides[slide].transition.is_none() {
+                        return Ok(ro(json!({ "ok": true })));
+                    }
+                    self.journal.record(self.state.clone());
+                    self.state.slides[slide].transition = None;
+                    return Ok(CommandResult::data(json!({ "ok": true })));
+                }
+                let kind = TransitionKind::parse(req_str(p, "kind")?).ok_or_else(|| {
+                    EngineError::validation(
+                        "transition kind must be \"none\"|\"fade\"|\"slideLeft\"|\"slideRight\"|\"slideUp\"|\"slideDown\"|\"wipe\"|\"zoom\"",
+                    )
+                })?;
+                let duration_ms =
+                    parse_bounded_ms(field(p, "duration_ms")?, MAX_TRANSITION_MS, "transition duration_ms")?;
+                let direction = match p.get("direction") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => Some(parse_transition_direction(v)?),
+                };
+                let next = SlideTransition { kind, duration_ms, direction };
+                if self.state.slides[slide].transition.as_ref() == Some(&next) {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].transition = Some(next);
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "clearSlideTransition" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                if self.state.slides[slide].transition.is_none() {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].transition = None;
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "setSlideTiming" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let duration_ms =
+                    parse_bounded_ms(field(p, "duration_ms")?, MAX_SLIDE_TIMING_MS, "timing duration_ms")?;
+                let advance = AdvanceMode::parse(req_str(p, "advance")?).ok_or_else(|| {
+                    EngineError::validation("advance must be \"manual\"|\"after\"")
+                })?;
+                let next = SlideTiming { duration_ms, advance };
+                if self.state.slides[slide].timing == Some(next) {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].timing = Some(next);
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "clearSlideTiming" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                if self.state.slides[slide].timing.is_none() {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].timing = None;
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
             // --- read-only ---------------------------------------------------
             "slideAt" | "slideAtWithClicksV1" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
@@ -981,6 +1176,18 @@ impl Engine for PitchEngine {
                     "strokes": &self.state.slides[slide].ink,
                 })))
             }
+            "slideTransition" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                Ok(ro(json!({
+                    "transition": self.state.slides[slide].transition,
+                })))
+            }
+            "slideTiming" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                Ok(ro(json!({
+                    "timing": self.state.slides[slide].timing,
+                })))
+            }
             "describe" => Ok(ro(serde_json::to_value(&self.state)?)),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
@@ -989,15 +1196,17 @@ impl Engine for PitchEngine {
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
         // schema:2 wraps documents using the earlier extended features
         // (size/sections/triggered or non-entrance animations). schema:3
-        // additionally carries speaker notes and persistent ink; a schema:2
-        // reader rejects schema:3 instead of silently dropping those fields.
+        // additionally carries speaker notes, persistent ink, slide
+        // transitions and slide timing; a schema:2 reader rejects schema:3
+        // instead of silently dropping those fields.
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
                 !anim.trigger.is_absolute() || !matches!(anim.kind, AnimKind::FadeIn | AnimKind::SlideInLeft | AnimKind::ZoomIn));
-        let notes_or_ink = self.state.slides.iter()
-            .any(|slide| slide.notes.is_some() || !slide.ink.is_empty());
-        let payload = if notes_or_ink {
+        let schema3 = self.state.slides.iter().any(|slide|
+            slide.notes.is_some() || !slide.ink.is_empty()
+            || slide.transition.is_some() || slide.timing.is_some());
+        let payload = if schema3 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":3,"document":self.state}))?
         } else if extended {
             serde_json::to_vec(&json!({"kind":"pitch","schema":2,"document":self.state}))?
@@ -1013,7 +1222,8 @@ impl Engine for PitchEngine {
             #[serde(deny_unknown_fields)]
             struct Versioned { kind: String, schema: u32, document: PitchState }
             let wrapper: Versioned = serde_json::from_value(value)?;
-            // schema:2 = extended features only; schema:3 = notes/ink-capable.
+            // schema:2 = extended features only; schema:3 = notes/ink/
+            // transition/timing-capable.
             if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
@@ -1039,6 +1249,20 @@ impl Engine for PitchEngine {
             }
             if slide.ink.len() > MAX_INK_STROKES_PER_SLIDE {
                 return Err(EngineError::serialization("ink stroke count exceeds bound"));
+            }
+            if slide
+                .transition
+                .as_ref()
+                .is_some_and(|t| t.duration_ms == 0 || t.duration_ms > MAX_TRANSITION_MS)
+            {
+                return Err(EngineError::serialization("transition duration exceeds bound"));
+            }
+            if slide
+                .timing
+                .as_ref()
+                .is_some_and(|t| t.duration_ms == 0 || t.duration_ms > MAX_SLIDE_TIMING_MS)
+            {
+                return Err(EngineError::serialization("slide timing duration exceeds bound"));
             }
             for stroke in &slide.ink {
                 if stroke.id == 0 || !ids.insert(stroke.id) {
@@ -2291,5 +2515,326 @@ mod tests {
         let mut reopened = PitchEngine::new();
         reopened.restore(&snap).unwrap();
         assert_eq!(reopened.snapshot().unwrap(), snap);
+    }
+
+    #[test]
+    fn slide_transitions_set_read_clear_undo_and_persist() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        // absent transition reads as null; transition-free doc stays unwrapped
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s1 }))["transition"],
+            json!(null)
+        );
+        let clean = e.snapshot().unwrap();
+        let (_, legacy_payload) = decode_envelope(&clean).unwrap();
+        let legacy: Value = serde_json::from_slice(legacy_payload).unwrap();
+        assert!(legacy.get("kind").is_none());
+
+        let result = e
+            .apply(cmd(
+                "setSlideTransition",
+                json!({ "slide": s1, "kind": "wipe", "duration_ms": 500, "direction": "left" }),
+            ))
+            .unwrap();
+        assert_eq!(result.events.len(), 1);
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s1 }))["transition"],
+            json!({ "kind": "wipe", "duration_ms": 500, "direction": "left" })
+        );
+        // describe exposes the transition on the slide
+        assert_eq!(
+            apply(&mut e, "describe", json!({ }))["slides"][0]["transition"]["kind"],
+            json!("wipe")
+        );
+        // transition presence triggers the schema:3 wrapper
+        let snap = e.snapshot().unwrap();
+        let (_, wrapped_payload) = decode_envelope(&snap).unwrap();
+        let wrapped: Value = serde_json::from_slice(wrapped_payload).unwrap();
+        assert_eq!(wrapped["kind"], json!("pitch"));
+        assert_eq!(wrapped["schema"], json!(3));
+        assert_eq!(
+            wrapped["document"]["slides"][0]["transition"]["duration_ms"],
+            json!(500)
+        );
+        // persists through snapshot/restore
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&snap).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), snap);
+        assert_eq!(
+            apply(&mut reopened, "slideTransition", json!({ "slide": s1 }))["transition"]["kind"],
+            json!("wipe")
+        );
+
+        // equal patch is an eventless no-op preserving redo
+        assert!(e
+            .apply(cmd(
+                "setSlideTransition",
+                json!({ "slide": s1, "kind": "wipe", "duration_ms": 500, "direction": "left" })
+            ))
+            .unwrap()
+            .events
+            .is_empty());
+        // undo restores the cleared state, redo reapplies
+        apply(&mut e, "clearSlideTransition", json!({ "slide": s1 }));
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s1 }))["transition"],
+            json!(null)
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s1 }))["transition"]["kind"],
+            json!("wipe")
+        );
+        assert!(e.redo().unwrap());
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s1 }))["transition"],
+            json!(null)
+        );
+        // kind "none" is the clear spelling
+        apply(
+            &mut e,
+            "setSlideTransition",
+            json!({ "slide": s1, "kind": "fade", "duration_ms": 250 }),
+        );
+        apply(&mut e, "setSlideTransition", json!({ "slide": s1, "kind": "none" }));
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s1 }))["transition"],
+            json!(null)
+        );
+        // transition follows slide identity on reorder and dies with the slide
+        let s2 = apply(&mut e, "addSlide", json!({ "layout": "blank" }))["slide_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "setSlideTransition",
+            json!({ "slide": s2, "kind": "zoom", "duration_ms": 300 }),
+        );
+        apply(&mut e, "moveSlide", json!({ "from": 1, "to": 0 }));
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s2 }))["transition"]["kind"],
+            json!("zoom")
+        );
+        apply(&mut e, "removeSlide", json!({ "id": s2 }));
+        assert!(apply_err(&mut e, "slideTransition", json!({ "slide": s2 })).code
+            == ignition_core::ErrorCode::NotFound);
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s2 }))["transition"]["kind"],
+            json!("zoom")
+        );
+    }
+
+    #[test]
+    fn slide_transition_validation_is_atomic_and_bounded() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        let before = e.snapshot().unwrap();
+        for payload in [
+            json!({ "slide": s1, "kind": "dissolve", "duration_ms": 100 }),
+            json!({ "slide": s1, "kind": "fade" }),
+            json!({ "slide": s1, "kind": "fade", "duration_ms": 0 }),
+            json!({ "slide": s1, "kind": "fade", "duration_ms": 60001 }),
+            json!({ "slide": s1, "kind": "fade", "duration_ms": 1.5 }),
+            json!({ "slide": s1, "kind": "fade", "duration_ms": -1 }),
+            json!({ "slide": s1, "kind": "fade", "duration_ms": "500" }),
+            json!({ "slide": s1, "kind": "wipe", "duration_ms": 100, "direction": "sideways" }),
+            json!({ "slide": 99999, "kind": "fade", "duration_ms": 100 }),
+        ] {
+            assert!(e.apply(cmd("setSlideTransition", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // admitted boundary values
+        for ms in [1u64, 60000] {
+            apply(
+                &mut e,
+                "setSlideTransition",
+                json!({ "slide": s1, "kind": "slideDown", "duration_ms": ms }),
+            );
+        }
+        // clearing a set transition mutates once; clearing an absent one is
+        // an eventless no-op
+        apply(&mut e, "clearSlideTransition", json!({ "slide": s1 }));
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s1 }))["transition"],
+            json!(null)
+        );
+        assert!(e
+            .apply(cmd("clearSlideTransition", json!({ "slide": s1 })))
+            .unwrap()
+            .events
+            .is_empty());
+    }
+
+    #[test]
+    fn slide_timing_set_clear_undo_persist_and_bounds() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        assert_eq!(
+            apply(&mut e, "slideTiming", json!({ "slide": s1 }))["timing"],
+            json!(null)
+        );
+        let result = e
+            .apply(cmd(
+                "setSlideTiming",
+                json!({ "slide": s1, "duration_ms": 45000, "advance": "after" }),
+            ))
+            .unwrap();
+        assert_eq!(result.events.len(), 1);
+        assert_eq!(
+            apply(&mut e, "slideTiming", json!({ "slide": s1 }))["timing"],
+            json!({ "duration_ms": 45000, "advance": "after" })
+        );
+        // describe exposes timing; presence triggers schema:3
+        assert_eq!(
+            apply(&mut e, "describe", json!({ }))["slides"][0]["timing"]["advance"],
+            json!("after")
+        );
+        let snap = e.snapshot().unwrap();
+        let (_, payload) = decode_envelope(&snap).unwrap();
+        let wrapped: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(wrapped["schema"], json!(3));
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&snap).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), snap);
+
+        // equal patch eventless; clear then undo/redo
+        assert!(e
+            .apply(cmd(
+                "setSlideTiming",
+                json!({ "slide": s1, "duration_ms": 45000, "advance": "after" })
+            ))
+            .unwrap()
+            .events
+            .is_empty());
+        apply(&mut e, "clearSlideTiming", json!({ "slide": s1 }));
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "slideTiming", json!({ "slide": s1 }))["timing"]["duration_ms"],
+            json!(45000)
+        );
+        assert!(e.redo().unwrap());
+        assert_eq!(
+            apply(&mut e, "slideTiming", json!({ "slide": s1 }))["timing"],
+            json!(null)
+        );
+
+        let before = e.snapshot().unwrap();
+        for payload in [
+            json!({ "slide": s1, "duration_ms": 45000 }),
+            json!({ "slide": s1, "advance": "after" }),
+            json!({ "slide": s1, "duration_ms": 0, "advance": "manual" }),
+            json!({ "slide": s1, "duration_ms": 3600001, "advance": "manual" }),
+            json!({ "slide": s1, "duration_ms": 1000.5, "advance": "manual" }),
+            json!({ "slide": s1, "duration_ms": 1000, "advance": "auto" }),
+            json!({ "slide": s1, "duration_ms": 1000, "advance": null }),
+        ] {
+            assert!(e.apply(cmd("setSlideTiming", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        apply(
+            &mut e,
+            "setSlideTiming",
+            json!({ "slide": s1, "duration_ms": 1, "advance": "manual" }),
+        );
+        apply(
+            &mut e,
+            "setSlideTiming",
+            json!({ "slide": s1, "duration_ms": 3600000, "advance": "after" }),
+        );
+    }
+
+    #[test]
+    fn hostile_restore_rejects_out_of_bound_transition_and_timing() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        apply(
+            &mut e,
+            "setSlideTransition",
+            json!({ "slide": s1, "kind": "fade", "duration_ms": 100 }),
+        );
+        apply(
+            &mut e,
+            "setSlideTiming",
+            json!({ "slide": s1, "duration_ms": 5000, "advance": "manual" }),
+        );
+        let snap = e.snapshot().unwrap();
+        let (_, payload) = decode_envelope(&snap).unwrap();
+        let mut wrapped: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(wrapped["schema"], json!(3));
+        let before = e.snapshot().unwrap();
+
+        // out-of-bound durations inside the schema:3 wrapper reject atomically
+        for (field, bad) in [
+            ("transition", json!({ "kind": "fade", "duration_ms": 60001 })),
+            ("transition", json!({ "kind": "fade", "duration_ms": 0 })),
+            ("timing", json!({ "duration_ms": 3600001, "advance": "manual" })),
+            ("timing", json!({ "duration_ms": 0, "advance": "after" })),
+        ] {
+            let mut hostile = wrapped.clone();
+            hostile["document"]["slides"][0][field] = bad;
+            assert!(e
+                .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // unknown enum variants fail deserialization before state replacement
+        for (field, bad) in [
+            ("transition", json!({ "kind": "morph", "duration_ms": 100 })),
+            ("transition", json!({ "kind": "wipe", "duration_ms": 100, "direction": "diagonal" })),
+            ("timing", json!({ "duration_ms": 1000, "advance": "auto" })),
+        ] {
+            let mut hostile = wrapped.clone();
+            hostile["document"]["slides"][0][field] = bad;
+            assert!(e
+                .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // non-integer/negative durations reject at the serde layer
+        for bad in [json!({ "kind": "fade", "duration_ms": -5 }), json!({ "kind": "fade", "duration_ms": 1.5 })] {
+            let mut hostile = wrapped.clone();
+            hostile["document"]["slides"][0]["transition"] = bad;
+            assert!(e
+                .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // the admitted snapshot still restores cleanly afterwards
+        e.restore(&snap).unwrap();
+        assert_eq!(e.snapshot().unwrap(), snap);
+    }
+
+    #[test]
+    fn transition_and_timing_compose_with_other_schema3_features() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        // a slide carrying only transition+timing (no notes/ink) wraps schema:3
+        apply(
+            &mut e,
+            "setSlideTransition",
+            json!({ "slide": s1, "kind": "slideLeft", "duration_ms": 400 }),
+        );
+        apply(
+            &mut e,
+            "setSlideTiming",
+            json!({ "slide": s1, "duration_ms": 8000, "advance": "after" }),
+        );
+        let snap = e.snapshot().unwrap();
+        let (_, payload) = decode_envelope(&snap).unwrap();
+        let wrapped: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(wrapped["schema"], json!(3));
+        // removing the last schema:3 feature drops back to the bare/legacy shape
+        apply(&mut e, "clearSlideTransition", json!({ "slide": s1 }));
+        apply(&mut e, "clearSlideTiming", json!({ "slide": s1 }));
+        let clean = e.snapshot().unwrap();
+        let (_, clean_payload) = decode_envelope(&clean).unwrap();
+        let clean_doc: Value = serde_json::from_slice(clean_payload).unwrap();
+        assert!(clean_doc.get("kind").is_none());
+        // undo chain still restores the wrapped form
+        assert!(e.undo().unwrap());
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), snap);
     }
 }
