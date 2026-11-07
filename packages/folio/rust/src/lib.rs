@@ -38,7 +38,9 @@
 //!   rewrite the page tree flat under the root `/Pages` node after
 //!   materializing inheritable page attributes, and collect objects that
 //!   become unreachable; `duplicatePage` shares `/Contents`/`/Resources`
-//!   but deep-copies annotations. See `page_ops.rs` and ENGINE_OPS.md.
+//!   but deep-copies annotations. Structural ops reject encrypted
+//!   documents (lopdf ciphertext is keyed by object id, so cloned objects
+//!   would not decrypt) — see `page_ops.rs` and ENGINE_OPS.md.
 
 mod annotation_edit;
 mod ink_link;
@@ -207,6 +209,31 @@ fn annots_loc(doc: &Document, page_id: ObjectId) -> Result<AnnotsLoc, EngineErro
         Ok(Object::Reference(r)) => Ok(AnnotsLoc::Ref(*r)),
         Ok(Object::Array(_)) => Ok(AnnotsLoc::Inline),
         _ => Ok(AnnotsLoc::Missing),
+    }
+}
+
+/// Raw `/Annots` array items — indirect references and inline dictionaries
+/// alike, in page order. Unlike `annot_ids` nothing is filtered out, so a
+/// caller that rewrites the array (`duplicatePage`) preserves every entry.
+fn annot_entries(doc: &Document, page_id: ObjectId) -> Result<Vec<Object>, EngineError> {
+    match annots_loc(doc, page_id)? {
+        AnnotsLoc::Missing => Ok(Vec::new()),
+        AnnotsLoc::Inline => {
+            let page = doc
+                .get_object(page_id)
+                .and_then(|o| o.as_dict())
+                .map_err(ser_err)?;
+            Ok(page
+                .get(b"Annots")
+                .and_then(|o| o.as_array())
+                .map_err(ser_err)?
+                .clone())
+        }
+        AnnotsLoc::Ref(r) => Ok(doc
+            .get_object(r)
+            .and_then(|o| o.as_array())
+            .map_err(ser_err)?
+            .clone()),
     }
 }
 
