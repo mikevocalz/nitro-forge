@@ -308,8 +308,10 @@ impl ParticleEmitter {
 }
 /// splitmix64-style integer hash -> [0,1). Mixing `(seed, index, channel)`
 /// gives each particle independent deterministic attributes; identical
-/// inputs always produce identical floats on every platform (no libm, no
-/// state, IEEE-754 deterministic ops only).
+/// inputs always produce identical floats within one engine build (the
+/// integer hash and closed-form math are platform-exact; trig/hypot in
+/// the render path use platform libm, so cross-platform bit-identity is
+/// not claimed).
 fn rand01(seed: u64, index: u64, channel: u64) -> f64 {
     let mut z = seed
         .wrapping_add(index.wrapping_mul(0x9E37_79B9_7F4A_7C15))
