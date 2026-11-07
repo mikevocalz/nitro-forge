@@ -41,11 +41,14 @@ describe("K-04 / K-18 page text", () => {
 describe("K-06 / K-07 annotations", () => {
   it("saves only the tools Folio can store", async () => {
     const { doc, calls } = fake();
-    expect(FOLIO_ANNOTATION_TOOLS).toEqual(["select", "note", "highlight"]);
+    expect(FOLIO_ANNOTATION_TOOLS).toEqual(["select", "note", "highlight", "underline", "strike"]);
     expect(await addFolioAnnotation(doc, "note", 0, [10, 20, 30, 40], "Why?")).toBe(12);
     await addFolioAnnotation(doc, "highlight", 1, [0, 0, 1, 1], "");
     expect(calls).toEqual([["addAnnotation", 0, [10, 20, 30, 40], "Why?", "Text"], ["addAnnotation", 1, [0, 0, 1, 1], "", "Highlight"]]);
-    await expect(addFolioAnnotation(doc, "strike", 0, [0, 0, 1, 1], "")).rejects.toThrow(/FOLIO_DEFERRED_OPS/);
+    await addFolioAnnotation(doc, "underline", 0, [0,0,2,3], "line");
+    await addFolioAnnotation(doc, "strike", 0, [0,0,2,3], "removed");
+    expect(calls.slice(-2)).toEqual([["addAnnotation",0,[0,0,2,3],"line","Underline"],["addAnnotation",0,[0,0,2,3],"removed","StrikeOut"]]);
+    await expect(addFolioAnnotation(doc, "ink", 0, [0, 0, 1, 1], "")).rejects.toThrow(/FOLIO_DEFERRED_OPS/);
   });
 
   it("lists annotations as one-comment threads and deletes through removeAnnotation", async () => {

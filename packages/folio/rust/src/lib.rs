@@ -21,6 +21,7 @@
 //!   allocating unbounded object graphs.
 
 mod annotation_edit;
+mod markup;
 mod comments;
 
 use ignition_core::{
@@ -473,17 +474,23 @@ impl Engine for FolioEngine {
                 let page_id = self.page_id(page)?;
                 let rect = req_rect(p)?;
                 let contents = req_str(p, "contents")?;
+                if contents.encode_utf16().count() > 32767 {
+                    return Err(EngineError::validation("annotation contents exceeds 32767 UTF-16 units"));
+                }
                 let metadata = if p.get("author").is_some() || p.get("modified").is_some() { Some(comments::metadata(p)?) } else { None };
                 let subtype = match p.get("subtype").and_then(Value::as_str) {
                     None => "Text",
                     Some(s) if s.eq_ignore_ascii_case("text") => "Text",
                     Some(s) if s.eq_ignore_ascii_case("highlight") => "Highlight",
+                    Some(s) if s.eq_ignore_ascii_case("underline") => "Underline",
+                    Some(s) if s.eq_ignore_ascii_case("strikeout") => "StrikeOut",
                     Some(s) => {
                         return Err(EngineError::validation(format!(
-                            "unsupported annotation subtype '{s}' (expected Text|Highlight)"
+                            "unsupported annotation subtype '{s}' (expected Text|Highlight|Underline|StrikeOut)"
                         )))
                     }
                 };
+                let quad = markup::quad(rect, subtype != "Text")?;
                 // PDF /Rect is [x1, y1, x2, y2]; payload is [x, y, w, h].
                 let pdf_rect = vec![
                     Object::Real(rect[0] as f32),
@@ -525,6 +532,7 @@ impl Engine for FolioEngine {
                     "Rect" => Object::Array(pdf_rect),
                     "Contents" => lopdf::text_string(contents),
                 };
+                if let Some(quad) = quad { annot.set("QuadPoints", Object::Array(quad)); }
                 if let Some((author, modified)) = metadata { annot.set("T", lopdf::text_string(&author)); annot.set("M", lopdf::text_string(&modified)); }
                 let annot_id = self.doc.add_object(Object::Dictionary(annot));
                 match loc {

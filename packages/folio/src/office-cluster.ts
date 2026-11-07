@@ -24,10 +24,6 @@ export const FOLIO_DEFERRED_OPS = {
   renderPage: "K-04",
   /** K-04 hit rectangles: `pageText` is lossy and carries no glyph positions. */
   textPositions: "K-04",
-  /** K-06 underline markup (`/Subtype /Underline`): `addAnnotation` writes Text and Highlight only. */
-  underlineAnnotation: "K-06",
-  /** K-06 strikethrough markup (`/StrikeOut`). */
-  strikeOutAnnotation: "K-06",
   /** K-06 freehand ink (`/Ink`). */
   inkAnnotation: "K-06",
   /** K-06 rectangle and ellipse (`/Square`, `/Circle`). */
@@ -79,19 +75,19 @@ export async function readFolioReadAloudBlocks(document: Pick<FolioDocument, "pa
 }
 
 /** Tools Folio can save, for `AnnotationToolbar.tools`. */
-export const FOLIO_ANNOTATION_TOOLS = ["select", "note", "highlight"] as const;
+export const FOLIO_ANNOTATION_TOOLS = ["select", "note", "highlight", "underline", "strike"] as const;
 export type FolioAnnotationTool = (typeof FOLIO_ANNOTATION_TOOLS)[number];
 
-const SUBTYPE: Record<Exclude<FolioAnnotationTool, "select">, AnnotSubtype> = { note: "Text", highlight: "Highlight" };
+const SUBTYPE: Record<Exclude<FolioAnnotationTool, "select">, AnnotSubtype> = { note: "Text", highlight: "Highlight", underline: "Underline", strike: "StrikeOut" };
 
 /**
- * Saves what the active tool made on a page: a note (`Text`) or a highlight.
+ * Saves what the active tool made on a page: a note or one axis-aligned horizontal markup quad.
  * `rect` is `[x, y, w, h]` in PDF user space, from the host's page view.
  */
 export async function addFolioAnnotation(
   document: Pick<FolioDocument, "addAnnotation">, tool: string, page: number, rect: Rect, contents: string,
 ): Promise<number> {
-  if (tool !== "note" && tool !== "highlight") throw new RangeError(`Folio cannot save a "${tool}" annotation (see FOLIO_DEFERRED_OPS)`);
+  if (tool !== "note" && tool !== "highlight" && tool !== "underline" && tool !== "strike") throw new RangeError(`Folio cannot save a "${tool}" annotation (see FOLIO_DEFERRED_OPS)`);
   return requireData(await document.addAnnotation(page, rect, contents, SUBTYPE[tool]), "addAnnotation").annot_id;
 }
 
