@@ -996,7 +996,11 @@ impl Engine for TallyEngine {
                 .iter()
                 .any(|key| object.contains_key(*key))
         });
-        let mut doc: Workbook = if wrapped {
+        let mut doc: Workbook;
+        // Schema of a wrapped snapshot (`None` for a bare legacy Workbook,
+        // which predates every versioned table).
+        let mut snapshot_schema: Option<u32> = None;
+        if wrapped {
             let wrapper: VersionedDoc = serde_json::from_value(value)?;
             // schema:2 (validations only) and schema:3 (conditional rules,
             // possibly alongside validations) are both honored; either
@@ -1008,10 +1012,29 @@ impl Engine for TallyEngine {
                     "unsupported Tally snapshot kind/schema",
                 ));
             }
-            wrapper.document
+            snapshot_schema = Some(wrapper.schema);
+            doc = wrapper.document;
         } else {
-            serde_json::from_value(value)?
-        };
+            doc = serde_json::from_value(value)?;
+        }
+        // Fail closed on crafted lower-version payloads smuggling newer
+        // tables: each durable table restores only under the schema that
+        // introduced it — conditional rules need schema:3, validations
+        // schema:2 — and a bare (unwrapped) Workbook predates both. Emit
+        // always stamps the highest table present, so honest payloads are
+        // unaffected; this only rejects hand-built downgrades.
+        if !doc.conditional_formats.is_empty()
+            && snapshot_schema.is_none_or(|s| s < 3)
+        {
+            return Err(EngineError::serialization(
+                "conditional formats require snapshot schema 3",
+            ));
+        }
+        if !doc.validations.is_empty() && snapshot_schema.is_none_or(|s| s < 2) {
+            return Err(EngineError::serialization(
+                "validations require snapshot schema 2",
+            ));
+        }
         if doc.sheets.is_empty() {
             return Err(EngineError::serialization(
                 "workbook must contain at least one sheet",
@@ -1182,6 +1205,11 @@ impl Engine for TallyEngine {
                     "invalid conditional criteria",
                 ));
             }
+            // Normalize before validating so stored rules stay canonical:
+            // `false` booleans collapse to absent exactly like the op path,
+            // keeping identical-resubmission equality and re-serialization
+            // stable for hostile `{"bold":false}` payloads.
+            conditional_ops::normalize_format(&mut r.format);
             if !conditional_ops::valid_conditional_format(&r.format) {
                 return Err(EngineError::serialization(
                     "invalid conditional format",
@@ -1946,6 +1974,59 @@ mod tests {
         assert_eq!(d["conditional_formats"].as_array().map_or(0, Vec::len), 0);
         // Re-saving keeps schema:2 — nothing was silently promoted.
         assert_eq!(snapshot_schema(&e3).0, Some(2));
+    }
+
+    #[test]
+    fn restore_rejects_newer_tables_under_lower_or_bare_schema() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        let before = describe(&mut e);
+        let sheet = json!({"id":0,"name":"S","cells":{"A1":{"raw":"1"}}});
+        let conditional = json!([{
+            "id":1,"sheet":0,"range":"A1","criteria":">0","format":{"bold":true}
+        }]);
+        let validation = json!([{
+            "id":1,"sheet":0,"range":"A1","criteria":{"kind":"number","min":0}
+        }]);
+        let doc_with = |extra: Value| {
+            let mut d = json!({
+                "next_sheet":1,
+                "sheets":[sheet.clone()],
+                "active":0
+            });
+            for (k, v) in extra.as_object().unwrap() {
+                d[k.as_str()] = v.clone();
+            }
+            d
+        };
+        for payload in [
+            // Conditional rules smuggled under schema:2, schema:1, or a
+            // bare (unwrapped) Workbook all fail closed.
+            json!({"kind":"tally","schema":2,"document":doc_with(json!({"conditional_formats":conditional.clone()}))}),
+            json!({"kind":"tally","schema":1,"document":doc_with(json!({"conditional_formats":conditional.clone()}))}),
+            doc_with(json!({"conditional_formats":conditional.clone()})),
+            // Same for validations under schema:1 or bare — schema:2 is
+            // the minimum that introduced the table.
+            json!({"kind":"tally","schema":1,"document":doc_with(json!({"validations":validation.clone()}))}),
+            doc_with(json!({"validations":validation.clone()})),
+        ] {
+            let bytes = encode_envelope(&serde_json::to_vec(&payload).unwrap());
+            assert!(e.restore(&bytes).is_err(), "accepted {payload}");
+            assert_eq!(describe(&mut e), before, "state mutated by {payload}");
+        }
+        // Honest payloads are unaffected: schema:3 with conditional rules
+        // (validations optional) and schema:2 with validations only.
+        for (schema, extra) in [
+            (3u32, json!({"conditional_formats":conditional})),
+            (2u32, json!({"validations":validation})),
+        ] {
+            let payload = json!({
+                "kind":"tally","schema":schema,
+                "document":doc_with(extra)
+            });
+            e.restore(&encode_envelope(&serde_json::to_vec(&payload).unwrap()))
+                .unwrap();
+        }
     }
 
     #[test]

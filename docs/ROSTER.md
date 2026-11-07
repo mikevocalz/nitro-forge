@@ -702,6 +702,27 @@ live `nf-cli` cases), package typecheck clean, `cargo build -p nf-cli`
 clean. Pre-merge this slice alone reported 82 engine tests and 47 Vitest.
 No native target run, XLSX or full P13 completion is implied.
 
+Review follow-up on the same slice: `Evaluator::match_value` now charges one
+unit of the shared 1,000,000-step conditional allowance per candidate
+rule-cell evaluation before criteria-type dispatch, so
+`evaluateConditionalFormats` cannot bypass the work bound via numeric
+comparisons, empty-criteria matches or type mismatches — a rule×cell product
+over the allowance fails the whole op with `#NUM!` (validation error) rather
+than emitting giant or partial output (no truncation flag; the bound is
+fail-closed). `ConditionalRule` gained `deny_unknown_fields` so deferred
+NYC-Tron fields (`enabled`, `stopIfTrue`, `styleId`, `kind`) reject instead
+of being silently dropped. `clearConditionalFormat {id, sheet}` now rejects
+the mixed selectors like `clearValidation` (`sheet:null` stays allowed).
+Restore normalizes each rule's `format` with the op-path `false`-boolean
+collapse before validation, so crafted `{"bold":false}` payloads cannot
+store non-canonical rules, and restore now fails closed when nonempty
+`conditional_formats` arrives under schema<3 or nonempty `validations`
+under schema<2 (including bare workbooks) — emitters always stamp the
+highest table present, so honest payloads are unaffected. Local evidence:
+`cargo test -p tally-engine` 98 passed (4 new), `pnpm --filter
+@nitro-forge/tally` 51 Vitest passed (unchanged — no TS surface change),
+typecheck clean, `cargo build -p nf-cli` clean.
+
 ## Tally data validation source checkpoint (2026-11-07)
 
 Tally persists workbook-level data-validation rules (`{id, sheet, range,

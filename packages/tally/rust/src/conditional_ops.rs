@@ -78,8 +78,11 @@ pub(super) fn valid_conditional_format(f: &ConditionalFormat) -> bool {
 }
 
 /// One durable rule: `id` is a workbook-unique handle, `sheet` the bound
-/// sheet id, `range` a canonical `"A1"`/`"A1:B2"`.
+/// sheet id, `range` a canonical `"A1"`/`"A1:B2"`. `deny_unknown_fields`
+/// keeps deferred NYC-Tron fields (`enabled`, `stopIfTrue`, `styleId`,
+/// `kind`) from being silently dropped out of hostile payloads.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConditionalRule {
     pub id: u64,
     pub sheet: u64,
@@ -150,8 +153,10 @@ struct RuleInput {
 
 /// Normalize a parsed format: `false` booleans carry no style, so they
 /// collapse to absent and stored rules stay canonical (identical
-/// re-submissions compare equal and stay eventless).
-fn normalize_format(f: &mut ConditionalFormat) {
+/// re-submissions compare equal and stay eventless). Shared by the op path
+/// and hostile-restore validation so a crafted `{"bold":false}` cannot
+/// restore a non-canonical rule that re-serialization would rewrite.
+pub(super) fn normalize_format(f: &mut ConditionalFormat) {
     for flag in [&mut f.bold, &mut f.italic, &mut f.underline] {
         if *flag == Some(false) {
             *flag = None;
@@ -266,7 +271,13 @@ impl TallyEngine {
     ) -> Result<CommandResult, EngineError> {
         let has_id = p.get("id").is_some_and(|v| !v.is_null());
         let has_range = p.get("range").is_some_and(|v| !v.is_null());
+        // `sheet` only applies to the `range` selector; with `id` it would be
+        // silently ignored, so reject the mix instead (mirrors clearValidation).
+        let has_sheet = p.get("sheet").is_some_and(|v| !v.is_null());
         match (has_id, has_range) {
+            (true, false) if has_sheet => Err(EngineError::invalid(
+                "clearConditionalFormat 'sheet' requires the 'range' selector",
+            )),
             (true, false) => {
                 let id = p
                     .get("id")
@@ -510,6 +521,81 @@ mod tests {
     }
 
     #[test]
+    fn clear_conditional_format_rejects_sheet_alongside_id() {
+        let mut e = TallyEngine::new();
+        set_rule(&mut e, ("A1", "A1"), ">1", json!({"bold": true}));
+        let id = rules(&mut e)[0]["id"].as_u64().unwrap();
+        // `sheet` only applies to the `range` selector — alongside `id` it
+        // would be silently ignored, so it rejects (mirrors clearValidation).
+        // An explicit `sheet: null` counts as absent and is allowed.
+        assert_eq!(
+            apply_err(
+                &mut e,
+                "clearConditionalFormat",
+                json!({"id": id, "sheet": "Sheet1"})
+            )
+            .code,
+            ErrorCode::InvalidCommand
+        );
+        assert_eq!(rules(&mut e).len(), 1);
+        assert_eq!(
+            data(
+                &mut e,
+                "clearConditionalFormat",
+                json!({"id": id, "sheet": null})
+            )["cleared"],
+            json!(1)
+        );
+    }
+
+    #[test]
+    fn evaluate_charges_work_per_candidate_and_bounds_rule_cell_product() {
+        let mut e = TallyEngine::new();
+        // 256 rules (the cap) all covering A1:A16384; the query covers
+        // A1:A8192, so 256 × 8192 = 2,097,152 candidate rule-cell
+        // evaluations exceed the shared 1,000,000 conditional allowance.
+        // Every candidate is charged one unit even when the criteria is a
+        // bare numeric comparison against empty cells (no pattern work), so
+        // the op must fail with #NUM! rather than serialize millions of
+        // match reports.
+        for i in 0..MAX_CONDITIONAL_RULES {
+            set_rule(
+                &mut e,
+                ("A1", "A16384"),
+                &format!(">={i}"),
+                json!({"bold": true}),
+            );
+        }
+        let err = apply_err(
+            &mut e,
+            "evaluateConditionalFormats",
+            json!({"range": {"from": "A1", "to": "A8192"}}),
+        );
+        assert_eq!(err.code, ErrorCode::Validation);
+        assert!(err.message.contains("#NUM!"), "{err:?}");
+        // A smaller product still succeeds: 64 rules over A1:A64 is
+        // 4,096 candidates, far under the allowance.
+        let mut small = TallyEngine::new();
+        for i in 0..64 {
+            set_rule(
+                &mut small,
+                ("A1", "A64"),
+                &format!(">={i}"),
+                json!({"bold": true}),
+            );
+        }
+        let cells = data(
+            &mut small,
+            "evaluateConditionalFormats",
+            json!({"range": {"from": "A1", "to": "A64"}}),
+        )["cells"]
+            .as_array()
+            .unwrap()
+            .clone();
+        assert_eq!(cells.len(), 64);
+    }
+
+    #[test]
     fn criteria_kinds_match_computed_values() {
         let mut e = TallyEngine::new();
         for (addr, raw) in [
@@ -694,6 +780,12 @@ mod tests {
                 d["document"]["conditional_formats"][0]["format"] = json!({});
                 d
             }),
+            // Non-canonical `false` booleans normalize to absent on restore;
+            // {"bold":false} alone leaves an empty format and must reject.
+            Box::new(|mut d: Value| {
+                d["document"]["conditional_formats"][0]["format"] = json!({"bold": false});
+                d
+            }),
             Box::new(|mut d: Value| {
                 d["document"]["conditional_formats"][0]["format"]["fill"] = json!("red");
                 d
@@ -704,6 +796,24 @@ mod tests {
             }),
             Box::new(|mut d: Value| {
                 d["document"]["conditional_formats"][0]["range"] = json!("A1:XFD1048576");
+                d
+            }),
+            // Deferred/unknown rule fields reject (deny_unknown_fields) —
+            // they must not be silently dropped out of hostile payloads.
+            Box::new(|mut d: Value| {
+                d["document"]["conditional_formats"][0]["enabled"] = json!(false);
+                d
+            }),
+            Box::new(|mut d: Value| {
+                d["document"]["conditional_formats"][0]["stopIfTrue"] = json!(true);
+                d
+            }),
+            Box::new(|mut d: Value| {
+                d["document"]["conditional_formats"][0]["kind"] = json!("formula");
+                d
+            }),
+            Box::new(|mut d: Value| {
+                d["document"]["conditional_formats"][0]["styleId"] = json!("s1");
                 d
             }),
             // over the rule cap
@@ -729,5 +839,44 @@ mod tests {
             bad = payload.clone();
         }
         let _ = rule;
+    }
+
+    #[test]
+    fn hostile_restore_normalizes_format_booleans() {
+        let mut e = TallyEngine::new();
+        set_rule(&mut e, ("A1", "A1"), ">1", json!({"bold": true}));
+        let good = e.snapshot().unwrap();
+        let payload: Value = serde_json::from_slice(decode_envelope(&good).unwrap().1).unwrap();
+        // `false` booleans carry no style: restore applies the same
+        // normalization as the op path, so {"bold":false,"fill":…} stores
+        // canonically as {"fill":…} instead of rejecting or drifting.
+        let mut p = payload.clone();
+        p["document"]["conditional_formats"][0]["format"] =
+            json!({"bold": false, "italic": false, "fill": "#FF0000"});
+        e.restore(&encode_envelope(&serde_json::to_vec(&p).unwrap()))
+            .unwrap();
+        assert_eq!(rules(&mut e)[0]["format"], json!({"fill": "#FF0000"}));
+        // Re-saving emits the canonical form and snapshot round-trips
+        // byte-identically — identical-resubmission equality is preserved.
+        let saved = e.snapshot().unwrap();
+        let mut e2 = TallyEngine::new();
+        e2.restore(&saved).unwrap();
+        assert_eq!(e2.snapshot().unwrap(), saved);
+        // An op resubmitting the non-canonical form dedupes eventlessly
+        // against the normalized stored rule.
+        let before = e.snapshot().unwrap();
+        let dup = apply(
+            &mut e,
+            "setConditionalFormat",
+            json!({
+                "range": {"from": "A1", "to": "A1"},
+                "rule": {"criteria": ">1", "format": {"bold": false, "fill": "#FF0000"}}
+            }),
+        );
+        assert!(dup.events.is_empty());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // State after all this still restores cleanly.
+        e.restore(&good).unwrap();
+        assert_eq!(rules(&mut e)[0]["format"], json!({"bold": true}));
     }
 }

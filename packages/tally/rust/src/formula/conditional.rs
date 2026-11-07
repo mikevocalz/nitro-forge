@@ -264,7 +264,12 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
     }
 
     /// Test an already-computed value against `matcher`, sharing the
-    /// evaluator's conditional work allowance. Error-valued cells never
+    /// evaluator's conditional work allowance. Every candidate rule-cell
+    /// evaluation is charged one unit up front — numeric comparisons,
+    /// empty-criteria matches and type mismatches never reach `pattern`'s
+    /// inner spends, so without the flat charge a large rule×cell product
+    /// (conditional formats evaluate up to 256 rules over 16,384 cells)
+    /// could serialize unbounded match reports. Error-valued cells never
     /// match; matcher failures (work exhaustion, over-long text) surface as
     /// `Err`. Pair with `eval_cell` so the cell evaluates once per request.
     pub fn match_value(
@@ -272,6 +277,7 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
         value: &Value,
         matcher: &CriteriaMatcher,
     ) -> Result<bool, Value> {
+        spend(&mut self.conditional_work, 1)?;
         match value {
             Value::Err(_) => Ok(false),
             _ => matcher.matches(value, &mut self.conditional_work),
