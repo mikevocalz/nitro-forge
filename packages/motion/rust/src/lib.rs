@@ -16,6 +16,11 @@ use std::{
 const HISTORY: usize = 16;
 const MAX_BYTES: usize = 16 * 1024 * 1024;
 const SAFE_ID: u64 = 9_007_199_254_740_991;
+/// Snapshot schema written by this version; restore accepts 1..=SCHEMA_VERSION.
+const SCHEMA_VERSION: u32 = 2;
+const MAX_COMPOSITIONS: usize = 16;
+/// Longest chain of nested compositions below the root composition.
+const MAX_COMP_DEPTH: usize = 8;
 fn bad(message: &str) -> EngineError {
     EngineError::validation(message)
 }
@@ -104,6 +109,13 @@ struct Curve {
     property: Property,
     keys: Arc<Vec<Key>>,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum LayerKind {
+    Shape,
+    Raster,
+    Comp,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Layer {
@@ -111,13 +123,35 @@ struct Layer {
     name: String,
     visible: bool,
     locked: bool,
+    /// Content kind; absent only in schema:1 snapshots (inferred on restore).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    kind: Option<LayerKind>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     shape: Option<Shape>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     asset_id: Option<u64>,
+    /// Composition instantiated by a `comp` layer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    comp_id: Option<u64>,
+    /// Transform parent: another layer in the same composition.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    parent_id: Option<u64>,
     transform: Transform,
     opacity: f64,
     curves: Vec<Curve>,
+}
+/// A nested composition. The root composition is the document header plus
+/// `State::layers`; entries here are referenced by `comp` layers.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Composition {
+    id: u64,
+    name: String,
+    width: u32,
+    height: u32,
+    duration_s: f64,
+    frame_rate: Rate,
+    layers: Vec<Arc<Layer>>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -139,6 +173,13 @@ struct State {
     next_key_id: u64,
     layers: Vec<Arc<Layer>>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    compositions: BTreeMap<u64, Composition>,
+    #[serde(
+        default = "initial_comp_id",
+        skip_serializing_if = "is_initial_comp_id"
+    )]
+    next_comp_id: u64,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     assets: BTreeMap<u64, Arc<RasterAsset>>,
     #[serde(
         default = "assets::initial_asset_id",
@@ -150,7 +191,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             kind: "motion".into(),
-            schema: 1,
+            schema: SCHEMA_VERSION,
             title: "Untitled".into(),
             width: 640,
             height: 360,
@@ -159,35 +200,234 @@ impl Default for State {
             next_layer_id: 1,
             next_key_id: 1,
             layers: vec![],
+            compositions: BTreeMap::new(),
+            next_comp_id: 1,
             assets: BTreeMap::new(),
             next_asset_id: 1,
         }
     }
 }
+fn initial_comp_id() -> u64 {
+    1
+}
+fn is_initial_comp_id(id: &u64) -> bool {
+    *id == 1
+}
+/// schema:1 snapshots predate `kind`; infer it from the content source.
+/// Hostile or inconsistent explicit kinds are left for `validate` to reject.
+fn normalize_layers(state: &mut State) {
+    let all = state
+        .layers
+        .iter_mut()
+        .chain(
+            state
+                .compositions
+                .values_mut()
+                .flat_map(|c| c.layers.iter_mut()),
+        );
+    for layer in all {
+        if layer.kind.is_none() {
+            Arc::make_mut(layer).kind = Some(if layer.comp_id.is_some() {
+                LayerKind::Comp
+            } else if layer.asset_id.is_some() {
+                LayerKind::Raster
+            } else {
+                LayerKind::Shape
+            });
+        }
+    }
+}
+/// State equality ignoring the schema marker (mutations bump it to current).
+fn content_eq(a: &State, b: &State) -> bool {
+    if a.schema == b.schema {
+        a == b
+    } else {
+        let mut x = a.clone();
+        x.schema = b.schema;
+        x == *b
+    }
+}
+/// `x' = a·x + c·y + e`, `y' = b·x + d·y + f`; mirrors Prism's affine model.
+#[derive(Clone, Copy, Debug)]
+struct Affine {
+    a: f64,
+    b: f64,
+    c: f64,
+    d: f64,
+    e: f64,
+    f: f64,
+}
+impl Affine {
+    /// `self · other` — apply `other` first, then `self`.
+    fn then_after(&self, other: &Affine) -> Affine {
+        Affine {
+            a: self.a * other.a + self.c * other.b,
+            b: self.b * other.a + self.d * other.b,
+            c: self.a * other.c + self.c * other.d,
+            d: self.b * other.c + self.d * other.d,
+            e: self.a * other.e + self.c * other.f + self.e,
+            f: self.b * other.e + self.d * other.f + self.f,
+        }
+    }
+}
+fn transform_affine(t: &Transform) -> Affine {
+    if *t == Transform::default() {
+        return Affine {
+            a: 1.,
+            b: 0.,
+            c: 0.,
+            d: 1.,
+            e: 0.,
+            f: 0.,
+        };
+    }
+    let (s, c) = t.rotation.to_radians().sin_cos();
+    let a = c * t.sx;
+    let b = s * t.sx;
+    let cc = -s * t.sy;
+    let d = c * t.sy;
+    Affine {
+        a,
+        b,
+        c: cc,
+        d,
+        e: t.tx + t.ox - (a * t.ox + cc * t.oy),
+        f: t.ty + t.oy - (b * t.ox + d * t.oy),
+    }
+}
+/// Decompose a skew-free affine into a pivot-less Transform (pivot folded in).
+fn decompose(m: &Affine) -> Option<Transform> {
+    let sx = m.a.hypot(m.b);
+    if sx < 1e-9 || !sx.is_finite() {
+        return None;
+    }
+    let sy = m.d * m.a - m.b * m.c;
+    let sy = sy / sx;
+    if sy.abs() < 1e-9
+        || !sy.is_finite()
+        || (m.a * m.c + m.b * m.d).abs() / (sx * sy.abs()) > 1e-6
+    {
+        return None;
+    }
+    Some(Transform {
+        tx: m.e,
+        ty: m.f,
+        sx,
+        sy,
+        rotation: m.b.atan2(m.a).to_degrees(),
+        ox: 0.,
+        oy: 0.,
+    })
+}
+/// Effective affine of a layer: parent chain transforms compose outermost-first.
+/// Only the transform inherits; opacity/visibility/curves stay per-layer.
+fn effective_affine<'a>(
+    layer: &Layer,
+    by_id: &BTreeMap<u64, &'a Layer>,
+) -> Result<Affine, EngineError> {
+    let mut acc = transform_affine(&layer.transform);
+    let mut seen = BTreeSet::new();
+    let mut current = layer.parent_id;
+    while let Some(pid) = current {
+        if !seen.insert(pid) {
+            return Err(bad("layer parent cycle"));
+        }
+        let parent = by_id
+            .get(&pid)
+            .ok_or_else(|| bad("layer parent must be a layer in the same composition"))?;
+        acc = transform_affine(&parent.transform).then_after(&acc);
+        current = parent.parent_id;
+    }
+    Ok(acc)
+}
+/// Read-only view of one composition's render-relevant fields.
+struct CompView<'a> {
+    width: u32,
+    height: u32,
+    duration_s: f64,
+    layers: &'a [Arc<Layer>],
+}
+impl State {
+    fn comp_view(&self, comp: Option<u64>) -> Result<CompView<'_>, EngineError> {
+        match comp {
+            None => Ok(CompView {
+                width: self.width,
+                height: self.height,
+                duration_s: self.duration_s,
+                layers: &self.layers,
+            }),
+            Some(id) => {
+                let c = self
+                    .compositions
+                    .get(&id)
+                    .ok_or_else(|| bad("unknown composition"))?;
+                Ok(CompView {
+                    width: c.width,
+                    height: c.height,
+                    duration_s: c.duration_s,
+                    layers: &c.layers,
+                })
+            }
+        }
+    }
+    /// Composition selector used by ops: `None`/0 is the root composition.
+    fn comp_arg(p: &Value, name: &str) -> Result<Option<u64>, EngineError> {
+        match p.get(name) {
+            None | Some(Value::Null) => Ok(None),
+            Some(v) => {
+                let id = v
+                    .as_u64()
+                    .ok_or_else(|| bad("composition must be an integer id"))?;
+                Ok((id != 0).then_some(id))
+            }
+        }
+    }
+}
+fn valid_rate(rate: &Rate) -> bool {
+    rate.num != 0
+        && rate.num <= 240000
+        && rate.den != 0
+        && rate.den <= 1001
+        && (1.0..=240.0).contains(&(f64::from(rate.num) / f64::from(rate.den)))
+}
+fn valid_dims(width: u32, height: u32) -> bool {
+    width != 0
+        && height != 0
+        && width <= 4096
+        && height <= 4096
+        && u64::from(width) * u64::from(height) <= 1_048_576
+}
+fn valid_duration(duration_s: f64) -> bool {
+    duration_s.is_finite() && duration_s > 0. && duration_s <= 604800.
+}
 fn validate(s: &State) -> Result<(), EngineError> {
     if s.kind != "motion"
-        || s.schema != 1
+        || !(1..=SCHEMA_VERSION).contains(&s.schema)
         || s.title.len() > 512
-        || s.width == 0
-        || s.height == 0
-        || s.width > 4096
-        || s.height > 4096
-        || u64::from(s.width) * u64::from(s.height) > 1_048_576
-        || !s.duration_s.is_finite()
-        || s.duration_s <= 0.
-        || s.duration_s > 604800.
-        || s.layers.len() > 128
-        || s.frame_rate.num == 0
-        || s.frame_rate.num > 240000
-        || s.frame_rate.den == 0
-        || s.frame_rate.den > 1001
-        || !(1.0..=240.0).contains(&(f64::from(s.frame_rate.num) / f64::from(s.frame_rate.den)))
+        || !valid_dims(s.width, s.height)
+        || !valid_duration(s.duration_s)
+        || s.compositions.len() > MAX_COMPOSITIONS
+        || !valid_rate(&s.frame_rate)
         || s.next_layer_id == 0
         || s.next_key_id == 0
+        || s.next_comp_id == 0
         || s.next_layer_id > SAFE_ID
         || s.next_key_id > SAFE_ID
+        || s.next_comp_id > SAFE_ID
     {
         return Err(bad("invalid motion header or budget"));
+    }
+    for (&id, comp) in &s.compositions {
+        if id != comp.id
+            || comp.id == 0
+            || comp.id >= s.next_comp_id
+            || comp.name.len() > 512
+            || !valid_dims(comp.width, comp.height)
+            || !valid_duration(comp.duration_s)
+            || !valid_rate(&comp.frame_rate)
+        {
+            return Err(bad("invalid composition identity or budget"));
+        }
     }
     if s.assets.len() > assets::MAX_ASSETS || s.next_asset_id == 0 || s.next_asset_id > SAFE_ID {
         return Err(bad("invalid raster asset counter/count"));
@@ -207,86 +447,196 @@ fn validate(s: &State) -> Result<(), EngineError> {
             .filter(|v| *v <= assets::MAX_RGBA)
             .ok_or_else(|| bad("decoded raster asset total exceeds 4 MiB"))?;
     }
-    let raster_count = s.layers.iter().filter(|l| l.asset_id.is_some()).count();
-    if raster_count > assets::MAX_RASTER_LAYERS
-        || u64::from(s.width) * u64::from(s.height) * 4 * raster_count as u64
-            > assets::MAX_CANVAS_STORAGE
-    {
-        return Err(bad("logical raster layer canvas storage exceeds budget"));
+    // Composition views: key 0 is the root, other keys are composition ids.
+    let mut views: Vec<(u64, u32, u32, f64, &[Arc<Layer>])> = vec![(
+        0,
+        s.width,
+        s.height,
+        s.duration_s,
+        s.layers.as_slice(),
+    )];
+    for (id, comp) in &s.compositions {
+        views.push((
+            *id,
+            comp.width,
+            comp.height,
+            comp.duration_s,
+            comp.layers.as_slice(),
+        ));
     }
+    // Pass 1: globally unique layer/key identities, per-comp id sets, budgets.
     let (mut ids, mut keys) = (BTreeSet::new(), BTreeSet::new());
-    let (mut count, mut curves) = (0, 0);
-    for l in &s.layers {
-        if l.id == 0 || l.id >= s.next_layer_id || !ids.insert(l.id) || l.name.len() > 512 {
-            return Err(bad("invalid layer identity"));
-        }
-        match (&l.shape, l.asset_id) {
-            (Some(sh), None) => {
-                if !["rect", "ellipse"].contains(&sh.kind.as_str())
-                    || ![sh.x, sh.y, sh.w, sh.h]
-                        .iter()
-                        .all(|v| v.is_finite() && v.abs() <= 1e7)
-                    || sh.w <= 0.
-                    || sh.h <= 0.
-                {
-                    return Err(bad("invalid shape"));
-                }
-            }
-            (None, Some(id)) => {
-                let asset = s
-                    .assets
-                    .get(&id)
-                    .ok_or_else(|| bad("raster layer references unknown asset"))?;
-                if asset.width > s.width || asset.height > s.height {
-                    return Err(bad(
-                        "referenced raster asset must fit composition dimensions",
-                    ));
-                }
-            }
-            _ => return Err(bad("layer requires exactly one shape or raster asset")),
-        }
-        for p in [
-            Property::Tx,
-            Property::Ty,
-            Property::Sx,
-            Property::Sy,
-            Property::Rotation,
-            Property::Ox,
-            Property::Oy,
-            Property::Opacity,
-        ] {
-            let (min, max) = p.bounds();
-            let v = p.read(l);
-            if !v.is_finite()
-                || v < min
-                || v > max
-                || matches!(p, Property::Sx | Property::Sy) && v.abs() < 1e-6
+    let mut comp_members: BTreeMap<u64, BTreeMap<u64, &Layer>> = BTreeMap::new();
+    let (mut total_layers, mut curves, mut count) = (0usize, 0usize, 0usize);
+    for &(key, _, _, _, layers) in &views {
+        let members = comp_members.entry(key).or_default();
+        for l in layers {
+            if l.id == 0
+                || l.id >= s.next_layer_id
+                || !ids.insert(l.id)
+                || l.name.len() > 512
+                || members.insert(l.id, &**l).is_some()
             {
-                return Err(bad("invalid transform or opacity"));
+                return Err(bad("invalid layer identity"));
+            }
+            total_layers += 1;
+        }
+    }
+    if total_layers > 128 {
+        return Err(bad("motion total layer budget exceeded"));
+    }
+    // Pass 2: per-layer content, transform, curves and parent references.
+    for &(key, width, height, duration_s, layers) in &views {
+        let members = &comp_members[&key];
+        let raster_count = layers.iter().filter(|l| l.asset_id.is_some()).count();
+        if raster_count > assets::MAX_RASTER_LAYERS
+            || u64::from(width) * u64::from(height) * 4 * raster_count as u64
+                > assets::MAX_CANVAS_STORAGE
+        {
+            return Err(bad("logical raster layer canvas storage exceeds budget"));
+        }
+        for l in layers {
+            match (l.kind, &l.shape, l.asset_id, l.comp_id) {
+                (Some(LayerKind::Shape), Some(sh), None, None) => {
+                    if !["rect", "ellipse"].contains(&sh.kind.as_str())
+                        || ![sh.x, sh.y, sh.w, sh.h]
+                            .iter()
+                            .all(|v| v.is_finite() && v.abs() <= 1e7)
+                        || sh.w <= 0.
+                        || sh.h <= 0.
+                    {
+                        return Err(bad("invalid shape"));
+                    }
+                }
+                (Some(LayerKind::Raster), None, Some(id), None) => {
+                    let asset = s
+                        .assets
+                        .get(&id)
+                        .ok_or_else(|| bad("raster layer references unknown asset"))?;
+                    if asset.width > width || asset.height > height {
+                        return Err(bad(
+                            "referenced raster asset must fit composition dimensions",
+                        ));
+                    }
+                }
+                (Some(LayerKind::Comp), None, None, Some(id)) => {
+                    let comp = s
+                        .compositions
+                        .get(&id)
+                        .ok_or_else(|| bad("comp layer references unknown composition"))?;
+                    if comp.width > width || comp.height > height {
+                        return Err(bad(
+                            "referenced composition must fit containing composition dimensions",
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(bad(
+                        "layer kind must match exactly one shape, raster asset or composition",
+                    ))
+                }
+            }
+            if let Some(pid) = l.parent_id {
+                if pid == l.id || !members.contains_key(&pid) {
+                    return Err(bad("layer parent must be another layer in the same composition"));
+                }
+                // Parent chains are acyclic and bounded by the comp's layer count.
+                let mut seen = BTreeSet::new();
+                let mut cursor = Some(pid);
+                while let Some(id) = cursor {
+                    if !seen.insert(id) {
+                        return Err(bad("layer parent cycle"));
+                    }
+                    cursor = members[&id].parent_id;
+                }
+            }
+            for p in [
+                Property::Tx,
+                Property::Ty,
+                Property::Sx,
+                Property::Sy,
+                Property::Rotation,
+                Property::Ox,
+                Property::Oy,
+                Property::Opacity,
+            ] {
+                let (min, max) = p.bounds();
+                let v = p.read(l);
+                if !v.is_finite()
+                    || v < min
+                    || v > max
+                    || matches!(p, Property::Sx | Property::Sy) && v.abs() < 1e-6
+                {
+                    return Err(bad("invalid transform or opacity"));
+                }
+            }
+            let mut properties = Vec::new();
+            for c in &l.curves {
+                if properties.contains(&c.property) {
+                    return Err(bad("duplicate property curve"));
+                }
+                properties.push(c.property);
+                curves += 1;
+                count += c.keys.len();
+                for k in c.keys.iter() {
+                    if k.id == 0 || k.id >= s.next_key_id || !keys.insert(k.id) {
+                        return Err(bad("invalid key identity"));
+                    }
+                }
+                let (mut min, mut max) = c.property.bounds();
+                if matches!(c.property, Property::Sx | Property::Sy) {
+                    if c.property.read(l) > 0. {
+                        min = 1e-6
+                    } else {
+                        max = -1e-6
+                    }
+                }
+                evaluate(&c.keys, c.property.read(l), 0., duration_s, min, max)
+                    .map_err(bad)?;
             }
         }
-        let mut properties = Vec::new();
-        for c in &l.curves {
-            if properties.contains(&c.property) {
-                return Err(bad("duplicate property curve"));
-            }
-            properties.push(c.property);
-            curves += 1;
-            count += c.keys.len();
-            for k in c.keys.iter() {
-                if k.id == 0 || k.id >= s.next_key_id || !keys.insert(k.id) {
-                    return Err(bad("invalid key identity"));
-                }
-            }
-            let (mut min, mut max) = c.property.bounds();
-            if matches!(c.property, Property::Sx | Property::Sy) {
-                if c.property.read(l) > 0. {
-                    min = 1e-6
-                } else {
-                    max = -1e-6
-                }
-            }
-            evaluate(&c.keys, c.property.read(l), 0., s.duration_s, min, max).map_err(bad)?;
+    }
+    // Pass 3: composition reference graph is acyclic with bounded depth.
+    // Node keys match `views`: 0 is the root, other keys are composition ids.
+    let mut edges: BTreeMap<u64, Vec<u64>> = BTreeMap::new();
+    for (key, _, _, _, layers) in &views {
+        let mut refs: Vec<u64> = layers
+            .iter()
+            .filter(|l| l.kind == Some(LayerKind::Comp))
+            .filter_map(|l| l.comp_id)
+            .collect();
+        refs.sort_unstable();
+        refs.dedup();
+        edges.insert(*key, refs);
+    }
+    let mut depth_memo: BTreeMap<u64, usize> = BTreeMap::new();
+    fn depth(
+        node: u64,
+        edges: &BTreeMap<u64, Vec<u64>>,
+        memo: &mut BTreeMap<u64, usize>,
+        visiting: &mut BTreeSet<u64>,
+    ) -> Result<usize, EngineError> {
+        if let Some(d) = memo.get(&node) {
+            return Ok(*d);
+        }
+        if !visiting.insert(node) {
+            return Err(bad("cyclic composition reference"));
+        }
+        let mut deepest = 0usize;
+        for &child in &edges[&node] {
+            deepest = deepest.max(depth(child, edges, memo, visiting)?);
+        }
+        visiting.remove(&node);
+        // Root contributes no depth; each composition level adds one.
+        let d = if node == 0 { deepest } else { deepest + 1 };
+        memo.insert(node, d);
+        Ok(d)
+    }
+    let mut visiting = BTreeSet::new();
+    for &node in edges.keys() {
+        let d = depth(node, &edges, &mut depth_memo, &mut visiting)?;
+        if node != 0 && d > MAX_COMP_DEPTH {
+            return Err(bad("composition nesting depth exceeded"));
         }
     }
     if curves > 128 || count > 100000 || serde_json::to_vec(s)?.len() > MAX_BYTES {
@@ -317,6 +667,61 @@ fn merge<T: Serialize + serde::de::DeserializeOwned>(
     }
     Ok(serde_json::from_value(data)?)
 }
+/// Locate a layer by its globally unique id. Returns (composition, index)
+/// where `None` is the root composition.
+fn locate_layer(s: &State, layer: u64) -> Option<(Option<u64>, usize)> {
+    if let Some(i) = s.layers.iter().position(|l| l.id == layer) {
+        return Some((None, i));
+    }
+    for (id, comp) in &s.compositions {
+        if let Some(i) = comp.layers.iter().position(|l| l.id == layer) {
+            return Some((Some(*id), i));
+        }
+    }
+    None
+}
+fn comp_layers<'a>(s: &'a State, comp: Option<u64>) -> Option<&'a [Arc<Layer>]> {
+    match comp {
+        None => Some(s.layers.as_slice()),
+        Some(id) => s.compositions.get(&id).map(|c| c.layers.as_slice()),
+    }
+}
+fn comp_layers_mut<'a>(s: &'a mut State, comp: Option<u64>) -> Option<&'a mut Vec<Arc<Layer>>> {
+    match comp {
+        None => Some(&mut s.layers),
+        Some(id) => s.compositions.get_mut(&id).map(|c| &mut c.layers),
+    }
+}
+/// Orphaned transform children of a removed/reparented layer keep their
+/// local transform but lose the parent link.
+fn clear_parent_links(layers: &mut [Arc<Layer>], parent: u64) {
+    for l in layers.iter_mut() {
+        if l.parent_id == Some(parent) {
+            Arc::make_mut(l).parent_id = None;
+        }
+    }
+}
+fn opt_string(p: &Value, name: &str, default: &str) -> Result<String, EngineError> {
+    p.get(name)
+        .map(|v| v.as_str().ok_or_else(|| bad("name must be a string")))
+        .transpose()
+        .map(|v| v.unwrap_or(default).to_string())
+}
+fn opt_u32(p: &Value, name: &str, default: u32) -> Result<u32, EngineError> {
+    match p.get(name) {
+        None | Some(Value::Null) => Ok(default),
+        Some(v) => serde_json::from_value(v.clone())
+            .map_err(|_| bad("expected an integer within range")),
+    }
+}
+fn opt_f64(p: &Value, name: &str, default: f64) -> Result<f64, EngineError> {
+    match p.get(name) {
+        None | Some(Value::Null) => Ok(default),
+        Some(v) => v
+            .as_f64()
+            .ok_or_else(|| bad("expected a finite number")),
+    }
+}
 pub struct MotionEngine {
     state: Arc<State>,
     journal: Journal<Arc<State>>,
@@ -333,12 +738,18 @@ impl MotionEngine {
             journal: Journal::new(HISTORY),
         }
     }
-    fn evaluated(&self, time: f64) -> Result<Vec<Layer>, EngineError> {
-        if !time.is_finite() || time < 0. || time > self.state.duration_s {
+    /// Evaluate one composition's layers at a local time. Curves resolve
+    /// against that composition's own duration.
+    fn evaluated_layers(
+        &self,
+        layers: &[Arc<Layer>],
+        duration_s: f64,
+        time: f64,
+    ) -> Result<Vec<Layer>, EngineError> {
+        if !time.is_finite() || time < 0. || time > duration_s {
             return Err(bad("time outside composition"));
         }
-        self.state
-            .layers
+        layers
             .iter()
             .map(|l| {
                 let mut out = (**l).clone();
@@ -348,7 +759,7 @@ impl MotionEngine {
                         &c.keys,
                         c.property.read(l),
                         time,
-                        self.state.duration_s,
+                        duration_s,
                         min,
                         max,
                     )
@@ -360,53 +771,110 @@ impl MotionEngine {
             })
             .collect()
     }
-    fn render(
+    /// Local time inside `comp` for a root-composition time `time`.
+    /// Nested time maps proportionally through each composition's duration:
+    /// child_time = parent_time * child.duration_s / parent.duration_s,
+    /// which telescopes to time * comp.duration_s / root.duration_s and is
+    /// clamped to the composition duration. No wrap or offset exists.
+    fn comp_local_time(&self, comp: &Composition, time: f64) -> f64 {
+        (time * comp.duration_s / self.state.duration_s).clamp(0., comp.duration_s)
+    }
+    /// Render one composition to packed RGBA at local `time`. `comp` layers
+    /// recurse into their own ephemeral Prism scene at their own dimensions;
+    /// the flattened child frame is uploaded into this scene as raster pixels.
+    fn render_comp(
         &self,
-        cmd: &Command,
+        view: &CompView,
+        time: f64,
         ctx: Option<&TaskContext>,
-    ) -> Result<CommandResult, EngineError> {
-        let time = cmd
-            .payload
-            .get("time_s")
-            .and_then(Value::as_f64)
-            .ok_or_else(|| bad("time_s must be finite"))?;
-        let layers = self.evaluated(time)?;
-        let mut prism = prism_engine::PrismEngine::new(self.state.width, self.state.height);
-        for l in layers {
+        depth: usize,
+    ) -> Result<Vec<u8>, EngineError> {
+        if depth > MAX_COMP_DEPTH {
+            return Err(bad("composition nesting depth exceeded"));
+        }
+        let layers = self.evaluated_layers(view.layers, view.duration_s, time)?;
+        let by_id: BTreeMap<u64, &Layer> = layers.iter().map(|l| (l.id, l)).collect();
+        let mut prism = prism_engine::PrismEngine::new(view.width, view.height);
+        for l in &layers {
             if let Some(c) = ctx {
                 c.checkpoint()?
             }
-            let result = if let Some(shape) = &l.shape {
-                prism.apply(Command::new("addShape", json!({"shape":shape})))?
+            let transform = if l.parent_id.is_some() {
+                decompose(&effective_affine(l, &by_id)?).ok_or_else(|| {
+                    bad("layer parent transform chain requires shear")
+                })?
             } else {
-                let asset = self
-                    .state
-                    .assets
-                    .get(&l.asset_id.ok_or_else(|| bad("raster layer lost asset"))?)
-                    .ok_or_else(|| bad("missing raster asset"))?;
-                let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
-                let id = added.data["layer_id"]
-                    .as_u64()
-                    .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
-                prism.apply(
-                    Command::new(
-                        "drawPixels",
-                        json!({"id":id,"x":0,"y":0,"w":asset.width,"h":asset.height}),
-                    )
-                    .with_binary(Some((*asset.pixels).clone())),
-                )?;
-                added
+                l.transform.clone()
+            };
+            let result = match l.kind {
+                Some(LayerKind::Shape) => {
+                    let shape = l.shape.as_ref().ok_or_else(|| bad("shape layer lost shape"))?;
+                    prism.apply(Command::new("addShape", json!({"shape":shape})))?
+                }
+                Some(LayerKind::Raster) => {
+                    let asset = self
+                        .state
+                        .assets
+                        .get(&l.asset_id.ok_or_else(|| bad("raster layer lost asset"))?)
+                        .ok_or_else(|| bad("missing raster asset"))?;
+                    let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
+                    let id = added.data["layer_id"]
+                        .as_u64()
+                        .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
+                    prism.apply(
+                        Command::new(
+                            "drawPixels",
+                            json!({"id":id,"x":0,"y":0,"w":asset.width,"h":asset.height}),
+                        )
+                        .with_binary(Some((*asset.pixels).clone())),
+                    )?;
+                    added
+                }
+                Some(LayerKind::Comp) => {
+                    let comp_id = l
+                        .comp_id
+                        .ok_or_else(|| bad("comp layer lost composition"))?;
+                    let comp = self
+                        .state
+                        .compositions
+                        .get(&comp_id)
+                        .ok_or_else(|| bad("missing composition"))?;
+                    // Local time maps proportionally through each composition's
+                    // duration: child = parent_time * child.duration / parent.duration.
+                    let child_time =
+                        (time * comp.duration_s / view.duration_s).clamp(0., comp.duration_s);
+                    let child_view = CompView {
+                        width: comp.width,
+                        height: comp.height,
+                        duration_s: comp.duration_s,
+                        layers: &comp.layers,
+                    };
+                    let pixels = self.render_comp(&child_view, child_time, ctx, depth + 1)?;
+                    let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
+                    let id = added.data["layer_id"]
+                        .as_u64()
+                        .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
+                    prism.apply(
+                        Command::new(
+                            "drawPixels",
+                            json!({"id":id,"x":0,"y":0,"w":comp.width,"h":comp.height}),
+                        )
+                        .with_binary(Some(pixels)),
+                    )?;
+                    added
+                }
+                None => return Err(bad("layer kind missing")),
             };
             let layer = result.data["layer_id"]
                 .as_u64()
                 .ok_or_else(|| bad("Prism did not return a layer"))?;
             prism.apply(Command::new(
                 "setTransformOrigin",
-                json!({"id":layer,"ox":l.transform.ox,"oy":l.transform.oy}),
+                json!({"id":layer,"ox":transform.ox,"oy":transform.oy}),
             ))?;
             prism.apply(Command::new(
                 "setLayerTransform",
-                json!({"id":layer,"transform":l.transform}),
+                json!({"id":layer,"transform":transform}),
             ))?;
             prism.apply(Command::new(
                 "setLayerOpacity",
@@ -424,9 +892,25 @@ impl MotionEngine {
         if let Some(c) = ctx {
             c.checkpoint()?
         }
-        let bytes = result
+        result
             .output
-            .ok_or_else(|| bad("Prism did not return RGBA"))?;
+            .ok_or_else(|| bad("Prism did not return RGBA"))
+    }
+    fn render(
+        &self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let time = cmd
+            .payload
+            .get("time_s")
+            .and_then(Value::as_f64)
+            .ok_or_else(|| bad("time_s must be finite"))?;
+        if !time.is_finite() || time < 0. || time > self.state.duration_s {
+            return Err(bad("time outside composition"));
+        }
+        let view = self.state.comp_view(None)?;
+        let bytes = self.render_comp(&view, time, ctx, 0)?;
         Ok(
             CommandResult::read_only(json!({"width":self.state.width,"height":self.state.height}))
                 .with_bytes(cmd, "pixels_b64", bytes),
@@ -448,11 +932,11 @@ impl Engine for MotionEngine {
                 journal: Journal::new(1),
             };
             let (staged, mut result) = ignition_core::execute_batch(staged, batch)?;
-            if staged.state != self.state {
+            if content_eq(&staged.state, &self.state) {
+                result.events.clear()
+            } else {
                 self.journal.record(self.state.clone());
                 self.state = staged.state
-            } else {
-                result.events.clear()
             }
             return Ok(result);
         }
@@ -525,6 +1009,7 @@ impl Engine for MotionEngine {
                     pixels: Arc::new(pixels),
                 }),
             );
+            next.schema = SCHEMA_VERSION;
             validate(&next)?;
             self.journal.record(self.state.clone());
             self.state = Arc::new(next);
@@ -537,6 +1022,10 @@ impl Engine for MotionEngine {
                 value["assets"] = json!({});
             }
             value["next_asset_id"] = json!(self.state.next_asset_id);
+            if value.get("compositions").is_none() {
+                value["compositions"] = json!({});
+            }
+            value["next_comp_id"] = json!(self.state.next_comp_id);
             return Ok(CommandResult::read_only(value));
         }
         if cmd.op == "evaluate" {
@@ -544,8 +1033,32 @@ impl Engine for MotionEngine {
                 .get("time_s")
                 .and_then(Value::as_f64)
                 .ok_or_else(|| bad("time_s required"))?;
+            if !t.is_finite() || t < 0. || t > self.state.duration_s {
+                return Err(bad("time outside composition"));
+            }
+            let root = self
+                .evaluated_layers(&self.state.layers, self.state.duration_s, t)?;
+            // Each nested composition is evaluated independently at its
+            // duration-scaled local time (the same mapping renderFrame uses
+            // per instance; multiple instances share one reported evaluation).
+            let mut compositions = serde_json::Map::new();
+            for (id, comp) in &self.state.compositions {
+                let local = self.comp_local_time(comp, t);
+                compositions.insert(
+                    id.to_string(),
+                    json!({
+                        "id": comp.id,
+                        "name": comp.name,
+                        "width": comp.width,
+                        "height": comp.height,
+                        "duration_s": comp.duration_s,
+                        "frame_rate": comp.frame_rate,
+                        "layers": self.evaluated_layers(&comp.layers, comp.duration_s, local)?,
+                    }),
+                );
+            }
             return Ok(CommandResult::read_only(
-                json!({"layers":self.evaluated(t)?}),
+                json!({"layers":root,"compositions":compositions}),
             ));
         }
         if cmd.op == "readRasterAsset" {
@@ -598,27 +1111,219 @@ impl Engine for MotionEngine {
                 next.duration_s = header.duration_s;
                 next.frame_rate = header.frame_rate;
             }
+            "addComposition" => {
+                let id = next.next_comp_id;
+                next.next_comp_id = id
+                    .checked_add(1)
+                    .ok_or_else(|| bad("composition identity exhausted"))?;
+                let name = opt_string(p, "name", "Composition")?;
+                let width = opt_u32(p, "width", 640)?;
+                let height = opt_u32(p, "height", 360)?;
+                let duration_s = opt_f64(p, "duration_s", next.duration_s)?;
+                next.compositions.insert(
+                    id,
+                    Composition {
+                        id,
+                        name,
+                        width,
+                        height,
+                        duration_s,
+                        frame_rate: next.frame_rate.clone(),
+                        layers: vec![],
+                    },
+                );
+                data = json!({"comp_id":id});
+            }
+            "duplicateComposition" => {
+                let id = id(p, "id")?;
+                let src = next
+                    .compositions
+                    .get(&id)
+                    .cloned()
+                    .ok_or_else(|| bad("unknown composition"))?;
+                let new_id = next.next_comp_id;
+                next.next_comp_id = new_id
+                    .checked_add(1)
+                    .ok_or_else(|| bad("composition identity exhausted"))?;
+                // Fresh layer/key identities; parent links are remapped inside
+                // the copy and composition references still target the same comps.
+                let mut layer_ids = BTreeMap::new();
+                for l in &src.layers {
+                    let nid = next.next_layer_id;
+                    next.next_layer_id = nid
+                        .checked_add(1)
+                        .ok_or_else(|| bad("layer identity exhausted"))?;
+                    layer_ids.insert(l.id, nid);
+                }
+                let mut layers = Vec::with_capacity(src.layers.len());
+                for l in &src.layers {
+                    let mut nl = (**l).clone();
+                    nl.id = layer_ids[&l.id];
+                    nl.parent_id = nl
+                        .parent_id
+                        .map(|pid| {
+                            layer_ids
+                                .get(&pid)
+                                .copied()
+                                .ok_or_else(|| bad("layer parent outside duplicated composition"))
+                        })
+                        .transpose()?;
+                    for c in &mut nl.curves {
+                        for k in Arc::make_mut(&mut c.keys).iter_mut() {
+                            k.id = next.next_key_id;
+                            next.next_key_id = next
+                                .next_key_id
+                                .checked_add(1)
+                                .ok_or_else(|| bad("key identity exhausted"))?;
+                        }
+                    }
+                    layers.push(Arc::new(nl));
+                }
+                let mut name = format!("{} copy", src.name);
+                while name.len() > 512 {
+                    name.pop();
+                }
+                next.compositions.insert(
+                    new_id,
+                    Composition {
+                        id: new_id,
+                        name,
+                        width: src.width,
+                        height: src.height,
+                        duration_s: src.duration_s,
+                        frame_rate: src.frame_rate.clone(),
+                        layers,
+                    },
+                );
+                data = json!({"comp_id":new_id});
+            }
+            "removeComposition" => {
+                let comp_id = id(p, "id")?;
+                if !next.compositions.contains_key(&comp_id) {
+                    return Err(bad("unknown composition"));
+                }
+                let referenced = next
+                    .layers
+                    .iter()
+                    .chain(
+                        next.compositions
+                            .values()
+                            .flat_map(|c| c.layers.iter()),
+                    )
+                    .any(|l| l.comp_id == Some(comp_id));
+                if referenced {
+                    return Err(bad("composition remains referenced by a comp layer"));
+                }
+                next.compositions.remove(&comp_id);
+            }
+            "addCompLayer" => {
+                let comp_id = id(p, "comp")?;
+                if !next.compositions.contains_key(&comp_id) {
+                    return Err(bad("unknown composition"));
+                }
+                let into = State::comp_arg(p, "into")?;
+                let layer = next.next_layer_id;
+                next.next_layer_id = layer
+                    .checked_add(1)
+                    .ok_or_else(|| bad("layer identity exhausted"))?;
+                let name = opt_string(p, "name", "Composition layer")?;
+                let layers = comp_layers_mut(&mut next, into)
+                    .ok_or_else(|| bad("unknown composition"))?;
+                layers.push(Arc::new(Layer {
+                    id: layer,
+                    name,
+                    visible: true,
+                    locked: false,
+                    kind: Some(LayerKind::Comp),
+                    shape: None,
+                    asset_id: None,
+                    comp_id: Some(comp_id),
+                    parent_id: None,
+                    transform: Transform::default(),
+                    opacity: 1.,
+                    curves: vec![],
+                }));
+                data = json!({"layer_id":layer});
+            }
+            "setLayerParent" => {
+                let layer_id = id(p, "layer")?;
+                let parent = match p.get("parent") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => Some(
+                        v.as_u64()
+                            .ok_or_else(|| bad("parent must be a layer id or null"))?,
+                    ),
+                };
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                let mut nl = (*arc).clone();
+                nl.parent_id = parent;
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
+            "reparentLayer" => {
+                if p.get("comp").is_none() {
+                    return Err(bad("comp required (0 selects the root composition)"));
+                }
+                let layer_id = id(p, "layer")?;
+                let target = State::comp_arg(p, "comp")?;
+                let index = p
+                    .get("index")
+                    .and_then(Value::as_u64)
+                    .and_then(|v| usize::try_from(v).ok())
+                    .ok_or_else(|| bad("index must be a nonnegative integer"))?;
+                let (src_key, src_i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, src_key).unwrap()[src_i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                let mut removed = comp_layers_mut(&mut next, src_key)
+                    .unwrap()
+                    .remove(src_i);
+                if src_key != target {
+                    // The transform parent and former children stay behind in the
+                    // source composition; their links cannot cross compositions.
+                    clear_parent_links(
+                        comp_layers_mut(&mut next, src_key).unwrap(),
+                        layer_id,
+                    );
+                    Arc::make_mut(&mut removed).parent_id = None;
+                }
+                let dest = comp_layers_mut(&mut next, target)
+                    .ok_or_else(|| bad("unknown composition"))?;
+                if index > dest.len() {
+                    return Err(bad("index out of bounds"));
+                }
+                dest.insert(index, removed);
+            }
             "addShapeLayer" => {
                 let shape: Shape = serde_json::from_value(
                     p.get("shape")
                         .cloned()
                         .ok_or_else(|| bad("shape required"))?,
                 )?;
-                let name = p
-                    .get("name")
-                    .map(|v| v.as_str().ok_or_else(|| bad("name must be a string")))
-                    .transpose()?
-                    .unwrap_or("Layer")
-                    .to_string();
+                let name = opt_string(p, "name", "Layer")?;
+                let into = State::comp_arg(p, "comp")?;
                 let layer = next.next_layer_id;
-                next.next_layer_id = layer.checked_add(1).ok_or_else(|| bad("id overflow"))?;
-                next.layers.push(Arc::new(Layer {
+                next.next_layer_id = layer
+                    .checked_add(1)
+                    .ok_or_else(|| bad("layer identity exhausted"))?;
+                let layers = comp_layers_mut(&mut next, into)
+                    .ok_or_else(|| bad("unknown composition"))?;
+                layers.push(Arc::new(Layer {
                     id: layer,
                     name,
                     visible: true,
                     locked: false,
+                    kind: Some(LayerKind::Shape),
                     shape: Some(shape),
                     asset_id: None,
+                    comp_id: None,
+                    parent_id: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -630,23 +1335,24 @@ impl Engine for MotionEngine {
                 if !next.assets.contains_key(&asset_id) {
                     return Err(bad("unknown raster asset"));
                 }
+                let into = State::comp_arg(p, "comp")?;
                 let layer = next.next_layer_id;
                 next.next_layer_id = layer
                     .checked_add(1)
                     .ok_or_else(|| bad("layer identity exhausted"))?;
-                let name = p
-                    .get("name")
-                    .map(|v| v.as_str().ok_or_else(|| bad("name must be a string")))
-                    .transpose()?
-                    .unwrap_or("Raster layer")
-                    .to_string();
-                next.layers.push(Arc::new(Layer {
+                let name = opt_string(p, "name", "Raster layer")?;
+                let layers = comp_layers_mut(&mut next, into)
+                    .ok_or_else(|| bad("unknown composition"))?;
+                layers.push(Arc::new(Layer {
                     id: layer,
                     name,
                     visible: true,
                     locked: false,
+                    kind: Some(LayerKind::Raster),
                     shape: None,
                     asset_id: Some(asset_id),
+                    comp_id: None,
+                    parent_id: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -655,7 +1361,16 @@ impl Engine for MotionEngine {
             }
             "removeRasterAsset" => {
                 let asset_id = id(p, "id")?;
-                if next.layers.iter().any(|l| l.asset_id == Some(asset_id)) {
+                let referenced = next
+                    .layers
+                    .iter()
+                    .chain(
+                        next.compositions
+                            .values()
+                            .flat_map(|c| c.layers.iter()),
+                    )
+                    .any(|l| l.asset_id == Some(asset_id));
+                if referenced {
                     return Err(bad("raster asset remains referenced by a layer"));
                 }
                 if next.assets.remove(&asset_id).is_none() {
@@ -668,22 +1383,40 @@ impl Engine for MotionEngine {
                         .cloned()
                         .ok_or_else(|| bad("order required"))?,
                 )?;
-                if order.len() != next.layers.len()
-                    || order.iter().collect::<BTreeSet<_>>().len() != order.len()
-                {
+                let order_set: BTreeSet<u64> = order.iter().copied().collect();
+                if order_set.len() != order.len() {
                     return Err(bad("order must be an exact permutation"));
                 }
-                let mut layers = Vec::new();
+                // The id set uniquely identifies one composition (layer ids are
+                // globally unique); the root is tried first for compatibility.
+                let mut found: Option<Option<u64>> = None;
+                let mut ambiguous = false;
+                for key in std::iter::once(None).chain(next.compositions.keys().map(|id| Some(*id)))
+                {
+                    let layers = comp_layers(&next, key).unwrap();
+                    if layers.iter().map(|l| l.id).collect::<BTreeSet<_>>() == order_set {
+                        if found.is_some() {
+                            ambiguous = true;
+                        }
+                        found = Some(key);
+                    }
+                }
+                if ambiguous || found.is_none() {
+                    return Err(bad("order must be an exact permutation"));
+                }
+                let key = found.unwrap();
+                let current = comp_layers(&next, key).unwrap();
+                let mut layers = Vec::with_capacity(order.len());
                 for id in order {
                     layers.push(
-                        next.layers
+                        current
                             .iter()
                             .find(|l| l.id == id)
                             .ok_or_else(|| bad("unknown layer"))?
                             .clone(),
                     )
                 }
-                next.layers = layers;
+                *comp_layers_mut(&mut next, key).unwrap() = layers;
             }
             "updateLayer" | "removeLayer" | "setPropertyKeys" => {
                 let layer_id = id(
@@ -694,17 +1427,19 @@ impl Engine for MotionEngine {
                         "id"
                     },
                 )?;
-                let i = next
-                    .layers
-                    .iter()
-                    .position(|l| l.id == layer_id)
-                    .ok_or_else(|| bad("unknown layer"))?;
-                let l = &next.layers[i];
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                // Clone the Arc out so `next` stays borrowable for key ids.
+                let l = comp_layers(&next, comp_key).unwrap()[i].clone();
                 if cmd.op == "removeLayer" {
                     if l.locked {
                         return Err(bad("layer is locked"));
                     }
-                    next.layers.remove(i);
+                    comp_layers_mut(&mut next, comp_key).unwrap().remove(i);
+                    clear_parent_links(
+                        comp_layers_mut(&mut next, comp_key).unwrap(),
+                        layer_id,
+                    );
                 } else if cmd.op == "updateLayer" {
                     if p.get("shape").is_some() && l.shape.is_none()
                         || p.get("asset_id").is_some() && l.asset_id.is_none()
@@ -730,11 +1465,12 @@ impl Engine for MotionEngine {
                             &["tx", "ty", "sx", "sy", "rotation", "ox", "oy"],
                         )?)?
                     }
-                    next.layers[i] = Arc::new(merge(
-                        &**l,
+                    let merged = merge(
+                        &*l,
                         &patch,
                         &["name", "visible", "locked", "shape", "transform", "opacity"],
-                    )?);
+                    )?;
+                    comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(merged);
                 } else {
                     if l.locked {
                         return Err(bad("layer is locked"));
@@ -775,7 +1511,7 @@ impl Engine for MotionEngine {
                         keys.push(serde_json::from_value(value)?)
                     }
                     data = json!({"key_ids":keys.iter().map(|k:&Key|k.id).collect::<Vec<_>>()});
-                    let mut layer = (**l).clone();
+                    let mut layer = (*l).clone();
                     if keys.is_empty() {
                         layer.curves.retain(|c| c.property != property)
                     } else if let Some(curve) =
@@ -788,13 +1524,14 @@ impl Engine for MotionEngine {
                             keys: Arc::new(keys),
                         })
                     }
-                    next.layers[i] = Arc::new(layer);
+                    comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(layer);
                 }
             }
             _ => return Err(EngineError::unsupported("unknown motion operation")),
         }
+        next.schema = SCHEMA_VERSION;
         validate(&next)?;
-        if next == *self.state {
+        if content_eq(&next, &self.state) {
             return Ok(CommandResult::read_only(data));
         }
         self.journal.record(self.state.clone());
@@ -828,7 +1565,9 @@ impl Engine for MotionEngine {
         }
         let wire: Value = serde_json::from_slice(payload)?;
         assets::preflight(&wire)?;
-        let next: State = serde_json::from_value(wire)?;
+        let mut next: State = serde_json::from_value(wire)?;
+        // schema:1 payloads lack `kind`; infer it before validation.
+        normalize_layers(&mut next);
         validate(&next)?;
         self.state = Arc::new(next);
         self.journal = Journal::new(HISTORY);
@@ -1116,3 +1855,5 @@ mod tests {
 }
 #[cfg(test)]
 mod raster_tests;
+#[cfg(test)]
+mod comp_tests;
