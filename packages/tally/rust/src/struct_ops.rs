@@ -8,11 +8,11 @@
 //! rewrite through `formula::remap_references`, per-sheet `merges`
 //! shrink/drop, and every workbook table bound to the sheet id — names,
 //! validations, conditional formats, filters (+column), charts (+series
-//! ranges), sparklines, captured view filter specs and comments — has its
-//! canonical `"A1"`/`"A1:B2"` range remapped; entries the band deletes
-//! outright are dropped. Each op records one whole-document undo entry
-//! (`UndoEntry::Reset`, the sheet-structural precedent), so undo/redo
-//! restore the exact prior document.
+//! ranges), sparklines, captured view filter specs, comments and pivot
+//! source ranges — has its canonical `"A1"`/`"A1:B2"` range remapped;
+//! entries the band deletes outright are dropped. Each op records one
+//! whole-document undo entry (`UndoEntry::Reset`, the sheet-structural
+//! precedent), so undo/redo restore the exact prior document.
 //!
 //! Merge semantics (bounded subset): a merge is display metadata stored
 //! per sheet as inclusive 0-based rectangles. `mergeCells` records the
@@ -471,6 +471,38 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) -> Result<(), En
             kept.push(c);
         }
         doc.comments = kept;
+    }
+    // Pivot specs: only `source.range` is coordinate-bound (the output
+    // sheet carries no stored coordinates). A pivot whose source sheet is
+    // the edited sheet remaps its source range like a chart anchor; a
+    // range fully covered by a deleted band — or a column edit that
+    // shrinks the range below a referenced field index — drops the pivot
+    // (a spec that cannot name its fields cannot compute). Pivots bound
+    // to the edited sheet only as *output* sheet are untouched.
+    {
+        let mut items = mem::take(&mut doc.pivots);
+        let mut kept = Vec::with_capacity(items.len());
+        for mut pv in items.drain(..) {
+            if pv.source.sheet == sheet_id {
+                match band.range_str(&pv.source.range) {
+                    Some(range) => pv.source.range = range,
+                    None => {
+                        if !band.deleting && band.overflows(&pv.source.range) {
+                            return Err(insert_overflow());
+                        }
+                        continue;
+                    }
+                }
+                // Column deletes can shrink the source width under a
+                // referenced field index; the spec then cannot resolve
+                // its fields and drops (deletes only — inserts expand).
+                if !pivot_ops::fields_ok(&pv) {
+                    continue;
+                }
+            }
+            kept.push(pv);
+        }
+        doc.pivots = kept;
     }
     Ok(())
 }

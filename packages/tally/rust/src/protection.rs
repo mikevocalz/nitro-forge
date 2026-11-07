@@ -236,6 +236,29 @@ impl TallyEngine {
                         .iter()
                         .any(|s| s.id == c.sheet && s.is_protected)
                 }),
+            // Pivot specs are workbook metadata bound to an output sheet:
+            // insertPivot guards its target sheet (payload `sheet`,
+            // default active), updatePivot/removePivot guard the stored
+            // pivot's output sheet. The source sheet is a read reference
+            // and does not gate. Unknown ids fall through — the op
+            // reports not_found. listPivots/describePivot are ungated.
+            "insertPivot" => {
+                let idx = match p.get("sheet") {
+                    Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                    _ => self.doc.active,
+                };
+                self.doc.sheets[idx].is_protected
+            }
+            "updatePivot" | "removePivot" => p
+                .get("id")
+                .and_then(Value::as_u64)
+                .and_then(|id| self.doc.pivots.iter().find(|pv| pv.id == id))
+                .is_some_and(|pv| {
+                    self.doc
+                        .sheets
+                        .iter()
+                        .any(|s| s.id == pv.sheet && s.is_protected)
+                }),
             "new" => self.doc.sheets.iter().any(|s| s.is_protected),
             _ => false,
         };

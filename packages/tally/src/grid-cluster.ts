@@ -79,6 +79,14 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * and return strings; the file-export sheet's CSV/TSV import formats in
  * `transfer.ts` ride the same ops. XLSX stays deferred on dependency
  * admission (backlog: "XLSX blocked on dependency admission").
+ *
+ * Pivot tables landed in slice 11-A as storage-only specs
+ * (`insertPivot`/`updatePivot`/`removePivot`/`listPivots`/`describePivot`
+ * on `TallyDocument`): the engine stores the bounded spec — output sheet,
+ * source sheet+range, field-offset rows/columns/values/filters/sort —
+ * and writes no cells. Compute, refresh, materialization and any pivot
+ * UI are deferred; hosts wire the methods directly when a later slice
+ * lands them.
  */
 export const TALLY_DEFERRED_OPS = {} as const;
 export type TallyDeferredOp = keyof typeof TALLY_DEFERRED_OPS;
