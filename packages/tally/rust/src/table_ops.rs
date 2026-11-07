@@ -53,10 +53,14 @@
 //! Structural edits: a table's `range` is coordinate-bound, so it
 //! participates in `remap_band` like every other range — inserts shift
 //! and expand it (a band strictly inside grows the table, a band at its
-//! edge shifts it whole), deletes shrink/clamp it, and a range fully
-//! covered by a deleted band drops the table (Excel removes a table whose
-//! rows/columns are all deleted). Inserts that would push the range off
-//! the sheet reject atomically like every other bound structure.
+//! edge shifts it whole), deletes shrink/clamp it, a range fully covered
+//! by a deleted band drops the table, and a delete that shrinks it below
+//! two cells drops it as well (Excel removes a table whose rows/columns
+//! are all deleted; a degenerate single-cell range cannot satisfy
+//! `range_ok`). Inserts that would push the range off the sheet — or
+//! grow it past the shared 16,384-cell cap — reject atomically like
+//! every other bound structure, so a remap never emits a snapshot
+//! `restore` would reject.
 //!
 //! Protection: tables are workbook metadata bound to one sheet, so
 //! mutations are guarded by that sheet exactly like chart/pivot ops (see
@@ -148,7 +152,9 @@ pub(super) fn range_coords(t: &TableSpec) -> Option<name_ops::RefersCoords> {
     name_ops::parse_refers_to(&t.range).ok()
 }
 
-fn cell_count(coords: name_ops::RefersCoords) -> u64 {
+/// Cell count of an inclusive 0-based rectangle (shared with the
+/// structural remap, which re-checks `range_ok`'s bounds after edits).
+pub(super) fn cell_count(coords: name_ops::RefersCoords) -> u64 {
     u64::from(coords.2 - coords.0 + 1) * u64::from(coords.3 - coords.1 + 1)
 }
 
@@ -321,12 +327,12 @@ impl TallyEngine {
             Some(n) => n,
             None => auto_table_name(&self.doc),
         };
-        let range = check_candidate(&self.doc, sheet_id, &name, coords, u64::MAX)?;
         if self.doc.tables.len() >= MAX_TABLES {
             return Err(EngineError::out_of_bounds(format!(
                 "table limit of {MAX_TABLES} reached"
             )));
         }
+        let range = check_candidate(&self.doc, sheet_id, &name, coords, u64::MAX)?;
         let id = self.doc.next_table;
         self.doc.next_table = self
             .doc
@@ -914,6 +920,127 @@ mod tests {
             ErrorCode::OutOfBounds
         );
         assert_eq!(tables(&mut e), before);
+    }
+
+    #[test]
+    fn structural_delete_dropping_table_below_two_cells() {
+        let mut e = TallyEngine::new();
+        // Two cells wide, one row tall; deleting column A leaves "A1" —
+        // a single cell `range_ok` forbids, so the table drops outright
+        // (same rule as a merge shrunk to one cell) instead of emitting
+        // a snapshot `restore` would reject.
+        insert(&mut e, json!({"name":"T","range":{"from":"A1","to":"B1"}}));
+        data(&mut e, "deleteCols", json!({"from":1,"to":1}));
+        assert!(tables(&mut e).is_empty());
+        // The whole-document undo entry restores the table exactly.
+        assert!(e.undo().unwrap());
+        assert_eq!(tables(&mut e).len(), 1);
+        assert_eq!(
+            data(&mut e, "describeTable", json!({"id":1}))["table"]["range"],
+            json!("A1:B1")
+        );
+        // Same on the row axis: a 1x2 table loses its second row.
+        let mut e2 = TallyEngine::new();
+        insert(&mut e2, json!({"name":"V","range":{"from":"A1","to":"A2"}}));
+        data(&mut e2, "deleteRows", json!({"from":1,"to":1}));
+        assert!(tables(&mut e2).is_empty());
+        assert!(e2.undo().unwrap());
+        assert_eq!(tables(&mut e2).len(), 1);
+    }
+
+    #[test]
+    fn structural_delete_shrinking_table_to_two_cells_keeps_it() {
+        let mut e = TallyEngine::new();
+        // A1:B2 (4 cells); deleting row 1 leaves A1:B1 — still two
+        // cells, so the table survives with the shrunken range.
+        insert(&mut e, json!({"name":"T","range":{"from":"A1","to":"B2"}}));
+        data(&mut e, "deleteRows", json!({"from":1,"to":1}));
+        assert_eq!(tables(&mut e).len(), 1);
+        assert_eq!(
+            data(&mut e, "describeTable", json!({"id":1}))["table"]["range"],
+            json!("A1:B1")
+        );
+        // Column axis mirrors: A1:B1 minus column B leaves "A1" and
+        // drops — covered above; here delete column A from A1:B2 first.
+        let mut e2 = TallyEngine::new();
+        insert(&mut e2, json!({"name":"U","range":{"from":"A1","to":"B2"}}));
+        data(&mut e2, "deleteCols", json!({"from":1,"to":1}));
+        assert_eq!(tables(&mut e2).len(), 1);
+        assert_eq!(
+            data(&mut e2, "describeTable", json!({"id":1}))["table"]["range"],
+            json!("A1:A2")
+        );
+    }
+
+    #[test]
+    fn structural_insert_growing_table_past_cell_cap_rejects() {
+        let mut e = TallyEngine::new();
+        // Exactly at the shared 16,384-cell cap: 16 cols x 1024 rows.
+        insert(&mut e, json!({"name":"Big","range":{"from":"A1","to":"P1024"}}));
+        let before = e.snapshot().unwrap();
+        // Inserting a row inside the table would grow it to 16,400
+        // cells — `range_ok`'s cap makes the edit reject atomically
+        // rather than storing a table `restore` would reject.
+        let err = apply_err(&mut e, "insertRows", json!({"from":2,"to":2}));
+        assert_eq!(err.code, ErrorCode::OutOfBounds);
+        assert_eq!(tables(&mut e).len(), 1);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // The pre-edit snapshot restores cleanly.
+        let mut e2 = TallyEngine::new();
+        e2.restore(&before).unwrap();
+        assert_eq!(tables(&mut e2).len(), 1);
+        // Column inserts at the cap reject the same way.
+        let err = apply_err(&mut e, "insertCols", json!({"from":2,"to":2}));
+        assert_eq!(err.code, ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+
+    #[test]
+    fn update_table_shrink_onto_own_footprint_succeeds() {
+        let mut e = TallyEngine::new();
+        insert(&mut e, json!({"name":"T","range":{"from":"A1","to":"D4"}}));
+        // The new range sits inside the table's own previous footprint;
+        // `except_id` excludes the table itself from the overlap check,
+        // so shrinking onto it succeeds.
+        let r = data(
+            &mut e,
+            "updateTable",
+            json!({"id":1,"patch":{"range":{"from":"B2","to":"C3"}}}),
+        );
+        assert_eq!(r["table"]["range"], json!("B2:C3"));
+    }
+
+    #[test]
+    fn overlap_checks_ignore_other_sheets() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "addSheet", json!({"name":"Data"}));
+        // Identical coordinates on different sheets never conflict: a
+        // merge on Sheet1 may cover the exact range of a table bound to
+        // Data, and a table on Sheet1 may cover the exact range of a
+        // merge bound to Data.
+        data(
+            &mut e,
+            "insertTable",
+            json!({"sheet":"Data","table":{"name":"T","range":{"from":"A1","to":"B2"}}}),
+        );
+        data(&mut e, "mergeCells", json!({"range":{"from":"A1","to":"B2"}}));
+        data(&mut e, "mergeCells", json!({"sheet":"Data","range":{"from":"C1","to":"D2"}}));
+        data(
+            &mut e,
+            "insertTable",
+            json!({"table":{"name":"U","range":{"from":"C1","to":"D2"}}}),
+        );
+        assert_eq!(tables(&mut e).len(), 2);
+        // But on the table's own sheet the merge rule still bites.
+        assert_eq!(
+            apply_err(
+                &mut e,
+                "mergeCells",
+                json!({"sheet":"Data","range":{"from":"A1","to":"C3"}})
+            )
+            .code,
+            ErrorCode::Validation
+        );
     }
 
     #[test]

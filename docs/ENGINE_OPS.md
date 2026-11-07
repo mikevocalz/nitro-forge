@@ -763,7 +763,10 @@ four are storage-only display flags; the engine never computes totals,
 applies banding or writes header/totals content. `name` is the display
 name: `[A-Za-z_][A-Za-z0-9_.]*`, ≤128 UTF-8 bytes, **unique
 case-insensitively across the whole workbook** (Excel's rule — table
-names are structured-reference targets, not per-sheet labels); omitted,
+names are structured-reference targets, not per-sheet labels); a table
+name may coincide with a defined name or a sheet name — the shared
+workbook-namespace collision is deferred with structured references;
+omitted,
 the engine assigns the smallest free `"Table{n}"` (`Table1`, `Table2`,
 … skipping names already taken case-insensitively). On one sheet table
 ranges **may not overlap each other** (`validation`), and a table range
@@ -836,8 +839,13 @@ The remap is Excel-like and covers **every coordinate-bound structure**:
   entry entirely** when its rectangle is fully covered by the deleted
   band. `tables[].range` remaps identically — inserting rows/columns
   strictly inside a table expands its range (Excel grows the table),
-  deleting part shrinks it and deleting the whole range drops the table;
-  because every bound structure remaps through the same `Band`, a table
+  deleting part shrinks it, deleting the whole range drops the table,
+  and a delete that shrinks a table below two cells drops it too (a
+  degenerate range cannot satisfy the table invariants, matching the
+  single-cell merge drop); an insert that would grow a table — or a
+  merge — past the shared 16,384-cell cap rejects `out_of_bounds`
+  atomically like every other bound-range overflow. Because every bound
+  structure remaps through the same `Band`, a table
   and another structure can never be left overlapping by an edit.
   `filters[].column` (a letter inside the filter range) shifts on
   column-axis edits and the rule drops when its column or range dies.
