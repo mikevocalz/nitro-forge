@@ -2,13 +2,16 @@
 //! tally-engine — the Nitro-Forge spreadsheet engine.
 //!
 //! Implements the `tally-engine` op surface from `docs/ENGINE_OPS.md` against
-//! `ignition_core::Engine`. State is `{ next_sheet, sheets: [Sheet], active }`;
-//! each `Sheet` is `{ id, name, cells: { "A1": { raw } }, formats?: { "A1":
-//! CellFormat } }`. Only raw cell text is stored — computed values are always
-//! derived live by the formula evaluator (`formula` module). `formats` is
-//! durable per-cell display metadata (number format, font, fill, borders)
-//! kept in a separate map so it survives content edits and never affects
-//! evaluation (see `format_ops`).
+//! `ignition_core::Engine`. State is `{ next_sheet, sheets: [Sheet], active,
+//! names: [NamedRange] }`; each `Sheet` is `{ id, name, cells: { "A1": { raw } },
+//! formats?: { "A1": CellFormat } }`. Only raw cell text is stored — computed
+//! values are always derived live by the formula evaluator (`formula`
+//! module). `formats` is durable per-cell display metadata (number format,
+//! font, fill, borders) kept in a separate map so it survives content edits
+//! and never affects evaluation (see `format_ops`). `names` is the durable
+//! workbook-level named-range table (see `name_ops`): each entry binds a
+//! validated name to one sheet id and a canonical `"A1"`/`"A1:B2"` target;
+//! formulas resolve names bound to the sheet being evaluated.
 //!
 //! Semantics documented for reviewers:
 //! * Cell addresses `$?[A-Z]+$?[0-9]+` (case-insensitive); `$` markers are
@@ -32,12 +35,13 @@
 
 mod formula;
 mod format_ops;
+mod name_ops;
 mod range_ops;
 mod sheet_ops;
 mod protection;
 
 use format_ops::CellFormat;
-use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
+use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -77,16 +81,30 @@ pub struct Sheet {
     pub is_protected: bool,
 }
 
+/// Workbook-level named range (see `name_ops` for the model decision):
+/// `name` is unique case-insensitively, `sheet` is the durable sheet id the
+/// range is bound to, and `refers_to` is a canonical `"A1"`/`"A1:B2"`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct NamedRange {
+    pub name: String,
+    pub sheet: u64,
+    pub refers_to: String,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Workbook {
     next_sheet: u64,
     sheets: Vec<Sheet>,
     active: usize,
+    /// Durable named ranges; empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    names: Vec<NamedRange>,
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
 /// only when the workbook carries durable post-release fields (`tone`,
-/// `is_protected`, `formats`) that pre-wrapper readers would silently drop;
+/// `is_protected`, `formats`, `names`) that pre-wrapper readers would
+/// silently drop;
 /// workbooks without them keep the legacy bare-`Workbook` payload so older
 /// engines can still read them.
 #[derive(Serialize)]
@@ -116,6 +134,7 @@ fn blank_workbook() -> Workbook {
             is_protected: false,
         }],
         active: 0,
+        names: Vec::new(),
     }
 }
 
@@ -168,11 +187,16 @@ enum UndoEntry {
     },
     /// A sheet was added; undo removes it.
     AddSheet { sheet_id: u64 },
-    /// A sheet was removed; undo re-inserts it at `index` and restores `active`.
+    /// A sheet was removed; undo re-inserts it at `index`, restores `active`
+    /// and re-adds `dropped_names` (names bound to the removed sheet are
+    /// cascade-dropped on removal). Re-admission skips any dropped name whose
+    /// case-insensitive twin already exists or that would exceed `MAX_NAMES`,
+    /// keeping `doc.names` inside the invariants `restore` enforces.
     RemoveSheet {
         index: usize,
         sheet: Sheet,
         prev_active: usize,
+        dropped_names: Vec<NamedRange>,
     },
     RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
@@ -298,13 +322,21 @@ impl TallyEngine {
         self.doc.sheets.iter_mut().find(|s| s.id == id)
     }
 
-    /// Fresh per-request evaluator over the active sheet.
-    fn eval_cell_now(&self, addr: &str) -> FVal {
-        Evaluator::new(self.active_sheet()).eval_cell(addr)
+    /// Fresh per-request evaluator over the active sheet, with workbook
+    /// named-range resolution enabled when `names` is nonempty.
+    fn evaluator(&self) -> Evaluator<'_, Sheet> {
+        let sheet = self.active_sheet();
+        if self.doc.names.is_empty() {
+            Evaluator::new(sheet)
+        } else {
+            Evaluator::with_names(sheet, sheet.id, name_ops::name_table(&self.doc.names))
+        }
     }
 
-    /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet`.
-    fn remove_sheet_at(&mut self, idx: usize) -> Sheet {
+    /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet` and
+    /// cascade-dropping names bound to the removed sheet id. Returns the
+    /// removed sheet and the dropped names.
+    fn remove_sheet_at(&mut self, idx: usize) -> (Sheet, Vec<NamedRange>) {
         let removed = self.doc.sheets.remove(idx);
         let len = self.doc.sheets.len();
         if self.doc.active > idx {
@@ -312,7 +344,16 @@ impl TallyEngine {
         } else if self.doc.active >= len {
             self.doc.active = len.saturating_sub(1);
         }
-        removed
+        let mut dropped = Vec::new();
+        self.doc.names.retain(|n| {
+            if n.sheet == removed.id {
+                dropped.push(n.clone());
+                false
+            } else {
+                true
+            }
+        });
+        (removed, dropped)
     }
 
     // -- op results -----------------------------------------------------------
@@ -407,10 +448,21 @@ impl TallyEngine {
         if self.doc.sheets.len() <= 1 {
             return Err(EngineError::validation("workbook must keep at least one sheet"));
         }
+        // Names bound to the removed sheet are cascade-dropped; the undo
+        // entry carries them so undo/redo restore them exactly.
+        let sheet_id = self.doc.sheets[idx].id;
+        let dropped_names: Vec<NamedRange> = self
+            .doc
+            .names
+            .iter()
+            .filter(|n| n.sheet == sheet_id)
+            .cloned()
+            .collect();
         let entry = UndoEntry::RemoveSheet {
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
             prev_active: self.doc.active,
+            dropped_names,
         };
         self.journal.record(entry);
         self.remove_sheet_at(idx);
@@ -457,7 +509,7 @@ impl TallyEngine {
                 sheet.cells.insert(addr.clone(), Cell { raw });
             }
         }
-        let computed = self.eval_cell_now(&addr).to_json();
+        let computed = self.evaluator().eval_cell(&addr).to_json();
         Ok(Self::changed(json!({ "addr": addr, "computed": computed })))
     }
 
@@ -486,7 +538,7 @@ impl TallyEngine {
             .get(&addr)
             .map(|c| c.raw.clone())
             .unwrap_or_default();
-        let computed = Evaluator::new(sheet).eval_cell(&addr).to_json();
+        let computed = self.evaluator().eval_cell(&addr).to_json();
         let mut out = serde_json::Map::new();
         out.insert("raw".to_string(), Value::String(raw));
         out.insert("computed".to_string(), computed);
@@ -509,7 +561,7 @@ impl TallyEngine {
             )));
         }
         let sheet = self.active_sheet();
-        let mut ev = Evaluator::new(sheet);
+        let mut ev = self.evaluator();
         let mut rows = Vec::with_capacity(h as usize);
         for r in r0..=r1 {
             let mut row = Vec::with_capacity(w as usize);
@@ -537,7 +589,7 @@ impl TallyEngine {
 
     fn op_evaluate(&self, p: &Value) -> Result<CommandResult, EngineError> {
         let f = Self::str_field(p, "formula")?;
-        let v = Evaluator::new(self.active_sheet()).eval_formula_text(f);
+        let v = self.evaluator().eval_formula_text(f);
         Ok(Self::readonly(json!({ "value": v.to_json() })))
     }
 
@@ -644,11 +696,12 @@ impl TallyEngine {
                 match self.doc.sheets.iter().position(|s| s.id == sheet_id) {
                     Some(idx) => {
                         let prev_active = self.doc.active;
-                        let removed = self.remove_sheet_at(idx);
+                        let (removed, dropped_names) = self.remove_sheet_at(idx);
                         UndoEntry::RemoveSheet {
                             index: idx,
                             sheet: removed,
                             prev_active,
+                            dropped_names,
                         }
                     }
                     // Already gone — nothing changed; emit a no-op entry.
@@ -661,11 +714,32 @@ impl TallyEngine {
                 index,
                 sheet,
                 prev_active,
+                dropped_names,
             } => {
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
                 self.doc.sheets.insert(idx, sheet);
                 self.doc.active = prev_active.min(self.doc.sheets.len() - 1);
+                // Names cascade-dropped with the sheet come back with it —
+                // but only while re-admission keeps `doc.names` inside the
+                // invariants `restore` enforces (case-insensitive
+                // uniqueness, MAX_NAMES). A name redefined while its sheet
+                // was gone wins; the dropped entry is discarded rather than
+                // leaving the document in an unrestorable state.
+                for n in dropped_names {
+                    if self.doc.names.len() >= name_ops::MAX_NAMES {
+                        break;
+                    }
+                    if self
+                        .doc
+                        .names
+                        .iter()
+                        .any(|e| e.name.eq_ignore_ascii_case(&n.name))
+                    {
+                        continue;
+                    }
+                    self.doc.names.push(n);
+                }
                 UndoEntry::AddSheet { sheet_id }
             }
             UndoEntry::RenameSheet {
@@ -730,6 +804,11 @@ impl Engine for TallyEngine {
             "fillSeries" => self.op_fill_series(p),
             "setFormat" => self.op_set_format(p),
             "clearFormat" => self.op_clear_format(p),
+            "defineName" => self.op_define_name(p),
+            "updateName" => self.op_update_name(p),
+            "removeName" => self.op_remove_name(p),
+            "listNames" => self.op_list_names(),
+            "functionCatalog" => self.op_function_catalog(),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -759,14 +838,15 @@ impl Engine for TallyEngine {
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        // Sheets with a tone, protection flag or stored formats carry durable
-        // fields added after the first release; older readers ignore unknown
-        // `Sheet` fields, so wrap those documents and let old engines fail
+        // Sheets with a tone, protection flag, stored formats, or any
+        // workbook names carry durable fields added after the first release;
+        // older readers ignore unknown `Sheet`/`Workbook` fields, so wrap
+        // those documents and let old engines fail
         // closed instead of silently discarding them. Plain workbooks keep
         // the legacy payload shape.
         let extended = self.doc.sheets.iter().any(|s| {
             s.tone.is_some() || s.is_protected || !s.formats.is_empty()
-        });
+        }) || !self.doc.names.is_empty();
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
@@ -856,6 +936,33 @@ impl Engine for TallyEngine {
                     s.formats.insert(formula::fmt_addr(col, row), fmt);
                 }
             }
+        }
+        // Named ranges get the same hostile-input treatment: bounded count,
+        // legal unique names, existing sheet ids, on-sheet refers_to that is
+        // re-canonicalized before state is replaced.
+        if doc.names.len() > name_ops::MAX_NAMES {
+            return Err(EngineError::serialization("too many named ranges"));
+        }
+        let mut seen_range_names = std::collections::BTreeSet::new();
+        for n in &mut doc.names {
+            if !name_ops::valid_name(&n.name) {
+                return Err(EngineError::serialization(format!(
+                    "invalid defined name '{}'",
+                    n.name
+                )));
+            }
+            if !seen_range_names.insert(n.name.to_ascii_lowercase()) {
+                return Err(EngineError::serialization("duplicate defined name"));
+            }
+            if !doc.sheets.iter().any(|s| s.id == n.sheet) {
+                return Err(EngineError::serialization(format!(
+                    "name '{}' references a missing sheet",
+                    n.name
+                )));
+            }
+            let coords = name_ops::parse_refers_to(&n.refers_to)
+                .map_err(|_| EngineError::serialization("invalid refers_to"))?;
+            n.refers_to = name_ops::canonical_refers_to(coords);
         }
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
@@ -1265,6 +1372,90 @@ mod tests {
         // redo chain still coherent
         while e.redo().unwrap() {}
         assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 1);
+    }
+
+    fn ghost_sheet(id: u64) -> Sheet {
+        Sheet {
+            id,
+            name: "Ghost".to_string(),
+            cells: BTreeMap::new(),
+            formats: BTreeMap::new(),
+            tone: None,
+            is_protected: false,
+        }
+    }
+
+    fn dropped_name(name: &str) -> NamedRange {
+        NamedRange {
+            name: name.to_string(),
+            sheet: 77,
+            refers_to: "B2".to_string(),
+        }
+    }
+
+    #[test]
+    fn undo_remove_sheet_readmits_names_within_restore_invariants() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "defineName", json!({"name":"foo","refers_to":"A1"}));
+        // A RemoveSheet undo entry recorded while "Foo" was bound to the
+        // removed sheet, with "foo" defined while the sheet was gone.
+        // Re-admission must skip the case-insensitive duplicate — a bare
+        // extend would leave doc.names unrestorable. The public op surface
+        // cannot currently produce this interleaving (the journal is
+        // strictly LIFO and `record` clears redo), so the entry is crafted
+        // directly to pin the invariant.
+        e.journal.record(UndoEntry::RemoveSheet {
+            index: 0,
+            sheet: ghost_sheet(77),
+            prev_active: 0,
+            dropped_names: vec![dropped_name("Foo"), dropped_name("Bar")],
+        });
+        assert!(e.undo().unwrap());
+        // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
+        let ns = data(&mut e, "listNames", json!({}))["names"]
+            .as_array()
+            .unwrap()
+            .clone();
+        assert_eq!(ns.len(), 2);
+        assert_eq!(ns[0]["name"], json!("foo"));
+        assert_eq!(ns[1]["name"], json!("Bar"));
+        assert_eq!(ns[1]["sheet"], json!("Ghost"));
+        // The document must still snapshot and restore cleanly (the crafted
+        // sheet id bumps `next_sheet` on restore, so compare name state, not
+        // envelope bytes).
+        let saved = e.snapshot().unwrap();
+        let mut reopened = TallyEngine::new();
+        reopened.restore(&saved).unwrap();
+        assert_eq!(
+            data(&mut reopened, "listNames", json!({})),
+            data(&mut e, "listNames", json!({}))
+        );
+    }
+
+    #[test]
+    fn undo_remove_sheet_dropped_names_respect_max_names() {
+        let mut e = TallyEngine::new();
+        // Fill the name table to the cap directly; the invariant under test
+        // is the re-admission guard, not the define path.
+        e.doc.names = (0..name_ops::MAX_NAMES)
+            .map(|i| NamedRange {
+                name: format!("nm_{i}"),
+                sheet: 0,
+                refers_to: "A1".to_string(),
+            })
+            .collect();
+        e.journal.record(UndoEntry::RemoveSheet {
+            index: 0,
+            sheet: ghost_sheet(77),
+            prev_active: 0,
+            dropped_names: vec![dropped_name("Extra")],
+        });
+        assert!(e.undo().unwrap());
+        assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);
+        assert!(e.doc.names.iter().all(|n| n.name != "Extra"));
+        let saved = e.snapshot().unwrap();
+        let mut reopened = TallyEngine::new();
+        reopened.restore(&saved).unwrap();
     }
 
     // -- snapshot / restore -------------------------------------------------------

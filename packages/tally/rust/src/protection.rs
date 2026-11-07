@@ -9,6 +9,43 @@ impl TallyEngine {
             "renameSheet" | "removeSheet" | "duplicateSheet" | "moveSheet" | "setSheetColor" => {
                 self.doc.sheets[self.resolve_sheet(Self::field(p, "sheet")?)?].is_protected
             }
+            // Names are workbook metadata but each is bound to one sheet, so
+            // mutating a name is treated like editing that sheet: defineName
+            // guards its target sheet, updateName/removeName guard the name's
+            // current sheet (updateName also guards an explicitly requested
+            // new target). Unknown names fall through — the op reports
+            // not_found. listNames/functionCatalog are reads and ungated.
+            "defineName" => {
+                let idx = match p.get("sheet") {
+                    Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                    _ => self.doc.active,
+                };
+                self.doc.sheets[idx].is_protected
+            }
+            "updateName" | "removeName" => {
+                let sheet_id = p
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .and_then(|n| self.name_sheet_id(n));
+                let current = sheet_id.is_some_and(|id| {
+                    self.doc
+                        .sheets
+                        .iter()
+                        .any(|s| s.id == id && s.is_protected)
+                });
+                let retarget = if op == "updateName" {
+                    match p.get("sheet") {
+                        Some(v) if !v.is_null() => self
+                            .resolve_sheet(v)
+                            .map(|i| self.doc.sheets[i].is_protected)
+                            .unwrap_or(false),
+                        _ => false,
+                    }
+                } else {
+                    false
+                };
+                current || retarget
+            }
             "new" => self.doc.sheets.iter().any(|s| s.is_protected),
             _ => false,
         };
@@ -86,6 +123,35 @@ mod tests {
         apply(&mut e, "protectSheet", json!({"sheet":0,"protected":false}));
         apply(&mut e, "setActive", json!({"sheet":0}));
         apply(&mut e, "setCell", json!({"addr":"A1","value":"unlocked"}));
+    }
+
+    #[test]
+    fn name_ops_guard_their_bound_sheet() {
+        let mut e = TallyEngine::new();
+        apply(&mut e, "addSheet", json!({"name":"Other"}));
+        apply(&mut e, "defineName", json!({"name":"OnProtected","refers_to":"A1"}));
+        apply(&mut e, "defineName", json!({"name":"OnOther","sheet":"Other","refers_to":"A1"}));
+        apply(&mut e, "protectSheet", json!({"sheet":0,"protected":true}));
+        let before = e.snapshot().unwrap();
+        // Names bound to the protected sheet (or defaulting to the active
+        // protected sheet) reject mutations; reads stay allowed.
+        for (op, p) in [
+            ("updateName", json!({"name":"OnProtected","refers_to":"B2"})),
+            ("removeName", json!({"name":"OnProtected"})),
+            ("defineName", json!({"name":"New","refers_to":"A1"})),
+            ("defineName", json!({"name":"New2","sheet":0,"refers_to":"A1"})),
+            // Retargeting an unprotected name onto the protected sheet.
+            ("updateName", json!({"name":"OnOther","sheet":0})),
+        ] {
+            assert!(e.apply(Command::new(op, p)).is_err(), "{op}");
+            assert_eq!(e.snapshot().unwrap(), before, "{op}");
+        }
+        assert!(e.apply(Command::new("listNames", json!({}))).is_ok());
+        assert!(e.apply(Command::new("functionCatalog", json!({}))).is_ok());
+        // Names bound to the unprotected sheet still mutate fine.
+        apply(&mut e, "updateName", json!({"name":"OnOther","refers_to":"B2"}));
+        apply(&mut e, "removeName", json!({"name":"OnOther"}));
+        assert_eq!(e.doc.names.len(), 1);
     }
 
     #[test]
