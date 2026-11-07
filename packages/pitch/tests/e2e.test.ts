@@ -272,4 +272,69 @@ describe("pitch engine e2e (real Rust via nf-cli)", () => {
     await re.close();
     await doc.close();
   });
+
+  it("connectors resolve, follow bound objects, persist and undo", async () => {
+    const doc = await PitchDocument.open(host, "Connectors");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    const a = (await doc.addRect(slide, 10, 20, 100, 50, [0, 0, 0, 255])).data.object_id;
+    const b = (await doc.addRect(slide, 300, 200, 80, 40, [0, 0, 0, 255])).data.object_id;
+    const connector = (
+      await doc.addConnector(
+        slide,
+        { type: "bound", object_id: a, side: "top" },
+        { type: "bound", object_id: b, side: "left" },
+      )
+    ).data.object_id;
+
+    const find = async () =>
+      (await doc.describe<any>()).data.slides[0].objects.find((o: any) => o.id === connector);
+    // top midpoint of A (60,20) to left midpoint of B (300,220)
+    expect((await find()).resolved.points).toEqual([[60, 20], [300, 220]]);
+    expect((await find()).connector.route).toBe("straight");
+
+    // bound endpoint follows the moved object
+    await doc.moveObject(slide, b, 500, 400);
+    expect((await find()).resolved.points).toEqual([[60, 20], [500, 420]]);
+
+    // elbow route + partial update
+    await doc.updateConnector(slide, connector, { route: "elbow", arrows: "end" });
+    expect((await find()).resolved.points).toEqual([
+      [60, 20], [280, 20], [280, 420], [500, 420],
+    ]);
+    await doc.updateConnector(slide, connector, { arrows: "start" });
+    expect((await find()).connector).toMatchObject({ route: "elbow", arrows: "start" });
+
+    // geometry ops refuse connectors; removing a bound target removes the connector
+    await expect(doc.moveObject(slide, connector, 0, 0)).rejects.toThrow();
+    await doc.removeObject(slide, a);
+    expect(
+      (await doc.describe<any>()).data.slides[0].objects.some((o: any) => o.id === connector),
+    ).toBe(false);
+    await doc.undo();
+    expect(
+      (await doc.describe<any>()).data.slides[0].objects.some((o: any) => o.id === connector),
+    ).toBe(true);
+
+    // bounds and hostile payloads reject without mutating
+    await expect(
+      doc.addConnector(slide, { type: "free", x: 0, y: 0 }, { type: "free", x: 0, y: 0 }, { route: "curved" as never }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addConnector(slide, { type: "bound", object_id: 99999, side: "top" }, { type: "free", x: 0, y: 0 }),
+    ).rejects.toThrow();
+    await expect(
+      doc.updateConnector(slide, connector, { to: { type: "bound", object_id: connector, side: "top" } }),
+    ).rejects.toThrow();
+    expect((await find()).connector.route).toBe("elbow");
+
+    // persist through snapshot with resolved geometry intact
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    const reConn = (await re.describe<any>()).data.slides[0].objects.find((o: any) => o.id === connector);
+    expect(reConn.kind).toBe("connector");
+    expect(reConn.connector.route).toBe("elbow");
+    expect(reConn.resolved.points).toHaveLength(4);
+    await re.close();
+    await doc.close();
+  });
 });

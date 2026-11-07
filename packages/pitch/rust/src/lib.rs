@@ -41,6 +41,9 @@ const MAX_INK_COORD: f64 = 1_000_000.0;
 const MAX_INK_WIDTH: f64 = 10_000.0;
 /// Shape stroke width shares the ink width bound: finite, >0, <=10,000.
 const MAX_SHAPE_STROKE_WIDTH: f64 = 10_000.0;
+/// Free connector endpoint coordinates share the ink coordinate bound:
+/// finite slide-space units within ±1,000,000.
+const MAX_CONNECTOR_COORD: f64 = 1_000_000.0;
 /// Slide transitions are bounded descriptors stored per slide; the engine
 /// never renders them — hosts animate from this data (same honesty boundary
 /// as the prototype runtime).
@@ -59,10 +62,13 @@ pub enum Layout {
 }
 
 /// Object kinds. `Text`/`Rect`/`Image` are the legacy set; the remaining
-/// variants are the bounded shape presets admitted by `addShape`. Shape
-/// geometry is deterministic: every preset is inscribed in the object's
-/// axis-aligned `x,y,w,h` bounds before `rotation_deg` is applied (see
-/// docs/ENGINE_OPS.md for the per-kind outline contract hosts render).
+/// variants are the bounded shape presets admitted by `addShape` plus
+/// `Connector`, admitted by `addConnector`. Shape geometry is deterministic:
+/// every preset is inscribed in the object's axis-aligned `x,y,w,h` bounds
+/// before `rotation_deg` is applied (see docs/ENGINE_OPS.md for the per-kind
+/// outline contract hosts render). Connectors are different: their `x,y,w,h`
+/// are unused zeros and their rendered path is resolved from the stored
+/// `connector` endpoint spec at read time (see `connector_points`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ObjKind {
@@ -76,6 +82,7 @@ pub enum ObjKind {
     Line,
     Arrow,
     Star,
+    Connector,
 }
 
 impl ObjKind {
@@ -119,6 +126,100 @@ impl ObjKind {
 pub struct ShapeStroke {
     pub width: f64,
     pub color: [u8; 4],
+}
+
+// ---------------------------------------------------------------------------
+// Connector model
+// ---------------------------------------------------------------------------
+/// Anchor side on a bound object's axis-aligned bounds. The resolved point is
+/// the midpoint of that side (`center` is the bounds midpoint).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AnchorSide {
+    Top,
+    Bottom,
+    Left,
+    Right,
+    Center,
+}
+
+impl AnchorSide {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "top" => Some(Self::Top),
+            "bottom" => Some(Self::Bottom),
+            "left" => Some(Self::Left),
+            "right" => Some(Self::Right),
+            "center" => Some(Self::Center),
+            _ => None,
+        }
+    }
+}
+
+/// One connector endpoint. `free` is an absolute slide-space point; `bound`
+/// attaches to another object's bounds at a named side, so the endpoint
+/// follows that object through move/resize (reconnection is resolved at read
+/// time, never stored). Serialized `{"type":"free","x":..,"y":..}` /
+/// `{"type":"bound","object_id":..,"side":"top"}`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ConnectorEnd {
+    Free { x: f64, y: f64 },
+    Bound { object_id: u64, side: AnchorSide },
+}
+
+/// Bounded routing catalog: `straight` is the segment between resolved
+/// endpoints; `elbow` is the horizontal-vertical-horizontal polyline through
+/// the mean x (the same formula the pinned NYC-Tron connector control draws).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ConnectorRoute {
+    Straight,
+    Elbow,
+}
+
+impl ConnectorRoute {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "straight" => Some(Self::Straight),
+            "elbow" => Some(Self::Elbow),
+            _ => None,
+        }
+    }
+}
+
+/// Which ends carry an arrowhead: `none`, `start`, `end` or `both`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ConnectorArrows {
+    None,
+    Start,
+    End,
+    Both,
+}
+
+impl ConnectorArrows {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "none" => Some(Self::None),
+            "start" => Some(Self::Start),
+            "end" => Some(Self::End),
+            "both" => Some(Self::Both),
+            _ => None,
+        }
+    }
+}
+
+/// Stored connector payload on `Obj.connector` (present iff kind is
+/// `connector`). `stroke` reuses the bounded shape-stroke contract.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConnectorSpec {
+    pub from: ConnectorEnd,
+    pub to: ConnectorEnd,
+    pub route: ConnectorRoute,
+    pub arrows: ConnectorArrows,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stroke: Option<ShapeStroke>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -174,6 +275,10 @@ pub struct Obj {
     /// `addShape` and by restore validation).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stroke: Option<ShapeStroke>,
+    /// Connector endpoint/routing spec; present iff `kind == Connector`
+    /// (enforced by `addConnector`/`updateConnector` and by restore).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connector: Option<ConnectorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub src: Option<String>,
 }
@@ -466,6 +571,144 @@ fn check_shape_stroke(stroke: &ShapeStroke) -> Result<(), EngineError> {
         return Err(EngineError::validation(format!(
             "shape stroke width must be finite, >0 and <= {MAX_SHAPE_STROKE_WIDTH}"
         )));
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Connector payload helpers and geometry
+// ---------------------------------------------------------------------------
+/// Parse one connector endpoint: `{"type":"free","x":..,"y":..}` or
+/// `{"type":"bound","object_id":..,"side":"top"|"bottom"|"left"|"right"|"center"}`.
+fn parse_connector_end(v: &Value) -> Result<ConnectorEnd, EngineError> {
+    match field(v, "type")?.as_str() {
+        Some("free") => {
+            let x = req_f64(v, "x")?;
+            let y = req_f64(v, "y")?;
+            check_free_end_coords(x, y)?;
+            Ok(ConnectorEnd::Free { x, y })
+        }
+        Some("bound") => Ok(ConnectorEnd::Bound {
+            object_id: req_u64(v, "object_id")?,
+            side: AnchorSide::parse(req_str(v, "side")?).ok_or_else(|| {
+                EngineError::validation(
+                    "connector anchor side must be \"top\"|\"bottom\"|\"left\"|\"right\"|\"center\"",
+                )
+            })?,
+        }),
+        _ => Err(EngineError::validation(
+            "connector endpoint type must be \"free\"|\"bound\"",
+        )),
+    }
+}
+
+fn check_free_end_coords(x: f64, y: f64) -> Result<(), EngineError> {
+    if ![x, y]
+        .iter()
+        .all(|c| c.is_finite() && c.abs() <= MAX_CONNECTOR_COORD)
+    {
+        return Err(EngineError::validation(format!(
+            "connector endpoint coordinates must be finite and within ±{MAX_CONNECTOR_COORD}"
+        )));
+    }
+    Ok(())
+}
+
+/// A bound endpoint must reference an existing non-connector object on the
+/// same slide; `self_id` rejects self-binding on updates (addConnector has no
+/// id yet, so callers pass 0).
+fn check_bound_end(
+    end: &ConnectorEnd,
+    slide: &Slide,
+    self_id: u64,
+) -> Result<(), EngineError> {
+    if let ConnectorEnd::Bound { object_id, .. } = end {
+        if *object_id == self_id {
+            return Err(EngineError::validation(
+                "a connector cannot bind to itself",
+            ));
+        }
+        match slide.objects.iter().find(|o| o.id == *object_id) {
+            None => {
+                return Err(EngineError::not_found(format!(
+                    "no object with id {object_id} to bind a connector endpoint"
+                )))
+            }
+            Some(o) if o.kind == ObjKind::Connector => {
+                return Err(EngineError::validation(
+                    "connector endpoints cannot bind to connectors",
+                ))
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+/// Midpoint of one side of an object's axis-aligned bounds.
+fn anchor_point(obj: &Obj, side: AnchorSide) -> (f64, f64) {
+    let cx = obj.x + obj.w / 2.0;
+    let cy = obj.y + obj.h / 2.0;
+    match side {
+        AnchorSide::Top => (cx, obj.y),
+        AnchorSide::Bottom => (cx, obj.y + obj.h),
+        AnchorSide::Left => (obj.x, cy),
+        AnchorSide::Right => (obj.x + obj.w, cy),
+        AnchorSide::Center => (cx, cy),
+    }
+}
+
+/// Resolve one endpoint against current slide state. `None` only if a bound
+/// target vanished (restore/op validation makes that unreachable).
+fn resolve_end(end: &ConnectorEnd, slide: &Slide) -> Option<(f64, f64)> {
+    match end {
+        ConnectorEnd::Free { x, y } => Some((*x, *y)),
+        ConnectorEnd::Bound { object_id, side } => slide
+            .objects
+            .iter()
+            .find(|o| o.id == *object_id && o.kind != ObjKind::Connector)
+            .map(|o| anchor_point(o, *side)),
+    }
+}
+
+/// Deterministic connector polyline in slide-space units. `straight` is the
+/// segment [from, to]; `elbow` is the H-V-H route
+/// [from, (midX,from.y), (midX,to.y), to] with `midX = (from.x+to.x)/2` — the
+/// same formula the pinned NYC-Tron connector control renders. `None` when
+/// an endpoint cannot resolve.
+fn connector_points(spec: &ConnectorSpec, slide: &Slide) -> Option<Vec<[f64; 2]>> {
+    let a = resolve_end(&spec.from, slide)?;
+    let b = resolve_end(&spec.to, slide)?;
+    Some(match spec.route {
+        ConnectorRoute::Straight => vec![[a.0, a.1], [b.0, b.1]],
+        ConnectorRoute::Elbow => {
+            let mid_x = (a.0 + b.0) / 2.0;
+            vec![[a.0, a.1], [mid_x, a.1], [mid_x, b.1], [b.0, b.1]]
+        }
+    })
+}
+
+/// Restore-side structural check for a stored connector spec: free endpoint
+/// coordinate bounds, stroke bounds, and bound-end referential integrity
+/// within the slide (bound targets must exist, be non-connectors, and not be
+/// the connector itself). Ops perform the same checks with op error codes.
+fn check_connector_spec(spec: &ConnectorSpec, slide: &Slide, self_id: u64) -> Result<(), EngineError> {
+    for end in [&spec.from, &spec.to] {
+        match end {
+            ConnectorEnd::Free { x, y } => check_free_end_coords(*x, *y)
+                .map_err(|_| EngineError::serialization("invalid connector endpoint"))?,
+            ConnectorEnd::Bound { .. } => check_bound_end(end, slide, self_id)
+                .map_err(|e| match e.code {
+                    ignition_core::ErrorCode::NotFound => {
+                        EngineError::serialization("connector endpoint references a missing object")
+                    }
+                    _ => EngineError::serialization("invalid connector endpoint binding"),
+                })?,
+        }
+    }
+    if let Some(stroke) = &spec.stroke {
+        check_shape_stroke(stroke)
+            .map_err(|_| EngineError::serialization("invalid connector stroke"))?;
     }
     Ok(())
 }
@@ -894,6 +1137,7 @@ impl Engine for PitchEngine {
                     }),
                     fill: None,
                     stroke: None,
+                    connector: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -967,6 +1211,7 @@ impl Engine for PitchEngine {
                     text: None,
                     fill: Some(fill),
                     stroke: None,
+                    connector: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1006,6 +1251,7 @@ impl Engine for PitchEngine {
                     text: None,
                     fill,
                     stroke,
+                    connector: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1033,9 +1279,107 @@ impl Engine for PitchEngine {
                     text: None,
                     fill: None,
                     stroke: None,
+                    connector: None,
                     src: Some(src),
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
+            }
+            "addConnector" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let from = parse_connector_end(field(p, "from")?)?;
+                let to = parse_connector_end(field(p, "to")?)?;
+                let route = match p.get("route") {
+                    None => ConnectorRoute::Straight,
+                    Some(v) => ConnectorRoute::parse(v.as_str().ok_or_else(|| {
+                        EngineError::invalid("route must be \"straight\"|\"elbow\"")
+                    })?)
+                    .ok_or_else(|| {
+                        EngineError::validation("route must be \"straight\"|\"elbow\"")
+                    })?,
+                };
+                let arrows = match p.get("arrows") {
+                    None => ConnectorArrows::None,
+                    Some(v) => ConnectorArrows::parse(v.as_str().ok_or_else(|| {
+                        EngineError::invalid("arrows must be \"none\"|\"start\"|\"end\"|\"both\"")
+                    })?)
+                    .ok_or_else(|| {
+                        EngineError::validation(
+                            "arrows must be \"none\"|\"start\"|\"end\"|\"both\"",
+                        )
+                    })?,
+                };
+                let stroke = match p.get("stroke") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => Some(parse_shape_stroke(v)?),
+                };
+                let slide_ref = &self.state.slides[slide];
+                check_bound_end(&from, slide_ref, 0)?;
+                check_bound_end(&to, slide_ref, 0)?;
+                self.preflight_object(slide)?;
+                self.journal.record(self.state.clone());
+                let id = self.alloc_id();
+                // x/y/w/h stay zero: connector geometry resolves from the
+                // endpoint spec at read time and is never stored.
+                self.state.slides[slide].objects.push(Obj {
+                    id,
+                    kind: ObjKind::Connector,
+                    x: 0.0,
+                    y: 0.0,
+                    w: 0.0,
+                    h: 0.0,
+                    rotation_deg: 0.0,
+                    text: None,
+                    fill: None,
+                    stroke: None,
+                    connector: Some(ConnectorSpec { from, to, route, arrows, stroke }),
+                    src: None,
+                });
+                Ok(CommandResult::data(json!({ "object_id": id })))
+            }
+            "updateConnector" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let oi = self.object_index(slide, req_u64(p, "id")?)?;
+                let original = self.state.slides[slide].objects[oi]
+                    .connector
+                    .clone()
+                    .ok_or_else(|| {
+                        EngineError::validation("updateConnector requires a connector object")
+                    })?;
+                let self_id = self.state.slides[slide].objects[oi].id;
+                let mut next = original.clone();
+                if p.get("from").is_some() {
+                    next.from = parse_connector_end(field(p, "from")?)?;
+                }
+                if p.get("to").is_some() {
+                    next.to = parse_connector_end(field(p, "to")?)?;
+                }
+                if p.get("route").is_some() {
+                    next.route = ConnectorRoute::parse(req_str(p, "route")?).ok_or_else(|| {
+                        EngineError::validation("route must be \"straight\"|\"elbow\"")
+                    })?;
+                }
+                if p.get("arrows").is_some() {
+                    next.arrows = ConnectorArrows::parse(req_str(p, "arrows")?).ok_or_else(|| {
+                        EngineError::validation(
+                            "arrows must be \"none\"|\"start\"|\"end\"|\"both\"",
+                        )
+                    })?;
+                }
+                if p.get("stroke").is_some() {
+                    next.stroke = match field(p, "stroke")? {
+                        Value::Null => None,
+                        v => Some(parse_shape_stroke(v)?),
+                    };
+                }
+                let slide_ref = &self.state.slides[slide];
+                check_bound_end(&next.from, slide_ref, self_id)?;
+                check_bound_end(&next.to, slide_ref, self_id)?;
+                if next == original {
+                    return Ok(CommandResult::read_only(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].objects[oi].connector = Some(next);
+                Ok(CommandResult::data(json!({ "ok": true })))
             }
             "setObjectOrder" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
@@ -1056,6 +1400,11 @@ impl Engine for PitchEngine {
             "moveObject" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let oi = self.object_index(slide, req_u64(p, "id")?)?;
+                if self.state.slides[slide].objects[oi].kind == ObjKind::Connector {
+                    return Err(EngineError::validation(
+                        "connector geometry resolves from its endpoints; move the bound objects or use updateConnector",
+                    ));
+                }
                 let (x, y) = (req_f64(p, "x")?, req_f64(p, "y")?);
                 self.journal.record(self.state.clone());
                 let obj = &mut self.state.slides[slide].objects[oi];
@@ -1066,6 +1415,11 @@ impl Engine for PitchEngine {
             "resizeObject" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let oi = self.object_index(slide, req_u64(p, "id")?)?;
+                if self.state.slides[slide].objects[oi].kind == ObjKind::Connector {
+                    return Err(EngineError::validation(
+                        "connector geometry resolves from its endpoints; resize the bound objects or use updateConnector",
+                    ));
+                }
                 let (w, h) = (req_f64(p, "w")?, req_f64(p, "h")?);
                 if w <= 0.0 || h <= 0.0 {
                     return Err(EngineError::validation("'w' and 'h' must be > 0"));
@@ -1079,6 +1433,11 @@ impl Engine for PitchEngine {
             "rotateObject" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let oi = self.object_index(slide, req_u64(p, "id")?)?;
+                if self.state.slides[slide].objects[oi].kind == ObjKind::Connector {
+                    return Err(EngineError::validation(
+                        "connectors have no stored bounds to rotate",
+                    ));
+                }
                 let degrees = req_f64(p, "degrees")?;
                 self.journal.record(self.state.clone());
                 self.state.slides[slide].objects[oi].rotation_deg = degrees;
@@ -1087,7 +1446,17 @@ impl Engine for PitchEngine {
             "removeObject" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let oi = self.object_index(slide, req_u64(p, "id")?)?;
-                let mut candidate=self.state.slides[slide].clone();let removed=candidate.objects.remove(oi);candidate.animations.retain(|a|a.object_id!=removed.id);animation::validate_slide(&candidate)?;
+                let mut candidate=self.state.slides[slide].clone();let removed=candidate.objects.remove(oi);candidate.animations.retain(|a|a.object_id!=removed.id);
+                // Connectors bound to the removed object die with it (same
+                // rule as animations); free-endpoint connectors survive.
+                candidate.objects.retain(|o| {
+                    o.connector.as_ref().map_or(true, |spec| {
+                        ![&spec.from, &spec.to].iter().any(|end| {
+                            matches!(end, ConnectorEnd::Bound { object_id, .. } if *object_id == removed.id)
+                        })
+                    })
+                });
+                animation::validate_slide(&candidate)?;
                 self.journal.record(self.state.clone());self.state.slides[slide]=candidate;
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
@@ -1319,7 +1688,40 @@ impl Engine for PitchEngine {
                     "timing": self.state.slides[slide].timing,
                 })))
             }
-            "describe" => Ok(ro(serde_json::to_value(&self.state)?)),
+            "describe" => {
+                let mut value = serde_json::to_value(&self.state)?;
+                // Connector objects expose their resolved geometry: `resolved`
+                // carries the endpoint points and the deterministic polyline
+                // (`connector_points`) computed from CURRENT slide state, so
+                // bound endpoints follow object moves/resizes. The stored
+                // `connector` spec is unchanged.
+                if let Some(slides) = value.get_mut("slides").and_then(Value::as_array_mut) {
+                    for (slide_index, slide_value) in slides.iter_mut().enumerate() {
+                        let Some(slide) = self.state.slides.get(slide_index) else { continue };
+                        let Some(objects) = slide_value
+                            .get_mut("objects")
+                            .and_then(Value::as_array_mut)
+                        else {
+                            continue;
+                        };
+                        for (object_index, object_value) in objects.iter_mut().enumerate() {
+                            let Some(object) = slide.objects.get(object_index) else { continue };
+                            if object.kind != ObjKind::Connector {
+                                continue;
+                            }
+                            let Some(spec) = &object.connector else { continue };
+                            if let Some(points) = connector_points(spec, slide) {
+                                object_value["resolved"] = json!({
+                                    "from": { "x": points[0][0], "y": points[0][1] },
+                                    "to": { "x": points[points.len() - 1][0], "y": points[points.len() - 1][1] },
+                                    "points": points,
+                                });
+                            }
+                        }
+                    }
+                }
+                Ok(ro(value))
+            }
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
     }
@@ -1330,10 +1732,10 @@ impl Engine for PitchEngine {
         // additionally carries speaker notes, persistent ink, slide
         // transitions and slide timing; a schema:2 reader rejects schema:3
         // instead of silently dropping those fields. schema:4 additionally
-        // carries shape presets beyond rect and object strokes; a schema:3
-        // reader rejects schema:4 rather than silently dropping the `stroke`
-        // field (new ObjKind variants already fail closed as unknown
-        // variants, but the additive `stroke` field does not).
+        // carries shape presets beyond rect, object strokes and connectors;
+        // a schema:3 reader rejects schema:4 rather than silently dropping
+        // the `stroke`/`connector` fields (new ObjKind variants already fail
+        // closed as unknown variants, but the additive fields do not).
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
@@ -1364,7 +1766,8 @@ impl Engine for PitchEngine {
             struct Versioned { kind: String, schema: u32, document: PitchState }
             let wrapper: Versioned = serde_json::from_value(value)?;
             // schema:2 = extended features only; schema:3 = notes/ink/
-            // transition/timing-capable; schema:4 = shape presets/strokes.
+            // transition/timing-capable; schema:4 = shape presets/strokes/
+            // connectors.
             if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
@@ -1424,6 +1827,22 @@ impl Engine for PitchEngine {
                     }
                     check_shape_stroke(stroke)
                         .map_err(|_| EngineError::serialization("invalid shape stroke"))?;
+                }
+                match (&object.kind, &object.connector) {
+                    (ObjKind::Connector, Some(spec)) => {
+                        check_connector_spec(spec, slide, object.id)?;
+                    }
+                    (ObjKind::Connector, None) => {
+                        return Err(EngineError::serialization(
+                            "connector object missing its connector spec",
+                        ));
+                    }
+                    (_, Some(_)) => {
+                        return Err(EngineError::serialization(
+                            "connector spec on a non-connector object",
+                        ));
+                    }
+                    _ => {}
                 }
             }
         }
@@ -3198,5 +3617,429 @@ mod tests {
         // the admitted snapshot still restores cleanly afterwards
         e.restore(&snap).unwrap();
         assert_eq!(e.snapshot().unwrap(), snap);
+    }
+
+    // ------------------------------------------------------------------
+    // Connectors / diagram tools
+    // ------------------------------------------------------------------
+
+    fn add_rect(e: &mut PitchEngine, slide: u64, x: f64, y: f64, w: f64, h: f64) -> u64 {
+        apply(
+            e,
+            "addRect",
+            json!({"slide":slide,"x":x,"y":y,"w":w,"h":h,"fill":[0,0,0,255]}),
+        )["object_id"]
+            .as_u64()
+            .unwrap()
+    }
+
+    fn described_objects(e: &mut PitchEngine) -> Value {
+        apply(e, "describe", json!({}))["slides"][0]["objects"].clone()
+    }
+
+    #[test]
+    fn connectors_resolve_bound_endpoints_and_follow_moves() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let a = add_rect(&mut e, slide, 10.0, 20.0, 100.0, 50.0);
+        let b = add_rect(&mut e, slide, 300.0, 200.0, 80.0, 40.0);
+        let connector = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":a,"side":"top"},
+                   "to":{"type":"bound","object_id":b,"side":"left"}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+
+        let objects = described_objects(&mut e);
+        let conn = objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(connector))
+            .unwrap();
+        assert_eq!(conn["kind"], json!("connector"));
+        // stored bounds stay zero; geometry is resolved, not stored
+        assert_eq!(conn["x"], json!(0.0));
+        assert_eq!(conn["w"], json!(0.0));
+        // top midpoint of A (10+100/2, 20) -> left midpoint of B (300, 200+40/2)
+        assert_eq!(
+            conn["resolved"]["points"],
+            json!([[60.0, 20.0], [300.0, 220.0]])
+        );
+        assert_eq!(conn["resolved"]["from"], json!({"x": 60.0, "y": 20.0}));
+        assert_eq!(conn["resolved"]["to"], json!({"x": 300.0, "y": 220.0}));
+        assert_eq!(conn["connector"]["route"], json!("straight"));
+        assert_eq!(conn["connector"]["arrows"], json!("none"));
+
+        // moving the bound object moves the resolved endpoint (reconnect)
+        apply(&mut e, "moveObject", json!({"slide":slide,"id":b,"x":500.0,"y":400.0}));
+        let objects = described_objects(&mut e);
+        let conn = objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(connector))
+            .unwrap();
+        assert_eq!(
+            conn["resolved"]["points"],
+            json!([[60.0, 20.0], [500.0, 420.0]])
+        );
+        // resizing changes the side anchor too
+        apply(&mut e, "resizeObject", json!({"slide":slide,"id":a,"w":200.0,"h":50.0}));
+        let objects = described_objects(&mut e);
+        let conn = objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(connector))
+            .unwrap();
+        assert_eq!(conn["resolved"]["points"][0], json!([110.0, 20.0]));
+
+        // undo restores the pre-move resolution
+        assert!(e.undo().unwrap());
+        let objects = described_objects(&mut e);
+        let conn = objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(connector))
+            .unwrap();
+        assert_eq!(conn["resolved"]["points"][0], json!([60.0, 20.0]));
+    }
+
+    #[test]
+    fn connector_elbow_route_and_free_endpoints_resolve() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let a = add_rect(&mut e, slide, 0.0, 0.0, 100.0, 100.0);
+        let id = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":a,"side":"right"},
+                   "to":{"type":"free","x":300.0,"y":200.0},
+                   "route":"elbow","arrows":"both",
+                   "stroke":{"width":2,"color":[1,2,3,255]}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let objects = described_objects(&mut e);
+        let conn = objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(id))
+            .unwrap();
+        // right midpoint of A is (100,50); elbow H-V-H through mean x = 200
+        assert_eq!(
+            conn["resolved"]["points"],
+            json!([[100.0, 50.0], [200.0, 50.0], [200.0, 200.0], [300.0, 200.0]])
+        );
+        assert_eq!(conn["connector"]["arrows"], json!("both"));
+        assert_eq!(
+            conn["connector"]["stroke"],
+            json!({"width": 2.0, "color": [1, 2, 3, 255]})
+        );
+    }
+
+    #[test]
+    fn update_connector_patches_endpoints_route_and_stroke() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let a = add_rect(&mut e, slide, 0.0, 0.0, 10.0, 10.0);
+        let b = add_rect(&mut e, slide, 100.0, 0.0, 10.0, 10.0);
+        let id = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"free","x":0.0,"y":0.0},
+                   "to":{"type":"free","x":50.0,"y":50.0},
+                   "stroke":{"width":1,"color":[0,0,0,255]}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        // empty/equal patch is an eventless no-op preserving redo
+        let noop = e
+            .apply(cmd("updateConnector", json!({"slide":slide,"id":id})))
+            .unwrap();
+        assert!(noop.events.is_empty());
+        assert!(e.redo().is_ok());
+
+        let result = e
+            .apply(cmd(
+                "updateConnector",
+                json!({"slide":slide,"id":id,
+                       "from":{"type":"bound","object_id":a,"side":"bottom"},
+                       "to":{"type":"bound","object_id":b,"side":"top"},
+                       "route":"elbow","arrows":"end","stroke":null}),
+            ))
+            .unwrap();
+        assert_eq!(result.events.len(), 1);
+        let objects = described_objects(&mut e);
+        let conn = objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(id))
+            .unwrap();
+        assert_eq!(conn["connector"]["route"], json!("elbow"));
+        assert_eq!(conn["connector"]["arrows"], json!("end"));
+        assert!(conn["connector"].get("stroke").is_none());
+        // bottom midpoint of A (5,10); top midpoint of B (105,0); mid x = 55
+        assert_eq!(
+            conn["resolved"]["points"],
+            json!([[5.0, 10.0], [55.0, 10.0], [55.0, 0.0], [105.0, 0.0]])
+        );
+        let changed = e.snapshot().unwrap();
+
+        // hostile patches reject atomically
+        for payload in [
+            json!({"slide":slide,"id":id,"route":"curved"}),
+            json!({"slide":slide,"id":id,"arrows":"both-end"}),
+            json!({"slide":slide,"id":id,"from":{"type":"bound","object_id":999,"side":"top"}}),
+            json!({"slide":slide,"id":id,"to":{"type":"bound","object_id":a,"side":"middle"}}),
+            json!({"slide":slide,"id":id,"to":{"type":"free","x":1e7,"y":0}}),
+            json!({"slide":slide,"id":id,"to":{"type":"teleport","x":0,"y":0}}),
+            json!({"slide":slide,"id":id,"stroke":{"width":0,"color":[0,0,0,255]}}),
+            json!({"slide":slide,"id":999,"route":"elbow"}),
+            json!({"slide":999,"id":id,"route":"elbow"}),
+        ] {
+            apply_err(&mut e, "updateConnector", payload);
+            assert_eq!(e.snapshot().unwrap(), changed);
+        }
+        // partial patch keeps other fields
+        apply(
+            &mut e,
+            "updateConnector",
+            json!({"slide":slide,"id":id,"arrows":"start"}),
+        );
+        let objects = described_objects(&mut e);
+        let conn = objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(id))
+            .unwrap();
+        assert_eq!(conn["connector"]["route"], json!("elbow"));
+        assert_eq!(conn["connector"]["arrows"], json!("start"));
+    }
+
+    #[test]
+    fn connector_remove_object_cascade_and_geometry_guards() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let a = add_rect(&mut e, slide, 0.0, 0.0, 10.0, 10.0);
+        let free_id = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"free","x":0.0,"y":0.0},
+                   "to":{"type":"free","x":9.0,"y":9.0}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let bound_id = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":a,"side":"center"},
+                   "to":{"type":"free","x":50.0,"y":50.0}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        // removing a connector itself works through removeObject
+        apply(&mut e, "removeObject", json!({"slide":slide,"id":bound_id}));
+        // re-add then remove the bound target: the connector dies with it
+        let bound_id = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":a,"side":"center"},
+                   "to":{"type":"free","x":50.0,"y":50.0}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        apply(&mut e, "removeObject", json!({"slide":slide,"id":a}));
+        let objects = described_objects(&mut e);
+        // the bound connector died with its target; the free one survives
+        assert!(objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|o| o["id"] != json!(bound_id)));
+        assert!(objects.as_array().unwrap().iter().any(|o| o["id"] == json!(free_id)));
+        // undo restores both the rect and its bound connector
+        assert!(e.undo().unwrap());
+        let objects = described_objects(&mut e);
+        assert!(objects.as_array().unwrap().iter().any(|o| o["id"] == json!(bound_id)));
+
+        // geometry ops refuse connectors; z-order still works
+        let slide_objs = described_objects(&mut e);
+        let conn = slide_objs
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["kind"] == json!("connector"))
+            .unwrap()["id"]
+            .as_u64()
+            .unwrap();
+        for (op, payload) in [
+            ("moveObject", json!({"slide":slide,"id":conn,"x":1,"y":1})),
+            ("resizeObject", json!({"slide":slide,"id":conn,"w":5,"h":5})),
+            ("rotateObject", json!({"slide":slide,"id":conn,"degrees":45})),
+        ] {
+            apply_err(&mut e, op, payload);
+        }
+        // binding to a connector is rejected
+        apply_err(
+            &mut e,
+            "updateConnector",
+            json!({"slide":slide,"id":free_id,"to":{"type":"bound","object_id":conn,"side":"top"}}),
+        );
+        // self-binding on update is rejected
+        apply_err(
+            &mut e,
+            "updateConnector",
+            json!({"slide":slide,"id":free_id,"from":{"type":"bound","object_id":free_id,"side":"top"}}),
+        );
+        // addConnector rejects bound targets that are connectors or missing
+        apply_err(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":conn,"side":"top"},
+                   "to":{"type":"free","x":0,"y":0}}),
+        );
+        apply_err(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":9999,"side":"top"},
+                   "to":{"type":"free","x":0,"y":0}}),
+        );
+        apply_err(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"free","x":0,"y":0},
+                   "to":{"type":"free","x":0,"y":0},
+                   "route":"spline"}),
+        );
+    }
+
+    #[test]
+    fn connector_snapshot_schema4_roundtrip_and_hostile_restore() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let a = add_rect(&mut e, slide, 0.0, 0.0, 10.0, 10.0);
+        let connector = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":a,"side":"right"},
+                   "to":{"type":"free","x":40.0,"y":40.0},
+                   "route":"elbow","arrows":"start"}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let snap = e.snapshot().unwrap();
+        // connectors ride the schema:4 wrapper with shapes/strokes
+        assert_eq!(shape_snapshot_schema(&snap), 4);
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&snap).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), snap);
+        let objects = described_objects(&mut reopened);
+        let conn = objects
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(connector))
+            .unwrap();
+        assert_eq!(conn["kind"], json!("connector"));
+        assert_eq!(conn["connector"]["route"], json!("elbow"));
+        assert_eq!(
+            conn["resolved"]["points"],
+            json!([[10.0, 5.0], [25.0, 5.0], [25.0, 40.0], [40.0, 40.0]])
+        );
+
+        // hostile payloads fail closed without touching state
+        let good = serde_json::to_value(&e.state).unwrap();
+        let conn_index = good["slides"][0]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|o| o["id"] == json!(connector))
+            .unwrap();
+        let restore_err = |e: &mut PitchEngine, mutate: &dyn Fn(&mut Value)| {
+            let mut hostile = good.clone();
+            mutate(&mut hostile);
+            assert!(e
+                .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), snap);
+        };
+        // connector spec on a non-connector object
+        restore_err(&mut e, &|h| {
+            let spec = h["slides"][0]["objects"][conn_index]["connector"].clone();
+            h["slides"][0]["objects"][0]["connector"] = spec;
+        });
+        // connector kind without a spec
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]
+                .as_object_mut()
+                .unwrap()
+                .remove("connector");
+        });
+        // dangling bound reference
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["connector"]["from"]["object_id"] =
+                json!(9999);
+        });
+        // self-binding
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["connector"]["to"] =
+                json!({"type":"bound","object_id":connector,"side":"top"});
+        });
+        // out-of-range free coordinate
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["connector"]["to"] =
+                json!({"type":"free","x":2e6,"y":0});
+        });
+        // unknown route enum fails serde closed
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["connector"]["route"] =
+                json!("curved");
+        });
+        // out-of-bound connector stroke
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["connector"]["stroke"] =
+                json!({"width":0,"color":[0,0,0,255]});
+        });
+        // bound target that is itself a connector
+        let second = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"free","x":0.0,"y":0.0},
+                   "to":{"type":"free","x":1.0,"y":1.0}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let mut hostile = serde_json::to_value(&e.state).unwrap();
+        let pos = hostile["slides"][0]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|o| o["id"] == json!(connector))
+            .unwrap();
+        hostile["slides"][0]["objects"][pos]["connector"]["from"] =
+            json!({"type":"bound","object_id":second,"side":"top"});
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+            .is_err());
+        e.restore(&snap).unwrap();
     }
 }

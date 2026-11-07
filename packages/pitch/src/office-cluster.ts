@@ -45,9 +45,9 @@ type Rgba = readonly [number, number, number, number];
  * A slide object as NYC-Tron `SlideObject` takes it. Ids are the engine's
  * numeric ids as strings. The pinned NYC-Tron `SlideObjectKind` union is
  * `"text" | "rect" | "image"` only: `readPitchDeck` refuses shape presets
- * beyond `rect` with a clear error rather than mislabeling them, and `stroke`
- * is retained as metadata the pinned renderer does not yet draw (same
- * honesty boundary as `sourceTrigger` on animations).
+ * beyond `rect` and connectors with a clear error rather than mislabeling
+ * them, and `stroke` is retained as metadata the pinned renderer does not
+ * yet draw (same honesty boundary as `sourceTrigger` on animations).
  */
 export interface PitchSlideObject {
   readonly id: string;
@@ -133,14 +133,14 @@ export function pitchId(id: string): number {
   return n;
 }
 
-/** Shape presets the engine stores that the pinned NYC-Tron slide renderer cannot draw. */
-const UNSUPPORTED_SHAPE_KINDS: ReadonlySet<string> = new Set([
-  "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star",
+/** Object kinds the engine stores that the pinned NYC-Tron slide renderer cannot draw. */
+const UNSUPPORTED_OBJECT_KINDS: ReadonlySet<string> = new Set([
+  "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star", "connector",
 ]);
 
 function toObject(o: RawObj): PitchSlideObject {
-  if (UNSUPPORTED_SHAPE_KINDS.has(o.kind)) {
-    throw new Error(`Pitch shape kind "${o.kind}" needs a newer NYC-Tron slide renderer`);
+  if (UNSUPPORTED_OBJECT_KINDS.has(o.kind)) {
+    throw new Error(`Pitch object kind "${o.kind}" needs a newer NYC-Tron slide renderer`);
   }
   const kind: PitchSlideObject["kind"] | undefined = o.kind === "text" || o.kind === "rect" || o.kind === "image" ? o.kind : undefined;
   if (!kind || ![o.x, o.y, o.w, o.h, o.rotation_deg].every(Number.isFinite)) throw new Error("Pitch returned a malformed object");
