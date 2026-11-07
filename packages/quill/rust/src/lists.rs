@@ -318,7 +318,7 @@ impl QuillEngine {
             return Ok(Self::read_only(json!({"ok":true})));
         }
         let removed = self.blocks.clone();
-        self.record_undo(0, removed, next.clone(), None);
+        self.record_undo(0, removed, next.clone(), Collections::default());
         self.blocks = next;
         Ok(CommandResult::data(json!({"ok":true})))
     }

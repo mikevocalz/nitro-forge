@@ -13,6 +13,8 @@ mod lists;
 mod numbering;
 use lists::ListItem;
 mod change_case;
+mod sections;
+use sections::{default_sections, is_default_sections, validate_sections, Section};
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -153,6 +155,11 @@ struct Schema3DocSnapshotRef<'a> {
     bookmarks: &'a [Bookmark],
     #[serde(skip_serializing_if = "<[StyleDef]>::is_empty")]
     styles: &'a [StyleDef],
+    /// Omitted for the single default section so bookmark/style-only
+    /// schema:3 payloads stay byte-identical; schema:3 already gates
+    /// pre-feature readers, so no schema:4 bump is needed.
+    #[serde(skip_serializing_if = "is_default_sections")]
+    sections: &'a [Section],
 }
 
 #[derive(Serialize)]
@@ -172,10 +179,15 @@ struct DocState {
 struct Schema3DocState {
     blocks: Vec<Block>,
     // `bookmarks` stays required (schema:3 was born with it); `styles` is
-    // optional so bookmark-era schema:3 snapshots still restore.
+    // optional so bookmark-era schema:3 snapshots still restore. `sections`
+    // is optional for the same reason — absent means the single default
+    // section; an explicit empty list fails validation rather than
+    // silently meaning "no sections".
     bookmarks: Vec<Bookmark>,
     #[serde(default)]
     styles: Vec<StyleDef>,
+    #[serde(default)]
+    sections: Option<Vec<Section>>,
 }
 
 #[derive(Serialize)]
@@ -222,6 +234,60 @@ struct UndoEntry {
     /// `(before, after)` named-style definition lists for style ops; `None`
     /// leaves the live style list untouched on undo/redo.
     styles: Option<(Vec<StyleDef>, Vec<StyleDef>)>,
+    /// `(before, after)` section lists for ops that can move or edit
+    /// section boundaries/settings; `None` leaves the live section list
+    /// untouched on undo/redo.
+    sections: Option<(Vec<Section>, Vec<Section>)>,
+}
+
+/// Before-images for the document-level collections an op can move or
+/// replace. A `None` field leaves that collection untouched on undo/redo.
+#[derive(Default)]
+struct Collections {
+    bookmarks: Option<Vec<Bookmark>>,
+    styles: Option<Vec<StyleDef>>,
+    sections: Option<Vec<Section>>,
+}
+
+impl Collections {
+    /// Bookmark and section lists move together through every
+    /// block-count-changing op.
+    fn anchors(bookmarks: Vec<Bookmark>, sections: Vec<Section>) -> Self {
+        Self {
+            bookmarks: Some(bookmarks),
+            sections: Some(sections),
+            ..Default::default()
+        }
+    }
+
+    fn bookmarks(bookmarks: Vec<Bookmark>) -> Self {
+        Self {
+            bookmarks: Some(bookmarks),
+            ..Default::default()
+        }
+    }
+
+    fn styles(styles: Vec<StyleDef>) -> Self {
+        Self {
+            styles: Some(styles),
+            ..Default::default()
+        }
+    }
+
+    fn sections(sections: Vec<Section>) -> Self {
+        Self {
+            sections: Some(sections),
+            ..Default::default()
+        }
+    }
+
+    fn all(bookmarks: Vec<Bookmark>, styles: Vec<StyleDef>, sections: Vec<Section>) -> Self {
+        Self {
+            bookmarks: Some(bookmarks),
+            styles: Some(styles),
+            sections: Some(sections),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -864,6 +930,7 @@ pub struct QuillEngine {
     blocks: Vec<Block>,
     bookmarks: Vec<Bookmark>,
     styles: Vec<StyleDef>,
+    sections: Vec<Section>,
     journal: Journal<UndoEntry>,
 }
 
@@ -873,41 +940,35 @@ impl QuillEngine {
             blocks: vec![Block::empty(BlockKind::Para)],
             bookmarks: Vec::new(),
             styles: Vec::new(),
+            sections: default_sections(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
 
-    /// Record one undo entry. `bookmarks_before` is the live bookmark list
-    /// captured before the op mutated; `Some` pairs it with the post-op list
-    /// so undo/redo restore both directions. Ops that cannot move bookmarks
-    /// pass `None`. `styles_before` plays the same role for the named-style
-    /// definition list.
+    /// Record one undo entry. `before` carries the live before-images of the
+    /// document-level collections the op can move or replace; a `None`
+    /// field leaves that collection untouched on undo/redo.
     fn record_undo(
         &mut self,
         index: usize,
         removed: Vec<Block>,
         inserted: Vec<Block>,
-        bookmarks_before: Option<Vec<Bookmark>>,
+        before: Collections,
     ) {
-        self.record_undo_meta(index, removed, inserted, bookmarks_before, None);
-    }
-
-    fn record_undo_meta(
-        &mut self,
-        index: usize,
-        removed: Vec<Block>,
-        inserted: Vec<Block>,
-        bookmarks_before: Option<Vec<Bookmark>>,
-        styles_before: Option<Vec<StyleDef>>,
-    ) {
-        let bookmarks = bookmarks_before.map(|before| (before, self.bookmarks.clone()));
-        let styles = styles_before.map(|before| (before, self.styles.clone()));
+        let bookmarks = before
+            .bookmarks
+            .map(|before| (before, self.bookmarks.clone()));
+        let styles = before.styles.map(|before| (before, self.styles.clone()));
+        let sections = before
+            .sections
+            .map(|before| (before, self.sections.clone()));
         self.journal.record(UndoEntry {
             index,
             removed,
             inserted,
             bookmarks,
             styles,
+            sections,
         });
     }
 
@@ -952,12 +1013,12 @@ impl QuillEngine {
         let old = std::mem::replace(&mut self.blocks, vec![Block::empty(BlockKind::Para)]);
         let bookmarks_before = std::mem::take(&mut self.bookmarks);
         let styles_before = std::mem::take(&mut self.styles);
-        self.record_undo_meta(
+        let sections_before = std::mem::replace(&mut self.sections, default_sections());
+        self.record_undo(
             0,
             old,
             self.blocks.clone(),
-            Some(bookmarks_before),
-            Some(styles_before),
+            Collections::all(bookmarks_before, styles_before, sections_before),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
     }
@@ -1020,9 +1081,16 @@ impl QuillEngine {
         let inserted = out.clone();
         self.validate_list_splice(at.block, 1, &out)?;
         let bookmarks_before = self.bookmarks.clone();
+        let sections_before = self.sections.clone();
         self.blocks.splice(at.block..at.block + 1, out);
         self.remap_bookmarks_insert_text(at, &text);
-        self.record_undo(at.block, vec![old], inserted, Some(bookmarks_before));
+        self.remap_sections_insert_text(at, &text);
+        self.record_undo(
+            at.block,
+            vec![old],
+            inserted,
+            Collections::anchors(bookmarks_before, sections_before),
+        );
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -1076,10 +1144,17 @@ impl QuillEngine {
         }
 
         let bookmarks_before = self.bookmarks.clone();
+        let sections_before = self.sections.clone();
         self.blocks
             .splice(from.block..=to.block, new_span.iter().cloned());
         self.remap_bookmarks_delete(from, to);
-        self.record_undo(from.block, removed, new_span, Some(bookmarks_before));
+        self.remap_sections_delete(from, to);
+        self.record_undo(
+            from.block,
+            removed,
+            new_span,
+            Collections::anchors(bookmarks_before, sections_before),
+        );
         Ok(CommandResult::data(json!({ "deleted_text": deleted_text })))
     }
 
@@ -1091,10 +1166,12 @@ impl QuillEngine {
         let text = as_str(field(p, "text")?, "text")?.to_owned();
         self.check_range(from, to)?;
         let bookmarks_before = self.bookmarks.clone();
+        let sections_before = self.sections.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
             styles: self.styles.clone(),
+            sections: self.sections.clone(),
             journal: Journal::new(1),
         };
         let mut deleted = String::new();
@@ -1115,7 +1192,14 @@ impl QuillEngine {
             return Ok(Self::read_only(data));
         }
         self.bookmarks = staged.bookmarks;
-        self.record_undo(0, self.blocks.clone(), staged.blocks.clone(), Some(bookmarks_before));
+        self.styles = staged.styles;
+        self.sections = staged.sections;
+        self.record_undo(
+            0,
+            self.blocks.clone(),
+            staged.blocks.clone(),
+            Collections::anchors(bookmarks_before, sections_before),
+        );
         self.blocks = staged.blocks;
         Ok(CommandResult::data(data))
     }
@@ -1165,7 +1249,7 @@ impl QuillEngine {
         let (removed, new_span) = self.style_span(from, to, &patch);
         self.blocks
             .splice(from.block..=to.block, new_span.iter().cloned());
-        self.record_undo(from.block, removed, new_span, None);
+        self.record_undo(from.block, removed, new_span, Collections::default());
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -1188,7 +1272,7 @@ impl QuillEngine {
         }
         self.validate_list_splice(index, 1, std::slice::from_ref(&new))?;
         self.blocks[index] = new.clone();
-        self.record_undo(index, vec![old], vec![new], None);
+        self.record_undo(index, vec![old], vec![new], Collections::default());
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -1206,12 +1290,19 @@ impl QuillEngine {
         }
         let old = self.blocks.clone();
         let bookmarks_before = self.bookmarks.clone();
+        let sections_before = self.sections.clone();
         let mut next = old.clone();
         next.insert(index, Block::empty(kind));
         lists::validate(&next)?;
         self.blocks = next;
         self.remap_bookmarks_insert_block(index);
-        self.record_undo(0, old, self.blocks.clone(), Some(bookmarks_before));
+        self.remap_sections_insert_block(index);
+        self.record_undo(
+            0,
+            old,
+            self.blocks.clone(),
+            Collections::anchors(bookmarks_before, sections_before),
+        );
         Ok(CommandResult::data(json!({ "block_index": index })))
     }
 
@@ -1236,10 +1327,17 @@ impl QuillEngine {
         ];
         self.validate_list_splice(at.block, 1, &new_span)?;
         let bookmarks_before = self.bookmarks.clone();
+        let sections_before = self.sections.clone();
         self.blocks
             .splice(at.block..at.block + 1, new_span.iter().cloned());
         self.remap_bookmarks_split(at);
-        self.record_undo(at.block, vec![old], new_span, Some(bookmarks_before));
+        self.remap_sections_split(at);
+        self.record_undo(
+            at.block,
+            vec![old],
+            new_span,
+            Collections::anchors(bookmarks_before, sections_before),
+        );
         Ok(CommandResult::data(
             json!({ "new_block_index": at.block + 1 }),
         ))
@@ -1261,6 +1359,7 @@ impl QuillEngine {
         let removed: Vec<Block> = self.blocks[index - 1..=index].to_vec();
         let head_len = block_len(&self.blocks[index - 1]);
         let bookmarks_before = self.bookmarks.clone();
+        let sections_before = self.sections.clone();
         let mut inlines = self.blocks[index - 1].inlines.clone();
         inlines.extend(self.blocks[index].inlines.iter().cloned());
         let merged = vec![Block {
@@ -1272,7 +1371,13 @@ impl QuillEngine {
         self.blocks
             .splice(index - 1..=index, merged.iter().cloned());
         self.remap_bookmarks_merge(index, head_len);
-        self.record_undo(index - 1, removed, merged, Some(bookmarks_before));
+        self.remap_sections_merge(index);
+        self.record_undo(
+            index - 1,
+            removed,
+            merged,
+            Collections::anchors(bookmarks_before, sections_before),
+        );
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -1368,10 +1473,12 @@ impl QuillEngine {
         }
 
         let bookmarks_before = self.bookmarks.clone();
+        let sections_before = self.sections.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
             styles: self.styles.clone(),
+            sections: self.sections.clone(),
             journal: Journal::new(1),
         };
         // Group consecutive matches by block (find_matches is block-ordered),
@@ -1434,11 +1541,12 @@ impl QuillEngine {
         }
         let replaced = matches.len();
         self.bookmarks = staged.bookmarks;
+        self.sections = staged.sections;
         self.record_undo(
             0,
             self.blocks.clone(),
             staged.blocks.clone(),
-            Some(bookmarks_before),
+            Collections::anchors(bookmarks_before, sections_before),
         );
         self.blocks = staged.blocks;
         Ok(CommandResult::data(json!({ "replaced": replaced })))
@@ -1467,7 +1575,7 @@ impl QuillEngine {
             block: at.block,
             offset: at.offset,
         });
-        self.record_undo(0, Vec::new(), Vec::new(), Some(before));
+        self.record_undo(0, Vec::new(), Vec::new(), Collections::bookmarks(before));
         Ok(CommandResult::data(json!({ "ok": true, "name": name })))
     }
 
@@ -1496,7 +1604,7 @@ impl QuillEngine {
         };
         let before = self.bookmarks.clone();
         let removed = self.bookmarks.remove(index);
-        self.record_undo(0, Vec::new(), Vec::new(), Some(before));
+        self.record_undo(0, Vec::new(), Vec::new(), Collections::bookmarks(before));
         Ok(CommandResult::data(json!({ "ok": true, "name": removed.name })))
     }
 
@@ -1670,7 +1778,12 @@ impl QuillEngine {
             kind,
             properties,
         });
-        self.record_undo_meta(0, Vec::new(), Vec::new(), None, Some(before));
+        self.record_undo(
+            0,
+            Vec::new(),
+            Vec::new(),
+            Collections::styles(before),
+        );
         Ok(CommandResult::data(json!({ "ok": true, "id": id })))
     }
 
@@ -1701,7 +1814,12 @@ impl QuillEngine {
         }
         let before = self.styles.clone();
         self.styles[index] = updated;
-        self.record_undo_meta(0, Vec::new(), Vec::new(), None, Some(before));
+        self.record_undo(
+            0,
+            Vec::new(),
+            Vec::new(),
+            Collections::styles(before),
+        );
         Ok(CommandResult::data(json!({ "ok": true, "id": id })))
     }
 
@@ -1729,15 +1847,22 @@ impl QuillEngine {
                     b.style_id = None;
                 }
             }
-            self.record_undo_meta(
+            self.record_undo(
                 0,
                 old_blocks,
                 self.blocks.clone(),
-                None,
-                Some(before_styles),
+                Collections {
+                    styles: Some(before_styles),
+                    ..Default::default()
+                },
             );
         } else {
-            self.record_undo_meta(0, Vec::new(), Vec::new(), None, Some(before_styles));
+            self.record_undo(
+                0,
+                Vec::new(),
+                Vec::new(),
+                Collections::styles(before_styles),
+            );
         }
         Ok(CommandResult::data(json!({ "ok": true, "id": id })))
     }
@@ -1776,7 +1901,7 @@ impl QuillEngine {
         let (removed, new_span) = self.style_span(from, to, &patch);
         self.blocks
             .splice(from.block..=to.block, new_span.iter().cloned());
-        self.record_undo(from.block, removed, new_span, None);
+        self.record_undo(from.block, removed, new_span, Collections::default());
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -1839,7 +1964,7 @@ impl QuillEngine {
             return Ok(Self::read_only(json!({ "ok": true })));
         }
         self.blocks[index] = new.clone();
-        self.record_undo(index, vec![old], vec![new], None);
+        self.record_undo(index, vec![old], vec![new], Collections::default());
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -1931,12 +2056,14 @@ impl QuillEngine {
         let old = std::mem::replace(&mut self.blocks, blocks);
         let bookmarks_before = std::mem::take(&mut self.bookmarks);
         let styles_before = std::mem::take(&mut self.styles);
-        self.record_undo_meta(
+        // DOCX sectPr import is deferred; an imported document gets the
+        // single default section.
+        let sections_before = std::mem::replace(&mut self.sections, default_sections());
+        self.record_undo(
             0,
             old,
             self.blocks.clone(),
-            Some(bookmarks_before),
-            Some(styles_before),
+            Collections::all(bookmarks_before, styles_before, sections_before),
         );
         Ok(CommandResult::data(serde_json::to_value(SnapshotRef {
             blocks: &self.blocks,
@@ -2010,6 +2137,11 @@ impl Engine for QuillEngine {
             "addBookmark" => self.op_add_bookmark(&cmd.payload),
             "removeBookmark" => self.op_remove_bookmark(&cmd.payload),
             "listBookmarks" => self.op_list_bookmarks(),
+            "insertSection" => self.op_insert_section(&cmd.payload),
+            "removeSection" => self.op_remove_section(&cmd.payload),
+            "setPageSetup" => self.op_set_page_setup(&cmd.payload),
+            "setHeaderFooter" => self.op_set_header_footer(&cmd.payload),
+            "listSections" => self.op_list_sections(),
             "defineStyle" => self.op_define_style(&cmd.payload),
             "updateStyle" => self.op_update_style(&cmd.payload),
             "removeStyle" => self.op_remove_style(&cmd.payload),
@@ -2032,10 +2164,12 @@ impl Engine for QuillEngine {
         let batch = ignition_core::parse_batch(cmd)?;
         let bookmarks_before = self.bookmarks.clone();
         let styles_before = self.styles.clone();
+        let sections_before = self.sections.clone();
         let staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
             styles: self.styles.clone(),
+            sections: self.sections.clone(),
             journal: Journal::new(1),
         };
         let (staged, result) = match ctx {
@@ -2051,12 +2185,12 @@ impl Engine for QuillEngine {
             let removed = self.blocks.clone();
             self.bookmarks = staged.bookmarks;
             self.styles = staged.styles;
-            self.record_undo_meta(
+            self.sections = staged.sections;
+            self.record_undo(
                 0,
                 removed,
                 inserted,
-                Some(bookmarks_before),
-                Some(styles_before),
+                Collections::all(bookmarks_before, styles_before, sections_before),
             );
             self.blocks = staged.blocks;
         }
@@ -2069,12 +2203,16 @@ impl Engine for QuillEngine {
         };
         // Legacy readers ignore unknown Block fields. Removing root blocks makes
         // them reject numbered metadata instead of silently losing it.
-        // Bookmarks and named styles require the schema:3 wrapper so
-        // pre-feature readers fail closed on `schema != 2`/`!= 3` rather
-        // than silently dropping them. `styles` is omitted from the
-        // document when empty, keeping bookmark-only payloads identical.
+        // Bookmarks, named styles, and sections require the schema:3 wrapper
+        // so pre-feature readers fail closed on `schema != 2`/`!= 3` rather
+        // than silently dropping them (the schema:3 document is
+        // `deny_unknown_fields`, so a `sections` key also fails schema:3-era
+        // readers closed). `styles`/`sections` are omitted from the document
+        // when empty/default, keeping earlier schema:3 payloads
+        // byte-identical.
         let needs_v3 = !self.bookmarks.is_empty()
             || !self.styles.is_empty()
+            || !is_default_sections(&self.sections)
             || self.blocks.iter().any(|b| b.style_id.is_some());
         let payload = if needs_v3 {
             serde_json::to_vec(&Schema3SnapshotRef {
@@ -2084,6 +2222,7 @@ impl Engine for QuillEngine {
                     blocks: &self.blocks,
                     bookmarks: &self.bookmarks,
                     styles: &self.styles,
+                    sections: &self.sections,
                 },
             })?
         } else if self.blocks.iter().any(|block| block.list.is_some()) {
@@ -2106,49 +2245,63 @@ impl Engine for QuillEngine {
                 .iter()
                 .any(|key| object.contains_key(*key))
         });
-        let (state_blocks, bookmarks, styles): (Vec<Block>, Vec<Bookmark>, Vec<StyleDef>) =
-            if wrapped {
-                let wrapper: WrappedDocState = serde_json::from_value(value)?;
-                if wrapper.kind != "quill" {
-                    return Err(EngineError::unsupported(
-                        "unsupported Quill snapshot kind/schema",
-                    ));
-                }
-                match wrapper.schema {
-                    2 => {
-                        // A schema:2 document has neither bookmark nor style
-                        // fields; reject strays rather than silently dropping.
-                        if wrapper.document.as_object().is_some_and(|o| {
-                            o.contains_key("bookmarks") || o.contains_key("styles")
-                        }) {
-                            return Err(EngineError::unsupported(
-                                "unsupported Quill snapshot kind/schema",
-                            ));
-                        }
-                        let doc: DocState = serde_json::from_value(wrapper.document)?;
-                        (doc.blocks, Vec::new(), Vec::new())
-                    }
-                    3 => {
-                        let doc: Schema3DocState = serde_json::from_value(wrapper.document)?;
-                        (doc.blocks, doc.bookmarks, doc.styles)
-                    }
-                    _ => {
+        let (state_blocks, bookmarks, styles, sections): (
+            Vec<Block>,
+            Vec<Bookmark>,
+            Vec<StyleDef>,
+            Vec<Section>,
+        ) = if wrapped {
+            let wrapper: WrappedDocState = serde_json::from_value(value)?;
+            if wrapper.kind != "quill" {
+                return Err(EngineError::unsupported(
+                    "unsupported Quill snapshot kind/schema",
+                ));
+            }
+            match wrapper.schema {
+                2 => {
+                    // A schema:2 document has neither bookmark, style, nor
+                    // section fields; reject strays rather than silently
+                    // dropping.
+                    if wrapper.document.as_object().is_some_and(|o| {
+                        o.contains_key("bookmarks")
+                            || o.contains_key("styles")
+                            || o.contains_key("sections")
+                    }) {
                         return Err(EngineError::unsupported(
                             "unsupported Quill snapshot kind/schema",
-                        ))
+                        ));
                     }
+                    let doc: DocState = serde_json::from_value(wrapper.document)?;
+                    (doc.blocks, Vec::new(), Vec::new(), default_sections())
                 }
-            } else {
-                if value.as_object().is_some_and(|o| {
-                    o.contains_key("bookmarks") || o.contains_key("styles")
-                }) {
+                3 => {
+                    let doc: Schema3DocState = serde_json::from_value(wrapper.document)?;
+                    // Absent `sections` means the single default section;
+                    // an explicit list (even empty) is validated strictly.
+                    let sections = doc
+                        .sections
+                        .unwrap_or_else(default_sections);
+                    (doc.blocks, doc.bookmarks, doc.styles, sections)
+                }
+                _ => {
                     return Err(EngineError::unsupported(
                         "unsupported Quill snapshot kind/schema",
-                    ));
+                    ))
                 }
-                let doc: DocState = serde_json::from_value(value)?;
-                (doc.blocks, Vec::new(), Vec::new())
-            };
+            }
+        } else {
+            if value.as_object().is_some_and(|o| {
+                o.contains_key("bookmarks")
+                    || o.contains_key("styles")
+                    || o.contains_key("sections")
+            }) {
+                return Err(EngineError::unsupported(
+                    "unsupported Quill snapshot kind/schema",
+                ));
+            }
+            let doc: DocState = serde_json::from_value(value)?;
+            (doc.blocks, Vec::new(), Vec::new(), default_sections())
+        };
         lists::validate(&state_blocks)?;
         for block in &state_blocks {
             for inline in &block.inlines {
@@ -2169,9 +2322,11 @@ impl Engine for QuillEngine {
         }
         validate_bookmarks(&bookmarks, &blocks)?;
         validate_styles(&styles, &blocks)?;
+        validate_sections(&sections, &blocks)?;
         self.blocks = blocks;
         self.bookmarks = bookmarks;
         self.styles = styles;
+        self.sections = sections;
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
     }
@@ -2191,6 +2346,10 @@ impl Engine for QuillEngine {
         if let Some(before) = styles {
             self.styles = before;
         }
+        let sections = entry.sections.as_ref().map(|(before, _)| before.clone());
+        if let Some(before) = sections {
+            self.sections = before;
+        }
         self.journal.push_redo(entry);
         Ok(true)
     }
@@ -2209,6 +2368,10 @@ impl Engine for QuillEngine {
         let styles = entry.styles.as_ref().map(|(_, after)| after.clone());
         if let Some(after) = styles {
             self.styles = after;
+        }
+        let sections = entry.sections.as_ref().map(|(_, after)| after.clone());
+        if let Some(after) = sections {
+            self.sections = after;
         }
         self.journal.push_undo(entry);
         Ok(true)
