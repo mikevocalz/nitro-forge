@@ -44,3 +44,9 @@ The Analysis panel composes supported automation edits, engine response curves a
 ## Tally data and view checkpoint (2026-11-07)
 
 Tally now composes controlled selection, bounded atomic TSV paste/clear and view-only freeze commands with active-sheet checks. Measured freeze limits feed the same bounded cell reads and admission generation. See [Tally data/view controls](../design/TALLY_DETAIL_PHASE.md). Unsupported formatting/data-structure operations, legacy widget focus/scroll resets and runtime/native acceptance remain explicit. No full acceptance field is promoted.
+
+## Active scope and pushed source checkpoints (2026-11-07)
+
+The user extended the original P02–P11 request through the final phase. The ledger contains 21 phases numbered P00–P20, so active scope is all remaining original phases through P20. See [P02–P11 implementation map](P02-P11-IMPLEMENTATION-MAP.md) and [P12–P20 implementation map](P12-P20-IMPLEMENTATION-MAP.md). This scope extension did not answer or lift the existing review gate for full/runtime/native testing. Phase and platform acceptance fields remain unchanged.
+
+Pushed source checkpoints: source/acceptance reconciliation `428e534`; Prism inspector/write ownership and bounded PNG delivery `995ce12`; experimental player source recovery/provenance `df28780`; recovery buffer ownership/cancellation `0263d2c`. NYC-Tron adds actual native presentation timestamp enumeration in `f9a071d`, with TypeScript checks passed and Swift/Kotlin compilation still open. [P10/P11 prerequisites](P10-P11-ENGINE-PREREQUISITES.md) records the missing backend scope without replacing it with UI settings.

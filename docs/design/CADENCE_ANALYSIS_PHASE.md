@@ -15,3 +15,7 @@ Validation: preview TypeScript checking and static diff checking passed. No runt
 Remaining work includes native live measurement/output, recording/import/render/export composition, arbitrary automation windows, fractional-quarter automation grids and cross-device acceptance. These controls do not own an audio context or player, and do not establish a complete DAW.
 
 The parent Analysis tab routes mutations through the parent detail-selection guard before the shared document gate. Synchronous unmount cleanup closes late widget callbacks. Graph selection is filtered against current EQ bands. Final preview typecheck, static production build and independent source review passed; existing bundle/directive/config-loader warnings remain recorded, with no runtime or performance acceptance claim.
+
+## Bounded WAV delivery checkpoint
+
+The preview now exposes the existing Cadence WAV exporter through its shared document operation gate. It describes the authoritative song and admits a complete master up to 60 seconds, keeping 48 kHz stereo f32 PCM/base64 below the host response budget. It reuses the existing single render so stateful inserts retain continuity, then requests a real browser WAV download. It neither truncates a longer song nor reports successful saving from a browser request. Replaced/unmounted owners discard output and object URLs are revoked. Longer exports, native file providers, actual format/playback acceptance and native live input/output remain open. Static checking and bundling are separate from those deferred runtime checks.

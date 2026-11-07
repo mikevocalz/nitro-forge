@@ -11,6 +11,7 @@ import { WORKSPACE_DENSITIES, isWorkspaceDensity, workspaceThemes, type Workspac
 import { FORGE_DIRECTION_IDS, isForgeDirection, nycTronTokens, type ForgeDirectionId } from '@nitro-forge/studio-workspace/directions';
 import { EngineStudioSurface } from './engine-studio-surfaces';
 import { exportPrismPng } from './prism-png-export';
+import { exportCadenceWav } from './cadence-wav-export';
 import { AppLauncher } from './app-launcher';
 import { Page, Main, Nav, Link, Text as SemanticText } from '@nyc-tron/ui/components/html';
 import { FilePicker } from '@nyc-tron/ui/components/files/FilePicker';
@@ -81,6 +82,21 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
     <FilePicker unstyled className="document-action min-h-11 px-3 flex-row items-center justify-center rounded-control hover:bg-surface-sunken" labelClassName="text-text text-sm font-semibold" label="Open" disabled={busy || !editor.doc}
       accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
       onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} /></DropZone>
+      {studio === 'cadence' && <Button aria-label="Export WAV, up to 60 seconds" title="Export WAV (≤60 s)" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
+        void run(async () => {
+          const current = editor.doc as { handle: DocumentHandle } | null;
+          const owner = exportOwner.current;
+          if (!current || !owner?.active || owner.document !== editor.doc) throw new Error('The document changed. Retry the export.');
+          const bytes = await exportCadenceWav(current.handle);
+          if (!owner.active || exportOwner.current !== owner) return;
+          const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'audio/wav' }));
+          try {
+            const link = document.createElement('a');
+            link.href = url; link.download = 'cadence-master.wav'; link.click();
+          } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+          store.setState({ notice: 'WAV download requested from the rendered master' });
+        }).catch(() => {});
+      }} />}
       {studio === 'prism' && <Button aria-label="Export PNG, up to one megapixel" title="Export PNG" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
         void run(async () => {
           const current = editor.doc as { handle: DocumentHandle } | null;
