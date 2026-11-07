@@ -18,6 +18,13 @@ export const OPS = {
   removeSlides: "removeSlides",
   setBackground: "setBackground",
   setSlideSize: "setSlideSize",
+  setNotes: "setNotes",
+  slideNotes: "slideNotes",
+  addInkStroke: "addInkStroke",
+  updateInkStroke: "updateInkStroke",
+  removeInkStroke: "removeInkStroke",
+  clearInk: "clearInk",
+  slideInk: "slideInk",
   addText: "addText",
   setText: "setText",
   setTextStyle: "setTextStyle",
@@ -29,9 +36,12 @@ export const OPS = {
   rotateObject: "rotateObject",
   removeObject: "removeObject",
   addAnimation: "addAnimation",
+  addTriggeredAnimationV1: "addTriggeredAnimationV1",
   removeAnimation: "removeAnimation",
   updateAnimation: "updateAnimation",
+  updateTriggeredAnimationV1: "updateTriggeredAnimationV1",
   slideAt: "slideAt",
+  slideAtWithClicksV1: "slideAtWithClicksV1",
   deck: "deck",
 } as const;
 
@@ -46,6 +56,33 @@ export interface PitchTextStyle {
 /** Stable boundary; follows start_slide_id on reorder. Removing that slide removes this boundary. */
 export interface PitchSection { id: number; label: string; start_slide_id: number }
 export type Layout = "blank" | "title" | "titleBody";
+export type InkKind = "pen" | "highlighter" | "laser";
+/**
+ * Persistent annotation stroke. `points` are `[x, y]` pairs in slide-space
+ * units (the same coordinate space as object x/y/w/h), not normalized.
+ * Bounds enforced by the engine: 1..=2048 points per stroke, at most 256
+ * strokes per slide, coordinates finite within ±1,000,000, width finite
+ * >0 and <=10,000, color four RGBA channels 0..255, opacity 0..=1 or null.
+ */
+export interface PitchInkStroke {
+  id: number;
+  kind: InkKind;
+  points: [number, number][];
+  width: number;
+  color: Rgba;
+  /** Optional extra opacity multiplier; absent/null means opaque apart from the color alpha. */
+  opacity?: number | null;
+}
+/** Stroke input for `addInkStroke`; the engine assigns `id`. */
+export type PitchInkStrokeInput = Omit<PitchInkStroke, "id">;
+/** Partial in-place ink edit; omitted fields preserve the stroke. `opacity: null` clears it. */
+export interface PitchInkStrokePatch {
+  kind?: InkKind;
+  points?: [number, number][];
+  width?: number;
+  color?: Rgba;
+  opacity?: number | null;
+}
 export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn" | "pulse" | "spin" | "fadeOut" | "zoomOut";
 export type PitchAnimationTrigger = {type:"absolute"}|{type:"on-click";click_index:number}|{type:"with-previous"}|{type:"after-previous"};
 function ownAnimationTrigger(value:PitchAnimationTrigger):PitchAnimationTrigger {
@@ -134,6 +171,33 @@ export class PitchDocument {
   setBackground(slide: number, color: Rgba | null) {
     return this.call(OPS.setBackground, { slide, color });
   }
+  /** Speaker notes: plain text up to 32768 UTF-8 bytes; "" clears. */
+  setNotes(slide: number, text: string) {
+    return this.call<{ ok: boolean }>(OPS.setNotes, { slide, text });
+  }
+  /** Read-only; `notes` is null when the slide has no speaker notes. */
+  slideNotes(slide: number) {
+    return this.call<{ notes: string | null }>(OPS.slideNotes, { slide });
+  }
+  /** Persistent ink stroke in slide-space coordinates; returns the assigned `stroke_id`. */
+  addInkStroke(slide: number, stroke: PitchInkStrokeInput) {
+    return this.call<{ stroke_id: number }>(OPS.addInkStroke, { slide, stroke });
+  }
+  /** Partial stroke patch; equal/empty patches are eventless no-ops. */
+  updateInkStroke(slide: number, strokeId: number, patch: PitchInkStrokePatch) {
+    return this.call<{ ok: boolean }>(OPS.updateInkStroke, { ...patch, slide, stroke_id: strokeId });
+  }
+  removeInkStroke(slide: number, strokeId: number) {
+    return this.call<{ ok: boolean }>(OPS.removeInkStroke, { slide, stroke_id: strokeId });
+  }
+  /** Remove every ink stroke on the slide in one undoable step; empty is a no-op. */
+  clearInk(slide: number) {
+    return this.call<{ ok: boolean }>(OPS.clearInk, { slide });
+  }
+  /** Read-only; `strokes` is empty when the slide has no persistent ink. */
+  slideInk(slide: number) {
+    return this.call<{ strokes: PitchInkStroke[] }>(OPS.slideInk, { slide });
+  }
   addText(slide: number, x: number, y: number, w: number, h: number, text: string, fontSize?: number) {
     return this.call<{ object_id: number }>(OPS.addText, {
       slide, x, y, w, h, text, font_size: fontSize,
@@ -169,13 +233,13 @@ export class PitchDocument {
     return this.call(OPS.removeObject, { slide, id });
   }
   addAnimation(slide: number, object: number, kind: AnimKind, startS: number, durationS: number, trigger?: PitchAnimationTrigger) {
-    return this.call<{ index: number }>(trigger === undefined ? OPS.addAnimation : "addTriggeredAnimationV1", {
+    return this.call<{ index: number }>(trigger === undefined ? OPS.addAnimation : OPS.addTriggeredAnimationV1, {
       slide, object, kind, start_s: startS, duration_s: durationS, ...(trigger === undefined ? {} : { trigger: ownAnimationTrigger(trigger) }),
     });
   }
   /** Retains target object and list index; equal/empty patches preserve history. */
   updateAnimation(slide: number, index: number, patch: PitchAnimationUpdate) {
-    return this.call<{ ok: boolean }>(patch.trigger === undefined ? OPS.updateAnimation : "updateTriggeredAnimationV1", { ...patch, ...(patch.trigger === undefined ? {} : { trigger: ownAnimationTrigger(patch.trigger) }), slide, index });
+    return this.call<{ ok: boolean }>(patch.trigger === undefined ? OPS.updateAnimation : OPS.updateTriggeredAnimationV1, { ...patch, ...(patch.trigger === undefined ? {} : { trigger: ownAnimationTrigger(patch.trigger) }), slide, index });
   }
   removeAnimation(slide: number, index: number) {
     return this.call(OPS.removeAnimation, { slide, index });
@@ -183,7 +247,7 @@ export class PitchDocument {
   /** Resolve slide objects at presentation time t (animations applied). */
   slideAt(slide: number, tS: number, clickTimes?: readonly number[]) {
     if(clickTimes && (clickTimes.length>256||clickTimes.some((time,index)=>!Number.isFinite(time)||time<0||time>86400||(index>0&&time<clickTimes[index-1]!))))throw new RangeError("Click times must be a bounded ordered slide-relative history");
-    return this.call<{ objects: AnimatedObject[]; schedule: PitchAnimationSchedule[] }>(clickTimes === undefined ? OPS.slideAt : "slideAtWithClicksV1", {
+    return this.call<{ objects: AnimatedObject[]; schedule: PitchAnimationSchedule[] }>(clickTimes === undefined ? OPS.slideAt : OPS.slideAtWithClicksV1, {
       slide,
       t_s: tS,
       ...(clickTimes === undefined ? {} : { click_times: [...clickTimes] }),

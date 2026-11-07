@@ -502,7 +502,7 @@ mod tests {
             let mut reopened=PitchEngine::new();reopened.restore(&snapshot).unwrap();
             assert_eq!(reopened.state,extended);
             let before=reopened.snapshot().unwrap();
-            for (key,value) in [("kind",json!("foreign")),("schema",json!(3))] {
+            for (key,value) in [("kind",json!("foreign")),("schema",json!(4))] {
                 let old=wrapper[key].clone();wrapper[key]=value;
                 assert!(reopened.restore(&encode_envelope(&serde_json::to_vec(&wrapper).unwrap())).is_err());
                 assert_eq!(reopened.snapshot().unwrap(),before);wrapper[key]=old;

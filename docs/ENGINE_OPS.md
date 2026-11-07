@@ -386,10 +386,18 @@ Square/Circle annotations use positive bounded caller rectangles and standard PD
 State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide], sections:[Section], next_section_id }`,
 `Section = { id, label, start_slide_id }` is a stable deck boundary. Older snapshots default to `sections:[]` and `next_section_id:1`.
 `Slide = { id, layout:"blank"|"title"|"titleBody", background:[r,g,b,a]|null,
-objects:[Obj], animations:[Anim] }`,
+objects:[Obj], animations:[Anim], notes?:string, ink?:[InkStroke] }`,
 `Obj = { id, kind:"text"|"rect"|"image", x,y,w,h, rotation_deg,
 text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
-`Anim = { object_id, kind:"fadeIn"|"slideInLeft"|"zoomIn"|"pulse"|"spin"|"fadeOut"|"zoomOut", start_s, duration_s, trigger? }`.
+`Anim = { object_id, kind:"fadeIn"|"slideInLeft"|"zoomIn"|"pulse"|"spin"|"fadeOut"|"zoomOut", start_s, duration_s, trigger? }`,
+`InkStroke = { id, kind:"pen"|"highlighter"|"laser", points:[[x,y]..], width, color:[r,g,b,a], opacity?:0..=1 }`.
+Ink `points` are `[x, y]` pairs in slide-space units (the same coordinate space
+as object x/y/w/h), not normalized. Bounds: 1..=2048 points per stroke,
+at most 256 strokes per slide, coordinates finite within ±1,000,000,
+width finite >0 and <=10,000, color four integer RGBA channels 0..255,
+opacity a finite 0..=1 multiplier (absent ≡ opaque apart from the color
+alpha; `opacity:null` in an update clears it). Stroke ids share the
+document `next_id` identity space.
 
 | op | payload | data | notes |
 |---|---|---|---|
@@ -404,6 +412,12 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `moveSlides` | `{order:number[]}` | `{ok}` | Complete unique slide-ID permutation; one undo entry. Identical order is a no-op. |
 | `removeSlides` | `{ids:number[]}` | `{ok}` | Unique existing slide IDs; must keep ≥1 slide; one undo entry. Empty selection is a no-op. |
 | `setBackground` | `{slide,color|null}` | `{ok}` | slide = id |
+| `setNotes` | `{slide,text}` | `{ok}` | slide = id; speaker notes are plain text ≤32768 UTF-8 bytes; empty string clears notes (absent ≡ cleared); equal/no-change patch is an eventless no-op that preserves redo; notes die with their slide (removeSlide/moveSlide/removeSlides follow slide identity) |
+| `addInkStroke` | `{slide,stroke:{kind,points,width,color,opacity?}}` | `{stroke_id}` | slide = id; persistent annotation ink in slide-space coordinates; stroke `id` is engine-assigned from `next_id`; full payload validated before mutation; ≤256 strokes/slide, 1..=2048 points/stroke |
+| `updateInkStroke` | `{slide,stroke_id,kind?,points?,width?,color?,opacity?}` | `{ok}` | Partial in-place patch retains stroke id and list position; `opacity:null` clears the optional field; validated before mutation; equal/empty patch is an eventless no-op that preserves redo |
+| `removeInkStroke` | `{slide,stroke_id}` | `{ok}` | unknown stroke id → NotFound |
+| `clearInk` | `{slide}` | `{ok}` | removes every ink stroke on the slide in one undo entry; empty slide is an eventless no-op |
+| `slideInk` | `{slide}` | `{strokes:[InkStroke]}` | read-only persistent ink for the slide id; `[]` when unset |
 | `addText` | `{slide,x,y,w,h,text,font_size?}` | `{object_id}` | |
 | `setText` | `{slide,id,text}` | `{ok}` | |
 | `setTextStyle` | `{slide,id,font_size?,bold?,italic?,color?}` | `{ok}` | Text objects only. Partial patch preserves omitted fields/content/geometry. Font size finite and >0; bold/italic strict booleans; color four integer RGBA channels 0..255. Explicit null invalid. Validated before mutation; one history entry/event only for a changed style. Empty/equal patch preserves redo and emits no event. |
@@ -415,12 +429,16 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `rotateObject` | `{slide,id,degrees}` | `{ok}` | |
 | `removeObject` | `{slide,id}` | `{ok}` | also drops its animations |
 | `addAnimation` | `{slide,object,kind,start_s,duration_s,trigger?}` | `{index}` | duration > 0 |
+| `addTriggeredAnimationV1` | same as `addAnimation` | `{index}` | explicit-trigger alias; old engines reject the unknown name rather than silently dropping `trigger` |
 | `updateAnimation` | `{slide,index,kind?,start_s?,duration_s?,trigger?}` | `{ok}` | Partial in-place patch retains target object and list position. Existing index required; admitted effect kinds, finite start/delay >=0 and finite duration >0, both ≤86400; explicit null invalid. Validate before mutation, one history entry/event only for actual change; empty/equal patch preserves redo and emits no event. Trigger updates are validated against the complete candidate timeline; list order is unchanged. |
+| `updateTriggeredAnimationV1` | same as `updateAnimation` | `{ok}` | explicit-trigger alias; old engines reject the unknown name |
 | `removeAnimation` | `{slide,index}` | `{ok}` | staged validation; reject if a first relative animation would lose its predecessor |
 | `slideAt` | `{slide,t_s,click_times?:number[]}` | `{objects:[{id,x,y,w,h,rotation,opacity}],schedule:[{index,start_s:number|null,end_s:number|null}]}` | read-only deterministic evaluation; missing click dependencies remain null/pending |
+| `slideAtWithClicksV1` | same as `slideAt` | same as `slideAt` | explicit click-history alias; old engines reject the unknown name rather than silently ignoring `click_times` |
+| `slideNotes` | `{slide}` | `{notes:string\|null}` | read-only speaker notes for the slide id; `null` when unset |
 | `deck` | `{}` | `{title,slide_count}` | read-only |
 
-Undo: prior slide/object/animation state.
+Undo: prior slide/object/animation state, including speaker notes and ink.
 
 Legacy snapshots without size default to 960×540; invalid sizes reject restore before replacing state. Canvas adapters read persisted size.
 
@@ -434,7 +452,7 @@ Animation evaluation caps at4096 objects/animations per slide; references and ob
 
 The pinned alpha.4 SlideAnimationPane supports effect/add/remove but lacks timing/trigger edit callbacks. The adapter offers all seven real effects, retains nonabsolute sourceTrigger metadata and refuses to bind that old pane over triggered programs rather than mislabel relative delays as absolute starts. Typed engine APIs/readPitchSlideAt accept explicit click history. No fake preview timer, host UI activation or new Pitch renderer is provided. Actual CPU pixel integration is checked through the existing Prism renderer.
 
-Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing. Root `meta` is absent so legacy readers fail rather than silently discard fields. New readers accept legacy root payloads and strictly validate wrapper kind/schema/keys before replacement. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
+Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes or non-empty slide ink uses `{kind:"pitch",schema:3,document:PitchState}` instead. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads rather than dropping notes/ink. Readers accept legacy root payloads and both schema:2 and schema:3 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
 
 ## quill-engine — `QuillEngine::new()`
 
