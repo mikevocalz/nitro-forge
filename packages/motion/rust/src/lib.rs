@@ -21,6 +21,10 @@ const SCHEMA_VERSION: u32 = 2;
 const MAX_COMPOSITIONS: usize = 16;
 /// Longest chain of nested compositions below the root composition.
 const MAX_COMP_DEPTH: usize = 8;
+/// Longest matte reference chain rendered within one composition.
+const MAX_MATTE_DEPTH: usize = 8;
+/// Largest accepted matte feather radius in pixels.
+const MAX_MATTE_FEATHER: f64 = 64.;
 fn bad(message: &str) -> EngineError {
     EngineError::validation(message)
 }
@@ -151,6 +155,31 @@ impl BlendMode {
         }
     }
 }
+/// Track-matte source modes; wire names are kebab-case like `BlendMode`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum MatteMode {
+    Alpha,
+    AlphaInverted,
+    Luma,
+    LumaInverted,
+}
+/// A layer matte: another layer in the same composition supplies the mask.
+/// `feather` is the bounded edge falloff in pixels (0..=64); `enabled=false`
+/// stores the matte without applying it at render time.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LayerMatte {
+    source_layer: u64,
+    mode: MatteMode,
+    #[serde(default)]
+    feather: f64,
+    #[serde(default = "matte_enabled_default")]
+    enabled: bool,
+}
+fn matte_enabled_default() -> bool {
+    true
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum LayerKind {
@@ -187,6 +216,10 @@ struct Layer {
     /// `clipped`; consecutive clipped layers share that base's alpha).
     #[serde(default, skip_serializing_if = "is_false")]
     clipped: bool,
+    /// Track matte supplied by another layer in the same composition; absent
+    /// means no matte. Additive serde default keeps schema at 2.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    matte: Option<LayerMatte>,
     transform: Transform,
     opacity: f64,
     curves: Vec<Curve>,
@@ -555,6 +588,17 @@ fn validate(s: &State) -> Result<(), EngineError> {
             if l.clipped && index == 0 {
                 return Err(bad("clipped layer requires a sibling below it"));
             }
+            if let Some(matte) = l.matte {
+                if !matte.feather.is_finite() || !(0.0..=MAX_MATTE_FEATHER).contains(&matte.feather)
+                {
+                    return Err(bad("invalid matte feather"));
+                }
+                if matte.source_layer == l.id || !members.contains_key(&matte.source_layer) {
+                    return Err(bad(
+                        "matte source must be another layer in the same composition",
+                    ));
+                }
+            }
             match (l.kind, &l.shape, l.asset_id, l.comp_id) {
                 (Some(LayerKind::Shape), Some(sh), None, None) => {
                     if !["rect", "ellipse"].contains(&sh.kind.as_str())
@@ -652,6 +696,27 @@ fn validate(s: &State) -> Result<(), EngineError> {
                 }
                 evaluate(&c.keys, c.property.read(l), 0., duration_s, min, max)
                     .map_err(bad)?;
+            }
+        }
+    }
+    // Pass 2b: matte chains are acyclic and bounded so render recursion
+    // terminates. Sources are already proven same-composition above, and the
+    // check covers every matte edge including disabled ones.
+    for &(_, _, _, _, layers) in &views {
+        let matte_of: BTreeMap<u64, u64> = layers
+            .iter()
+            .filter_map(|l| l.matte.map(|m| (l.id, m.source_layer)))
+            .collect();
+        for &start in matte_of.keys() {
+            let mut seen = BTreeSet::from([start]);
+            let mut cursor = matte_of[&start];
+            let mut hops = 1usize;
+            while matte_of.contains_key(&cursor) {
+                if hops >= MAX_MATTE_DEPTH || !seen.insert(cursor) {
+                    return Err(bad("cyclic or over-deep matte chain"));
+                }
+                hops += 1;
+                cursor = matte_of[&cursor];
             }
         }
     }
@@ -760,6 +825,26 @@ fn clear_parent_links(layers: &mut [Arc<Layer>], parent: u64) {
         }
     }
 }
+/// True when following `from`'s matte chain reaches `target`, meaning a new
+/// `target -> from` matte edge would close a cycle. Chains are already valid
+/// in `next`, so the walk terminates; `seen` is a defensive backstop.
+fn matte_reaches(layers: &[Arc<Layer>], from: u64, target: u64) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut cursor = Some(from);
+    while let Some(id) = cursor {
+        if id == target {
+            return true;
+        }
+        if !seen.insert(id) {
+            return false;
+        }
+        cursor = layers
+            .iter()
+            .find(|l| l.id == id)
+            .and_then(|l| l.matte.map(|m| m.source_layer));
+    }
+    false
+}
 fn opt_string(p: &Value, name: &str, default: &str) -> Result<String, EngineError> {
     p.get(name)
         .map(|v| v.as_str().ok_or_else(|| bad("name must be a string")))
@@ -838,6 +923,216 @@ impl MotionEngine {
     fn comp_local_time(&self, comp: &Composition, time: f64) -> f64 {
         (time * comp.duration_s / self.state.duration_s).clamp(0., comp.duration_s)
     }
+    /// Stage one evaluated layer into `prism`. `siblings` enables blend and
+    /// clipping, which only make sense inside the flat composition scene;
+    /// matte-source renders pass false because a lone staged layer has no
+    /// siblings — its transform parents, opacity, visibility and its own
+    /// matte still apply, and comp layers still recurse.
+    /// `matte_depth` counts matte hops already taken to reach this layer.
+    #[allow(clippy::too_many_arguments)]
+    fn stage_layer(
+        &self,
+        prism: &mut prism_engine::PrismEngine,
+        view: &CompView,
+        l: &Layer,
+        by_id: &BTreeMap<u64, &Layer>,
+        time: f64,
+        ctx: Option<&TaskContext>,
+        depth: usize,
+        matte_depth: usize,
+        siblings: bool,
+    ) -> Result<(), EngineError> {
+        if let Some(c) = ctx {
+            c.checkpoint()?
+        }
+        let transform = if l.parent_id.is_some() {
+            decompose(&effective_affine(l, by_id)?)
+                .ok_or_else(|| bad("layer parent transform chain requires shear"))?
+        } else {
+            l.transform.clone()
+        };
+        let result = match l.kind {
+            Some(LayerKind::Shape) => {
+                let shape = l
+                    .shape
+                    .as_ref()
+                    .ok_or_else(|| bad("shape layer lost shape"))?;
+                prism.apply(Command::new("addShape", json!({"shape":shape})))?
+            }
+            Some(LayerKind::Raster) => {
+                let asset = self
+                    .state
+                    .assets
+                    .get(&l.asset_id.ok_or_else(|| bad("raster layer lost asset"))?)
+                    .ok_or_else(|| bad("missing raster asset"))?;
+                let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
+                let id = added.data["layer_id"]
+                    .as_u64()
+                    .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
+                prism.apply(
+                    Command::new(
+                        "drawPixels",
+                        json!({"id":id,"x":0,"y":0,"w":asset.width,"h":asset.height}),
+                    )
+                    .with_binary(Some((*asset.pixels).clone())),
+                )?;
+                added
+            }
+            Some(LayerKind::Comp) => {
+                let comp_id = l
+                    .comp_id
+                    .ok_or_else(|| bad("comp layer lost composition"))?;
+                let comp = self
+                    .state
+                    .compositions
+                    .get(&comp_id)
+                    .ok_or_else(|| bad("missing composition"))?;
+                // Local time maps proportionally through each composition's
+                // duration: child = parent_time * child.duration / parent.duration.
+                let child_time =
+                    (time * comp.duration_s / view.duration_s).clamp(0., comp.duration_s);
+                let child_view = CompView {
+                    width: comp.width,
+                    height: comp.height,
+                    duration_s: comp.duration_s,
+                    layers: &comp.layers,
+                };
+                let pixels = self.render_comp(&child_view, child_time, ctx, depth + 1)?;
+                let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
+                let id = added.data["layer_id"]
+                    .as_u64()
+                    .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
+                prism.apply(
+                    Command::new(
+                        "drawPixels",
+                        json!({"id":id,"x":0,"y":0,"w":comp.width,"h":comp.height}),
+                    )
+                    .with_binary(Some(pixels)),
+                )?;
+                added
+            }
+            None => return Err(bad("layer kind missing")),
+        };
+        let layer = result.data["layer_id"]
+            .as_u64()
+            .ok_or_else(|| bad("Prism did not return a layer"))?;
+        prism.apply(Command::new(
+            "setTransformOrigin",
+            json!({"id":layer,"ox":transform.ox,"oy":transform.oy}),
+        ))?;
+        prism.apply(Command::new(
+            "setLayerTransform",
+            json!({"id":layer,"transform":transform}),
+        ))?;
+        prism.apply(Command::new(
+            "setLayerOpacity",
+            json!({"id":layer,"opacity":l.opacity}),
+        ))?;
+        prism.apply(Command::new(
+            "setLayerVisible",
+            json!({"id":layer,"visible":l.visible}),
+        ))?;
+        if siblings {
+            if let Some(blend) = l.blend {
+                prism.apply(Command::new(
+                    "setLayerBlend",
+                    json!({"id":layer,"blend":blend.prism_name()}),
+                ))?;
+            }
+            if l.clipped {
+                prism.apply(Command::new(
+                    "setClipped",
+                    json!({"id":layer,"clipped":true}),
+                ))?;
+            }
+        }
+        if let Some(matte) = l.matte {
+            if matte.enabled {
+                let mask = self.matte_mask(view, matte, by_id, time, ctx, depth, matte_depth)?;
+                // Prism masks are canvas-space alpha: paint the derived mask
+                // over an empty mask, then feather it inside Prism.
+                prism.apply(Command::new("addMask", json!({"id":layer,"fill":"hide"})))?;
+                prism.apply(Command::new(
+                    "paintMask",
+                    json!({
+                        "id":layer,"x":0,"y":0,
+                        "w":view.width,"h":view.height,
+                        "data_b64":ignition_core::base64_encode(&mask),
+                    }),
+                ))?;
+                if matte.feather > 0. {
+                    prism.apply(Command::new(
+                        "refineMask",
+                        json!({"id":layer,"feather":matte.feather}),
+                    ))?;
+                }
+            }
+        }
+        Ok(())
+    }
+    /// Render the matte source layer's subtree standalone into an ephemeral
+    /// scene and derive the canvas-space mask for `matte.mode`. Alpha modes
+    /// read the flattened alpha channel; luma modes read premultiplied
+    /// Rec.601 luminance (transparent pixels contribute 0), inverted modes
+    /// complement the derived value. `matte_depth` bounds the chain.
+    #[allow(clippy::too_many_arguments)]
+    fn matte_mask(
+        &self,
+        view: &CompView,
+        matte: LayerMatte,
+        by_id: &BTreeMap<u64, &Layer>,
+        time: f64,
+        ctx: Option<&TaskContext>,
+        depth: usize,
+        matte_depth: usize,
+    ) -> Result<Vec<u8>, EngineError> {
+        if matte_depth >= MAX_MATTE_DEPTH {
+            return Err(bad("matte chain depth exceeded"));
+        }
+        let source = by_id
+            .get(&matte.source_layer)
+            .copied()
+            .ok_or_else(|| bad("matte source layer missing"))?;
+        let mut prism = prism_engine::PrismEngine::new(view.width, view.height);
+        self.stage_layer(
+            &mut prism,
+            view,
+            source,
+            by_id,
+            time,
+            ctx,
+            depth,
+            matte_depth + 1,
+            false,
+        )?;
+        if let Some(c) = ctx {
+            c.checkpoint()?
+        }
+        let flat = prism
+            .apply(Command::new("flatten", json!({})).with_binary(None))?
+            .output
+            .ok_or_else(|| bad("Prism did not return RGBA"))?;
+        let mut mask = Vec::with_capacity(view.width as usize * view.height as usize);
+        for px in flat.chunks_exact(4) {
+            let value = match matte.mode {
+                MatteMode::Alpha => f64::from(px[3]),
+                MatteMode::AlphaInverted => 255. - f64::from(px[3]),
+                MatteMode::Luma | MatteMode::LumaInverted => {
+                    let lum = 0.299 * f64::from(px[0])
+                        + 0.587 * f64::from(px[1])
+                        + 0.114 * f64::from(px[2]);
+                    let v = (lum * f64::from(px[3]) / 255.).round();
+                    if matte.mode == MatteMode::LumaInverted {
+                        255. - v
+                    } else {
+                        v
+                    }
+                }
+            };
+            mask.push(value.round().clamp(0., 255.) as u8);
+        }
+        Ok(mask)
+    }
     /// Render one composition to packed RGBA at local `time`. `comp` layers
     /// recurse into their own ephemeral Prism scene at their own dimensions;
     /// the flattened child frame is uploaded into this scene as raster pixels.
@@ -855,106 +1150,7 @@ impl MotionEngine {
         let by_id: BTreeMap<u64, &Layer> = layers.iter().map(|l| (l.id, l)).collect();
         let mut prism = prism_engine::PrismEngine::new(view.width, view.height);
         for l in &layers {
-            if let Some(c) = ctx {
-                c.checkpoint()?
-            }
-            let transform = if l.parent_id.is_some() {
-                decompose(&effective_affine(l, &by_id)?).ok_or_else(|| {
-                    bad("layer parent transform chain requires shear")
-                })?
-            } else {
-                l.transform.clone()
-            };
-            let result = match l.kind {
-                Some(LayerKind::Shape) => {
-                    let shape = l.shape.as_ref().ok_or_else(|| bad("shape layer lost shape"))?;
-                    prism.apply(Command::new("addShape", json!({"shape":shape})))?
-                }
-                Some(LayerKind::Raster) => {
-                    let asset = self
-                        .state
-                        .assets
-                        .get(&l.asset_id.ok_or_else(|| bad("raster layer lost asset"))?)
-                        .ok_or_else(|| bad("missing raster asset"))?;
-                    let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
-                    let id = added.data["layer_id"]
-                        .as_u64()
-                        .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
-                    prism.apply(
-                        Command::new(
-                            "drawPixels",
-                            json!({"id":id,"x":0,"y":0,"w":asset.width,"h":asset.height}),
-                        )
-                        .with_binary(Some((*asset.pixels).clone())),
-                    )?;
-                    added
-                }
-                Some(LayerKind::Comp) => {
-                    let comp_id = l
-                        .comp_id
-                        .ok_or_else(|| bad("comp layer lost composition"))?;
-                    let comp = self
-                        .state
-                        .compositions
-                        .get(&comp_id)
-                        .ok_or_else(|| bad("missing composition"))?;
-                    // Local time maps proportionally through each composition's
-                    // duration: child = parent_time * child.duration / parent.duration.
-                    let child_time =
-                        (time * comp.duration_s / view.duration_s).clamp(0., comp.duration_s);
-                    let child_view = CompView {
-                        width: comp.width,
-                        height: comp.height,
-                        duration_s: comp.duration_s,
-                        layers: &comp.layers,
-                    };
-                    let pixels = self.render_comp(&child_view, child_time, ctx, depth + 1)?;
-                    let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
-                    let id = added.data["layer_id"]
-                        .as_u64()
-                        .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
-                    prism.apply(
-                        Command::new(
-                            "drawPixels",
-                            json!({"id":id,"x":0,"y":0,"w":comp.width,"h":comp.height}),
-                        )
-                        .with_binary(Some(pixels)),
-                    )?;
-                    added
-                }
-                None => return Err(bad("layer kind missing")),
-            };
-            let layer = result.data["layer_id"]
-                .as_u64()
-                .ok_or_else(|| bad("Prism did not return a layer"))?;
-            prism.apply(Command::new(
-                "setTransformOrigin",
-                json!({"id":layer,"ox":transform.ox,"oy":transform.oy}),
-            ))?;
-            prism.apply(Command::new(
-                "setLayerTransform",
-                json!({"id":layer,"transform":transform}),
-            ))?;
-            prism.apply(Command::new(
-                "setLayerOpacity",
-                json!({"id":layer,"opacity":l.opacity}),
-            ))?;
-            prism.apply(Command::new(
-                "setLayerVisible",
-                json!({"id":layer,"visible":l.visible}),
-            ))?;
-            if let Some(blend) = l.blend {
-                prism.apply(Command::new(
-                    "setLayerBlend",
-                    json!({"id":layer,"blend":blend.prism_name()}),
-                ))?;
-            }
-            if l.clipped {
-                prism.apply(Command::new(
-                    "setClipped",
-                    json!({"id":layer,"clipped":true}),
-                ))?;
-            }
+            self.stage_layer(&mut prism, view, l, &by_id, time, ctx, depth, 0, true)?;
         }
         if let Some(c) = ctx {
             c.checkpoint()?
@@ -1239,6 +1435,16 @@ impl Engine for MotionEngine {
                                 .ok_or_else(|| bad("layer parent outside duplicated composition"))
                         })
                         .transpose()?;
+                    // Matte sources are same-composition layers, so they
+                    // remap to the copy's fresh identities like parent links.
+                    if let Some(matte) = nl.matte.as_mut() {
+                        matte.source_layer = layer_ids
+                            .get(&matte.source_layer)
+                            .copied()
+                            .ok_or_else(|| {
+                                bad("matte source outside duplicated composition")
+                            })?;
+                    }
                     for c in &mut nl.curves {
                         for k in Arc::make_mut(&mut c.keys).iter_mut() {
                             k.id = next.next_key_id;
@@ -1312,6 +1518,7 @@ impl Engine for MotionEngine {
                     parent_id: None,
                     blend: None,
                     clipped: false,
+                    matte: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1416,6 +1623,40 @@ impl Engine for MotionEngine {
                 // validate() rejects a clipped layer with no sibling below.
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
+            "setLayerMatte" => {
+                let layer_id = id(p, "layer")?;
+                // `matte:null` (or absent) clears; otherwise a full matte object.
+                let matte = match p.get("matte") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => Some(
+                        serde_json::from_value::<LayerMatte>(v.clone())
+                            .map_err(|_| bad("invalid matte"))?,
+                    ),
+                };
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                if let Some(matte) = matte {
+                    if matte.source_layer == layer_id {
+                        return Err(bad("layer cannot matte itself"));
+                    }
+                    let layers = comp_layers(&next, comp_key).unwrap();
+                    if !layers.iter().any(|l| l.id == matte.source_layer) {
+                        return Err(bad(
+                            "matte source must be a layer in the same composition",
+                        ));
+                    }
+                    if matte_reaches(layers, matte.source_layer, layer_id) {
+                        return Err(bad("matte chain would cycle"));
+                    }
+                }
+                let mut nl = (*arc).clone();
+                nl.matte = matte;
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
             "addShapeLayer" => {
                 let shape: Shape = serde_json::from_value(
                     p.get("shape")
@@ -1442,6 +1683,7 @@ impl Engine for MotionEngine {
                     parent_id: None,
                     blend: None,
                     clipped: false,
+                    matte: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1473,6 +1715,7 @@ impl Engine for MotionEngine {
                     parent_id: None,
                     blend: None,
                     clipped: false,
+                    matte: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1986,6 +2229,8 @@ mod tests {
 }
 #[cfg(test)]
 mod blend_tests;
+#[cfg(test)]
+mod matte_tests;
 #[cfg(test)]
 mod raster_tests;
 #[cfg(test)]
