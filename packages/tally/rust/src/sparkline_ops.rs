@@ -91,6 +91,10 @@ pub(super) fn stored_ok(s: &SparklineSpec) -> bool {
 pub(super) fn readd_ok(doc: &Workbook, spec: &SparklineSpec) -> bool {
     doc.sparklines.len() < MAX_SPARKLINES
         && !doc.sparklines.iter().any(|s| s.id == spec.id)
+        && !doc
+            .sparklines
+            .iter()
+            .any(|s| s.sheet == spec.sheet && s.target == spec.target)
         && doc.sheets.iter().any(|s| s.id == spec.sheet)
         && stored_ok(spec)
 }
@@ -496,6 +500,8 @@ mod tests {
         let mutates: Vec<Box<dyn Fn(&mut Value)>> = vec![
             // duplicate id
             Box::new(|d| d["sparklines"][1]["id"] = json!(1)),
+            // duplicate (sheet, target)
+            Box::new(|d| d["sparklines"][1]["target"] = json!("A1")),
             // missing sheet
             Box::new(|d| d["sparklines"][0]["sheet"] = json!(99)),
             // unparseable target/data

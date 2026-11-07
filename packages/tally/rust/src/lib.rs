@@ -1560,6 +1560,7 @@ impl Engine for TallyEngine {
             return Err(EngineError::serialization("too many sparkline specs"));
         }
         let mut seen_sparkline_ids = std::collections::BTreeSet::new();
+        let mut seen_sparkline_targets = std::collections::BTreeSet::new();
         for s in &mut doc.sparklines {
             if !seen_sparkline_ids.insert(s.id) {
                 return Err(EngineError::serialization("duplicate sparkline id"));
@@ -1580,6 +1581,11 @@ impl Engine for TallyEngine {
                     ));
                 }
                 *range = name_ops::canonical_refers_to(coords);
+            }
+            if !seen_sparkline_targets.insert((s.sheet, s.target.clone())) {
+                return Err(EngineError::serialization(
+                    "duplicate sparkline target on sheet",
+                ));
             }
             if !sparkline_ops::stored_ok(s) {
                 return Err(EngineError::serialization("invalid sparkline spec"));
