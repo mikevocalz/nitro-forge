@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useRef} from 'react';
 import {useStore} from 'zustand';
 import {createStore} from 'zustand/vanilla';
-import {Banner,Button,Select,TabBar,Text,View} from '@nitro-forge/studio-workspace/ui';
+import {Banner,Button,Select,TabBar,Text,TextInput,View} from '@nitro-forge/studio-workspace/ui';
 import {resolveWorkspaceScale,workspaceThemes,type WorkspaceDensity} from '@nitro-forge/studio-workspace/theme';
 import {BusAndRoutingMatrix} from '@nyc-tron/ui/components/forge/audio/BusAndRoutingMatrix';
 import {InsertEffectRack} from '@nyc-tron/ui/components/forge/audio/InsertEffectRack';
@@ -30,6 +30,16 @@ const controlledMidiScroll=midiCapabilities?.version===1&&midiCapabilities.contr
 const errorText=(error:unknown)=>error instanceof Error?error.message:String(error);
 /** Observe legacy void callbacks while preserving the original rejection for awaited callers. */
 const observed=<T,>(task:Promise<T>)=>{void task.catch(()=>{});return task;};
+
+/** Draft survives unrelated project refreshes; document, track and authoritative name own its reset. */
+function TrackNameEditor({document,name,disabled,targetSize,onCommit}:{document:CadenceDocument;name:string;disabled:boolean;targetSize:number;onCommit:(name:string)=>Promise<unknown>}){
+ const store=useMemo(()=>createStore(()=>({draft:name})),[document,name]);
+ const draft=useStore(store,state=>state.draft);
+ return <View style={{gap:4}}>
+  <TextInput accessibilityLabel="Track name" value={draft} editable={!disabled} onChangeText={value=>store.setState({draft:value})}/>
+  <Button title="Rename track" variant="ghost" targetSize={targetSize} disabled={disabled||draft===name||!draft.trim()} onPress={()=>{void onCommit(draft);}}/>
+ </View>;
+}
 
 /** App composition: no audio context, player, synthetic meters or document handle ownership. */
 export function CadenceDetailControls(props:CadenceDetailControlsProps){
@@ -88,6 +98,7 @@ export function CadenceDetailControls(props:CadenceDetailControlsProps){
   {view.panel!=='routing'&&view.panel!=='analysis'&&track&&<>
    <Select label="Track to edit" value={String(track.id)} options={selectableTracks.map(t=>({value:String(t.id),label:t.name}))}
     disabled={disabled} onValueChange={id=>select({trackId:Number(id),slotId:null,clipId:null,note:undefined,scrollX:0})}/>
+   <TrackNameEditor key={track.id} document={document} name={track.name} disabled={disabled} targetSize={scale.size.target} onCommit={name=>write(()=>document.renameTrack(track.id,name))}/>
    {view.panel==='effects'&&<>
    <InsertEffectRack key={controlBoundary} label={track.name} inserts={mixerClusterSlots(project,track.id)} disabled={disabled}
     {...(slot?{selectedId:String(slot.id)}:{})} onSelect={id=>select({slotId:Number(id)})}
