@@ -1,8 +1,10 @@
 //! Persistent bounded 2D motion. Prism owns rasterization/compositing.
 mod assets;
 mod curve;
+mod effects;
 use assets::RasterAsset;
 use curve::{evaluate, Key};
+use effects::{apply_effects, LayerEffect};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -220,6 +222,12 @@ struct Layer {
     /// means no matte. Additive serde default keeps schema at 2.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     matte: Option<LayerMatte>,
+    /// Bounded CPU effect stack (slice C), applied in order to the layer's
+    /// rendered canvas-space RGBA after its transform and before opacity,
+    /// blend, clipping and matte composite it. Additive serde default keeps
+    /// schema at 2; empty stacks serialize identically to effect-free layers.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    effects: Vec<LayerEffect>,
     transform: Transform,
     opacity: f64,
     curves: Vec<Curve>,
@@ -599,6 +607,11 @@ fn validate(s: &State) -> Result<(), EngineError> {
                     ));
                 }
             }
+            if l.effects.len() > effects::MAX_EFFECTS
+                || l.effects.iter().any(|e| !e.valid())
+            {
+                return Err(bad("invalid layer effect stack"));
+            }
             match (l.kind, &l.shape, l.asset_id, l.comp_id) {
                 (Some(LayerKind::Shape), Some(sh), None, None) => {
                     if !["rect", "ellipse"].contains(&sh.kind.as_str())
@@ -945,6 +958,75 @@ impl MotionEngine {
         if let Some(c) = ctx {
             c.checkpoint()?
         }
+        let layer = if l.effects.is_empty() {
+            self.stage_content(prism, view, l, by_id, time, ctx, depth)?
+        } else {
+            self.stage_effects(prism, view, l, by_id, time, ctx, depth)?
+        };
+        prism.apply(Command::new(
+            "setLayerOpacity",
+            json!({"id":layer,"opacity":l.opacity}),
+        ))?;
+        prism.apply(Command::new(
+            "setLayerVisible",
+            json!({"id":layer,"visible":l.visible}),
+        ))?;
+        if siblings {
+            if let Some(blend) = l.blend {
+                prism.apply(Command::new(
+                    "setLayerBlend",
+                    json!({"id":layer,"blend":blend.prism_name()}),
+                ))?;
+            }
+            if l.clipped {
+                prism.apply(Command::new(
+                    "setClipped",
+                    json!({"id":layer,"clipped":true}),
+                ))?;
+            }
+        }
+        if let Some(matte) = l.matte {
+            // An invisible layer composites to nothing in Prism anyway, so
+            // the matte mask render (a full-scene pass over the source) is
+            // skipped entirely for hidden targets.
+            if matte.enabled && l.visible {
+                let mask = self.matte_mask(view, matte, by_id, time, ctx, depth, matte_depth)?;
+                // Prism masks are canvas-space alpha: paint the derived mask
+                // over an empty mask, then feather it inside Prism.
+                prism.apply(Command::new("addMask", json!({"id":layer,"fill":"hide"})))?;
+                prism.apply(Command::new(
+                    "paintMask",
+                    json!({
+                        "id":layer,"x":0,"y":0,
+                        "w":view.width,"h":view.height,
+                        "data_b64":ignition_core::base64_encode(&mask),
+                    }),
+                ))?;
+                if matte.feather > 0. {
+                    prism.apply(Command::new(
+                        "refineMask",
+                        json!({"id":layer,"feather":matte.feather}),
+                    ))?;
+                }
+            }
+        }
+        Ok(())
+    }
+    /// Stage one layer's content (shape/raster/comp subtree) plus its
+    /// evaluated transform — including `parent_id` inheritance — into
+    /// `prism`, and return the Prism layer id. Opacity, visibility, blend,
+    /// clipping and matte are composite-stage concerns handled by the caller.
+    #[allow(clippy::too_many_arguments)]
+    fn stage_content(
+        &self,
+        prism: &mut prism_engine::PrismEngine,
+        view: &CompView,
+        l: &Layer,
+        by_id: &BTreeMap<u64, &Layer>,
+        time: f64,
+        ctx: Option<&TaskContext>,
+        depth: usize,
+    ) -> Result<u64, EngineError> {
         let transform = if l.parent_id.is_some() {
             decompose(&effective_affine(l, by_id)?)
                 .ok_or_else(|| bad("layer parent transform chain requires shear"))?
@@ -1013,7 +1095,8 @@ impl MotionEngine {
             }
             None => return Err(bad("layer kind missing")),
         };
-        let layer = result.data["layer_id"]
+        let layer = result
+            .data["layer_id"]
             .as_u64()
             .ok_or_else(|| bad("Prism did not return a layer"))?;
         prism.apply(Command::new(
@@ -1024,54 +1107,72 @@ impl MotionEngine {
             "setLayerTransform",
             json!({"id":layer,"transform":transform}),
         ))?;
+        Ok(layer)
+    }
+    /// Rasterize-then-process path for a layer with a non-empty effect stack:
+    /// the layer's content and evaluated transform render into an ephemeral
+    /// canvas-sized Prism scene, the CPU effect passes run in stack order on
+    /// the flattened straight RGBA, and the result uploads into the parent
+    /// scene as a raster layer at canvas origin with identity transform.
+    /// Ordering: effects run AFTER the layer's own render (content +
+    /// transform, baked into canvas space) and BEFORE opacity, blend,
+    /// clipping and matte, which still composite in the parent scene exactly
+    /// as for effect-free layers. Effects therefore force rasterization of
+    /// every kind — shape, raster and comp layers alike — at containing
+    /// composition dimensions, bounded by the 1-megapixel canvas cap.
+    #[allow(clippy::too_many_arguments)]
+    fn stage_effects(
+        &self,
+        prism: &mut prism_engine::PrismEngine,
+        view: &CompView,
+        l: &Layer,
+        by_id: &BTreeMap<u64, &Layer>,
+        time: f64,
+        ctx: Option<&TaskContext>,
+        depth: usize,
+    ) -> Result<u64, EngineError> {
+        let mut offscreen = prism_engine::PrismEngine::new(view.width, view.height);
+        self.stage_content(&mut offscreen, view, l, by_id, time, ctx, depth)?;
+        if let Some(c) = ctx {
+            c.checkpoint()?
+        }
+        let mut pixels = offscreen
+            .apply(Command::new("flatten", json!({})).with_binary(None))?
+            .output
+            .ok_or_else(|| bad("Prism did not return RGBA"))?;
+        apply_effects(
+            &mut pixels,
+            view.width as usize,
+            view.height as usize,
+            &l.effects,
+            ctx,
+        )?;
+        let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
+        let layer = added
+            .data["layer_id"]
+            .as_u64()
+            .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
+        prism.apply(
+            Command::new(
+                "drawPixels",
+                json!({
+                    "id":layer,"x":0,"y":0,
+                    "w":view.width,"h":view.height,
+                }),
+            )
+            .with_binary(Some(pixels)),
+        )?;
+        // The transform is already baked into the pixels; pin the raster to
+        // the identity transform/origin the composite tail expects.
         prism.apply(Command::new(
-            "setLayerOpacity",
-            json!({"id":layer,"opacity":l.opacity}),
+            "setTransformOrigin",
+            json!({"id":layer,"ox":0,"oy":0}),
         ))?;
         prism.apply(Command::new(
-            "setLayerVisible",
-            json!({"id":layer,"visible":l.visible}),
+            "setLayerTransform",
+            json!({"id":layer,"transform":Transform::default()}),
         ))?;
-        if siblings {
-            if let Some(blend) = l.blend {
-                prism.apply(Command::new(
-                    "setLayerBlend",
-                    json!({"id":layer,"blend":blend.prism_name()}),
-                ))?;
-            }
-            if l.clipped {
-                prism.apply(Command::new(
-                    "setClipped",
-                    json!({"id":layer,"clipped":true}),
-                ))?;
-            }
-        }
-        if let Some(matte) = l.matte {
-            // An invisible layer composites to nothing in Prism anyway, so
-            // the matte mask render (a full-scene pass over the source) is
-            // skipped entirely for hidden targets.
-            if matte.enabled && l.visible {
-                let mask = self.matte_mask(view, matte, by_id, time, ctx, depth, matte_depth)?;
-                // Prism masks are canvas-space alpha: paint the derived mask
-                // over an empty mask, then feather it inside Prism.
-                prism.apply(Command::new("addMask", json!({"id":layer,"fill":"hide"})))?;
-                prism.apply(Command::new(
-                    "paintMask",
-                    json!({
-                        "id":layer,"x":0,"y":0,
-                        "w":view.width,"h":view.height,
-                        "data_b64":ignition_core::base64_encode(&mask),
-                    }),
-                ))?;
-                if matte.feather > 0. {
-                    prism.apply(Command::new(
-                        "refineMask",
-                        json!({"id":layer,"feather":matte.feather}),
-                    ))?;
-                }
-            }
-        }
-        Ok(())
+        Ok(layer)
     }
     /// Render the matte source layer's subtree standalone into an ephemeral
     /// scene and derive the canvas-space mask for `matte.mode`. Alpha modes
@@ -1513,6 +1614,7 @@ impl Engine for MotionEngine {
                     blend: None,
                     clipped: false,
                     matte: None,
+                    effects: vec![],
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1651,6 +1753,30 @@ impl Engine for MotionEngine {
                 nl.matte = matte;
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
+            "setLayerEffects" => {
+                let layer_id = id(p, "layer")?;
+                // `effects:null` (or absent/[]) clears the stack; otherwise a
+                // full replacement array of typed effect objects.
+                let stack = match p.get("effects") {
+                    None | Some(Value::Null) => Vec::new(),
+                    Some(v) => serde_json::from_value::<Vec<LayerEffect>>(v.clone())
+                        .map_err(|_| bad("invalid effects"))?,
+                };
+                if stack.len() > effects::MAX_EFFECTS
+                    || stack.iter().any(|e| !e.valid())
+                {
+                    return Err(bad("invalid layer effect stack"));
+                }
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                let mut nl = (*arc).clone();
+                nl.effects = stack;
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
             "addShapeLayer" => {
                 let shape: Shape = serde_json::from_value(
                     p.get("shape")
@@ -1678,6 +1804,7 @@ impl Engine for MotionEngine {
                     blend: None,
                     clipped: false,
                     matte: None,
+                    effects: vec![],
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1710,6 +1837,7 @@ impl Engine for MotionEngine {
                     blend: None,
                     clipped: false,
                     matte: None,
+                    effects: vec![],
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -2250,6 +2378,8 @@ mod tests {
 mod blend_tests;
 #[cfg(test)]
 mod matte_tests;
+#[cfg(test)]
+mod effects_tests;
 #[cfg(test)]
 mod raster_tests;
 #[cfg(test)]
