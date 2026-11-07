@@ -97,8 +97,8 @@ describe("animation binding and deferrals", () => {
   it("offers only the effects Pitch plays and refuses others before the engine", async () => {
     const { doc, calls } = fake();
     const b = await bindPitchAnimations(doc, "1", () => {});
-    expect(b.effects.map(e => e.kind)).toEqual(["fadeIn", "slideInLeft", "zoomIn"]);
-    await expect(b.onAdd({ objectId: "3", kind: "fadeOut", startS: 0, durationS: 1 })).rejects.toThrow(/cannot play/);
+    expect(b.effects.map(e => e.kind)).toEqual(["fadeIn", "slideInLeft", "zoomIn", "pulse", "spin", "fadeOut", "zoomOut"]);
+    await expect(b.onAdd({ objectId: "3", kind: "bounce", startS: 0, durationS: 1 })).rejects.toThrow(/cannot play/);
     expect(calls).toEqual([]);
     await b.onAdd({ objectId: "4", kind: "zoomIn", startS: 0.5, durationS: 2 });
     expect(calls).toEqual([["addAnimation", 1, 4, "zoomIn", 0.5, 2]]);
@@ -108,7 +108,7 @@ describe("animation binding and deferrals", () => {
 
   it("names deferred ops that Pitch's OPS does not have", () => {
     for (const op of Object.keys(PITCH_DEFERRED_OPS)) expect(Object.values(OPS)).not.toContain(op);
-    for (const e of PITCH_ANIMATION_EFFECTS) expect(["fadeIn", "slideInLeft", "zoomIn"]).toContain(e.kind);
+    for (const e of PITCH_ANIMATION_EFFECTS) expect(["fadeIn", "slideInLeft", "zoomIn", "pulse", "spin", "fadeOut", "zoomOut"]).toContain(e.kind);
   });
 });
 
@@ -133,4 +133,12 @@ describe('Pitch authoritative section metadata without pinned UI activation', ()
     for (const sections of [[null], [{ id: 1, label: 'A', start_slide_id: 999 }], [{ id: 1, label: ' ', start_slide_id: 1 }], [{ id: 1, label: 'é'.repeat(513), start_slide_id: 1 }], [{ id: 1, label: 'A', start_slide_id: 1 }, { id: 2, label: 'B', start_slide_id: 1 }]])
       await expect(readPitchDeck(fake({ ...state, sections }).doc)).rejects.toThrow();
   });
+});
+
+it('retains trigger authority but gates unsupported timing UI under the pinned release',async()=>{
+ const {doc}=fake();
+ const triggered={...state,slides:state.slides.map((slide,index)=>index===0?{...slide,animations:slide.animations.map(animation=>({...animation,trigger:{type:'on-click',click_index:0}}))}:slide)};
+ const document={...doc,describe:vi.fn(()=>ok(triggered))} as unknown as PitchOfficeDocument;
+ expect((await readPitchDeck(document)).animations['1']![0]!.sourceTrigger).toEqual({type:'on-click',click_index:0});
+ await expect(bindPitchAnimations(document,'1',()=>{})).rejects.toThrow('pinned animation pane');
 });

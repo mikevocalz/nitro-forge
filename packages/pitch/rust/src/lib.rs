@@ -7,15 +7,9 @@
 //! Conventions / decisions (documented where the spec leaves room):
 //! - `{slide}` payload fields are slide *ids* (u64), per the spec note
 //!   "slide = id". `moveSlide` takes positional indices `{from, to}`.
-//! - `slideAt` resolution: each animation targeting an object is applied in
-//!   declaration order. Progress `p` = clamp((t - start_s) / duration_s, 0, 1).
-//!   * fadeIn      → opacity *= p
-//!   * slideInLeft → opacity *= p; x -= 200 * (1 - p)
-//!   * zoomIn      → opacity *= p; scale = 0.5 + 0.5*p applied to w/h anchored
-//!     on the object's current center
-//!   Before `start_s`, p = 0 (opacity 0 — hidden); at/after start+duration,
-//!   p = 1 (final values). Multiple animations compose multiplicatively on
-//!   opacity and sequentially on geometry.
+//! - `slideAt` applies bounded effects in declaration order. The animation module
+//!   defines emphasis/exit geometry, legacy absolute starts and explicit host-click
+//!   trigger scheduling; no presentation clock or click timestamp is fabricated.
 //! - `new {title?}` defaults the title to "Untitled".
 //! - `addText` defaults: font_size 18, color opaque black, not bold/italic.
 //! - Undo entries are whole-state clones (cheap for this model size);
@@ -29,6 +23,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 mod sections;
+mod animation;
+pub use animation::Trigger;
 use sections::Section;
 
 const JOURNAL_CAPACITY: usize = 64;
@@ -58,6 +54,10 @@ pub enum AnimKind {
     FadeIn,
     SlideInLeft,
     ZoomIn,
+    Pulse,
+    Spin,
+    FadeOut,
+    ZoomOut,
 }
 
 impl AnimKind {
@@ -66,6 +66,10 @@ impl AnimKind {
             "fadeIn" => Some(Self::FadeIn),
             "slideInLeft" => Some(Self::SlideInLeft),
             "zoomIn" => Some(Self::ZoomIn),
+            "pulse" => Some(Self::Pulse),
+            "spin" => Some(Self::Spin),
+            "fadeOut" => Some(Self::FadeOut),
+            "zoomOut" => Some(Self::ZoomOut),
             _ => None,
         }
     }
@@ -99,6 +103,8 @@ pub struct Obj {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Anim {
+    #[serde(default,skip_serializing_if="Trigger::is_absolute")]
+    pub trigger: Trigger,
     pub object_id: u64,
     pub kind: AnimKind,
     pub start_s: f64,
@@ -259,51 +265,27 @@ impl PitchEngine {
             })
     }
 
+    fn preflight_id(&self) -> Result<(), EngineError> {
+        if self.state.next_id == 0 || self.state.next_id >= 9_007_199_254_740_991 {
+            return Err(EngineError::validation("safe identity capacity exhausted"));
+        }
+        Ok(())
+    }
+
+    fn preflight_object(&self, slide: usize) -> Result<(), EngineError> {
+        if self.state.slides[slide].objects.len() >= 4096 {
+            return Err(EngineError::validation("object capacity exceeds 4096"));
+        }
+        self.preflight_id()
+    }
+
     fn alloc_id(&mut self) -> u64 {
         let id = self.state.next_id;
         self.state.next_id += 1;
         id
     }
 
-    /// Resolve one object's animation state at time `t`. See module docs.
-    fn resolve_object(obj: &Obj, anims: &[Anim], t: f64) -> Value {
-        let (mut x, mut y, mut w, mut h, mut opacity) = (obj.x, obj.y, obj.w, obj.h, 1.0f64);
-        for a in anims.iter().filter(|a| a.object_id == obj.id) {
-            let p = if t < a.start_s {
-                0.0
-            } else {
-                ((t - a.start_s) / a.duration_s).min(1.0)
-            };
-            match a.kind {
-                AnimKind::FadeIn => {
-                    opacity *= p;
-                }
-                AnimKind::SlideInLeft => {
-                    opacity *= p;
-                    x -= SLIDE_IN_OFFSET * (1.0 - p);
-                }
-                AnimKind::ZoomIn => {
-                    opacity *= p;
-                    let s = ZOOM_START_SCALE + (1.0 - ZOOM_START_SCALE) * p;
-                    let cx = x + w / 2.0;
-                    let cy = y + h / 2.0;
-                    w *= s;
-                    h *= s;
-                    x = cx - w / 2.0;
-                    y = cy - h / 2.0;
-                }
-            }
-        }
-        json!({
-            "id": obj.id,
-            "x": x,
-            "y": y,
-            "w": w,
-            "h": h,
-            "rotation": obj.rotation_deg,
-            "opacity": opacity,
-        })
-    }
+
 }
 
 impl Default for PitchEngine {
@@ -368,6 +350,7 @@ impl Engine for PitchEngine {
                         )))
                     }
                 };
+                self.preflight_id()?;
                 self.journal.record(self.state.clone());
                 let id = self.alloc_id();
                 self.state.slides.push(Slide {
@@ -472,6 +455,7 @@ impl Engine for PitchEngine {
                 if font_size <= 0.0 {
                     return Err(EngineError::validation("'font_size' must be > 0"));
                 }
+                self.preflight_object(slide)?;
                 self.journal.record(self.state.clone());
                 let id = self.alloc_id();
                 self.state.slides[slide].objects.push(Obj {
@@ -549,6 +533,7 @@ impl Engine for PitchEngine {
                     req_f64(p, "h")?,
                 );
                 let fill = parse_color(field(p, "fill")?)?;
+                self.preflight_object(slide)?;
                 self.journal.record(self.state.clone());
                 let id = self.alloc_id();
                 self.state.slides[slide].objects.push(Obj {
@@ -574,6 +559,7 @@ impl Engine for PitchEngine {
                     req_f64(p, "h")?,
                 );
                 let src = req_str(p, "src")?.to_string();
+                self.preflight_object(slide)?;
                 self.journal.record(self.state.clone());
                 let id = self.alloc_id();
                 self.state.slides[slide].objects.push(Obj {
@@ -640,15 +626,11 @@ impl Engine for PitchEngine {
             "removeObject" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let oi = self.object_index(slide, req_u64(p, "id")?)?;
-                self.journal.record(self.state.clone());
-                let removed = self.state.slides[slide].objects.remove(oi);
-                // Drop animations that referenced the removed object.
-                self.state.slides[slide]
-                    .animations
-                    .retain(|a| a.object_id != removed.id);
+                let mut candidate=self.state.slides[slide].clone();let removed=candidate.objects.remove(oi);candidate.animations.retain(|a|a.object_id!=removed.id);animation::validate_slide(&candidate)?;
+                self.journal.record(self.state.clone());self.state.slides[slide]=candidate;
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
-            "addAnimation" => {
+            "addAnimation" | "addTriggeredAnimationV1" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let object_id = req_u64(p, "object")?;
                 if self.object_index(slide, object_id).is_err() {
@@ -658,7 +640,7 @@ impl Engine for PitchEngine {
                 }
                 let kind = AnimKind::parse(req_str(p, "kind")?).ok_or_else(|| {
                     EngineError::validation(
-                        "'kind' must be fadeIn|slideInLeft|zoomIn".to_string(),
+                        "unsupported animation effect kind".to_string(),
                     )
                 })?;
                 let start_s = req_f64(p, "start_s")?;
@@ -669,17 +651,13 @@ impl Engine for PitchEngine {
                 if duration_s <= 0.0 {
                     return Err(EngineError::validation("'duration_s' must be > 0"));
                 }
-                self.journal.record(self.state.clone());
-                self.state.slides[slide].animations.push(Anim {
-                    object_id,
-                    kind,
-                    start_s,
-                    duration_s,
-                });
-                let index = self.state.slides[slide].animations.len() - 1;
+                let mut candidate=self.state.slides[slide].clone();
+                let index=candidate.animations.len();
+                candidate.animations.push(Anim{object_id,kind,start_s,duration_s,trigger:p.get("trigger").map(animation::parse_trigger).transpose()?.unwrap_or_default()});
+                animation::validate_slide(&candidate)?;self.journal.record(self.state.clone());self.state.slides[slide]=candidate;
                 Ok(CommandResult::data(json!({ "index": index })))
             }
-            "updateAnimation" => {
+            "updateAnimation" | "updateTriggeredAnimationV1" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let index = req_usize(p, "index")?;
                 let original = self.state.slides[slide].animations.get(index)
@@ -687,7 +665,7 @@ impl Engine for PitchEngine {
                 let mut next = original.clone();
                 if p.get("kind").is_some() {
                     next.kind = AnimKind::parse(req_str(p, "kind")?).ok_or_else(||
-                        EngineError::validation("'kind' must be fadeIn|slideInLeft|zoomIn"))?;
+                        EngineError::validation("unsupported animation effect kind"))?;
                 }
                 if p.get("start_s").is_some() {
                     next.start_s = req_f64(p, "start_s")?;
@@ -701,11 +679,14 @@ impl Engine for PitchEngine {
                         return Err(EngineError::validation("'duration_s' must be > 0"));
                     }
                 }
+                if let Some(trigger)=p.get("trigger"){next.trigger=animation::parse_trigger(trigger)?;}
                 if &next == original {
                     return Ok(CommandResult::read_only(json!({ "ok": true })));
                 }
+                let mut candidate=self.state.slides[slide].clone();candidate.animations[index]=next;
+                animation::validate_slide(&candidate)?;
                 self.journal.record(self.state.clone());
-                self.state.slides[slide].animations[index] = next;
+                self.state.slides[slide]=candidate;
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
             "removeAnimation" => {
@@ -716,21 +697,17 @@ impl Engine for PitchEngine {
                         "no animation at index {index}"
                     )));
                 }
+                let mut candidate=self.state.slides[slide].clone();candidate.animations.remove(index);animation::validate_slide(&candidate)?;
                 self.journal.record(self.state.clone());
-                self.state.slides[slide].animations.remove(index);
+                self.state.slides[slide]=candidate;
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
             // --- read-only ---------------------------------------------------
-            "slideAt" => {
+            "slideAt" | "slideAtWithClicksV1" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let t = req_f64(p, "t_s")?;
-                let s = &self.state.slides[slide];
-                let objects: Vec<Value> = s
-                    .objects
-                    .iter()
-                    .map(|o| Self::resolve_object(o, &s.animations, t))
-                    .collect();
-                Ok(ro(json!({ "objects": objects })))
+                let clicks=animation::parse_clicks(p)?;
+                animation::slide_at(&self.state.slides[slide],t,&clicks)
             }
             "deck" => Ok(ro(json!({
                 "title": self.state.meta.title,
@@ -742,17 +719,48 @@ impl Engine for PitchEngine {
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        let payload = serde_json::to_vec(&self.state)?;
+        let extended = self.state.size != SlideSize::default()
+            || !self.state.sections.is_empty() || self.state.next_section_id != 1
+            || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
+                !anim.trigger.is_absolute() || !matches!(anim.kind, AnimKind::FadeIn | AnimKind::SlideInLeft | AnimKind::ZoomIn));
+        let payload = if extended {
+            serde_json::to_vec(&json!({"kind":"pitch","schema":2,"document":self.state}))?
+        } else { serde_json::to_vec(&self.state)? };
         Ok(encode_envelope(&payload))
     }
 
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_, payload) = decode_envelope(data)?;
-        let state: PitchState = serde_json::from_slice(payload)?;
+        let value: Value = serde_json::from_slice(payload)?;
+        let state: PitchState = if value.get("kind").is_some() || value.get("schema").is_some() || value.get("document").is_some() {
+            #[derive(Deserialize)]
+            #[serde(deny_unknown_fields)]
+            struct Versioned { kind: String, schema: u32, document: PitchState }
+            let wrapper: Versioned = serde_json::from_value(value)?;
+            if wrapper.kind != "pitch" || wrapper.schema != 2 {
+                return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
+            }
+            wrapper.document
+        } else { serde_json::from_value(value)? };
         if !state.size.valid() {
             return Err(EngineError::serialization("invalid slide size"));
         }
+        let mut ids = std::collections::BTreeSet::new();
+        for slide in &state.slides {
+            if slide.id == 0 || !ids.insert(slide.id) {
+                return Err(EngineError::serialization("invalid or duplicate identity"));
+            }
+            for object in &slide.objects {
+                if object.id == 0 || !ids.insert(object.id) {
+                    return Err(EngineError::serialization("invalid or duplicate identity"));
+                }
+            }
+        }
+        if state.next_id == 0 || state.next_id > 9_007_199_254_740_991 || ids.last().is_some_and(|id| *id >= state.next_id) {
+            return Err(EngineError::serialization("invalid next identity"));
+        }
         sections::validate(&state)?;
+        animation::validate_state(&state)?;
         // Commit only after the payload fully decoded.
         self.state = state;
         // A replacement document cannot reuse the previous document history.
@@ -857,8 +865,8 @@ mod tests {
         assert_eq!(result.events.len(), 1);
         let animations = &e.state.slides[0].animations;
         assert_eq!(animations.len(), 2);
-        assert_eq!(animations[0], Anim {object_id:object,kind:AnimKind::ZoomIn,start_s:2.0,duration_s:3.0});
-        assert_eq!(animations[1], Anim {object_id:object,kind:AnimKind::SlideInLeft,start_s:0.0,duration_s:1.0});
+        assert_eq!(animations[0], Anim {trigger:Trigger::Absolute,object_id:object,kind:AnimKind::ZoomIn,start_s:2.0,duration_s:3.0});
+        assert_eq!(animations[1], Anim {trigger:Trigger::Absolute,object_id:object,kind:AnimKind::SlideInLeft,start_s:0.0,duration_s:1.0});
         let changed = e.snapshot().unwrap();
         let mut reopened = PitchEngine::new();
         reopened.restore(&changed).unwrap();
@@ -877,7 +885,7 @@ mod tests {
         assert!(e.redo().unwrap());
         assert_eq!(e.snapshot().unwrap(), changed);
         apply(&mut e, "updateAnimation", json!({"slide":slide,"index":0,"duration_s":4}));
-        assert_eq!(e.state.slides[0].animations[0], Anim {object_id:object,kind:AnimKind::ZoomIn,start_s:2.0,duration_s:4.0});
+        assert_eq!(e.state.slides[0].animations[0], Anim {trigger:Trigger::Absolute,object_id:object,kind:AnimKind::ZoomIn,start_s:2.0,duration_s:4.0});
         let before = e.snapshot().unwrap();
         for payload in [json!({"slide":slide,"index":2,"kind":"fadeIn"}),json!({"slide":slide,"index":-1}),json!({"slide":99999,"index":0})] {
             assert!(e.apply(cmd("updateAnimation", payload)).is_err());
@@ -1160,7 +1168,7 @@ mod tests {
             .as_u64()
             .unwrap();
         for (k, code) in [
-            (json!({ "slide": s1, "object": t, "kind": "spin", "start_s": 0, "duration_s": 1 }), ignition_core::ErrorCode::Validation),
+            (json!({ "slide": s1, "object": t, "kind": "bounce", "start_s": 0, "duration_s": 1 }), ignition_core::ErrorCode::Validation),
             (json!({ "slide": s1, "object": t, "kind": "fadeIn", "start_s": 0, "duration_s": 0 }), ignition_core::ErrorCode::Validation),
             (json!({ "slide": s1, "object": t, "kind": "fadeIn", "start_s": -1, "duration_s": 1 }), ignition_core::ErrorCode::Validation),
             (json!({ "slide": s1, "object": 99, "kind": "fadeIn", "start_s": 0, "duration_s": 1 }), ignition_core::ErrorCode::NotFound),

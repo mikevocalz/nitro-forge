@@ -46,10 +46,23 @@ export interface PitchTextStyle {
 /** Stable boundary; follows start_slide_id on reorder. Removing that slide removes this boundary. */
 export interface PitchSection { id: number; label: string; start_slide_id: number }
 export type Layout = "blank" | "title" | "titleBody";
-export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn";
+export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn" | "pulse" | "spin" | "fadeOut" | "zoomOut";
+export type PitchAnimationTrigger = {type:"absolute"}|{type:"on-click";click_index:number}|{type:"with-previous"}|{type:"after-previous"};
+function ownAnimationTrigger(value:PitchAnimationTrigger):PitchAnimationTrigger {
+ if(!value||typeof value!=='object')throw new TypeError('Animation trigger must be explicit');
+ const keys=Object.keys(value);
+ if(value.type==='on-click'){
+  if(keys.length!==2||!keys.includes('type')||!keys.includes('click_index')||!Number.isInteger(value.click_index)||value.click_index<0||value.click_index>=256)throw new RangeError('Invalid click trigger');
+  return {type:'on-click',click_index:value.click_index};
+ }
+ if(keys.length!==1||keys[0]!=='type'||!['absolute','with-previous','after-previous'].includes(value.type))throw new RangeError('Invalid animation trigger');
+ return {type:value.type};
+}
+export interface PitchAnimationSchedule {index:number;start_s:number|null;end_s:number|null}
 
 /** Partial in-place animation edit; omitted fields preserve the effect and timing. */
 export interface PitchAnimationUpdate {
+  trigger?: PitchAnimationTrigger;
   kind?: AnimKind;
   start_s?: number;
   duration_s?: number;
@@ -155,23 +168,25 @@ export class PitchDocument {
   removeObject(slide: number, id: number) {
     return this.call(OPS.removeObject, { slide, id });
   }
-  addAnimation(slide: number, object: number, kind: AnimKind, startS: number, durationS: number) {
-    return this.call<{ index: number }>(OPS.addAnimation, {
-      slide, object, kind, start_s: startS, duration_s: durationS,
+  addAnimation(slide: number, object: number, kind: AnimKind, startS: number, durationS: number, trigger?: PitchAnimationTrigger) {
+    return this.call<{ index: number }>(trigger === undefined ? OPS.addAnimation : "addTriggeredAnimationV1", {
+      slide, object, kind, start_s: startS, duration_s: durationS, ...(trigger === undefined ? {} : { trigger: ownAnimationTrigger(trigger) }),
     });
   }
   /** Retains target object and list index; equal/empty patches preserve history. */
   updateAnimation(slide: number, index: number, patch: PitchAnimationUpdate) {
-    return this.call<{ ok: boolean }>(OPS.updateAnimation, { ...patch, slide, index });
+    return this.call<{ ok: boolean }>(patch.trigger === undefined ? OPS.updateAnimation : "updateTriggeredAnimationV1", { ...patch, ...(patch.trigger === undefined ? {} : { trigger: ownAnimationTrigger(patch.trigger) }), slide, index });
   }
   removeAnimation(slide: number, index: number) {
     return this.call(OPS.removeAnimation, { slide, index });
   }
   /** Resolve slide objects at presentation time t (animations applied). */
-  slideAt(slide: number, tS: number) {
-    return this.call<{ objects: AnimatedObject[] }>(OPS.slideAt, {
+  slideAt(slide: number, tS: number, clickTimes?: readonly number[]) {
+    if(clickTimes && (clickTimes.length>256||clickTimes.some((time,index)=>!Number.isFinite(time)||time<0||time>86400||(index>0&&time<clickTimes[index-1]!))))throw new RangeError("Click times must be a bounded ordered slide-relative history");
+    return this.call<{ objects: AnimatedObject[]; schedule: PitchAnimationSchedule[] }>(clickTimes === undefined ? OPS.slideAt : "slideAtWithClicksV1", {
       slide,
       t_s: tS,
+      ...(clickTimes === undefined ? {} : { click_times: [...clickTimes] }),
     });
   }
   deck() {

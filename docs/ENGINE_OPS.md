@@ -385,7 +385,7 @@ State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide], sections:[S
 objects:[Obj], animations:[Anim] }`,
 `Obj = { id, kind:"text"|"rect"|"image", x,y,w,h, rotation_deg,
 text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
-`Anim = { object_id, kind:"fadeIn"|"slideInLeft"|"zoomIn", start_s, duration_s }`.
+`Anim = { object_id, kind:"fadeIn"|"slideInLeft"|"zoomIn"|"pulse"|"spin"|"fadeOut"|"zoomOut", start_s, duration_s, trigger? }`.
 
 | op | payload | data | notes |
 |---|---|---|---|
@@ -410,10 +410,10 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `resizeObject` | `{slide,id,w,h}` | `{ok}` | w,h > 0 |
 | `rotateObject` | `{slide,id,degrees}` | `{ok}` | |
 | `removeObject` | `{slide,id}` | `{ok}` | also drops its animations |
-| `addAnimation` | `{slide,object,kind,start_s,duration_s}` | `{index}` | duration > 0 |
-| `updateAnimation` | `{slide,index,kind?,start_s?,duration_s?}` | `{ok}` | Partial in-place patch retains target object and list position. Existing index required; kind fadeIn/slideInLeft/zoomIn, finite start >=0 and finite duration >0; explicit null invalid. Validate before mutation, one history entry/event only for actual change; empty/equal patch preserves redo and emits no event. No trigger/order change. |
-| `removeAnimation` | `{slide,index}` | `{ok}` | |
-| `slideAt` | `{slide,t_s}` | `{objects:[{id,x,y,w,h,rotation,opacity}]}` | animation interpolation: before start → hidden(0)/offset; during → eased progress; after → final. slideInLeft starts x-200px, zoomIn scales 0.5→1 |
+| `addAnimation` | `{slide,object,kind,start_s,duration_s,trigger?}` | `{index}` | duration > 0 |
+| `updateAnimation` | `{slide,index,kind?,start_s?,duration_s?,trigger?}` | `{ok}` | Partial in-place patch retains target object and list position. Existing index required; admitted effect kinds, finite start/delay >=0 and finite duration >0, both ≤86400; explicit null invalid. Validate before mutation, one history entry/event only for actual change; empty/equal patch preserves redo and emits no event. Trigger updates are validated against the complete candidate timeline; list order is unchanged. |
+| `removeAnimation` | `{slide,index}` | `{ok}` | staged validation; reject if a first relative animation would lose its predecessor |
+| `slideAt` | `{slide,t_s,click_times?:number[]}` | `{objects:[{id,x,y,w,h,rotation,opacity}],schedule:[{index,start_s:number|null,end_s:number|null}]}` | read-only deterministic evaluation; missing click dependencies remain null/pending |
 | `deck` | `{}` | `{title,slide_count}` | read-only |
 
 Undo: prior slide/object/animation state.
@@ -421,6 +421,16 @@ Undo: prior slide/object/animation state.
 Legacy snapshots without size default to 960×540; invalid sizes reject restore before replacing state. Canvas adapters read persisted size.
 
 Section count is at most 1024; labels are nonblank and at most 1024 UTF-8 bytes. IDs are positive, distinct and below `next_section_id`, with that counter within 1..9007199254740991. Every boundary starts at a distinct existing slide. Add/update validates the full candidate before one journal entry/event; failures consume no identities or redo history. Reordering carries boundaries with their start-slide IDs. Single/bulk slide deletion removes boundaries whose start slides are removed in the same undo step; no silent reassignment. Restore validates section identities/counter/labels/references before replacing state/history. Pinned alpha.4 slide controls have no section props/mutation callbacks; typed operations and read metadata do not imply default UI activation.
+
+Trigger is `{type:"absolute"}` (legacy default, omitted when encoding), `{type:"on-click",click_index:0..255}`, `{type:"with-previous"}` or `{type:"after-previous"}`. Absolute preserves start_s from slide appearance. Other modes treat start_s as delay: click time+delay, immediately previous list entry's resolved start+delay, or its end+delay. First relative entries reject. Explicit host click_times must be a finite ordered prefix of actual slide-relative timestamps, at most256 entries in0..86400; no times are generated. Missing click slots remain pending and propagate through dependent entries. All resolved starts/ends must remain within86400 seconds. Updates/removals/object cleanup validate before mutation; deleting a predecessor that leaves the first entry relative rejects atomically. Other relative entries reanchor to the previous surviving list entry.
+
+Progress p clamps linear `(t−resolvedStart)/duration` to0..1; pending means p=0. FadeIn multiplies opacity byp; SlideInLeft also translates x from−200 to0; ZoomIn center-scales0.5→1 and multiplies opacity byp. Pulse uses center-scale `1+0.2*(1−abs(2p−1))`; Spin adds360p degrees; FadeOut multiplies opacity by1−p; ZoomOut center-scales1→0.5 and multiplies opacity by1−p. Effects on a repeated object compose in declaration order, with multiplicative opacity and sequential geometry, including pending entrance contributions. Exit/emphasis contributions are neutral before their start. This is a declared supported evaluator, not full presentation-software compatibility.
+
+Animation evaluation caps at4096 objects/animations per slide; references and object identities validate, effects are grouped per object for bounded work, and nonfinite composed output rejects rather than emitting invalid geometry. Restore validates timelines/targets before replacing state; missing triggers preserve legacy absolute semantics. SlideAt copies host click history through the typed API and remains history-free.
+
+The pinned alpha.4 SlideAnimationPane supports effect/add/remove but lacks timing/trigger edit callbacks. The adapter offers all seven real effects, retains nonabsolute sourceTrigger metadata and refuses to bind that old pane over triggered programs rather than mislabel relative delays as absolute starts. Typed engine APIs/readPitchSlideAt accept explicit click history. No fake preview timer, host UI activation or new Pitch renderer is provided. Actual CPU pixel integration is checked through the existing Prism renderer.
+
+Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing. Root `meta` is absent so legacy readers fail rather than silently discard fields. New readers accept legacy root payloads and strictly validate wrapper kind/schema/keys before replacement. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
 
 ## quill-engine — `QuillEngine::new()`
 
