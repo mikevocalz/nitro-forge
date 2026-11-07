@@ -1339,3 +1339,231 @@ fn variables_snapshot_wrapper_hostile_restore_and_cleanup() {
     assert!(bare.get("variables").is_none());
     assert!(bare.get("bindings").is_none());
 }
+
+fn constraint(horizontal: &str, vertical: &str) -> Value {
+    json!({"horizontal":horizontal,"vertical":vertical})
+}
+#[test]
+fn constraints_store_clear_persist_undo_and_read_silently() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    let rect = shape(&mut e, 1, 1., 1., 2., 2., [255; 4]);
+    let bare = e.snapshot().unwrap();
+    // Unknown fields, missing anchors and non-object payloads reject.
+    let before = e.snapshot().unwrap();
+    for p in [
+        json!({"id":rect,"constraints":{"horizontal":"left"}}),
+        json!({"id":rect,"constraints":{"horizontal":"left","vertical":"top","extra":1}}),
+        json!({"id":rect,"constraints":"left"}),
+        json!({"id":rect,"constraints":null,"surprise":1}),
+        json!({"id":rect}),
+    ] {
+        assert!(e.apply(Command::new("setConstraints", p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    let set = call(
+        &mut e,
+        "setConstraints",
+        json!({"id":rect,"constraints":{"horizontal":"left","vertical":"top","relative_to":1}}),
+    );
+    assert_eq!(set.events.len(), 1);
+    let node = &e.state.nodes[&rect];
+    assert_eq!(
+        node.constraints,
+        Some(NodeConstraints {
+            horizontal: HorizontalAnchor::Left,
+            vertical: VerticalAnchor::Top,
+            relative_to: Some(1),
+        })
+    );
+    // Storage only: evaluated boxes keep authored x/y.
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert_eq!((boxes[1].x, boxes[1].y), (1., 1.));
+    // Repeating the same write is a silent no-op.
+    assert!(call(
+        &mut e,
+        "setConstraints",
+        json!({"id":rect,"constraints":{"horizontal":"left","vertical":"top","relative_to":1}})
+    )
+    .events
+    .is_empty());
+    // readConstraints is silent and reports storage-only enforcement.
+    let read = call(&mut e, "readConstraints", json!({}));
+    assert!(read.events.is_empty());
+    assert_eq!(read.data["solving"], "storage-only");
+    assert_eq!(read.data["accepted"]["horizontal"], json!(["left","right","center","stretch"]));
+    assert_eq!(read.data["nodes"].as_array().unwrap().len(), 1);
+    assert_eq!(read.data["nodes"][0]["node_id"], rect);
+    assert_eq!(read.data["nodes"][0]["enforced"], false);
+    assert_eq!(read.data["nodes"][0]["constraints"]["horizontal"], "left");
+    let filtered = call(&mut e, "readConstraints", json!({"id":1}));
+    assert!(filtered.data["nodes"].as_array().unwrap().is_empty());
+    assert!(e
+        .apply(Command::new("readConstraints", json!({"id":"x"})))
+        .is_err());
+    // Constraints trigger the schema:2 wrapper; restore round-trips.
+    let wrapped = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&wrapped).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(outer["schema"], 2);
+    assert_eq!(outer["document"]["nodes"][rect.to_string()]["constraints"]["vertical"], "top");
+    let mut reopen = DesignEngine::new();
+    reopen.restore(&wrapped).unwrap();
+    assert_eq!(reopen.snapshot().unwrap(), wrapped);
+    // Clearing restores the bare schema:1 snapshot byte-for-byte.
+    call(&mut e, "setConstraints", json!({"id":rect,"constraints":null}));
+    assert!(e.state.nodes[&rect].constraints.is_none());
+    assert_eq!(e.snapshot().unwrap(), bare);
+    // Undo restores the set constraints, then the cleared state.
+    assert!(e.undo().unwrap());
+    assert!(e.state.nodes[&rect].constraints.is_some());
+    assert!(e.undo().unwrap());
+    assert!(e.state.nodes[&rect].constraints.is_none());
+}
+#[test]
+fn constraints_reject_root_flow_scale_bad_targets_and_hostile_restore() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    // Root can never carry constraints.
+    assert!(e
+        .apply(Command::new(
+            "setConstraints",
+            json!({"id":1,"constraints":constraint("left","top")})
+        ))
+        .is_err());
+    let rect = shape(&mut e, 1, 1., 1., 2., 2., [255; 4]);
+    let sibling = shape(&mut e, 1, 5., 5., 2., 2., [0; 4]);
+    // scale anchors parse but reject with a reason until the solver lands.
+    for bad_anchor in [
+        json!({"horizontal":"scale","vertical":"top"}),
+        json!({"horizontal":"left","vertical":"scale"}),
+    ] {
+        let err = e
+            .apply(Command::new(
+                "setConstraints",
+                json!({"id":rect,"constraints":bad_anchor}),
+            ))
+            .unwrap_err();
+        assert!(err.message.contains("scale"), "{}", err.message);
+    }
+    // relative_to must name the parent frame (root1 here), not a sibling.
+    let err = e
+        .apply(Command::new(
+            "setConstraints",
+            json!({"id":rect,"constraints":{"horizontal":"left","vertical":"top","relative_to":sibling}}),
+        ))
+        .unwrap_err();
+    assert!(err.message.contains("relative_to"), "{}", err.message);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":rect,"constraints":{"horizontal":"right","vertical":"bottom"}}),
+    );
+    // A nested frame starts absolute; flow children cannot carry anchors.
+    let frame = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":frame,"layout":flow("row","start","start",0.)}),
+    );
+    let inner = shape(&mut e, frame, 0., 0., 1., 1., [9; 4]);
+    let err = e
+        .apply(Command::new(
+            "setConstraints",
+            json!({"id":inner,"constraints":constraint("center","stretch")}),
+        ))
+        .unwrap_err();
+    assert!(err.message.contains("absolute"), "{}", err.message);
+    // Absolute again: inner gains parent-relative anchors.
+    call(&mut e, "setFrameLayout", json!({"id":frame,"layout":null}));
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":inner,"constraints":{"horizontal":"center","vertical":"stretch","relative_to":frame}}),
+    );
+    // Hostile restores fail closed: constraints on the root, on a node whose
+    // parent uses flow layout, scale anchors and non-parent relative_to.
+    let wrapped = e.snapshot().unwrap();
+    let mut reopen = DesignEngine::new();
+    reopen.restore(&wrapped).unwrap();
+    let (_, raw) = decode_envelope(&wrapped).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    for mutation in ["root", "flow_child", "scale", "bad_relative"] {
+        let mut hostile = outer.clone();
+        let doc = &mut hostile["document"];
+        match mutation {
+            "root" => {
+                doc["nodes"]["1"]["constraints"] = constraint("left", "top");
+            }
+            "flow_child" => {
+                doc["nodes"][inner.to_string()]["constraints"] = constraint("left", "top");
+                doc["nodes"][frame.to_string()]["layout"] = flow("row", "start", "start", 0.);
+            }
+            "scale" => {
+                doc["nodes"][inner.to_string()]["constraints"] =
+                    json!({"horizontal":"scale","vertical":"top"});
+            }
+            _ => {
+                doc["nodes"][inner.to_string()]["constraints"] =
+                    json!({"horizontal":"left","vertical":"top","relative_to":1});
+            }
+        }
+        assert!(
+            reopen
+                .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+                .is_err(),
+            "{mutation}"
+        );
+        assert_eq!(reopen.snapshot().unwrap(), wrapped);
+    }
+    // Converting frame to flow while inner is constrained rejects atomically.
+    assert!(e
+        .apply(Command::new(
+            "setFrameLayout",
+            json!({"id":frame,"layout":flow("row","start","start",0.)})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), wrapped);
+    // Clearing inner constraints unblocks the flow switch; reparenting the
+    // still-constrained rect under it then rejects atomically.
+    call(&mut e, "setConstraints", json!({"id":inner,"constraints":null}));
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":frame,"layout":flow("row","start","start",0.)}),
+    );
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("reparentNode", json!({"id":rect,"parent":frame,"index":0})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    call(&mut e, "setConstraints", json!({"id":rect,"constraints":null}));
+    call(
+        &mut e,
+        "reparentNode",
+        json!({"id":rect,"parent":frame,"index":0}),
+    );
+    // rect is now a flow child: anchors reject with the placement reason.
+    let err = e
+        .apply(Command::new(
+            "setConstraints",
+            json!({"id":rect,"constraints":constraint("left","top")}),
+        ))
+        .unwrap_err();
+    assert!(err.message.contains("absolute"), "{}", err.message);
+    // Locked nodes reject constraint edits like any other mutation.
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":sibling,"constraints":constraint("center","bottom")}),
+    );
+    call(&mut e, "updateNode", json!({"id":sibling,"locked":true}));
+    assert!(e
+        .apply(Command::new(
+            "setConstraints",
+            json!({"id":sibling,"constraints":null})
+        ))
+        .is_err());
+}

@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 //! Fixed-size design hierarchy/layout. Prism owns actual rasterization.
+mod constraints;
 mod layout;
 mod model;
 mod sizing;
@@ -195,6 +196,11 @@ impl Engine for DesignEngine {
             }
             "listBindings" => {
                 return Ok(CommandResult::read_only(variables::list(
+                    &self.state, p,
+                )?))
+            }
+            "readConstraints" => {
+                return Ok(CommandResult::read_only(constraints::describe(
                     &self.state, p,
                 )?))
             }
@@ -466,6 +472,23 @@ impl Engine for DesignEngine {
                         .cloned()
                         .ok_or_else(|| bad("layout required (or null for absolute)"))?,
                 )?;
+            }
+            "setConstraints" => {
+                fields(p, &["id", "constraints"])?;
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                let value = p
+                    .get("constraints")
+                    .ok_or_else(|| bad("constraints required (object or null)"))?;
+                let constraints = match value {
+                    Value::Null => None,
+                    Value::Object(_) => Some(serde_json::from_value::<NodeConstraints>(
+                        value.clone(),
+                    )?),
+                    _ => return Err(bad("constraints must be an object or null")),
+                };
+                Arc::make_mut(next.nodes.get_mut(&node_id).unwrap()).constraints =
+                    constraints;
             }
             "setChildOrder" => {
                 let parent = id(p, "parent")?;

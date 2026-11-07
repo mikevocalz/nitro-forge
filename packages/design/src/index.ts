@@ -25,6 +25,8 @@ export const OPS={
  bindVariable:'bindVariable',
  unbindVariable:'unbindVariable',
  listBindings:'listBindings',
+ setConstraints:'setConstraints',
+ readConstraints:'readConstraints',
  evaluateLayout:'evaluateLayout',
  renderFrame:'renderFrame',
 } as const;
@@ -54,13 +56,27 @@ export interface VariableBinding{node_id:number;path:BindPath;variable_id:string
 export interface VariableBindingInfo extends VariableBinding{resolved:number|null}
 export interface VariableInfo extends DesignVariable{resolved:Record<string,VariableValue>;problems:string[]}
 export interface VariablesDescription{modes:DesignMode[];active_mode:string|null;variables:VariableInfo[];bindings:VariableBindingInfo[]}
+/** NYC-Tron `DesignConstraints` h/v anchor axes. `scale` parses but the
+ * engine rejects it until the constraint solver slice; the engine's accepted
+ * set is left/right/center/stretch (horizontal) and top/bottom/center/stretch
+ * (vertical), where `stretch` is the Figma-style both-edges anchor. */
+export type HorizontalAnchor='left'|'right'|'center'|'stretch'|'scale';
+export type VerticalAnchor='top'|'bottom'|'center'|'stretch'|'scale';
+/** Stored responsive anchors on absolute children only. `relative_to` maps
+ * NYC-Tron `relativeToId` to the engine's numeric node id and may only name
+ * the parent frame; absent means the parent. min/max/aspectLocked are C2 and
+ * not admitted. C1 stores anchors without solving them. */
+export interface NodeConstraints{horizontal:HorizontalAnchor;vertical:VerticalAnchor;relative_to?:number}
+export interface ConstraintNodeInfo{node_id:number;constraints:NodeConstraints;enforced:boolean}
+export interface ConstraintsDescription{solving:'storage-only';accepted:{horizontal:HorizontalAnchor[];vertical:VerticalAnchor[]};rejected:string[];nodes:ConstraintNodeInfo[]}
 export interface FrameLayout{direction:'row'|'column';wrap?:boolean;gap:number;padding_top:number;padding_right:number;padding_bottom:number;padding_left:number;align:'start'|'center'|'end'|'stretch';justify:'start'|'center'|'end'|'space-between'}
 export interface NodeGeometry{x:number;y:number;width:number;height:number}
-export interface DesignNode extends NodeGeometry{id:number;kind:NodeKind;name:string;fill:[number,number,number,number];visible:boolean;locked:boolean;children:number[];layout:FrameLayout|null;sizing?:SizingSettings;text?:TextStyle}
+export interface DesignNode extends NodeGeometry{id:number;kind:NodeKind;name:string;fill:[number,number,number,number];visible:boolean;locked:boolean;children:number[];layout:FrameLayout|null;sizing?:SizingSettings;text?:TextStyle;constraints?:NodeConstraints}
 export interface CompositionSettings{title:string;width:number;height:number}
 /** describe/evaluateLayout expose the internal schema:1 state; the schema:2
  * wrapper `{kind:'design',schema:2,document}` exists only inside snapshot
- * bytes and only when schema-2 features (text nodes, variables/modes/bindings)
+ * bytes and only when schema-2 features (text nodes, node constraints,
+ * variables/modes/bindings)
  * are present. The collections are omitted entirely when empty. */
 export interface DesignState{kind:'design';schema:1;title:string;next_id:number;nodes:Record<string,DesignNode>;variables?:Record<string,DesignVariable>;modes?:DesignMode[];active_mode?:string;bindings?:VariableBinding[]}
 export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'|'locked'>> & {text?:TextStylePatch};
@@ -70,7 +86,9 @@ export interface EvaluatedBox extends NodeGeometry{id:number;kind:NodeKind;fill:
 /** Bounded fixed/hug/fill layout and real Prism RGBA plus variables/modes.
  * Text nodes are layout boxes only (renderable:false, fill background draws,
  * no glyphs); bindings resolve at read/render time and never bake into nodes.
- * No constraints, components, prototype runtime, images or clipping. */
+ * Constraints are stored h/v anchors on absolute children only — storage and
+ * validation, not solving (evaluateLayout ignores them in C1). No components,
+ * prototype runtime, images or clipping. */
 export class DesignDocument{
  private constructor(private readonly document:DocumentHandle){}
  static async open(host:EngineHost,settings:Partial<CompositionSettings>={}){return new DesignDocument(await DocumentHandle.openInitialized(host,'design',doc=>doc.apply(OPS.new,settings)));}
@@ -117,6 +135,16 @@ export class DesignDocument{
  unbindVariable(node_id:number,path:BindPath){return this.document.apply<{ok:boolean}>(OPS.unbindVariable,{node_id,path});}
  /** Read-only binding list, optionally filtered to one node; silent. */
  listBindings(node_id?:number){return this.document.apply<{bindings:VariableBindingInfo[]}>(OPS.listBindings,node_id===undefined?{}:{node_id});}
+ /** Stores h/v anchors on an absolute child — the parent must not use flow
+  * layout and the node cannot be the root. `null` clears. `scale` anchors and
+  * a `relative_to` that does not name the parent frame reject with reasons;
+  * converting the parent to flow layout or reparenting under one rejects
+  * while anchors are stored. Anchors are durable state only in C1:
+  * evaluateLayout does not solve them. */
+ setConstraints(id:number,constraints:NodeConstraints|null){return this.document.apply<{ok:boolean}>(OPS.setConstraints,{id,constraints});}
+ /** Read-only constraint state plus the accepted/rejected anchor sets;
+  * silent. `enforced` is always false until the solver slice lands. */
+ readConstraints(id?:number){return this.document.apply<ConstraintsDescription>(OPS.readConstraints,id===undefined?{}:{id});}
  evaluateLayout(){return this.document.apply<{boxes:EvaluatedBox[]}>(OPS.evaluateLayout,{});}
  renderFrame(){return this.document.apply<{width:number;height:number;pixels_b64?:string}>(OPS.renderFrame,{});}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}
