@@ -442,6 +442,7 @@ fn parse_document_with_numbering(
                     blocks.push(Block {
                         kind: BlockKind::Para,
                         list: None,
+                        style_id: None,
                         inlines: Vec::new(),
                     });
                 }
@@ -574,6 +575,7 @@ fn parse_document_with_numbering(
                         blocks.push(Block {
                             kind,
                             list,
+                            style_id: None,
                             inlines: normalize_inlines(std::mem::take(&mut inlines)),
                         });
                     }
@@ -588,6 +590,7 @@ fn parse_document_with_numbering(
         blocks.push(Block {
             kind: BlockKind::Para,
             list: None,
+            style_id: None,
             inlines: Vec::new(),
         });
     }

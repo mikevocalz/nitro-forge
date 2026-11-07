@@ -108,6 +108,56 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("named styles define, apply, persist, and undo via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "hello world");
+    await doc.defineStyle({
+      id: "emph",
+      name: "Emphasis",
+      kind: "character",
+      properties: { italic: true, color: "#ff0000" },
+    });
+    await doc.defineStyle({
+      id: "title",
+      name: "Title",
+      kind: "paragraph",
+      properties: { bold: true, font_size: 18 },
+    });
+    const listed = await doc.listStyles();
+    expect(listed.data.styles.map((s) => s.id)).toEqual(["emph", "title"]);
+
+    await doc.applyNamedStyle("emph", { block: 0, offset: 0 }, { block: 0, offset: 5 });
+    await doc.setBlockStyle(0, "title");
+    const blocks = await doc.blocks<any>();
+    expect(blocks.data.blocks[0].style_id).toBe("title");
+    expect(blocks.data.blocks[0].inlines[0].style.bold).toBe(true);
+    expect(blocks.data.blocks[0].inlines[0].style.font_size).toBe(18);
+    // "hello" got both the paragraph stamp and the character range style
+    const hello = blocks.data.blocks[0].inlines.find((i: any) => i.text === "hello");
+    expect(hello.style.italic).toBe(true);
+    expect(hello.style.color).toBe("#ff0000");
+
+    // kind mismatches reject
+    await expect(
+      doc.applyNamedStyle("title", { block: 0, offset: 0 }, { block: 0, offset: 1 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.setBlockStyle(0, "emph")).rejects.toBeInstanceOf(EngineError);
+
+    // snapshot keeps definitions + reference; reopen resolves them
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.listStyles()).data.styles).toHaveLength(2);
+    expect((await re.blocks<any>()).data.blocks[0].style_id).toBe("title");
+
+    // removeStyle clears the block reference atomically; undo restores it
+    await re.removeStyle("title");
+    expect((await re.blocks<any>()).data.blocks[0].style_id).toBeUndefined();
+    expect(await re.undo()).toBe(true);
+    expect((await re.blocks<any>()).data.blocks[0].style_id).toBe("title");
+    await re.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");
