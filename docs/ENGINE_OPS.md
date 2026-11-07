@@ -184,6 +184,17 @@ Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteri
 
 Criteria expressions/cell references are evaluated normally; criteria range errors/cycles propagate. SUMIF evaluates sum cells only for matches, ignores matched nonnumeric values and propagates matched errors; nonfinite accumulated sums return #NUM!. Existing per-request memoization/depth/cycle rules remain intact. Each conditional rectangle is capped at16384 cells, criteria at255 Unicode scalars and matched text at4096 UTF-8 bytes (#VALUE! for string limits). A shared per-Evaluator allowance of1000000 conditional scan/string/DP steps returns #NUM! on exhaustion; matcher allocation work is charged before bounded DP buffers. These are explicit Tally semantics, not full Excel compatibility.
 
+Snapshots: the NFD1 envelope is unchanged; the JSON payload is normally the bare
+`Workbook` (`{next_sheet,sheets,active}`). When any sheet carries durable
+post-release fields (`tone` set or `is_protected` true), the payload is instead
+`{kind:"tally",schema:1,document:<Workbook>}` so pre-wrapper readers fail closed
+rather than silently dropping those fields (same precedent as pitch schema:2 and
+quill schema:2). `restore` accepts both shapes, strictly validates wrapper
+kind/schema/keys (`deny_unknown_fields`), then runs the existing document
+validation before replacing state and resetting the journal; bad input leaves
+state untouched. Workbooks without tone/protection keep the legacy payload, so
+older snapshots and older readers round-trip unchanged.
+
 ## cadence-engine — `CadenceEngine::new()`
 
 State `{ tempo_bpm, time_sig: [n,d], ppq: 960, playhead_ticks, next_id,
