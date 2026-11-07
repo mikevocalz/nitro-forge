@@ -617,3 +617,7 @@ Motion now persists owned immutable straight-sRGB RGBA8 assets and real raster l
 ## P10 decoded develop preview source checkpoint (2026-11-07)
 
 Photo persists version recipes and processes real bounded straight-alpha sRGB RGBA8. Eleven Photo engine tests and eight TypeScript tests pass, including identity/color/alpha, persistence, stale authority, owned input and malformed/oversized responses. The parent independently verifies a binary FFI preview and a real Photo-to-Motion CLI pixel/history/reopen flow. Those use synthetic decoded pixels, not a RAW decoder or original-file provenance proof. See [the develop source report](completion/reports/P10-nondestructive-develop-preview-source.md). No native target, full RAW controls or P10 acceptance is inferred.
+
+## Shared decoder and backend test entry (2026-11-07)
+
+The base64 decoder now rejects malformed alphabet/padding/trailing bits before allocation while retaining valid unpadded input (`6949110`); seven decoder/host tests pass. New package test scripts and the shared source runner make Photo/Motion/Design/Draft tests discoverable in workspace and existing CI runs. Local evidence: 54 scoped Rust tests, 18 source/CLI tests, four binary FFI checks and preview TypeScript pass. See [test entry report](completion/reports/backend-test-discovery.md). These results do not establish remote CI, native consumer or required-platform acceptance.

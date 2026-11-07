@@ -11,6 +11,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "test:rust": "cargo test --locked --workspace",
+    "test:completion-backends": "cargo test --locked -p photo-engine -p motion-engine -p design-engine -p draft-engine && cargo build --locked -p nf-cli && vitest run --config tooling/completion-backends.vitest.config.mjs",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "verify:nyc-tron": "node tooling/verify-nyc-tron-pin.mjs",

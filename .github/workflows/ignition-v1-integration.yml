@@ -3,12 +3,17 @@ on:
   pull_request:
     paths:
       - 'packages/ignition/**'
+      - 'packages/photo/**'
+      - 'packages/motion/**'
+      - 'packages/design/**'
+      - 'packages/draft/**'
       - 'packages/collaboration-server/**'
       - 'rust/nf-sys/**'
       - 'rust/ignition-core/**'
       - 'rust/nf-cli/**'
       - 'packages/*/rust/**'
       - 'tooling/native/**'
+      - 'tooling/completion-backends.vitest.config.mjs'
       - 'pnpm-lock.yaml'
       - 'package.json'
       - 'apps/example/package.json'
@@ -44,6 +49,8 @@ jobs:
           pnpm --filter @nitro-forge/collaboration-server test
         env:
           NF_CLI: ${{ github.workspace }}/target/debug/nf-cli
+      - name: Verify Photo Motion Design and Draft source backends
+        run: pnpm test:completion-backends
       - name: Link real C++ session to Rust and exercise round trip
         run: |
           g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp \

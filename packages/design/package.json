@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "test": "vitest run --config ../../tooling/completion-backends.vitest.config.mjs packages/design/tests", "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@nitro-forge/ignition": "workspace:*"
