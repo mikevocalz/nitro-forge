@@ -968,3 +968,46 @@ chart_ops/sparkline_ops plus schema-matrix and smuggle coverage), `pnpm
 --filter @nitro-forge/tally` typecheck clean and 57 Vitest passed across
 15 files (3 new live `nf-cli` chart/sparkline tests), `cargo build -p
 nf-cli` clean. No rendering, XLSX or native/device acceptance is claimed.
+
+## Tally saved sheet views + setSheetView slice checkpoint (2026-11-07)
+
+Tally gains durable workbook-persisted named sheet views (P13 slice 8),
+lifting the `setSheetView` entry from `TALLY_DEFERRED_OPS`. Decision:
+**workbook-persisted** — the engine's only durable view-ish state is the
+filter table (row visibility derives live from computed values), so a
+`SheetView = {id, sheet, name, filters}` captures the bound sheet's
+current filter specs (`{range,column?,criteria}`, rule ids stripped); at
+most 256 views per workbook, 64 specs per view, 128-byte names unique
+case-insensitively per sheet. Scroll, zoom, frozen panes/splits and
+column widths are NOT engine-owned (host view state) and `sortRange` is a
+destructive mutation, so views honestly capture filters only — the
+I-17 freeze/split half stays host-side and is noted in
+`TALLY_DEFERRED_OPS`' successor comment. Ops: `saveSheetView` (same
+sheet+name updates specs in place keeping `id`; identical capture
+eventless; >64 rules rejects), `setSheetView` (`{view:id}` replaces the
+bound sheet's filter rules with the captured specs under fresh ids —
+projected against the shared filter cap — and records `Sheet.active_view`
+durably; `{view:null,sheet?}` clears only the selection; re-applying the
+active view is eventless; `sheet` alongside an id rejects),
+`removeSheetView` (clears `active_view` references), read-only
+`listSheetViews` (`active` flag per view). All mutations journal one
+whole-document undo entry; `removeSheet` cascade-drops bound views with
+`readd_ok` re-admission plus an `active_view` dangling-pointer sweep;
+`duplicateSheet` does not copy views and clears `active_view` on the
+copy; bound-sheet protection guards all three mutations. Snapshots
+carrying views or any `active_view` emit `{kind:"tally",schema:6}` — the
+bump is required because `Workbook`/`Sheet` do not deny unknown fields
+and schema:5 readers would silently drop the new table and field (same
+reasoning as filters' schema:4); `restore` accepts schemas 1–6, fails
+closed on views/`active_view` under lower or bare schemas, and
+re-validates count/id uniqueness, bound sheets, per-sheet name
+uniqueness, bounded specs with re-canonicalized in-cap ranges, parseable
+criteria, in-range columns, `next_view` repair and same-sheet
+`active_view` references atomically. `TALLY_DEFERRED_OPS` is now empty;
+NYC-Tron view-selector wiring is host-side. Local evidence: `cargo test
+-p tally-engine` 129 passed (6 new across view_ops/protection plus
+schema-matrix and smuggle coverage), `pnpm --filter @nitro-forge/tally`
+typecheck clean and 59 Vitest passed across 16 files (1 new live `nf-cli`
+sheet-views test file, 2 cases), `cargo build -p nf-cli` clean. No
+freeze-pane/split persistence, rendering or native/device acceptance is
+claimed.

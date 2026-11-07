@@ -54,11 +54,16 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * `listSparklines`) persistence landed in slice 7 as storage-only specs —
  * hosts wire `ChartBuilder.onInsert`/`SparklineEditor` callbacks to the
  * `TallyDocument` methods directly; rendering stays host-side.
+ *
+ * `setSheetView` landed in slice 8 (`saveSheetView`/`setSheetView`/
+ * `removeSheetView`/`listSheetViews`): workbook-persisted named views that
+ * capture the sheet's filter specs — the only durable view state the
+ * engine owns. Frozen panes, splits, scroll, zoom and column widths remain
+ * host view state (the engine does not own them), so the I-17 freeze/split
+ * half of the deferral is honestly still open even though the op name is
+ * now backed.
  */
-export const TALLY_DEFERRED_OPS = {
-  /** I-17: freeze panes and split saved with the sheet; today they are app view state only. */
-  setSheetView: "I-17",
-} as const;
+export const TALLY_DEFERRED_OPS = {} as const;
 export type TallyDeferredOp = keyof typeof TALLY_DEFERRED_OPS;
 
 function requireData<T>(response: { data?: T }, op: string): T {

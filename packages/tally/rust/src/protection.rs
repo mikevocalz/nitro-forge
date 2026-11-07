@@ -169,6 +169,47 @@ impl TallyEngine {
                     self.doc.sheets[idx].is_protected
                 }
             },
+            // Named views are workbook metadata bound to one sheet:
+            // saveSheetView guards its target sheet, setSheetView guards
+            // the view's bound sheet (or the resolved sheet for the
+            // `view:null` clear), removeSheetView guards the stored
+            // view's sheet. Unknown ids fall through — the op reports
+            // not_found. listSheetViews is an ungated read.
+            "saveSheetView" => {
+                let idx = match p.get("sheet") {
+                    Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                    _ => self.doc.active,
+                };
+                self.doc.sheets[idx].is_protected
+            }
+            "setSheetView" => match p.get("view") {
+                Some(v) if !v.is_null() => v
+                    .as_u64()
+                    .and_then(|id| self.doc.views.iter().find(|vw| vw.id == id))
+                    .is_some_and(|vw| {
+                        self.doc
+                            .sheets
+                            .iter()
+                            .any(|s| s.id == vw.sheet && s.is_protected)
+                    }),
+                _ => {
+                    let idx = match p.get("sheet") {
+                        Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                        _ => self.doc.active,
+                    };
+                    self.doc.sheets[idx].is_protected
+                }
+            },
+            "removeSheetView" => p
+                .get("id")
+                .and_then(Value::as_u64)
+                .and_then(|id| self.doc.views.iter().find(|vw| vw.id == id))
+                .is_some_and(|vw| {
+                    self.doc
+                        .sheets
+                        .iter()
+                        .any(|s| s.id == vw.sheet && s.is_protected)
+                }),
             "new" => self.doc.sheets.iter().any(|s| s.is_protected),
             _ => false,
         };
@@ -285,6 +326,33 @@ mod tests {
         apply(&mut e, "updateName", json!({"name":"OnOther","refers_to":"B2"}));
         apply(&mut e, "removeName", json!({"name":"OnOther"}));
         assert_eq!(e.doc.names.len(), 1);
+    }
+
+    #[test]
+    fn view_ops_guard_their_bound_sheet() {
+        let mut e = TallyEngine::new();
+        apply(&mut e, "addSheet", json!({"name":"Other"}));
+        apply(&mut e, "saveSheetView", json!({"name":"V0"}));
+        apply(&mut e, "saveSheetView", json!({"name":"V1","sheet":"Other"}));
+        apply(&mut e, "protectSheet", json!({"sheet":0,"protected":true}));
+        let before = e.snapshot().unwrap();
+        for (op, p) in [
+            ("saveSheetView", json!({"name":"Nope"})),
+            ("saveSheetView", json!({"name":"Nope","sheet":0})),
+            ("setSheetView", json!({"view":1})),
+            ("setSheetView", json!({"view":null})),
+            ("setSheetView", json!({"view":null,"sheet":"Sheet1"})),
+            ("removeSheetView", json!({"id":1})),
+        ] {
+            assert!(e.apply(Command::new(op, p)).is_err(), "{op}");
+            assert_eq!(e.snapshot().unwrap(), before, "{op}");
+        }
+        // Views bound to the unprotected sheet still mutate fine; reads
+        // stay ungated.
+        assert!(e.apply(Command::new("listSheetViews", json!({}))).is_ok());
+        apply(&mut e, "setSheetView", json!({"view":2}));
+        apply(&mut e, "removeSheetView", json!({"id":2}));
+        apply(&mut e, "saveSheetView", json!({"name":"OnOther","sheet":"Other"}));
     }
 
     #[test]

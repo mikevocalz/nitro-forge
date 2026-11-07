@@ -46,6 +46,10 @@ export const OPS = {
   setSparkline: "setSparkline",
   clearSparkline: "clearSparkline",
   listSparklines: "listSparklines",
+  saveSheetView: "saveSheetView",
+  setSheetView: "setSheetView",
+  removeSheetView: "removeSheetView",
+  listSheetViews: "listSheetViews",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -351,6 +355,38 @@ export interface SparklineInfo {
 
 /** `setSparkline` anchor: exactly one of `cell` or `range`. */
 export type SparklineTarget = { cell: string; range?: never } | { range: { from: string; to: string }; cell?: never };
+
+/**
+ * One filter spec captured into a sheet view — the `FilterRule` fields
+ * minus the rule `id`. Views capture engine-owned durable state only:
+ * scroll, zoom, frozen panes/splits and column widths are host view state,
+ * and sorts are destructive mutations, so none of them are captured.
+ */
+export interface SheetViewFilter {
+  /** Canonical `"A1"`/`"A1:B2"` range on the bound sheet. */
+  range: string;
+  /** Present only for single-column filters. */
+  column?: string;
+  /** COUNTIF-style criteria string, same matcher as filters. */
+  criteria: string;
+}
+
+/**
+ * Durable named sheet view bound to one sheet. `name` is unique
+ * case-insensitively among that sheet's views; `filters` is the captured
+ * spec set `setSheetView` applies (replacing the sheet's filter rules
+ * under fresh ids). `active` marks the sheet's recorded view selection.
+ */
+export interface SheetViewInfo {
+  id: number;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  name: string;
+  filters: SheetViewFilter[];
+  /** True when this view is the bound sheet's `active_view`. */
+  active: boolean;
+}
 
 export class TallyDocument {
   private constructor(private doc: DocumentHandle) {}
@@ -686,6 +722,40 @@ export class TallyDocument {
   /** Read-only sparkline list; `sheet` filters to one sheet, absent lists all. */
   listSparklines(sheet?: string | number) {
     return this.call<{ sparklines: SparklineInfo[] }>(OPS.listSparklines, {
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Capture `sheet`'s (default active) current filter rules into a named
+   * view. Re-saving the same case-insensitive name on the same sheet
+   * updates the captured specs in place, keeping the view id; an
+   * identical capture is eventless. Views hold at most 64 filter specs.
+   */
+  saveSheetView(name: string, sheet?: string | number) {
+    return this.call<{ view: SheetViewInfo }>(OPS.saveSheetView, {
+      name,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Apply view `id` to its bound sheet: the sheet's filter rules are
+   * replaced by the view's captured specs under fresh ids and the
+   * selection is recorded durably. Re-applying the active view is
+   * eventless. `null` clears the resolved sheet's (default active)
+   * selection without touching its filters.
+   */
+  setSheetView(view: number | null, sheet?: string | number) {
+    return this.call<{ view: SheetViewInfo | null }>(OPS.setSheetView, {
+      view,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  removeSheetView(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removeSheetView, { id });
+  }
+  /** Read-only view list; `sheet` filters to one sheet, absent lists all. */
+  listSheetViews(sheet?: string | number) {
+    return this.call<{ views: SheetViewInfo[] }>(OPS.listSheetViews, {
       ...(sheet === undefined ? {} : { sheet }),
     });
   }
