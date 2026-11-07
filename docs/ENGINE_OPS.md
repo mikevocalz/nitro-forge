@@ -264,6 +264,10 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `clearCell` | `{addr}` | `{ok}` | |
 | `getCell` | `{addr}` | `{raw,computed,format?}` | `computed` = evaluated value; `format` present only when stored |
 | `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed,format?}]]}` | |
+| `importCsv` | `{text,sheet?,at?}` | `{changed,rows}` | delimited-text import, comma separator; see delimited-text rules below |
+| `importTsv` | `{text,sheet?,at?}` | `{changed,rows}` | same as `importCsv` with tab separator |
+| `exportCsv` | `{sheet?,range?}` | `{text,rows,cols}` | computed values as CSV text; silent read |
+| `exportTsv` | `{sheet?,range?}` | `{text,rows,cols}` | same as `exportCsv` with tab separator |
 | `evaluate` | `{formula}` | `{value}` | ad-hoc formula against active sheet, no write |
 | `workbook` | `{}` | `{sheets:[{name,cell_count,tone,is_protected}],active}` | read-only |
 
@@ -648,7 +652,45 @@ re-admits each only while it still satisfies the restore invariants;
 not retarget them. Bound-sheet protection guards apply like the other
 rule tables.
 
-Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. `saveSheetView` rejects on its target sheet (payload `sheet`, default active), `setSheetView` rejects on the view's bound sheet (or the resolved sheet for `view:null`) and `removeSheetView` rejects on the stored view's sheet; `listSheetViews` stays allowed. `addComment` rejects on its target sheet (payload `sheet`, default active) and `updateComment`/`removeComment`/`resolveComment`/`reopenComment` reject on the stored comment's sheet; `listComments` stays allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Delimited-text rules: engines are I/O-free, so `importCsv`/`importTsv` take
+the file *text* in `text` (never a path) and `exportCsv`/`exportTsv` return
+the text in `data.text`. One parser serves both ops, parameterized only by
+the separator (`,` vs `\t`). Quoting follows RFC 4180: a field that opens
+with `"` reads to its closing quote, `""` inside is a literal quote, and
+embedded CR/LF are allowed; after a closing quote only the separator, a
+record break or EOF may follow — anything else rejects the whole import
+(`validation`). A `"` inside an *unquoted* field is kept literally. Record
+breaks accept CRLF, LF and lone CR; one leading UTF-8 BOM is stripped. A
+completely empty line produces no row (blank lines are skipped, matching
+Excel); a line of separators (`",,"`) is a real row of empty fields.
+`sheet` (name or index, default active) picks the target sheet and `at`
+(default `A1`) the anchor; there is no header handling — every parsed row
+is data. Field text stores verbatim exactly like `setRange`: `=`-prefixed
+fields become formulas, numeric-looking text computes as numbers, and
+empty fields clear the target cell. Rows may be ragged — each row writes
+only its own fields, leaving cells right of a short row's last field
+untouched. Import is atomic: the text (≤16 MiB), the parse, the sheet
+bounds (`XFD1048576` from `at`) and the 1,048,576-cell budget are all
+checked before `commit_cells_on_sheet` stages the write, so malformed or
+oversized input mutates and journals nothing; one undo entry covers the
+whole import and an empty result is eventless. `exportCsv`/`exportTsv` are
+silent reads of *computed* values (formulas export their result, number
+formats are ignored) over `range:{from,to}` or, absent that, the bounding
+box of the sheet's used cells; both forms are capped at the shared
+16,384-cell bound and an oversized used rectangle rejects with
+`out_of_bounds` (pass an explicit `range`). Export quoting mirrors the
+import: a field is quoted when it contains the separator, a quote or a
+line break, `"` escapes as `""`, rows join with CRLF and the text ends
+with a trailing CRLF; values export in display text form (`fmt_num`,
+`TRUE`/`FALSE`, the `#…!` literal, empty for empty cells). Display text
+round-trips but value *types* do not: a re-imported `#DIV/0!` or `TRUE`
+lands as literal text, not an error/boolean — matching Excel's CSV
+behavior closely enough for interchange, and documented so hosts do not
+expect typed fidelity. These ops carry
+no durable state — they are pure cell reads/writes, so snapshots need no
+schema bump (XLSX import stays deferred on dependency admission).
+
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. `saveSheetView` rejects on its target sheet (payload `sheet`, default active), `setSheetView` rejects on the view's bound sheet (or the resolved sheet for `view:null`) and `removeSheetView` rejects on the stored view's sheet; `listSheetViews` stays allowed. `addComment` rejects on its target sheet (payload `sheet`, default active) and `updateComment`/`removeComment`/`resolveComment`/`reopenComment` reject on the stored comment's sheet; `listComments` stays allowed. `importCsv`/`importTsv` reject when their target sheet (payload `sheet`, default active) is protected; `exportCsv`/`exportTsv` are ungated reads. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 

@@ -1061,3 +1061,42 @@ claimed.
 Quill gains row/column structural ops on existing tables (P12 slice 7-B), completing the structural half of block-model tables. New ops: `insertTableRow {block,row}` (`index`/`at` aliases; 0..=rows, `rows` appends), `deleteTableRow {block,row}`, `insertTableColumn {block,col}` (`index`/`at` aliases; 0..=cols, `cols` appends), `deleteTableColumn {block,col}`. Inserts splice `cols`/`rows` fresh cells in the `setCellText` empty shape (one empty `para` each); deletes drop the removed cells' content. A table must keep ≥1 row and ≥1 column, the 64-row/26-col caps reject inserts at the limit, out-of-range positions reject, and every op rebuilds the dense row-major grid then re-validates the staged candidate through `validate_tables` before commit — so the document-wide ≤65536 cell-block budget, per-cell ≤64 block cap, and all strict-para cell-block rules hold exactly as on restore. Because the table stays one top-level block, no `Pos`-anchored collection (bookmarks, comments, sections) can move: each op records a plain block-splice undo entry like `setCellText`, and successful ops always change state so there is no eventless case (rejects record nothing). Schema: **no bump** — `Table {rows,cols,cells}` already carries everything the new ops produce, snapshots stay byte-compatible, and the same fail-closed `BlockKind` argument covers old readers. Deferred honestly: cell merge/split, per-cell or table styling, nested tables, in-cell find/replace and rich cell editing, `text`/`layout` cell coverage, DOCX `w:tbl` import/export, consumer geometry.
 
 Local evidence: `cargo test -p quill-engine` 141 passed (8 new table tests covering row/column insert+delete happy paths, aliases, bounds, min-dims and dimension-cap rejects, atomic snapshot-equality on rejects, cell-block budget enforcement on row insert, undo/redo, anchor stability, snapshot round-trip), `cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean, `pnpm --filter @nitro-forge/quill test` 33 passed across 6 files (1 new nf-cli row/column case), `pnpm --filter @nitro-forge/quill typecheck` clean. No native/device acceptance or full P12 completion is implied.
+
+## Tally CSV/TSV transfer source checkpoint (2026-11-07)
+
+Tally gains delimited-text import/export ops (slice 10, backlog item 10 —
+"CSV/TSV import-export ops now; XLSX blocked on dependency admission"):
+`importCsv`/`importTsv` take the file text in `text` (engines are I/O-free
+— never a path) plus optional `sheet` (name or index, default active) and
+`at` anchor (default `A1`); `exportCsv`/`exportTsv` are silent reads
+returning `{text,rows,cols}` over `range:{from,to}` or the bounding box
+of the sheet's used cells. One parser serves both, parameterized by `,`/`\t`:
+RFC 4180 quoting with `""` escapes and embedded newlines, strict rejection
+of unterminated quotes or data after a closing quote, CRLF/LF/lone-CR
+breaks, one leading UTF-8 BOM stripped, completely blank lines skipped
+(`",,"` stays a real row of empty fields), no header handling — every row
+is data. Field text stores verbatim like `setRange` (`=` fields become
+formulas, numeric text computes as numbers, empty fields clear cells);
+rows may be ragged. Import is atomic — 16 MiB text cap, full parse,
+`XFD1048576` bounds from `at` and a 1,048,576-cell budget all check before
+`commit_cells_on_sheet` stages — one undo entry, eventless when nothing
+changes. Export writes *computed* values in display text form
+(`fmt_num`/`TRUE`/`FALSE`/`#…!` literals, formats ignored) with the same
+quoting rules and a trailing CRLF; the explicit or used-bounds rectangle
+is capped at the shared 16,384 cells. Bound-sheet protection guards both
+import ops; exports stay ungated reads. These are pure cell reads/writes —
+no durable state, so **no schema bump** (stays schema:7-capable). TS
+mirror adds `OPS` entries, `importCsv`/`importTsv`/`exportCsv`/`exportTsv`
+(and shared `importDelimited`/`exportDelimited`) on `TallyDocument`, and
+`transfer.ts` gains `csv`/`tsv` `ImportFormat`s decoding UTF-8 strictly
+through `runImport`; the banded `getRange` CSV export stays for sheets
+larger than one op's cell cap. `TALLY_DEFERRED_OPS` was already empty —
+nothing to lift. Local evidence: `cargo test -p tally-engine` 148 passed
+(13 new across csv_ops: round-trip, quoting/CRLF/embedded-newline/BOM,
+ragged rows, blank-line skip, `at`/`sheet` targeting, atomic rejects,
+undo, protection, unicode, sparse-sheet export bounds),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/tally test` 68 Vitest passed across 18 files
+(1 new live `nf-cli` csv-transfer file, 5 cases), `pnpm --filter
+@nitro-forge/tally typecheck` clean. XLSX import, header-row options,
+encoding selection (host-side) and any import-preview UI remain deferred.

@@ -53,7 +53,10 @@ impl TallyEngine {
             // sheet (by id) or the target sheet (by range). Unknown ids
             // fall through — the op reports not_found. The get/evaluate/
             // validate reads are ungated.
-            "setValidation" | "setConditionalFormat" | "setFilter" | "sortRange" => {
+            // `importCsv`/`importTsv` write cells on their target sheet
+            // (payload `sheet`, default active) — same bound-sheet rule.
+            "setValidation" | "setConditionalFormat" | "setFilter" | "sortRange"
+            | "importCsv" | "importTsv" => {
                 let idx = match p.get("sheet") {
                     Some(v) if !v.is_null() => self.resolve_sheet(v)?,
                     _ => self.doc.active,

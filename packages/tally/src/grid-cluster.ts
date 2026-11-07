@@ -69,6 +69,13 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * coordinates — hosts wire comment-pin UI to the `TallyDocument` methods
  * directly; threading/replies and anchor remapping on row/column edits are
  * deferred (row/column insert/delete ops do not exist yet).
+ *
+ * Delimited text transfer landed in slice 10 (`importCsv`/`importTsv`/
+ * `exportCsv`/`exportTsv`): the engine parses/serializes RFC 4180 text
+ * in-op — `TallyDocument.importCsv`/`exportCsv` (and the TSV pair) take
+ * and return strings; the file-export sheet's CSV/TSV import formats in
+ * `transfer.ts` ride the same ops. XLSX stays deferred on dependency
+ * admission (backlog: "XLSX blocked on dependency admission").
  */
 export const TALLY_DEFERRED_OPS = {} as const;
 export type TallyDeferredOp = keyof typeof TALLY_DEFERRED_OPS;
