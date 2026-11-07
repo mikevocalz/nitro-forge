@@ -3,6 +3,7 @@
 mod layout;
 mod model;
 mod sizing;
+mod variables;
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -10,7 +11,7 @@ use ignition_core::{
 use model::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 fn id(p: &Value, key: &str) -> Result<u64, EngineError> {
     p.get(key)
         .and_then(Value::as_u64)
@@ -30,6 +31,28 @@ fn merge<T: Serialize + DeserializeOwned>(
         next[k] = v.clone();
     }
     Ok(serde_json::from_value(next)?)
+}
+fn fields(p: &Value, allowed: &[&str]) -> Result<(), EngineError> {
+    let object = p.as_object().ok_or_else(|| bad("expected object payload"))?;
+    if object.keys().any(|k| !allowed.contains(&k.as_str())) {
+        return Err(bad("unknown field"));
+    }
+    Ok(())
+}
+fn text_field<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
+    p.get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| bad("expected string field"))
+}
+/// Smallest unused `prefix-N` symbol id; the collection caps bound the scan.
+fn generated_id(prefix: &str, taken: &dyn Fn(&str) -> bool) -> Result<String, EngineError> {
+    for i in 1..=8192u64 {
+        let candidate = format!("{prefix}-{i}");
+        if !taken(&candidate) {
+            return Ok(candidate);
+        }
+    }
+    Err(bad("identity exhausted"))
 }
 pub struct DesignEngine {
     state: Arc<State>,
@@ -54,7 +77,8 @@ impl DesignEngine {
             .nodes
             .get(&node_id)
             .ok_or_else(|| bad("unknown node"))?;
-        let sizes = sizing::evaluate(&self.state)?;
+        let effective = variables::effective(&self.state);
+        let sizes = sizing::evaluate(&effective)?;
         let unavailable = if node_id == 1 {
             Some("Root canvas sizing uses setComposition".to_string())
         } else {
@@ -79,13 +103,10 @@ impl DesignEngine {
             let hug = capability(SizeMode::Hug);
             let fill = capability(SizeMode::Fill);
             let current_mode = sizing::mode(node, axis);
-            let resolved = sizes.values[&(node_id, axis)];
-            let value = if current_mode == SizeMode::Fixed {
-                sizing::authored(node, axis)
-            } else {
-                resolved
-            };
-            let mut info = json!({"mode":current_mode,"value":value,"fixedValue":sizing::authored(node,axis),"resolvedValue":resolved,"canHug":hug.is_ok(),"canFill":fill.is_ok()});
+            // `value` is the effective current size: for fixed axes a bound
+            // variable overrides the authored scalar, matching resolvedValue.
+            let value = sizes.values[&(node_id, axis)];
+            let mut info = json!({"mode":current_mode,"value":value,"fixedValue":sizing::authored(node,axis),"resolvedValue":sizes.values[&(node_id,axis)],"canHug":hug.is_ok(),"canFill":fill.is_ok()});
             if let Some(reason) = &unavailable {
                 info["unavailableReason"] = json!(reason);
             }
@@ -106,7 +127,7 @@ impl DesignEngine {
         cmd: &Command,
         ctx: Option<&TaskContext>,
     ) -> Result<CommandResult, EngineError> {
-        let boxes = layout::evaluate(&self.state)?;
+        let boxes = layout::evaluate(&variables::effective(&self.state))?;
         let root = &self.state.nodes[&1];
         let mut prism = prism_engine::PrismEngine::new(root.width as u32, root.height as u32);
         for b in boxes {
@@ -175,9 +196,19 @@ impl Engine for DesignEngine {
                 )?))
             }
             "evaluateLayout" => {
-                return Ok(CommandResult::read_only(
-                    json!({"boxes":layout::evaluate(&self.state)?}),
-                ))
+                return Ok(CommandResult::read_only(json!({
+                    "boxes": layout::evaluate(&variables::effective(&self.state))?
+                })))
+            }
+            "describeVariables" => {
+                return Ok(CommandResult::read_only(variables::describe(
+                    &self.state,
+                )?))
+            }
+            "listBindings" => {
+                return Ok(CommandResult::read_only(variables::list(
+                    &self.state, p,
+                )?))
             }
             "renderFrame" => return self.render(&cmd, None),
             _ => {}
@@ -414,7 +445,8 @@ impl Engine for DesignEngine {
                     && value.is_none()
                     && sizing::mode(&self.state.nodes[&node_id], axis) != SizeMode::Fixed
                 {
-                    Some(sizing::evaluate(&self.state)?.values[&(node_id, axis)])
+                    // Freeze captures the effective (binding-resolved) size.
+                    Some(sizing::evaluate(&variables::effective(&self.state))?.values[&(node_id, axis)])
                 } else {
                     value
                 };
@@ -507,6 +539,201 @@ impl Engine for DesignEngine {
                 for id in all {
                     next.nodes.remove(&id);
                 }
+                next.bindings.retain(|b| next.nodes.contains_key(&b.node_id));
+            }
+            "defineMode" => {
+                fields(p, &["id", "name"])?;
+                if next.modes.len() >= MAX_MODES {
+                    return Err(bad("mode budget exceeded"));
+                }
+                let name = text_field(p, "name")?;
+                let mode_id = match p.get("id") {
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("mode id must be a string"))?
+                        .to_string(),
+                    None => generated_id("mode", &|c| {
+                        next.modes.iter().any(|m| m.id == c)
+                    })?,
+                };
+                next.modes.push(Mode {
+                    id: mode_id,
+                    name: name.into(),
+                });
+            }
+            "renameMode" => {
+                fields(p, &["id", "name"])?;
+                let mode_id = text_field(p, "id")?;
+                let name = text_field(p, "name")?;
+                let mode = next
+                    .modes
+                    .iter_mut()
+                    .find(|m| m.id == mode_id)
+                    .ok_or_else(|| bad("unknown mode"))?;
+                mode.name = name.into();
+            }
+            "removeMode" => {
+                fields(p, &["id"])?;
+                let mode_id = text_field(p, "id")?;
+                let before = next.modes.len();
+                next.modes.retain(|m| m.id != mode_id);
+                if next.modes.len() == before {
+                    return Err(bad("unknown mode"));
+                }
+                for v in next.variables.values_mut() {
+                    v.values.remove(mode_id);
+                }
+                if next.active_mode.as_deref() == Some(mode_id) {
+                    next.active_mode = next.modes.first().map(|m| m.id.clone());
+                }
+            }
+            "defineVariable" => {
+                fields(p, &["id", "name", "type", "values"])?;
+                if next.variables.len() >= MAX_VARIABLES {
+                    return Err(bad("variable budget exceeded"));
+                }
+                let name = text_field(p, "name")?;
+                let var_type: VarType = serde_json::from_value(
+                    p.get("type")
+                        .cloned()
+                        .ok_or_else(|| bad("variable type required"))?,
+                )?;
+                let values: BTreeMap<String, VarValue> = match p.get("values") {
+                    Some(v) => serde_json::from_value(v.clone())?,
+                    None => BTreeMap::new(),
+                };
+                let variable_id = match p.get("id") {
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("variable id must be a string"))?
+                        .to_string(),
+                    None => generated_id("var", &|c| {
+                        next.variables.contains_key(c)
+                    })?,
+                };
+                if next.variables.contains_key(&variable_id) {
+                    return Err(bad("variable already exists"));
+                }
+                next.variables.insert(
+                    variable_id.clone(),
+                    Variable {
+                        id: variable_id,
+                        name: name.into(),
+                        var_type,
+                        values,
+                    },
+                );
+            }
+            "setVariableValue" => {
+                fields(p, &["id", "mode", "value"])?;
+                let variable_id = text_field(p, "id")?;
+                let mode = text_field(p, "mode")?;
+                let value: VarValue = serde_json::from_value(
+                    p.get("value")
+                        .cloned()
+                        .ok_or_else(|| bad("variable value required"))?,
+                )?;
+                if !next.modes.iter().any(|m| m.id == mode) {
+                    return Err(bad("unknown mode"));
+                }
+                let variable = next
+                    .variables
+                    .get_mut(variable_id)
+                    .ok_or_else(|| bad("unknown variable"))?;
+                variable.values.insert(mode.into(), value);
+            }
+            "removeVariable" => {
+                fields(p, &["id"])?;
+                let variable_id = text_field(p, "id")?;
+                if next.variables.remove(variable_id).is_none() {
+                    return Err(bad("unknown variable"));
+                }
+                next.bindings.retain(|b| b.variable_id != variable_id);
+            }
+            "setActiveMode" => {
+                fields(p, &["id"])?;
+                let mode_id = text_field(p, "id")?;
+                if !next.modes.iter().any(|m| m.id == mode_id) {
+                    return Err(bad("unknown mode"));
+                }
+                next.active_mode = Some(mode_id.into());
+            }
+            "bindVariable" => {
+                fields(p, &["node_id", "path", "variable_id"])?;
+                let node_id = id(p, "node_id")?;
+                let path: BindPath = serde_json::from_value(
+                    p.get("path")
+                        .cloned()
+                        .ok_or_else(|| bad("binding path required"))?,
+                )?;
+                let variable_id = text_field(p, "variable_id")?;
+                next.editable(node_id, false)?;
+                let node = next
+                    .nodes
+                    .get(&node_id)
+                    .ok_or_else(|| bad("unknown node"))?;
+                let variable = next
+                    .variables
+                    .get(variable_id)
+                    .ok_or_else(|| bad("unknown variable"))?;
+                if variable.var_type != VarType::Number {
+                    return Err(bad("only number variables can bind properties"));
+                }
+                match path {
+                    BindPath::Gap
+                    | BindPath::PaddingTop
+                    | BindPath::PaddingRight
+                    | BindPath::PaddingBottom
+                    | BindPath::PaddingLeft
+                        if node.kind != Kind::Frame =>
+                    {
+                        return Err(bad("layout bindings require a frame"));
+                    }
+                    BindPath::X | BindPath::Y => {
+                        if node_id == 1 {
+                            return Err(bad("root position is fixed"));
+                        }
+                        if let Some(parent) = next.parent(node_id) {
+                            if next.nodes[&parent].layout.is_some() {
+                                return Err(bad(
+                                    "flow layout positions children; x/y bindings need absolute placement",
+                                ));
+                            }
+                        }
+                    }
+                    BindPath::Width if node.sizing.x != SizeMode::Fixed => {
+                        return Err(bad("width bindings require fixed x sizing"));
+                    }
+                    BindPath::Height if node.sizing.y != SizeMode::Fixed => {
+                        return Err(bad("height bindings require fixed y sizing"));
+                    }
+                    _ => {}
+                }
+                if let Some(binding) = next
+                    .bindings
+                    .iter_mut()
+                    .find(|b| b.node_id == node_id && b.path == path)
+                {
+                    binding.variable_id = variable_id.into();
+                } else {
+                    next.bindings.push(Binding {
+                        node_id,
+                        path,
+                        variable_id: variable_id.into(),
+                    });
+                    next.bindings.sort();
+                }
+            }
+            "unbindVariable" => {
+                fields(p, &["node_id", "path"])?;
+                let node_id = id(p, "node_id")?;
+                let path: BindPath = serde_json::from_value(
+                    p.get("path")
+                        .cloned()
+                        .ok_or_else(|| bad("binding path required"))?,
+                )?;
+                next.bindings
+                    .retain(|b| !(b.node_id == node_id && b.path == path));
             }
             _ => return Err(EngineError::unsupported("unsupported design operation")),
         }

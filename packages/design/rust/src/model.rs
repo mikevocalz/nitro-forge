@@ -10,6 +10,23 @@ pub const SAFE_ID: u64 = 9_007_199_254_740_991;
 pub const MAX_TEXT_BYTES: usize = 64 * 1024;
 /// UTF-8 byte cap for the text font family name.
 pub const MAX_FONT_FAMILY_BYTES: usize = 256;
+/// UTF-8 byte cap for variable and mode identifiers.
+pub const MAX_SYMBOL_ID_BYTES: usize = 128;
+/// UTF-8 byte cap for variable and mode display names.
+pub const MAX_SYMBOL_NAME_BYTES: usize = 256;
+/// UTF-8 byte cap for string variable values (mirrors the UI field cap).
+pub const MAX_STRING_VALUE_BYTES: usize = 64 * 1024;
+/// Maximum absolute magnitude admitted for number variable literals.
+pub const MAX_VARIABLE_NUMBER: f64 = 1e9;
+/// Bound on stored design variables.
+pub const MAX_VARIABLES: usize = 1024;
+/// Bound on stored modes.
+pub const MAX_MODES: usize = 128;
+/// Bound on node property bindings.
+pub const MAX_BINDINGS: usize = 4096;
+/// Shared hop budget for whole-document alias validation; exceeding it
+/// rejects the candidate so hostile snapshots cannot force unbounded walks.
+pub const MAX_ALIAS_HOPS: usize = 1_000_000;
 pub fn bad(s: &str) -> EngineError {
     EngineError::validation(s)
 }
@@ -181,6 +198,153 @@ impl Node {
         }
     }
 }
+/// Declared variable type; every per-mode value must resolve to this type.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VarType {
+    Number,
+    String,
+    Boolean,
+}
+/// Per-mode variable value: a typed literal or an alias to another variable.
+/// Serialized `{kind:"number"|"string"|"boolean"|"alias", ...}` mirroring the
+/// NYC-Tron `DesignVariableValue` contract (engine fields are snake_case).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum VarValue {
+    Number { value: f64 },
+    String { value: String },
+    Boolean { value: bool },
+    Alias { variable_id: String },
+}
+/// A fully resolved literal; aliases never appear here.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Literal {
+    Number { value: f64 },
+    String { value: String },
+    Boolean { value: bool },
+}
+/// Closed set of node properties a variable may bind. Every path resolves to
+/// a single number at read/render time; bindings never bake into nodes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BindPath {
+    FillR,
+    FillG,
+    FillB,
+    FillA,
+    Gap,
+    PaddingTop,
+    PaddingRight,
+    PaddingBottom,
+    PaddingLeft,
+    X,
+    Y,
+    Width,
+    Height,
+}
+/// A named collection of per-mode values. `values` is sparse: a variable may
+/// legitimately have no value in some modes.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Variable {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub var_type: VarType,
+    #[serde(default)]
+    pub values: BTreeMap<String, VarValue>,
+}
+/// Named value collection switch; at most [`MAX_MODES`] are stored.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Mode {
+    pub id: String,
+    pub name: String,
+}
+/// Binds one node property path to a number variable. Stored on `State`, not
+/// on the node, so resolution stays a read/render-time overlay.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Binding {
+    pub node_id: u64,
+    pub path: BindPath,
+    pub variable_id: String,
+}
+fn valid_symbol_id(s: &str) -> bool {
+    !s.is_empty() && s.len() <= MAX_SYMBOL_ID_BYTES && !s.chars().any(char::is_control)
+}
+fn valid_symbol_name(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= MAX_SYMBOL_NAME_BYTES
+        && !s.chars().any(char::is_control)
+}
+fn valid_number(v: f64) -> bool {
+    v.is_finite() && v.abs() <= MAX_VARIABLE_NUMBER
+}
+/// Resolve a variable's value in `mode`, following alias chains. Mirrors the
+/// NYC-Tron `validateAlias` contract: every hop target must exist, share the
+/// root variable's type, and carry a value in this mode; the chain must end
+/// in a literal of the root type. Chain length is bounded by the variable
+/// count because a repeated id is a cycle.
+pub fn resolve_mode_value(
+    s: &State,
+    variable: &Variable,
+    mode: &str,
+) -> Result<Literal, EngineError> {
+    let mut seen = BTreeSet::from([variable.id.clone()]);
+    let mut current_var = variable;
+    let mut current = variable
+        .values
+        .get(mode)
+        .ok_or_else(|| bad("variable has no value in this mode"))?;
+    loop {
+        match current {
+            VarValue::Number { value } if valid_number(*value) => {
+                return if current_var.var_type == VarType::Number {
+                    Ok(Literal::Number { value: *value })
+                } else {
+                    Err(bad("variable literal kind does not match its type"))
+                };
+            }
+            VarValue::String { value } if value.len() <= MAX_STRING_VALUE_BYTES => {
+                return if current_var.var_type == VarType::String {
+                    Ok(Literal::String {
+                        value: value.clone(),
+                    })
+                } else {
+                    Err(bad("variable literal kind does not match its type"))
+                };
+            }
+            VarValue::Boolean { value } => {
+                return if current_var.var_type == VarType::Boolean {
+                    Ok(Literal::Boolean { value: *value })
+                } else {
+                    Err(bad("variable literal kind does not match its type"))
+                };
+            }
+            VarValue::Alias { variable_id } => {
+                if !valid_symbol_id(variable_id) || !seen.insert(variable_id.clone()) {
+                    return Err(bad("variable aliases must not form a cycle"));
+                }
+                let target = s
+                    .variables
+                    .get(variable_id)
+                    .ok_or_else(|| bad("alias target does not exist"))?;
+                if target.var_type != current_var.var_type {
+                    return Err(bad("alias target must have the same variable type"));
+                }
+                current = target
+                    .values
+                    .get(mode)
+                    .ok_or_else(|| bad("alias has no value in this mode"))?;
+                current_var = target;
+            }
+            _ => return Err(bad("variable value exceeds bounds")),
+        }
+    }
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct State {
@@ -189,6 +353,16 @@ pub struct State {
     pub title: String,
     pub next_id: u64,
     pub nodes: BTreeMap<u64, Arc<Node>>,
+    /// Design variables keyed by id; empty collections are omitted from
+    /// snapshots so schema:1-only documents stay byte-identical.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub variables: BTreeMap<String, Variable>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modes: Vec<Mode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bindings: Vec<Binding>,
 }
 impl Default for State {
     fn default() -> Self {
@@ -198,6 +372,10 @@ impl Default for State {
             title: "Untitled".into(),
             next_id: 2,
             nodes: BTreeMap::from([(1, Arc::new(Node::frame(1, 640., 360.)))]),
+            variables: BTreeMap::new(),
+            modes: vec![],
+            active_mode: None,
+            bindings: vec![],
         }
     }
 }
@@ -231,13 +409,170 @@ impl State {
         ids
     }
 }
-/// Schema-2 features (currently text nodes) require the versioned snapshot
-/// wrapper so schema:1 documents stay byte-identical and old readers fail
-/// closed on the unknown `kind:"text"` node variant or `text` field.
+/// Schema-2 features (text nodes, variables/modes/bindings) require the
+/// versioned snapshot wrapper so schema:1 documents stay byte-identical and
+/// old readers fail closed on the unknown `kind:"text"` node variant, `text`
+/// field, or the new state collections.
 pub fn requires_wrapper(s: &State) -> bool {
     s.nodes
         .values()
         .any(|n| n.kind == Kind::Text || n.text.is_some())
+        || !s.variables.is_empty()
+        || !s.modes.is_empty()
+        || s.active_mode.is_some()
+        || !s.bindings.is_empty()
+}
+/// Whole-document variable/mode/binding validation. Alias chains are checked
+/// per stored (variable, mode) entry with a shared hop budget and a memo of
+/// already-proven (variable, mode) resolutions so dense documents stay
+/// linear-ish; exceeding [`MAX_ALIAS_HOPS`] rejects the candidate.
+fn validate_alias_entry(
+    s: &State,
+    root: &Variable,
+    mode: &str,
+    memo: &mut BTreeMap<(String, String), ()>,
+    hops: &mut usize,
+) -> Result<(), EngineError> {
+    let mut seen = BTreeSet::from([root.id.clone()]);
+    let mut visited = vec![root.id.clone()];
+    let mut current_var = root;
+    let mut current = current_var
+        .values
+        .get(mode)
+        .ok_or_else(|| bad("variable has no value in this mode"))?;
+    loop {
+        *hops = hops.checked_sub(1).ok_or_else(|| {
+            bad("alias validation budget exceeded")
+        })?;
+        match current {
+            VarValue::Number { value } if valid_number(*value) => {
+                if current_var.var_type != VarType::Number {
+                    return Err(bad("variable literal kind does not match its type"));
+                }
+                break;
+            }
+            VarValue::String { value } if value.len() <= MAX_STRING_VALUE_BYTES => {
+                if current_var.var_type != VarType::String {
+                    return Err(bad("variable literal kind does not match its type"));
+                }
+                break;
+            }
+            VarValue::Boolean { value: _ } => {
+                if current_var.var_type != VarType::Boolean {
+                    return Err(bad("variable literal kind does not match its type"));
+                }
+                break;
+            }
+            VarValue::Alias { variable_id } => {
+                if !valid_symbol_id(variable_id) || !seen.insert(variable_id.clone()) {
+                    return Err(bad("variable aliases must not form a cycle"));
+                }
+                let target = s
+                    .variables
+                    .get(variable_id)
+                    .ok_or_else(|| bad("alias target does not exist"))?;
+                if target.var_type != current_var.var_type {
+                    return Err(bad("alias target must have the same variable type"));
+                }
+                if memo.contains_key(&(variable_id.clone(), mode.to_string())) {
+                    break;
+                }
+                current = target
+                    .values
+                    .get(mode)
+                    .ok_or_else(|| bad("alias has no value in this mode"))?;
+                current_var = target;
+                visited.push(variable_id.clone());
+            }
+            _ => return Err(bad("variable value exceeds bounds")),
+        }
+    }
+    for id in visited {
+        memo.insert((id, mode.to_string()), ());
+    }
+    Ok(())
+}
+pub fn validate_variables(s: &State) -> Result<(), EngineError> {
+    if s.variables.len() > MAX_VARIABLES
+        || s.modes.len() > MAX_MODES
+        || s.bindings.len() > MAX_BINDINGS
+    {
+        return Err(bad("variable, mode or binding budget exceeded"));
+    }
+    let mut mode_ids = BTreeSet::new();
+    for m in &s.modes {
+        if !valid_symbol_id(&m.id) || !valid_symbol_name(&m.name) || !mode_ids.insert(&m.id) {
+            return Err(bad("invalid or duplicate mode"));
+        }
+    }
+    if let Some(active) = &s.active_mode {
+        if !mode_ids.contains(active) {
+            return Err(bad("active mode does not exist"));
+        }
+    }
+    let mut memo = BTreeMap::new();
+    let mut hops = MAX_ALIAS_HOPS;
+    for (key, v) in &s.variables {
+        if key != &v.id || !valid_symbol_id(&v.id) || !valid_symbol_name(&v.name) {
+            return Err(bad("invalid variable identity"));
+        }
+        for (mode, value) in &v.values {
+            if !mode_ids.contains(mode) {
+                return Err(bad("variable value references unknown mode"));
+            }
+            match value {
+                VarValue::Alias { variable_id } if !valid_symbol_id(variable_id) => {
+                    return Err(bad("invalid alias target"));
+                }
+                VarValue::Number { value } if !valid_number(*value) => {
+                    return Err(bad("variable number out of bounds"));
+                }
+                VarValue::String { value } if value.len() > MAX_STRING_VALUE_BYTES => {
+                    return Err(bad("variable string out of bounds"));
+                }
+                _ => {}
+            }
+            validate_alias_entry(s, v, mode, &mut memo, &mut hops)?;
+        }
+    }
+    let mut seen = BTreeSet::new();
+    for b in &s.bindings {
+        if !seen.insert((b.node_id, b.path)) {
+            return Err(bad("duplicate variable binding"));
+        }
+        let n = s
+            .nodes
+            .get(&b.node_id)
+            .ok_or_else(|| bad("binding references unknown node"))?;
+        let v = s
+            .variables
+            .get(&b.variable_id)
+            .ok_or_else(|| bad("binding references unknown variable"))?;
+        if v.var_type != VarType::Number {
+            return Err(bad("only number variables can bind properties"));
+        }
+        // Context-dependent rules (fixed sizing for width/height, absolute
+        // placement for x/y) are enforced at bind time only; a later layout or
+        // sizing change leaves the binding dormant rather than invalid.
+        let applicable = match b.path {
+            BindPath::FillR
+            | BindPath::FillG
+            | BindPath::FillB
+            | BindPath::FillA
+            | BindPath::Width
+            | BindPath::Height => true,
+            BindPath::Gap
+            | BindPath::PaddingTop
+            | BindPath::PaddingRight
+            | BindPath::PaddingBottom
+            | BindPath::PaddingLeft => n.kind == Kind::Frame,
+            BindPath::X | BindPath::Y => b.node_id != 1,
+        };
+        if !applicable {
+            return Err(bad("binding path is not applicable to this node"));
+        }
+    }
+    Ok(())
 }
 pub fn validate(s: &State) -> Result<(), EngineError> {
     if s.kind != "design"
@@ -314,6 +649,7 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
     if visited.len() != s.nodes.len() {
         return Err(bad("unreachable node"));
     }
+    validate_variables(s)?;
     if serde_json::to_vec(s)?.len() > MAX_BYTES {
         return Err(bad("design encoded state exceeds 8 MiB"));
     }
