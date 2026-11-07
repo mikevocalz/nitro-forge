@@ -879,3 +879,36 @@ pitch-engine` 85 passed (8 new data tests), `pnpm --filter
 chart/table cases), package typecheck clean, `cargo build -p nf-cli`
 clean. No chart/table rendering, NYC-Tron slide-model kind extension,
 formula evaluation or native target run is claimed.
+
+## P14 Pitch slideScene source checkpoint (2026-11-07)
+
+Pitch slides now expose `slideScene`, the per-slide STRUCTURED scene
+read (P14 slice 12): `{slide,t_s?,click_times?}` returns the slide
+chrome (id, deck index, background, deck size, layout, layout binding,
+notes, ink count, transition, timing), the complete bottom-to-top
+object inventory with stored geometry and every per-kind payload
+(`text`/`fill`/`stroke`/`src`, connector spec plus the same `resolved`
+polyline `describe` emits, `media`/`chart`/`table` specs, `morph_name`),
+the verbatim `animations` program, and, only when `t_s` is supplied,
+per-object `frame` entries identical to `slideAt` output plus the
+resolved `schedule`. The frame path reuses the `slideAt` evaluator
+verbatim, so geometry, opacity and pending-click semantics cannot
+drift; `click_times` without `t_s` rejects, as do unknown slide ids,
+non-finite `t_s` and unordered click histories. The op is read-only: no
+journal entry, no `document:changed`, no state change, and no snapshot
+schema bump (read ops never touch durable state). HONESTY BOUNDARY:
+structured description only, the engine has no rasterizer and returns
+no pixels or thumbnail bitmap; hosts render filmstrip thumbnails and
+slide canvases from this data (the pinned NYC-Tron
+`SlideSummary`/`SlideObject` filmstrip contract is a projection of
+these fields). A separate `slideThumbnail` op was considered and
+rejected: it would duplicate this payload, and hosts that need only a
+summary can project the fields they need. Deferred: pixel thumbnails
+(host-side rendering, e.g. via the existing Prism `flatten` path),
+ink stroke payloads inside the scene (`ink_count` reports presence;
+full strokes stay on `slideInk`/`describe`). Local evidence: `cargo
+test -p pitch-engine` 88 passed (3 new slideScene tests), `pnpm
+--filter @nitro-forge/pitch test` 45 passed across 11 files (3 new
+nf-cli scene cases), package typecheck clean, `cargo build -p nf-cli`
+clean. No pixel rendering, native target run or full P14 completion is
+claimed.
