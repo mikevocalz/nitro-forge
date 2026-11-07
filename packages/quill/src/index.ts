@@ -217,6 +217,8 @@ export interface SectionInfo {
  * A table block's location and dimensions as reported by `listTables`.
  * Tables are single `kind:"table"` blocks in the block stream; each cell
  * holds its own paragraph list (see `describeTable` for cell text).
+ * Block payloads may therefore report `kind: "table"` even though
+ * `BlockKind` does not include it — no input op can create one directly.
  * Bounds: rows 1..=64, cols 1..=26, at most 256 tables per document.
  */
 export interface TableInfo {

@@ -2525,7 +2525,7 @@ impl Engine for QuillEngine {
         };
         lists::validate(&state_blocks)?;
         validate_tables(&state_blocks)?;
-        for block in &state_blocks {
+        for block in all_blocks(&state_blocks) {
             for inline in &block.inlines {
                 if let Some(highlight) = &inline.style.highlight {
                     validate_highlight(highlight)?;

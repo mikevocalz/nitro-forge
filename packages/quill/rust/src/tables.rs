@@ -55,8 +55,10 @@ pub struct Table {
 /// Full table validation for restore and staged op results: the
 /// kind/payload invariant, dimension and cell-count bounds, per-cell block
 /// limits, the document-wide cell-block budget, and the no-nesting/no-list
-/// cell rules. Cell `style_id` references are checked separately by
-/// `validate_styles`, which walks cell blocks too.
+/// cell rules. Cell paragraphs are plain default-style only: a cell-block
+/// `style_id` is rejected here because no op can set one (`setCellText`
+/// builds `Block::empty` paragraphs and cell blocks are unreachable by
+/// `Pos`, so `setBlockStyle`/`removeStyle` never see them).
 pub fn validate_tables(blocks: &[Block]) -> Result<(), EngineError> {
     let mut tables = 0usize;
     let mut cell_blocks_total = 0usize;
@@ -124,6 +126,11 @@ fn validate_table(table: &Table, total: &mut usize) -> Result<(), EngineError> {
             if cb.list.is_some() {
                 return Err(EngineError::validation(
                     "list membership inside table cells is not supported",
+                ));
+            }
+            if cb.style_id.is_some() {
+                return Err(EngineError::validation(
+                    "named styles are not supported inside table cells",
                 ));
             }
         }
@@ -355,6 +362,12 @@ impl QuillEngine {
         if new == old {
             return Ok(Self::read_only(json!({ "ok": true })));
         }
+        // Re-validate the candidate before committing: a cell may grow to
+        // CELL_BLOCKS_MAX blocks, so repeated setCellText calls could push
+        // the document-wide cell-block budget past what restore accepts.
+        let mut candidate = self.blocks.clone();
+        candidate[index] = new.clone();
+        validate_tables(&candidate)?;
         self.blocks[index] = new.clone();
         self.record_undo(index, vec![old], vec![new], Collections::default());
         Ok(CommandResult::data(json!({ "ok": true })))
@@ -544,6 +557,47 @@ mod tests {
             assert!(e.apply(cmd("setCellText", payload.clone())).is_err(), "{payload}");
             assert_eq!(e.snapshot().unwrap(), before);
         }
+    }
+
+    #[test]
+    fn set_cell_text_enforces_document_cell_block_budget() {
+        // A max-size table starts at 1664 cell blocks (one empty paragraph
+        // per cell); each setCellText can grow a cell to CELL_BLOCKS_MAX
+        // blocks, so the op must re-validate the document-wide budget
+        // instead of committing a snapshot restore would reject.
+        let mut e = engine();
+        insert_table(&mut e, 0, TABLE_ROWS_MAX, TABLE_COLS_MAX);
+        let initial = TABLE_ROWS_MAX * TABLE_COLS_MAX;
+        let headroom = CELL_BLOCKS_TOTAL_MAX - initial;
+        let expected = headroom / (CELL_BLOCKS_MAX - 1);
+        let mut filled = 0usize;
+        let mut rejected = None;
+        for cell in 0..initial {
+            let payload = json!({
+                "block": 0,
+                "row": cell / TABLE_COLS_MAX,
+                "col": cell % TABLE_COLS_MAX,
+                // 64 '\n'-separated segments → 64 paragraph blocks.
+                "text": "a\n".repeat(CELL_BLOCKS_MAX - 1),
+            });
+            match e.apply(cmd("setCellText", payload)) {
+                Ok(_) => filled += 1,
+                Err(er) => {
+                    rejected = Some(er);
+                    break;
+                }
+            }
+        }
+        let er = rejected.expect("setCellText must eventually hit the cell-block budget");
+        assert_eq!(er.code, ErrorCode::Validation);
+        assert_eq!(filled, expected);
+        // The rejected write changed nothing: the target cell is still
+        // empty and the resulting snapshot restores cleanly.
+        let d = describe_table(&mut e, 0);
+        assert_eq!(d["cells"][filled / TABLE_COLS_MAX][filled % TABLE_COLS_MAX], "");
+        let bytes = e.snapshot().unwrap();
+        let mut r = engine();
+        r.restore(&bytes).unwrap();
     }
 
     #[test]
@@ -832,6 +886,22 @@ mod tests {
                 let mut v = value.clone();
                 let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
                 doc["blocks"][2]["table"]["rows"] = json!(0);
+                serde_json::to_value(v).unwrap()
+            },
+            // cell paragraph carrying a style_id (no op can set one)
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][2]["table"]["cells"][0]["blocks"][0]["style_id"] =
+                    json!("ghost");
+                serde_json::to_value(v).unwrap()
+            },
+            // out-of-range font_size on an inline inside a cell paragraph
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][2]["table"]["cells"][0]["blocks"][0]["inlines"] =
+                    json!([{"text":"x","style":{"font_size":2000}}]);
                 serde_json::to_value(v).unwrap()
             },
         ];
