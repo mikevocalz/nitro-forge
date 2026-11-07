@@ -219,6 +219,72 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("comments anchor ranges, track edits, persist, and resolve via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "hello world\nsecond");
+    await doc.addComment({
+      id: "c1",
+      from: { block: 0, offset: 0 },
+      to: { block: 0, offset: 5 },
+      author: "Ada",
+      body: "check this",
+    });
+    await doc.addComment({
+      id: "c2",
+      from: { block: 1, offset: 0 },
+      to: { block: 1, offset: 0 },
+      body: "point note",
+    });
+    const listed = await doc.listComments();
+    expect(listed.data.comments.map((c) => c.id)).toEqual(["c1", "c2"]);
+    expect(listed.data.comments[0]?.author).toBe("Ada");
+    expect(listed.data.comments[0]?.resolved).toBe(false);
+
+    // Edits re-anchor: insert before/at the range start keeps `from`
+    // left-gravity (new text lands inside), `to` shifts right.
+    await doc.insertText({ block: 0, offset: 0 }, "XX");
+    let c1 = (await doc.listComments()).data.comments[0]!;
+    expect(c1.from.offset).toBe(0);
+    expect(c1.to.offset).toBe(7);
+    // Insert exactly at `from` again: still inside, end moves again.
+    await doc.insertText({ block: 0, offset: 0 }, "!");
+    c1 = (await doc.listComments()).data.comments[0]!;
+    expect(c1.from.offset).toBe(0);
+    expect(c1.to.offset).toBe(8);
+
+    // Resolve/reopen and update round-trip; duplicate ids reject.
+    await doc.resolveComment("c1");
+    expect((await doc.listComments()).data.comments[0]?.resolved).toBe(true);
+    await doc.reopenComment("c1");
+    await doc.updateComment("c1", { body: "revised", author: null });
+    const updated = (await doc.listComments()).data.comments[0]!;
+    expect(updated.body).toBe("revised");
+    expect(updated.author).toBeNull();
+    await expect(
+      doc.addComment({
+        id: "c1",
+        from: { block: 0, offset: 0 },
+        to: { block: 0, offset: 1 },
+        body: "dup",
+      }),
+    ).rejects.toBeInstanceOf(EngineError);
+
+    // Snapshot keeps the schema:3 comments collection; anchors survive.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    const restored = (await re.listComments()).data.comments;
+    expect(restored).toHaveLength(2);
+    expect(restored[0]?.from.offset).toBe(0);
+    expect(restored[0]?.to.offset).toBe(8);
+    // Undo restores the comment list, not just the text.
+    await re.removeComment("c2");
+    expect((await re.listComments()).data.comments).toHaveLength(1);
+    expect(await re.undo()).toBe(true);
+    expect((await re.listComments()).data.comments).toHaveLength(2);
+    await re.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");
