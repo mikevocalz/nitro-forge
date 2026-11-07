@@ -66,11 +66,13 @@ mod sort_ops;
 mod protection;
 mod sparkline_ops;
 mod validation_ops;
+mod view_ops;
 
 use chart_ops::ChartSpec;
 use conditional_ops::ConditionalRule;
 use filter_ops::FilterRule;
 use sparkline_ops::SparklineSpec;
+use view_ops::SheetView;
 use format_ops::CellFormat;
 use validation_ops::ValidationRule;
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator};
@@ -111,6 +113,11 @@ pub struct Sheet {
     pub tone: Option<String>,
     #[serde(default)]
     pub is_protected: bool,
+    /// Durable id of the sheet view last applied via `setSheetView`
+    /// (schema:6); `None` when no view selection is recorded. Restore
+    /// requires it to reference a view bound to this sheet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_view: Option<u64>,
 }
 
 /// Workbook-level named range (see `name_ops` for the model decision):
@@ -161,6 +168,12 @@ struct Workbook {
     /// Next id handed out by `setSparkline`.
     #[serde(default)]
     next_sparkline: u64,
+    /// Durable named sheet views; empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    views: Vec<SheetView>,
+    /// Next id handed out by `saveSheetView`.
+    #[serde(default)]
+    next_view: u64,
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
@@ -194,6 +207,7 @@ fn blank_workbook() -> Workbook {
             formats: BTreeMap::new(),
             tone: None,
             is_protected: false,
+            active_view: None,
         }],
         active: 0,
         names: Vec::new(),
@@ -207,6 +221,8 @@ fn blank_workbook() -> Workbook {
         next_chart: 1,
         sparklines: Vec::new(),
         next_sparkline: 1,
+        views: Vec::new(),
+        next_view: 1,
     }
 }
 
@@ -262,13 +278,14 @@ enum UndoEntry {
     /// A sheet was removed; undo re-inserts it at `index`, restores `active`
     /// and re-adds `dropped_names`/`dropped_validations`/
     /// `dropped_conditional_formats`/`dropped_filters`/`dropped_charts`/
-    /// `dropped_sparklines` (names, validation rules, conditional rules,
-    /// filter rules, charts and sparkline specs bound to the removed sheet
-    /// are cascade-dropped on removal). Re-admission skips entries whose
-    /// case-insensitive name twin already exists, that would exceed the
-    /// table caps, or (for rules/specs) that no longer satisfy the
-    /// stored-entry invariants, keeping `doc` inside the invariants
-    /// `restore` enforces.
+    /// `dropped_sparklines`/`dropped_views` (names, validation rules,
+    /// conditional rules, filter rules, charts, sparkline specs and named
+    /// views bound to the removed sheet are cascade-dropped on removal).
+    /// Re-admission skips entries whose case-insensitive name twin already
+    /// exists, that would exceed the table caps, or (for rules/specs) that
+    /// no longer satisfy the stored-entry invariants, keeping `doc` inside
+    /// the invariants `restore` enforces; `active_view` references left
+    /// dangling by skipped views are swept to `None`.
     RemoveSheet {
         index: usize,
         sheet: Sheet,
@@ -279,6 +296,7 @@ enum UndoEntry {
         dropped_filters: Vec<FilterRule>,
         dropped_charts: Vec<ChartSpec>,
         dropped_sparklines: Vec<SparklineSpec>,
+        dropped_views: Vec<SheetView>,
     },
     RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
@@ -431,8 +449,8 @@ impl TallyEngine {
 
     /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet` and
     /// cascade-dropping names, validation rules, conditional rules, filter
-    /// rules, charts and sparkline specs bound to the removed sheet id.
-    /// Returns the removed sheet and the dropped entries.
+    /// rules, charts, sparkline specs and named views bound to the removed
+    /// sheet id. Returns the removed sheet and the dropped entries.
     fn remove_sheet_at(
         &mut self,
         idx: usize,
@@ -444,6 +462,7 @@ impl TallyEngine {
         Vec<FilterRule>,
         Vec<ChartSpec>,
         Vec<SparklineSpec>,
+        Vec<SheetView>,
     ) {
         let removed = self.doc.sheets.remove(idx);
         let len = self.doc.sheets.len();
@@ -506,6 +525,15 @@ impl TallyEngine {
                 true
             }
         });
+        let mut dropped_views = Vec::new();
+        self.doc.views.retain(|v| {
+            if v.sheet == removed.id {
+                dropped_views.push(v.clone());
+                false
+            } else {
+                true
+            }
+        });
         (
             removed,
             dropped,
@@ -514,6 +542,7 @@ impl TallyEngine {
             dropped_filters,
             dropped_charts,
             dropped_sparklines,
+            dropped_views,
         )
     }
 
@@ -573,6 +602,7 @@ impl TallyEngine {
             formats: BTreeMap::new(),
             tone: None,
             is_protected: false,
+            active_view: None,
         };
         self.journal.record(UndoEntry::AddSheet { sheet_id: id });
         self.doc.next_sheet = next_id;
@@ -609,8 +639,8 @@ impl TallyEngine {
         if self.doc.sheets.len() <= 1 {
             return Err(EngineError::validation("workbook must keep at least one sheet"));
         }
-        // Names, validation rules, conditional rules, filter rules, charts
-        // and sparkline specs bound to the removed sheet are
+        // Names, validation rules, conditional rules, filter rules, charts,
+        // sparkline specs and named views bound to the removed sheet are
         // cascade-dropped; the undo entry carries them so undo/redo restore
         // them exactly.
         let sheet_id = self.doc.sheets[idx].id;
@@ -656,6 +686,13 @@ impl TallyEngine {
             .filter(|s| s.sheet == sheet_id)
             .cloned()
             .collect();
+        let dropped_views: Vec<SheetView> = self
+            .doc
+            .views
+            .iter()
+            .filter(|v| v.sheet == sheet_id)
+            .cloned()
+            .collect();
         let entry = UndoEntry::RemoveSheet {
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
@@ -666,6 +703,7 @@ impl TallyEngine {
             dropped_filters,
             dropped_charts,
             dropped_sparklines,
+            dropped_views,
         };
         self.journal.record(entry);
         self.remove_sheet_at(idx);
@@ -907,6 +945,7 @@ impl TallyEngine {
                             dropped_filters,
                             dropped_charts,
                             dropped_sparklines,
+                            dropped_views,
                         ) = self.remove_sheet_at(idx);
                         UndoEntry::RemoveSheet {
                             index: idx,
@@ -918,6 +957,7 @@ impl TallyEngine {
                             dropped_filters,
                             dropped_charts,
                             dropped_sparklines,
+                            dropped_views,
                         }
                     }
                     // Already gone — nothing changed; emit a no-op entry.
@@ -936,6 +976,7 @@ impl TallyEngine {
                 dropped_filters,
                 dropped_charts,
                 dropped_sparklines,
+                dropped_views,
             } => {
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
@@ -1007,6 +1048,34 @@ impl TallyEngine {
                 for s in dropped_sparklines {
                     if sparkline_ops::readd_ok(&self.doc, &s) {
                         self.doc.sparklines.push(s);
+                    }
+                }
+                // Named views cascade-dropped with the sheet come back
+                // under the same discipline: each is re-admitted only
+                // while it still satisfies the invariants `restore`
+                // enforces (existing sheet, unique id, per-sheet name
+                // free, under the cap, valid captured specs). A view
+                // redefined while its sheet was gone wins; the dropped
+                // entry is discarded.
+                for v in dropped_views {
+                    if view_ops::readd_ok(&self.doc, &v) {
+                        self.doc.views.push(v);
+                    }
+                }
+                // A re-admitted sheet restores its own `active_view`, but
+                // a view skipped above leaves the pointer dangling —
+                // sweep it so `doc` stays inside the invariants
+                // `restore` enforces.
+                for s in &mut self.doc.sheets {
+                    if let Some(av) = s.active_view {
+                        if !self
+                            .doc
+                            .views
+                            .iter()
+                            .any(|v| v.id == av && v.sheet == s.id)
+                        {
+                            s.active_view = None;
+                        }
                     }
                 }
                 UndoEntry::AddSheet { sheet_id }
@@ -1097,6 +1166,10 @@ impl Engine for TallyEngine {
             "setSparkline" => self.op_set_sparkline(p),
             "clearSparkline" => self.op_clear_sparkline(p),
             "listSparklines" => self.op_list_sparklines(p),
+            "saveSheetView" => self.op_save_sheet_view(p),
+            "setSheetView" => self.op_set_sheet_view(p),
+            "removeSheetView" => self.op_remove_sheet_view(p),
+            "listSheetViews" => self.op_list_sheet_views(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -1128,35 +1201,45 @@ impl Engine for TallyEngine {
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
         // Sheets with a tone, protection flag, stored formats, workbook
         // names, validation rules, conditional-format rules, filter rules,
-        // charts or sparkline specs carry durable fields added after the
-        // first release; older readers ignore unknown `Sheet`/`Workbook`
-        // fields, so wrap those documents and let old engines fail closed
-        // instead of silently discarding them. Plain workbooks keep the
-        // legacy payload shape.
+        // charts, sparkline specs or named views carry durable fields added
+        // after the first release; older readers ignore unknown
+        // `Sheet`/`Workbook` fields, so wrap those documents and let old
+        // engines fail closed instead of silently discarding them. Plain
+        // workbooks keep the legacy payload shape.
         // `Workbook` does not deny unknown fields, so each newer table bumps
         // the schema: documents carrying only validations emit schema:2,
         // documents carrying conditional rules emit schema:3 (which may
         // also carry validations), documents carrying filter rules emit
         // schema:4 (which may carry every earlier table), documents
         // carrying charts or sparklines emit schema:5 (which may carry
-        // every earlier table), and tone/protection/formats/names alone
-        // stay schema:1 — older readers reject the higher schemas rather
-        // than silently dropping rules/specs (see docs/ENGINE_OPS.md).
+        // every earlier table), documents carrying named views emit
+        // schema:6 (which may carry every earlier table), and
+        // tone/protection/formats/names alone stay schema:1 — older
+        // readers reject the higher schemas rather than silently dropping
+        // rules/specs (see docs/ENGINE_OPS.md).
         let has_validations = !self.doc.validations.is_empty();
         let has_conditional = !self.doc.conditional_formats.is_empty();
         let has_filters = !self.doc.filters.is_empty();
         let has_charts = !self.doc.charts.is_empty() || !self.doc.sparklines.is_empty();
+        // `active_view` selections ride inside `sheets`; they only exist
+        // alongside the views table, but counting them keeps the emit
+        // honest even for a hand-built in-memory document.
+        let has_views = !self.doc.views.is_empty()
+            || self.doc.sheets.iter().any(|s| s.active_view.is_some());
         let extended = self.doc.sheets.iter().any(|s| {
             s.tone.is_some() || s.is_protected || !s.formats.is_empty()
         }) || !self.doc.names.is_empty()
             || has_validations
             || has_conditional
             || has_filters
-            || has_charts;
+            || has_charts
+            || has_views;
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
-                schema: if has_charts {
+                schema: if has_views {
+                    6
+                } else if has_charts {
                     5
                 } else if has_filters {
                     4
@@ -1192,12 +1275,14 @@ impl Engine for TallyEngine {
             let wrapper: VersionedDoc = serde_json::from_value(value)?;
             // schema:2 (validations only), schema:3 (conditional rules,
             // possibly alongside validations), schema:4 (filter rules,
-            // possibly alongside every earlier table) and schema:5 (chart
+            // possibly alongside every earlier table), schema:5 (chart
             // objects and sparkline specs, possibly alongside every earlier
-            // table) are all honored; either table absent from a document
-            // deserializes to its serde default, so cross-version payloads
-            // never lose the other families' rules.
-            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5) {
+            // table) and schema:6 (named sheet views and `active_view`
+            // selections, possibly alongside every earlier table) are all
+            // honored; every table absent from a document deserializes to
+            // its serde default, so cross-version payloads never lose the
+            // other families' rules.
+            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5 | 6) {
                 return Err(EngineError::unsupported(
                     "unsupported Tally snapshot kind/schema",
                 ));
@@ -1209,11 +1294,20 @@ impl Engine for TallyEngine {
         }
         // Fail closed on crafted lower-version payloads smuggling newer
         // tables: each durable table restores only under the schema that
-        // introduced it — chart/sparkline specs need schema:5, filter
-        // rules schema:4, conditional rules schema:3, validations schema:2
-        // — and a bare (unwrapped) Workbook predates all four. Emit always
-        // stamps the highest table present, so honest payloads are
-        // unaffected; this only rejects hand-built downgrades.
+        // introduced it — named views and `active_view` selections need
+        // schema:6, chart/sparkline specs schema:5, filter rules schema:4,
+        // conditional rules schema:3, validations schema:2 — and a bare
+        // (unwrapped) Workbook predates all five. Emit always stamps the
+        // highest table present, so honest payloads are unaffected; this
+        // only rejects hand-built downgrades.
+        if (!doc.views.is_empty()
+            || doc.sheets.iter().any(|s| s.active_view.is_some()))
+            && snapshot_schema.is_none_or(|s| s < 6)
+        {
+            return Err(EngineError::serialization(
+                "sheet views require snapshot schema 6",
+            ));
+        }
         if (!doc.charts.is_empty() || !doc.sparklines.is_empty())
             && snapshot_schema.is_none_or(|s| s < 5)
         {
@@ -1600,6 +1694,93 @@ impl Engine for TallyEngine {
         }
         if doc.next_sparkline == 0 {
             doc.next_sparkline = 1;
+        }
+        // Named views get the same hostile-input treatment: bounded count,
+        // unique ids, existing sheet ids, legal names unique
+        // case-insensitively per sheet, bounded captured specs whose ranges
+        // are re-canonicalized and whose criteria/columns satisfy the
+        // op-level invariants, plus `active_view` selections that must
+        // reference a view bound to the same sheet.
+        if doc.views.len() > view_ops::MAX_VIEWS {
+            return Err(EngineError::serialization("too many sheet views"));
+        }
+        let mut seen_view_ids = std::collections::BTreeSet::new();
+        let mut seen_view_names = std::collections::BTreeSet::new();
+        for v in &mut doc.views {
+            if !seen_view_ids.insert(v.id) {
+                return Err(EngineError::serialization("duplicate sheet view id"));
+            }
+            if !doc.sheets.iter().any(|s| s.id == v.sheet) {
+                return Err(EngineError::serialization(
+                    "sheet view references a missing sheet",
+                ));
+            }
+            if !view_ops::valid_view_name(&v.name) {
+                return Err(EngineError::serialization("invalid sheet view name"));
+            }
+            // ASCII-case-insensitive like the op path's
+            // `eq_ignore_ascii_case` — non-ASCII case pairs stay distinct.
+            if !seen_view_names.insert((v.sheet, v.name.to_ascii_lowercase())) {
+                return Err(EngineError::serialization(
+                    "duplicate sheet view name on sheet",
+                ));
+            }
+            if v.filters.len() > view_ops::MAX_VIEW_FILTERS {
+                return Err(EngineError::serialization(
+                    "sheet view has too many captured filters",
+                ));
+            }
+            for f in &mut v.filters {
+                let coords = name_ops::parse_refers_to(&f.range)
+                    .map_err(|_| EngineError::serialization("invalid view filter range"))?;
+                if (coords.2 - coords.0 + 1) as u64 * (coords.3 - coords.1 + 1) as u64
+                    > MAX_GET_RANGE_CELLS
+                {
+                    return Err(EngineError::serialization(
+                        "view filter range exceeds 16384 cells",
+                    ));
+                }
+                f.range = name_ops::canonical_refers_to(coords);
+                if let Some(col) = &mut f.column {
+                    let idx = filter_ops::column_index(col)
+                        .filter(|&c| c >= coords.0 && c <= coords.2)
+                        .ok_or_else(|| {
+                            EngineError::serialization("invalid view filter column")
+                        })?;
+                    *col = filter_ops::column_name(idx);
+                }
+                if !formula::CriteriaMatcher::is_valid(&f.criteria) {
+                    return Err(EngineError::serialization(
+                        "invalid view filter criteria",
+                    ));
+                }
+            }
+            if !view_ops::stored_ok(v) {
+                return Err(EngineError::serialization("invalid sheet view"));
+            }
+        }
+        if let Some(max_id) = doc.views.iter().map(|v| v.id).max() {
+            if doc.next_view <= max_id {
+                doc.next_view = max_id.checked_add(1).ok_or_else(|| {
+                    EngineError::serialization("view id space exhausted")
+                })?;
+            }
+        }
+        if doc.next_view == 0 {
+            doc.next_view = 1;
+        }
+        for s in &doc.sheets {
+            if let Some(av) = s.active_view {
+                if !doc
+                    .views
+                    .iter()
+                    .any(|v| v.id == av && v.sheet == s.id)
+                {
+                    return Err(EngineError::serialization(
+                        "sheet active_view references a missing view",
+                    ));
+                }
+            }
         }
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
@@ -2019,6 +2200,7 @@ mod tests {
             formats: BTreeMap::new(),
             tone: None,
             is_protected: false,
+            active_view: None,
         }
     }
 
@@ -2051,6 +2233,7 @@ mod tests {
             dropped_filters: Vec::new(),
             dropped_charts: Vec::new(),
             dropped_sparklines: Vec::new(),
+            dropped_views: Vec::new(),
         });
         assert!(e.undo().unwrap());
         // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
@@ -2096,6 +2279,7 @@ mod tests {
             dropped_filters: Vec::new(),
             dropped_charts: Vec::new(),
             dropped_sparklines: Vec::new(),
+            dropped_views: Vec::new(),
         });
         assert!(e.undo().unwrap());
         assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);
@@ -2234,9 +2418,9 @@ mod tests {
             "active": 0
         });
         for wrapper in [
-            // wrong schema / wrong kind fail closed (schemas 1–5 are the
-            // accepted tally versions; 6 is beyond them)
-            json!({"kind":"tally","schema":6,"document":doc}),
+            // wrong schema / wrong kind fail closed (schemas 1–6 are the
+            // accepted tally versions; 7 is beyond them)
+            json!({"kind":"tally","schema":7,"document":doc}),
             json!({"kind":"quill","schema":1,"document":doc}),
             // unknown wrapper keys rejected by deny_unknown_fields
             json!({"kind":"tally","schema":1,"document":doc,"extra":true}),
@@ -2442,6 +2626,67 @@ mod tests {
         assert_eq!(d["filters"].as_array().unwrap().len(), 1);
         assert_eq!(d["charts"].as_array().unwrap().len(), 1);
         assert_eq!(d["sparklines"].as_array().unwrap().len(), 1);
+
+        // Views only → schema:6; restores with empty earlier tables, and
+        // the sheet's active_view selection survives.
+        let mut e = TallyEngine::new();
+        data(
+            &mut e,
+            "setFilter",
+            json!({"range":{"from":"A1","to":"A4"},"criteria":">1"}),
+        );
+        data(&mut e, "saveSheetView", json!({"name":"V"}));
+        data(&mut e, "setSheetView", json!({"view":1}));
+        let (schema, v) = snapshot_schema(&e);
+        assert_eq!(schema, Some(6));
+        assert_eq!(v["document"]["views"].as_array().unwrap().len(), 1);
+        assert_eq!(v["document"]["sheets"][0]["active_view"], json!(1));
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        let d = data(&mut e2, "describe", json!({}));
+        assert_eq!(d["views"].as_array().unwrap().len(), 1);
+        assert_eq!(d["sheets"][0]["active_view"], json!(1));
+        assert_eq!(d["filters"].as_array().unwrap().len(), 1);
+
+        // Views alongside every earlier table → still schema:6, all
+        // tables restore intact.
+        let mut e = TallyEngine::new();
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"B1","to":"B1"},"rule":{"kind":"list","values":["a"]}}),
+        );
+        data(
+            &mut e,
+            "setConditionalFormat",
+            json!({"range":{"from":"A1","to":"A1"},"rule":{"criteria":">1","format":{"bold":true}}}),
+        );
+        data(
+            &mut e,
+            "setFilter",
+            json!({"range":{"from":"A1","to":"A4"},"criteria":"*"}),
+        );
+        data(
+            &mut e,
+            "insertChart",
+            json!({"chart":{"kind":"column","range":{"from":"A1","to":"A4"}}}),
+        );
+        data(
+            &mut e,
+            "setSparkline",
+            json!({"cell":"C1","data":{"from":"A1","to":"A4"},"kind":"line"}),
+        );
+        data(&mut e, "saveSheetView", json!({"name":"All"}));
+        assert_eq!(snapshot_schema(&e).0, Some(6));
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        let d = data(&mut e2, "describe", json!({}));
+        assert_eq!(d["validations"].as_array().unwrap().len(), 1);
+        assert_eq!(d["conditional_formats"].as_array().unwrap().len(), 1);
+        assert_eq!(d["filters"].as_array().unwrap().len(), 1);
+        assert_eq!(d["charts"].as_array().unwrap().len(), 1);
+        assert_eq!(d["sparklines"].as_array().unwrap().len(), 1);
+        assert_eq!(d["views"].as_array().unwrap().len(), 1);
     }
 
     #[test]
@@ -2464,6 +2709,9 @@ mod tests {
         }]);
         let sparkline = json!([{
             "id":1,"sheet":0,"target":"C1","data":"A1:A4","kind":"line"
+        }]);
+        let view = json!([{
+            "id":1,"sheet":0,"name":"V","filters":[{"range":"A1:A4","criteria":">1"}]
         }]);
         let doc_with = |extra: Value| {
             let mut d = json!({
@@ -2504,6 +2752,15 @@ mod tests {
             json!({"kind":"tally","schema":4,"document":doc_with(json!({"sparklines":sparkline.clone()}))}),
             json!({"kind":"tally","schema":1,"document":doc_with(json!({"sparklines":sparkline.clone()}))}),
             doc_with(json!({"sparklines":sparkline.clone()})),
+            // Named views and active_view selections smuggled under
+            // schema:1–5 or a bare Workbook all fail closed — schema:6 is
+            // the minimum that introduced them.
+            json!({"kind":"tally","schema":5,"document":doc_with(json!({"views":view.clone()}))}),
+            json!({"kind":"tally","schema":4,"document":doc_with(json!({"views":view.clone()}))}),
+            json!({"kind":"tally","schema":1,"document":doc_with(json!({"views":view.clone()}))}),
+            doc_with(json!({"views":view.clone()})),
+            json!({"kind":"tally","schema":5,"document":doc_with(json!({"sheets":[{"id":0,"name":"S","cells":{},"active_view":1}]}))}),
+            doc_with(json!({"sheets":[{"id":0,"name":"S","cells":{},"active_view":1}]})),
         ] {
             let bytes = encode_envelope(&serde_json::to_vec(&payload).unwrap());
             assert!(e.restore(&bytes).is_err(), "accepted {payload}");
@@ -2516,6 +2773,7 @@ mod tests {
             (2u32, json!({"validations":validation})),
             (4u32, json!({"filters":filter})),
             (5u32, json!({"charts":chart,"sparklines":sparkline})),
+            (6u32, json!({"views":view})),
         ] {
             let payload = json!({
                 "kind":"tally","schema":schema,
