@@ -940,6 +940,9 @@ export class PitchDocument {
     if (clickTimes !== undefined && tS === undefined) {
       throw new RangeError("slideScene clickTimes requires tS");
     }
+    if (tS !== undefined && !Number.isFinite(tS)) {
+      throw new RangeError("slideScene tS must be finite");
+    }
     if (clickTimes && (clickTimes.length > 256 || clickTimes.some((time, index) =>
       !Number.isFinite(time) || time < 0 || time > 86400 || (index > 0 && time < clickTimes[index - 1]!)))) {
       throw new RangeError("Click times must be a bounded ordered slide-relative history");
