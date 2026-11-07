@@ -9,7 +9,7 @@ export interface MotionKey extends CurvePoint{id:number;interpolation:'hold'|'li
 export type MotionKeyInput=Omit<MotionKey,'id'>&{id?:number};
 export interface Transform{tx:number;ty:number;sx:number;sy:number;rotation:number;ox:number;oy:number}
 export interface Shape{kind:'rect'|'ellipse';x:number;y:number;w:number;h:number;fill:[number,number,number,number]}
-export type LayerKind='shape'|'raster'|'comp';
+export type LayerKind='shape'|'raster'|'comp'|'particles';
 /** The 13 W3C Compositing Level 1 blend modes Prism implements; `null`/`"normal"` is the default source-over. */
 export type MotionBlendMode='normal'|'multiply'|'screen'|'overlay'|'darken'|'lighten'|'color-dodge'|'color-burn'|'hard-light'|'soft-light'|'difference'|'exclusion'|'add';
 /** Track-matte modes: alpha/luma read the matte source's rendered subtree; inverted modes complement the derived mask. */
@@ -26,9 +26,15 @@ export type MotionEffect=
  |{kind:'contrast';amount:number}
  |{kind:'gaussian-blur';radius_px:number}
  |{kind:'fill';color:[number,number,number,number];opacity?:number};
-interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[];path?:MotionPath;path_progress?:number}
-/** Exactly one real content source; no placeholder shape for raster or comp layers. `comp` is the composition id a comp layer instantiates (0 is never a valid target). */
-export type MotionLayer=MotionLayerCommon&({shape:Shape;asset_id?:never;comp_id?:never}|{asset_id:number;shape?:never;comp_id?:never}|{comp_id:number;shape?:never;asset_id?:never});
+/** What each particle draws: a bounded axis-aligned shape (`rect`|`ellipse`, width/height in layer-local units before transform scale, 0<w,h<=512) or an existing raster `asset_id` stamped at natural size. */
+export type MotionSprite=
+ |{kind:'shape';shape:'rect'|'ellipse';width:number;height:number;fill:[number,number,number,number]}
+ |{kind:'asset';asset_id:number};
+/** Deterministic particle emitter on a `particles` layer (engine slice F). Particle `n` is born at `n/rate` seconds and lives `lifetime_s`; position is closed-form `spawn + v*tau + 0.5*gravity*tau^2` with per-particle attributes hashed from `seed` — no sim state, so any `time_s` reproduces identically. Bounds: rate 0..=8192 with rate*lifetime_s<=511 (<=512 alive sprites/emitter/frame), lifetime<=3600, speed<=1e5, spread<=360, speed/size jitter 0..=1, grow -0.9..=8, fade 0..=0.5, sprite dims<=512, spawn rect coords |.|<=1e7. `spawn` omitted = containing composition canvas mapped into layer space. At most 64 emitters per document and 512 summed alive sprites per composition. */
+export interface MotionEmitter{seed?:number;rate?:number;lifetime_s?:number;angle_deg?:number;spread_deg?:number;speed?:number;speed_jitter?:number;gravity?:[number,number];spawn?:{x:number;y:number;w:number;h:number};sprite:MotionSprite;size_jitter?:number;grow?:number;fade?:number}
+interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[];path?:MotionPath;path_progress?:number;emitter?:MotionEmitter}
+/** Exactly one real content source; no placeholder shape for raster or comp layers. `comp` is the composition id a comp layer instantiates (0 is never a valid target). Particles layers carry only the optional `emitter` spec. */
+export type MotionLayer=MotionLayerCommon&({shape:Shape;asset_id?:never;comp_id?:never;emitter?:never}|{asset_id:number;shape?:never;comp_id?:never;emitter?:never}|{comp_id:number;shape?:never;asset_id?:never;emitter?:never}|{emitter?:MotionEmitter;shape?:never;asset_id?:never;comp_id?:never});
 export const MOTION_RASTER_FORMAT='rgba8-straight-srgb' as const;
 export interface MotionRasterAsset{readonly id:number;readonly width:number;readonly height:number;readonly format:typeof MOTION_RASTER_FORMAT;readonly pixels_b64:string}
 export interface CompositionSettings{title:string;width:number;height:number;duration_s:number;frame_rate:{num:number;den:number}}
@@ -71,6 +77,10 @@ export class MotionDocument{
  setLayerMatte(layer:number,matte:MotionMatteInput|null){return this.document.apply<{ok:boolean}>('setLayerMatte',{layer,matte});}
  /** Replace the layer's effect stack (full replace, at most 16); null or [] clears. Effects run on the layer's rendered pixels after its transform and before opacity/blend/clip/matte. */
  setLayerEffects(layer:number,effects:readonly MotionEffect[]|null){return this.document.apply<{ok:boolean}>('setLayerEffects',{layer,effects});}
+ /** Create a deterministic particle-emitter layer (empty until `setParticleEmitter`); `comp` optionally targets a nested composition. */
+ addParticlesLayer(name?:string,comp?:number){return this.document.apply<{layer_id:number}>('addParticlesLayer',{...(name===undefined?{}:{name}),...(comp===undefined?{}:{comp})});}
+ /** Attach/replace/clear the layer's particle emitter; null clears to an empty particles layer. Requires a `particles` kind layer. Full-spec replace, validated engine-side. */
+ setParticleEmitter(layer:number,emitter:MotionEmitter|null){return this.document.apply<{ok:boolean}>('setParticleEmitter',{layer,emitter});}
  /** Move a layer to another composition at `index`; comp 0 selects the root. Cross-comp moves clear transform-parent links. */
  reparentLayer(layer:number,comp:number,index:number){return this.document.apply<{ok:boolean}>('reparentLayer',{layer,comp,index});}
  /** Attach/replace/clear the layer's motion path; null clears the path, its progress base and any `path_progress` curve atomically. Animate position along it with `setPropertyKeys(layer,'path_progress',...)` keys in 0..=1; the sampled offset adds to tx/ty and `auto_orient` adds the tangent angle to rotation. */

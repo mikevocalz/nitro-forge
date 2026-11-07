@@ -2,10 +2,12 @@
 mod assets;
 mod curve;
 mod effects;
+mod particles;
 mod path;
 use assets::RasterAsset;
 use curve::{evaluate, Key};
 use effects::{apply_effects, LayerEffect};
+use particles::{ParticleEmitter, ParticleSprite};
 use path::MotionPath;
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -196,6 +198,9 @@ enum LayerKind {
     Shape,
     Raster,
     Comp,
+    /// Deterministic particle emitter layer (slice F); content is the
+    /// optional `emitter` spec, rasterized per frame with no sim state.
+    Particles,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -244,6 +249,11 @@ struct Layer {
     /// identically to pre-E snapshots.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     path: Option<MotionPath>,
+    /// Deterministic particle emitter (slice F), present only on
+    /// `kind:"particles"` layers; `None` renders an empty layer.
+    /// Additive serde default keeps schema at 2.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    emitter: Option<ParticleEmitter>,
     /// Authored base arc-length progress along `path` (0..=1); a
     /// `path_progress` curve overrides it at evaluation. Validate rejects
     /// nonzero values and `path_progress` curves when `path` is absent.
@@ -586,7 +596,8 @@ fn validate(s: &State) -> Result<(), EngineError> {
     // Pass 1: globally unique layer/key identities, per-comp id sets, budgets.
     let (mut ids, mut keys) = (BTreeSet::new(), BTreeSet::new());
     let mut comp_members: BTreeMap<u64, BTreeMap<u64, &Layer>> = BTreeMap::new();
-    let (mut total_layers, mut curves, mut count) = (0usize, 0usize, 0usize);
+    let (mut total_layers, mut curves, mut count, mut emitters) =
+        (0usize, 0usize, 0usize, 0usize);
     for &(key, _, _, _, layers) in &views {
         let members = comp_members.entry(key).or_default();
         for l in layers {
@@ -599,21 +610,33 @@ fn validate(s: &State) -> Result<(), EngineError> {
                 return Err(bad("invalid layer identity"));
             }
             total_layers += 1;
+            if l.emitter.is_some() {
+                emitters += 1;
+            }
         }
     }
     if total_layers > 128 {
         return Err(bad("motion total layer budget exceeded"));
     }
+    if emitters > particles::MAX_EMITTERS {
+        return Err(bad("particle emitter budget exceeded"));
+    }
     // Pass 2: per-layer content, transform, curves and parent references.
     for &(key, width, height, duration_s, layers) in &views {
         let members = &comp_members[&key];
-        // Asset-backed layers and layers with a non-empty effect stack both
-        // materialize a canvas-sized raster upload in the ephemeral Prism
-        // scene at render (see `stage_effects`), so they share one logical
-        // canvas-storage budget; a layer that is both counts once.
+        // Asset-backed layers, layers with a non-empty effect stack and
+        // particle layers all materialize a canvas-sized raster upload in
+        // the ephemeral Prism scene at render (see `stage_effects` and the
+        // particles arm of `stage_content`), so they share one logical
+        // canvas-storage budget; a layer that is several of these counts
+        // once.
         let canvas_rasters = layers
             .iter()
-            .filter(|l| l.asset_id.is_some() || !l.effects.is_empty())
+            .filter(|l| {
+                l.asset_id.is_some()
+                    || !l.effects.is_empty()
+                    || l.kind == Some(LayerKind::Particles)
+            })
             .count();
         if canvas_rasters > assets::MAX_RASTER_LAYERS
             || u64::from(width) * u64::from(height) * 4 * canvas_rasters as u64
@@ -621,6 +644,9 @@ fn validate(s: &State) -> Result<(), EngineError> {
         {
             return Err(bad("logical raster layer canvas storage exceeds budget"));
         }
+        // Per-composition alive-particle budget: the sum of each emitter's
+        // worst-case alive count must stay within one frame's sprite cap.
+        let mut sprite_budget = 0usize;
         for (index, l) in layers.iter().enumerate() {
             // Layers are bottom-to-top; a clipped layer needs a sibling below
             // to clip to (Prism `setClipped` parity).
@@ -642,6 +668,23 @@ fn validate(s: &State) -> Result<(), EngineError> {
                 || l.effects.iter().any(|e| !e.valid())
             {
                 return Err(bad("invalid layer effect stack"));
+            }
+            if let Some(emitter) = &l.emitter {
+                if l.kind != Some(LayerKind::Particles) {
+                    return Err(bad("particle emitter requires a particles layer"));
+                }
+                if !emitter.valid() {
+                    return Err(bad("invalid particle emitter"));
+                }
+                if let ParticleSprite::Asset { asset_id } = emitter.sprite {
+                    if !s.assets.contains_key(&asset_id) {
+                        return Err(bad("particle sprite references unknown asset"));
+                    }
+                }
+                sprite_budget = sprite_budget
+                    .checked_add(emitter.alive_bound())
+                    .filter(|v| *v <= particles::MAX_COMP_SPRITES)
+                    .ok_or_else(|| bad("particle sprite budget exceeded"))?;
             }
             if let Some(mpath) = &l.path {
                 mpath.validate().map_err(|_| bad("invalid motion path"))?;
@@ -686,6 +729,10 @@ fn validate(s: &State) -> Result<(), EngineError> {
                         ));
                     }
                 }
+                // A particles layer's only content is its optional emitter;
+                // shape/asset/comp payloads on it (or an emitter on another
+                // kind) fall through to the catch-all rejection.
+                (Some(LayerKind::Particles), None, None, None) => {}
                 _ => {
                     return Err(bad(
                         "layer kind must match exactly one shape, raster asset or composition",
@@ -1091,7 +1138,13 @@ impl MotionEngine {
         ctx: Option<&TaskContext>,
         depth: usize,
     ) -> Result<u64, EngineError> {
-        let transform = if l.parent_id.is_some() {
+        // Particles bake the effective affine (own transform plus parent
+        // chain, shear included — no decompose needed) into per-particle
+        // canvas positions and sprite scale, so the uploaded raster pins
+        // the identity transform below.
+        let transform = if l.kind == Some(LayerKind::Particles) {
+            Transform::default()
+        } else if l.parent_id.is_some() {
             decompose(&effective_affine(l, by_id)?)
                 .ok_or_else(|| bad("layer parent transform chain requires shear"))?
         } else {
@@ -1152,6 +1205,34 @@ impl MotionEngine {
                     Command::new(
                         "drawPixels",
                         json!({"id":id,"x":0,"y":0,"w":comp.width,"h":comp.height}),
+                    )
+                    .with_binary(Some(pixels)),
+                )?;
+                added
+            }
+            Some(LayerKind::Particles) => {
+                // Deterministic per-frame raster: particle positions are a
+                // pure function of (seed, spec, time) — no sim state — so
+                // seeking backward or forward recomputes identical output.
+                let affine = effective_affine(l, by_id)?;
+                let pixels = particles::render(
+                    l.emitter.as_ref(),
+                    &self.state.assets,
+                    &affine,
+                    view.width,
+                    view.height,
+                    time,
+                    ctx,
+                )?;
+                let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
+                let id = added
+                    .data["layer_id"]
+                    .as_u64()
+                    .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
+                prism.apply(
+                    Command::new(
+                        "drawPixels",
+                        json!({"id":id,"x":0,"y":0,"w":view.width,"h":view.height}),
                     )
                     .with_binary(Some(pixels)),
                 )?;
@@ -1681,6 +1762,7 @@ impl Engine for MotionEngine {
                     effects: vec![],
                     path: None,
                     path_progress: 0.,
+                    emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1873,6 +1955,39 @@ impl Engine for MotionEngine {
                 }
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
+            "setParticleEmitter" => {
+                let layer_id = id(p, "layer")?;
+                // `emitter:null` (or absent) clears the spec, leaving an
+                // empty particles layer; otherwise a full emitter spec.
+                let emitter = match p.get("emitter") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => {
+                        let e: ParticleEmitter = serde_json::from_value(v.clone())
+                            .map_err(|_| bad("invalid particle emitter"))?;
+                        if !e.valid() {
+                            return Err(bad("invalid particle emitter"));
+                        }
+                        if let ParticleSprite::Asset { asset_id } = e.sprite {
+                            if !next.assets.contains_key(&asset_id) {
+                                return Err(bad("particle sprite references unknown asset"));
+                            }
+                        }
+                        Some(e)
+                    }
+                };
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                if arc.kind != Some(LayerKind::Particles) {
+                    return Err(bad("particle emitter requires a particles layer"));
+                }
+                let mut nl = (*arc).clone();
+                nl.emitter = emitter;
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
             "addShapeLayer" => {
                 let shape: Shape = serde_json::from_value(
                     p.get("shape")
@@ -1903,6 +2018,7 @@ impl Engine for MotionEngine {
                     effects: vec![],
                     path: None,
                     path_progress: 0.,
+                    emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1938,6 +2054,39 @@ impl Engine for MotionEngine {
                     effects: vec![],
                     path: None,
                     path_progress: 0.,
+                    emitter: None,
+                    transform: Transform::default(),
+                    opacity: 1.,
+                    curves: vec![],
+                }));
+                data = json!({"layer_id":layer});
+            }
+            "addParticlesLayer" => {
+                let into = State::comp_arg(p, "comp")?;
+                let layer = next.next_layer_id;
+                next.next_layer_id = layer
+                    .checked_add(1)
+                    .ok_or_else(|| bad("layer identity exhausted"))?;
+                let name = opt_string(p, "name", "Particles")?;
+                let layers = comp_layers_mut(&mut next, into)
+                    .ok_or_else(|| bad("unknown composition"))?;
+                layers.push(Arc::new(Layer {
+                    id: layer,
+                    name,
+                    visible: true,
+                    locked: false,
+                    kind: Some(LayerKind::Particles),
+                    shape: None,
+                    asset_id: None,
+                    comp_id: None,
+                    parent_id: None,
+                    blend: None,
+                    clipped: false,
+                    matte: None,
+                    effects: vec![],
+                    path: None,
+                    path_progress: 0.,
+                    emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1954,7 +2103,13 @@ impl Engine for MotionEngine {
                             .values()
                             .flat_map(|c| c.layers.iter()),
                     )
-                    .any(|l| l.asset_id == Some(asset_id));
+                    .any(|l| {
+                        l.asset_id == Some(asset_id)
+                            || l.emitter
+                                .as_ref()
+                                .and_then(|e| e.sprite.asset_id())
+                                == Some(asset_id)
+                    });
                 if referenced {
                     return Err(bad("raster asset remains referenced by a layer"));
                 }
@@ -2486,3 +2641,5 @@ mod raster_tests;
 mod comp_tests;
 #[cfg(test)]
 mod path_tests;
+#[cfg(test)]
+mod particles_tests;
