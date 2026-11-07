@@ -1,5 +1,9 @@
 # Completion status
 
+The remaining P02–P20 program is sequenced in [MEGAPLAN.md](MEGAPLAN.md).
+It records ground truth, worktree/subagent waves, dependency order and the
+lifted native/runtime review gate; it promotes no phase or acceptance field.
+
 P00 and P01 are complete. Fresh iOS/Android builds and native engine/edit/undo/reopen checks pass on both targets; see [P01](reports/P01.md) for provenance.
 
 P02 is in progress. Native task/cache/binary, checkpoint recovery, atomic edits,
