@@ -85,13 +85,15 @@ export interface FolioCommentThread extends FolioCommentEntry { subtype: string;
  * mutating outline ops reject anyway. `page` is the 0-based page index
  * the destination resolves to (`null` when unresolvable, e.g. a deleted
  * page ghost). `dest` is the explicit-destination tail (`/Fit` plus
- * coordinates) when the item carries an array destination.
+ * coordinates, possibly nested arrays) when the item carries an array
+ * destination, or the bare destination name string when it stays
+ * unresolved (e.g. a named destination that does not decode).
  */
 export interface FolioOutlineItem {
   id: number | null;
   title: string;
   page: number | null;
-  dest?: (string | number | null)[];
+  dest?: string | unknown[];
   children: FolioOutlineItem[];
 }
 
