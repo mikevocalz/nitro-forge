@@ -76,5 +76,5 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
  const baseline=readFileSync(new URL('baseline-roster.tsv',dir),'utf8');
  const errors=validateCompletionPlan(plan,baseline);
  if(errors.length){process.stderr.write(errors.join('\n')+'\n');process.exitCode=1;}
- else console.log(`Completion plan valid: ${plan.components.length} components, ${plan.phases.length} phases, ${plan.requiredPlatforms.length} required platforms; ${plan.components.filter(c=>c.completion==='complete').length} fully verified`);
+ else console.log(`Completion plan valid: ${plan.components.length} components, ${plan.phases.length} phases, ${plan.requiredPlatforms.length} required platforms; ${plan.components.filter(c=>c.completion==='complete').length} fully verified${plan.librarySourceSnapshot?`; ${plan.components.filter(c=>c.librarySource?.review==='implemented').length}/${plan.components.filter(c=>c.librarySource?.inScope).length} library source reviews`:''}`);
 }

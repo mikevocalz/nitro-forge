@@ -25,7 +25,12 @@
       "dependsOn": [],
       "exitCriteria": "Map all 341 IDs once; preserve baseline evidence; validate phase dependencies and mandatory completion gates.",
       "status": "complete",
-      "components": []
+      "components": [],
+      "librarySourceSummary": {
+        "inScope": 0,
+        "reviewedImplemented": 0,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P01",
@@ -35,7 +40,12 @@
       ],
       "exitCriteria": "Start the canonical generated factory in the native consumer; exercise seven engines, snapshots and Cadence edits through actual JS/native calls; verify cleanup and errors on iOS/Android.",
       "status": "complete",
-      "components": []
+      "components": [],
+      "librarySourceSummary": {
+        "inScope": 0,
+        "reviewedImplemented": 0,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P02",
@@ -61,7 +71,20 @@
         "N-18",
         "N-20",
         "N-21"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 8,
+        "reviewedImplemented": 8,
+        "enginePlatformIds": [
+          "N-10",
+          "N-11",
+          "N-13",
+          "N-14",
+          "N-15",
+          "N-16",
+          "N-18"
+        ]
+      }
     },
     {
       "id": "P03",
@@ -76,7 +99,14 @@
         "D-01",
         "D-05",
         "N-19"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 2,
+        "reviewedImplemented": 2,
+        "enginePlatformIds": [
+          "N-19"
+        ]
+      }
     },
     {
       "id": "P04",
@@ -117,7 +147,12 @@
         "A-28",
         "A-29",
         "A-30"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 30,
+        "reviewedImplemented": 30,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P05",
@@ -155,7 +190,12 @@
         "B-30",
         "B-31",
         "B-34"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 27,
+        "reviewedImplemented": 27,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P06",
@@ -177,7 +217,16 @@
         "N-02",
         "N-03",
         "N-04"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 8,
+        "reviewedImplemented": 8,
+        "enginePlatformIds": [
+          "N-01",
+          "N-03",
+          "N-04"
+        ]
+      }
     },
     {
       "id": "P07",
@@ -215,7 +264,12 @@
         "C-25",
         "C-26",
         "C-27"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 27,
+        "reviewedImplemented": 27,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P08",
@@ -269,7 +323,12 @@
         "D-41",
         "D-42",
         "D-43"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 41,
+        "reviewedImplemented": 41,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P09",
@@ -323,7 +382,12 @@
         "E-39",
         "E-40",
         "E-41"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 41,
+        "reviewedImplemented": 41,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P10",
@@ -353,7 +417,12 @@
         "F-16",
         "F-17",
         "F-18"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 18,
+        "reviewedImplemented": 18,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P11",
@@ -380,7 +449,12 @@
         "G-13",
         "G-14",
         "G-15"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 15,
+        "reviewedImplemented": 15,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P12",
@@ -414,7 +488,12 @@
         "H-20",
         "H-21",
         "H-22"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 22,
+        "reviewedImplemented": 22,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P13",
@@ -447,7 +526,12 @@
         "I-19",
         "I-20",
         "I-21"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 21,
+        "reviewedImplemented": 21,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P14",
@@ -476,7 +560,12 @@
         "J-14",
         "J-15",
         "J-16"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 16,
+        "reviewedImplemented": 16,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P15",
@@ -509,7 +598,12 @@
         "K-19",
         "K-20",
         "K-21"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 21,
+        "reviewedImplemented": 21,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P16",
@@ -536,7 +630,12 @@
         "L-13",
         "L-14",
         "L-15"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 15,
+        "reviewedImplemented": 15,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P17",
@@ -565,7 +664,12 @@
         "M-15",
         "M-16",
         "M-17"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 17,
+        "reviewedImplemented": 17,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P18",
@@ -580,7 +684,14 @@
       "status": "pending",
       "components": [
         "N-09"
-      ]
+      ],
+      "librarySourceSummary": {
+        "inScope": 0,
+        "reviewedImplemented": 0,
+        "enginePlatformIds": [
+          "N-09"
+        ]
+      }
     },
     {
       "id": "P19",
@@ -606,7 +717,12 @@
       ],
       "exitCriteria": "Audit every component against functional, error, undo/persistence, accessibility, adaptive layout, performance, licensing and platform runtime evidence. No unverified row may be counted complete.",
       "status": "pending",
-      "components": []
+      "components": [],
+      "librarySourceSummary": {
+        "inScope": 0,
+        "reviewedImplemented": 0,
+        "enginePlatformIds": []
+      }
     },
     {
       "id": "P20",
@@ -616,7 +732,12 @@
       ],
       "exitCriteria": "Publish all completed packages and platform artifacts, verify checksums/exports/size/native consumers/migrations, update all consuming pins and close the full 341-row acceptance ledger.",
       "status": "pending",
-      "components": []
+      "components": [],
+      "librarySourceSummary": {
+        "inScope": 0,
+        "reviewedImplemented": 0,
+        "enginePlatformIds": []
+      }
     }
   ],
   "components": [
@@ -633,7 +754,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/WorkspaceHost.tsx"
+        ],
+        "reportPaths": [
+          "P04-workspace-shell.md",
+          "P04-workspace-native-proof.json"
+        ]
+      }
     },
     {
       "id": "A-02",
@@ -648,7 +780,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/WorkspacePresetSwitcher.tsx"
+        ],
+        "reportPaths": [
+          "P04-workspace-shell.md",
+          "P04-workspace-native-proof.json"
+        ]
+      }
     },
     {
       "id": "A-03",
@@ -663,7 +806,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/AdaptiveDock.tsx"
+        ],
+        "reportPaths": [
+          "P04-workspace-shell.md",
+          "P04-workspace-native-proof.json"
+        ]
+      }
     },
     {
       "id": "A-04",
@@ -678,7 +832,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/PaneSplitter.tsx"
+        ],
+        "reportPaths": [
+          "P04-workspace-shell.md",
+          "P04-workspace-native-proof.json"
+        ]
+      }
     },
     {
       "id": "A-05",
@@ -693,7 +858,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/DocumentTabBar.tsx"
+        ],
+        "reportPaths": [
+          "P04-command-controls.md"
+        ]
+      }
     },
     {
       "id": "A-06",
@@ -708,7 +883,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/ToolRail.tsx"
+        ],
+        "reportPaths": [
+          "P04-command-controls.md"
+        ]
+      }
     },
     {
       "id": "A-07",
@@ -723,7 +908,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/ContextualToolbar.tsx"
+        ],
+        "reportPaths": [
+          "P04-command-controls.md"
+        ]
+      }
     },
     {
       "id": "A-08",
@@ -738,7 +933,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/RibbonTabs.tsx"
+        ],
+        "reportPaths": [
+          "P04-command-controls.md"
+        ]
+      }
     },
     {
       "id": "A-09",
@@ -753,7 +958,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/InspectorPanel.tsx"
+        ],
+        "reportPaths": [
+          "P04-inspector-precision.md"
+        ]
+      }
     },
     {
       "id": "A-10",
@@ -768,7 +983,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/InspectorSection.tsx"
+        ],
+        "reportPaths": [
+          "P04-inspector-precision.md"
+        ]
+      }
     },
     {
       "id": "A-11",
@@ -783,7 +1008,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/PropertyRow.tsx"
+        ],
+        "reportPaths": [
+          "P04-inspector-precision.md"
+        ]
+      }
     },
     {
       "id": "A-12",
@@ -798,7 +1033,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/NumericScrubField.tsx",
+          "packages/ui/src/components/forge/inputs/PrecisionScrubber.tsx"
+        ],
+        "reportPaths": [
+          "P04-state-and-public-api.md"
+        ]
+      }
     },
     {
       "id": "A-13",
@@ -813,7 +1059,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/UnitInput.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-settings.md"
+        ]
+      }
     },
     {
       "id": "A-14",
@@ -828,7 +1084,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/SliderField.tsx"
+        ],
+        "reportPaths": [
+          "P04-inspector-precision.md"
+        ]
+      }
     },
     {
       "id": "A-15",
@@ -843,7 +1109,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/RangeSlider.tsx"
+        ],
+        "reportPaths": [
+          "P04-inspector-precision.md"
+        ]
+      }
     },
     {
       "id": "A-16",
@@ -858,7 +1134,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/RotaryKnob.tsx"
+        ],
+        "reportPaths": [
+          "P04-inspector-precision.md"
+        ]
+      }
     },
     {
       "id": "A-17",
@@ -873,7 +1159,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/SplitButton.tsx"
+        ],
+        "reportPaths": [
+          "P04-command-controls.md"
+        ]
+      }
     },
     {
       "id": "A-18",
@@ -888,7 +1184,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/overlays/CommandPalette.tsx"
+        ],
+        "reportPaths": [
+          "P04-overlays-and-transfer.md"
+        ]
+      }
     },
     {
       "id": "A-19",
@@ -903,7 +1209,21 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/ContextMenu.tsx",
+          "packages/expo-controls/src/components/ContextMenu.native.tsx",
+          "packages/expo-controls/src/components/ContextMenu.web.tsx"
+        ],
+        "reportPaths": [
+          "P04-overlays-and-transfer.md",
+          "P04-native-overlays.md",
+          "P04-native-overlays-proof.json"
+        ]
+      }
     },
     {
       "id": "A-20",
@@ -918,7 +1238,20 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/expo-controls/src/components/NativePopover.native.tsx",
+          "packages/expo-controls/src/components/NativePopover.web.tsx"
+        ],
+        "reportPaths": [
+          "P04-overlays-and-transfer.md",
+          "P04-native-overlays.md",
+          "P04-native-overlays-proof.json"
+        ]
+      }
     },
     {
       "id": "A-21",
@@ -933,7 +1266,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/InspectorSearch.tsx"
+        ],
+        "reportPaths": [
+          "P04-inspector-precision.md"
+        ]
+      }
     },
     {
       "id": "A-22",
@@ -948,7 +1291,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/AssetBrowser.tsx"
+        ],
+        "reportPaths": [
+          "P04-shell-library.md"
+        ]
+      }
     },
     {
       "id": "A-23",
@@ -963,7 +1316,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/PresetGallery.tsx"
+        ],
+        "reportPaths": [
+          "P04-overlays-and-transfer.md"
+        ]
+      }
     },
     {
       "id": "A-24",
@@ -978,7 +1341,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/HistoryPanel.tsx"
+        ],
+        "reportPaths": [
+          "P04-shell-library.md"
+        ]
+      }
     },
     {
       "id": "A-25",
@@ -993,7 +1366,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/StatusBar.tsx"
+        ],
+        "reportPaths": [
+          "P04-overlays-and-transfer.md"
+        ]
+      }
     },
     {
       "id": "A-26",
@@ -1008,7 +1391,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/ToastAndProgress.tsx"
+        ],
+        "reportPaths": [
+          "P04-shell-library.md"
+        ]
+      }
     },
     {
       "id": "A-27",
@@ -1023,7 +1416,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/KeyboardShortcutHUD.tsx"
+        ],
+        "reportPaths": [
+          "P04-overlays-and-transfer.md"
+        ]
+      }
     },
     {
       "id": "A-28",
@@ -1038,7 +1441,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/FocusAndA11yLayer.tsx"
+        ],
+        "reportPaths": [
+          "P04-overlays-and-transfer.md",
+          "P04-native-overlays.md",
+          "P04-native-overlays-proof.json"
+        ]
+      }
     },
     {
       "id": "A-29",
@@ -1053,7 +1468,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/FindReplacePopover.tsx",
+          "packages/expo-controls/src/components/FindReplacePopover.native.tsx",
+          "packages/expo-controls/src/components/FindReplacePopover.web.tsx"
+        ],
+        "reportPaths": [
+          "P04-shell-library.md"
+        ]
+      }
     },
     {
       "id": "A-30",
@@ -1068,7 +1495,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/files/FileImportExportSheet.native.tsx",
+          "packages/ui/src/components/files/FileImportExportSheet.web.tsx"
+        ],
+        "reportPaths": [
+          "P04-overlays-and-transfer.md"
+        ]
+      }
     },
     {
       "id": "B-01",
@@ -1083,7 +1521,20 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas/GPUCanvasViewport.tsx"
+        ],
+        "reportPaths": [
+          "P05-gpu-viewport.md",
+          "P05-native-canvas.md",
+          "P05-native-canvas-proof.json",
+          "P05-android-merged-manifest-proof.json"
+        ]
+      }
     },
     {
       "id": "B-02",
@@ -1098,7 +1549,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas/CanvasPanZoom.tsx"
+        ],
+        "reportPaths": [
+          "P05-canvas-navigation.md",
+          "P05-native-canvas.md",
+          "P05-native-canvas-proof.json"
+        ]
+      }
     },
     {
       "id": "B-03",
@@ -1113,7 +1576,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas/CanvasRuler.tsx"
+        ],
+        "reportPaths": [
+          "P05-rulers.md"
+        ]
+      }
     },
     {
       "id": "B-04",
@@ -1128,7 +1601,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas/SnapGridOverlay.tsx"
+        ],
+        "reportPaths": [
+          "P05-snapping-and-pivot.md"
+        ]
+      }
     },
     {
       "id": "B-05",
@@ -1143,7 +1626,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas/SmartGuides.tsx"
+        ],
+        "reportPaths": [
+          "P05-snapping-and-pivot.md"
+        ]
+      }
     },
     {
       "id": "B-06",
@@ -1158,7 +1651,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/selection/SelectionBounds.tsx"
+        ],
+        "reportPaths": [
+          "P05-selection-bounds.md"
+        ]
+      }
     },
     {
       "id": "B-07",
@@ -1173,7 +1676,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/selection/MultiSelectionControls.tsx"
+        ],
+        "reportPaths": [
+          "P05-multi-selection.md"
+        ]
+      }
     },
     {
       "id": "B-08",
@@ -1188,7 +1701,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas/TransformOriginHandle.tsx"
+        ],
+        "reportPaths": [
+          "P05-snapping-and-pivot.md"
+        ]
+      }
     },
     {
       "id": "B-09",
@@ -1203,7 +1726,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/layers/LayerStack.tsx"
+        ],
+        "reportPaths": [
+          "P05-layer-tree.md"
+        ]
+      }
     },
     {
       "id": "B-10",
@@ -1218,7 +1751,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/layers/LayerThumbnail.tsx"
+        ],
+        "reportPaths": [
+          "P05-thumbnail-resources.md"
+        ]
+      }
     },
     {
       "id": "B-11",
@@ -1233,7 +1776,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/layers/LayerBlendAndOpacity.tsx"
+        ],
+        "reportPaths": [
+          "P05-layer-blend.md"
+        ]
+      }
     },
     {
       "id": "B-12",
@@ -1248,7 +1801,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/layers/MaskThumbnailAndEditor.tsx"
+        ],
+        "reportPaths": [
+          "P05-mask-and-clipping.md"
+        ]
+      }
     },
     {
       "id": "B-13",
@@ -1263,7 +1826,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/layers/ClippingMaskControls.tsx"
+        ],
+        "reportPaths": [
+          "P05-mask-and-clipping.md"
+        ]
+      }
     },
     {
       "id": "B-14",
@@ -1278,7 +1851,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/layers/ArtboardNavigator.tsx"
+        ],
+        "reportPaths": [
+          "P05-artboard-navigation.md"
+        ]
+      }
     },
     {
       "id": "B-15",
@@ -1293,7 +1876,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/ink/BrushPresetBrowser.tsx"
+        ],
+        "reportPaths": [
+          "P06-brush-and-ink-batch.md"
+        ]
+      }
     },
     {
       "id": "B-16",
@@ -1308,7 +1901,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/ink/BrushDynamicsInspector.tsx"
+        ],
+        "reportPaths": [
+          "P06-brush-and-ink-batch.md"
+        ]
+      }
     },
     {
       "id": "B-17",
@@ -1323,7 +1926,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/ink/InkStrokePreview.tsx"
+        ],
+        "reportPaths": [
+          "P06-brush-and-ink-batch.md"
+        ]
+      }
     },
     {
       "id": "B-18",
@@ -1338,7 +1951,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/ink/EraserModePicker.tsx"
+        ],
+        "reportPaths": [
+          "P06-brush-and-ink-batch.md"
+        ]
+      }
     },
     {
       "id": "B-19",
@@ -1353,7 +1976,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/selection/SelectionMarquee.tsx"
+        ],
+        "reportPaths": [
+          "P05-selection-tools-batch.md"
+        ]
+      }
     },
     {
       "id": "B-20",
@@ -1368,7 +2001,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/selection/MagicSelectionControls.tsx"
+        ],
+        "reportPaths": [
+          "P05-selection-tools-batch.md"
+        ]
+      }
     },
     {
       "id": "B-21",
@@ -1383,7 +2026,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/vector/PenNodeEditor.tsx"
+        ],
+        "reportPaths": [
+          "P05-vector-and-crop-batch.md"
+        ]
+      }
     },
     {
       "id": "B-22",
@@ -1398,7 +2051,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/vector/ShapeBuilder.tsx"
+        ],
+        "reportPaths": [
+          "P05-vector-and-crop-batch.md"
+        ]
+      }
     },
     {
       "id": "B-23",
@@ -1413,7 +2076,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/vector/FillStrokeInspector.tsx"
+        ],
+        "reportPaths": [
+          "P05-vector-and-crop-batch.md"
+        ]
+      }
     },
     {
       "id": "B-24",
@@ -1428,7 +2101,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/vector/GradientOnCanvasHandles.tsx"
+        ],
+        "reportPaths": [
+          "P05-vector-and-crop-batch.md"
+        ]
+      }
     },
     {
       "id": "B-25",
@@ -1443,7 +2126,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas/AlignDistributePanel.tsx"
+        ],
+        "reportPaths": [
+          "P05-vector-and-crop-batch.md"
+        ]
+      }
     },
     {
       "id": "B-26",
@@ -1458,7 +2151,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas/GuidedCropAndStraighten.tsx"
+        ],
+        "reportPaths": [
+          "P05-vector-and-crop-batch.md"
+        ]
+      }
     },
     {
       "id": "B-27",
@@ -1473,7 +2176,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/layers/CanvasCompareView.tsx"
+        ],
+        "reportPaths": [
+          "P05-vector-and-crop-batch.md"
+        ]
+      }
     },
     {
       "id": "B-28",
@@ -1488,7 +2201,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/FloatingPaletteUndockHandle.tsx"
+        ],
+        "reportPaths": [
+          "P05-vector-and-crop-batch.md"
+        ]
+      }
     },
     {
       "id": "B-29",
@@ -1503,7 +2226,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/ink/BrushTaperControl.tsx"
+        ],
+        "reportPaths": [
+          "P06-brush-and-ink-batch.md"
+        ]
+      }
     },
     {
       "id": "B-30",
@@ -1518,7 +2251,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas-tools/ColorDropCanvasTarget.tsx"
+        ],
+        "reportPaths": [
+          "P05-selection-tools-batch.md"
+        ]
+      }
     },
     {
       "id": "B-31",
@@ -1533,7 +2276,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas-tools/ReferenceImageBoard.tsx"
+        ],
+        "reportPaths": [
+          "P05-selection-tools-batch.md"
+        ]
+      }
     },
     {
       "id": "B-32",
@@ -1548,7 +2301,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/ink/TimelapsePlaybackExporter.tsx"
+        ],
+        "reportPaths": [
+          "P06-brush-and-ink-batch.md"
+        ]
+      }
     },
     {
       "id": "B-33",
@@ -1563,7 +2326,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/ink/BrushStabilizationPreview.tsx"
+        ],
+        "reportPaths": [
+          "P06-brush-and-ink-batch.md"
+        ]
+      }
     },
     {
       "id": "B-34",
@@ -1578,7 +2351,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/canvas-tools/GestureCustomizationPanel.tsx"
+        ],
+        "reportPaths": [
+          "P05-selection-tools-batch.md"
+        ]
+      }
     },
     {
       "id": "C-01",
@@ -1593,7 +2376,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ColorPickerDialog.tsx"
+        ],
+        "reportPaths": [
+          "P07-existing-color-review.md"
+        ]
+      }
     },
     {
       "id": "C-02",
@@ -1608,7 +2401,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/SVColorField.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md"
+        ]
+      }
     },
     {
       "id": "C-03",
@@ -1623,7 +2426,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ColorWheel.tsx"
+        ],
+        "reportPaths": [
+          "P07-existing-color-review.md"
+        ]
+      }
     },
     {
       "id": "C-04",
@@ -1638,7 +2451,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/HueSlider.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md"
+        ]
+      }
     },
     {
       "id": "C-05",
@@ -1653,7 +2476,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/AlphaSlider.tsx"
+        ],
+        "reportPaths": [
+          "P07-existing-color-review.md"
+        ]
+      }
     },
     {
       "id": "C-06",
@@ -1668,7 +2501,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ColorChannelFields.tsx"
+        ],
+        "reportPaths": [
+          "P07-existing-color-review.md"
+        ]
+      }
     },
     {
       "id": "C-07",
@@ -1683,7 +2526,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/PrintColorChannels.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-management.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-08",
@@ -1698,7 +2552,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/WideGamutChannels.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-management.md"
+        ]
+      }
     },
     {
       "id": "C-09",
@@ -1713,7 +2577,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ColorSpaceChooser.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-management.md"
+        ]
+      }
     },
     {
       "id": "C-10",
@@ -1728,7 +2602,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/GamutWarning.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-management.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-11",
@@ -1743,7 +2628,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/EyedropperTool.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md"
+        ]
+      }
     },
     {
       "id": "C-12",
@@ -1758,7 +2653,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ForegroundBackgroundChips.tsx"
+        ],
+        "reportPaths": [
+          "P07-existing-color-review.md"
+        ]
+      }
     },
     {
       "id": "C-13",
@@ -1773,7 +2678,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/SwatchGrid.tsx"
+        ],
+        "reportPaths": [
+          "P07-existing-color-review.md"
+        ]
+      }
     },
     {
       "id": "C-14",
@@ -1788,7 +2703,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ThemeColorReferences.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-management.md"
+        ]
+      }
     },
     {
       "id": "C-15",
@@ -1803,7 +2728,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/SpotAndGlobalColorEditor.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-management.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-16",
@@ -1818,7 +2754,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/GradientStopEditor.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-17",
@@ -1833,7 +2780,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/GradientMeshEditor.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-18",
@@ -1848,7 +2806,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ColorHarmonyAssistant.tsx"
+        ],
+        "reportPaths": [
+          "P07-existing-color-review.md"
+        ]
+      }
     },
     {
       "id": "C-19",
@@ -1863,7 +2831,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/LiveHistogram.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-20",
@@ -1878,7 +2857,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/LevelsEditor.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md"
+        ]
+      }
     },
     {
       "id": "C-21",
@@ -1893,7 +2882,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/CurvesEditor.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-22",
@@ -1908,7 +2908,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ColorGradingWheels.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-23",
@@ -1923,7 +2934,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/HSLSecondaryEditor.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md"
+        ]
+      }
     },
     {
       "id": "C-24",
@@ -1938,7 +2959,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/VideoScopesPanel.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-adjustments.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-25",
@@ -1953,7 +2985,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/SoftProofControls.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-management.md",
+          "P07-color-specification.md"
+        ]
+      }
     },
     {
       "id": "C-26",
@@ -1968,7 +3011,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/FloatingColorPalette.tsx"
+        ],
+        "reportPaths": [
+          "P07-existing-color-review.md"
+        ]
+      }
     },
     {
       "id": "C-27",
@@ -1983,7 +3036,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/color/ColorDiscPicker.tsx",
+          "packages/native-controls/src/DisplayP3DiscLayer.tsx"
+        ],
+        "reportPaths": [
+          "P07-color-specification.md",
+          "P07-native-p3.md"
+        ]
+      }
     },
     {
       "id": "D-01",
@@ -1998,7 +3063,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/native-controls/src/NativeVideoPlayer.tsx",
+          "packages/native-controls/ios/TronVideoPlayerView.swift",
+          "packages/native-controls/android/src/main/java/com/nyctron/instruments/TronVideoPlayerView.kt"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "D-02",
@@ -2013,7 +3090,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/SourceMonitor.tsx"
+        ],
+        "reportPaths": [
+          "P08-monitors-and-media.md"
+        ]
+      }
     },
     {
       "id": "D-03",
@@ -2028,7 +3115,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/ProgramMonitor.tsx"
+        ],
+        "reportPaths": [
+          "P08-monitors-and-media.md"
+        ]
+      }
     },
     {
       "id": "D-04",
@@ -2043,7 +3140,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/NativeSeekBar.native.tsx",
+          "packages/ui/src/components/forge/NativeSeekBar.web.tsx",
+          "packages/ui/src/components/forge/timeline/SeekBar.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-05",
@@ -2058,7 +3167,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/FrameAccurateScrubber.shared.tsx",
+          "packages/ui/src/components/forge/timeline/FrameAccurateScrubber.native.tsx",
+          "packages/ui/src/components/forge/timeline/FrameAccurateScrubber.tsx"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "D-06",
@@ -2073,7 +3194,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TransportControls.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-07",
@@ -2088,7 +3219,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/PlaybackRateMenu.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-08",
@@ -2103,7 +3244,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TimecodeDisplay.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-09",
@@ -2118,7 +3269,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/JKLShuttleController.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-10",
@@ -2133,7 +3294,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TimelineRuler.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-11",
@@ -2148,7 +3319,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TimelinePlayhead.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-12",
@@ -2163,7 +3344,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/InOutRangeHandles.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-13",
@@ -2178,7 +3369,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/LoopRangeBar.tsx"
+        ],
+        "reportPaths": [
+          "P08-transport-and-navigation.md"
+        ]
+      }
     },
     {
       "id": "D-14",
@@ -2193,7 +3394,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TimelineZoomAndScroll.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-15",
@@ -2208,7 +3419,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TimelineClipLane.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-16",
@@ -2223,7 +3444,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/VideoFilmstrip.tsx"
+        ],
+        "reportPaths": [
+          "P08-monitors-and-media.md"
+        ]
+      }
     },
     {
       "id": "D-17",
@@ -2238,7 +3469,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/AudioClipWaveform.tsx"
+        ],
+        "reportPaths": [
+          "P08-monitors-and-media.md"
+        ]
+      }
     },
     {
       "id": "D-18",
@@ -2253,7 +3494,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TrackHeaders.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-19",
@@ -2268,7 +3519,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/ClipTrimHandles.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-20",
@@ -2283,7 +3544,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/RazorSplitTool.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-21",
@@ -2298,7 +3569,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/RollSlipSlideControls.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-22",
@@ -2313,7 +3594,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/DragReorderAndRipple.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-23",
@@ -2328,7 +3619,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TransitionHandles.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-24",
@@ -2343,7 +3644,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TimelineMarkers.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-25",
@@ -2358,7 +3669,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/SafeAreaOverlay.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-26",
@@ -2373,7 +3694,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/ScopesDock.tsx"
+        ],
+        "reportPaths": [
+          "P08-monitors-and-media.md"
+        ]
+      }
     },
     {
       "id": "D-27",
@@ -2388,7 +3719,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/MulticamAngleViewer.tsx"
+        ],
+        "reportPaths": [
+          "P08-monitors-and-media.md"
+        ]
+      }
     },
     {
       "id": "D-28",
@@ -2403,7 +3744,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/RenderCacheIndicator.tsx"
+        ],
+        "reportPaths": [
+          "P08-monitors-and-media.md"
+        ]
+      }
     },
     {
       "id": "D-29",
@@ -2418,7 +3769,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/ExportMonitor.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-30",
@@ -2433,7 +3794,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/PictureInPictureControls.tsx"
+        ],
+        "reportPaths": [
+          "P08-monitors-and-media.md"
+        ]
+      }
     },
     {
       "id": "D-31",
@@ -2448,7 +3819,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/OverlayAndEffectsTrackStack.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-32",
@@ -2463,7 +3844,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/VideoSpeedRampCurve.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-33",
@@ -2478,7 +3869,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/AutoCaptionTranscriptTimeline.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-34",
@@ -2493,7 +3894,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/CaptionWordTimingHandles.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-35",
@@ -2508,7 +3919,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/AutoReframeGuides.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-36",
@@ -2523,7 +3944,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/VideoStabilizationInspector.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-37",
@@ -2538,7 +3969,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/TransitionPresetBrowser.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-38",
@@ -2553,7 +3994,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/VideoEffectsBrowser.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-39",
@@ -2568,7 +4019,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/MotionTrackingOverlay.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-40",
@@ -2583,7 +4044,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/CoverFramePicker.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-41",
@@ -2598,7 +4069,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/BatchEditPanel.tsx"
+        ],
+        "reportPaths": [
+          "P08-timeline-editing.md"
+        ]
+      }
     },
     {
       "id": "D-42",
@@ -2613,7 +4094,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/VideoQualityInspector.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "D-43",
@@ -2628,7 +4119,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/timeline/StickerMotionLane.tsx"
+        ],
+        "reportPaths": [
+          "P08-video-production-tools.md"
+        ]
+      }
     },
     {
       "id": "E-01",
@@ -2643,7 +4144,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/NativeAudioTransport.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-02",
@@ -2658,7 +4169,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/WaveformLane.tsx"
+        ],
+        "reportPaths": [
+          "P09-clip-and-recording-workflows.md"
+        ]
+      }
     },
     {
       "id": "E-03",
@@ -2673,7 +4194,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/StereoMultichannelWaveform.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-04",
@@ -2688,7 +4219,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/LiveRecordingWaveform.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-05",
@@ -2703,7 +4244,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/SpectrogramView.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-06",
@@ -2718,7 +4269,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/RecordingArmButton.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-07",
@@ -2733,7 +4294,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/InputMonitorToggle.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-08",
@@ -2748,7 +4319,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/DeviceAndChannelPicker.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-09",
@@ -2763,7 +4344,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/AudioClipTrimAndFade.tsx"
+        ],
+        "reportPaths": [
+          "P09-clip-and-recording-workflows.md"
+        ]
+      }
     },
     {
       "id": "E-10",
@@ -2778,7 +4369,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/ClipGainEnvelope.tsx"
+        ],
+        "reportPaths": [
+          "P09-clip-and-recording-workflows.md"
+        ]
+      }
     },
     {
       "id": "E-11",
@@ -2793,7 +4394,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/AutomationLane.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-12",
@@ -2808,7 +4419,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/AutomationModePicker.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-13",
@@ -2823,7 +4444,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/MixingConsole.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-14",
@@ -2838,7 +4469,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/VerticalFader.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-15",
@@ -2853,7 +4494,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/PanAndBalanceControl.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-16",
@@ -2868,7 +4519,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/RealtimePeakMeter.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-17",
@@ -2883,7 +4544,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/LoudnessMeter.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-18",
@@ -2898,7 +4569,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/SoloMuteButtons.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-19",
@@ -2913,7 +4594,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/BusAndRoutingMatrix.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-20",
@@ -2928,7 +4619,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/InsertEffectRack.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-21",
@@ -2943,7 +4644,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/EQFrequencyGraph.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-22",
@@ -2958,7 +4669,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/DynamicsTransferGraph.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-23",
@@ -2973,7 +4694,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/PluginPresetBrowser.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-24",
@@ -2988,7 +4719,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/midi/MIDIPianoRoll.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-25",
@@ -3003,7 +4744,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/midi/MIDIVelocityLane.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-26",
@@ -3018,7 +4769,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/midi/StepSequencer.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-27",
@@ -3033,7 +4794,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/TempoAndMetronome.tsx"
+        ],
+        "reportPaths": [
+          "P09-mixer-analysis-and-midi.md"
+        ]
+      }
     },
     {
       "id": "E-28",
@@ -3048,7 +4819,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/TakePlaylistAndComping.tsx"
+        ],
+        "reportPaths": [
+          "P09-clip-and-recording-workflows.md"
+        ]
+      }
     },
     {
       "id": "E-29",
@@ -3063,7 +4844,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/LoopPunchRecording.tsx"
+        ],
+        "reportPaths": [
+          "P09-clip-and-recording-workflows.md"
+        ]
+      }
     },
     {
       "id": "E-30",
@@ -3078,7 +4869,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/SampleEditor.tsx"
+        ],
+        "reportPaths": [
+          "P09-clip-and-recording-workflows.md"
+        ]
+      }
     },
     {
       "id": "E-31",
@@ -3093,7 +4894,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/AudioVideoSync.tsx"
+        ],
+        "reportPaths": [
+          "P09-clip-and-recording-workflows.md"
+        ]
+      }
     },
     {
       "id": "E-32",
@@ -3108,7 +4919,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/LatencyCalibrationPanel.tsx"
+        ],
+        "reportPaths": [
+          "P09-clip-and-recording-workflows.md"
+        ]
+      }
     },
     {
       "id": "E-33",
@@ -3123,7 +4944,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/SurroundPanView.tsx"
+        ],
+        "reportPaths": [
+          "P09-input-and-automation.md"
+        ]
+      }
     },
     {
       "id": "E-34",
@@ -3138,7 +4969,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/VoiceIsolationPanel.tsx"
+        ],
+        "reportPaths": [
+          "P09-processing-and-speech.md"
+        ]
+      }
     },
     {
       "id": "E-35",
@@ -3153,7 +4994,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/BeatDetectionMarkerLane.tsx"
+        ],
+        "reportPaths": [
+          "P09-processing-and-speech.md"
+        ]
+      }
     },
     {
       "id": "E-36",
@@ -3168,7 +5019,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/SoundEffectsLibrary.tsx"
+        ],
+        "reportPaths": [
+          "P09-processing-and-speech.md"
+        ]
+      }
     },
     {
       "id": "E-37",
@@ -3183,7 +5044,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/SpeechTranscriptTakeReview.tsx"
+        ],
+        "reportPaths": [
+          "P09-processing-and-speech.md"
+        ]
+      }
     },
     {
       "id": "E-38",
@@ -3198,7 +5069,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/VoiceoverCountdownAndTakeBin.tsx"
+        ],
+        "reportPaths": [
+          "P09-processing-and-speech.md"
+        ]
+      }
     },
     {
       "id": "E-39",
@@ -3213,7 +5094,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/AudioEffectsPresetPanel.tsx"
+        ],
+        "reportPaths": [
+          "P09-processing-and-speech.md"
+        ]
+      }
     },
     {
       "id": "E-40",
@@ -3228,7 +5119,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/NoiseReductionMonitor.tsx"
+        ],
+        "reportPaths": [
+          "P09-processing-and-speech.md"
+        ]
+      }
     },
     {
       "id": "E-41",
@@ -3243,7 +5144,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/AutoDuckEnvelopePanel.tsx"
+        ],
+        "reportPaths": [
+          "P09-processing-and-speech.md"
+        ]
+      }
     },
     {
       "id": "F-01",
@@ -3258,7 +5169,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/PhotoLibraryGrid.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-catalog.md"
+        ]
+      }
     },
     {
       "id": "F-02",
@@ -3273,7 +5194,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/CatalogFilterBar.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-catalog.md"
+        ]
+      }
     },
     {
       "id": "F-03",
@@ -3288,7 +5219,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/RatingAndFlagControl.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-develop.md"
+        ]
+      }
     },
     {
       "id": "F-04",
@@ -3303,7 +5244,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/RAWDevelopPanel.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-develop.md"
+        ]
+      }
     },
     {
       "id": "F-05",
@@ -3318,7 +5269,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/ExposureAndWhiteBalance.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-develop.md"
+        ]
+      }
     },
     {
       "id": "F-06",
@@ -3333,7 +5294,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/ToneAndPresence.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-develop.md"
+        ]
+      }
     },
     {
       "id": "F-07",
@@ -3348,7 +5319,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/EightBandColorMixer.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-develop.md"
+        ]
+      }
     },
     {
       "id": "F-08",
@@ -3363,7 +5344,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/LensCorrectionPanel.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-develop.md"
+        ]
+      }
     },
     {
       "id": "F-09",
@@ -3378,7 +5369,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/LocalMaskBrush.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-masks.md"
+        ]
+      }
     },
     {
       "id": "F-10",
@@ -3393,7 +5394,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/LinearRadialGradientMask.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-masks.md"
+        ]
+      }
     },
     {
       "id": "F-11",
@@ -3408,7 +5419,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/LuminanceColorRangeMask.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-masks.md"
+        ]
+      }
     },
     {
       "id": "F-12",
@@ -3423,7 +5444,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/BeforeAfterCompare.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-catalog.md"
+        ]
+      }
     },
     {
       "id": "F-13",
@@ -3438,7 +5469,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/PresetFilmstrip.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-workflows.md"
+        ]
+      }
     },
     {
       "id": "F-14",
@@ -3453,7 +5494,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/BatchExportPanel.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-workflows.md"
+        ]
+      }
     },
     {
       "id": "F-15",
@@ -3468,7 +5519,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/PhotoVersionHistoryBrowser.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-workflows.md"
+        ]
+      }
     },
     {
       "id": "F-16",
@@ -3483,7 +5544,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/CleanupAndRetouchPanel.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-masks.md"
+        ]
+      }
     },
     {
       "id": "F-17",
@@ -3498,7 +5569,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/PresetManager.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-workflows.md"
+        ]
+      }
     },
     {
       "id": "F-18",
@@ -3513,7 +5594,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/photo/PhotoMetadataInspector.tsx"
+        ],
+        "reportPaths": [
+          "P10-photo-catalog.md"
+        ]
+      }
     },
     {
       "id": "G-01",
@@ -3528,7 +5619,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/CompositionLayerTree.tsx"
+        ],
+        "reportPaths": [
+          "P11-composition-tree.md"
+        ]
+      }
     },
     {
       "id": "G-02",
@@ -3543,7 +5644,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/MotionKeyframeTimeline.tsx"
+        ],
+        "reportPaths": [
+          "P11-keyframe-timeline.md"
+        ]
+      }
     },
     {
       "id": "G-03",
@@ -3558,7 +5669,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/KeyframeValueGraph.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-curves.md"
+        ]
+      }
     },
     {
       "id": "G-04",
@@ -3573,7 +5694,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/KeyframeSpeedGraph.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-curves.md"
+        ]
+      }
     },
     {
       "id": "G-05",
@@ -3588,7 +5719,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/EasingPresetGallery.tsx"
+        ],
+        "reportPaths": [
+          "P11-render-and-easing.md"
+        ]
+      }
     },
     {
       "id": "G-06",
@@ -3603,7 +5744,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/MotionPathEditor.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-path.md"
+        ]
+      }
     },
     {
       "id": "G-07",
@@ -3618,7 +5769,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/Transform3DInspector.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-settings.md"
+        ]
+      }
     },
     {
       "id": "G-08",
@@ -3633,7 +5794,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/CameraAndLightControls.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-settings.md"
+        ]
+      }
     },
     {
       "id": "G-09",
@@ -3648,7 +5819,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/MatteAndMaskPanel.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-settings.md"
+        ]
+      }
     },
     {
       "id": "G-10",
@@ -3663,7 +5844,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/EffectStackAndInspector.tsx"
+        ],
+        "reportPaths": [
+          "P11-effect-stack.md"
+        ]
+      }
     },
     {
       "id": "G-11",
@@ -3678,7 +5869,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/ExpressionEditor.tsx"
+        ],
+        "reportPaths": [
+          "P11-expression-editor.md",
+          "P11-native-motion.md",
+          "P11-native-motion-proof.json"
+        ]
+      }
     },
     {
       "id": "G-12",
@@ -3693,7 +5896,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/ParticleEmitterControls.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-settings.md"
+        ]
+      }
     },
     {
       "id": "G-13",
@@ -3708,7 +5921,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/TimeRemapCurve.tsx"
+        ],
+        "reportPaths": [
+          "P11-motion-curves.md"
+        ]
+      }
     },
     {
       "id": "G-14",
@@ -3723,7 +5946,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/NodeGraphEditor.tsx"
+        ],
+        "reportPaths": [
+          "P11-node-graph.md",
+          "P11-native-motion.md",
+          "P11-native-motion-proof.json"
+        ]
+      }
     },
     {
       "id": "G-15",
@@ -3738,7 +5973,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/motion/RenderQueuePanel.tsx"
+        ],
+        "reportPaths": [
+          "P11-render-and-easing.md"
+        ]
+      }
     },
     {
       "id": "H-01",
@@ -3753,7 +5998,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/PaginatedTextCanvas.tsx"
+        ],
+        "reportPaths": [
+          "P12-text-surfaces-and-references.md"
+        ]
+      }
     },
     {
       "id": "H-02",
@@ -3768,7 +6023,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/TextSelectionAndCaret.tsx"
+        ],
+        "reportPaths": [
+          "P12-text-surfaces-and-references.md"
+        ]
+      }
     },
     {
       "id": "H-03",
@@ -3783,7 +6048,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/RichTextRibbon.tsx"
+        ],
+        "reportPaths": [
+          "P12-review-and-structure.md"
+        ]
+      }
     },
     {
       "id": "H-04",
@@ -3798,7 +6073,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/TypographyInspector.tsx"
+        ],
+        "reportPaths": [
+          "P12-layout-and-formatting.md"
+        ]
+      }
     },
     {
       "id": "H-05",
@@ -3813,7 +6098,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/ParagraphStylesGallery.tsx"
+        ],
+        "reportPaths": [
+          "P12-layout-and-formatting.md"
+        ]
+      }
     },
     {
       "id": "H-06",
@@ -3828,7 +6123,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/ParagraphRuler.tsx"
+        ],
+        "reportPaths": [
+          "P12-layout-and-formatting.md"
+        ]
+      }
     },
     {
       "id": "H-07",
@@ -3843,7 +6148,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/BulletsNumberingEditor.tsx"
+        ],
+        "reportPaths": [
+          "P12-review-and-structure.md"
+        ]
+      }
     },
     {
       "id": "H-08",
@@ -3858,7 +6173,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/InsertTableGrid.tsx"
+        ],
+        "reportPaths": [
+          "P12-layout-and-formatting.md"
+        ]
+      }
     },
     {
       "id": "H-09",
@@ -3873,7 +6198,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/TableLayoutInspector.tsx"
+        ],
+        "reportPaths": [
+          "P12-layout-and-formatting.md"
+        ]
+      }
     },
     {
       "id": "H-10",
@@ -3888,7 +6223,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/HeadersFootersEditor.tsx"
+        ],
+        "reportPaths": [
+          "P12-layout-and-formatting.md"
+        ]
+      }
     },
     {
       "id": "H-11",
@@ -3903,7 +6248,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/PageSetupPanel.tsx"
+        ],
+        "reportPaths": [
+          "P12-layout-and-formatting.md"
+        ]
+      }
     },
     {
       "id": "H-12",
@@ -3918,7 +6273,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/TextWrapAndFrames.tsx"
+        ],
+        "reportPaths": [
+          "P12-text-surfaces-and-references.md"
+        ]
+      }
     },
     {
       "id": "H-13",
@@ -3933,7 +6298,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/CommentsAndReviewRail.tsx"
+        ],
+        "reportPaths": [
+          "P12-review-and-structure.md"
+        ]
+      }
     },
     {
       "id": "H-14",
@@ -3948,7 +6323,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/TrackChangesView.tsx"
+        ],
+        "reportPaths": [
+          "P12-review-and-structure.md"
+        ]
+      }
     },
     {
       "id": "H-15",
@@ -3963,7 +6348,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/NavigationOutline.tsx"
+        ],
+        "reportPaths": [
+          "P12-review-and-structure.md"
+        ]
+      }
     },
     {
       "id": "H-16",
@@ -3978,7 +6373,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/TableOfContentsEditor.tsx"
+        ],
+        "reportPaths": [
+          "P12-review-and-structure.md"
+        ]
+      }
     },
     {
       "id": "H-17",
@@ -3993,7 +6398,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/FootnoteCitationEditor.tsx"
+        ],
+        "reportPaths": [
+          "P12-text-surfaces-and-references.md"
+        ]
+      }
     },
     {
       "id": "H-18",
@@ -4008,7 +6423,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/SpellGrammarPopover.tsx"
+        ],
+        "reportPaths": [
+          "P12-text-surfaces-and-references.md"
+        ]
+      }
     },
     {
       "id": "H-19",
@@ -4023,7 +6448,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/MailMergeFieldPicker.tsx"
+        ],
+        "reportPaths": [
+          "P12-text-surfaces-and-references.md"
+        ]
+      }
     },
     {
       "id": "H-20",
@@ -4038,7 +6473,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/LayoutSpreadNavigator.tsx"
+        ],
+        "reportPaths": [
+          "P12-text-surfaces-and-references.md"
+        ]
+      }
     },
     {
       "id": "H-21",
@@ -4053,7 +6498,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/DocumentReadAloudTransport.tsx"
+        ],
+        "reportPaths": [
+          "P12-review-and-structure.md"
+        ]
+      }
     },
     {
       "id": "H-22",
@@ -4068,7 +6523,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/document/DictationSessionPanel.tsx"
+        ],
+        "reportPaths": [
+          "P12-review-and-structure.md"
+        ]
+      }
     },
     {
       "id": "I-01",
@@ -4083,7 +6548,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/VirtualSpreadsheetGrid.tsx",
+          "packages/ui/src/components/forge/SpreadsheetGrid.tsx"
+        ],
+        "reportPaths": [
+          "P13-grid-and-formula-controls.md"
+        ]
+      }
     },
     {
       "id": "I-02",
@@ -4098,7 +6574,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/CellSelectionOverlay.tsx"
+        ],
+        "reportPaths": [
+          "P13-grid-and-formula-controls.md"
+        ]
+      }
     },
     {
       "id": "I-03",
@@ -4113,7 +6599,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/FormulaBar.tsx"
+        ],
+        "reportPaths": [
+          "P13-grid-and-formula-controls.md"
+        ]
+      }
     },
     {
       "id": "I-04",
@@ -4128,7 +6624,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/NameBox.tsx"
+        ],
+        "reportPaths": [
+          "P13-grid-and-formula-controls.md"
+        ]
+      }
     },
     {
       "id": "I-05",
@@ -4143,7 +6649,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/FormulaAutocomplete.tsx"
+        ],
+        "reportPaths": [
+          "P13-grid-and-formula-controls.md"
+        ]
+      }
     },
     {
       "id": "I-06",
@@ -4158,7 +6674,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/ReferenceColorizer.tsx"
+        ],
+        "reportPaths": [
+          "P13-grid-and-formula-controls.md"
+        ]
+      }
     },
     {
       "id": "I-07",
@@ -4173,7 +6699,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/FillHandleAndAutoFill.tsx"
+        ],
+        "reportPaths": [
+          "P13-grid-and-formula-controls.md"
+        ]
+      }
     },
     {
       "id": "I-08",
@@ -4188,7 +6724,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/SheetTabs.tsx"
+        ],
+        "reportPaths": [
+          "P13-sheet-management-and-charts.md"
+        ]
+      }
     },
     {
       "id": "I-09",
@@ -4203,7 +6749,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/CellFormatInspector.tsx"
+        ],
+        "reportPaths": [
+          "P13-formatting-and-data-tools.md"
+        ]
+      }
     },
     {
       "id": "I-10",
@@ -4218,7 +6774,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/ConditionalFormatRules.tsx"
+        ],
+        "reportPaths": [
+          "P13-formatting-and-data-tools.md"
+        ]
+      }
     },
     {
       "id": "I-11",
@@ -4233,7 +6799,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/ValidationDropdown.tsx"
+        ],
+        "reportPaths": [
+          "P13-formatting-and-data-tools.md"
+        ]
+      }
     },
     {
       "id": "I-12",
@@ -4248,7 +6824,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/SortFilterHeader.tsx"
+        ],
+        "reportPaths": [
+          "P13-formatting-and-data-tools.md"
+        ]
+      }
     },
     {
       "id": "I-13",
@@ -4263,7 +6849,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/ChartBuilder.tsx"
+        ],
+        "reportPaths": [
+          "P13-sheet-management-and-charts.md"
+        ]
+      }
     },
     {
       "id": "I-14",
@@ -4278,7 +6874,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/SparklineEditor.tsx"
+        ],
+        "reportPaths": [
+          "P13-sheet-management-and-charts.md"
+        ]
+      }
     },
     {
       "id": "I-15",
@@ -4293,7 +6899,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/PivotFieldList.tsx"
+        ],
+        "reportPaths": [
+          "P13-formatting-and-data-tools.md"
+        ]
+      }
     },
     {
       "id": "I-16",
@@ -4308,7 +6924,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/TableStyleGallery.tsx"
+        ],
+        "reportPaths": [
+          "P13-formatting-and-data-tools.md"
+        ]
+      }
     },
     {
       "id": "I-17",
@@ -4323,7 +6949,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/FreezeSplitControls.tsx"
+        ],
+        "reportPaths": [
+          "P13-sheet-management-and-charts.md"
+        ]
+      }
     },
     {
       "id": "I-18",
@@ -4338,7 +6974,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/RangeComments.tsx"
+        ],
+        "reportPaths": [
+          "P13-sheet-management-and-charts.md"
+        ]
+      }
     },
     {
       "id": "I-19",
@@ -4353,7 +6999,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/DataImportWizard.tsx"
+        ],
+        "reportPaths": [
+          "P13-formatting-and-data-tools.md"
+        ]
+      }
     },
     {
       "id": "I-20",
@@ -4368,7 +7024,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/SpreadsheetCardsView.tsx"
+        ],
+        "reportPaths": [
+          "P13-sheet-management-and-charts.md"
+        ]
+      }
     },
     {
       "id": "I-21",
@@ -4383,7 +7049,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/spreadsheet/SavedSheetViewManager.tsx"
+        ],
+        "reportPaths": [
+          "P13-formatting-and-data-tools.md"
+        ]
+      }
     },
     {
       "id": "J-01",
@@ -4398,7 +7074,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/SlideFilmstrip.tsx"
+        ],
+        "reportPaths": [
+          "P14-canvas-deck-and-native-ink.md"
+        ]
+      }
     },
     {
       "id": "J-02",
@@ -4413,7 +7099,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/SlideSorter.tsx"
+        ],
+        "reportPaths": [
+          "P14-canvas-deck-and-native-ink.md"
+        ]
+      }
     },
     {
       "id": "J-03",
@@ -4428,7 +7124,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/MasterLayoutEditor.tsx"
+        ],
+        "reportPaths": [
+          "P14-authoring-and-presenter.md"
+        ]
+      }
     },
     {
       "id": "J-04",
@@ -4443,7 +7149,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/ThemeAndTemplateGallery.tsx"
+        ],
+        "reportPaths": [
+          "P14-authoring-and-presenter.md"
+        ]
+      }
     },
     {
       "id": "J-05",
@@ -4458,7 +7174,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/SlideCanvas.tsx"
+        ],
+        "reportPaths": [
+          "P14-canvas-deck-and-native-ink.md"
+        ]
+      }
     },
     {
       "id": "J-06",
@@ -4473,7 +7199,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/ShapePresetGallery.tsx"
+        ],
+        "reportPaths": [
+          "P14-authoring-and-presenter.md"
+        ]
+      }
     },
     {
       "id": "J-07",
@@ -4488,7 +7224,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/ConnectorAndDiagramTools.tsx"
+        ],
+        "reportPaths": [
+          "P14-diagrams-morph-and-media.md"
+        ]
+      }
     },
     {
       "id": "J-08",
@@ -4503,7 +7249,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/TransitionPicker.tsx"
+        ],
+        "reportPaths": [
+          "P14-authoring-and-presenter.md"
+        ]
+      }
     },
     {
       "id": "J-09",
@@ -4518,7 +7274,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/SlideAnimationPane.tsx"
+        ],
+        "reportPaths": [
+          "P14-canvas-deck-and-native-ink.md"
+        ]
+      }
     },
     {
       "id": "J-10",
@@ -4533,7 +7299,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/MorphPreview.tsx"
+        ],
+        "reportPaths": [
+          "P14-diagrams-morph-and-media.md"
+        ]
+      }
     },
     {
       "id": "J-11",
@@ -4548,7 +7324,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/SlideNotesEditor.tsx"
+        ],
+        "reportPaths": [
+          "P14-authoring-and-presenter.md"
+        ]
+      }
     },
     {
       "id": "J-12",
@@ -4563,7 +7349,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/PresenterView.tsx"
+        ],
+        "reportPaths": [
+          "P14-authoring-and-presenter.md"
+        ]
+      }
     },
     {
       "id": "J-13",
@@ -4578,7 +7374,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/RehearsalTimers.tsx"
+        ],
+        "reportPaths": [
+          "P14-authoring-and-presenter.md"
+        ]
+      }
     },
     {
       "id": "J-14",
@@ -4593,7 +7399,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/InkAndLaserPointer.tsx"
+        ],
+        "reportPaths": [
+          "P14-canvas-deck-and-native-ink.md"
+        ]
+      }
     },
     {
       "id": "J-15",
@@ -4608,7 +7424,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/MediaInsertInspector.tsx"
+        ],
+        "reportPaths": [
+          "P14-diagrams-morph-and-media.md"
+        ]
+      }
     },
     {
       "id": "J-16",
@@ -4623,7 +7449,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/slides/ChartAndTableEditor.tsx"
+        ],
+        "reportPaths": [
+          "P14-diagrams-morph-and-media.md"
+        ]
+      }
     },
     {
       "id": "K-01",
@@ -4638,7 +7474,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/VirtualPDFPageViewer.tsx"
+        ],
+        "reportPaths": [
+          "P15-viewer-selection-and-text.md"
+        ]
+      }
     },
     {
       "id": "K-02",
@@ -4653,7 +7499,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFThumbnailSidebar.tsx"
+        ],
+        "reportPaths": [
+          "P15-organization-and-output.md"
+        ]
+      }
     },
     {
       "id": "K-03",
@@ -4668,7 +7524,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFPageLayoutSelector.tsx"
+        ],
+        "reportPaths": [
+          "P15-viewer-selection-and-text.md"
+        ]
+      }
     },
     {
       "id": "K-04",
@@ -4683,7 +7549,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/TextSearchResults.tsx"
+        ],
+        "reportPaths": [
+          "P15-signatures-forms-and-capture.md"
+        ]
+      }
     },
     {
       "id": "K-05",
@@ -4698,7 +7574,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFTextSelection.tsx"
+        ],
+        "reportPaths": [
+          "P15-viewer-selection-and-text.md"
+        ]
+      }
     },
     {
       "id": "K-06",
@@ -4713,7 +7599,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/AnnotationToolbar.tsx"
+        ],
+        "reportPaths": [
+          "P15-signatures-forms-and-capture.md"
+        ]
+      }
     },
     {
       "id": "K-07",
@@ -4728,7 +7624,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/CommentsThreadPanel.tsx"
+        ],
+        "reportPaths": [
+          "P15-signatures-forms-and-capture.md"
+        ]
+      }
     },
     {
       "id": "K-08",
@@ -4743,7 +7649,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/SignatureStampTool.tsx"
+        ],
+        "reportPaths": [
+          "P15-signatures-forms-and-capture.md"
+        ]
+      }
     },
     {
       "id": "K-09",
@@ -4758,7 +7674,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFFormFieldEditor.tsx"
+        ],
+        "reportPaths": [
+          "P15-signatures-forms-and-capture.md"
+        ]
+      }
     },
     {
       "id": "K-10",
@@ -4773,7 +7699,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PageReorderOrganizer.tsx"
+        ],
+        "reportPaths": [
+          "P15-organization-and-output.md"
+        ]
+      }
     },
     {
       "id": "K-11",
@@ -4788,7 +7724,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/ExtractMergeSplitDialog.tsx"
+        ],
+        "reportPaths": [
+          "P15-organization-and-output.md"
+        ]
+      }
     },
     {
       "id": "K-12",
@@ -4803,7 +7749,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/BookmarkOutline.tsx"
+        ],
+        "reportPaths": [
+          "P15-viewer-selection-and-text.md"
+        ]
+      }
     },
     {
       "id": "K-13",
@@ -4818,7 +7774,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/HyperlinkInspector.tsx"
+        ],
+        "reportPaths": [
+          "P15-organization-and-output.md"
+        ]
+      }
     },
     {
       "id": "K-14",
@@ -4833,7 +7799,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/RedactionReviewTool.tsx"
+        ],
+        "reportPaths": [
+          "P15-organization-and-output.md"
+        ]
+      }
     },
     {
       "id": "K-15",
@@ -4848,7 +7824,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/EncryptPermissionsPanel.tsx"
+        ],
+        "reportPaths": [
+          "P15-organization-and-output.md"
+        ]
+      }
     },
     {
       "id": "K-16",
@@ -4863,7 +7849,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFCompareOverlay.tsx"
+        ],
+        "reportPaths": [
+          "P15-organization-and-output.md"
+        ]
+      }
     },
     {
       "id": "K-17",
@@ -4878,7 +7874,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PrintAndExportPreview.tsx"
+        ],
+        "reportPaths": [
+          "P15-organization-and-output.md"
+        ]
+      }
     },
     {
       "id": "K-18",
@@ -4893,7 +7899,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFReadAloudTransport.tsx"
+        ],
+        "reportPaths": [
+          "P15-signatures-forms-and-capture.md"
+        ]
+      }
     },
     {
       "id": "K-19",
@@ -4908,7 +7924,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFVoiceNoteAttachment.tsx"
+        ],
+        "reportPaths": [
+          "P15-signatures-forms-and-capture.md"
+        ]
+      }
     },
     {
       "id": "K-20",
@@ -4923,7 +7949,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFScanSession.tsx"
+        ],
+        "reportPaths": [
+          "P15-signatures-forms-and-capture.md"
+        ]
+      }
     },
     {
       "id": "K-21",
@@ -4938,7 +7974,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/pdf/PDFInlineTextEdit.tsx"
+        ],
+        "reportPaths": [
+          "P15-viewer-selection-and-text.md"
+        ]
+      }
     },
     {
       "id": "L-01",
@@ -4953,7 +7999,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/FrameAndComponentTree.tsx"
+        ],
+        "reportPaths": [
+          "P16-layout-styles-and-variables.md"
+        ]
+      }
     },
     {
       "id": "L-02",
@@ -4968,7 +8024,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/AutoLayoutInspector.tsx"
+        ],
+        "reportPaths": [
+          "P16-layout-styles-and-variables.md"
+        ]
+      }
     },
     {
       "id": "L-03",
@@ -4983,7 +8049,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/HugFillFixedSizeControls.tsx"
+        ],
+        "reportPaths": [
+          "P16-layout-styles-and-variables.md"
+        ]
+      }
     },
     {
       "id": "L-04",
@@ -4998,7 +8074,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/ConstraintsPanel.tsx"
+        ],
+        "reportPaths": [
+          "P16-layout-styles-and-variables.md"
+        ]
+      }
     },
     {
       "id": "L-05",
@@ -5013,7 +8099,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/ComponentVariantPicker.tsx"
+        ],
+        "reportPaths": [
+          "P16-layout-styles-and-variables.md"
+        ]
+      }
     },
     {
       "id": "L-06",
@@ -5028,7 +8124,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/ReusableStylesPanel.tsx"
+        ],
+        "reportPaths": [
+          "P16-layout-styles-and-variables.md"
+        ]
+      }
     },
     {
       "id": "L-07",
@@ -5043,7 +8149,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/VariablesAndModes.tsx"
+        ],
+        "reportPaths": [
+          "P16-layout-styles-and-variables.md"
+        ]
+      }
     },
     {
       "id": "L-08",
@@ -5058,7 +8174,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/PrototypeConnectionTool.tsx"
+        ],
+        "reportPaths": [
+          "P16-prototypes-collaboration-and-handoff.md"
+        ]
+      }
     },
     {
       "id": "L-09",
@@ -5073,7 +8199,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/InteractionTriggerEditor.tsx"
+        ],
+        "reportPaths": [
+          "P16-prototypes-collaboration-and-handoff.md"
+        ]
+      }
     },
     {
       "id": "L-10",
@@ -5088,7 +8224,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/PrototypePreviewPlayer.tsx"
+        ],
+        "reportPaths": [
+          "P16-prototypes-collaboration-and-handoff.md"
+        ]
+      }
     },
     {
       "id": "L-11",
@@ -5103,7 +8249,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/FlowOverview.tsx"
+        ],
+        "reportPaths": [
+          "P16-prototypes-collaboration-and-handoff.md"
+        ]
+      }
     },
     {
       "id": "L-12",
@@ -5118,7 +8274,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/DevHandoffInspector.tsx"
+        ],
+        "reportPaths": [
+          "P16-prototypes-collaboration-and-handoff.md"
+        ]
+      }
     },
     {
       "id": "L-13",
@@ -5133,7 +8299,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/CollaborationPresence.tsx"
+        ],
+        "reportPaths": [
+          "P16-prototypes-collaboration-and-handoff.md"
+        ]
+      }
     },
     {
       "id": "L-14",
@@ -5148,7 +8324,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/CommentPins.tsx"
+        ],
+        "reportPaths": [
+          "P16-prototypes-collaboration-and-handoff.md"
+        ]
+      }
     },
     {
       "id": "L-15",
@@ -5163,7 +8349,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/design/MultiExportSlices.tsx"
+        ],
+        "reportPaths": [
+          "P16-prototypes-collaboration-and-handoff.md"
+        ]
+      }
     },
     {
       "id": "M-01",
@@ -5178,7 +8374,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/Native3DViewport.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-02",
@@ -5193,7 +8399,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/ViewCubeAndAxisGizmo.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-03",
@@ -5208,7 +8424,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/TransformGizmo3D.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-04",
@@ -5223,7 +8449,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/UVEditor.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-05",
@@ -5238,7 +8474,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/TextureSetPanel.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-06",
@@ -5253,7 +8499,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/PBRMaterialInspector.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-07",
@@ -5268,7 +8524,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/TextureBrush3D.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-08",
@@ -5283,7 +8549,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/TextureMaskAndGenerator.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-09",
@@ -5298,7 +8574,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/BakingMapPanel.tsx"
+        ],
+        "reportPaths": [
+          "P17-native-viewport-and-texturing.md"
+        ]
+      }
     },
     {
       "id": "M-10",
@@ -5313,7 +8599,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/NodeGraphCanvas.tsx"
+        ],
+        "reportPaths": [
+          "P17-graphs-and-drafting.md"
+        ]
+      }
     },
     {
       "id": "M-11",
@@ -5328,7 +8624,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/NodeLibrarySearch.tsx"
+        ],
+        "reportPaths": [
+          "P17-graphs-and-drafting.md"
+        ]
+      }
     },
     {
       "id": "M-12",
@@ -5343,7 +8649,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/LiveNodeThumbnail.tsx"
+        ],
+        "reportPaths": [
+          "P17-graphs-and-drafting.md"
+        ]
+      }
     },
     {
       "id": "M-13",
@@ -5358,7 +8674,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/DraftingCommandLine.tsx"
+        ],
+        "reportPaths": [
+          "P17-graphs-and-drafting.md"
+        ]
+      }
     },
     {
       "id": "M-14",
@@ -5373,7 +8699,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/ObjectSnapsAndOrtho.tsx"
+        ],
+        "reportPaths": [
+          "P17-graphs-and-drafting.md"
+        ]
+      }
     },
     {
       "id": "M-15",
@@ -5388,7 +8724,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/DimensionsAndHatching.tsx"
+        ],
+        "reportPaths": [
+          "P17-graphs-and-drafting.md"
+        ]
+      }
     },
     {
       "id": "M-16",
@@ -5403,7 +8749,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/PaperSpaceLayout.tsx"
+        ],
+        "reportPaths": [
+          "P17-graphs-and-drafting.md"
+        ]
+      }
     },
     {
       "id": "M-17",
@@ -5418,7 +8774,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/cad/ParametricConstraintEditor.tsx"
+        ],
+        "reportPaths": [
+          "P17-graphs-and-drafting.md"
+        ]
+      }
     },
     {
       "id": "N-01",
@@ -5433,7 +8799,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-02",
@@ -5448,7 +8820,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/devices/PenPairingDialog.tsx"
+        ],
+        "reportPaths": [
+          "P06-brush-and-ink-batch.md"
+        ]
+      }
     },
     {
       "id": "N-03",
@@ -5463,7 +8845,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-04",
@@ -5478,7 +8866,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-05",
@@ -5493,7 +8887,20 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/platform-services/src/haptics/index.ts",
+          "packages/platform-services/src/haptics/haptics.ts",
+          "packages/platform-services/ios/NYCTronHapticsModule.swift",
+          "packages/platform-services/android/src/main/java/com/nyctron/platformservices/NYCTronHapticsModule.kt"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "N-06",
@@ -5508,7 +8915,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/shell/FocusAndA11yLayer.tsx",
+          "packages/ui/src/components/shell/a11y-audit.ts",
+          "packages/ui/src/components/forge/inputs/PrecisionScrubber.tsx"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "N-07",
@@ -5523,7 +8942,20 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/hardware-keys/src/index.ts",
+          "packages/ui/src/components/shell/keyboard-map.ts",
+          "packages/hardware-keys/src/useHardwareKeyboard.ts",
+          "packages/hardware-keys/src/binding-registry.ts"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "N-08",
@@ -5538,7 +8970,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/panes/src/components/SafeAreaFoldableLayout.tsx",
+          "packages/panes/src/components/AdaptivePaneHost.tsx",
+          "packages/core/src/folds.ts"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "N-09",
@@ -5553,7 +8997,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-10",
@@ -5568,7 +9018,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-11",
@@ -5583,7 +9039,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-12",
@@ -5598,7 +9060,20 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/platform-services/src/documents/index.ts",
+          "packages/platform-services/src/documents/documents.ts",
+          "packages/platform-services/ios/NYCTronDocumentsModule.swift",
+          "packages/platform-services/android/src/main/java/com/nyctron/platformservices/NYCTronDocumentsModule.kt"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "N-13",
@@ -5613,7 +9088,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-14",
@@ -5628,7 +9109,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-15",
@@ -5643,7 +9130,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-16",
@@ -5658,7 +9151,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-17",
@@ -5673,7 +9172,19 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/platform-services/src/playback/index.ts",
+          "packages/platform-services/src/playback/session.ts",
+          "packages/platform-services/src/playback/policy.ts"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "N-18",
@@ -5688,7 +9199,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-19",
@@ -5703,7 +9220,13 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": false,
+        "review": "outside-library-scope",
+        "candidatePaths": [],
+        "reportPaths": []
+      }
     },
     {
       "id": "N-20",
@@ -5718,7 +9241,17 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/audio/AudioInterruptionRecoveryDialog.tsx"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     },
     {
       "id": "N-21",
@@ -5733,7 +9266,18 @@
       "completion": "unverified",
       "specification": "pending component-level acceptance audit",
       "gates": {},
-      "platforms": {}
+      "platforms": {},
+      "librarySource": {
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/ui/src/components/forge/platform/AccessiblePrecisionScrubControl.tsx",
+          "packages/ui/src/components/gestures/GestureHandlerDrag.tsx"
+        ],
+        "reportPaths": [
+          "P02-P03-final-platform-and-media-controls.md"
+        ]
+      }
     }
   ],
   "evidence": [],
@@ -5760,5 +9304,12 @@
       "error_paths",
       "input_layout"
     ]
+  },
+  "librarySourceSnapshot": {
+    "repository": "mikevocalz/NYC-Tron-UI",
+    "revision": "37645d149b19b3f9ff5feee4ca1ce004137994a4",
+    "path": "docs/completion/library-progress.json",
+    "sha256": "d97fcf0cf5924f2c8cfd0b776f24b96e891178f2726deea054e7fde4ee71c855",
+    "meaning": "Recorded library implementation reviews; component gates and phase acceptance retain their own evidence requirements."
   }
 }
