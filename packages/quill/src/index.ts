@@ -16,6 +16,7 @@ export const OPS = {
   applyStyle: "applyStyle",
   changeCase: "changeCase",
   setBlockKind: "setBlockKind",
+  setListKind:"setListKind",setListFormat:"setListFormat",shiftListLevel:"shiftListLevel",
   insertBlock: "insertBlock",
   splitBlock: "splitBlock",
   mergeBlock: "mergeBlock",
@@ -30,6 +31,11 @@ export type TextCase = "sentence" | "lower" | "upper" | "capitalize";
 
 export type BlockKind = "para" | "h1" | "h2" | "h3" | "list" | "quote";
 
+export type ListKind="none"|"bullet"|"numbered"|"multilevel";
+export type ListFormat="bullet"|"decimal"|"lowerLetter"|"upperLetter"|"lowerRoman"|"upperRoman";
+export interface ListLevel {format:ListFormat;start:number;indent_twips:number;hanging_twips:number}
+export interface ListDefinition {id:number;kind:Exclude<ListKind,"none">;levels:readonly ListLevel[]}
+export interface ListItem {level:number;definition:ListDefinition}
 export interface Pos {
   block: number;
   offset: number;
@@ -112,6 +118,11 @@ export class QuillDocument {
   applyStyle(from: Pos, to: Pos, style: Style) {
     return this.call(OPS.applyStyle, { from, to, style });
   }
+  setListKind(first:number,last:number,kind:ListKind){return this.call<{ok:boolean}>(OPS.setListKind,{first,last,kind});}
+  setListFormat(first:number,last:number,level:number,format:ListFormat,options:Partial<Pick<ListLevel,"start"|"indent_twips"|"hanging_twips">>={}){
+    return this.call<{ok:boolean}>(OPS.setListFormat,{...(options.start===undefined?{}:{start:options.start}),...(options.indent_twips===undefined?{}:{indent_twips:options.indent_twips}),...(options.hanging_twips===undefined?{}:{hanging_twips:options.hanging_twips}),first,last,level,format});
+  }
+  shiftListLevel(first:number,last:number,direction:1|-1){return this.call<{ok:boolean}>(OPS.shiftListLevel,{first,last,direction});}
   setBlockKind(block: number, kind: BlockKind) {
     return this.call(OPS.setBlockKind, { block, kind });
   }

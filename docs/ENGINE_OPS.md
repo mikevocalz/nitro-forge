@@ -435,7 +435,7 @@ Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimati
 ## quill-engine — `QuillEngine::new()`
 
 State `{ next free n/a, blocks: [Block] }`,
-`Block = { kind:"para"|"h1"|"h2"|"h3"|"list"|"quote", inlines:[Inline] }`,
+`Block = { kind:"para"|"h1"|"h2"|"h3"|"list"|"quote", inlines:[Inline], list?:{level:0..8,definition:{id,kind,levels:[9]}} }`,
 `Inline = { text, style:{ bold,italic,underline,strike: bool, color?:hex str,
 link?:url } }`. Positions `{ block, offset }` (offset = char index within block's
 concatenated text). Ranges `{ start:Pos, end:Pos }`, `end` exclusive.
@@ -448,25 +448,38 @@ concatenated text). Ranges `{ start:Pos, end:Pos }`, `end` exclusive.
 | `replaceRange` | `{from:Pos,to:Pos,text}` | `{deleted_text}` | `deleteRange` then `insertText` at `from` as one command; validates before mutating; one undo entry |
 | `changeCase` | `{from:Pos,to:Pos,mode}` | `{from:Pos,to:Pos}` | modes lower/upper/sentence/capitalize; style-preserving Unicode scalar conversion, adjusted selection end; atomic one undo entry, unchanged/collapsed is eventless |
 | `applyStyle` | `{from,to,style:{bold?,italic?,underline?,strike?,color?,link?,font_family?,font_size?,highlight?}}` | `{ok}` | re-splits inlines at range bounds; `font_family` string sets direct Latin family, null clears; 1–128 non-control characters, nonblank; `font_size` is 1–1638 points in half-point increments, null clears; `highlight` is exact `#RRGGBB` run background, null clears (DOCX explicit RGB shd only) |
-| `setBlockKind` | `{block,kind}` | `{ok}` | |
+| `setBlockKind` | `{block,kind}` | `{ok}` | Leaving list kind clears membership; entering legacy list kind uses the explicit bullet0 default below. |
+| `setListKind` | `{first,last,kind:"none"|"bullet"|"numbered"|"multilevel"}` | `{ok}` | Atomic inclusive block range; changing kind creates an independent definition, retaining existing levels; same kind is eventless. None clears membership. |
+| `setListFormat` | `{first,last,level:0..8,format,start?,indent_twips?,hanging_twips?}` | `{ok}` | Updates each complete definition touched by selected list paragraphs in one undo. Formats bullet/decimal/lowerLetter/upperLetter/lowerRoman/upperRoman. |
+| `shiftListLevel` | `{first,last,direction:1|-1}` | `{ok}` | One definition; canonical nesting policy: first item stays0, indent at most one below predecessor, all levels remain0..8. |
 | `insertBlock` | `{index,kind?}` | `{block_index}` | |
 | `splitBlock` | `{at:Pos}` | `{new_block_index}` | |
 | `mergeBlock` | `{index}` | `{ok}` | merge into previous |
 | `text` | `{from?,to?}` | `{text}` | plain text, `\n` between blocks |
 | `blocks` | `{}` | full structure | read-only |
 | `layout` | `{page_width,font_size}` | `{pages:[{lines:[{block,start,end}]}]}` | greedy wrap; avg glyph width 0.5em (h1=1.4x h2=1.25x h3=1.1x); block keeps its page |
-| `exportDocx` | `{}` | `{bytes_b64}` | valid minimal .docx (zip + `[Content_Types].xml` + `word/document.xml`); runs carry b/i/u/strike, blocks map to pStyle Heading1-3/ListParagraph/Quote |
+| `exportDocx` | `{}` | `{bytes_b64}` | Real ZIP; list paragraphs use numPr/ilvl/numId plus numbering.xml, its document relationship and content-type override. |
 | `importDocx` | `{bytes_b64}` | `{blocks}` | parse document.xml: paragraphs → blocks (pStyle), runs → inlines (b,i,u,strike); malformed → Serialization |
 
 Deps: `zip = "2"`, `quick-xml = "0.37"` (adjust to versions that resolve).
 Undo: prior `Vec<Block>` for structural ops; for `applyStyle`/`insertText`/
-`deleteRange`/`replaceRange` record affected block range's previous content.
+`deleteRange`/`replaceRange` record affected content. replaceRange stages a private candidate before one full-document journal entry, preserving redo on list-budget failure.
 
 ---
 
 `changeCase` uses locale-independent Rust Unicode default mappings. Lowercase context is computed for each entire affected paragraph, including outside the selection and across style runs, then aligned to source scalars by their lowercase expansion lengths; contextual output (including Greek final sigma) retains its source style. Alignment mismatch rejects rather than guessing. Uppercase and first-letter capitalization may expand one source scalar into several, all inheriting its style. No locale-specific Turkish/Lithuanian rules or Unicode titlecase/UAX29 segmentation are promised.
 
 Capitalize mode treats Unicode alphanumeric scalars, General_Category=Mark combining marks and straight/curly apostrophes as word units; it uppercases a leading alphabetic scalar and lowercases the remainder. Sentence mode uppercases the first alphabetic scalar of the selected span in each paragraph and after ASCII `. ! ?` followed by whitespace; other selected text lowercases. These are explicit simple editing grammars, not linguistic sentence segmentation. Paragraph kinds and text/styles outside the selected range remain unchanged. Context UTF-8 bytes across all affected paragraphs and converted selection UTF-8 output are each capped at1MiB before live mutation. Positions remain Unicode scalar offsets, not UTF-16 units/graphemes. The returned selection end accounts for expansions; the ribbon adapter rebinds against it.
+
+List definitions carry positive OOXML-compatible IDs<=2147483647, kind bullet/numbered/multilevel and nine levels. Each level stores one admitted format, start1..9999, left indent0..31680 twips and hanging0..left. Default starts1, indent720×(level+1), hanging360; bullet/numbered formats are bullet/decimal at all levels and multilevel cycles decimal/lowerLetter/lowerRoman. Shared Arc definitions serialize per membership; every same-ID copy must match. At most10000 list paragraphs/256 explicit definitions; DOCX numbering projection also caps256 instances. New list edits validate before journal/mutation, preserve all body text/Style fields and never insert literal marker prefixes. Split/newline retain list identity/level; merges retain destination membership, kind changes away from list clear it. Removing/replacing content preserves destination semantics. Old snapshots with kind:list and absent metadata remain supported with an explicit new default bullet0 interpretation; no previous numbering is claimed to have been retained.
+
+DOCX lists use actual abstractNum/lvl/num definitions, direct per-paragraph numPr and distinct num IDs for independent restart instances. Each admitted level writes start/numFmt/lvlText, left/hanging and a matching numbering tab. Numeric templates are current-level `%n.`; bullet glyphs are `•`, `◦`, `▪` by level. Import retains instance IDs, level settings and startOverride restarts. The admitted subset requires explicit level format/start/indent/hanging; missing referenced levels/instances, custom templates, symbol-font/picture bullets, alternate suffix/alignment, full level overrides, style-inherited numbering, paragraph indentation overrides and combined numbered headings/quotes reject. Part targets are bounded local basenames, and numbering requires the transitional w namespace/prefix. Numbering XML<=4MiB/100000 events; relationships<=1MiB; inspected styles<=4MiB. Existing document XML<=256MiB bound remains. These are logical/parser limits, not a security or RSS certificate.
+
+Own legacy bullet projection uses a reserved name only with the complete exact nine-level default template, level0 and one contiguous use; changed/missing template fields or disjoint uses reject rather than dropping settings. A foreign ListParagraph style without numPr imports as unnumbered para, so an absent marker is not fabricated. Explicit definitions never collapse merely because their visible format happens to be bullets. Snapshot/import validation checks definition coherence before replacing live state/history.
+
+The canonical list adapter exposes real kind/format/shift callbacks only for a truthful none or single-definition context, including preceding same-instance items so preview continuation is correct. Nondefault starts or mixed contexts reject with an explicit projection error because the current control cannot display authoritative per-item/start markers. Native APIs and DOCX retain those values. No application UI/pin activation, marker-aware font layout or complete H-07/P12 acceptance is claimed.
+
+Snapshots containing any explicit list membership use an engine-specific JSON wrapper `{kind:"quill",schema:2,document:{blocks:[...]}}` inside the unchanged NFD1 envelope. There is no root blocks field, so pre-list Quill readers fail closed rather than silently discarding unknown list fields. The current reader validates wrapper kind/schema/shape and the complete document before replacing live state/history; foreign/future/malformed wrappers reject. Snapshots without explicit list metadata keep the exact legacy `{blocks:[...]}` shape, including legacy kind:list defaults. No global envelope version or checkpoint/native tag changes.
 
 ## Shared engine rules
 - serde `rename_all = "camelCase"` is NOT used — payloads use snake_case exactly as written above.

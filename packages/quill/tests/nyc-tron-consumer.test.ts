@@ -18,7 +18,7 @@ export const ribbonFits = (b: QuillRibbonBinding): Pick<
 > => b;
 // BulletsNumberingEditor: list items, kind and the kinds Quill stores.
 export const listFits = (b: QuillListBinding): Pick<
-  BulletsNumberingEditorProps, "items" | "kind" | "kinds" | "onKindChange"
+  BulletsNumberingEditorProps, "items" | "kind" | "kinds" | "selectionStart" | "selectionEnd" | "levelFormats" | "onKindChange" | "onLevelFormatChange" | "onShiftLevel"
 > => b;
 // NavigationOutline: headings read from the document.
 export const outlineFits = (headings: QuillOutlineHeading[]): NavigationOutlineProps["headings"] => headings;

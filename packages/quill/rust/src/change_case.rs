@@ -149,6 +149,7 @@ impl QuillEngine {
             }
             next.push(Block {
                 kind: block.kind,
+                list: block.list.clone(),
                 inlines,
             });
         }
@@ -211,6 +212,7 @@ mod tests {
         };
         e.blocks = vec![Block {
             kind: BlockKind::H1,
+            list: None,
             inlines: vec![
                 run("a", Style::default()),
                 run("ß", style.clone()),
@@ -275,10 +277,12 @@ mod tests {
         e.blocks = vec![
             Block {
                 kind: BlockKind::Para,
+                list: None,
                 inlines: vec![run("abß", Style::default())],
             },
             Block {
                 kind: BlockKind::Quote,
+                list: None,
                 inlines: vec![run("éz", Style::default())],
             },
         ];

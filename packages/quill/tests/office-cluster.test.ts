@@ -18,7 +18,7 @@ function fake() {
   const calls: unknown[][] = [];
   const rec = (name: string) => vi.fn((...args: unknown[]) => { calls.push([name, ...args]); return ok({ ok: true }); });
   const doc = {
-    blocks: vi.fn(() => ok(blocks)), applyStyle: rec("applyStyle"), setBlockKind: rec("setBlockKind"),
+    blocks: vi.fn(() => ok(blocks)), applyStyle: rec("applyStyle"), setBlockKind: rec("setBlockKind"),setListKind:rec("setListKind"),setListFormat:rec("setListFormat"),shiftListLevel:rec("shiftListLevel"),
     layout: vi.fn(() => ok({ pages: [{ lines: [{ block: 0, start: 0, end: 4 }, { block: 1, start: 0, end: 5 }] }, { lines: [{ block: 2, start: 0, end: 3 }, { block: 3, start: 0, end: 3 }] }] })),
   };
   return { doc: doc as unknown as QuillOfficeDocument, calls };
@@ -57,15 +57,21 @@ describe("Quill blocks and selection runs for H-03", () => {
 });
 
 describe("H-07 list, H-15 outline, H-21 sections", () => {
-  it("list binding offers on/off only and refuses numbering", async () => {
-    const { doc, calls } = fake();
-    const l = await bindQuillList(doc, 1, 3, () => {});
-    expect(l.kind).toBe("mixed");
-    expect(l.items.map(i => i.text)).toEqual(["Héllo", "One", "Two"]);
-    await l.onKindChange("bullet");
-    expect(calls).toEqual([["setBlockKind", 1, "list"], ["setBlockKind", 2, "list"], ["setBlockKind", 3, "list"]]);
-    await expect(l.onKindChange("numbered")).rejects.toThrow(/setListFormat/);
-    await expect(bindQuillList(doc, 2, 9, () => {})).rejects.toThrow(RangeError);
+  it("list binding uses real atomic kind/format/level operations and full context", async () => {
+    const {doc,calls}=fake();const l=await bindQuillList(doc,3,3,()=>{});
+    expect(l.kind).toBe('bullet');expect(l.items.map(i=>i.text)).toEqual(['One','Two']);expect([l.selectionStart,l.selectionEnd]).toEqual([1,1]);
+    await l.onKindChange('numbered');await l.onLevelFormatChange!(0,'upperRoman');await l.onShiftLevel!(1);
+    expect(calls).toEqual([['setListKind',3,3,'numbered'],['setListFormat',3,3,0,'upperRoman'],['shiftListLevel',3,3,1]]);
+    await expect(bindQuillList(doc,1,3,()=>{})).rejects.toThrow('mixed list/nonlist');
+    await expect(bindQuillList(doc,2,9,()=>{})).rejects.toThrow(RangeError);
+  });
+  it("withholds a fake canonical preview for nondefault starts or multiple definitions",async()=>{
+    const {doc}=fake();const levels=Array.from({length:9},(_,i)=>({format:'decimal',start:i===0?5:1,indent_twips:720*(i+1),hanging_twips:360}));
+    const item={kind:'list',list:{level:0,definition:{id:1,kind:'numbered',levels}},inlines:[{text:'Actual fifth item',style:{}}]};
+    const source={...doc,blocks:vi.fn(()=>ok({blocks:[item]}))} as unknown as QuillOfficeDocument;
+    await expect(bindQuillList(source,0,0,()=>{})).rejects.toThrow('nondefault numbering starts');
+    const mixed={...doc,blocks:vi.fn(()=>ok({blocks:[item,{...item,list:{...item.list,definition:{...item.list.definition,id:2}}}]}))} as unknown as QuillOfficeDocument;
+    await expect(bindQuillList(mixed,0,1,()=>{})).rejects.toThrow('one list definition');
   });
 
   it("outline gives headings with their first page, and sections", async () => {

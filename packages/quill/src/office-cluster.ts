@@ -1,4 +1,4 @@
-import type { BlockKind, Pos, QuillDocument, Style, TextCase } from "./index";
+import type { BlockKind, Pos, QuillDocument, Style, ListItem, ListFormat, ListKind, TextCase } from "./index";
 
 /**
  * Engine side of NYC-Tron's document controls (Forge roster H-03
@@ -16,14 +16,6 @@ import type { BlockKind, Pos, QuillDocument, Style, TextCase } from "./index";
  * have. Each is a DEFER: the matching NYC-Tron prop is left out.
  */
 export const QUILL_DEFERRED_OPS = {
-  /**
-   * H-07 numbering definitions (bullet vs number, per-level format). Quill's
-   * `list` block exports as Word's ListParagraph style without numPr, so no
-   * marker is stored.
-   */
-  setListFormat: "H-07",
-  /** H-07 nesting: Quill blocks have no list level. */
-  setListLevel: "H-07",
   /** H-15 bookmarks: Quill has no named positions. */
   bookmarks: "H-15",
   /** H-15 page thumbnails: `layout` gives line spans, not pixels. */
@@ -41,6 +33,7 @@ export interface QuillRun {
 export interface QuillBlock {
   readonly index: number;
   readonly kind: BlockKind;
+  readonly list?:ListItem;
   readonly text: string;
   readonly runs: readonly QuillRun[];
 }
@@ -51,7 +44,7 @@ export interface QuillSelection {
   readonly end: Pos;
 }
 
-export type QuillOfficeDocument = Pick<QuillDocument, "blocks" | "applyStyle" | "changeCase" | "setBlockKind" | "layout">;
+export type QuillOfficeDocument = Pick<QuillDocument, "blocks" | "applyStyle" | "changeCase" | "setBlockKind" | "setListKind" | "setListFormat" | "shiftListLevel" | "layout">;
 
 const KINDS = new Set<BlockKind>(["para", "h1", "h2", "h3", "list", "quote"]);
 
@@ -62,11 +55,11 @@ function requireData<T>(response: { data?: T }, op: string): T {
 
 /** Reads every block through `blocks`. */
 export async function readQuillBlocks(document: Pick<QuillDocument, "blocks">): Promise<QuillBlock[]> {
-  const data = requireData(await document.blocks<{ blocks: { kind: BlockKind; inlines: QuillRun[] }[] }>(), "blocks");
+  const data = requireData(await document.blocks<{ blocks: { kind: BlockKind; list?:ListItem; inlines: QuillRun[] }[] }>(), "blocks");
   if (!Array.isArray(data.blocks)) throw new Error("Quill returned invalid blocks");
   return data.blocks.map((b, index) => {
     if (!KINDS.has(b.kind) || !Array.isArray(b.inlines)) throw new Error(`Quill returned a malformed block ${index}`);
-    return { index, kind: b.kind, runs: b.inlines, text: b.inlines.map(r => r.text).join("") };
+    return { index, kind: b.kind,...(b.list?{list:b.list}:{}), runs: b.inlines, text: b.inlines.map(r => r.text).join("") };
   });
 }
 
@@ -171,37 +164,39 @@ export async function bindQuillRibbon(
   };
 }
 
-/** `BulletsNumberingEditor` props Quill can back: list on or off. Formats and levels are deferred. */
+/** A truthful canonical preview requires one numbering context and default starts. */
 export interface QuillListBinding {
-  /** The selected blocks as list items (every level is 0). */
-  readonly items: readonly { id: string; text: string; level: 0 }[];
-  readonly kind: "none" | "bullet" | "mixed";
-  /** Quill stores "a list paragraph" only, offered as the bulleted kind. */
-  readonly kinds: readonly ["none", "bullet"];
-  readonly onKindChange: (kind: string) => Promise<void>;
+ readonly items:readonly {id:string;text:string;level:number}[];
+ readonly selectionStart:number;readonly selectionEnd:number;
+ readonly kind:ListKind;readonly kinds:readonly ListKind[];
+ readonly levelFormats?:readonly ListFormat[];
+ readonly onKindChange:(kind:ListKind)=>Promise<void>;
+ readonly onLevelFormatChange?:(level:number,format:ListFormat)=>Promise<void>;
+ readonly onShiftLevel?:(direction:1|-1)=>Promise<void>;
 }
-
-/** Binds the list editor to blocks `[first, last]`. */
-export async function bindQuillList(
-  document: QuillOfficeDocument, first: number, last: number, onChanged: (next: QuillListBinding) => void,
-): Promise<QuillListBinding> {
-  const blocks = await readQuillBlocks(document);
-  if (first < 0 || last < first || last >= blocks.length) throw new RangeError("Block range is out of the document");
-  const chosen = blocks.slice(first, last + 1);
-  const lists = chosen.filter(b => b.kind === "list").length;
-  const after = async (write: () => Promise<unknown>) => {
-    await write();
-    onChanged(await bindQuillList(document, first, last, onChanged));
-  };
-  return {
-    items: chosen.map(b => ({ id: String(b.index), text: b.text, level: 0 as const })),
-    kind: lists === 0 ? "none" : lists === chosen.length ? "bullet" : "mixed",
-    kinds: ["none", "bullet"],
-    onKindChange: kind => after(async () => {
-      if (kind !== "none" && kind !== "bullet") throw new RangeError(`Quill cannot store a "${kind}" list (see QUILL_DEFERRED_OPS.setListFormat)`);
-      for (const b of chosen) await document.setBlockKind(b.index, kind === "none" ? "para" : "list");
-    }),
-  };
+export async function bindQuillList(document:QuillOfficeDocument,first:number,last:number,onChanged:(next:QuillListBinding)=>void):Promise<QuillListBinding>{
+ const blocks=await readQuillBlocks(document);
+ if(!Number.isSafeInteger(first)||!Number.isSafeInteger(last)||first<0||last<first||last>=blocks.length)throw new RangeError("Block range is out of the document");
+ const chosen=blocks.slice(first,last+1),lists=chosen.filter(b=>b.kind==='list');
+ let context=chosen,kind:ListKind='none',formats:ListFormat[]|undefined;
+ if(lists.length){
+  if(lists.length!==chosen.length)throw new Error('Canonical list preview cannot represent mixed list/nonlist paragraphs');
+  const list=chosen[0]!.list;
+  if(list){
+   if(chosen.some(b=>b.list?.definition.id!==list.definition.id))throw new Error('Canonical list preview needs one list definition');
+   context=blocks.filter(b=>b.list?.definition.id===list.definition.id);
+   if(list.definition.levels.length!==9||context.some(b=>list.definition.levels[b.list!.level]?.start!==1))throw new Error('Canonical list preview cannot represent nondefault numbering starts');
+   kind=list.definition.kind;formats=list.definition.levels.map(l=>l.format);
+  }else{
+   if(chosen.some(b=>b.list))throw new Error('Canonical list preview needs one list definition');
+   let start=first,end=last;while(start>0&&blocks[start-1]!.kind==='list'&&!blocks[start-1]!.list)start--;while(end+1<blocks.length&&blocks[end+1]!.kind==='list'&&!blocks[end+1]!.list)end++;
+   context=blocks.slice(start,end+1);kind='bullet';formats=Array<ListFormat>(9).fill('bullet');
+  }
+ }
+ const after=async(write:()=>Promise<unknown>)=>{await write();onChanged(await bindQuillList(document,first,last,onChanged));};
+ return {items:context.map(b=>({id:String(b.index),text:b.text,level:b.list?.level??0})),selectionStart:context.findIndex(b=>b.index===first),selectionEnd:context.findIndex(b=>b.index===last),kind,kinds:['none','bullet','numbered','multilevel'],
+  onKindChange:kind=>after(()=>document.setListKind(first,last,kind)),
+  ...(formats?{levelFormats:formats,onLevelFormatChange:(level:number,format:ListFormat)=>after(()=>document.setListFormat(first,last,level,format)),onShiftLevel:(direction:1|-1)=>after(()=>document.shiftListLevel(first,last,direction))}:{})};
 }
 
 /** A heading as NYC-Tron `OutlineHeading` takes it. */
