@@ -1129,3 +1129,190 @@ fn profiles_nest_deterministic_order_and_batch_guard() {
     assert_eq!(e.snapshot().unwrap(), before);
     let _ = ring_ids;
 }
+
+#[test]
+fn profiles_chord_closes_tolerance_gap_at_large_coordinates() {
+    // A walk whose last edge ends 5e-7 from its start closes within the
+    // default 1e-6 tolerance. The implicit closing chord keeps the shoelace
+    // and moment integrals exact for the reported polyline; without it the
+    // untranslated contour at ~1e6 coordinates picks up O(tol * |coord|)
+    // error (about 2 world^2 of double-area here).
+    let mut e = DraftEngine::new();
+    let (ox, oy) = (999_990.0, 999_990.0);
+    let a = point(&mut e, ox, oy);
+    let b = point(&mut e, ox + 4., oy);
+    let c = point(&mut e, ox + 4., oy + 3.);
+    let d = point(&mut e, ox, oy + 3.);
+    let near_a = point(&mut e, ox + 5e-7, oy);
+    segment(&mut e, a, b);
+    segment(&mut e, b, c);
+    segment(&mut e, c, d);
+    segment(&mut e, d, near_a);
+    let profiles = find_profiles(&mut e, json!({}))["profiles"].clone();
+    let profiles = profiles.as_array().unwrap();
+    assert_eq!(profiles.len(), 1);
+    // Pre-fix (traversed edges only, no hop chords) this reports area 11.75
+    // and centroid x ~1021268: the untranslated contour moments at ~1e6
+    // coordinates are not closed-contour invariant. Post-fix residuals are
+    // f64 cancellation in the x^2/y^2 moment sums (~1e12 terms), bounded
+    // well under these tolerances while still catching the open contour.
+    let area = profiles[0]["area"].as_f64().unwrap();
+    assert!((area - 12.).abs() < 0.1, "tolerance-closed area {area}");
+    let cx = profiles[0]["centroid"]["x"].as_f64().unwrap();
+    let cy = profiles[0]["centroid"]["y"].as_f64().unwrap();
+    assert!((cx - (ox + 2.)).abs() < 0.5, "centroid x {cx}");
+    assert!((cy - (oy + 1.5)).abs() < 0.5, "centroid y {cy}");
+    // Tightening the tolerance below the gap leaves an open chain: no profile.
+    let tight = find_profiles(&mut e, json!({"tolerance":1e-9}))["profiles"].clone();
+    assert_eq!(tight.as_array().unwrap().len(), 0);
+}
+
+#[test]
+fn profiles_near_coincident_single_segment_emits_no_phantom() {
+    // One segment whose endpoints coincide within tolerance traces a
+    // one-edge "loop"; the closing chord traverses the same segment in
+    // reverse, so the double-area self-cancels and MIN_AREA2 drops it.
+    // Away from the origin the uncancelled shoelace term would be nonzero.
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 100., 100.);
+    let b = point(&mut e, 100.0000005, 100.);
+    segment(&mut e, a, b);
+    assert_eq!(
+        find_profiles(&mut e, json!({}))["profiles"]
+            .as_array()
+            .unwrap()
+            .len(),
+        0
+    );
+    // Two segments folding out and back to the start coordinate (a distinct
+    // point ID may share coordinates) also collapse to exactly zero area.
+    let c = point(&mut e, 200., 200.);
+    let d = point(&mut e, 201., 200.);
+    let dd = point(&mut e, 200., 200.);
+    segment(&mut e, c, d);
+    segment(&mut e, d, dd);
+    assert_eq!(
+        find_profiles(&mut e, json!({}))["profiles"]
+            .as_array()
+            .unwrap()
+            .len(),
+        0
+    );
+}
+
+#[test]
+fn profiles_negative_sweep_arc_closes_through_chord() {
+    // Negative-sweep half arc plus its chord: analytic circular integrals
+    // must combine with the chord into the exact half-disk area/centroid.
+    let mut e = DraftEngine::new();
+    let ac = point(&mut e, 0., 0.);
+    let p0 = point(&mut e, -5., 0.);
+    let p1 = point(&mut e, 5., 0.);
+    let a = arc(&mut e, ac, 5., 180., -180.);
+    let chord = segment(&mut e, p0, p1);
+    let profiles = find_profiles(&mut e, json!({}))["profiles"].clone();
+    let profiles = profiles.as_array().unwrap();
+    assert_eq!(profiles.len(), 1);
+    assert_eq!(loop_ids(&profiles[0]).len(), 2);
+    assert!(loop_ids(&profiles[0]).contains(&a));
+    assert!(loop_ids(&profiles[0]).contains(&chord));
+    let area = profiles[0]["area"].as_f64().unwrap();
+    assert!(
+        (area - 12.5 * std::f64::consts::PI).abs() < 1e-6,
+        "negative-sweep half-disk area {area}"
+    );
+    // Upper half (sweep passes through +90 deg): centroid 4r/(3pi) above the
+    // diameter, regardless of traversal orientation.
+    let cy = profiles[0]["centroid"]["y"].as_f64().unwrap();
+    let want = 20. / (3. * std::f64::consts::PI);
+    assert!((cy - want).abs() < 1e-6, "centroid y {cy} vs {want}");
+}
+
+#[test]
+fn profiles_hidden_entities_are_excluded() {
+    let mut e = DraftEngine::new();
+    let pts: Vec<u64> = [(0., 0.), (4., 0.), (4., 3.), (0., 3.)]
+        .iter()
+        .map(|&(x, y)| point(&mut e, x, y))
+        .collect();
+    let mut segs = vec![];
+    for i in 0..4 {
+        segs.push(segment(&mut e, pts[i], pts[(i + 1) % 4]));
+    }
+    assert_eq!(
+        find_profiles(&mut e, json!({}))["profiles"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    // Hiding any one rectangle edge opens the chain: no profile.
+    apply(&mut e, "updateSegment", json!({"id":segs[2],"visible":false}));
+    assert_eq!(
+        find_profiles(&mut e, json!({}))["profiles"]
+            .as_array()
+            .unwrap()
+            .len(),
+        0
+    );
+    apply(&mut e, "updateSegment", json!({"id":segs[2],"visible":true}));
+    // A hidden standalone circle never forms a loop either.
+    let c = point(&mut e, 20., 20.);
+    let circ = circle(&mut e, c, 2.);
+    apply(&mut e, "updateCircle", json!({"id":circ,"visible":false}));
+    assert_eq!(
+        find_profiles(&mut e, json!({}))["profiles"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn profiles_junction_and_folded_loop_are_deterministic() {
+    // Figure-eight: two squares sharing one corner point. The greedy
+    // lowest-document-order rule at the degree-4 junction must resolve both
+    // loops deterministically on repeated calls.
+    let mut e = DraftEngine::new();
+    let j = point(&mut e, 0., 0.);
+    let p = point(&mut e, 2., 0.);
+    let q = point(&mut e, 2., 2.);
+    let r = point(&mut e, 0., 2.);
+    let s = point(&mut e, -2., 0.);
+    let t = point(&mut e, -2., -2.);
+    let u = point(&mut e, 0., -2.);
+    for (a, b) in [(j, p), (p, q), (q, r), (r, j), (j, s), (s, t), (t, u), (u, j)] {
+        segment(&mut e, a, b);
+    }
+    let first = find_profiles(&mut e, json!({}));
+    assert_eq!(first, find_profiles(&mut e, json!({})));
+    let profiles = first["profiles"].as_array().unwrap();
+    assert_eq!(profiles.len(), 2);
+    for p in profiles {
+        assert!((p["area"].as_f64().unwrap() - 4.).abs() < 1e-9);
+    }
+
+    // Folded spur returning to (within tolerance of) its junction plus a
+    // real square: the zero-area folded walk is dropped and its edges stay
+    // available, while the square still reports exactly one profile.
+    let mut f = DraftEngine::new();
+    let j = point(&mut f, 10., 10.);
+    let a = point(&mut f, 14., 10.);
+    let b = point(&mut f, 14., 14.);
+    let c = point(&mut f, 10., 14.);
+    let spur = point(&mut f, 12., 10.);
+    let back = point(&mut f, 10.0000005, 10.);
+    // Spur edges are authored first so the folded walk is attempted first.
+    segment(&mut f, j, spur);
+    segment(&mut f, spur, back);
+    segment(&mut f, j, a);
+    segment(&mut f, a, b);
+    segment(&mut f, b, c);
+    segment(&mut f, c, j);
+    let profiles = find_profiles(&mut f, json!({}))["profiles"].clone();
+    let profiles = profiles.as_array().unwrap();
+    assert_eq!(profiles.len(), 1);
+    assert!((profiles[0]["area"].as_f64().unwrap() - 16.).abs() < 1e-9);
+    assert_eq!(find_profiles(&mut f, json!({}))["profiles"], json!(profiles));
+}

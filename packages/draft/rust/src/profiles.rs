@@ -1,8 +1,12 @@
 //! Deterministic closed-profile tracing over visible segments and analytic arcs.
 //! Read-only derived geometry: no state, journal or events are produced.
-//! Endpoint coincidence uses a world-unit tolerance; at junctions (degree > 2)
-//! the lowest document-order unused incident edge is followed, so ambiguous
-//! figure-eights resolve deterministically rather than enumerating cycles.
+//! Endpoint coincidence uses a world-unit tolerance; matched ends may differ
+//! by up to that tolerance, so area/centroid integrals include the implicit
+//! straight hop chords between each arrival and the next entered end (and
+//! back to the walk start) to keep the contour exactly closed. At junctions
+//! (degree > 2) the lowest document-order unused incident edge is followed,
+//! so ambiguous figure-eights resolve deterministically rather than
+//! enumerating cycles.
 use crate::{circular, model::*};
 use ignition_core::EngineError;
 use serde_json::{json, Value};
@@ -83,20 +87,25 @@ fn curve_moments(g: &circular::Geometry) -> (f64, f64, f64) {
     (a2, fx(t1) - fx(t0), -(kx(t1) - kx(t0)))
 }
 
+/// Segment line integrals from `p0` to `p1`; also used for the implicit
+/// closing chord that makes a tolerance-closed walk exactly closed.
+fn segment_moments(p0: XY, p1: XY) -> (f64, f64, f64) {
+    let (x0, y0) = p0;
+    let (x1, y1) = p1;
+    let (u, v) = (x1 - x0, y1 - y0);
+    (
+        x0 * y1 - x1 * y0,
+        v * (x0 * x0 + x0 * u + u * u / 3.),
+        u * (y0 * y0 + y0 * v + v * v / 3.),
+    )
+}
+
 /// (contour(x dy - y dx), contour(x^2 dy), contour(y^2 dx)) along the edge in
 /// the entered-end direction; reversing a path negates every line integral.
 fn moments(e: &Edge, entered: u8) -> (f64, f64, f64) {
     match e.kind {
         Kind::Segment { a, b } => {
-            let (p0, p1) = if entered == 0 { (a, b) } else { (b, a) };
-            let (x0, y0) = p0;
-            let (x1, y1) = p1;
-            let (u, v) = (x1 - x0, y1 - y0);
-            (
-                x0 * y1 - x1 * y0,
-                v * (x0 * x0 + x0 * u + u * u / 3.),
-                u * (y0 * y0 + y0 * v + v * v / 3.),
-            )
+            segment_moments(if entered == 0 { a } else { b }, if entered == 0 { b } else { a })
         }
         Kind::Arc { g } | Kind::Closed { g } => {
             let (a2, x2, y2) = curve_moments(&g);
@@ -336,8 +345,30 @@ fn loop_from_path(path: &[(usize, u8)], edges: &[Edge]) -> Loop {
         l.bounds.3 = l.bounds.3.max(b.3);
         push_poly(e, entered, &mut l.poly);
     }
-    let (ei, entered) = path[0];
-    l.test = edges[ei].ends[entered as usize];
+    // `trace` matches edge endpoints pairwise within `tol`, so consecutive
+    // traversed edges can meet at points up to `tol` apart and the walk's
+    // final arrival can sit `tol` from its start. The reported polygon —
+    // the sampled `poly` vertices connected cyclically — therefore contains
+    // small implicit hop chords between each arrival and the next edge's
+    // entered end that the edge integrals alone do not cover. Shoelace and
+    // moment sums are only translation-invariant for exactly closed
+    // contours, so every hop is integrated as a straight segment between
+    // the authored/analytic end coordinates (arc ends are `Geometry::ends`,
+    // never sampled nodes). Exactly coincident matches contribute zero; a
+    // single-edge walk's closing hop is the edge reversed and self-cancels
+    // to zero area, and a standalone closed curve's hop is degenerate.
+    for k in 0..path.len() {
+        let (ei, en) = path[k];
+        let (ni, nn) = path[(k + 1) % path.len()];
+        let from = edges[ei].ends[1 - en as usize];
+        let to = edges[ni].ends[nn as usize];
+        let (a2, x2, y2) = segment_moments(from, to);
+        l.a2 += a2;
+        l.x2dy += x2;
+        l.y2dx += y2;
+    }
+    let (fi, fe) = path[0];
+    l.test = edges[fi].ends[fe as usize];
     l
 }
 
