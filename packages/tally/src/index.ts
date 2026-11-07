@@ -50,6 +50,12 @@ export const OPS = {
   setSheetView: "setSheetView",
   removeSheetView: "removeSheetView",
   listSheetViews: "listSheetViews",
+  addComment: "addComment",
+  updateComment: "updateComment",
+  removeComment: "removeComment",
+  resolveComment: "resolveComment",
+  reopenComment: "reopenComment",
+  listComments: "listComments",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -387,6 +393,30 @@ export interface SheetViewInfo {
   /** True when this view is the bound sheet's `active_view`. */
   active: boolean;
 }
+
+/**
+ * Durable cell/range-anchored comment bound to one sheet. `anchor` is a
+ * canonical `"A1"`/`"A1:B2"` coordinate string — static grid coordinates,
+ * never remapped by content edits (sorts move cell contents, not anchors;
+ * row/column insert/delete ops are deferred). Single-entry, not threaded:
+ * replies are a deferred host-side concern.
+ */
+export interface CommentInfo {
+  id: number;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  /** Canonical `"A1"` or `"A1:B2"` anchor on the bound sheet. */
+  anchor: string;
+  /** Present only when set (1-128 bytes, no control characters). */
+  author?: string;
+  /** Non-blank body, at most 8192 UTF-8 bytes. */
+  body: string;
+  resolved: boolean;
+}
+
+/** `addComment`/`listComments` anchor: exactly one of `cell` or `range`. */
+export type CommentAnchor = { cell: string; range?: never } | { range: { from: string; to: string }; cell?: never };
 
 export class TallyDocument {
   private constructor(private doc: DocumentHandle) {}
@@ -760,6 +790,58 @@ export class TallyDocument {
   listSheetViews(sheet?: string | number) {
     return this.call<{ views: SheetViewInfo[] }>(OPS.listSheetViews, {
       ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Attach a comment to a `cell` or `range` anchor on `sheet` (name or
+   * index; default active). `body` is required non-blank (≤8192 UTF-8
+   * bytes); `author` is optional (≤128 bytes, no control characters) and
+   * `resolved` defaults false. Anchors are static coordinates — content
+   * edits and sorts never move them.
+   */
+  addComment(anchor: CommentAnchor, body: string, options?: { sheet?: string | number; author?: string; resolved?: boolean }) {
+    return this.call<{ comment: CommentInfo }>(OPS.addComment, {
+      ...("cell" in anchor ? { cell: anchor.cell } : { range: anchor.range }),
+      body,
+      ...(options?.sheet === undefined ? {} : { sheet: options.sheet }),
+      ...(options?.author === undefined ? {} : { author: options.author }),
+      ...(options?.resolved === undefined ? {} : { resolved: options.resolved }),
+    });
+  }
+  /**
+   * Patch comment `id`: present `author`/`body` keys set (`author:null`
+   * clears the author), absent keys keep values. Anchors are not
+   * re-pointable. No fields or an equal patch is eventless.
+   */
+  updateComment(id: number, patch: { author?: string | null; body?: string }) {
+    return this.call<{ comment: CommentInfo }>(OPS.updateComment, { id, ...patch });
+  }
+  removeComment(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removeComment, { id });
+  }
+  /** Mark comment `id` resolved; already resolved is eventless. */
+  resolveComment(id: number) {
+    return this.call<{ comment: CommentInfo }>(OPS.resolveComment, { id });
+  }
+  /** Mark comment `id` open again; already open is eventless. */
+  reopenComment(id: number) {
+    return this.call<{ comment: CommentInfo }>(OPS.reopenComment, { id });
+  }
+  /**
+   * Read-only comment list. `sheet` filters by bound sheet (absent lists
+   * all); `cell`/`range` narrow to anchors containing the cell or
+   * intersecting the range on the resolved sheet (default active) — the
+   * engine rejects both together.
+   */
+  listComments(options?: {
+    sheet?: string | number;
+    cell?: string;
+    range?: { from: string; to: string };
+  }) {
+    return this.call<{ comments: CommentInfo[] }>(OPS.listComments, {
+      ...(options?.sheet === undefined ? {} : { sheet: options.sheet }),
+      ...(options?.cell === undefined ? {} : { cell: options.cell }),
+      ...(options?.range === undefined ? {} : { range: options.range }),
     });
   }
   getCell(addr: string) {

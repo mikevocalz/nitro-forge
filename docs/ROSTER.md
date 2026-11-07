@@ -1011,3 +1011,41 @@ typecheck clean and 59 Vitest passed across 16 files (1 new live `nf-cli`
 sheet-views test file, 2 cases), `cargo build -p nf-cli` clean. No
 freeze-pane/split persistence, rendering or native/device acceptance is
 claimed.
+
+## Tally comments source checkpoint (2026-11-07)
+
+Tally gains durable workbook-level comments (slice 9): `addComment`,
+`updateComment`, `removeComment`, `resolveComment`, `reopenComment` and
+read-only `listComments`. A `Comment` is `{id,sheet,anchor,author?,body,
+resolved}` — a workbook-unique numeric id bound to one sheet by durable
+sheet id, `anchor` a canonical `"A1"`/`"A1:B2"` coordinate string (single
+cell via `cell` or bounded rectangle via `range`, exactly one required,
+under the shared 16,384-cell cap), `body` required non-blank ≤8192 UTF-8
+bytes, `author` optional ≤128 bytes without control characters, `resolved`
+a durable flag, at most 1024 comments per workbook. Single-entry, not
+threaded — NYC-Tron's `CommentThread.replies` is a deferred host-side
+grouping (quill comments precedent); no timestamps or mentions.
+**Anchor semantics are static coordinates**: anchors name grid positions,
+never content — `setCell`/ranges/fills/formats and `sortRange` never move
+them, and row/column insert/delete ops are deferred so there is nothing to
+remap against. `updateComment` patches author (`null` clears)/body with
+eventless equal/no-field paths; resolve/reopen are eventless when already
+in state; `listComments {sheet?,cell?,range?}` filters by bound sheet and
+by containing/intersecting anchors on the resolved sheet (default active).
+All mutations journal one whole-document undo entry; `removeSheet`
+cascade-drops bound comments with `readd_ok` re-admission;
+`duplicateSheet`/`moveSheet`/`renameSheet` do not copy or retarget them;
+bound-sheet protection guards mutations while `listComments` stays
+ungated. Snapshots carrying comments emit `{kind:"tally",schema:7}` — the
+bump is required because `Workbook` does not deny unknown fields and
+schema:6 readers would silently drop the table; `restore` accepts schemas
+1–7, fails closed on comments under lower or bare schemas, re-canonicalizes
+anchors and re-validates count/id uniqueness, bound sheets, anchor caps,
+author/body bounds, strict shape (`deny_unknown_fields`) and `next_comment`
+repair atomically. Local evidence: `cargo test -p tally-engine` 135 passed
+(6 new across comment_ops/protection plus schema-matrix and smuggle
+coverage), `pnpm --filter @nitro-forge/tally` typecheck clean and 63 Vitest
+passed across 17 files (1 new live `nf-cli` comments test file, 4 cases),
+`cargo build -p nf-cli` clean. No threading/replies, anchor remapping on
+row/column edits, comment-pin UI wiring or native/device acceptance is
+claimed.
