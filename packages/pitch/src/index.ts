@@ -16,6 +16,7 @@ export const OPS = {
   setBackground: "setBackground",
   addText: "addText",
   setText: "setText",
+  setTextStyle: "setTextStyle",
   addRect: "addRect",
   addImage: "addImage",
   moveObject: "moveObject",
@@ -30,6 +31,13 @@ export const OPS = {
 } as const;
 
 export type Rgba = [number, number, number, number];
+/** Omitted text attributes remain unchanged; null is invalid. RGBA channels are 0..255. */
+export interface PitchTextStyle {
+  font_size?: number;
+  bold?: boolean;
+  italic?: boolean;
+  color?: Rgba;
+}
 export type Layout = "blank" | "title" | "titleBody";
 export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn";
 
@@ -95,6 +103,10 @@ export class PitchDocument {
   }
   setText(slide: number, id: number, text: string) {
     return this.call(OPS.setText, { slide, id, text });
+  }
+  /** Apply a partial text style in one history entry; equal/empty patches are no-ops. */
+  setTextStyle(slide: number, id: number, style: PitchTextStyle) {
+    return this.call<{ ok: boolean }>(OPS.setTextStyle, { ...style, slide, id });
   }
   addRect(slide: number, x: number, y: number, w: number, h: number, fill: Rgba) {
     return this.call<{ object_id: number }>(OPS.addRect, { slide, x, y, w, h, fill });

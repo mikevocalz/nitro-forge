@@ -476,6 +476,36 @@ impl Engine for PitchEngine {
                 }
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
+            "setTextStyle" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let oi = self.object_index(slide, req_u64(p, "id")?)?;
+                let obj = &self.state.slides[slide].objects[oi];
+                if obj.kind != ObjKind::Text {
+                    return Err(EngineError::validation("setTextStyle requires a text object"));
+                }
+                let original = obj.text.as_ref().ok_or_else(|| EngineError::validation("text object has no text properties"))?;
+                let mut next = original.clone();
+                if p.get("font_size").is_some() {
+                    next.font_size = req_f64(p, "font_size")?;
+                    if next.font_size <= 0.0 {
+                        return Err(EngineError::validation("'font_size' must be > 0"));
+                    }
+                }
+                for (key, target) in [("bold", &mut next.bold), ("italic", &mut next.italic)] {
+                    if let Some(value) = p.get(key) {
+                        *target = value.as_bool().ok_or_else(|| EngineError::invalid(format!("field '{key}' must be a boolean")))?;
+                    }
+                }
+                if let Some(value) = p.get("color") {
+                    next.color = parse_color(value)?;
+                }
+                if &next == original {
+                    return Ok(CommandResult::read_only(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].objects[oi].text = Some(next);
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
             "addRect" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let (x, y, w, h) = (
@@ -705,6 +735,47 @@ mod tests {
 
     fn slide_id(e: &mut PitchEngine, idx: usize) -> u64 {
         e.state.slides[idx].id
+    }
+
+    #[test]
+    fn text_style_is_atomic_partial_persistent_and_preserves_history_on_noop() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let id = apply(&mut e, "addText", json!({"slide":slide,"x":1,"y":2,"w":90,"h":30,"text":"Keep content"}))["object_id"].as_u64().unwrap();
+        let original = e.snapshot().unwrap();
+        let result = e.apply(cmd("setTextStyle", json!({"slide":slide,"id":id,"font_size":32,"bold":true,"italic":true,"color":[1,2,3,128]}))).unwrap();
+        assert_eq!(result.events.len(), 1);
+        let text = e.state.slides[0].objects[0].text.as_ref().unwrap();
+        assert_eq!(text.content, "Keep content");
+        assert_eq!((text.font_size, text.bold, text.italic, text.color), (32.0, true, true, [1,2,3,128]));
+        let styled = e.snapshot().unwrap();
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&styled).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), styled);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), original); // all four fields are one history entry
+        for patch in [json!({}), json!({"font_size":18,"bold":false,"italic":false,"color":[0,0,0,255]})] {
+            let mut payload = patch;
+            payload["slide"] = json!(slide); payload["id"] = json!(id);
+            assert!(e.apply(cmd("setTextStyle", payload)).unwrap().events.is_empty());
+        }
+        for patch in [json!({"font_size":0}),json!({"font_size":-1}),json!({"font_size":null}),json!({"bold":1}),json!({"italic":"true"}),json!({"bold":true,"color":[1,2,3,256]}),json!({"bold":true,"color":[1,2,3]}),json!({"color":[1.5,2,3,4]})] {
+            let mut payload = patch;
+            payload["slide"] = json!(slide); payload["id"] = json!(id);
+            assert!(e.apply(cmd("setTextStyle", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), original);
+        }
+        assert!(e.redo().unwrap()); // no-op and failed patches did not clear redo
+        assert_eq!(e.snapshot().unwrap(), styled);
+        apply(&mut e, "setTextStyle", json!({"slide":slide,"id":id,"bold":false}));
+        let text = e.state.slides[0].objects[0].text.as_ref().unwrap();
+        assert_eq!((text.font_size, text.bold, text.italic, text.color), (32.0, false, true, [1,2,3,128]));
+        let rect = apply(&mut e, "addRect", json!({"slide":slide,"x":0,"y":0,"w":10,"h":10,"fill":[0,0,0,255]}))["object_id"].as_u64().unwrap();
+        let before = e.snapshot().unwrap();
+        for payload in [json!({"slide":slide,"id":rect,"bold":true}),json!({"slide":slide,"id":99999,"bold":true}),json!({"slide":99999,"id":id,"bold":true})] {
+            assert!(e.apply(cmd("setTextStyle", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
     }
 
     #[test]

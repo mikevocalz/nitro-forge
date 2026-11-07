@@ -378,6 +378,7 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `setBackground` | `{slide,color|null}` | `{ok}` | slide = id |
 | `addText` | `{slide,x,y,w,h,text,font_size?}` | `{object_id}` | |
 | `setText` | `{slide,id,text}` | `{ok}` | |
+| `setTextStyle` | `{slide,id,font_size?,bold?,italic?,color?}` | `{ok}` | Text objects only. Partial patch preserves omitted fields/content/geometry. Font size finite and >0; bold/italic strict booleans; color four integer RGBA channels 0..255. Explicit null invalid. Validated before mutation; one history entry/event only for a changed style. Empty/equal patch preserves redo and emits no event. |
 | `addRect` | `{slide,x,y,w,h,fill}` | `{object_id}` | |
 | `addImage` | `{slide,x,y,w,h,src}` | `{object_id}` | |
 | `moveObject` | `{slide,id,x,y}` | `{ok}` | |
