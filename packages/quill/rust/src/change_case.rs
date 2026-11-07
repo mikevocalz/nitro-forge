@@ -168,6 +168,9 @@ impl QuillEngine {
                 list: block.list.clone(),
                 style_id: block.style_id.clone(),
                 inlines,
+                // Table blocks carry no case-able text; the payload is
+                // preserved verbatim through the clone.
+                table: block.table.clone(),
             });
         }
         if !changed {
@@ -251,6 +254,7 @@ mod tests {
             kind: BlockKind::H1,
             list: None,
             style_id: None,
+            table: None,
             inlines: vec![
                 run("a", Style::default()),
                 run("ß", style.clone()),
@@ -317,12 +321,14 @@ mod tests {
                 kind: BlockKind::Para,
                 list: None,
                 style_id: None,
+                table: None,
                 inlines: vec![run("abß", Style::default())],
             },
             Block {
                 kind: BlockKind::Quote,
                 list: None,
                 style_id: None,
+                table: None,
                 inlines: vec![run("éz", Style::default())],
             },
         ];

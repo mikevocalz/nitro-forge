@@ -43,6 +43,11 @@ export const OPS = {
   listComments: "listComments",
   applyNamedStyle: "applyNamedStyle",
   setBlockStyle: "setBlockStyle",
+  insertTable: "insertTable",
+  deleteTable: "deleteTable",
+  setCellText: "setCellText",
+  listTables: "listTables",
+  describeTable: "describeTable",
   blocks: "blocks",
   layout: "layout",
   exportDocx: "exportDocx",
@@ -207,6 +212,25 @@ export interface SectionInfo {
   block: number;
   page: PageSetup;
   header_footer: HeaderFooter;
+}
+/**
+ * A table block's location and dimensions as reported by `listTables`.
+ * Tables are single `kind:"table"` blocks in the block stream; each cell
+ * holds its own paragraph list (see `describeTable` for cell text).
+ * Block payloads may therefore report `kind: "table"` even though
+ * `BlockKind` does not include it — no input op can create one directly.
+ * Bounds: rows 1..=64, cols 1..=26, at most 256 tables per document.
+ */
+export interface TableInfo {
+  /** Index of the table block in the top-level block stream. */
+  block: number;
+  rows: number;
+  cols: number;
+}
+/** `describeTable` result: dimensions plus a row-major grid of cell text. */
+export interface TableDescription extends TableInfo {
+  /** `cells[row][col]` is the cell's plain text (its paragraphs joined by "\n"). */
+  cells: string[][];
 }
 
 export class QuillDocument {
@@ -445,6 +469,39 @@ export class QuillDocument {
    */
   setBlockStyle(block: number, styleId: string | null) {
     return this.call(OPS.setBlockStyle, { block, style_id: styleId });
+  }
+  /**
+   * Insert a `rows`x`cols` table (each cell starts with one empty
+   * paragraph) as a single block at `index` (0..=block count). Row/column
+   * insert/delete, cell merge, styling, and DOCX table interop are deferred.
+   */
+  insertTable(index: number, rows: number, cols: number) {
+    return this.call<{ ok: boolean; block_index: number }>(OPS.insertTable, {
+      index,
+      rows,
+      cols,
+    });
+  }
+  /** Remove a table block entirely; anchors remap like a single-block delete. */
+  deleteTable(block: number) {
+    return this.call<{ ok: boolean }>(OPS.deleteTable, { block });
+  }
+  /**
+   * Replace one cell's content with plain paragraphs: `text` splits on "\n"
+   * into at most 64 paragraphs of at most 8192 characters total; empty text
+   * yields one empty paragraph. Cell content is unreachable by `Pos`, so
+   * top-level anchors never move.
+   */
+  setCellText(block: number, row: number, col: number, text: string) {
+    return this.call<{ ok: boolean }>(OPS.setCellText, { block, row, col, text });
+  }
+  /** Read-only; table blocks in document order. */
+  listTables() {
+    return this.call<{ tables: TableInfo[] }>(OPS.listTables);
+  }
+  /** Read-only; one table's dimensions and row-major cell text grid. */
+  describeTable(block: number) {
+    return this.call<TableDescription>(OPS.describeTable, { block });
   }
   blocks<T = unknown>() {
     return this.call<T>(OPS.blocks);

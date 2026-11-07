@@ -616,6 +616,7 @@ mod tests {
                 definition: Arc::new(definition(7, ListKind::Numbered)),
             }),
             style_id: None,
+            table: None,
             inlines: vec![],
         };
         let mut projection = project(std::slice::from_ref(&b)).unwrap();
@@ -680,6 +681,7 @@ mod tests {
             kind: BlockKind::List,
             list: None,
             style_id: None,
+            table: None,
             inlines: vec![],
         }])
         .unwrap();

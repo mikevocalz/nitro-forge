@@ -314,6 +314,10 @@ impl QuillEngine {
             _ => return Err(EngineError::unsupported("unknown list operation")),
         }
         validate(&next)?;
+        // List ops rewrite `kind`/`list` over a block range; a table block
+        // inside it would lose its kind/payload invariant, so the merged
+        // candidate must still satisfy table validation.
+        crate::tables::validate_tables(&next)?;
         if next == self.blocks {
             return Ok(Self::read_only(json!({"ok":true})));
         }

@@ -285,6 +285,57 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("inserts tables, edits cell text, and keeps anchors stable", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "before\nafter");
+    await doc.addBookmark("tail", { block: 1, offset: 0 });
+    const ins = await doc.insertTable(1, 2, 3);
+    expect(ins.data.block_index).toBe(1);
+    const tables = (await doc.listTables()).data.tables;
+    expect(tables).toEqual([{ block: 1, rows: 2, cols: 3 }]);
+    await doc.setCellText(1, 0, 0, "hello\nworld");
+    await doc.setCellText(1, 1, 2, "corner");
+    const described = (await doc.describeTable(1)).data;
+    expect(described.cells[0]?.[0]).toBe("hello\nworld");
+    expect(described.cells[1]?.[2]).toBe("corner");
+    expect(described.cells[0]?.[1]).toBe("");
+    // The bookmark after the insertion point shifted one block; in-cell
+    // edits never move top-level anchors.
+    const bms = (await doc.listBookmarks()).data.bookmarks;
+    expect(bms[0]?.pos.block).toBe(2);
+    // describe/blocks expose the table block with its payload.
+    const blocks = await doc.blocks<any>();
+    expect(blocks.data.blocks[1].kind).toBe("table");
+    expect(blocks.data.blocks[1].table.rows).toBe(2);
+    // Snapshot round-trip preserves the table and the bookmark.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.describeTable(1)).data.cells[0]?.[0]).toBe("hello\nworld");
+    expect((await re.listBookmarks()).data.bookmarks[0]?.pos.block).toBe(2);
+    // deleteTable removes the block and shifts anchors back.
+    await re.deleteTable(1);
+    expect((await re.listTables()).data.tables).toHaveLength(0);
+    expect((await re.listBookmarks()).data.bookmarks[0]?.pos.block).toBe(1);
+    expect(await re.undo()).toBe(true);
+    expect((await re.listTables()).data.tables).toHaveLength(1);
+    await re.close();
+  });
+
+  it("rejects out-of-bounds tables and cell edits atomically", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertTable(1, 1, 1);
+    await expect(doc.insertTable(9, 1, 1)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.insertTable(0, 0, 1)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.insertTable(0, 1, 27)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.setCellText(1, 5, 0, "x")).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.setCellText(0, 0, 0, "x")).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deleteTable(0)).rejects.toBeInstanceOf(EngineError);
+    // Document unchanged: still [para, table].
+    expect((await doc.listTables()).data.tables).toEqual([{ block: 1, rows: 1, cols: 1 }]);
+    await doc.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");
