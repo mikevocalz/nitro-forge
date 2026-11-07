@@ -7,6 +7,7 @@ import type { EngineKind } from "./types";
 const ENGINE_TAGS: Readonly<Record<EngineKind, number>> = {
   prism: 0, cadence: 1, splice: 2, folio: 3, pitch: 4, tally: 5, quill: 6,
 };
+const MAX_CHECKPOINT_BYTES = 256 * 1024 * 1024;
 const ENGINES_BY_TAG = new Map(Object.entries(ENGINE_TAGS).map(([kind, tag]) => [tag, kind as EngineKind]));
 
 export interface Checkpoint {
@@ -34,11 +35,11 @@ export function createCheckpointStore(storage: BinaryCheckpointStorage): Checkpo
     async read(key) {
       const bytes = await storage.read(key);
       if (!bytes) return undefined;
-      if (bytes.length < 14 || String.fromCharCode(...bytes.subarray(0, 4)) !== "NFC1")
+      if (bytes.length < 14 || bytes.byteLength > MAX_CHECKPOINT_BYTES + 5 || String.fromCharCode(...bytes.subarray(0, 4)) !== "NFC1")
         throw new Error("Invalid checkpoint record");
       const kind = ENGINES_BY_TAG.get(bytes[4]!);
       if (!kind) throw new Error("Unknown checkpoint engine");
-      const snapshot = bytes.slice(5);
+      const snapshot = Uint8Array.from(bytes.subarray(5));
       validateCheckpoint(snapshot);
       return { kind, bytes: snapshot };
     },
@@ -64,7 +65,7 @@ export interface AutosaveState {
 
 /** Bound and validate the NFD1 framing before persisting or opening a session. */
 export function validateCheckpoint(bytes: Uint8Array): void {
-  if (bytes.byteLength < 9 || bytes.byteLength > 256 * 1024 * 1024 ||
+  if (bytes.byteLength < 9 || bytes.byteLength > MAX_CHECKPOINT_BYTES ||
       String.fromCharCode(...bytes.subarray(0, 4)) !== "NFD1" || bytes[4] !== 0 ||
       new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(5, true) !== bytes.byteLength - 9)
     throw new Error("Invalid or oversized NFD1 checkpoint");
@@ -92,9 +93,12 @@ export class DocumentAutosave {
     if (!key || key.length > 256 || !Number.isFinite(delayMs) || delayMs < 0)
       throw new RangeError("Autosave requires a bounded key and nonnegative delay");
     this.unsubscribe = document.on(event => {
+      if (this.stopped) return;
       if (event.kind === "document:changed" || event.kind === "document:restored") {
         this.revision++;
         this.notify();
+        // A synchronous observer can close this resource during publication.
+        if (this.stopped) return;
         this.cancelTimer();
         this.timer = setTimeout(() => {
           this.timer = undefined;
@@ -140,7 +144,7 @@ export class DocumentAutosave {
         const revision = this.revision;
         const bytes = await this.document.snapshot();
         validateCheckpoint(bytes);
-        await this.store.write(this.key, { kind: this.document.kind, bytes: bytes.slice() });
+        await this.store.write(this.key, { kind: this.document.kind, bytes: Uint8Array.from(bytes) });
         this.savedRevision = revision;
         this.notify();
       }
@@ -165,21 +169,31 @@ export class DocumentAutosave {
     return this.closing;
   }
 
-  /** Recover into a new, unpublished session, so async storage cannot replace
-   * edits in an already interactive document. Missing checkpoint is normal. */
+  /** Recover into a new, unpublished session. Cancellation closes a session
+   * opened by this attempt before it can be published. Already-submitted
+   * storage/engine work may finish; the signal prevents subsequent admission. */
   static async recover(host: EngineHost, kind: EngineKind, store: CheckpointStore,
-    key: string): Promise<DocumentHandle | undefined> {
+    key: string, signal?: AbortSignal): Promise<DocumentHandle | undefined> {
+    const checkCancelled = () => {
+      if (!signal?.aborted) return;
+      const error = new Error("Checkpoint recovery cancelled", { cause: signal.reason });
+      error.name = "AbortError";
+      throw error;
+    };
+    checkCancelled();
     const checkpoint = await store.read(key);
+    checkCancelled();
     if (!checkpoint) return undefined;
     if (checkpoint.kind !== kind) throw new Error("Checkpoint belongs to another engine");
+    // Own the bytes before open() yields: a storage adapter may reuse its buffer.
+    // Uint8Array.from also copies Node Buffer inputs, whose slice() aliases memory.
     validateCheckpoint(checkpoint.bytes);
-    const document = await DocumentHandle.open(host, kind);
-    try {
-      await document.restore(checkpoint.bytes.slice());
-      return document;
-    } catch (error) {
-      await document.close();
-      throw error;
-    }
+    const bytes = Uint8Array.from(checkpoint.bytes);
+    validateCheckpoint(bytes);
+    return DocumentHandle.openInitialized(host, kind, async document => {
+      checkCancelled();
+      await document.restore(bytes);
+      checkCancelled();
+    });
   }
 }

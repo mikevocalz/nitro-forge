@@ -38,7 +38,7 @@ export function ownCollaborationCheckpoint(value: CollaborationCheckpoint): Coll
   }
   const size = HEADER + 4 + value.documentId.length + value.bytes.length + (value.pending?.bytes.length ?? 0);
   if (size > CAP) throw new RangeError("Collaboration recovery record exceeds 256 MiB including pending upload");
-  const local = value.bytes.slice(), pending = value.pending?.bytes.slice();
+  const local = Uint8Array.from(value.bytes), pending = value.pending === undefined ? undefined : Uint8Array.from(value.pending.bytes);
   validateCheckpoint(local); if (pending) validateCheckpoint(pending);
   return Object.freeze({ version: 1 as const, documentId: value.documentId, kind: value.kind,
     revision: value.revision, dirty: value.dirty, bytes: local,
@@ -85,7 +85,7 @@ export function createCollaborationCheckpointStore(storage: BinaryCheckpointStor
     async read(key) {
       const raw = await storage.read(key); if (!raw) return undefined;
       if (raw.length < HEADER + 4 + 1 + 9 || raw.length > CAP) throw new Error("Invalid collaboration recovery length");
-      const bytes = raw.slice(), view = new DataView(bytes.buffer);
+      const bytes = Uint8Array.from(raw), view = new DataView(bytes.buffer);
       if (String.fromCharCode(...bytes.subarray(0, 4)) !== "NCC1" ||
           view.getUint32(bytes.length - 4, true) !== await checksum(bytes.subarray(0, bytes.length - 4)))
         throw new Error("Corrupt collaboration recovery record");
