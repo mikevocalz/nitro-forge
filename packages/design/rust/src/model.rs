@@ -42,6 +42,15 @@ pub enum Kind {
     /// Layout box only: glyphs are a Prism/font-metrics gate. `renderFrame`
     /// draws the node's fill as a plain rect background and no text.
     Text,
+    /// Reusable definition node (NYC-Tron `component`): frame-like — it owns
+    /// children and an optional flow layout — and renders on canvas like a
+    /// frame. Its subtree is the template that `Kind::Instance` nodes expand.
+    Component,
+    /// Materialized-instance reference (NYC-Tron `instance`): a leaf node
+    /// storing `instance.component` + optional `variant` + `overrides`. Its
+    /// rendered subtree exists only as a deterministic read-time expansion;
+    /// the expanded form is never persisted.
+    Instance,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -213,6 +222,66 @@ impl TextStyle {
             && (1..=1000).contains(&self.font_weight)
     }
 }
+/// Bounded set of node properties an instance override or component variant
+/// may set on a template node. `text` sets only the content string of a
+/// `Kind::Text` target; font style stays authored on the template.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OverridePath {
+    Name,
+    Fill,
+    X,
+    Y,
+    Width,
+    Height,
+    Visible,
+    Locked,
+    Text,
+}
+/// Scalar payload for an [`OverridePath`]. Untagged JSON keeps the NYC-Tron
+/// `onOverride(id, string|number|boolean)` shape plus the engine's `[r,g,b,a]`
+/// fill quadruple; `validate` enforces the path↔value pairing.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum OverrideValue {
+    Flag(bool),
+    Number(f64),
+    Text(String),
+    Color([u8; 4]),
+}
+/// One property override aimed at a node inside a component subtree.
+/// `node` is the template node id: the component root id targets the
+/// expanded instance root, any descendant id targets that clone.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NodeOverride {
+    pub node: u64,
+    pub path: OverridePath,
+    pub value: OverrideValue,
+}
+/// Named override bundle stored on a component (NYC-Tron variant picker:
+/// `onPropertyChange` selects one of these by name). Multi-axis variant
+/// properties are deferred; a variant is a flat named set.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ComponentVariant {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub properties: Vec<NodeOverride>,
+}
+/// Instance payload stored on `Kind::Instance` nodes only. `component`
+/// names the `Kind::Component` node; `variant` selects one of its
+/// `variants` by name; `overrides` apply after variant properties, so
+/// instance-level values win on `(node, path)` conflicts.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstanceSpec {
+    pub component: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub variant: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub overrides: Vec<NodeOverride>,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Node {
@@ -239,6 +308,14 @@ pub struct Node {
     /// the schema:2 snapshot wrapper.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub constraints: Option<NodeConstraints>,
+    /// Named variant bundles; meaningful only on `Kind::Component` nodes.
+    /// Presence triggers the schema:2 snapshot wrapper.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<ComponentVariant>,
+    /// Component reference + variant + overrides; meaningful only on
+    /// `Kind::Instance` nodes. Presence triggers the schema:2 wrapper.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instance: Option<InstanceSpec>,
 }
 impl Node {
     pub fn frame(id: u64, width: f64, height: f64) -> Self {
@@ -258,6 +335,8 @@ impl Node {
             sizing: Sizing::default(),
             text: None,
             constraints: None,
+            variants: vec![],
+            instance: None,
         }
     }
 }
@@ -478,7 +557,13 @@ impl State {
 /// node variant, `text`/`constraints` fields, or the new state collections.
 pub fn requires_wrapper(s: &State) -> bool {
     s.nodes.values().any(|n| {
-        n.kind == Kind::Text || n.text.is_some() || n.constraints.is_some()
+        n.kind == Kind::Text
+            || n.text.is_some()
+            || n.constraints.is_some()
+            || n.kind == Kind::Component
+            || n.kind == Kind::Instance
+            || n.instance.is_some()
+            || !n.variants.is_empty()
     })
         || !s.variables.is_empty()
         || !s.modes.is_empty()
@@ -636,6 +721,98 @@ pub fn validate_variables(s: &State) -> Result<(), EngineError> {
     }
     Ok(())
 }
+/// Path↔value pairing for [`NodeOverride`]; `validate_override_set`
+/// enforces the per-path scalar bounds on top of this shape check.
+fn override_value_matches(path: OverridePath, v: &OverrideValue) -> bool {
+    matches!(
+        (path, v),
+        (OverridePath::Name | OverridePath::Text, OverrideValue::Text(_))
+            | (OverridePath::Fill, OverrideValue::Color(_))
+            | (
+                OverridePath::X
+                    | OverridePath::Y
+                    | OverridePath::Width
+                    | OverridePath::Height,
+                OverrideValue::Number(_)
+            )
+            | (OverridePath::Visible | OverridePath::Locked, OverrideValue::Flag(_))
+    )
+}
+/// True when `target` is `root` itself or a descendant of `root` in the
+/// stored tree. Walks the parent map with the same depth bound as tree
+/// validation so hostile input cannot force an unbounded climb.
+fn override_target_in_subtree(
+    target: u64,
+    root: u64,
+    parents: &BTreeMap<u64, u64>,
+) -> bool {
+    let mut cursor = Some(target);
+    for _ in 0..=64 {
+        let Some(id) = cursor else { return false };
+        if id == root {
+            return true;
+        }
+        cursor = parents.get(&id).copied();
+    }
+    false
+}
+/// Validate one override set (instance `overrides` or a component
+/// variant's `properties`) against the subtree rooted at `component_id`.
+/// Every `node` target must be the component root or a descendant, the
+/// value must match its path's scalar kind and bounds, `text` overrides
+/// require a text target, and `(node, path)` pairs must be unique.
+fn validate_override_set(
+    s: &State,
+    overrides: &[NodeOverride],
+    component_id: u64,
+    parents: &BTreeMap<u64, u64>,
+) -> Result<(), EngineError> {
+    let mut seen = BTreeSet::new();
+    for ov in overrides {
+        if !seen.insert((ov.node, ov.path)) {
+            return Err(bad("duplicate instance override target"));
+        }
+        if !override_target_in_subtree(ov.node, component_id, parents) {
+            return Err(bad("override target is outside the component subtree"));
+        }
+        let target = s
+            .nodes
+            .get(&ov.node)
+            .ok_or_else(|| bad("override target does not exist"))?;
+        if !override_value_matches(ov.path, &ov.value) {
+            return Err(bad("override value does not match its path"));
+        }
+        match (&ov.path, &ov.value) {
+            (OverridePath::Name, OverrideValue::Text(v))
+                if v.len() > 512 || v.chars().any(char::is_control) =>
+            {
+                return Err(bad("override name exceeds bounds"));
+            }
+            (OverridePath::Text, OverrideValue::Text(v)) => {
+                if v.len() > MAX_TEXT_BYTES
+                    || !v.chars().all(|c| c == '\n' || c == '\t' || !c.is_control())
+                {
+                    return Err(bad("override text exceeds bounds"));
+                }
+                if target.kind != Kind::Text {
+                    return Err(bad("text override requires a text target"));
+                }
+            }
+            (OverridePath::X | OverridePath::Y, OverrideValue::Number(v))
+                if !v.is_finite() || v.abs() > 1e6 =>
+            {
+                return Err(bad("override position exceeds bounds"));
+            }
+            (OverridePath::Width | OverridePath::Height, OverrideValue::Number(v))
+                if !v.is_finite() || *v <= 0. || *v > 1e7 =>
+            {
+                return Err(bad("override size exceeds bounds"));
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
 pub fn validate(s: &State) -> Result<(), EngineError> {
     if s.kind != "design"
         || s.schema != 1
@@ -673,14 +850,29 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
         {
             return Err(bad("invalid node identity or geometry"));
         }
-        if n.kind != Kind::Frame && (!n.children.is_empty() || n.layout.is_some()) {
-            return Err(bad("only frames own children or layout"));
+        // Frames and components own children/layout; every other kind is a
+        // leaf. Instances materialize their subtree only at read time.
+        if !matches!(n.kind, Kind::Frame | Kind::Component)
+            && (!n.children.is_empty() || n.layout.is_some())
+        {
+            return Err(bad("only frames and components own children or layout"));
         }
         match (&n.kind, &n.text) {
             (Kind::Text, Some(t)) if t.valid() => {}
             (Kind::Text, _) => return Err(bad("text node requires a valid text style")),
             (_, Some(_)) => return Err(bad("text style requires a text node")),
             _ => {}
+        }
+        match (&n.kind, &n.instance) {
+            (Kind::Instance, Some(_)) => {}
+            (Kind::Instance, None) => {
+                return Err(bad("instance node requires an instance spec"));
+            }
+            (_, Some(_)) => return Err(bad("instance spec requires an instance node")),
+            _ => {}
+        }
+        if !n.variants.is_empty() && n.kind != Kind::Component {
+            return Err(bad("variants require a component node"));
         }
         if let Some(l) = &n.layout {
             if ![
@@ -712,6 +904,94 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
     }
     if visited.len() != s.nodes.len() {
         return Err(bad("unreachable node"));
+    }
+    // Component/instance state: variant names, override targets and values,
+    // instance references and the component-reference graph are validated
+    // together so hostile restores cannot strand overrides or create
+    // unbounded expansion cycles.
+    let mut variant_names: BTreeMap<u64, BTreeSet<String>> = BTreeMap::new();
+    for (id, n) in &s.nodes {
+        if n.kind != Kind::Component {
+            continue;
+        }
+        let mut names = BTreeSet::new();
+        for v in &n.variants {
+            if !valid_symbol_name(&v.name) || !names.insert(v.name.clone()) {
+                return Err(bad("invalid or duplicate component variant"));
+            }
+            validate_override_set(s, &v.properties, *id, &parents)?;
+        }
+        variant_names.insert(*id, names);
+    }
+    let mut edges: BTreeMap<u64, BTreeSet<u64>> = BTreeMap::new();
+    for (id, n) in &s.nodes {
+        let Some(spec) = &n.instance else {
+            continue;
+        };
+        let comp = s
+            .nodes
+            .get(&spec.component)
+            .ok_or_else(|| bad("instance references unknown component"))?;
+        if comp.kind != Kind::Component {
+            return Err(bad("instance target is not a component"));
+        }
+        if let Some(var) = &spec.variant {
+            if !valid_symbol_name(var) {
+                return Err(bad("invalid instance variant name"));
+            }
+            let known = variant_names
+                .get(&spec.component)
+                .is_some_and(|names| names.contains(var));
+            if !known {
+                return Err(bad("instance variant does not exist on component"));
+            }
+        }
+        validate_override_set(s, &spec.overrides, spec.component, &parents)?;
+        // Edge from the nearest enclosing component to the referenced
+        // component; canvas-level instances create no edge.
+        let mut cursor = parents.get(id).copied();
+        while let Some(p) = cursor {
+            if s.nodes[&p].kind == Kind::Component {
+                edges.entry(p).or_default().insert(spec.component);
+                break;
+            }
+            cursor = parents.get(&p).copied();
+        }
+    }
+    // Kahn topological check: any leftover component means a reference
+    // cycle, which would make read-time expansion unbounded.
+    {
+        let mut all: BTreeSet<u64> = edges.keys().copied().collect();
+        for targets in edges.values() {
+            all.extend(targets.iter().copied());
+        }
+        let mut indegree: BTreeMap<u64, usize> = all.iter().map(|id| (*id, 0)).collect();
+        for targets in edges.values() {
+            for t in targets {
+                *indegree.get_mut(t).unwrap() += 1;
+            }
+        }
+        let mut queue: Vec<u64> = indegree
+            .iter()
+            .filter(|(_, d)| **d == 0)
+            .map(|(id, _)| *id)
+            .collect();
+        let mut removed = 0usize;
+        while let Some(id) = queue.pop() {
+            removed += 1;
+            if let Some(targets) = edges.get(&id) {
+                for t in targets {
+                    let d = indegree.get_mut(t).unwrap();
+                    *d -= 1;
+                    if *d == 0 {
+                        queue.push(*t);
+                    }
+                }
+            }
+        }
+        if removed != all.len() {
+            return Err(bad("component instance references form a cycle"));
+        }
     }
     // Constraint state is durable on absolute children only. Flow children
     // get positions from their parent's layout, the root has no parent

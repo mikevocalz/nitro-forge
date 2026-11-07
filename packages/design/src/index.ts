@@ -27,6 +27,12 @@ export const OPS={
  listBindings:'listBindings',
  setConstraints:'setConstraints',
  readConstraints:'readConstraints',
+ createComponent:'createComponent',
+ updateComponent:'updateComponent',
+ createInstance:'createInstance',
+ updateInstance:'updateInstance',
+ detachInstance:'detachInstance',
+ describeComponents:'describeComponents',
  evaluateLayout:'evaluateLayout',
  renderFrame:'renderFrame',
 } as const;
@@ -35,7 +41,21 @@ export type Axis='x'|'y';
 export interface AxisSizing {mode:SizeMode;value:number;fixedValue:number;resolvedValue:number;canHug:boolean;canFill:boolean;unavailableReason?:string;hugReason?:string;fillReason?:string}
 export type AxisSizingUpdate={mode:'fixed';value?:number}|{mode:'hug'|'fill'};
 export type SizingSettings={x:SizeMode;y:SizeMode};
-export type NodeKind='frame'|'rect'|'ellipse'|'text';
+export type NodeKind='frame'|'rect'|'ellipse'|'text'|'component'|'instance';
+/** Bounded override surface for instances and component variants. `text`
+ * sets only the content string of a text target; font style stays authored.
+ * `node` is the template node id — the component root id targets the
+ * expanded instance root. */
+export type OverridePath='name'|'fill'|'x'|'y'|'width'|'height'|'visible'|'locked'|'text';
+export type OverrideValue=boolean|number|string|[number,number,number,number];
+export interface NodeOverride{node:number;path:OverridePath;value:OverrideValue}
+/** Named override bundle on a component; `updateInstance` selects one by
+ * name. Multi-axis variant properties are deferred. */
+export interface ComponentVariant{name:string;properties?:NodeOverride[]}
+/** Instance payload on `kind:'instance'` nodes: component reference,
+ * optional variant name, and per-target overrides applied after variant
+ * properties (instance values win on node+path conflicts). */
+export interface InstanceSpec{component:number;variant?:string;overrides?:NodeOverride[]}
 export type TextFontStyle='normal'|'italic';
 /** Bounded text style; content ≤64KiB UTF-8, font_family ≤256 bytes, font_size>0≤1e4, font_weight 1..=1000. */
 export interface TextStyle{content:string;font_family:string;font_size:number;font_weight:number;font_style:TextFontStyle}
@@ -76,7 +96,7 @@ export interface ConstraintNodeInfo{node_id:number;constraints:NodeConstraints;e
 export interface ConstraintsDescription{solving:'storage-only';accepted:{horizontal:HorizontalAnchor[];vertical:VerticalAnchor[];relative_to:('parent'|'sibling')[];extent_bounds:string};rejected:string[];nodes:ConstraintNodeInfo[]}
 export interface FrameLayout{direction:'row'|'column';wrap?:boolean;gap:number;padding_top:number;padding_right:number;padding_bottom:number;padding_left:number;align:'start'|'center'|'end'|'stretch';justify:'start'|'center'|'end'|'space-between'}
 export interface NodeGeometry{x:number;y:number;width:number;height:number}
-export interface DesignNode extends NodeGeometry{id:number;kind:NodeKind;name:string;fill:[number,number,number,number];visible:boolean;locked:boolean;children:number[];layout:FrameLayout|null;sizing?:SizingSettings;text?:TextStyle;constraints?:NodeConstraints}
+export interface DesignNode extends NodeGeometry{id:number;kind:NodeKind;name:string;fill:[number,number,number,number];visible:boolean;locked:boolean;children:number[];layout:FrameLayout|null;sizing?:SizingSettings;text?:TextStyle;constraints?:NodeConstraints;variants?:ComponentVariant[];instance?:InstanceSpec}
 export interface CompositionSettings{title:string;width:number;height:number}
 /** describe/evaluateLayout expose the internal schema:1 state; the schema:2
  * wrapper `{kind:'design',schema:2,document}` exists only inside snapshot
@@ -88,12 +108,18 @@ export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'f
 export type NewNode=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'>>;
 export interface NewTextNode extends NewNode{content:string;style?:FontStylePatch}
 export interface EvaluatedBox extends NodeGeometry{id:number;kind:NodeKind;fill:[number,number,number,number];visible:boolean;renderable:boolean}
+export interface ComponentDescription{id:number;name:string;variants:{name:string;properties:NodeOverride[]}[]}
+export interface InstanceDescription{id:number;name:string;component:number|null;variant:string|null;overrides:NodeOverride[];unavailable_reason?:string}
+export interface ComponentsDescription{expansion:{max_depth:number;max_nodes:number;persisted:boolean};components:ComponentDescription[];instances:InstanceDescription[]}
 /** Bounded fixed/hug/fill layout and real Prism RGBA plus variables/modes.
  * Text nodes are layout boxes only (renderable:false, fill background draws,
  * no glyphs); bindings resolve at read/render time and never bake into nodes.
  * Constraints are stored h/v anchors on absolute children only — storage and
- * validation, not solving (evaluateLayout ignores them in C1/C2). No components,
- * prototype runtime, images or clipping. */
+ * validation, not solving (evaluateLayout ignores them in C1/C2). Components
+ * and instances exist: instances expand deterministically at read/render
+ * time only (never persisted expanded) under depth/node caps, with a bounded
+ * override surface and named variant bundles. Instance sizing stays fixed.
+ * No prototype runtime, images, clipping, groups or layers. */
 export class DesignDocument{
  private constructor(private readonly document:DocumentHandle){}
  static async open(host:EngineHost,settings:Partial<CompositionSettings>={}){return new DesignDocument(await DocumentHandle.openInitialized(host,'design',doc=>doc.apply(OPS.new,settings)));}
@@ -152,6 +178,30 @@ export class DesignDocument{
  /** Read-only constraint state plus the accepted/rejected anchor sets;
   * silent. `enforced` is always false until the solver slice lands. */
  readConstraints(id?:number){return this.document.apply<ConstraintsDescription>(OPS.readConstraints,id===undefined?{}:{id});}
+ /** Converts an existing frame subtree into a reusable component
+  * definition. Optional `variants` are named override bundles selectable
+  * per instance; `name` renames in the same op. The root canvas cannot
+  * become a component. */
+ createComponent(id:number,options:{name?:string;variants?:ComponentVariant[]}={}){return this.document.apply<{ok:boolean}>(OPS.createComponent,{id,...options});}
+ /** Renames a component and/or replaces its variant bundle list (empty
+  * array clears). Requires an existing component node. */
+ updateComponent(id:number,patch:{name?:string;variants?:ComponentVariant[]}){return this.document.apply<{ok:boolean}>(OPS.updateComponent,{id,...patch});}
+ /** Creates a materialized-instance leaf under `parent` (default root).
+  * Box fields default from the component root; `variant` selects a named
+  * variant bundle and `overrides` are per-target property overrides.
+  * Returns the new node id. */
+ createInstance(component:number,options:{parent?:number;name?:string;x?:number;y?:number;width?:number;height?:number;fill?:[number,number,number,number];visible?:boolean;locked?:boolean;variant?:string|null;overrides?:NodeOverride[]|null}={}){return this.document.apply<{node_id:number}>(OPS.createInstance,{component,...options});}
+ /** Sets an instance's variant (null clears) and/or replaces its override
+  * list (null or [] clears). Absent fields are unchanged. */
+ updateInstance(id:number,patch:{variant?:string|null;overrides?:NodeOverride[]|null}){return this.document.apply<{ok:boolean}>(OPS.updateInstance,{id,...patch});}
+ /** Materializes one instance's current expansion as ordinary nodes: the
+  * instance becomes a frame and expanded descendants get fresh ids.
+  * Bindings do not follow clones; overrides are baked. Undo restores. */
+ detachInstance(id:number){return this.document.apply<{ok:boolean}>(OPS.detachInstance,{id});}
+ /** Read-only component/instance catalog for the tree and variant-picker
+  * contracts, plus expansion bounds. Instances report `unavailable_reason`
+  * when the document currently exceeds a read expansion bound. */
+ describeComponents(){return this.document.apply<ComponentsDescription>(OPS.describeComponents,{});}
  evaluateLayout(){return this.document.apply<{boxes:EvaluatedBox[]}>(OPS.evaluateLayout,{});}
  renderFrame(){return this.document.apply<{width:number;height:number;pixels_b64?:string}>(OPS.renderFrame,{});}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}

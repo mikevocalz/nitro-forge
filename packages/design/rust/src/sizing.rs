@@ -206,8 +206,8 @@ impl Resolver<'_> {
             };
             return Ok(extent.max(0.001));
         }
-        if n.kind != Kind::Frame {
-            return Err(bad("hug requires a frame"));
+        if !matches!(n.kind, Kind::Frame | Kind::Component) {
+            return Err(bad("hug requires a frame or component"));
         }
         if let Some(l) = &n.layout {
             if axis == main(l) {
