@@ -4,6 +4,7 @@ members = [
     "rust/ignition-core",
     "rust/nf-cli",
     "rust/nf-sys",
+    "rust/nf-raw",
     "packages/*/rust",
 ]
 

@@ -636,6 +636,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "nf-raw"
+version = "0.1.0"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "nf-sys"
 version = "0.1.0"
 dependencies = [

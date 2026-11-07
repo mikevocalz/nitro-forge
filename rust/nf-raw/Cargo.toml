@@ -1,0 +1,11 @@
+[package]
+name = "nf-raw"
+description = "Host-side RAW decode provider (LibRaw) producing bounded RGBA8 previews for photo-engine. Native code is confined to the FFI shim; this crate is NOT an engine and performs no document I/O."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+
+[build-dependencies]
+cc = "1"
