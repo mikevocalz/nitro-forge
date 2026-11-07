@@ -10,9 +10,13 @@
 //! through `setCellText` and never move top-level anchors.
 //!
 //! Scope: insert/delete, row/column insert/delete, cell text replacement,
-//! rectangular cell merge/unmerge, and read ops. Table styling, nested
-//! tables, in-cell find/replace, `text`/`layout` cell coverage, and DOCX
-//! table import/export are deferred (see docs/ENGINE_OPS.md).
+//! rectangular cell merge/unmerge, and read ops. Slice D added in-cell
+//! find/replace coverage (`findText` reports cell-qualified matches and
+//! `replaceText` rewrites cell paragraphs) plus `text`/`layout` cell
+//! coverage through the `table_text` serialization. Table styling,
+//! nested tables, in-cell `changeCase`/`applyStyle` (both are `Pos`
+//! anchored and cannot address cells), and DOCX table import/export
+//! remain deferred (see docs/ENGINE_OPS.md).
 //!
 //! Merge model (slice C): `Table.merges` is a registry of rectangular
 //! regions `{row,col,rows,cols}` in grid coordinates — the dense
@@ -321,6 +325,24 @@ fn cell_text(cell: &TableCell) -> String {
     cell.blocks
         .iter()
         .map(block_text)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Serialized plain text of a whole table for the `text`/`layout` ops:
+/// rows joined by `'\n'`, cells within a row `'\t'`-separated, each
+/// cell's own paragraphs `'\n'`-joined via `cell_text` — so a
+/// multi-paragraph cell is indistinguishable from extra row breaks in
+/// the flat serialization (documented in docs/ENGINE_OPS.md). Covered
+/// merge cells contribute their empty text like every other read.
+pub(super) fn table_text(table: &Table) -> String {
+    (0..table.rows)
+        .map(|r| {
+            (0..table.cols)
+                .map(|c| cell_text(&table.cells[r * table.cols + c]))
+                .collect::<Vec<_>>()
+                .join("\t")
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -2088,5 +2110,221 @@ mod tests {
             assert!(e2.restore(&bytes).is_err(), "case {i} must reject");
             assert_eq!(e2.snapshot().unwrap(), engine().snapshot().unwrap());
         }
+    }
+
+    // -- slice D: in-cell find/replace + text/layout coverage -----------------
+
+    fn find(e: &mut QuillEngine, payload: Value) -> CommandResult {
+        apply(e, "findText", payload)
+    }
+
+    /// ["top foo" para, 2x2 table, "tail" para] with "foo"-bearing cells:
+    /// (0,0) "foo bar", (0,1) "foo", (1,0) three paragraphs "x"/"foo y"/
+    /// "foo", (1,1) empty.
+    fn find_fixture() -> QuillEngine {
+        let mut e = engine();
+        apply(&mut e, "insertText", json!({"at":{"block":0,"offset":0},"text":"top foo"}));
+        insert_table(&mut e, 1, 2, 2);
+        apply(&mut e, "insertBlock", json!({"index": 2}));
+        apply(&mut e, "insertText", json!({"at":{"block":2,"offset":0},"text":"tail"}));
+        apply(&mut e, "setCellText", json!({"block":1,"row":0,"col":0,"text":"foo bar"}));
+        apply(&mut e, "setCellText", json!({"block":1,"row":0,"col":1,"text":"foo"}));
+        apply(&mut e, "setCellText", json!({"block":1,"row":1,"col":0,"text":"x\nfoo y\nfoo"}));
+        e
+    }
+
+    #[test]
+    fn find_text_reports_cell_matches_with_cell_positions() {
+        let mut e = find_fixture();
+        let r = find(&mut e, json!({"query": "foo"}));
+        assert_eq!(r.data["count"], 1);
+        assert_eq!(r.data["cell_count"], 4);
+        assert_eq!(r.data["matches"][0]["from"]["block"], 0);
+        let cell = r.data["cell_matches"].as_array().unwrap();
+        // Row-major order: (0,0), (0,1), then (1,0)'s second paragraph.
+        assert_eq!(
+            cell[0],
+            json!({
+                "from": {"block":1,"row":0,"col":0,"cell_block":0,"offset":0},
+                "to":   {"block":1,"row":0,"col":0,"cell_block":0,"offset":3},
+                "text": "foo",
+            })
+        );
+        assert_eq!(cell[1]["from"]["row"], 0);
+        assert_eq!(cell[1]["from"]["col"], 1);
+        assert_eq!(cell[2]["from"]["row"], 1);
+        assert_eq!(cell[2]["from"]["col"], 0);
+        // The match sits in the cell's second paragraph ("x"/"foo y").
+        assert_eq!(cell[2]["from"]["cell_block"], 1);
+        assert_eq!(cell[2]["from"]["offset"], 0);
+        // The fourth match sits in the cell's third paragraph.
+        assert_eq!(cell[3]["from"]["cell_block"], 2);
+        assert_eq!(cell[3]["from"]["offset"], 0);
+        assert_eq!(cell[3]["text"], "foo");
+        // Case sensitivity applies inside cells too.
+        let r = find(&mut e, json!({"query": "FOO", "case_sensitive": true}));
+        assert_eq!(r.data["cell_count"], 0);
+        let r = find(&mut e, json!({"query": "FOO"}));
+        assert_eq!(r.data["cell_count"], 4);
+    }
+
+    #[test]
+    fn find_text_cell_coverage_follows_block_range_rules() {
+        let mut e = find_fixture(); // table at block 1
+        // Collapsed on the table block: no cell matches.
+        let r = find(
+            &mut e,
+            json!({"query":"foo","from":{"block":1,"offset":0},"to":{"block":1,"offset":0}}),
+        );
+        assert_eq!(r.data["cell_count"], 0);
+        // Ending at the table's position still covers it (deleteRange's
+        // inclusive to-block convention); starting at it covers it too.
+        let r = find(
+            &mut e,
+            json!({"query":"foo","from":{"block":0,"offset":0},"to":{"block":1,"offset":0}}),
+        );
+        assert_eq!(r.data["cell_count"], 4);
+        let r = find(
+            &mut e,
+            json!({"query":"foo","from":{"block":1,"offset":0},"to":{"block":2,"offset":4}}),
+        );
+        assert_eq!(r.data["cell_count"], 4);
+        // A range starting after the table excludes its cells.
+        let r = find(
+            &mut e,
+            json!({"query":"foo","from":{"block":2,"offset":0}}),
+        );
+        assert_eq!(r.data["cell_count"], 0);
+        assert_eq!(r.data["count"], 0);
+    }
+
+    #[test]
+    fn replace_text_rewrites_cell_paragraphs_with_undo() {
+        let mut e = engine();
+        insert_table(&mut e, 0, 2, 2);
+        apply(&mut e, "setCellText", json!({"block":0,"row":0,"col":0,"text":"foo x foo"}));
+        apply(&mut e, "setCellText", json!({"block":0,"row":1,"col":1,"text":"foo"}));
+        apply(&mut e, "addBookmark", json!({"name":"bm","pos":{"block":0,"offset":0}}));
+        let r = apply(&mut e, "replaceText", json!({"query":"foo","replacement":"bar"}));
+        assert_eq!(r.data["replaced"], 3);
+        let d = describe_table(&mut e, 0);
+        assert_eq!(d["cells"][0][0], "bar x bar");
+        assert_eq!(d["cells"][1][1], "bar");
+        // Cell paragraphs keep their block structure (no new blocks, so
+        // the cell-block budget cannot grow).
+        let cell = &e.blocks[0].table.as_ref().unwrap().cells[0];
+        assert_eq!(cell.blocks.len(), 1);
+        assert_eq!(block_text(&cell.blocks[0]), "bar x bar");
+        // A bookmark on the table block cannot move: cell edits are
+        // invisible to Pos-anchored collections.
+        let bms = apply(&mut e, "listBookmarks", json!({})).data;
+        assert_eq!(bms["bookmarks"][0]["pos"], json!({"block":0,"offset":0}));
+        // One undo restores every cell at once.
+        assert!(e.undo().unwrap());
+        assert_eq!(describe_table(&mut e, 0)["cells"][0][0], "foo x foo");
+        assert_eq!(describe_table(&mut e, 0)["cells"][1][1], "foo");
+        assert!(e.redo().unwrap());
+        assert_eq!(describe_table(&mut e, 0)["cells"][0][0], "bar x bar");
+        // Identical replacement is eventless even with cell matches.
+        let before = e.snapshot().unwrap();
+        let r = apply(&mut e, "replaceText", json!({"query":"bar","replacement":"bar"}));
+        assert_eq!(r.data["replaced"], 0);
+        assert!(r.events.is_empty());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Snapshot round-trip preserves the rewritten cells.
+        let bytes = e.snapshot().unwrap();
+        let mut r2 = engine();
+        r2.restore(&bytes).unwrap();
+        assert_eq!(describe_table(&mut r2, 0)["cells"][0][0], "bar x bar");
+    }
+
+    #[test]
+    fn replace_text_cell_matches_respect_range_and_merges() {
+        let mut e = find_fixture(); // table at block 1
+        // Collapsed on the table: nothing to replace.
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({"query":"foo","replacement":"z",
+                   "from":{"block":1,"offset":0},"to":{"block":1,"offset":0}}),
+        );
+        assert_eq!(r.data["replaced"], 0);
+        assert_eq!(describe_table(&mut e, 1)["cells"][0][0], "foo bar");
+        // Range covering only the tail block leaves cells untouched.
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({"query":"foo","replacement":"z","from":{"block":2,"offset":0}}),
+        );
+        assert_eq!(r.data["replaced"], 0);
+        // Whole-document replace hits top-level and cell matches; `replaced`
+        // counts both.
+        let r = apply(&mut e, "replaceText", json!({"query":"foo","replacement":"z"}));
+        assert_eq!(r.data["replaced"], 5);
+        assert_eq!(block_text(&e.blocks[0]), "top z");
+        assert_eq!(describe_table(&mut e, 1)["cells"][0][0], "z bar");
+        assert_eq!(describe_table(&mut e, 1)["cells"][1][0], "x\nz y\nz");
+        // Merge-covered cells are canonical empty paragraphs: they can
+        // never match, and the anchor cell edits normally.
+        let mut m = engine();
+        insert_table(&mut m, 0, 2, 2);
+        apply(&mut m, "setCellText", json!({"block":0,"row":0,"col":0,"text":"foo"}));
+        apply(&mut m, "setCellText", json!({"block":0,"row":0,"col":1,"text":"foo"}));
+        merge_cells(&mut m, 0, (0, 0), (0, 1)); // covered (0,1) content discarded
+        let r = find(&mut m, json!({"query":"foo"}));
+        assert_eq!(r.data["cell_count"], 1);
+        assert_eq!(r.data["cell_matches"][0]["from"]["col"], 0);
+        let r = apply(&mut m, "replaceText", json!({"query":"foo","replacement":"bar"}));
+        assert_eq!(r.data["replaced"], 1);
+        let d = describe_table(&mut m, 0);
+        assert_eq!(d["cells"][0][0], "bar");
+        assert_eq!(d["cells"][0][1], "");
+        assert_eq!(d["merges"], json!([{"row":0,"col":0,"rows":1,"cols":2}]));
+    }
+
+    #[test]
+    fn text_and_layout_cover_cell_content() {
+        let mut e = engine();
+        apply(&mut e, "insertText", json!({"at":{"block":0,"offset":0},"text":"top"}));
+        insert_table(&mut e, 1, 2, 2);
+        apply(&mut e, "setCellText", json!({"block":1,"row":0,"col":0,"text":"a\nb"}));
+        apply(&mut e, "setCellText", json!({"block":1,"row":0,"col":1,"text":"c"}));
+        apply(&mut e, "setCellText", json!({"block":1,"row":1,"col":1,"text":"d"}));
+        // Unbounded text: the table serializes rows '\n'-joined with cells
+        // '\t'-separated (a multi-paragraph cell reads as extra breaks).
+        let r = apply(&mut e, "text", json!({}));
+        assert_eq!(r.data["text"], "top\na\nb\tc\n\td");
+        // A range covering the table reports the same serialization.
+        let r = apply(
+            &mut e,
+            "text",
+            json!({"from":{"block":1,"offset":0},"to":{"block":1,"offset":0}}),
+        );
+        // Collapsed on the table: empty, like any collapsed range.
+        assert_eq!(r.data["text"], "");
+        let r = apply(
+            &mut e,
+            "text",
+            json!({"from":{"block":0,"offset":0},"to":{"block":1,"offset":0}}),
+        );
+        assert_eq!(r.data["text"], "top\na\nb\tc\n\td");
+        // layout wraps the same serialization: lines carry the table's
+        // block index with char spans into it.
+        let r = apply(&mut e, "layout", json!({"page_width": 200.0, "font_size": 10.0}));
+        let lines: Vec<Value> = r.data["pages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|p| p["lines"].as_array().unwrap().iter().cloned())
+            .collect();
+        let table_lines: Vec<&Value> = lines
+            .iter()
+            .filter(|l| l.get("block").and_then(Value::as_u64) == Some(1))
+            .collect();
+        assert!(!table_lines.is_empty());
+        // The serialization is 9 chars, so every table line span fits it.
+        assert!(table_lines
+            .iter()
+            .all(|l| l.get("end").and_then(Value::as_u64).unwrap() <= 9));
     }
 }

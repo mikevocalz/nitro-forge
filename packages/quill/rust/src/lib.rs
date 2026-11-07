@@ -359,6 +359,19 @@ fn block_text_slice(b: &Block, start: usize, end: usize) -> String {
         .collect()
 }
 
+/// Plain text of one block for the `text`/`layout` reads. Table blocks
+/// serialize their cell grid via `tables::table_text` (rows `'\n'`-joined,
+/// cells `'\t'`-separated); every other block concatenates its inline
+/// text. `layout` line spans and the joined `text` output index this
+/// serialization — for a table they address the serialized cell text,
+/// never a `Pos` offset (a table block's only valid `Pos` offset is 0).
+fn block_content_text(b: &Block) -> String {
+    match &b.table {
+        Some(t) => tables::table_text(t),
+        None => block_text(b),
+    }
+}
+
 fn split_str_at_char(s: &str, idx: usize) -> (String, String) {
     match s.char_indices().nth(idx) {
         Some((byte, _)) => (s[..byte].to_string(), s[byte..].to_string()),
@@ -793,13 +806,58 @@ fn find_in_chars(hay: &[char], s: usize, e: usize, q: &[char], ignore_case: bool
     out
 }
 
+/// One search match. `cell` is `Some((row, col, cell_block))` when the
+/// match lives inside a table cell's paragraph block — `block` is then
+/// the table block's index and `start`/`end` are scalar offsets within
+/// that cell paragraph. Like top-level matches, cell matches never span
+/// a block boundary: not a cell paragraph, not a cell, not the table.
+#[derive(Clone, Copy)]
+struct TextMatch {
+    block: usize,
+    cell: Option<(usize, usize, usize)>,
+    start: usize,
+    end: usize,
+}
+
 /// All non-overlapping matches across `blocks` within the query range.
-/// Returns `(block_index, start, end)` scalar offsets. Matches are confined
-/// to a single block; the block boundary itself is never matched.
-fn find_matches(blocks: &[Block], q: &FindQuery) -> Vec<(usize, usize, usize)> {
+/// Returns matches in document order (a table's cell matches appear at
+/// the table block's position, row-major). Top-level matches are
+/// `(block, start, end)` scalar offsets confined to a single block; cell
+/// matches carry their `(row, col, cell_block)` qualifiers.
+fn find_matches(blocks: &[Block], q: &FindQuery) -> Vec<TextMatch> {
     let mut out = Vec::new();
     let ignore_case = !q.case_sensitive;
     for (bi, b) in blocks.iter().enumerate().take(q.to.block + 1).skip(q.from.block) {
+        if let Some(table) = &b.table {
+            // A table block's only valid Pos is {bi,0}, so there is no
+            // intra-table clipping: the cell grid is searched whole when
+            // the range covers the block index — the same inclusive
+            // block coverage `deleteRange` applies to its `to` endpoint.
+            // A range collapsed on the table itself ({bi,0}..{bi,0})
+            // covers nothing, matching empty-range behavior elsewhere.
+            if q.from.block == bi && q.to.block == bi {
+                continue;
+            }
+            for r in 0..table.rows {
+                for c in 0..table.cols {
+                    let cell = &table.cells[r * table.cols + c];
+                    for (cbi, cb) in cell.blocks.iter().enumerate() {
+                        let hay: Vec<char> = block_text(cb).chars().collect();
+                        for (ms, me) in
+                            find_in_chars(&hay, 0, hay.len(), &q.chars, ignore_case)
+                        {
+                            out.push(TextMatch {
+                                block: bi,
+                                cell: Some((r, c, cbi)),
+                                start: ms,
+                                end: me,
+                            });
+                        }
+                    }
+                }
+            }
+            continue;
+        }
         let s = if bi == q.from.block { q.from.offset } else { 0 };
         let e = if bi == q.to.block {
             q.to.offset
@@ -811,7 +869,12 @@ fn find_matches(blocks: &[Block], q: &FindQuery) -> Vec<(usize, usize, usize)> {
         }
         let hay: Vec<char> = block_text(b).chars().collect();
         for (ms, me) in find_in_chars(&hay, s, e, &q.chars, ignore_case) {
-            out.push((bi, ms, me));
+            out.push(TextMatch {
+                block: bi,
+                cell: None,
+                start: ms,
+                end: me,
+            });
         }
     }
     out
@@ -1559,7 +1622,7 @@ impl QuillEngine {
             (None, None) => self
                 .blocks
                 .iter()
-                .map(block_text)
+                .map(block_content_text)
                 .collect::<Vec<_>>()
                 .join("\n"),
             (Some(from), Some(to)) if from.block == to.block => {
@@ -1568,11 +1631,23 @@ impl QuillEngine {
             (Some(from), Some(to)) => {
                 let first = &self.blocks[from.block];
                 let last = &self.blocks[to.block];
-                let mut parts = vec![block_text_slice(first, from.offset, block_len(first))];
+                // A covered table block has no Pos-reachable offsets (its
+                // only valid position is offset 0), so it contributes its
+                // full cell serialization — the same text the unbounded
+                // `text` read reports for it.
+                let mut parts = vec![if first.kind == BlockKind::Table {
+                    block_content_text(first)
+                } else {
+                    block_text_slice(first, from.offset, block_len(first))
+                }];
                 for b in &self.blocks[from.block + 1..to.block] {
-                    parts.push(block_text(b));
+                    parts.push(block_content_text(b));
                 }
-                parts.push(block_text_slice(last, 0, to.offset));
+                parts.push(if last.kind == BlockKind::Table {
+                    block_content_text(last)
+                } else {
+                    block_text_slice(last, 0, to.offset)
+                });
                 parts.join("\n")
             }
             _ => unreachable!(),
@@ -1581,23 +1656,61 @@ impl QuillEngine {
     }
 
     /// `findText {query, from?, to?, case_sensitive?}` — read-only search.
-    /// Matches are per-block, non-overlapping, and reported as
-    /// `{from:Pos,to:Pos,text}` with scalar offsets.
+    /// Top-level matches are per-block, non-overlapping, and reported as
+    /// `{from:Pos,to:Pos,text}` with scalar offsets in `matches`/`count`
+    /// (unchanged shape). Matches inside table cells cannot be expressed
+    /// as `Pos` — a table block's only valid position is offset 0 — so
+    /// they are reported separately in `cell_matches`/`cell_count` as
+    /// `{from,to,text}` where each endpoint is a cell-qualified position
+    /// `{block,row,col,cell_block,offset}`: `block` is the table block's
+    /// index, `row`/`col` the grid cell, `cell_block` the paragraph index
+    /// within the cell, and `offset` the scalar offset inside it. Cell
+    /// matches obey the same range rule as `deleteRange` block coverage:
+    /// a table's cells are searched iff the query's block range includes
+    /// the table's index and is not collapsed on it.
     fn op_find_text(&self, p: &Value) -> Result<CommandResult, EngineError> {
         let q = parse_find_query(p, &self.blocks)?;
         let matches = find_matches(&self.blocks, &q);
-        let arr: Vec<Value> = matches
-            .iter()
-            .map(|&(bi, s, e)| {
-                json!({
-                    "from": {"block": bi, "offset": s},
-                    "to": {"block": bi, "offset": e},
-                    "text": block_text_slice(&self.blocks[bi], s, e),
-                })
-            })
-            .collect();
-        let count = arr.len();
-        Ok(Self::read_only(json!({ "matches": arr, "count": count })))
+        let mut top: Vec<Value> = Vec::new();
+        let mut cell: Vec<Value> = Vec::new();
+        for m in &matches {
+            match m.cell {
+                None => top.push(json!({
+                    "from": {"block": m.block, "offset": m.start},
+                    "to": {"block": m.block, "offset": m.end},
+                    "text": block_text_slice(&self.blocks[m.block], m.start, m.end),
+                })),
+                Some((row, col, cbi)) => {
+                    let table = self.blocks[m.block]
+                        .table
+                        .as_ref()
+                        .expect("cell match implies a table block");
+                    let b = &table.cells[row * table.cols + col].blocks[cbi];
+                    let pos = |offset: usize| {
+                        json!({
+                            "block": m.block,
+                            "row": row,
+                            "col": col,
+                            "cell_block": cbi,
+                            "offset": offset,
+                        })
+                    };
+                    cell.push(json!({
+                        "from": pos(m.start),
+                        "to": pos(m.end),
+                        "text": block_text_slice(b, m.start, m.end),
+                    }));
+                }
+            }
+        }
+        let count = top.len();
+        let cell_count = cell.len();
+        Ok(Self::read_only(json!({
+            "matches": top,
+            "count": count,
+            "cell_matches": cell,
+            "cell_count": cell_count,
+        })))
     }
 
     /// `replaceText {query, replacement, from?, to?, case_sensitive?}` —
@@ -1605,8 +1718,12 @@ impl QuillEngine {
     /// command: one journal entry, one `document:changed`, staged validation
     /// before mutation. `replacement` inherits the style of the first matched
     /// scalar; it must not contain newlines (matches never span blocks).
-    /// Zero matches or an unchanged document is eventless; `replaced`
-    /// reports applied edits, so the no-change path returns 0.
+    /// Matches inside table cells rewrite the cell's paragraph inlines in
+    /// place — cell text stays strict `para` blocks, the document-wide
+    /// cell-block budget cannot grow (no block is added or removed), and
+    /// merge-covered cells are canonical empty paragraphs so they can
+    /// never match. Zero matches or an unchanged document is eventless;
+    /// `replaced` counts applied edits including in-cell ones.
     fn op_replace_text(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let replacement = as_str(field(p, "replacement")?, "replacement")?;
         if replacement.contains('\n') || replacement.contains('\r') {
@@ -1619,6 +1736,14 @@ impl QuillEngine {
         if matches.is_empty() {
             return Ok(Self::read_only(json!({ "replaced": 0 })));
         }
+        // Cell matches are applied on the staged clone below; anchor
+        // remapping only ever sees top-level matches because cell edits
+        // cannot move `Pos`-anchored collections.
+        let top: Vec<TextMatch> = matches
+            .iter()
+            .copied()
+            .filter(|m| m.cell.is_none())
+            .collect();
 
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
@@ -1635,12 +1760,12 @@ impl QuillEngine {
         // then apply each block's matches right-to-left so earlier scalar
         // offsets stay valid.
         let mut i = 0;
-        while i < matches.len() {
-            let bi = matches[i].0;
+        while i < top.len() {
+            let bi = top[i].block;
             let mut j = i;
             let mut per: Vec<(usize, usize)> = Vec::new();
-            while j < matches.len() && matches[j].0 == bi {
-                per.push((matches[j].1, matches[j].2));
+            while j < top.len() && top[j].block == bi {
+                per.push((top[j].start, top[j].end));
                 j += 1;
             }
             per.sort_by(|a, b| b.0.cmp(&a.0));
@@ -1663,17 +1788,47 @@ impl QuillEngine {
             i = j;
         }
 
-        // Re-anchor bookmarks through the replacements: a mark at or inside
-        // a match's span lands just after the replacement text.
+        // In-cell matches: find_matches emits them in (block, row, col,
+        // cell_block, start) order, so iterating in reverse applies each
+        // cell paragraph's matches right-to-left and earlier offsets in
+        // every paragraph stay valid.
+        for m in matches.iter().rev() {
+            let Some((row, col, cbi)) = m.cell else {
+                continue;
+            };
+            let table_block = &mut staged.blocks[m.block];
+            let table = table_block.table.as_mut().expect("cell match implies a table block");
+            let cols = table.cols;
+            let b = &mut table.cells[row * cols + col].blocks[cbi];
+            // Same style inheritance as top-level: the first matched
+            // scalar's style (cell paragraphs are strict `para` blocks,
+            // but restore-validated inlines may carry styles).
+            let style = style_at(b, m.start + 1);
+            let (head, _mid, tail) = split3(&b.inlines, m.start, m.end);
+            let mut inlines = head;
+            if !replacement.is_empty() {
+                inlines.push(Inline {
+                    text: replacement.to_string(),
+                    style,
+                });
+            }
+            inlines.extend(tail);
+            b.inlines = normalize_inlines(inlines);
+        }
+
+        // Re-anchor bookmarks through the top-level replacements: a mark
+        // at or inside a match's span lands just after the replacement
+        // text. Cell matches never appear here — they cannot move a
+        // `Pos`-anchored collection.
         if !staged.bookmarks.is_empty() {
             let repl_len = replacement.chars().count();
             let mut i = 0;
-            while i < matches.len() {
-                let bi = matches[i].0;
+            while i < top.len() {
+                let bi = top[i].block;
                 let mut j = i;
                 let mut span: Vec<(usize, usize)> = Vec::new();
-                while j < matches.len() && matches[j].0 == bi {
-                    span.push((matches[j].1, matches[j].2));
+                while j < top.len() && top[j].block == bi {
+                    span.push((top[j].start, top[j].end));
                     j += 1;
                 }
                 for bm in staged.bookmarks.iter_mut().filter(|b| b.block == bi) {
@@ -1691,12 +1846,12 @@ impl QuillEngine {
         if !staged.comments.is_empty() {
             let repl_len = replacement.chars().count();
             let mut i = 0;
-            while i < matches.len() {
-                let bi = matches[i].0;
+            while i < top.len() {
+                let bi = top[i].block;
                 let mut j = i;
                 let mut span: Vec<(usize, usize)> = Vec::new();
-                while j < matches.len() && matches[j].0 == bi {
-                    span.push((matches[j].1, matches[j].2));
+                while j < top.len() && top[j].block == bi {
+                    span.push((top[j].start, top[j].end));
                     j += 1;
                 }
                 for c in staged.comments.iter_mut() {
@@ -1714,6 +1869,10 @@ impl QuillEngine {
         }
 
         lists::validate(&staged.blocks)?;
+        // In-cell edits only rewrite existing cell-paragraph inlines, but
+        // the staged candidate still goes through the same table gate
+        // restore uses, matching every other cell mutation.
+        validate_tables(&staged.blocks)?;
         // `replaced` counts applied edits: the eventless no-change path
         // (replacement identical to every match) applied nothing.
         if staged.blocks == self.blocks {
@@ -2189,7 +2348,12 @@ impl QuillEngine {
             let max_chars = max_chars.max(1);
             let line_height = eff * LINE_SPACING;
 
-            let spans = wrap_block(&block_text(b), max_chars);
+            // Cell paragraphs wrap with the same greedy approximation as
+            // top-level blocks; line spans index the block's
+            // `block_content_text` serialization (for a table, the
+            // `tables::table_text` cell grid — `layout` models no cell
+            // geometry).
+            let spans = wrap_block(&block_content_text(b), max_chars);
             let block_height = spans.len() as f64 * line_height;
 
             // A block that doesn't fit the remaining page height starts on a

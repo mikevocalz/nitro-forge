@@ -15,7 +15,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
 | folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments) | 112 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
-| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, tables incl. cell merge/unmerge) | 149 pass | `cargo test -p quill-engine` |
+| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, tables incl. cell merge/unmerge and in-cell find/replace) | 154 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI + dispatch tests (incl. folio binary-input gate) | 28 pass | `cargo test -p nf-sys` |
 | Package e2e suites (vitest → nf-cli → real Rust) | 4×8 = 32 pass | `pnpm -r test` |
 | Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
@@ -45,7 +45,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch | ✅ 44 tests |
 | Folio engine | PDF eng (subagent bdd8014e) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption, outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment) | ✅ 112 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
-| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, read ops; no styling or DOCX table interop) | ✅ 149 tests |
+| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) | ✅ 154 tests |
 | Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |
 | Example app | RN eng (main session) | Expo screens + useDocument hook | ⚠️ source + typecheck only |
 | Design/UX | — | — | ❌ not staffed this session |
@@ -1248,3 +1248,40 @@ nf-cli pivots file, 2 cases), `pnpm --filter @nitro-forge/tally
 typecheck` clean. Deferred: pivot compute/refresh/materialization,
 header-name field resolution, pivot UI wiring — no native/device
 acceptance or full P12–P14 completion is implied.
+
+## P12 Quill tables slice 7-D checkpoint (2026-11-07)
+
+Quill closes the two tractable deferred table items (P12 slice 7-D): in-cell
+find/replace and `text`/`layout` cell coverage — no new state, so no schema
+bump and hostile-restore behavior is unchanged. Addressing-model decision:
+cell text stays unreachable by `Pos` (a table block's only valid position is
+`{block,0}`), so `findText` keeps `matches`/`count` byte-identical for
+top-level hits and adds `cell_matches`/`cell_count`, each entry `{from,to,text}`
+whose endpoints are cell-qualified `CellPos = {block,row,col,cell_block,offset}`
+(table block index, grid cell, paragraph index inside the cell, scalar offset).
+Cell coverage follows `deleteRange`'s inclusive block-range convention: a
+table's cells are searched iff the query's block range includes the table index
+and is not collapsed on it; matching stays per cell paragraph, so hits never
+span paragraphs, cells, or the table boundary. `replaceText` applies the same
+matches on the staged clone — in-cell hits rewrite the cell paragraph's
+inlines with the same first-scalar style inheritance, right-to-left per
+paragraph; bookmarks/comments/sections remap through top-level matches only
+(cell edits cannot move `Pos` anchors), the candidate still passes list +
+`validate_tables` staging, `replaced` counts top-level plus in-cell edits, and
+merge-covered cells are canonical empty paragraphs that can never match.
+`text` serializes a covered table block as rows `\n`-joined, cells
+`\t`-separated, cell paragraphs `\n`-joined (documented ambiguity: a
+multi-paragraph cell reads as extra row breaks); `layout` wraps that same
+serialization with line spans indexing it — honest coverage with no cell
+geometry. Still deferred: in-cell `changeCase`/`applyStyle` and rich cell
+editing (all need cell-qualified range addressing), per-cell/table styling,
+nested tables, band-merge convenience ops, DOCX `w:tbl`.
+
+Local evidence: `cargo test -p quill-engine` 154 passed (5 new slice-D tests
+covering cell-match positions and ordering, range/case rules, multi-cell
+replace with undo/redo/eventless/snapshot round-trip, merge-covered cells,
+`text`/`layout` serialization), `cargo build -p nf-cli` clean,
+`pnpm install --prefer-offline` clean, `pnpm --filter @nitro-forge/quill test`
+35 passed across 6 files (1 new nf-cli in-cell find/replace case),
+`pnpm --filter @nitro-forge/quill typecheck` clean. No native/device acceptance
+or full P12 completion is implied.

@@ -429,6 +429,48 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("finds and replaces text inside table cells via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "top foo");
+    // The table is the last block: whole-document reads still cover it.
+    await doc.insertTable(1, 2, 2);
+    await doc.setCellText(1, 0, 0, "foo bar");
+    await doc.setCellText(1, 0, 1, "foo");
+    await doc.setCellText(1, 1, 0, "x\nfoo y\nfoo");
+
+    const found = await doc.findText("foo");
+    expect(found.data.count).toBe(1);
+    expect(found.data.cell_count).toBe(4);
+    const first = found.data.cell_matches[0];
+    expect(first?.from).toEqual({
+      block: 1, row: 0, col: 0, cell_block: 0, offset: 0,
+    });
+    expect(first?.to.offset).toBe(3);
+    // The last match lives in the cell's third paragraph.
+    expect(found.data.cell_matches[3]?.from.cell_block).toBe(2);
+
+    const replaced = await doc.replaceText("foo", "z");
+    expect(replaced.data.replaced).toBe(5);
+    const d = (await doc.describeTable(1)).data;
+    expect(d.cells[0]?.[0]).toBe("z bar");
+    expect(d.cells[1]?.[0]).toBe("x\nz y\nz");
+    expect((await doc.text()).data.text).toContain("top z");
+    // Undo restores every cell edit in one step.
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.describeTable(1)).data.cells[0]?.[0]).toBe("foo bar");
+
+    // text serializes the cell grid; layout reports table lines.
+    const t = await doc.text();
+    expect(t.data.text).toBe("top foo\nfoo bar\tfoo\nx\nfoo y\nfoo\t");
+    const layout = await doc.layout(200, 10);
+    expect(
+      layout.data.pages.some((p) =>
+        p.lines.some((l) => l.block === 1 && l.end > l.start),
+      ),
+    ).toBe(true);
+    await doc.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");
