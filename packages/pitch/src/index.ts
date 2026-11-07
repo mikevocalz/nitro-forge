@@ -36,9 +36,12 @@ export const OPS = {
   rotateObject: "rotateObject",
   removeObject: "removeObject",
   addAnimation: "addAnimation",
+  addTriggeredAnimationV1: "addTriggeredAnimationV1",
   removeAnimation: "removeAnimation",
   updateAnimation: "updateAnimation",
+  updateTriggeredAnimationV1: "updateTriggeredAnimationV1",
   slideAt: "slideAt",
+  slideAtWithClicksV1: "slideAtWithClicksV1",
   deck: "deck",
 } as const;
 
@@ -230,13 +233,13 @@ export class PitchDocument {
     return this.call(OPS.removeObject, { slide, id });
   }
   addAnimation(slide: number, object: number, kind: AnimKind, startS: number, durationS: number, trigger?: PitchAnimationTrigger) {
-    return this.call<{ index: number }>(trigger === undefined ? OPS.addAnimation : "addTriggeredAnimationV1", {
+    return this.call<{ index: number }>(trigger === undefined ? OPS.addAnimation : OPS.addTriggeredAnimationV1, {
       slide, object, kind, start_s: startS, duration_s: durationS, ...(trigger === undefined ? {} : { trigger: ownAnimationTrigger(trigger) }),
     });
   }
   /** Retains target object and list index; equal/empty patches preserve history. */
   updateAnimation(slide: number, index: number, patch: PitchAnimationUpdate) {
-    return this.call<{ ok: boolean }>(patch.trigger === undefined ? OPS.updateAnimation : "updateTriggeredAnimationV1", { ...patch, ...(patch.trigger === undefined ? {} : { trigger: ownAnimationTrigger(patch.trigger) }), slide, index });
+    return this.call<{ ok: boolean }>(patch.trigger === undefined ? OPS.updateAnimation : OPS.updateTriggeredAnimationV1, { ...patch, ...(patch.trigger === undefined ? {} : { trigger: ownAnimationTrigger(patch.trigger) }), slide, index });
   }
   removeAnimation(slide: number, index: number) {
     return this.call(OPS.removeAnimation, { slide, index });
@@ -244,7 +247,7 @@ export class PitchDocument {
   /** Resolve slide objects at presentation time t (animations applied). */
   slideAt(slide: number, tS: number, clickTimes?: readonly number[]) {
     if(clickTimes && (clickTimes.length>256||clickTimes.some((time,index)=>!Number.isFinite(time)||time<0||time>86400||(index>0&&time<clickTimes[index-1]!))))throw new RangeError("Click times must be a bounded ordered slide-relative history");
-    return this.call<{ objects: AnimatedObject[]; schedule: PitchAnimationSchedule[] }>(clickTimes === undefined ? OPS.slideAt : "slideAtWithClicksV1", {
+    return this.call<{ objects: AnimatedObject[]; schedule: PitchAnimationSchedule[] }>(clickTimes === undefined ? OPS.slideAt : OPS.slideAtWithClicksV1, {
       slide,
       t_s: tS,
       ...(clickTimes === undefined ? {} : { click_times: [...clickTimes] }),

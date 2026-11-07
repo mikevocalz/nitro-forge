@@ -987,13 +987,19 @@ impl Engine for PitchEngine {
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
+        // schema:2 wraps documents using the earlier extended features
+        // (size/sections/triggered or non-entrance animations). schema:3
+        // additionally carries speaker notes and persistent ink; a schema:2
+        // reader rejects schema:3 instead of silently dropping those fields.
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
-            || self.state.slides.iter().any(|slide| slide.notes.is_some())
-            || self.state.slides.iter().any(|slide| !slide.ink.is_empty())
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
                 !anim.trigger.is_absolute() || !matches!(anim.kind, AnimKind::FadeIn | AnimKind::SlideInLeft | AnimKind::ZoomIn));
-        let payload = if extended {
+        let notes_or_ink = self.state.slides.iter()
+            .any(|slide| slide.notes.is_some() || !slide.ink.is_empty());
+        let payload = if notes_or_ink {
+            serde_json::to_vec(&json!({"kind":"pitch","schema":3,"document":self.state}))?
+        } else if extended {
             serde_json::to_vec(&json!({"kind":"pitch","schema":2,"document":self.state}))?
         } else { serde_json::to_vec(&self.state)? };
         Ok(encode_envelope(&payload))
@@ -1002,16 +1008,24 @@ impl Engine for PitchEngine {
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_, payload) = decode_envelope(data)?;
         let value: Value = serde_json::from_slice(payload)?;
-        let state: PitchState = if value.get("kind").is_some() || value.get("schema").is_some() || value.get("document").is_some() {
+        let mut state: PitchState = if value.get("kind").is_some() || value.get("schema").is_some() || value.get("document").is_some() {
             #[derive(Deserialize)]
             #[serde(deny_unknown_fields)]
             struct Versioned { kind: String, schema: u32, document: PitchState }
             let wrapper: Versioned = serde_json::from_value(value)?;
-            if wrapper.kind != "pitch" || wrapper.schema != 2 {
+            // schema:2 = extended features only; schema:3 = notes/ink-capable.
+            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
             wrapper.document
         } else { serde_json::from_value(value)? };
+        // Canonicalize persisted notes: setNotes stores "" as absent, so an
+        // empty-string notes field normalizes to absent rather than failing.
+        for slide in &mut state.slides {
+            if slide.notes.as_ref().is_some_and(|n| n.is_empty()) {
+                slide.notes = None;
+            }
+        }
         if !state.size.valid() {
             return Err(EngineError::serialization("invalid slide size"));
         }
@@ -1702,6 +1716,8 @@ mod tests {
         apply(&mut e, "slideAt", json!({ "slide": s1, "t_s": 0 }));
         apply(&mut e, "deck", json!({}));
         apply(&mut e, "describe", json!({}));
+        apply(&mut e, "slideNotes", json!({ "slide": s1 }));
+        apply(&mut e, "slideInk", json!({ "slide": s1 }));
         assert_eq!(e.journal.undo_len(), before);
     }
 
@@ -1746,15 +1762,22 @@ mod tests {
             apply(&mut e, "describe", json!({}))["slides"][0]["notes"],
             json!("Open with the Q3 numbers")
         );
-        // notes presence triggers the schema:2 wrapper
+        // notes presence triggers the schema:3 wrapper
         let snap = e.snapshot().unwrap();
         let (_, wrapped_payload) = decode_envelope(&snap).unwrap();
         let wrapped: Value = serde_json::from_slice(wrapped_payload).unwrap();
         assert_eq!(wrapped["kind"], "pitch");
-        assert_eq!(wrapped["schema"], 2);
+        assert_eq!(wrapped["schema"], 3);
         assert!(wrapped["document"]["slides"][0]["notes"].is_string());
         // a legacy reader (PitchState at payload root) rejects the wrapper
         assert!(serde_json::from_value::<PitchState>(wrapped.clone()).is_err());
+        // downgrade regression: a schema:2-only reader rejects schema:3 so
+        // notes can never be silently dropped by an older build
+        #[derive(Deserialize)]
+        struct Schema2OnlyReader { kind: String, schema: u32 }
+        let old_view: Schema2OnlyReader = serde_json::from_value(wrapped.clone()).unwrap();
+        // this is the old reader's accept gate; it must refuse schema:3
+        assert!(!(old_view.kind == "pitch" && old_view.schema == 2));
         let mut reopened = PitchEngine::new();
         reopened.restore(&snap).unwrap();
         assert_eq!(reopened.snapshot().unwrap(), snap);
@@ -1906,7 +1929,7 @@ mod tests {
         assert_eq!(strokes[0]["width"], json!(4.0));
         assert_eq!(strokes[0]["color"], json!([255, 0, 0, 200]));
         assert!(strokes[0].get("opacity").is_none());
-        // describe exposes ink on the slide; ink triggers the schema:2 wrapper
+        // describe exposes ink on the slide; ink triggers the schema:3 wrapper
         assert_eq!(
             apply(&mut e, "describe", json!({}))["slides"][0]["ink"][0]["id"],
             json!(sid)
@@ -1915,7 +1938,7 @@ mod tests {
         let (_, wrapped_payload) = decode_envelope(&snap).unwrap();
         let wrapped: Value = serde_json::from_slice(wrapped_payload).unwrap();
         assert_eq!(wrapped["kind"], json!("pitch"));
-        assert_eq!(wrapped["schema"], json!(2));
+        assert_eq!(wrapped["schema"], json!(3));
         assert_eq!(wrapped["document"]["slides"][0]["ink"][0]["id"], json!(sid));
 
         // partial update: kind/width/opacity/points; color retained
@@ -2199,5 +2222,74 @@ mod tests {
             1
         );
         let _ = s1;
+    }
+
+    #[test]
+    fn restore_normalizes_empty_notes_and_rejects_oversize_in_wrapped_snapshot() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        // persisted "" notes canonicalize to absent, matching setNotes ""→None
+        let mut state = serde_json::to_value(&e.state).unwrap();
+        state["slides"][0]["notes"] = json!("");
+        e.restore(&encode_envelope(&serde_json::to_vec(&state).unwrap()))
+            .unwrap();
+        assert!(e.state.slides[0].notes.is_none());
+        assert_eq!(
+            apply(&mut e, "slideNotes", json!({ "slide": s1 }))["notes"],
+            json!(null)
+        );
+        // same normalization inside a schema:3 wrapped payload
+        apply(&mut e, "setNotes", json!({ "slide": s1, "text": "real notes" }));
+        let snap = e.snapshot().unwrap();
+        let (_, payload) = decode_envelope(&snap).unwrap();
+        let mut wrapped: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(wrapped["schema"], json!(3));
+        wrapped["document"]["slides"][0]["notes"] = json!("");
+        e.restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
+            .unwrap();
+        assert!(e.state.slides[0].notes.is_none());
+        // oversize notes inside the WRAPPED snapshot still reject atomically
+        wrapped["document"]["slides"][0]["notes"] = json!("x".repeat(MAX_NOTES_BYTES + 1));
+        let before = e.snapshot().unwrap();
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+
+    #[test]
+    fn notes_utf8_boundary_at_exactly_max_bytes() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        // "é" is 2 UTF-8 bytes: 16384 of them is exactly MAX_NOTES_BYTES
+        let exact = "é".repeat(MAX_NOTES_BYTES / 2);
+        assert_eq!(exact.len(), MAX_NOTES_BYTES);
+        apply(&mut e, "setNotes", json!({ "slide": s1, "text": exact }));
+        let snap = e.snapshot().unwrap();
+        assert_eq!(
+            apply(&mut e, "slideNotes", json!({ "slide": s1 }))["notes"]
+                .as_str()
+                .unwrap()
+                .len(),
+            MAX_NOTES_BYTES
+        );
+        // one more byte tips it over the bound
+        assert!(e
+            .apply(cmd(
+                "setNotes",
+                json!({ "slide": s1, "text": format!("{exact}x") })
+            ))
+            .is_err());
+        // and a multibyte char straddling the boundary also rejects
+        assert!(e
+            .apply(cmd(
+                "setNotes",
+                json!({ "slide": s1, "text": format!("{}é", "x".repeat(MAX_NOTES_BYTES - 1)) })
+            ))
+            .is_err());
+        // the admitted snapshot roundtrips through restore unchanged
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&snap).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), snap);
     }
 }
