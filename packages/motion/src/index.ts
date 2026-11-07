@@ -1,5 +1,9 @@
 import {DocumentHandle,bytesToBase64,type EngineHost} from '@nitro-forge/ignition';
-export type MotionProperty='tx'|'ty'|'sx'|'sy'|'rotation'|'ox'|'oy'|'opacity';
+export type MotionProperty='tx'|'ty'|'sx'|'sy'|'rotation'|'ox'|'oy'|'opacity'|'path_progress';
+/** A motion-path node mirroring Prism's node wire shape: `x`/`y` anchor plus optional cubic handles as offsets from the node (`in` leads into the node, `out` leaves toward the next). A segment with neither handle is a straight line. */
+export interface MotionPathNode{x:number;y:number;in?:[number,number];out?:[number,number]}
+/** A single-subpath motion path in the layer's transform space (1..=256 nodes, coordinates/handles bounded). `closed` connects last node to first; `auto_orient` adds the path tangent angle in degrees to evaluated rotation. Progress is arc-length fraction via the `path_progress` property (0..=1). */
+export interface MotionPath{nodes:MotionPathNode[];closed?:boolean;auto_orient?:boolean}
 export interface CurvePoint{time:number;value:number}
 export interface MotionKey extends CurvePoint{id:number;interpolation:'hold'|'linear'|'bezier';in_handle:CurvePoint|null;out_handle:CurvePoint|null}
 export type MotionKeyInput=Omit<MotionKey,'id'>&{id?:number};
@@ -22,7 +26,7 @@ export type MotionEffect=
  |{kind:'contrast';amount:number}
  |{kind:'gaussian-blur';radius_px:number}
  |{kind:'fill';color:[number,number,number,number];opacity?:number};
-interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[]}
+interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[];path?:MotionPath;path_progress?:number}
 /** Exactly one real content source; no placeholder shape for raster or comp layers. `comp` is the composition id a comp layer instantiates (0 is never a valid target). */
 export type MotionLayer=MotionLayerCommon&({shape:Shape;asset_id?:never;comp_id?:never}|{asset_id:number;shape?:never;comp_id?:never}|{comp_id:number;shape?:never;asset_id?:never});
 export const MOTION_RASTER_FORMAT='rgba8-straight-srgb' as const;
@@ -69,6 +73,8 @@ export class MotionDocument{
  setLayerEffects(layer:number,effects:readonly MotionEffect[]|null){return this.document.apply<{ok:boolean}>('setLayerEffects',{layer,effects});}
  /** Move a layer to another composition at `index`; comp 0 selects the root. Cross-comp moves clear transform-parent links. */
  reparentLayer(layer:number,comp:number,index:number){return this.document.apply<{ok:boolean}>('reparentLayer',{layer,comp,index});}
+ /** Attach/replace/clear the layer's motion path; null clears the path, its progress base and any `path_progress` curve atomically. Animate position along it with `setPropertyKeys(layer,'path_progress',...)` keys in 0..=1; the sampled offset adds to tx/ty and `auto_orient` adds the tangent angle to rotation. */
+ setMotionPath(layer:number,path:MotionPath|null){return this.document.apply<{ok:boolean}>('setMotionPath',{layer,path});}
  updateLayer(id:number,patch:Partial<Pick<MotionLayer,'name'|'visible'|'locked'|'opacity'|'shape'|'asset_id'>>&{transform?:Partial<Transform>}){return this.document.apply<{ok:boolean}>('updateLayer',{...patch,id});}
  removeLayer(id:number){return this.document.apply<{ok:boolean}>('removeLayer',{id});}
  setLayerOrder(order:readonly number[]){return this.document.apply<{ok:boolean}>('setLayerOrder',{order});}
