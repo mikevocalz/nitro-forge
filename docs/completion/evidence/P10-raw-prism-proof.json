@@ -1,0 +1,37 @@
+{
+  "libraw": {
+    "libraw": "0.22.3-Release",
+    "make": "Pentax",
+    "model": "K-7",
+    "raw_width": 4736,
+    "raw_height": 3136,
+    "raw_pitch_bytes": 9472,
+    "raw_nonzero_samples": 14741139,
+    "preview_width": 2342,
+    "preview_height": 1561,
+    "preview_rgb_bytes": 10967586,
+    "invalid_input": {
+      "exit": 1,
+      "artifact_created": false,
+      "error": "probe: Input/output error"
+    },
+    "preview_sha256": "0a4064721a74e34a78b3aecdbc1e0026262592df06bbd91e4a19badc7372257f",
+    "source_sha256": "789f3c33466210a1a0907f747a97c715d21bbf4af712f257fcbbd90111b227e4",
+    "fixture_sha256": "f441c36678dfca4f38e25a580f4f8485d78d8067a054153bc36be71e56c92386"
+  },
+  "prism": {
+    "scope": "macOS LibRaw RGB preview -> real Prism engine",
+    "width": 512,
+    "height": 341,
+    "rgba_sha256": "ff6e4d096a3991c65d724d8dec652013170e064a5a164e04e1d54cfb99f2a4c9",
+    "snapshot_sha256": "31f7dbf3a304b5a77539625e6d85213ea7e364bea47b0edecbfcb17767395d1d",
+    "fixture_sha256": "f441c36678dfca4f38e25a580f4f8485d78d8067a054153bc36be71e56c92386",
+    "engine_host_sha256": "7d546deb0020ee46cdf20e49eb418accf3afe4b2a1fe3e2f1b2042cfd6747722",
+    "flatten_exact": true,
+    "single_undo_redo": true,
+    "snapshot_reopen_exact": true,
+    "original_unchanged": true,
+    "catalog_implemented": false
+  },
+  "platform": "macOS arm64; isolated prototype and real CLI engine only"
+}
