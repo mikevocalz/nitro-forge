@@ -52,6 +52,8 @@ export const OPS = {
   deleteTableColumn: "deleteTableColumn",
   listTables: "listTables",
   describeTable: "describeTable",
+  mergeTableCells: "mergeTableCells",
+  unmergeTableCells: "unmergeTableCells",
   blocks: "blocks",
   layout: "layout",
   exportDocx: "exportDocx",
@@ -229,6 +231,25 @@ export interface TableInfo {
   /** Index of the table block in the top-level block stream. */
   block: number;
   rows: number;
+  cols: number;
+  /**
+   * Merged regions as `{row,col,rows,cols}` rectangles in grid
+   * coordinates. The cell at `row`/`col` is the anchor and keeps the
+   * region's content; every other cell in the rect is covered (reports
+   * empty text and rejects `setCellText`). Rects never overlap and each
+   * covers at least 2 cells.
+   */
+  merges: TableMerge[];
+}
+/** One merged cell region inside a table (see `TableInfo.merges`). */
+export interface TableMerge {
+  /** Anchor (top-left) cell row. */
+  row: number;
+  /** Anchor (top-left) cell column. */
+  col: number;
+  /** Region height in grid cells. */
+  rows: number;
+  /** Region width in grid cells. */
   cols: number;
 }
 /** `describeTable` result: dimensions plus a row-major grid of cell text. */
@@ -476,8 +497,8 @@ export class QuillDocument {
   }
   /**
    * Insert a `rows`x`cols` table (each cell starts with one empty
-   * paragraph) as a single block at `index` (0..=block count). Cell merge,
-   * styling, and DOCX table interop are deferred.
+   * paragraph) as a single block at `index` (0..=block count). Cell
+   * styling and DOCX table interop are deferred.
    */
   insertTable(index: number, rows: number, cols: number) {
     return this.call<{ ok: boolean; block_index: number }>(OPS.insertTable, {
@@ -529,6 +550,26 @@ export class QuillDocument {
   /** Read-only; one table's dimensions and row-major cell text grid. */
   describeTable(block: number) {
     return this.call<TableDescription>(OPS.describeTable, { block });
+  }
+  /**
+   * Merge the rectangular cell region between `from` and `to` (either
+   * order; the top-left cell is the anchor and keeps its content). The
+   * region must cover at least 2 cells, stay in bounds, and not overlap
+   * an existing merge; covered cells' content is discarded.
+   */
+  mergeTableCells(
+    block: number,
+    from: { row: number; col: number },
+    to: { row: number; col: number },
+  ) {
+    return this.call<{ ok: boolean }>(OPS.mergeTableCells, { block, from, to });
+  }
+  /**
+   * Remove the merge whose region contains cell (`row`,`col`) — anchor
+   * or covered cell alike. Covered cells return as ordinary empty cells.
+   */
+  unmergeTableCells(block: number, row: number, col: number) {
+    return this.call<{ ok: boolean }>(OPS.unmergeTableCells, { block, row, col });
   }
   blocks<T = unknown>() {
     return this.call<T>(OPS.blocks);

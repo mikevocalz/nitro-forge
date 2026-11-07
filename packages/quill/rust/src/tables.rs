@@ -10,14 +10,28 @@
 //! through `setCellText` and never move top-level anchors.
 //!
 //! Scope: insert/delete, row/column insert/delete, cell text replacement,
-//! and read ops. Cell merge/split, table styling, nested tables, in-cell
-//! find/replace, `text`/`layout` cell coverage, and DOCX table
-//! import/export are deferred (see docs/ENGINE_OPS.md).
+//! rectangular cell merge/unmerge, and read ops. Table styling, nested
+//! tables, in-cell find/replace, `text`/`layout` cell coverage, and DOCX
+//! table import/export are deferred (see docs/ENGINE_OPS.md).
+//!
+//! Merge model (slice C): `Table.merges` is a registry of rectangular
+//! regions `{row,col,rows,cols}` in grid coordinates — the dense
+//! row-major `cells` grid stays 1:1 with `rows*cols`. The anchor (top-left)
+//! cell keeps its content; every covered cell is reset to the canonical
+//! empty paragraph at merge time (Excel semantics: covered content is
+//! discarded, `setCellText` rejects covered cells, and unmerge leaves them
+//! empty). Merge rects must be in-bounds, cover ≥2 cells, and never
+//! overlap; restore validation enforces all of it plus the rule that
+//! covered cells are pristine empty paragraphs.
 //!
 //! Schema: no bump. Every snapshot tier deserializes `Block.kind` through
 //! the `BlockKind` enum, so a schema≤3 reader fails closed on the unknown
 //! `"table"` variant rather than silently dropping the payload — the same
-//! guarantee a schema:4 wrapper would give.
+//! guarantee a schema:4 wrapper would give. `Table.merges` is
+//! serde-optional and omitted when empty, so merge-free snapshots stay
+//! byte-identical; a slice-A/B reader's `deny_unknown_fields` `Table`
+//! fails closed only on snapshots that actually carry merges — the same
+//! precedent as `comments`/`sections` on the schema:3 document state.
 
 use super::*;
 use serde::{Deserialize, Serialize};
@@ -43,14 +57,31 @@ pub struct TableCell {
     pub blocks: Vec<Block>,
 }
 
+/// One merged region: the rectangle of grid cells anchored at
+/// (`row`,`col`) extending `rows`x`cols`. The anchor cell keeps its
+/// content; all other cells in the rect are covered (canonical empty
+/// paragraphs, unwritable via `setCellText`). At least 2 cells per rect
+/// and no two rects may overlap — both enforced by `validate_table`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TableMerge {
+    pub row: usize,
+    pub col: usize,
+    pub rows: usize,
+    pub cols: usize,
+}
+
 /// The table payload carried by a `kind:"table"` block. `cells` is row-major
-/// with exactly `rows * cols` entries.
+/// with exactly `rows * cols` entries; `merges` lists the merged regions
+/// (empty for an unmerged table and omitted from snapshots then).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Table {
     pub rows: usize,
     pub cols: usize,
     pub cells: Vec<TableCell>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub merges: Vec<TableMerge>,
 }
 
 /// Full table validation for restore and staged op results: the
@@ -171,7 +202,54 @@ fn validate_table(table: &Table, total: &mut usize) -> Result<(), EngineError> {
             }
         }
     }
+    // Merge registry: every rect is in-bounds, covers at least 2 cells,
+    // and no two rects overlap (a second rect touching any cell of an
+    // earlier one — anchor included — rejects). Covered cells must be
+    // pristine empty paragraphs: `mergeTableCells` resets them and
+    // `setCellText` rejects covered cells, so content there is
+    // unreachable by ops and only a hostile snapshot could smuggle it in.
+    let mut covered = vec![false; expected];
+    for m in &table.merges {
+        if m.rows == 0
+            || m.cols == 0
+            || m.rows.saturating_mul(m.cols) < 2
+            || m.row >= table.rows
+            || m.col >= table.cols
+            || m.row.saturating_add(m.rows) > table.rows
+            || m.col.saturating_add(m.cols) > table.cols
+        {
+            return Err(EngineError::validation(
+                "table merges must be in-bounds rectangles of at least 2 cells",
+            ));
+        }
+        for r in m.row..m.row + m.rows {
+            for c in m.col..m.col + m.cols {
+                let i = r * table.cols + c;
+                if covered[i] {
+                    return Err(EngineError::validation("overlapping table merges"));
+                }
+                covered[i] = true;
+                if !(r == m.row && c == m.col) {
+                    let cell = &table.cells[i];
+                    if cell.blocks.len() != 1
+                        || cell.blocks[0].kind != BlockKind::Para
+                        || !cell.blocks[0].inlines.is_empty()
+                    {
+                        return Err(EngineError::validation(
+                            "cells covered by a table merge must be empty",
+                        ));
+                    }
+                }
+            }
+        }
+    }
     Ok(())
+}
+
+/// Whether grid cell (`row`,`col`) lies inside merge rect `m` — anchor
+/// and covered cells alike.
+fn merge_covers(m: &TableMerge, row: usize, col: usize) -> bool {
+    row >= m.row && row < m.row + m.rows && col >= m.col && col < m.col + m.cols
 }
 
 fn table_dim(v: &Value, name: &str, max: usize) -> Result<usize, EngineError> {
@@ -207,6 +285,26 @@ fn table_axis_position(p: &Value, key: &str) -> Result<usize, EngineError> {
         }
     }
     Err(EngineError::invalid(format!("payload missing '{key}'")))
+}
+
+/// One grid point for the merge ops: canonical flat
+/// `{prefix}_row`/`{prefix}_col` keys, or a `{prefix}: {row, col}` object
+/// alias (the shape the TypeScript wrapper sends).
+fn cell_point(p: &Value, prefix: &str) -> Result<(usize, usize), EngineError> {
+    if let Some(v) = p.get(prefix) {
+        if v.is_object() {
+            return Ok((
+                as_usize(field(v, "row")?, "row")?,
+                as_usize(field(v, "col")?, "col")?,
+            ));
+        }
+    }
+    let row_key = format!("{prefix}_row");
+    let col_key = format!("{prefix}_col");
+    Ok((
+        as_usize(field(p, &row_key)?, &row_key)?,
+        as_usize(field(p, &col_key)?, &col_key)?,
+    ))
 }
 
 /// One cell in the shape `setCellText` produces for empty content: a
@@ -273,7 +371,12 @@ impl QuillEngine {
             kind: BlockKind::Table,
             list: None,
             style_id: None,
-            table: Some(Table { rows, cols, cells }),
+            table: Some(Table {
+                rows,
+                cols,
+                cells,
+                merges: Vec::new(),
+            }),
             inlines: Vec::new(),
         };
         let mut next = self.blocks.clone();
@@ -399,6 +502,17 @@ impl QuillEngine {
             )));
         }
         let cell_index = row * table.cols + col;
+        // Covered cells are hidden inside a merged region; only the
+        // anchor cell carries the region's content.
+        if table
+            .merges
+            .iter()
+            .any(|m| merge_covers(m, row, col) && (m.row != row || m.col != col))
+        {
+            return Err(EngineError::validation(
+                "cell is covered by a merged region; edit its anchor cell",
+            ));
+        }
         let old = self.blocks[index].clone();
         let mut new = old.clone();
         let cell = &mut new.table.as_mut().expect("table block").cells[cell_index];
@@ -469,12 +583,34 @@ impl QuillEngine {
                 table.rows
             )));
         }
+        // Merge interaction: a merge wholly at/below the insertion point
+        // shifts down one row; an insertion strictly inside a merge's row
+        // span would cut the region, so it rejects. Inserting exactly at
+        // the merge's top edge or just past its bottom edge is clean.
+        let mut merges = table.merges.clone();
+        for m in &mut merges {
+            if m.row >= pos {
+                m.row += 1;
+            } else if pos < m.row + m.rows {
+                return Err(EngineError::validation(
+                    "cannot insert a row through a merged region",
+                ));
+            }
+        }
         let (rows, cols) = (table.rows, table.cols);
         let mut cells = Vec::with_capacity((rows + 1) * cols);
         cells.extend_from_slice(&table.cells[..pos * cols]);
         cells.extend((0..cols).map(|_| empty_cell()));
         cells.extend_from_slice(&table.cells[pos * cols..]);
-        self.commit_table(index, Table { rows: rows + 1, cols, cells })?;
+        self.commit_table(
+            index,
+            Table {
+                rows: rows + 1,
+                cols,
+                cells,
+                merges,
+            },
+        )?;
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -500,11 +636,36 @@ impl QuillEngine {
                 "table must keep at least one row",
             ));
         }
+        // Merge interaction: deleting a row a merge covers would cut the
+        // region, so it rejects; merges wholly below the deleted row
+        // shift up one (merges wholly above are untouched — no merge can
+        // span the deleted row without covering it).
+        let mut merges = Vec::with_capacity(table.merges.len());
+        for m in &table.merges {
+            if m.row <= pos && pos < m.row + m.rows {
+                return Err(EngineError::validation(
+                    "cannot delete a row through a merged region",
+                ));
+            }
+            let mut m = m.clone();
+            if m.row > pos {
+                m.row -= 1;
+            }
+            merges.push(m);
+        }
         let (rows, cols) = (table.rows, table.cols);
         let mut cells = Vec::with_capacity((rows - 1) * cols);
         cells.extend_from_slice(&table.cells[..pos * cols]);
         cells.extend_from_slice(&table.cells[(pos + 1) * cols..]);
-        self.commit_table(index, Table { rows: rows - 1, cols, cells })?;
+        self.commit_table(
+            index,
+            Table {
+                rows: rows - 1,
+                cols,
+                cells,
+                merges,
+            },
+        )?;
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -531,6 +692,17 @@ impl QuillEngine {
                 table.cols
             )));
         }
+        // Merge interaction mirrors insertTableRow on the column axis.
+        let mut merges = table.merges.clone();
+        for m in &mut merges {
+            if m.col >= pos {
+                m.col += 1;
+            } else if pos < m.col + m.cols {
+                return Err(EngineError::validation(
+                    "cannot insert a column through a merged region",
+                ));
+            }
+        }
         let (rows, cols) = (table.rows, table.cols);
         let mut cells = Vec::with_capacity(rows * (cols + 1));
         for r in 0..rows {
@@ -539,7 +711,15 @@ impl QuillEngine {
             cells.push(empty_cell());
             cells.extend_from_slice(&row[pos..]);
         }
-        self.commit_table(index, Table { rows, cols: cols + 1, cells })?;
+        self.commit_table(
+            index,
+            Table {
+                rows,
+                cols: cols + 1,
+                cells,
+                merges,
+            },
+        )?;
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -567,6 +747,20 @@ impl QuillEngine {
                 "table must keep at least one column",
             ));
         }
+        // Merge interaction mirrors deleteTableRow on the column axis.
+        let mut merges = Vec::with_capacity(table.merges.len());
+        for m in &table.merges {
+            if m.col <= pos && pos < m.col + m.cols {
+                return Err(EngineError::validation(
+                    "cannot delete a column through a merged region",
+                ));
+            }
+            let mut m = m.clone();
+            if m.col > pos {
+                m.col -= 1;
+            }
+            merges.push(m);
+        }
         let (rows, cols) = (table.rows, table.cols);
         let mut cells = Vec::with_capacity(rows * (cols - 1));
         for r in 0..rows {
@@ -574,11 +768,117 @@ impl QuillEngine {
             cells.extend_from_slice(&row[..pos]);
             cells.extend_from_slice(&row[pos + 1..]);
         }
-        self.commit_table(index, Table { rows, cols: cols - 1, cells })?;
+        self.commit_table(
+            index,
+            Table {
+                rows,
+                cols: cols - 1,
+                cells,
+                merges,
+            },
+        )?;
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
-    /// `listTables` — read-only; table blocks in document order.
+    /// `mergeTableCells {block, from, to}` — merges the rectangular region
+    /// between two grid points (either order; the top-left cell is the
+    /// anchor and keeps its content). `from`/`to` are `{row,col}` objects
+    /// or flat `from_row`/`from_col`/`to_row`/`to_col` keys. The region
+    /// must cover at least 2 cells, stay in bounds, and not overlap an
+    /// existing merge; every covered cell is reset to the canonical empty
+    /// paragraph (covered content is discarded, matching spreadsheet
+    /// merge semantics — undo restores it). One undo entry via
+    /// `commit_table`.
+    pub(super) fn op_merge_table_cells(
+        &mut self,
+        p: &Value,
+    ) -> Result<CommandResult, EngineError> {
+        let index = self.table_block_index(p)?;
+        let (fr, fc) = cell_point(p, "from")?;
+        let (tr, tc) = cell_point(p, "to")?;
+        let table = self.blocks[index]
+            .table
+            .as_ref()
+            .expect("table block validated");
+        for (r, c) in [(fr, fc), (tr, tc)] {
+            if r >= table.rows || c >= table.cols {
+                return Err(EngineError::out_of_bounds(format!(
+                    "cell ({r},{c}) out of range ({}x{} table)",
+                    table.rows, table.cols
+                )));
+            }
+        }
+        let (r1, c1) = (fr.min(tr), fc.min(tc));
+        let (r2, c2) = (fr.max(tr), fc.max(tc));
+        if r1 == r2 && c1 == c2 {
+            return Err(EngineError::validation(
+                "merge must cover at least 2 cells",
+            ));
+        }
+        let mut new_table = table.clone();
+        let cols = new_table.cols;
+        for r in r1..=r2 {
+            for c in c1..=c2 {
+                if r == r1 && c == c1 {
+                    continue;
+                }
+                new_table.cells[r * cols + c] = empty_cell();
+            }
+        }
+        new_table.merges.push(TableMerge {
+            row: r1,
+            col: c1,
+            rows: r2 - r1 + 1,
+            cols: c2 - c1 + 1,
+        });
+        // Overlap/bounds of the new rect is enforced by the staged
+        // validate_tables call inside commit_table — a rejected merge
+        // leaves the document untouched.
+        self.commit_table(index, new_table)?;
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// `unmergeTableCells {block,row,col}` — removes the merge whose
+    /// region contains cell (`row`,`col`) (anchor or covered; either
+    /// identifies the region). Covered cells were reset to empty
+    /// paragraphs at merge time, so unmerge restores them as ordinary
+    /// empty cells; the anchor keeps its content. Rejects when the cell
+    /// is not part of a merged region.
+    pub(super) fn op_unmerge_table_cells(
+        &mut self,
+        p: &Value,
+    ) -> Result<CommandResult, EngineError> {
+        let index = self.table_block_index(p)?;
+        let row = as_usize(field(p, "row")?, "row")?;
+        let col = as_usize(field(p, "col")?, "col")?;
+        let table = self.blocks[index]
+            .table
+            .as_ref()
+            .expect("table block validated");
+        if row >= table.rows || col >= table.cols {
+            return Err(EngineError::out_of_bounds(format!(
+                "cell ({row},{col}) out of range ({}x{} table)",
+                table.rows, table.cols
+            )));
+        }
+        let Some(mi) = table
+            .merges
+            .iter()
+            .position(|m| merge_covers(m, row, col))
+        else {
+            return Err(EngineError::validation(
+                "cell is not part of a merged region",
+            ));
+        };
+        let mut new_table = table.clone();
+        new_table.merges.remove(mi);
+        self.commit_table(index, new_table)?;
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// `listTables` — read-only; table blocks in document order, each
+    /// with its merge registry so hosts can render spans without a
+    /// second call.
     pub(super) fn op_list_tables(&self) -> Result<CommandResult, EngineError> {
         let arr: Vec<Value> = self
             .blocks
@@ -586,15 +886,21 @@ impl QuillEngine {
             .enumerate()
             .filter_map(|(i, b)| {
                 b.table.as_ref().map(|t| {
-                    json!({ "block": i, "rows": t.rows, "cols": t.cols })
+                    json!({
+                        "block": i,
+                        "rows": t.rows,
+                        "cols": t.cols,
+                        "merges": t.merges,
+                    })
                 })
             })
             .collect();
         Ok(Self::read_only(json!({ "tables": arr })))
     }
 
-    /// `describeTable {block}` — read-only; dimensions plus each cell's
-    /// plain text as a row-major `cells` grid of strings.
+    /// `describeTable {block}` — read-only; dimensions, the merge
+    /// registry, and each cell's plain text as a row-major `cells` grid
+    /// of strings (covered cells report their empty text).
     pub(super) fn op_describe_table(&self, p: &Value) -> Result<CommandResult, EngineError> {
         let index = self.table_block_index(p)?;
         let table = self.blocks[index].table.as_ref().expect("table block");
@@ -609,6 +915,7 @@ impl QuillEngine {
             "block": index,
             "rows": table.rows,
             "cols": table.cols,
+            "merges": table.merges,
             "cells": cells,
         })))
     }
@@ -687,7 +994,10 @@ mod tests {
             assert!(cell.blocks[0].inlines.is_empty());
         }
         let lt = list_tables(&mut e);
-        assert_eq!(lt["tables"], json!([{"block": 2, "rows": 2, "cols": 2}]));
+        assert_eq!(
+            lt["tables"],
+            json!([{"block": 2, "rows": 2, "cols": 2, "merges": []}])
+        );
     }
 
     #[test]
@@ -833,6 +1143,7 @@ mod tests {
                 cells: vec![TableCell {
                     blocks: vec![Block::empty(BlockKind::Para)],
                 }],
+                merges: Vec::new(),
             }),
             inlines: Vec::new(),
         }];
@@ -1204,6 +1515,7 @@ mod tests {
             cells: vec![TableCell {
                 blocks: vec![Block::empty(BlockKind::Para)],
             }],
+            merges: Vec::new(),
         };
         let block = |style_id: Option<&str>, inlines: Vec<Inline>| Block {
             kind: BlockKind::Table,
@@ -1365,6 +1677,7 @@ mod tests {
                 rows: 60,
                 cols: TABLE_COLS_MAX,
                 cells,
+                merges: Vec::new(),
             }),
             inlines: Vec::new(),
         }];
@@ -1420,5 +1733,360 @@ mod tests {
         assert_eq!(bms["bookmarks"][0]["pos"]["block"], 3);
         assert_eq!(describe_table(&mut e, 2)["rows"], 3);
         assert_eq!(describe_table(&mut e, 2)["cols"], 1);
+    }
+
+    // -- cell merge/unmerge (slice C) ----------------------------------------
+
+    fn merge_cells(
+        e: &mut QuillEngine,
+        block: usize,
+        from: (usize, usize),
+        to: (usize, usize),
+    ) -> CommandResult {
+        apply(
+            e,
+            "mergeTableCells",
+            json!({
+                "block": block,
+                "from": {"row": from.0, "col": from.1},
+                "to": {"row": to.0, "col": to.1},
+            }),
+        )
+    }
+
+    fn unmerge_cell(e: &mut QuillEngine, block: usize, row: usize, col: usize) -> CommandResult {
+        apply(
+            e,
+            "unmergeTableCells",
+            json!({"block": block, "row": row, "col": col}),
+        )
+    }
+
+    /// A 3x3 table at block 0 with distinct text in every cell.
+    fn merged_fixture() -> QuillEngine {
+        let mut e = engine();
+        insert_table(&mut e, 0, 3, 3);
+        for r in 0..3 {
+            for c in 0..3 {
+                apply(
+                    &mut e,
+                    "setCellText",
+                    json!({"block":0,"row":r,"col":c,"text":format!("c{r}{c}")}),
+                );
+            }
+        }
+        e
+    }
+
+    #[test]
+    fn merge_table_cells_builds_registry_and_discards_covered_content() {
+        let mut e = merged_fixture();
+        let r = merge_cells(&mut e, 0, (1, 1), (2, 0)); // reversed corners normalize
+        assert_eq!(r.data["ok"], true);
+        let d = describe_table(&mut e, 0);
+        assert_eq!(d["merges"], json!([{"row":1,"col":0,"rows":2,"cols":2}]));
+        // Anchor (top-left of the rect) keeps its text; covered cells are
+        // empty in the grid and their old content is gone.
+        assert_eq!(d["cells"][1][0], "c10");
+        assert_eq!(d["cells"][1][1], "");
+        assert_eq!(d["cells"][1][2], "c12");
+        assert_eq!(d["cells"][2][0], "");
+        assert_eq!(d["cells"][2][1], "");
+        assert_eq!(d["cells"][2][2], "c22");
+        // The dense grid is untouched: still rows*cols cells.
+        let table = &e.blocks[0].table.as_ref().unwrap();
+        assert_eq!(table.cells.len(), 9);
+        // listTables exposes the registry too.
+        assert_eq!(
+            list_tables(&mut e)["tables"][0]["merges"],
+            json!([{"row":1,"col":0,"rows":2,"cols":2}])
+        );
+        // Flat key spelling is accepted as an alias.
+        let mut e2 = merged_fixture();
+        apply(
+            &mut e2,
+            "mergeTableCells",
+            json!({"block":0,"from_row":0,"from_col":2,"to_row":1,"to_col":2}),
+        );
+        assert_eq!(describe_table(&mut e2, 0)["merges"][0]["cols"], 1);
+    }
+
+    #[test]
+    fn merge_table_cells_rejects_bad_regions_atomically() {
+        let mut e = merged_fixture();
+        let before = e.snapshot().unwrap();
+        for payload in [
+            // single cell
+            json!({"block":0,"from":{"row":0,"col":0},"to":{"row":0,"col":0}}),
+            // out of bounds endpoints
+            json!({"block":0,"from":{"row":0,"col":0},"to":{"row":3,"col":0}}),
+            json!({"block":0,"from":{"row":-1,"col":0},"to":{"row":1,"col":1}}),
+            // missing keys / wrong types
+            json!({"block":0,"from":{"row":0}}),
+            json!({"block":0,"to":{"row":1,"col":1}}),
+            json!({"block":0,"from":{"row":"x","col":0},"to":{"row":1,"col":1}}),
+            json!({"block":9,"from":{"row":0,"col":0},"to":{"row":1,"col":1}}),
+            json!({"block":1,"from":{"row":0,"col":0},"to":{"row":1,"col":1}}), // not a table
+        ] {
+            assert!(e.apply(cmd("mergeTableCells", payload.clone())).is_err(), "{payload}");
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // Overlapping an existing merge rejects and changes nothing.
+        merge_cells(&mut e, 0, (0, 0), (1, 1));
+        let before = e.snapshot().unwrap();
+        assert!(err(&mut e, "mergeTableCells", json!({
+            "block":0,"from":{"row":1,"col":1},"to":{"row":2,"col":2}
+        }))
+        .code == ErrorCode::Validation);
+        // A rect fully inside the existing merge also overlaps.
+        assert!(err(&mut e, "mergeTableCells", json!({
+            "block":0,"from":{"row":0,"col":0},"to":{"row":0,"col":1}
+        }))
+        .code == ErrorCode::Validation);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Adjacent (non-overlapping) merges are fine.
+        apply(
+            &mut e,
+            "mergeTableCells",
+            json!({"block":0,"from":{"row":0,"col":2},"to":{"row":2,"col":2}}),
+        );
+        assert_eq!(describe_table(&mut e, 0)["merges"].as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn unmerge_table_cells_restores_empty_covered_cells() {
+        let mut e = merged_fixture();
+        merge_cells(&mut e, 0, (0, 0), (1, 1));
+        // Unmerge by naming a covered cell.
+        unmerge_cell(&mut e, 0, 1, 1);
+        let d = describe_table(&mut e, 0);
+        assert_eq!(d["merges"], json!([]));
+        // Covered cells come back as ordinary (empty) cells; the anchor
+        // keeps its content — covered content was discarded at merge.
+        assert_eq!(d["cells"][0][0], "c00");
+        assert_eq!(d["cells"][1][1], "");
+        assert_eq!(d["cells"][1][0], "");
+        // Unmerge by naming the anchor works too; unmerged cells reject.
+        merge_cells(&mut e, 0, (2, 2), (2, 1)); // horizontal merge, anchor left
+        unmerge_cell(&mut e, 0, 2, 2); // covered cell identifies the region
+        assert_eq!(describe_table(&mut e, 0)["merges"], json!([]));
+        let before = e.snapshot().unwrap();
+        assert!(err(&mut e, "unmergeTableCells", json!({"block":0,"row":0,"col":0}))
+            .code == ErrorCode::Validation);
+        assert!(err(&mut e, "unmergeTableCells", json!({"block":0,"row":9,"col":0}))
+            .code == ErrorCode::OutOfBounds);
+        assert!(err(&mut e, "unmergeTableCells", json!({"block":0,"row":0}))
+            .code == ErrorCode::InvalidCommand);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // After unmerge the formerly covered cells are writable again.
+        apply(&mut e, "setCellText", json!({"block":0,"row":1,"col":1,"text":"back"}));
+        assert_eq!(describe_table(&mut e, 0)["cells"][1][1], "back");
+    }
+
+    #[test]
+    fn set_cell_text_rejects_covered_cells() {
+        let mut e = merged_fixture();
+        merge_cells(&mut e, 0, (0, 0), (1, 1));
+        let before = e.snapshot().unwrap();
+        for (r, c) in [(0, 1), (1, 0), (1, 1)] {
+            assert!(err(&mut e, "setCellText", json!({
+                "block":0,"row":r,"col":c,"text":"x"
+            }))
+            .code == ErrorCode::Validation);
+        }
+        assert_eq!(e.snapshot().unwrap(), before);
+        // The anchor cell stays editable.
+        apply(&mut e, "setCellText", json!({"block":0,"row":0,"col":0,"text":"anchor"}));
+        assert_eq!(describe_table(&mut e, 0)["cells"][0][0], "anchor");
+    }
+
+    #[test]
+    fn structural_ops_shift_or_reject_through_merges() {
+        let mut e = merged_fixture();
+        merge_cells(&mut e, 0, (1, 0), (2, 1)); // rows 1-2, cols 0-1
+        // Inserting a row strictly inside the merge's row span rejects.
+        let before = e.snapshot().unwrap();
+        assert!(err(&mut e, "insertTableRow", json!({"block":0,"row":2}))
+            .code == ErrorCode::Validation);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Inserting at the merge's top edge shifts the whole merge down.
+        apply(&mut e, "insertTableRow", json!({"block":0,"row":1}));
+        assert_eq!(
+            describe_table(&mut e, 0)["merges"],
+            json!([{"row":2,"col":0,"rows":2,"cols":2}])
+        );
+        // Inserting past the merge's bottom edge leaves it alone.
+        apply(&mut e, "insertTableRow", json!({"block":0,"row":4}));
+        assert_eq!(
+            describe_table(&mut e, 0)["merges"],
+            json!([{"row":2,"col":0,"rows":2,"cols":2}])
+        );
+        // Deleting a covered row rejects; deleting a row below shifts up.
+        assert!(err(&mut e, "deleteTableRow", json!({"block":0,"row":3}))
+            .code == ErrorCode::Validation);
+        apply(&mut e, "deleteTableRow", json!({"block":0,"row":0})); // above merge
+        assert_eq!(
+            describe_table(&mut e, 0)["merges"],
+            json!([{"row":1,"col":0,"rows":2,"cols":2}])
+        );
+        // Column ops behave the same on the column axis.
+        assert!(err(&mut e, "insertTableColumn", json!({"block":0,"col":1}))
+            .code == ErrorCode::Validation);
+        apply(&mut e, "insertTableColumn", json!({"block":0,"col":0}));
+        assert_eq!(
+            describe_table(&mut e, 0)["merges"],
+            json!([{"row":1,"col":1,"rows":2,"cols":2}])
+        );
+        assert!(err(&mut e, "deleteTableColumn", json!({"block":0,"col":2}))
+            .code == ErrorCode::Validation);
+        apply(&mut e, "deleteTableColumn", json!({"block":0,"col":0}));
+        assert_eq!(
+            describe_table(&mut e, 0)["merges"],
+            json!([{"row":1,"col":0,"rows":2,"cols":2}])
+        );
+        // Every intermediate state still restores cleanly.
+        let mut r = engine();
+        r.restore(&e.snapshot().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn merge_unmerge_undo_redo() {
+        let mut e = merged_fixture();
+        merge_cells(&mut e, 0, (0, 0), (1, 1));
+        unmerge_cell(&mut e, 0, 1, 0);
+        assert_eq!(describe_table(&mut e, 0)["merges"], json!([]));
+        let full = e.snapshot().unwrap();
+        // Undo unmerge → merge back; undo merge → covered content returns.
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            describe_table(&mut e, 0)["merges"],
+            json!([{"row":0,"col":0,"rows":2,"cols":2}])
+        );
+        assert_eq!(describe_table(&mut e, 0)["cells"][1][1], "");
+        assert!(e.undo().unwrap());
+        assert_eq!(describe_table(&mut e, 0)["merges"], json!([]));
+        assert_eq!(describe_table(&mut e, 0)["cells"][1][1], "c11");
+        while e.redo().unwrap() {}
+        assert_eq!(e.snapshot().unwrap(), full);
+        assert_eq!(
+            describe_table(&mut e, 0)["merges"],
+            json!([])
+        );
+    }
+
+    #[test]
+    fn snapshot_round_trip_preserves_merges() {
+        let mut e = merged_fixture();
+        merge_cells(&mut e, 0, (0, 1), (2, 2));
+        // Flat key spelling, non-overlapping region in column 0.
+        apply(&mut e, "mergeTableCells", json!({
+            "block":0,"from_row":0,"from_col":0,"to_row":1,"to_col":0
+        }));
+        let bytes = e.snapshot().unwrap();
+        let mut r = engine();
+        r.restore(&bytes).unwrap();
+        assert_eq!(r.blocks, e.blocks);
+        assert_eq!(r.snapshot().unwrap(), bytes);
+        assert_eq!(
+            describe_table(&mut r, 0)["merges"],
+            json!([
+                {"row":0,"col":1,"rows":3,"cols":2},
+                {"row":0,"col":0,"rows":2,"cols":1}
+            ])
+        );
+        // A merge-free table omits the key entirely (byte-identical
+        // pre-slice-C payloads).
+        let mut p = engine();
+        insert_table(&mut p, 0, 1, 1);
+        let bytes2 = p.snapshot().unwrap();
+        let (_f, payload) = decode_envelope(&bytes2).unwrap();
+        let text = String::from_utf8(payload.to_vec()).unwrap();
+        assert!(!text.contains("merges"));
+    }
+
+    #[test]
+    fn hostile_merge_snapshots_reject() {
+        let mut e = merged_fixture();
+        merge_cells(&mut e, 0, (0, 0), (1, 1));
+        let bytes = e.snapshot().unwrap();
+        let (_fmt, payload) = decode_envelope(&bytes).unwrap();
+        let value: Value = serde_json::from_slice(payload).unwrap();
+        let blocks = if value.get("document").is_some() {
+            value["document"]["blocks"].clone()
+        } else {
+            value["blocks"].clone()
+        };
+        assert_eq!(blocks[0]["table"]["merges"][0]["rows"], 2);
+
+        let cases: Vec<Value> = vec![
+            // overlapping merges
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][0]["table"]["merges"] = json!([
+                    {"row":0,"col":0,"rows":2,"cols":2},
+                    {"row":1,"col":1,"rows":2,"cols":2}
+                ]);
+                serde_json::to_value(v).unwrap()
+            },
+            // out-of-bounds merge
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][0]["table"]["merges"] = json!([
+                    {"row":2,"col":2,"rows":2,"cols":2}
+                ]);
+                serde_json::to_value(v).unwrap()
+            },
+            // 1x1 merge (covers a single cell — meaningless)
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][0]["table"]["merges"] = json!([
+                    {"row":0,"col":0,"rows":1,"cols":1}
+                ]);
+                serde_json::to_value(v).unwrap()
+            },
+            // zero-extent merge
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][0]["table"]["merges"] = json!([
+                    {"row":0,"col":0,"rows":0,"cols":2}
+                ]);
+                serde_json::to_value(v).unwrap()
+            },
+            // covered cell smuggling content (cell (0,1) is covered by the
+            // real merge; give it text)
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][0]["table"]["cells"][1]["blocks"][0]["inlines"] =
+                    json!([{"text":"sneaky","style":{}}]);
+                serde_json::to_value(v).unwrap()
+            },
+            // unknown field inside a merge rect (deny_unknown_fields)
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][0]["table"]["merges"][0]["extra"] = json!(1);
+                serde_json::to_value(v).unwrap()
+            },
+            // huge extent that would overflow naive row+rows arithmetic
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][0]["table"]["merges"] = json!([
+                    {"row":0,"col":0,"rows":u64::MAX,"cols":2}
+                ]);
+                serde_json::to_value(v).unwrap()
+            },
+        ];
+        for (i, v) in cases.iter().enumerate() {
+            let bytes = encode_envelope(&serde_json::to_vec(v).unwrap());
+            let mut e2 = engine();
+            assert!(e2.restore(&bytes).is_err(), "case {i} must reject");
+            assert_eq!(e2.snapshot().unwrap(), engine().snapshot().unwrap());
+        }
     }
 }
