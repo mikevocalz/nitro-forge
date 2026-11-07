@@ -121,14 +121,46 @@ impl Block {
     }
 }
 
+/// A named zero-width mark at a `{block, offset}` position (Unicode scalar
+/// offsets, same unit as `Pos`). Bookmarks have right gravity: a mark stays
+/// attached to the character after it, so text inserted exactly at a bookmark
+/// lands before the mark. `remap_bookmarks_*` defines the per-op rules.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct Bookmark {
+    name: String,
+    block: usize,
+    offset: usize,
+}
+
 #[derive(Serialize)]
 struct SnapshotRef<'a> {
     blocks: &'a [Block],
 }
 
+/// schema:3 document payload: legacy blocks plus the bookmark collection.
+#[derive(Serialize)]
+struct BookmarkDocSnapshotRef<'a> {
+    blocks: &'a [Block],
+    bookmarks: &'a [Bookmark],
+}
+
+#[derive(Serialize)]
+struct BookmarkSnapshotRef<'a> {
+    kind: &'static str,
+    schema: u32,
+    document: BookmarkDocSnapshotRef<'a>,
+}
+
 #[derive(Deserialize)]
 struct DocState {
     blocks: Vec<Block>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BookmarkDocState {
+    blocks: Vec<Block>,
+    bookmarks: Vec<Bookmark>,
 }
 
 #[derive(Serialize)]
@@ -139,10 +171,10 @@ struct ListSnapshotRef<'a> {
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ListDocState {
+struct WrappedDocState {
     kind: String,
     schema: u32,
-    document: DocState,
+    document: Value,
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +200,10 @@ struct UndoEntry {
     index: usize,
     removed: Vec<Block>,
     inserted: Vec<Block>,
+    /// `(before, after)` bookmark lists for ops that can move bookmarks;
+    /// `None` for ops that cannot (style/kind/list-metadata edits), whose
+    /// undo/redo leaves the live bookmark list untouched.
+    bookmarks: Option<(Vec<Bookmark>, Vec<Bookmark>)>,
 }
 
 // ---------------------------------------------------------------------------
@@ -274,6 +310,98 @@ fn style_at(b: &Block, offset: usize) -> Style {
         .last()
         .map(|i| i.style.clone())
         .unwrap_or_default()
+}
+
+// ---------------------------------------------------------------------------
+// Bookmarks
+// ---------------------------------------------------------------------------
+
+/// Bookmark names are 1..=64 non-blank Unicode scalars without control
+/// characters; names are unique per document (exact, case-sensitive match).
+const BOOKMARK_NAME_MAX: usize = 64;
+/// Bound on stored bookmarks so snapshots stay small.
+const BOOKMARKS_MAX: usize = 1024;
+
+fn validate_bookmark_name(name: &str) -> Result<(), EngineError> {
+    if name.trim().is_empty() {
+        return Err(EngineError::validation("bookmark name must not be blank"));
+    }
+    if name.chars().count() > BOOKMARK_NAME_MAX {
+        return Err(EngineError::validation(format!(
+            "bookmark name must be at most {BOOKMARK_NAME_MAX} characters"
+        )));
+    }
+    if name.chars().any(|c| c.is_control()) {
+        return Err(EngineError::validation(
+            "bookmark name must not contain control characters",
+        ));
+    }
+    Ok(())
+}
+
+/// Full bookmark validation for restore: names, uniqueness, bounds against
+/// the final block list. Runs before live state is replaced.
+fn validate_bookmarks(bookmarks: &[Bookmark], blocks: &[Block]) -> Result<(), EngineError> {
+    if bookmarks.len() > BOOKMARKS_MAX {
+        return Err(EngineError::validation("too many bookmarks"));
+    }
+    let mut seen = std::collections::HashSet::with_capacity(bookmarks.len());
+    for bm in bookmarks {
+        validate_bookmark_name(&bm.name)?;
+        if !seen.insert(bm.name.as_str()) {
+            return Err(EngineError::validation(format!(
+                "duplicate bookmark name '{}'",
+                bm.name
+            )));
+        }
+        let Some(b) = blocks.get(bm.block) else {
+            return Err(EngineError::out_of_bounds(format!(
+                "bookmark '{}' block {} out of range ({} blocks)",
+                bm.name,
+                bm.block,
+                blocks.len()
+            )));
+        };
+        if bm.offset > block_len(b) {
+            return Err(EngineError::out_of_bounds(format!(
+                "bookmark '{}' offset {} out of range (block {} has {} chars)",
+                bm.name,
+                bm.offset,
+                bm.block,
+                block_len(b)
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// `pos` is the documented payload key; `at`/`anchor` are accepted aliases.
+fn bookmark_pos(p: &Value) -> Result<Pos, EngineError> {
+    for key in ["pos", "at", "anchor"] {
+        if let Some(v) = p.get(key) {
+            return parse_pos(v);
+        }
+    }
+    Err(EngineError::invalid("payload missing 'pos'"))
+}
+
+/// New offset for a right-gravity mark after each `(start,end)` match in
+/// `matches` (ascending, non-overlapping scalar spans) is replaced by `repl`
+/// chars. A mark at or inside a match's span lands just after the
+/// replacement, matching delete-then-insert composition.
+fn remap_offset_through_matches(offset: usize, matches: &[(usize, usize)], repl: usize) -> usize {
+    let mut delta = 0isize;
+    for &(s, e) in matches {
+        if offset < s {
+            break;
+        }
+        let ns = s as isize + delta;
+        if offset < e {
+            return (ns + repl as isize) as usize;
+        }
+        delta += repl as isize - (e - s) as isize;
+    }
+    (offset as isize + delta) as usize
 }
 
 // ---------------------------------------------------------------------------
@@ -611,6 +739,7 @@ impl StylePatch {
 
 pub struct QuillEngine {
     blocks: Vec<Block>,
+    bookmarks: Vec<Bookmark>,
     journal: Journal<UndoEntry>,
 }
 
@@ -618,8 +747,29 @@ impl QuillEngine {
     pub fn new() -> Self {
         Self {
             blocks: vec![Block::empty(BlockKind::Para)],
+            bookmarks: Vec::new(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
+    }
+
+    /// Record one undo entry. `bookmarks_before` is the live bookmark list
+    /// captured before the op mutated; `Some` pairs it with the post-op list
+    /// so undo/redo restore both directions. Ops that cannot move bookmarks
+    /// pass `None`.
+    fn record_undo(
+        &mut self,
+        index: usize,
+        removed: Vec<Block>,
+        inserted: Vec<Block>,
+        bookmarks_before: Option<Vec<Bookmark>>,
+    ) {
+        let bookmarks = bookmarks_before.map(|before| (before, self.bookmarks.clone()));
+        self.journal.record(UndoEntry {
+            index,
+            removed,
+            inserted,
+            bookmarks,
+        });
     }
 
     fn check_pos(&self, p: Pos) -> Result<(), EngineError> {
@@ -661,11 +811,8 @@ impl QuillEngine {
 
     fn op_new(&mut self) -> Result<CommandResult, EngineError> {
         let old = std::mem::replace(&mut self.blocks, vec![Block::empty(BlockKind::Para)]);
-        self.journal.record(UndoEntry {
-            index: 0,
-            removed: old,
-            inserted: self.blocks.clone(),
-        });
+        let bookmarks_before = std::mem::take(&mut self.bookmarks);
+        self.record_undo(0, old, self.blocks.clone(), Some(bookmarks_before));
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -724,12 +871,10 @@ impl QuillEngine {
 
         let inserted = out.clone();
         self.validate_list_splice(at.block, 1, &out)?;
+        let bookmarks_before = self.bookmarks.clone();
         self.blocks.splice(at.block..at.block + 1, out);
-        self.journal.record(UndoEntry {
-            index: at.block,
-            removed: vec![old],
-            inserted,
-        });
+        self.remap_bookmarks_insert_text(at, &text);
+        self.record_undo(at.block, vec![old], inserted, Some(bookmarks_before));
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -780,13 +925,11 @@ impl QuillEngine {
             }];
         }
 
+        let bookmarks_before = self.bookmarks.clone();
         self.blocks
             .splice(from.block..=to.block, new_span.iter().cloned());
-        self.journal.record(UndoEntry {
-            index: from.block,
-            removed,
-            inserted: new_span,
-        });
+        self.remap_bookmarks_delete(from, to);
+        self.record_undo(from.block, removed, new_span, Some(bookmarks_before));
         Ok(CommandResult::data(json!({ "deleted_text": deleted_text })))
     }
 
@@ -797,8 +940,10 @@ impl QuillEngine {
         let to = parse_pos(field(p, "to")?)?;
         let text = as_str(field(p, "text")?, "text")?.to_owned();
         self.check_range(from, to)?;
+        let bookmarks_before = self.bookmarks.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
+            bookmarks: self.bookmarks.clone(),
             journal: Journal::new(1),
         };
         let mut deleted = String::new();
@@ -818,11 +963,8 @@ impl QuillEngine {
         if staged.blocks == self.blocks {
             return Ok(Self::read_only(data));
         }
-        self.journal.record(UndoEntry {
-            index: 0,
-            removed: self.blocks.clone(),
-            inserted: staged.blocks.clone(),
-        });
+        self.bookmarks = staged.bookmarks;
+        self.record_undo(0, self.blocks.clone(), staged.blocks.clone(), Some(bookmarks_before));
         self.blocks = staged.blocks;
         Ok(CommandResult::data(data))
     }
@@ -866,11 +1008,7 @@ impl QuillEngine {
 
         self.blocks
             .splice(from.block..=to.block, new_span.iter().cloned());
-        self.journal.record(UndoEntry {
-            index: from.block,
-            removed,
-            inserted: new_span,
-        });
+        self.record_undo(from.block, removed, new_span, None);
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -893,11 +1031,7 @@ impl QuillEngine {
         }
         self.validate_list_splice(index, 1, std::slice::from_ref(&new))?;
         self.blocks[index] = new.clone();
-        self.journal.record(UndoEntry {
-            index,
-            removed: vec![old],
-            inserted: vec![new],
-        });
+        self.record_undo(index, vec![old], vec![new], None);
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -914,15 +1048,13 @@ impl QuillEngine {
             )));
         }
         let old = self.blocks.clone();
+        let bookmarks_before = self.bookmarks.clone();
         let mut next = old.clone();
         next.insert(index, Block::empty(kind));
         lists::validate(&next)?;
         self.blocks = next;
-        self.journal.record(UndoEntry {
-            index: 0,
-            removed: old,
-            inserted: self.blocks.clone(),
-        });
+        self.remap_bookmarks_insert_block(index);
+        self.record_undo(0, old, self.blocks.clone(), Some(bookmarks_before));
         Ok(CommandResult::data(json!({ "block_index": index })))
     }
 
@@ -944,13 +1076,11 @@ impl QuillEngine {
             },
         ];
         self.validate_list_splice(at.block, 1, &new_span)?;
+        let bookmarks_before = self.bookmarks.clone();
         self.blocks
             .splice(at.block..at.block + 1, new_span.iter().cloned());
-        self.journal.record(UndoEntry {
-            index: at.block,
-            removed: vec![old],
-            inserted: new_span,
-        });
+        self.remap_bookmarks_split(at);
+        self.record_undo(at.block, vec![old], new_span, Some(bookmarks_before));
         Ok(CommandResult::data(
             json!({ "new_block_index": at.block + 1 }),
         ))
@@ -970,6 +1100,8 @@ impl QuillEngine {
             ));
         }
         let removed: Vec<Block> = self.blocks[index - 1..=index].to_vec();
+        let head_len = block_len(&self.blocks[index - 1]);
+        let bookmarks_before = self.bookmarks.clone();
         let mut inlines = self.blocks[index - 1].inlines.clone();
         inlines.extend(self.blocks[index].inlines.iter().cloned());
         let merged = vec![Block {
@@ -979,11 +1111,8 @@ impl QuillEngine {
         }];
         self.blocks
             .splice(index - 1..=index, merged.iter().cloned());
-        self.journal.record(UndoEntry {
-            index: index - 1,
-            removed,
-            inserted: merged,
-        });
+        self.remap_bookmarks_merge(index, head_len);
+        self.record_undo(index - 1, removed, merged, Some(bookmarks_before));
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -1077,8 +1206,10 @@ impl QuillEngine {
             return Ok(Self::read_only(json!({ "replaced": 0 })));
         }
 
+        let bookmarks_before = self.bookmarks.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
+            bookmarks: self.bookmarks.clone(),
             journal: Journal::new(1),
         };
         // Group consecutive matches by block (find_matches is block-ordered),
@@ -1113,18 +1244,226 @@ impl QuillEngine {
             i = j;
         }
 
+        // Re-anchor bookmarks through the replacements: a mark at or inside
+        // a match's span lands just after the replacement text.
+        if !staged.bookmarks.is_empty() {
+            let repl_len = replacement.chars().count();
+            let mut i = 0;
+            while i < matches.len() {
+                let bi = matches[i].0;
+                let mut j = i;
+                let mut span: Vec<(usize, usize)> = Vec::new();
+                while j < matches.len() && matches[j].0 == bi {
+                    span.push((matches[j].1, matches[j].2));
+                    j += 1;
+                }
+                for bm in staged.bookmarks.iter_mut().filter(|b| b.block == bi) {
+                    bm.offset = remap_offset_through_matches(bm.offset, &span, repl_len);
+                }
+                i = j;
+            }
+        }
+
         lists::validate(&staged.blocks)?;
         let replaced = matches.len();
         if staged.blocks == self.blocks {
             return Ok(Self::read_only(json!({ "replaced": replaced })));
         }
-        self.journal.record(UndoEntry {
-            index: 0,
-            removed: self.blocks.clone(),
-            inserted: staged.blocks.clone(),
-        });
+        self.bookmarks = staged.bookmarks;
+        self.record_undo(
+            0,
+            self.blocks.clone(),
+            staged.blocks.clone(),
+            Some(bookmarks_before),
+        );
         self.blocks = staged.blocks;
         Ok(CommandResult::data(json!({ "replaced": replaced })))
+    }
+
+    // -- bookmark ops -------------------------------------------------------
+
+    /// `addBookmark {name, pos}` — `pos`/`at`/`anchor` all accepted. Names
+    /// are unique, 1..64 non-blank non-control scalars.
+    fn op_add_bookmark(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let name = as_str(field(p, "name")?, "name")?.to_string();
+        validate_bookmark_name(&name)?;
+        let at = bookmark_pos(p)?;
+        self.check_pos(at)?;
+        if self.bookmarks.len() >= BOOKMARKS_MAX {
+            return Err(EngineError::validation("bookmark limit reached"));
+        }
+        if self.bookmarks.iter().any(|b| b.name == name) {
+            return Err(EngineError::validation(format!(
+                "bookmark '{name}' already exists"
+            )));
+        }
+        let before = self.bookmarks.clone();
+        self.bookmarks.push(Bookmark {
+            name: name.clone(),
+            block: at.block,
+            offset: at.offset,
+        });
+        self.record_undo(0, Vec::new(), Vec::new(), Some(before));
+        Ok(CommandResult::data(json!({ "ok": true, "name": name })))
+    }
+
+    /// `removeBookmark {name}` or `{pos}` — exactly one selector required.
+    fn op_remove_bookmark(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let index = if p.get("name").is_some() {
+            let name = as_str(field(p, "name")?, "name")?;
+            self.bookmarks
+                .iter()
+                .position(|b| b.name == name)
+                .ok_or_else(|| EngineError::validation(format!("unknown bookmark '{name}'")))?
+        } else {
+            let at = bookmark_pos(p)?;
+            self.check_pos(at)?;
+            self.bookmarks
+                .iter()
+                .position(|b| b.block == at.block && b.offset == at.offset)
+                .ok_or_else(|| EngineError::validation("no bookmark at that position"))?
+        };
+        let before = self.bookmarks.clone();
+        let removed = self.bookmarks.remove(index);
+        self.record_undo(0, Vec::new(), Vec::new(), Some(before));
+        Ok(CommandResult::data(json!({ "ok": true, "name": removed.name })))
+    }
+
+    /// `listBookmarks` — read-only; sorted by document position then name.
+    fn op_list_bookmarks(&self) -> Result<CommandResult, EngineError> {
+        let mut sorted: Vec<&Bookmark> = self.bookmarks.iter().collect();
+        sorted.sort_by(|a, b| {
+            (a.block, a.offset, a.name.as_str()).cmp(&(b.block, b.offset, b.name.as_str()))
+        });
+        let arr: Vec<Value> = sorted
+            .iter()
+            .map(|b| {
+                json!({
+                    "name": b.name,
+                    "pos": { "block": b.block, "offset": b.offset },
+                })
+            })
+            .collect();
+        Ok(Self::read_only(json!({ "bookmarks": arr })))
+    }
+
+    // -- bookmark position remapping -----------------------------------------
+    //
+    // Bookmarks are right-gravity marks: a mark at `{block, offset}` stays
+    // attached to the character after it. Text inserted exactly at a mark
+    // lands before the mark. A mark whose following text is deleted clamps
+    // to the deletion start; a mark whose whole block is deleted is removed.
+
+    /// `insertText` at `at` inserting `text` (already validated).
+    fn remap_bookmarks_insert_text(&mut self, at: Pos, text: &str) {
+        if self.bookmarks.is_empty() {
+            return;
+        }
+        let added = text.bytes().filter(|&b| b == b'\n').count();
+        if added == 0 {
+            let n = text.chars().count();
+            for bm in &mut self.bookmarks {
+                if bm.block == at.block && bm.offset >= at.offset {
+                    bm.offset += n;
+                }
+            }
+            return;
+        }
+        // The tail of the split block lands in the last new block after the
+        // final inserted segment.
+        let last_len = text.rsplit('\n').next().map_or(0, |s| s.chars().count());
+        for bm in &mut self.bookmarks {
+            if bm.block == at.block {
+                if bm.offset >= at.offset {
+                    bm.block = at.block + added;
+                    bm.offset = last_len + (bm.offset - at.offset);
+                }
+            } else if bm.block > at.block {
+                bm.block += added;
+            }
+        }
+    }
+
+    /// `deleteRange` from `from` to `to` (already validated, from != to).
+    fn remap_bookmarks_delete(&mut self, from: Pos, to: Pos) {
+        if self.bookmarks.is_empty() {
+            return;
+        }
+        let span = to.block - from.block;
+        let mut kept = Vec::with_capacity(self.bookmarks.len());
+        for mut bm in std::mem::take(&mut self.bookmarks) {
+            if bm.block < from.block {
+                kept.push(bm);
+            } else if bm.block == from.block && from.block == to.block {
+                if bm.offset <= from.offset {
+                    kept.push(bm);
+                } else if bm.offset >= to.offset {
+                    bm.offset -= to.offset - from.offset;
+                    kept.push(bm);
+                } else {
+                    bm.offset = from.offset;
+                    kept.push(bm);
+                }
+            } else if bm.block == from.block {
+                // Multi-block delete: everything after `from.offset` in the
+                // first block is removed; marks there clamp to `from`.
+                if bm.offset > from.offset {
+                    bm.offset = from.offset;
+                }
+                kept.push(bm);
+            } else if bm.block < to.block {
+                // Interior block fully deleted: the bookmark is removed.
+            } else if bm.block == to.block {
+                bm.block = from.block;
+                bm.offset = if bm.offset < to.offset {
+                    from.offset
+                } else {
+                    from.offset + (bm.offset - to.offset)
+                };
+                kept.push(bm);
+            } else {
+                bm.block -= span;
+                kept.push(bm);
+            }
+        }
+        self.bookmarks = kept;
+    }
+
+    /// `splitBlock` at `at`: marks at or after the split point move to the
+    /// start of the new tail block (they stay before the same character).
+    fn remap_bookmarks_split(&mut self, at: Pos) {
+        for bm in &mut self.bookmarks {
+            if bm.block == at.block {
+                if bm.offset >= at.offset {
+                    bm.block += 1;
+                    bm.offset -= at.offset;
+                }
+            } else if bm.block > at.block {
+                bm.block += 1;
+            }
+        }
+    }
+
+    /// `mergeBlock` at `index`: `head_len` is the pre-merge length of
+    /// `blocks[index - 1]`. Marks in the merged-away block shift by it.
+    fn remap_bookmarks_merge(&mut self, index: usize, head_len: usize) {
+        for bm in &mut self.bookmarks {
+            if bm.block == index {
+                bm.block = index - 1;
+                bm.offset += head_len;
+            } else if bm.block > index {
+                bm.block -= 1;
+            }
+        }
+    }
+
+    /// `insertBlock` at `index`: marks at or after it shift one block.
+    fn remap_bookmarks_insert_block(&mut self, index: usize) {
+        for bm in &mut self.bookmarks {
+            if bm.block >= index {
+                bm.block += 1;
+            }
+        }
     }
 
     fn op_blocks(&self) -> Result<CommandResult, EngineError> {
@@ -1213,11 +1552,8 @@ impl QuillEngine {
         let blocks = docx::import_docx(&bytes)?;
         lists::validate(&blocks)?;
         let old = std::mem::replace(&mut self.blocks, blocks);
-        self.journal.record(UndoEntry {
-            index: 0,
-            removed: old,
-            inserted: self.blocks.clone(),
-        });
+        let bookmarks_before = std::mem::take(&mut self.bookmarks);
+        self.record_undo(0, old, self.blocks.clone(), Some(bookmarks_before));
         Ok(CommandResult::data(serde_json::to_value(SnapshotRef {
             blocks: &self.blocks,
         })?))
@@ -1259,8 +1595,10 @@ impl Engine for QuillEngine {
     fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
             let batch = ignition_core::parse_batch(cmd)?;
+            let bookmarks_before = self.bookmarks.clone();
             let staged = Self {
                 blocks: self.blocks.clone(),
+                bookmarks: self.bookmarks.clone(),
                 journal: Journal::new(1),
             };
             let (staged, result) = ignition_core::execute_batch(staged, batch)?;
@@ -1271,11 +1609,8 @@ impl Engine for QuillEngine {
             {
                 let inserted = staged.blocks.clone();
                 let removed = self.blocks.clone();
-                self.journal.record(UndoEntry {
-                    index: 0,
-                    removed,
-                    inserted,
-                });
+                self.bookmarks = staged.bookmarks;
+                self.record_undo(0, removed, inserted, Some(bookmarks_before));
                 self.blocks = staged.blocks;
             }
             return Ok(result);
@@ -1304,6 +1639,9 @@ impl Engine for QuillEngine {
             "text" => self.op_text(&cmd.payload),
             "findText" => self.op_find_text(&cmd.payload),
             "replaceText" => self.op_replace_text(&cmd.payload),
+            "addBookmark" => self.op_add_bookmark(&cmd.payload),
+            "removeBookmark" => self.op_remove_bookmark(&cmd.payload),
+            "listBookmarks" => self.op_list_bookmarks(),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
             "exportDocx" => self.op_export_docx(&cmd, None),
@@ -1318,7 +1656,18 @@ impl Engine for QuillEngine {
         };
         // Legacy readers ignore unknown Block fields. Removing root blocks makes
         // them reject numbered metadata instead of silently losing it.
-        let payload = if self.blocks.iter().any(|block| block.list.is_some()) {
+        // Bookmarks require the schema:3 wrapper so pre-bookmark readers fail
+        // closed on `schema != 2` rather than silently dropping them.
+        let payload = if !self.bookmarks.is_empty() {
+            serde_json::to_vec(&BookmarkSnapshotRef {
+                kind: "quill",
+                schema: 3,
+                document: BookmarkDocSnapshotRef {
+                    blocks: &self.blocks,
+                    bookmarks: &self.bookmarks,
+                },
+            })?
+        } else if self.blocks.iter().any(|block| block.list.is_some()) {
             serde_json::to_vec(&ListSnapshotRef {
                 kind: "quill",
                 schema: 2,
@@ -1338,19 +1687,53 @@ impl Engine for QuillEngine {
                 .iter()
                 .any(|key| object.contains_key(*key))
         });
-        let state: DocState = if wrapped {
-            let wrapper: ListDocState = serde_json::from_value(value)?;
-            if wrapper.kind != "quill" || wrapper.schema != 2 {
+        let (state_blocks, bookmarks): (Vec<Block>, Vec<Bookmark>) = if wrapped {
+            let wrapper: WrappedDocState = serde_json::from_value(value)?;
+            if wrapper.kind != "quill" {
                 return Err(EngineError::unsupported(
                     "unsupported Quill snapshot kind/schema",
                 ));
             }
-            wrapper.document
+            match wrapper.schema {
+                2 => {
+                    // A schema:2 document has no bookmark field; reject a
+                    // stray one rather than silently dropping it.
+                    if wrapper
+                        .document
+                        .as_object()
+                        .is_some_and(|o| o.contains_key("bookmarks"))
+                    {
+                        return Err(EngineError::unsupported(
+                            "unsupported Quill snapshot kind/schema",
+                        ));
+                    }
+                    let doc: DocState = serde_json::from_value(wrapper.document)?;
+                    (doc.blocks, Vec::new())
+                }
+                3 => {
+                    let doc: BookmarkDocState = serde_json::from_value(wrapper.document)?;
+                    (doc.blocks, doc.bookmarks)
+                }
+                _ => {
+                    return Err(EngineError::unsupported(
+                        "unsupported Quill snapshot kind/schema",
+                    ))
+                }
+            }
         } else {
-            serde_json::from_value(value)?
+            if value
+                .as_object()
+                .is_some_and(|o| o.contains_key("bookmarks"))
+            {
+                return Err(EngineError::unsupported(
+                    "unsupported Quill snapshot kind/schema",
+                ));
+            }
+            let doc: DocState = serde_json::from_value(value)?;
+            (doc.blocks, Vec::new())
         };
-        lists::validate(&state.blocks)?;
-        for block in &state.blocks {
+        lists::validate(&state_blocks)?;
+        for block in &state_blocks {
             for inline in &block.inlines {
                 if let Some(highlight) = &inline.style.highlight {
                     validate_highlight(highlight)?;
@@ -1363,11 +1746,13 @@ impl Engine for QuillEngine {
                 }
             }
         }
-        let mut blocks = state.blocks;
+        let mut blocks = state_blocks;
         if blocks.is_empty() {
             blocks.push(Block::empty(BlockKind::Para));
         }
+        validate_bookmarks(&bookmarks, &blocks)?;
         self.blocks = blocks;
+        self.bookmarks = bookmarks;
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
     }
@@ -1379,6 +1764,10 @@ impl Engine for QuillEngine {
         let end = (entry.index + entry.inserted.len()).min(self.blocks.len());
         self.blocks
             .splice(entry.index..end, entry.removed.iter().cloned());
+        let bookmarks = entry.bookmarks.as_ref().map(|(before, _)| before.clone());
+        if let Some(before) = bookmarks {
+            self.bookmarks = before;
+        }
         self.journal.push_redo(entry);
         Ok(true)
     }
@@ -1390,6 +1779,10 @@ impl Engine for QuillEngine {
         let end = (entry.index + entry.removed.len()).min(self.blocks.len());
         self.blocks
             .splice(entry.index..end, entry.inserted.iter().cloned());
+        let bookmarks = entry.bookmarks.as_ref().map(|(_, after)| after.clone());
+        if let Some(after) = bookmarks {
+            self.bookmarks = after;
+        }
         self.journal.push_undo(entry);
         Ok(true)
     }
@@ -2856,5 +3249,529 @@ mod tests {
         // find works after restore too
         let r = find(&mut e2, json!({"query": "b"}));
         assert_eq!(r.data["count"], 1);
+    }
+
+    // -- bookmarks ------------------------------------------------------------
+
+    fn bookmarks(e: &mut QuillEngine) -> Value {
+        apply(e, "listBookmarks", json!({})).data["bookmarks"].clone()
+    }
+
+    fn bookmark_at(e: &mut QuillEngine, name: &str) -> Value {
+        bookmarks(e)
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|b| b["name"] == name)
+            .cloned()
+            .unwrap_or(Value::Null)
+    }
+
+    #[test]
+    fn bookmark_add_list_remove_and_validation() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "hello world");
+        let r = apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "mid", "pos": {"block": 0, "offset": 6}}),
+        );
+        assert_eq!(r.data["name"], "mid");
+        assert_eq!(r.events.len(), 1, "mutating op emits document:changed");
+        // read-only list emits nothing and does not journal
+        let r = apply(&mut e, "listBookmarks", json!({}));
+        assert_eq!(r.events.len(), 0);
+        assert_eq!(
+            r.data["bookmarks"],
+            json!([{ "name": "mid", "pos": { "block": 0, "offset": 6 } }])
+        );
+        // listBookmarks recorded no entry: the next undo pops addBookmark
+        assert!(e.undo().unwrap());
+        assert!(bookmark_at(&mut e, "mid").is_null());
+        assert!(e.redo().unwrap());
+        assert_eq!(bookmark_at(&mut e, "mid")["pos"]["offset"], 6);
+        // pos aliases at/anchor
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "end", "at": {"block": 0, "offset": 11}}),
+        );
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "start", "anchor": {"block": 0, "offset": 0}}),
+        );
+        // sorted by position then name
+        let list = bookmarks(&mut e);
+        let names: Vec<&str> = list
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| b["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, vec!["start", "mid", "end"]);
+
+        // duplicate name rejects, state unchanged
+        let before = bookmarks(&mut e);
+        assert_eq!(
+            err(
+                &mut e,
+                "addBookmark",
+                json!({"name": "mid", "pos": {"block": 0, "offset": 0}})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        assert_eq!(bookmarks(&mut e), before);
+        // name validation
+        for name in [
+            json!(""),
+            json!("   "),
+            json!("a\nb"),
+            json!("x".repeat(65)),
+            json!(7),
+        ] {
+            assert!(e
+                .apply(cmd(
+                    "addBookmark",
+                    json!({"name": name, "pos": {"block": 0, "offset": 0}})
+                ))
+                .is_err());
+        }
+        // missing pos / out-of-range pos reject
+        assert_eq!(
+            err(&mut e, "addBookmark", json!({"name": "x"})).code,
+            ErrorCode::InvalidCommand
+        );
+        assert_eq!(
+            err(
+                &mut e,
+                "addBookmark",
+                json!({"name": "x", "pos": {"block": 9, "offset": 0}})
+            )
+            .code,
+            ErrorCode::OutOfBounds
+        );
+        assert_eq!(
+            err(
+                &mut e,
+                "addBookmark",
+                json!({"name": "x", "pos": {"block": 0, "offset": 99}})
+            )
+            .code,
+            ErrorCode::OutOfBounds
+        );
+
+        // remove by name and by pos
+        let r = apply(&mut e, "removeBookmark", json!({"name": "mid"}));
+        assert_eq!(r.data["name"], "mid");
+        assert!(bookmark_at(&mut e, "mid").is_null());
+        let r = apply(
+            &mut e,
+            "removeBookmark",
+            json!({"pos": {"block": 0, "offset": 11}}),
+        );
+        assert_eq!(r.data["name"], "end");
+        assert_eq!(
+            err(&mut e, "removeBookmark", json!({"name": "ghost"})).code,
+            ErrorCode::Validation
+        );
+        assert_eq!(
+            err(
+                &mut e,
+                "removeBookmark",
+                json!({"pos": {"block": 0, "offset": 3}})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        assert_eq!(bookmarks(&mut e).as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn bookmarks_shift_with_insert_text() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "hello world");
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "w", "pos": {"block": 0, "offset": 6}}),
+        );
+        // insert before the mark shifts it
+        insert(&mut e, 0, 0, "XX");
+        assert_eq!(bookmark_at(&mut e, "w")["pos"]["offset"], 8);
+        // insert exactly at the mark: right gravity keeps it after inserted text
+        insert(&mut e, 0, 8, "AB");
+        assert_eq!(bookmark_at(&mut e, "w")["pos"]["offset"], 10);
+        assert_eq!(text(&mut e), "XXhello ABworld");
+        // newline insert moves the mark into the tail block after the last segment
+        insert(&mut e, 0, 0, "a\nb");
+        let bm = bookmark_at(&mut e, "w");
+        assert_eq!(bm["pos"]["block"], 1);
+        assert_eq!(bm["pos"]["offset"], 11); // last seg "b" (1) + old offset 10
+        assert_eq!(text(&mut e), "a\nbXXhello ABworld");
+        // undo restores the pre-insert position
+        assert!(e.undo().unwrap());
+        let bm = bookmark_at(&mut e, "w");
+        assert_eq!(bm["pos"]["block"], 0);
+        assert_eq!(bm["pos"]["offset"], 10);
+        assert!(e.redo().unwrap());
+        assert_eq!(bookmark_at(&mut e, "w")["pos"]["block"], 1);
+    }
+
+    #[test]
+    fn bookmarks_survive_delete_split_merge_and_block_insert() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "AAA\nBBB\nCCC");
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "b0", "pos": {"block": 0, "offset": 3}}),
+        );
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "b1", "pos": {"block": 1, "offset": 1}}),
+        );
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "b2", "pos": {"block": 2, "offset": 3}}),
+        );
+        // split block 2 at offset 1: mark at end (offset 3) moves to tail block
+        apply(
+            &mut e,
+            "splitBlock",
+            json!({"at": {"block": 2, "offset": 1}}),
+        );
+        let bm = bookmark_at(&mut e, "b2");
+        assert_eq!(bm["pos"]["block"], 3);
+        assert_eq!(bm["pos"]["offset"], 2);
+        // merge blocks 2 and 3 back: mark returns to block 2 offset 1+2=3
+        apply(&mut e, "mergeBlock", json!({"index": 3}));
+        let bm = bookmark_at(&mut e, "b2");
+        assert_eq!(bm["pos"]["block"], 2);
+        assert_eq!(bm["pos"]["offset"], 3);
+        // insert a block before block 1: later marks shift
+        apply(&mut e, "insertBlock", json!({"index": 1}));
+        assert_eq!(bookmark_at(&mut e, "b1")["pos"]["block"], 2);
+        assert_eq!(bookmark_at(&mut e, "b2")["pos"]["block"], 3);
+        // same-block delete shifts offsets
+        apply(
+            &mut e,
+            "deleteRange",
+            json!({"from": {"block": 0, "offset": 0}, "to": {"block": 0, "offset": 1}}),
+        );
+        assert_eq!(bookmark_at(&mut e, "b0")["pos"]["offset"], 2);
+    }
+
+    #[test]
+    fn bookmarks_clamp_or_drop_on_cross_block_delete() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "AAA\nBBB\nCCC\nDDD");
+        for (name, block, offset) in [
+            ("edge-from", 0usize, 1usize),
+            ("past-from", 0, 3),
+            ("inside", 1, 2),
+            ("edge-to", 2, 0),
+            ("past-to", 2, 3),
+            ("after", 3, 1),
+        ] {
+            apply(
+                &mut e,
+                "addBookmark",
+                json!({"name": name, "pos": {"block": block, "offset": offset}}),
+            );
+        }
+        // delete from mid-block0 to start of block2: blocks 1 and the head of
+        // block2's range are consumed; survivors merge into block 0.
+        apply(
+            &mut e,
+            "deleteRange",
+            json!({
+                "from": {"block": 0, "offset": 1},
+                "to": {"block": 2, "offset": 0}
+            }),
+        );
+        assert_eq!(text(&mut e), "ACCC\nDDD");
+        // edge-from keeps its position; past-from clamps to the deletion start
+        assert_eq!(bookmark_at(&mut e, "edge-from")["pos"], json!({"block": 0, "offset": 1}));
+        assert_eq!(bookmark_at(&mut e, "past-from")["pos"], json!({"block": 0, "offset": 1}));
+        // interior block bookmark is removed entirely
+        assert!(bookmark_at(&mut e, "inside").is_null());
+        // marks in the last deleted block clamp to / shift from the merge point
+        assert_eq!(bookmark_at(&mut e, "edge-to")["pos"], json!({"block": 0, "offset": 1}));
+        assert_eq!(bookmark_at(&mut e, "past-to")["pos"], json!({"block": 0, "offset": 4}));
+        // later blocks shift down by the removed span
+        assert_eq!(bookmark_at(&mut e, "after")["pos"], json!({"block": 1, "offset": 1}));
+        // undo restores every bookmark at its original position
+        assert!(e.undo().unwrap());
+        assert_eq!(bookmark_at(&mut e, "inside")["pos"], json!({"block": 1, "offset": 2}));
+        assert_eq!(bookmark_at(&mut e, "past-to")["pos"], json!({"block": 2, "offset": 3}));
+        assert_eq!(bookmark_at(&mut e, "after")["pos"], json!({"block": 3, "offset": 1}));
+        assert!(e.redo().unwrap());
+        assert!(bookmark_at(&mut e, "inside").is_null());
+    }
+
+    #[test]
+    fn bookmarks_track_replace_range_and_replace_text() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "foo bar foo");
+        for (name, offset) in [
+            ("before", 0usize),
+            ("early", 1),
+            ("mid", 5),
+            ("after", 8),
+        ] {
+            apply(
+                &mut e,
+                "addBookmark",
+                json!({"name": name, "pos": {"block": 0, "offset": offset}}),
+            );
+        }
+        // replaceRange "bar" -> "bazaar": the mark inside the range lands
+        // after the replacement; marks after it shift by +3.
+        apply(
+            &mut e,
+            "replaceRange",
+            json!({
+                "from": {"block": 0, "offset": 4},
+                "to": {"block": 0, "offset": 7},
+                "text": "bazaar"
+            }),
+        );
+        assert_eq!(text(&mut e), "foo bazaar foo");
+        assert_eq!(bookmark_at(&mut e, "before")["pos"]["offset"], 0);
+        assert_eq!(bookmark_at(&mut e, "early")["pos"]["offset"], 1);
+        assert_eq!(bookmark_at(&mut e, "mid")["pos"]["offset"], 10);
+        assert_eq!(bookmark_at(&mut e, "after")["pos"]["offset"], 11);
+        // replaceText "foo" -> "quux": marks at/inside each match land after
+        // the replacement text; untouched marks shift by the length delta.
+        apply(
+            &mut e,
+            "replaceText",
+            json!({"query": "foo", "replacement": "quux"}),
+        );
+        assert_eq!(text(&mut e), "quux bazaar quux");
+        assert_eq!(bookmark_at(&mut e, "before")["pos"]["offset"], 4);
+        assert_eq!(bookmark_at(&mut e, "early")["pos"]["offset"], 4);
+        assert_eq!(bookmark_at(&mut e, "mid")["pos"]["offset"], 11);
+        assert_eq!(bookmark_at(&mut e, "after")["pos"]["offset"], 16);
+        // one undo restores both the text and every bookmark position
+        assert!(e.undo().unwrap());
+        assert_eq!(text(&mut e), "foo bazaar foo");
+        assert_eq!(bookmark_at(&mut e, "mid")["pos"]["offset"], 10);
+        assert_eq!(bookmark_at(&mut e, "after")["pos"]["offset"], 11);
+        assert!(e.undo().unwrap());
+        assert_eq!(bookmark_at(&mut e, "early")["pos"]["offset"], 1);
+        assert_eq!(bookmark_at(&mut e, "mid")["pos"]["offset"], 5);
+    }
+
+    #[test]
+    fn bookmarks_track_change_case_expansion() {
+        let mut e = engine();
+        e.blocks[0].inlines = vec![Inline {
+            text: "aßz".into(),
+            style: Style::default(),
+        }];
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "end", "pos": {"block": 0, "offset": 3}}),
+        );
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "mid", "pos": {"block": 0, "offset": 2}}),
+        );
+        apply(
+            &mut e,
+            "changeCase",
+            json!({"from": {"block": 0, "offset": 0}, "to": {"block": 0, "offset": 3}, "mode": "upper"}),
+        );
+        assert_eq!(text(&mut e), "ASSZ");
+        // ß expands to SS: end mark 3 -> 4, mid mark 2 -> 3
+        assert_eq!(bookmark_at(&mut e, "end")["pos"]["offset"], 4);
+        assert_eq!(bookmark_at(&mut e, "mid")["pos"]["offset"], 3);
+    }
+
+    #[test]
+    fn bookmark_undo_redo_and_new_import_clear() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "x", "pos": {"block": 0, "offset": 1}}),
+        );
+        apply(&mut e, "removeBookmark", json!({"name": "x"}));
+        assert_eq!(bookmarks(&mut e).as_array().unwrap().len(), 0);
+        assert!(e.undo().unwrap(), "undo of remove restores the bookmark");
+        assert_eq!(bookmark_at(&mut e, "x")["pos"]["offset"], 1);
+        assert!(e.undo().unwrap(), "undo of add removes it again");
+        assert!(bookmark_at(&mut e, "x").is_null());
+        assert!(e.redo().unwrap());
+        assert_eq!(bookmark_at(&mut e, "x")["pos"]["offset"], 1);
+        assert!(e.redo().unwrap());
+        assert!(bookmark_at(&mut e, "x").is_null(), "redo of remove drops it");
+        // `new` clears bookmarks but undo restores them
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "x", "pos": {"block": 0, "offset": 1}}),
+        );
+        apply(&mut e, "new", json!({}));
+        assert!(bookmark_at(&mut e, "x").is_null());
+        assert!(e.undo().unwrap());
+        assert_eq!(bookmark_at(&mut e, "x")["pos"]["offset"], 1);
+    }
+
+    #[test]
+    fn bookmark_snapshot_schema3_round_trip_and_legacy_restore() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "persist\nsecond");
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "here", "pos": {"block": 1, "offset": 3}}),
+        );
+        let snap = e.snapshot().unwrap();
+        let payload: Value =
+            serde_json::from_slice(&decode_envelope(&snap).unwrap().1).unwrap();
+        assert_eq!(payload["kind"], "quill");
+        assert_eq!(payload["schema"], 3);
+        assert!(payload.get("blocks").is_none(), "no root blocks field");
+
+        let mut e2 = engine();
+        e2.restore(&snap).unwrap();
+        assert_eq!(bookmark_at(&mut e2, "here")["pos"], json!({"block": 1, "offset": 3}));
+        // edits after restore keep tracking
+        insert(&mut e2, 1, 0, "XX");
+        assert_eq!(bookmark_at(&mut e2, "here")["pos"]["offset"], 5);
+
+        // legacy bare payload restores with no bookmarks
+        let legacy = encode_envelope(
+            serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"old","style":{}}]}]}))
+                .unwrap()
+                .as_slice(),
+        );
+        let mut e3 = engine();
+        e3.restore(&legacy).unwrap();
+        assert_eq!(bookmarks(&mut e3).as_array().unwrap().len(), 0);
+
+        // schema:2 wrapper restores with no bookmarks
+        let schema2 = encode_envelope(
+            serde_json::to_vec(&json!({
+                "kind": "quill", "schema": 2,
+                "document": {"blocks": [{"kind":"para","inlines":[{"text":"l2","style":{}}]}]}
+            }))
+            .unwrap()
+            .as_slice(),
+        );
+        let mut e4 = engine();
+        e4.restore(&schema2).unwrap();
+        assert_eq!(text(&mut e4), "l2");
+        assert_eq!(bookmarks(&mut e4).as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn bookmark_snapshot_rejects_hostile_and_future_payloads() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "keep");
+        let before = e.snapshot().unwrap();
+        let wrap = |schema: u32, document: Value| {
+            encode_envelope(
+                serde_json::to_vec(&json!({
+                    "kind": "quill", "schema": schema, "document": document
+                }))
+                .unwrap()
+                .as_slice(),
+            )
+        };
+        let one_block = || {
+            json!([{"kind":"para","inlines":[{"text":"x","style":{}}]}])
+        };
+        // schema:4 and wrong kind reject
+        assert!(e.restore(&wrap(4, json!({"blocks": one_block()}))).is_err());
+        let wrong_kind = encode_envelope(
+            serde_json::to_vec(&json!({
+                "kind": "folio", "schema": 3,
+                "document": {"blocks": one_block(), "bookmarks": []}
+            }))
+            .unwrap()
+            .as_slice(),
+        );
+        assert!(e.restore(&wrong_kind).is_err());
+        // schema:2 carrying bookmarks rejects rather than dropping them
+        assert!(e
+            .restore(&wrap(
+                2,
+                json!({"blocks": one_block(), "bookmarks": [{"name":"a","block":0,"offset":0}]})
+            ))
+            .is_err());
+        // unwrapped payload with a stray bookmarks key rejects
+        let stray = encode_envelope(
+            serde_json::to_vec(&json!({
+                "blocks": one_block(),
+                "bookmarks": [{"name":"a","block":0,"offset":0}]
+            }))
+            .unwrap()
+            .as_slice(),
+        );
+        assert!(e.restore(&stray).is_err());
+        // schema:3 hostile documents reject
+        for document in [
+            // out-of-range block
+            json!({"blocks": one_block(), "bookmarks": [{"name":"a","block":7,"offset":0}]}),
+            // offset past block length
+            json!({"blocks": one_block(), "bookmarks": [{"name":"a","block":0,"offset":9}]}),
+            // duplicate names
+            json!({"blocks": one_block(), "bookmarks": [
+                {"name":"a","block":0,"offset":0},{"name":"a","block":0,"offset":1}]}),
+            // blank / control / overlong names
+            json!({"blocks": one_block(), "bookmarks": [{"name":" ","block":0,"offset":0}]}),
+            json!({"blocks": one_block(), "bookmarks": [{"name":"a\nb","block":0,"offset":0}]}),
+            json!({"blocks": one_block(), "bookmarks": [{"name":"x".repeat(65),"block":0,"offset":0}]}),
+            // missing bookmarks field is not a schema:3 document
+            json!({"blocks": one_block()}),
+        ] {
+            assert!(e.restore(&wrap(3, document)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before, "state untouched");
+        }
+    }
+
+    #[test]
+    fn bookmark_batch_and_import_docx_semantics() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        // batch: bookmark ops compose with text edits in one undo entry
+        let r = e
+            .apply(Command::new(
+                ignition_core::OP_BATCH,
+                json!({"commands": [
+                    {"op": "addBookmark", "payload": {"name": "b", "pos": {"block": 0, "offset": 1}}},
+                    {"op": "insertText", "payload": {"at": {"block": 0, "offset": 0}, "text": "Z"}}
+                ]}),
+            ))
+            .unwrap();
+        assert!(r
+            .events
+            .iter()
+            .any(|ev| ev.kind == "document:changed"));
+        assert_eq!(bookmark_at(&mut e, "b")["pos"]["offset"], 2);
+        assert!(e.undo().unwrap());
+        assert!(bookmark_at(&mut e, "b").is_null());
+        assert_eq!(text(&mut e), "abc");
+        // importDocx replaces the document and clears bookmarks; undo restores
+        apply(
+            &mut e,
+            "addBookmark",
+            json!({"name": "b", "pos": {"block": 0, "offset": 0}}),
+        );
+        let bytes = docx::export_docx(&e.blocks).unwrap();
+        apply(&mut e, "importDocx", json!({"bytes_b64": base64_encode(&bytes)}));
+        assert_eq!(bookmarks(&mut e).as_array().unwrap().len(), 0);
+        assert!(e.undo().unwrap());
+        assert_eq!(bookmark_at(&mut e, "b")["pos"]["offset"], 0);
     }
 }

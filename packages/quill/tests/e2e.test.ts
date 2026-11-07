@@ -83,6 +83,31 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await doc.close();
   });
 
+  it("bookmarks track edits, persist through snapshots, and undo", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "hello world");
+    await doc.addBookmark("mid", { block: 0, offset: 6 });
+    await doc.insertText({ block: 0, offset: 0 }, "XX");
+    expect((await doc.listBookmarks()).data.bookmarks).toEqual([
+      { name: "mid", pos: { block: 0, offset: 8 } },
+    ]);
+    // snapshot keeps the schema:3 bookmark collection
+    const bytes = await doc.save();
+    await doc.close();
+
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.listBookmarks()).data.bookmarks[0]?.pos.offset).toBe(8);
+    await re.removeBookmarkByName("mid");
+    expect((await re.listBookmarks()).data.bookmarks).toEqual([]);
+    await expect(
+      re.addBookmark("mid", { block: 0, offset: 0 }),
+    ).resolves.toBeDefined();
+    await expect(
+      re.addBookmark("mid", { block: 0, offset: 1 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await re.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");

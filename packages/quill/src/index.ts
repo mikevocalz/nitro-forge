@@ -23,6 +23,9 @@ export const OPS = {
   text: "text",
   findText: "findText",
   replaceText: "replaceText",
+  addBookmark: "addBookmark",
+  removeBookmark: "removeBookmark",
+  listBookmarks: "listBookmarks",
   blocks: "blocks",
   layout: "layout",
   exportDocx: "exportDocx",
@@ -72,6 +75,10 @@ export interface FindMatch {
   from: Pos;
   to: Pos;
   text: string;
+}
+export interface Bookmark {
+  name: string;
+  pos: Pos;
 }
 export interface FindOptions {
   from?: Pos;
@@ -173,6 +180,25 @@ export class QuillDocument {
         ? {}
         : { case_sensitive: options.caseSensitive }),
     });
+  }
+  /**
+   * Named zero-width mark at `pos`. Names are unique, 1–64 non-blank
+   * non-control characters. Bookmarks have right gravity: edits shift them
+   * deterministically (see docs/ENGINE_OPS.md); a bookmark whose block is
+   * deleted inside a range is removed, edge blocks clamp.
+   */
+  addBookmark(name: string, pos: Pos) {
+    return this.call<{ ok: boolean; name: string }>(OPS.addBookmark, { name, pos });
+  }
+  removeBookmarkByName(name: string) {
+    return this.call<{ ok: boolean; name: string }>(OPS.removeBookmark, { name });
+  }
+  removeBookmarkAt(pos: Pos) {
+    return this.call<{ ok: boolean; name: string }>(OPS.removeBookmark, { pos });
+  }
+  /** Read-only; sorted by document position then name. */
+  listBookmarks() {
+    return this.call<{ bookmarks: Bookmark[] }>(OPS.listBookmarks);
   }
   blocks<T = unknown>() {
     return this.call<T>(OPS.blocks);
