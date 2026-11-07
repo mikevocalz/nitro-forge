@@ -423,6 +423,7 @@ concatenated text). Ranges `{ start:Pos, end:Pos }`, `end` exclusive.
 | `insertText` | `{at:Pos,text}` | `{ok}` | inherits style of char to the left (or right if at 0); `\n` splits block |
 | `deleteRange` | `{from:Pos,to:Pos}` | `{deleted_text}` | cross-block merges survivors |
 | `replaceRange` | `{from:Pos,to:Pos,text}` | `{deleted_text}` | `deleteRange` then `insertText` at `from` as one command; validates before mutating; one undo entry |
+| `changeCase` | `{from:Pos,to:Pos,mode}` | `{from:Pos,to:Pos}` | modes lower/upper/sentence/capitalize; style-preserving Unicode scalar conversion, adjusted selection end; atomic one undo entry, unchanged/collapsed is eventless |
 | `applyStyle` | `{from,to,style:{bold?,italic?,underline?,strike?,color?,link?,font_family?,font_size?,highlight?}}` | `{ok}` | re-splits inlines at range bounds; `font_family` string sets direct Latin family, null clears; 1–128 non-control characters, nonblank; `font_size` is 1–1638 points in half-point increments, null clears; `highlight` is exact `#RRGGBB` run background, null clears (DOCX explicit RGB shd only) |
 | `setBlockKind` | `{block,kind}` | `{ok}` | |
 | `insertBlock` | `{index,kind?}` | `{block_index}` | |
@@ -439,6 +440,10 @@ Undo: prior `Vec<Block>` for structural ops; for `applyStyle`/`insertText`/
 `deleteRange`/`replaceRange` record affected block range's previous content.
 
 ---
+
+`changeCase` uses locale-independent Rust Unicode default mappings. Lowercase context is computed for each entire affected paragraph, including outside the selection and across style runs, then aligned to source scalars by their lowercase expansion lengths; contextual output (including Greek final sigma) retains its source style. Alignment mismatch rejects rather than guessing. Uppercase and first-letter capitalization may expand one source scalar into several, all inheriting its style. No locale-specific Turkish/Lithuanian rules or Unicode titlecase/UAX29 segmentation are promised.
+
+Capitalize mode treats Unicode alphanumeric scalars, General_Category=Mark combining marks and straight/curly apostrophes as word units; it uppercases a leading alphabetic scalar and lowercases the remainder. Sentence mode uppercases the first alphabetic scalar of the selected span in each paragraph and after ASCII `. ! ?` followed by whitespace; other selected text lowercases. These are explicit simple editing grammars, not linguistic sentence segmentation. Paragraph kinds and text/styles outside the selected range remain unchanged. Context UTF-8 bytes across all affected paragraphs and converted selection UTF-8 output are each capped at1MiB before live mutation. Positions remain Unicode scalar offsets, not UTF-16 units/graphemes. The returned selection end accounts for expansions; the ribbon adapter rebinds against it.
 
 ## Shared engine rules
 - serde `rename_all = "camelCase"` is NOT used — payloads use snake_case exactly as written above.

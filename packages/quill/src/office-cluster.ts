@@ -1,4 +1,4 @@
-import type { BlockKind, Pos, QuillDocument, Style } from "./index";
+import type { BlockKind, Pos, QuillDocument, Style, TextCase } from "./index";
 
 /**
  * Engine side of NYC-Tron's document controls (Forge roster H-03
@@ -16,11 +16,6 @@ import type { BlockKind, Pos, QuillDocument, Style } from "./index";
  * have. Each is a DEFER: the matching NYC-Tron prop is left out.
  */
 export const QUILL_DEFERRED_OPS = {
-  /**
-   * H-03 change case. Doing it as `deleteRange` + `insertText` would drop the
-   * runs' styles, so it waits for an engine op that rewrites text in place.
-   */
-  changeCase: "H-03",
   /**
    * H-07 numbering definitions (bullet vs number, per-level format). Quill's
    * `list` block exports as Word's ListParagraph style without numPr, so no
@@ -56,7 +51,7 @@ export interface QuillSelection {
   readonly end: Pos;
 }
 
-export type QuillOfficeDocument = Pick<QuillDocument, "blocks" | "applyStyle" | "setBlockKind" | "layout">;
+export type QuillOfficeDocument = Pick<QuillDocument, "blocks" | "applyStyle" | "changeCase" | "setBlockKind" | "layout">;
 
 const KINDS = new Set<BlockKind>(["para", "h1", "h2", "h3", "list", "quote"]);
 
@@ -113,12 +108,15 @@ export const QUILL_PARAGRAPH_STYLES = [
 /** Character toggles `applyStyle` stores. */
 export type QuillToggle = "bold" | "italic" | "underline" | "strike";
 
-/** `RichTextRibbon` props Quill can back. Case conversion remains deferred. */
+/** `RichTextRibbon` props backed by persistent Quill style and case operations. */
 export interface QuillRibbonBinding {
+  /** Host selection metadata; synchronize the actual range after case expansions. */
+  readonly selection: QuillSelection;
   readonly runs: readonly Style[];
   /** The selection's paragraph kind, or "mixed". */
   readonly paragraphStyle: BlockKind | "mixed";
   readonly paragraphStyles: typeof QUILL_PARAGRAPH_STYLES;
+  readonly onChangeCase: (mode: TextCase) => Promise<void>;
   readonly onToggle: (toggle: QuillToggle, on: boolean) => Promise<void>;
   /** Undefined inherits document defaults; mixed selections remain explicit. */
   readonly fontFamily: string | "mixed" | undefined;
@@ -150,8 +148,14 @@ export async function bindQuillRibbon(
   });
   return {
     runs,
+    selection: sel,
     paragraphStyle: kinds.size === 1 ? [...kinds][0]! : "mixed",
     paragraphStyles: QUILL_PARAGRAPH_STYLES,
+    onChangeCase: async mode => {
+      if (collapsed) throw new RangeError("Select text to change its case");
+      const range = requireData(await document.changeCase(sel.start, sel.end, mode), "changeCase");
+      onChanged(await bindQuillRibbon(document, { start: range.from, end: range.to }, onChanged));
+    },
     onToggle: (t, on) => style({ [t]: on }),
     fontFamily: runs.length && runs.every(run => run.font_family === runs[0]!.font_family) ? runs[0]!.font_family ?? undefined : runs.length ? "mixed" : undefined,
     fontSize: runs.length && runs.every(run => run.font_size === runs[0]!.font_size) ? runs[0]!.font_size ?? undefined : runs.length ? "mixed" : undefined,

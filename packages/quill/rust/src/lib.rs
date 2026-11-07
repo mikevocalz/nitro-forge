@@ -9,6 +9,7 @@
 #![forbid(unsafe_code)]
 
 mod docx;
+mod change_case;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -995,6 +996,7 @@ impl Engine for QuillEngine {
             "deleteRange" => self.op_delete_range(&cmd.payload),
             "replaceRange" => self.op_replace_range(&cmd.payload),
             "applyStyle" => self.op_apply_style(&cmd.payload),
+            "changeCase" => self.op_change_case(&cmd.payload),
             "setBlockKind" => self.op_set_block_kind(&cmd.payload),
             "insertBlock" => self.op_insert_block(&cmd.payload),
             "splitBlock" => self.op_split_block(&cmd.payload),

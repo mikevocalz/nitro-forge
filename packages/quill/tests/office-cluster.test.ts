@@ -170,3 +170,22 @@ describe("RGB highlight ribbon binding", () => {
     await expect(caret.onHighlightChange("#123456")).rejects.toThrow(/Select text/);
   });
 });
+
+it("refreshes case callbacks with the engine's adjusted scalar selection", async () => {
+  let text = "ß";
+  const changeCase = vi.fn(async (_from: unknown, _to: unknown, _mode: unknown) => {
+    text = "SS";
+    return ok({ from: { block: 0, offset: 0 }, to: { block: 0, offset: 2 } });
+  });
+  const applyStyle = vi.fn(() => ok({ ok: true }));
+  const doc = { blocks: vi.fn(() => ok({ blocks: [{ kind: "para", inlines: [{ text, style: { bold: true } }] }] })), changeCase, applyStyle } as unknown as QuillOfficeDocument;
+  let latest: Awaited<ReturnType<typeof bindQuillRibbon>> | undefined;
+  const binding = await bindQuillRibbon(doc, { start: { block: 0, offset: 0 }, end: { block: 0, offset: 1 } }, next => { latest = next; });
+  await binding.onChangeCase("upper");
+  expect(changeCase).toHaveBeenCalledWith({ block: 0, offset: 0 }, { block: 0, offset: 1 }, "upper");
+  expect(latest!.selection).toEqual({ start: { block: 0, offset: 0 }, end: { block: 0, offset: 2 } });
+  await latest!.onToggle("italic", true);
+  expect(applyStyle).toHaveBeenCalledWith({ block: 0, offset: 0 }, { block: 0, offset: 2 }, { italic: true });
+  const caret = await bindQuillRibbon(doc, { start: { block: 0, offset: 0 }, end: { block: 0, offset: 0 } }, () => {});
+  await expect(caret.onChangeCase("lower")).rejects.toThrow("Select text");
+});

@@ -14,6 +14,7 @@ export const OPS = {
   deleteRange: "deleteRange",
   replaceRange: "replaceRange",
   applyStyle: "applyStyle",
+  changeCase: "changeCase",
   setBlockKind: "setBlockKind",
   insertBlock: "insertBlock",
   splitBlock: "splitBlock",
@@ -24,6 +25,8 @@ export const OPS = {
   exportDocx: "exportDocx",
   importDocx: "importDocx",
 } as const;
+
+export type TextCase = "sentence" | "lower" | "upper" | "capitalize";
 
 export type BlockKind = "para" | "h1" | "h2" | "h3" | "list" | "quote";
 
@@ -101,6 +104,10 @@ export class QuillDocument {
   /** Replace `from..to` with `text` as one command and one undo step. */
   replaceRange(from: Pos, to: Pos, text: string) {
     return this.call<{ deleted_text: string }>(OPS.replaceRange, { from, to, text });
+  }
+  /** Unicode default casing; preserves run styles and returns the adjusted scalar selection. */
+  changeCase(from: Pos, to: Pos, mode: TextCase) {
+    return this.call<{ from: Pos; to: Pos }>(OPS.changeCase, { from, to, mode });
   }
   applyStyle(from: Pos, to: Pos, style: Style) {
     return this.call(OPS.applyStyle, { from, to, style });
