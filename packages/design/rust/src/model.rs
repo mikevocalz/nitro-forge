@@ -112,6 +112,43 @@ impl Axis {
         }
     }
 }
+/// NYC-Tron `DesignConstraints.horizontal` anchor set. `Scale` parses so
+/// hostile input deserializes, but `validate` rejects it in C1: proportional
+/// scaling is solver work deferred to a later slice.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HorizontalAnchor {
+    Left,
+    Right,
+    Center,
+    Stretch,
+    Scale,
+}
+/// NYC-Tron `DesignConstraints.vertical` anchor set; same C1 `Scale` caveat.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VerticalAnchor {
+    Top,
+    Bottom,
+    Center,
+    Stretch,
+    Scale,
+}
+/// Responsive anchors stored on absolute children only (the NYC-Tron
+/// `DesignConstraints` h/v axes). C1 is storage + validation: `evaluateLayout`
+/// does not solve anchors yet, and the C2 fields (`minWidth`/`maxWidth`/
+/// `minHeight`/`maxHeight`/`aspectLocked`) are not admitted. `relative_to`
+/// maps NYC-Tron `relativeToId` to the engine's numeric node id; absent means
+/// the parent frame, and any other target is rejected until relative targets
+/// land in C2.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NodeConstraints {
+    pub horizontal: HorizontalAnchor,
+    pub vertical: VerticalAnchor,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relative_to: Option<u64>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TextFontStyle {
@@ -177,6 +214,11 @@ pub struct Node {
     /// schema:2 snapshot wrapper (see `requires_wrapper`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<TextStyle>,
+    /// Responsive anchors; meaningful only on absolute children (parent
+    /// without flow layout), enforced by `validate`. Presence also triggers
+    /// the schema:2 snapshot wrapper.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub constraints: Option<NodeConstraints>,
 }
 impl Node {
     pub fn frame(id: u64, width: f64, height: f64) -> Self {
@@ -195,6 +237,7 @@ impl Node {
             layout: None,
             sizing: Sizing::default(),
             text: None,
+            constraints: None,
         }
     }
 }
@@ -409,14 +452,14 @@ impl State {
         ids
     }
 }
-/// Schema-2 features (text nodes, variables/modes/bindings) require the
-/// versioned snapshot wrapper so schema:1 documents stay byte-identical and
-/// old readers fail closed on the unknown `kind:"text"` node variant, `text`
-/// field, or the new state collections.
+/// Schema-2 features (text nodes, constraints, variables/modes/bindings)
+/// require the versioned snapshot wrapper so schema:1 documents stay
+/// byte-identical and old readers fail closed on the unknown `kind:"text"`
+/// node variant, `text`/`constraints` fields, or the new state collections.
 pub fn requires_wrapper(s: &State) -> bool {
-    s.nodes
-        .values()
-        .any(|n| n.kind == Kind::Text || n.text.is_some())
+    s.nodes.values().any(|n| {
+        n.kind == Kind::Text || n.text.is_some() || n.constraints.is_some()
+    })
         || !s.variables.is_empty()
         || !s.modes.is_empty()
         || s.active_mode.is_some()
@@ -635,6 +678,7 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
         }
     }
     let mut visited = BTreeSet::new();
+    let mut parents = BTreeMap::new();
     let mut pending = vec![(1, 0usize)];
     while let Some((id, depth)) = pending.pop() {
         if depth > 64 || !visited.insert(id) {
@@ -642,11 +686,38 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
         }
         let n = s.nodes.get(&id).ok_or_else(|| bad("unknown child"))?;
         for child in &n.children {
+            parents.insert(*child, id);
             pending.push((*child, depth + 1));
         }
     }
     if visited.len() != s.nodes.len() {
         return Err(bad("unreachable node"));
+    }
+    // Constraint anchors are durable state on absolute children only. Flow
+    // children get positions from their parent's layout, the root has no
+    // parent frame, `scale` is deferred solver work, and `relative_to` may
+    // only name the parent until C2 relative targets land.
+    for (id, n) in &s.nodes {
+        let Some(c) = &n.constraints else {
+            continue;
+        };
+        if *id == 1 {
+            return Err(bad("root cannot carry constraints"));
+        }
+        let Some(&parent) = parents.get(id) else {
+            return Err(bad("constraints require a parent frame"));
+        };
+        if s.nodes[&parent].layout.is_some() {
+            return Err(bad(
+                "constraints require absolute placement; parent uses flow layout",
+            ));
+        }
+        if c.horizontal == HorizontalAnchor::Scale || c.vertical == VerticalAnchor::Scale {
+            return Err(bad("scale constraint anchoring is not supported"));
+        }
+        if c.relative_to.is_some_and(|r| r != parent) {
+            return Err(bad("constraint relative_to must name the parent frame"));
+        }
     }
     validate_variables(s)?;
     if serde_json::to_vec(s)?.len() > MAX_BYTES {
