@@ -46,6 +46,24 @@ describe("folio engine e2e (real Rust via nf-cli)", () => {
     ).rejects.toBeInstanceOf(EngineError);
   });
 
+  it("encrypts, reports state, and decrypts through save/reopen", async () => {
+    const doc = await FolioDocument.create(host, 1);
+    await doc.encrypt({ password: "user-pw", permissions: ["print"] });
+    expect((await doc.info()).data.encrypted).toBe(true);
+    expect(await doc.isEncrypted()).toBe(true);
+
+    const { bytes } = await doc.savePdf();
+    const locked = await FolioDocument.openPdf(host, bytes);
+    expect((await locked.info()).data.encrypted).toBe(true);
+    await expect(locked.decrypt("wrong")).rejects.toBeInstanceOf(EngineError);
+    expect((await locked.info()).data.encrypted).toBe(true);
+    await locked.decrypt("user-pw");
+    expect((await locked.info()).data.encrypted).toBe(false);
+    expect((await locked.pageCount()).data.pages).toBe(1);
+    await locked.close();
+    await doc.close();
+  });
+
   it("snapshot/save/reopen preserves annotations", async () => {
     const doc = await FolioDocument.create(host, 1);
     await doc.addAnnotation(0, [0, 0, 50, 50], "note", "Text");

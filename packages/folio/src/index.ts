@@ -21,12 +21,28 @@ export const OPS = {
   removeAnnotation: "removeAnnotation",
   setAnnotationContents: "setAnnotationContents",
   rotatePage: "rotatePage",
+  encrypt: "encrypt",
+  decrypt: "decrypt",
   save: "save",
   info: "info",
 } as const;
 
 export type Rect = [number, number, number, number]; // x, y, w, h (PDF user space)
 export type AnnotSubtype = "Text" | "Highlight" | "Underline" | "StrikeOut" | "Square" | "Circle";
+/** PDF Standard-handler permission names accepted by `encrypt` (all granted when omitted). */
+export type FolioPermission =
+  | "print" | "modify" | "copy" | "annotate" | "fill"
+  | "accessibility" | "assemble" | "printHighQuality";
+export interface FolioEncryptOptions {
+  /** Required user password: non-empty, at most 127 UTF-8 bytes. */
+  password: string;
+  /** Optional owner password (defaults to `password`). lopdf 0.36 cannot decrypt with an owner-only password — see docs/ENGINE_OPS.md. */
+  ownerPassword?: string;
+  /** Granted permissions; omit for all. */
+  permissions?: readonly FolioPermission[];
+  /** Encrypt document metadata too (default true). */
+  encryptMetadata?: boolean;
+}
 
 export interface Annotation {
   id: number;
@@ -118,13 +134,30 @@ export class FolioDocument {
   rotatePage(page: number, degrees: number) {
     return this.call(OPS.rotatePage, { page, degrees });
   }
+  /** Encrypt the document in place (V4/R4, AES-128). One undo entry; saved bytes stay encrypted. */
+  encrypt(options: FolioEncryptOptions) {
+    return this.call<{ ok: boolean; encrypted: boolean }>(OPS.encrypt, {
+      password: options.password,
+      ...(options.ownerPassword === undefined ? {} : { owner_password: options.ownerPassword }),
+      ...(options.permissions === undefined ? {} : { permissions: [...options.permissions] }),
+      ...(options.encryptMetadata === undefined ? {} : { encrypt_metadata: options.encryptMetadata }),
+    });
+  }
+  /** Decrypt with the user password. Wrong password → EngineError, document untouched. */
+  decrypt(password: string) {
+    return this.call<{ ok: boolean; encrypted: boolean }>(OPS.decrypt, { password });
+  }
   /** Serialize the working PDF (lopdf) — real PDF bytes. */
   async savePdf() {
     const r = await this.call<{ bytes_b64: string; size: number }>(OPS.save);
     return { bytes: base64ToBytes(r.data.bytes_b64), size: r.data.size };
   }
   info() {
-    return this.call<{ pages: number; has_annots: boolean }>(OPS.info);
+    return this.call<{ pages: number; has_annots: boolean; encrypted: boolean }>(OPS.info);
+  }
+  /** True when the document still holds ciphertext and needs `decrypt`. */
+  async isEncrypted() {
+    return (await this.info()).data.encrypted;
   }
   describe<T = unknown>() {
     return this.call<T>(OPS.describe);

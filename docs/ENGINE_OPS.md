@@ -353,7 +353,9 @@ until `new`/`open`.
 | op | payload | data | notes |
 |---|---|---|---|
 | `new` | `{pages?}` | `{ok}` | builds valid PDF with N blank letter pages via lopdf objects |
-| `open` | `{bytes_b64}` | `{pages, encrypted:false}` | `lopdf::Document::load_mem`; corrupted → Serialization |
+| `open` | `{bytes_b64}` | `{pages, encrypted}` | `lopdf::Document::load_mem`; corrupted → Serialization; `encrypted` is the real trailer `/Encrypt` state — lopdf auto-decrypts docs whose user or owner password is empty, so `true` means a password is required |
+| `encrypt` | `{password, owner_password?, permissions?, encrypt_metadata?}` | `{ok, encrypted:true}` | mutating; Standard handler V4/R4 AES-128 (`StdCF`). `password` = user password, non-empty ≤127 UTF-8 bytes (key material truncated to 32 per spec); `owner_password` defaults to `password`; `permissions` = array of `print|modify|copy|annotate|fill|accessibility|assemble|printHighQuality`, omitted = all; `encrypt_metadata` bool default true. Already-encrypted → Validation. Generates a random trailer `/ID` when absent (lopdf key derivation requires it). One undo entry |
+| `decrypt` | `{password}` | `{ok, encrypted:false}` | mutating; `password` is the **user** password. Wrong password → Validation `incorrect password`, state untouched; a password matching only `/O` → Unsupported (lopdf 0.36 derives the file key from the user password even when owner auth succeeds). Not-encrypted → Validation. One undo entry |
 | `pageCount` | `{}` | `{pages}` | |
 | `pageText` | `{page}` | `{text}` | 0-based page; extracts strings from `Tj`/`TJ`/`'`/`"` ops in content stream; may be lossy — documented |
 | `addAnnotation` | `{page,rect:[x,y,w,h],contents,subtype?,author?,modified?}` | `{annot_id}` | real PDF: appends obj to page `/Annots` (`/Subtype /Text|/Highlight|/Underline|/StrikeOut|/Square|/Circle`, `/Rect`, `/Contents`; markup includes `/QuadPoints`) |
@@ -365,9 +367,11 @@ until `new`/`open`.
 | `removeAnnotation` | `{page,id}` | `{ok}` | atomic annotation-descendant subtree removal; generic owned Widget/Ink retained; external references/popup lifecycle/unsupported graphs reject safely |
 | `rotatePage` | `{page,degrees}` | `{ok}` | sets `/Rotate`, must be multiple of 90 |
 | `save` | `{}` | `{bytes_b64,size}` | `doc.save_to` → real PDF bytes |
-| `info` | `{}` | `{pages,has_annots}` | read-only |
+| `info` | `{}` | `{pages,has_annots,encrypted}` | read-only; `encrypted` mirrors `describe.encrypted` and the `open` flag |
 
-Undo: previous serialized `doc` (lopdf Document clone — it implements Clone; cap 8).
+Undo: previous serialized `doc` (lopdf Document clone — it implements Clone; cap 8). `encrypt`/`decrypt` record undo like every mutating op, so encryption state round-trips through undo/redo for free.
+
+Encryption notes: `encrypt`/`decrypt` run on a cloned `Document` and commit only on success, so failures are atomic. Encrypted ciphertext persists in `save` bytes and NFD1 snapshots (snapshot = serialized PDF), so an encrypted document stays encrypted across `save`/`snapshot`/`restore`/`open`; `restore` of encrypted bytes leaves the doc encrypted until `decrypt`. While `encrypted` is true the document still parses (page tree/dicts are plaintext) but strings and streams are ciphertext — `pageText`, annotation contents and other content ops are not meaningful until `decrypt` succeeds. `describe` also reports `encrypted`. Only the Standard password handler at V4/R4 (AES-128) is produced; foreign documents using other handlers/versions may fail `decrypt` with a typed error rather than being silently mis-decrypted.
 
 Annotation creation/editing encodes ASCII as PDFDocEncoding and non-ASCII as UTF-16BE via lopdf text_string. Annotation listing decodes PDF text strings; pageText remains the existing lossy content-stream extraction. Comment edits preserve the annotation id/type/geometry and unrelated PDF dictionary entries, with one undo entry; no author/date/appearance/reply/state is fabricated.
 
