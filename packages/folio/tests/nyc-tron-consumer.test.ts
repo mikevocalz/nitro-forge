@@ -11,7 +11,7 @@ import type { FolioCommentsBinding } from "../src/office-cluster";
 import { bindFolioHistory, FOLIO_ANNOTATION_TOOLS } from "../src/office-cluster";
 
 // CommentsThreadPanel: Folio threads and the delete it supports.
-export const commentsFits = (b: FolioCommentsBinding): Pick<CommentsThreadPanelProps, "threads" | "onDelete"> => b;
+export const commentsFits = (b: FolioCommentsBinding): Pick<CommentsThreadPanelProps, "threads" | "onDelete" | "onReply" | "onResolvedChange"> => b;
 // AnnotationToolbar: the tools Folio can create, plus undo/redo.
 export const toolsFit: AnnotationToolbarProps["tools"] = FOLIO_ANNOTATION_TOOLS;
 export const historyFits = (b: ReturnType<typeof bindFolioHistory>): Pick<AnnotationToolbarProps, "onUndo" | "onRedo"> => b;

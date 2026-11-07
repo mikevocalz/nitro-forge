@@ -356,10 +356,13 @@ until `new`/`open`.
 | `open` | `{bytes_b64}` | `{pages, encrypted:false}` | `lopdf::Document::load_mem`; corrupted → Serialization |
 | `pageCount` | `{}` | `{pages}` | |
 | `pageText` | `{page}` | `{text}` | 0-based page; extracts strings from `Tj`/`TJ`/`'`/`"` ops in content stream; may be lossy — documented |
-| `addAnnotation` | `{page,rect:[x,y,w,h],contents,subtype?}` | `{annot_id}` | real PDF: appends obj to page `/Annots` (`/Subtype /Text|/Highlight`, `/Rect`, `/Contents`) |
+| `addAnnotation` | `{page,rect:[x,y,w,h],contents,subtype?,author?,modified?}` | `{annot_id}` | real PDF: appends obj to page `/Annots` (`/Subtype /Text|/Highlight`, `/Rect`, `/Contents`) |
 | `listAnnotations` | `{page}` | `{annots:[{id,subtype,rect,contents}]}` | |
 | `setAnnotationContents` | `{page,id,contents}` | `{ok}` | page-owned Text/Highlight only; at most 32767 UTF-16 code units (64 KiB including BOM); real PDF text string; same-text request is eventless/no history |
-| `removeAnnotation` | `{page,id}` | `{ok}` | |
+| `addAnnotationReply` | `{page,id,contents,author,modified}` | `{annot_id}` | Text reply /IRT to a primary Text/Highlight, /RT /R; explicit metadata, bounded nonblank body |
+| `setAnnotationReview` | `{page,id,resolved:boolean,author,modified}` | `{annot_id}` or `{ok}` | separate hidden author-specific Review state Text record: Completed/None; chains to previous author state; same state eventless |
+| `listCommentThreads` | `{page,review_author?}` | `{threads:[{id,contents,subtype,rect,author?,modified?,replies,resolved?,review_state?}]}` | actual PDF body/metadata; state records omitted from body replies; author-specific projection only |
+| `removeAnnotation` | `{page,id}` | `{ok}` | atomic annotation-descendant subtree removal; generic owned Widget/Ink retained; external references/popup lifecycle/unsupported graphs reject safely |
 | `rotatePage` | `{page,degrees}` | `{ok}` | sets `/Rotate`, must be multiple of 90 |
 | `save` | `{}` | `{bytes_b64,size}` | `doc.save_to` → real PDF bytes |
 | `info` | `{}` | `{pages,has_annots}` | read-only |
@@ -367,6 +370,12 @@ until `new`/`open`.
 Undo: previous serialized `doc` (lopdf Document clone — it implements Clone; cap 8).
 
 Annotation creation/editing encodes ASCII as PDFDocEncoding and non-ASCII as UTF-16BE via lopdf text_string. Annotation listing decodes PDF text strings; pageText remains the existing lossy content-stream extraction. Comment edits preserve the annotation id/type/geometry and unrelated PDF dictionary entries, with one undo entry; no author/date/appearance/reply/state is fabricated.
+
+Comment metadata requires caller-owned nonblank author ≤256 UTF-8 bytes without controls and a full valid UTC PDF date `D:YYYYMMDDHHmmSSZ`. Optional addAnnotation metadata must supply both fields; no author/date is generated. Reply bodies cap at 32767 UTF-16 units. Review state and StateModel are PDF text strings; /IRT links are same-page indirect references, /RT is /R. State records have Hidden flag 2, zero Rect and empty Contents; later author state changes chain to the prior author state. Latest ordering is (validated UTC date,ObjectId); changed dates older than that author's latest reject before mutation. Equal dates use the fresh object id. Completed/None project resolved true/false only for explicit review_author; Accepted/Rejected/Cancelled retain review_state with resolved omitted, and no author query implies no global resolved value.
+
+Admitted graphs require unique page-array ownership, including objects without /P, with no cycles/dangling/cross-page/grouping replies. Limits: 4096 references/page, 10000 pages/100000 references for ownership scanning, 100000 PDF objects, 256 records/thread, 64 links/depth. Deletion additionally scans at most 1000000 reference values/depth 64, rejecting unsupported external/popup relationships before mutation. Legal partial/non-UTC dates, unknown state models, nonempty state-record body text and unsupported reply relationships reject conservatively. Removing a comment/reply removes its descendant reply/state records in one undo entry. Original root review state is never overwritten. Existing comment-content edits preserve metadata.
+
+Canonical reply/resolve bindings require explicit metadata provider, reviewAuthor, isCurrent admission and authoritative host commit(action) gate. The adapter rejects actor mismatch and unsupported mentions, rechecks generation after async provider/read work, rereads thread authority within the gate and checks again before the operation. This is caller-owned serialization, not native expected-revision CAS. Raw PDF dates are retained; timeLabel requires an explicit app formatter. No application-host activation or PDF visual rendering is claimed.
 
 ## pitch-engine — `PitchEngine::new()`
 

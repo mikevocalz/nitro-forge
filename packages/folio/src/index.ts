@@ -15,6 +15,9 @@ export const OPS = {
   pageText: "pageText",
   addAnnotation: "addAnnotation",
   listAnnotations: "listAnnotations",
+  listCommentThreads: "listCommentThreads",
+  addAnnotationReply: "addAnnotationReply",
+  setAnnotationReview: "setAnnotationReview",
   removeAnnotation: "removeAnnotation",
   setAnnotationContents: "setAnnotationContents",
   rotatePage: "rotatePage",
@@ -31,6 +34,10 @@ export interface Annotation {
   rect: Rect;
   contents: string;
 }
+
+export interface FolioCommentMetadata { author: string; modified: string }
+export interface FolioCommentEntry { id: number; contents: string; author?: string; modified?: string }
+export interface FolioCommentThread extends FolioCommentEntry { subtype: string; rect: Rect | null; replies: FolioCommentEntry[]; resolved?: boolean; review_state?: string }
 
 export class FolioDocument {
   private constructor(private doc: DocumentHandle) {}
@@ -78,13 +85,24 @@ export class FolioDocument {
     rect: Rect,
     contents: string,
     subtype: AnnotSubtype = "Highlight",
+    metadata?: FolioCommentMetadata,
   ) {
     return this.call<{ annot_id: number }>(OPS.addAnnotation, {
       page,
       rect,
       contents,
       subtype,
+      ...(metadata === undefined ? {} : { author: metadata.author, modified: metadata.modified }),
     });
+  }
+  listCommentThreads(page: number, reviewAuthor?: string) {
+    return this.call<{ threads: FolioCommentThread[] }>(OPS.listCommentThreads, { page, ...(reviewAuthor === undefined ? {} : { review_author: reviewAuthor }) });
+  }
+  addAnnotationReply(page: number, id: number, contents: string, metadata: FolioCommentMetadata) {
+    return this.call<{ annot_id: number }>(OPS.addAnnotationReply, { page, id, contents, author: metadata.author, modified: metadata.modified });
+  }
+  setAnnotationReview(page: number, id: number, resolved: boolean, metadata: FolioCommentMetadata) {
+    return this.call<{ annot_id: number } | { ok: true }>(OPS.setAnnotationReview, { page, id, resolved, author: metadata.author, modified: metadata.modified });
   }
   listAnnotations(page: number) {
     return this.call<{ annots: Annotation[] }>(OPS.listAnnotations, { page });

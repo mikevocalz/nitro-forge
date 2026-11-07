@@ -21,6 +21,7 @@
 //!   allocating unbounded object graphs.
 
 mod annotation_edit;
+mod comments;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -472,6 +473,7 @@ impl Engine for FolioEngine {
                 let page_id = self.page_id(page)?;
                 let rect = req_rect(p)?;
                 let contents = req_str(p, "contents")?;
+                let metadata = if p.get("author").is_some() || p.get("modified").is_some() { Some(comments::metadata(p)?) } else { None };
                 let subtype = match p.get("subtype").and_then(Value::as_str) {
                     None => "Text",
                     Some(s) if s.eq_ignore_ascii_case("text") => "Text",
@@ -517,12 +519,13 @@ impl Engine for FolioEngine {
                     }
                 }
                 self.journal.record(self.doc.clone());
-                let annot = dictionary! {
+                let mut annot = dictionary! {
                     "Type" => "Annot",
                     "Subtype" => subtype,
                     "Rect" => Object::Array(pdf_rect),
                     "Contents" => lopdf::text_string(contents),
                 };
+                if let Some((author, modified)) = metadata { annot.set("T", lopdf::text_string(&author)); annot.set("M", lopdf::text_string(&modified)); }
                 let annot_id = self.doc.add_object(Object::Dictionary(annot));
                 match loc {
                     AnnotsLoc::Inline => {
@@ -555,89 +558,10 @@ impl Engine for FolioEngine {
                 Ok(CommandResult::data(json!({ "annot_id": annot_id.0 })))
             }
             "setAnnotationContents" => self.op_set_annotation_contents(p),
-            "removeAnnotation" => {
-                let page = req_u64(p, "page")?;
-                let page_id = self.page_id(page)?;
-                let id = req_u64(p, "id")?;
-                let loc = annots_loc(&self.doc, page_id)?;
-                // Confirm the annotation exists (read-only) before recording
-                // an undo entry — a NotFound must not consume an undo slot.
-                let exists = match loc {
-                    AnnotsLoc::Inline => self
-                        .doc
-                        .get_object(page_id)
-                        .and_then(|o| o.as_dict())
-                        .ok()
-                        .and_then(|d| d.get(b"Annots").ok())
-                        .and_then(|o| o.as_array().ok())
-                        .map(|a| {
-                            a.iter().any(|o| {
-                                matches!(o, Object::Reference(r) if u64::from(r.0) == id)
-                            })
-                        })
-                        .unwrap_or(false),
-                    AnnotsLoc::Ref(r) => self
-                        .doc
-                        .get_object(r)
-                        .and_then(|o| o.as_array())
-                        .ok()
-                        .map(|a| {
-                            a.iter().any(|o| {
-                                matches!(o, Object::Reference(r) if u64::from(r.0) == id)
-                            })
-                        })
-                        .unwrap_or(false),
-                    AnnotsLoc::Missing => false,
-                };
-                if !exists {
-                    return Err(EngineError::not_found(format!(
-                        "no annotation with id {id} on page {page}"
-                    )));
-                }
-                self.journal.record(self.doc.clone());
-                let removed = match loc {
-                    AnnotsLoc::Inline => {
-                        let page_dict = self
-                            .doc
-                            .get_object_mut(page_id)
-                            .and_then(|o| o.as_dict_mut())
-                            .map_err(ser_err)?;
-                        let arr = page_dict
-                            .get_mut(b"Annots")
-                            .and_then(|o| o.as_array_mut())
-                            .map_err(ser_err)?;
-                        match arr.iter().position(|o| {
-                            matches!(o, Object::Reference(r) if u64::from(r.0) == id)
-                        }) {
-                            Some(i) => Some(arr.remove(i)),
-                            None => None,
-                        }
-                    }
-                    AnnotsLoc::Ref(r) => {
-                        let arr = self
-                            .doc
-                            .get_object_mut(r)
-                            .and_then(|o| o.as_array_mut())
-                            .map_err(ser_err)?;
-                        match arr.iter().position(|o| {
-                            matches!(o, Object::Reference(r) if u64::from(r.0) == id)
-                        }) {
-                            Some(i) => Some(arr.remove(i)),
-                            None => None,
-                        }
-                    }
-                    AnnotsLoc::Missing => None,
-                };
-                match removed {
-                    Some(Object::Reference(annot_id)) => {
-                        self.doc.objects.remove(&annot_id);
-                        Ok(CommandResult::data(json!({ "ok": true })))
-                    }
-                    _ => Err(EngineError::not_found(format!(
-                        "no annotation with id {id} on page {page}"
-                    ))),
-                }
-            }
+            "removeAnnotation" => self.op_remove_comment_tree(p),
+            "addAnnotationReply" => self.op_comment_reply(p, false),
+            "setAnnotationReview" => self.op_comment_reply(p, true),
+            "listCommentThreads" => self.op_list_comment_threads(p),
             "rotatePage" => {
                 let page = req_u64(p, "page")?;
                 let page_id = self.page_id(page)?;
