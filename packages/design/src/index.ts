@@ -73,7 +73,7 @@ export type VerticalAnchor='top'|'bottom'|'center'|'stretch'|'scale';
  * not solve constraints and `enforced` stays false. */
 export interface NodeConstraints{horizontal:HorizontalAnchor;vertical:VerticalAnchor;min_width?:number;max_width?:number;min_height?:number;max_height?:number;aspect_locked?:boolean;relative_to?:number}
 export interface ConstraintNodeInfo{node_id:number;constraints:NodeConstraints;enforced:boolean}
-export interface ConstraintsDescription{solving:'storage-only';accepted:{horizontal:HorizontalAnchor[];vertical:VerticalAnchor[]};rejected:string[];nodes:ConstraintNodeInfo[]}
+export interface ConstraintsDescription{solving:'storage-only';accepted:{horizontal:HorizontalAnchor[];vertical:VerticalAnchor[];relative_to:('parent'|'sibling')[];extent_bounds:string};rejected:string[];nodes:ConstraintNodeInfo[]}
 export interface FrameLayout{direction:'row'|'column';wrap?:boolean;gap:number;padding_top:number;padding_right:number;padding_bottom:number;padding_left:number;align:'start'|'center'|'end'|'stretch';justify:'start'|'center'|'end'|'space-between'}
 export interface NodeGeometry{x:number;y:number;width:number;height:number}
 export interface DesignNode extends NodeGeometry{id:number;kind:NodeKind;name:string;fill:[number,number,number,number];visible:boolean;locked:boolean;children:number[];layout:FrameLayout|null;sizing?:SizingSettings;text?:TextStyle;constraints?:NodeConstraints}
