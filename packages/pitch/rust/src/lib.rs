@@ -645,6 +645,35 @@ impl Engine for PitchEngine {
                 let index = self.state.slides[slide].animations.len() - 1;
                 Ok(CommandResult::data(json!({ "index": index })))
             }
+            "updateAnimation" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let index = req_usize(p, "index")?;
+                let original = self.state.slides[slide].animations.get(index)
+                    .ok_or_else(|| EngineError::out_of_bounds(format!("no animation at index {index}")))?;
+                let mut next = original.clone();
+                if p.get("kind").is_some() {
+                    next.kind = AnimKind::parse(req_str(p, "kind")?).ok_or_else(||
+                        EngineError::validation("'kind' must be fadeIn|slideInLeft|zoomIn"))?;
+                }
+                if p.get("start_s").is_some() {
+                    next.start_s = req_f64(p, "start_s")?;
+                    if next.start_s < 0.0 {
+                        return Err(EngineError::validation("'start_s' must be >= 0"));
+                    }
+                }
+                if p.get("duration_s").is_some() {
+                    next.duration_s = req_f64(p, "duration_s")?;
+                    if next.duration_s <= 0.0 {
+                        return Err(EngineError::validation("'duration_s' must be > 0"));
+                    }
+                }
+                if &next == original {
+                    return Ok(CommandResult::read_only(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].animations[index] = next;
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
             "removeAnimation" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let index = req_usize(p, "index")?;
@@ -735,6 +764,47 @@ mod tests {
 
     fn slide_id(e: &mut PitchEngine, idx: usize) -> u64 {
         e.state.slides[idx].id
+    }
+
+    #[test]
+    fn animation_update_preserves_identity_order_and_atomic_history() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let object = apply(&mut e, "addText", json!({"slide":slide,"x":0,"y":0,"w":100,"h":40,"text":"Animated"}))["object_id"].as_u64().unwrap();
+        for kind in ["fadeIn", "slideInLeft"] {
+            apply(&mut e, "addAnimation", json!({"slide":slide,"object":object,"kind":kind,"start_s":0,"duration_s":1}));
+        }
+        let original = e.snapshot().unwrap();
+        let result = e.apply(cmd("updateAnimation", json!({"slide":slide,"index":0,"kind":"zoomIn","start_s":2,"duration_s":3}))).unwrap();
+        assert_eq!(result.events.len(), 1);
+        let animations = &e.state.slides[0].animations;
+        assert_eq!(animations.len(), 2);
+        assert_eq!(animations[0], Anim {object_id:object,kind:AnimKind::ZoomIn,start_s:2.0,duration_s:3.0});
+        assert_eq!(animations[1], Anim {object_id:object,kind:AnimKind::SlideInLeft,start_s:0.0,duration_s:1.0});
+        let changed = e.snapshot().unwrap();
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&changed).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), changed);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), original);
+        for patch in [json!({}),json!({"kind":"fadeIn","start_s":0,"duration_s":1})] {
+            let mut payload = patch; payload["slide"] = json!(slide); payload["index"] = json!(0);
+            assert!(e.apply(cmd("updateAnimation", payload)).unwrap().events.is_empty());
+        }
+        for patch in [json!({"kind":"exit"}),json!({"kind":null}),json!({"start_s":-1}),json!({"start_s":null}),json!({"duration_s":0}),json!({"duration_s":"3"}),json!({"kind":"zoomIn","duration_s":-1})] {
+            let mut payload = patch; payload["slide"] = json!(slide); payload["index"] = json!(0);
+            assert!(e.apply(cmd("updateAnimation", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), original);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), changed);
+        apply(&mut e, "updateAnimation", json!({"slide":slide,"index":0,"duration_s":4}));
+        assert_eq!(e.state.slides[0].animations[0], Anim {object_id:object,kind:AnimKind::ZoomIn,start_s:2.0,duration_s:4.0});
+        let before = e.snapshot().unwrap();
+        for payload in [json!({"slide":slide,"index":2,"kind":"fadeIn"}),json!({"slide":slide,"index":-1}),json!({"slide":99999,"index":0})] {
+            assert!(e.apply(cmd("updateAnimation", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
     }
 
     #[test]

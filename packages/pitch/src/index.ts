@@ -26,6 +26,7 @@ export const OPS = {
   removeObject: "removeObject",
   addAnimation: "addAnimation",
   removeAnimation: "removeAnimation",
+  updateAnimation: "updateAnimation",
   slideAt: "slideAt",
   deck: "deck",
 } as const;
@@ -40,6 +41,13 @@ export interface PitchTextStyle {
 }
 export type Layout = "blank" | "title" | "titleBody";
 export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn";
+
+/** Partial in-place animation edit; omitted fields preserve the effect and timing. */
+export interface PitchAnimationUpdate {
+  kind?: AnimKind;
+  start_s?: number;
+  duration_s?: number;
+}
 
 export interface AnimatedObject {
   id: number;
@@ -134,6 +142,10 @@ export class PitchDocument {
     return this.call<{ index: number }>(OPS.addAnimation, {
       slide, object, kind, start_s: startS, duration_s: durationS,
     });
+  }
+  /** Retains target object and list index; equal/empty patches preserve history. */
+  updateAnimation(slide: number, index: number, patch: PitchAnimationUpdate) {
+    return this.call<{ ok: boolean }>(OPS.updateAnimation, { ...patch, slide, index });
   }
   removeAnimation(slide: number, index: number) {
     return this.call(OPS.removeAnimation, { slide, index });

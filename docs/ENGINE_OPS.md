@@ -390,6 +390,7 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `rotateObject` | `{slide,id,degrees}` | `{ok}` | |
 | `removeObject` | `{slide,id}` | `{ok}` | also drops its animations |
 | `addAnimation` | `{slide,object,kind,start_s,duration_s}` | `{index}` | duration > 0 |
+| `updateAnimation` | `{slide,index,kind?,start_s?,duration_s?}` | `{ok}` | Partial in-place patch retains target object and list position. Existing index required; kind fadeIn/slideInLeft/zoomIn, finite start >=0 and finite duration >0; explicit null invalid. Validate before mutation, one history entry/event only for actual change; empty/equal patch preserves redo and emits no event. No trigger/order change. |
 | `removeAnimation` | `{slide,index}` | `{ok}` | |
 | `slideAt` | `{slide,t_s}` | `{objects:[{id,x,y,w,h,rotation,opacity}]}` | animation interpolation: before start → hidden(0)/offset; during → eased progress; after → final. slideInLeft starts x-200px, zoomIn scales 0.5→1 |
 | `deck` | `{}` | `{title,slide_count}` | read-only |

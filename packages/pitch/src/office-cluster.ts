@@ -19,14 +19,13 @@ import type { AnimKind, PitchDocument } from "./index";
  * Each is a DEFER: the matching NYC-Tron prop is left out. Adding the op to
  * `packages/pitch/rust` and `OPS` is what lifts the deferral.
  */
-/** Text restyling is now an engine operation; released SlideCanvas has no style callback yet. */
+/** Text restyling and animation updates are engine operations; released alpha.4
+ * SlideCanvas/SlideAnimationPane expose no corresponding edit callbacks yet. */
 export const PITCH_DEFERRED_OPS = {
   /** J-01 sections in the filmstrip: Pitch slides carry no section. */
   setSlideSection: "J-01",
   /** J-05: the deck's coordinate space. Pitch stores none, so the adapter uses {@link PITCH_SLIDE_SIZE}. */
   setSlideSize: "J-05",
-  /** J-09 edit an animation's timing or effect in place (today: remove and add). */
-  updateAnimation: "J-09",
   /** J-09 triggers (on click, with previous, after previous): Pitch animations have absolute start times only. */
   setAnimationTrigger: "J-09",
   /** J-09 emphasis and exit effects: `addAnimation` accepts fadeIn, slideInLeft and zoomIn only. */
