@@ -36,6 +36,8 @@ export const OPS = {
   setTextStyle: "setTextStyle",
   addRect: "addRect",
   addShape: "addShape",
+  addConnector: "addConnector",
+  updateConnector: "updateConnector",
   addImage: "addImage",
   moveObject: "moveObject",
   setObjectOrder: "setObjectOrder",
@@ -82,6 +84,37 @@ export type PitchShapeKind =
 export interface PitchShapeStroke {
   width: number;
   color: Rgba;
+}
+/**
+ * Connector endpoint. `free` is an absolute slide-space point (coordinates
+ * finite within ±1,000,000). `bound` attaches to another object's bounds at
+ * a named side; the engine resolves the current anchor point at read time,
+ * so the endpoint follows that object through move/resize. Bound targets
+ * must be non-connector objects on the same slide.
+ */
+export type PitchAnchorSide = "top" | "bottom" | "left" | "right" | "center";
+export type PitchConnectorEnd =
+  | { type: "free"; x: number; y: number }
+  | { type: "bound"; object_id: number; side: PitchAnchorSide };
+/** Routing catalog: `straight` is the endpoint segment; `elbow` is the H-V-H route through the mean x. */
+export type PitchConnectorRoute = "straight" | "elbow";
+/** Which ends carry an arrowhead. */
+export type PitchConnectorArrows = "none" | "start" | "end" | "both";
+/** Stored connector spec (the `connector` field of a connector object in `describe`). */
+export interface PitchConnectorSpec {
+  from: PitchConnectorEnd;
+  to: PitchConnectorEnd;
+  route: PitchConnectorRoute;
+  arrows: PitchConnectorArrows;
+  stroke?: PitchShapeStroke;
+}
+/** Partial in-place connector edit; `from`/`to` replace the whole endpoint, `stroke: null` clears it. */
+export interface PitchConnectorUpdate {
+  from?: PitchConnectorEnd;
+  to?: PitchConnectorEnd;
+  route?: PitchConnectorRoute;
+  arrows?: PitchConnectorArrows;
+  stroke?: PitchShapeStroke | null;
 }
 export type InkKind = "pen" | "highlighter" | "laser";
 /**
@@ -316,6 +349,29 @@ export class PitchDocument {
       ...(fill === undefined ? {} : { fill }),
       ...(stroke === undefined ? {} : { stroke }),
     });
+  }
+  /**
+   * Add a connector between two endpoints. `route` defaults to `"straight"`,
+   * `arrows` to `"none"`; `stroke` is an optional bounded outline. Returns the
+   * assigned `object_id`. `describe` exposes the resolved polyline under the
+   * object's `resolved` field.
+   */
+  addConnector(
+    slide: number,
+    from: PitchConnectorEnd,
+    to: PitchConnectorEnd,
+    options?: { route?: PitchConnectorRoute; arrows?: PitchConnectorArrows; stroke?: PitchShapeStroke | null },
+  ) {
+    return this.call<{ object_id: number }>(OPS.addConnector, {
+      slide, from, to,
+      ...(options?.route === undefined ? {} : { route: options.route }),
+      ...(options?.arrows === undefined ? {} : { arrows: options.arrows }),
+      ...(options?.stroke === undefined ? {} : { stroke: options.stroke }),
+    });
+  }
+  /** Partial connector patch; equal/empty patches are eventless no-ops. */
+  updateConnector(slide: number, id: number, patch: PitchConnectorUpdate) {
+    return this.call<{ ok: boolean }>(OPS.updateConnector, { ...patch, slide, id });
   }
   addImage(slide: number, x: number, y: number, w: number, h: number, src: string) {
     return this.call<{ object_id: number }>(OPS.addImage, { slide, x, y, w, h, src });
