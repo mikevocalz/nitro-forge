@@ -612,3 +612,10 @@ v1 codegen and generated constructor/implementation syntax compilation passed.
 No CUDA inference, model weights, GNM evaluator, capture/reconstruction, GPU
 rasterizer, linked RN host, SwiftPM build or headset validation is claimed.
 See [native persona implementation status](../native/persona/README.md).
+
+### Persona XR capture (2026-11-07)
+
+- Implemented optional C++ Meta face v2/social eyes and Android face v1/eyes adapters.
+- Strict GCC compilation and fake-runtime contract tests against pinned real OpenXR headers PASS.
+- Actual headset SDK capture, Android permissions, PICO ABI, GNM mapping and splat GPU binding NOT RUN / pending.
+- The adapters remain separate from the Nitro v1 performance bridge and document engines.

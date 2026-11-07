@@ -129,3 +129,12 @@ math tests are not visual, reconstruction-quality or headset performance evidenc
 - https://yihalem1.github.io/FlexiAvatar/
 - https://research.nvidia.com/labs/amri/projects/instant4d/
 - https://forresti.github.io/squeezeme/
+
+## Live tracking extension
+
+`openxr/` now provides optional native Meta and Android XR face/eye capture
+adapters compiled against real Khronos headers. See [integration and limitations](openxr/README.md).
+`tracking.hpp` selects calibrated recent live controls ahead of audio controls;
+invalid/stale channels fall back to audio or neutral. The provider outputs must
+be calibrated and clock-aligned by the host before selection. Device capture,
+PICO, GNM retargeting assets and renderer binding are not yet verified.

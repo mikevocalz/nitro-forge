@@ -15,3 +15,6 @@ fi
 "$cc" -std=c11 -Wall -Wextra -Werror -I include -c tests/c_consumer.c -o "$build/consumer.o"
 "$cxx" "${flags[@]}" src/persona.cpp src/persona_c.cpp "$build/consumer.o" -o "$build/consumer"
 "$build/consumer"
+
+"$cxx" "${flags[@]}" tests/tracking_test.cpp -o "$build/tracking"
+"$build/tracking"
