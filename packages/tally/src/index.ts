@@ -742,8 +742,11 @@ export class TallyDocument {
    * replaced by the view's captured specs under fresh ids and the
    * selection is recorded durably. Re-applying the active view is
    * eventless. `null` clears the resolved sheet's (default active)
-   * selection without touching its filters.
+   * selection without touching its filters; `sheet` is only valid with
+   * `null` — the engine rejects it alongside a view id.
    */
+  setSheetView(view: number): Promise<CommandResult<{ view: SheetViewInfo | null }>>;
+  setSheetView(view: null, sheet?: string | number): Promise<CommandResult<{ view: SheetViewInfo | null }>>;
   setSheetView(view: number | null, sheet?: string | number) {
     return this.call<{ view: SheetViewInfo | null }>(OPS.setSheetView, {
       view,
