@@ -31,6 +31,14 @@ const JOURNAL_CAPACITY: usize = 64;
 const DEFAULT_FONT_SIZE: f64 = 18.0;
 /// Speaker notes are bounded plain text stored per slide; empty clears them.
 const MAX_NOTES_BYTES: usize = 32_768;
+/// Persistent ink is bounded per slide: at most this many strokes, each with
+/// at most this many points. Stroke ids share the document `next_id` space.
+const MAX_INK_STROKES_PER_SLIDE: usize = 256;
+const MAX_INK_POINTS_PER_STROKE: usize = 2_048;
+/// Ink coordinates are slide-space units like object x/y; they must stay
+/// finite and within ±this bound. Width is finite, >0 and at most this bound.
+const MAX_INK_COORD: f64 = 1_000_000.0;
+const MAX_INK_WIDTH: f64 = 10_000.0;
 const SLIDE_IN_OFFSET: f64 = 200.0;
 const ZOOM_START_SCALE: f64 = 0.5;
 
@@ -113,6 +121,40 @@ pub struct Anim {
     pub duration_s: f64,
 }
 
+/// Persistent annotation ink. `points` are `[x, y]` pairs in slide-space
+/// units (the same coordinate space as object x/y/w/h), not normalized.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum InkKind {
+    Pen,
+    Highlighter,
+    Laser,
+}
+
+impl InkKind {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "pen" => Some(Self::Pen),
+            "highlighter" => Some(Self::Highlighter),
+            "laser" => Some(Self::Laser),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InkStroke {
+    pub id: u64,
+    pub kind: InkKind,
+    pub points: Vec<[f64; 2]>,
+    pub width: f64,
+    pub color: [u8; 4],
+    /// Optional extra opacity multiplier 0..=1 on top of the color alpha;
+    /// absent (None) means fully opaque apart from the alpha channel.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opacity: Option<f64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Slide {
     pub id: u64,
@@ -123,6 +165,9 @@ pub struct Slide {
     /// Optional speaker notes; absent (None) for slides without notes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    /// Persistent annotation strokes; absent (empty) for un-inked slides.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ink: Vec<InkStroke>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -171,6 +216,7 @@ impl PitchState {
                 objects: Vec::new(),
                 animations: Vec::new(),
                 notes: None,
+                ink: Vec::new(),
             }],
         }
     }
@@ -229,6 +275,123 @@ fn parse_color(v: &Value) -> Result<[u8; 4], EngineError> {
     Ok(out)
 }
 
+// ---------------------------------------------------------------------------
+// Ink payload helpers
+// ---------------------------------------------------------------------------
+fn parse_ink_kind(v: &Value) -> Result<InkKind, EngineError> {
+    InkKind::parse(v.as_str().ok_or_else(|| {
+        EngineError::invalid("ink kind must be \"pen\"|\"highlighter\"|\"laser\"")
+    })?)
+    .ok_or_else(|| {
+        EngineError::validation("ink kind must be \"pen\"|\"highlighter\"|\"laser\"")
+    })
+}
+
+fn parse_ink_points(v: &Value) -> Result<Vec<[f64; 2]>, EngineError> {
+    let arr = v
+        .as_array()
+        .ok_or_else(|| EngineError::invalid("ink points must be an array of [x, y]"))?;
+    if arr.is_empty() || arr.len() > MAX_INK_POINTS_PER_STROKE {
+        return Err(EngineError::validation(format!(
+            "ink stroke needs 1..={MAX_INK_POINTS_PER_STROKE} points"
+        )));
+    }
+    let mut points = Vec::with_capacity(arr.len());
+    for pair in arr {
+        let pair = pair
+            .as_array()
+            .ok_or_else(|| EngineError::invalid("ink point must be [x, y]"))?;
+        if pair.len() != 2 {
+            return Err(EngineError::invalid("ink point must be [x, y]"));
+        }
+        let mut point = [0.0; 2];
+        for (i, c) in pair.iter().enumerate() {
+            let n = c
+                .as_f64()
+                .ok_or_else(|| EngineError::invalid("ink point coordinates must be numbers"))?;
+            if !n.is_finite() || n.abs() > MAX_INK_COORD {
+                return Err(EngineError::validation(format!(
+                    "ink point coordinate must be finite and within ±{MAX_INK_COORD}"
+                )));
+            }
+            point[i] = n;
+        }
+        points.push(point);
+    }
+    Ok(points)
+}
+
+fn parse_ink_width(v: &Value) -> Result<f64, EngineError> {
+    let w = v
+        .as_f64()
+        .ok_or_else(|| EngineError::invalid("ink width must be a number"))?;
+    if !w.is_finite() || w <= 0.0 || w > MAX_INK_WIDTH {
+        return Err(EngineError::validation(format!(
+            "ink width must be finite, >0 and <= {MAX_INK_WIDTH}"
+        )));
+    }
+    Ok(w)
+}
+
+/// `null` clears the optional opacity; a number must be a finite 0..=1
+/// multiplier. Absent fields are handled by callers before this runs.
+fn parse_ink_opacity(v: &Value) -> Result<Option<f64>, EngineError> {
+    if v.is_null() {
+        return Ok(None);
+    }
+    let o = v
+        .as_f64()
+        .ok_or_else(|| EngineError::invalid("ink opacity must be a number or null"))?;
+    if !o.is_finite() || !(0.0..=1.0).contains(&o) {
+        return Err(EngineError::validation("ink opacity must be within 0..=1"));
+    }
+    Ok(Some(o))
+}
+
+/// Full structural check used by ops (validation errors) and restore
+/// (mapped to serialization errors).
+fn check_ink_stroke(s: &InkStroke) -> Result<(), EngineError> {
+    if s.points.is_empty() || s.points.len() > MAX_INK_POINTS_PER_STROKE {
+        return Err(EngineError::validation(format!(
+            "ink stroke needs 1..={MAX_INK_POINTS_PER_STROKE} points"
+        )));
+    }
+    for p in &s.points {
+        if p.iter().any(|c| !c.is_finite() || c.abs() > MAX_INK_COORD) {
+            return Err(EngineError::validation(format!(
+                "ink point coordinate must be finite and within ±{MAX_INK_COORD}"
+            )));
+        }
+    }
+    if !s.width.is_finite() || s.width <= 0.0 || s.width > MAX_INK_WIDTH {
+        return Err(EngineError::validation(format!(
+            "ink width must be finite, >0 and <= {MAX_INK_WIDTH}"
+        )));
+    }
+    if s.opacity.is_some_and(|o| !o.is_finite() || !(0.0..=1.0).contains(&o)) {
+        return Err(EngineError::validation("ink opacity must be within 0..=1"));
+    }
+    Ok(())
+}
+
+/// Parse a complete stroke payload (the `stroke` object of `addInkStroke`);
+/// the engine assigns `id`.
+fn parse_ink_stroke(v: &Value) -> Result<InkStroke, EngineError> {
+    let stroke = InkStroke {
+        id: 0,
+        kind: parse_ink_kind(field(v, "kind")?)?,
+        points: parse_ink_points(field(v, "points")?)?,
+        width: parse_ink_width(field(v, "width")?)?,
+        color: parse_color(field(v, "color")?)?,
+        opacity: match v.get("opacity") {
+            None => None,
+            Some(o) => parse_ink_opacity(o)?,
+        },
+    };
+    check_ink_stroke(&stroke)?;
+    Ok(stroke)
+}
+
 fn ro(data: Value) -> CommandResult {
     CommandResult {
         events: vec![],
@@ -268,6 +431,16 @@ impl PitchEngine {
             .position(|o| o.id == id)
             .ok_or_else(|| {
                 EngineError::not_found(format!("no object with id {id} on slide {slide}"))
+            })
+    }
+
+    fn ink_index(&self, slide: usize, id: u64) -> Result<usize, EngineError> {
+        self.state.slides[slide]
+            .ink
+            .iter()
+            .position(|s| s.id == id)
+            .ok_or_else(|| {
+                EngineError::not_found(format!("no ink stroke with id {id} on slide {slide}"))
             })
     }
 
@@ -366,6 +539,7 @@ impl Engine for PitchEngine {
                     objects: Vec::new(),
                     animations: Vec::new(),
                     notes: None,
+                    ink: Vec::new(),
                 });
                 Ok(CommandResult::data(json!({ "slide_id": id })))
             }
@@ -726,6 +900,64 @@ impl Engine for PitchEngine {
                 self.state.slides[slide]=candidate;
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
+            "addInkStroke" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let stroke = parse_ink_stroke(field(p, "stroke")?)?;
+                if self.state.slides[slide].ink.len() >= MAX_INK_STROKES_PER_SLIDE {
+                    return Err(EngineError::validation(format!(
+                        "ink stroke capacity exceeds {MAX_INK_STROKES_PER_SLIDE} per slide"
+                    )));
+                }
+                self.preflight_id()?;
+                self.journal.record(self.state.clone());
+                let id = self.alloc_id();
+                self.state.slides[slide].ink.push(InkStroke { id, ..stroke });
+                Ok(CommandResult::data(json!({ "stroke_id": id })))
+            }
+            "updateInkStroke" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let idx = self.ink_index(slide, req_u64(p, "stroke_id")?)?;
+                let original = self.state.slides[slide].ink[idx].clone();
+                let mut next = original.clone();
+                if p.get("kind").is_some() {
+                    next.kind = parse_ink_kind(field(p, "kind")?)?;
+                }
+                if p.get("points").is_some() {
+                    next.points = parse_ink_points(field(p, "points")?)?;
+                }
+                if p.get("width").is_some() {
+                    next.width = parse_ink_width(field(p, "width")?)?;
+                }
+                if p.get("color").is_some() {
+                    next.color = parse_color(field(p, "color")?)?;
+                }
+                if p.get("opacity").is_some() {
+                    next.opacity = parse_ink_opacity(field(p, "opacity")?)?;
+                }
+                check_ink_stroke(&next)?;
+                if next == original {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].ink[idx] = next;
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "removeInkStroke" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let idx = self.ink_index(slide, req_u64(p, "stroke_id")?)?;
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].ink.remove(idx);
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "clearInk" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                if self.state.slides[slide].ink.is_empty() {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].ink.clear();
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
             // --- read-only ---------------------------------------------------
             "slideAt" | "slideAtWithClicksV1" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
@@ -743,6 +975,12 @@ impl Engine for PitchEngine {
                     "notes": self.state.slides[slide].notes,
                 })))
             }
+            "slideInk" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                Ok(ro(json!({
+                    "strokes": &self.state.slides[slide].ink,
+                })))
+            }
             "describe" => Ok(ro(serde_json::to_value(&self.state)?)),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
@@ -752,6 +990,7 @@ impl Engine for PitchEngine {
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().any(|slide| slide.notes.is_some())
+            || self.state.slides.iter().any(|slide| !slide.ink.is_empty())
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
                 !anim.trigger.is_absolute() || !matches!(anim.kind, AnimKind::FadeIn | AnimKind::SlideInLeft | AnimKind::ZoomIn));
         let payload = if extended {
@@ -783,6 +1022,16 @@ impl Engine for PitchEngine {
             }
             if slide.notes.as_ref().is_some_and(|n| n.len() > MAX_NOTES_BYTES) {
                 return Err(EngineError::serialization("speaker notes exceed bound"));
+            }
+            if slide.ink.len() > MAX_INK_STROKES_PER_SLIDE {
+                return Err(EngineError::serialization("ink stroke count exceeds bound"));
+            }
+            for stroke in &slide.ink {
+                if stroke.id == 0 || !ids.insert(stroke.id) {
+                    return Err(EngineError::serialization("invalid or duplicate identity"));
+                }
+                check_ink_stroke(stroke)
+                    .map_err(|_| EngineError::serialization("invalid ink stroke"))?;
             }
             for object in &slide.objects {
                 if object.id == 0 || !ids.insert(object.id) {
@@ -1614,6 +1863,341 @@ mod tests {
             .restore(&encode_envelope(&serde_json::to_vec(&state).unwrap()))
             .is_err());
         assert_eq!(e.snapshot().unwrap(), before);
+        let _ = s1;
+    }
+
+    fn ink_stroke(kind: &str, points: Value) -> Value {
+        json!({
+            "kind": kind,
+            "points": points,
+            "width": 4.0,
+            "color": [255, 0, 0, 200],
+        })
+    }
+
+    #[test]
+    fn ink_strokes_add_update_remove_clear_read_and_persist() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        // read-only slideInk on an un-inked slide
+        assert_eq!(
+            apply(&mut e, "slideInk", json!({ "slide": s1 }))["strokes"],
+            json!([])
+        );
+        // ink-free document keeps the legacy unwrapped snapshot shape
+        let clean = e.snapshot().unwrap();
+        let (_, legacy_payload) = decode_envelope(&clean).unwrap();
+        let legacy: Value = serde_json::from_slice(legacy_payload).unwrap();
+        assert!(legacy.get("kind").is_none());
+
+        let sid = apply(
+            &mut e,
+            "addInkStroke",
+            json!({ "slide": s1, "stroke": ink_stroke("pen", json!([[10.0, 20.0], [30.0, 40.0]])) }),
+        )["stroke_id"]
+            .as_u64()
+            .unwrap();
+        // slide-space points, engine-assigned id, default opacity absent
+        let strokes = apply(&mut e, "slideInk", json!({ "slide": s1 }))["strokes"].clone();
+        assert_eq!(strokes.as_array().unwrap().len(), 1);
+        assert_eq!(strokes[0]["id"], json!(sid));
+        assert_eq!(strokes[0]["kind"], json!("pen"));
+        assert_eq!(strokes[0]["points"], json!([[10.0, 20.0], [30.0, 40.0]]));
+        assert_eq!(strokes[0]["width"], json!(4.0));
+        assert_eq!(strokes[0]["color"], json!([255, 0, 0, 200]));
+        assert!(strokes[0].get("opacity").is_none());
+        // describe exposes ink on the slide; ink triggers the schema:2 wrapper
+        assert_eq!(
+            apply(&mut e, "describe", json!({}))["slides"][0]["ink"][0]["id"],
+            json!(sid)
+        );
+        let snap = e.snapshot().unwrap();
+        let (_, wrapped_payload) = decode_envelope(&snap).unwrap();
+        let wrapped: Value = serde_json::from_slice(wrapped_payload).unwrap();
+        assert_eq!(wrapped["kind"], json!("pitch"));
+        assert_eq!(wrapped["schema"], json!(2));
+        assert_eq!(wrapped["document"]["slides"][0]["ink"][0]["id"], json!(sid));
+
+        // partial update: kind/width/opacity/points; color retained
+        let noop = e
+            .apply(cmd(
+                "updateInkStroke",
+                json!({ "slide": s1, "stroke_id": sid, "kind": "pen", "width": 4.0 }),
+            ))
+            .unwrap();
+        assert!(noop.events.is_empty());
+        apply(
+            &mut e,
+            "updateInkStroke",
+            json!({ "slide": s1, "stroke_id": sid, "kind": "highlighter", "width": 12.5, "opacity": 0.5, "points": [[1.0, 2.0]] }),
+        );
+        let styled = e.snapshot().unwrap();
+        let updated = &apply(&mut e, "slideInk", json!({ "slide": s1 }))["strokes"][0];
+        assert_eq!(updated["kind"], json!("highlighter"));
+        assert_eq!(updated["width"], json!(12.5));
+        assert_eq!(updated["opacity"], json!(0.5));
+        assert_eq!(updated["points"], json!([[1.0, 2.0]]));
+        assert_eq!(updated["color"], json!([255, 0, 0, 200]));
+        // opacity:null clears the optional field
+        apply(
+            &mut e,
+            "updateInkStroke",
+            json!({ "slide": s1, "stroke_id": sid, "opacity": null }),
+        );
+        assert!(apply(&mut e, "slideInk", json!({ "slide": s1 }))["strokes"][0]
+            .get("opacity")
+            .is_none());
+
+        // snapshot roundtrip preserves ink exactly
+        let with_ink = e.snapshot().unwrap();
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&with_ink).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), with_ink);
+        assert_eq!(
+            apply(&mut reopened, "slideInk", json!({ "slide": s1 }))["strokes"],
+            apply(&mut e, "slideInk", json!({ "slide": s1 }))["strokes"]
+        );
+
+        // undo restores the pre-clear stroke (opacity 0.5); redo clears again
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), styled);
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), with_ink);
+
+        // second stroke + removeInkStroke
+        let sid2 = apply(
+            &mut e,
+            "addInkStroke",
+            json!({ "slide": s1, "stroke": ink_stroke("laser", json!([[0.0, 0.0]])) }),
+        )["stroke_id"]
+            .as_u64()
+            .unwrap();
+        assert!(sid2 != sid);
+        apply(&mut e, "removeInkStroke", json!({ "slide": s1, "stroke_id": sid2 }));
+        assert_eq!(
+            apply(&mut e, "slideInk", json!({ "slide": s1 }))["strokes"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        // clearInk empties and is undoable; clearing again is a no-op
+        apply(&mut e, "clearInk", json!({ "slide": s1 }));
+        assert_eq!(
+            apply(&mut e, "slideInk", json!({ "slide": s1 }))["strokes"],
+            json!([])
+        );
+        assert!(e
+            .apply(cmd("clearInk", json!({ "slide": s1 })))
+            .unwrap()
+            .events
+            .is_empty());
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "slideInk", json!({ "slide": s1 }))["strokes"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        apply(&mut e, "clearInk", json!({ "slide": s1 }));
+    }
+
+    #[test]
+    fn ink_validation_bounds_and_atomicity() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        let before = e.snapshot().unwrap();
+        // malformed strokes reject without mutating
+        for stroke in [
+            json!({ "kind": "marker", "points": [[0.0, 0.0]], "width": 1.0, "color": [0,0,0,255] }),
+            json!({ "kind": "pen", "points": [], "width": 1.0, "color": [0,0,0,255] }),
+            json!({ "kind": "pen", "points": [[0.0]], "width": 1.0, "color": [0,0,0,255] }),
+            json!({ "kind": "pen", "points": [[0.0, "x"]], "width": 1.0, "color": [0,0,0,255] }),
+            json!({ "kind": "pen", "points": [[1e7, 0.0]], "width": 1.0, "color": [0,0,0,255] }),
+            json!({ "kind": "pen", "points": [[0.0, 0.0]], "width": 0.0, "color": [0,0,0,255] }),
+            json!({ "kind": "pen", "points": [[0.0, 0.0]], "width": 20000.0, "color": [0,0,0,255] }),
+            json!({ "kind": "pen", "points": [[0.0, 0.0]], "width": 1.0, "color": [0,0,0] }),
+            json!({ "kind": "pen", "points": [[0.0, 0.0]], "width": 1.0, "color": [0,0,0,255], "opacity": 1.5 }),
+            json!({ "kind": "pen", "points": [[0.0, 0.0]], "width": 1.0, "color": [0,0,0,255], "opacity": "half" }),
+            json!({ "points": [[0.0, 0.0]], "width": 1.0, "color": [0,0,0,255] }),
+        ] {
+            assert!(e
+                .apply(cmd("addInkStroke", json!({ "slide": s1, "stroke": stroke })))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // points cap boundary
+        let max_points = vec![json!([0.0, 0.0]); MAX_INK_POINTS_PER_STROKE];
+        apply(
+            &mut e,
+            "addInkStroke",
+            json!({ "slide": s1, "stroke": ink_stroke("pen", Value::Array(max_points.clone())) }),
+        );
+        let mut too_many = max_points;
+        too_many.push(json!([1.0, 1.0]));
+        assert!(e
+            .apply(cmd(
+                "addInkStroke",
+                json!({ "slide": s1, "stroke": ink_stroke("pen", Value::Array(too_many)) })
+            ))
+            .is_err());
+        // stroke cap: fill to MAX_INK_STROKES_PER_SLIDE then reject
+        for _ in 1..MAX_INK_STROKES_PER_SLIDE {
+            apply(
+                &mut e,
+                "addInkStroke",
+                json!({ "slide": s1, "stroke": ink_stroke("pen", json!([[0.0, 0.0]])) }),
+            );
+        }
+        let full = e.snapshot().unwrap();
+        assert!(e
+            .apply(cmd(
+                "addInkStroke",
+                json!({ "slide": s1, "stroke": ink_stroke("pen", json!([[0.0, 0.0]])) })
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), full);
+        // unknown slide / stroke ids
+        let err = apply_err(
+            &mut e,
+            "addInkStroke",
+            json!({ "slide": 99999, "stroke": ink_stroke("pen", json!([[0.0, 0.0]])) }),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::NotFound);
+        let err = apply_err(
+            &mut e,
+            "updateInkStroke",
+            json!({ "slide": s1, "stroke_id": 424242, "width": 2.0 }),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::NotFound);
+        let err = apply_err(
+            &mut e,
+            "removeInkStroke",
+            json!({ "slide": s1, "stroke_id": 424242 }),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::NotFound);
+        let err = apply_err(&mut e, "slideInk", json!({ "slide": 99999 }));
+        assert_eq!(err.code, ignition_core::ErrorCode::NotFound);
+        // failed update patch leaves the stroke intact
+        let sid = apply(&mut e, "slideInk", json!({ "slide": s1 })).clone();
+        let sid = sid["strokes"][0]["id"].as_u64().unwrap();
+        for patch in [
+            json!({ "kind": "marker" }),
+            json!({ "points": [] }),
+            json!({ "width": -1.0 }),
+            json!({ "color": [0, 0, 0, 256] }),
+            json!({ "opacity": 2.0 }),
+            json!({ "opacity": null, "kind": "bogus" }),
+        ] {
+            let mut payload = patch;
+            payload["slide"] = json!(s1);
+            payload["stroke_id"] = json!(sid);
+            assert!(e.apply(cmd("updateInkStroke", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), full);
+        }
+    }
+
+    #[test]
+    fn ink_dies_with_slide_moves_with_identity_and_restore_rejects_bad_ink() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        let s2 = apply(&mut e, "addSlide", json!({}))["slide_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "addInkStroke",
+            json!({ "slide": s2, "stroke": ink_stroke("laser", json!([[5.0, 6.0]])) }),
+        );
+        // hostile restores reject without touching state (ink lives on
+        // slides[1], the s2 slide, before any reorder)
+        let good = e.snapshot().unwrap();
+        for mutate in [
+            // stroke id colliding with a slide id
+            {
+                let mut s = serde_json::to_value(&e.state).unwrap();
+                s["slides"][1]["ink"][0]["id"] = json!(s["slides"][0]["id"]);
+                s
+            },
+            // invalid zero stroke id
+            {
+                let mut s = serde_json::to_value(&e.state).unwrap();
+                s["slides"][1]["ink"][0]["id"] = json!(0);
+                s
+            },
+            // too many strokes on one slide
+            {
+                let mut s = serde_json::to_value(&e.state).unwrap();
+                let stroke = s["slides"][1]["ink"][0].clone();
+                let mut ink = vec![stroke; MAX_INK_STROKES_PER_SLIDE + 1];
+                for (i, st) in ink.iter_mut().enumerate() {
+                    st["id"] = json!(10_000 + i);
+                }
+                s["slides"][1]["ink"] = Value::Array(ink);
+                s["next_id"] = json!(20_000);
+                s
+            },
+            // out-of-range persisted points
+            {
+                let mut s = serde_json::to_value(&e.state).unwrap();
+                s["slides"][1]["ink"][0]["points"] = json!([[1e7, 0.0]]);
+                s
+            },
+            // persisted opacity out of range
+            {
+                let mut s = serde_json::to_value(&e.state).unwrap();
+                s["slides"][1]["ink"][0]["opacity"] = json!(1.5);
+                s
+            },
+            // persisted width invalid
+            {
+                let mut s = serde_json::to_value(&e.state).unwrap();
+                s["slides"][1]["ink"][0]["width"] = json!(0.0);
+                s
+            },
+        ] {
+            assert!(e
+                .restore(&encode_envelope(&serde_json::to_vec(&mutate).unwrap()))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), good);
+        }
+        // a legacy snapshot without the ink field still restores
+        let mut legacy = serde_json::to_value(&e.state).unwrap();
+        for slide in legacy["slides"].as_array_mut().unwrap() {
+            slide.as_object_mut().unwrap().remove("ink");
+        }
+        e.restore(&encode_envelope(&serde_json::to_vec(&legacy).unwrap()))
+            .unwrap();
+        assert!(e.state.slides.iter().all(|s| s.ink.is_empty()));
+        // restoring the legacy payload dropped the ink; re-add it for the
+        // identity/deletion checks below
+        apply(
+            &mut e,
+            "addInkStroke",
+            json!({ "slide": s2, "stroke": ink_stroke("laser", json!([[5.0, 6.0]])) }),
+        );
+        // moveSlide carries ink with the slide identity
+        apply(&mut e, "moveSlide", json!({ "from": 1, "to": 0 }));
+        assert_eq!(
+            apply(&mut e, "slideInk", json!({ "slide": s2 }))["strokes"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        // removeSlide drops the ink with the slide
+        apply(&mut e, "removeSlide", json!({ "id": s2 }));
+        let err = apply_err(&mut e, "slideInk", json!({ "slide": s2 }));
+        assert_eq!(err.code, ignition_core::ErrorCode::NotFound);
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "slideInk", json!({ "slide": s2 }))["strokes"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
         let _ = s1;
     }
 }
