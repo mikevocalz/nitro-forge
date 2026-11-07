@@ -25,14 +25,25 @@ const TABLE: number[] = (() => {
 })();
 
 export function base64ToBytes(s: string): Uint8Array {
-  const clean = s.replace(/=+$/, "");
-  const out = new Uint8Array(Math.floor((clean.length * 3) / 4));
+  const padding = s.endsWith("==") ? 2 : s.endsWith("=") ? 1 : 0;
+  const length = s.length - padding;
+  const remainder = length % 4;
+  if (remainder === 1 || (padding > 0 && (s.length % 4 !== 0 || padding !== 4 - remainder)))
+    throw new Error("invalid base64 input");
+  // Validate before allocating. Out-of-table UTF-16 code units are not alphabet entries.
+  for (let i = 0; i < length; i++) {
+    const value = TABLE[s.charCodeAt(i)];
+    if (value === undefined || value === 255) throw new Error("invalid base64 input");
+  }
+  const last = length === 0 ? 0 : TABLE[s.charCodeAt(length - 1)]!;
+  if ((remainder === 2 && (last & 15) !== 0) || (remainder === 3 && (last & 3) !== 0))
+    throw new Error("invalid base64 trailing bits");
+  const out = new Uint8Array(Math.floor((length * 3) / 4));
   let acc = 0;
   let bits = 0;
   let o = 0;
-  for (let i = 0; i < clean.length; i++) {
+  for (let i = 0; i < length; i++) {
     const v = TABLE[s.charCodeAt(i)]!;
-    if (v === 255) throw new Error("invalid base64 input");
     acc = (acc << 6) | v;
     bits += 6;
     if (bits >= 8) {
