@@ -126,6 +126,7 @@ impl Block {
 /// attached to the character after it, so text inserted exactly at a bookmark
 /// lands before the mark. `remap_bookmarks_*` defines the per-op rules.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Bookmark {
     name: String,
     block: usize,
@@ -425,7 +426,7 @@ fn parse_find_query(p: &Value, blocks: &[Block]) -> Result<FindQuery, EngineErro
     let case_sensitive = match p.get("case_sensitive") {
         Some(v) => v
             .as_bool()
-            .ok_or_else(|| EngineError::invalid("'case_sensitive' must be a bool"))?,
+            .ok_or_else(|| EngineError::validation("'case_sensitive' must be a bool"))?,
         None => false,
     };
     let doc_start = Pos {
@@ -1192,7 +1193,8 @@ impl QuillEngine {
     /// command: one journal entry, one `document:changed`, staged validation
     /// before mutation. `replacement` inherits the style of the first matched
     /// scalar; it must not contain newlines (matches never span blocks).
-    /// Zero matches or an unchanged document is eventless.
+    /// Zero matches or an unchanged document is eventless; `replaced`
+    /// reports applied edits, so the no-change path returns 0.
     fn op_replace_text(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let replacement = as_str(field(p, "replacement")?, "replacement")?;
         if replacement.contains('\n') || replacement.contains('\r') {
@@ -1265,10 +1267,12 @@ impl QuillEngine {
         }
 
         lists::validate(&staged.blocks)?;
-        let replaced = matches.len();
+        // `replaced` counts applied edits: the eventless no-change path
+        // (replacement identical to every match) applied nothing.
         if staged.blocks == self.blocks {
-            return Ok(Self::read_only(json!({ "replaced": replaced })));
+            return Ok(Self::read_only(json!({ "replaced": 0 })));
         }
+        let replaced = matches.len();
         self.bookmarks = staged.bookmarks;
         self.record_undo(
             0,
@@ -1307,8 +1311,15 @@ impl QuillEngine {
         Ok(CommandResult::data(json!({ "ok": true, "name": name })))
     }
 
-    /// `removeBookmark {name}` or `{pos}` — exactly one selector required.
+    /// `removeBookmark {name}` or `{pos}` — exactly one selector required;
+    /// supplying both rejects rather than silently preferring `name`.
     fn op_remove_bookmark(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let has_pos = ["pos", "at", "anchor"].iter().any(|k| p.get(*k).is_some());
+        if p.get("name").is_some() && has_pos {
+            return Err(EngineError::validation(
+                "removeBookmark takes exactly one selector: 'name' or 'pos'",
+            ));
+        }
         let index = if p.get("name").is_some() {
             let name = as_str(field(p, "name")?, "name")?;
             self.bookmarks
@@ -3024,10 +3035,10 @@ mod tests {
         let r = find(&mut e, json!({"query": "foo", "case_sensitive": true}));
         assert_eq!(r.data["count"], 1);
         assert_eq!(r.data["matches"][0]["from"]["offset"], 4);
-        // non-bool flag rejects
+        // non-bool flag rejects as payload validation, like sibling ops
         assert_eq!(
             err(&mut e, "findText", json!({"query": "x", "case_sensitive": "yes"})).code,
-            ErrorCode::InvalidCommand
+            ErrorCode::Validation
         );
     }
 
@@ -3251,6 +3262,25 @@ mod tests {
         assert_eq!(r.data["count"], 1);
     }
 
+    #[test]
+    fn replace_text_identical_replacement_reports_zero_and_stays_eventless() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "foo bar foo");
+        let before = describe(&mut e);
+        // replacement identical to every match: matches exist but no edit
+        // is applied, so `replaced` is 0 and nothing is journaled/emitted
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({"query": "foo", "replacement": "foo"}),
+        );
+        assert_eq!(r.data["replaced"], 0);
+        assert_eq!(r.events.len(), 0);
+        assert_eq!(describe(&mut e), before);
+        assert!(e.undo().unwrap(), "only the setup insert is undoable");
+        assert!(!e.undo().unwrap());
+    }
+
     // -- bookmarks ------------------------------------------------------------
 
     fn bookmarks(e: &mut QuillEngine) -> Value {
@@ -3385,6 +3415,22 @@ mod tests {
             .code,
             ErrorCode::Validation
         );
+        // both selectors at once reject rather than silently preferring name
+        for extra in [
+            json!({"pos": {"block": 0, "offset": 0}}),
+            json!({"at": {"block": 0, "offset": 0}}),
+            json!({"anchor": {"block": 0, "offset": 0}}),
+        ] {
+            let mut payload = json!({"name": "start"});
+            payload
+                .as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            assert_eq!(
+                err(&mut e, "removeBookmark", payload).code,
+                ErrorCode::Validation
+            );
+        }
         assert_eq!(bookmarks(&mut e).as_array().unwrap().len(), 1);
     }
 
@@ -3732,6 +3778,10 @@ mod tests {
             json!({"blocks": one_block(), "bookmarks": [{"name":" ","block":0,"offset":0}]}),
             json!({"blocks": one_block(), "bookmarks": [{"name":"a\nb","block":0,"offset":0}]}),
             json!({"blocks": one_block(), "bookmarks": [{"name":"x".repeat(65),"block":0,"offset":0}]}),
+            // stray keys inside a bookmark reject (deny_unknown_fields)
+            json!({"blocks": one_block(), "bookmarks": [{"name":"a","block":0,"offset":0,"junk":1}]}),
+            // missing bookmark fields reject
+            json!({"blocks": one_block(), "bookmarks": [{"name":"a","block":0}]}),
             // missing bookmarks field is not a schema:3 document
             json!({"blocks": one_block()}),
         ] {
