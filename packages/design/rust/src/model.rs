@@ -38,10 +38,15 @@ pub enum Justify {
     End,
     SpaceBetween,
 }
+fn is_false(value: &bool) -> bool {
+    !*value
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Layout {
     pub direction: Direction,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub wrap: bool,
     pub gap: f64,
     pub padding_top: f64,
     pub padding_right: f64,

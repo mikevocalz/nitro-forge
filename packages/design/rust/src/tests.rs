@@ -314,3 +314,126 @@ fn lock_is_authored_edit_permission_not_a_frozen_layout_or_order() {
     assert_eq!(layout::evaluate(&e.state).unwrap()[2].id, a);
     assert!(e.state.nodes[&a].locked);
 }
+
+#[test]
+fn wrapping_breaks_rows_and_columns_at_exact_padded_boundaries() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":8,"height":8}));
+    shape(&mut e, 1, 0., 0., 3., 2., [255; 4]);
+    shape(&mut e, 1, 0., 0., 3., 1., [255; 4]);
+    shape(&mut e, 1, 0., 0., 2., 3., [255; 4]);
+    let mut layout = flow("row", "end", "start", 0.);
+    layout["wrap"] = json!(true);
+    call(&mut e, "setFrameLayout", json!({"id":1,"layout":layout}));
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert_eq!((boxes[1].x, boxes[1].y), (1., 1.));
+    assert_eq!((boxes[2].x, boxes[2].y), (4., 2.));
+    assert_eq!((boxes[3].x, boxes[3].y), (1., 3.));
+    let mut stretch = flow("row", "stretch", "start", 0.);
+    stretch["wrap"] = json!(true);
+    call(&mut e, "setFrameLayout", json!({"id":1,"layout":stretch}));
+    let stretched = layout::evaluate(&e.state).unwrap();
+    assert_eq!(stretched[2].height, 2.);
+    assert_eq!(e.state.nodes[&3].height, 1.);
+    let mut layout = flow("column", "center", "space-between", 1.);
+    layout["wrap"] = json!(true);
+    call(&mut e, "setFrameLayout", json!({"id":1,"layout":layout}));
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert_eq!((boxes[1].x, boxes[1].y), (1., 1.));
+    assert_eq!((boxes[2].x, boxes[2].y), (1., 6.));
+    assert_eq!((boxes[3].x, boxes[3].y), (5., 1.));
+}
+#[test]
+fn wrap_pixels_oversized_single_items_hidden_space_and_legacy_default_are_real() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":2,"height":2}));
+    shape(&mut e, 1, 0., 0., 2., 1., [255, 0, 0, 255]);
+    shape(&mut e, 1, 0., 0., 2., 1., [0, 255, 0, 255]);
+    let settings = json!({"direction":"row","wrap":true,"gap":0,"padding_top":0,"padding_right":0,"padding_bottom":0,"padding_left":0,"align":"stretch","justify":"center"});
+    call(&mut e, "setFrameLayout", json!({"id":1,"layout":settings}));
+    let before = e.snapshot().unwrap();
+    let rgba = e
+        .apply(Command::new("renderFrame", json!({})).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert_eq!(
+        rgba,
+        vec![255, 0, 0, 255, 255, 0, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255]
+    );
+    let mut no_wrap = settings.clone();
+    no_wrap["wrap"] = json!(false);
+    call(&mut e, "setFrameLayout", json!({"id":1,"layout":no_wrap}));
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert!(
+        call(&mut e, "setFrameLayout", json!({"id":1,"layout":settings}))
+            .events
+            .is_empty()
+    );
+    assert!(e.redo().unwrap());
+    assert!(e.undo().unwrap());
+    let mut restored = DesignEngine::new();
+    restored.restore(&before).unwrap();
+    assert_eq!(restored.snapshot().unwrap(), before);
+    let mut legacy = serde_json::to_value(&*e.state).unwrap();
+    legacy["nodes"]["1"]["layout"]
+        .as_object_mut()
+        .unwrap()
+        .remove("wrap");
+    restored
+        .restore(&encode_envelope(&serde_json::to_vec(&legacy).unwrap()))
+        .unwrap();
+    assert!(!restored.state.nodes[&1].layout.as_ref().unwrap().wrap);
+    assert!(
+        serde_json::to_value(&*restored.state).unwrap()["nodes"]["1"]["layout"]
+            .get("wrap")
+            .is_none()
+    );
+    assert_eq!(layout::evaluate(&restored.state).unwrap()[2].x, 2.);
+    call(
+        &mut e,
+        "updateNode",
+        json!({"id":2,"visible":false,"width":3}),
+    );
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert!(!boxes[1].visible);
+    assert_eq!((boxes[1].x, boxes[2].x, boxes[2].y), (0., 0., 1.));
+}
+#[test]
+fn wrap_invalid_type_and_nested_effective_padding_preserve_history() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    let frame = call(&mut e, "addFrame", json!({"parent":1,"width":3,"height":3})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":frame,"layout":flow("row","start","start",0.)}),
+    );
+    call(&mut e, "setComposition", json!({"title":"Redo"}));
+    e.undo().unwrap();
+    let before = e.snapshot().unwrap();
+    let mut invalid = flow("row", "stretch", "start", 0.);
+    invalid["wrap"] = json!("yes");
+    assert!(e
+        .apply(Command::new(
+            "setFrameLayout",
+            json!({"id":1,"layout":invalid})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let mut state = serde_json::to_value(&*e.state).unwrap();
+    state["nodes"]["1"]["layout"] = json!({"direction":"row","wrap":null,"gap":0,"padding_top":0,"padding_right":0,"padding_bottom":0,"padding_left":0,"align":"start","justify":"start"});
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&state).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert!(e.redo().unwrap());
+    // Wrapped stretch uses each line's intrinsic cross size, not the parent's entire cross size.
+    let mut layout = flow("column", "stretch", "start", 0.);
+    layout["wrap"] = json!(true);
+    call(&mut e, "setFrameLayout", json!({"id":1,"layout":layout}));
+    assert_eq!(layout::evaluate(&e.state).unwrap()[1].width, 3.);
+}

@@ -523,7 +523,7 @@ Whole proposed state validates before one journal/event on actual change; equal/
 
 ## design-engine — `DesignEngine::new()` (fixed-frame layout slice)
 
-Registered Design/design at appended checkpoint/native ordinal9 after Motion8; prior ordinals stay unchanged. Snapshot NFD1 JSON owns `kind:"design",schema:1,title,next_id,nodes`. Root node1 is a fixed canvas frame; all other nodes form one ordered acyclic tree of frames/rectangles/ellipses. Coordinates/sizes are fixed document units; no hug/fill, wrapping, constraints, text, component/variable/prototype runtime or clipping is admitted.
+Registered Design/design at appended checkpoint/native ordinal9 after Motion8; prior ordinals stay unchanged. Snapshot NFD1 JSON owns `kind:"design",schema:1,title,next_id,nodes`. Root node1 is a fixed canvas frame; all other nodes form one ordered acyclic tree of frames/rectangles/ellipses. Coordinates/sizes are fixed document units; no hug/fill, constraints, text, component/variable/prototype runtime or clipping is admitted.
 
 | Op | Payload | Result | Notes |
 | --- | --- | --- | --- |
@@ -533,7 +533,7 @@ Registered Design/design at appended checkpoint/native ordinal9 after Motion8; p
 | `addFrame` | `{parent,name?,x?,y?,width?,height?,fill?,visible?}` | `{node_id}` | Parent must be an editable frame. Defaults0,0/100×100/transparent. |
 | `addShape` | same + `kind:"rect"|"ellipse"` | `{node_id}` | Real Prism shape primitives. |
 | `updateNode` | `{id,name?,x?,y?,width?,height?,fill?,visible?,locked?}` | `{ok}` | Root geometry uses setComposition. Locked node requires a separate lock-only unlock; locked ancestors block it. |
-| `setFrameLayout` | `{id,layout:null|{direction:"row"|"column",gap,padding_top,padding_right,padding_bottom,padding_left,align:"start"|"center"|"end"|"stretch",justify:"start"|"center"|"end"|"space-between"}}` | `{ok}` | Complete flow settings; null restores absolute child positioning. |
+| `setFrameLayout` | `{id,layout:null|{direction:"row"|"column",wrap?:boolean,gap,padding_top,padding_right,padding_bottom,padding_left,align:"start"|"center"|"end"|"stretch",justify:"start"|"center"|"end"|"space-between"}}` | `{ok}` | Complete flow settings; null restores absolute child positioning. |
 | `setChildOrder` | `{parent,order:[id,...]}` | `{ok}` | Exact unique permutation of existing direct children. |
 | `reparentNode` | `{id,parent,index}` | `{ok}` | Index in destination after removal; retains authored local coordinates; rejects cycles. |
 | `removeNode` | `{id}` | `{ok}` | Deletes subtree; root cannot be removed; every descendant must be editable. |
@@ -543,6 +543,8 @@ Registered Design/design at appended checkpoint/native ordinal9 after Motion8; p
 Absolute children use parent origin plus local x/y. Flow overrides child x/y in computed output, retains authored fixed sizes, and applies padding/gap, cross-axis alignment and main-axis distribution. Stretch overrides evaluated cross size without changing stored size. Extra main space is nonnegative; overflowing fixed children retain size and start from leading padding. Center/end may overflow cross-axis bounds. Hidden nodes still occupy flow space and validate; visibility is inherited. Frames do not clip descendants. Every computed box, including hidden boxes, must satisfy Prism's finite ±1e7 coordinate/positive size constraints. Effective nested frame padding must leave positive content size. These checks precede mutation and restore.
 
 Lock is authored edit permission on a node and its descendants, not a frozen world-space result: unlocked ancestor layout/reparent/order operations can reposition locked descendants. Separate unlock admits only the locked field; subtree removal checks every descendant. Root new/restore/history remain full-document lifecycle operations.
+
+Wrapping defaults false for legacy schema1 snapshots; false is omitted when serializing, preserving the original nonwrap representation. True requires the updated reader. When true, ordered fixed children greedily form lines against padded main size; exact fits stay on the line and an oversized item occupies its own visibly overflowing line. Each line gets the maximum authored cross size of its children; align (including stretch) applies within that line, justify applies independently per line, and gap also separates lines. Wrapped lines start from leading cross padding without cross-line distribution. Hidden children still participate. No clamp or wrap-driven persistent resize occurs.
 
 Whole candidate validation precedes one history/event entry; equal writes and net-equal atomic batches preserve redo/events. Sixteen Arc/COW history states, <=1024 nodes, <=64 parent edges, <=512-byte names/title, safe-integer IDs below next counter, 8MiB encoded state. Local x/y and positive sizes bounded1e6; gap/padding0..100000. Root width/height1..4096 and <=1,048,576 pixels before allocation. Restore checks kind/schema/tree/bounds/evaluated geometry before replacing state/history. Render tasks checkpoint between nodes and before/after synchronous Prism flatten; no inside-compositor interruption is claimed. Binary input, app activation and native rebuilt support remain outside this slice.
 
