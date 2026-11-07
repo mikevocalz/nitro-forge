@@ -336,6 +336,49 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await doc.close();
   });
 
+  it("inserts and deletes table rows and columns with undo", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertTable(0, 2, 2);
+    await doc.setCellText(0, 0, 0, "a");
+    await doc.setCellText(0, 1, 1, "d");
+    // Insert a row at the top and a column on the right.
+    await doc.insertTableRow(0, 0);
+    await doc.insertTableColumn(0, 2);
+    let d = (await doc.describeTable(0)).data;
+    expect(d.rows).toBe(3);
+    expect(d.cols).toBe(3);
+    expect(d.cells).toEqual([["", "", ""], ["a", "", ""], ["", "d", ""]]);
+    // Structural edits never move top-level anchors: bookmark stays put.
+    await doc.insertBlock(1);
+    await doc.addBookmark("b", { block: 1, offset: 0 });
+    await doc.insertTableRow(0, 3);
+    await doc.deleteTableColumn(0, 0);
+    d = (await doc.describeTable(0)).data;
+    expect(d.rows).toBe(4);
+    expect(d.cols).toBe(2);
+    // Column 0 (holding "a") was deleted; "d" shifted left with its row.
+    expect(d.cells[1]).toEqual(["", ""]);
+    expect(d.cells[2]).toEqual(["d", ""]);
+    expect((await doc.listBookmarks()).data.bookmarks[0]?.pos.block).toBe(1);
+    // Bounds and min-dims reject atomically.
+    await expect(doc.insertTableRow(0, 5)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deleteTableRow(0, 9)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deleteTableColumn(0, 9)).rejects.toBeInstanceOf(EngineError);
+    await doc.deleteTableRow(0, 0);
+    await doc.deleteTableRow(0, 0);
+    await doc.deleteTableRow(0, 0);
+    // Now a single row remains; deleting it must reject (and record
+    // nothing, so the next undo restores the third successful delete).
+    await expect(doc.deleteTableRow(0, 0)).rejects.toBeInstanceOf(EngineError);
+    expect((await doc.describeTable(0)).data.rows).toBe(1);
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.describeTable(0)).data.rows).toBe(2);
+    await doc.undo();
+    await doc.undo();
+    expect((await doc.describeTable(0)).data.rows).toBe(4);
+    await doc.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");
