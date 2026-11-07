@@ -1,3 +1,4 @@
+import {PrismVectorControls} from './prism-vector-controls';
 import {useEffect,useLayoutEffect,useMemo,useRef} from 'react';
 import {useStore} from 'zustand';
 import {createStore} from 'zustand/vanilla';
@@ -39,7 +40,7 @@ const message=(error:unknown)=>error instanceof Error?error.message:String(error
 export function PrismDetailControls(props:PrismDetailControlsProps){
  const {document,state,disabled,commit}=props,scale=resolveWorkspaceScale(props.density),colors=workspaceThemes[props.theme];
  const adapter=useMemo(()=>new PrismCanvasAdapter(document),[document]);
- const store=useMemo(()=>createStore(()=>({panel:'objects' as 'objects'|'selection'|'artboards'|'colors',layerId:null as number|null,artboardId:undefined as string|undefined,
+ const store=useMemo(()=>createStore(()=>({panel:'objects' as 'objects'|'selection'|'artboards'|'colors'|'vector',layerId:null as number|null,artboardId:undefined as string|undefined,
   reference:'canvas' as AlignReferenceKind,distribution:'centers' as DistributeMode,spacing:undefined as number|undefined,
   refine:{feather:0,grow:0},radii:{grow:1,feather:1,smooth:1},wand:{tolerance:32,contiguous:true,sample:'composite' as 'composite'|'layer'},
   active:'foreground' as ColorSlot,query:'',palette:null as PrismColorBinding|null,hasSelection:false,readStatus:'idle' as 'idle'|'loading'|'ready'|'error',readError:'',retry:0,
@@ -89,9 +90,10 @@ export function PrismDetailControls(props:PrismDetailControlsProps){
  const picker=view.picker&&pickerOwner.current?.document===document&&pickerOwner.current.state===state&&pickerOwner.current.session===view.picker.session?view.picker:null;
  const selectObject=(id:number)=>{const next=state.selected.includes(id)?state.selected.filter(value=>value!==id):[...state.selected,id];return write(()=>adapter.layers().select(next));};
  return <View testID="prism-detail-controls" style={{gap:scale.space.group}}>
-  <TabBar semantics="tabs" density="compact" aria-label="Image detail panels" tabs={(['objects','selection','artboards','colors'] as const).map(panel=>({key:panel,label:panel==='objects'?'Objects':panel==='selection'?'Selection':panel==='artboards'?'Artboards':'Colors',icon:null,active:view.panel===panel,onPress:()=>select({panel,picker:null})}))}/>
+  <TabBar semantics="tabs" density="compact" aria-label="Image detail panels" tabs={(['objects','selection','artboards','colors','vector'] as const).map(panel=>({key:panel,label:panel==='objects'?'Objects':panel==='selection'?'Selection':panel==='artboards'?'Artboards':panel==='vector'?'Vector':'Colors',icon:null,active:view.panel===panel,onPress:()=>select({panel,picker:null})}))}/>
   {view.readStatus==='error'&&readSource.current===generation&&<Banner tone="danger" title={view.readError} live="alert"/>}
   {view.readStatus==='error'&&readSource.current===generation&&<Button title="Retry image data" disabled={disabled} targetSize={scale.size.target} onPress={()=>store.setState(s=>({retry:s.retry+1}))}/>}
+  {view.panel==='vector'&&<PrismVectorControls key={key+'vector'} document={document} state={state} layerId={layer?.id??null} disabled={disabled} write={write}/>}
   {view.panel==='objects'&&<>
    {!layer?<Text style={{color:colors.muted}}>Create a layer to edit object properties.</Text>:<>
     <Select label="Layer properties" value={String(layer.id)} options={state.layers.map(item=>({value:String(item.id),label:item.name}))} disabled={disabled}
