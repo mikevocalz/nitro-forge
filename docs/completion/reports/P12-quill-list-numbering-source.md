@@ -10,7 +10,7 @@ The parser admits direct current-level numeric templates, explicit supported Uni
 
 Legacy export writes real bullets with a reserved sentinel name. Import collapses that sentinel back to absent metadata only for the complete exact nine-level default template, level0 and contiguous use; foreign/changed settings are not silently erased. A ListParagraph style alone imports as unnumbered para, preserving the absence of actual numbering.
 
-The typed adapter supplies all real list-kind choices and format/shift callbacks for coherent contexts, including prior same-instance items and correct selected indices. Current canonical preview always starts at one and cannot represent mixed/nondefault-start marker output; those projections reject honestly. The native APIs/DOCX retain custom starts. No UI or pin was activated, no intrinsic font/marker layout was invented and no H-07/P12 acceptance was promoted. Root is considering an authoritative-marker control extension as a separate gated slice.
+The typed adapter supplies all real list-kind choices and format/shift callbacks for coherent contexts, including prior same-instance items and correct selected indices. Current canonical preview always starts at one and cannot represent mixed/nondefault-start marker output; those projections reject honestly. The native APIs/DOCX retain custom starts. No UI or pin was activated, no intrinsic font/marker layout was invented and no H-07/P12 acceptance was promoted. A later [authoritative-marker source checkpoint](P12-quill-authoritative-markers-source.md) adds a capability-gated preview for those contexts; absent/old capabilities retain this refusal.
 
 Verification on final source:
 
