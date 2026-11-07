@@ -1,5 +1,8 @@
 #![forbid(unsafe_code)]
-//! Catalog metadata only. Asset bytes, decoding and durable asset retention are host-owned.
+//! Persistent catalog and bounded sRGB preview processing. RAW decoding and durable originals are host-owned.
+mod develop;
+pub use develop::Develop;
+
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal,
@@ -29,6 +32,8 @@ pub struct Original {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Version {
+    #[serde(default, skip_serializing_if = "Develop::is_identity")]
+    pub develop: Develop,
     pub id: String,
     pub original_id: String,
     pub name: String,
@@ -120,6 +125,7 @@ fn validate(s: &State) -> Result<(), EngineError> {
     }
     let mut counts = BTreeMap::<&str, usize>::new();
     for (id, v) in &s.versions {
+        v.develop.validate()?;
         if id != &v.id
             || !valid_id(id, "version-", s.next_id)
             || !s.originals.contains_key(&v.original_id)
@@ -205,7 +211,10 @@ impl Engine for PhotoEngine {
                 "unsupported photo command version",
             ));
         }
+        if cmd.op == "processPreview" { return self.process_preview(cmd, None); }
         let p = &cmd.payload;
+        if cmd.op == "setDevelop" { return self.set_develop(p); }
+        if cmd.op == "readDevelop" { return self.read_develop(p); }
         if cmd.op == "describe" {
             return Ok(readonly(serde_json::to_value(&*self.state)?));
         }
@@ -256,6 +265,7 @@ impl Engine for PhotoEngine {
                 next.versions.insert(
                     version_id.clone(),
                     Arc::new(Version {
+                        develop: Develop::default(),
                         id: version_id.clone(),
                         original_id: original_id.clone(),
                         name: "Original".into(),
@@ -306,6 +316,7 @@ impl Engine for PhotoEngine {
                 next.versions.insert(
                     id.clone(),
                     Arc::new(Version {
+                        develop: Develop::default(),
                         id: id.clone(),
                         original_id,
                         name: text(p, "name")?.into(),
@@ -331,6 +342,12 @@ impl Engine for PhotoEngine {
             _ => return Err(EngineError::invalid("unknown photo operation")),
         };
         self.replace(next, data)
+    }
+    fn binary_input_ops(&self) -> &'static [&'static str] { &["processPreview"] }
+    fn apply_long(&mut self, command: Command, ctx: &ignition_core::TaskContext) -> Result<CommandResult, EngineError> {
+        if command.v != 1 { return Err(EngineError::unsupported("unsupported photo command version")); }
+        if command.op == "processPreview" { return self.process_preview(command, Some(ctx)); }
+        ctx.checkpoint()?;let result=self.apply(command)?;ctx.set_progress(1.0);Ok(result)
     }
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
         Ok(encode_envelope(&serde_json::to_vec(&*self.state)?))

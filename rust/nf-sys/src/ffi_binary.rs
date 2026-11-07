@@ -179,7 +179,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn motion_registered_factory_returns_real_binary_rgba() {
         unsafe {
@@ -194,6 +193,45 @@ mod tests {
             assert!(result.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(result.output.ptr,result.output.len),&[7,8,9,255]);nf_v1_free_binary_result(result);
             let rejected=run(handle,"renderFrame",r#"{"time_s":0}"#,Some(&[1]),std::ptr::null());assert!(!rejected.command.error_json.is_null());nf_v1_free_binary_result(rejected);
             assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
+    fn photo_develop_binary_preview_returns_real_pixels_without_mutation() {
+        unsafe {
+            let mut error = std::ptr::null_mut();
+            let kind = std::ffi::CString::new("photo").unwrap();
+            let handle = crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(), 5, &mut error);
+            assert!(handle > 0 && error.is_null());
+            let recipe = serde_json::json!({"schema":1,"exposure_ev":1,"contrast":1,"rgb_gain":[1,1,1]});
+            for (op, payload) in [
+                ("addOriginal", serde_json::json!({"sha256":"a".repeat(64),"asset_ref":"retained:raw","byte_length":20,"camera_make":"Pentax","camera_model":"K-7"})),
+                ("setDevelop", serde_json::json!({"id":"version-2","develop":recipe})),
+            ] {
+                let result = run(handle, op, &payload.to_string(), None, std::ptr::null());
+                assert!(result.command.error_json.is_null());
+                nf_v1_free_binary_result(result);
+            }
+            let before = run(handle, "__snapshot", "{}", None, std::ptr::null());
+            assert!(before.command.error_json.is_null());
+            let snapshot = std::slice::from_raw_parts(before.output.ptr, before.output.len).to_vec();
+            nf_v1_free_binary_result(before);
+            let mut payload = serde_json::json!({"version_id":"version-2","original_id":"original-1","original_sha256":"a".repeat(64),"expected_develop":recipe,"format":"rgba8-straight-srgb","width":1,"height":1});
+            let preview = run(handle, "processPreview", &payload.to_string(), Some(&[128,64,32,99]), std::ptr::null());
+            assert!(preview.command.error_json.is_null());
+            assert_eq!(preview.command.event_count, 0);
+            assert_eq!(std::slice::from_raw_parts(preview.output.ptr, preview.output.len), &[176,90,47,99]);
+            nf_v1_free_binary_result(preview);
+            payload["original_sha256"] = serde_json::json!("b".repeat(64));
+            let rejected = run(handle, "processPreview", &payload.to_string(), Some(&[128,64,32,99]), std::ptr::null());
+            assert!(!rejected.command.error_json.is_null());
+            assert!(rejected.output.ptr.is_null());
+            nf_v1_free_binary_result(rejected);
+            let after = run(handle, "__snapshot", "{}", None, std::ptr::null());
+            assert!(after.command.error_json.is_null());
+            assert_eq!(std::slice::from_raw_parts(after.output.ptr, after.output.len), snapshot);
+            nf_v1_free_binary_result(after);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle), 1);
         }
     }
 

@@ -193,6 +193,7 @@ fn total_state_budget_rejects_a_mutation_before_commit() {
         state.versions.insert(
             version.clone(),
             Arc::new(Version {
+                develop: Develop::default(),
                 id: version,
                 original_id: id,
                 name: "Original".into(),
