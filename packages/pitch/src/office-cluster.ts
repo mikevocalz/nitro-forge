@@ -24,8 +24,6 @@ import type { AnimKind, PitchDocument } from "./index";
 export const PITCH_DEFERRED_OPS = {
   /** J-01 sections in the filmstrip: Pitch slides carry no section. */
   setSlideSection: "J-01",
-  /** J-05: the deck's coordinate space. Pitch stores none, so the adapter uses {@link PITCH_SLIDE_SIZE}. */
-  setSlideSize: "J-05",
   /** J-09 triggers (on click, with previous, after previous): Pitch animations have absolute start times only. */
   setAnimationTrigger: "J-09",
   /** J-09 emphasis and exit effects: `addAnimation` accepts fadeIn, slideInLeft and zoomIn only. */
@@ -33,7 +31,7 @@ export const PITCH_DEFERRED_OPS = {
 } as const;
 export type PitchDeferredOp = keyof typeof PITCH_DEFERRED_OPS;
 
-/** Coordinate space the adapter assumes for Pitch decks (Pitch stores none; see `setSlideSize`). */
+/** Legacy coordinate space for decks saved before persisted slide sizes. */
 export const PITCH_SLIDE_SIZE = { width: 960, height: 540 } as const;
 
 /** Effects `addAnimation` accepts, with the names the animation pane shows. */
@@ -83,6 +81,7 @@ export interface PitchSlideAnimation {
 /** The deck read from `describe`. */
 export interface PitchDeck {
   readonly title: string;
+  readonly size: { readonly width: number; readonly height: number };
   readonly slides: readonly PitchSlideSummary[];
   /** Animations per slide id. */
   readonly animations: Readonly<Record<string, readonly PitchSlideAnimation[]>>;
@@ -98,7 +97,7 @@ interface RawObj {
   fill?: number[]; src?: string;
 }
 interface RawSlide { id: number; background: number[] | null; objects: RawObj[]; animations: { object_id: number; kind: string; start_s: number; duration_s: number }[] }
-interface RawState { meta: { title: string }; slides: RawSlide[] }
+interface RawState { size?: { width: number; height: number }; meta: { title: string }; slides: RawSlide[] }
 
 const rgba = (c: unknown): Rgba | undefined =>
   Array.isArray(c) && c.length === 4 && c.every(n => Number.isInteger(n) && n >= 0 && n <= 255) ? [c[0], c[1], c[2], c[3]] : undefined;
@@ -133,6 +132,8 @@ function toObject(o: RawObj): PitchSlideObject {
 export async function readPitchDeck(document: Pick<PitchDocument, "describe">): Promise<PitchDeck> {
   const state = requireData(await document.describe<RawState>(), "describe");
   if (!state || !Array.isArray(state.slides) || typeof state.meta?.title !== "string") throw new Error("Pitch returned an invalid deck");
+  const size = state.size === undefined ? PITCH_SLIDE_SIZE : state.size;
+  if (!size || ![size.width, size.height].every(n => Number.isFinite(n) && n > 0 && n <= 100_000)) throw new Error("Pitch returned invalid slide dimensions");
   const animations: Record<string, PitchSlideAnimation[]> = {};
   const slides = state.slides.map(s => {
     if (!Number.isSafeInteger(s.id) || !Array.isArray(s.objects) || !Array.isArray(s.animations)) throw new Error("Pitch returned a malformed slide");
@@ -142,7 +143,7 @@ export async function readPitchDeck(document: Pick<PitchDocument, "describe">): 
     const background = rgba(s.background);
     return { id: String(s.id), objects: s.objects.map(toObject), ...(background ? { background } : {}) };
   });
-  return { title: state.meta.title, slides, animations };
+  return { title: state.meta.title, size, slides, animations };
 }
 
 /** Single from/to moves (valid indexes at each step) that turn `before` into `after`. */
@@ -211,7 +212,7 @@ export async function bindPitchSlideList(
 /** `SlideCanvas` callbacks for one slide, each one engine write. */
 export interface PitchCanvasBinding {
   readonly slide: PitchSlideSummary;
-  readonly size: typeof PITCH_SLIDE_SIZE;
+  readonly size: { readonly width: number; readonly height: number };
   readonly onMoveObject: (id: string, x: number, y: number) => Promise<void>;
   readonly onResizeObject: (id: string, w: number, h: number) => Promise<void>;
   readonly onRotateObject: (id: string, degrees: number) => Promise<void>;
@@ -232,7 +233,7 @@ export async function bindPitchCanvas(
     onChanged(await bindPitchCanvas(document, slideId, onChanged));
   };
   return {
-    slide, size: PITCH_SLIDE_SIZE,
+    slide, size: deck.size,
     onMoveObject: (id, x, y) => after(() => document.moveObject(s, pitchId(id), x, y)),
     onResizeObject: (id, w, h) => after(() => document.resizeObject(s, pitchId(id), w, h)),
     onRotateObject: (id, degrees) => after(() => document.rotateObject(s, pitchId(id), degrees)),

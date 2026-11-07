@@ -117,7 +117,20 @@ pub struct Meta {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct SlideSize { width: f64, height: f64 }
+impl Default for SlideSize {
+    fn default() -> Self { Self { width: 960.0, height: 540.0 } }
+}
+impl SlideSize {
+    fn valid(&self) -> bool {
+        [self.width, self.height].iter().all(|v| v.is_finite() && *v > 0.0 && *v <= 100_000.0)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct PitchState {
+    #[serde(default)]
+    size: SlideSize,
     meta: Meta,
     next_id: u64,
     slides: Vec<Slide>,
@@ -126,6 +139,7 @@ struct PitchState {
 impl PitchState {
     fn fresh(title: &str) -> Self {
         Self {
+            size: SlideSize::default(),
             meta: Meta {
                 title: title.to_string(),
             },
@@ -323,6 +337,14 @@ impl Engine for PitchEngine {
                 self.journal.record(self.state.clone());
                 self.state = PitchState::fresh(&title);
                 Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "setSlideSize" => {
+                let size: SlideSize = serde_json::from_value(p.clone())?;
+                if !size.valid() { return Err(EngineError::validation("slide dimensions must be finite, positive and at most 100000")); }
+                if self.state.size == size { return Ok(ro(json!({"ok":true}))); }
+                self.journal.record(self.state.clone());
+                self.state.size = size;
+                Ok(CommandResult::data(json!({"ok":true})))
             }
             "addSlide" => {
                 let layout = match p.get("layout").and_then(Value::as_str) {
@@ -715,6 +737,9 @@ impl Engine for PitchEngine {
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_, payload) = decode_envelope(data)?;
         let state: PitchState = serde_json::from_slice(payload)?;
+        if !state.size.valid() {
+            return Err(EngineError::serialization("invalid slide size"));
+        }
         // Commit only after the payload fully decoded.
         self.state = state;
         // A replacement document cannot reuse the previous document history.
@@ -760,6 +785,46 @@ mod tests {
 
     fn apply_err(e: &mut PitchEngine, op: &str, payload: Value) -> EngineError {
         e.apply(cmd(op, payload)).unwrap_err()
+    }
+
+    #[test]
+    fn slide_dimensions_are_durable_undoable_and_do_not_scale_objects() {
+        let mut e = PitchEngine::new();
+        apply(&mut e, "addRect", json!({"slide":1,"x":10,"y":20,"w":30,"h":40,"fill":[1,2,3,255]}));
+        let before = e.snapshot().unwrap();
+        let objects = e.state.slides[0].objects.clone();
+        apply(&mut e, "setSlideSize", json!({"width":720,"height":1280}));
+        assert_eq!(e.state.slides[0].objects, objects);
+        let after = e.snapshot().unwrap();
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), before);
+        let noop = e.apply(cmd("setSlideSize",json!({"width":960,"height":540}))).unwrap();
+        assert!(noop.events.is_empty());
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), after);
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&after).unwrap();
+        assert_eq!(reopened.state.size, SlideSize {width:720.0,height:1280.0});
+        for size in [json!({"width":0,"height":100}),json!({"width":100001,"height":100}),json!({"width":"720","height":1280})] {
+            assert!(e.apply(cmd("setSlideSize",size)).is_err());
+            assert_eq!(e.snapshot().unwrap(),after);
+        }
+    }
+
+    #[test]
+    fn legacy_size_default_and_invalid_snapshot_are_atomic() {
+        let mut e = PitchEngine::new();
+        let mut state = serde_json::to_value(&e.state).unwrap();
+        state.as_object_mut().unwrap().remove("size");
+        e.restore(&encode_envelope(&serde_json::to_vec(&state).unwrap())).unwrap();
+        assert_eq!(e.state.size, SlideSize::default());
+        apply(&mut e,"setSlideSize",json!({"width":400,"height":300}));
+        let before = e.snapshot().unwrap();
+        state["size"] = json!({"width":-1,"height":540});
+        assert!(e.restore(&encode_envelope(&serde_json::to_vec(&state).unwrap())).is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.state.size, SlideSize::default());
     }
 
     fn slide_id(e: &mut PitchEngine, idx: usize) -> u64 {

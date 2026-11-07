@@ -363,7 +363,7 @@ Undo: previous serialized `doc` (lopdf Document clone — it implements Clone; c
 
 ## pitch-engine — `PitchEngine::new()`
 
-State `{ meta:{title}, next_id, slides:[Slide] }`,
+State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide] }`,
 `Slide = { id, layout:"blank"|"title"|"titleBody", background:[r,g,b,a]|null,
 objects:[Obj], animations:[Anim] }`,
 `Obj = { id, kind:"text"|"rect"|"image", x,y,w,h, rotation_deg,
@@ -373,6 +373,7 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | op | payload | data | notes |
 |---|---|---|---|
 | `new` | `{title?}` | `{ok}` | one blank slide |
+| `setSlideSize` | `{width,height}` | `{ok}` | finite positive dimensions ≤100000; deck coordinates only, no object scaling or app window changes; one undo entry; identical size is eventless no-op |
 | `addSlide` | `{layout?}` | `{slide_id}` | |
 | `removeSlide` | `{id}` | `{ok}` | must keep ≥1 slide |
 | `moveSlide` | `{from,to}` | `{ok}` | |
@@ -396,6 +397,8 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `deck` | `{}` | `{title,slide_count}` | read-only |
 
 Undo: prior slide/object/animation state.
+
+Legacy snapshots without size default to 960×540; invalid sizes reject restore before replacing state. Canvas adapters read persisted size.
 
 ## quill-engine — `QuillEngine::new()`
 

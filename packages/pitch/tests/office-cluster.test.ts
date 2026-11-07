@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  PITCH_ANIMATION_EFFECTS, PITCH_DEFERRED_OPS, bindPitchAnimations, bindPitchSlideList, pitchId, pitchMovePlan, readPitchDeck,
+  PITCH_ANIMATION_EFFECTS, PITCH_DEFERRED_OPS, bindPitchAnimations, bindPitchSlideList, bindPitchCanvas, pitchId, pitchMovePlan, readPitchDeck,
   type PitchOfficeDocument,
 } from "../src/office-cluster";
 import { OPS } from "../src/index";
@@ -110,4 +110,14 @@ describe("animation binding and deferrals", () => {
     for (const op of Object.keys(PITCH_DEFERRED_OPS)) expect(Object.values(OPS)).not.toContain(op);
     for (const e of PITCH_ANIMATION_EFFECTS) expect(["fadeIn", "slideInLeft", "zoomIn"]).toContain(e.kind);
   });
+});
+
+it("feeds persisted deck geometry to the canonical canvas, with legacy fallback", async () => {
+  const { doc } = fake();
+  const legacy = await bindPitchCanvas(doc, "1", () => {});
+  expect(legacy.size).toEqual({ width: 960, height: 540 });
+  const persisted = { describe: vi.fn(() => ok({ ...state, size: { width: 720, height: 1280 } })) };
+  expect((await readPitchDeck(persisted as never)).size).toEqual({ width: 720, height: 1280 });
+  const invalid = { describe: vi.fn(() => ok({ ...state, size: { width: 0, height: 1280 } })) };
+  await expect(readPitchDeck(invalid as never)).rejects.toThrow("invalid slide dimensions");
 });

@@ -14,6 +14,7 @@ export const OPS = {
   moveSlides: "moveSlides",
   removeSlides: "removeSlides",
   setBackground: "setBackground",
+  setSlideSize: "setSlideSize",
   addText: "addText",
   setText: "setText",
   setTextStyle: "setTextStyle",
@@ -100,6 +101,10 @@ export class PitchDocument {
   /** Remove a unique set of slide IDs in one undoable transaction. */
   removeSlides(ids: readonly number[]) {
     return this.call(OPS.removeSlides, { ids });
+  }
+  /** Deck coordinates only; does not resize objects or the application window. */
+  setSlideSize(width: number, height: number) {
+    return this.call<{ ok: boolean }>(OPS.setSlideSize, { width, height });
   }
   setBackground(slide: number, color: Rgba | null) {
     return this.call(OPS.setBackground, { slide, color });
