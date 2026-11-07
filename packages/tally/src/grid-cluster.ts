@@ -87,6 +87,15 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * and writes no cells. Compute, refresh, materialization and any pivot
  * UI are deferred; hosts wire the methods directly when a later slice
  * lands them.
+ *
+ * Table objects (Excel Tables) landed in slice 12 as storage + CRUD +
+ * read ops (`insertTable`/`updateTable`/`removeTable`/`listTables`/
+ * `describeTable` on `TallyDocument`): a workbook-unique display name, a
+ * canonical sheet range including the header row, and storage-only
+ * header/totals/banding flags. Table ranges may not overlap each other
+ * or merged regions on their sheet, and they remap with the structural
+ * row/column ops. Structured references, totals computation and any
+ * table UI are deferred; hosts wire the methods directly.
  */
 export const TALLY_DEFERRED_OPS = {} as const;
 export type TallyDeferredOp = keyof typeof TALLY_DEFERRED_OPS;

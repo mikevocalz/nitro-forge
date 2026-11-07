@@ -61,6 +61,11 @@ export const OPS = {
   removePivot: "removePivot",
   listPivots: "listPivots",
   describePivot: "describePivot",
+  insertTable: "insertTable",
+  updateTable: "updateTable",
+  removeTable: "removeTable",
+  listTables: "listTables",
+  describeTable: "describeTable",
   clearCell: "clearCell",
   insertRows: "insertRows",
   deleteRows: "deleteRows",
@@ -531,6 +536,62 @@ export interface PivotInfo {
   values: PivotValueInput[];
   filters?: PivotFilterInput[];
   sort?: PivotSortInput;
+}
+
+/**
+ * Input for `insertTable`'s `table` field (id/sheet are engine-assigned).
+ * `name` is the Excel-style display name — unique workbook-wide,
+ * case-insensitive, `[A-Za-z_][A-Za-z0-9_.]*` up to 128 bytes; omit it and
+ * the engine assigns the smallest free `"Table{n}"`. `range` is the
+ * `{from,to}` rectangle the table covers, including its header row (the
+ * top row of the range) — at least two cells, ≤16384 cells. Table ranges
+ * on one sheet may not overlap each other or any merged region.
+ * Structured references (`Table1[Col]`) are deferred — the formula
+ * evaluator does not resolve table names.
+ */
+export interface TableInput {
+  name?: string;
+  range: { from: string; to: string };
+  /** Render the range's top row as the header row; default true. */
+  show_headers?: boolean;
+  /** Storage-only totals-row flag; the engine never computes totals. Default false. */
+  show_totals?: boolean;
+  /** Storage-only banded-rows display flag; default true. */
+  banded_rows?: boolean;
+  /** Storage-only banded-columns display flag; default false. */
+  banded_columns?: boolean;
+}
+
+/**
+ * `updateTable` patch: present keys set; no field accepts `null` (tables
+ * have no clearable attributes). An unchanged spec is eventless.
+ */
+export interface TablePatch {
+  name?: string;
+  range?: { from: string; to: string };
+  show_headers?: boolean;
+  show_totals?: boolean;
+  banded_rows?: boolean;
+  banded_columns?: boolean;
+}
+
+/**
+ * Durable table object (Excel Table / ListObject) bound to one sheet.
+ * Storage + CRUD only — the engine writes no cells, computes no totals
+ * and applies no banding; hosts read cells and render.
+ */
+export interface TableInfo {
+  id: number;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  name: string;
+  /** Canonical `"A1"`/`"A1:B2"` range including the header row. */
+  range: string;
+  show_headers: boolean;
+  show_totals: boolean;
+  banded_rows: boolean;
+  banded_columns: boolean;
 }
 
 /**
@@ -1125,6 +1186,54 @@ export class TallyDocument {
   /** Read-only single pivot spec by id. */
   describePivot(id: number) {
     return this.call<{ pivot: PivotInfo }>(OPS.describePivot, { id });
+  }
+  /**
+   * Store a table object (Excel Table) bound to `sheet` (name or index;
+   * default active) over `table.range`. `name` defaults to the smallest
+   * free `"Table{n}"`. The range may not overlap another table or a
+   * merged region on the sheet. Storage only — the engine writes no
+   * cells; structured references and totals computation are deferred.
+   */
+  insertTable(table: TableInput, sheet?: string | number) {
+    return this.call<{ table: TableInfo }>(OPS.insertTable, {
+      table: {
+        ...(table.name === undefined ? {} : { name: table.name }),
+        range: table.range,
+        ...(table.show_headers === undefined ? {} : { show_headers: table.show_headers }),
+        ...(table.show_totals === undefined ? {} : { show_totals: table.show_totals }),
+        ...(table.banded_rows === undefined ? {} : { banded_rows: table.banded_rows }),
+        ...(table.banded_columns === undefined ? {} : { banded_columns: table.banded_columns }),
+      },
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Partially update table `id`: present patch keys set, no field
+   * accepts `null`. The merged spec re-validates name uniqueness and
+   * overlap rules before commit; an unchanged spec is eventless.
+   */
+  updateTable(id: number, patch: TablePatch) {
+    const body: Record<string, unknown> = {};
+    if (patch.name !== undefined) body.name = patch.name;
+    if (patch.range !== undefined) body.range = patch.range;
+    if (patch.show_headers !== undefined) body.show_headers = patch.show_headers;
+    if (patch.show_totals !== undefined) body.show_totals = patch.show_totals;
+    if (patch.banded_rows !== undefined) body.banded_rows = patch.banded_rows;
+    if (patch.banded_columns !== undefined) body.banded_columns = patch.banded_columns;
+    return this.call<{ table: TableInfo }>(OPS.updateTable, { id, patch: body });
+  }
+  removeTable(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removeTable, { id });
+  }
+  /** Read-only table list; `sheet` filters to one sheet, absent lists all. */
+  listTables(sheet?: string | number) {
+    return this.call<{ tables: TableInfo[] }>(OPS.listTables, {
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /** Read-only single table spec by id. */
+  describeTable(id: number) {
+    return this.call<{ table: TableInfo }>(OPS.describeTable, { id });
   }
   getCell(addr: string) {
     return this.call<{ raw: string; computed: CellValue; format?: CellFormat; merged_into?: string }>(OPS.getCell, { addr });

@@ -78,6 +78,7 @@ mod range_ops;
 mod sheet_ops;
 mod sort_ops;
 mod struct_ops;
+mod table_ops;
 mod protection;
 mod sparkline_ops;
 mod validation_ops;
@@ -88,6 +89,7 @@ use comment_ops::Comment;
 use conditional_ops::ConditionalRule;
 use filter_ops::FilterRule;
 use pivot_ops::PivotSpec;
+use table_ops::TableSpec;
 use sparkline_ops::SparklineSpec;
 use view_ops::SheetView;
 use format_ops::CellFormat;
@@ -221,6 +223,12 @@ struct Workbook {
     /// Next id handed out by `insertPivot`.
     #[serde(default)]
     next_pivot: u64,
+    /// Durable table objects (Excel Tables); empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    tables: Vec<TableSpec>,
+    /// Next id handed out by `insertTable`.
+    #[serde(default)]
+    next_table: u64,
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
@@ -275,6 +283,8 @@ fn blank_workbook() -> Workbook {
         next_comment: 1,
         pivots: Vec::new(),
         next_pivot: 1,
+        tables: Vec::new(),
+        next_table: 1,
     }
 }
 
@@ -331,9 +341,11 @@ enum UndoEntry {
     /// and re-adds `dropped_names`/`dropped_validations`/
     /// `dropped_conditional_formats`/`dropped_filters`/`dropped_charts`/
     /// `dropped_sparklines`/`dropped_views`/`dropped_comments`/
-    /// `dropped_pivots` (names, validation rules, conditional rules,
-    /// filter rules, charts, sparkline specs, named views, comments and
-    /// pivot specs bound to the removed sheet — as output *or* source —
+    /// `dropped_pivots`/`dropped_tables` (names, validation rules,
+    /// conditional rules,
+    /// filter rules, charts, sparkline specs, named views, comments,
+    /// pivot specs and table objects bound to the removed sheet — as
+    /// output *or* source for pivots —
     /// are cascade-dropped on removal).
     /// Re-admission skips entries whose case-insensitive name twin already
     /// exists, that would exceed the table caps, or (for rules/specs) that
@@ -353,6 +365,7 @@ enum UndoEntry {
         dropped_views: Vec<SheetView>,
         dropped_comments: Vec<Comment>,
         dropped_pivots: Vec<PivotSpec>,
+        dropped_tables: Vec<TableSpec>,
     },
     RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
@@ -523,6 +536,7 @@ impl TallyEngine {
         Vec<SheetView>,
         Vec<Comment>,
         Vec<PivotSpec>,
+        Vec<TableSpec>,
     ) {
         let removed = self.doc.sheets.remove(idx);
         let len = self.doc.sheets.len();
@@ -612,6 +626,15 @@ impl TallyEngine {
                 true
             }
         });
+        let mut dropped_tables = Vec::new();
+        self.doc.tables.retain(|t| {
+            if t.sheet == removed.id {
+                dropped_tables.push(t.clone());
+                false
+            } else {
+                true
+            }
+        });
         (
             removed,
             dropped,
@@ -623,6 +646,7 @@ impl TallyEngine {
             dropped_views,
             dropped_comments,
             dropped_pivots,
+            dropped_tables,
         )
     }
 
@@ -789,6 +813,13 @@ impl TallyEngine {
             .filter(|pv| pv.sheet == sheet_id || pv.source.sheet == sheet_id)
             .cloned()
             .collect();
+        let dropped_tables: Vec<TableSpec> = self
+            .doc
+            .tables
+            .iter()
+            .filter(|t| t.sheet == sheet_id)
+            .cloned()
+            .collect();
         let entry = UndoEntry::RemoveSheet {
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
@@ -802,6 +833,7 @@ impl TallyEngine {
             dropped_views,
             dropped_comments,
             dropped_pivots,
+            dropped_tables,
         };
         self.journal.record(entry);
         self.remove_sheet_at(idx);
@@ -1054,6 +1086,7 @@ impl TallyEngine {
                             dropped_views,
                             dropped_comments,
                             dropped_pivots,
+                            dropped_tables,
                         ) = self.remove_sheet_at(idx);
                         UndoEntry::RemoveSheet {
                             index: idx,
@@ -1068,6 +1101,7 @@ impl TallyEngine {
                             dropped_views,
                             dropped_comments,
                             dropped_pivots,
+                            dropped_tables,
                         }
                     }
                     // Already gone — nothing changed; emit a no-op entry.
@@ -1089,6 +1123,7 @@ impl TallyEngine {
                 dropped_views,
                 dropped_comments,
                 dropped_pivots,
+                dropped_tables,
             } => {
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
@@ -1198,6 +1233,17 @@ impl TallyEngine {
                 for pv in dropped_pivots {
                     if pivot_ops::readd_ok(&self.doc, &pv) {
                         self.doc.pivots.push(pv);
+                    }
+                }
+                // Table objects cascade-dropped with the sheet come back
+                // under the same discipline: each is re-admitted only
+                // while it still satisfies the invariants `restore`
+                // enforces (existing bound sheet, unique id, workbook-
+                // wide unique name, canonical in-cap range, no overlap
+                // with merges or other tables on its sheet).
+                for t in dropped_tables {
+                    if table_ops::readd_ok(&self.doc, &t) {
+                        self.doc.tables.push(t);
                     }
                 }
                 // A re-admitted sheet restores its own `active_view`, but
@@ -1319,6 +1365,11 @@ impl Engine for TallyEngine {
             "removePivot" => self.op_remove_pivot(p),
             "listPivots" => self.op_list_pivots(p),
             "describePivot" => self.op_describe_pivot(p),
+            "insertTable" => self.op_insert_table(p),
+            "updateTable" => self.op_update_table(p),
+            "removeTable" => self.op_remove_table(p),
+            "listTables" => self.op_list_tables(p),
+            "describeTable" => self.op_describe_table(p),
             "insertRows" => self.op_insert_rows(p),
             "deleteRows" => self.op_delete_rows(p),
             "insertCols" => self.op_insert_cols(p),
@@ -1378,7 +1429,8 @@ impl Engine for TallyEngine {
         // table), documents carrying merged-cell regions emit
         // schema:8 (which may carry every earlier table) and documents
         // carrying pivot specs emit schema:9 (which may carry every
-        // earlier table) — `Sheet`/`Workbook` lack `deny_unknown_fields`,
+        // earlier table) and documents carrying table objects emit
+        // schema:10 (which may carry every earlier table) — `Sheet`/`Workbook` lack `deny_unknown_fields`,
         // so older readers would silently drop `merges`/`pivots` without
         // the bump. Tone/protection/formats/names alone
         // stay schema:1 — older readers reject the higher schemas rather
@@ -1395,6 +1447,7 @@ impl Engine for TallyEngine {
         let has_comments = !self.doc.comments.is_empty();
         let has_merges = self.doc.sheets.iter().any(|s| !s.merges.is_empty());
         let has_pivots = !self.doc.pivots.is_empty();
+        let has_tables = !self.doc.tables.is_empty();
         let extended = self.doc.sheets.iter().any(|s| {
             s.tone.is_some()
                 || s.is_protected
@@ -1407,11 +1460,14 @@ impl Engine for TallyEngine {
             || has_charts
             || has_views
             || has_comments
-            || has_pivots;
+            || has_pivots
+            || has_tables;
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
-                schema: if has_pivots {
+                schema: if has_tables {
+                    10
+                } else if has_pivots {
                     9
                 } else if has_merges {
                     8
@@ -1461,12 +1517,14 @@ impl Engine for TallyEngine {
             // selections, possibly alongside every earlier table),
             // schema:7 (comments, possibly alongside every earlier table),
             // schema:8 (merged-cell regions, possibly alongside every
-            // earlier table) and schema:9 (pivot specs, possibly alongside
-            // every earlier table) are all honored; every table absent
+            // earlier table), schema:9 (pivot specs, possibly alongside
+            // every earlier table) and schema:10 (table objects,
+            // possibly alongside every earlier table) are all honored;
+            // every table absent
             // from a document deserializes to its serde default, so
             // cross-version payloads never lose the other families' rules.
             if wrapper.kind != "tally"
-                || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
+                || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10)
             {
                 return Err(EngineError::unsupported(
                     "unsupported Tally snapshot kind/schema",
@@ -1484,9 +1542,15 @@ impl Engine for TallyEngine {
         // named views and `active_view` selections schema:6, chart/sparkline
         // specs schema:5, filter rules schema:4, conditional rules schema:3,
         // validations schema:2 — and a bare (unwrapped) Workbook predates
-        // all eight. Emit always stamps the highest table present, so
+        // every versioned table. Emit always stamps the highest table
+        // present, so
         // honest payloads are unaffected; this only rejects hand-built
         // downgrades.
+        if !doc.tables.is_empty() && snapshot_schema.is_none_or(|s| s < 10) {
+            return Err(EngineError::serialization(
+                "table objects require snapshot schema 10",
+            ));
+        }
         if !doc.pivots.is_empty() && snapshot_schema.is_none_or(|s| s < 9) {
             return Err(EngineError::serialization(
                 "pivot specs require snapshot schema 9",
@@ -2093,6 +2157,81 @@ impl Engine for TallyEngine {
         if doc.next_pivot == 0 {
             doc.next_pivot = 1;
         }
+        // Table objects get the same hostile-input treatment: bounded
+        // count, unique ids, existing bound sheet ids, legal
+        // workbook-wide-unique names, canonical in-cap ranges of at
+        // least two cells re-canonicalized like every other refers_to
+        // table, no overlapping tables or merges on one sheet, strict
+        // spec shape and `next_table` id-space repair.
+        if doc.tables.len() > table_ops::MAX_TABLES {
+            return Err(EngineError::serialization("too many table objects"));
+        }
+        let mut seen_table_ids = std::collections::BTreeSet::new();
+        let mut seen_table_names = std::collections::BTreeSet::new();
+        for t in &mut doc.tables {
+            if !seen_table_ids.insert(t.id) {
+                return Err(EngineError::serialization("duplicate table id"));
+            }
+            if !doc.sheets.iter().any(|s| s.id == t.sheet) {
+                return Err(EngineError::serialization(
+                    "table references a missing sheet",
+                ));
+            }
+            let coords = name_ops::parse_refers_to(&t.range)
+                .map_err(|_| EngineError::serialization("invalid table range"))?;
+            t.range = name_ops::canonical_refers_to(coords);
+            if !table_ops::stored_ok(t) {
+                return Err(EngineError::serialization("invalid table spec"));
+            }
+            if !seen_table_names.insert(t.name.to_ascii_lowercase()) {
+                return Err(EngineError::serialization(
+                    "duplicate table name",
+                ));
+            }
+        }
+        // Pairwise overlap rules per sheet: tables may not intersect
+        // each other or any merged region on their bound sheet (the op
+        // path enforces both directions; structural remaps preserve
+        // disjointness, so engine-emitted documents always satisfy this).
+        for i in 0..doc.tables.len() {
+            let (sheet, coords) = {
+                let t = &doc.tables[i];
+                let Some(c) = table_ops::range_coords(t) else {
+                    return Err(EngineError::serialization("invalid table range"));
+                };
+                (t.sheet, c)
+            };
+            for j in (i + 1)..doc.tables.len() {
+                let u = &doc.tables[j];
+                if u.sheet == sheet
+                    && table_ops::range_coords(u)
+                        .is_some_and(|c| struct_ops::rects_overlap(c, coords))
+                {
+                    return Err(EngineError::serialization(
+                        "overlapping table objects",
+                    ));
+                }
+            }
+            if let Some(s) = doc.sheets.iter().find(|s| s.id == sheet) {
+                if s.merges.iter().any(|m| {
+                    struct_ops::rects_overlap(coords, (m.c0, m.r0, m.c1, m.r1))
+                }) {
+                    return Err(EngineError::serialization(
+                        "table overlaps a merged region",
+                    ));
+                }
+            }
+        }
+        if let Some(max_id) = doc.tables.iter().map(|t| t.id).max() {
+            if doc.next_table <= max_id {
+                doc.next_table = max_id.checked_add(1).ok_or_else(|| {
+                    EngineError::serialization("table id space exhausted")
+                })?;
+            }
+        }
+        if doc.next_table == 0 {
+            doc.next_table = 1;
+        }
         for s in &doc.sheets {
             if let Some(av) = s.active_view {
                 if !doc
@@ -2561,6 +2700,7 @@ mod tests {
             dropped_views: Vec::new(),
             dropped_comments: Vec::new(),
             dropped_pivots: Vec::new(),
+            dropped_tables: Vec::new(),
         });
         assert!(e.undo().unwrap());
         // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
@@ -2609,6 +2749,7 @@ mod tests {
             dropped_views: Vec::new(),
             dropped_comments: Vec::new(),
             dropped_pivots: Vec::new(),
+            dropped_tables: Vec::new(),
         });
         assert!(e.undo().unwrap());
         assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);
@@ -2747,9 +2888,9 @@ mod tests {
             "active": 0
         });
         for wrapper in [
-            // wrong schema / wrong kind fail closed (schemas 1–9 are the
-            // accepted tally versions; 10 is beyond them)
-            json!({"kind":"tally","schema":10,"document":doc}),
+            // wrong schema / wrong kind fail closed (schemas 1–10 are the
+            // accepted tally versions; 11 is beyond them)
+            json!({"kind":"tally","schema":11,"document":doc}),
             json!({"kind":"quill","schema":1,"document":doc}),
             // unknown wrapper keys rejected by deny_unknown_fields
             json!({"kind":"tally","schema":1,"document":doc,"extra":true}),

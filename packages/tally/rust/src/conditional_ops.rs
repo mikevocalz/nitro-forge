@@ -748,9 +748,9 @@ mod tests {
         let good = e.snapshot().unwrap();
         let payload: Value = serde_json::from_slice(decode_envelope(&good).unwrap().1).unwrap();
         let mut bad = payload.clone();
-        // Schemas beyond the accepted 1–9 range must fail closed.
+        // Schemas beyond the accepted 1–10 range must fail closed.
         let mut v4 = payload.clone();
-        v4["schema"] = json!(10);
+        v4["schema"] = json!(11);
         assert!(e.restore(&encode_envelope(&serde_json::to_vec(&v4).unwrap())).is_err());
         assert_eq!(e.snapshot().unwrap(), good);
         let rule = |mut r: Value| {
