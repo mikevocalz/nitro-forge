@@ -24,6 +24,11 @@ pub const MAX_VARIABLES: usize = 1024;
 pub const MAX_MODES: usize = 128;
 /// Bound on node property bindings.
 pub const MAX_BINDINGS: usize = 4096;
+/// Bound on variant bundles stored on one component.
+pub const MAX_VARIANTS: usize = 64;
+/// Bound on override entries in one instance spec or variant bundle;
+/// `validate_override_set` enforces it for both call sites.
+pub const MAX_OVERRIDES: usize = 256;
 /// Upper magnitude admitted for C2 constraint extent bounds (min/max
 /// width/height), matching the node geometry size bound.
 pub const MAX_CONSTRAINT_EXTENT: f64 = 1e7;
@@ -767,6 +772,9 @@ fn validate_override_set(
     component_id: u64,
     parents: &BTreeMap<u64, u64>,
 ) -> Result<(), EngineError> {
+    if overrides.len() > MAX_OVERRIDES {
+        return Err(bad("override budget exceeded"));
+    }
     let mut seen = BTreeSet::new();
     for ov in overrides {
         if !seen.insert((ov.node, ov.path)) {
@@ -874,6 +882,12 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
         if !n.variants.is_empty() && n.kind != Kind::Component {
             return Err(bad("variants require a component node"));
         }
+        // Instances are fixed-sizing only: hug/fill on the materialized
+        // root is deferred, so non-fixed sizing rejects on mutation and on
+        // hostile restore alike.
+        if n.kind == Kind::Instance && !n.sizing.is_fixed() {
+            return Err(bad("instance sizing must be fixed"));
+        }
         if let Some(l) = &n.layout {
             if ![
                 l.gap,
@@ -915,6 +929,9 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
             continue;
         }
         let mut names = BTreeSet::new();
+        if n.variants.len() > MAX_VARIANTS {
+            return Err(bad("variant budget exceeded"));
+        }
         for v in &n.variants {
             if !valid_symbol_name(&v.name) || !names.insert(v.name.clone()) {
                 return Err(bad("invalid or duplicate component variant"));
@@ -956,6 +973,21 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
                 break;
             }
             cursor = parents.get(&p).copied();
+        }
+    }
+    // Containment edges: expansion clones a component's whole descendant
+    // subtree, including any nested component definitions and the instances
+    // inside them. An ancestor→descendant edge therefore joins the same
+    // acyclicity check — without it, component-in-component nesting plus a
+    // back reference is admitted and only fails reads at the depth cap.
+    for (id, n) in &s.nodes {
+        if n.kind != Kind::Component {
+            continue;
+        }
+        for desc in s.subtree(*id).into_iter().skip(1) {
+            if s.nodes[&desc].kind == Kind::Component {
+                edges.entry(*id).or_default().insert(desc);
+            }
         }
     }
     // Kahn topological check: any leftover component means a reference

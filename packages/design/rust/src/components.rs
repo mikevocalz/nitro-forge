@@ -53,7 +53,7 @@ pub fn expand(s: &State) -> Result<Cow<'_, State>, EngineError> {
     let mut next_synth = SYNTH_BASE;
     let mut budget = MAX_EXPANDED_NODES;
     for inst in order {
-        expand_instance(&mut nodes, inst, 1, &mut next_synth, &mut budget)?;
+        expand_instance(&s.nodes, &mut nodes, inst, 1, &mut next_synth, &mut budget)?;
     }
     let mut out = s.clone();
     out.nodes = nodes;
@@ -63,7 +63,15 @@ pub fn expand(s: &State) -> Result<Cow<'_, State>, EngineError> {
 /// children/layout from the component root, apply variant + instance
 /// overrides, and recurse into nested instance clones. `depth` counts
 /// instance nesting; `budget` is the shared cloned-node allowance.
+///
+/// `orig` is the pre-expansion node map (`s.nodes`): template ids, template
+/// children and clone sources are always read from it, never from `nodes`.
+/// `nodes` is mutated in place — earlier instances in document order (and
+/// in-place expansion of instances stored inside component subtrees) would
+/// otherwise leak their synthetic children into a later instance's template
+/// walk and clone the already-expanded subtree a second time.
 fn expand_instance(
+    orig: &BTreeMap<u64, Arc<Node>>,
     nodes: &mut BTreeMap<u64, Arc<Node>>,
     inst_id: u64,
     depth: usize,
@@ -77,9 +85,10 @@ fn expand_instance(
         .instance
         .clone()
         .ok_or_else(|| bad("expanded node is not an instance"))?;
-    // Snapshot the component root's template data before mutating `nodes`.
+    // Snapshot the component root's template data from the pristine map
+    // before mutating `nodes`.
     let (comp_children, comp_layout, comp_variants) = {
-        let comp = nodes
+        let comp = orig
             .get(&spec.component)
             .ok_or_else(|| bad("instance references unknown component"))?;
         if comp.kind != Kind::Component {
@@ -91,13 +100,15 @@ fn expand_instance(
             comp.variants.clone(),
         )
     };
-    // Collect the component subtree in DFS pre-order, excluding the root:
-    // the instance node itself plays the component root's role.
+    // Collect the component subtree in DFS pre-order over `orig`, excluding
+    // the root: the instance node itself plays the component root's role.
+    // Walking the stored tree keeps stored instance leaves leaf-shaped —
+    // their expansion output lives only in `nodes`.
     let mut template_ids = vec![];
     let mut stack: Vec<u64> = comp_children.iter().rev().copied().collect();
     while let Some(id) = stack.pop() {
         template_ids.push(id);
-        let n = &nodes[&id];
+        let n = &orig[&id];
         for child in n.children.iter().rev() {
             stack.push(*child);
         }
@@ -111,7 +122,7 @@ fn expand_instance(
     let mut nested = vec![];
     for tid in &template_ids {
         let clone_id = alloc_synth(next_synth)?;
-        let mut clone = nodes[tid].as_ref().clone();
+        let mut clone = orig[tid].as_ref().clone();
         clone.id = clone_id;
         clone.children = vec![];
         // Instance clones keep their spec; they expand in the second pass.
@@ -124,12 +135,32 @@ fn expand_instance(
     // Second pass: restore child links through the id map.
     for tid in &template_ids {
         let clone_id = map[tid];
-        let children: Vec<u64> = nodes[tid]
+        let children: Vec<u64> = orig[tid]
             .children
             .iter()
             .map(|c| map[c])
             .collect();
         Arc::make_mut(nodes.get_mut(&clone_id).unwrap()).children = children;
+    }
+    // Cloned `component` nodes keep their variant bundles, but those
+    // overrides still name template ids. Retarget them at this expansion's
+    // clones so the expanded form is self-consistent — `detachInstance`
+    // then re-identifies them through its own map like every other field.
+    // Instance specs are NOT retargeted: their overrides are interpreted
+    // against their own component's template when the nested clone expands.
+    for tid in &template_ids {
+        if orig[tid].kind != Kind::Component || orig[tid].variants.is_empty() {
+            continue;
+        }
+        let clone_id = map[tid];
+        let clone = Arc::make_mut(nodes.get_mut(&clone_id).unwrap());
+        for variant in &mut clone.variants {
+            for ov in &mut variant.properties {
+                ov.node = *map.get(&ov.node).ok_or_else(|| {
+                    bad("variant override target outside component subtree")
+                })?;
+            }
+        }
     }
     // The instance node becomes the materialized root: it inherits the
     // component root's flow layout and child list (synthetic ids), while
@@ -166,7 +197,7 @@ fn expand_instance(
     // Nested instances expand after their clones are wired, in clone
     // (document) order.
     for nid in nested {
-        expand_instance(nodes, nid, depth + 1, next_synth, budget)?;
+        expand_instance(orig, nodes, nid, depth + 1, next_synth, budget)?;
     }
     Ok(())
 }
@@ -217,10 +248,15 @@ fn apply_override(slot: &mut Arc<Node>, ov: &NodeOverride) -> Result<(), EngineE
 /// Persist one instance's expansion as ordinary nodes: the instance node
 /// becomes a `Frame` keeping its id and expanded (override-applied) fields,
 /// and every expanded descendant is re-identified under fresh `next_id`
-/// values. Nested expanded instances detach to frames the same way.
-/// Bindings do not follow clones (they key on node id); overrides are baked
-/// because detachment is exactly the materialization step. Returns the full
-/// next state for the caller's validate/layout/journal pipeline.
+/// values. Nested expanded instances detach to frames the same way, and
+/// variant bundles cloned onto nested `component` nodes have their override
+/// targets re-identified through the same map so they still resolve inside
+/// the detached subtree. Bindings do not follow clones (they key on node
+/// id); overrides are baked because detachment is exactly the
+/// materialization step. Expansion runs over the whole document (bounded by
+/// the read caps), not just the detached cone — acceptable because detach
+/// is a rare explicit op. Returns the full next state for the caller's
+/// validate/layout/journal pipeline.
 pub fn detach(s: &State, inst_id: u64) -> Result<State, EngineError> {
     let node = s
         .nodes
@@ -265,6 +301,17 @@ pub fn detach(s: &State, inst_id: u64) -> Result<State, EngineError> {
         let mut clone = (**src).clone();
         clone.id = id_map[exp_id];
         clone.children = remap_children(&src.children, &id_map)?;
+        // A cloned `component` node keeps its variant bundles; their
+        // override targets still name template ids, so re-target them at
+        // the detached clones (the whole component subtree was cloned, so
+        // every target resolves through `id_map`).
+        for variant in &mut clone.variants {
+            for ov in &mut variant.properties {
+                ov.node = *id_map.get(&ov.node).ok_or_else(|| {
+                    bad("variant override target outside detached subtree")
+                })?;
+            }
+        }
         if clone.kind == Kind::Instance {
             clone.kind = Kind::Frame;
             clone.instance = None;

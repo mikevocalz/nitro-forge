@@ -442,6 +442,13 @@ impl Engine for DesignEngine {
                 let mode: SizeMode = serde_json::from_value(
                     p.get("mode").cloned().ok_or_else(|| bad("mode required"))?,
                 )?;
+                // Instances are fixed-sizing only (instance hug/fill is
+                // deferred); `validate` enforces the same on hostile input.
+                if next.nodes[&node_id].kind == Kind::Instance
+                    && mode != SizeMode::Fixed
+                {
+                    return Err(bad("instance sizing must be fixed"));
+                }
                 let value = p
                     .get("value")
                     .map(|v| {

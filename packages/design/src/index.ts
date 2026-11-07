@@ -107,6 +107,10 @@ export interface DesignState{kind:'design';schema:1;title:string;next_id:number;
 export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'|'locked'>> & {text?:TextStylePatch};
 export type NewNode=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'>>;
 export interface NewTextNode extends NewNode{content:string;style?:FontStylePatch}
+/** `id` is a real node id for stored nodes, or a synthetic expansion id
+ * `>= 2^53-1` for instance clones. Synthetic ids are read-only provenance
+ * handles: they exceed JS safe-integer precision, are never persisted, and
+ * every op rejects them as unknown nodes — do not feed them back into ops. */
 export interface EvaluatedBox extends NodeGeometry{id:number;kind:NodeKind;fill:[number,number,number,number];visible:boolean;renderable:boolean}
 export interface ComponentDescription{id:number;name:string;variants:{name:string;properties:NodeOverride[]}[]}
 export interface InstanceDescription{id:number;name:string;component:number|null;variant:string|null;overrides:NodeOverride[];unavailable_reason?:string}
