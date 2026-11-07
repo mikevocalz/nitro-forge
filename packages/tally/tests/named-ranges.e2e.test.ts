@@ -49,7 +49,12 @@ describe("tally named ranges + functionCatalog (real Rust via nf-cli)", () => {
   it("rejects invalid names and targets atomically", async () => {
     const doc = await TallyDocument.open(host);
     try {
-      for (const bad of ["A1", "has space", "R1C1", "TRUE", "9lives"]) {
+      for (const bad of [
+        "A1", "has space", "R1C1", "TRUE", "9lives",
+        // Ref-shaped beyond grid bounds, `.` is not a word character, and
+        // function-catalog names are reserved.
+        "A0", "ZZZZZZZZ1", "a.b", "SUM",
+      ]) {
         await expect(doc.defineName(bad, "A1")).rejects.toMatchObject({
           code: "validation",
         });
@@ -70,6 +75,10 @@ describe("tally named ranges + functionCatalog (real Rust via nf-cli)", () => {
     const doc = await TallyDocument.open(host);
     try {
       await doc.defineName("Keep", "A1:B2");
+      // `refers_to: null` counts as absent — alone it is a validation error.
+      await expect(
+        doc.handle.apply("updateName", { name: "Keep", refers_to: null }),
+      ).rejects.toMatchObject({ code: "validation" });
       await doc.updateName("Keep", { refersTo: "C3:D4" });
       const saved = await doc.save();
 

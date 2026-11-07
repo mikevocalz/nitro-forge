@@ -9,10 +9,15 @@
 //! ordered). Names do not support whole-row/column refs or formula targets.
 //!
 //! Name validation is a documented subset of Excel's rules: ASCII
-//! `[A-Za-z_][A-Za-z0-9_.]*`, ≤64 chars, not cell-ref shaped (`A1`, `XFD1048576`,
-//! any letters-then-digits token), not R1C1-shaped (`R1`, `C1`, `R1C1`), not
-//! the single letters `R`/`C`, and not `TRUE`/`FALSE` (formula literals).
-//! Uniqueness is case-insensitive across the whole workbook.
+//! `[A-Za-z_][A-Za-z0-9_]*`, ≤64 chars, not cell-ref shaped in the
+//! tokenizer's `$?[A-Za-z]+$?[0-9]+` shape regardless of grid bounds
+//! (`A1`, `A0`, `ZZZZZZZZ1` all lex as refs), not R1C1-shaped (`R1`, `C1`,
+//! `R1C1`), not a `functionCatalog` name (`SUM`, `IF`, … — `=NAME` would
+//! resolve the name while `=NAME(...)` calls the function), not the single
+//! letters `R`/`C`, and not `TRUE`/`FALSE` (formula literals). The charset
+//! mirrors the tokenizer's word characters: `.` or `$` could never
+//! round-trip through `=name`. Uniqueness is case-insensitive across the
+//! whole workbook.
 //!
 //! Formula integration: the evaluator resolves a bare identifier to its
 //! target when the formula's sheet matches the name's sheet; names bound to
@@ -70,17 +75,27 @@ pub(super) fn valid_name(name: &str) -> bool {
         Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
         _ => return false,
     }
-    if !name
-        .bytes()
-        .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'.')
-    {
+    // Charset mirrors the formula tokenizer's word characters (`.` splits a
+    // token and fails lexing → `#NAME?`; `$` is ref syntax): a name outside
+    // it could never round-trip through `=name`.
+    if !name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
         return false;
     }
     if name.eq_ignore_ascii_case("TRUE") || name.eq_ignore_ascii_case("FALSE") {
         return false;
     }
-    // Cell-ref shaped (`A1`, `ZZZ999`, `$`-free by charset) or R1C1 shaped.
-    parse_addr(name).is_none() && !r1c1_shaped(name)
+    // Function names are callable as `NAME(...)` while a bare `=NAME` would
+    // resolve the defined name — ambiguous, so reserved (the catalog also
+    // covers TRUE/FALSE, already rejected above as literals).
+    if formula::FUNCTION_CATALOG
+        .iter()
+        .any(|f| f.name.eq_ignore_ascii_case(name))
+    {
+        return false;
+    }
+    // Cell-ref shaped in the tokenizer's `$?[A-Za-z]+$?[0-9]+` sense —
+    // bounds-independent, so `A0`/`ZZZZZZZZ1` reject too — or R1C1 shaped.
+    !formula::is_ref_word(name) && !r1c1_shaped(name)
 }
 
 /// Parse `"A1"` or `"A1:B2"` (either endpoint order, `$` allowed) into
@@ -231,7 +246,10 @@ impl TallyEngine {
             .find_name(name)
             .ok_or_else(|| EngineError::not_found(format!("no name '{name}'")))?;
         let has_sheet = p.get("sheet").is_some_and(|v| !v.is_null());
-        let has_refers = p.get("refers_to").is_some();
+        // `refers_to: null` counts as absent (same convention as `sheet`):
+        // alone it fails the at-least-one-field check below, alongside a
+        // real field it is ignored.
+        let has_refers = p.get("refers_to").is_some_and(|v| !v.is_null());
         if !has_sheet && !has_refers {
             return Err(EngineError::validation(
                 "updateName requires 'sheet' and/or 'refers_to'",
@@ -322,7 +340,7 @@ mod tests {
         for ok in [
             "MyRange",
             "_x",
-            "a.b_c9",
+            "ab_c9",
             "Q1_sales",
             "R2D2",
             "Revenue",
@@ -335,7 +353,18 @@ mod tests {
             "A1",
             "a1",
             "ZZZ999",
+            // Ref-shaped in the tokenizer's sense even outside grid bounds —
+            // these would lex as `Ref` and evaluate to `#REF!`.
+            "A0",
+            "ZZZZZZZZ1",
             "XFD1048576",
+            // `.` is not a word character: `=a.b` fails lexing.
+            "a.b",
+            // Function-catalog names are reserved (bare `=SUM` would resolve
+            // the name while `=SUM(...)` calls the function).
+            "SUM",
+            "sum",
+            "CountIf",
             "$A$1",
             "R1C1",
             "r1c1",
@@ -460,6 +489,23 @@ mod tests {
             apply_err(&mut e, "updateName", json!({"name":"First"})).code,
             ErrorCode::Validation
         );
+        // `refers_to: null` counts as absent: alone it is a validation
+        // error; alongside a real field it is ignored.
+        assert_eq!(
+            apply_err(
+                &mut e,
+                "updateName",
+                json!({"name":"First","refers_to":null})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        let r = apply(
+            &mut e,
+            "updateName",
+            json!({"name":"First","sheet":0,"refers_to":null}),
+        );
+        assert!(r.events.is_empty());
         assert_eq!(
             apply_err(
                 &mut e,
@@ -593,11 +639,11 @@ mod tests {
         data(
             &mut e,
             "defineName",
-            json!({"name":"OnSheet1","refers_to":"C3"}),
+            json!({"name":"OnMain","refers_to":"C3"}),
         );
         data(&mut e, "removeSheet", json!({"sheet":"Data"}));
         assert_eq!(names(&mut e).len(), 1);
-        assert_eq!(names(&mut e)[0]["name"], json!("OnSheet1"));
+        assert_eq!(names(&mut e)[0]["name"], json!("OnMain"));
         assert!(e.undo().unwrap());
         assert_eq!(names(&mut e).len(), 2);
         assert!(e.redo().unwrap());
@@ -647,7 +693,7 @@ mod tests {
         let mut bad = doc.clone();
         bad["document"]["names"] = Value::Array(
             (0..=MAX_NAMES)
-                .map(|i| json!({"name":format!("n{i}"),"sheet":0,"refers_to":"A1"}))
+                .map(|i| json!({"name":format!("nm_{i}"),"sheet":0,"refers_to":"A1"}))
                 .collect(),
         );
         let bytes = encode_envelope(&serde_json::to_vec(&bad).unwrap());

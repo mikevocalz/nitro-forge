@@ -189,7 +189,9 @@ enum UndoEntry {
     AddSheet { sheet_id: u64 },
     /// A sheet was removed; undo re-inserts it at `index`, restores `active`
     /// and re-adds `dropped_names` (names bound to the removed sheet are
-    /// cascade-dropped on removal).
+    /// cascade-dropped on removal). Re-admission skips any dropped name whose
+    /// case-insensitive twin already exists or that would exceed `MAX_NAMES`,
+    /// keeping `doc.names` inside the invariants `restore` enforces.
     RemoveSheet {
         index: usize,
         sheet: Sheet,
@@ -718,8 +720,26 @@ impl TallyEngine {
                 let sheet_id = sheet.id;
                 self.doc.sheets.insert(idx, sheet);
                 self.doc.active = prev_active.min(self.doc.sheets.len() - 1);
-                // Names cascade-dropped with the sheet come back with it.
-                self.doc.names.extend(dropped_names);
+                // Names cascade-dropped with the sheet come back with it —
+                // but only while re-admission keeps `doc.names` inside the
+                // invariants `restore` enforces (case-insensitive
+                // uniqueness, MAX_NAMES). A name redefined while its sheet
+                // was gone wins; the dropped entry is discarded rather than
+                // leaving the document in an unrestorable state.
+                for n in dropped_names {
+                    if self.doc.names.len() >= name_ops::MAX_NAMES {
+                        break;
+                    }
+                    if self
+                        .doc
+                        .names
+                        .iter()
+                        .any(|e| e.name.eq_ignore_ascii_case(&n.name))
+                    {
+                        continue;
+                    }
+                    self.doc.names.push(n);
+                }
                 UndoEntry::AddSheet { sheet_id }
             }
             UndoEntry::RenameSheet {
@@ -1341,6 +1361,90 @@ mod tests {
         // redo chain still coherent
         while e.redo().unwrap() {}
         assert_eq!(describe(&mut e)["sheets"].as_array().unwrap().len(), 1);
+    }
+
+    fn ghost_sheet(id: u64) -> Sheet {
+        Sheet {
+            id,
+            name: "Ghost".to_string(),
+            cells: BTreeMap::new(),
+            formats: BTreeMap::new(),
+            tone: None,
+            is_protected: false,
+        }
+    }
+
+    fn dropped_name(name: &str) -> NamedRange {
+        NamedRange {
+            name: name.to_string(),
+            sheet: 77,
+            refers_to: "B2".to_string(),
+        }
+    }
+
+    #[test]
+    fn undo_remove_sheet_readmits_names_within_restore_invariants() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "defineName", json!({"name":"foo","refers_to":"A1"}));
+        // A RemoveSheet undo entry recorded while "Foo" was bound to the
+        // removed sheet, with "foo" defined while the sheet was gone.
+        // Re-admission must skip the case-insensitive duplicate — a bare
+        // extend would leave doc.names unrestorable. The public op surface
+        // cannot currently produce this interleaving (the journal is
+        // strictly LIFO and `record` clears redo), so the entry is crafted
+        // directly to pin the invariant.
+        e.journal.record(UndoEntry::RemoveSheet {
+            index: 0,
+            sheet: ghost_sheet(77),
+            prev_active: 0,
+            dropped_names: vec![dropped_name("Foo"), dropped_name("Bar")],
+        });
+        assert!(e.undo().unwrap());
+        // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
+        let ns = data(&mut e, "listNames", json!({}))["names"]
+            .as_array()
+            .unwrap()
+            .clone();
+        assert_eq!(ns.len(), 2);
+        assert_eq!(ns[0]["name"], json!("foo"));
+        assert_eq!(ns[1]["name"], json!("Bar"));
+        assert_eq!(ns[1]["sheet"], json!("Ghost"));
+        // The document must still snapshot and restore cleanly (the crafted
+        // sheet id bumps `next_sheet` on restore, so compare name state, not
+        // envelope bytes).
+        let saved = e.snapshot().unwrap();
+        let mut reopened = TallyEngine::new();
+        reopened.restore(&saved).unwrap();
+        assert_eq!(
+            data(&mut reopened, "listNames", json!({})),
+            data(&mut e, "listNames", json!({}))
+        );
+    }
+
+    #[test]
+    fn undo_remove_sheet_dropped_names_respect_max_names() {
+        let mut e = TallyEngine::new();
+        // Fill the name table to the cap directly; the invariant under test
+        // is the re-admission guard, not the define path.
+        e.doc.names = (0..name_ops::MAX_NAMES)
+            .map(|i| NamedRange {
+                name: format!("nm_{i}"),
+                sheet: 0,
+                refers_to: "A1".to_string(),
+            })
+            .collect();
+        e.journal.record(UndoEntry::RemoveSheet {
+            index: 0,
+            sheet: ghost_sheet(77),
+            prev_active: 0,
+            dropped_names: vec![dropped_name("Extra")],
+        });
+        assert!(e.undo().unwrap());
+        assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);
+        assert!(e.doc.names.iter().all(|n| n.name != "Extra"));
+        let saved = e.snapshot().unwrap();
+        let mut reopened = TallyEngine::new();
+        reopened.restore(&saved).unwrap();
     }
 
     // -- snapshot / restore -------------------------------------------------------

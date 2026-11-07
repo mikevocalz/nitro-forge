@@ -211,7 +211,7 @@ export class TallyDocument {
       ...(sheet === undefined ? {} : { sheet }),
     });
   }
-  /** Retarget a name's sheet and/or refers_to; at least one field required. */
+  /** Retarget a name's sheet and/or refers_to; at least one field required (explicit null counts as absent). */
   updateName(name: string, patch: { sheet?: string | number; refersTo?: string }) {
     return this.call<{ name: NamedRangeInfo }>(OPS.updateName, {
       name,

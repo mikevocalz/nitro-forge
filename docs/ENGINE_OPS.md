@@ -178,7 +178,7 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `setFormat` | `{range:{from,to} \| cells:[addr…], format:{…patch}}` | `{changed}` | per-cell format patch; exactly one of `range`/`cells`; see format rules below |
 | `clearFormat` | `{range:{from,to} \| cells:[addr…]}` | `{changed}` | removes stored formats; contents untouched |
 | `defineName` | `{name,refers_to,sheet?}` | `{name}` | workbook-scoped name bound to `sheet` (name or index, default active); see name rules below |
-| `updateName` | `{name,sheet?,refers_to?}` | `{name}` | retarget sheet and/or refers_to; at least one field required; same-value is eventless |
+| `updateName` | `{name,sheet?,refers_to?}` | `{name}` | retarget sheet and/or refers_to; at least one field required (explicit `null` fields count as absent); same-value is eventless |
 | `removeName` | `{name}` | `{ok}` | name lookup is case-insensitive; missing → `not_found` |
 | `listNames` | `{}` | `{names:[{name,sheet,sheet_id,refers_to}]}` | read-only; `sheet` is the current sheet name |
 | `functionCatalog` | `{}` | `{functions:[{name,min_args,max_args,signature}]}` | read-only; `max_args:null` = variadic |
@@ -224,12 +224,17 @@ scope" collapsed to the only scope this engine resolves, since formulas have
 no cross-sheet references. `refers_to` accepts `"A1"` or `"A1:B2"` (endpoints
 in either order, `$` markers allowed); it is stored canonicalized, single-cell
 targets keep the bare `"A1"` form, and whole-row/column refs or formula
-targets are not supported. `name` must match `[A-Za-z_][A-Za-z0-9_.]*`, ≤64
-bytes, be unique case-insensitively across the workbook, and must not be
-cell-ref shaped (`A1`, `XFD1048576`, or any letters-then-digits token — a
-documented strict subset of Excel, which only rejects refs inside the grid),
-R1C1 shaped (`R1`, `C1`, `R1C1`), the single letters `R`/`C`, or the literals
-`TRUE`/`FALSE`; at most 256 names per workbook. **Formula integration:** a
+targets are not supported. `name` must match `[A-Za-z_][A-Za-z0-9_]*` — the
+formula tokenizer's word characters, since `.`/`$` could never round-trip
+through `=name` — ≤64 bytes, be unique case-insensitively across the
+workbook, and must not be cell-ref shaped in the tokenizer's
+`$?[A-Za-z]+$?[0-9]+` sense regardless of grid bounds (`A1`, `A0`,
+`ZZZZZZZZ1` all lex as references — a documented strict subset of Excel,
+which only rejects refs inside the grid), R1C1 shaped (`R1`, `C1`, `R1C1`),
+a `functionCatalog` name (`SUM`, `IF`, … case-insensitive — a bare `=NAME`
+would resolve the name while `=NAME(...)` calls the function), the single
+letters `R`/`C`, or the literals `TRUE`/`FALSE`; at most 256 names per
+workbook. **Formula integration:** a
 bare identifier in a formula or `evaluate` resolves to the name's target
 when the formula's sheet is the name's bound sheet — a single-cell target
 behaves like a cell ref, a multi-cell target like a range (aggregates and
@@ -239,7 +244,10 @@ range argument. A name bound to a different sheet evaluates to `#NAME?`
 (same limitation as cross-sheet cell refs); resolution is live, so
 `updateName`/`removeName` change or break dependent formulas immediately.
 `removeSheet` cascade-drops names bound to the removed sheet (recorded in the
-same undo entry, so undo/redo restore them); `duplicateSheet`/`moveSheet` do
+same undo entry, so undo/redo restore them — re-admission re-checks the
+name-table invariants, so a name redefined while its sheet was gone or a
+table at the 256-name cap wins and the dropped entry is discarded rather
+than corrupting the document); `duplicateSheet`/`moveSheet` do
 not copy or retarget names. Mutating name ops record one undo entry each (whole-document inverse, like
 sheet structural ops); `updateName` with unchanged values is eventless and
 journal-free. `listNames`/`functionCatalog` are read-only, eventless. The

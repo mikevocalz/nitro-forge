@@ -296,7 +296,9 @@ fn is_word_char(b: u8) -> bool {
 }
 
 /// Does a scanned word match the cell-ref shape `$?[A-Za-z]+$?[0-9]+`?
-fn is_ref_word(w: &str) -> bool {
+/// Bounds-independent: `A0` or `ZZZZZZZZ1` still lex as `Ref` (→ `#REF!`),
+/// so name validation reuses this shape rather than `parse_addr`.
+pub(crate) fn is_ref_word(w: &str) -> bool {
     let b = w.as_bytes();
     let mut i = 0usize;
     if b.get(i) == Some(&b'$') {
