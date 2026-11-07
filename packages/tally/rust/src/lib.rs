@@ -35,8 +35,15 @@
 //! rows by computed key values with formulas moving verbatim.
 //! `comments` is the durable workbook-level comment table (see
 //! `comment_ops`): each entry binds a sheet id and a canonical
-//! `"A1"`/`"A1:B2"` coordinate anchor plus author/body/resolved — anchors
-//! are static coordinates, never remapped by content mutations.
+//! `"A1"`/`"A1:B2"` coordinate anchor plus author/body/resolved.
+//! `merges` is the per-sheet merged-cell registry (see `struct_ops`):
+//! display metadata only — contents are never cleared and every cell
+//! stays live to formulas and reads. `insertRows`/`deleteRows`/
+//! `insertCols`/`deleteCols` are structural band edits that remap every
+//! coordinate-bound structure on the target sheet (cells, formats,
+//! formulas' references, merges, names, validations, conditional formats,
+//! filters + columns, charts + series, sparklines, captured view filter
+//! specs and comments) in one atomic whole-document undo entry.
 //!
 //! Semantics documented for reviewers:
 //! * Cell addresses `$?[A-Z]+$?[0-9]+` (case-insensitive); `$` markers are
@@ -69,6 +76,7 @@ mod name_ops;
 mod range_ops;
 mod sheet_ops;
 mod sort_ops;
+mod struct_ops;
 mod protection;
 mod sparkline_ops;
 mod validation_ops;
@@ -125,6 +133,24 @@ pub struct Sheet {
     /// requires it to reference a view bound to this sheet.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub active_view: Option<u64>,
+    /// Durable merged-cell regions as inclusive 0-based rectangles
+    /// (schema:8). Display metadata only: contents are never cleared and
+    /// every cell stays live to formulas/reads (see `struct_ops`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub merges: Vec<MergeRegion>,
+}
+
+/// One merged-cell region: inclusive 0-based `(c0, r0)..(c1, r1)`
+/// rectangle, normalized so `c0 <= c1` and `r0 <= r1`, spanning at least
+/// two cells. The top-left cell `(c0, r0)` is the anchor that hosts
+/// render; covered cells report `merged_into` in `getCell`/`getRange`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MergeRegion {
+    pub c0: u32,
+    pub r0: u32,
+    pub c1: u32,
+    pub r1: u32,
 }
 
 /// Workbook-level named range (see `name_ops` for the model decision):
@@ -221,6 +247,7 @@ fn blank_workbook() -> Workbook {
             tone: None,
             is_protected: false,
             active_view: None,
+            merges: Vec::new(),
         }],
         active: 0,
         names: Vec::new(),
@@ -631,6 +658,7 @@ impl TallyEngine {
             tone: None,
             is_protected: false,
             active_view: None,
+            merges: Vec::new(),
         };
         self.journal.record(UndoEntry::AddSheet { sheet_id: id });
         self.doc.next_sheet = next_id;
@@ -822,6 +850,11 @@ impl TallyEngine {
         if let Some(f) = sheet.formats.get(&addr) {
             out.insert("format".to_string(), serde_json::to_value(f)?);
         }
+        if let Some((c, r)) = parse_addr(&addr) {
+            if let Some(anchor) = struct_ops::merge_anchor(sheet, c, r) {
+                out.insert("merged_into".to_string(), Value::String(anchor));
+            }
+        }
         Ok(Self::readonly(Value::Object(out)))
     }
 
@@ -856,6 +889,9 @@ impl TallyEngine {
                 cell.insert("computed".to_string(), computed);
                 if let Some(f) = sheet.formats.get(&addr) {
                     cell.insert("format".to_string(), serde_json::to_value(f)?);
+                }
+                if let Some(anchor) = struct_ops::merge_anchor(sheet, c, r) {
+                    cell.insert("merged_into".to_string(), Value::String(anchor));
                 }
                 row.push(Value::Object(cell));
             }
@@ -1227,6 +1263,13 @@ impl Engine for TallyEngine {
             "resolveComment" => self.op_resolve_comment(p),
             "reopenComment" => self.op_reopen_comment(p),
             "listComments" => self.op_list_comments(p),
+            "insertRows" => self.op_insert_rows(p),
+            "deleteRows" => self.op_delete_rows(p),
+            "insertCols" => self.op_insert_cols(p),
+            "deleteCols" => self.op_delete_cols(p),
+            "mergeCells" => self.op_merge_cells(p),
+            "unmergeCells" => self.op_unmerge_cells(p),
+            "listMergedCells" => self.op_list_merged_cells(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -1274,10 +1317,14 @@ impl Engine for TallyEngine {
         // schema:4 (which may carry every earlier table), documents
         // carrying charts or sparklines emit schema:5 (which may carry
         // every earlier table), documents carrying named views emit
-        // schema:6 (which may carry every earlier table), and
-        // tone/protection/formats/names alone stay schema:1 — older
-        // readers reject the higher schemas rather than silently dropping
-        // rules/specs (see docs/ENGINE_OPS.md).
+        // schema:6 (which may carry every earlier table), documents
+        // carrying comments emit schema:7 (which may carry every earlier
+        // table), and documents carrying merged-cell regions emit
+        // schema:8 (which may carry every earlier table) — `Sheet` lacks
+        // `deny_unknown_fields`, so older readers would silently drop
+        // `merges` without the bump. Tone/protection/formats/names alone
+        // stay schema:1 — older readers reject the higher schemas rather
+        // than silently dropping rules/specs (see docs/ENGINE_OPS.md).
         let has_validations = !self.doc.validations.is_empty();
         let has_conditional = !self.doc.conditional_formats.is_empty();
         let has_filters = !self.doc.filters.is_empty();
@@ -1288,8 +1335,12 @@ impl Engine for TallyEngine {
         let has_views = !self.doc.views.is_empty()
             || self.doc.sheets.iter().any(|s| s.active_view.is_some());
         let has_comments = !self.doc.comments.is_empty();
+        let has_merges = self.doc.sheets.iter().any(|s| !s.merges.is_empty());
         let extended = self.doc.sheets.iter().any(|s| {
-            s.tone.is_some() || s.is_protected || !s.formats.is_empty()
+            s.tone.is_some()
+                || s.is_protected
+                || !s.formats.is_empty()
+                || !s.merges.is_empty()
         }) || !self.doc.names.is_empty()
             || has_validations
             || has_conditional
@@ -1300,7 +1351,9 @@ impl Engine for TallyEngine {
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
-                schema: if has_comments {
+                schema: if has_merges {
+                    8
+                } else if has_comments {
                     7
                 } else if has_views {
                     6
@@ -1343,12 +1396,13 @@ impl Engine for TallyEngine {
             // possibly alongside every earlier table), schema:5 (chart
             // objects and sparkline specs, possibly alongside every earlier
             // table), schema:6 (named sheet views and `active_view`
-            // selections, possibly alongside every earlier table) and
+            // selections, possibly alongside every earlier table),
             // schema:7 (comments, possibly alongside every earlier table)
-            // are all honored; every table absent from a document
-            // deserializes to its serde default, so cross-version payloads
-            // never lose the other families' rules.
-            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5 | 6 | 7) {
+            // and schema:8 (merged-cell regions, possibly alongside every
+            // earlier table) are all honored; every table absent from a
+            // document deserializes to its serde default, so
+            // cross-version payloads never lose the other families' rules.
+            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8) {
                 return Err(EngineError::unsupported(
                     "unsupported Tally snapshot kind/schema",
                 ));
@@ -1360,12 +1414,20 @@ impl Engine for TallyEngine {
         }
         // Fail closed on crafted lower-version payloads smuggling newer
         // tables: each durable table restores only under the schema that
-        // introduced it — comments need schema:7, named views and
-        // `active_view` selections need schema:6, chart/sparkline specs
-        // schema:5, filter rules schema:4, conditional rules schema:3,
+        // introduced it — merged regions need schema:8, comments schema:7,
+        // named views and `active_view` selections schema:6, chart/sparkline
+        // specs schema:5, filter rules schema:4, conditional rules schema:3,
         // validations schema:2 — and a bare (unwrapped) Workbook predates
-        // all six. Emit always stamps the highest table present, so honest
-        // payloads are unaffected; this only rejects hand-built downgrades.
+        // all seven. Emit always stamps the highest table present, so
+        // honest payloads are unaffected; this only rejects hand-built
+        // downgrades.
+        if doc.sheets.iter().any(|s| !s.merges.is_empty())
+            && snapshot_schema.is_none_or(|s| s < 8)
+        {
+            return Err(EngineError::serialization(
+                "merged cells require snapshot schema 8",
+            ));
+        }
         if !doc.comments.is_empty() && snapshot_schema.is_none_or(|s| s < 7) {
             return Err(EngineError::serialization(
                 "comments require snapshot schema 7",
@@ -1458,6 +1520,38 @@ impl Engine for TallyEngine {
                 format_ops::canonicalize(&mut fmt);
                 if !fmt.is_empty() {
                     s.formats.insert(formula::fmt_addr(col, row), fmt);
+                }
+            }
+            // Merge regions get the same hostile-input treatment: bounded
+            // count, normalized to canonical endpoint order, at least two
+            // cells, on-sheet, inside the shared cell cap, and pairwise
+            // non-overlapping.
+            if s.merges.len() > struct_ops::MAX_MERGES {
+                return Err(EngineError::serialization("too many merged regions"));
+            }
+            for m in &mut s.merges {
+                if m.c0 > m.c1 {
+                    std::mem::swap(&mut m.c0, &mut m.c1);
+                }
+                if m.r0 > m.r1 {
+                    std::mem::swap(&mut m.r0, &mut m.r1);
+                }
+                if !struct_ops::merge_ok(m) {
+                    return Err(EngineError::serialization("invalid merge region"));
+                }
+            }
+            for i in 0..s.merges.len() {
+                for j in (i + 1)..s.merges.len() {
+                    let (a, b) = (&s.merges[i], &s.merges[j]);
+                    let overlap = a.c0 <= b.c1
+                        && b.c0 <= a.c1
+                        && a.r0 <= b.r1
+                        && b.r0 <= a.r1;
+                    if overlap {
+                        return Err(EngineError::serialization(
+                            "overlapping merge regions",
+                        ));
+                    }
                 }
             }
         }
@@ -2313,6 +2407,7 @@ mod tests {
             tone: None,
             is_protected: false,
             active_view: None,
+            merges: Vec::new(),
         }
     }
 
@@ -2532,9 +2627,9 @@ mod tests {
             "active": 0
         });
         for wrapper in [
-            // wrong schema / wrong kind fail closed (schemas 1–7 are the
-            // accepted tally versions; 8 is beyond them)
-            json!({"kind":"tally","schema":8,"document":doc}),
+            // wrong schema / wrong kind fail closed (schemas 1–8 are the
+            // accepted tally versions; 9 is beyond them)
+            json!({"kind":"tally","schema":9,"document":doc}),
             json!({"kind":"quill","schema":1,"document":doc}),
             // unknown wrapper keys rejected by deny_unknown_fields
             json!({"kind":"tally","schema":1,"document":doc,"extra":true}),

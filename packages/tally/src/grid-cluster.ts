@@ -65,10 +65,13 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  *
  * Cell/range comments landed in slice 9 (`addComment`/`updateComment`/
  * `removeComment`/`resolveComment`/`reopenComment`/`listComments`):
- * workbook-persisted single-entry comments anchored to static cell/range
+ * workbook-persisted single-entry comments anchored to cell/range
  * coordinates — hosts wire comment-pin UI to the `TallyDocument` methods
- * directly; threading/replies and anchor remapping on row/column edits are
- * deferred (row/column insert/delete ops do not exist yet).
+ * directly; threading/replies stay deferred. Slice 13 added the
+ * row/column structural ops those anchors now remap with
+ * (`insertRows`/`deleteRows`/`insertCols`/`deleteCols` on
+ * `TallyDocument`, plus `mergeCells`/`unmergeCells`/`listMergedCells`
+ * for merged regions); hosts wire row/column UI to the methods directly.
  *
  * Delimited text transfer landed in slice 10 (`importCsv`/`importTsv`/
  * `exportCsv`/`exportTsv`): the engine parses/serializes RFC 4180 text

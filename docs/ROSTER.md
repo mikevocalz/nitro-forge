@@ -1100,3 +1100,48 @@ undo, protection, unicode, sparse-sheet export bounds),
 (1 new live `nf-cli` csv-transfer file, 5 cases), `pnpm --filter
 @nitro-forge/tally typecheck` clean. XLSX import, header-row options,
 encoding selection (host-side) and any import-preview UI remain deferred.
+
+## Tally structural edits + merged cells source checkpoint (2026-11-07)
+
+Tally gains row/column structural ops and merged-cell regions (slice 13,
+backlog item 13 — "Merged cells + row/column insert/delete (reuse
+`shift_references`)"): `insertRows`/`deleteRows`/`insertCols`/`deleteCols`
+take `{sheet?,from,to}` 1-based inclusive bands, validate fully, stage the
+remap on a cloned document and commit as one whole-document undo entry —
+eventless `{ok:true,changed:0}` when nothing moves. Bounds: bands inside
+XFD1048576, inserts must fit the cap, deletes may not cover every row or
+column; bound-sheet protection gates all four plus `mergeCells`/
+`unmergeCells`. `mergeCells`/`unmergeCells`/`listMergedCells` manage
+per-sheet `merges` rectangles (inclusive 0-based `{c0,r0,c1,r1}`, ≥2
+cells, non-overlapping, 256/sheet cap); covered cells report
+`merged_into` in `getCell`/`getRange` while every cell stays live to
+formulas/reads — merges are render metadata only this slice.
+
+Every coordinate-bound structure remaps Excel-like on the edited axis:
+cell/format keys shift or drop; formula references rewrite lexically
+(`$` preserved syntactically, deleted refs → `#REF!`, partially covered
+ranges shrink, fully covered → `#REF!`, insert inside a range expands it);
+names/validations/conditional-formats/filters(+column)/charts(+series)/
+sparklines/views' captured filter specs/comments anchors/merges all
+remap, dropping entries fully covered by a deleted band; ids, criteria,
+kinds, titles, bodies and sheet order stay static. Comments — previously
+documented static because the ops were deferred — now shift like Excel
+and drop with their anchor's band. **Schema bump to 8**: `Sheet.merges`
+is new durable state `Sheet`/`Workbook` do not `deny_unknown_fields`, so
+merge-carrying snapshots emit `{kind:"tally",schema:8}` and restore
+accepts 1–8 with per-table schema gates (nonempty merges require 8);
+restore re-canonicalizes merge rectangles and rejects overlaps,
+single-cell/out-of-bounds regions, cap violations and unknown fields
+atomically. TS mirror adds the seven `OPS` entries, `BandEdit`/
+`MergedRangeInfo` types, `merged_into` on `CellInfo`, and
+`TallyDocument` methods; `grid-cluster.ts` docs updated (no UI callback
+changes — hosts wire the methods directly). Local evidence:
+`cargo test -p tally-engine` 164 passed (16 new struct_ops tests covering
+the full remap matrix, merge ops, bounds, atomicity, undo/redo, hostile
+restore and protection), `cargo build -p nf-cli` clean,
+`pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/tally test` 75 Vitest passed across 19 files (1 new live
+nf-cli structural-merges file, 7 cases), `pnpm --filter
+@nitro-forge/tally typecheck` clean. Deferred: merge render/fill
+semantics, sort/format interaction rules, and any row/column UI wiring —
+no native/device acceptance or full P13+ completion is implied.
