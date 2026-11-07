@@ -49,13 +49,13 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * Engine operations the cluster's UI can express but Tally does not have yet.
  * Each is a DEFER: the matching NYC-Tron callback is left out, so its control
  * is not drawn. Adding the op to `packages/tally/rust` and `OPS` is what
- * lifts the deferral.
+ * lifts the deferral. Chart (`insertChart`/`updateChart`/`removeChart`/
+ * `listCharts`) and sparkline (`setSparkline`/`clearSparkline`/
+ * `listSparklines`) persistence landed in slice 7 as storage-only specs —
+ * hosts wire `ChartBuilder.onInsert`/`SparklineEditor` callbacks to the
+ * `TallyDocument` methods directly; rendering stays host-side.
  */
 export const TALLY_DEFERRED_OPS = {
-  /** I-13 `onInsert`: a chart object saved in the workbook. */
-  insertChart: "I-13",
-  /** I-14 `onApply`/`onRemove`: sparkline groups saved in the workbook. */
-  setSparkline: "I-14",
   /** I-17: freeze panes and split saved with the sheet; today they are app view state only. */
   setSheetView: "I-17",
 } as const;

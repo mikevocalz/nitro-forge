@@ -142,7 +142,7 @@ google/ink source admission (#46).
 
 ## tally-engine — `TallyEngine::new()`
 
-State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation, conditional_formats: [ConditionalRule], next_conditional, filters: [FilterRule], next_filter }`,
+State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation, conditional_formats: [ConditionalRule], next_conditional, filters: [FilterRule], next_filter, charts: [ChartSpec], next_chart, sparklines: [SparklineSpec], next_sparkline }`,
 `Sheet = { id, name, tone?: string | null, is_protected?: boolean, cells: { "A1": { raw: string } }, formats?: { "A1": CellFormat } }` — computed values are
 derived, not stored. `formats` is durable per-cell display metadata keyed by
 canonical address, independent of `cells`: it survives content edits, applies
@@ -162,8 +162,19 @@ below). `FilterRule = { id, sheet: sheet-id, range, column?, criteria }` is
 a durable workbook-level row-filter rule bound to one sheet; `range` is a
 canonical `"A1"`/`"A1:B2"`, `column` an optional column letter inside that
 range, and `criteria` a COUNTIF-style string (see filter rules below).
-Validation rules on one sheet may not overlap; conditional and filter rules
-may. `CellFormat = { number_format?,
+`ChartSpec = { id, sheet: sheet-id, kind, title?, range, series?, colors? }`
+is a durable workbook-level chart object bound to one sheet; `kind` is
+`line|column|bar|area|pie`, `title` a 1–512-byte string, `range` the
+canonical `"A1"`/`"A1:B2"` data anchor on the bound sheet, `series` ≤32
+`{name?,range?}` overrides (name ≤128 bytes, range canonical on the same
+sheet, at least one field each) and `colors` ≤16 deduped `#RRGGBB` entries.
+`SparklineSpec = { id, sheet: sheet-id, target, data, kind }` is a durable
+workbook-level sparkline spec; `target`/`data` are canonical
+`"A1"`/`"A1:B2"` ranges on the bound sheet and `kind` is
+`line|column|bar|winloss`. Both are storage-only — the engine never
+evaluates chart/sparkline data or renders; hosts read cells and draw
+(see chart/sparkline rules below). Validation rules on one sheet may not
+overlap; conditional and filter rules may. `CellFormat = { number_format?,
 bold?, italic?, fill?, border? }` — all attributes optional; `number_format` is
 a bounded opaque string (≤64 ASCII graphic/space chars, no `" \ { }`) holding
 a preset id or custom pattern the host interprets; `fill`/`border.color` are
@@ -213,6 +224,13 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `clearFilter` | `{id}` xor `{sheet?,range:{from,to}}` | `{cleared}` | remove one rule by id, or every rule on the sheet intersecting the range |
 | `getFilters` | `{sheet?}` | `{rules:[{id,sheet,sheet_id,range,column?,criteria}]}` | read-only; `sheet` absent lists all rules |
 | `evaluateFilters` | `{sheet?,range:{from,to},id?}` | `{rows:[{row,visible,matched,failed}\|{row,matched}]}` | read-only per-row visibility report; see filter rules below |
+| `insertChart` | `{sheet?,chart:{kind,title?,range:{from,to},series?,colors?}}` | `{chart}` | append a chart object; see chart rules below |
+| `updateChart` | `{id,patch:{kind?,title?,range?,series?,colors?}}` | `{chart}` | partial patch; `null` clears title/series/colors; equal patch eventless |
+| `removeChart` | `{id}` | `{ok}` | `sheet` alongside `id` rejects |
+| `listCharts` | `{sheet?}` | `{charts:[{id,sheet,sheet_id,kind,title?,range,series?,colors?}]}` | read-only; `sheet` absent lists all |
+| `setSparkline` | `{sheet?,cell\|range,data:{from,to},kind}` | `{sparkline}` | attach/replace a sparkline spec; see sparkline rules below |
+| `clearSparkline` | `{id}` xor `{sheet?,cell\|range}` | `{cleared}` | `sheet`/`cell`/`range` alongside `id` reject |
+| `listSparklines` | `{sheet?}` | `{sparklines:[{id,sheet,sheet_id,target,data,kind}]}` | read-only; `sheet` absent lists all |
 | `clearCell` | `{addr}` | `{ok}` | |
 | `getCell` | `{addr}` | `{raw,computed,format?}` | `computed` = evaluated value; `format` present only when stored |
 | `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed,format?}]]}` | |
@@ -478,7 +496,60 @@ each; all three read ops are silent. Deferred loudly: per-operator filter
 UI state, sort-by-header-text, Excel-style reference adjustment on sort,
 and any actual row hiding in `getRange` output — all host concerns.
 
-Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Chart rules: charts are **workbook-scoped** objects bound to one sheet by
+durable sheet id (same model as names/rules), at most 256 per workbook,
+each with a workbook-unique id. `insertChart` takes `sheet?` (name or
+index, default active) and `chart:{kind,title?,range:{from,to},
+series?,colors?}` — `kind` is the bounded `line|column|bar|area|pie`
+enum, `title` a nonempty ≤512-byte string, `range` the data anchor
+canonicalized to `"A1"`/`"A1:B2"` under the shared 16,384-cell cap,
+`series` ≤32 `{name?,range?}` overrides (name ≤128 bytes, range
+canonical on the same sheet, at least one field per entry) and `colors`
+≤16 deduped `#RRGGBB` entries. Duplicate specs are allowed — charts are
+objects, not keyed rules. `updateChart {id,patch}` is a partial patch:
+present keys set, explicit `null` clears `title`/`series`/`colors`,
+`kind`/`range` cannot be null, unknown patch keys and a `sheet` field
+alongside `id` reject (the `clear*` mixed-selector precedent); an update
+that leaves the spec unchanged is eventless. `removeChart {id}` removes
+one chart (`sheet` alongside `id` rejects); `listCharts {sheet?}` is a
+silent read listing `{id,sheet,sheet_id,kind,title?,range,series?,colors?}`
+with the bound sheet's current name resolved. **Rendering stays
+host-side**: the engine stores and returns the bounded spec only — it
+never evaluates series data, computes geometry or draws pixels; hosts
+read cells via `getRange`/`getCell` and render. Mutations record one
+whole-document undo entry each; `removeSheet` cascade-drops the sheet's
+charts into the same undo entry and undo re-admits each only while it
+still satisfies the restore invariants (existing sheet, unique id, under
+the cap, canonical in-cap ranges, bounded fields); `duplicateSheet`/
+`moveSheet` do not copy or retarget charts.
+
+Sparkline rules: specs are **workbook-scoped** entries bound to one sheet
+by durable sheet id, at most 256 per workbook, each with a
+workbook-unique id — `SparklineSpec = {id,sheet,target,data,kind}` where
+`target` is the canonical `"A1"`/`"A1:B2"` anchor the sparkline is drawn
+in and `data` the canonical `"A1"`/`"A1:B2"` source range (both under the
+shared 16,384-cell cap), `kind` the bounded `line|column|bar|winloss`
+enum. `setSparkline {sheet?,cell|range,data:{from,to},kind}` attaches a
+spec: `cell` is a single address, `range` a `{from,to}` rectangle —
+exactly one is required. One spec covers one `target` per sheet:
+identical sheet+target+data+kind is an eventless no-op, the same target
+with a different spec replaces in place keeping the id. Whether a
+multi-cell `target` means "same sparkline per cell" or a grouped display
+is a host decision — the engine only guarantees the stored bounds.
+`clearSparkline` takes exactly one of `id` or a `cell`/`range` target
+selector (+ optional `sheet`, default active) removing every spec on
+that sheet with that target (`{cleared}` counts removals; no hits is
+eventless); `sheet`/`cell`/`range` alongside `id` and `cell` alongside
+`range` reject rather than being ignored. `listSparklines {sheet?}` is a
+silent read listing `{id,sheet,sheet_id,target,data,kind}` with the bound
+sheet's current name resolved. **Rendering stays host-side**: the engine
+stores and returns the bounded spec only — it never evaluates the data
+range or draws pixels. Mutations record one whole-document undo entry
+each; `removeSheet` cascade-drops the sheet's specs into the same undo
+entry and undo re-admits each only while it still satisfies the restore
+invariants; `duplicateSheet`/`moveSheet` do not copy or retarget specs.
+
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
@@ -487,23 +558,28 @@ Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteri
 Criteria expressions/cell references are evaluated normally; criteria range errors/cycles propagate. SUMIF evaluates sum cells only for matches, ignores matched nonnumeric values and propagates matched errors; nonfinite accumulated sums return #NUM!. Existing per-request memoization/depth/cycle rules remain intact. Each conditional rectangle is capped at16384 cells, criteria at255 Unicode scalars and matched text at4096 UTF-8 bytes (#VALUE! for string limits). A shared per-Evaluator allowance of1000000 conditional scan/string/DP steps returns #NUM! on exhaustion; matcher allocation work is charged before bounded DP buffers, and `Evaluator::match_value` (used by `evaluateConditionalFormats`) charges one flat unit per candidate rule-cell evaluation up front so every comparison path — numeric, boolean, empty-criteria, wildcard and type-mismatch — counts against the same allowance. These are explicit Tally semantics, not full Excel compatibility.
 
 Snapshots: the NFD1 envelope is unchanged; the JSON payload is normally the bare
-`Workbook` (`{next_sheet,sheets,active,names?,validations?,next_validation?,conditional_formats?,next_conditional,filters?,next_filter}`). When any sheet carries durable
+`Workbook` (`{next_sheet,sheets,active,names?,validations?,next_validation?,conditional_formats?,next_conditional,filters?,next_filter,charts?,next_chart?,sparklines?,next_sparkline?}`). When any sheet carries durable
 post-release fields (`tone` set, `is_protected` true, or a nonempty `formats`
-map) **or the workbook has any names, validation rules, conditional rules or
-filter rules**,
+map) **or the workbook has any names, validation rules, conditional rules,
+filter rules, charts or sparkline specs**,
 the payload is instead `{kind:"tally",schema:N,document:<Workbook>}` so
 pre-wrapper readers fail closed rather than silently dropping those fields
 (same precedent as pitch schema:2 and quill schema:2). `N` is `1` for
 tone/protection/formats/names-only documents, `2` when `validations` is
 nonempty and no later table is, `3` when `conditional_formats` is nonempty
 and `filters` is empty — a schema:3 document may carry both earlier rule
-tables — and `4` when `filters` is nonempty, which may carry every earlier
-table. `Workbook` does not deny unknown fields, so each newer table bumps
+tables — `4` when `filters` is nonempty, and `5` when `charts` or
+`sparklines` is nonempty, each of which may carry every earlier table.
+`Workbook` does not deny unknown fields, so each newer table bumps
 the schema: schema:1 readers would silently drop `validations`,
-`conditional_formats` or `filters`, and the higher schemas make them reject
-the snapshot instead. `formats`/`names`/`validations`/`conditional_formats`/`filters`
+`conditional_formats`, `filters`, `charts` or `sparklines`, and the higher
+schemas make them reject the snapshot instead — the chart/sparkline bump to
+schema:5 follows the same reasoning as filters' bump to schema:4 (the new
+tables are top-level `Workbook` fields, not `deny_unknown_fields`-covered
+struct fields, so an unbumped schema:4 payload would be silently dropped by
+schema:4 readers). `formats`/`names`/`validations`/`conditional_formats`/`filters`/`charts`/`sparklines`
 entries ride
-inside `document`; `restore` accepts schemas 1, 2, 3 and 4, strictly validates
+inside `document`; `restore` accepts schemas 1, 2, 3, 4 and 5, strictly validates
 wrapper kind/schema/keys (`deny_unknown_fields`), then runs the existing
 document validation — including name uniqueness, name legality, on-sheet
 `refers_to`, existing sheet ids, validation-rule count/id uniqueness, bound
@@ -513,20 +589,27 @@ id uniqueness, sheet binding, criteria parseability, range
 canonicalization/caps and format shapes (with the op-path `false`-boolean
 normalization applied first), filter-rule count/id uniqueness, bound sheet
 existence, canonical in-sheet ranges within the cell cap, criteria
-parseability, in-range columns, and `next_filter` id-space repair — all
+parseability, in-range columns, and `next_filter` id-space repair,
+chart/sparkline count and id uniqueness, bound sheet existence,
+re-canonicalized in-cap ranges (including series ranges and palette
+dedupe), bounded titles/series/colors and `next_chart`/`next_sparkline`
+id-space repair — all
 re-canonicalized — before
 replacing state and resetting the journal; bad input leaves state untouched.
 Each table also restores only under the schema that introduced it:
-nonempty `filters` requires schema:4, nonempty `conditional_formats`
+nonempty `charts`/`sparklines` require schema:5, nonempty `filters`
+requires schema:4, nonempty `conditional_formats`
 requires schema:3 and nonempty
 `validations` requires schema:2, so crafted lower-schema or bare-workbook
 payloads carrying any table fail closed rather than silently dropping
-version markers. Every rule table is serde-optional, so a schema:2 payload
-(validations only) restores with empty `conditional_formats`/`filters`, a
-schema:3 payload restores with empty `filters`, and vice versa.
+version markers. Every rule/spec table is serde-optional, so a schema:2
+payload (validations only) restores with empty `conditional_formats`/
+`filters`/`charts`/`sparklines`, a schema:3 payload restores with empty
+`filters`/`charts`/`sparklines`, a schema:4 payload restores with empty
+`charts`/`sparklines`, and vice versa.
 Workbooks without tone/protection/formats/names/validations/conditional
-rules/filters keep the legacy payload, so older snapshots and older readers
-round-trip unchanged.
+rules/filters/charts/sparklines keep the legacy payload, so older snapshots
+and older readers round-trip unchanged.
 
 ## cadence-engine — `CadenceEngine::new()`
 

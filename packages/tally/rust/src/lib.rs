@@ -24,6 +24,13 @@
 //! `filter_ops`): each rule binds a sheet id, a canonical range, an
 //! optional column and a COUNTIF-style criteria string; filters hide rows
 //! (never delete) and visibility is derived live from computed values.
+//! `charts` is the durable workbook-level chart-object table (see
+//! `chart_ops`): each spec binds a sheet id, a bounded kind, a canonical
+//! data-anchor range and optional title/series/colors — the engine stores
+//! the spec only, rendering is host-side. `sparklines` is the durable
+//! workbook-level sparkline table (see `sparkline_ops`): each spec binds a
+//! sheet id, a canonical target anchor and data range plus a bounded kind —
+//! likewise storage-only.
 //! `sortRange` (see `sort_ops`) is a pure mutation — it permutes raw cell
 //! rows by computed key values with formulas moving verbatim.
 //!
@@ -47,6 +54,7 @@
 //!   `new` — a strict superset of the spec's per-cell undo. `restore` and
 //!   `new` reset the journal's view of the world appropriately.
 
+mod chart_ops;
 mod conditional_ops;
 mod filter_ops;
 mod formula;
@@ -56,10 +64,13 @@ mod range_ops;
 mod sheet_ops;
 mod sort_ops;
 mod protection;
+mod sparkline_ops;
 mod validation_ops;
 
+use chart_ops::ChartSpec;
 use conditional_ops::ConditionalRule;
 use filter_ops::FilterRule;
+use sparkline_ops::SparklineSpec;
 use format_ops::CellFormat;
 use validation_ops::ValidationRule;
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator};
@@ -138,6 +149,18 @@ struct Workbook {
     /// Next id handed out by `setFilter`.
     #[serde(default)]
     next_filter: u64,
+    /// Durable chart objects; empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    charts: Vec<ChartSpec>,
+    /// Next id handed out by `insertChart`.
+    #[serde(default)]
+    next_chart: u64,
+    /// Durable sparkline specs; empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    sparklines: Vec<SparklineSpec>,
+    /// Next id handed out by `setSparkline`.
+    #[serde(default)]
+    next_sparkline: u64,
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
@@ -180,6 +203,10 @@ fn blank_workbook() -> Workbook {
         next_conditional: 1,
         filters: Vec::new(),
         next_filter: 1,
+        charts: Vec::new(),
+        next_chart: 1,
+        sparklines: Vec::new(),
+        next_sparkline: 1,
     }
 }
 
@@ -234,12 +261,14 @@ enum UndoEntry {
     AddSheet { sheet_id: u64 },
     /// A sheet was removed; undo re-inserts it at `index`, restores `active`
     /// and re-adds `dropped_names`/`dropped_validations`/
-    /// `dropped_conditional_formats`/`dropped_filters` (names, validation
-    /// rules, conditional rules and filter rules bound to the removed sheet
+    /// `dropped_conditional_formats`/`dropped_filters`/`dropped_charts`/
+    /// `dropped_sparklines` (names, validation rules, conditional rules,
+    /// filter rules, charts and sparkline specs bound to the removed sheet
     /// are cascade-dropped on removal). Re-admission skips entries whose
     /// case-insensitive name twin already exists, that would exceed the
-    /// table caps, or (for rules) that no longer satisfy the stored-rule
-    /// invariants, keeping `doc` inside the invariants `restore` enforces.
+    /// table caps, or (for rules/specs) that no longer satisfy the
+    /// stored-entry invariants, keeping `doc` inside the invariants
+    /// `restore` enforces.
     RemoveSheet {
         index: usize,
         sheet: Sheet,
@@ -248,6 +277,8 @@ enum UndoEntry {
         dropped_validations: Vec<ValidationRule>,
         dropped_conditional_formats: Vec<ConditionalRule>,
         dropped_filters: Vec<FilterRule>,
+        dropped_charts: Vec<ChartSpec>,
+        dropped_sparklines: Vec<SparklineSpec>,
     },
     RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
@@ -399,9 +430,9 @@ impl TallyEngine {
     }
 
     /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet` and
-    /// cascade-dropping names, validation rules, conditional rules and
-    /// filter rules bound to the removed sheet id. Returns the removed sheet
-    /// and the dropped entries.
+    /// cascade-dropping names, validation rules, conditional rules, filter
+    /// rules, charts and sparkline specs bound to the removed sheet id.
+    /// Returns the removed sheet and the dropped entries.
     fn remove_sheet_at(
         &mut self,
         idx: usize,
@@ -411,6 +442,8 @@ impl TallyEngine {
         Vec<ValidationRule>,
         Vec<ConditionalRule>,
         Vec<FilterRule>,
+        Vec<ChartSpec>,
+        Vec<SparklineSpec>,
     ) {
         let removed = self.doc.sheets.remove(idx);
         let len = self.doc.sheets.len();
@@ -455,7 +488,33 @@ impl TallyEngine {
                 true
             }
         });
-        (removed, dropped, dropped_rules, dropped_conditional, dropped_filters)
+        let mut dropped_charts = Vec::new();
+        self.doc.charts.retain(|c| {
+            if c.sheet == removed.id {
+                dropped_charts.push(c.clone());
+                false
+            } else {
+                true
+            }
+        });
+        let mut dropped_sparklines = Vec::new();
+        self.doc.sparklines.retain(|s| {
+            if s.sheet == removed.id {
+                dropped_sparklines.push(s.clone());
+                false
+            } else {
+                true
+            }
+        });
+        (
+            removed,
+            dropped,
+            dropped_rules,
+            dropped_conditional,
+            dropped_filters,
+            dropped_charts,
+            dropped_sparklines,
+        )
     }
 
     // -- op results -----------------------------------------------------------
@@ -550,9 +609,10 @@ impl TallyEngine {
         if self.doc.sheets.len() <= 1 {
             return Err(EngineError::validation("workbook must keep at least one sheet"));
         }
-        // Names, validation rules and conditional rules bound to the
-        // removed sheet are cascade-dropped; the undo entry carries them so
-        // undo/redo restore them exactly.
+        // Names, validation rules, conditional rules, filter rules, charts
+        // and sparkline specs bound to the removed sheet are
+        // cascade-dropped; the undo entry carries them so undo/redo restore
+        // them exactly.
         let sheet_id = self.doc.sheets[idx].id;
         let dropped_names: Vec<NamedRange> = self
             .doc
@@ -582,6 +642,20 @@ impl TallyEngine {
             .filter(|r| r.sheet == sheet_id)
             .cloned()
             .collect();
+        let dropped_charts: Vec<ChartSpec> = self
+            .doc
+            .charts
+            .iter()
+            .filter(|c| c.sheet == sheet_id)
+            .cloned()
+            .collect();
+        let dropped_sparklines: Vec<SparklineSpec> = self
+            .doc
+            .sparklines
+            .iter()
+            .filter(|s| s.sheet == sheet_id)
+            .cloned()
+            .collect();
         let entry = UndoEntry::RemoveSheet {
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
@@ -590,6 +664,8 @@ impl TallyEngine {
             dropped_validations,
             dropped_conditional_formats,
             dropped_filters,
+            dropped_charts,
+            dropped_sparklines,
         };
         self.journal.record(entry);
         self.remove_sheet_at(idx);
@@ -829,6 +905,8 @@ impl TallyEngine {
                             dropped_validations,
                             dropped_conditional_formats,
                             dropped_filters,
+                            dropped_charts,
+                            dropped_sparklines,
                         ) = self.remove_sheet_at(idx);
                         UndoEntry::RemoveSheet {
                             index: idx,
@@ -838,6 +916,8 @@ impl TallyEngine {
                             dropped_validations,
                             dropped_conditional_formats,
                             dropped_filters,
+                            dropped_charts,
+                            dropped_sparklines,
                         }
                     }
                     // Already gone — nothing changed; emit a no-op entry.
@@ -854,6 +934,8 @@ impl TallyEngine {
                 dropped_validations,
                 dropped_conditional_formats,
                 dropped_filters,
+                dropped_charts,
+                dropped_sparklines,
             } => {
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
@@ -910,6 +992,21 @@ impl TallyEngine {
                 for r in dropped_filters {
                     if filter_ops::readd_ok(&self.doc, &r) {
                         self.doc.filters.push(r);
+                    }
+                }
+                // Charts and sparkline specs cascade-dropped with the sheet
+                // come back under the same discipline: each is re-admitted
+                // only while it still satisfies the invariants `restore`
+                // enforces (existing sheet, unique id, under the cap,
+                // canonical in-cap ranges and bounded fields).
+                for c in dropped_charts {
+                    if chart_ops::readd_ok(&self.doc, &c) {
+                        self.doc.charts.push(c);
+                    }
+                }
+                for s in dropped_sparklines {
+                    if sparkline_ops::readd_ok(&self.doc, &s) {
+                        self.doc.sparklines.push(s);
                     }
                 }
                 UndoEntry::AddSheet { sheet_id }
@@ -993,6 +1090,13 @@ impl Engine for TallyEngine {
             "clearFilter" => self.op_clear_filter(p),
             "getFilters" => self.op_get_filters(p),
             "evaluateFilters" => self.op_evaluate_filters(p),
+            "insertChart" => self.op_insert_chart(p),
+            "updateChart" => self.op_update_chart(p),
+            "removeChart" => self.op_remove_chart(p),
+            "listCharts" => self.op_list_charts(p),
+            "setSparkline" => self.op_set_sparkline(p),
+            "clearSparkline" => self.op_clear_sparkline(p),
+            "listSparklines" => self.op_list_sparklines(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -1023,32 +1127,38 @@ impl Engine for TallyEngine {
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
         // Sheets with a tone, protection flag, stored formats, workbook
-        // names, validation rules, conditional-format rules or filter
-        // rules carry durable fields added after the first release; older
-        // readers ignore unknown `Sheet`/`Workbook` fields, so wrap those
-        // documents and let old engines fail closed instead of silently
-        // discarding them. Plain workbooks keep the legacy payload shape.
+        // names, validation rules, conditional-format rules, filter rules,
+        // charts or sparkline specs carry durable fields added after the
+        // first release; older readers ignore unknown `Sheet`/`Workbook`
+        // fields, so wrap those documents and let old engines fail closed
+        // instead of silently discarding them. Plain workbooks keep the
+        // legacy payload shape.
         // `Workbook` does not deny unknown fields, so each newer table bumps
         // the schema: documents carrying only validations emit schema:2,
         // documents carrying conditional rules emit schema:3 (which may
         // also carry validations), documents carrying filter rules emit
-        // schema:4 (which may carry every earlier table), and
-        // tone/protection/formats/names alone stay schema:1 — older readers
-        // reject the higher schemas rather than silently dropping rules
-        // (see docs/ENGINE_OPS.md).
+        // schema:4 (which may carry every earlier table), documents
+        // carrying charts or sparklines emit schema:5 (which may carry
+        // every earlier table), and tone/protection/formats/names alone
+        // stay schema:1 — older readers reject the higher schemas rather
+        // than silently dropping rules/specs (see docs/ENGINE_OPS.md).
         let has_validations = !self.doc.validations.is_empty();
         let has_conditional = !self.doc.conditional_formats.is_empty();
         let has_filters = !self.doc.filters.is_empty();
+        let has_charts = !self.doc.charts.is_empty() || !self.doc.sparklines.is_empty();
         let extended = self.doc.sheets.iter().any(|s| {
             s.tone.is_some() || s.is_protected || !s.formats.is_empty()
         }) || !self.doc.names.is_empty()
             || has_validations
             || has_conditional
-            || has_filters;
+            || has_filters
+            || has_charts;
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
-                schema: if has_filters {
+                schema: if has_charts {
+                    5
+                } else if has_filters {
                     4
                 } else if has_conditional {
                     3
@@ -1081,12 +1191,13 @@ impl Engine for TallyEngine {
         if wrapped {
             let wrapper: VersionedDoc = serde_json::from_value(value)?;
             // schema:2 (validations only), schema:3 (conditional rules,
-            // possibly alongside validations) and schema:4 (filter rules,
-            // possibly alongside every earlier table) are all honored;
-            // either table absent from a document deserializes to its
-            // serde default, so cross-version payloads never lose the
-            // other families' rules.
-            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3 | 4) {
+            // possibly alongside validations), schema:4 (filter rules,
+            // possibly alongside every earlier table) and schema:5 (chart
+            // objects and sparkline specs, possibly alongside every earlier
+            // table) are all honored; either table absent from a document
+            // deserializes to its serde default, so cross-version payloads
+            // never lose the other families' rules.
+            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5) {
                 return Err(EngineError::unsupported(
                     "unsupported Tally snapshot kind/schema",
                 ));
@@ -1098,11 +1209,18 @@ impl Engine for TallyEngine {
         }
         // Fail closed on crafted lower-version payloads smuggling newer
         // tables: each durable table restores only under the schema that
-        // introduced it — filter rules need schema:4, conditional rules
-        // schema:3, validations schema:2 — and a bare (unwrapped) Workbook
-        // predates all three. Emit always stamps the highest table present,
-        // so honest payloads are unaffected; this only rejects hand-built
-        // downgrades.
+        // introduced it — chart/sparkline specs need schema:5, filter
+        // rules schema:4, conditional rules schema:3, validations schema:2
+        // — and a bare (unwrapped) Workbook predates all four. Emit always
+        // stamps the highest table present, so honest payloads are
+        // unaffected; this only rejects hand-built downgrades.
+        if (!doc.charts.is_empty() || !doc.sparklines.is_empty())
+            && snapshot_schema.is_none_or(|s| s < 5)
+        {
+            return Err(EngineError::serialization(
+                "charts and sparklines require snapshot schema 5",
+            ));
+        }
         if !doc.filters.is_empty() && snapshot_schema.is_none_or(|s| s < 4) {
             return Err(EngineError::serialization(
                 "filters require snapshot schema 4",
@@ -1372,6 +1490,110 @@ impl Engine for TallyEngine {
         }
         if doc.next_filter == 0 {
             doc.next_filter = 1;
+        }
+        // Chart objects get the same hostile-input treatment: bounded
+        // count, unique ids, existing sheet ids, canonical on-sheet ranges
+        // within the shared cell cap (re-canonicalized, including each
+        // series range), bounded title/series/colors, deduped palette.
+        if doc.charts.len() > chart_ops::MAX_CHARTS {
+            return Err(EngineError::serialization("too many charts"));
+        }
+        let mut seen_chart_ids = std::collections::BTreeSet::new();
+        for c in &mut doc.charts {
+            if !seen_chart_ids.insert(c.id) {
+                return Err(EngineError::serialization("duplicate chart id"));
+            }
+            if !doc.sheets.iter().any(|s| s.id == c.sheet) {
+                return Err(EngineError::serialization(
+                    "chart references a missing sheet",
+                ));
+            }
+            let coords = name_ops::parse_refers_to(&c.range)
+                .map_err(|_| EngineError::serialization("invalid chart range"))?;
+            if (coords.2 - coords.0 + 1) as u64 * (coords.3 - coords.1 + 1) as u64
+                > MAX_GET_RANGE_CELLS
+            {
+                return Err(EngineError::serialization(
+                    "chart range exceeds 16384 cells",
+                ));
+            }
+            c.range = name_ops::canonical_refers_to(coords);
+            if let Some(series) = &mut c.series {
+                for s in series.iter_mut() {
+                    if let Some(range) = &mut s.range {
+                        let coords = name_ops::parse_refers_to(range)
+                            .map_err(|_| EngineError::serialization("invalid chart series range"))?;
+                        if (coords.2 - coords.0 + 1) as u64
+                            * (coords.3 - coords.1 + 1) as u64
+                            > MAX_GET_RANGE_CELLS
+                        {
+                            return Err(EngineError::serialization(
+                                "chart series range exceeds 16384 cells",
+                            ));
+                        }
+                        *range = name_ops::canonical_refers_to(coords);
+                    }
+                }
+            }
+            if let Some(colors) = &mut c.colors {
+                let mut seen = std::collections::BTreeSet::new();
+                colors.retain(|col| seen.insert(col.clone()));
+            }
+            if !chart_ops::stored_ok(c) {
+                return Err(EngineError::serialization("invalid chart spec"));
+            }
+        }
+        if let Some(max_id) = doc.charts.iter().map(|c| c.id).max() {
+            if doc.next_chart <= max_id {
+                doc.next_chart = max_id.checked_add(1).ok_or_else(|| {
+                    EngineError::serialization("chart id space exhausted")
+                })?;
+            }
+        }
+        if doc.next_chart == 0 {
+            doc.next_chart = 1;
+        }
+        // Sparkline specs get the same hostile-input treatment: bounded
+        // count, unique ids, existing sheet ids, canonical on-sheet target
+        // and data ranges within the shared cell cap.
+        if doc.sparklines.len() > sparkline_ops::MAX_SPARKLINES {
+            return Err(EngineError::serialization("too many sparkline specs"));
+        }
+        let mut seen_sparkline_ids = std::collections::BTreeSet::new();
+        for s in &mut doc.sparklines {
+            if !seen_sparkline_ids.insert(s.id) {
+                return Err(EngineError::serialization("duplicate sparkline id"));
+            }
+            if !doc.sheets.iter().any(|sh| sh.id == s.sheet) {
+                return Err(EngineError::serialization(
+                    "sparkline references a missing sheet",
+                ));
+            }
+            for range in [&mut s.target, &mut s.data] {
+                let coords = name_ops::parse_refers_to(range)
+                    .map_err(|_| EngineError::serialization("invalid sparkline range"))?;
+                if (coords.2 - coords.0 + 1) as u64 * (coords.3 - coords.1 + 1) as u64
+                    > MAX_GET_RANGE_CELLS
+                {
+                    return Err(EngineError::serialization(
+                        "sparkline range exceeds 16384 cells",
+                    ));
+                }
+                *range = name_ops::canonical_refers_to(coords);
+            }
+            if !sparkline_ops::stored_ok(s) {
+                return Err(EngineError::serialization("invalid sparkline spec"));
+            }
+        }
+        if let Some(max_id) = doc.sparklines.iter().map(|s| s.id).max() {
+            if doc.next_sparkline <= max_id {
+                doc.next_sparkline = max_id.checked_add(1).ok_or_else(|| {
+                    EngineError::serialization("sparkline id space exhausted")
+                })?;
+            }
+        }
+        if doc.next_sparkline == 0 {
+            doc.next_sparkline = 1;
         }
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
@@ -1821,6 +2043,8 @@ mod tests {
             dropped_validations: Vec::new(),
             dropped_conditional_formats: Vec::new(),
             dropped_filters: Vec::new(),
+            dropped_charts: Vec::new(),
+            dropped_sparklines: Vec::new(),
         });
         assert!(e.undo().unwrap());
         // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
@@ -1864,6 +2088,8 @@ mod tests {
             dropped_validations: Vec::new(),
             dropped_conditional_formats: Vec::new(),
             dropped_filters: Vec::new(),
+            dropped_charts: Vec::new(),
+            dropped_sparklines: Vec::new(),
         });
         assert!(e.undo().unwrap());
         assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);
@@ -2002,9 +2228,9 @@ mod tests {
             "active": 0
         });
         for wrapper in [
-            // wrong schema / wrong kind fail closed (schemas 1–4 are the
-            // accepted tally versions; 5 is beyond them)
-            json!({"kind":"tally","schema":5,"document":doc}),
+            // wrong schema / wrong kind fail closed (schemas 1–5 are the
+            // accepted tally versions; 6 is beyond them)
+            json!({"kind":"tally","schema":6,"document":doc}),
             json!({"kind":"quill","schema":1,"document":doc}),
             // unknown wrapper keys rejected by deny_unknown_fields
             json!({"kind":"tally","schema":1,"document":doc,"extra":true}),
@@ -2156,6 +2382,60 @@ mod tests {
         assert_eq!(d["validations"].as_array().unwrap().len(), 1);
         assert_eq!(d["conditional_formats"].as_array().unwrap().len(), 1);
         assert_eq!(d["filters"].as_array().unwrap().len(), 1);
+
+        // Charts only → schema:5; restores with empty earlier tables.
+        let mut e = TallyEngine::new();
+        data(
+            &mut e,
+            "insertChart",
+            json!({"chart":{"kind":"line","range":{"from":"A1","to":"A4"}}}),
+        );
+        let (schema, v) = snapshot_schema(&e);
+        assert_eq!(schema, Some(5));
+        assert_eq!(v["document"]["charts"].as_array().unwrap().len(), 1);
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        let d = data(&mut e2, "describe", json!({}));
+        assert_eq!(d["charts"].as_array().unwrap().len(), 1);
+        assert_eq!(d["filters"].as_array().map_or(0, Vec::len), 0);
+
+        // Sparklines alongside every earlier table → still schema:5, all
+        // tables restore intact.
+        let mut e = TallyEngine::new();
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"B1","to":"B1"},"rule":{"kind":"list","values":["a"]}}),
+        );
+        data(
+            &mut e,
+            "setConditionalFormat",
+            json!({"range":{"from":"A1","to":"A1"},"rule":{"criteria":">1","format":{"bold":true}}}),
+        );
+        data(
+            &mut e,
+            "setFilter",
+            json!({"range":{"from":"A1","to":"A4"},"criteria":"*"}),
+        );
+        data(
+            &mut e,
+            "insertChart",
+            json!({"chart":{"kind":"column","range":{"from":"A1","to":"A4"},"title":"T"}}),
+        );
+        data(
+            &mut e,
+            "setSparkline",
+            json!({"cell":"C1","data":{"from":"A1","to":"A4"},"kind":"line"}),
+        );
+        assert_eq!(snapshot_schema(&e).0, Some(5));
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        let d = data(&mut e2, "describe", json!({}));
+        assert_eq!(d["validations"].as_array().unwrap().len(), 1);
+        assert_eq!(d["conditional_formats"].as_array().unwrap().len(), 1);
+        assert_eq!(d["filters"].as_array().unwrap().len(), 1);
+        assert_eq!(d["charts"].as_array().unwrap().len(), 1);
+        assert_eq!(d["sparklines"].as_array().unwrap().len(), 1);
     }
 
     #[test]
@@ -2172,6 +2452,12 @@ mod tests {
         }]);
         let filter = json!([{
             "id":1,"sheet":0,"range":"A1:A4","column":"A","criteria":">1"
+        }]);
+        let chart = json!([{
+            "id":1,"sheet":0,"kind":"line","range":"A1:A4"
+        }]);
+        let sparkline = json!([{
+            "id":1,"sheet":0,"target":"C1","data":"A1:A4","kind":"line"
         }]);
         let doc_with = |extra: Value| {
             let mut d = json!({
@@ -2201,6 +2487,17 @@ mod tests {
             json!({"kind":"tally","schema":2,"document":doc_with(json!({"filters":filter.clone()}))}),
             json!({"kind":"tally","schema":1,"document":doc_with(json!({"filters":filter.clone()}))}),
             doc_with(json!({"filters":filter.clone()})),
+            // Chart/sparkline specs smuggled under schema:1–4 or a bare
+            // Workbook all fail closed — schema:5 is the minimum that
+            // introduced the tables.
+            json!({"kind":"tally","schema":4,"document":doc_with(json!({"charts":chart.clone()}))}),
+            json!({"kind":"tally","schema":3,"document":doc_with(json!({"charts":chart.clone()}))}),
+            json!({"kind":"tally","schema":2,"document":doc_with(json!({"charts":chart.clone()}))}),
+            json!({"kind":"tally","schema":1,"document":doc_with(json!({"charts":chart.clone()}))}),
+            doc_with(json!({"charts":chart.clone()})),
+            json!({"kind":"tally","schema":4,"document":doc_with(json!({"sparklines":sparkline.clone()}))}),
+            json!({"kind":"tally","schema":1,"document":doc_with(json!({"sparklines":sparkline.clone()}))}),
+            doc_with(json!({"sparklines":sparkline.clone()})),
         ] {
             let bytes = encode_envelope(&serde_json::to_vec(&payload).unwrap());
             assert!(e.restore(&bytes).is_err(), "accepted {payload}");
@@ -2212,6 +2509,7 @@ mod tests {
             (3u32, json!({"conditional_formats":conditional})),
             (2u32, json!({"validations":validation})),
             (4u32, json!({"filters":filter})),
+            (5u32, json!({"charts":chart,"sparklines":sparkline})),
         ] {
             let payload = json!({
                 "kind":"tally","schema":schema,
