@@ -39,6 +39,7 @@ fn factory(kind: EngineKind) -> Option<Box<dyn Engine>> {
         EngineKind::Photo => Some(Box::new(photo_engine::PhotoEngine::new())),
         EngineKind::Motion => Some(Box::new(motion_engine::MotionEngine::new())),
         EngineKind::Design => Some(Box::new(design_engine::DesignEngine::new())),
+        EngineKind::Draft => Some(Box::new(draft_engine::DraftEngine::new())),
     }
 }
 
@@ -79,7 +80,7 @@ unsafe fn read_str<'a>(s: *const c_char) -> Result<&'a str, EngineError> {
         .map_err(|_| EngineError::invalid("argument is not valid UTF-8"))
 }
 
-/// Open an engine. `kind` is one of: prism cadence splice folio pitch tally quill photo motion design.
+/// Open an engine. `kind` is one of: prism cadence splice folio pitch tally quill photo motion design draft.
 /// Returns a handle > 0, or 0 on failure (writes an error string to
 /// `*out_err`, free with nf_free_string).
 #[no_mangle]

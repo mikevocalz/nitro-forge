@@ -1,6 +1,6 @@
 # P16/P17 backend entry plan
 
-Initial source audit, 2026-11-07. At audit time, neither design nor CAD documents were registered. The subsequent Design9 fixed-frame source checkpoint now implements the first bounded layout/render slice; see [source and checks](P16-design-fixed-frame-source.md). Draft10 is assigned for the next bounded 2D drafting slice and is not yet registered. Full design and CAD/3D scope remains open. Canonical controls exist in NYC-Tron `packages/ui/src/components/forge/design/` and `cad/`; they supply callback contracts, not a layout/geometry backend.
+Initial source audit, 2026-11-07. At audit time, neither design nor CAD documents were registered. The subsequent Design9 fixed-frame source checkpoint now implements the first bounded layout/render slice; see [source and checks](P16-design-fixed-frame-source.md). The subsequent [Draft10 source](P17-draft-source.md) implements bounded world points/segments, real snaps, linear coordinate solving and actual Prism rendering. Full design and CAD/3D scope remains open. Canonical controls exist in NYC-Tron `packages/ui/src/components/forge/design/` and `cad/`; they supply callback contracts, not a layout/geometry backend.
 
 ## Shared production foundation
 

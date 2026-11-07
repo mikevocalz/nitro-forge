@@ -285,6 +285,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "draft-engine"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "prism-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "ecb"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -612,6 +622,7 @@ version = "0.1.0"
 dependencies = [
  "cadence-engine",
  "design-engine",
+ "draft-engine",
  "folio-engine",
  "ignition-core",
  "motion-engine",
@@ -629,6 +640,7 @@ version = "0.1.0"
 dependencies = [
  "cadence-engine",
  "design-engine",
+ "draft-engine",
  "folio-engine",
  "ignition-core",
  "motion-engine",

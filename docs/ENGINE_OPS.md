@@ -545,3 +545,35 @@ Absolute children use parent origin plus local x/y. Flow overrides child x/y in 
 Lock is authored edit permission on a node and its descendants, not a frozen world-space result: unlocked ancestor layout/reparent/order operations can reposition locked descendants. Separate unlock admits only the locked field; subtree removal checks every descendant. Root new/restore/history remain full-document lifecycle operations.
 
 Whole candidate validation precedes one history/event entry; equal writes and net-equal atomic batches preserve redo/events. Sixteen Arc/COW history states, <=1024 nodes, <=64 parent edges, <=512-byte names/title, safe-integer IDs below next counter, 8MiB encoded state. Local x/y and positive sizes bounded1e6; gap/padding0..100000. Root width/height1..4096 and <=1,048,576 pixels before allocation. Restore checks kind/schema/tree/bounds/evaluated geometry before replacing state/history. Render tasks checkpoint between nodes and before/after synchronous Prism flatten; no inside-compositor interruption is claimed. Binary input, app activation and native rebuilt support remain outside this slice.
+
+## draft-engine — `DraftEngine::new()` (bounded 2D slice)
+
+Draft appends native/NFC1/NCC1 tag 10 after Design9, preserving tags0..9. NFD1 framing is unchanged; JSON state carries `kind:"draft",schema:1`, units (`mm|cm|m|in` metadata), safe monotonic shared entity IDs, world points, ordered finite segments, linear constraints and snap settings. Viewport transforms and selection are host state, never silently persisted as world geometry. No unit conversion is implied by units metadata.
+
+| Op | Payload | Result / behavior |
+| --- | --- | --- |
+| `new` | `{units?}` | `{ok}`; resets to empty geometry, default mm/grid spacing10. |
+| `describe` | `{}` | Full state plus ephemeral monotonic `source_revision`. |
+| `addPoint` | `{x,y,locked?}` | `{point_id}`. |
+| `updatePoint` | `{id,x?,y?,locked?}` | `{ok}`; locked point/locked-segment endpoints cannot move. |
+| `removePoint` | `{id}` | `{ok}`; rejects locks and remaining segment/constraint references. |
+| `addSegment` | `{a,b,name?,color?,width?,visible?,locked?}` | `{segment_id}`; distinct existing point IDs; width in world units. |
+| `updateSegment` | `{id,a?,b?,name?,color?,width?,visible?,locked?}` | `{ok}`; locked segment requires separate unlock. |
+| `removeSegment` | `{id}` | `{ok}`; rejects lock and remaining horizontal/vertical constraint references. |
+| `setSegmentOrder` | `{order:[id,...]}` | `{ok}`; exact unique segment permutation. |
+| `setSnapSettings` | `{grid?,spacing?,origin_x?,origin_y?,endpoint?,midpoint?,projection?,intersection?}` | `{ok}`; persistent world-grid/feature settings. |
+| `querySnap` | `{x,y,tolerance}` | `{candidate:null|{kind,x,y,distance,sources},source_revision}`; tolerance is world units, inclusive radius. |
+| `addConstraint` | `{definition,enabled?}` | `{constraint_id}`; stores intent, does not claim it is solved. |
+| `updateConstraint` | `{id,definition?,enabled?}` | `{ok}`; atomic complete definition replacement. |
+| `removeConstraint` | `{id}` | `{ok}`. |
+| `solve` | `{tolerance?}` | `{status,rank,dof,residual,unsatisfied_constraints,unsatisfied_locked_points,applied}`; consistent bounded geometry publishes atomically, otherwise no geometry/history/event change. |
+| `evaluate` | `{}` | Actual world `{points,segments,order,source_revision}`. |
+| `renderFrame` | `{width,height,origin_x,origin_y,scale}` | Real Prism stroked-path RGBA; JSON/base64 or original command's binary output. Positive scale is pixels/world unit, origin maps to pixel0,0. |
+
+Constraint definitions are `fixed {point,x,y}`, `coincident {a,b}`, `horizontal|vertical {segment}`, `distance_x|distance_y {a,b,value}` under a `kind` discriminator. Distances are signed axis differences (`b-a`), not nonlinear Euclidean distances. Locked points and endpoints of locked segments are exact fixed coordinates: the solver restores them exactly before recomputing residual/status. Gaussian elimination solves only these linear equations with deterministic bounded pivots; free coordinates retain authored values. Rank/DOF refer to this admitted coordinate matrix. `solved`/`underconstrained` mean residual within the requested absolute world tolerance (default1e-7, allowed1e-9..1e-3); residual/unsatisfied IDs remain explicit. Inconsistent attempts do not publish geometry or clear redo. Consistent solutions outside world bounds reject atomically.
+
+Snaps use all authored points for endpoints, including standalone and hidden-segment-only points; midpoint/projection/intersection use visible segments. Projection clamps to a finite segment. Unique finite-segment intersections exclude zero-length, collinear/overlapping and angular-nearparallel pairs (relative determinant cutoff1e-12). Grid half-ties round away from zero. Candidate order is exact computed distance, then endpoint/intersection/midpoint/projection/grid priority, then stable source IDs; tolerance is a radius, not a near-tie priority override. When no candidate qualifies, `candidate` is null. Distinct point IDs may share coordinates; such zero-length segments skip projection/intersection and draw no path, retaining real geometry identities.
+
+Limits:64 points/128 solver variables,128 segments/constraints,384 equation rows, at most16777216 elimination coefficient updates, world coordinates ±1e6, signed axis distances ±2e6, world stroke width1e-6..1000, grid spacing1e-6..1e6, names512 UTF-8 bytes,8 MiB serialized state and16 Arc/COW history entries. Full candidate/restore validates kind/schema, identities/references/order, finite bounds and budgets before live mutation. Equal writes and net-equal batches preserve redo/events. Revision-bearing `describe`/`evaluate`/`querySnap` reject inside shared atomic batches so no intermediate revision escapes as final geometry; successful batches advance source revision once. Undo/redo/restore advance the ephemeral source revision without changing persisted IDs.
+
+Render viewport is width/height1..4096, <=1048576 pixels, world origin ±1e6, positive scale1e-6..1e4. Every transformed path coordinate and stroke must fit Prism's public ±1e7/positive-width limits before compositor/output allocation; unsupported projected extents reject rather than render a fabricated frame. Render tasks checkpoint between paths and before/after synchronous flatten, not within Prism. No binary input ops, circles/nonlinear/general CAD, ortho/polar modes, drafting parser, 3D, encoded export, default UI activation or native target acceptance is claimed.

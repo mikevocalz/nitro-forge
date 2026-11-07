@@ -11,6 +11,7 @@ export const ENGINE_KINDS = [
   "photo",
   "motion",
   "design",
+  "draft",
 ] as const;
 export type EngineKind = (typeof ENGINE_KINDS)[number];
 

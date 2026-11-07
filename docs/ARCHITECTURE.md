@@ -1,6 +1,6 @@
 # Nitro-Forge Architecture — Ignition Contracts
 
-Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill, Photo, Motion and Design)
+Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill, Photo, Motion, Design and Draft)
 implement against these contracts. Changes require touching every engine, so they are
 deliberately small.
 
@@ -147,3 +147,5 @@ The registered Motion engine appends native and NFC1/NCC1 tag 8 after Photo 7; t
 Motion validates the complete candidate before mutation and retains sixteen Arc/COW history entries under a 16 MiB serialized-state cap. Render tasks checkpoint between layers and before/after synchronous Prism flatten, without promising interruption inside that compositor. Snapshot opening uses the shared owning DocumentHandle.openSnapshot helper. Registration, focused host tests and generated enum checks do not establish a native target rebuild, app rollout, encoding queue or complete P11 acceptance.
 
 The registered Design engine appends native and NFC1/NCC1 tag 9 after Motion 8. Its explicit design/schema-1 tree uses the unchanged NFD1 envelope, sixteen Arc/COW history entries and an 8 MiB encoded-state cap. Fixed frame trees evaluate row/column layout into validated world boxes and render actual ephemeral Prism RGBA. Ancestor visibility and authored edit locks are explicit; unlocked ancestor layout may change a locked child's evaluated geometry. Frames have visible overflow, without a clipping claim. Full components, text layout, variables, constraints, prototypes, native consumer rebuild and application activation remain separate work.
+
+The registered Draft engine appends native/checkpoint identity 10 after Design9. It owns bounded 2D points, segments, snap settings and linear coordinate constraints, with real rank/DOF/residual results and atomic solved geometry. Exact locked coordinates remain fixed. World viewport and selection are host-owned; projected finite paths use actual Prism RGBA. Schema1 NFD1 snapshots have an 8 MiB cap and sixteen Arc/COW history entries. This source registration does not supply general nonlinear CAD, 3D processing, native target acceptance or default product activation.

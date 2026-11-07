@@ -133,6 +133,21 @@ mod tests {
         )
     }
     #[test]
+    fn draft_registered_factory_returns_real_binary_path_rgba() {
+        unsafe {
+            let mut error=std::ptr::null_mut();let kind=std::ffi::CString::new("draft").unwrap();
+            let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(),5,&mut error);assert!(handle>0);assert!(error.is_null());
+            for(op,payload)in [("addPoint",r#"{"x":0,"y":0.5}"#),("addPoint",r#"{"x":1,"y":0.5}"#),("addSegment",r#"{"a":1,"b":2,"color":[11,22,33,255]}"#)] {
+                let result=run(handle,op,payload,None,std::ptr::null());assert!(result.command.error_json.is_null());nf_v1_free_binary_result(result);
+            }
+            let frame=run(handle,"renderFrame",r#"{"width":1,"height":1,"origin_x":0,"origin_y":0,"scale":1}"#,None,std::ptr::null());
+            assert!(frame.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(frame.output.ptr,frame.output.len),&[11,22,33,255]);nf_v1_free_binary_result(frame);
+            let rejected=run(handle,"describe","{}",Some(&[1]),std::ptr::null());assert!(!rejected.command.error_json.is_null());nf_v1_free_binary_result(rejected);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
     fn design_registered_factory_returns_real_binary_rgba() {
         unsafe {
             let mut error=std::ptr::null_mut();

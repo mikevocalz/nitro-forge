@@ -6,7 +6,7 @@ import {ENGINE_KINDS,type EngineKind} from '../src/types';
 import {CliHost} from '../src/host-cli';
 import {DesignDocument} from '../../design/src/index';
 it('preserves all prior tags and appends Design9 in checkpoints and generated native enum',async()=>{
- const kinds:EngineKind[]=['prism','cadence','splice','folio','pitch','tally','quill','photo','motion','design'];expect(ENGINE_KINDS).toEqual(kinds);
+ const kinds:EngineKind[]=['prism','cadence','splice','folio','pitch','tally','quill','photo','motion','design'];expect(ENGINE_KINDS.slice(0,10)).toEqual(kinds);
  const snapshot=new Uint8Array([78,70,68,49,0,0,0,0,0]);
  for(const[tag,kind]of kinds.entries()){
   let bytes:Uint8Array|undefined;const storage={async read(){return bytes;},async write(_key:string,value:Uint8Array){bytes=Uint8Array.from(value);}};

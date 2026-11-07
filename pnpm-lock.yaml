@@ -728,6 +728,16 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
+  packages/draft:
+    dependencies:
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
+    devDependencies:
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
   packages/motion:
     dependencies:
       '@nitro-forge/ignition':
