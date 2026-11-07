@@ -10,6 +10,9 @@ export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_
 export interface SolveReport{scope:'point_coordinates';status:'solved'|'underconstrained'|'inconsistent';rank:number;dof:number;residual:number;unsatisfied_constraints:number[];unsatisfied_locked_points:number[];applied:boolean}
 export interface SnapResult{kind:'grid'|'endpoint'|'midpoint'|'projection'|'intersection'|'ortho'|'polar'|'center'|'nearest_circle'|'tangent';x:number;y:number;distance:number;sources:number[];angle_degrees?:number}
 export interface DraftSnapQuery{candidate:SnapResult|null;source_revision:number}
+export interface DraftProfileBounds{min_x:number;min_y:number;max_x:number;max_y:number}
+export interface DraftProfile{loops:number[][];area:number;centroid:{x:number;y:number};bounds:DraftProfileBounds}
+export interface DraftProfiles{profiles:DraftProfile[];source_revision:number}
 /** World origin at output pixel (0,0); positive uniform scale is pixels per world unit. */
 export interface DraftViewport{width:number;height:number;origin_x:number;origin_y:number;scale:number}
 /** No screen transforms, selection, nonlinear constraints or 3D ownership. */
@@ -43,6 +46,8 @@ export class DraftDocument{
  removeConstraint(id:number){return this.document.apply<{ok:boolean}>('removeConstraint',{id});}
  /** Publishes only a consistent bounded solution; unconstrained coordinates retain their authored value. */
  solve(tolerance=1e-7){return this.document.apply<SolveReport>('solve',{tolerance});}
+ /** Read-only deterministic closed-loop tracing; tolerance is world units (default 1e-6). */
+ findProfiles(tolerance?:number){return this.document.apply<DraftProfiles>('findProfiles',tolerance===undefined?{}:{tolerance});}
  evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'order'>&{source_revision:number}>('evaluate',{});}
  renderFrame(viewport:DraftViewport){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',viewport);}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}

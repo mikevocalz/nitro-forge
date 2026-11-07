@@ -922,3 +922,210 @@ fn extended_snapshots_require_matching_readers_without_changing_legacy_or_envelo
     reopened.restore(&arc_snapshot).unwrap();
     assert_eq!(reopened.snapshot().unwrap(), arc_snapshot);
 }
+
+fn circle(e: &mut DraftEngine, center: u64, radius: f64) -> u64 {
+    apply(e, "addCircle", json!({"center":center,"radius":radius})).data["circle_id"]
+        .as_u64()
+        .unwrap()
+}
+fn arc(e: &mut DraftEngine, center: u64, radius: f64, start: f64, sweep: f64) -> u64 {
+    apply(
+        e,
+        "addArc",
+        json!({"center":center,"radius":radius,"start_deg":start,"sweep_deg":sweep}),
+    )
+    .data["arc_id"]
+        .as_u64()
+        .unwrap()
+}
+fn find_profiles(e: &mut DraftEngine, p: Value) -> Value {
+    apply(e, "findProfiles", p).data
+}
+fn loop_ids(profile: &Value) -> Vec<u64> {
+    profile["loops"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|l| l.as_array().unwrap().iter())
+        .filter_map(|id| id.as_u64())
+        .collect()
+}
+
+#[test]
+fn profiles_trace_rectangle_circle_arc_chain_and_open_chain() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 4., 0.);
+    let c = point(&mut e, 4., 3.);
+    let d = point(&mut e, 0., 3.);
+    let mut rect = vec![];
+    for (u, v) in [(a, b), (b, c), (c, d), (d, a)] {
+        rect.push(segment(&mut e, u, v));
+    }
+    let before = e.snapshot().unwrap();
+    let result = e.apply(Command::new("findProfiles", json!({}))).unwrap();
+    assert!(result.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let data = result.data;
+    assert_eq!(
+        data["source_revision"],
+        apply(&mut e, "describe", json!({})).data["source_revision"]
+    );
+    let profiles = data["profiles"].as_array().unwrap();
+    assert_eq!(profiles.len(), 1);
+    let mut member = loop_ids(&profiles[0]);
+    member.sort_unstable();
+    let mut want = rect.clone();
+    want.sort_unstable();
+    assert_eq!(member, want);
+    assert!((profiles[0]["area"].as_f64().unwrap() - 12.).abs() < 1e-9);
+    assert_eq!(profiles[0]["centroid"]["x"].as_f64(), Some(2.));
+    assert_eq!(profiles[0]["centroid"]["y"].as_f64(), Some(1.5));
+    assert_eq!(profiles[0]["bounds"]["min_x"].as_f64(), Some(0.));
+    assert_eq!(profiles[0]["bounds"]["max_y"].as_f64(), Some(3.));
+    // Deterministic: identical input yields identical output.
+    assert_eq!(find_profiles(&mut e, json!({})), data);
+
+    // Closed circle is a standalone analytic loop.
+    let center = point(&mut e, 10., 10.);
+    let circ = circle(&mut e, center, 2.);
+    let profiles = find_profiles(&mut e, json!({}))["profiles"].clone();
+    let profiles = profiles.as_array().unwrap();
+    assert_eq!(profiles.len(), 2);
+    assert_eq!(profiles[1]["loops"], json!([[circ]]));
+    assert!((profiles[1]["area"].as_f64().unwrap() - 4. * std::f64::consts::PI).abs() < 1e-9);
+    assert_eq!(profiles[1]["centroid"]["x"].as_f64(), Some(10.));
+    assert_eq!(profiles[1]["bounds"]["max_x"].as_f64(), Some(12.));
+
+    // Arc swept portion plus its chord closes a half-disk profile.
+    let ac = point(&mut e, 20., 0.);
+    let a0 = point(&mut e, 25., 0.);
+    let a1 = point(&mut e, 15., 0.);
+    let curved = arc(&mut e, ac, 5., 0., 180.);
+    let chord = segment(&mut e, a0, a1);
+    // Full-sweep arc is a closed loop like a circle.
+    let fc = point(&mut e, 30., 10.);
+    let full = arc(&mut e, fc, 3., 40., 360.);
+    let profiles = find_profiles(&mut e, json!({}))["profiles"].clone();
+    let profiles = profiles.as_array().unwrap();
+    assert_eq!(profiles.len(), 4);
+    let half = profiles
+        .iter()
+        .find(|p| loop_ids(p).contains(&curved))
+        .unwrap();
+    let mut half_members = loop_ids(half);
+    half_members.sort_unstable();
+    assert_eq!(half_members, {
+        let mut v = vec![curved, chord];
+        v.sort_unstable();
+        v
+    });
+    assert!(
+        (half["area"].as_f64().unwrap() - 12.5 * std::f64::consts::PI).abs() < 1e-6,
+        "half-disk area {}",
+        half["area"]
+    );
+    assert_eq!(half["bounds"]["min_x"].as_f64(), Some(15.));
+    assert_eq!(half["bounds"]["max_x"].as_f64(), Some(25.));
+    assert_eq!(half["bounds"]["max_y"].as_f64(), Some(5.));
+    let fullp = profiles
+        .iter()
+        .find(|p| loop_ids(p).contains(&full))
+        .unwrap();
+    assert!((fullp["area"].as_f64().unwrap() - 9. * std::f64::consts::PI).abs() < 1e-9);
+
+    // Open chains and near-miss junctions produce no profile by default only
+    // when the gap exceeds the coincidence tolerance.
+    let o1 = point(&mut e, 40., 0.);
+    let o2 = point(&mut e, 41., 0.);
+    let o3 = point(&mut e, 42., 1.);
+    segment(&mut e, o1, o2);
+    segment(&mut e, o2, o3);
+    assert_eq!(
+        find_profiles(&mut e, json!({}))["profiles"]
+            .as_array()
+            .unwrap()
+            .len(),
+        4
+    );
+
+    // Two chains whose ends miss by 5e-7: closed at the 1e-6 default, open at 1e-9.
+    let t1 = point(&mut e, 60., 0.);
+    let t2 = point(&mut e, 64., 0.);
+    let t3 = point(&mut e, 64.0000005, 0.);
+    let t4 = point(&mut e, 62., 3.);
+    let t5 = point(&mut e, 60., 0.);
+    segment(&mut e, t1, t2);
+    segment(&mut e, t3, t4);
+    segment(&mut e, t4, t5);
+    let profiles = find_profiles(&mut e, json!({}))["profiles"].clone();
+    assert_eq!(profiles.as_array().unwrap().len(), 5);
+    let tight = find_profiles(&mut e, json!({"tolerance":1e-9}))["profiles"].clone();
+    assert_eq!(tight.as_array().unwrap().len(), 4);
+    for bad_tol in [json!(0), json!(-1), json!(1e7), json!("x")] {
+        assert!(e
+            .apply(Command::new("findProfiles", json!({"tolerance":bad_tol})))
+            .is_err());
+    }
+}
+
+#[test]
+fn profiles_nest_deterministic_order_and_batch_guard() {
+    let mut e = DraftEngine::new();
+    let outer = [(0., 0.), (6., 0.), (6., 4.), (0., 4.)];
+    let inner = [(2., 1.), (4., 1.), (4., 3.), (2., 3.)];
+    let mut ring_ids = vec![];
+    for rect in [outer, inner] {
+        let pts: Vec<u64> = rect.iter().map(|&(x, y)| point(&mut e, x, y)).collect();
+        for i in 0..4 {
+            ring_ids.push(segment(&mut e, pts[i], pts[(i + 1) % 4]));
+        }
+    }
+    let first = find_profiles(&mut e, json!({}));
+    let second = find_profiles(&mut e, json!({}));
+    assert_eq!(first, second);
+    let profiles = first["profiles"].as_array().unwrap();
+    assert_eq!(profiles.len(), 1);
+    assert_eq!(profiles[0]["loops"].as_array().unwrap().len(), 2);
+    // Outer loop first (depth ordering), then the hole; even-odd area 24 - 4.
+    assert_eq!(profiles[0]["loops"][0].as_array().unwrap().len(), 4);
+    assert_eq!(profiles[0]["loops"][1].as_array().unwrap().len(), 4);
+    assert!((profiles[0]["area"].as_f64().unwrap() - 20.).abs() < 1e-9);
+    assert_eq!(profiles[0]["centroid"]["x"].as_f64(), Some(3.));
+    assert_eq!(profiles[0]["centroid"]["y"].as_f64(), Some(2.));
+    assert_eq!(profiles[0]["bounds"]["max_x"].as_f64(), Some(6.));
+
+    // A second disjoint profile sorts after the first by document order.
+    let q = [(10., 0.), (12., 0.), (12., 2.), (10., 2.)];
+    let pts: Vec<u64> = q.iter().map(|&(x, y)| point(&mut e, x, y)).collect();
+    for i in 0..4 {
+        segment(&mut e, pts[i], pts[(i + 1) % 4]);
+    }
+    let profiles = find_profiles(&mut e, json!({}))["profiles"].clone();
+    let profiles = profiles.as_array().unwrap();
+    assert_eq!(profiles.len(), 2);
+    assert!(profiles[0]["bounds"]["max_x"].as_f64().unwrap() <= 6.);
+    assert_eq!(profiles[1]["area"].as_f64(), Some(4.));
+
+    // Read-only in every context: no journal, no events, revision guard intact.
+    // Like describe/evaluate/querySnap it is a revision-bearing read and is
+    // rejected inside atomic batches, even a read-only one.
+    let before = e.snapshot().unwrap();
+    let rev = apply(&mut e, "describe", json!({})).data["source_revision"].clone();
+    for commands in [
+        json!([{"op":"addPoint","payload":{"x":0,"y":0}},{"op":"findProfiles","payload":{}}]),
+        json!([{"op":"findProfiles","payload":{}}]),
+    ] {
+        assert!(e
+            .apply(Command::new(
+                ignition_core::OP_BATCH,
+                json!({"commands":commands})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    let lone = e.apply(Command::new("findProfiles", json!({}))).unwrap();
+    assert_eq!(lone.data["source_revision"], rev);
+    assert_eq!(e.snapshot().unwrap(), before);
+    let _ = ring_ids;
+}

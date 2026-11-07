@@ -1,4 +1,4 @@
-use crate::{commands, constraints, model::*, render, snaps};
+use crate::{commands, constraints, model::*, profiles, render, snaps};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -202,7 +202,12 @@ impl Engine for DraftEngine {
         if cmd.v != 1 || cmd.input.is_some() {
             return Err(bad("unsupported command version or binary input"));
         }
-        if self.in_batch && matches!(cmd.op.as_str(), "describe" | "evaluate" | "querySnap") {
+        if self.in_batch
+            && matches!(
+                cmd.op.as_str(),
+                "describe" | "evaluate" | "querySnap" | "findProfiles"
+            )
+        {
             return Err(bad(
                 "revision-bearing reads are unavailable inside an atomic batch",
             ));
@@ -249,6 +254,16 @@ impl Engine for DraftEngine {
                 )?;
                 return Ok(CommandResult::read_only(
                     json!({"candidate":candidate,"source_revision":self.revision}),
+                ));
+            }
+            "findProfiles" => {
+                fields(p, &["tolerance"])?;
+                let profiles = profiles::find(
+                    &self.state,
+                    optional(p, "tolerance", profiles::DEFAULT_TOLERANCE)?,
+                )?;
+                return Ok(CommandResult::read_only(
+                    json!({"profiles":profiles,"source_revision":self.revision}),
                 ));
             }
             "renderFrame" => return render::render(&self.state, &cmd, None),
