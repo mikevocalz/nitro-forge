@@ -380,6 +380,7 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `addRect` | `{slide,x,y,w,h,fill}` | `{object_id}` | |
 | `addImage` | `{slide,x,y,w,h,src}` | `{object_id}` | |
 | `moveObject` | `{slide,id,x,y}` | `{ok}` | |
+| `setObjectOrder` | `{slide,id,to}` | `{ok}` | Absolute bottom-to-top object index within the slide; atomic undo; same-index request preserves history; animation references retain identity |
 | `resizeObject` | `{slide,id,w,h}` | `{ok}` | w,h > 0 |
 | `rotateObject` | `{slide,id,degrees}` | `{ok}` | |
 | `removeObject` | `{slide,id}` | `{ok}` | also drops its animations |

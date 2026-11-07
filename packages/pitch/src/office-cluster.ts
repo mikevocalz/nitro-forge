@@ -24,8 +24,6 @@ export const PITCH_DEFERRED_OPS = {
   setSlideSection: "J-01",
   /** J-05: the deck's coordinate space. Pitch stores none, so the adapter uses {@link PITCH_SLIDE_SIZE}. */
   setSlideSize: "J-05",
-  /** J-05 bring forward / send backward: objects keep insertion order. */
-  setObjectOrder: "J-05",
   /** J-05 text formatting on the canvas (font size, bold, italic, color after creation). */
   setTextStyle: "J-05",
   /** J-09 edit an animation's timing or effect in place (today: remove and add). */

@@ -19,6 +19,7 @@ export const OPS = {
   addRect: "addRect",
   addImage: "addImage",
   moveObject: "moveObject",
+  setObjectOrder: "setObjectOrder",
   resizeObject: "resizeObject",
   rotateObject: "rotateObject",
   removeObject: "removeObject",
@@ -100,6 +101,10 @@ export class PitchDocument {
   }
   addImage(slide: number, x: number, y: number, w: number, h: number, src: string) {
     return this.call<{ object_id: number }>(OPS.addImage, { slide, x, y, w, h, src });
+  }
+  /** Absolute bottom-to-top object index; object and animation identities are unchanged. */
+  setObjectOrder(slide: number, id: number, to: number) {
+    return this.call(OPS.setObjectOrder, { slide, id, to });
   }
   moveObject(slide: number, id: number, x: number, y: number) {
     return this.call(OPS.moveObject, { slide, id, x, y });

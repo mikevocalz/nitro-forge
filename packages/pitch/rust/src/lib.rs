@@ -526,6 +526,22 @@ impl Engine for PitchEngine {
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
             }
+            "setObjectOrder" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let from = self.object_index(slide, req_u64(p, "id")?)?;
+                let to = usize::try_from(req_u64(p, "to")?)
+                    .map_err(|_| EngineError::validation("object index is too large"))?;
+                if to >= self.state.slides[slide].objects.len() {
+                    return Err(EngineError::validation("object index must be within the slide"));
+                }
+                if from == to {
+                    return Ok(CommandResult::read_only(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                let object = self.state.slides[slide].objects.remove(from);
+                self.state.slides[slide].objects.insert(to, object);
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
             "moveObject" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let oi = self.object_index(slide, req_u64(p, "id")?)?;
@@ -689,6 +705,31 @@ mod tests {
 
     fn slide_id(e: &mut PitchEngine, idx: usize) -> u64 {
         e.state.slides[idx].id
+    }
+
+    #[test]
+    fn object_order_is_atomic_persistent_and_noop_preserves_redo() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let a = apply(&mut e, "addRect", json!({"slide":slide,"x":0,"y":0,"w":10,"h":10,"fill":[255,0,0,255]}))["object_id"].as_u64().unwrap();
+        let b = apply(&mut e, "addRect", json!({"slide":slide,"x":0,"y":0,"w":10,"h":10,"fill":[0,0,255,255]}))["object_id"].as_u64().unwrap();
+        let original = e.snapshot().unwrap();
+        for payload in [json!({"slide":slide,"id":a,"to":2}), json!({"slide":slide,"id":99999,"to":0}), json!({"slide":slide,"id":a,"to":-1})] {
+            assert!(e.apply(cmd("setObjectOrder", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), original);
+        }
+        apply(&mut e, "setObjectOrder", json!({"slide":slide,"id":a,"to":1}));
+        assert_eq!(e.state.slides[0].objects.iter().map(|o|o.id).collect::<Vec<_>>(), vec![b,a]);
+        let moved = e.snapshot().unwrap();
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&moved).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), moved);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), original);
+        let noop = e.apply(cmd("setObjectOrder", json!({"slide":slide,"id":a,"to":0}))).unwrap();
+        assert!(noop.events.is_empty());
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), moved);
     }
 
     #[test]
