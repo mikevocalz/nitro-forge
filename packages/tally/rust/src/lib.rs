@@ -11,7 +11,10 @@
 //! and never affects evaluation (see `format_ops`). `names` is the durable
 //! workbook-level named-range table (see `name_ops`): each entry binds a
 //! validated name to one sheet id and a canonical `"A1"`/`"A1:B2"` target;
-//! formulas resolve names bound to the sheet being evaluated.
+//! formulas resolve names bound to the sheet being evaluated. `validations`
+//! is the durable workbook-level data-validation table (see
+//! `validation_ops`): each rule binds a sheet id, a canonical range and a
+//! bounded criteria object evaluated against computed cell values.
 //!
 //! Semantics documented for reviewers:
 //! * Cell addresses `$?[A-Z]+$?[0-9]+` (case-insensitive); `$` markers are
@@ -39,8 +42,10 @@ mod name_ops;
 mod range_ops;
 mod sheet_ops;
 mod protection;
+mod validation_ops;
 
 use format_ops::CellFormat;
+use validation_ops::ValidationRule;
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -99,6 +104,12 @@ struct Workbook {
     /// Durable named ranges; empty in legacy documents.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     names: Vec<NamedRange>,
+    /// Durable data-validation rules; empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    validations: Vec<ValidationRule>,
+    /// Next id handed out by `setValidation`.
+    #[serde(default)]
+    next_validation: u64,
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
@@ -135,6 +146,8 @@ fn blank_workbook() -> Workbook {
         }],
         active: 0,
         names: Vec::new(),
+        validations: Vec::new(),
+        next_validation: 1,
     }
 }
 
@@ -188,15 +201,18 @@ enum UndoEntry {
     /// A sheet was added; undo removes it.
     AddSheet { sheet_id: u64 },
     /// A sheet was removed; undo re-inserts it at `index`, restores `active`
-    /// and re-adds `dropped_names` (names bound to the removed sheet are
-    /// cascade-dropped on removal). Re-admission skips any dropped name whose
-    /// case-insensitive twin already exists or that would exceed `MAX_NAMES`,
-    /// keeping `doc.names` inside the invariants `restore` enforces.
+    /// and re-adds `dropped_names`/`dropped_validations` (names and rules
+    /// bound to the removed sheet are cascade-dropped on removal).
+    /// Re-admission skips entries whose case-insensitive name twin already
+    /// exists, that would exceed the table caps, or (for rules) that no
+    /// longer satisfy the stored-rule invariants, keeping `doc` inside the
+    /// invariants `restore` enforces.
     RemoveSheet {
         index: usize,
         sheet: Sheet,
         prev_active: usize,
         dropped_names: Vec<NamedRange>,
+        dropped_validations: Vec<ValidationRule>,
     },
     RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
@@ -322,10 +338,10 @@ impl TallyEngine {
         self.doc.sheets.iter_mut().find(|s| s.id == id)
     }
 
-    /// Fresh per-request evaluator over the active sheet, with workbook
+    /// Fresh per-request evaluator over one sheet, with workbook
     /// named-range resolution enabled when `names` is nonempty.
-    fn evaluator(&self) -> Evaluator<'_, Sheet> {
-        let sheet = self.active_sheet();
+    fn evaluator_for(&self, index: usize) -> Evaluator<'_, Sheet> {
+        let sheet = &self.doc.sheets[index];
         if self.doc.names.is_empty() {
             Evaluator::new(sheet)
         } else {
@@ -333,10 +349,18 @@ impl TallyEngine {
         }
     }
 
+    /// Fresh per-request evaluator over the active sheet.
+    fn evaluator(&self) -> Evaluator<'_, Sheet> {
+        self.evaluator_for(self.doc.active)
+    }
+
     /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet` and
-    /// cascade-dropping names bound to the removed sheet id. Returns the
-    /// removed sheet and the dropped names.
-    fn remove_sheet_at(&mut self, idx: usize) -> (Sheet, Vec<NamedRange>) {
+    /// cascade-dropping names and validation rules bound to the removed
+    /// sheet id. Returns the removed sheet and the dropped entries.
+    fn remove_sheet_at(
+        &mut self,
+        idx: usize,
+    ) -> (Sheet, Vec<NamedRange>, Vec<ValidationRule>) {
         let removed = self.doc.sheets.remove(idx);
         let len = self.doc.sheets.len();
         if self.doc.active > idx {
@@ -353,7 +377,16 @@ impl TallyEngine {
                 true
             }
         });
-        (removed, dropped)
+        let mut dropped_rules = Vec::new();
+        self.doc.validations.retain(|v| {
+            if v.sheet == removed.id {
+                dropped_rules.push(v.clone());
+                false
+            } else {
+                true
+            }
+        });
+        (removed, dropped, dropped_rules)
     }
 
     // -- op results -----------------------------------------------------------
@@ -448,8 +481,9 @@ impl TallyEngine {
         if self.doc.sheets.len() <= 1 {
             return Err(EngineError::validation("workbook must keep at least one sheet"));
         }
-        // Names bound to the removed sheet are cascade-dropped; the undo
-        // entry carries them so undo/redo restore them exactly.
+        // Names and validation rules bound to the removed sheet are
+        // cascade-dropped; the undo entry carries them so undo/redo restore
+        // them exactly.
         let sheet_id = self.doc.sheets[idx].id;
         let dropped_names: Vec<NamedRange> = self
             .doc
@@ -458,11 +492,19 @@ impl TallyEngine {
             .filter(|n| n.sheet == sheet_id)
             .cloned()
             .collect();
+        let dropped_validations: Vec<ValidationRule> = self
+            .doc
+            .validations
+            .iter()
+            .filter(|v| v.sheet == sheet_id)
+            .cloned()
+            .collect();
         let entry = UndoEntry::RemoveSheet {
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
             prev_active: self.doc.active,
             dropped_names,
+            dropped_validations,
         };
         self.journal.record(entry);
         self.remove_sheet_at(idx);
@@ -696,12 +738,14 @@ impl TallyEngine {
                 match self.doc.sheets.iter().position(|s| s.id == sheet_id) {
                     Some(idx) => {
                         let prev_active = self.doc.active;
-                        let (removed, dropped_names) = self.remove_sheet_at(idx);
+                        let (removed, dropped_names, dropped_validations) =
+                            self.remove_sheet_at(idx);
                         UndoEntry::RemoveSheet {
                             index: idx,
                             sheet: removed,
                             prev_active,
                             dropped_names,
+                            dropped_validations,
                         }
                     }
                     // Already gone — nothing changed; emit a no-op entry.
@@ -715,6 +759,7 @@ impl TallyEngine {
                 sheet,
                 prev_active,
                 dropped_names,
+                dropped_validations,
             } => {
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
@@ -739,6 +784,17 @@ impl TallyEngine {
                         continue;
                     }
                     self.doc.names.push(n);
+                }
+                // Validation rules cascade-dropped with the sheet come back
+                // under the same discipline: each is re-admitted only while
+                // it still satisfies the invariants `restore` enforces
+                // (existing sheet, canonical in-bounds range, valid
+                // criteria, unique id, no overlap). Rules cannot be created
+                // for a sheet while it is gone, so conflicts are defensive.
+                for v in dropped_validations {
+                    if validation_ops::readd_ok(&self.doc, &v) {
+                        self.doc.validations.push(v);
+                    }
                 }
                 UndoEntry::AddSheet { sheet_id }
             }
@@ -809,6 +865,9 @@ impl Engine for TallyEngine {
             "removeName" => self.op_remove_name(p),
             "listNames" => self.op_list_names(),
             "functionCatalog" => self.op_function_catalog(),
+            "setValidation" => self.op_set_validation(p),
+            "clearValidation" => self.op_clear_validation(p),
+            "validateCell" => self.op_validate_cell(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -838,19 +897,24 @@ impl Engine for TallyEngine {
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        // Sheets with a tone, protection flag, stored formats, or any
-        // workbook names carry durable fields added after the first release;
-        // older readers ignore unknown `Sheet`/`Workbook` fields, so wrap
-        // those documents and let old engines fail
+        // Sheets with a tone, protection flag, stored formats, workbook
+        // names, or validation rules carry durable fields added after the
+        // first release; older readers ignore unknown `Sheet`/`Workbook`
+        // fields, so wrap those documents and let old engines fail
         // closed instead of silently discarding them. Plain workbooks keep
-        // the legacy payload shape.
+        // the legacy payload shape. `validations` is the newest durable
+        // field and `Workbook` does not deny unknown fields, so documents
+        // carrying rules emit schema:2 — schema:1 readers reject them —
+        // while tone/protection/formats/names alone stay schema:1.
+        let has_validations = !self.doc.validations.is_empty();
         let extended = self.doc.sheets.iter().any(|s| {
             s.tone.is_some() || s.is_protected || !s.formats.is_empty()
-        }) || !self.doc.names.is_empty();
+        }) || !self.doc.names.is_empty()
+            || has_validations;
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
-                schema: 1,
+                schema: if has_validations { 2 } else { 1 },
                 document: &self.doc,
             })?
         } else {
@@ -870,7 +934,7 @@ impl Engine for TallyEngine {
         });
         let mut doc: Workbook = if wrapped {
             let wrapper: VersionedDoc = serde_json::from_value(value)?;
-            if wrapper.kind != "tally" || wrapper.schema != 1 {
+            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2) {
                 return Err(EngineError::unsupported(
                     "unsupported Tally snapshot kind/schema",
                 ));
@@ -963,6 +1027,65 @@ impl Engine for TallyEngine {
             let coords = name_ops::parse_refers_to(&n.refers_to)
                 .map_err(|_| EngineError::serialization("invalid refers_to"))?;
             n.refers_to = name_ops::canonical_refers_to(coords);
+        }
+        // Validation rules get the same hostile-input treatment: bounded
+        // count, unique ids, existing sheet ids, canonical on-sheet ranges
+        // within the shared cell cap, criteria satisfying the op-level
+        // invariants, and no overlapping rules on one sheet.
+        if doc.validations.len() > validation_ops::MAX_VALIDATIONS {
+            return Err(EngineError::serialization("too many validation rules"));
+        }
+        let mut seen_rule_ids = std::collections::BTreeSet::new();
+        for v in &mut doc.validations {
+            if !seen_rule_ids.insert(v.id) {
+                return Err(EngineError::serialization("duplicate validation rule id"));
+            }
+            if !doc.sheets.iter().any(|s| s.id == v.sheet) {
+                return Err(EngineError::serialization(
+                    "validation rule references a missing sheet",
+                ));
+            }
+            if !validation_ops::valid_criteria(&v.criteria) {
+                return Err(EngineError::serialization("invalid validation criteria"));
+            }
+            let coords = name_ops::parse_refers_to(&v.range)
+                .map_err(|_| EngineError::serialization("invalid validation range"))?;
+            if (coords.2 - coords.0 + 1) as u64 * (coords.3 - coords.1 + 1) as u64
+                > MAX_GET_RANGE_CELLS
+            {
+                return Err(EngineError::serialization(
+                    "validation range exceeds 16384 cells",
+                ));
+            }
+            v.range = name_ops::canonical_refers_to(coords);
+        }
+        for i in 0..doc.validations.len() {
+            for j in (i + 1)..doc.validations.len() {
+                let (a, b) = (&doc.validations[i], &doc.validations[j]);
+                if a.sheet == b.sheet {
+                    let (ca, cb) = (
+                        name_ops::parse_refers_to(&a.range),
+                        name_ops::parse_refers_to(&b.range),
+                    );
+                    if let (Ok(ca), Ok(cb)) = (ca, cb) {
+                        if ca.0 <= cb.2 && cb.0 <= ca.2 && ca.1 <= cb.3 && cb.1 <= ca.3 {
+                            return Err(EngineError::serialization(
+                                "overlapping validation rules",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(max_id) = doc.validations.iter().map(|v| v.id).max() {
+            if doc.next_validation <= max_id {
+                doc.next_validation = max_id.checked_add(1).ok_or_else(|| {
+                    EngineError::serialization("validation id space exhausted")
+                })?;
+            }
+        }
+        if doc.next_validation == 0 {
+            doc.next_validation = 1;
         }
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
@@ -1409,6 +1532,7 @@ mod tests {
             sheet: ghost_sheet(77),
             prev_active: 0,
             dropped_names: vec![dropped_name("Foo"), dropped_name("Bar")],
+            dropped_validations: Vec::new(),
         });
         assert!(e.undo().unwrap());
         // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
@@ -1449,6 +1573,7 @@ mod tests {
             sheet: ghost_sheet(77),
             prev_active: 0,
             dropped_names: vec![dropped_name("Extra")],
+            dropped_validations: Vec::new(),
         });
         assert!(e.undo().unwrap());
         assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);
@@ -1587,8 +1712,9 @@ mod tests {
             "active": 0
         });
         for wrapper in [
-            // wrong schema / wrong kind fail closed
-            json!({"kind":"tally","schema":2,"document":doc}),
+            // wrong schema / wrong kind fail closed (schema:2 is the
+            // validation-rules wrapper version and is accepted)
+            json!({"kind":"tally","schema":3,"document":doc}),
             json!({"kind":"quill","schema":1,"document":doc}),
             // unknown wrapper keys rejected by deny_unknown_fields
             json!({"kind":"tally","schema":1,"document":doc,"extra":true}),

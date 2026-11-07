@@ -659,3 +659,27 @@ Motion layers now carry an optional `matte` (`source_layer`, `mode` alpha/alpha-
 ## P16 design constraints C2 source checkpoint (2026-11-07)
 
 Design `Node.constraints` now stores the rest of the NYC-Tron `DesignConstraints` contract: optional per-axis extent bounds (`min_width`/`max_width`/`min_height`/`max_height`, finite, 0..=1e7, min<=max when both present), the `aspect_locked` flag (no stored ratio; a solver derives it at enforcement time), and `relative_to` targets widened from parent-only to the parent frame or a sibling sharing that parent. `scale` anchors, self/unknown/cross-tree targets and invalid bounds reject with distinct reasons on mutation and hostile restore; whole-document validation also rejects `removeNode` of a referenced target, flow conversion or reparenting that would strand constraints. Snapshot schema stays 2: the fields are additive serde defaults inside `deny_unknown_fields` `NodeConstraints`, so absent fields serialize byte-identically and old readers fail closed on the new keys. Constraints remain storage-only: `readConstraints` still reports `solving:"storage-only"` and `enforced:false`, and `evaluateLayout`/`renderFrame` ignore them. Local evidence: `cargo test -p design-engine` 31 passed (1 new C2 test), `pnpm --filter @nitro-forge/design test` 9 passed (1 new nf-cli contract test, 1 updated C1 test), package typecheck clean, `cargo build -p nf-cli` clean. No solver, native target run or full P16 completion is implied.
+
+## Tally data validation source checkpoint (2026-11-07)
+
+Tally persists workbook-level data-validation rules (`{id, sheet, range,
+criteria}`) through new `setValidation`/`clearValidation` ops and the
+read-only `validateCell` op. Criteria are bounded to what the engine honestly
+evaluates: `number` (optional inclusive min/max, `integer` flag), `list`
+(1–512 exact case-sensitive text-form entries, matching the NYC-Tron
+ValidationDropdown caps) and `text` (optional inclusive length bounds).
+Date bounds, custom formulas, whole-row/column ranges and the dropdown's
+allowOther/allowBlank commit policy are deferred and documented in
+`docs/ENGINE_OPS.md`. Rules cannot overlap per sheet; same sheet+range
+replaces criteria in place keeping the id. Sheet removal cascade-drops rules
+into the same undo entry and undo re-admits them only while they satisfy the
+restore invariants. Snapshots carrying rules emit `{kind:"tally",schema:2}`
+because `Workbook` does not deny unknown fields and schema:1 readers would
+silently drop them; `restore` accepts schema 1 and 2 and re-validates rule
+count, id uniqueness, bound sheets, canonical in-bounds ranges, criteria
+invariants and per-sheet overlap atomically. Mutations are protection-checked
+against the bound sheet like name ops. Local evidence: `cargo test -p
+tally-engine` 85 passed (9 new), `pnpm --filter @nitro-forge/tally` typecheck
+clean and 49 Vitest tests passed including four new live `nf-cli`
+data-validation tests, `cargo build -p nf-cli` clean. No UI wiring, XLSX or
+native/device acceptance is claimed.

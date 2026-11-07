@@ -142,13 +142,17 @@ google/ink source admission (#46).
 
 ## tally-engine — `TallyEngine::new()`
 
-State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange] }`,
+State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation }`,
 `Sheet = { id, name, tone?: string | null, is_protected?: boolean, cells: { "A1": { raw: string } }, formats?: { "A1": CellFormat } }` — computed values are
 derived, not stored. `formats` is durable per-cell display metadata keyed by
 canonical address, independent of `cells`: it survives content edits, applies
 to empty cells, and never affects evaluation. `NamedRange = { name, sheet:
 sheet-id, refers_to }` is a durable workbook-level name bound to one sheet;
-`refers_to` is a canonical `"A1"` or `"A1:B2"` on that sheet. `CellFormat = { number_format?,
+`refers_to` is a canonical `"A1"` or `"A1:B2"` on that sheet.
+`ValidationRule = { id, sheet: sheet-id, range, criteria }` is a durable
+workbook-level data-validation rule bound to one sheet; `range` is a canonical
+`"A1"` or `"A1:B2"` on that sheet and `criteria` is a bounded kind-tagged
+object (see validation rules below). Rules on one sheet may not overlap. `CellFormat = { number_format?,
 bold?, italic?, fill?, border? }` — all attributes optional; `number_format` is
 a bounded opaque string (≤64 ASCII graphic/space chars, no `" \ { }`) holding
 a preset id or custom pattern the host interprets; `fill`/`border.color` are
@@ -186,6 +190,9 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `removeName` | `{name}` | `{ok}` | name lookup is case-insensitive; missing → `not_found` |
 | `listNames` | `{}` | `{names:[{name,sheet,sheet_id,refers_to}]}` | read-only; `sheet` is the current sheet name |
 | `functionCatalog` | `{}` | `{functions:[{name,min_args,max_args,signature}]}` | read-only; `max_args:null` = variadic |
+| `setValidation` | `{sheet?,range:{from,to},rule:{kind,…}}` | `{rule}` | create/replace the rule for an exact sheet+range; see validation rules below |
+| `clearValidation` | `{id}` xor `{sheet?,range:{from,to}}` | `{cleared}` | by rule id, or every rule on the sheet intersecting the range; eventless when nothing matches |
+| `validateCell` | `{sheet?,addr}` (`cell` alias accepted) | `{valid[,rule,expected,actual]}` | read-only; silent, no journal/events |
 | `clearCell` | `{addr}` | `{ok}` | |
 | `getCell` | `{addr}` | `{raw,computed,format?}` | `computed` = evaluated value; `format` present only when stored |
 | `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed,format?}]]}` | |
@@ -260,7 +267,52 @@ MAX COUNT COUNTA COUNTIF SUMIF IF ROUND ABS CONCAT TRUE FALSE` — with
 `min_args`/`max_args` (`null` = variadic) and a signature string; it is the
 same list documented in the formula-language paragraph.
 
-Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Validation rules: rules are **workbook-scoped** entries bound to one sheet by
+durable sheet id, like names — `ValidationRule = { id, sheet: sheet-id,
+range, criteria }` with `range` a canonical `"A1"`/`"A1:B2"` (endpoints in
+either order, `$` allowed, re-canonicalized on restore) capped at the shared
+16,384-cell bound, and `id` a workbook-unique handle from `next_validation`.
+At most 256 rules per workbook. `criteria` is a flat kind-tagged object —
+`{"kind":"number",min?,max?,integer?}` (computed value must be a finite number
+within the optional inclusive bounds; `integer:true` requires an integral
+value; no bounds means "must be a number"), `{"kind":"list",values:[…]}`
+(computed value's text form must exactly equal one entry, case-sensitive;
+1–512 nonempty entries of ≤8192 chars, matching the NYC-Tron
+`ValidationDropdown` contract), or `{"kind":"text",min_length?,max_length?}`
+(computed value's text form must have a Unicode-scalar length within the
+optional inclusive bounds, each 1–65536, at least one required). Fields
+belonging to other kinds reject. The text form is the string itself, finite
+numbers via `fmt_num`, `TRUE`/`FALSE` for booleans, and the literal for
+errors; empty cells, non-finite numbers and range results have none. Deferred
+kinds — date bounds (the evaluator has no date serials), custom-formula
+criteria, whole-row/column ranges, and the dropdown's `allowOther`/
+`allowBlank` commit policy — are host concerns and reject as unknown kinds
+or stray fields. `setValidation` targets `sheet` (name or index, default
+active) plus `range:{from,to}`; rules on one sheet may not overlap — a
+partial overlap rejects atomically, while the exact same sheet+range replaces
+`criteria` in place keeping `id` (the edit path; identical resubmission is
+eventless and journal-free). `clearValidation` takes exactly one of `id`
+(removes that rule, `not_found` when absent) or `range`+optional `sheet`
+(removes every rule on that sheet intersecting the rectangle; `{cleared:0}`
+is eventless). `validateCell` is a silent read: `{valid:true}` alone when no
+rule covers the cell, otherwise `{valid,rule,expected,actual}` where `rule`
+resolves the bound sheet's current name and `actual` is the computed value;
+a blank cell (no stored raw) reports valid under any rule — hosts enforce
+"value required" at commit time, and error values satisfy `list` only via a
+literal error-text entry and never satisfy `number`/`text`. Mutations record
+one whole-document undo entry each like name ops; `removeSheet`
+cascade-drops the sheet's rules into the same undo entry and undo/redo
+re-admit them only while they still satisfy the restore invariants (existing
+sheet, canonical in-bounds range, valid criteria, unique id, no overlap);
+`duplicateSheet`/`moveSheet` do not copy or retarget rules.
+`setValidation`/`clearValidation` are protection-checked against the bound
+sheet like name mutations; `validateCell` is ungated.
+
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation mutations follow the
+same bound-sheet rule: `setValidation` rejects when its target sheet
+(payload `sheet`, default active) is protected, `clearValidation` rejects
+when the rule's sheet (by `id`) or the target sheet (by `range`) is
+protected; `validateCell` stays allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
@@ -269,20 +321,24 @@ Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteri
 Criteria expressions/cell references are evaluated normally; criteria range errors/cycles propagate. SUMIF evaluates sum cells only for matches, ignores matched nonnumeric values and propagates matched errors; nonfinite accumulated sums return #NUM!. Existing per-request memoization/depth/cycle rules remain intact. Each conditional rectangle is capped at16384 cells, criteria at255 Unicode scalars and matched text at4096 UTF-8 bytes (#VALUE! for string limits). A shared per-Evaluator allowance of1000000 conditional scan/string/DP steps returns #NUM! on exhaustion; matcher allocation work is charged before bounded DP buffers. These are explicit Tally semantics, not full Excel compatibility.
 
 Snapshots: the NFD1 envelope is unchanged; the JSON payload is normally the bare
-`Workbook` (`{next_sheet,sheets,active,names?}`). When any sheet carries durable
+`Workbook` (`{next_sheet,sheets,active,names?,validations?,next_validation?}`). When any sheet carries durable
 post-release fields (`tone` set, `is_protected` true, or a nonempty `formats`
-map) **or the workbook has any names**, the payload is instead
-`{kind:"tally",schema:1,document:<Workbook>}` so pre-wrapper readers fail closed
-rather than silently dropping those fields (same precedent as pitch schema:2 and
-quill schema:2). `formats` entries ride inside `document` at schema:1 — the
-wrapper boundary, not a schema bump, is what guards them, and `restore`
-re-validates every stored format before replacing state. `restore` accepts both shapes, strictly validates wrapper
-kind/schema/keys (`deny_unknown_fields`), then runs the existing document
-validation — including name uniqueness, name legality, on-sheet `refers_to`
-and existing sheet ids, all re-canonicalized — before replacing state and
-resetting the journal; bad input leaves state untouched. Workbooks without
-tone/protection/formats/names keep the legacy payload, so older snapshots and
-older readers round-trip unchanged.
+map) **or the workbook has any names or validation rules**, the payload is
+instead `{kind:"tally",schema:N,document:<Workbook>}` so pre-wrapper readers
+fail closed rather than silently dropping those fields (same precedent as
+pitch schema:2 and quill schema:2). `N` is 1 for tone/protection/formats/names
+alone and **2 when `validations` is nonempty** — `Workbook` does not deny
+unknown fields, so schema:1 readers would silently drop rules; schema:2 makes
+them reject the snapshot instead. `formats`/`names`/`validations` entries ride
+inside `document`; `restore` accepts schema 1 and 2, strictly validates
+wrapper kind/schema/keys (`deny_unknown_fields`), then runs the existing
+document validation — including name uniqueness, name legality, on-sheet
+`refers_to`, existing sheet ids, validation-rule count/id uniqueness, bound
+sheet existence, canonical in-sheet ranges within the cell cap, criteria
+invariants, and no overlapping rules per sheet, all re-canonicalized — before
+replacing state and resetting the journal; bad input leaves state untouched.
+Workbooks without tone/protection/formats/names/validations keep the legacy
+payload, so older snapshots and older readers round-trip unchanged.
 
 ## cadence-engine — `CadenceEngine::new()`
 
