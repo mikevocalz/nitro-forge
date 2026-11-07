@@ -292,7 +292,7 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     const ins = await doc.insertTable(1, 2, 3);
     expect(ins.data.block_index).toBe(1);
     const tables = (await doc.listTables()).data.tables;
-    expect(tables).toEqual([{ block: 1, rows: 2, cols: 3 }]);
+    expect(tables).toEqual([{ block: 1, rows: 2, cols: 3, merges: [] }]);
     await doc.setCellText(1, 0, 0, "hello\nworld");
     await doc.setCellText(1, 1, 2, "corner");
     const described = (await doc.describeTable(1)).data;
@@ -332,7 +332,7 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await expect(doc.setCellText(0, 0, 0, "x")).rejects.toBeInstanceOf(EngineError);
     await expect(doc.deleteTable(0)).rejects.toBeInstanceOf(EngineError);
     // Document unchanged: still [para, table].
-    expect((await doc.listTables()).data.tables).toEqual([{ block: 1, rows: 1, cols: 1 }]);
+    expect((await doc.listTables()).data.tables).toEqual([{ block: 1, rows: 1, cols: 1, merges: [] }]);
     await doc.close();
   });
 
@@ -377,6 +377,56 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await doc.undo();
     expect((await doc.describeTable(0)).data.rows).toBe(4);
     await doc.close();
+  });
+
+  it("merges and unmerges table cells with undo and snapshot round-trip", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertTable(0, 3, 3);
+    await doc.setCellText(0, 0, 0, "anchor");
+    await doc.setCellText(0, 1, 1, "covered");
+    // Merge a 2x2 region (corners given in reverse order).
+    await doc.mergeTableCells(0, { row: 1, col: 1 }, { row: 0, col: 0 });
+    let d = (await doc.describeTable(0)).data;
+    expect(d.merges).toEqual([{ row: 0, col: 0, rows: 2, cols: 2 }]);
+    expect(d.cells[0]?.[0]).toBe("anchor");
+    // Covered content is discarded; covered cells report empty text.
+    expect(d.cells[0]?.[1]).toBe("");
+    expect(d.cells[1]?.[1]).toBe("");
+    expect(d.cells[2]?.[2]).toBe("");
+    // Covered cells reject setCellText; the anchor stays editable.
+    await expect(doc.setCellText(0, 1, 1, "x")).rejects.toBeInstanceOf(EngineError);
+    await doc.setCellText(0, 0, 0, "anchor2");
+    // Overlapping and single-cell merges reject atomically.
+    await expect(
+      doc.mergeTableCells(0, { row: 0, col: 0 }, { row: 2, col: 2 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(
+      doc.mergeTableCells(0, { row: 2, col: 2 }, { row: 2, col: 2 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    // Structural ops that would cut the merge reject; ones outside shift it.
+    await expect(doc.insertTableRow(0, 1)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deleteTableColumn(0, 1)).rejects.toBeInstanceOf(EngineError);
+    await doc.insertTableRow(0, 0);
+    d = (await doc.describeTable(0)).data;
+    expect(d.merges).toEqual([{ row: 1, col: 0, rows: 2, cols: 2 }]);
+    // Unmerge via a covered cell restores empty ordinary cells.
+    await doc.unmergeTableCells(0, 1, 1);
+    d = (await doc.describeTable(0)).data;
+    expect(d.merges).toEqual([]);
+    expect(d.cells[1]?.[0]).toBe("anchor2");
+    expect(d.cells[1]?.[1]).toBe("");
+    // Undo restores the merge; snapshot round-trip preserves it.
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.describeTable(0)).data.merges).toEqual([
+      { row: 1, col: 0, rows: 2, cols: 2 },
+    ]);
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    const rd = (await re.describeTable(0)).data;
+    expect(rd.merges).toEqual([{ row: 1, col: 0, rows: 2, cols: 2 }]);
+    expect(rd.cells[1]?.[0]).toBe("anchor2");
+    await re.close();
   });
 
   it("undo restores deleted text; bad positions error cleanly", async () => {

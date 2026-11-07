@@ -2359,6 +2359,8 @@ impl Engine for QuillEngine {
             "deleteTableColumn" => self.op_delete_table_column(&cmd.payload),
             "listTables" => self.op_list_tables(),
             "describeTable" => self.op_describe_table(&cmd.payload),
+            "mergeTableCells" => self.op_merge_table_cells(&cmd.payload),
+            "unmergeTableCells" => self.op_unmerge_table_cells(&cmd.payload),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
             "exportDocx" => self.op_export_docx(&cmd, None),
