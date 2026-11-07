@@ -23,6 +23,13 @@ export const OPS = {
   addPlaceholder: "addPlaceholder",
   updatePlaceholder: "updatePlaceholder",
   removePlaceholder: "removePlaceholder",
+  addTheme: "addTheme",
+  renameTheme: "renameTheme",
+  setThemeColor: "setThemeColor",
+  setThemeFont: "setThemeFont",
+  removeTheme: "removeTheme",
+  setDeckTheme: "setDeckTheme",
+  deckTheme: "deckTheme",
   removeSlide: "removeSlide",
   moveSlide: "moveSlide",
   moveSlides: "moveSlides",
@@ -135,6 +142,43 @@ export interface PitchLayout {
   master_id: number;
   name: string;
   placeholders: PitchPlaceholder[];
+}
+/**
+ * Deck theme color slots — the OOXML theme color roles. Slots are sparse:
+ * a theme stores only the slots it explicitly sets; absent means "no theme
+ * value stored", never an implicit default.
+ */
+export type PitchThemeColorSlot =
+  | "dk1"
+  | "lt1"
+  | "dk2"
+  | "lt2"
+  | "accent1"
+  | "accent2"
+  | "accent3"
+  | "accent4"
+  | "accent5"
+  | "accent6"
+  | "hlink"
+  | "fol_hlink";
+/** Deck theme font slots — the OOXML major/minor latin typefaces. */
+export type PitchThemeFontSlot = "major_latin" | "minor_latin";
+/**
+ * Named deck theme (P14 slice 9). DATA ONLY: the engine stores and
+ * validates the slot maps plus the deck→theme binding; it does NOT resolve
+ * theme colors/fonts onto objects, masters, layouts or placeholders —
+ * hosts own any application. This covers the NYC-Tron
+ * `ThemeAndTemplateGallery` `kind:"theme"` presets; `kind:"template"`
+ * bundles (theme + master/layout set) are deferred — see docs/ENGINE_OPS.md.
+ * Bounds: at most 32 themes, names/font families non-blank <=128 UTF-8
+ * bytes, ids share the document id space. Snapshots carrying themes or a
+ * deck binding use the `{kind:"pitch",schema:6}` wrapper.
+ */
+export interface PitchTheme {
+  id: number;
+  name: string;
+  colors: Partial<Record<PitchThemeColorSlot, Rgba>>;
+  fonts: Partial<Record<PitchThemeFontSlot, string>>;
 }
 export type Layout = "blank" | "title" | "titleBody";
 /**
@@ -414,6 +458,45 @@ export class PitchDocument {
   }
   removePlaceholder(layout: number, id: number) {
     return this.call<{ ok: boolean }>(OPS.removePlaceholder, { layout, id });
+  }
+  /**
+   * Add a named deck theme with optional sparse color/font slot maps.
+   * DATA ONLY — nothing is applied to slides, masters or layouts.
+   * Returns the assigned `theme_id`.
+   */
+  addTheme(
+    name: string,
+    colors?: Partial<Record<PitchThemeColorSlot, Rgba>>,
+    fonts?: Partial<Record<PitchThemeFontSlot, string>>,
+  ) {
+    return this.call<{ theme_id: number }>(OPS.addTheme, {
+      name,
+      ...(colors === undefined ? {} : { colors }),
+      ...(fonts === undefined ? {} : { fonts }),
+    });
+  }
+  renameTheme(id: number, name: string) {
+    return this.call<{ ok: boolean }>(OPS.renameTheme, { id, name });
+  }
+  /** Set or clear (`null`) one color slot on a theme; equal/absent-clear is an eventless no-op. */
+  setThemeColor(id: number, slot: PitchThemeColorSlot, color: Rgba | null) {
+    return this.call<{ ok: boolean }>(OPS.setThemeColor, { id, slot, color });
+  }
+  /** Set or clear (`null`) one font slot on a theme; equal/absent-clear is an eventless no-op. */
+  setThemeFont(id: number, slot: PitchThemeFontSlot, font: string | null) {
+    return this.call<{ ok: boolean }>(OPS.setThemeFont, { id, slot, font });
+  }
+  /** Removes the theme; removing the deck-bound theme clears the binding. */
+  removeTheme(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removeTheme, { id });
+  }
+  /** Bind the deck to an existing theme; `null` clears. DATA ONLY — no theme application. */
+  setDeckTheme(theme: number | null) {
+    return this.call<{ ok: boolean }>(OPS.setDeckTheme, { theme });
+  }
+  /** Read-only; `theme` is the bound theme object or null when unbound. */
+  deckTheme() {
+    return this.call<{ theme_id: number | null; theme: PitchTheme | null }>(OPS.deckTheme, {});
   }
   removeSlide(id: number) {
     return this.call(OPS.removeSlide, { id });

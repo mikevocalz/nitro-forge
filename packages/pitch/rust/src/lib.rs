@@ -25,6 +25,7 @@ use serde_json::{json, Value};
 mod sections;
 mod animation;
 mod masters;
+mod themes;
 pub use animation::Trigger;
 use sections::Section;
 
@@ -596,6 +597,12 @@ struct PitchState {
     /// references its master via `master_id`.
     #[serde(default)]
     layouts: Vec<masters::SlideLayout>,
+    /// Named deck themes (P14 slice 9). DATA ONLY — see themes.rs.
+    #[serde(default)]
+    themes: Vec<themes::DeckTheme>,
+    /// Deck→theme binding; must reference an entry in `themes` when set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    deck_theme: Option<u64>,
 }
 
 impl PitchState {
@@ -605,6 +612,8 @@ impl PitchState {
             next_section_id: 1,
             masters: Vec::new(),
             layouts: Vec::new(),
+            themes: Vec::new(),
+            deck_theme: None,
             size: SlideSize::default(),
             meta: Meta {
                 title: title.to_string(),
@@ -1280,6 +1289,8 @@ impl Engine for PitchEngine {
             |"addPlaceholder"|"updatePlaceholder"|"removePlaceholder" => {
                 masters::apply(self, &cmd)
             }
+            "addTheme"|"renameTheme"|"setThemeColor"|"setThemeFont"
+            |"removeTheme"|"setDeckTheme" => themes::apply(self, &cmd),
             "setSlideSize" => {
                 let size: SlideSize = serde_json::from_value(p.clone())?;
                 if !size.valid() { return Err(EngineError::validation("slide dimensions must be finite, positive and at most 100000")); }
@@ -2149,6 +2160,16 @@ impl Engine for PitchEngine {
                     "timing": self.state.slides[slide].timing,
                 })))
             }
+            "deckTheme" => {
+                let theme = self
+                    .state
+                    .deck_theme
+                    .and_then(|id| self.state.themes.iter().find(|t| t.id == id));
+                Ok(ro(json!({
+                    "theme_id": self.state.deck_theme,
+                    "theme": theme,
+                })))
+            }
             "describe" => {
                 let mut value = serde_json::to_value(&self.state)?;
                 // Connector objects expose their resolved geometry: `resolved`
@@ -2222,7 +2243,11 @@ impl Engine for PitchEngine {
         // additionally carries morph transition kinds and per-object morph
         // names (P14 slice 11); a schema:≤4 reader would silently drop the
         // additive `morph_name` field (the `"morph"` kind enum variant
-        // already fails closed), so morph data takes schema:5.
+        // already fails closed), so morph data takes schema:5. schema:6
+        // additionally carries named deck themes and the deck→theme
+        // binding (P14 slice 9); a schema:≤5 reader would silently drop
+        // the additive `themes`/`deck_theme` fields, so theme state takes
+        // schema:6.
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
@@ -2241,7 +2266,10 @@ impl Engine for PitchEngine {
         let schema5 = self.state.slides.iter().any(|slide|
             slide.objects.iter().any(|object| object.morph_name.is_some())
             || slide.transition.as_ref().is_some_and(|t| t.kind == TransitionKind::Morph));
-        let payload = if schema5 {
+        let schema6 = !self.state.themes.is_empty() || self.state.deck_theme.is_some();
+        let payload = if schema6 {
+            serde_json::to_vec(&json!({"kind":"pitch","schema":6,"document":self.state}))?
+        } else if schema5 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":5,"document":self.state}))?
         } else if schema4 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":4,"document":self.state}))?
@@ -2264,8 +2292,9 @@ impl Engine for PitchEngine {
             // schema:2 = extended features only; schema:3 = notes/ink/
             // transition/timing-capable; schema:4 = shape presets/strokes/
             // connectors/media objects; schema:5 = morph transitions and
-            // per-object morph names.
-            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4 || wrapper.schema == 5) {
+            // per-object morph names; schema:6 = named deck themes and the
+            // deck→theme binding.
+            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4 || wrapper.schema == 5 || wrapper.schema == 6) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
             wrapper.document
@@ -2426,11 +2455,19 @@ impl Engine for PitchEngine {
                 }
             }
         }
+        // Theme ids share the same document id space; the deck→theme
+        // binding and slot/name bounds are checked by themes::validate.
+        for theme in &state.themes {
+            if theme.id == 0 || !ids.insert(theme.id) {
+                return Err(EngineError::serialization("invalid or duplicate identity"));
+            }
+        }
         if state.next_id == 0 || state.next_id > 9_007_199_254_740_991 || ids.last().is_some_and(|id| *id >= state.next_id) {
             return Err(EngineError::serialization("invalid next identity"));
         }
         sections::validate(&state)?;
         masters::validate(&state)?;
+        themes::validate(&state)?;
         animation::validate_state(&state)?;
         // Commit only after the payload fully decoded.
         self.state = state;

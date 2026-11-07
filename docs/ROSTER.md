@@ -763,3 +763,33 @@ keep the three-tier contract: schema:2 for validations-only documents,
 schema:3 whenever `conditional_formats` is nonempty (which may also carry
 validations), schema:1 otherwise; `restore` accepts 1–3 and both rule tables
 are serde-optional so each restores with the other's table empty.
+
+## P14 Pitch deck themes source checkpoint (2026-11-07)
+
+Pitch decks now store named deck themes plus a deck→theme binding
+(P14 slice 9, the NYC-Tron `ThemeAndTemplateGallery` `kind:"theme"`
+contract): `addTheme`/`renameTheme`/`setThemeColor`/`setThemeFont`/
+`removeTheme`/`setDeckTheme` mutate and `deckTheme` reads. Color slots are
+the OOXML theme color roles (`dk1|lt1|dk2|lt2|accent1..accent6|hlink|
+fol_hlink`), font slots the OOXML major/minor latin typefaces
+(`major_latin|minor_latin`); slots are sparse and names/font families are
+bounded non-blank ≤128 UTF-8 bytes, ≤32 themes per deck, ids share the
+document `next_id` space. DATA ONLY: the engine stores and validates the
+slot maps and the binding — it does not resolve theme colors/fonts onto
+objects, masters, layouts or placeholders, and placeholder `inherit_theme`
+stays an independent flag. NYC-Tron `kind:"template"` presets (bundled
+theme + master/layout set) are deferred: masters/layouts/placeholders are
+separate validated collections and the apply/bind slice does not exist
+yet. Removing the bound theme clears `deck_theme`; equal slot writes and
+rebinds are eventless no-ops; hostile restores reject missing bindings,
+duplicate ids, blank/oversize names and fonts, unknown slots (typed enum
+keys fail serde before validation) and over-cap collections atomically.
+Snapshots carrying themes or a binding use the new
+`{kind:"pitch",schema:6}` wrapper because `themes`/`deck_theme` are
+additive fields old readers would silently drop; readers accept schema:2
+through schema:6. Local evidence: `cargo test -p pitch-engine` 77 passed
+(6 new theme tests; the legacy-reader reject probe moved to schema:7),
+`pnpm --filter @nitro-forge/pitch test` 39 passed across 9 files (3 new
+nf-cli theme cases), package typecheck clean, `cargo build -p nf-cli`
+clean. No theme application to objects, template bundles, UI wiring or
+native target run is claimed.
