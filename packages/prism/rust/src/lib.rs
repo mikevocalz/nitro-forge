@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    Journal, TaskContext,
 };
 use serde_json::{json, Value};
 
@@ -36,6 +36,67 @@ const COMMAND_VERSION: u32 = 1;
 /// Canvas ceiling: 2^28 pixels = 1 GiB of RGBA. Larger requests are rejected
 /// with `Validation` so a hostile payload cannot trigger a giant allocation.
 const MAX_PIXELS: u64 = 1 << 28;
+/// Pixels between cooperative cancellation checkpoints inside long pixel
+/// loops (matches photo's `processPreview` cadence).
+pub(crate) const CHECKPOINT_EVERY_PX: usize = 4096;
+
+/// Checkpoint/progress state shared by one cancellable op. `total` counts
+/// the op's work units (rendered layers for scene passes, phases for pixel
+/// ops); `done` is how many finished. Helpers report `progress(frac)` where
+/// `frac` is their fraction of the in-flight unit, so reported progress is
+/// `(done + frac) / total` — monotonic and clamped by `TaskContext`.
+/// A detached task (no context) makes every call a no-op.
+pub(crate) struct RenderTask<'a> {
+    ctx: Option<&'a TaskContext>,
+    done: u64,
+    total: u64,
+}
+
+impl<'a> RenderTask<'a> {
+    pub fn new(ctx: Option<&'a TaskContext>, total: u64) -> Self {
+        Self { ctx, done: 0, total }
+    }
+
+    /// The underlying context, if any — for helpers that only checkpoint.
+    #[inline]
+    pub fn context(&self) -> Option<&'a TaskContext> {
+        self.ctx
+    }
+
+    #[inline]
+    pub fn checkpoint(&self) -> Result<(), EngineError> {
+        match self.ctx {
+            Some(c) => c.checkpoint(),
+            None => Ok(()),
+        }
+    }
+
+    /// Report `frac` (0..=1) of the current unit's work.
+    #[inline]
+    pub fn progress(&self, frac: f32) {
+        if let (Some(c), true) = (self.ctx, self.total > 0) {
+            let inner = (self.done as f32 + frac.clamp(0.0, 1.0)) / self.total as f32;
+            c.set_progress(inner.clamp(0.0, 1.0));
+        }
+    }
+
+    /// One unit of `total` completed (a rendered layer, an op phase).
+    #[inline]
+    pub fn step_done(&mut self) {
+        self.done = self.done.saturating_add(1);
+        self.progress(0.0);
+    }
+
+    /// Checkpoint + progress every `every` items of a flat loop.
+    #[inline]
+    pub fn tick(&self, i: usize, every: usize, frac: f32) -> Result<(), EngineError> {
+        if i % every == 0 {
+            self.checkpoint()?;
+            self.progress(frac);
+        }
+        Ok(())
+    }
+}
 
 /// Prior document state recorded before structural mutations. `Vec<Layer>`
 /// clones are cheap: raster pixels are `Arc`.
@@ -496,7 +557,14 @@ impl PrismEngine {
     /// `drawPixels {id,x,y,w,h,data_b64}` — real src-over blend, clipped to
     /// canvas. `data` is `w*h*4` RGBA. Raster layers only. The pixels may
     /// instead arrive as the command's binary input, with `data_b64` omitted.
-    fn op_draw_pixels(&mut self, cmd: &mut Command) -> Result<CommandResult, EngineError> {
+    /// With a task context the blend runs on a scratch copy of the clipped
+    /// region and commits only after the last checkpoint, so a cancelled
+    /// op leaves the document untouched.
+    fn op_draw_pixels(
+        &mut self,
+        cmd: &mut Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let p = &cmd.payload;
         let idx = self.raster_index(Self::req_id(p)?)?;
         self.ensure_unlocked(idx)?;
@@ -563,6 +631,52 @@ impl PrismEngine {
             cw as usize,
             ch as usize,
         );
+
+        let mut task = RenderTask::new(ctx, 1);
+        if ctx.is_some() {
+            // Cancellable path: blend into a scratch copy of the region,
+            // checkpointing every CHECKPOINT_EVERY_PX pixels, then commit.
+            let mut work = prev.clone();
+            Self::blend_draw_rect(
+                &mut work,
+                cw as usize,
+                cx as usize,
+                cy as usize,
+                &data,
+                wi as usize,
+                x0,
+                y0,
+                x1,
+                y1,
+                xi,
+                yi,
+                &mut task,
+            )?;
+            task.checkpoint()?;
+            self.journal.record(UndoEntry::Pixels {
+                layer_id: self.layers[idx].id,
+                x: cx,
+                y: cy,
+                w: cw,
+                h: ch,
+                prev,
+            });
+            let canvas_w = self.width as usize;
+            let buf = self
+                .raster_mut(idx)
+                .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+            raster::write_region(
+                buf,
+                canvas_w,
+                cx as usize,
+                cy as usize,
+                cw as usize,
+                ch as usize,
+                &work,
+            );
+            return Ok(CommandResult::data(json!({ "ok": true })));
+        }
+
         self.journal.record(UndoEntry::Pixels {
             layer_id: self.layers[idx].id,
             x: cx,
@@ -576,40 +690,120 @@ impl PrismEngine {
         let buf = self
             .raster_mut(idx)
             .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
-        let src_w = wi as usize;
+        Self::blend_draw_rect(
+            buf,
+            canvas_w,
+            0,
+            0,
+            &data,
+            wi as usize,
+            x0,
+            y0,
+            x1,
+            y1,
+            xi,
+            yi,
+            &mut task,
+        )?;
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// Src-over blend of `data` (`src_w`-wide RGBA) into `dst`, whose pixel
+    /// `(dst_ox, dst_oy)` aligns with canvas `(dst_ox, dst_oy)`. Only the
+    /// clipped canvas rect `x0..x1 × y0..y1` is touched. Checkpoints every
+    /// `CHECKPOINT_EVERY_PX` blended pixels when the task has a context.
+    #[allow(clippy::too_many_arguments)]
+    fn blend_draw_rect(
+        dst: &mut [u8],
+        dst_w: usize,
+        dst_ox: usize,
+        dst_oy: usize,
+        data: &[u8],
+        src_w: usize,
+        x0: i64,
+        y0: i64,
+        x1: i64,
+        y1: i64,
+        xi: i64,
+        yi: i64,
+        task: &mut RenderTask,
+    ) -> Result<(), EngineError> {
+        let total = ((x1 - x0) * (y1 - y0)).max(1) as f32;
+        let mut done = 0usize;
         for cy_i in y0..y1 {
             let sy = (cy_i - yi) as usize;
             for cx_i in x0..x1 {
                 let sx = (cx_i - xi) as usize;
                 let so = (sy * src_w + sx) * 4;
                 let src = [data[so], data[so + 1], data[so + 2], data[so + 3]];
-                let d = (cy_i as usize * canvas_w + cx_i as usize) * 4;
-                if d + 4 <= buf.len() {
-                    raster::blend_pixel(&mut buf[d..d + 4], &src, 1.0);
+                let d =
+                    ((cy_i as usize - dst_oy) * dst_w + (cx_i as usize - dst_ox)) * 4;
+                if d + 4 <= dst.len() {
+                    raster::blend_pixel(&mut dst[d..d + 4], &src, 1.0);
                 }
+                done += 1;
+                task.tick(done, CHECKPOINT_EVERY_PX, done as f32 / total)?;
             }
         }
-        Ok(CommandResult::data(json!({ "ok": true })))
+        Ok(())
     }
 
     /// `fillLayer {id,color:[r,g,b,a]}` — set every pixel (not blended).
-    fn op_fill_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    /// With a task context the fill runs on a scratch copy and commits only
+    /// after the last checkpoint, so a cancelled op leaves the document
+    /// untouched.
+    fn op_fill_layer(
+        &mut self,
+        p: &Value,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let idx = self.raster_index(Self::req_id(p)?)?;
         let color = Self::req_color(p, "color")?;
         self.ensure_unlocked(idx)?;
+        let mut task = RenderTask::new(ctx, 1);
+        if ctx.is_some() {
+            let mut work = self
+                .raster_ref(idx)
+                .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?
+                .clone();
+            Self::fill_pixels(&mut work, &color, &mut task)?;
+            task.checkpoint()?;
+            self.record_full_layer_pixels(idx)?;
+            self.layers[idx].content = Content::Raster(Arc::new(work));
+            return Ok(CommandResult::data(json!({ "ok": true })));
+        }
         self.record_full_layer_pixels(idx)?;
         let buf = self
             .raster_mut(idx)
             .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
-        for px in buf.chunks_exact_mut(4) {
-            px.copy_from_slice(&color);
-        }
+        Self::fill_pixels(buf, &color, &mut task)?;
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
+    /// Set every pixel of `buf` to `color`, checkpointing every
+    /// `CHECKPOINT_EVERY_PX` pixels when the task has a context.
+    fn fill_pixels(
+        buf: &mut [u8],
+        color: &[u8; 4],
+        task: &mut RenderTask,
+    ) -> Result<(), EngineError> {
+        let total = (buf.len() / 4).max(1) as f32;
+        for (i, px) in buf.chunks_exact_mut(4).enumerate() {
+            task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
+            px.copy_from_slice(color);
+        }
+        Ok(())
+    }
+
     /// `applyFilter {id,filter:{type,amount?}}` — grayscale / invert /
-    /// brightness (amount -1..=1). Raster only.
-    fn op_apply_filter(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    /// brightness (amount -1..=1). Raster only. With a task context the
+    /// filter runs on a scratch copy and commits only after the last
+    /// checkpoint, so a cancelled op leaves the document untouched.
+    fn op_apply_filter(
+        &mut self,
+        p: &Value,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let idx = self.raster_index(Self::req_id(p)?)?;
         let f = Self::field(p, "filter")?;
         let ty = Self::field(f, "type")?
@@ -639,19 +833,36 @@ impl PrismEngine {
             }
         };
         self.ensure_unlocked(idx)?;
+        let mut task = RenderTask::new(ctx, 1);
+        if ctx.is_some() {
+            let mut work = self
+                .raster_ref(idx)
+                .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?
+                .clone();
+            raster::apply_filter(&mut work, &filter, &mut task)?;
+            task.checkpoint()?;
+            self.record_full_layer_pixels(idx)?;
+            self.layers[idx].content = Content::Raster(Arc::new(work));
+            return Ok(CommandResult::data(json!({ "ok": true })));
+        }
         self.record_full_layer_pixels(idx)?;
         let buf = self
             .raster_mut(idx)
             .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
-        raster::apply_filter(buf, &filter);
+        raster::apply_filter(buf, &filter, &mut task)?;
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
     /// `flatten {}` — composite bottom→top honoring opacity/visible; shapes
     /// rasterized. Read-only: no undo entry, no `document:changed`. A binary
     /// command gets the RGBA bytes as output instead of `pixels_b64`.
-    fn op_flatten(&self, cmd: &Command) -> Result<CommandResult, EngineError> {
-        let pixels = self.scene().flatten();
+    fn op_flatten(
+        &self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let mut task = RenderTask::new(ctx, self.layers.len() as u64);
+        let pixels = self.scene().flatten_ctx(&mut task)?;
         Ok(CommandResult::read_only(json!({
             "width": self.width,
             "height": self.height,
@@ -833,18 +1044,14 @@ impl PrismEngine {
             prev: cur,
         }
     }
-}
-
-impl Engine for PrismEngine {
-    fn kind(&self) -> EngineKind {
-        EngineKind::Prism
-    }
-
-    fn binary_input_ops(&self) -> &'static [&'static str] {
-        &["drawPixels"]
-    }
-
-    fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
+    /// Shared dispatch for `apply` (no context) and `apply_long` (task
+    /// context). `ctx` is `None` for plain applies; heavy ops use it for
+    /// cooperative cancellation and progress only.
+    fn apply_inner(
+        &mut self,
+        mut cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
             return self.apply_batch(cmd, None);
         }
@@ -866,18 +1073,51 @@ impl Engine for PrismEngine {
             "renameLayer" => self.op_rename_layer(&cmd.payload),
             "setLayerOpacity" => self.op_set_opacity(&cmd.payload),
             "setLayerVisible" => self.op_set_visible(&cmd.payload),
-            "drawPixels" => self.op_draw_pixels(&mut cmd),
-            "fillLayer" => self.op_fill_layer(&cmd.payload),
-            "applyFilter" => self.op_apply_filter(&cmd.payload),
-            "flatten" => self.op_flatten(&cmd),
+            "drawPixels" => self.op_draw_pixels(&mut cmd, ctx),
+            "fillLayer" => self.op_fill_layer(&cmd.payload, ctx),
+            "applyFilter" => self.op_apply_filter(&cmd.payload, ctx),
+            "flatten" => self.op_flatten(&cmd, ctx),
             "getLayer" => self.op_get_layer(&cmd.payload),
             "describe" => self.op_describe(),
             "setColors" => self.op_set_colors(&cmd.payload),
             "swapColors" => self.op_swap_colors(),
             "clearRecentColors" => self.op_clear_recent_colors(),
             "getColors" => self.op_get_colors(),
-            other => self.apply_v2(other, &cmd.payload),
+            other => self.apply_v2(other, &cmd.payload, ctx),
         }
+    }
+
+}
+
+impl Engine for PrismEngine {
+    fn kind(&self) -> EngineKind {
+        EngineKind::Prism
+    }
+
+    fn binary_input_ops(&self) -> &'static [&'static str] {
+        &["drawPixels"]
+    }
+
+    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+        self.apply_inner(cmd, None)
+    }
+
+    /// Cancellable entry point (Engine::apply_long contract): `__batch`
+    /// forwards to `apply_batch` with the context; other ops checkpoint up
+    /// front, run with a task context so heavy pixel/render loops can
+    /// cancel cooperatively, and report completion.
+    fn apply_long(
+        &mut self,
+        cmd: Command,
+        ctx: &TaskContext,
+    ) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            return self.apply_batch(cmd, Some(ctx));
+        }
+        ctx.checkpoint()?;
+        let result = self.apply_inner(cmd, Some(ctx))?;
+        ctx.set_progress(1.0);
+        Ok(result)
     }
 
     fn apply_batch(

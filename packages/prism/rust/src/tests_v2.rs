@@ -751,3 +751,203 @@ fn scaled_fill_pulls_back_selection_coverage_and_blends_each_texel_once() {
     let d=describe(&mut e);let raw=b64::decode(layer(&d,l)["content"]["pixels_b64"].as_str().unwrap()).unwrap();
     assert_eq!(px(&raw,4,0,0),[127,0,128,255]);assert_eq!(px(&raw,4,1,0),[0,0,0,0]);
 }
+
+// -- apply_long: cooperative cancellation and progress ----------------------
+
+/// Runs `cmd` through `apply_long` on a worker thread while `observer`
+/// watches progress; cancels as soon as the op reports work, then joins.
+/// Mirrors the cadence cancellation test: the engine travels with the
+/// worker so its post-cancel state can be inspected on return.
+fn cancel_during(e: PrismEngine, cmd: Command) -> (PrismEngine, ignition_core::ErrorCode) {
+    use ignition_core::TaskContext;
+    let ctx = TaskContext::new();
+    let observer = ctx.clone();
+    let worker = std::thread::spawn(move || {
+        let mut e = e;
+        let result = e.apply_long(cmd, &ctx);
+        (e, result)
+    });
+    while observer.progress() == 0.0 && !worker.is_finished() {
+        std::thread::yield_now();
+    }
+    observer.cancel();
+    let (e, result) = worker.join().unwrap();
+    (e, result.unwrap_err().code)
+}
+
+#[test]
+fn apply_long_fill_layer_cancels_mid_op_and_leaves_state_untouched() {
+    // 2048x2048 = 4M pixels: far more than one CHECKPOINT_EVERY_PX window, so
+    // the observer's cancel always lands inside the fill loop.
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    let (e, code) = cancel_during(
+        e,
+        Command::new("fillLayer", json!({"id": l, "color": BLUE})),
+    );
+    assert_eq!(code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before, "cancelled fillLayer must not mutate");
+    assert_eq!(e.journal.undo_len(), depth, "cancelled fillLayer must not journal");
+}
+
+#[test]
+fn apply_long_apply_filter_cancels_mid_op_and_leaves_state_untouched() {
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    let (e, code) = cancel_during(
+        e,
+        Command::new(
+            "applyFilter",
+            json!({"id": l, "filter": {"type": "invert"}}),
+        ),
+    );
+    assert_eq!(code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before, "cancelled applyFilter must not mutate");
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn apply_long_draw_pixels_cancels_mid_op_and_leaves_state_untouched() {
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    // Full-canvas src-over blend delivered as binary input (16 MiB).
+    let data = vec![0u8, 255, 0, 255].repeat(2048 * 2048);
+    let cmd = Command::new(
+        "drawPixels",
+        json!({"id": l, "x": 0, "y": 0, "w": 2048, "h": 2048}),
+    )
+    .with_binary(Some(data));
+    let (e, code) = cancel_during(e, cmd);
+    assert_eq!(code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before, "cancelled drawPixels must not mutate");
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn apply_long_flatten_cancels_mid_composite() {
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    let (e, code) = cancel_during(e, Command::new("flatten", json!({})));
+    assert_eq!(code, ErrorCode::Cancelled);
+    // Read-only op: no journal entry either way, and the doc is unchanged.
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn apply_long_pre_cancelled_command_fails_before_any_work() {
+    use ignition_core::TaskContext;
+    let mut e = eng(64, 64);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    let ctx = TaskContext::new();
+    ctx.cancel();
+    let err = e
+        .apply_long(
+            Command::new("fillLayer", json!({"id": l, "color": BLUE})),
+            &ctx,
+        )
+        .unwrap_err();
+    assert_eq!(err.code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn apply_long_matches_apply_results_and_reports_full_progress() {
+    use ignition_core::TaskContext;
+    // Same op sequence through `apply` on one engine and `apply_long` on an
+    // identical twin; snapshots must be byte-identical and progress must end
+    // at 1.0.
+    let mut a = eng(256, 256);
+    let mut b = eng(256, 256);
+    let la = id(&run(&mut a, "addRasterLayer", json!({})));
+    let lb = id(&run(&mut b, "addRasterLayer", json!({})));
+    assert_eq!(la, lb);
+
+    let ctx = TaskContext::new();
+    b.apply_long(
+        Command::new("fillLayer", json!({"id": lb, "color": RED})),
+        &ctx,
+    )
+    .unwrap();
+    a.apply(Command::new("fillLayer", json!({"id": la, "color": RED}))).unwrap();
+    assert_eq!(ctx.progress(), 1.0);
+    assert_eq!(a.snapshot().unwrap(), b.snapshot().unwrap());
+
+    // drawPixels via binary input on both paths.
+    let patch = vec![9u8, 8, 7, 255].repeat(64 * 64);
+    a.apply(
+        Command::new(
+            "drawPixels",
+            json!({"id": la, "x": 4, "y": 4, "w": 64, "h": 64}),
+        )
+        .with_binary(Some(patch.clone())),
+    )
+    .unwrap();
+    b.apply_long(
+        Command::new(
+            "drawPixels",
+            json!({"id": lb, "x": 4, "y": 4, "w": 64, "h": 64}),
+        )
+        .with_binary(Some(patch)),
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(ctx.progress(), 1.0);
+    assert_eq!(a.snapshot().unwrap(), b.snapshot().unwrap());
+
+    // Read-only render op through apply_long.
+    let flat_a = a.apply(Command::new("flatten", json!({}))).unwrap();
+    let flat_b = b
+        .apply_long(Command::new("flatten", json!({})), &ctx)
+        .unwrap();
+    assert_eq!(flat_a.output, flat_b.output);
+    assert_eq!(ctx.progress(), 1.0);
+}
+
+#[test]
+fn apply_long_progress_is_monotonic_and_clamped() {
+    use ignition_core::TaskContext;
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let ctx = TaskContext::new();
+    let observer = ctx.clone();
+    let worker = std::thread::spawn(move || {
+        let mut e = e;
+        let result = e.apply_long(
+            Command::new("applyFilter", json!({"id": l, "filter": {"type": "grayscale"}})),
+            &ctx,
+        );
+        (e, result)
+    });
+    let mut samples = Vec::new();
+    while !worker.is_finished() {
+        samples.push(observer.progress());
+        std::thread::yield_now();
+    }
+    let (_e, result) = worker.join().unwrap();
+    result.unwrap();
+    assert!(!samples.is_empty());
+    assert!(samples.iter().all(|&v| (0.0..=1.0).contains(&v)));
+    assert!(
+        samples.windows(2).all(|w| w[1] >= w[0]),
+        "progress must never decrease: {samples:?}"
+    );
+    assert!(samples.iter().any(|&v| v > 0.0), "op should report progress");
+    assert_eq!(observer.progress(), 1.0);
+}

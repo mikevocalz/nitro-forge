@@ -2,10 +2,13 @@
 //! clipping runs, blend modes, masks and transforms; plus thumbnails, bounds
 //! and point hit-testing.
 
+use ignition_core::EngineError;
+
 use crate::geom::{Affine, Rect};
 use crate::model::{BlendMode, BoolOp, Content, FillRule, Layer, PaintOrder, Paint};
 use crate::raster;
 use crate::vector::{self, Polyline, Sampler};
+use crate::{RenderTask, CHECKPOINT_EVERY_PX};
 
 /// Read-only view over the document used by every render entry point.
 pub struct Scene<'a> {
@@ -93,12 +96,22 @@ pub fn composite_pixel(dst: &mut [u8], src: &[u8], mode: BlendMode, opacity: f64
     dst[3] = (out_a * 255.0).round().clamp(0.0, 255.0) as u8;
 }
 
-fn composite_into(dst: &mut [u8], src: &[u8], mode: BlendMode, opacity: f64, atop: bool) {
-    for (d, s) in dst.chunks_exact_mut(4).zip(src.chunks_exact(4)) {
+fn composite_into(
+    dst: &mut [u8],
+    src: &[u8],
+    mode: BlendMode,
+    opacity: f64,
+    atop: bool,
+    task: &mut RenderTask,
+) -> Result<(), EngineError> {
+    let total = dst.len().div_ceil(4).max(1) as f32;
+    for (i, (d, s)) in dst.chunks_exact_mut(4).zip(src.chunks_exact(4)).enumerate() {
+        task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
         if s[3] != 0 {
             composite_pixel(d, s, mode, opacity, atop);
         }
     }
+    Ok(())
 }
 
 impl<'a> Scene<'a> {
@@ -131,17 +144,27 @@ impl<'a> Scene<'a> {
         self.parent_affine(layer).then_after(&layer.transform.affine())
     }
 
-    /// Full composite of the visible document.
-    pub fn flatten(&self) -> Vec<u8> {
+    /// Full composite of the visible document. Checkpoints between layers
+    /// and inside pixel loops when `task` has a context.
+    pub fn flatten_ctx(&self, task: &mut RenderTask) -> Result<Vec<u8>, EngineError> {
+        task.checkpoint()?;
         let mut out = vec![0u8; self.w * self.h * 4];
-        self.render_children(None, &Affine::IDENTITY, &mut out);
-        out
+        self.render_children(None, &Affine::IDENTITY, &mut out, task)?;
+        task.checkpoint()?;
+        Ok(out)
     }
 
-    fn render_children(&self, parent: Option<u64>, base: &Affine, out: &mut [u8]) {
+    fn render_children(
+        &self,
+        parent: Option<u64>,
+        base: &Affine,
+        out: &mut [u8],
+        task: &mut RenderTask,
+    ) -> Result<(), EngineError> {
         let kids: Vec<&Layer> = self.children(parent).collect();
         let mut i = 0;
         while i < kids.len() {
+            task.checkpoint()?;
             let head = kids[i];
             let mut j = i + 1;
             while j < kids.len() && kids[j].clipped {
@@ -150,39 +173,48 @@ impl<'a> Scene<'a> {
             if head.visible {
                 if j == i + 1 && head.blend == BlendMode::Normal {
                     // Fast path: no clipping run.
-                    let buf = self.render_layer(head, base);
-                    composite_into(out, &buf, head.blend, head.opacity, false);
+                    let buf = self.render_layer_ctx(head, base, task)?;
+                    composite_into(out, &buf, head.blend, head.opacity, false, task)?;
                 } else {
-                    let mut buf = self.render_layer(head, base);
+                    let mut buf = self.render_layer_ctx(head, base, task)?;
                     for clip in &kids[i + 1..j] {
                         if clip.visible {
-                            let cb = self.render_layer(clip, base);
-                            composite_into(&mut buf, &cb, clip.blend, clip.opacity, true);
+                            let cb = self.render_layer_ctx(clip, base, task)?;
+                            composite_into(&mut buf, &cb, clip.blend, clip.opacity, true, task)?;
                         }
                     }
-                    composite_into(out, &buf, head.blend, head.opacity, false);
+                    composite_into(out, &buf, head.blend, head.opacity, false, task)?;
                 }
             }
             i = j;
         }
+        Ok(())
     }
 
     /// One layer alone (content, transform, mask), straight RGBA; opacity
     /// and blend are applied by the caller.
-    pub fn render_layer(&self, layer: &Layer, base: &Affine) -> Vec<u8> {
+    pub fn render_layer_ctx(
+        &self,
+        layer: &Layer,
+        base: &Affine,
+        task: &mut RenderTask,
+    ) -> Result<Vec<u8>, EngineError> {
         let (w, h) = (self.w, self.h);
         let m = base.then_after(&layer.transform.affine());
         let mut buf = vec![0u8; w * h * 4];
         match &layer.content {
-            Content::Raster(px) => sample_raster(px, w, h, &m, &mut buf),
+            Content::Raster(px) => sample_raster(px, w, h, &m, &mut buf, task)?,
             Content::Shape(shape) => {
                 let inv = m.invert();
                 if let Some(inv) = inv {
+                    let total = (w * h).max(1) as f32;
                     for py in 0..h {
                         for pxx in 0..w {
+                            let i = py * w + pxx;
+                            task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
                             let (x, y) = inv.apply(pxx as f64 + 0.5, py as f64 + 0.5);
                             if raster::shape_covers(shape, x, y) {
-                                let o = (py * w + pxx) * 4;
+                                let o = i * 4;
                                 buf[o..o + 4].copy_from_slice(&shape.fill);
                             }
                         }
@@ -191,33 +223,47 @@ impl<'a> Scene<'a> {
             }
             Content::Path(path) => {
                 let polys = vector::flatten(&path.subpaths, &m);
-                let fill = path.fill.as_ref().map(|p| (vector::fill_coverage(&polys, path.fill_rule, w, h), p));
+                let fill = path
+                    .fill
+                    .as_ref()
+                    .map(|p| {
+                        vector::fill_coverage(&polys, path.fill_rule, w, h, task)
+                            .map(|cov| (cov, p))
+                    })
+                    .transpose()?;
                 let stroke = path
                     .stroke
                     .as_ref()
-                    .map(|s| (vector::stroke_coverage(&polys, s, m.mean_scale(), w, h), &s.paint));
+                    .map(|s| {
+                        vector::stroke_coverage(&polys, s, m.mean_scale(), w, h, task)
+                            .map(|cov| (cov, &s.paint))
+                    })
+                    .transpose()?;
                 let order: [Option<(Vec<f32>, &Paint)>; 2] = match path.paint_order {
                     PaintOrder::FillStroke => [fill, stroke],
                     PaintOrder::StrokeFill => [stroke, fill],
                 };
                 for (cov, paint) in order.into_iter().flatten() {
-                    paint_coverage(&mut buf, &cov, paint, &m, w);
+                    paint_coverage(&mut buf, &cov, paint, &m, w, task)?;
                 }
             }
-            Content::Group => self.render_children(Some(layer.id), &m, &mut buf),
+            Content::Group => self.render_children(Some(layer.id), &m, &mut buf, task)?,
             Content::Boolean { op, fill } => {
-                let cov = self.boolean_coverage(layer.id, *op, &m);
+                let cov = self.boolean_coverage(layer.id, *op, &m, task)?;
                 let paint = fill.clone().unwrap_or(Paint::solid([0, 0, 0, 255]));
-                paint_coverage(&mut buf, &cov, &paint, &m, w);
+                paint_coverage(&mut buf, &cov, &paint, &m, w, task)?;
             }
         }
         if let Some(mask) = &layer.mask {
+            let total = buf.len().div_ceil(4).max(1) as f32;
             for (i, px) in buf.chunks_exact_mut(4).enumerate() {
+                task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
                 let v = mask.value(i) as u32;
                 px[3] = ((px[3] as u32 * v + 127) / 255) as u8;
             }
         }
-        buf
+        task.step_done();
+        Ok(buf)
     }
 
     /// Geometry of a vector operand in canvas space (fill polygons).
@@ -229,15 +275,24 @@ impl<'a> Scene<'a> {
         }
     }
 
-    fn boolean_coverage(&self, id: u64, op: BoolOp, m: &Affine) -> Vec<f32> {
+    fn boolean_coverage(
+        &self,
+        id: u64,
+        op: BoolOp,
+        m: &Affine,
+        task: &mut RenderTask,
+    ) -> Result<Vec<f32>, EngineError> {
         let mut acc: Option<Vec<f32>> = None;
-        for operand in self.children(Some(id)) {
-            if !operand.visible {
-                continue;
-            }
+        let operands: Vec<&Layer> = self
+            .children(Some(id))
+            .filter(|o| o.visible)
+            .collect();
+        let total = operands.len().max(1) as f32;
+        for (k, operand) in operands.iter().enumerate() {
+            task.tick(k, 1, k as f32 / total)?;
             let om = m.then_after(&operand.transform.affine());
             let Some((polys, rule)) = self.operand_polys(operand, &om) else { continue };
-            let cov = vector::fill_coverage(&polys, rule, self.w, self.h);
+            let cov = vector::fill_coverage(&polys, rule, self.w, self.h, task)?;
             acc = Some(match acc {
                 None => cov,
                 Some(a) => a
@@ -252,7 +307,7 @@ impl<'a> Scene<'a> {
                     .collect(),
             });
         }
-        acc.unwrap_or_else(|| vec![0.0; self.w * self.h])
+        Ok(acc.unwrap_or_else(|| vec![0.0; self.w * self.h]))
     }
 
     /// Content bounds in canvas space (transformed corners + AABB).
@@ -350,9 +405,18 @@ impl<'a> Scene<'a> {
     }
 }
 
-fn paint_coverage(buf: &mut [u8], cov: &[f32], paint: &Paint, m: &Affine, w: usize) {
+fn paint_coverage(
+    buf: &mut [u8],
+    cov: &[f32],
+    paint: &Paint,
+    m: &Affine,
+    w: usize,
+    task: &mut RenderTask,
+) -> Result<(), EngineError> {
     let sampler = Sampler::new(paint, m);
+    let total = cov.len().max(1) as f32;
     for (i, &c) in cov.iter().enumerate() {
+        task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
         if c <= 0.0 {
             continue;
         }
@@ -361,35 +425,46 @@ fn paint_coverage(buf: &mut [u8], cov: &[f32], paint: &Paint, m: &Affine, w: usi
         col[3] = (col[3] as f32 * c.min(1.0)).round() as u8;
         raster::blend_pixel(&mut buf[i * 4..i * 4 + 4], &col, 1.0);
     }
+    Ok(())
 }
 
 /// Resample a canvas-sized raster through `m` (bilinear, premultiplied).
-fn sample_raster(px: &[u8], w: usize, h: usize, m: &Affine, out: &mut [u8]) {
+fn sample_raster(
+    px: &[u8],
+    w: usize,
+    h: usize,
+    m: &Affine,
+    out: &mut [u8],
+    task: &mut RenderTask,
+) -> Result<(), EngineError> {
     if m.is_identity() {
         let n = px.len().min(out.len());
         out[..n].copy_from_slice(&px[..n]);
-        return;
+        return Ok(());
     }
-    let Some(inv) = m.invert() else { return };
+    let Some(inv) = m.invert() else { return Ok(()) };
     // Integer translations stay pixel-exact.
     if m.a == 1.0 && m.b == 0.0 && m.c == 0.0 && m.d == 1.0 && m.e.fract() == 0.0 && m.f.fract() == 0.0 {
         let (dx, dy) = (m.e as i64, m.f as i64);
+        let total = (w * h).max(1) as f32;
         for y in 0..h as i64 {
             let sy = y - dy;
             if sy < 0 || sy >= h as i64 {
                 continue;
             }
             for x in 0..w as i64 {
+                let i = (y as usize) * w + x as usize;
+                task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
                 let sx = x - dx;
                 if sx < 0 || sx >= w as i64 {
                     continue;
                 }
                 let s = ((sy as usize) * w + sx as usize) * 4;
-                let d = ((y as usize) * w + x as usize) * 4;
+                let d = i * 4;
                 out[d..d + 4].copy_from_slice(&px[s..s + 4]);
             }
         }
-        return;
+        return Ok(());
     }
     let fetch = |x: i64, y: i64| -> [f64; 4] {
         if x < 0 || y < 0 || x >= w as i64 || y >= h as i64 {
@@ -399,8 +474,11 @@ fn sample_raster(px: &[u8], w: usize, h: usize, m: &Affine, out: &mut [u8]) {
         let a = px[o + 3] as f64 / 255.0;
         [px[o] as f64 * a, px[o + 1] as f64 * a, px[o + 2] as f64 * a, a]
     };
+    let total = (w * h).max(1) as f32;
     for y in 0..h {
         for x in 0..w {
+            let i = y * w + x;
+            task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
             let (sx, sy) = inv.apply(x as f64 + 0.5, y as f64 + 0.5);
             let (fx, fy) = (sx - 0.5, sy - 0.5);
             let (x0, y0) = (fx.floor() as i64, fy.floor() as i64);
@@ -416,19 +494,31 @@ fn sample_raster(px: &[u8], w: usize, h: usize, m: &Affine, out: &mut [u8]) {
             if acc[3] <= 0.0 {
                 continue;
             }
-            let o = (y * w + x) * 4;
+            let o = i * 4;
             for c in 0..3 {
                 out[o + c] = (acc[c] / acc[3]).round().clamp(0.0, 255.0) as u8;
             }
             out[o + 3] = (acc[3] * 255.0).round().clamp(0.0, 255.0) as u8;
         }
     }
+    Ok(())
 }
 
 /// Crop `src` (`sw*sh` RGBA) to the integer region, transparent outside.
-pub fn crop(src: &[u8], sw: usize, sh: usize, x: i64, y: i64, w: usize, h: usize) -> Vec<u8> {
+pub fn crop(
+    src: &[u8],
+    sw: usize,
+    sh: usize,
+    x: i64,
+    y: i64,
+    w: usize,
+    h: usize,
+    task: &mut RenderTask,
+) -> Result<Vec<u8>, EngineError> {
     let mut out = vec![0u8; w * h * 4];
+    let total = h.max(1) as f32;
     for r in 0..h as i64 {
+        task.tick(r as usize, 1, r as f32 / total)?;
         let sy = y + r;
         if sy < 0 || sy >= sh as i64 {
             continue;
@@ -443,23 +533,30 @@ pub fn crop(src: &[u8], sw: usize, sh: usize, x: i64, y: i64, w: usize, h: usize
             out[d..d + 4].copy_from_slice(&src[s..s + 4]);
         }
     }
-    out
+    Ok(out)
 }
 
 /// Area-average downscale to fit inside `max × max`, keeping aspect ratio.
 /// Images already inside the box are returned as-is (never upscaled).
-pub fn fit(src: &[u8], w: usize, h: usize, max: usize) -> (Vec<u8>, usize, usize) {
+pub fn fit(
+    src: &[u8],
+    w: usize,
+    h: usize,
+    max: usize,
+    task: &mut RenderTask,
+) -> Result<(Vec<u8>, usize, usize), EngineError> {
     if w == 0 || h == 0 {
-        return (Vec::new(), 0, 0);
+        return Ok((Vec::new(), 0, 0));
     }
     if w <= max && h <= max {
-        return (src.to_vec(), w, h);
+        return Ok((src.to_vec(), w, h));
     }
     let s = (max as f64 / w as f64).min(max as f64 / h as f64);
     let tw = ((w as f64 * s).round() as usize).max(1);
     let th = ((h as f64 * s).round() as usize).max(1);
     let mut out = vec![0u8; tw * th * 4];
     for ty in 0..th {
+        task.tick(ty, 1, ty as f32 / th as f32)?;
         let y0 = ty * h / th;
         let y1 = ((ty + 1) * h / th).max(y0 + 1);
         for tx in 0..tw {
@@ -487,5 +584,5 @@ pub fn fit(src: &[u8], w: usize, h: usize, max: usize) -> (Vec<u8>, usize, usize
             out[o + 3] = (acc[3] / n).round().clamp(0.0, 255.0) as u8;
         }
     }
-    (out, tw, th)
+    Ok((out, tw, th))
 }

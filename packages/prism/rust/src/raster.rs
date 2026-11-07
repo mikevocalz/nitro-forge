@@ -2,7 +2,10 @@
 //! canvas-region helpers. All functions are panic-free for any buffer
 //! contents; callers guarantee region bounds before calling read/write.
 
+use ignition_core::EngineError;
+
 use crate::model::{Shape, ShapeKind};
+use crate::{RenderTask, CHECKPOINT_EVERY_PX};
 
 /// Source-over alpha blend of one straight-alpha RGBA `src` pixel onto `dst`
 /// (a 4-byte slice), with the source alpha pre-scaled by `opacity` (0..=1).
@@ -56,15 +59,22 @@ pub fn shape_covers(shape: &Shape, px: f64, py: f64) -> bool {
 }
 
 /// Per-channel filters applied in place to an RGBA buffer. Alpha is never
-/// touched.
+/// touched. Checkpoints every `CHECKPOINT_EVERY_PX` pixels when `task` has
+/// a context.
 pub enum Filter {
     Grayscale,
     Invert,
     Brightness(f64), // amount -1..=1, scaled by 255
 }
 
-pub fn apply_filter(buf: &mut [u8], filter: &Filter) {
-    for px in buf.chunks_exact_mut(4) {
+pub fn apply_filter(
+    buf: &mut [u8],
+    filter: &Filter,
+    task: &mut RenderTask,
+) -> Result<(), EngineError> {
+    let total = (buf.len() / 4).max(1) as f32;
+    for (i, px) in buf.chunks_exact_mut(4).enumerate() {
+        task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
         match filter {
             Filter::Grayscale => {
                 // ITU-R 601 luma coefficients.
@@ -90,6 +100,7 @@ pub fn apply_filter(buf: &mut [u8], filter: &Filter) {
             }
         }
     }
+    Ok(())
 }
 
 /// Copy a `w*h` pixel region out of a canvas-sized buffer. Assumes
