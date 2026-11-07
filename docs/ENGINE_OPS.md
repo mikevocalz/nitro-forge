@@ -501,11 +501,30 @@ Freehand Ink annotations persist real `/InkList` stroke geometry — an array of
 
 ## pitch-engine — `PitchEngine::new()`
 
-State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide], sections:[Section], next_section_id }`,
+State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide], sections:[Section], next_section_id,
+masters:[SlideMaster], layouts:[SlideLayout] }`,
 `Section = { id, label, start_slide_id }` is a stable deck boundary. Older snapshots default to `sections:[]` and `next_section_id:1`.
 `Slide = { id, layout:"blank"|"title"|"titleBody", background:[r,g,b,a]|null,
 objects:[Obj], animations:[Anim], notes?:string, ink?:[InkStroke],
-transition?:SlideTransition, timing?:SlideTiming }`,
+transition?:SlideTransition, timing?:SlideTiming, layout_id?:number }`,
+`SlideMaster = { id, name, background?:[r,g,b,a] }`,
+`SlideLayout = { id, master_id, name, placeholders:[Placeholder] }`,
+`Placeholder = { id, kind:"title"|"body"|"image"|"media"|"date"|"footer"|"pageNumber",
+x,y,w,h, label, inherit_theme?:bool }`.
+Masters/layouts/placeholders are slide-master DATA (P14 slice 8a, mirroring
+the pinned NYC-Tron `MasterLayoutEditor` contract): flat deck-level
+collections, a layout back-references its master via `master_id`, and
+placeholders are typed regions on layouts. Bounds: ≤64 masters, ≤256
+layouts, ≤64 placeholders per layout; names/labels non-blank ≤128 UTF-8
+bytes; placeholder x/y finite within ±1,000,000 and w/h finite >0
+≤1,000,000. All ids share the document `next_id` space. HONESTY BOUNDARY:
+the engine stores/validates these definitions and the slide→layout
+binding; it does NOT render master content onto slides or resolve
+placeholders into objects — apply/bind is a later slice. NYC-Tron layout
+`parentId` inheritance is not modeled yet. `removeMaster` cascade-removes
+its layouts; `removeLayout` and `removeMaster` clear slide `layout_id`
+bindings without touching slide content. Older snapshots default to
+`masters:[]`/`layouts:[]` and absent `layout_id`.
 `SlideTransition = { kind:"fade"|"slideLeft"|"slideRight"|"slideUp"|"slideDown"|"wipe"|"zoom",
 duration_ms:1..=60000, direction?:"left"|"right"|"up"|"down" }`,
 `SlideTiming = { duration_ms:1..=3600000, advance:"manual"|"after" }`.
@@ -587,6 +606,17 @@ document `next_id` identity space.
 | `addSection` | `{label,start_slide}` | `{section_id}` | Creates a stable boundary at a unique existing slide. |
 | `updateSection` | `{id,label?,start_slide?}` | `{ok}` | Rename/reassign boundary without changing its ID; equal/empty patch is eventless and preserves redo. |
 | `removeSection` | `{id}` | `{ok}` | Removes only the boundary; retains all slides. |
+| `addMaster` | `{name,background?}` | `{master_id}` | name non-blank ≤128 UTF-8 bytes; `background` optional `[r,g,b,a]` stored data for the host; ≤64 masters; id from `next_id`; one undo entry |
+| `renameMaster` | `{id,name}` | `{ok}` | equal name is an eventless no-op preserving redo |
+| `setMasterBackground` | `{id,color}` | `{ok}` | `color` `[r,g,b,a]` or null to clear; equal/absent-clear is an eventless no-op |
+| `removeMaster` | `{id}` | `{ok}` | cascade-removes every layout of the master (with their placeholders) and clears slide `layout_id` bindings to those layouts; slide content untouched; one undo entry |
+| `addLayout` | `{master,name}` | `{layout_id}` | `master` must be an existing master id; ≤256 layouts deck-wide; one undo entry |
+| `renameLayout` | `{id,name}` | `{ok}` | equal name is an eventless no-op preserving redo |
+| `removeLayout` | `{id}` | `{ok}` | clears slide `layout_id` bindings to it; slide content untouched; one undo entry |
+| `setSlideLayout` | `{slide,layout}` | `{ok}` | slide = id; `layout` is an existing layout id or null/omitted to clear the binding; equal rebind is an eventless no-op; DATA ONLY — no master content is applied to the slide |
+| `addPlaceholder` | `{layout,kind,x,y,w,h,label,inherit_theme?}` | `{placeholder_id}` | `layout` must exist; `kind` is the bounded catalog `title|body|image|media|date|footer|pageNumber`; bounds per the Placeholder contract; `label` non-blank ≤128 bytes; ≤64 placeholders per layout; id from `next_id`; one undo entry |
+| `updatePlaceholder` | `{layout,id,kind?,x?,y?,w?,h?,label?,inherit_theme?}` | `{ok}` | partial in-place patch retains placeholder id and position; merged result re-validated; equal/empty patch is an eventless no-op preserving redo |
+| `removePlaceholder` | `{layout,id}` | `{ok}` | unknown placeholder id → NotFound |
 | `removeSlide` | `{id}` | `{ok}` | must keep ≥1 slide |
 | `moveSlide` | `{from,to}` | `{ok}` | |
 | `moveSlides` | `{order:number[]}` | `{ok}` | Complete unique slide-ID permutation; one undo entry. Identical order is a no-op. |
@@ -643,7 +673,7 @@ Animation evaluation caps at4096 objects/animations per slide; references and ob
 
 The pinned alpha.4 SlideAnimationPane supports effect/add/remove but lacks timing/trigger edit callbacks. The adapter offers all seven real effects, retains nonabsolute sourceTrigger metadata and refuses to bind that old pane over triggered programs rather than mislabel relative delays as absolute starts. Typed engine APIs/readPitchSlideAt accept explicit click history. No fake preview timer, host UI activation or new Pitch renderer is provided. Actual CPU pixel integration is checked through the existing Prism renderer.
 
-Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text`, an object `stroke`, a connector or a media object/spec uses `{kind:"pitch",schema:4,document:PitchState}`. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads and schema:≤3 readers reject schema:4 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes/connectors/media (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke`/`connector`/`media` fields do not, which is why shapes/strokes/connectors/media take schema:4 rather than reusing schema:3). Readers accept legacy root payloads and schema:2, schema:3 and schema:4 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
+Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text`, an object `stroke`, a connector, a media object/spec, any master/layout/placeholder definition or a slide `layout_id` binding uses `{kind:"pitch",schema:4,document:PitchState}``. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads and schema:≤3 readers reject schema:4 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes/connectors/media/masters/layouts/placeholders/layout bindings (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke`/`connector`/`media` fields do not, which is why shapes/strokes/connectors/media take schema:4 rather than reusing schema:3). Readers accept legacy root payloads and schema:2, schema:3 and schema:4 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
 
 ## quill-engine — `QuillEngine::new()`
 

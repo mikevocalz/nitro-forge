@@ -12,6 +12,17 @@ export const OPS = {
   addSection: "addSection",
   updateSection: "updateSection",
   removeSection: "removeSection",
+  addMaster: "addMaster",
+  renameMaster: "renameMaster",
+  setMasterBackground: "setMasterBackground",
+  removeMaster: "removeMaster",
+  addLayout: "addLayout",
+  renameLayout: "renameLayout",
+  removeLayout: "removeLayout",
+  setSlideLayout: "setSlideLayout",
+  addPlaceholder: "addPlaceholder",
+  updatePlaceholder: "updatePlaceholder",
+  removePlaceholder: "removePlaceholder",
   removeSlide: "removeSlide",
   moveSlide: "moveSlide",
   moveSlides: "moveSlides",
@@ -66,6 +77,63 @@ export interface PitchTextStyle {
 }
 /** Stable boundary; follows start_slide_id on reorder. Removing that slide removes this boundary. */
 export interface PitchSection { id: number; label: string; start_slide_id: number }
+/**
+ * Slide master/layout/placeholder definitions (P14 slice 8a). DATA ONLY:
+ * the engine stores and validates these definitions plus the slide→layout
+ * binding (`layout_id` on each slide in `describe`); it does NOT render
+ * master content onto slides or resolve placeholders — apply/bind is a
+ * later slice. Masters and layouts are flat deck-level collections; a
+ * layout references its master via `master_id`.
+ *
+ * Bounds enforced by the engine: at most 64 masters, 256 layouts and 64
+ * placeholders per layout; names/labels non-blank <=128 UTF-8 bytes;
+ * placeholder x/y finite within ±1,000,000 and w/h finite >0 <=1,000,000.
+ * Ids share the document id space. `removeMaster` cascade-removes its
+ * layouts; `removeLayout`/`removeMaster` clear slide `layout_id` bindings
+ * without touching slide content.
+ */
+export type PitchPlaceholderKind =
+  | "title"
+  | "body"
+  | "image"
+  | "media"
+  | "date"
+  | "footer"
+  | "pageNumber";
+/** Typed placeholder region on a layout (NYC-Tron `MasterPlaceholder` contract). */
+export interface PitchPlaceholder {
+  id: number;
+  kind: PitchPlaceholderKind;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string;
+  inherit_theme?: boolean;
+}
+/** `addPlaceholder` payload; the engine assigns `id`. */
+export type PitchPlaceholderInput = Omit<PitchPlaceholder, "id">;
+/** Partial in-place placeholder edit; omitted fields preserve the region. */
+export interface PitchPlaceholderPatch {
+  kind?: PitchPlaceholderKind;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  label?: string;
+  inherit_theme?: boolean;
+}
+export interface PitchMaster {
+  id: number;
+  name: string;
+  background?: Rgba;
+}
+export interface PitchLayout {
+  id: number;
+  master_id: number;
+  name: string;
+  placeholders: PitchPlaceholder[];
+}
 export type Layout = "blank" | "title" | "titleBody";
 /**
  * Bounded shape-preset catalog admitted by `addShape`. Every preset is
@@ -298,6 +366,49 @@ export class PitchDocument {
   }
   /** Removes only the boundary, retaining every slide. */
   removeSection(id: number) { return this.call<{ ok: boolean }>(OPS.removeSection, { id }); }
+  /** Add a named slide master; optional RGBA `background` is stored data for the host. */
+  addMaster(name: string, background?: Rgba | null) {
+    return this.call<{ master_id: number }>(OPS.addMaster, {
+      name,
+      ...(background === undefined ? {} : { background }),
+    });
+  }
+  renameMaster(id: number, name: string) {
+    return this.call<{ ok: boolean }>(OPS.renameMaster, { id, name });
+  }
+  /** Set/clear (null) the master's stored background color. */
+  setMasterBackground(id: number, color: Rgba | null) {
+    return this.call<{ ok: boolean }>(OPS.setMasterBackground, { id, color });
+  }
+  /** Cascade-removes the master's layouts and clears slide layout bindings to them. */
+  removeMaster(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removeMaster, { id });
+  }
+  addLayout(master: number, name: string) {
+    return this.call<{ layout_id: number }>(OPS.addLayout, { master, name });
+  }
+  renameLayout(id: number, name: string) {
+    return this.call<{ ok: boolean }>(OPS.renameLayout, { id, name });
+  }
+  /** Removes the layout and clears slide `layout_id` bindings to it; slide content is kept. */
+  removeLayout(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removeLayout, { id });
+  }
+  /** Bind a slide to an existing layout; `null` clears the binding. Data only — no master content is applied. */
+  setSlideLayout(slide: number, layout: number | null) {
+    return this.call<{ ok: boolean }>(OPS.setSlideLayout, { slide, layout });
+  }
+  /** Add a typed placeholder region to a layout; returns the assigned `placeholder_id`. */
+  addPlaceholder(layout: number, placeholder: PitchPlaceholderInput) {
+    return this.call<{ placeholder_id: number }>(OPS.addPlaceholder, { layout, ...placeholder });
+  }
+  /** Partial placeholder patch; equal/empty patches are eventless no-ops. */
+  updatePlaceholder(layout: number, id: number, patch: PitchPlaceholderPatch) {
+    return this.call<{ ok: boolean }>(OPS.updatePlaceholder, { ...patch, layout, id });
+  }
+  removePlaceholder(layout: number, id: number) {
+    return this.call<{ ok: boolean }>(OPS.removePlaceholder, { layout, id });
+  }
   removeSlide(id: number) {
     return this.call(OPS.removeSlide, { id });
   }

@@ -24,6 +24,7 @@ use serde_json::{json, Value};
 
 mod sections;
 mod animation;
+mod masters;
 pub use animation::Trigger;
 use sections::Section;
 
@@ -537,6 +538,12 @@ pub struct Slide {
     /// Optional per-slide rehearsal/advance timing; absent means host default.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timing: Option<SlideTiming>,
+    /// Optional binding to a stored slide layout (`masters.rs`). DATA ONLY:
+    /// the engine records the reference; it does not render master/layout
+    /// content onto the slide (apply/bind is a later slice). Cleared when
+    /// the referenced layout (or its master) is removed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -566,6 +573,13 @@ struct PitchState {
     sections: Vec<Section>,
     #[serde(default="sections::default_next_id")]
     next_section_id: u64,
+    /// Slide master definitions (P14 slice 8a). DATA ONLY — see masters.rs.
+    #[serde(default)]
+    masters: Vec<masters::SlideMaster>,
+    /// Slide layout definitions with typed placeholder regions; each layout
+    /// references its master via `master_id`.
+    #[serde(default)]
+    layouts: Vec<masters::SlideLayout>,
 }
 
 impl PitchState {
@@ -573,6 +587,8 @@ impl PitchState {
         Self {
             sections: Vec::new(),
             next_section_id: 1,
+            masters: Vec::new(),
+            layouts: Vec::new(),
             size: SlideSize::default(),
             meta: Meta {
                 title: title.to_string(),
@@ -588,6 +604,7 @@ impl PitchState {
                 ink: Vec::new(),
                 transition: None,
                 timing: None,
+                layout_id: None,
             }],
         }
     }
@@ -1228,6 +1245,11 @@ impl Engine for PitchEngine {
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
             "addSection"|"updateSection"|"removeSection" => sections::apply(self,&cmd),
+            "addMaster"|"renameMaster"|"setMasterBackground"|"removeMaster"
+            |"addLayout"|"renameLayout"|"removeLayout"|"setSlideLayout"
+            |"addPlaceholder"|"updatePlaceholder"|"removePlaceholder" => {
+                masters::apply(self, &cmd)
+            }
             "setSlideSize" => {
                 let size: SlideSize = serde_json::from_value(p.clone())?;
                 if !size.valid() { return Err(EngineError::validation("slide dimensions must be finite, positive and at most 100000")); }
@@ -1261,6 +1283,7 @@ impl Engine for PitchEngine {
                     ink: Vec::new(),
                     transition: None,
                     timing: None,
+                    layout_id: None,
                 });
                 Ok(CommandResult::data(json!({ "slide_id": id })))
             }
@@ -2121,7 +2144,10 @@ impl Engine for PitchEngine {
         // media objects; a schema:3 reader rejects schema:4 rather than
         // silently dropping the `stroke`/`connector`/`media` fields (new
         // ObjKind variants already fail closed as unknown variants, but the
-        // additive fields do not).
+        // additive fields do not). schema:4 also carries slide masters,
+        // layouts, placeholder regions and slide→layout bindings (P14
+        // slice 8a); a schema:≤3 reader rejects schema:4 rather than
+        // silently dropping `masters`/`layouts`/`layout_id`.
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
@@ -2133,7 +2159,10 @@ impl Engine for PitchEngine {
             slide.objects.iter().any(|object|
                 !matches!(object.kind, ObjKind::Text | ObjKind::Rect | ObjKind::Image)
                 || object.stroke.is_some()
-                || object.media.is_some()));
+                || object.media.is_some())
+            || slide.layout_id.is_some())
+            || !self.state.masters.is_empty()
+            || !self.state.layouts.is_empty();
         let payload = if schema4 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":4,"document":self.state}))?
         } else if schema3 {
@@ -2287,10 +2316,28 @@ impl Engine for PitchEngine {
                 }
             }
         }
+        // Master/layout/placeholder identities share the document id space;
+        // collect them into the same uniqueness set before commit.
+        for master in &state.masters {
+            if master.id == 0 || !ids.insert(master.id) {
+                return Err(EngineError::serialization("invalid or duplicate identity"));
+            }
+        }
+        for layout in &state.layouts {
+            if layout.id == 0 || !ids.insert(layout.id) {
+                return Err(EngineError::serialization("invalid or duplicate identity"));
+            }
+            for placeholder in &layout.placeholders {
+                if placeholder.id == 0 || !ids.insert(placeholder.id) {
+                    return Err(EngineError::serialization("invalid or duplicate identity"));
+                }
+            }
+        }
         if state.next_id == 0 || state.next_id > 9_007_199_254_740_991 || ids.last().is_some_and(|id| *id >= state.next_id) {
             return Err(EngineError::serialization("invalid next identity"));
         }
         sections::validate(&state)?;
+        masters::validate(&state)?;
         animation::validate_state(&state)?;
         // Commit only after the payload fully decoded.
         self.state = state;
