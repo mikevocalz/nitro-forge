@@ -7,6 +7,7 @@ declare module 'react-native-web' {
   export const Pressable: ComponentType<object>;
   export const TextInput: ComponentType<object>;
   export const ScrollView: ComponentType<object>;
+  export const ActivityIndicator: typeof import('react-native').ActivityIndicator;
   export const Image: ComponentType<object>;
   export const Platform: typeof import('react-native').Platform;
   export const PanResponder: typeof import('react-native').PanResponder;

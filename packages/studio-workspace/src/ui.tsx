@@ -41,6 +41,7 @@ export type StudioTabBarProps = {
   semantics?: 'tabs' | 'navigation'; density?: 'navigation' | 'compact'; 'aria-label'?: string; className?: string; tone?: 'royal';
 };
 export type StudioButtonProps = {
+  targetSize?: number;
   title: string; icon?: ReactNode; onPress?: () => void; disabled?: boolean; loading?: boolean;
   selected?: boolean; 'aria-label'?: string; accessibilityHint?: string;
   variant?: 'primary' | 'outline' | 'ghost'; size?: 'sm' | 'md'; tone?: 'royal' | 'carolina';

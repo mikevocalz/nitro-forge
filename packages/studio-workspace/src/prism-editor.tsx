@@ -212,6 +212,7 @@ export function PrismEditor(props: PrismEditorProps) {
         only its released value becomes a Rust document operation. */}
     {selected && <View style={{ paddingHorizontal: scale.space.inset, paddingVertical: scale.space.element, zIndex: 10 }}>
       <PrecisionScrubber
+        {...{targetSize: scale.size.target}}
         label="Layer opacity"
         value={selected.opacity * 100}
         min={0}

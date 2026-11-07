@@ -1,0 +1,255 @@
+import { useEffect, useMemo, useRef } from 'react';
+import { useStore } from 'zustand';
+import { createStore } from 'zustand/vanilla';
+import { Banner, ScrollView, Text, TokenScope, View } from '@nitro-forge/studio-workspace/ui';
+import { resolveWorkspaceScale, workspaceThemes, type WorkspaceDensity } from '@nitro-forge/studio-workspace/theme';
+import { nycTronTokens } from '@nitro-forge/studio-workspace/directions';
+import { SpreadsheetGrid, type SpreadsheetWindowRequest } from '@nyc-tron/ui/components/forge/SpreadsheetGrid';
+import { SheetTabs } from '@nyc-tron/ui/components/forge/spreadsheet/SheetTabs';
+import { TempoAndMetronome } from '@nyc-tron/ui/components/forge/audio/TempoAndMetronome';
+import { MixingConsole } from '@nyc-tron/ui/components/forge/audio/MixingConsole';
+import { TimelinePlayhead } from '@nyc-tron/ui/components/forge/timeline/TimelinePlayhead';
+import { TimelineZoomAndScroll } from '@nyc-tron/ui/components/forge/timeline/TimelineZoomAndScroll';
+import { FRAME_RATES, type FrameRate } from '@nyc-tron/ui/components/forge/timebase';
+import { TimelineRuler } from '@nyc-tron/ui/components/forge/timeline/TimelineRuler';
+import { OverlayAndEffectsTrackStack } from '@nyc-tron/ui/components/forge/timeline/OverlayAndEffectsTrackStack';
+import type { TimelineViewport } from '@nyc-tron/ui/components/forge/timeline/viewport';
+import type { TallyDocument } from '../../../packages/tally/src/index';
+import { readTallyWindow, commitTallyGridCell, type TallyGridData } from '../../../packages/tally/src/grid-adapter';
+import { bindTallySheetTabs, readTallySheetTabs, commitTallyFill, TALLY_SHEET_BOUNDS, type TallySheetTabsBinding } from '../../../packages/tally/src/grid-cluster';
+import type { CadenceDocument } from '../../../packages/cadence/src/index';
+import { createCadenceMixerBindings, createCadenceTempoBindings, toMixerChannels, type CadenceDescribe } from '../../../packages/cadence/src/editor-adapter';
+import type { SpliceDocument } from '../../../packages/splice/src/index';
+import { SpliceTimelineAdapter, timelineClusterCallbacks, type SpliceTimelineView } from '../../../packages/splice/src/timeline-cluster';
+
+export interface EngineStudioSurfaceProps {
+  studio: 'tally' | 'cadence' | 'splice';
+  /** The already-open typed document; this surface never creates an engine session. */
+  document: unknown;
+  state: unknown;
+  reload: () => Promise<void>;
+  /** One host lock shared with Save, Open, history and generic commands. */
+  perform: (action: () => Promise<unknown>) => Promise<void>;
+  theme: 'dark' | 'light';
+  density: WorkspaceDensity;
+  /** Host document operations close surface admission until the refreshed read settles. */
+  disabled?: boolean;
+}
+import { SurfaceAdmission, performSurfaceWrite } from './surface-admission';
+
+const message = (error: unknown) => error instanceof Error ? error.message : String(error);
+
+/** App composition only. Every reusable instrument is owned by NYC-Tron. */
+export function EngineStudioSurface(props: EngineStudioSurfaceProps) {
+  return <TokenScope variables={nycTronTokens(props.theme)}>
+    {props.studio === 'tally' ? <TallySurface {...props}/> : props.studio === 'cadence' ? <CadenceSurface {...props}/> : <SpliceSurface {...props}/>}
+  </TokenScope>;
+}
+
+const initialWindow: SpreadsheetWindowRequest = { startRow: 0, endRow: 64, startColumn: 0, endColumn: 16, frozenRows: 0, frozenColumns: 0 };
+function TallySurface(props: EngineStudioSurfaceProps) {
+  const document = props.document as TallyDocument | null;
+  const store = useMemo(() => createStore(() => ({ cells: {} as TallyGridData, tabs: null as TallySheetTabsBinding | null,
+    range: initialWindow, error: null as string | null, busy: false, ready: false, revision: 0 })), []);
+  const { cells, tabs, range, error, busy, ready, revision } = useStore(store, s => s);
+  const latest = useRef({ document, state: props.state });
+  latest.current = { document, state: props.state };
+  const gate = useRef(new SurfaceAdmission()).current;
+  gate.update(document, props.state, range, props.disabled);
+  const loaded = useRef<{ document: TallyDocument | null; state: unknown; range: SpreadsheetWindowRequest }>({ document: null, state: null, range: initialWindow });
+  const scale = resolveWorkspaceScale(props.density);
+  useEffect(() => {
+    const token = gate.beginRead();
+    store.setState({ ready: false });
+    if (!document) {
+      loaded.current.document = null;
+      store.setState({ cells: {}, tabs: null });
+      return;
+    }
+    if (!token) return;
+    const current = () => gate.current(token);
+    const read = async () => {
+      // The callback is deliberately inert: this surface coordinates its own refresh.
+      const binding = await bindTallySheetTabs(document, () => {});
+      const next = await readTallyWindow(document, range);
+      const confirmed = await readTallySheetTabs(document);
+      if (JSON.stringify(confirmed) !== JSON.stringify({ tabs: binding.tabs, activeId: binding.activeId }))
+        throw new Error('The active worksheet changed while its cells were loading. Refresh the workbook.');
+      if (gate.acceptRead(token)) {
+        loaded.current = { document, state: props.state, range };
+        store.setState({ tabs: binding, cells: next, error: null, ready: true });
+      }
+    };
+    void read().catch(error => { if (current()) store.setState({ error: message(error), ready: false }); });
+    return () => { if (gate.current(token)) gate.invalidate(); };
+  }, [document, props.state, props.disabled, range, revision, store, gate]);
+  const token = gate.capture();
+  const canEdit = ready && gate.ready && !busy;
+  const commit = async (write: () => Promise<unknown>) => {
+    if (!document) throw new Error('The document is still opening.');
+    let admitted = false;
+    try {
+      await performSurfaceWrite(gate, token, async () => {
+        admitted = true;
+        store.setState({ busy: true, ready: false, error: null });
+        await props.perform(async () => {
+          const active = await readTallySheetTabs(document);
+          if (active.activeId !== tabs?.activeId) throw new Error('The active worksheet changed. Refresh before editing.');
+          await write();
+        });
+      });
+    } catch (error) {
+      if (latest.current.document === document) store.setState({ error: message(error) });
+      throw error;
+    } finally {
+      // Readiness stays closed until a new binding and window have both loaded.
+      if (admitted) store.setState(current => ({ busy: false, revision: current.revision + 1 }));
+    }
+  };
+  const visibleTabs = loaded.current.document === document ? tabs : null;
+  return <View testID="tally-engine-surface" style={{ flex: 1, minHeight: 0 }}>
+    {error && <Banner tone="danger" title={error} live="alert"/>}
+    {!canEdit && <Text accessibilityLiveRegion="polite" style={{ color: workspaceThemes[props.theme].muted }}>Worksheet edits are unavailable until the current window is loaded.</Text>}
+    {visibleTabs && <SheetTabs tabs={visibleTabs.tabs} activeId={visibleTabs.activeId}
+      onSelect={id => commit(() => visibleTabs.onSelect(id))} onAdd={() => commit(visibleTabs.onAdd)}
+      onRename={(id, name) => commit(() => visibleTabs.onRename(id, name))} onRemove={id => commit(() => visibleTabs.onRemove(id))}/>}
+    {visibleTabs && <SpreadsheetGrid sheetId={visibleTabs.activeId} sheetName={visibleTabs.tabs.find(tab => tab.id === visibleTabs.activeId)?.name ?? ''}
+      rowCount={TALLY_SHEET_BOUNDS.rowCount} columnCount={TALLY_SHEET_BOUNDS.columnCount} cells={cells}
+      rowHeight={scale.size.target} columnWidth={112} style={{ flex: 1, minHeight: 0 }}
+      onWindowChange={next => { if (JSON.stringify(next) !== JSON.stringify(store.getState().range)) {
+        gate.invalidate();
+        store.setState({ range: next, ready: false });
+      } }}
+      {...(canEdit && document ? { onCommitCell: (address: string, raw: string) => commit(() => commitTallyGridCell(document, address, raw)),
+        onFillRange: (plan: Parameters<typeof commitTallyFill>[1]) => commit(() => commitTallyFill(document, plan)) } : {})}/>}
+  </View>;
+}
+
+/** Read/commit admission belongs to the current document and read generation. */
+function useDocumentSurface<T>(document: unknown, source: unknown, read: () => Promise<T>, perform: EngineStudioSurfaceProps['perform'], disabled = false) {
+  const store = useMemo(() => createStore(() => ({ data: null as T | null, error: null as string | null, ready: false, busy: false, revision: 0 })), []);
+  const state = useStore(store, s => s);
+  const latest = useRef({ document, source });
+  latest.current = { document, source };
+  const gate = useRef(new SurfaceAdmission()).current;
+  gate.update(document, source, null, disabled);
+  const loadedDocument = useRef<unknown>(null);
+  useEffect(() => {
+    const token = gate.beginRead();
+    store.setState({ ready: false });
+    if (!token) return;
+    const current = () => gate.current(token);
+    void read().then(data => {
+      if (gate.acceptRead(token)) {
+        loadedDocument.current = document;
+        store.setState({ data, ready: true, error: null });
+      }
+    }, error => { if (current()) store.setState({ error: message(error), ready: false }); });
+    return () => { if (gate.current(token)) gate.invalidate(); };
+  }, [document, source, disabled, read, state.revision, store, gate]);
+  const token = gate.capture();
+  const ready = state.ready && gate.ready && !state.busy;
+  const commit = async (write: () => Promise<unknown>) => {
+    let admitted = false;
+    try {
+      await performSurfaceWrite(gate, token, async () => {
+        admitted = true;
+        store.setState({ busy: true, ready: false, error: null });
+        await perform(write);
+      });
+    }
+    catch (error) {
+      if (latest.current.document === document) store.setState({ error: message(error) });
+      throw error;
+    } finally {
+      if (admitted) store.setState(current => ({ busy: false, revision: current.revision + 1 }));
+    }
+  };
+  return { data: loadedDocument.current === document ? state.data : null, error: state.error, ready, commit };
+}
+
+function CadenceSurface(props: EngineStudioSurfaceProps) {
+  const document = props.document as CadenceDocument | null;
+  const read = useMemo(() => async () => {
+    if (!document) throw new Error('The document is still opening.');
+    return (await document.handle.apply<CadenceDescribe>('describe')).data;
+  }, [document]);
+  const { data: project, error, ready, commit } = useDocumentSurface(document, props.state, read, props.perform, props.disabled);
+  const scale = resolveWorkspaceScale(props.density);
+  if (!document) return null;
+  const tempo = createCadenceTempoBindings(document), mixer = createCadenceMixerBindings(document);
+  return <ScrollView testID="cadence-engine-surface" style={{ flex: 1 }} contentContainerStyle={{ padding: scale.space.group, gap: scale.space.group }}>
+    {error && <Banner tone="danger" title={error} live="alert"/>}
+    {!ready && <Text accessibilityLiveRegion="polite" style={{ color: workspaceThemes[props.theme].muted }}>Document edits are unavailable until the current state is loaded.</Text>}
+    {project && <>
+      <TempoAndMetronome bpm={project.tempo_bpm} timeSignature={project.time_sig} disabled={!ready}
+        onTempoCommit={bpm => {
+          const task = commit(() => tempo.onTempoCommit(bpm));
+          // alpha.4 awaits numeric entry but invokes tap tempo as a void callback.
+          // Observe that path while returning the original rejection to awaited callers.
+          void task.catch(() => {});
+          return task;
+        }}
+        onTimeSignatureCommit={signature => { void commit(() => tempo.onTimeSignatureCommit(signature)).catch(() => {}); }}/>
+      <MixingConsole channels={toMixerChannels(project)} disabled={!ready}
+        onGainCommit={(id, value) => commit(() => mixer.onGainCommit(id, value))}
+        onPanCommit={(id, value) => commit(() => mixer.onPanCommit(id, value))}
+        onMutedCommit={(id, value) => commit(() => mixer.onMutedCommit(id, value))}
+        onSoloCommit={(id, value) => commit(() => mixer.onSoloCommit(id, value))}/>
+    </>}
+    <Text style={{ color: workspaceThemes[props.theme].muted, fontSize: scale.type.body }}>Tempo and mixer edits are saved in the document. Audio output and metronome playback require the native audio host.</Text>
+  </ScrollView>;
+}
+
+/** Preserve the document's frame rate; refuse rates outside the shared control contract. */
+function spliceRate(fps: number): FrameRate | null {
+  for (const rate of Object.values(FRAME_RATES)) {
+    if (Math.abs(rate.numerator / rate.denominator - fps) < 1e-9) return rate;
+  }
+  for (let denominator = 1; denominator <= 100000 && fps * denominator <= 120000; denominator++) {
+    const numerator = Math.round(fps * denominator);
+    if (numerator > 0 && Math.abs(numerator / denominator - fps) < 1e-9) return { numerator, denominator };
+  }
+  return null;
+}
+function SpliceSurface(props: EngineStudioSurfaceProps) {
+  const document = props.document as SpliceDocument | null;
+  const fps = (props.state as { fps?: number } | null)?.fps ?? 30;
+  const rate = useMemo(() => spliceRate(fps), [fps]);
+  const adapter = useMemo(() => document && rate ? new SpliceTimelineAdapter(document, rate) : null, [document, rate]);
+  const store = useMemo(() => createStore(() => ({
+    viewport: { startFrame: 0, pxPerFrame: 2, widthPx: 600 } as TimelineViewport, selected: undefined as string | undefined, frame: 0, width: 800 })), []);
+  const { viewport, selected, frame, width } = useStore(store, s => s);
+  const read = useMemo(() => async () => {
+    if (!adapter) throw new Error('The document is still opening.');
+    return adapter.read();
+  }, [adapter]);
+  const { data: view, error, ready, commit } = useDocumentSurface<SpliceTimelineView>(document, props.state, read, props.perform, props.disabled);
+  const scale = resolveWorkspaceScale(props.density), compact = width < 700, headerWidth = compact ? 56 : 232;
+  useEffect(() => {
+    store.setState({ selected: undefined, frame: 0 });
+  }, [document, store]);
+  if (!rate) return <Banner tone="danger" title={`The sequence rate ${fps} cannot be represented by the timeline controls.`} live="alert"/>;
+  if (!adapter) return null;
+  const bindings = timelineClusterCallbacks(adapter);
+  return <ScrollView testID="splice-engine-surface" style={{ flex: 1 }} contentContainerStyle={{ padding: scale.space.element, gap: scale.space.element }}
+    onLayout={event => { const width = event.nativeEvent.layout.width; if (width > 0) store.setState(current => ({ width, viewport: { ...current.viewport, widthPx: Math.max(1, width - (width < 700 ? 56 : 232) - scale.space.element * 2) } })); }}>
+    {error && <Banner tone="danger" title={error} live="alert"/>}
+    {view && <>
+      <TimelineZoomAndScroll viewport={viewport} onViewportChange={viewport => store.setState({ viewport })} durationFrames={view.durationFrames} rate={rate} playheadFrame={frame} disabled={!ready}/>
+      <View style={{ marginLeft: headerWidth }}><TimelineRuler viewport={viewport} rate={rate} durationFrames={view.durationFrames} frame={frame}
+        disabled={!ready} onSeek={frame => store.setState({ frame })}/>
+        <TimelinePlayhead viewport={viewport} frame={frame} durationFrames={view.durationFrames} rate={rate} height={44}
+          disabled={!ready} onSeek={frame => store.setState({ frame })}/>
+      </View>
+      <OverlayAndEffectsTrackStack tracks={view.tracks} viewport={viewport} onViewportChange={viewport => store.setState({ viewport })}
+        rate={rate} durationFrames={view.durationFrames} playheadFrame={frame} {...(selected ? { selectedClipId: selected } : {})}
+        onSelect={selected => store.setState({ selected })} onEdit={edit => { void commit(() => bindings.onEdit(edit)).catch(() => {}); }}
+        compactHeaders={compact} headerWidth={headerWidth} laneHeight={Math.max(56, scale.size.target)} disabled={!ready}
+        onSetFlag={(id, flag, value) => { void commit(() => bindings.onSetFlag(id, flag, value)).catch(() => {}); }}
+        onRename={(id, name) => { void commit(() => bindings.onRename(id, name)).catch(() => {}); }}
+        onMoveTrack={(id, index) => { void commit(() => bindings.onMoveTrack(id, index)).catch(() => {}); }}
+        onAddTrack={kind => { void commit(() => bindings.onAddTrack(kind)).catch(() => {}); }}/>
+    </>}
+  </ScrollView>;
+}

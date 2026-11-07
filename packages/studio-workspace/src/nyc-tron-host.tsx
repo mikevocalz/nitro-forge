@@ -41,10 +41,10 @@ export type NycTronHostParts = Pick<StudioUIComponents, 'View' | 'Text' | 'Press
 
 /** Forge's `outline` is NYC-Tron's bordered `secondary`. `tone` is ignored:
  * colour comes from the theme tokens. */
-function Button({ variant, tone: _tone, cornerRadius, selected, ...props }: StudioButtonProps) {
-  return <TronButton {...props} {...(variant === undefined ? {} : { variant: variant === 'outline' ? 'secondary' as const : variant })}
+function Button({ variant, tone: _tone, cornerRadius, selected, targetSize, ...props }: StudioButtonProps) {
+  return <TronButton {...props} {...(targetSize === undefined ? {} : {targetSize})} {...(variant === undefined ? {} : { variant: variant === 'outline' ? 'secondary' as const : variant })}
     {...(selected === undefined ? {} : { accessibilityState: { selected } })}
-    {...(cornerRadius === undefined ? {} : { style: { borderRadius: cornerRadius } })} />;
+    style={{ ...(cornerRadius === undefined ? {} : { borderRadius: cornerRadius }), ...(targetSize === undefined ? {} : { minHeight: targetSize, minWidth: targetSize }) }} />;
 }
 
 /** `surface="night"` keeps a dark card on a light page through NightScope. */
@@ -72,7 +72,7 @@ export function nycTronStudioUI(host: NycTronHostParts): StudioUIComponents {
   const NativeDropdown = ({ groups, ...props }: StudioDropdownProps) =>
     <GroupedSelect {...props} groups={studioDropdownGroups(groups)} />;
   return {
-    ...parts, Menu, Popover, NativeDropdown, Button, Card, SegmentedControl, TabBar, Toolbar, List, ListItem, IconButton, FieldGroup,
+    ...parts, Menu, Popover, NativeDropdown, Button, Card, SegmentedControl, TabBar, Toolbar, List, ListItem, IconButton: ({targetSize,...props}) => <IconButton {...props} {...(targetSize === undefined ? {} : {style:{minWidth:targetSize,minHeight:targetSize}})} />, FieldGroup,
     Banner, Badge, EmptyState, ErrorMessage, KeyValueList, NightScope, DropZone,
   };
 }

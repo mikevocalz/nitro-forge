@@ -10,6 +10,7 @@ import { useEditorDoc } from './useDocument';
 import { WORKSPACE_DENSITIES, isWorkspaceDensity, workspaceThemes, type WorkspaceDensity } from '@nitro-forge/studio-workspace/theme';
 import { FORGE_DIRECTION_IDS, isForgeDirection, nycTronTokens, type ForgeDirectionId } from '@nitro-forge/studio-workspace/directions';
 import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
+import { EngineStudioSurface } from './engine-studio-surfaces';
 import { AppLauncher } from './app-launcher';
 import { Page, Main, Nav, Link, Text as SemanticText } from '@nyc-tron/ui/components/html';
 import { FilePicker } from '@nyc-tron/ui/components/files/FilePicker';
@@ -33,7 +34,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
   const notice = useStore(store, s => s.notice);
   const documentTitle = useStore(store, s => s.documentTitle);
   const run = async (action: () => Promise<unknown> | unknown) => {
-    if (store.getState().busy) return;
+    if (store.getState().busy) throw new Error('Wait for the current document operation to finish.');
     store.setState({ busy: true, error: null, notice: '' });
     try { await action(); await editor.reload(); }
     catch (cause) {
@@ -95,8 +96,8 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
       onUndo={() => run(editor.undo)} onRedo={() => run(editor.redo)}
       onSave={() => run(save)} onRefresh={() => run(editor.reload)}
       busy={busy || !editor.doc} error={error ?? editor.error}>
-      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} density={density} direction={direction} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc}
-        personas={prismPersonaStore()} onComposePersona={() => { window.location.hash = COMPOSER_LAB_HASH; }} /> : undefined}
+      {studio === 'quill' ? <QuillTextEditor density={density} ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} density={density} direction={direction} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc}
+        personas={prismPersonaStore()} onComposePersona={() => { window.location.hash = COMPOSER_LAB_HASH; }} /> : studio === 'tally' || studio === 'cadence' || studio === 'splice' ? <EngineStudioSurface disabled={busy || !editor.doc} perform={run} studio={studio} document={editor.doc} state={editor.state} reload={editor.reload} theme={theme} density={density} /> : undefined}
     </ForgeWorkspace>
     {notice && <Banner tone="info" title={notice} className="rounded-[4px]" />}
   </>;

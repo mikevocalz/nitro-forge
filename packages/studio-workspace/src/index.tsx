@@ -109,7 +109,7 @@ export function ForgeWorkspace(props: ForgeWorkspaceProps) {
     const icon = glyph ? <ForgeIcon name={glyph} size={18} selected={selected} disabled={disabled}
       appearance={appearance} color={primary ? colors.ink : selected ? colors.accent : colors.muted}
       selectedColor={primary ? colors.ink : colors.accent} surfaceColor={primary ? colors.accent : selected ? colors.soft : colors.base} reducedMotion={reducedMotion} /> : undefined;
-    const shared = { onPress, disabled, ...(toggled === undefined ? {} : { selected: toggled }), cornerRadius: scale.radius.control,
+    const shared = { onPress, disabled, targetSize: scale.size.target, ...(toggled === undefined ? {} : { selected: toggled }), cornerRadius: scale.radius.control,
       variant: primary ? 'primary' as const : 'ghost' as const, tone: 'carolina' as const,
       // A transparent edge keeps each button's shape under Windows High Contrast.
       className: (selected && !primary ? 'rounded-[4px] border border-transparent bg-ink-800' : 'rounded-[4px] border border-transparent') + (props.density === 'comfortable' ? ' min-h-12 min-w-12' : '') };

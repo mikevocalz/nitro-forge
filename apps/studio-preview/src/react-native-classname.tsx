@@ -35,3 +35,5 @@ export const ScrollView = withClassName(RNW.ScrollView as ComponentType<Styled>)
 export const Image = RNW.Image;
 export const Platform = RNW.Platform;
 export const PanResponder = RNW.PanResponder;
+
+export const ActivityIndicator = RNW.ActivityIndicator;
