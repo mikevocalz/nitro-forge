@@ -272,7 +272,7 @@ pub struct Binding {
     pub path: BindPath,
     pub variable_id: String,
 }
-fn valid_symbol_id(s: &str) -> bool {
+pub(crate) fn valid_symbol_id(s: &str) -> bool {
     !s.is_empty() && s.len() <= MAX_SYMBOL_ID_BYTES && !s.chars().any(char::is_control)
 }
 fn valid_symbol_name(s: &str) -> bool {
@@ -280,7 +280,7 @@ fn valid_symbol_name(s: &str) -> bool {
         && s.len() <= MAX_SYMBOL_NAME_BYTES
         && !s.chars().any(char::is_control)
 }
-fn valid_number(v: f64) -> bool {
+pub(crate) fn valid_number(v: f64) -> bool {
     v.is_finite() && v.abs() <= MAX_VARIABLE_NUMBER
 }
 /// Resolve a variable's value in `mode`, following alias chains. Mirrors the
@@ -552,15 +552,14 @@ pub fn validate_variables(s: &State) -> Result<(), EngineError> {
             return Err(bad("only number variables can bind properties"));
         }
         // Context-dependent rules (fixed sizing for width/height, absolute
-        // placement for x/y) are enforced at bind time only; a later layout or
-        // sizing change leaves the binding dormant rather than invalid.
+        // placement for x/y, root canvas geometry) are enforced at bind time
+        // only; a later layout or sizing change leaves the binding dormant
+        // rather than invalid.
         let applicable = match b.path {
-            BindPath::FillR
-            | BindPath::FillG
-            | BindPath::FillB
-            | BindPath::FillA
-            | BindPath::Width
-            | BindPath::Height => true,
+            BindPath::FillR | BindPath::FillG | BindPath::FillB | BindPath::FillA => true,
+            // Root width/height would bypass the setComposition canvas budget
+            // through the effective overlay; the authored canvas is fixed.
+            BindPath::Width | BindPath::Height => b.node_id != 1,
             BindPath::Gap
             | BindPath::PaddingTop
             | BindPath::PaddingRight

@@ -1253,6 +1253,41 @@ fn binding_validation_lifecycle_cleanup_and_caps() {
     assert_eq!(e.snapshot().unwrap(), before);
 }
 #[test]
+fn root_canvas_rejects_width_height_bindings_but_allows_fill() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":8,"height":8}));
+    mode(&mut e, "m", "M");
+    var(&mut e, "n", "N", "number");
+    var(&mut e, "big", "Big", "number");
+    call(&mut e, "setVariableValue", json!({"id":"n","mode":"m","value":val("number",json!(4))}));
+    call(&mut e, "setVariableValue", json!({"id":"big","mode":"m","value":val("number",json!(1e9))}));
+    call(&mut e, "setActiveMode", json!({"id":"m"}));
+    let before = e.snapshot().unwrap();
+    // Root width/height bypass setComposition's canvas budget (<=4096 per
+    // axis, w*h <= 1_048_576, integer) if admitted; both paths reject.
+    for path in ["width", "height"] {
+        assert!(e
+            .apply(Command::new(
+                "bindVariable",
+                json!({"node_id":1,"path":path,"variable_id":"n"})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    // Hostile restore with a root width binding fails validate_variables.
+    let mut hostile = serde_json::to_value(&*e.state).unwrap();
+    hostile["bindings"] = json!([{"node_id":1,"path":"width","variable_id":"big"}]);
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Fill channels on the root stay allowed.
+    call(&mut e, "bindVariable", json!({"node_id":1,"path":"fill_r","variable_id":"n"}));
+    assert_eq!(e.state.bindings.len(), 1);
+    let boxes = layout::evaluate(&variables::effective(&e.state)).unwrap();
+    assert_eq!(boxes[0].fill[0], 4);
+}
+#[test]
 fn variables_snapshot_wrapper_hostile_restore_and_cleanup() {
     let mut e = DesignEngine::new();
     // Bare schema:1 stays bare; variables alone trigger the schema:2 wrapper.

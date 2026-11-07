@@ -701,6 +701,9 @@ impl Engine for DesignEngine {
                             }
                         }
                     }
+                    BindPath::Width | BindPath::Height if node_id == 1 => {
+                        return Err(bad("root canvas size uses setComposition"));
+                    }
                     BindPath::Width if node.sizing.x != SizeMode::Fixed => {
                         return Err(bad("width bindings require fixed x sizing"));
                     }
