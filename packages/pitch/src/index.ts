@@ -38,6 +38,8 @@ export const OPS = {
   addShape: "addShape",
   addConnector: "addConnector",
   updateConnector: "updateConnector",
+  addMedia: "addMedia",
+  updateMedia: "updateMedia",
   addImage: "addImage",
   moveObject: "moveObject",
   setObjectOrder: "setObjectOrder",
@@ -115,6 +117,64 @@ export interface PitchConnectorUpdate {
   route?: PitchConnectorRoute;
   arrows?: PitchConnectorArrows;
   stroke?: PitchShapeStroke | null;
+}
+/**
+ * Bounded media kind catalog mirroring the NYC-Tron SlideMedia contract
+ * (`video`|`audio`); still images stay on `addImage`/`kind:"image"`.
+ */
+export type PitchMediaKind = "video" | "audio";
+/** Bounded fit catalog mirroring NYC-Tron `SlideMediaSettings.fit`. */
+export type PitchMediaFit = "contain" | "cover" | "stretch";
+/**
+ * Stored media spec (the `media` field of a `kind:"media"` object in
+ * `describe`). METADATA ONLY: the engine never decodes, buffers, plays or
+ * renders media — hosts own media pipelines and read this spec as data.
+ * `src`/`poster` are host-resolved asset references (bounded non-empty
+ * strings, the same reference model as image `src`), never embedded bytes.
+ * Bounds enforced by the engine: `src`/`poster` 1..=4096 UTF-8 bytes,
+ * `mime` 1..=128, trim points whole milliseconds 0..=86,400,000 with
+ * `trim_in_ms <= trim_out_ms` when both present, `volume` finite 0..=1.
+ */
+export interface PitchMediaSpec {
+  src: string;
+  kind: PitchMediaKind;
+  mime?: string;
+  poster?: string;
+  trim_in_ms?: number;
+  trim_out_ms?: number;
+  volume?: number;
+  fit?: PitchMediaFit;
+  autoplay?: boolean;
+  loop?: boolean;
+  muted?: boolean;
+  show_controls?: boolean;
+  hide_when_stopped?: boolean;
+}
+/**
+ * `addMedia` payload: the spec fields are flattened next to the geometry.
+ * `src` and `kind` are required; every other field is optional.
+ */
+export type PitchMediaInput = PitchMediaSpec;
+/**
+ * Partial in-place media edit mirroring `updateConnector`: omitted fields
+ * preserve the spec, explicit `null` clears an optional field, and `src`/
+ * `kind` replace the reference/kind (null is invalid for both). Equal or
+ * empty patches are eventless no-ops that preserve redo.
+ */
+export interface PitchMediaUpdate {
+  src?: string;
+  kind?: PitchMediaKind;
+  mime?: string | null;
+  poster?: string | null;
+  trim_in_ms?: number | null;
+  trim_out_ms?: number | null;
+  volume?: number | null;
+  fit?: PitchMediaFit | null;
+  autoplay?: boolean | null;
+  loop?: boolean | null;
+  muted?: boolean | null;
+  show_controls?: boolean | null;
+  hide_when_stopped?: boolean | null;
 }
 export type InkKind = "pen" | "highlighter" | "laser";
 /**
@@ -372,6 +432,29 @@ export class PitchDocument {
   /** Partial connector patch; equal/empty patches are eventless no-ops. */
   updateConnector(slide: number, id: number, patch: PitchConnectorUpdate) {
     return this.call<{ ok: boolean }>(OPS.updateConnector, { ...patch, slide, id });
+  }
+  /**
+   * Add a media object: bounded METADATA ONLY (source reference, kind,
+   * optional mime/poster/trim/volume/fit/playback flags). The engine never
+   * decodes or plays media — hosts own media pipelines. Media has real
+   * bounds, so move/resize/rotate apply (unlike connectors). `w`/`h` must
+   * be > 0. Returns the assigned `object_id`.
+   */
+  addMedia(
+    slide: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    spec: PitchMediaInput,
+  ) {
+    return this.call<{ object_id: number }>(OPS.addMedia, {
+      slide, x, y, w, h, ...spec,
+    });
+  }
+  /** Partial media spec patch; equal/empty patches are eventless no-ops. */
+  updateMedia(slide: number, id: number, patch: PitchMediaUpdate) {
+    return this.call<{ ok: boolean }>(OPS.updateMedia, { ...patch, slide, id });
   }
   addImage(slide: number, x: number, y: number, w: number, h: number, src: string) {
     return this.call<{ object_id: number }>(OPS.addImage, { slide, x, y, w, h, src });

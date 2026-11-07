@@ -337,4 +337,95 @@ describe("pitch engine e2e (real Rust via nf-cli)", () => {
     await re.close();
     await doc.close();
   });
+
+  it("media objects store bounded metadata, persist, and take geometry ops", async () => {
+    const doc = await PitchDocument.open(host, "Media");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    const media = (
+      await doc.addMedia(slide, 10, 20, 320, 180, {
+        src: "https://cdn.example.com/clip.mp4",
+        kind: "video",
+        mime: "video/mp4",
+        poster: "https://cdn.example.com/poster.jpg",
+        fit: "cover",
+        volume: 0.5,
+        trim_in_ms: 500,
+        trim_out_ms: 9000,
+        autoplay: true,
+        loop: true,
+        muted: false,
+        show_controls: true,
+        hide_when_stopped: false,
+      })
+    ).data.object_id;
+    const find = async () =>
+      (await doc.describe<any>()).data.slides[0].objects.find((o: any) => o.id === media);
+    expect((await find()).kind).toBe("media");
+    expect((await find()).media).toMatchObject({
+      src: "https://cdn.example.com/clip.mp4",
+      kind: "video",
+      fit: "cover",
+      volume: 0.5,
+      trim_in_ms: 500,
+      trim_out_ms: 9000,
+      loop: true,
+    });
+
+    // partial update: null clears optionals, omitted fields preserve
+    await doc.updateMedia(slide, media, { volume: null, muted: true, trim_out_ms: 2000 });
+    const patched = (await find()).media;
+    expect(patched.volume).toBeUndefined();
+    expect(patched.muted).toBe(true);
+    expect(patched.trim_out_ms).toBe(2000);
+    expect(patched.src).toBe("https://cdn.example.com/clip.mp4");
+
+    // media has real bounds: geometry ops apply (unlike connectors)
+    await doc.moveObject(slide, media, 50, 60);
+    await doc.resizeObject(slide, media, 640, 360);
+    await doc.rotateObject(slide, media, 15);
+    const moved = await find();
+    expect(moved).toMatchObject({ x: 50, y: 60, w: 640, h: 360, rotation_deg: 15 });
+
+    // persist through snapshot and undo
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    const reObj = (await re.describe<any>()).data.slides[0].objects.find((o: any) => o.id === media);
+    expect(reObj.kind).toBe("media");
+    expect(reObj.media.kind).toBe("video");
+    expect(reObj.media.trim_out_ms).toBe(2000);
+    await re.updateMedia(slide, media, { kind: "audio", src: "voice.mp3" });
+    expect((await re.describe<any>()).data.slides[0].objects.find((o: any) => o.id === media).media)
+      .toMatchObject({ kind: "audio", src: "voice.mp3" });
+    await re.undo();
+    expect((await re.describe<any>()).data.slides[0].objects.find((o: any) => o.id === media).media.kind)
+      .toBe("video");
+
+    // bounds and hostile payloads reject without mutating
+    await expect(
+      doc.addMedia(slide, 0, 0, 0, 10, { src: "a.mp4", kind: "video" }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addMedia(slide, 0, 0, 10, 10, { src: "a.mp4", kind: "image" as never }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addMedia(slide, 0, 0, 10, 10, { src: "", kind: "video" }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addMedia(slide, 0, 0, 10, 10, {
+        src: "a.mp4", kind: "video", trim_in_ms: 200, trim_out_ms: 100,
+      }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addMedia(slide, 0, 0, 10, 10, { src: "a.mp4", kind: "video", volume: 1.5 }),
+    ).rejects.toThrow();
+    await expect(
+      doc.updateMedia(slide, media, { volume: -0.1 }),
+    ).rejects.toThrow();
+    await expect(
+      doc.updateMedia(slide, media, { fit: "fill" as never }),
+    ).rejects.toThrow();
+    expect((await find()).media.src).toBe("https://cdn.example.com/clip.mp4");
+    await re.close();
+    await doc.close();
+  });
 });

@@ -462,8 +462,8 @@ transition?:SlideTransition, timing?:SlideTiming }`,
 `SlideTransition = { kind:"fade"|"slideLeft"|"slideRight"|"slideUp"|"slideDown"|"wipe"|"zoom",
 duration_ms:1..=60000, direction?:"left"|"right"|"up"|"down" }`,
 `SlideTiming = { duration_ms:1..=3600000, advance:"manual"|"after" }`.
-`Obj = { id, kind:"text"|"rect"|"image"|"roundedRect"|"ellipse"|"triangle"|"diamond"|"line"|"arrow"|"star"|"connector", x,y,w,h, rotation_deg,
-text?{content,font_size,color,bold,italic}, fill?[u8;4], stroke?:{width,color:[u8;4]}, connector?:ConnectorSpec, src?:string }`.
+`Obj = { id, kind:"text"|"rect"|"image"|"roundedRect"|"ellipse"|"triangle"|"diamond"|"line"|"arrow"|"star"|"connector"|"media", x,y,w,h, rotation_deg,
+text?{content,font_size,color,bold,italic}, fill?[u8;4], stroke?:{width,color:[u8;4]}, connector?:ConnectorSpec, media?:MediaSpec, src?:string }`.
 Shape presets are inscribed in the object's axis-aligned `x,y,w,h` bounds
 before `rotation_deg`: `roundedRect` is a rectangle with corner radius
 `min(w,h)/4`; `ellipse` is the inscribed ellipse; `triangle` is isosceles
@@ -503,6 +503,25 @@ applies. `slideAt` emits connectors like every object as kind-less
 `{id,x,y,w,h,rotation,opacity}` entries — normally zero bounds since
 connector geometry is resolved, not stored; hosts read connector paths from
 `describe`'s `resolved` field.
+`MediaSpec = { src:string, kind:"video"|"audio", mime?:string, poster?:string,
+trim_in_ms?:u32, trim_out_ms?:u32, volume?:f64, fit?:"contain"|"cover"|"stretch",
+autoplay?:bool, loop?:bool, muted?:bool, show_controls?:bool, hide_when_stopped?:bool }`.
+A media object stores METADATA ONLY — the engine never decodes, buffers,
+plays or renders media; decode/playback is host-side (the same honesty
+boundary as slide transitions and the prototype runtime). `src`/`poster`
+are host-resolved asset references (bounded non-empty strings ≤4096 UTF-8
+bytes, the same reference model as image `src`), never embedded bytes;
+`mime` is a bounded non-empty string ≤128 bytes. `trim_in_ms`/`trim_out_ms`
+are whole milliseconds 0..=86,400,000 with `trim_in_ms <= trim_out_ms` when
+both present; `volume` is a finite 0..=1 gain; `fit` and the playback flags
+mirror the NYC-Tron `SlideMediaSettings` contract (kind is `video`|`audio`
+there; still images stay on `kind:"image"`). Unlike connectors, media
+objects have REAL bounds: `x,y,w,h` must be finite with `w,h > 0` (enforced
+by `addMedia` and by restore), so `moveObject`/`resizeObject`/
+`rotateObject`/`setObjectOrder`/`removeObject` and animations all apply.
+Media objects carry no `text`/`fill`/`src`/`connector`/`stroke` payloads
+(restore rejects them); `media` is present iff `kind=="media"` in both
+directions.
 `Anim = { object_id, kind:"fadeIn"|"slideInLeft"|"zoomIn"|"pulse"|"spin"|"fadeOut"|"zoomOut", start_s, duration_s, trigger? }`,
 `InkStroke = { id, kind:"pen"|"highlighter"|"laser", points:[[x,y]..], width, color:[r,g,b,a], opacity?:0..=1 }`.
 Ink `points` are `[x, y]` pairs in slide-space units (the same coordinate space
@@ -545,11 +564,13 @@ document `next_id` identity space.
 | `addShape` | `{slide,kind,x,y,w,h,fill?,stroke?}` | `{object_id}` | `kind` is the bounded preset set `rect|roundedRect|ellipse|triangle|diamond|line|arrow|star`; `fill` optional `[r,g,b,a]` (absent/null = no fill), `stroke` optional `{width,color:[r,g,b,a]}` with width finite >0 <=10,000; validated before mutation; same 4096-object/identity caps as `addRect`; one undo entry; new kinds/strokes emit the schema:4 snapshot wrapper |
 | `addConnector` | `{slide,from,to,route?,arrows?,stroke?}` | `{object_id}` | `from`/`to` are `ConnectorEnd`s (`{type:"free",x,y}` or `{type:"bound",object_id,side}`); `route` defaults `"straight"`, `arrows` defaults `"none"`, `stroke` optional bounded outline; bound ends must reference existing non-connector objects on the slide; validated before mutation; same 4096-object/identity caps; one undo entry; connectors emit the schema:4 snapshot wrapper |
 | `updateConnector` | `{slide,id,from?,to?,route?,arrows?,stroke?}` | `{ok}` | Partial in-place patch on a connector object; `from`/`to` replace the whole endpoint, `stroke:null` clears the outline, omitted fields preserve; bound ends re-validated (existing non-connector target, no self-bind); equal/empty patch is an eventless no-op preserving redo; one history entry/event only for actual change |
+| `addMedia` | `{slide,src,kind,x,y,w,h,mime?,poster?,trim_in_ms?,trim_out_ms?,volume?,fit?,autoplay?,loop?,muted?,show_controls?,hide_when_stopped?}` | `{object_id}` | `kind` is `"video"|"audio"`; spec fields are flattened next to geometry. Stores bounded media METADATA ONLY — no decode/playback/pixels (host-side). `src`/`poster` bounded non-empty ≤4096 UTF-8 bytes, `mime` ≤128, trim ms 0..=86,400,000 with in<=out, `volume` 0..=1, `fit` `contain|cover|stretch`, flags strict booleans. `w,h > 0` required (media has real bounds). Validated before mutation; same 4096-object/identity caps; one undo entry; media emits the schema:4 snapshot wrapper |
+| `updateMedia` | `{slide,id,src?,kind?,mime?,poster?,trim_in_ms?,trim_out_ms?,volume?,fit?,autoplay?,loop?,muted?,show_controls?,hide_when_stopped?}` | `{ok}` | Partial in-place patch on a media object mirroring `updateConnector`: omitted fields preserve, explicit `null` clears an optional field, `src`/`kind` replace the reference/kind (null invalid for both); the merged spec is re-validated (trim ordering, bounds); equal/empty patch is an eventless no-op preserving redo; one history entry/event only for actual change |
 | `addImage` | `{slide,x,y,w,h,src}` | `{object_id}` | |
-| `moveObject` | `{slide,id,x,y}` | `{ok}` | rejects connector objects (geometry resolves from endpoints) |
+| `moveObject` | `{slide,id,x,y}` | `{ok}` | rejects connector objects (geometry resolves from endpoints); media objects move normally |
 | `setObjectOrder` | `{slide,id,to}` | `{ok}` | Absolute bottom-to-top object index within the slide; atomic undo; same-index request preserves history; animation references retain identity |
-| `resizeObject` | `{slide,id,w,h}` | `{ok}` | w,h > 0; rejects connector objects |
-| `rotateObject` | `{slide,id,degrees}` | `{ok}` | rejects connector objects |
+| `resizeObject` | `{slide,id,w,h}` | `{ok}` | w,h > 0; rejects connector objects; media objects resize normally |
+| `rotateObject` | `{slide,id,degrees}` | `{ok}` | rejects connector objects; media objects rotate normally |
 | `removeObject` | `{slide,id}` | `{ok}` | also drops its animations and any connectors bound to it — cascade-dropped connectors take their own animations with them (free-endpoint connectors survive) |
 | `addAnimation` | `{slide,object,kind,start_s,duration_s,trigger?}` | `{index}` | duration > 0 |
 | `addTriggeredAnimationV1` | same as `addAnimation` | `{index}` | explicit-trigger alias; old engines reject the unknown name rather than silently dropping `trigger` |
@@ -575,7 +596,7 @@ Animation evaluation caps at4096 objects/animations per slide; references and ob
 
 The pinned alpha.4 SlideAnimationPane supports effect/add/remove but lacks timing/trigger edit callbacks. The adapter offers all seven real effects, retains nonabsolute sourceTrigger metadata and refuses to bind that old pane over triggered programs rather than mislabel relative delays as absolute starts. Typed engine APIs/readPitchSlideAt accept explicit click history. No fake preview timer, host UI activation or new Pitch renderer is provided. Actual CPU pixel integration is checked through the existing Prism renderer.
 
-Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text`, an object `stroke` or a connector uses `{kind:"pitch",schema:4,document:PitchState}`. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads and schema:≤3 readers reject schema:4 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes/connectors (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke`/`connector` fields do not, which is why shapes/strokes/connectors take schema:4 rather than reusing schema:3). Readers accept legacy root payloads and schema:2, schema:3 and schema:4 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
+Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text`, an object `stroke`, a connector or a media object/spec uses `{kind:"pitch",schema:4,document:PitchState}`. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads and schema:≤3 readers reject schema:4 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes/connectors/media (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke`/`connector`/`media` fields do not, which is why shapes/strokes/connectors/media take schema:4 rather than reusing schema:3). Readers accept legacy root payloads and schema:2, schema:3 and schema:4 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
 
 ## quill-engine — `QuillEngine::new()`
 

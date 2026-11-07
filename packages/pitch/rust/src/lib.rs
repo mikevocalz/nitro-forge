@@ -44,6 +44,16 @@ const MAX_SHAPE_STROKE_WIDTH: f64 = 10_000.0;
 /// Free connector endpoint coordinates share the ink coordinate bound:
 /// finite slide-space units within ±1,000,000.
 const MAX_CONNECTOR_COORD: f64 = 1_000_000.0;
+/// Media objects store bounded METADATA ONLY — the engine never decodes,
+/// plays or renders media (hosts own media pipelines, the same honesty
+/// boundary as slide transitions). `src`/`poster` are host-resolved asset
+/// references bounded like bounded strings, never embedded bytes.
+const MAX_MEDIA_SRC_BYTES: usize = 4_096;
+const MAX_MEDIA_POSTER_BYTES: usize = 4_096;
+const MAX_MEDIA_MIME_BYTES: usize = 128;
+/// Trim in/out points are whole milliseconds within 24h; when both are
+/// present `trim_in_ms <= trim_out_ms`.
+const MAX_MEDIA_TRIM_MS: u32 = 86_400_000;
 /// Slide transitions are bounded descriptors stored per slide; the engine
 /// never renders them — hosts animate from this data (same honesty boundary
 /// as the prototype runtime).
@@ -63,12 +73,15 @@ pub enum Layout {
 
 /// Object kinds. `Text`/`Rect`/`Image` are the legacy set; the remaining
 /// variants are the bounded shape presets admitted by `addShape` plus
-/// `Connector`, admitted by `addConnector`. Shape geometry is deterministic:
-/// every preset is inscribed in the object's axis-aligned `x,y,w,h` bounds
-/// before `rotation_deg` is applied (see docs/ENGINE_OPS.md for the per-kind
-/// outline contract hosts render). Connectors are different: their `x,y,w,h`
-/// are unused zeros and their rendered path is resolved from the stored
-/// `connector` endpoint spec at read time (see `connector_points`).
+/// `Connector`, admitted by `addConnector`, and `Media`, admitted by
+/// `addMedia`. Shape geometry is deterministic: every preset is inscribed
+/// in the object's axis-aligned `x,y,w,h` bounds before `rotation_deg` is
+/// applied (see docs/ENGINE_OPS.md for the per-kind outline contract hosts
+/// render). Connectors are different: their `x,y,w,h` are unused zeros and
+/// their rendered path is resolved from the stored `connector` endpoint
+/// spec at read time (see `connector_points`). Media objects DO have real
+/// bounds (move/resize/rotate apply) and carry a bounded `media` metadata
+/// spec; the engine stores the spec only — decode/playback is host-side.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ObjKind {
@@ -83,6 +96,7 @@ pub enum ObjKind {
     Arrow,
     Star,
     Connector,
+    Media,
 }
 
 impl ObjKind {
@@ -222,6 +236,86 @@ pub struct ConnectorSpec {
     pub stroke: Option<ShapeStroke>,
 }
 
+// ---------------------------------------------------------------------------
+// Media model
+// ---------------------------------------------------------------------------
+/// Bounded media kind catalog mirroring the NYC-Tron SlideMedia contract
+/// (`video`|`audio`); still images stay on `ObjKind::Image`, not media.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MediaKind {
+    Video,
+    Audio,
+}
+
+impl MediaKind {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "video" => Some(Self::Video),
+            "audio" => Some(Self::Audio),
+            _ => None,
+        }
+    }
+}
+
+/// Bounded fit catalog mirroring NYC-Tron `SlideMediaSettings.fit`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MediaFit {
+    Contain,
+    Cover,
+    Stretch,
+}
+
+impl MediaFit {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "contain" => Some(Self::Contain),
+            "cover" => Some(Self::Cover),
+            "stretch" => Some(Self::Stretch),
+            _ => None,
+        }
+    }
+}
+
+/// Stored media payload on `Obj.media` (present iff `kind == Media`,
+/// enforced by `addMedia`/`updateMedia` and by restore). METADATA ONLY:
+/// the engine never decodes, buffers, plays or renders media — hosts own
+/// media pipelines and read this spec as data. `src`/`poster` are
+/// host-resolved asset references (bounded non-empty strings, the same
+/// reference model as `Obj.src` on images), never embedded bytes.
+/// `trim_in_ms`/`trim_out_ms` are whole-millisecond trim points
+/// (0..=MAX_MEDIA_TRIM_MS, in<=out when both present); `volume` is a
+/// finite 0..=1 gain; the boolean flags mirror the NYC-Tron
+/// `SlideMediaSettings` playback contract.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MediaSpec {
+    pub src: String,
+    pub kind: MediaKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mime: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub poster: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trim_in_ms: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trim_out_ms: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub volume: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fit: Option<MediaFit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub autoplay: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r#loop: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub muted: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_controls: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hide_when_stopped: Option<bool>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AnimKind {
@@ -279,6 +373,11 @@ pub struct Obj {
     /// (enforced by `addConnector`/`updateConnector` and by restore).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub connector: Option<ConnectorSpec>,
+    /// Bounded media metadata spec; present iff `kind == Media` (enforced
+    /// by `addMedia`/`updateMedia` and by restore). Metadata only — no
+    /// decode/playback/pixels.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media: Option<MediaSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub src: Option<String>,
 }
@@ -722,6 +821,163 @@ fn check_connector_spec(spec: &ConnectorSpec, slide: &Slide, self_id: u64) -> Re
 }
 
 // ---------------------------------------------------------------------------
+// Media payload helpers
+// ---------------------------------------------------------------------------
+/// Bounded non-empty string field (asset references like `src`/`poster`,
+/// and `mime`); UTF-8 byte length within `1..=max`.
+fn bounded_string(v: &Value, max: usize, what: &str) -> Result<String, EngineError> {
+    let s = v
+        .as_str()
+        .ok_or_else(|| EngineError::invalid(format!("{what} must be a string")))?;
+    if s.is_empty() || s.len() > max {
+        return Err(EngineError::validation(format!(
+            "{what} must be 1..={max} UTF-8 bytes"
+        )));
+    }
+    Ok(s.to_string())
+}
+
+/// Optional bounded string payload field: absent or `null` clears to None.
+fn opt_bounded_string(p: &Value, key: &str, max: usize) -> Result<Option<String>, EngineError> {
+    match p.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => bounded_string(v, max, &format!("media {key}")).map(Some),
+    }
+}
+
+/// Optional whole-millisecond trim point: absent or `null` clears to None;
+/// admitted range is 0..=MAX_MEDIA_TRIM_MS.
+fn opt_trim_ms(p: &Value, key: &str) -> Result<Option<u32>, EngineError> {
+    match p.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => {
+            let n = v
+                .as_u64()
+                .ok_or_else(|| EngineError::invalid(format!("media {key} must be an integer")))?;
+            let ms = u32::try_from(n)
+                .map_err(|_| EngineError::out_of_bounds(format!("media {key} is too large")))?;
+            if ms > MAX_MEDIA_TRIM_MS {
+                return Err(EngineError::validation(format!(
+                    "media {key} must be within 0..={MAX_MEDIA_TRIM_MS}"
+                )));
+            }
+            Ok(Some(ms))
+        }
+    }
+}
+
+/// Optional playback gain: absent or `null` clears to None; finite 0..=1.
+fn opt_volume(p: &Value) -> Result<Option<f64>, EngineError> {
+    match p.get("volume") {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => {
+            let volume = v
+                .as_f64()
+                .ok_or_else(|| EngineError::invalid("media volume must be a number"))?;
+            if !volume.is_finite() || !(0.0..=1.0).contains(&volume) {
+                return Err(EngineError::validation("media volume must be within 0..=1"));
+            }
+            Ok(Some(volume))
+        }
+    }
+}
+
+/// Optional strict-boolean playback flag: absent or `null` clears to None.
+fn opt_flag(p: &Value, key: &str) -> Result<Option<bool>, EngineError> {
+    match p.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => v
+            .as_bool()
+            .map(Some)
+            .ok_or_else(|| EngineError::invalid(format!("media {key} must be a boolean"))),
+    }
+}
+
+fn opt_media_fit(p: &Value) -> Result<Option<MediaFit>, EngineError> {
+    match p.get("fit") {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => MediaFit::parse(v.as_str().ok_or_else(|| {
+            EngineError::invalid("media fit must be \"contain\"|\"cover\"|\"stretch\"")
+        })?)
+        .map(Some)
+        .ok_or_else(|| {
+            EngineError::validation("media fit must be \"contain\"|\"cover\"|\"stretch\"")
+        }),
+    }
+}
+
+/// Structural check shared by ops (validation errors) and restore (mapped
+/// to serialization errors): bounded references, trim ordering and volume.
+fn check_media_spec(spec: &MediaSpec) -> Result<(), EngineError> {
+    if spec.src.is_empty() || spec.src.len() > MAX_MEDIA_SRC_BYTES {
+        return Err(EngineError::validation(format!(
+            "media src must be 1..={MAX_MEDIA_SRC_BYTES} UTF-8 bytes"
+        )));
+    }
+    for (value, max, what) in [
+        (&spec.mime, MAX_MEDIA_MIME_BYTES, "media mime"),
+        (&spec.poster, MAX_MEDIA_POSTER_BYTES, "media poster"),
+    ] {
+        if let Some(s) = value {
+            if s.is_empty() || s.len() > max {
+                return Err(EngineError::validation(format!(
+                    "{what} must be 1..={max} UTF-8 bytes"
+                )));
+            }
+        }
+    }
+    for (trim, what) in [
+        (spec.trim_in_ms, "media trim_in_ms"),
+        (spec.trim_out_ms, "media trim_out_ms"),
+    ] {
+        if trim.is_some_and(|ms| ms > MAX_MEDIA_TRIM_MS) {
+            return Err(EngineError::validation(format!(
+                "{what} must be within 0..={MAX_MEDIA_TRIM_MS}"
+            )));
+        }
+    }
+    if let (Some(input), Some(output)) = (spec.trim_in_ms, spec.trim_out_ms) {
+        if input > output {
+            return Err(EngineError::validation(
+                "media trim_in_ms must not exceed trim_out_ms",
+            ));
+        }
+    }
+    if spec
+        .volume
+        .is_some_and(|v| !v.is_finite() || !(0.0..=1.0).contains(&v))
+    {
+        return Err(EngineError::validation("media volume must be within 0..=1"));
+    }
+    Ok(())
+}
+
+/// Parse the complete media spec from a flat `addMedia` payload: `src`
+/// and `kind` are required; every other field is optional (absent or
+/// `null` means unset). Validated before the caller mutates.
+fn parse_media_spec(p: &Value) -> Result<MediaSpec, EngineError> {
+    let spec = MediaSpec {
+        src: bounded_string(field(p, "src")?, MAX_MEDIA_SRC_BYTES, "media src")?,
+        kind: MediaKind::parse(req_str(p, "kind")?).ok_or_else(|| {
+            EngineError::validation("media kind must be \"video\"|\"audio\"")
+        })?,
+        mime: opt_bounded_string(p, "mime", MAX_MEDIA_MIME_BYTES)?,
+        poster: opt_bounded_string(p, "poster", MAX_MEDIA_POSTER_BYTES)?,
+        trim_in_ms: opt_trim_ms(p, "trim_in_ms")?,
+        trim_out_ms: opt_trim_ms(p, "trim_out_ms")?,
+        volume: opt_volume(p)?,
+        fit: opt_media_fit(p)?,
+        autoplay: opt_flag(p, "autoplay")?,
+        r#loop: opt_flag(p, "loop")?,
+        muted: opt_flag(p, "muted")?,
+        show_controls: opt_flag(p, "show_controls")?,
+        hide_when_stopped: opt_flag(p, "hide_when_stopped")?,
+    };
+    check_media_spec(&spec)?;
+    Ok(spec)
+}
+
+// ---------------------------------------------------------------------------
 // Ink payload helpers
 // ---------------------------------------------------------------------------
 fn parse_ink_kind(v: &Value) -> Result<InkKind, EngineError> {
@@ -1139,6 +1395,7 @@ impl Engine for PitchEngine {
                     fill: None,
                     stroke: None,
                     connector: None,
+                    media: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1213,6 +1470,7 @@ impl Engine for PitchEngine {
                     fill: Some(fill),
                     stroke: None,
                     connector: None,
+                    media: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1253,6 +1511,7 @@ impl Engine for PitchEngine {
                     fill,
                     stroke,
                     connector: None,
+                    media: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1281,9 +1540,106 @@ impl Engine for PitchEngine {
                     fill: None,
                     stroke: None,
                     connector: None,
+                    media: None,
                     src: Some(src),
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
+            }
+            "addMedia" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let (x, y, w, h) = (
+                    req_f64(p, "x")?,
+                    req_f64(p, "y")?,
+                    req_f64(p, "w")?,
+                    req_f64(p, "h")?,
+                );
+                // Media has real bounds (unlike connectors): positive w/h.
+                if !(w.is_finite() && w > 0.0) || !(h.is_finite() && h > 0.0) {
+                    return Err(EngineError::validation("'w' and 'h' must be > 0"));
+                }
+                let media = parse_media_spec(p)?;
+                self.preflight_object(slide)?;
+                self.journal.record(self.state.clone());
+                let id = self.alloc_id();
+                self.state.slides[slide].objects.push(Obj {
+                    id,
+                    kind: ObjKind::Media,
+                    x,
+                    y,
+                    w,
+                    h,
+                    rotation_deg: 0.0,
+                    text: None,
+                    fill: None,
+                    stroke: None,
+                    connector: None,
+                    media: Some(media),
+                    src: None,
+                });
+                Ok(CommandResult::data(json!({ "object_id": id })))
+            }
+            "updateMedia" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let oi = self.object_index(slide, req_u64(p, "id")?)?;
+                let original = self.state.slides[slide].objects[oi]
+                    .media
+                    .clone()
+                    .ok_or_else(|| {
+                        EngineError::validation("updateMedia requires a media object")
+                    })?;
+                let mut next = original.clone();
+                // src/kind are required spec fields: patching them replaces
+                // the reference/kind; null is invalid for both.
+                if p.get("src").is_some() {
+                    next.src = bounded_string(field(p, "src")?, MAX_MEDIA_SRC_BYTES, "media src")?;
+                }
+                if p.get("kind").is_some() {
+                    next.kind = MediaKind::parse(req_str(p, "kind")?).ok_or_else(|| {
+                        EngineError::validation("media kind must be \"video\"|\"audio\"")
+                    })?;
+                }
+                // Optional fields: present patches the field; explicit null
+                // clears it; omitted preserves it.
+                if p.get("mime").is_some() {
+                    next.mime = opt_bounded_string(p, "mime", MAX_MEDIA_MIME_BYTES)?;
+                }
+                if p.get("poster").is_some() {
+                    next.poster = opt_bounded_string(p, "poster", MAX_MEDIA_POSTER_BYTES)?;
+                }
+                if p.get("trim_in_ms").is_some() {
+                    next.trim_in_ms = opt_trim_ms(p, "trim_in_ms")?;
+                }
+                if p.get("trim_out_ms").is_some() {
+                    next.trim_out_ms = opt_trim_ms(p, "trim_out_ms")?;
+                }
+                if p.get("volume").is_some() {
+                    next.volume = opt_volume(p)?;
+                }
+                if p.get("fit").is_some() {
+                    next.fit = opt_media_fit(p)?;
+                }
+                if p.get("autoplay").is_some() {
+                    next.autoplay = opt_flag(p, "autoplay")?;
+                }
+                if p.get("loop").is_some() {
+                    next.r#loop = opt_flag(p, "loop")?;
+                }
+                if p.get("muted").is_some() {
+                    next.muted = opt_flag(p, "muted")?;
+                }
+                if p.get("show_controls").is_some() {
+                    next.show_controls = opt_flag(p, "show_controls")?;
+                }
+                if p.get("hide_when_stopped").is_some() {
+                    next.hide_when_stopped = opt_flag(p, "hide_when_stopped")?;
+                }
+                check_media_spec(&next)?;
+                if next == original {
+                    return Ok(CommandResult::read_only(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].objects[oi].media = Some(next);
+                Ok(CommandResult::data(json!({ "ok": true })))
             }
             "addConnector" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
@@ -1333,6 +1689,7 @@ impl Engine for PitchEngine {
                     fill: None,
                     stroke: None,
                     connector: Some(ConnectorSpec { from, to, route, arrows, stroke }),
+                    media: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1760,10 +2117,11 @@ impl Engine for PitchEngine {
         // additionally carries speaker notes, persistent ink, slide
         // transitions and slide timing; a schema:2 reader rejects schema:3
         // instead of silently dropping those fields. schema:4 additionally
-        // carries shape presets beyond rect, object strokes and connectors;
-        // a schema:3 reader rejects schema:4 rather than silently dropping
-        // the `stroke`/`connector` fields (new ObjKind variants already fail
-        // closed as unknown variants, but the additive fields do not).
+        // carries shape presets beyond rect, object strokes, connectors and
+        // media objects; a schema:3 reader rejects schema:4 rather than
+        // silently dropping the `stroke`/`connector`/`media` fields (new
+        // ObjKind variants already fail closed as unknown variants, but the
+        // additive fields do not).
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
@@ -1774,7 +2132,8 @@ impl Engine for PitchEngine {
         let schema4 = self.state.slides.iter().any(|slide|
             slide.objects.iter().any(|object|
                 !matches!(object.kind, ObjKind::Text | ObjKind::Rect | ObjKind::Image)
-                || object.stroke.is_some()));
+                || object.stroke.is_some()
+                || object.media.is_some()));
         let payload = if schema4 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":4,"document":self.state}))?
         } else if schema3 {
@@ -1795,7 +2154,7 @@ impl Engine for PitchEngine {
             let wrapper: Versioned = serde_json::from_value(value)?;
             // schema:2 = extended features only; schema:3 = notes/ink/
             // transition/timing-capable; schema:4 = shape presets/strokes/
-            // connectors.
+            // connectors/media objects.
             if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
@@ -1885,6 +2244,43 @@ impl Engine for PitchEngine {
                     (_, Some(_)) => {
                         return Err(EngineError::serialization(
                             "connector spec on a non-connector object",
+                        ));
+                    }
+                    _ => {}
+                }
+                match (&object.kind, &object.media) {
+                    (ObjKind::Media, Some(spec)) => {
+                        // Media has real bounds (the opposite of connectors):
+                        // x/y/w/h/rotation must be finite with positive w/h.
+                        // It carries no text/fill/src/connector payloads —
+                        // media metadata lives on `media` (an object-level
+                        // `stroke` was already rejected above since Media is
+                        // not a shape kind).
+                        if ![object.x, object.y, object.w, object.h, object.rotation_deg]
+                            .iter()
+                            .all(|v| v.is_finite())
+                            || object.w <= 0.0
+                            || object.h <= 0.0
+                            || object.text.is_some()
+                            || object.fill.is_some()
+                            || object.src.is_some()
+                            || object.connector.is_some()
+                        {
+                            return Err(EngineError::serialization(
+                                "media object carries invalid geometry or content fields",
+                            ));
+                        }
+                        check_media_spec(spec)
+                            .map_err(|_| EngineError::serialization("invalid media spec"))?;
+                    }
+                    (ObjKind::Media, None) => {
+                        return Err(EngineError::serialization(
+                            "media object missing its media spec",
+                        ));
+                    }
+                    (_, Some(_)) => {
+                        return Err(EngineError::serialization(
+                            "media spec on a non-media object",
                         ));
                     }
                     _ => {}
@@ -4228,5 +4624,356 @@ mod tests {
             .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
             .is_err());
         e.restore(&snap).unwrap();
+    }
+
+    // ------------------------------------------------------------------
+    // Media objects (bounded metadata only; decode/playback is host-side)
+    // ------------------------------------------------------------------
+
+    fn described_media(e: &mut PitchEngine, id: u64) -> Value {
+        described_objects(e)
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(id))
+            .unwrap()
+            .clone()
+    }
+
+    #[test]
+    fn add_media_stores_bounded_spec_and_geometry_ops_apply() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let id = apply(
+            &mut e,
+            "addMedia",
+            json!({"slide":slide,"src":"https://cdn.example.com/clip.mp4","kind":"video",
+                   "x":10,"y":20,"w":320,"h":180,"mime":"video/mp4",
+                   "poster":"https://cdn.example.com/poster.jpg","fit":"cover",
+                   "volume":0.5,"trim_in_ms":500,"trim_out_ms":9000,
+                   "autoplay":true,"loop":true,"muted":false,
+                   "show_controls":true,"hide_when_stopped":false}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let obj = described_media(&mut e, id);
+        assert_eq!(obj["kind"], json!("media"));
+        assert_eq!(obj["x"], json!(10.0));
+        assert_eq!(obj["w"], json!(320.0));
+        assert_eq!(
+            obj["media"],
+            json!({"src":"https://cdn.example.com/clip.mp4","kind":"video",
+                   "mime":"video/mp4","poster":"https://cdn.example.com/poster.jpg",
+                   "trim_in_ms":500,"trim_out_ms":9000,"volume":0.5,"fit":"cover",
+                   "autoplay":true,"loop":true,"muted":false,
+                   "show_controls":true,"hide_when_stopped":false})
+        );
+        // media carries no legacy content fields
+        assert!(obj.get("text").is_none());
+        assert!(obj.get("fill").is_none());
+        assert!(obj.get("src").is_none());
+        assert!(obj.get("connector").is_none());
+        assert!(obj.get("stroke").is_none());
+
+        // media has real bounds: move/resize/rotate/order/remove all apply
+        apply(&mut e, "moveObject", json!({"slide":slide,"id":id,"x":50,"y":60}));
+        apply(&mut e, "resizeObject", json!({"slide":slide,"id":id,"w":640,"h":360}));
+        apply(&mut e, "rotateObject", json!({"slide":slide,"id":id,"degrees":15}));
+        let obj = described_media(&mut e, id);
+        assert_eq!(obj["x"], json!(50.0));
+        assert_eq!(obj["w"], json!(640.0));
+        assert_eq!(obj["rotation_deg"], json!(15.0));
+        // animations treat media like any other object
+        apply(
+            &mut e,
+            "addAnimation",
+            json!({"slide":slide,"object":id,"kind":"fadeIn","start_s":0,"duration_s":1}),
+        );
+        let at = apply(&mut e, "slideAt", json!({"slide":slide,"t_s":0.5}));
+        let entry = at["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(id))
+            .unwrap();
+        assert_eq!(entry["opacity"], json!(0.5));
+        apply(&mut e, "setObjectOrder", json!({"slide":slide,"id":id,"to":0}));
+        apply(&mut e, "removeObject", json!({"slide":slide,"id":id}));
+        assert!(!described_objects(&mut e)
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|o| o["id"] == json!(id)));
+        assert!(e.undo().unwrap());
+        assert_eq!(described_media(&mut e, id)["kind"], json!("media"));
+    }
+
+    #[test]
+    fn update_media_partial_patch_null_clears_and_noop_preserves_history() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let id = apply(
+            &mut e,
+            "addMedia",
+            json!({"slide":slide,"src":"a.mp3","kind":"audio","x":0,"y":0,"w":50,"h":50,
+                   "volume":0.8,"fit":"contain"}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        // minimal spec round-trips with optional fields absent
+        let obj = described_media(&mut e, id);
+        assert_eq!(
+            obj["media"],
+            json!({"src":"a.mp3","kind":"audio","volume":0.8,"fit":"contain"})
+        );
+        // empty and equal patches are eventless no-ops
+        for patch in [
+            json!({"slide":slide,"id":id}),
+            json!({"slide":slide,"id":id,"volume":0.8,"fit":"contain"}),
+        ] {
+            assert!(e.apply(cmd("updateMedia", patch)).unwrap().events.is_empty());
+        }
+        // partial patch: set flags/trim, keep src/kind/volume/fit
+        let result = e
+            .apply(cmd(
+                "updateMedia",
+                json!({"slide":slide,"id":id,"muted":true,"trim_in_ms":100,
+                       "trim_out_ms":200,"autoplay":true,"loop":true,
+                       "show_controls":false,"hide_when_stopped":true}),
+            ))
+            .unwrap();
+        assert_eq!(result.events.len(), 1);
+        let media = described_media(&mut e, id)["media"].clone();
+        assert_eq!(media["src"], json!("a.mp3"));
+        assert_eq!(media["kind"], json!("audio"));
+        assert_eq!(media["volume"], json!(0.8));
+        assert_eq!(media["fit"], json!("contain"));
+        assert_eq!(media["muted"], json!(true));
+        assert_eq!(media["trim_in_ms"], json!(100));
+        assert_eq!(media["trim_out_ms"], json!(200));
+        assert_eq!(media["loop"], json!(true));
+        let changed = e.snapshot().unwrap();
+
+        // src/kind replace; null clears optionals
+        apply(
+            &mut e,
+            "updateMedia",
+            json!({"slide":slide,"id":id,"src":"b.mp4","kind":"video","volume":null,
+                   "fit":null,"muted":null,"trim_in_ms":null,"trim_out_ms":null,
+                   "autoplay":null,"loop":null,"show_controls":null,"hide_when_stopped":null}),
+        );
+        assert_eq!(
+            described_media(&mut e, id)["media"],
+            json!({"src":"b.mp4","kind":"video"})
+        );
+        // undo restores the patched spec in one entry
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), changed);
+        assert_eq!(described_media(&mut e, id)["media"]["src"], json!("a.mp3"));
+
+        // hostile patches reject atomically
+        for patch in [
+            json!({"slide":slide,"id":id,"kind":"image"}),
+            json!({"slide":slide,"id":id,"kind":null}),
+            json!({"slide":slide,"id":id,"src":""}),
+            json!({"slide":slide,"id":id,"src":"x".repeat(MAX_MEDIA_SRC_BYTES + 1)}),
+            json!({"slide":slide,"id":id,"src":null}),
+            json!({"slide":slide,"id":id,"mime":""}),
+            json!({"slide":slide,"id":id,"mime":"x".repeat(MAX_MEDIA_MIME_BYTES + 1)}),
+            json!({"slide":slide,"id":id,"poster":""}),
+            json!({"slide":slide,"id":id,"volume":1.5}),
+            json!({"slide":slide,"id":id,"volume":-0.1}),
+            json!({"slide":slide,"id":id,"volume":"loud"}),
+            json!({"slide":slide,"id":id,"fit":"fill"}),
+            json!({"slide":slide,"id":id,"fit":null,"trim_in_ms":9000,"trim_out_ms":100}),
+            json!({"slide":slide,"id":id,"trim_in_ms":u64::from(MAX_MEDIA_TRIM_MS) + 1}),
+            json!({"slide":slide,"id":id,"trim_in_ms":-1}),
+            json!({"slide":slide,"id":id,"trim_out_ms":1.5}),
+            json!({"slide":slide,"id":id,"muted":"yes"}),
+            json!({"slide":slide,"id":id,"loop":1}),
+            json!({"slide":99999,"id":id,"volume":0.5}),
+            json!({"slide":slide,"id":99999,"volume":0.5}),
+        ] {
+            assert!(e.apply(cmd("updateMedia", patch)).is_err());
+            assert_eq!(e.snapshot().unwrap(), changed);
+        }
+        // trim ordering is enforced on the merged spec
+        apply(&mut e, "updateMedia", json!({"slide":slide,"id":id,"trim_out_ms":500}));
+        apply_err(&mut e, "updateMedia", json!({"slide":slide,"id":id,"trim_in_ms":600}));
+        apply(&mut e, "updateMedia", json!({"slide":slide,"id":id,"trim_in_ms":500}));
+        // updateMedia refuses non-media objects
+        let rect = add_rect(&mut e, slide, 0.0, 0.0, 10.0, 10.0);
+        let before = e.snapshot().unwrap();
+        apply_err(&mut e, "updateMedia", json!({"slide":slide,"id":rect,"volume":0.5}));
+        apply_err(&mut e, "updateMedia", json!({"slide":slide,"id":id,"volume":0.5,"kind":"podcast"}));
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+
+    #[test]
+    fn add_media_validates_bounds_and_geometry_atomically() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let before = e.snapshot().unwrap();
+        for patch in [
+            json!({"slide":slide,"src":"a.mp4","kind":"video","x":0,"y":0,"w":0,"h":10}),
+            json!({"slide":slide,"src":"a.mp4","kind":"video","x":0,"y":0,"w":10,"h":-5}),
+            json!({"slide":slide,"src":"a.mp4","kind":"video","x":0,"y":0,"w":10}),
+            json!({"slide":slide,"kind":"video","x":0,"y":0,"w":10,"h":10}),
+            json!({"slide":slide,"src":"a.mp4","x":0,"y":0,"w":10,"h":10}),
+            json!({"slide":slide,"src":"","kind":"video","x":0,"y":0,"w":10,"h":10}),
+            json!({"slide":slide,"src":"x".repeat(MAX_MEDIA_SRC_BYTES + 1),"kind":"video","x":0,"y":0,"w":10,"h":10}),
+            json!({"slide":slide,"src":"a.mp4","kind":"image","x":0,"y":0,"w":10,"h":10}),
+            json!({"slide":slide,"src":"a.mp4","kind":null,"x":0,"y":0,"w":10,"h":10}),
+            json!({"slide":slide,"src":"a.mp4","kind":"video","x":0,"y":0,"w":10,"h":10,"trim_in_ms":200,"trim_out_ms":100}),
+            json!({"slide":slide,"src":"a.mp4","kind":"video","x":0,"y":0,"w":10,"h":10,"volume":2}),
+            json!({"slide":slide,"src":"a.mp4","kind":"video","x":0,"y":0,"w":10,"h":10,"autoplay":"true"}),
+            json!({"slide":99999,"src":"a.mp4","kind":"video","x":0,"y":0,"w":10,"h":10}),
+        ] {
+            apply_err(&mut e, "addMedia", patch);
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // boundary values admit: zero trim_in, max trim, volume 0 and 1
+        for (trim_in, trim_out, volume) in [
+            (json!(0), json!(0), json!(0.0)),
+            (json!(MAX_MEDIA_TRIM_MS), json!(MAX_MEDIA_TRIM_MS), json!(1.0)),
+        ] {
+            apply(
+                &mut e,
+                "addMedia",
+                json!({"slide":slide,"src":"b.webm","kind":"video","x":0,"y":0,"w":10,"h":10,
+                       "trim_in_ms":trim_in,"trim_out_ms":trim_out,"volume":volume}),
+            );
+        }
+    }
+
+    #[test]
+    fn media_persists_schema4_and_hostile_restore_fails_closed() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        // a second object so spec/kind pairing can be tested across kinds
+        add_rect(&mut e, slide, 0.0, 0.0, 10.0, 10.0);
+        let id = apply(
+            &mut e,
+            "addMedia",
+            json!({"slide":slide,"src":"clip.mp4","kind":"video","x":1,"y":2,"w":100,"h":60,
+                   "fit":"stretch","volume":0.25,"trim_in_ms":10,"trim_out_ms":20,
+                   "autoplay":true,"loop":true,"muted":true,"show_controls":true,
+                   "hide_when_stopped":true,"mime":"video/mp4","poster":"p.jpg"}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        // distinct rotation so the 1e999 needle below is unique to media
+        apply(&mut e, "rotateObject", json!({"slide":slide,"id":id,"degrees":45}));
+        let snap = e.snapshot().unwrap();
+        // media rides the schema:4 wrapper (new ObjKind + additive field)
+        assert_eq!(shape_snapshot_schema(&snap), 4);
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&snap).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), snap);
+        assert_eq!(described_media(&mut reopened, id)["media"]["src"], json!("clip.mp4"));
+
+        // hostile payloads fail closed without touching state
+        let good = serde_json::to_value(&e.state).unwrap();
+        let media_index = good["slides"][0]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|o| o["id"] == json!(id))
+            .unwrap();
+        let restore_err = |e: &mut PitchEngine, mutate: &dyn Fn(&mut Value)| {
+            let mut hostile = good.clone();
+            mutate(&mut hostile);
+            assert!(e
+                .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), snap);
+        };
+        fn obj<'a>(h: &'a mut Value, index: usize) -> &'a mut Value {
+            &mut h["slides"][0]["objects"][index]
+        }
+        // spec/kind pairing both directions
+        restore_err(&mut e, &|h| {
+            let spec = obj(h, media_index)["media"].clone();
+            h["slides"][0]["objects"][0]["media"] = spec; // rect gains a media spec
+        });
+        restore_err(&mut e, &|h| {
+            obj(h, media_index).as_object_mut().unwrap().remove("media"); // media loses its spec
+        });
+        // connector spec on a media object (and vice versa is covered above)
+        restore_err(&mut e, &|h| {
+            obj(h, media_index)["connector"] = json!({
+                "from":{"type":"free","x":0,"y":0},"to":{"type":"free","x":1,"y":1},
+                "route":"straight","arrows":"none"
+            });
+        });
+        // media has real bounds: zero/negative geometry rejects
+        for (field, value) in [("w", json!(0.0)), ("h", json!(-1.0))] {
+            restore_err(&mut e, &|h| {
+                obj(h, media_index)[field] = value.clone();
+            });
+        }
+        // non-finite persisted geometry (1e999) rejects; the only object on
+        // the slide is the media object so the needles are unique
+        for (field, needle) in [
+            ("w", "\"w\":100.0"),
+            ("x", "\"x\":1.0"),
+            ("rotation_deg", "\"rotation_deg\":45.0"),
+        ] {
+            let text = serde_json::to_string(&good).unwrap();
+            let hostile_text = text.replacen(needle, &format!("\"{field}\":1e999"), 1);
+            assert_ne!(hostile_text, text);
+            assert!(e
+                .restore(&encode_envelope(hostile_text.as_bytes()))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), snap);
+        }
+        // media carries no legacy content fields
+        restore_err(&mut e, &|h| {
+            obj(h, media_index)["text"] = json!({"content":"x","font_size":12,"color":[0,0,0,255],"bold":false,"italic":false});
+        });
+        restore_err(&mut e, &|h| {
+            obj(h, media_index)["fill"] = json!([0,0,0,255]);
+        });
+        restore_err(&mut e, &|h| {
+            obj(h, media_index)["src"] = json!("other.mp4");
+        });
+        // out-of-bound spec fields
+        for (field, value) in [
+            ("src", json!("")),
+            ("src", json!("x".repeat(MAX_MEDIA_SRC_BYTES + 1))),
+            ("mime", json!("x".repeat(MAX_MEDIA_MIME_BYTES + 1))),
+            ("poster", json!("")),
+            ("volume", json!(1.5)),
+            ("volume", json!(-0.5)),
+            ("trim_in_ms", json!(u64::from(MAX_MEDIA_TRIM_MS) + 1)),
+            ("trim_out_ms", json!(-1)),
+        ] {
+            restore_err(&mut e, &|h| {
+                obj(h, media_index)["media"][field] = value.clone();
+            });
+        }
+        // trim ordering on the persisted spec
+        restore_err(&mut e, &|h| {
+            obj(h, media_index)["media"]["trim_in_ms"] = json!(MAX_MEDIA_TRIM_MS);
+            obj(h, media_index)["media"]["trim_out_ms"] = json!(0);
+        });
+        // unknown enum variants and wrong types fail serde closed
+        for (field, value) in [
+            ("kind", json!("image")),
+            ("fit", json!("fill")),
+            ("autoplay", json!("yes")),
+            ("volume", json!("loud")),
+        ] {
+            restore_err(&mut e, &|h| {
+                obj(h, media_index)["media"][field] = value.clone();
+            });
+        }
+        // object-level stroke stays shape-only
+        restore_err(&mut e, &|h| {
+            obj(h, media_index)["stroke"] = json!({"width":1,"color":[0,0,0,255]});
+        });
+        // the admitted snapshot still restores cleanly afterwards
+        e.restore(&snap).unwrap();
+        assert_eq!(e.snapshot().unwrap(), snap);
     }
 }
