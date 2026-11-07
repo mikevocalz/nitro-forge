@@ -26,6 +26,12 @@ export const OPS = {
   addBookmark: "addBookmark",
   removeBookmark: "removeBookmark",
   listBookmarks: "listBookmarks",
+  defineStyle: "defineStyle",
+  updateStyle: "updateStyle",
+  removeStyle: "removeStyle",
+  listStyles: "listStyles",
+  applyNamedStyle: "applyNamedStyle",
+  setBlockStyle: "setBlockStyle",
   blocks: "blocks",
   layout: "layout",
   exportDocx: "exportDocx",
@@ -79,6 +85,19 @@ export interface FindMatch {
 export interface Bookmark {
   name: string;
   pos: Pos;
+}
+/** Named style kind: paragraph styles mark blocks, character styles format ranges. */
+export type NamedStyleKind = "paragraph" | "character";
+/**
+ * Durable named style definition. `properties` uses the same grammar as
+ * `applyStyle`'s `style` payload. Styles are snapshot bundles: applying one
+ * copies its properties at that moment and never live-updates afterwards.
+ */
+export interface NamedStyle {
+  id: string;
+  name: string;
+  kind: NamedStyleKind;
+  properties: Style;
 }
 export interface FindOptions {
   from?: Pos;
@@ -199,6 +218,44 @@ export class QuillDocument {
   /** Read-only; sorted by document position then name. */
   listBookmarks() {
     return this.call<{ bookmarks: Bookmark[] }>(OPS.listBookmarks);
+  }
+  /**
+   * Define a durable named style. Ids are unique, 1–64 non-blank
+   * non-control characters; at most 256 definitions.
+   */
+  defineStyle(def: { id: string; name: string; kind: NamedStyleKind; properties: Style }) {
+    return this.call<{ ok: boolean; id: string }>(OPS.defineStyle, def);
+  }
+  /** Replace `name`/`properties` on an existing style; never propagates. */
+  updateStyle(id: string, changes: { name?: string; properties?: Style }) {
+    return this.call<{ ok: boolean; id: string }>(OPS.updateStyle, { id, ...changes });
+  }
+  /**
+   * Delete a style definition and clear paragraph-style references on
+   * blocks that used it. Properties already copied onto inlines remain.
+   */
+  removeStyle(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.removeStyle, { id });
+  }
+  /** Read-only; definitions sorted by id. */
+  listStyles() {
+    return this.call<{ styles: NamedStyle[] }>(OPS.listStyles);
+  }
+  /**
+   * Copy a `"character"` style's properties onto the inlines in `from..to`
+   * (same re-split rules as `applyStyle`). Present properties overwrite —
+   * including null clears; absent properties leave inline values untouched.
+   */
+  applyNamedStyle(styleId: string, from: Pos, to: Pos) {
+    return this.call(OPS.applyNamedStyle, { style_id: styleId, from, to });
+  }
+  /**
+   * Attach a `"paragraph"` style to a block: stamps its properties onto the
+   * block's inlines and records `style_id` (visible via `blocks`/`describe`).
+   * `null` clears only the reference; stamped properties are not reverted.
+   */
+  setBlockStyle(block: number, styleId: string | null) {
+    return this.call(OPS.setBlockStyle, { block, style_id: styleId });
   }
   blocks<T = unknown>() {
     return this.call<T>(OPS.blocks);

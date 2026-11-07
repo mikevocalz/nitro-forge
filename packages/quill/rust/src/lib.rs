@@ -107,6 +107,11 @@ pub struct Block {
     pub kind: BlockKind,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub list: Option<ListItem>,
+    /// Named paragraph-style reference (`styles[].id` where `kind` is
+    /// `"paragraph"`). `None` for unstyled blocks; absent from legacy
+    /// snapshots, which restore as unstyled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub style_id: Option<String>,
     #[serde(default)]
     pub inlines: Vec<Inline>,
 }
@@ -116,6 +121,7 @@ impl Block {
         Self {
             kind,
             list: None,
+            style_id: None,
             inlines: Vec::new(),
         }
     }
@@ -138,18 +144,22 @@ struct SnapshotRef<'a> {
     blocks: &'a [Block],
 }
 
-/// schema:3 document payload: legacy blocks plus the bookmark collection.
+/// schema:3 document payload: legacy blocks plus the bookmark and named
+/// style collections. `styles` is omitted when empty so bookmark-only
+/// schema:3 snapshots stay byte-identical to the bookmark-era shape.
 #[derive(Serialize)]
-struct BookmarkDocSnapshotRef<'a> {
+struct Schema3DocSnapshotRef<'a> {
     blocks: &'a [Block],
     bookmarks: &'a [Bookmark],
+    #[serde(skip_serializing_if = "<[StyleDef]>::is_empty")]
+    styles: &'a [StyleDef],
 }
 
 #[derive(Serialize)]
-struct BookmarkSnapshotRef<'a> {
+struct Schema3SnapshotRef<'a> {
     kind: &'static str,
     schema: u32,
-    document: BookmarkDocSnapshotRef<'a>,
+    document: Schema3DocSnapshotRef<'a>,
 }
 
 #[derive(Deserialize)]
@@ -159,9 +169,13 @@ struct DocState {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct BookmarkDocState {
+struct Schema3DocState {
     blocks: Vec<Block>,
+    // `bookmarks` stays required (schema:3 was born with it); `styles` is
+    // optional so bookmark-era schema:3 snapshots still restore.
     bookmarks: Vec<Bookmark>,
+    #[serde(default)]
+    styles: Vec<StyleDef>,
 }
 
 #[derive(Serialize)]
@@ -205,6 +219,9 @@ struct UndoEntry {
     /// `None` for ops that cannot (style/kind/list-metadata edits), whose
     /// undo/redo leaves the live bookmark list untouched.
     bookmarks: Option<(Vec<Bookmark>, Vec<Bookmark>)>,
+    /// `(before, after)` named-style definition lists for style ops; `None`
+    /// leaves the live style list untouched on undo/redo.
+    styles: Option<(Vec<StyleDef>, Vec<StyleDef>)>,
 }
 
 // ---------------------------------------------------------------------------
@@ -403,6 +420,111 @@ fn remap_offset_through_matches(offset: usize, matches: &[(usize, usize)], repl:
         delta += repl as isize - (e - s) as isize;
     }
     (offset as isize + delta) as usize
+}
+
+// ---------------------------------------------------------------------------
+// Named styles
+// ---------------------------------------------------------------------------
+//
+// A named style is a durable document-level definition
+// `{id, name, kind, properties}` where `kind` is `"paragraph"` or
+// `"character"` and `properties` is a partial inline-style object using the
+// exact `applyStyle` grammar (including null-clears). Styles are snapshot
+// bundles, not live formatting: applying one copies its properties at that
+// moment, and later `updateStyle`/`removeStyle` calls never rewrite content
+// that was already styled. Paragraph styles additionally leave a
+// `style_id` reference on the block for consumers (and future DOCX pStyle
+// mapping); character styles leave no reference — only the copied inline
+// properties.
+
+/// Style ids and names share the bookmark bounds: 1..=64 non-blank
+/// non-control Unicode scalars.
+const STYLE_NAME_MAX: usize = 64;
+/// Bound on stored style definitions so snapshots stay small.
+const STYLES_MAX: usize = 256;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum NamedStyleKind {
+    Paragraph,
+    Character,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StyleDef {
+    id: String,
+    name: String,
+    kind: NamedStyleKind,
+    /// Validated partial style object (same grammar as `applyStyle`'s
+    /// `style` payload). Stored verbatim and revalidated on every use and
+    /// on restore, so a hostile snapshot cannot smuggle invalid properties.
+    properties: Value,
+}
+
+fn validate_style_token(value: &str, what: &str) -> Result<(), EngineError> {
+    if value.trim().is_empty() {
+        return Err(EngineError::validation(format!("style {what} must not be blank")));
+    }
+    if value.chars().count() > STYLE_NAME_MAX {
+        return Err(EngineError::validation(format!(
+            "style {what} must be at most {STYLE_NAME_MAX} characters"
+        )));
+    }
+    if value.chars().any(|c| c.is_control()) {
+        return Err(EngineError::validation(format!(
+            "style {what} must not contain control characters"
+        )));
+    }
+    Ok(())
+}
+
+/// Full style validation for restore: ids, names, property grammar, and
+/// every `Block::style_id` reference (must name a paragraph style). Runs
+/// before live state is replaced.
+fn validate_styles(styles: &[StyleDef], blocks: &[Block]) -> Result<(), EngineError> {
+    if styles.len() > STYLES_MAX {
+        return Err(EngineError::validation("too many styles"));
+    }
+    let mut seen = std::collections::HashSet::with_capacity(styles.len());
+    for def in styles {
+        validate_style_token(&def.id, "id")?;
+        validate_style_token(&def.name, "name")?;
+        if !seen.insert(def.id.as_str()) {
+            return Err(EngineError::validation(format!(
+                "duplicate style id '{}'",
+                def.id
+            )));
+        }
+        // Rejects non-object properties and out-of-range style fields.
+        StylePatch::parse(&def.properties)?;
+    }
+    for block in blocks {
+        if let Some(id) = &block.style_id {
+            let Some(def) = styles.iter().find(|d| &d.id == id) else {
+                return Err(EngineError::validation(format!(
+                    "block references unknown style '{id}'"
+                )));
+            };
+            if def.kind != NamedStyleKind::Paragraph {
+                return Err(EngineError::validation(format!(
+                    "block references character style '{id}'"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// `id` is the documented payload key; `style_id`/`style` are accepted
+/// aliases for the apply/set ops.
+fn style_id_field(p: &Value) -> Result<&str, EngineError> {
+    for key in ["style_id", "id", "style"] {
+        if let Some(v) = p.get(key) {
+            return as_str(v, key);
+        }
+    }
+    Err(EngineError::invalid("payload missing 'style_id'"))
 }
 
 // ---------------------------------------------------------------------------
@@ -741,6 +863,7 @@ impl StylePatch {
 pub struct QuillEngine {
     blocks: Vec<Block>,
     bookmarks: Vec<Bookmark>,
+    styles: Vec<StyleDef>,
     journal: Journal<UndoEntry>,
 }
 
@@ -749,6 +872,7 @@ impl QuillEngine {
         Self {
             blocks: vec![Block::empty(BlockKind::Para)],
             bookmarks: Vec::new(),
+            styles: Vec::new(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
@@ -756,7 +880,8 @@ impl QuillEngine {
     /// Record one undo entry. `bookmarks_before` is the live bookmark list
     /// captured before the op mutated; `Some` pairs it with the post-op list
     /// so undo/redo restore both directions. Ops that cannot move bookmarks
-    /// pass `None`.
+    /// pass `None`. `styles_before` plays the same role for the named-style
+    /// definition list.
     fn record_undo(
         &mut self,
         index: usize,
@@ -764,12 +889,25 @@ impl QuillEngine {
         inserted: Vec<Block>,
         bookmarks_before: Option<Vec<Bookmark>>,
     ) {
+        self.record_undo_meta(index, removed, inserted, bookmarks_before, None);
+    }
+
+    fn record_undo_meta(
+        &mut self,
+        index: usize,
+        removed: Vec<Block>,
+        inserted: Vec<Block>,
+        bookmarks_before: Option<Vec<Bookmark>>,
+        styles_before: Option<Vec<StyleDef>>,
+    ) {
         let bookmarks = bookmarks_before.map(|before| (before, self.bookmarks.clone()));
+        let styles = styles_before.map(|before| (before, self.styles.clone()));
         self.journal.record(UndoEntry {
             index,
             removed,
             inserted,
             bookmarks,
+            styles,
         });
     }
 
@@ -813,7 +951,14 @@ impl QuillEngine {
     fn op_new(&mut self) -> Result<CommandResult, EngineError> {
         let old = std::mem::replace(&mut self.blocks, vec![Block::empty(BlockKind::Para)]);
         let bookmarks_before = std::mem::take(&mut self.bookmarks);
-        self.record_undo(0, old, self.blocks.clone(), Some(bookmarks_before));
+        let styles_before = std::mem::take(&mut self.styles);
+        self.record_undo_meta(
+            0,
+            old,
+            self.blocks.clone(),
+            Some(bookmarks_before),
+            Some(styles_before),
+        );
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -853,6 +998,7 @@ impl QuillEngine {
                 out.push(Block {
                     kind,
                     list: old.list.clone(),
+                    style_id: old.style_id.clone(),
                     inlines: normalize_inlines(std::mem::take(&mut head)),
                 });
             }
@@ -867,6 +1013,7 @@ impl QuillEngine {
         out.push(Block {
             kind,
             list: old.list.clone(),
+            style_id: old.style_id.clone(),
             inlines: normalize_inlines(head),
         });
 
@@ -900,6 +1047,7 @@ impl QuillEngine {
             new_span = vec![Block {
                 kind: b.kind,
                 list: b.list.clone(),
+                style_id: b.style_id.clone(),
                 inlines: normalize_inlines(inlines),
             }];
         } else {
@@ -922,6 +1070,7 @@ impl QuillEngine {
             new_span = vec![Block {
                 kind: first.kind,
                 list: first.list.clone(),
+                style_id: first.style_id.clone(),
                 inlines: normalize_inlines(inlines),
             }];
         }
@@ -945,6 +1094,7 @@ impl QuillEngine {
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
+            styles: self.styles.clone(),
             journal: Journal::new(1),
         };
         let mut deleted = String::new();
@@ -970,15 +1120,9 @@ impl QuillEngine {
         Ok(CommandResult::data(data))
     }
 
-    fn op_apply_style(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
-        let from = parse_pos(field(p, "from")?)?;
-        let to = parse_pos(field(p, "to")?)?;
-        let patch = StylePatch::parse(field(p, "style")?)?;
-        self.check_range(from, to)?;
-        if from == to || patch.is_empty() {
-            return Ok(CommandResult::data(json!({ "ok": true })));
-        }
-
+    /// `(removed, new_span)` for applying `patch` over `from..to` without
+    /// mutating. Shared by `applyStyle` and `applyNamedStyle`.
+    fn style_span(&self, from: Pos, to: Pos, patch: &StylePatch) -> (Vec<Block>, Vec<Block>) {
         let removed: Vec<Block> = self.blocks[from.block..=to.block].to_vec();
         let mut new_span: Vec<Block> = Vec::with_capacity(removed.len());
         for (i, b) in self.blocks[from.block..=to.block].iter().enumerate() {
@@ -1003,10 +1147,22 @@ impl QuillEngine {
             new_span.push(Block {
                 kind: b.kind,
                 list: b.list.clone(),
+                style_id: b.style_id.clone(),
                 inlines: normalize_inlines(inlines),
             });
         }
+        (removed, new_span)
+    }
 
+    fn op_apply_style(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let from = parse_pos(field(p, "from")?)?;
+        let to = parse_pos(field(p, "to")?)?;
+        let patch = StylePatch::parse(field(p, "style")?)?;
+        self.check_range(from, to)?;
+        if from == to || patch.is_empty() {
+            return Ok(CommandResult::data(json!({ "ok": true })));
+        }
+        let (removed, new_span) = self.style_span(from, to, &patch);
         self.blocks
             .splice(from.block..=to.block, new_span.iter().cloned());
         self.record_undo(from.block, removed, new_span, None);
@@ -1068,11 +1224,13 @@ impl QuillEngine {
             Block {
                 kind: old.kind,
                 list: old.list.clone(),
+                style_id: old.style_id.clone(),
                 inlines: normalize_inlines(head),
             },
             Block {
                 kind: old.kind,
                 list: old.list.clone(),
+                style_id: old.style_id.clone(),
                 inlines: normalize_inlines(tail),
             },
         ];
@@ -1108,6 +1266,7 @@ impl QuillEngine {
         let merged = vec![Block {
             kind: self.blocks[index - 1].kind,
             list: self.blocks[index - 1].list.clone(),
+            style_id: self.blocks[index - 1].style_id.clone(),
             inlines: normalize_inlines(inlines),
         }];
         self.blocks
@@ -1212,6 +1371,7 @@ impl QuillEngine {
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
+            styles: self.styles.clone(),
             journal: Journal::new(1),
         };
         // Group consecutive matches by block (find_matches is block-ordered),
@@ -1477,6 +1637,212 @@ impl QuillEngine {
         }
     }
 
+    // -- named style ops -----------------------------------------------------
+
+    fn find_style(&self, id: &str) -> Option<&StyleDef> {
+        self.styles.iter().find(|d| d.id == id)
+    }
+
+    /// `defineStyle {id, name, kind, properties}` — `kind` is
+    /// `"paragraph"` or `"character"`; `properties` uses the `applyStyle`
+    /// grammar. Ids are unique.
+    fn op_define_style(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let id = as_str(field(p, "id")?, "id")?.to_string();
+        let name = as_str(field(p, "name")?, "name")?.to_string();
+        let kind: NamedStyleKind = serde_json::from_value(field(p, "kind")?.clone())
+            .map_err(|_| EngineError::validation("kind must be \"paragraph\" or \"character\""))?;
+        let properties = field(p, "properties")?.clone();
+        validate_style_token(&id, "id")?;
+        validate_style_token(&name, "name")?;
+        StylePatch::parse(&properties)?;
+        if self.styles.len() >= STYLES_MAX {
+            return Err(EngineError::validation("style limit reached"));
+        }
+        if self.find_style(&id).is_some() {
+            return Err(EngineError::validation(format!(
+                "style '{id}' already exists"
+            )));
+        }
+        let before = self.styles.clone();
+        self.styles.push(StyleDef {
+            id: id.clone(),
+            name,
+            kind,
+            properties,
+        });
+        self.record_undo_meta(0, Vec::new(), Vec::new(), None, Some(before));
+        Ok(CommandResult::data(json!({ "ok": true, "id": id })))
+    }
+
+    /// `updateStyle {id, name?, properties?}` — replaces the named fields;
+    /// absent fields keep their values. Never propagates to content that
+    /// already applied the style.
+    fn op_update_style(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let id = as_str(field(p, "id")?, "id")?;
+        let index = self
+            .styles
+            .iter()
+            .position(|d| d.id == id)
+            .ok_or_else(|| EngineError::validation(format!("unknown style '{id}'")))?;
+        let mut updated = self.styles[index].clone();
+        if let Some(v) = p.get("name") {
+            updated.name = as_str(v, "name")?.to_string();
+            validate_style_token(&updated.name, "name")?;
+        }
+        if let Some(v) = p.get("properties") {
+            StylePatch::parse(v)?;
+            updated.properties = v.clone();
+        }
+        if p.get("name").is_none() && p.get("properties").is_none() {
+            return Ok(Self::read_only(json!({ "ok": true, "id": id })));
+        }
+        if updated == self.styles[index] {
+            return Ok(Self::read_only(json!({ "ok": true, "id": id })));
+        }
+        let before = self.styles.clone();
+        self.styles[index] = updated;
+        self.record_undo_meta(0, Vec::new(), Vec::new(), None, Some(before));
+        Ok(CommandResult::data(json!({ "ok": true, "id": id })))
+    }
+
+    /// `removeStyle {id}` — deletes the definition and clears `style_id`
+    /// references on blocks that used it, atomically in one undo entry.
+    /// Properties already copied onto inlines are ordinary direct
+    /// formatting and are not reverted.
+    fn op_remove_style(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let id = as_str(field(p, "id")?, "id")?;
+        let index = self
+            .styles
+            .iter()
+            .position(|d| d.id == id)
+            .ok_or_else(|| EngineError::validation(format!("unknown style '{id}'")))?;
+        let before_styles = self.styles.clone();
+        self.styles.remove(index);
+        let referenced = self
+            .blocks
+            .iter()
+            .any(|b| b.style_id.as_deref() == Some(id));
+        if referenced {
+            let old_blocks = self.blocks.clone();
+            for b in &mut self.blocks {
+                if b.style_id.as_deref() == Some(id) {
+                    b.style_id = None;
+                }
+            }
+            self.record_undo_meta(
+                0,
+                old_blocks,
+                self.blocks.clone(),
+                None,
+                Some(before_styles),
+            );
+        } else {
+            self.record_undo_meta(0, Vec::new(), Vec::new(), None, Some(before_styles));
+        }
+        Ok(CommandResult::data(json!({ "ok": true, "id": id })))
+    }
+
+    /// `listStyles` — read-only; definitions sorted by id.
+    fn op_list_styles(&self) -> Result<CommandResult, EngineError> {
+        let mut sorted: Vec<&StyleDef> = self.styles.iter().collect();
+        sorted.sort_by(|a, b| a.id.cmp(&b.id));
+        Ok(Self::read_only(json!({ "styles": sorted })))
+    }
+
+    /// `applyNamedStyle {style_id, from, to}` — copies a `"character"`
+    /// style's properties onto the inlines in range, using the same
+    /// re-split/patch rules as `applyStyle`. Properties present in the
+    /// style overwrite the matching inline properties (null clears, as in
+    /// `applyStyle`); properties absent from the style leave existing
+    /// inline values untouched. The application is a snapshot copy: no
+    /// link back to the definition remains.
+    fn op_apply_named_style(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let id = style_id_field(p)?;
+        let from = parse_pos(field(p, "from")?)?;
+        let to = parse_pos(field(p, "to")?)?;
+        let def = self
+            .find_style(id)
+            .ok_or_else(|| EngineError::validation(format!("unknown style '{id}'")))?;
+        if def.kind != NamedStyleKind::Character {
+            return Err(EngineError::validation(format!(
+                "style '{id}' is a paragraph style; use setBlockStyle"
+            )));
+        }
+        let patch = StylePatch::parse(&def.properties)?;
+        self.check_range(from, to)?;
+        if from == to || patch.is_empty() {
+            return Ok(Self::read_only(json!({ "ok": true })));
+        }
+        let (removed, new_span) = self.style_span(from, to, &patch);
+        self.blocks
+            .splice(from.block..=to.block, new_span.iter().cloned());
+        self.record_undo(from.block, removed, new_span, None);
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// `setBlockStyle {block, style_id}` — `style_id` must name a
+    /// `"paragraph"` style; `null` clears the reference. Setting stamps the
+    /// style's properties onto every inline in the block (same snapshot
+    /// semantics as `applyNamedStyle`) and records the reference;
+    /// clearing only removes the reference and never reverts stamped
+    /// properties.
+    fn op_set_block_style(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let index = as_usize(field(p, "block")?, "block")?;
+        let style_id = {
+            let mut found = None;
+            for key in ["style_id", "id", "style"] {
+                if let Some(v) = p.get(key) {
+                    found = Some(v);
+                    break;
+                }
+            }
+            match found {
+                Some(v) if v.is_null() => None,
+                Some(v) => Some(as_str(v, "style_id")?.to_string()),
+                None => {
+                    return Err(EngineError::invalid(
+                        "payload missing 'style_id' (string or null)",
+                    ))
+                }
+            }
+        };
+        let Some(old) = self.blocks.get(index).cloned() else {
+            return Err(EngineError::out_of_bounds(format!(
+                "block {index} out of range"
+            )));
+        };
+        let patch = match &style_id {
+            Some(id) => {
+                let def = self
+                    .find_style(id)
+                    .ok_or_else(|| EngineError::validation(format!("unknown style '{id}'")))?;
+                if def.kind != NamedStyleKind::Paragraph {
+                    return Err(EngineError::validation(format!(
+                        "style '{id}' is a character style; use applyNamedStyle"
+                    )));
+                }
+                Some(StylePatch::parse(&def.properties)?)
+            }
+            None => None,
+        };
+        let mut new = old.clone();
+        new.style_id = style_id;
+        if let Some(patch) = &patch {
+            if !patch.is_empty() {
+                for inl in &mut new.inlines {
+                    patch.apply(&mut inl.style);
+                }
+                new.inlines = normalize_inlines(new.inlines);
+            }
+        }
+        if new == old {
+            return Ok(Self::read_only(json!({ "ok": true })));
+        }
+        self.blocks[index] = new.clone();
+        self.record_undo(index, vec![old], vec![new], None);
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
     fn op_blocks(&self) -> Result<CommandResult, EngineError> {
         Ok(Self::read_only(serde_json::to_value(SnapshotRef {
             blocks: &self.blocks,
@@ -1564,7 +1930,14 @@ impl QuillEngine {
         lists::validate(&blocks)?;
         let old = std::mem::replace(&mut self.blocks, blocks);
         let bookmarks_before = std::mem::take(&mut self.bookmarks);
-        self.record_undo(0, old, self.blocks.clone(), Some(bookmarks_before));
+        let styles_before = std::mem::take(&mut self.styles);
+        self.record_undo_meta(
+            0,
+            old,
+            self.blocks.clone(),
+            Some(bookmarks_before),
+            Some(styles_before),
+        );
         Ok(CommandResult::data(serde_json::to_value(SnapshotRef {
             blocks: &self.blocks,
         })?))
@@ -1637,6 +2010,12 @@ impl Engine for QuillEngine {
             "addBookmark" => self.op_add_bookmark(&cmd.payload),
             "removeBookmark" => self.op_remove_bookmark(&cmd.payload),
             "listBookmarks" => self.op_list_bookmarks(),
+            "defineStyle" => self.op_define_style(&cmd.payload),
+            "updateStyle" => self.op_update_style(&cmd.payload),
+            "removeStyle" => self.op_remove_style(&cmd.payload),
+            "listStyles" => self.op_list_styles(),
+            "applyNamedStyle" => self.op_apply_named_style(&cmd.payload),
+            "setBlockStyle" => self.op_set_block_style(&cmd.payload),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
             "exportDocx" => self.op_export_docx(&cmd, None),
@@ -1652,9 +2031,11 @@ impl Engine for QuillEngine {
     ) -> Result<CommandResult, EngineError> {
         let batch = ignition_core::parse_batch(cmd)?;
         let bookmarks_before = self.bookmarks.clone();
+        let styles_before = self.styles.clone();
         let staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
+            styles: self.styles.clone(),
             journal: Journal::new(1),
         };
         let (staged, result) = match ctx {
@@ -1669,7 +2050,14 @@ impl Engine for QuillEngine {
             let inserted = staged.blocks.clone();
             let removed = self.blocks.clone();
             self.bookmarks = staged.bookmarks;
-            self.record_undo(0, removed, inserted, Some(bookmarks_before));
+            self.styles = staged.styles;
+            self.record_undo_meta(
+                0,
+                removed,
+                inserted,
+                Some(bookmarks_before),
+                Some(styles_before),
+            );
             self.blocks = staged.blocks;
         }
         Ok(result)
@@ -1681,15 +2069,21 @@ impl Engine for QuillEngine {
         };
         // Legacy readers ignore unknown Block fields. Removing root blocks makes
         // them reject numbered metadata instead of silently losing it.
-        // Bookmarks require the schema:3 wrapper so pre-bookmark readers fail
-        // closed on `schema != 2` rather than silently dropping them.
-        let payload = if !self.bookmarks.is_empty() {
-            serde_json::to_vec(&BookmarkSnapshotRef {
+        // Bookmarks and named styles require the schema:3 wrapper so
+        // pre-feature readers fail closed on `schema != 2`/`!= 3` rather
+        // than silently dropping them. `styles` is omitted from the
+        // document when empty, keeping bookmark-only payloads identical.
+        let needs_v3 = !self.bookmarks.is_empty()
+            || !self.styles.is_empty()
+            || self.blocks.iter().any(|b| b.style_id.is_some());
+        let payload = if needs_v3 {
+            serde_json::to_vec(&Schema3SnapshotRef {
                 kind: "quill",
                 schema: 3,
-                document: BookmarkDocSnapshotRef {
+                document: Schema3DocSnapshotRef {
                     blocks: &self.blocks,
                     bookmarks: &self.bookmarks,
+                    styles: &self.styles,
                 },
             })?
         } else if self.blocks.iter().any(|block| block.list.is_some()) {
@@ -1712,51 +2106,49 @@ impl Engine for QuillEngine {
                 .iter()
                 .any(|key| object.contains_key(*key))
         });
-        let (state_blocks, bookmarks): (Vec<Block>, Vec<Bookmark>) = if wrapped {
-            let wrapper: WrappedDocState = serde_json::from_value(value)?;
-            if wrapper.kind != "quill" {
-                return Err(EngineError::unsupported(
-                    "unsupported Quill snapshot kind/schema",
-                ));
-            }
-            match wrapper.schema {
-                2 => {
-                    // A schema:2 document has no bookmark field; reject a
-                    // stray one rather than silently dropping it.
-                    if wrapper
-                        .document
-                        .as_object()
-                        .is_some_and(|o| o.contains_key("bookmarks"))
-                    {
-                        return Err(EngineError::unsupported(
-                            "unsupported Quill snapshot kind/schema",
-                        ));
-                    }
-                    let doc: DocState = serde_json::from_value(wrapper.document)?;
-                    (doc.blocks, Vec::new())
-                }
-                3 => {
-                    let doc: BookmarkDocState = serde_json::from_value(wrapper.document)?;
-                    (doc.blocks, doc.bookmarks)
-                }
-                _ => {
+        let (state_blocks, bookmarks, styles): (Vec<Block>, Vec<Bookmark>, Vec<StyleDef>) =
+            if wrapped {
+                let wrapper: WrappedDocState = serde_json::from_value(value)?;
+                if wrapper.kind != "quill" {
                     return Err(EngineError::unsupported(
                         "unsupported Quill snapshot kind/schema",
-                    ))
+                    ));
                 }
-            }
-        } else {
-            if value
-                .as_object()
-                .is_some_and(|o| o.contains_key("bookmarks"))
-            {
-                return Err(EngineError::unsupported(
-                    "unsupported Quill snapshot kind/schema",
-                ));
-            }
-            let doc: DocState = serde_json::from_value(value)?;
-            (doc.blocks, Vec::new())
-        };
+                match wrapper.schema {
+                    2 => {
+                        // A schema:2 document has neither bookmark nor style
+                        // fields; reject strays rather than silently dropping.
+                        if wrapper.document.as_object().is_some_and(|o| {
+                            o.contains_key("bookmarks") || o.contains_key("styles")
+                        }) {
+                            return Err(EngineError::unsupported(
+                                "unsupported Quill snapshot kind/schema",
+                            ));
+                        }
+                        let doc: DocState = serde_json::from_value(wrapper.document)?;
+                        (doc.blocks, Vec::new(), Vec::new())
+                    }
+                    3 => {
+                        let doc: Schema3DocState = serde_json::from_value(wrapper.document)?;
+                        (doc.blocks, doc.bookmarks, doc.styles)
+                    }
+                    _ => {
+                        return Err(EngineError::unsupported(
+                            "unsupported Quill snapshot kind/schema",
+                        ))
+                    }
+                }
+            } else {
+                if value.as_object().is_some_and(|o| {
+                    o.contains_key("bookmarks") || o.contains_key("styles")
+                }) {
+                    return Err(EngineError::unsupported(
+                        "unsupported Quill snapshot kind/schema",
+                    ));
+                }
+                let doc: DocState = serde_json::from_value(value)?;
+                (doc.blocks, Vec::new(), Vec::new())
+            };
         lists::validate(&state_blocks)?;
         for block in &state_blocks {
             for inline in &block.inlines {
@@ -1776,8 +2168,10 @@ impl Engine for QuillEngine {
             blocks.push(Block::empty(BlockKind::Para));
         }
         validate_bookmarks(&bookmarks, &blocks)?;
+        validate_styles(&styles, &blocks)?;
         self.blocks = blocks;
         self.bookmarks = bookmarks;
+        self.styles = styles;
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
     }
@@ -1793,6 +2187,10 @@ impl Engine for QuillEngine {
         if let Some(before) = bookmarks {
             self.bookmarks = before;
         }
+        let styles = entry.styles.as_ref().map(|(before, _)| before.clone());
+        if let Some(before) = styles {
+            self.styles = before;
+        }
         self.journal.push_redo(entry);
         Ok(true)
     }
@@ -1807,6 +2205,10 @@ impl Engine for QuillEngine {
         let bookmarks = entry.bookmarks.as_ref().map(|(_, after)| after.clone());
         if let Some(after) = bookmarks {
             self.bookmarks = after;
+        }
+        let styles = entry.styles.as_ref().map(|(_, after)| after.clone());
+        if let Some(after) = styles {
+            self.styles = after;
         }
         self.journal.push_undo(entry);
         Ok(true)
@@ -3837,5 +4239,446 @@ mod tests {
         assert_eq!(bookmarks(&mut e).as_array().unwrap().len(), 0);
         assert!(e.undo().unwrap());
         assert_eq!(bookmark_at(&mut e, "b")["pos"]["offset"], 0);
+    }
+
+    // -- named styles ---------------------------------------------------------
+
+    fn define(e: &mut QuillEngine, id: &str, kind: &str, properties: Value) {
+        apply(
+            e,
+            "defineStyle",
+            json!({"id": id, "name": id, "kind": kind, "properties": properties}),
+        );
+    }
+
+    fn styles(e: &mut QuillEngine) -> Value {
+        apply(e, "listStyles", json!({})).data["styles"].clone()
+    }
+
+    fn block_style_id(e: &mut QuillEngine, block: usize) -> Value {
+        describe(e)["blocks"][block]["style_id"].clone()
+    }
+
+    #[test]
+    fn define_update_remove_list_styles_and_validation() {
+        let mut e = engine();
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 0);
+        define(&mut e, "emph", "character", json!({"italic": true}));
+        define(
+            &mut e,
+            "title",
+            "paragraph",
+            json!({"bold": true, "font_size": 18.0}),
+        );
+        let list = styles(&mut e);
+        assert_eq!(list.as_array().unwrap().len(), 2);
+        // sorted by id: emph before title
+        assert_eq!(list[0]["id"], "emph");
+        assert_eq!(list[0]["kind"], "character");
+        assert_eq!(list[1]["properties"]["font_size"], 18.0);
+
+        // updateStyle replaces named fields only
+        apply(
+            &mut e,
+            "updateStyle",
+            json!({"id": "emph", "name": "Emphasis", "properties": {"bold": true}}),
+        );
+        let list = styles(&mut e);
+        assert_eq!(list[0]["name"], "Emphasis");
+        assert_eq!(list[0]["properties"], json!({"bold": true}));
+        // no-field update is eventless
+        let r = apply(&mut e, "updateStyle", json!({"id": "emph"}));
+        assert!(r.events.is_empty());
+
+        // validation: dup id, bad kind, bad properties, unknown id
+        assert_eq!(
+            err(
+                &mut e,
+                "defineStyle",
+                json!({"id": "emph", "name": "x", "kind": "character", "properties": {}}),
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        assert!(err(
+            &mut e,
+            "defineStyle",
+            json!({"id": "s", "name": "x", "kind": "section", "properties": {}}),
+        )
+        .code
+            == ErrorCode::Validation);
+        assert!(err(
+            &mut e,
+            "defineStyle",
+            json!({"id": "s", "name": "x", "kind": "character", "properties": {"font_size": 99999}}),
+        )
+        .code
+            == ErrorCode::Validation);
+        assert!(err(
+            &mut e,
+            "defineStyle",
+            json!({"id": " ", "name": "x", "kind": "character", "properties": {}}),
+        )
+        .code
+            == ErrorCode::Validation);
+        assert!(err(&mut e, "updateStyle", json!({"id": "ghost"})).code
+            == ErrorCode::Validation);
+        assert!(err(&mut e, "removeStyle", json!({"id": "ghost"})).code
+            == ErrorCode::Validation);
+
+        // undo chain: remove → update → define ×2 all replay
+        apply(&mut e, "removeStyle", json!({"id": "emph"}));
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
+        assert!(e.undo().unwrap());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 2);
+        assert!(e.undo().unwrap());
+        assert_eq!(styles(&mut e)[0]["name"], "emph");
+        assert!(e.undo().unwrap());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
+        assert!(e.undo().unwrap());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 0);
+        assert!(e.redo().unwrap());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn apply_named_style_copies_properties_with_precedence() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abcdef");
+        // pre-existing italic on "cd"
+        apply(
+            &mut e,
+            "applyStyle",
+            json!({"from":{"block":0,"offset":2},"to":{"block":0,"offset":4},"style":{"italic":true}}),
+        );
+        define(
+            &mut e,
+            "emph",
+            "character",
+            json!({"bold": true, "color": "#ff0000"}),
+        );
+        let r = apply(
+            &mut e,
+            "applyNamedStyle",
+            json!({"style_id": "emph", "from": {"block":0,"offset":1}, "to": {"block":0,"offset":5}}),
+        );
+        assert!(r
+            .events
+            .iter()
+            .any(|ev| ev.kind == "document:changed"));
+        let d = describe(&mut e);
+        let inls = d["blocks"][0]["inlines"].as_array().unwrap();
+        // runs split at the pre-existing italic boundary: a|b|cd|e|f
+        let seg = |t: &str| {
+            inls.iter()
+                .find(|i| i["text"].as_str() == Some(t))
+                .unwrap()
+                .clone()
+        };
+        assert_eq!(seg("a")["style"]["bold"], false);
+        assert_eq!(seg("b")["style"]["bold"], true);
+        assert_eq!(seg("b")["style"]["color"], "#ff0000");
+        assert_eq!(seg("cd")["style"]["italic"], true);
+        assert_eq!(seg("cd")["style"]["bold"], true);
+        assert_eq!(seg("e")["style"]["bold"], true);
+        assert_eq!(seg("f")["style"]["bold"], false);
+
+        // undo restores pre-application inline styles in one step
+        assert!(e.undo().unwrap());
+        let d = describe(&mut e);
+        let inls = d["blocks"][0]["inlines"].as_array().unwrap();
+        assert!(inls.iter().all(|i| i["style"]["bold"] != true));
+        assert!(e.redo().unwrap());
+
+        // kind mismatch and unknown id reject; state unchanged
+        define(&mut e, "hd", "paragraph", json!({"bold": true}));
+        let before = e.snapshot().unwrap();
+        assert!(err(
+            &mut e,
+            "applyNamedStyle",
+            json!({"style_id": "hd", "from": {"block":0,"offset":0}, "to": {"block":0,"offset":1}}),
+        )
+        .code
+            == ErrorCode::Validation);
+        assert!(err(
+            &mut e,
+            "applyNamedStyle",
+            json!({"style_id": "ghost", "from": {"block":0,"offset":0}, "to": {"block":0,"offset":1}}),
+        )
+        .code
+            == ErrorCode::Validation);
+        // out-of-bounds range rejects
+        assert!(err(
+            &mut e,
+            "applyNamedStyle",
+            json!({"style_id": "emph", "from": {"block":0,"offset":0}, "to": {"block":9,"offset":0}}),
+        )
+        .code
+            == ErrorCode::OutOfBounds);
+        // collapsed range is eventless
+        let r = apply(
+            &mut e,
+            "applyNamedStyle",
+            json!({"style_id": "emph", "from": {"block":0,"offset":2}, "to": {"block":0,"offset":2}}),
+        );
+        assert!(r.events.is_empty());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+
+    #[test]
+    fn set_block_style_references_and_stamps() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "hello");
+        apply(&mut e, "insertBlock", json!({"index": 1}));
+        insert(&mut e, 1, 0, "world");
+        define(
+            &mut e,
+            "title",
+            "paragraph",
+            json!({"bold": true, "font_size": 18.0}),
+        );
+        define(&mut e, "emph", "character", json!({"italic": true}));
+        apply(
+            &mut e,
+            "setBlockStyle",
+            json!({"block": 0, "style_id": "title"}),
+        );
+        assert_eq!(block_style_id(&mut e, 0), "title");
+        assert!(block_style_id(&mut e, 1).is_null());
+        let d = describe(&mut e);
+        assert_eq!(d["blocks"][0]["inlines"][0]["style"]["bold"], true);
+        assert_eq!(d["blocks"][0]["inlines"][0]["style"]["font_size"], 18.0);
+        assert_eq!(d["blocks"][1]["inlines"][0]["style"]["bold"], false);
+
+        // character style id rejects on setBlockStyle; unknown id rejects
+        let before = e.snapshot().unwrap();
+        assert!(err(
+            &mut e,
+            "setBlockStyle",
+            json!({"block": 0, "style_id": "emph"}),
+        )
+        .code
+            == ErrorCode::Validation);
+        assert!(err(
+            &mut e,
+            "setBlockStyle",
+            json!({"block": 0, "style_id": "ghost"}),
+        )
+        .code
+            == ErrorCode::Validation);
+        assert!(err(
+            &mut e,
+            "setBlockStyle",
+            json!({"block": 9, "style_id": "title"}),
+        )
+        .code
+            == ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+
+        // split inherits the paragraph reference on both halves; merge keeps head
+        apply(&mut e, "splitBlock", json!({"at": {"block": 0, "offset": 2}}));
+        assert_eq!(block_style_id(&mut e, 0), "title");
+        assert_eq!(block_style_id(&mut e, 1), "title");
+        apply(&mut e, "mergeBlock", json!({"index": 1}));
+        assert_eq!(block_style_id(&mut e, 0), "title");
+        assert_eq!(describe(&mut e)["blocks"].as_array().unwrap().len(), 2);
+
+        // undo/redo of setBlockStyle restores reference and stamped props
+        assert!(e.undo().unwrap()); // merge undone
+        assert!(e.undo().unwrap()); // split undone
+        assert_eq!(block_style_id(&mut e, 0), "title");
+        assert!(e.undo().unwrap()); // setBlockStyle undone
+        assert!(block_style_id(&mut e, 0).is_null());
+        assert_eq!(describe(&mut e)["blocks"][0]["inlines"][0]["style"]["bold"], false);
+        assert!(e.redo().unwrap());
+        assert_eq!(block_style_id(&mut e, 0), "title");
+
+        // clearing with null drops only the reference, not stamped props
+        apply(
+            &mut e,
+            "setBlockStyle",
+            json!({"block": 0, "style_id": null}),
+        );
+        assert!(block_style_id(&mut e, 0).is_null());
+        assert_eq!(describe(&mut e)["blocks"][0]["inlines"][0]["style"]["bold"], true);
+
+        // removeStyle clears dangling block references atomically
+        apply(
+            &mut e,
+            "setBlockStyle",
+            json!({"block": 0, "style_id": "title"}),
+        );
+        apply(&mut e, "removeStyle", json!({"id": "title"}));
+        assert!(block_style_id(&mut e, 0).is_null());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
+        // undo restores both the definition and the block reference
+        assert!(e.undo().unwrap());
+        assert_eq!(block_style_id(&mut e, 0), "title");
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn styles_persist_through_snapshot_and_new_clears() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "styled");
+        define(&mut e, "emph", "character", json!({"italic": true}));
+        define(&mut e, "title", "paragraph", json!({"bold": true}));
+        apply(
+            &mut e,
+            "applyNamedStyle",
+            json!({"style_id": "emph", "from": {"block":0,"offset":0}, "to": {"block":0,"offset":6}}),
+        );
+        apply(
+            &mut e,
+            "setBlockStyle",
+            json!({"block": 0, "style_id": "title"}),
+        );
+        let bytes = e.snapshot().unwrap();
+        // schema:3 wrapper now carries styles alongside bookmarks
+        let payload = decode_envelope(&bytes).unwrap().1;
+        let v: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(v["schema"], 3);
+        assert_eq!(v["document"]["styles"].as_array().unwrap().len(), 2);
+
+        let mut re = engine();
+        re.restore(&bytes).unwrap();
+        assert_eq!(styles(&mut re).as_array().unwrap().len(), 2);
+        assert_eq!(block_style_id(&mut re, 0), "title");
+        assert_eq!(describe(&mut re)["blocks"][0]["inlines"][0]["style"]["italic"], true);
+        // describe/blocks round-trip: snapshot of restored equals original
+        assert_eq!(re.snapshot().unwrap(), bytes);
+
+        // `new` clears styles and references; undo restores them
+        apply(&mut e, "new", json!({}));
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 0);
+        assert!(block_style_id(&mut e, 0).is_null());
+        assert!(e.undo().unwrap());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 2);
+        assert_eq!(block_style_id(&mut e, 0), "title");
+    }
+
+    #[test]
+    fn style_snapshot_rejects_hostile_and_future_payloads() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "x");
+        let before = e.snapshot().unwrap();
+        let wrap = |schema: u32, document: Value| {
+            encode_envelope(
+                serde_json::to_vec(&json!({
+                    "kind": "quill", "schema": schema, "document": document
+                }))
+                .unwrap()
+                .as_slice(),
+            )
+        };
+        let one_block = || {
+            json!([{"kind":"para","inlines":[{"text":"x","style":{}}]}])
+        };
+        let good_style = || {
+            json!({"id":"s1","name":"S","kind":"character","properties":{"bold":true}})
+        };
+        // schema:2 carrying styles rejects rather than dropping them
+        assert!(e
+            .restore(&wrap(
+                2,
+                json!({"blocks": one_block(), "styles": [good_style()]})
+            ))
+            .is_err());
+        // unwrapped payload with a stray styles key rejects
+        let stray = encode_envelope(
+            serde_json::to_vec(&json!({
+                "blocks": one_block(),
+                "styles": [good_style()]
+            }))
+            .unwrap()
+            .as_slice(),
+        );
+        assert!(e.restore(&stray).is_err());
+        // schema:3 hostile style documents reject and leave state untouched
+        let styled_block = || {
+            json!([{"kind":"para","style_id":"s1","inlines":[{"text":"x","style":{}}]}])
+        };
+        for document in [
+            // duplicate ids
+            json!({"blocks": one_block(), "bookmarks": [], "styles": [good_style(), good_style()]}),
+            // blank id / control-char name
+            json!({"blocks": one_block(), "bookmarks": [], "styles": [
+                {"id":" ","name":"S","kind":"character","properties":{}}]}),
+            json!({"blocks": one_block(), "bookmarks": [], "styles": [
+                {"id":"s2","name":"a\nb","kind":"character","properties":{}}]}),
+            // unknown kind
+            json!({"blocks": one_block(), "bookmarks": [], "styles": [
+                {"id":"s3","name":"S","kind":"section","properties":{}}]}),
+            // stray def field (deny_unknown_fields)
+            json!({"blocks": one_block(), "bookmarks": [], "styles": [
+                {"id":"s4","name":"S","kind":"character","properties":{},"junk":1}]}),
+            // invalid properties (font_size out of range)
+            json!({"blocks": one_block(), "bookmarks": [], "styles": [
+                {"id":"s5","name":"S","kind":"character","properties":{"font_size":99999}}]}),
+            // properties not an object
+            json!({"blocks": one_block(), "bookmarks": [], "styles": [
+                {"id":"s6","name":"S","kind":"character","properties":"bold"}]}),
+            // block references unknown style
+            json!({"blocks": styled_block(), "bookmarks": [], "styles": []}),
+            // block references a character style
+            json!({"blocks": styled_block(), "bookmarks": [], "styles": [good_style()]}),
+            // over the style cap
+            json!({"blocks": one_block(), "bookmarks": [], "styles": (0..257)
+                .map(|i| json!({"id":format!("s{i}"),"name":"S","kind":"character","properties":{}}))
+                .collect::<Vec<_>>()}),
+        ] {
+            assert!(e.restore(&wrap(3, document)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before, "state untouched");
+        }
+        // a well-formed schema:3 styles document restores
+        let ok = wrap(
+            3,
+            json!({"blocks": one_block(), "bookmarks": [], "styles": [
+                {"id":"s1","name":"S","kind":"paragraph","properties":{"bold":true}}]}),
+        );
+        e.restore(&ok).unwrap();
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn style_ops_compose_in_batch_and_import_docx_clears() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        let r = e
+            .apply(Command::new(
+                ignition_core::OP_BATCH,
+                json!({"commands": [
+                    {"op": "defineStyle", "payload": {"id": "emph", "name": "Emph", "kind": "character", "properties": {"italic": true}}},
+                    {"op": "applyNamedStyle", "payload": {"style_id": "emph", "from": {"block": 0, "offset": 0}, "to": {"block": 0, "offset": 3}}}
+                ]}),
+            ))
+            .unwrap();
+        assert!(r
+            .events
+            .iter()
+            .any(|ev| ev.kind == "document:changed"));
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
+        assert_eq!(describe(&mut e)["blocks"][0]["inlines"][0]["style"]["italic"], true);
+        // one undo entry restores both the definition and the inline style
+        assert!(e.undo().unwrap());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 0);
+        assert_eq!(describe(&mut e)["blocks"][0]["inlines"][0]["style"]["italic"], false);
+        assert!(e.redo().unwrap());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
+
+        // importDocx replaces the document and clears styles; undo restores
+        define(&mut e, "para", "paragraph", json!({"bold": true}));
+        apply(
+            &mut e,
+            "setBlockStyle",
+            json!({"block": 0, "style_id": "para"}),
+        );
+        let bytes = docx::export_docx(&e.blocks).unwrap();
+        apply(&mut e, "importDocx", json!({"bytes_b64": base64_encode(&bytes)}));
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 0);
+        assert!(block_style_id(&mut e, 0).is_null());
+        assert!(e.undo().unwrap());
+        assert_eq!(styles(&mut e).as_array().unwrap().len(), 2);
+        assert_eq!(block_style_id(&mut e, 0), "para");
     }
 }
