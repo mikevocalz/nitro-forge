@@ -705,8 +705,9 @@ mod tests {
         set_rule(&mut e, ("A1", "A1"), ">5", json!({"bold": true, "fill": "#123456"}));
         set_rule(&mut e, ("B1", "B1"), "x", json!({"underline": true}));
         let saved = e.snapshot().unwrap();
-        // Conditional rules emit the schema:3 wrapper (the highest tally
-        // schema; schema:2 is validations-only, schema:1 the legacy wrapper).
+        // Conditional rules emit the schema:3 wrapper (schema:4 is the
+        // filters tier, schema:2 validations-only, schema:1 the legacy
+        // wrapper).
         let payload: Value = serde_json::from_slice(decode_envelope(&saved).unwrap().1).unwrap();
         assert_eq!(payload["kind"], json!("tally"));
         assert_eq!(payload["schema"], json!(3));
@@ -747,9 +748,9 @@ mod tests {
         let good = e.snapshot().unwrap();
         let payload: Value = serde_json::from_slice(decode_envelope(&good).unwrap().1).unwrap();
         let mut bad = payload.clone();
-        // Schemas beyond the accepted 1–3 range must fail closed.
+        // Schemas beyond the accepted 1–4 range must fail closed.
         let mut v4 = payload.clone();
-        v4["schema"] = json!(4);
+        v4["schema"] = json!(5);
         assert!(e.restore(&encode_envelope(&serde_json::to_vec(&v4).unwrap())).is_err());
         assert_eq!(e.snapshot().unwrap(), good);
         let rule = |mut r: Value| {

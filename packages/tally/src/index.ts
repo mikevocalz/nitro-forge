@@ -34,6 +34,11 @@ export const OPS = {
   clearConditionalFormat: "clearConditionalFormat",
   getConditionalFormats: "getConditionalFormats",
   evaluateConditionalFormats: "evaluateConditionalFormats",
+  sortRange: "sortRange",
+  setFilter: "setFilter",
+  clearFilter: "clearFilter",
+  getFilters: "getFilters",
+  evaluateFilters: "evaluateFilters",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -200,6 +205,65 @@ export interface ConditionalMatch {
   addr: string;
   computed: CellValue;
   matches: ConditionalRuleInfo[];
+}
+
+/**
+ * One key of a `sortRange` call: exactly one of `column`/`offset`, enforced
+ * by the discriminated union — `{}` and `{column, offset}` both fail to
+ * typecheck (the engine rejects them too).
+ */
+export type SortKey =
+  | {
+      /** Column letter inside the sort range, e.g. `"B"`. */
+      column: string;
+      offset?: never;
+      /** Sort direction; defaults to ascending. */
+      ascending?: boolean;
+    }
+  | {
+      /** 0-based column offset from the range's left edge. */
+      offset: number;
+      column?: never;
+      /** Sort direction; defaults to ascending. */
+      ascending?: boolean;
+    };
+
+/**
+ * Durable row-filter rule bound to one sheet. `range` is a canonical
+ * `"A1"`/`"A1:B2"`; `column` is an optional column letter inside `range`.
+ * Filters hide rows — they never delete cells — and visibility is derived
+ * live from computed values, so it stays correct across edits and undo.
+ */
+export interface FilterRuleInfo {
+  id: number;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  range: string;
+  /** Present only for single-column filters. */
+  column?: string;
+  /** COUNTIF-style criteria string, same matcher as conditional formats. */
+  criteria: string;
+}
+
+/** One row of an `evaluateFilters` report (all-rules mode). */
+export interface FilterRowVisibility {
+  /** 1-based sheet row number. */
+  row: number;
+  /** True when every covering rule passes — the row a host should show. */
+  visible: boolean;
+  /** Ids of covering rules the row satisfied. */
+  matched: number[];
+  /** Ids of covering rules the row failed (these hide the row). */
+  failed: number[];
+}
+
+/** One row of an `evaluateFilters` report (single-rule `id` mode). */
+export interface FilterRowMatch {
+  /** 1-based sheet row number. */
+  row: number;
+  /** Whether the row passes the selected rule; rows outside its range pass. */
+  matched: boolean;
 }
 
 export class TallyDocument {
@@ -397,6 +461,79 @@ export class TallyDocument {
       range,
       ...(sheet === undefined ? {} : { sheet }),
     });
+  }
+  /**
+   * Stable sort of whole rows inside `range` on `sheet` (name or index;
+   * default active) by computed key-cell values. Keys are tried in order;
+   * rows equal on every key keep their original order. Formulas move
+   * verbatim — references are NOT rewritten (see docs/ENGINE_OPS.md).
+   * `hasHeader` keeps the range's first row in place.
+   */
+  sortRange(
+    range: { from: string; to: string },
+    keys: readonly SortKey[],
+    options?: { sheet?: string | number; hasHeader?: boolean },
+  ) {
+    return this.call<{ changed: number; sorted_rows: number }>(OPS.sortRange, {
+      range,
+      keys: [...keys],
+      ...(options?.sheet === undefined ? {} : { sheet: options.sheet }),
+      ...(options?.hasHeader === undefined ? {} : { has_header: options.hasHeader }),
+    });
+  }
+  /**
+   * Append a row-filter rule to `sheet` (name or index; default active).
+   * `column` restricts the criteria to one column inside `range`; absent
+   * means every cell of the row's range slice must satisfy the criteria.
+   * An identical existing rule is an eventless no-op.
+   */
+  setFilter(
+    range: { from: string; to: string },
+    criteria: string,
+    options?: { sheet?: string | number; column?: string },
+  ) {
+    return this.call<{ rule: FilterRuleInfo }>(OPS.setFilter, {
+      range,
+      criteria,
+      ...(options?.sheet === undefined ? {} : { sheet: options.sheet }),
+      ...(options?.column === undefined ? {} : { column: options.column }),
+    });
+  }
+  /**
+   * Remove filter rules: by rule `id`, or every rule on `sheet`
+   * (default active) intersecting `range`. Exactly one form is required.
+   */
+  clearFilter(target: number | { from: string; to: string }, sheet?: string | number) {
+    const payload = typeof target === "number"
+      ? { id: target }
+      : { range: target, ...(sheet === undefined ? {} : { sheet }) };
+    return this.call<{ cleared: number }>(OPS.clearFilter, payload);
+  }
+  /** Read-only filter rule list; `sheet` filters to one sheet, absent lists all. */
+  getFilters(sheet?: string | number) {
+    return this.call<{ rules: FilterRuleInfo[] }>(OPS.getFilters, {
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Read-only per-row filter report over `range` on `sheet` (default
+   * active). Without `id`, each row reports `visible` plus the `matched`/
+   * `failed` covering-rule ids; with `id`, each row reports `matched`
+   * against that one rule. `visible:false` rows are the ones a host should
+   * hide — the engine never deletes or hides cells itself.
+   */
+  evaluateFilters(
+    range: { from: string; to: string },
+    options?: { sheet?: string | number; id?: number },
+  ) {
+    return this.call<{ rows: (FilterRowVisibility | FilterRowMatch)[] }>(
+      OPS.evaluateFilters,
+      {
+        range,
+        ...(options?.sheet === undefined ? {} : { sheet: options.sheet }),
+        ...(options?.id === undefined ? {} : { id: options.id }),
+      },
+    );
   }
   getCell(addr: string) {
     return this.call<{ raw: string; computed: CellValue; format?: CellFormat }>(OPS.getCell, { addr });

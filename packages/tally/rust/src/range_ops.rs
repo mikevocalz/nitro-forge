@@ -56,11 +56,27 @@ impl Rect {
 }
 
 impl TallyEngine {
-    fn commit_cells(&mut self, staged: Vec<(String, String)>) -> CommandResult {
+    /// Stage-and-commit against the active sheet. Ops whose payload resolves
+    /// a non-active target (`sortRange`) must call
+    /// `commit_cells_on_sheet` instead — prior-value lookup, the undo entry's
+    /// sheet id and the mutation all follow the sheet index, never
+    /// `doc.active`.
+    pub(super) fn commit_cells(&mut self, staged: Vec<(String, String)>) -> CommandResult {
+        self.commit_cells_on_sheet(self.doc.active, staged)
+    }
+
+    /// `commit_cells` bound to an explicit sheet index: unchanged raws are
+    /// filtered against *that* sheet, the undo entry records *that* sheet's
+    /// id, and the mutation writes *that* sheet's cells.
+    pub(super) fn commit_cells_on_sheet(
+        &mut self,
+        index: usize,
+        staged: Vec<(String, String)>,
+    ) -> CommandResult {
         let staged: Vec<_> = staged
             .into_iter()
             .filter(|(addr, raw)| {
-                self.active_sheet()
+                self.doc.sheets[index]
                     .cells
                     .get(addr)
                     .map(|cell| cell.raw.as_str())
@@ -77,15 +93,16 @@ impl TallyEngine {
             .map(|(addr, _)| {
                 (
                     addr.clone(),
-                    self.active_sheet().cells.get(addr).map(|c| c.raw.clone()),
+                    self.doc.sheets[index].cells.get(addr).map(|c| c.raw.clone()),
                 )
             })
             .collect();
+        let sheet_id = self.doc.sheets[index].id;
         self.journal.record(UndoEntry::Cells {
-            sheet: self.active_sheet().id,
+            sheet: sheet_id,
             cells,
         });
-        let sheet = self.active_sheet_mut();
+        let sheet = &mut self.doc.sheets[index];
         for (addr, raw) in staged {
             if raw.is_empty() {
                 sheet.cells.remove(&addr);

@@ -1053,8 +1053,8 @@ mod tests {
         let mut p4: Value = serde_json::from_slice(decode_envelope(&s4).unwrap().1).unwrap();
         assert_eq!(p4["schema"], json!(1));
         e.restore(&s4).unwrap();
-        // Schemas beyond the accepted 1–3 range must fail closed.
-        p4["schema"] = json!(4);
+        // Schemas beyond the accepted 1–4 range must fail closed.
+        p4["schema"] = json!(5);
         assert!(e.restore(&encode_envelope(&serde_json::to_vec(&p4).unwrap())).is_err());
     }
 

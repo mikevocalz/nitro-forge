@@ -263,6 +263,15 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
         result.unwrap_or_else(|error| error)
     }
 
+    /// Charge `n` units of the shared per-evaluator conditional allowance for
+    /// work that is not a criteria match — `sortRange` uses this for key-cell
+    /// evaluations and sort comparisons so large sorts cannot run unbounded.
+    /// Exhaustion returns the `#NUM!` error value; callers map it to an op
+    /// error before mutating.
+    pub fn charge_work(&mut self, n: usize) -> Result<(), Value> {
+        spend(&mut self.conditional_work, n)
+    }
+
     /// Test an already-computed value against `matcher`, sharing the
     /// evaluator's conditional work allowance. Every candidate rule-cell
     /// evaluation is charged one unit up front — numeric comparisons,
