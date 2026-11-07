@@ -26,7 +26,7 @@ export const OPS = {
 } as const;
 
 export type Rect = [number, number, number, number]; // x, y, w, h (PDF user space)
-export type AnnotSubtype = "Text" | "Highlight" | "Underline" | "StrikeOut";
+export type AnnotSubtype = "Text" | "Highlight" | "Underline" | "StrikeOut" | "Square" | "Circle";
 
 export interface Annotation {
   id: number;

@@ -26,8 +26,6 @@ export const FOLIO_DEFERRED_OPS = {
   textPositions: "K-04",
   /** K-06 freehand ink (`/Ink`). */
   inkAnnotation: "K-06",
-  /** K-06 rectangle and ellipse (`/Square`, `/Circle`). */
-  shapeAnnotations: "K-06",
 } as const;
 export type FolioDeferredOp = keyof typeof FOLIO_DEFERRED_OPS;
 
@@ -75,19 +73,19 @@ export async function readFolioReadAloudBlocks(document: Pick<FolioDocument, "pa
 }
 
 /** Tools Folio can save, for `AnnotationToolbar.tools`. */
-export const FOLIO_ANNOTATION_TOOLS = ["select", "note", "highlight", "underline", "strike"] as const;
+export const FOLIO_ANNOTATION_TOOLS = ["select", "note", "highlight", "underline", "strike", "rectangle", "ellipse"] as const;
 export type FolioAnnotationTool = (typeof FOLIO_ANNOTATION_TOOLS)[number];
 
-const SUBTYPE: Record<Exclude<FolioAnnotationTool, "select">, AnnotSubtype> = { note: "Text", highlight: "Highlight", underline: "Underline", strike: "StrikeOut" };
+const SUBTYPE: Record<Exclude<FolioAnnotationTool, "select">, AnnotSubtype> = { note: "Text", highlight: "Highlight", underline: "Underline", strike: "StrikeOut", rectangle: "Square", ellipse: "Circle" };
 
 /**
- * Saves what the active tool made on a page: a note or one axis-aligned horizontal markup quad.
+ * Saves what the active tool made on a page: a note, one axis-aligned horizontal markup quad or a bounded rectangle/ellipse.
  * `rect` is `[x, y, w, h]` in PDF user space, from the host's page view.
  */
 export async function addFolioAnnotation(
   document: Pick<FolioDocument, "addAnnotation">, tool: string, page: number, rect: Rect, contents: string,
 ): Promise<number> {
-  if (tool !== "note" && tool !== "highlight" && tool !== "underline" && tool !== "strike") throw new RangeError(`Folio cannot save a "${tool}" annotation (see FOLIO_DEFERRED_OPS)`);
+  if (tool !== "note" && tool !== "highlight" && tool !== "underline" && tool !== "strike" && tool !== "rectangle" && tool !== "ellipse") throw new RangeError(`Folio cannot save a "${tool}" annotation (see FOLIO_DEFERRED_OPS)`);
   return requireData(await document.addAnnotation(page, rect, contents, SUBTYPE[tool]), "addAnnotation").annot_id;
 }
 

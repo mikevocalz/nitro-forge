@@ -23,7 +23,7 @@ pub(super) fn quad(rect: [f64; 4], markup: bool) -> Result<Option<Vec<Object>>, 
         || bottom >= top
     {
         return Err(EngineError::validation(
-            "markup requires positive nondegenerate rectangle within +/-1000000 PDF units",
+            "annotation requires positive nondegenerate rectangle within +/-1000000 PDF units",
         ));
     }
     // Counterclockwise BL, BR, TR, TL. First edge defines +X text direction.
@@ -33,6 +33,14 @@ pub(super) fn quad(rect: [f64; 4], markup: bool) -> Result<Option<Vec<Object>>, 
             .map(Object::Real)
             .collect(),
     ))
+}
+// Shape dictionaries emit PDF1.4 IC; preserve higher headers and catalog metadata.
+pub(super) fn shape_version(current: &str) -> Result<String,EngineError> {
+    let (major,minor)=current.split_once('.').ok_or_else(||EngineError::validation("unknown PDF header version"))?;
+    let major=major.parse::<u16>().map_err(|_|EngineError::validation("unknown PDF header version"))?;
+    let minor=minor.parse::<u16>().map_err(|_|EngineError::validation("unknown PDF header version"))?;
+    if major==0 {return Err(EngineError::validation("unknown PDF header version"));}
+    Ok(if major==1 && minor<4 {"1.4".into()} else {current.into()})
 }
 #[cfg(test)]
 mod tests {
@@ -131,4 +139,44 @@ mod tests {
         assert!(e.redo().unwrap());
         assert_eq!(points(&e).len(), 8);
     }
+    #[test]
+    fn actual_shape_dictionaries_save_reopen_delete_and_history() {
+        for subtype in ["Square", "Circle"] {
+            let mut e=FolioEngine::new();apply(&mut e,"new",json!({"pages":1}));
+            let id=apply(&mut e,"addAnnotation",json!({"page":0,"rect":[10,20,30,40],"contents":"Shape","subtype":subtype}))["annot_id"].as_u64().unwrap();
+            let inspect=|engine:&FolioEngine|{
+                let d=engine.doc.get_object((id as u32,0)).unwrap().as_dict().unwrap();
+                assert_eq!(d.get(b"Subtype").unwrap().as_name().unwrap(),subtype.as_bytes());
+                assert!(d.get(b"QuadPoints").is_err());assert!(d.get(b"AP").is_err());
+                assert_eq!(d.get(b"BS").unwrap().as_dict().unwrap().get(b"W").unwrap().as_i64().unwrap(),1);
+                assert!(d.get(b"IC").unwrap().as_array().unwrap().is_empty());
+                assert_eq!(d.get(b"C").unwrap().as_array().unwrap(),&vec![Object::Integer(0)]);
+            };inspect(&e);
+            let saved=apply(&mut e,"save",json!({}));let mut reopened=FolioEngine::new();
+            apply(&mut reopened,"open",json!({"bytes_b64":saved["bytes_b64"]}));inspect(&reopened);
+            let snap=e.snapshot().unwrap();reopened.restore(&snap).unwrap();inspect(&reopened);
+            assert!(e.undo().unwrap());assert!(annot_ids(&e.doc,e.page_id(0).unwrap()).unwrap().is_empty());assert!(e.redo().unwrap());inspect(&e);
+            apply(&mut e,"removeAnnotation",json!({"page":0,"id":id}));assert!(annot_ids(&e.doc,e.page_id(0).unwrap()).unwrap().is_empty());assert!(e.undo().unwrap());inspect(&e);
+            for rect in [[0.,0.,0.,1.],[1.,1.,1e-12,1.],[0.,0.,-1.,1.],[1e6,0.,1.,1.]]{
+                let before=e.serialize_doc().unwrap();assert!(e.apply(Command::new("addAnnotation",json!({"page":0,"rect":rect,"contents":"bad","subtype":subtype}))).is_err());assert_eq!(e.serialize_doc().unwrap(),before);
+            }
+        }
+    }
+
+    #[test]
+    fn shape_headers_raise_only_when_required_and_undo_preserves_original_version() {
+        for version in ["1.2","1.3","1.4","1.7","2.0"] {
+            let mut e=FolioEngine::new();apply(&mut e,"new",json!({"pages":1}));e.doc.version=version.into();
+            // Catalog metadata is retained; effective version may already be higher.
+            let root=e.doc.trailer.get(b"Root").unwrap().as_reference().unwrap();e.doc.get_object_mut(root).unwrap().as_dict_mut().unwrap().set("Version",Object::Name(b"1.7".to_vec()));
+            let original=e.serialize_doc().unwrap();let mut imported=FolioEngine::new();apply(&mut imported,"open",json!({"bytes_b64":b64_encode(&original)}));
+            apply(&mut imported,"addAnnotation",json!({"page":0,"rect":[1,2,3,4],"contents":"shape","subtype":"Square"}));
+            assert_eq!(imported.doc.version,if version=="1.2"||version=="1.3" {"1.4"}else{version});
+            assert_eq!(imported.doc.get_object(root).unwrap().as_dict().unwrap().get(b"Version").unwrap().as_name().unwrap(),b"1.7");
+            let saved=imported.serialize_doc().unwrap();assert_eq!(Document::load_mem(&saved).unwrap().version,imported.doc.version);
+            assert!(imported.undo().unwrap());assert_eq!(imported.doc.version,version);assert!(imported.redo().unwrap());assert_eq!(imported.doc.version,shape_version(version).unwrap());
+        }
+        assert!(shape_version("bad").is_err());assert!(shape_version("0.9").is_err());
+    }
+
 }

@@ -484,13 +484,16 @@ impl Engine for FolioEngine {
                     Some(s) if s.eq_ignore_ascii_case("highlight") => "Highlight",
                     Some(s) if s.eq_ignore_ascii_case("underline") => "Underline",
                     Some(s) if s.eq_ignore_ascii_case("strikeout") => "StrikeOut",
+                    Some(s) if s.eq_ignore_ascii_case("square") => "Square",
+                    Some(s) if s.eq_ignore_ascii_case("circle") => "Circle",
                     Some(s) => {
                         return Err(EngineError::validation(format!(
-                            "unsupported annotation subtype '{s}' (expected Text|Highlight|Underline|StrikeOut)"
+                            "unsupported annotation subtype '{s}' (expected Text|Highlight|Underline|StrikeOut|Square|Circle)"
                         )))
                     }
                 };
                 let quad = markup::quad(rect, subtype != "Text")?;
+                let shape_version = if matches!(subtype, "Square" | "Circle") { Some(markup::shape_version(&self.doc.version)?) } else { None };
                 // PDF /Rect is [x1, y1, x2, y2]; payload is [x, y, w, h].
                 let pdf_rect = vec![
                     Object::Real(rect[0] as f32),
@@ -532,8 +535,14 @@ impl Engine for FolioEngine {
                     "Rect" => Object::Array(pdf_rect),
                     "Contents" => lopdf::text_string(contents),
                 };
-                if let Some(quad) = quad { annot.set("QuadPoints", Object::Array(quad)); }
+                if let Some(quad) = quad.filter(|_| matches!(subtype, "Highlight" | "Underline" | "StrikeOut")) { annot.set("QuadPoints", Object::Array(quad)); }
                 if let Some((author, modified)) = metadata { annot.set("T", lopdf::text_string(&author)); annot.set("M", lopdf::text_string(&modified)); }
+                if let Some(version) = shape_version {
+                    self.doc.version = version;
+                    annot.set("BS", dictionary! {"Type"=>"Border", "W"=>1, "S"=>"S"});
+                    annot.set("C", vec![Object::Integer(0)]);
+                    annot.set("IC", Vec::<Object>::new());
+                }
                 let annot_id = self.doc.add_object(Object::Dictionary(annot));
                 match loc {
                     AnnotsLoc::Inline => {

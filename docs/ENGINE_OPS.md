@@ -356,7 +356,7 @@ until `new`/`open`.
 | `open` | `{bytes_b64}` | `{pages, encrypted:false}` | `lopdf::Document::load_mem`; corrupted → Serialization |
 | `pageCount` | `{}` | `{pages}` | |
 | `pageText` | `{page}` | `{text}` | 0-based page; extracts strings from `Tj`/`TJ`/`'`/`"` ops in content stream; may be lossy — documented |
-| `addAnnotation` | `{page,rect:[x,y,w,h],contents,subtype?,author?,modified?}` | `{annot_id}` | real PDF: appends obj to page `/Annots` (`/Subtype /Text|/Highlight|/Underline|/StrikeOut`, `/Rect`, `/Contents`; markup includes `/QuadPoints`) |
+| `addAnnotation` | `{page,rect:[x,y,w,h],contents,subtype?,author?,modified?}` | `{annot_id}` | real PDF: appends obj to page `/Annots` (`/Subtype /Text|/Highlight|/Underline|/StrikeOut|/Square|/Circle`, `/Rect`, `/Contents`; markup includes `/QuadPoints`) |
 | `listAnnotations` | `{page}` | `{annots:[{id,subtype,rect,contents}]}` | |
 | `setAnnotationContents` | `{page,id,contents}` | `{ok}` | page-owned Text/Highlight only; at most 32767 UTF-16 code units (64 KiB including BOM); real PDF text string; same-text request is eventless/no history |
 | `addAnnotationReply` | `{page,id,contents,author,modified}` | `{annot_id}` | Text reply /IRT to a primary Text/Highlight, /RT /R; explicit metadata, bounded nonblank body |
@@ -378,6 +378,8 @@ Admitted graphs require unique page-array ownership, including objects without /
 Canonical reply/resolve bindings require explicit metadata provider, reviewAuthor, isCurrent admission and authoritative host commit(action) gate. The adapter rejects actor mismatch and unsupported mentions, rechecks generation after async provider/read work, rereads thread authority within the gate and checks again before the operation. This is caller-owned serialization, not native expected-revision CAS. Raw PDF dates are retained; timeLabel requires an explicit app formatter. No application-host activation or PDF visual rendering is claimed.
 
 Axis-aligned markup accepts one caller-owned rectangle in default PDF user space. Highlight, Underline and StrikeOut persist required QuadPoints as counterclockwise bottom-left, bottom-right, top-right, top-left (ISO 32000-1 Table179), first edge defining horizontal +X text orientation. Width/height must be positive, all corners within ±1000000 units and distinct after lopdf f32 conversion. All annotation corners must remain finite in f32; creation contents cap at 32767 UTF-16 units. Validation precedes journal/object mutation. No glyph hit testing, crop/rotation transform, multi-line quadrilaterals or appearance stream is inferred. Cross-viewer display, including Acrobat's differing QuadPoints convention, remains unverified. Underline/StrikeOut do not enter the narrower Text/Highlight comment editing/reply/review contract. The pinned AnnotationToolbar supports the added underline/strike tool IDs; host supplies actual page coordinates.
+
+Square/Circle annotations use positive bounded caller rectangles and standard PDF geometry, with an explicit solid one-point black DeviceGray border and transparent interior. They carry no QuadPoints or fabricated appearance stream. Because IC is emitted, headers below PDF1.4 are raised to1.4; higher headers and catalog version metadata remain intact, and undo restores the original header. Unsupported header versions reject before mutation. Generic list/delete/save/history apply; comment text/reply/review still supports only Text/Highlight. Renderer placement, styling controls and viewer visual acceptance remain separate.
 
 ## pitch-engine — `PitchEngine::new()`
 

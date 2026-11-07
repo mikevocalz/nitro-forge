@@ -41,13 +41,16 @@ describe("K-04 / K-18 page text", () => {
 describe("K-06 / K-07 annotations", () => {
   it("saves only the tools Folio can store", async () => {
     const { doc, calls } = fake();
-    expect(FOLIO_ANNOTATION_TOOLS).toEqual(["select", "note", "highlight", "underline", "strike"]);
+    expect(FOLIO_ANNOTATION_TOOLS).toEqual(["select", "note", "highlight", "underline", "strike", "rectangle", "ellipse"]);
     expect(await addFolioAnnotation(doc, "note", 0, [10, 20, 30, 40], "Why?")).toBe(12);
     await addFolioAnnotation(doc, "highlight", 1, [0, 0, 1, 1], "");
     expect(calls).toEqual([["addAnnotation", 0, [10, 20, 30, 40], "Why?", "Text"], ["addAnnotation", 1, [0, 0, 1, 1], "", "Highlight"]]);
     await addFolioAnnotation(doc, "underline", 0, [0,0,2,3], "line");
     await addFolioAnnotation(doc, "strike", 0, [0,0,2,3], "removed");
     expect(calls.slice(-2)).toEqual([["addAnnotation",0,[0,0,2,3],"line","Underline"],["addAnnotation",0,[0,0,2,3],"removed","StrikeOut"]]);
+    await addFolioAnnotation(doc, "rectangle", 0, [1,2,3,4], "box");
+    await addFolioAnnotation(doc, "ellipse", 0, [1,2,3,4], "oval");
+    expect(calls.slice(-2)).toEqual([["addAnnotation",0,[1,2,3,4],"box","Square"],["addAnnotation",0,[1,2,3,4],"oval","Circle"]]);
     await expect(addFolioAnnotation(doc, "ink", 0, [0, 0, 1, 1], "")).rejects.toThrow(/FOLIO_DEFERRED_OPS/);
   });
 
