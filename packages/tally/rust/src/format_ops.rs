@@ -90,7 +90,7 @@ fn valid_number_format(s: &str) -> bool {
         && !s.contains(['"', '\\', '{', '}'])
 }
 
-fn valid_color(s: &str) -> bool {
+pub(super) fn valid_color(s: &str) -> bool {
     s.len() == 7 && s.starts_with('#') && s.bytes().skip(1).all(|b| b.is_ascii_hexdigit())
 }
 

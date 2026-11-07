@@ -671,6 +671,58 @@ Motion layers now carry an optional `effects` stack (at most 16 typed entries: `
 
 Pitch slide transitions now admit `kind:"morph"` and objects carry an optional `morph_name` tag set via `setMorphName`/`clearMorphName`. Names are non-blank, <=128 UTF-8 bytes and unique per slide (the same name on different slides is the intended cross-slide pairing); equal re-tags and absent clears are eventless no-ops, tags die with their objects, and hostile restores reject duplicate or out-of-bound names. DATA ONLY: the engine stores the morph kind and the tags for the host to match objects across adjacent slides; it performs no morph evaluation, interpolation or rendering. Snapshots carrying morph data use the new `{kind:"pitch",schema:5}` wrapper because `morph_name` is an additive field old readers would silently drop (the `"morph"` kind variant already fails closed); readers accept schema:2 through schema:5. Local evidence: `cargo test -p pitch-engine` 71 passed (3 new morph tests), `pnpm --filter @nitro-forge/pitch test` 36 passed across 8 files (2 new nf-cli morph cases), package typecheck clean, `cargo build -p nf-cli` clean. No native target run, morph pixel evaluation or full P14 completion is implied.
 
+## Tally conditional formats source checkpoint (2026-11-07)
+
+Tally persists workbook-level conditional-format rules (`id`, bound sheet id,
+canonical `"A1"`/`"A1:B2"` range, COUNTIF-style `criteria`, bounded `format`
+payload of `bold`/`italic`/`underline`/`color`/`fill`) via new
+`setConditionalFormat`/`clearConditionalFormat`/`getConditionalFormats`/
+`evaluateConditionalFormats` ops. Criteria reuse the `COUNTIF`/`SUMIF`
+matcher (`formula::conditional`, now exposed as `CriteriaMatcher` +
+`Evaluator::match_value`), so comparisons, wildcards and empty-text
+semantics match the aggregate functions exactly; evaluation runs against
+computed cell values through the normal evaluator, so matches track edits,
+undo and reopen. Rules may overlap (unlike validation); an identical
+resubmission is eventless, mutations journal whole-document undo entries,
+`removeSheet` cascade-drops rules into the undo entry with `readd_ok`
+re-admission, and bound-sheet protection guards apply. `evaluateConditionalFormats`
+reports `{addr, computed, matches}` per cell — matches only, no style
+application, merge or rendering (host-side). Rules-carrying snapshots emit
+`{kind:"tally",schema:3}`; after the data-validation slice merged, `restore`
+accepts schemas 1–3 and emits 1/2/3 by feature (bare workbook / validations
+only / conditional rules present, possibly alongside validations) — the
+final three-tier contract is documented in `docs/ENGINE_OPS.md`. Deferred:
+NYC-Tron `kind` variants (formula,
+color-scale, icon-set, data-bar), `styleId`, `enabled`/`stopIfTrue`,
+whole-row/column ranges, pixel output. Local evidence (post-merge with the
+data-validation slice): `cargo test -p tally-engine` 94 passed including a
+new emit+restore schema-matrix test covering bare/schema:2/schema:3/both,
+`pnpm --filter @nitro-forge/tally` 51 Vitest passed across 13 files (2 new
+live `nf-cli` cases), package typecheck clean, `cargo build -p nf-cli`
+clean. Pre-merge this slice alone reported 82 engine tests and 47 Vitest.
+No native target run, XLSX or full P13 completion is implied.
+
+Review follow-up on the same slice: `Evaluator::match_value` now charges one
+unit of the shared 1,000,000-step conditional allowance per candidate
+rule-cell evaluation before criteria-type dispatch, so
+`evaluateConditionalFormats` cannot bypass the work bound via numeric
+comparisons, empty-criteria matches or type mismatches — a rule×cell product
+over the allowance fails the whole op with `#NUM!` (validation error) rather
+than emitting giant or partial output (no truncation flag; the bound is
+fail-closed). `ConditionalRule` gained `deny_unknown_fields` so deferred
+NYC-Tron fields (`enabled`, `stopIfTrue`, `styleId`, `kind`) reject instead
+of being silently dropped. `clearConditionalFormat {id, sheet}` now rejects
+the mixed selectors like `clearValidation` (`sheet:null` stays allowed).
+Restore normalizes each rule's `format` with the op-path `false`-boolean
+collapse before validation, so crafted `{"bold":false}` payloads cannot
+store non-canonical rules, and restore now fails closed when nonempty
+`conditional_formats` arrives under schema<3 or nonempty `validations`
+under schema<2 (including bare workbooks) — emitters always stamp the
+highest table present, so honest payloads are unaffected. Local evidence:
+`cargo test -p tally-engine` 98 passed (4 new), `pnpm --filter
+@nitro-forge/tally` 51 Vitest passed (unchanged — no TS surface change),
+typecheck clean, `cargo build -p nf-cli` clean.
+
 ## Tally data validation source checkpoint (2026-11-07)
 
 Tally persists workbook-level data-validation rules (`{id, sheet, range,
@@ -706,4 +758,8 @@ no longer passes every rule (both match the already-documented semantics).
 current name + `sheet_id`) are documented in `docs/ENGINE_OPS.md`. Local
 evidence: `cargo test -p tally-engine` 87 passed (2 new), `pnpm --filter
 @nitro-forge/tally test` 49 passed, typecheck clean, `cargo build -p
-nf-cli` clean.
+nf-cli` clean. After the conditional-formats slice merged on top, snapshots
+keep the three-tier contract: schema:2 for validations-only documents,
+schema:3 whenever `conditional_formats` is nonempty (which may also carry
+validations), schema:1 otherwise; `restore` accepts 1–3 and both rule tables
+are serde-optional so each restores with the other's table empty.

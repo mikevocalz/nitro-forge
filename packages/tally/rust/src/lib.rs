@@ -11,10 +11,15 @@
 //! and never affects evaluation (see `format_ops`). `names` is the durable
 //! workbook-level named-range table (see `name_ops`): each entry binds a
 //! validated name to one sheet id and a canonical `"A1"`/`"A1:B2"` target;
-//! formulas resolve names bound to the sheet being evaluated. `validations`
-//! is the durable workbook-level data-validation table (see
+//! formulas resolve names bound to the sheet being evaluated.
+//! `validations` is the durable workbook-level data-validation table (see
 //! `validation_ops`): each rule binds a sheet id, a canonical range and a
 //! bounded criteria object evaluated against computed cell values.
+//! `conditional_formats` is the durable workbook-level conditional-format
+//! table (see `conditional_ops`): each rule binds a sheet id, a canonical
+//! range, a COUNTIF-style criteria string and a bounded style payload;
+//! the engine reports which rules match which computed cell values —
+//! applying the styles is host-side.
 //!
 //! Semantics documented for reviewers:
 //! * Cell addresses `$?[A-Z]+$?[0-9]+` (case-insensitive); `$` markers are
@@ -36,6 +41,7 @@
 //!   `new` — a strict superset of the spec's per-cell undo. `restore` and
 //!   `new` reset the journal's view of the world appropriately.
 
+mod conditional_ops;
 mod formula;
 mod format_ops;
 mod name_ops;
@@ -44,6 +50,7 @@ mod sheet_ops;
 mod protection;
 mod validation_ops;
 
+use conditional_ops::ConditionalRule;
 use format_ops::CellFormat;
 use validation_ops::ValidationRule;
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator};
@@ -110,6 +117,12 @@ struct Workbook {
     /// Next id handed out by `setValidation`.
     #[serde(default)]
     next_validation: u64,
+    /// Durable conditional-format rules; empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    conditional_formats: Vec<ConditionalRule>,
+    /// Next id handed out by `setConditionalFormat`.
+    #[serde(default)]
+    next_conditional: u64,
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
@@ -148,6 +161,8 @@ fn blank_workbook() -> Workbook {
         names: Vec::new(),
         validations: Vec::new(),
         next_validation: 1,
+        conditional_formats: Vec::new(),
+        next_conditional: 1,
     }
 }
 
@@ -201,18 +216,20 @@ enum UndoEntry {
     /// A sheet was added; undo removes it.
     AddSheet { sheet_id: u64 },
     /// A sheet was removed; undo re-inserts it at `index`, restores `active`
-    /// and re-adds `dropped_names`/`dropped_validations` (names and rules
-    /// bound to the removed sheet are cascade-dropped on removal).
-    /// Re-admission skips entries whose case-insensitive name twin already
-    /// exists, that would exceed the table caps, or (for rules) that no
-    /// longer satisfy the stored-rule invariants, keeping `doc` inside the
-    /// invariants `restore` enforces.
+    /// and re-adds `dropped_names`/`dropped_validations`/
+    /// `dropped_conditional_formats` (names, validation rules and
+    /// conditional rules bound to the removed sheet are cascade-dropped on
+    /// removal). Re-admission skips entries whose case-insensitive name
+    /// twin already exists, that would exceed the table caps, or (for rules)
+    /// that no longer satisfy the stored-rule invariants, keeping `doc`
+    /// inside the invariants `restore` enforces.
     RemoveSheet {
         index: usize,
         sheet: Sheet,
         prev_active: usize,
         dropped_names: Vec<NamedRange>,
         dropped_validations: Vec<ValidationRule>,
+        dropped_conditional_formats: Vec<ConditionalRule>,
     },
     RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
@@ -355,12 +372,13 @@ impl TallyEngine {
     }
 
     /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet` and
-    /// cascade-dropping names and validation rules bound to the removed
-    /// sheet id. Returns the removed sheet and the dropped entries.
+    /// cascade-dropping names, validation rules and conditional rules bound
+    /// to the removed sheet id. Returns the removed sheet and the dropped
+    /// entries.
     fn remove_sheet_at(
         &mut self,
         idx: usize,
-    ) -> (Sheet, Vec<NamedRange>, Vec<ValidationRule>) {
+    ) -> (Sheet, Vec<NamedRange>, Vec<ValidationRule>, Vec<ConditionalRule>) {
         let removed = self.doc.sheets.remove(idx);
         let len = self.doc.sheets.len();
         if self.doc.active > idx {
@@ -386,7 +404,16 @@ impl TallyEngine {
                 true
             }
         });
-        (removed, dropped, dropped_rules)
+        let mut dropped_conditional = Vec::new();
+        self.doc.conditional_formats.retain(|r| {
+            if r.sheet == removed.id {
+                dropped_conditional.push(r.clone());
+                false
+            } else {
+                true
+            }
+        });
+        (removed, dropped, dropped_rules, dropped_conditional)
     }
 
     // -- op results -----------------------------------------------------------
@@ -481,9 +508,9 @@ impl TallyEngine {
         if self.doc.sheets.len() <= 1 {
             return Err(EngineError::validation("workbook must keep at least one sheet"));
         }
-        // Names and validation rules bound to the removed sheet are
-        // cascade-dropped; the undo entry carries them so undo/redo restore
-        // them exactly.
+        // Names, validation rules and conditional rules bound to the
+        // removed sheet are cascade-dropped; the undo entry carries them so
+        // undo/redo restore them exactly.
         let sheet_id = self.doc.sheets[idx].id;
         let dropped_names: Vec<NamedRange> = self
             .doc
@@ -499,12 +526,20 @@ impl TallyEngine {
             .filter(|v| v.sheet == sheet_id)
             .cloned()
             .collect();
+        let dropped_conditional_formats: Vec<ConditionalRule> = self
+            .doc
+            .conditional_formats
+            .iter()
+            .filter(|r| r.sheet == sheet_id)
+            .cloned()
+            .collect();
         let entry = UndoEntry::RemoveSheet {
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
             prev_active: self.doc.active,
             dropped_names,
             dropped_validations,
+            dropped_conditional_formats,
         };
         self.journal.record(entry);
         self.remove_sheet_at(idx);
@@ -738,7 +773,7 @@ impl TallyEngine {
                 match self.doc.sheets.iter().position(|s| s.id == sheet_id) {
                     Some(idx) => {
                         let prev_active = self.doc.active;
-                        let (removed, dropped_names, dropped_validations) =
+                        let (removed, dropped_names, dropped_validations, dropped_conditional_formats) =
                             self.remove_sheet_at(idx);
                         UndoEntry::RemoveSheet {
                             index: idx,
@@ -746,6 +781,7 @@ impl TallyEngine {
                             prev_active,
                             dropped_names,
                             dropped_validations,
+                            dropped_conditional_formats,
                         }
                     }
                     // Already gone — nothing changed; emit a no-op entry.
@@ -760,6 +796,7 @@ impl TallyEngine {
                 prev_active,
                 dropped_names,
                 dropped_validations,
+                dropped_conditional_formats,
             } => {
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
@@ -794,6 +831,18 @@ impl TallyEngine {
                 for v in dropped_validations {
                     if validation_ops::readd_ok(&self.doc, &v) {
                         self.doc.validations.push(v);
+                    }
+                }
+                // Conditional rules cascade-dropped with the sheet come back
+                // under the same discipline: each is re-admitted only while
+                // it still satisfies the invariants `restore` enforces
+                // (existing sheet, canonical in-bounds range, parseable
+                // criteria, valid format, unique id, under the cap). Rules
+                // cannot be created for a sheet while it is gone, so
+                // conflicts are defensive.
+                for r in dropped_conditional_formats {
+                    if conditional_ops::readd_ok(&self.doc, &r) {
+                        self.doc.conditional_formats.push(r);
                     }
                 }
                 UndoEntry::AddSheet { sheet_id }
@@ -868,6 +917,10 @@ impl Engine for TallyEngine {
             "setValidation" => self.op_set_validation(p),
             "clearValidation" => self.op_clear_validation(p),
             "validateCell" => self.op_validate_cell(p),
+            "setConditionalFormat" => self.op_set_conditional_format(p),
+            "clearConditionalFormat" => self.op_clear_conditional_format(p),
+            "getConditionalFormats" => self.op_get_conditional_formats(p),
+            "evaluateConditionalFormats" => self.op_evaluate_conditional_formats(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -898,23 +951,34 @@ impl Engine for TallyEngine {
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
         // Sheets with a tone, protection flag, stored formats, workbook
-        // names, or validation rules carry durable fields added after the
-        // first release; older readers ignore unknown `Sheet`/`Workbook`
-        // fields, so wrap those documents and let old engines fail
-        // closed instead of silently discarding them. Plain workbooks keep
-        // the legacy payload shape. `validations` is the newest durable
-        // field and `Workbook` does not deny unknown fields, so documents
-        // carrying rules emit schema:2 — schema:1 readers reject them —
-        // while tone/protection/formats/names alone stay schema:1.
+        // names, validation rules, or conditional-format rules carry durable
+        // fields added after the first release; older readers ignore unknown
+        // `Sheet`/`Workbook` fields, so wrap those documents and let old
+        // engines fail closed instead of silently discarding them. Plain
+        // workbooks keep the legacy payload shape. `Workbook` does not deny
+        // unknown fields, so each newer table bumps the schema: documents
+        // carrying only validations emit schema:2, documents carrying
+        // conditional rules emit schema:3 (which may also carry
+        // validations), and tone/protection/formats/names alone stay
+        // schema:1 — older readers reject the higher schemas rather than
+        // silently dropping rules (see docs/ENGINE_OPS.md).
         let has_validations = !self.doc.validations.is_empty();
+        let has_conditional = !self.doc.conditional_formats.is_empty();
         let extended = self.doc.sheets.iter().any(|s| {
             s.tone.is_some() || s.is_protected || !s.formats.is_empty()
         }) || !self.doc.names.is_empty()
-            || has_validations;
+            || has_validations
+            || has_conditional;
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
-                schema: if has_validations { 2 } else { 1 },
+                schema: if has_conditional {
+                    3
+                } else if has_validations {
+                    2
+                } else {
+                    1
+                },
                 document: &self.doc,
             })?
         } else {
@@ -932,17 +996,45 @@ impl Engine for TallyEngine {
                 .iter()
                 .any(|key| object.contains_key(*key))
         });
-        let mut doc: Workbook = if wrapped {
+        let mut doc: Workbook;
+        // Schema of a wrapped snapshot (`None` for a bare legacy Workbook,
+        // which predates every versioned table).
+        let mut snapshot_schema: Option<u32> = None;
+        if wrapped {
             let wrapper: VersionedDoc = serde_json::from_value(value)?;
-            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2) {
+            // schema:2 (validations only) and schema:3 (conditional rules,
+            // possibly alongside validations) are both honored; either
+            // table absent from a document deserializes to its serde
+            // default, so cross-version payloads never lose the other
+            // family's rules.
+            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3) {
                 return Err(EngineError::unsupported(
                     "unsupported Tally snapshot kind/schema",
                 ));
             }
-            wrapper.document
+            snapshot_schema = Some(wrapper.schema);
+            doc = wrapper.document;
         } else {
-            serde_json::from_value(value)?
-        };
+            doc = serde_json::from_value(value)?;
+        }
+        // Fail closed on crafted lower-version payloads smuggling newer
+        // tables: each durable table restores only under the schema that
+        // introduced it — conditional rules need schema:3, validations
+        // schema:2 — and a bare (unwrapped) Workbook predates both. Emit
+        // always stamps the highest table present, so honest payloads are
+        // unaffected; this only rejects hand-built downgrades.
+        if !doc.conditional_formats.is_empty()
+            && snapshot_schema.is_none_or(|s| s < 3)
+        {
+            return Err(EngineError::serialization(
+                "conditional formats require snapshot schema 3",
+            ));
+        }
+        if !doc.validations.is_empty() && snapshot_schema.is_none_or(|s| s < 2) {
+            return Err(EngineError::serialization(
+                "validations require snapshot schema 2",
+            ));
+        }
         if doc.sheets.is_empty() {
             return Err(EngineError::serialization(
                 "workbook must contain at least one sheet",
@@ -1086,6 +1178,63 @@ impl Engine for TallyEngine {
         }
         if doc.next_validation == 0 {
             doc.next_validation = 1;
+        }
+        // Conditional rules get the same hostile-input treatment: bounded
+        // count, unique ids, existing sheet ids, canonical on-sheet ranges
+        // within the shared cell cap, criteria the matcher accepts, and
+        // valid format payloads.
+        if doc.conditional_formats.len() > conditional_ops::MAX_CONDITIONAL_RULES {
+            return Err(EngineError::serialization(
+                "too many conditional format rules",
+            ));
+        }
+        let mut seen_conditional_ids = std::collections::BTreeSet::new();
+        for r in &mut doc.conditional_formats {
+            if !seen_conditional_ids.insert(r.id) {
+                return Err(EngineError::serialization(
+                    "duplicate conditional rule id",
+                ));
+            }
+            if !doc.sheets.iter().any(|s| s.id == r.sheet) {
+                return Err(EngineError::serialization(
+                    "conditional rule references a missing sheet",
+                ));
+            }
+            if !formula::CriteriaMatcher::is_valid(&r.criteria) {
+                return Err(EngineError::serialization(
+                    "invalid conditional criteria",
+                ));
+            }
+            // Normalize before validating so stored rules stay canonical:
+            // `false` booleans collapse to absent exactly like the op path,
+            // keeping identical-resubmission equality and re-serialization
+            // stable for hostile `{"bold":false}` payloads.
+            conditional_ops::normalize_format(&mut r.format);
+            if !conditional_ops::valid_conditional_format(&r.format) {
+                return Err(EngineError::serialization(
+                    "invalid conditional format",
+                ));
+            }
+            let coords = name_ops::parse_refers_to(&r.range)
+                .map_err(|_| EngineError::serialization("invalid conditional range"))?;
+            if (coords.2 - coords.0 + 1) as u64 * (coords.3 - coords.1 + 1) as u64
+                > MAX_GET_RANGE_CELLS
+            {
+                return Err(EngineError::serialization(
+                    "conditional range exceeds 16384 cells",
+                ));
+            }
+            r.range = name_ops::canonical_refers_to(coords);
+        }
+        if let Some(max_id) = doc.conditional_formats.iter().map(|r| r.id).max() {
+            if doc.next_conditional <= max_id {
+                doc.next_conditional = max_id.checked_add(1).ok_or_else(|| {
+                    EngineError::serialization("conditional rule id space exhausted")
+                })?;
+            }
+        }
+        if doc.next_conditional == 0 {
+            doc.next_conditional = 1;
         }
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
@@ -1533,6 +1682,7 @@ mod tests {
             prev_active: 0,
             dropped_names: vec![dropped_name("Foo"), dropped_name("Bar")],
             dropped_validations: Vec::new(),
+            dropped_conditional_formats: Vec::new(),
         });
         assert!(e.undo().unwrap());
         // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
@@ -1574,6 +1724,7 @@ mod tests {
             prev_active: 0,
             dropped_names: vec![dropped_name("Extra")],
             dropped_validations: Vec::new(),
+            dropped_conditional_formats: Vec::new(),
         });
         assert!(e.undo().unwrap());
         assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);
@@ -1712,9 +1863,9 @@ mod tests {
             "active": 0
         });
         for wrapper in [
-            // wrong schema / wrong kind fail closed (schema:2 is the
-            // validation-rules wrapper version and is accepted)
-            json!({"kind":"tally","schema":3,"document":doc}),
+            // wrong schema / wrong kind fail closed (schemas 1–3 are the
+            // accepted tally versions; 4 is beyond them)
+            json!({"kind":"tally","schema":4,"document":doc}),
             json!({"kind":"quill","schema":1,"document":doc}),
             // unknown wrapper keys rejected by deny_unknown_fields
             json!({"kind":"tally","schema":1,"document":doc,"extra":true}),
@@ -1735,6 +1886,147 @@ mod tests {
         e.restore(&encode_envelope(&serde_json::to_vec(&ok).unwrap()))
             .unwrap();
         assert_eq!(get_cell(&mut e, "A1")["computed"], json!(9.0));
+    }
+
+    fn snapshot_schema(e: &TallyEngine) -> (Option<u64>, Value) {
+        let snap = e.snapshot().unwrap();
+        let (_tag, payload) = decode_envelope(&snap).unwrap();
+        let v: Value = serde_json::from_slice(&payload).unwrap();
+        let schema = v.get("schema").and_then(Value::as_u64);
+        (schema, v)
+    }
+
+    #[test]
+    fn snapshot_schema_matrix_emit_and_restore() {
+        // Neither durable table → bare legacy Workbook payload.
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"5"}));
+        let (schema, v) = snapshot_schema(&e);
+        assert_eq!(schema, None);
+        assert!(v.get("sheets").is_some());
+
+        // Validations only → schema:2; restores with empty conditional table.
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"B1","to":"B1"},"rule":{"kind":"list","values":["a"]}}),
+        );
+        let (schema, v) = snapshot_schema(&e);
+        assert_eq!(schema, Some(2));
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        assert_eq!(data(&mut e2, "describe", json!({}))["validations"].as_array().unwrap().len(), 1);
+        assert_eq!(data(&mut e2, "describe", json!({}))["conditional_formats"].as_array().map_or(0, Vec::len), 0);
+
+        // Conditional rules only → schema:3; restores with empty validations.
+        let mut e = TallyEngine::new();
+        data(
+            &mut e,
+            "setConditionalFormat",
+            json!({"range":{"from":"A1","to":"A1"},"rule":{"criteria":">1","format":{"bold":true}}}),
+        );
+        let (schema, v) = snapshot_schema(&e);
+        assert_eq!(schema, Some(3));
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        assert_eq!(data(&mut e2, "describe", json!({}))["conditional_formats"].as_array().unwrap().len(), 1);
+        assert_eq!(data(&mut e2, "describe", json!({}))["validations"].as_array().map_or(0, Vec::len), 0);
+
+        // Both tables → schema:3 carrying both; each restores intact.
+        let mut e = TallyEngine::new();
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"B1","to":"B1"},"rule":{"kind":"list","values":["a"]}}),
+        );
+        data(
+            &mut e,
+            "setConditionalFormat",
+            json!({"range":{"from":"A1","to":"A1"},"rule":{"criteria":">1","format":{"bold":true}}}),
+        );
+        let (schema, v) = snapshot_schema(&e);
+        assert_eq!(schema, Some(3));
+        assert_eq!(v["document"]["validations"].as_array().unwrap().len(), 1);
+        assert_eq!(v["document"]["conditional_formats"].as_array().unwrap().len(), 1);
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        let d = data(&mut e2, "describe", json!({}));
+        assert_eq!(d["validations"].as_array().unwrap().len(), 1);
+        assert_eq!(d["conditional_formats"].as_array().unwrap().len(), 1);
+
+        // A hand-built schema:2 payload (validations only, no conditional
+        // key) restores with an empty conditional table — serde defaults
+        // keep the absent family optional in both directions.
+        let mut e3 = TallyEngine::new();
+        let payload = json!({
+            "kind":"tally","schema":2,
+            "document":{
+                "next_sheet":1,
+                "sheets":[{"id":0,"name":"S","cells":{"A1":{"raw":"1"}}}],
+                "active":0,
+                "validations":[{"id":1,"sheet":0,"range":"A1","criteria":{"kind":"number","min":0}}]
+            }
+        });
+        e3.restore(&encode_envelope(&serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+        let d = data(&mut e3, "describe", json!({}));
+        assert_eq!(d["validations"].as_array().unwrap().len(), 1);
+        assert_eq!(d["conditional_formats"].as_array().map_or(0, Vec::len), 0);
+        // Re-saving keeps schema:2 — nothing was silently promoted.
+        assert_eq!(snapshot_schema(&e3).0, Some(2));
+    }
+
+    #[test]
+    fn restore_rejects_newer_tables_under_lower_or_bare_schema() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        let before = describe(&mut e);
+        let sheet = json!({"id":0,"name":"S","cells":{"A1":{"raw":"1"}}});
+        let conditional = json!([{
+            "id":1,"sheet":0,"range":"A1","criteria":">0","format":{"bold":true}
+        }]);
+        let validation = json!([{
+            "id":1,"sheet":0,"range":"A1","criteria":{"kind":"number","min":0}
+        }]);
+        let doc_with = |extra: Value| {
+            let mut d = json!({
+                "next_sheet":1,
+                "sheets":[sheet.clone()],
+                "active":0
+            });
+            for (k, v) in extra.as_object().unwrap() {
+                d[k.as_str()] = v.clone();
+            }
+            d
+        };
+        for payload in [
+            // Conditional rules smuggled under schema:2, schema:1, or a
+            // bare (unwrapped) Workbook all fail closed.
+            json!({"kind":"tally","schema":2,"document":doc_with(json!({"conditional_formats":conditional.clone()}))}),
+            json!({"kind":"tally","schema":1,"document":doc_with(json!({"conditional_formats":conditional.clone()}))}),
+            doc_with(json!({"conditional_formats":conditional.clone()})),
+            // Same for validations under schema:1 or bare — schema:2 is
+            // the minimum that introduced the table.
+            json!({"kind":"tally","schema":1,"document":doc_with(json!({"validations":validation.clone()}))}),
+            doc_with(json!({"validations":validation.clone()})),
+        ] {
+            let bytes = encode_envelope(&serde_json::to_vec(&payload).unwrap());
+            assert!(e.restore(&bytes).is_err(), "accepted {payload}");
+            assert_eq!(describe(&mut e), before, "state mutated by {payload}");
+        }
+        // Honest payloads are unaffected: schema:3 with conditional rules
+        // (validations optional) and schema:2 with validations only.
+        for (schema, extra) in [
+            (3u32, json!({"conditional_formats":conditional})),
+            (2u32, json!({"validations":validation})),
+        ] {
+            let payload = json!({
+                "kind":"tally","schema":schema,
+                "document":doc_with(extra)
+            });
+            e.restore(&encode_envelope(&serde_json::to_vec(&payload).unwrap()))
+                .unwrap();
+        }
     }
 
     #[test]

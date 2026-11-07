@@ -30,6 +30,10 @@ export const OPS = {
   setValidation: "setValidation",
   clearValidation: "clearValidation",
   validateCell: "validateCell",
+  setConditionalFormat: "setConditionalFormat",
+  clearConditionalFormat: "clearConditionalFormat",
+  getConditionalFormats: "getConditionalFormats",
+  evaluateConditionalFormats: "evaluateConditionalFormats",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -154,6 +158,48 @@ export interface FunctionInfo {
   /** `null` marks a variadic function. */
   max_args: number | null;
   signature: string;
+}
+
+/**
+ * Bounded style payload stored on a conditional-format rule. The engine
+ * reports matches only — applying these styles is host-side. `color` is a
+ * `#RRGGBB` font color, `fill` a `#RRGGBB` background.
+ */
+export interface ConditionalFormat {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  color?: string;
+  fill?: string;
+}
+
+/** Input for `setConditionalFormat`'s `rule` field. */
+export interface ConditionalRuleInput {
+  /** COUNTIF-style criteria: `">=3"`, `"<>apple"`, `"a*"`, `""`, etc. */
+  criteria: string;
+  format: ConditionalFormat;
+}
+
+/**
+ * Durable conditional-format rule bound to one sheet. `range` is a
+ * canonical `"A1"`/`"A1:B2"`; rules may overlap — every match is reported
+ * in creation order and precedence/merge is host-side.
+ */
+export interface ConditionalRuleInfo {
+  id: number;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  range: string;
+  criteria: string;
+  format: ConditionalFormat;
+}
+
+/** One cell row of `evaluateConditionalFormats`: computed value plus every matching rule. */
+export interface ConditionalMatch {
+  addr: string;
+  computed: CellValue;
+  matches: ConditionalRuleInfo[];
 }
 
 export class TallyDocument {
@@ -297,6 +343,58 @@ export class TallyDocument {
   validateCell(addr: string, sheet?: string | number) {
     return this.call<CellValidation>(OPS.validateCell, {
       addr,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Append a conditional-format rule to `sheet` (name or index; default
+   * active). `range` is `{from,to}`; an identical existing rule is an
+   * eventless no-op. Overlaps are allowed.
+   */
+  setConditionalFormat(
+    range: { from: string; to: string },
+    rule: ConditionalRuleInput,
+    sheet?: string | number,
+  ) {
+    return this.call<{ rule: ConditionalRuleInfo }>(OPS.setConditionalFormat, {
+      range,
+      rule,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Remove conditional rules: either `{id}` for one rule, or
+   * `{range, sheet?}` removing every rule on that sheet intersecting the
+   * rectangle. Exactly one form is required.
+   */
+  clearConditionalFormat(
+    target: { id: number } | { range: { from: string; to: string }; sheet?: string | number },
+  ) {
+    const payload = "id" in target
+      ? { id: target.id }
+      : {
+          range: target.range,
+          ...(target.sheet === undefined ? {} : { sheet: target.sheet }),
+        };
+    return this.call<{ cleared: number }>(OPS.clearConditionalFormat, payload);
+  }
+  /** Read-only rule list; `sheet` filters to one sheet, absent lists all. */
+  getConditionalFormats(sheet?: string | number) {
+    return this.call<{ rules: ConditionalRuleInfo[] }>(OPS.getConditionalFormats, {
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Read-only match report: per cell in `range` on `sheet` (default active),
+   * the computed value and every rule whose criteria it satisfies. Reports
+   * matches only — the engine does not apply or render styles.
+   */
+  evaluateConditionalFormats(
+    range: { from: string; to: string },
+    sheet?: string | number,
+  ) {
+    return this.call<{ cells: ConditionalMatch[] }>(OPS.evaluateConditionalFormats, {
+      range,
       ...(sheet === undefined ? {} : { sheet }),
     });
   }
