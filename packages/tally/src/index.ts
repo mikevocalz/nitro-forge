@@ -524,9 +524,9 @@ export interface PivotInfo {
     /** Canonical `"A1"`/`"A1:B2"` source range on the source sheet. */
     range: string;
   };
-  /** Present only when nonempty — 0-based source column offsets. */
+  /** 0-based source column offsets (always emitted, possibly empty). */
   rows?: number[];
-  /** Present only when nonempty — 0-based source column offsets. */
+  /** 0-based source column offsets (always emitted, possibly empty). */
   columns?: number[];
   values: PivotValueInput[];
   filters?: PivotFilterInput[];

@@ -203,6 +203,11 @@ cap), `rows`/`columns` ≤16 unique field indices each, `values` 1–16
 `{field, values}` entries (unique fields, 1–64 values of 1–512 bytes each)
 and `sort` an optional `{field, ascending}` — field indices are 0-based
 column offsets into the source range, at most 256 pivots per workbook.
+Because offsets are positional, a structural column insert/delete strictly
+inside the source range re-points every field index at/after the edit
+position (the spec survives unchanged unless a delete shrinks the range
+below a referenced index, which drops the pivot); field-index remap is
+deferred with pivot compute/refresh.
 Chart/sparkline specs, views, comments and pivot specs are storage-only —
 the engine never evaluates chart/sparkline data, renders, computes pivot
 grids or writes pivot output cells; hosts read cells

@@ -1219,7 +1219,7 @@ undo/redo, sheet-removal cascade + re-admission, hostile restore,
 schema matrix and structural source-range remap), `cargo build -p
 nf-cli` clean, `pnpm install --prefer-offline` clean, `pnpm --filter
 @nitro-forge/tally test` 77 Vitest passed across 20 files (1 new live
-nf-cli pivots file, 4 cases), `pnpm --filter @nitro-forge/tally
+nf-cli pivots file, 2 cases), `pnpm --filter @nitro-forge/tally
 typecheck` clean. Deferred: pivot compute/refresh/materialization,
 header-name field resolution, pivot UI wiring — no native/device
 acceptance or full P12–P14 completion is implied.
