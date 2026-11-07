@@ -34,11 +34,17 @@
 //!   (detected via `PasswordAlgorithm`) instead of failing mid-decrypt.
 //! - `encrypt` needs a trailer `/ID` for key derivation; documents that lack
 //!   one get a random 16-byte ID before encrypting.
+//! - Page ops (`movePage`/`deletePage`/`duplicatePage`/`insertBlankPage`)
+//!   rewrite the page tree flat under the root `/Pages` node after
+//!   materializing inheritable page attributes, and collect objects that
+//!   become unreachable; `duplicatePage` shares `/Contents`/`/Resources`
+//!   but deep-copies annotations. See `page_ops.rs` and ENGINE_OPS.md.
 
 mod annotation_edit;
 mod ink_link;
 mod markup;
 mod comments;
+mod page_ops;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -799,6 +805,10 @@ impl Engine for FolioEngine {
                     .set("Rotate", Object::Integer(norm as i64));
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
+            "movePage" => self.op_move_page(p),
+            "deletePage" => self.op_delete_page(p),
+            "duplicatePage" => self.op_duplicate_page(p),
+            "insertBlankPage" => self.op_insert_blank(p),
             // --- read-only ---------------------------------------------------
             "pageCount" => Ok(ro(json!({ "pages": self.page_count() }))),
             "pageText" => {
@@ -879,6 +889,7 @@ impl Engine for FolioEngine {
                 Ok(ro(json!({ "annots": annots })))
             }
             "save" => self.op_save(&cmd, None),
+            "listPageInfo" => self.op_list_page_info(),
             "info" => Ok(ro(json!({
                 "pages": self.page_count(),
                 "has_annots": self.has_annots()?,
