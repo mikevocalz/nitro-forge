@@ -1,0 +1,91 @@
+{
+  "role": "argent-environment-inspector",
+  "inspected": "2026-11-07",
+  "is_react_native": true,
+  "is_native_ios": false,
+  "is_native_android": false,
+  "project_type": "Expo React Native monorepo with generated iOS/Android acceptance host",
+  "roots": {
+    "tron": "/Users/mikevocalz/recovered-work/2026-11-05/tron-complete",
+    "forge": "/Users/mikevocalz/recovered-work/2026-11-05/forge-complete",
+    "native_host": "/Users/mikevocalz/recovered-work/2026-11-05/forge-complete/examples/native-cadence"
+  },
+  "pins": {
+    "expo": "58.0.23",
+    "react_native": "0.88.1",
+    "react": "19.3.0",
+    "nitro": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "package_manager": "pnpm@10.32.1",
+    "nyc_tron_release": "0.1.0-alpha.4",
+    "player_candidate": "7.0.0-beta.12-nitrov1-experimental.1",
+    "orientation": "default",
+    "new_architecture": true,
+    "ios_bundle_id": "ai.nitroforge.cadence.native",
+    "android_package": "ai.nitroforge.cadence.studio"
+  },
+  "devices": {
+    "preferred_running": {
+      "platform": "ios",
+      "udid": "BBCC4078-E64D-4642-893B-ACF80ACB29A1",
+      "name": "Forge Completion iPhone Duo",
+      "runtime": "iOS 27.1",
+      "state": "Booted"
+    },
+    "android_running": [],
+    "android_available_avd": "ForgeCompletion_API36",
+    "physical_iphone_selection": "paired, tunnel unavailable; do not select automatically"
+  },
+  "environment": {
+    "free_disk_gib_at_inspection": 12.44,
+    "disk_used_percent": 98,
+    "xcode": "27.1 build27A9269",
+    "swift": "6.4",
+    "java_installed": [
+      "27",
+      "17"
+    ],
+    "java_21_installed": false,
+    "android_platforms": [
+      "33",
+      "36",
+      "37.0"
+    ],
+    "android_build_tools": [
+      "34.0.0",
+      "35.0.0",
+      "36.0.0",
+      "37.0.0"
+    ],
+    "android_ndk_installed": [
+      "27.1.12297006",
+      "28.2.13676358"
+    ],
+    "android_cmake": "3.22.1",
+    "gradle_wrapper": "9.4.1",
+    "metro_8081_or_8082_listener_observed": false
+  },
+  "commands": {
+    "cwd": "examples/native-cadence",
+    "start": "./node_modules/.bin/expo start --port 8081",
+    "media": "FORGE_ACCEPTANCE=media NYC_TRON_ROOT=/Users/mikevocalz/recovered-work/2026-11-05/tron-complete ./node_modules/.bin/expo start --port 8081",
+    "player": "FORGE_ACCEPTANCE=player ./node_modules/.bin/expo start --port 8081",
+    "ios": "./node_modules/.bin/expo run:ios",
+    "android": "./node_modules/.bin/expo run:android",
+    "spm_refresh": "./node_modules/.bin/react-native spm update",
+    "status": "Discovered entrypoints; not validated successful commands. Avoid pnpm dependency pre-run hooks/global Expo54 CLI."
+  },
+  "build_feasibility": {
+    "ios": "Generated xcodeproj references missing ios/build/generated and xcframeworks graph. No xcworkspace. Inspect SwiftPM generation before rebuilding. Native compile requires actual latest source link; Metro alias alone is insufficient.",
+    "android": "NDK29 absent; candidate requests AGP9.3.1/Gradle9.5+, host wrapper9.4.1. Resolve actual compatibility before build.",
+    "policy": "Sequential native builds under disk pressure; preserve source, native metadata and window contract."
+  },
+  "candidate_provenance": {
+    "archive": "tooling/react-native-video-v1/experimental-build-v1.tgz",
+    "sha256": "0758b71466e5b4e60705c3386516f2bd212cb4056a5f38547f0480465800bb44",
+    "upstream_commit": "321b868085e49669a6fe1aa1cfb58e64d63d326f",
+    "source_patch": "tooling/react-native-video-v1/react-native-video-beta12-nitro-v1-experimental-1-recovered.patch",
+    "integration_patch": "tooling/react-native-video-v1/forge-integration-candidate.patch",
+    "comparison": "733/734 archive files match recovered source; remaining Swift file recovered from archive. Generated-output reproduction and full native ABI/player acceptance remain open."
+  },
+  "authorization": "Latest user selected groups1,2,3 (P02-P17), including focused P02/P03 native validation. P19 broad acceptance and release remain separate."
+}

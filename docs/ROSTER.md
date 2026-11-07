@@ -600,3 +600,7 @@ Workspace/presets, contextual overflow, file transfer, color dialog and presente
 ## Recovery phase 6
 
 See [PHASE6](recovery/PHASE6.md): 340 Rust / 446 Forge package tests pass, one pre-existing native check skipped. Actual linked C++ task/binary/cache and FIFO tests and generated-header compilation pass. NYC-Tron has 716 source tests, 435 full Chromium tests and an actual iOS simulator app build. Native runtime, Android decoder, complete RNW app and QNX gates remain explicitly open.
+
+## Focused P02 recovery follow-up, 2026-11-07
+
+`pnpm --filter @nitro-forge/ignition exec vitest run tests/recovery-ownership.test.ts tests/autosave.test.ts tests/collaboration-checkpoint.test.ts` passed 20 tests in 3 files. Seven new fault-injected cases cover Buffer ownership, recovery cancellation boundaries, aggregate cleanup errors and close-during-notification scheduling. This is focused JS/CLI evidence; native/device cancellation and platform storage acceptance remain NOT RUN.
