@@ -564,3 +564,38 @@ fn matte_snapshot_undo_redo_equal_patch_and_hostile_restore() {
         .unwrap();
     assert!(old.state.layers.iter().all(|l| l.matte.is_none()));
 }
+
+#[test]
+fn nested_matte_source_applies_its_own_matte() {
+    let mut e = MotionEngine::new();
+    call(&mut e, "new", json!({"width":3,"height":1,"duration_s":1}));
+    // Innermost mask source: opaque only over x0..x1.
+    let inner = rect(&mut e, 0., 0., 2., 1., [255, 255, 255, 255]);
+    // Middle layer: full-canvas green, itself matted by `inner`, so its own
+    // rendered alpha covers only x0..x1.
+    let middle = rect(&mut e, 0., 0., 3., 1., [0, 255, 0, 255]);
+    call(&mut e, "setLayerMatte", matte(middle, inner, "alpha"));
+    // Target: full-canvas blue matted by the *matted* middle layer. If the
+    // nested matte were dropped while rendering the mask source, the middle
+    // layer's full-canvas alpha would reveal the target at x2 as well.
+    let target = rect(&mut e, 0., 0., 3., 1., [0, 0, 255, 255]);
+    call(&mut e, "setLayerMatte", matte(target, middle, "alpha"));
+    let out = pixels(&mut e, 0.);
+    assert_eq!(px(&out, 0), [0, 0, 255, 255]);
+    assert_eq!(px(&out, 1), [0, 0, 255, 255]);
+    assert_eq!(px(&out, 2), [0, 0, 0, 0]);
+}
+
+#[test]
+fn invisible_matted_target_skips_mask_render() {
+    let mut e = MotionEngine::new();
+    call(&mut e, "new", json!({"width":1,"height":1,"duration_s":1}));
+    let source = rect(&mut e, 0., 0., 1., 1., [255, 255, 255, 255]);
+    let target = rect(&mut e, 0., 0., 1., 1., [0, 0, 255, 255]);
+    call(&mut e, "setLayerMatte", matte(target, source, "alpha"));
+    assert_eq!(px(&pixels(&mut e, 0.), 0), [0, 0, 255, 255]);
+    // Hiding the target skips the matte mask render entirely; the source
+    // still composites on its own and the frame is unchanged otherwise.
+    call(&mut e, "updateLayer", json!({"id":target,"visible":false}));
+    assert_eq!(px(&pixels(&mut e, 0.), 0), [255, 255, 255, 255]);
+}

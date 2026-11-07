@@ -1047,7 +1047,10 @@ impl MotionEngine {
             }
         }
         if let Some(matte) = l.matte {
-            if matte.enabled {
+            // An invisible layer composites to nothing in Prism anyway, so
+            // the matte mask render (a full-scene pass over the source) is
+            // skipped entirely for hidden targets.
+            if matte.enabled && l.visible {
                 let mask = self.matte_mask(view, matte, by_id, time, ctx, depth, matte_depth)?;
                 // Prism masks are canvas-space alpha: paint the derived mask
                 // over an empty mask, then feather it inside Prism.
@@ -1150,6 +1153,9 @@ impl MotionEngine {
         let by_id: BTreeMap<u64, &Layer> = layers.iter().map(|l| (l.id, l)).collect();
         let mut prism = prism_engine::PrismEngine::new(view.width, view.height);
         for l in &layers {
+            // matte_depth restarts at every composition boundary, so the
+            // worst case is MAX_COMP_DEPTH comp renders each taking up to
+            // MAX_MATTE_DEPTH matte hops (transient mask buffers included).
             self.stage_layer(&mut prism, view, l, &by_id, time, ctx, depth, 0, true)?;
         }
         if let Some(c) = ctx {
