@@ -195,3 +195,20 @@ it("refreshes case callbacks with the engine's adjusted scalar selection", async
   const caret = await bindQuillRibbon(doc, { start: { block: 0, offset: 0 }, end: { block: 0, offset: 0 } }, () => {});
   await expect(caret.onChangeCase("lower")).rejects.toThrow("Select text");
 });
+
+it('uses authoritative marker capability for starts, continuation and mixed selection without fake controls',async()=>{
+ const {doc,calls}=fake();
+ const definition={id:1,kind:'numbered',levels:Array.from({length:9},(_,i)=>({format:'decimal',start:5,indent_twips:720*(i+1),hanging_twips:360}))};
+ const item={kind:'list',list:{level:0,definition},inlines:[{text:'Body',style:{}}]};
+ const source={...doc,blocks:vi.fn(()=>ok({blocks:[item,{kind:'para',inlines:[{text:'Between',style:{}}]},item]}))} as unknown as QuillOfficeDocument;
+ for(const capability of [undefined,{version:1,authoritativeMarkers:false},{version:2,authoritativeMarkers:true}])await expect(bindQuillList(source,2,2,()=>{},capability)).rejects.toThrow('nondefault');
+ let refreshed:Awaited<ReturnType<typeof bindQuillList>>|undefined;
+ const capability={version:1,authoritativeMarkers:true};
+ const binding=await bindQuillList(source,2,2,next=>{refreshed=next;},capability);
+ expect(binding.items.map(i=>i.marker)).toEqual(['5.','6.']);expect(binding.selectionStart).toBe(1);
+ await binding.onKindChange('bullet');expect(refreshed!.items.map(i=>i.marker)).toEqual(['5.','6.']);
+ const mixed=await bindQuillList(source,0,2,()=>{},capability);
+ expect(mixed.kind).toBe('mixed');expect(mixed.items.map(i=>i.marker)).toEqual(['5.','','6.']);
+ expect(mixed.onLevelFormatChange).toBeUndefined();expect(mixed.onShiftLevel).toBeUndefined();
+ await mixed.onKindChange('none');expect(calls.at(-1)).toEqual(['setListKind',0,2,'none']);
+});

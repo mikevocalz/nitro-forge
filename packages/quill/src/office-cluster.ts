@@ -1,4 +1,6 @@
 import type { BlockKind, Pos, QuillDocument, Style, ListItem, ListFormat, ListKind, TextCase } from "./index";
+import {deriveQuillListMarkers} from './list-markers';
+export {deriveQuillListMarkers} from './list-markers';
 
 /**
  * Engine side of NYC-Tron's document controls (Forge roster H-03
@@ -164,37 +166,44 @@ export async function bindQuillRibbon(
   };
 }
 
-/** A truthful canonical preview requires one numbering context and default starts. */
+/** Actual source capability from the linked H-07 module; absent/unknown versions keep the old gate. */
+export interface QuillListHostCapabilities {readonly version:number;readonly authoritativeMarkers?:boolean}
+/** Without authoritative marker support the preview needs one context and default starts. */
 export interface QuillListBinding {
- readonly items:readonly {id:string;text:string;level:number}[];
+ readonly items:readonly {id:string;text:string;level:number;marker?:string}[];
  readonly selectionStart:number;readonly selectionEnd:number;
- readonly kind:ListKind;readonly kinds:readonly ListKind[];
+ readonly kind:ListKind|"mixed";readonly kinds:readonly ListKind[];
  readonly levelFormats?:readonly ListFormat[];
  readonly onKindChange:(kind:ListKind)=>Promise<void>;
  readonly onLevelFormatChange?:(level:number,format:ListFormat)=>Promise<void>;
  readonly onShiftLevel?:(direction:1|-1)=>Promise<void>;
 }
-export async function bindQuillList(document:QuillOfficeDocument,first:number,last:number,onChanged:(next:QuillListBinding)=>void):Promise<QuillListBinding>{
+export async function bindQuillList(document:QuillOfficeDocument,first:number,last:number,onChanged:(next:QuillListBinding)=>void,capabilities?:QuillListHostCapabilities):Promise<QuillListBinding>{
  const blocks=await readQuillBlocks(document);
  if(!Number.isSafeInteger(first)||!Number.isSafeInteger(last)||first<0||last<first||last>=blocks.length)throw new RangeError("Block range is out of the document");
+ const authoritative=capabilities?.version===1&&capabilities.authoritativeMarkers===true;
+ const markers=authoritative?deriveQuillListMarkers(blocks):undefined;
  const chosen=blocks.slice(first,last+1),lists=chosen.filter(b=>b.kind==='list');
- let context=chosen,kind:ListKind='none',formats:ListFormat[]|undefined;
+ let context=chosen,kind:ListKind|"mixed"='none',formats:ListFormat[]|undefined;
  if(lists.length){
-  if(lists.length!==chosen.length)throw new Error('Canonical list preview cannot represent mixed list/nonlist paragraphs');
   const list=chosen[0]!.list;
-  if(list){
-   if(chosen.some(b=>b.list?.definition.id!==list.definition.id))throw new Error('Canonical list preview needs one list definition');
-   context=blocks.filter(b=>b.list?.definition.id===list.definition.id);
-   if(list.definition.levels.length!==9||context.some(b=>list.definition.levels[b.list!.level]?.start!==1))throw new Error('Canonical list preview cannot represent nondefault numbering starts');
+  const coherent=lists.length===chosen.length&&(list?chosen.every(b=>b.list?.definition.id===list.definition.id):chosen.every(b=>!b.list));
+  if(!coherent){
+   if(!authoritative)throw new Error(lists.length!==chosen.length?'Canonical list preview cannot represent mixed list/nonlist paragraphs':'Canonical list preview needs one list definition');
+   const kinds=new Set(chosen.map(b=>b.kind==='list'?(b.list?.definition.kind??'bullet'):'none'));
+   kind=kinds.size===1?[...kinds][0]!:'mixed';
+  }else if(list){
+   context=blocks.filter(b=>b.kind==='list'&&b.list?.definition.id===list.definition.id);
+   if(list.definition.levels.length!==9||!authoritative&&context.some(b=>list.definition.levels[b.list!.level]?.start!==1))throw new Error('Canonical list preview cannot represent nondefault numbering starts');
    kind=list.definition.kind;formats=list.definition.levels.map(l=>l.format);
   }else{
-   if(chosen.some(b=>b.list))throw new Error('Canonical list preview needs one list definition');
    let start=first,end=last;while(start>0&&blocks[start-1]!.kind==='list'&&!blocks[start-1]!.list)start--;while(end+1<blocks.length&&blocks[end+1]!.kind==='list'&&!blocks[end+1]!.list)end++;
    context=blocks.slice(start,end+1);kind='bullet';formats=Array<ListFormat>(9).fill('bullet');
   }
  }
- const after=async(write:()=>Promise<unknown>)=>{await write();onChanged(await bindQuillList(document,first,last,onChanged));};
- return {items:context.map(b=>({id:String(b.index),text:b.text,level:b.list?.level??0})),selectionStart:context.findIndex(b=>b.index===first),selectionEnd:context.findIndex(b=>b.index===last),kind,kinds:['none','bullet','numbered','multilevel'],
+
+ const after=async(write:()=>Promise<unknown>)=>{await write();onChanged(await bindQuillList(document,first,last,onChanged,capabilities));};
+ return {items:context.map(b=>({id:String(b.index),text:b.text,level:b.list?.level??0,...(markers?{marker:markers[b.index]!}:{})})),selectionStart:context.findIndex(b=>b.index===first),selectionEnd:context.findIndex(b=>b.index===last),kind,kinds:['none','bullet','numbered','multilevel'],
   onKindChange:kind=>after(()=>document.setListKind(first,last,kind)),
   ...(formats?{levelFormats:formats,onLevelFormatChange:(level:number,format:ListFormat)=>after(()=>document.setListFormat(first,last,level,format)),onShiftLevel:(direction:1|-1)=>after(()=>document.shiftListLevel(first,last,direction))}:{})};
 }
