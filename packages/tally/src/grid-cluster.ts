@@ -62,6 +62,13 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * host view state (the engine does not own them), so the I-17 freeze/split
  * half of the deferral is honestly still open even though the op name is
  * now backed.
+ *
+ * Cell/range comments landed in slice 9 (`addComment`/`updateComment`/
+ * `removeComment`/`resolveComment`/`reopenComment`/`listComments`):
+ * workbook-persisted single-entry comments anchored to static cell/range
+ * coordinates — hosts wire comment-pin UI to the `TallyDocument` methods
+ * directly; threading/replies and anchor remapping on row/column edits are
+ * deferred (row/column insert/delete ops do not exist yet).
  */
 export const TALLY_DEFERRED_OPS = {} as const;
 export type TallyDeferredOp = keyof typeof TALLY_DEFERRED_OPS;

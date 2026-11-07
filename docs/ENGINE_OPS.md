@@ -142,7 +142,7 @@ google/ink source admission (#46).
 
 ## tally-engine — `TallyEngine::new()`
 
-State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation, conditional_formats: [ConditionalRule], next_conditional, filters: [FilterRule], next_filter, charts: [ChartSpec], next_chart, sparklines: [SparklineSpec], next_sparkline, views: [SheetView], next_view }`,
+State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation, conditional_formats: [ConditionalRule], next_conditional, filters: [FilterRule], next_filter, charts: [ChartSpec], next_chart, sparklines: [SparklineSpec], next_sparkline, views: [SheetView], next_view, comments: [Comment], next_comment }`,
 `Sheet = { id, name, tone?: string | null, is_protected?: boolean, active_view?: number | null, cells: { "A1": { raw: string } }, formats?: { "A1": CellFormat } }` — computed values are
 derived, not stored. `formats` is durable per-cell display metadata keyed by
 canonical address, independent of `cells`: it survives content edits, applies
@@ -183,10 +183,17 @@ letter inside it and a COUNTIF-style criteria string (the `FilterRule`
 fields minus the rule id), at most 64 per view and 256 views per workbook.
 Views capture the sheet's filter rules — the only durable view state the
 engine owns; scroll, zoom, frozen panes/splits and column widths are host
-view state and sorts are destructive mutations, so none are captured. Both
-chart/sparkline specs and views are storage-only — the engine never
-evaluates chart/sparkline data or renders; hosts read cells and draw
-(see chart/sparkline rules below). Validation rules on one sheet may not
+view state and sorts are destructive mutations, so none are captured. `Comment =
+{ id, sheet: sheet-id, anchor, author?, body, resolved }` is a durable
+workbook-level comment bound to one sheet; `anchor` is a canonical
+`"A1"`/`"A1:B2"` coordinate string (single cell or bounded rectangle under
+the shared 16,384-cell cap), `body` required non-blank ≤8192 UTF-8 bytes,
+`author` optional ≤128 bytes without control characters, `resolved` a
+durable flag, at most 1024 comments per workbook. Chart/sparkline specs and
+views are storage-only and comments are coordinate-bound metadata — the
+engine never evaluates chart/sparkline data, renders, or remaps comment
+anchors; hosts read cells and draw (see chart/sparkline/view/comment rules
+below). Validation rules on one sheet may not
 overlap; conditional and filter rules may. `CellFormat = { number_format?,
 bold?, italic?, fill?, border? }` — all attributes optional; `number_format` is
 a bounded opaque string (≤64 ASCII graphic/space chars, no `" \ { }`) holding
@@ -248,6 +255,12 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `setSheetView` | `{view:id\|null,sheet?}` | `{view}` | apply a view's captured specs to its bound sheet (fresh rule ids, records `active_view`); `null` clears the resolved sheet's selection only; `sheet` alongside an id rejects |
 | `removeSheetView` | `{id}` | `{ok}` | removes the view and clears `active_view` references to it |
 | `listSheetViews` | `{sheet?}` | `{views:[{id,sheet,sheet_id,name,filters:[{range,column?,criteria}],active}]}` | read-only; `sheet` absent lists all |
+| `addComment` | `{sheet?,cell\|range,author?,body,resolved?}` | `{comment}` | attach a comment to a cell/range anchor; see comment rules below |
+| `updateComment` | `{id,author?,body?}` | `{comment}` | partial patch; `author:null` clears; equal/no-field patch eventless |
+| `removeComment` | `{id}` | `{ok}` | `not_found` on unknown id |
+| `resolveComment` | `{id}` | `{comment}` | set `resolved:true`; already resolved eventless |
+| `reopenComment` | `{id}` | `{comment}` | set `resolved:false`; already open eventless |
+| `listComments` | `{sheet?,cell\|range?}` | `{comments:[{id,sheet,sheet_id,anchor,author?,body,resolved}]}` | read-only; `sheet` filters by bound sheet, `cell`/`range` narrow to containing/intersecting anchors on the resolved sheet |
 | `clearCell` | `{addr}` | `{ok}` | |
 | `getCell` | `{addr}` | `{raw,computed,format?}` | `computed` = evaluated value; `format` present only when stored |
 | `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed,format?}]]}` | |
@@ -599,7 +612,43 @@ does not copy views and clears `active_view` on the copy;
 `moveSheet`/`renameSheet` do not retarget them. Bound-sheet protection
 guards apply like the other rule tables.
 
-Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. `saveSheetView` rejects on its target sheet (payload `sheet`, default active), `setSheetView` rejects on the view's bound sheet (or the resolved sheet for `view:null`) and `removeSheetView` rejects on the stored view's sheet; `listSheetViews` stays allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Comment rules: comments are **workbook-scoped** entries bound to one sheet
+by durable sheet id — `Comment = {id,sheet,anchor,author?,body,resolved}`
+with a workbook-unique numeric id, at most 1024 per workbook.
+`anchor` is a canonical `"A1"`/`"A1:B2"` coordinate string: `addComment
+{sheet?,cell|range,author?,body,resolved?}` takes exactly one of `cell`
+(a single address) or `range` (a `{from,to}` rectangle), canonicalized
+like the sparkline target and capped at the shared 16,384-cell bound.
+**Anchors are static coordinates**: they name grid positions, not content
+— `setCell`/`clearCell`/`setRange`/`fillRange`/`fillSeries`/formats and
+`sortRange` never move them (`sortRange` permutes cell contents while a
+comment stays on its coordinates), and row/column insert/delete ops are
+deferred entirely so there is nothing to remap against. `body` is required
+non-blank ≤8192 UTF-8 bytes, `author` optional ≤128 bytes without control
+characters, `resolved` an optional bool defaulting false (accepted at add
+time for parity with `resolveComment`). `updateComment {id,author?,body?}`
+patches author (`null` clears) and/or body — absent fields keep values, no
+fields or an equal patch is eventless, and anchors are not re-pointable.
+`removeComment {id}` deletes; `resolveComment`/`reopenComment {id}` flip
+the durable flag with already-in-state calls eventless. `listComments
+{sheet?,cell?,range?}` is a silent read returning `{id,sheet,sheet_id,
+anchor,author?,body,resolved}` with the bound sheet's current name
+resolved; `sheet` (name or index) filters by bound sheet — absent lists
+every sheet when no anchor filter is given — and `cell`/`range` (exactly
+one, mutually exclusive) narrow to comments whose anchor contains the cell
+or intersects the range, evaluated on the resolved sheet (default active)
+since addresses are sheet-relative. Single-entry, not threaded: NYC-Tron's
+`CommentThread` carries `replies`, but the engine stores one body per
+anchor — threading is a deferred host-side grouping, matching the quill
+comments precedent; no timestamps or mentions (the engine is I/O-free).
+Mutations record one whole-document undo entry each; `removeSheet`
+cascade-drops the sheet's comments into the same undo entry and undo
+re-admits each only while it still satisfies the restore invariants;
+`duplicateSheet` does not copy comments and `moveSheet`/`renameSheet` do
+not retarget them. Bound-sheet protection guards apply like the other
+rule tables.
+
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. `saveSheetView` rejects on its target sheet (payload `sheet`, default active), `setSheetView` rejects on the view's bound sheet (or the resolved sheet for `view:null`) and `removeSheetView` rejects on the stored view's sheet; `listSheetViews` stays allowed. `addComment` rejects on its target sheet (payload `sheet`, default active) and `updateComment`/`removeComment`/`resolveComment`/`reopenComment` reject on the stored comment's sheet; `listComments` stays allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
@@ -608,11 +657,11 @@ Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteri
 Criteria expressions/cell references are evaluated normally; criteria range errors/cycles propagate. SUMIF evaluates sum cells only for matches, ignores matched nonnumeric values and propagates matched errors; nonfinite accumulated sums return #NUM!. Existing per-request memoization/depth/cycle rules remain intact. Each conditional rectangle is capped at16384 cells, criteria at255 Unicode scalars and matched text at4096 UTF-8 bytes (#VALUE! for string limits). A shared per-Evaluator allowance of1000000 conditional scan/string/DP steps returns #NUM! on exhaustion; matcher allocation work is charged before bounded DP buffers, and `Evaluator::match_value` (used by `evaluateConditionalFormats`) charges one flat unit per candidate rule-cell evaluation up front so every comparison path — numeric, boolean, empty-criteria, wildcard and type-mismatch — counts against the same allowance. These are explicit Tally semantics, not full Excel compatibility.
 
 Snapshots: the NFD1 envelope is unchanged; the JSON payload is normally the bare
-`Workbook` (`{next_sheet,sheets,active,names?,validations?,next_validation?,conditional_formats?,next_conditional,filters?,next_filter,charts?,next_chart?,sparklines?,next_sparkline?,views?,next_view?}`). When any sheet carries durable
+`Workbook` (`{next_sheet,sheets,active,names?,validations?,next_validation?,conditional_formats?,next_conditional,filters?,next_filter,charts?,next_chart?,sparklines?,next_sparkline?,views?,next_view?,comments?,next_comment?}`). When any sheet carries durable
 post-release fields (`tone` set, `is_protected` true, `active_view` set, or a
 nonempty `formats`
 map) **or the workbook has any names, validation rules, conditional rules,
-filter rules, charts, sparkline specs or views**,
+filter rules, charts, sparkline specs, views or comments**,
 the payload is instead `{kind:"tally",schema:N,document:<Workbook>}` so
 pre-wrapper readers fail closed rather than silently dropping those fields
 (same precedent as pitch schema:2 and quill schema:2). `N` is `1` for
@@ -621,18 +670,21 @@ nonempty and no later table is, `3` when `conditional_formats` is nonempty
 and `filters` is empty — a schema:3 document may carry both earlier rule
 tables — `4` when `filters` is nonempty, `5` when `charts` or
 `sparklines` is nonempty, and `6` when `views` is nonempty or any sheet
-carries `active_view`, each of which may carry every earlier table.
+carries `active_view`, `7` when `comments` is nonempty — each of which may
+carry every earlier table.
 `Workbook` does not deny unknown fields, so each newer table bumps
 the schema: schema:1 readers would silently drop `validations`,
-`conditional_formats`, `filters`, `charts`, `sparklines` or `views`, and the
+`conditional_formats`, `filters`, `charts`, `sparklines`, `views` or
+`comments`, and the
 higher
 schemas make them reject the snapshot instead — the views bump to
-schema:6 follows the same reasoning as filters' bump to schema:4 (the new
+schema:6 and the comments bump to schema:7 follow the same reasoning as
+filters' bump to schema:4 (the new
 tables and the `Sheet.active_view` field are not `deny_unknown_fields`-covered,
-so an unbumped schema:5 payload would be silently dropped by schema:5
-readers). `formats`/`names`/`validations`/`conditional_formats`/`filters`/`charts`/`sparklines`/`views`
+so an unbumped payload would be silently dropped by same-schema
+readers). `formats`/`names`/`validations`/`conditional_formats`/`filters`/`charts`/`sparklines`/`views`/`comments`
 entries ride
-inside `document`; `restore` accepts schemas 1, 2, 3, 4, 5 and 6, strictly validates
+inside `document`; `restore` accepts schemas 1, 2, 3, 4, 5, 6 and 7, strictly validates
 wrapper kind/schema/keys (`deny_unknown_fields`), then runs the existing
 document validation — including name uniqueness, name legality, on-sheet
 `refers_to`, existing sheet ids, validation-rule count/id uniqueness, bound
@@ -650,23 +702,26 @@ id-space repair, view count/id uniqueness, bound sheet existence,
 legal names unique case-insensitively per sheet, bounded captured specs
 with re-canonicalized in-cap ranges, parseable criteria, in-range columns,
 `next_view` id-space repair and `active_view` selections referencing a view
-bound to the same sheet — all
+bound to the same sheet, comment count/id uniqueness, bound sheet
+existence, anchors re-canonicalized and capped like every other
+refers_to table, bounded author/body fields, strict comment shape
+(`deny_unknown_fields`) and `next_comment` id-space repair — all
 re-canonicalized — before
 replacing state and resetting the journal; bad input leaves state untouched.
 Each table also restores only under the schema that introduced it:
-nonempty `views` or any `active_view` require schema:6, nonempty `charts`/`sparklines` require schema:5, nonempty `filters`
+nonempty `comments` require schema:7, nonempty `views` or any `active_view` require schema:6, nonempty `charts`/`sparklines` require schema:5, nonempty `filters`
 requires schema:4, nonempty `conditional_formats`
 requires schema:3 and nonempty
 `validations` requires schema:2, so crafted lower-schema or bare-workbook
 payloads carrying any table fail closed rather than silently dropping
 version markers. Every rule/spec table is serde-optional, so a schema:2
 payload (validations only) restores with empty `conditional_formats`/
-`filters`/`charts`/`sparklines`/`views`, a schema:3 payload restores with empty
-`filters`/`charts`/`sparklines`/`views`, a schema:4 payload restores with empty
-`charts`/`sparklines`/`views`, a schema:5 payload restores with empty
-`views`, and vice versa.
+`filters`/`charts`/`sparklines`/`views`/`comments`, a schema:3 payload restores with empty
+`filters`/`charts`/`sparklines`/`views`/`comments`, a schema:4 payload restores with empty
+`charts`/`sparklines`/`views`/`comments`, a schema:5 payload restores with empty
+`views`/`comments`, a schema:6 payload restores with empty `comments`, and vice versa.
 Workbooks without tone/protection/formats/names/validations/conditional
-rules/filters/charts/sparklines/views keep the legacy payload, so older snapshots
+rules/filters/charts/sparklines/views/comments keep the legacy payload, so older snapshots
 and older readers round-trip unchanged.
 
 ## cadence-engine — `CadenceEngine::new()`

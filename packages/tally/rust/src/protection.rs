@@ -210,6 +210,28 @@ impl TallyEngine {
                         .iter()
                         .any(|s| s.id == vw.sheet && s.is_protected)
                 }),
+            // Comments are workbook metadata bound to one sheet:
+            // addComment guards its target sheet, the id-addressed
+            // mutations guard the stored comment's sheet. Unknown ids
+            // fall through — the op reports not_found. listComments is an
+            // ungated read.
+            "addComment" => {
+                let idx = match p.get("sheet") {
+                    Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                    _ => self.doc.active,
+                };
+                self.doc.sheets[idx].is_protected
+            }
+            "updateComment" | "removeComment" | "resolveComment" | "reopenComment" => p
+                .get("id")
+                .and_then(Value::as_u64)
+                .and_then(|id| self.doc.comments.iter().find(|c| c.id == id))
+                .is_some_and(|c| {
+                    self.doc
+                        .sheets
+                        .iter()
+                        .any(|s| s.id == c.sheet && s.is_protected)
+                }),
             "new" => self.doc.sheets.iter().any(|s| s.is_protected),
             _ => false,
         };
@@ -353,6 +375,35 @@ mod tests {
         apply(&mut e, "setSheetView", json!({"view":2}));
         apply(&mut e, "removeSheetView", json!({"id":2}));
         apply(&mut e, "saveSheetView", json!({"name":"OnOther","sheet":"Other"}));
+    }
+
+    #[test]
+    fn comment_ops_guard_their_bound_sheet() {
+        let mut e = TallyEngine::new();
+        apply(&mut e, "addSheet", json!({"name":"Other"}));
+        apply(&mut e, "addComment", json!({"cell":"A1","body":"on sheet1"}));
+        apply(&mut e, "addComment", json!({"sheet":"Other","cell":"A1","body":"on other"}));
+        apply(&mut e, "protectSheet", json!({"sheet":0,"protected":true}));
+        let before = e.snapshot().unwrap();
+        for (op, p) in [
+            ("addComment", json!({"cell":"B1","body":"nope"})),
+            ("addComment", json!({"sheet":0,"cell":"B1","body":"nope"})),
+            ("updateComment", json!({"id":1,"body":"nope"})),
+            ("removeComment", json!({"id":1})),
+            ("resolveComment", json!({"id":1})),
+            ("reopenComment", json!({"id":1})),
+        ] {
+            assert!(e.apply(Command::new(op, p)).is_err(), "{op}");
+            assert_eq!(e.snapshot().unwrap(), before, "{op}");
+        }
+        // Comments bound to the unprotected sheet still mutate; reads stay
+        // ungated.
+        assert!(e.apply(Command::new("listComments", json!({}))).is_ok());
+        apply(&mut e, "updateComment", json!({"id":2,"body":"edited"}));
+        apply(&mut e, "resolveComment", json!({"id":2}));
+        apply(&mut e, "reopenComment", json!({"id":2}));
+        apply(&mut e, "removeComment", json!({"id":2}));
+        apply(&mut e, "addComment", json!({"sheet":"Other","cell":"C1","body":"ok"}));
     }
 
     #[test]

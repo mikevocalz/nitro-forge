@@ -1017,3 +1017,41 @@ claimed.
 Quill gains block-model tables (P12 slice 7-A, insert/basic model). A table is a single `kind:"table"` block in the top-level stream carrying `Table {rows,cols,cells}` — a dense row-major grid whose `TableCell`s each hold their own paragraph `blocks` (one empty paragraph at insert). New ops: `insertTable {index,rows,cols}` (rows 1..=64, cols 1..=26, ≤256 tables/doc, ≤64 blocks/cell, ≤65536 cell blocks/doc), `deleteTable {block}`, `setCellText {block,row,col,text}` (plain paragraphs, `\n` splits, ≤8192 chars, equal content eventless), `listTables`, `describeTable`. Because the table is one block, bookmarks/comments/sections keep their existing `{block,offset}`/`{block}` anchors with zero new anchor types: `insertTable` reuses the `insertBlock` remap and `deleteTable` applies single-block-delete rules (bookmark on the table removed, comment endpoints clamp to the deletion point, section boundary merges away). Cell text is unreachable by `Pos`, so `setCellText` cannot move top-level anchors. Guards preserve the kind/payload invariant: `insertText`/`splitBlock`/`mergeBlock`/`setBlockKind`/`setBlockStyle`/`deleteRange`-from reject table blocks, list ops re-validate the merged candidate, `exportDocx` rejects documents containing tables rather than dropping cell content, and `findText`/`replaceText`/`text`/`layout`/`applyStyle`/`changeCase` treat a table block as empty (cell text not covered this slice). On restore, cell blocks are restricted to strict plain `para` paragraphs — any other kind (including `kind:"list"` without metadata and nested `kind:"table"`), `list`, `style_id`, and any stray `table` payload on a cell block are rejected (a stray payload would hide its inner blocks from `all_blocks` and bypass inline-style/`style_id` validation); the table block itself must have empty `inlines` and no `list`/`style_id`. Cell-paragraph inlines get the same highlight/font_size/font_family validation as top-level blocks; `setCellText` re-validates the document-wide cell-block budget on its staged candidate before committing. Schema: **no bump** — every snapshot tier deserializes `Block.kind` through the `BlockKind` enum, so schema≤3/legacy readers fail closed on the unknown `"table"` variant rather than silently dropping the payload. Deferred honestly: row/column insert/delete, cell merge/split, cell/table styling, nested tables, in-cell find/replace and rich cell editing, `text`/`layout` cell coverage, DOCX `w:tbl` import/export.
 
 Local evidence: `cargo test -p quill-engine` 133 passed (18 table tests covering model, bounds, atomic rejects, undo/redo, anchor stability through insert/delete and in-cell edits, snapshot round-trip, hostile restore incl. cell style_id, cell-inline style rejection, stray cell table payloads, nonempty table-block inlines and cell-block budget enforcement on `setCellText`, old-reader fail-closed), `cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean, `pnpm --filter @nitro-forge/quill test` 32 passed across 6 files (2 new nf-cli table cases), `pnpm --filter @nitro-forge/quill typecheck` clean. No native/device acceptance or full P12 completion is implied.
+
+## Tally comments source checkpoint (2026-11-07)
+
+Tally gains durable workbook-level comments (slice 9): `addComment`,
+`updateComment`, `removeComment`, `resolveComment`, `reopenComment` and
+read-only `listComments`. A `Comment` is `{id,sheet,anchor,author?,body,
+resolved}` — a workbook-unique numeric id bound to one sheet by durable
+sheet id, `anchor` a canonical `"A1"`/`"A1:B2"` coordinate string (single
+cell via `cell` or bounded rectangle via `range`, exactly one required,
+under the shared 16,384-cell cap), `body` required non-blank ≤8192 UTF-8
+bytes, `author` optional ≤128 bytes without control characters, `resolved`
+a durable flag, at most 1024 comments per workbook. Single-entry, not
+threaded — NYC-Tron's `CommentThread.replies` is a deferred host-side
+grouping (quill comments precedent); no timestamps or mentions.
+**Anchor semantics are static coordinates**: anchors name grid positions,
+never content — `setCell`/ranges/fills/formats and `sortRange` never move
+them, and row/column insert/delete ops are deferred so there is nothing to
+remap against. `updateComment` patches author (`null` clears)/body with
+eventless equal/no-field paths; resolve/reopen are eventless when already
+in state; `listComments {sheet?,cell?,range?}` filters by bound sheet and
+by containing/intersecting anchors on the resolved sheet (default active).
+All mutations journal one whole-document undo entry; `removeSheet`
+cascade-drops bound comments with `readd_ok` re-admission;
+`duplicateSheet`/`moveSheet`/`renameSheet` do not copy or retarget them;
+bound-sheet protection guards mutations while `listComments` stays
+ungated. Snapshots carrying comments emit `{kind:"tally",schema:7}` — the
+bump is required because `Workbook` does not deny unknown fields and
+schema:6 readers would silently drop the table; `restore` accepts schemas
+1–7, fails closed on comments under lower or bare schemas, re-canonicalizes
+anchors and re-validates count/id uniqueness, bound sheets, anchor caps,
+author/body bounds, strict shape (`deny_unknown_fields`) and `next_comment`
+repair atomically. Local evidence: `cargo test -p tally-engine` 135 passed
+(6 new across comment_ops/protection plus schema-matrix and smuggle
+coverage), `pnpm --filter @nitro-forge/tally` typecheck clean and 63 Vitest
+passed across 17 files (1 new live `nf-cli` comments test file, 4 cases),
+`cargo build -p nf-cli` clean. No threading/replies, anchor remapping on
+row/column edits, comment-pin UI wiring or native/device acceptance is
+claimed.

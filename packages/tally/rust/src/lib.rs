@@ -33,6 +33,10 @@
 //! likewise storage-only.
 //! `sortRange` (see `sort_ops`) is a pure mutation — it permutes raw cell
 //! rows by computed key values with formulas moving verbatim.
+//! `comments` is the durable workbook-level comment table (see
+//! `comment_ops`): each entry binds a sheet id and a canonical
+//! `"A1"`/`"A1:B2"` coordinate anchor plus author/body/resolved — anchors
+//! are static coordinates, never remapped by content mutations.
 //!
 //! Semantics documented for reviewers:
 //! * Cell addresses `$?[A-Z]+$?[0-9]+` (case-insensitive); `$` markers are
@@ -55,6 +59,7 @@
 //!   `new` reset the journal's view of the world appropriately.
 
 mod chart_ops;
+mod comment_ops;
 mod conditional_ops;
 mod filter_ops;
 mod formula;
@@ -69,6 +74,7 @@ mod validation_ops;
 mod view_ops;
 
 use chart_ops::ChartSpec;
+use comment_ops::Comment;
 use conditional_ops::ConditionalRule;
 use filter_ops::FilterRule;
 use sparkline_ops::SparklineSpec;
@@ -174,6 +180,12 @@ struct Workbook {
     /// Next id handed out by `saveSheetView`.
     #[serde(default)]
     next_view: u64,
+    /// Durable cell/range-anchored comments; empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    comments: Vec<Comment>,
+    /// Next id handed out by `addComment`.
+    #[serde(default)]
+    next_comment: u64,
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
@@ -223,6 +235,8 @@ fn blank_workbook() -> Workbook {
         next_sparkline: 1,
         views: Vec::new(),
         next_view: 1,
+        comments: Vec::new(),
+        next_comment: 1,
     }
 }
 
@@ -278,9 +292,10 @@ enum UndoEntry {
     /// A sheet was removed; undo re-inserts it at `index`, restores `active`
     /// and re-adds `dropped_names`/`dropped_validations`/
     /// `dropped_conditional_formats`/`dropped_filters`/`dropped_charts`/
-    /// `dropped_sparklines`/`dropped_views` (names, validation rules,
-    /// conditional rules, filter rules, charts, sparkline specs and named
-    /// views bound to the removed sheet are cascade-dropped on removal).
+    /// `dropped_sparklines`/`dropped_views`/`dropped_comments` (names,
+    /// validation rules, conditional rules, filter rules, charts, sparkline
+    /// specs, named views and comments bound to the removed sheet are
+    /// cascade-dropped on removal).
     /// Re-admission skips entries whose case-insensitive name twin already
     /// exists, that would exceed the table caps, or (for rules/specs) that
     /// no longer satisfy the stored-entry invariants, keeping `doc` inside
@@ -297,6 +312,7 @@ enum UndoEntry {
         dropped_charts: Vec<ChartSpec>,
         dropped_sparklines: Vec<SparklineSpec>,
         dropped_views: Vec<SheetView>,
+        dropped_comments: Vec<Comment>,
     },
     RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
@@ -449,8 +465,8 @@ impl TallyEngine {
 
     /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet` and
     /// cascade-dropping names, validation rules, conditional rules, filter
-    /// rules, charts, sparkline specs and named views bound to the removed
-    /// sheet id. Returns the removed sheet and the dropped entries.
+    /// rules, charts, sparkline specs, named views and comments bound to the
+    /// removed sheet id. Returns the removed sheet and the dropped entries.
     fn remove_sheet_at(
         &mut self,
         idx: usize,
@@ -463,6 +479,7 @@ impl TallyEngine {
         Vec<ChartSpec>,
         Vec<SparklineSpec>,
         Vec<SheetView>,
+        Vec<Comment>,
     ) {
         let removed = self.doc.sheets.remove(idx);
         let len = self.doc.sheets.len();
@@ -534,6 +551,15 @@ impl TallyEngine {
                 true
             }
         });
+        let mut dropped_comments = Vec::new();
+        self.doc.comments.retain(|c| {
+            if c.sheet == removed.id {
+                dropped_comments.push(c.clone());
+                false
+            } else {
+                true
+            }
+        });
         (
             removed,
             dropped,
@@ -543,6 +569,7 @@ impl TallyEngine {
             dropped_charts,
             dropped_sparklines,
             dropped_views,
+            dropped_comments,
         )
     }
 
@@ -693,6 +720,13 @@ impl TallyEngine {
             .filter(|v| v.sheet == sheet_id)
             .cloned()
             .collect();
+        let dropped_comments: Vec<Comment> = self
+            .doc
+            .comments
+            .iter()
+            .filter(|c| c.sheet == sheet_id)
+            .cloned()
+            .collect();
         let entry = UndoEntry::RemoveSheet {
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
@@ -704,6 +738,7 @@ impl TallyEngine {
             dropped_charts,
             dropped_sparklines,
             dropped_views,
+            dropped_comments,
         };
         self.journal.record(entry);
         self.remove_sheet_at(idx);
@@ -946,6 +981,7 @@ impl TallyEngine {
                             dropped_charts,
                             dropped_sparklines,
                             dropped_views,
+                            dropped_comments,
                         ) = self.remove_sheet_at(idx);
                         UndoEntry::RemoveSheet {
                             index: idx,
@@ -958,6 +994,7 @@ impl TallyEngine {
                             dropped_charts,
                             dropped_sparklines,
                             dropped_views,
+                            dropped_comments,
                         }
                     }
                     // Already gone — nothing changed; emit a no-op entry.
@@ -977,6 +1014,7 @@ impl TallyEngine {
                 dropped_charts,
                 dropped_sparklines,
                 dropped_views,
+                dropped_comments,
             } => {
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
@@ -1060,6 +1098,18 @@ impl TallyEngine {
                 for v in dropped_views {
                     if view_ops::readd_ok(&self.doc, &v) {
                         self.doc.views.push(v);
+                    }
+                }
+                // Comments cascade-dropped with the sheet come back under
+                // the same discipline: each is re-admitted only while it
+                // still satisfies the invariants `restore` enforces
+                // (existing sheet, unique id, under the cap, canonical
+                // in-cap anchor, valid author/body). Comments cannot be
+                // created for a sheet while it is gone, so conflicts are
+                // defensive.
+                for c in dropped_comments {
+                    if comment_ops::readd_ok(&self.doc, &c) {
+                        self.doc.comments.push(c);
                     }
                 }
                 // A re-admitted sheet restores its own `active_view`, but
@@ -1170,6 +1220,12 @@ impl Engine for TallyEngine {
             "setSheetView" => self.op_set_sheet_view(p),
             "removeSheetView" => self.op_remove_sheet_view(p),
             "listSheetViews" => self.op_list_sheet_views(p),
+            "addComment" => self.op_add_comment(p),
+            "updateComment" => self.op_update_comment(p),
+            "removeComment" => self.op_remove_comment(p),
+            "resolveComment" => self.op_resolve_comment(p),
+            "reopenComment" => self.op_reopen_comment(p),
+            "listComments" => self.op_list_comments(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -1226,6 +1282,7 @@ impl Engine for TallyEngine {
         // honest even for a hand-built in-memory document.
         let has_views = !self.doc.views.is_empty()
             || self.doc.sheets.iter().any(|s| s.active_view.is_some());
+        let has_comments = !self.doc.comments.is_empty();
         let extended = self.doc.sheets.iter().any(|s| {
             s.tone.is_some() || s.is_protected || !s.formats.is_empty()
         }) || !self.doc.names.is_empty()
@@ -1233,11 +1290,14 @@ impl Engine for TallyEngine {
             || has_conditional
             || has_filters
             || has_charts
-            || has_views;
+            || has_views
+            || has_comments;
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
-                schema: if has_views {
+                schema: if has_comments {
+                    7
+                } else if has_views {
                     6
                 } else if has_charts {
                     5
@@ -1277,12 +1337,13 @@ impl Engine for TallyEngine {
             // possibly alongside validations), schema:4 (filter rules,
             // possibly alongside every earlier table), schema:5 (chart
             // objects and sparkline specs, possibly alongside every earlier
-            // table) and schema:6 (named sheet views and `active_view`
-            // selections, possibly alongside every earlier table) are all
-            // honored; every table absent from a document deserializes to
-            // its serde default, so cross-version payloads never lose the
-            // other families' rules.
-            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5 | 6) {
+            // table), schema:6 (named sheet views and `active_view`
+            // selections, possibly alongside every earlier table) and
+            // schema:7 (comments, possibly alongside every earlier table)
+            // are all honored; every table absent from a document
+            // deserializes to its serde default, so cross-version payloads
+            // never lose the other families' rules.
+            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 2 | 3 | 4 | 5 | 6 | 7) {
                 return Err(EngineError::unsupported(
                     "unsupported Tally snapshot kind/schema",
                 ));
@@ -1294,12 +1355,17 @@ impl Engine for TallyEngine {
         }
         // Fail closed on crafted lower-version payloads smuggling newer
         // tables: each durable table restores only under the schema that
-        // introduced it — named views and `active_view` selections need
-        // schema:6, chart/sparkline specs schema:5, filter rules schema:4,
-        // conditional rules schema:3, validations schema:2 — and a bare
-        // (unwrapped) Workbook predates all five. Emit always stamps the
-        // highest table present, so honest payloads are unaffected; this
-        // only rejects hand-built downgrades.
+        // introduced it — comments need schema:7, named views and
+        // `active_view` selections need schema:6, chart/sparkline specs
+        // schema:5, filter rules schema:4, conditional rules schema:3,
+        // validations schema:2 — and a bare (unwrapped) Workbook predates
+        // all six. Emit always stamps the highest table present, so honest
+        // payloads are unaffected; this only rejects hand-built downgrades.
+        if !doc.comments.is_empty() && snapshot_schema.is_none_or(|s| s < 7) {
+            return Err(EngineError::serialization(
+                "comments require snapshot schema 7",
+            ));
+        }
         if (!doc.views.is_empty()
             || doc.sheets.iter().any(|s| s.active_view.is_some()))
             && snapshot_schema.is_none_or(|s| s < 6)
@@ -1769,6 +1835,47 @@ impl Engine for TallyEngine {
         if doc.next_view == 0 {
             doc.next_view = 1;
         }
+        // Comments get the same hostile-input treatment: bounded count,
+        // unique ids, existing sheet ids, anchors re-canonicalized and
+        // capped like every other refers_to table, and author/body/flag
+        // fields satisfying the op-level invariants.
+        if doc.comments.len() > comment_ops::MAX_COMMENTS {
+            return Err(EngineError::serialization("too many comments"));
+        }
+        let mut seen_comment_ids = std::collections::BTreeSet::new();
+        for c in &mut doc.comments {
+            if !seen_comment_ids.insert(c.id) {
+                return Err(EngineError::serialization("duplicate comment id"));
+            }
+            if !doc.sheets.iter().any(|s| s.id == c.sheet) {
+                return Err(EngineError::serialization(
+                    "comment references a missing sheet",
+                ));
+            }
+            let coords = name_ops::parse_refers_to(&c.anchor)
+                .map_err(|_| EngineError::serialization("invalid comment anchor"))?;
+            if (coords.2 - coords.0 + 1) as u64 * (coords.3 - coords.1 + 1) as u64
+                > MAX_GET_RANGE_CELLS
+            {
+                return Err(EngineError::serialization(
+                    "comment anchor exceeds 16384 cells",
+                ));
+            }
+            c.anchor = name_ops::canonical_refers_to(coords);
+            if !comment_ops::stored_ok(c) {
+                return Err(EngineError::serialization("invalid comment"));
+            }
+        }
+        if let Some(max_id) = doc.comments.iter().map(|c| c.id).max() {
+            if doc.next_comment <= max_id {
+                doc.next_comment = max_id.checked_add(1).ok_or_else(|| {
+                    EngineError::serialization("comment id space exhausted")
+                })?;
+            }
+        }
+        if doc.next_comment == 0 {
+            doc.next_comment = 1;
+        }
         for s in &doc.sheets {
             if let Some(av) = s.active_view {
                 if !doc
@@ -2234,6 +2341,7 @@ mod tests {
             dropped_charts: Vec::new(),
             dropped_sparklines: Vec::new(),
             dropped_views: Vec::new(),
+            dropped_comments: Vec::new(),
         });
         assert!(e.undo().unwrap());
         // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
@@ -2280,6 +2388,7 @@ mod tests {
             dropped_charts: Vec::new(),
             dropped_sparklines: Vec::new(),
             dropped_views: Vec::new(),
+            dropped_comments: Vec::new(),
         });
         assert!(e.undo().unwrap());
         assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);
@@ -2418,9 +2527,9 @@ mod tests {
             "active": 0
         });
         for wrapper in [
-            // wrong schema / wrong kind fail closed (schemas 1–6 are the
-            // accepted tally versions; 7 is beyond them)
-            json!({"kind":"tally","schema":7,"document":doc}),
+            // wrong schema / wrong kind fail closed (schemas 1–7 are the
+            // accepted tally versions; 8 is beyond them)
+            json!({"kind":"tally","schema":8,"document":doc}),
             json!({"kind":"quill","schema":1,"document":doc}),
             // unknown wrapper keys rejected by deny_unknown_fields
             json!({"kind":"tally","schema":1,"document":doc,"extra":true}),
@@ -2687,6 +2796,66 @@ mod tests {
         assert_eq!(d["charts"].as_array().unwrap().len(), 1);
         assert_eq!(d["sparklines"].as_array().unwrap().len(), 1);
         assert_eq!(d["views"].as_array().unwrap().len(), 1);
+
+        // Comments only → schema:7; restores with empty earlier tables.
+        let mut e = TallyEngine::new();
+        data(
+            &mut e,
+            "addComment",
+            json!({"cell":"B2","author":"Ada","body":"note"}),
+        );
+        let (schema, v) = snapshot_schema(&e);
+        assert_eq!(schema, Some(7));
+        assert_eq!(v["document"]["comments"].as_array().unwrap().len(), 1);
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        let d = data(&mut e2, "describe", json!({}));
+        assert_eq!(d["comments"].as_array().unwrap().len(), 1);
+        assert_eq!(d["comments"][0]["anchor"], json!("B2"));
+        assert_eq!(d["views"].as_array().map_or(0, Vec::len), 0);
+        assert_eq!(d["filters"].as_array().map_or(0, Vec::len), 0);
+
+        // Comments alongside every earlier table → still schema:7, all
+        // tables restore intact.
+        let mut e = TallyEngine::new();
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"B1","to":"B1"},"rule":{"kind":"list","values":["a"]}}),
+        );
+        data(
+            &mut e,
+            "setConditionalFormat",
+            json!({"range":{"from":"A1","to":"A1"},"rule":{"criteria":">1","format":{"bold":true}}}),
+        );
+        data(
+            &mut e,
+            "setFilter",
+            json!({"range":{"from":"A1","to":"A4"},"criteria":"*"}),
+        );
+        data(
+            &mut e,
+            "insertChart",
+            json!({"chart":{"kind":"column","range":{"from":"A1","to":"A4"}}}),
+        );
+        data(
+            &mut e,
+            "setSparkline",
+            json!({"cell":"C1","data":{"from":"A1","to":"A4"},"kind":"line"}),
+        );
+        data(&mut e, "saveSheetView", json!({"name":"All"}));
+        data(&mut e, "addComment", json!({"cell":"D1","body":"all tables"}));
+        assert_eq!(snapshot_schema(&e).0, Some(7));
+        let mut e2 = TallyEngine::new();
+        e2.restore(&e.snapshot().unwrap()).unwrap();
+        let d = data(&mut e2, "describe", json!({}));
+        assert_eq!(d["validations"].as_array().unwrap().len(), 1);
+        assert_eq!(d["conditional_formats"].as_array().unwrap().len(), 1);
+        assert_eq!(d["filters"].as_array().unwrap().len(), 1);
+        assert_eq!(d["charts"].as_array().unwrap().len(), 1);
+        assert_eq!(d["sparklines"].as_array().unwrap().len(), 1);
+        assert_eq!(d["views"].as_array().unwrap().len(), 1);
+        assert_eq!(d["comments"].as_array().unwrap().len(), 1);
     }
 
     #[test]
@@ -2712,6 +2881,9 @@ mod tests {
         }]);
         let view = json!([{
             "id":1,"sheet":0,"name":"V","filters":[{"range":"A1:A4","criteria":">1"}]
+        }]);
+        let comment = json!([{
+            "id":1,"sheet":0,"anchor":"B2","body":"note"
         }]);
         let doc_with = |extra: Value| {
             let mut d = json!({
@@ -2761,6 +2933,13 @@ mod tests {
             doc_with(json!({"views":view.clone()})),
             json!({"kind":"tally","schema":5,"document":doc_with(json!({"sheets":[{"id":0,"name":"S","cells":{},"active_view":1}]}))}),
             doc_with(json!({"sheets":[{"id":0,"name":"S","cells":{},"active_view":1}]})),
+            // Comments smuggled under schema:1–6 or a bare Workbook all
+            // fail closed — schema:7 is the minimum that introduced the
+            // table.
+            json!({"kind":"tally","schema":6,"document":doc_with(json!({"comments":comment.clone()}))}),
+            json!({"kind":"tally","schema":5,"document":doc_with(json!({"comments":comment.clone()}))}),
+            json!({"kind":"tally","schema":1,"document":doc_with(json!({"comments":comment.clone()}))}),
+            doc_with(json!({"comments":comment.clone()})),
         ] {
             let bytes = encode_envelope(&serde_json::to_vec(&payload).unwrap());
             assert!(e.restore(&bytes).is_err(), "accepted {payload}");
@@ -2774,6 +2953,7 @@ mod tests {
             (4u32, json!({"filters":filter})),
             (5u32, json!({"charts":chart,"sparklines":sparkline})),
             (6u32, json!({"views":view})),
+            (7u32, json!({"comments":comment})),
         ] {
             let payload = json!({
                 "kind":"tally","schema":schema,
