@@ -1285,3 +1285,44 @@ replace with undo/redo/eventless/snapshot round-trip, merge-covered cells,
 35 passed across 6 files (1 new nf-cli in-cell find/replace case),
 `pnpm --filter @nitro-forge/quill typecheck` clean. No native/device acceptance
 or full P12 completion is implied.
+
+## P11 Motion slice F deterministic particles source checkpoint (2026-11-08)
+
+Motion gains `kind:"particles"` layers carrying an optional bounded
+`emitter` spec (`addParticlesLayer` creates the empty kind,
+`setParticleEmitter` full-replaces or null-clears the spec; locked layers
+and non-particles targets reject). **No sim state exists**: birth index
+`n` occurs at `n/rate`, alive while `tau=t-n/rate` is in `0..=lifetime_s`,
+position is closed-form `spawn + v*tau + 0.5*gravity*tau^2`, and every
+per-particle attribute (spawn point, angle, speed, size, fade phase)
+derives from a splitmix64-style hash of `(seed, n, channel)` — `evaluate(t)`
+and `renderFrame(t)` are pure functions of time, seek-safe forward and
+backward. Sprites are bounded shapes (rect/ellipse, dims <=512) or existing
+immutable raster assets at natural size; rendering rasterizes on the CPU
+into a canvas-sized straight-alpha buffer (4x4 supersampled masks,
+source-over in ascending birth order) and uploads through the normal
+`addRasterLayer`+`drawPixels` path with identity transform, baking the
+layer's effective affine — own transform plus `parent_id` chain, shear
+included — into positions and per-axis sprite scale, so transform, opacity,
+visibility, curves, blend, clipping, mattes, effects and nested comps all
+compose unchanged. Caps: `rate*lifetime_s<=511` (<=512 alive sprites per
+emitter per frame), <=64 emitters per document across all compositions,
+<=512 summed alive-sprite bound per composition, sprites join the 16
+canvas-raster-layer/16 MiB per-comp storage budget, and a deterministic
+8x-canvas stamped-pixel budget drops younger particles when spent.
+Snapshot schema stays 2 via additive serde defaults; `validate` re-checks
+all bounds, sprite-asset existence, kind matching and budgets on hostile
+restore; `removeRasterAsset` also rejects emitter sprite references.
+Sprite orientation is never rotated and asset sprites resample
+nearest-neighbor — documented approximations.
+
+Local evidence: `cargo test -p motion-engine` 63 passed (7 new covering
+byte-identical repeat/seek determinism, seed decorrelation, lifetime
+window edges, per-emitter/per-comp/64-emitter caps, kind rules,
+hostile-restore rejection with state preservation, undo/redo, transform
+translation of the particle field, asset sprites, asset-reference
+stranding and snapshot round-trip), `cargo build -p nf-cli` clean,
+`pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/motion test` 8 passed across 7 files (1 new nf-cli particles
+case), `pnpm --filter @nitro-forge/motion typecheck` clean. Particle UI,
+GPU sims, per-particle curves and full P11 completion are not implied.
