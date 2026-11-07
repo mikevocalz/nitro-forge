@@ -6,8 +6,8 @@ Provider crate for the P10 photo pipeline, per
 that a host can feed to `photo-engine`'s `processPreview` binary op. It is
 **not** an engine: it does no document I/O, stores no catalog state, and is
 outside `packages/photo/rust` (which stays `#![forbid(unsafe_code)]`). All
-native/unsafe code is confined to `src/raw_shim.cpp` + `src/ffi.rs`, the
-same posture as `rust/nf-sys`.
+native code lives in `src/raw_shim.cpp`; unsafe Rust is confined to the FFI
+boundary in `src/ffi.rs` and `src/lib.rs`.
 
 ## API
 
@@ -38,14 +38,18 @@ Limits (prototype caps, enforced in the shim): 64 MiB input, 40 MP raw,
 as `tooling/raw-prototype/manifest.json`):
 
 1. `NF_RAW_LIBRAW_DIR=/path/to/LibRaw-0.22.3` — use a pre-fetched extracted
-   tree (must be writable unless `lib/libraw_r.a` is already built).
+   tree (must be writable unless `lib/libraw_r.a` is already built). This
+   override skips the tarball SHA-256 pin, so `build.rs` asserts the tree's
+   `libraw/libraw_version.h` reports exactly 0.22.3; any other version
+   fails the build. The tree is still compiled and linked in place — treat
+   the path as trusted input.
 2. Otherwise the tarball is downloaded from `libraw.org` into `OUT_DIR`,
    hash-verified, extracted with `tar`, and built there via
    `make -f Makefile.dist lib/libraw_r.a` (clang/clang++, `-DUSE_ZLIB`, no
    OpenMP, no optional codec integrations).
 
-Requires `make`, `clang`/`clang++` (or a C++17 toolchain `cc` finds), `tar`,
-`curl`, and `sha256sum`/`shasum` on PATH.
+Requires `make`, `clang`/`clang++` (or a C++17 toolchain `cc` finds), `ar`,
+`ranlib`, `tar`, `curl`, and `sha256sum`/`shasum` on PATH.
 
 ## Cancellation
 
@@ -75,7 +79,8 @@ never on the UI thread. One `LibRaw` instance per call; no shared state.
 | Android | Not built. Needs NDK toolchain (clang++), `APP_PLATFORM`/API-level flags, no OpenMP (`-fopenmp` must stay off — LibRaw builds without it), per-ABI static libs packaged via jniLibs or cargo-ndk. |
 | visionOS / Quest / PICO | Not built. Same C++ cross-compile requirements as iOS/Android per SDK; XR targets additionally need their vendor SDK/NDK recipes verified. |
 | WASM / web | Not built. rawler 0.8.0 is the documented fallback for this tier (see decision record); LibRaw-via-wasm is plausible but unproven. |
-| Linux/Windows desktop | Not built. `build.rs` already emits `stdc++`/`static=libc++` link hints but the Makefile.dist recipe is untested there. |
+| Linux desktop | Not built. `build.rs` emits `stdc++` and now invokes `sha256sum` correctly, but the Makefile.dist recipe is untested there. |
+| Windows | **Unsupported.** MSVC has no `libc++`/`libstdc++` to link by name and `build.rs` emits no C++ stdlib hint for it; the Makefile.dist recipe is POSIX-only. |
 
 ## Fixture / tests
 
@@ -94,6 +99,12 @@ cargo test -p nf-raw -- --include-ignored
 Observed on macOS arm64: probe → Pentax K-7, 4736×3136, `dng`; decode →
 1254×836 RGBA8 (1,048,344 px, all alpha 255, non-uniform pixels); pre-set
 cancel → `RawError::Cancelled`.
+
+## License / provenance
+
+This crate statically links LibRaw 0.22.3 (`libraw_r.a`, CDDL-1.0 election —
+see `THIRD_PARTY_NOTICES.md` and `tooling/raw-prototype/manifest.json` for
+the pinned source, hash, and license texts' locations in the extracted tree).
 
 ## Not in this slice
 

@@ -31,10 +31,13 @@ fn run(cmd: &mut Command, what: &str) {
 }
 
 fn sha256_file(path: &Path) -> String {
-    // Prefer sha256sum (Linux), fall back to shasum (macOS). Both print
-    // "<hex>  <path>"; we only need the hex digest.
-    for tool in ["sha256sum", "shasum"] {
-        if let Ok(out) = Command::new(tool).arg("-a").arg("256").arg(path).output() {
+    // GNU sha256sum (Linux coreutils) takes no algorithm flag and exits
+    // nonzero on `-a`; perl shasum (macOS) requires `-a 256`. Pass the
+    // right flags per tool and accept the first that succeeds.
+    let attempts: [(&str, &[&str]); 2] =
+        [("sha256sum", &[]), ("shasum", &["-a", "256"])];
+    for (tool, args) in attempts {
+        if let Ok(out) = Command::new(tool).args(args).arg(path).output() {
             if out.status.success() {
                 let text = String::from_utf8_lossy(&out.stdout);
                 if let Some(hex) = text.split_whitespace().next() {
@@ -78,6 +81,42 @@ fn fetch_source(dest_dir: &Path) -> PathBuf {
     src
 }
 
+/// Minimal version assertion for the NF_RAW_LIBRAW_DIR override: the env
+/// var bypasses the tarball SHA-256 pin, so check that the tree's
+/// libraw_version.h reports the pinned release. This is a version check,
+/// not an integrity check — the tree is compiled and linked in place.
+fn assert_libraw_version(dir: &Path) {
+    let header = dir.join("libraw").join("libraw_version.h");
+    let text = std::fs::read_to_string(&header).unwrap_or_else(|e| {
+        panic!(
+            "nf-raw build: NF_RAW_LIBRAW_DIR={} lacks libraw/libraw_version.h: {e}",
+            dir.display()
+        )
+    });
+    let define = |name: &str| -> Option<u32> {
+        text.lines().find_map(|line| {
+            let rest = line.trim().strip_prefix(&format!("#define {name}"))?;
+            rest.split_whitespace().next()?.parse().ok()
+        })
+    };
+    let (major, minor, patch) = (
+        define("LIBRAW_MAJOR_VERSION"),
+        define("LIBRAW_MINOR_VERSION"),
+        define("LIBRAW_PATCH_VERSION"),
+    );
+    assert_eq!(
+        (major, minor, patch),
+        (Some(0), Some(22), Some(3)),
+        "nf-raw build: NF_RAW_LIBRAW_DIR={} is not LibRaw {LIBRAW_VERSION} \
+         (libraw_version.h reports {}.{}.{}); the override skips the tarball \
+         hash pin, so only the pinned release is supported",
+        dir.display(),
+        major.unwrap_or(u32::MAX),
+        minor.unwrap_or(u32::MAX),
+        patch.unwrap_or(u32::MAX),
+    );
+}
+
 fn source_dir() -> PathBuf {
     if let Ok(dir) = env::var("NF_RAW_LIBRAW_DIR") {
         let dir = PathBuf::from(dir);
@@ -86,6 +125,7 @@ fn source_dir() -> PathBuf {
             "nf-raw build: NF_RAW_LIBRAW_DIR={} is not an extracted LibRaw-{LIBRAW_VERSION} tree",
             dir.display()
         );
+        assert_libraw_version(&dir);
         return dir;
     }
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR"));
@@ -124,8 +164,9 @@ fn main() {
         // libc++ on macOS/iOS.
         println!("cargo:rustc-link-lib=c++");
     } else if target.contains("windows") {
-        // MSVC C++ runtime; untested, documented as unsupported for now.
-        println!("cargo:rustc-link-lib=static=libc++");
+        // MSVC has no libc++/libstdc++ to link by name; Windows is
+        // documented as unsupported in README.md, so emit no C++ stdlib
+        // hint here rather than a wrong one.
     } else {
         println!("cargo:rustc-link-lib=stdc++");
     }

@@ -1,5 +1,7 @@
 //! Thin FFI declarations for the nf_raw_shim C ABI (src/raw_shim.cpp).
-//! All unsafe in this crate is confined to this module.
+//! Unsafe in this crate lives in three places: this module (the extern
+//! "C" progress trampoline), src/lib.rs (FFI call sites and CStr/slice
+//! handling around the shim boundary), and the native shim itself.
 
 use std::ffi::c_void;
 use std::os::raw::c_char;

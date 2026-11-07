@@ -1,5 +1,6 @@
 // nf-raw C ABI shim over LibRaw 0.22.3 (CDDL-1.0 route).
-// All unsafe/native code for this crate lives here and in src/ffi.rs.
+// Native code for this crate lives in this file; the Rust side is
+// src/ffi.rs (declarations) and src/lib.rs (unsafe call sites).
 // Contract mirrors tooling/raw-prototype/decode.cpp: open_buffer probe,
 // bounded unpack, half-size 8-bit sRGB processing, RGBA8 expansion.
 #include "nf_raw.h"
@@ -133,22 +134,18 @@ int open_and_probe(const uint8_t* data, size_t len, LibRaw* raw,
   return LIBRAW_SUCCESS;
 }
 
-}  // namespace
-
-extern "C" {
-
-int nf_raw_probe(const uint8_t* data, size_t len, nf_raw_info_t* info,
-                 char* err, size_t errlen) {
+int nf_raw_probe_impl(const uint8_t* data, size_t len, nf_raw_info_t* info,
+                      char* err, size_t errlen) {
   LibRaw raw;
   return open_and_probe(data, len, &raw, info, err, errlen, nullptr);
 }
 
 // Decodes to packed straight-alpha sRGB RGBA8. Caller owns *out (malloc) and
 // must release it with nf_raw_free. *out_len is width*height*4.
-int nf_raw_decode(const uint8_t* data, size_t len, uint64_t max_pixels,
-                  void* cancel_ctx, nf_raw_poll_fn cancel_poll,
-                  nf_raw_info_t* info, uint8_t** out, size_t* out_len,
-                  char* err, size_t errlen) {
+int nf_raw_decode_impl(const uint8_t* data, size_t len, uint64_t max_pixels,
+                       void* cancel_ctx, nf_raw_poll_fn cancel_poll,
+                       nf_raw_info_t* info, uint8_t** out, size_t* out_len,
+                       char* err, size_t errlen) {
   if (!out || !out_len) {
     set_error(err, errlen, "missing output out-params");
     return LIBRAW_UNSPECIFIED_ERROR;
@@ -180,6 +177,40 @@ int nf_raw_decode(const uint8_t* data, size_t len, uint64_t max_pixels,
   if (!raw_dims_ok(raw.imgdata.sizes)) {
     set_error(err, errlen, "unpacked raw dimensions exceed 40 MP budget");
     return LIBRAW_TOO_BIG;
+  }
+
+  // Prototype parity (tooling/raw-prototype/decode.cpp): require a Bayer
+  // raw plane with a sane pitch and at least one nonzero sample. An
+  // all-zero decode means a corrupt/empty file, not a black image.
+  {
+    const auto& isz = raw.imgdata.sizes;
+    const auto& rd = raw.imgdata.rawdata;
+    if (!rd.raw_image) {
+      set_error(err, errlen, "decoder produced no raw plane");
+      return LIBRAW_DATA_ERROR;
+    }
+    const uint64_t pitch = isz.raw_pitch;
+    if (pitch < static_cast<uint64_t>(isz.raw_width) * sizeof(uint16_t) ||
+        pitch % sizeof(uint16_t) != 0) {
+      set_error(err, errlen, "invalid decoded raw row pitch");
+      return LIBRAW_DATA_ERROR;
+    }
+    const size_t row_samples = static_cast<size_t>(pitch / sizeof(uint16_t));
+    const uint16_t* plane = rd.raw_image;
+    bool nonzero = false;
+    for (uint32_t row = 0; row < isz.raw_height && !nonzero; ++row) {
+      const uint16_t* r = plane + static_cast<size_t>(row) * row_samples;
+      for (uint32_t col = 0; col < isz.raw_width; ++col) {
+        if (r[col] != 0) {
+          nonzero = true;
+          break;
+        }
+      }
+    }
+    if (!nonzero) {
+      set_error(err, errlen, "decoded raw plane is empty");
+      return LIBRAW_DATA_ERROR;
+    }
   }
 
   rc = raw.dcraw_process();
@@ -274,6 +305,40 @@ int nf_raw_decode(const uint8_t* data, size_t len, uint64_t max_pixels,
   info->preview_width = tw;
   info->preview_height = th;
   return LIBRAW_SUCCESS;
+}
+
+}  // namespace
+
+// Exception safety: LibRaw internals (constructor, open_buffer, unpack,
+// dcraw_process, dcraw_make_mem_image/copy_mem_image/gamma_curve) do not
+// catch C++ exceptions such as std::bad_alloc. Letting one escape an
+// extern "C" function is undefined behavior, so every export wraps its
+// impl in catch(...) and reports a generic LibRaw error instead.
+extern "C" {
+
+int nf_raw_probe(const uint8_t* data, size_t len, nf_raw_info_t* info,
+                 char* err, size_t errlen) {
+  try {
+    return nf_raw_probe_impl(data, len, info, err, errlen);
+  } catch (...) {
+    set_error(err, errlen, "unexpected native exception in RAW probe");
+    return LIBRAW_UNSPECIFIED_ERROR;
+  }
+}
+
+int nf_raw_decode(const uint8_t* data, size_t len, uint64_t max_pixels,
+                  void* cancel_ctx, nf_raw_poll_fn cancel_poll,
+                  nf_raw_info_t* info, uint8_t** out, size_t* out_len,
+                  char* err, size_t errlen) {
+  try {
+    return nf_raw_decode_impl(data, len, max_pixels, cancel_ctx, cancel_poll,
+                              info, out, out_len, err, errlen);
+  } catch (...) {
+    if (out) *out = nullptr;
+    if (out_len) *out_len = 0;
+    set_error(err, errlen, "unexpected native exception in RAW decode");
+    return LIBRAW_UNSPECIFIED_ERROR;
+  }
 }
 
 void nf_raw_free(void* p) { std::free(p); }
