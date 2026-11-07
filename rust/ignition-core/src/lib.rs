@@ -17,7 +17,7 @@ mod task;
 pub use command::{
     Command, CommandResult, Event, COMMAND_VERSION, OP_REDO, OP_SNAPSHOT, OP_UNDO,
 };
-pub use batch::{parse_batch, execute_batch, OP_BATCH, MAX_BATCH_COMMANDS};
+pub use batch::{parse_batch, execute_batch, execute_batch_with_ctx, OP_BATCH, MAX_BATCH_COMMANDS};
 pub use engine::{Engine, EngineKind};
 pub use envelope::{decode_envelope, encode_envelope, ENVELOPE_FORMAT_JSON, ENVELOPE_MAGIC, ENVELOPE_VERSION};
 pub use error::{EngineError, ErrorCode};

@@ -846,16 +846,7 @@ impl Engine for PrismEngine {
 
     fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let mut staged = Self::new(self.width, self.height);
-            staged.set_state(self.capture());
-            staged.journal = Journal::new(1);
-            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
-            if result.events.iter().any(|event| event.kind == "document:changed") {
-                self.journal.record(UndoEntry::Doc(self.capture()));
-                self.set_state(staged.capture());
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         if cmd.v != COMMAND_VERSION {
             return Err(EngineError::unsupported(format!(
@@ -887,6 +878,26 @@ impl Engine for PrismEngine {
             "getColors" => self.op_get_colors(),
             other => self.apply_v2(other, &cmd.payload),
         }
+    }
+
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let mut staged = Self::new(self.width, self.height);
+        staged.set_state(self.capture());
+        staged.journal = Journal::new(1);
+        let (staged, result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if result.events.iter().any(|event| event.kind == "document:changed") {
+            self.journal.record(UndoEntry::Doc(self.capture()));
+            self.set_state(staged.capture());
+        }
+        Ok(result)
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {

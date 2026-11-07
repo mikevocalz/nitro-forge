@@ -181,23 +181,7 @@ impl Engine for DraftEngine {
     }
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let staged = Self {
-                state: self.state.clone(),
-                journal: Journal::new(1),
-                revision: self.revision,
-                in_batch: true,
-            };
-            let (staged, mut result) = ignition_core::execute_batch(staged, batch)?;
-            if staged.state != self.state {
-                let revision = self.next_revision()?;
-                self.journal.record(self.state.clone());
-                self.state = staged.state;
-                self.revision = revision
-            } else {
-                result.events.clear()
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         if cmd.v != 1 || cmd.input.is_some() {
             return Err(bad("unsupported command version or binary input"));
@@ -634,11 +618,40 @@ impl Engine for DraftEngine {
         }
         self.publish(next, data)
     }
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let staged = Self {
+            state: self.state.clone(),
+            journal: Journal::new(1),
+            revision: self.revision,
+            in_batch: true,
+        };
+        let (staged, mut result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if staged.state != self.state {
+            let revision = self.next_revision()?;
+            self.journal.record(self.state.clone());
+            self.state = staged.state;
+            self.revision = revision
+        } else {
+            result.events.clear()
+        }
+        Ok(result)
+    }
     fn apply_long(
         &mut self,
         cmd: Command,
         ctx: &TaskContext,
     ) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            return self.apply_batch(cmd, Some(ctx));
+        }
         ctx.checkpoint()?;
         let result = if cmd.op == "renderFrame" {
             if cmd.v != 1 || cmd.input.is_some() {

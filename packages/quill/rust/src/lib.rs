@@ -1593,6 +1593,9 @@ impl Engine for QuillEngine {
         cmd: Command,
         ctx: &TaskContext,
     ) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            return self.apply_batch(cmd, Some(ctx));
+        }
         ctx.checkpoint()?;
         let result = if cmd.op == "exportDocx" && cmd.v == 1 {
             self.op_export_docx(&cmd, Some(ctx))
@@ -1605,26 +1608,7 @@ impl Engine for QuillEngine {
 
     fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let bookmarks_before = self.bookmarks.clone();
-            let staged = Self {
-                blocks: self.blocks.clone(),
-                bookmarks: self.bookmarks.clone(),
-                journal: Journal::new(1),
-            };
-            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
-            if result
-                .events
-                .iter()
-                .any(|event| event.kind == "document:changed")
-            {
-                let inserted = staged.blocks.clone();
-                let removed = self.blocks.clone();
-                self.bookmarks = staged.bookmarks;
-                self.record_undo(0, removed, inserted, Some(bookmarks_before));
-                self.blocks = staged.blocks;
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
@@ -1659,6 +1643,36 @@ impl Engine for QuillEngine {
             "importDocx" => self.op_import_docx(&mut cmd),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
+    }
+
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let bookmarks_before = self.bookmarks.clone();
+        let staged = Self {
+            blocks: self.blocks.clone(),
+            bookmarks: self.bookmarks.clone(),
+            journal: Journal::new(1),
+        };
+        let (staged, result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if result
+            .events
+            .iter()
+            .any(|event| event.kind == "document:changed")
+        {
+            let inserted = staged.blocks.clone();
+            let removed = self.blocks.clone();
+            self.bookmarks = staged.bookmarks;
+            self.record_undo(0, removed, inserted, Some(bookmarks_before));
+            self.blocks = staged.blocks;
+        }
+        Ok(result)
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {

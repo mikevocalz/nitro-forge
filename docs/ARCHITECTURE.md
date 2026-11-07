@@ -82,6 +82,21 @@ Prism's shared raster buffers retain copy-on-write ownership. Native queues
 already serialize the whole command, so no other document operation observes
 an intermediate step. This adds no C ABI layout or generated Nitro type changes.
 
+Batch execution has two paths behind `Engine::apply_batch`. Plain `apply`
+runs each step through `apply` on the staged clone. Task-driven `apply_long`
+routes `__batch` to `apply_batch` with the `TaskContext`, which runs every
+step through the staged engine's own `apply_long` on a scoped child context:
+each step observes cancellation and reports progress into its own slice of
+the task's progress, so a heavy op inside a batch (for example Cadence
+`render`, which returns base64 JSON inside a batch) checkpoints mid-step
+instead of running uninterruptible. Splice's `batch` op applies the same
+per-op routing on its scratch engine. Cancellation semantics are unchanged
+and atomic: a cancelled or failed step returns `Cancelled`/the step's error,
+the staged clone is dropped, and the committed document, IDs and journal are
+untouched — a cancelled batch is rejected whole, never partially applied.
+Synchronous `apply`/`nf-cli` batches keep the original non-interruptible
+behavior.
+
 ### Errors
 `EngineError { code, message, recoverable }` with a closed `ErrorCode` enum:
 `InvalidCommand | NotFound | Validation | Serialization | OutOfBounds | Internal`.
@@ -134,7 +149,8 @@ The pinned Nitro nightly-120 factory returns `ForgeDocument` and `ForgeMediaCach
 
 The additive C ABI in `nf_v1.h` preserves existing result layouts. Binary inputs and outputs are capped at 256 MiB; command JSON remains capped at 32 MiB. Input is copied before leaving JS to prevent caller mutation; Rust results are copied to owned native storage and transferred as ArrayBuffer. This is not a zero-copy claim. Callers must free each C result exactly once and retain the opaque task through all worker/observer calls.
 
-`Engine::apply_long` checks cancellation before atomic operations. Cadence synthesis checks every 8192 samples and between mix stages; EQ/compressor processing retains continuous state and is not interrupted mid-stage. Folio save and Quill DOCX export add safe read-only checkpoints. Other commands may finish after cancellation was requested; a successful atomic mutation is never reported as cancelled. `cancelled` is a recoverable error. Progress is monotonic checkpoint progress, not elapsed-time estimation. Media decoding is a separate Expo queue and is not cancelled by ForgeTask.
+`Engine::apply_long` checks cancellation before atomic operations and forwards
+`__batch` to `Engine::apply_batch` with the task context. Cadence synthesis checks every 8192 samples and between mix stages; EQ/compressor processing retains continuous state and is not interrupted mid-stage. Folio save and Quill DOCX export add safe read-only checkpoints. Other commands may finish after cancellation was requested; a successful atomic mutation is never reported as cancelled. `cancelled` is a recoverable error. Progress is monotonic checkpoint progress, not elapsed-time estimation; `TaskContext::scoped` gives batch steps disjoint progress windows so per-step `apply_long` progress composes into task-wide progress. Media decoding is a separate Expo queue and is not cancelled by ForgeTask.
 
 The media cache owns derived bytes only. Capacity is 1..256 MiB, with at most 4096 entries and 1024-byte keys. Put copies input before queueing; get returns a copy and updates LRU order. Close drains earlier work, clears bytes and rejects later operations. Keys must encode source revision and decode options. It neither persists engine documents nor generates waveforms/thumbnails itself. See recovery/PHASE6.md for executed checks and platform gates.
 

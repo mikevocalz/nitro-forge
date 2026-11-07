@@ -549,6 +549,21 @@ fn task_render_can_cancel_inside_synthesis(){
 }
 
 #[test]
+fn task_batch_render_step_can_cancel_inside_synthesis(){
+ use ignition_core::{Engine,TaskContext};
+ let mut e=CadenceEngine::new();
+ let track=e.apply(Command::new("addTrack",json!({"kind":"midi"}))).unwrap().data["track_id"].as_u64().unwrap();
+ let clip=e.apply(Command::new("addClip",json!({"track":track,"start_ticks":0,"length_ticks":57600}))).unwrap().data["clip_id"].as_u64().unwrap();
+ e.apply(Command::new("addNote",json!({"clip":clip,"pitch":69,"velocity":100,"start_ticks":0,"length_ticks":57600}))).unwrap();
+ let before=e.snapshot().unwrap();let ctx=TaskContext::new();let observer=ctx.clone();
+ // A render step inside __batch must reach apply_long so synthesis checkpoints
+ // observe the task context instead of running uninterruptible.
+ let worker=std::thread::spawn(move||{let result=e.apply_long(Command::new("__batch",json!({"commands":[{"op":"render","payload":{"from_ticks":0,"to_ticks":57600,"sample_rate":48000}}]})),&ctx);(e,result)});
+ while observer.progress()==0.0 && !worker.is_finished(){std::thread::yield_now();}
+ observer.cancel();let (e,result)=worker.join().unwrap();assert_eq!(result.unwrap_err().code,ignition_core::ErrorCode::Cancelled);assert_eq!(e.snapshot().unwrap(),before);
+}
+
+#[test]
 fn task_and_legacy_render_keep_identical_effect_output() {
     use ignition_core::{base64_decode, TaskContext};
     let mut e = CadenceEngine::new();

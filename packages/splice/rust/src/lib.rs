@@ -20,7 +20,7 @@ mod transitions;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Event, Journal,
+    Event, Journal, TaskContext,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -655,7 +655,7 @@ impl SpliceEngine {
             }
 
             // ---- batch -----------------------------------------------------
-            "batch" => self.batch(p),
+            "batch" => self.batch(p, None),
 
             // ---- clips -----------------------------------------------------
             "addClip" => {
@@ -872,8 +872,10 @@ impl SpliceEngine {
     }
 
     /// `batch {ops:[{op,payload}]}`: run every op on a scratch engine; commit
-    /// all of them as one undo entry, or none if any op fails.
-    fn batch(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    /// all of them as one undo entry, or none if any op fails. With `ctx`
+    /// each op runs through `apply_long` on a scoped slice of the task's
+    /// progress, so cancellation lands between ops or inside a long one.
+    fn batch(&mut self, p: &Value, ctx: Option<&TaskContext>) -> Result<CommandResult, EngineError> {
         let ops = p
             .get("ops")
             .and_then(Value::as_array)
@@ -890,7 +892,8 @@ impl SpliceEngine {
             doc: self.doc.clone(),
             journal: Journal::new(1),
         };
-        let mut results = Vec::with_capacity(ops.len());
+        let total = ops.len();
+        let mut results = Vec::with_capacity(total);
         let mut structural = false;
         for (i, item) in ops.iter().enumerate() {
             let op = item
@@ -903,8 +906,19 @@ impl SpliceEngine {
                 )));
             }
             let payload = item.get("payload").cloned().unwrap_or_else(|| json!({}));
-            let r = scratch
-                .apply(Command::new(op, payload))
+            let command = Command::new(op, payload);
+            let applied = match ctx {
+                Some(ctx) => {
+                    ctx.checkpoint()?;
+                    let step = ctx.scoped(
+                        i as f32 / total as f32,
+                        (i + 1) as f32 / total as f32,
+                    );
+                    scratch.apply_long(command, &step)
+                }
+                None => scratch.apply(command),
+            };
+            let r = applied
                 .map_err(|e| EngineError::new(e.code, format!("ops[{i}] {op}: {}", e.message)))?;
             structural |= r.events.iter().any(|e| e.kind == "timeline:changed");
             results.push(r.data);
@@ -929,14 +943,7 @@ impl Engine for SpliceEngine {
     /// `removed_transitions`.
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
-            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
-            if result.events.iter().any(|event| event.kind == "document:changed") {
-                self.journal.record(self.doc.clone());
-                self.doc = staged.doc;
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         let mut result = self.apply_op(cmd)?;
         if result.events.iter().any(|e| e.kind == "timeline:changed") {
@@ -947,6 +954,40 @@ impl Engine for SpliceEngine {
                 }
             }
         }
+        Ok(result)
+    }
+
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
+        let (staged, result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if result.events.iter().any(|event| event.kind == "document:changed") {
+            self.journal.record(self.doc.clone());
+            self.doc = staged.doc;
+        }
+        Ok(result)
+    }
+
+    /// `__batch` forwards to `apply_batch`; the engine's own `batch` op runs
+    /// its plan on a scratch engine with per-op cancellation and progress.
+    fn apply_long(&mut self, cmd: Command, ctx: &TaskContext) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            return self.apply_batch(cmd, Some(ctx));
+        }
+        ctx.checkpoint()?;
+        let result = if cmd.op == "batch" {
+            self.batch(&cmd.payload, Some(ctx))?
+        } else {
+            self.apply(cmd)?
+        };
+        ctx.set_progress(1.0);
         Ok(result)
     }
 
@@ -1556,6 +1597,46 @@ mod tests {
         // undo now reaches the second addClip, proving no failed batch recorded.
         assert!(e.undo().unwrap());
         assert_eq!(describe(&e)["tracks"][0]["clips"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn task_batch_op_is_cancellable_and_reports_progress() {
+        use ignition_core::TaskContext;
+        let mut e = eng();
+        setup(&mut e);
+        let before = describe(&e);
+        let ctx = TaskContext::new();
+        ctx.cancel();
+        let err = e
+            .apply_long(
+                Command::new(
+                    "batch",
+                    json!({"ops": [{"op": "addMarker", "payload": {"time_s": 1.0}}]}),
+                ),
+                &ctx,
+            )
+            .unwrap_err();
+        assert_eq!(err.code, ErrorCode::Cancelled);
+        assert_eq!(describe(&e), before);
+
+        // An uncancelled task batch commits once and reports full progress.
+        let ctx = TaskContext::new();
+        let r = e
+            .apply_long(
+                Command::new(
+                    "batch",
+                    json!({"ops": [
+                        {"op": "addMarker", "payload": {"time_s": 1.0}},
+                        {"op": "setLoopRange", "payload": {"in_s": 0.5, "out_s": 3.0}},
+                    ]}),
+                ),
+                &ctx,
+            )
+            .unwrap();
+        assert_eq!(r.data["results"].as_array().unwrap().len(), 2);
+        assert_eq!(ctx.progress(), 1.0);
+        assert!(e.undo().unwrap(), "task batch recorded no undo entry");
+        assert_eq!(describe(&e), before);
     }
 
     #[test]
