@@ -648,7 +648,7 @@ Freehand Ink annotations persist real `/InkList` stroke geometry — an array of
 ## pitch-engine — `PitchEngine::new()`
 
 State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide], sections:[Section], next_section_id,
-masters:[SlideMaster], layouts:[SlideLayout] }`,
+masters:[SlideMaster], layouts:[SlideLayout], themes:[DeckTheme], deck_theme?:number }`,
 `Section = { id, label, start_slide_id }` is a stable deck boundary. Older snapshots default to `sections:[]` and `next_section_id:1`.
 `Slide = { id, layout:"blank"|"title"|"titleBody", background:[r,g,b,a]|null,
 objects:[Obj], animations:[Anim], notes?:string, ink?:[InkStroke],
@@ -656,7 +656,25 @@ transition?:SlideTransition, timing?:SlideTiming, layout_id?:number }`,
 `SlideMaster = { id, name, background?:[r,g,b,a] }`,
 `SlideLayout = { id, master_id, name, placeholders:[Placeholder] }`,
 `Placeholder = { id, kind:"title"|"body"|"image"|"media"|"date"|"footer"|"pageNumber",
-x,y,w,h, label, inherit_theme?:bool }`.
+x,y,w,h, label, inherit_theme?:bool }`,
+`DeckTheme = { id, name, colors?:{slot:[r,g,b,a]}, fonts?:{slot:string} }`.
+Deck themes are named color/font slot bundles (P14 slice 9, mirroring the
+pinned NYC-Tron `ThemeAndTemplateGallery` `kind:"theme"` preset contract):
+a flat deck-level collection plus a `deck_theme` binding. Color slots are
+the OOXML theme color roles `dk1|lt1|dk2|lt2|accent1..accent6|hlink|
+fol_hlink`; font slots are the OOXML major/minor latin typefaces
+`major_latin|minor_latin`. Slots are sparse: an absent slot means "no
+theme value stored", never an implicit default. Bounds: ≤32 themes,
+names/font families non-blank ≤128 UTF-8 bytes; all ids share the
+document `next_id` space. HONESTY BOUNDARY: the engine stores/validates
+the slot maps and the deck→theme binding as DATA ONLY — it does NOT
+resolve theme colors/fonts onto objects, masters, layouts or
+placeholders, and placeholder `inherit_theme` stays an independent flag.
+NYC-Tron `kind:"template"` presets (a bundled theme + master/layout set)
+are deferred: masters/layouts/placeholders are separate validated
+collections and the apply/bind slice does not exist yet, so a template
+bundle has no honest semantics to store in this slice. Older snapshots
+default to `themes:[]` and absent `deck_theme`.
 Masters/layouts/placeholders are slide-master DATA (P14 slice 8a, mirroring
 the pinned NYC-Tron `MasterLayoutEditor` contract): flat deck-level
 collections, a layout back-references its master via `master_id`, and
@@ -772,6 +790,13 @@ document `next_id` identity space.
 | `addPlaceholder` | `{layout,kind,x,y,w,h,label,inherit_theme?}` | `{placeholder_id}` | `layout` must exist; `kind` is the bounded catalog `title|body|image|media|date|footer|pageNumber`; bounds per the Placeholder contract; `label` non-blank ≤128 bytes; ≤64 placeholders per layout; id from `next_id`; one undo entry |
 | `updatePlaceholder` | `{layout,id,kind?,x?,y?,w?,h?,label?,inherit_theme?}` | `{ok}` | partial in-place patch retains placeholder id and position; merged result re-validated; equal/empty patch is an eventless no-op preserving redo |
 | `removePlaceholder` | `{layout,id}` | `{ok}` | unknown placeholder id → NotFound |
+| `addTheme` | `{name,colors?,fonts?}` | `{theme_id}` | name non-blank ≤128 UTF-8 bytes; `colors` is an optional object of OOXML color slots (`dk1|lt1|dk2|lt2|accent1..accent6|hlink|fol_hlink`) → `[r,g,b,a]`, `fonts` an optional object of font slots (`major_latin|minor_latin`) → non-blank ≤128-byte family names; unknown slots reject; ≤32 themes; id from `next_id`; one undo entry; theme data emits the schema:6 snapshot wrapper |
+| `renameTheme` | `{id,name}` | `{ok}` | equal name is an eventless no-op preserving redo |
+| `setThemeColor` | `{id,slot,color}` | `{ok}` | `slot` is a bounded color slot; `color` `[r,g,b,a]` or null/omitted to clear the slot; equal/absent-clear is an eventless no-op |
+| `setThemeFont` | `{id,slot,font}` | `{ok}` | `slot` is `major_latin|minor_latin`; `font` non-blank ≤128-byte string or null/omitted to clear; equal/absent-clear is an eventless no-op |
+| `removeTheme` | `{id}` | `{ok}` | removing the deck-bound theme clears `deck_theme`; other bindings untouched; one undo entry |
+| `setDeckTheme` | `{theme}` | `{ok}` | `theme` is an existing theme id or null/omitted to clear the deck→theme binding; equal rebind is an eventless no-op; DATA ONLY — no theme is applied to slides/masters/layouts |
+| `deckTheme` | `{}` | `{theme_id,theme}` | read-only; `theme_id` is the bound theme id or null, `theme` the resolved `DeckTheme` or null |
 | `removeSlide` | `{id}` | `{ok}` | must keep ≥1 slide |
 | `moveSlide` | `{from,to}` | `{ok}` | |
 | `moveSlides` | `{order:number[]}` | `{ok}` | Complete unique slide-ID permutation; one undo entry. Identical order is a no-op. |
@@ -830,7 +855,7 @@ Animation evaluation caps at4096 objects/animations per slide; references and ob
 
 The pinned alpha.4 SlideAnimationPane supports effect/add/remove but lacks timing/trigger edit callbacks. The adapter offers all seven real effects, retains nonabsolute sourceTrigger metadata and refuses to bind that old pane over triggered programs rather than mislabel relative delays as absolute starts. Typed engine APIs/readPitchSlideAt accept explicit click history. No fake preview timer, host UI activation or new Pitch renderer is provided. Actual CPU pixel integration is checked through the existing Prism renderer.
 
-Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text`, an object `stroke`, a connector, a media object/spec, any master/layout/placeholder definition or a slide `layout_id` binding uses `{kind:"pitch",schema:4,document:PitchState}``; any document carrying a `"morph"` transition kind or an object `morph_name` tag uses `{kind:"pitch",schema:5,document:PitchState}``. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads, schema:≤3 readers reject schema:4 payloads and schema:≤4 readers reject schema:5 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes/connectors/media/masters/layouts/placeholders/layout bindings/morph tags (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke`/`connector`/`media`/`morph_name` fields do not, which is why shapes/strokes/connectors/media take schema:4 and morph data takes schema:5 rather than reusing earlier wrappers). Readers accept legacy root payloads and schema:2, schema:3, schema:4 and schema:5 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
+Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text`, an object `stroke`, a connector, a media object/spec, any master/layout/placeholder definition or a slide `layout_id` binding uses `{kind:"pitch",schema:4,document:PitchState}``; any document carrying a `"morph"` transition kind or an object `morph_name` tag uses `{kind:"pitch",schema:5,document:PitchState}`; any document carrying a deck theme definition or a `deck_theme` binding uses `{kind:"pitch",schema:6,document:PitchState}``. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads, schema:≤3 readers reject schema:4 payloads, schema:≤4 readers reject schema:5 payloads and schema:≤5 readers reject schema:6 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes/connectors/media/masters/layouts/placeholders/layout bindings/morph tags/themes (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke`/`connector`/`media`/`morph_name`/`themes`/`deck_theme` fields do not, which is why shapes/strokes/connectors/media take schema:4, morph data takes schema:5 and themes take schema:6 rather than reusing earlier wrappers). Readers accept legacy root payloads and schema:2, schema:3, schema:4, schema:5 and schema:6 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
 
 ## quill-engine — `QuillEngine::new()`
 
