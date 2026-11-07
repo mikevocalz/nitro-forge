@@ -679,13 +679,21 @@ fn resolve_end(end: &ConnectorEnd, slide: &Slide) -> Option<(f64, f64)> {
 fn connector_points(spec: &ConnectorSpec, slide: &Slide) -> Option<Vec<[f64; 2]>> {
     let a = resolve_end(&spec.from, slide)?;
     let b = resolve_end(&spec.to, slide)?;
-    Some(match spec.route {
+    let points = match spec.route {
         ConnectorRoute::Straight => vec![[a.0, a.1], [b.0, b.1]],
         ConnectorRoute::Elbow => {
             let mid_x = (a.0 + b.0) / 2.0;
             vec![[a.0, a.1], [mid_x, a.1], [mid_x, b.1], [b.0, b.1]]
         }
-    })
+    };
+    // Bound endpoints derive from stored object bounds, which ops leave
+    // unbounded (any finite f64): extreme coordinates can overflow the
+    // anchor arithmetic to non-finite. `describe` stays total by omitting
+    // `resolved` for that connector rather than emitting nulls.
+    points
+        .iter()
+        .all(|p| p.iter().all(|c| c.is_finite()))
+        .then_some(points)
 }
 
 /// Restore-side structural check for a stored connector spec: free endpoint
@@ -1446,16 +1454,25 @@ impl Engine for PitchEngine {
             "removeObject" => {
                 let slide = self.slide_index(req_u64(p, "slide")?)?;
                 let oi = self.object_index(slide, req_u64(p, "id")?)?;
-                let mut candidate=self.state.slides[slide].clone();let removed=candidate.objects.remove(oi);candidate.animations.retain(|a|a.object_id!=removed.id);
+                let mut candidate=self.state.slides[slide].clone();let removed=candidate.objects.remove(oi);
                 // Connectors bound to the removed object die with it (same
                 // rule as animations); free-endpoint connectors survive.
+                // Animations on EVERY dropped object — the target and each
+                // cascade-dropped connector — are dropped too, or
+                // validate_slide would reject the dangling references.
+                let mut dropped = vec![removed.id];
                 candidate.objects.retain(|o| {
-                    o.connector.as_ref().map_or(true, |spec| {
+                    let keep = o.connector.as_ref().map_or(true, |spec| {
                         ![&spec.from, &spec.to].iter().any(|end| {
                             matches!(end, ConnectorEnd::Bound { object_id, .. } if *object_id == removed.id)
                         })
-                    })
+                    });
+                    if !keep {
+                        dropped.push(o.id);
+                    }
+                    keep
                 });
+                candidate.animations.retain(|a| !dropped.contains(&a.object_id));
                 animation::validate_slide(&candidate)?;
                 self.journal.record(self.state.clone());self.state.slides[slide]=candidate;
                 Ok(CommandResult::data(json!({ "ok": true })))
@@ -1830,6 +1847,23 @@ impl Engine for PitchEngine {
                 }
                 match (&object.kind, &object.connector) {
                     (ObjKind::Connector, Some(spec)) => {
+                        // Connectors store no geometry or content: bounds and
+                        // rotation stay zeroed and text/fill/src stay absent
+                        // (the outline lives on `spec.stroke`, already checked
+                        // above since Connector is not a shape kind).
+                        if object.x != 0.0
+                            || object.y != 0.0
+                            || object.w != 0.0
+                            || object.h != 0.0
+                            || object.rotation_deg != 0.0
+                            || object.text.is_some()
+                            || object.fill.is_some()
+                            || object.src.is_some()
+                        {
+                            return Err(EngineError::serialization(
+                                "connector object carries geometry or content fields",
+                            ));
+                        }
                         check_connector_spec(spec, slide, object.id)?;
                     }
                     (ObjKind::Connector, None) => {
@@ -3931,6 +3965,118 @@ mod tests {
     }
 
     #[test]
+    fn connector_cascade_drops_bound_connector_animations() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let a = add_rect(&mut e, slide, 0.0, 0.0, 10.0, 10.0);
+        let keep = add_rect(&mut e, slide, 100.0, 100.0, 10.0, 10.0);
+        let conn = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":a,"side":"center"},
+                   "to":{"type":"free","x":50.0,"y":50.0}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        // an animation on the connector itself must not strand the cascade
+        apply(
+            &mut e,
+            "addAnimation",
+            json!({"slide":slide,"object":conn,"kind":"fadeIn","start_s":0,"duration_s":1}),
+        );
+        apply(&mut e, "removeObject", json!({"slide":slide,"id":a}));
+        let described = apply(&mut e, "describe", json!({}));
+        let slide_state = &described["slides"][0];
+        // connector AND its animation are gone; unrelated objects survive
+        assert!(slide_state["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|o| o["id"] != json!(conn)));
+        assert!(slide_state["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|o| o["id"] == json!(keep)));
+        assert_eq!(slide_state["animations"].as_array().unwrap().len(), 0);
+        // undo restores the target, the connector and its animation
+        assert!(e.undo().unwrap());
+        let described = apply(&mut e, "describe", json!({}));
+        let slide_state = &described["slides"][0];
+        assert!(slide_state["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|o| o["id"] == json!(conn)));
+        assert_eq!(slide_state["animations"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            slide_state["animations"][0]["object_id"],
+            json!(conn)
+        );
+    }
+
+    #[test]
+    fn connector_resolved_omitted_when_bound_geometry_overflows() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let a = add_rect(&mut e, slide, 0.0, 0.0, 10.0, 10.0);
+        let b = add_rect(&mut e, slide, 200.0, 200.0, 10.0, 10.0);
+        let bound = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":a,"side":"bottom"},
+                   "to":{"type":"free","x":50.0,"y":50.0}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let free = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,
+                   "from":{"type":"bound","object_id":b,"side":"top"},
+                   "to":{"type":"free","x":60.0,"y":60.0}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        // move/resize accept any finite f64; y + h overflows f64 to inf,
+        // so the bound endpoint cannot produce finite resolved geometry
+        apply(
+            &mut e,
+            "moveObject",
+            json!({"slide":slide,"id":a,"x":0.0,"y":1.7e308}),
+        );
+        apply(
+            &mut e,
+            "resizeObject",
+            json!({"slide":slide,"id":a,"w":10.0,"h":1e308}),
+        );
+        // describe stays total: the overflowing connector omits `resolved`
+        // while the healthy connector still resolves
+        let objects = described_objects(&mut e);
+        let objects = objects.as_array().unwrap();
+        let conn = objects.iter().find(|o| o["id"] == json!(bound)).unwrap();
+        assert!(conn.get("resolved").is_none());
+        assert_eq!(conn["kind"], json!("connector"));
+        let other = objects.iter().find(|o| o["id"] == json!(free)).unwrap();
+        assert_eq!(
+            other["resolved"]["points"],
+            json!([[205.0, 200.0], [60.0, 60.0]])
+        );
+        // slideAt still emits the connector as a zero-bounds object entry
+        let at = apply(&mut e, "slideAt", json!({"slide":slide,"t_s":0.0}));
+        let entry = at["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(bound))
+            .unwrap();
+        assert_eq!(entry["w"], json!(0.0));
+        assert_eq!(entry["h"], json!(0.0));
+    }
+
+    #[test]
     fn connector_snapshot_schema4_roundtrip_and_hostile_restore() {
         let mut e = PitchEngine::new();
         let slide = slide_id(&mut e, 0);
@@ -4017,6 +4163,36 @@ mod tests {
         restore_err(&mut e, &|h| {
             h["slides"][0]["objects"][conn_index]["connector"]["stroke"] =
                 json!({"width":0,"color":[0,0,0,255]});
+        });
+        // connectors store no geometry: nonzero bounds/rotation reject
+        for (field, value) in [
+            ("x", json!(1.0)),
+            ("y", json!(1.0)),
+            ("w", json!(5.0)),
+            ("h", json!(5.0)),
+            ("rotation_deg", json!(45.0)),
+        ] {
+            restore_err(&mut e, &|h| {
+                h["slides"][0]["objects"][conn_index][field] = value.clone();
+            });
+        }
+        // connectors carry no text/fill/src content fields either
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["text"] = json!({
+                "content":"x","font_size":12,"color":[0,0,0,255],
+                "bold":false,"italic":false
+            });
+        });
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["fill"] = json!([0,0,0,255]);
+        });
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["src"] = json!("x.png");
+        });
+        // an object-level stroke outline is shape-only, connectors included
+        restore_err(&mut e, &|h| {
+            h["slides"][0]["objects"][conn_index]["stroke"] =
+                json!({"width":1,"color":[0,0,0,255]});
         });
         // bound target that is itself a connector
         let second = apply(

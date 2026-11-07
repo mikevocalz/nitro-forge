@@ -469,7 +469,12 @@ stored. `describe` adds a `resolved` field to each connector object:
 `{from:{x,y}, to:{x,y}, points:[[x,y]..]}` computed from CURRENT slide state.
 Endpoint resolution: `free` is the absolute slide-space point (finite within
 ±1,000,000); `bound` resolves to the midpoint of `side` on the target object's
-axis-aligned bounds (`center` = bounds midpoint). Bound targets must be
+PRE-ROTATION stored axis-aligned bounds (`rotation_deg` is ignored;
+`center` = bounds midpoint) computed from STATIC stored geometry — slide
+animations never affect resolved endpoints. Object bounds are unbounded (any
+finite f64), so extreme coordinates can overflow the anchor arithmetic;
+`describe` then omits `resolved` for that connector rather than emitting
+non-finite values. Bound targets must be
 existing non-connector objects on the same slide; they cannot be the connector
 itself. Route geometry is deterministic: `straight` → `[from, to]`; `elbow` →
 `[from, (midX,from.y), (midX,to.y), to]` with `midX = (from.x+to.x)/2` (the
@@ -480,7 +485,10 @@ connector reuses the shape-stroke bounds (width finite >0 <=10,000). The
 engine stores endpoints/routing as data; hosts own path rendering, arrowhead
 glyphs and hit testing. `moveObject`/`resizeObject`/`rotateObject` reject
 connector objects (their bounds are meaningless); `setObjectOrder` still
-applies.
+applies. `slideAt` emits connectors like every object as kind-less
+`{id,x,y,w,h,rotation,opacity}` entries — normally zero bounds since
+connector geometry is resolved, not stored; hosts read connector paths from
+`describe`'s `resolved` field.
 `Anim = { object_id, kind:"fadeIn"|"slideInLeft"|"zoomIn"|"pulse"|"spin"|"fadeOut"|"zoomOut", start_s, duration_s, trigger? }`,
 `InkStroke = { id, kind:"pen"|"highlighter"|"laser", points:[[x,y]..], width, color:[r,g,b,a], opacity?:0..=1 }`.
 Ink `points` are `[x, y]` pairs in slide-space units (the same coordinate space
@@ -528,7 +536,7 @@ document `next_id` identity space.
 | `setObjectOrder` | `{slide,id,to}` | `{ok}` | Absolute bottom-to-top object index within the slide; atomic undo; same-index request preserves history; animation references retain identity |
 | `resizeObject` | `{slide,id,w,h}` | `{ok}` | w,h > 0; rejects connector objects |
 | `rotateObject` | `{slide,id,degrees}` | `{ok}` | rejects connector objects |
-| `removeObject` | `{slide,id}` | `{ok}` | also drops its animations and any connectors bound to it (free-endpoint connectors survive) |
+| `removeObject` | `{slide,id}` | `{ok}` | also drops its animations and any connectors bound to it — cascade-dropped connectors take their own animations with them (free-endpoint connectors survive) |
 | `addAnimation` | `{slide,object,kind,start_s,duration_s,trigger?}` | `{index}` | duration > 0 |
 | `addTriggeredAnimationV1` | same as `addAnimation` | `{index}` | explicit-trigger alias; old engines reject the unknown name rather than silently dropping `trigger` |
 | `updateAnimation` | `{slide,index,kind?,start_s?,duration_s?,trigger?}` | `{ok}` | Partial in-place patch retains target object and list position. Existing index required; admitted effect kinds, finite start/delay >=0 and finite duration >0, both ≤86400; explicit null invalid. Validate before mutation, one history entry/event only for actual change; empty/equal patch preserves redo and emits no event. Trigger updates are validated against the complete candidate timeline; list order is unchanged. |
