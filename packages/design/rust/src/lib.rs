@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 //! Fixed-size design hierarchy/layout. Prism owns actual rasterization.
+mod components;
 mod constraints;
 mod layout;
 mod model;
@@ -32,6 +33,11 @@ fn merge<T: Serialize + DeserializeOwned>(
         next[k] = v.clone();
     }
     Ok(serde_json::from_value(next)?)
+}
+/// Kinds that may own children and flow layout: frames and component
+/// definitions. Instances are leaves until read-time expansion.
+fn container_kind(k: Kind) -> bool {
+    matches!(k, Kind::Frame | Kind::Component)
 }
 fn fields(p: &Value, allowed: &[&str]) -> Result<(), EngineError> {
     let object = p.as_object().ok_or_else(|| bad("expected object payload"))?;
@@ -128,7 +134,9 @@ impl DesignEngine {
         cmd: &Command,
         ctx: Option<&TaskContext>,
     ) -> Result<CommandResult, EngineError> {
-        let boxes = layout::evaluate(&variables::effective(&self.state))?;
+        let effective = variables::effective(&self.state);
+        let expanded = components::expand(&effective)?;
+        let boxes = layout::evaluate(&expanded)?;
         let root = &self.state.nodes[&1];
         let mut prism = prism_engine::PrismEngine::new(root.width as u32, root.height as u32);
         for b in boxes {
@@ -185,9 +193,16 @@ impl Engine for DesignEngine {
                 )?))
             }
             "evaluateLayout" => {
+                let effective = variables::effective(&self.state);
+                let expanded = components::expand(&effective)?;
                 return Ok(CommandResult::read_only(json!({
-                    "boxes": layout::evaluate(&variables::effective(&self.state))?
+                    "boxes": layout::evaluate(&expanded)?
                 })))
+            }
+            "describeComponents" => {
+                return Ok(CommandResult::read_only(components::describe(
+                    &self.state,
+                )?))
             }
             "describeVariables" => {
                 return Ok(CommandResult::read_only(variables::describe(
@@ -248,8 +263,8 @@ impl Engine for DesignEngine {
             "addFrame" | "addShape" => {
                 let parent = id(p, "parent")?;
                 next.editable(parent, false)?;
-                if next.nodes[&parent].kind != Kind::Frame {
-                    return Err(bad("parent must be a frame"));
+                if !container_kind(next.nodes[&parent].kind) {
+                    return Err(bad("parent must be a frame or component"));
                 }
                 let node_id = next.next_id;
                 next.next_id = node_id
@@ -266,8 +281,10 @@ impl Engine for DesignEngine {
                         .remove("kind")
                         .ok_or_else(|| bad("shape kind required"))?;
                     node.kind = serde_json::from_value(kind)?;
-                    if node.kind == Kind::Frame {
-                        return Err(bad("use addFrame for frame nodes"));
+                    // addShape admits leaf primitives only; frames come from
+                    // addFrame and component/instance nodes from their own ops.
+                    if !matches!(node.kind, Kind::Rect | Kind::Ellipse) {
+                        return Err(bad("addShape admits rect or ellipse only"));
                     }
                 }
                 node = merge(
@@ -291,8 +308,8 @@ impl Engine for DesignEngine {
                     None => 1,
                 };
                 next.editable(parent, false)?;
-                if next.nodes[&parent].kind != Kind::Frame {
-                    return Err(bad("parent must be a frame"));
+                if !container_kind(next.nodes[&parent].kind) {
+                    return Err(bad("parent must be a frame or component"));
                 }
                 let node_id = next.next_id;
                 next.next_id = node_id
@@ -425,6 +442,13 @@ impl Engine for DesignEngine {
                 let mode: SizeMode = serde_json::from_value(
                     p.get("mode").cloned().ok_or_else(|| bad("mode required"))?,
                 )?;
+                // Instances are fixed-sizing only (instance hug/fill is
+                // deferred); `validate` enforces the same on hostile input.
+                if next.nodes[&node_id].kind == Kind::Instance
+                    && mode != SizeMode::Fixed
+                {
+                    return Err(bad("instance sizing must be fixed"));
+                }
                 let value = p
                     .get("value")
                     .map(|v| {
@@ -464,8 +488,8 @@ impl Engine for DesignEngine {
                 let node_id = id(p, "id")?;
                 next.editable(node_id, false)?;
                 let node = Arc::make_mut(next.nodes.get_mut(&node_id).unwrap());
-                if node.kind != Kind::Frame {
-                    return Err(bad("layout requires a frame"));
+                if !container_kind(node.kind) {
+                    return Err(bad("layout requires a frame or component"));
                 }
                 node.layout = serde_json::from_value(
                     p.get("layout")
@@ -514,7 +538,7 @@ impl Engine for DesignEngine {
                 next.editable(node_id, false)?;
                 next.editable(parent, false)?;
                 if node_id == 1
-                    || next.nodes[&parent].kind != Kind::Frame
+                    || !container_kind(next.nodes[&parent].kind)
                     || next.subtree(node_id).contains(&parent)
                 {
                     return Err(bad("invalid parent or cycle"));
@@ -748,6 +772,166 @@ impl Engine for DesignEngine {
                 )?;
                 next.bindings
                     .retain(|b| !(b.node_id == node_id && b.path == path));
+            }
+            "createComponent" | "updateComponent" => {
+                fields(p, &["id", "name", "variants"])?;
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                if node_id == 1 {
+                    return Err(bad("root canvas cannot become a component"));
+                }
+                let kind = next.nodes[&node_id].kind;
+                if cmd.op == "createComponent" {
+                    if kind != Kind::Frame {
+                        return Err(bad("createComponent requires a frame subtree"));
+                    }
+                } else if kind != Kind::Component {
+                    return Err(bad("updateComponent requires a component"));
+                }
+                let node = Arc::make_mut(next.nodes.get_mut(&node_id).unwrap());
+                if cmd.op == "createComponent" {
+                    node.kind = Kind::Component;
+                }
+                if let Some(v) = p.get("name") {
+                    node.name = v
+                        .as_str()
+                        .ok_or_else(|| bad("component name must be a string"))?
+                        .into();
+                }
+                if let Some(v) = p.get("variants") {
+                    node.variants = serde_json::from_value(v.clone())?;
+                }
+            }
+            "createInstance" => {
+                fields(
+                    p,
+                    &[
+                        "component",
+                        "parent",
+                        "name",
+                        "x",
+                        "y",
+                        "width",
+                        "height",
+                        "fill",
+                        "visible",
+                        "locked",
+                        "variant",
+                        "overrides",
+                    ],
+                )?;
+                let component = id(p, "component")?;
+                let comp = next
+                    .nodes
+                    .get(&component)
+                    .ok_or_else(|| bad("unknown component"))?;
+                if comp.kind != Kind::Component {
+                    return Err(bad("createInstance target is not a component"));
+                }
+                let parent = match p.get("parent") {
+                    Some(v) => v
+                        .as_u64()
+                        .ok_or_else(|| bad("expected integer parent"))?,
+                    None => 1,
+                };
+                next.editable(parent, false)?;
+                if !container_kind(next.nodes[&parent].kind) {
+                    return Err(bad("parent must be a frame or component"));
+                }
+                let node_id = next.next_id;
+                next.next_id = node_id
+                    .checked_add(1)
+                    .ok_or_else(|| bad("identity exhausted"))?;
+                // The instance starts as a materialized copy of the component
+                // root box: name/geometry/fill/visibility default from the
+                // template, payload fields override, sizing stays fixed
+                // (instance hug/fill is deferred — see ENGINE_OPS.md).
+                let mut node = Node::frame(node_id, comp.width, comp.height);
+                node.kind = Kind::Instance;
+                node.name = comp.name.clone();
+                node.x = comp.x;
+                node.y = comp.y;
+                node.fill = comp.fill;
+                node.visible = comp.visible;
+                node.locked = comp.locked;
+                let mut patch = p
+                    .as_object()
+                    .ok_or_else(|| bad("expected node object"))?
+                    .clone();
+                for k in [
+                    "component",
+                    "parent",
+                    "variant",
+                    "overrides",
+                ] {
+                    patch.remove(k);
+                }
+                node = merge(
+                    &node,
+                    &Value::Object(patch),
+                    &["name", "x", "y", "width", "height", "fill", "visible", "locked"],
+                )?;
+                let variant = match p.get("variant") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(
+                        v.as_str()
+                            .ok_or_else(|| bad("variant must be a string or null"))?
+                            .to_string(),
+                    ),
+                };
+                let overrides = match p.get("overrides") {
+                    Some(Value::Null) | None => vec![],
+                    Some(v) => serde_json::from_value(v.clone())?,
+                };
+                node.instance = Some(InstanceSpec {
+                    component,
+                    variant,
+                    overrides,
+                });
+                next.nodes.insert(node_id, Arc::new(node));
+                Arc::make_mut(next.nodes.get_mut(&parent).unwrap())
+                    .children
+                    .push(node_id);
+                data = json!({"node_id":node_id});
+            }
+            "updateInstance" => {
+                fields(p, &["id", "variant", "overrides"])?;
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                let node = next
+                    .nodes
+                    .get(&node_id)
+                    .ok_or_else(|| bad("unknown node"))?;
+                if node.kind != Kind::Instance {
+                    return Err(bad("updateInstance requires an instance node"));
+                }
+                let node = Arc::make_mut(next.nodes.get_mut(&node_id).unwrap());
+                let spec = node
+                    .instance
+                    .as_mut()
+                    .ok_or_else(|| bad("instance node requires an instance spec"))?;
+                if p.as_object().is_some_and(|o| o.contains_key("variant")) {
+                    spec.variant = match p.get("variant") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(
+                            v.as_str()
+                                .ok_or_else(|| bad("variant must be a string or null"))?
+                                .to_string(),
+                        ),
+                    };
+                }
+                if p.as_object().is_some_and(|o| o.contains_key("overrides")) {
+                    spec.overrides = match p.get("overrides") {
+                        Some(Value::Null) | None => vec![],
+                        Some(v) => serde_json::from_value(v.clone())?,
+                    };
+                }
+            }
+            "detachInstance" => {
+                fields(p, &["id"])?;
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                next = components::detach(&next, node_id)?;
             }
             _ => return Err(EngineError::unsupported("unsupported design operation")),
         }

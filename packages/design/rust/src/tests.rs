@@ -1741,3 +1741,478 @@ fn constraints_c2_bounds_targets_and_hostile_restore() {
         None
     );
 }
+fn make_component(e: &mut DesignEngine, child_fill: [u8; 4]) -> (u64, u64) {
+    let frame = call(
+        e,
+        "addFrame",
+        json!({"parent":1,"x":0,"y":0,"width":10,"height":10}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    let child = shape(e, frame, 1., 1., 2., 2., child_fill);
+    call(e, "createComponent", json!({"id":frame}));
+    (frame, child)
+}
+#[test]
+fn instances_expand_deterministically_with_overrides_variants_and_undo() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    let (comp, child) = make_component(&mut e, [9, 8, 7, 255]);
+    let inst = call(
+        &mut e,
+        "createInstance",
+        json!({"component":comp,"parent":1,"x":5,"y":0,"width":10,"height":10}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    // Stored state keeps the instance a leaf; expansion is read-only.
+    let stored = &e.state.nodes[&inst];
+    assert_eq!(stored.kind, Kind::Instance);
+    assert!(stored.children.is_empty());
+    assert_eq!(stored.instance.as_ref().unwrap().component, comp);
+    // evaluateLayout expands: instance box plus a synthetic child clone.
+    let expanded = components::expand(&e.state).unwrap();
+    let boxes = layout::evaluate(&expanded).unwrap();
+    let inst_box = boxes.iter().find(|b| b.id == inst).unwrap();
+    assert_eq!(inst_box.kind, Kind::Instance);
+    let synth = boxes.iter().find(|b| b.id > SAFE_ID).unwrap();
+    assert_eq!((synth.x, synth.y, synth.width, synth.height), (6., 1., 2., 2.));
+    assert_eq!(synth.fill, [9, 8, 7, 255]);
+    // Determinism: two expansions produce identical boxes.
+    let again = layout::evaluate(&components::expand(&e.state).unwrap()).unwrap();
+    assert_eq!(
+        serde_json::to_value(&boxes).unwrap(),
+        serde_json::to_value(&again).unwrap()
+    );
+    // Instance overrides hit descendant clones and the instance root.
+    call(
+        &mut e,
+        "updateInstance",
+        json!({"id":inst,"overrides":[
+            {"node":child,"path":"fill","value":[1,2,3,255]},
+            {"node":comp,"path":"fill","value":[4,5,6,255]},
+            {"node":child,"path":"x","value":0.}
+        ]}),
+    );
+    let pixels = e
+        .apply(Command::new("renderFrame", json!({})).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    // Child clone at instance x5 + override x0 -> pixel (5,1) is child fill.
+    assert_eq!(&pixels[(1 * 20 + 5) as usize * 4..][..4], &[1, 2, 3, 255]);
+    // Instance root fill shows inside its box but outside the child.
+    assert_eq!(&pixels[(7 * 20 + 7) as usize * 4..][..4], &[4, 5, 6, 255]);
+    // Variant selection swaps the property bundle; instance overrides win.
+    call(
+        &mut e,
+        "updateComponent",
+        json!({"id":comp,"variants":[{"name":"alt","properties":[
+            {"node":child,"path":"x","value":3.},
+            {"node":child,"path":"fill","value":[7,7,7,255]}
+        ]}]}),
+    );
+    call(&mut e, "updateInstance", json!({"id":inst,"variant":"alt"}));
+    let pixels = e
+        .apply(Command::new("renderFrame", json!({})).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    // Variant x=3 loses to the instance override x=0; variant fill loses to
+    // the instance override fill [1,2,3,255] on the same (node,path).
+    assert_eq!(&pixels[(1 * 20 + 5) as usize * 4..][..4], &[1, 2, 3, 255]);
+    // Undo/redo across the variant selection.
+    assert!(e.undo().unwrap());
+    assert!(e.redo().unwrap());
+    assert_eq!(
+        e.state.nodes[&inst].instance.as_ref().unwrap().variant.as_deref(),
+        Some("alt")
+    );
+    // describeComponents reports both sides for the variant picker contract.
+    let desc = call(&mut e, "describeComponents", json!({})).data;
+    assert_eq!(desc["components"][0]["id"], comp);
+    assert_eq!(desc["components"][0]["variants"][0]["name"], "alt");
+    assert_eq!(desc["instances"][0]["component"], comp);
+    assert_eq!(desc["instances"][0]["variant"], "alt");
+    // Snapshot carries the schema:2 wrapper and round-trips byte-identically.
+    let bytes = e.snapshot().unwrap();
+    let mut reopen = DesignEngine::new();
+    reopen.restore(&bytes).unwrap();
+    assert_eq!(reopen.snapshot().unwrap(), bytes);
+    // Equal updateInstance is a silent no-op.
+    let r = e.apply(Command::new(
+        "updateInstance",
+        json!({"id":inst,"variant":"alt"}),
+    ));
+    assert!(r.unwrap().events.is_empty());
+}
+#[test]
+fn detach_instance_materializes_expansion_and_undo_restores() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    let (comp, child) = make_component(&mut e, [9, 8, 7, 255]);
+    let inst = call(
+        &mut e,
+        "createInstance",
+        json!({"component":comp,"parent":1,"x":5,"y":0,"width":10,"height":10,
+               "overrides":[{"node":child,"path":"fill","value":[1,2,3,255]}]}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    call(&mut e, "detachInstance", json!({"id":inst}));
+    let node = &e.state.nodes[&inst];
+    assert_eq!(node.kind, Kind::Frame);
+    assert!(node.instance.is_none());
+    assert_eq!(node.children.len(), 1);
+    let materialized = node.children[0];
+    assert!(materialized < e.state.next_id && materialized != child);
+    assert_eq!(e.state.nodes[&materialized].fill, [1, 2, 3, 255]);
+    // No instance spec remains anywhere; expansion is now ordinary state.
+    assert!(!e.state.nodes.values().any(|n| n.kind == Kind::Instance));
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert!(boxes.iter().any(|b| b.id == materialized && b.x == 6.));
+    assert!(e.undo().unwrap());
+    assert_eq!(e.state.nodes[&inst].kind, Kind::Instance);
+    assert!(e.redo().unwrap());
+    assert_eq!(e.state.nodes[&inst].kind, Kind::Frame);
+}
+#[test]
+fn component_lifecycle_rules_cascade_and_reject_bad_references() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    let (comp, _child) = make_component(&mut e, [9, 8, 7, 255]);
+    let before = e.snapshot().unwrap();
+    // Unknown component, non-component target, bad variant, stranded override.
+    for (op, p) in [
+        ("createInstance", json!({"component":999,"parent":1})),
+        ("createInstance", json!({"component":1,"parent":1})),
+        ("createInstance", json!({"component":comp,"parent":1,"variant":"ghost"})),
+        ("createInstance", json!({"component":comp,"parent":1,
+            "overrides":[{"node":1,"path":"fill","value":[0,0,0,255]}]})),
+        ("createInstance", json!({"component":comp,"parent":1,
+            "overrides":[{"node":_child,"path":"fill","value":"red"}]})),
+        ("updateComponent", json!({"id":1,"name":"No"})),
+        ("createComponent", json!({"id":1})),
+        ("detachInstance", json!({"id":comp})),
+    ] {
+        assert!(e.apply(Command::new(op, p.clone())).is_err(), "{op} {p}");
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    let inst = call(
+        &mut e,
+        "createInstance",
+        json!({"component":comp,"parent":1}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    // Removing the component while an instance references it fails closed.
+    assert!(e.apply(Command::new("removeNode", json!({"id":comp}))).is_err());
+    assert_eq!(e.state.nodes[&comp].kind, Kind::Component);
+    // Removing a template node that an override targets also fails closed.
+    call(
+        &mut e,
+        "updateInstance",
+        json!({"id":inst,"overrides":[{"node":_child,"path":"visible","value":false}]}),
+    );
+    assert!(e.apply(Command::new("removeNode", json!({"id":_child}))).is_err());
+    // Clearing overrides frees the template node; then instance removal
+    // frees the component for deletion.
+    call(&mut e, "updateInstance", json!({"id":inst,"overrides":[]}));
+    call(&mut e, "removeNode", json!({"id":_child}));
+    call(&mut e, "removeNode", json!({"id":inst}));
+    call(&mut e, "removeNode", json!({"id":comp}));
+    assert!(!e.state.nodes.values().any(|n| matches!(n.kind, Kind::Component | Kind::Instance)));
+}
+#[test]
+fn component_reference_cycles_and_expansion_bounds_fail_reads_not_edits() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":4,"height":4}));
+    // Two components that instance each other inside their subtrees cycle.
+    let a = call(&mut e, "addFrame", json!({"parent":1,"width":4,"height":4})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "createComponent", json!({"id":a}));
+    let b = call(&mut e, "addFrame", json!({"parent":1,"width":4,"height":4})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "createComponent", json!({"id":b}));
+    call(&mut e, "createInstance", json!({"component":a,"parent":b}));
+    // A->? edge: instance of b inside a would close the cycle.
+    let snap = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new(
+            "createInstance",
+            json!({"component":b,"parent":a}),
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), snap);
+    // Depth bound: a chain of 9 nested component instances exceeds
+    // MAX_EXPANSION_DEPTH at read time while edits stay possible.
+    let mut e2 = DesignEngine::new();
+    call(&mut e2, "new", json!({"width":4,"height":4}));
+    let mut comps = vec![];
+    for _ in 0..9 {
+        let f = call(&mut e2, "addFrame", json!({"parent":1,"width":4,"height":4}))
+            .data["node_id"]
+            .as_u64()
+            .unwrap();
+        call(&mut e2, "createComponent", json!({"id":f}));
+        comps.push(f);
+    }
+    // comps[i] gets an instance of comps[i+1] inside its subtree.
+    for i in 0..8 {
+        call(
+            &mut e2,
+            "createInstance",
+            json!({"component":comps[i + 1],"parent":comps[i]}),
+        );
+    }
+    call(
+        &mut e2,
+        "createInstance",
+        json!({"component":comps[0],"parent":1}),
+    );
+    assert!(components::expand(&e2.state).is_err());
+    assert!(e2.apply(Command::new("evaluateLayout", json!({}))).is_err());
+    let desc = call(&mut e2, "describeComponents", json!({})).data;
+    assert!(desc["instances"][0]["unavailable_reason"].is_string());
+    // Mutations still work so the document can be repaired.
+    call(&mut e2, "updateNode", json!({"id":1,"name":"still editable"}));
+    // Node bound: many instances over a wide component exceed
+    // MAX_EXPANDED_NODES at read time.
+    let mut e3 = DesignEngine::new();
+    call(&mut e3, "new", json!({"width":4,"height":4}));
+    let (wide, _) = {
+        let f = call(&mut e3, "addFrame", json!({"parent":1,"width":4,"height":4}))
+            .data["node_id"]
+            .as_u64()
+            .unwrap();
+        for i in 0..100 {
+            shape(&mut e3, f, (i % 10) as f64, (i / 10) as f64, 1., 1., [0; 4]);
+        }
+        call(&mut e3, "createComponent", json!({"id":f}));
+        (f, 0)
+    };
+    for _ in 0..200 {
+        call(
+            &mut e3,
+            "createInstance",
+            json!({"component":wide,"parent":1,"x":0.,"y":0.,"width":4.,"height":4.}),
+        );
+    }
+    assert!(components::expand(&e3.state).is_err());
+}
+#[test]
+fn component_instance_snapshot_wrapper_and_hostile_restore() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    let (comp, child) = make_component(&mut e, [9, 8, 7, 255]);
+    call(
+        &mut e,
+        "createInstance",
+        json!({"component":comp,"parent":1,
+               "overrides":[{"node":child,"path":"visible","value":false}]}),
+    );
+    let bytes = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&bytes).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(outer["schema"], 2);
+    // Round-trip plus hostile mutations all fail closed.
+    let mut reopen = DesignEngine::new();
+    reopen.restore(&bytes).unwrap();
+    assert_eq!(reopen.snapshot().unwrap(), bytes);
+    // Unwrapped state carrying an instance spec is rejected.
+    let bare = serde_json::to_vec(&*e.state).unwrap();
+    assert!(reopen.restore(&encode_envelope(&bare)).is_err());
+    for mutation in ["component", "variant", "override_target", "kind"] {
+        let mut doc = outer.clone();
+        let nodes = &mut doc["document"]["nodes"];
+        let inst_key = nodes
+            .as_object()
+            .unwrap()
+            .keys()
+            .find(|k| nodes[*k]["kind"] == "instance")
+            .unwrap()
+            .clone();
+        match mutation {
+            "component" => {
+                nodes[&inst_key]["instance"]["component"] = json!(999);
+            }
+            "variant" => {
+                nodes[&inst_key]["instance"]["variant"] = json!("ghost");
+            }
+            "override_target" => {
+                nodes[&inst_key]["instance"]["overrides"] =
+                    json!([{"node":1,"path":"fill","value":[0,0,0,255]}]);
+            }
+            _ => {
+                nodes[&inst_key]["kind"] = json!("frame");
+            }
+        }
+        assert!(
+            reopen
+                .restore(&encode_envelope(&serde_json::to_vec(&doc).unwrap()))
+                .is_err(),
+            "{mutation}"
+        );
+        assert_eq!(reopen.snapshot().unwrap(), bytes);
+    }
+}
+#[test]
+fn nested_instance_templates_expand_from_pristine_state_without_orphans() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":40,"height":20}));
+    // Component D: a frame with one fill-sized rect child.
+    let d = call(&mut e, "addFrame", json!({"parent":1,"x":0,"y":0,"width":10,"height":10})).data["node_id"].as_u64().unwrap();
+    let rd = shape(&mut e, d, 1., 1., 2., 2., [9, 8, 7, 255]);
+    call(&mut e, "setFrameLayout", json!({"id":d,"layout":{"direction":"row","gap":0,"padding_top":0,"padding_right":0,"padding_bottom":0,"padding_left":0,"align":"start","justify":"start"}}));
+    size(&mut e, rd, "x", "fill");
+    call(&mut e, "createComponent", json!({"id":d}));
+    // Component C contains an instance of D plus its own rect.
+    let c = call(&mut e, "addFrame", json!({"parent":1,"x":0,"y":0,"width":10,"height":10})).data["node_id"].as_u64().unwrap();
+    let inner = call(&mut e, "createInstance", json!({"component":d,"parent":c})).data["node_id"].as_u64().unwrap();
+    let rc = shape(&mut e, c, 1., 1., 2., 2., [1, 2, 3, 255]);
+    call(&mut e, "createComponent", json!({"id":c}));
+    // Top-level instance J of C, created after the inner instance so the
+    // stored DFS expands the inner instance first.
+    let j = call(&mut e, "createInstance", json!({"component":c,"parent":1,"x":0,"y":0,"width":10,"height":10})).data["node_id"].as_u64().unwrap();
+    // The inner instance's in-place expansion must not leak synthetic
+    // children into J's template walk: no orphan clones, no fill orphan
+    // parent failure, deterministic box count.
+    let expanded = components::expand(&e.state).unwrap();
+    let boxes = layout::evaluate(&expanded).unwrap();
+    // root + D(1+rd) + C(c,inner,inner's rd clone,rc) + J(j,inner clone,rd clone,rc clone) = 11.
+    assert_eq!(boxes.len(), 11, "{:?}", boxes.iter().map(|b| b.id).collect::<Vec<_>>());
+    assert!(e.apply(Command::new("evaluateLayout", json!({}))).is_ok());
+    // Every synthetic box id is unique; no id appears twice.
+    let ids: std::collections::BTreeSet<u64> = boxes.iter().map(|b| b.id).collect();
+    assert_eq!(ids.len(), boxes.len());
+    // Detach J: the materialized subtree keeps working state.
+    call(&mut e, "detachInstance", json!({"id":j}));
+    assert_eq!(e.state.nodes[&j].kind, Kind::Frame);
+    assert!(layout::evaluate(&e.state).is_ok());
+    let _ = (inner, rc, rd);
+}
+#[test]
+fn detach_remaps_variant_targets_on_cloned_component_nodes() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    // Outer component C.
+    let c = call(&mut e, "addFrame", json!({"parent":1,"x":0,"y":0,"width":10,"height":10})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "createComponent", json!({"id":c}));
+    // Nested component D inside C's subtree, bearing a variant whose
+    // override targets D's own child.
+    let d = call(&mut e, "addFrame", json!({"parent":c,"x":0,"y":0,"width":5,"height":5})).data["node_id"].as_u64().unwrap();
+    let rd = shape(&mut e, d, 0., 0., 1., 1., [7, 7, 7, 255]);
+    call(&mut e, "createComponent", json!({"id":d}));
+    call(&mut e, "updateComponent", json!({"id":d,"variants":[{"name":"alt","properties":[{"node":rd,"path":"fill","value":[5,5,5,255]}]}]}));
+    // Instance J of C at the root, then detach materializes the expansion.
+    let j = call(&mut e, "createInstance", json!({"component":c,"parent":1,"x":0,"y":0,"width":10,"height":10})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "detachInstance", json!({"id":j}));
+    assert_eq!(e.state.nodes[&j].kind, Kind::Frame);
+    // The detached subtree contains a component clone whose variant targets
+    // were re-identified onto the detached child, not the template ids.
+    let clone_comp = e.state.nodes[&j].children[0];
+    let clone_node = &e.state.nodes[&clone_comp];
+    assert_eq!(clone_node.kind, Kind::Component);
+    let detached_child = clone_node.children[0];
+    assert_ne!(detached_child, rd);
+    let props = &clone_node.variants[0].properties;
+    assert_eq!(props[0].node, detached_child);
+    assert!(layout::evaluate(&e.state).is_ok());
+    // Undo restores the instance; redo re-detaches cleanly.
+    assert!(e.undo().unwrap());
+    assert_eq!(e.state.nodes[&j].kind, Kind::Instance);
+    assert!(e.redo().unwrap());
+    assert_eq!(e.state.nodes[&j].kind, Kind::Frame);
+}
+#[test]
+fn instance_sizing_is_fixed_on_mutation_and_hostile_restore() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    let (comp, _) = make_component(&mut e, [9, 8, 7, 255]);
+    let inst = call(&mut e, "createInstance", json!({"component":comp,"parent":1})).data["node_id"].as_u64().unwrap();
+    let before = e.snapshot().unwrap();
+    for mode in ["hug", "fill"] {
+        for axis in ["x", "y"] {
+            assert!(e
+                .apply(Command::new("setAxisSizing", json!({"id":inst,"axis":axis,"mode":mode})))
+                .is_err(), "{axis} {mode}");
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+    }
+    // Fixed sizing with an explicit value stays admitted on instances.
+    call(&mut e, "setAxisSizing", json!({"id":inst,"axis":"x","mode":"fixed","value":12.}));
+    assert_eq!(e.state.nodes[&inst].width, 12.);
+    // readAxisSizing reports hug/fill as unavailable for instances.
+    let caps = call(&mut e, "readAxisSizing", json!({"id":inst}));
+    assert_eq!(caps.data["x"]["canHug"], false);
+    assert_eq!(caps.data["x"]["canFill"], false);
+    // Hostile restore with non-fixed instance sizing fails closed (the
+    // instance forces the schema:2 wrapper, so mutate `document`).
+    let current = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&current).unwrap();
+    let mut outer: Value = serde_json::from_slice(&raw).unwrap();
+    outer["document"]["nodes"][inst.to_string()]["sizing"] = json!({"x":"fill","y":"fixed"});
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&outer).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), current);
+}
+#[test]
+fn component_containment_cycles_reject_at_validation_not_read_time() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    // Component B whose subtree embeds component A; A instances B. Expansion
+    // would recurse B -> A -> B -> ..., so validation rejects the edge set.
+    let b = call(&mut e, "addFrame", json!({"parent":1,"width":10,"height":10})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "createComponent", json!({"id":b}));
+    let a = call(&mut e, "addFrame", json!({"parent":b,"width":5,"height":5})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "createComponent", json!({"id":a}));
+    let snap = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("createInstance", json!({"component":b,"parent":a})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), snap);
+    // Acyclic component-in-component nesting stays admitted: C contains
+    // component E which instances unrelated D.
+    let c = call(&mut e, "addFrame", json!({"parent":1,"width":10,"height":10})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "createComponent", json!({"id":c}));
+    let d = call(&mut e, "addFrame", json!({"parent":1,"width":4,"height":4})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "createComponent", json!({"id":d}));
+    let ecomp = call(&mut e, "addFrame", json!({"parent":c,"width":5,"height":5})).data["node_id"].as_u64().unwrap();
+    call(&mut e, "createComponent", json!({"id":ecomp}));
+    call(&mut e, "createInstance", json!({"component":d,"parent":ecomp}));
+    call(&mut e, "createInstance", json!({"component":c,"parent":1}));
+    assert!(components::expand(&e.state).is_ok());
+    assert!(e.apply(Command::new("evaluateLayout", json!({}))).is_ok());
+}
+#[test]
+fn override_and_variant_budgets_reject() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    let (comp, child) = make_component(&mut e, [9, 8, 7, 255]);
+    // Variant count cap.
+    let variants: Vec<Value> = (0..MAX_VARIANTS + 1)
+        .map(|i| json!({"name":format!("v{i}")}))
+        .collect();
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("updateComponent", json!({"id":comp,"variants":variants})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Override count cap via hostile restore (duplicate pairs would fail the
+    // uniqueness check anyway; the budget check runs first).
+    let inst = call(&mut e, "createInstance", json!({"component":comp,"parent":1})).data["node_id"].as_u64().unwrap();
+    let wrapped = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&wrapped).unwrap();
+    let mut outer: Value = serde_json::from_slice(&raw).unwrap();
+    let overrides: Vec<Value> = (0..MAX_OVERRIDES + 1)
+        .map(|_| json!({"node":child,"path":"visible","value":false}))
+        .collect();
+    outer["document"]["nodes"][inst.to_string()]["instance"]["overrides"] = json!(overrides);
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&outer).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), wrapped);
+}
