@@ -13,7 +13,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | cadence-engine tests (incl. real PCM render) | 21 pass | `cargo test -p cadence-engine` |
 | splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch) | 44 pass | `cargo test -p splice-engine` |
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
-| folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption) | 59 pass | `cargo test -p folio-engine` |
+| folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines) | 76 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
 | quill-engine tests (incl. real DOCX zip round-trip) | 25 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI round-trip test | 1 pass | `cargo test -p nf-sys` |
@@ -43,7 +43,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Tally engine | Spreadsheet eng (subagent ddf87203) | formula parser/evaluator | ✅ 27 tests |
 | Cadence engine | Audio/DSP eng (subagent 75836ea5) | MIDI clips, transport, PCM render | ✅ 21 tests |
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch | ✅ 44 tests |
-| Folio engine | PDF eng (subagent bdd8014e) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption | ✅ 59 tests |
+| Folio engine | PDF eng (subagent bdd8014e) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption, outline (bookmark) ops | ✅ 76 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
 | Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX | ✅ 25 tests |
 | Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |
@@ -102,7 +102,10 @@ Reviewer reproduced three defects live (nf-cli + a C harness against
   `/Type /Page` objects reachable via named destinations/outlines/open-action
   (dest scrubbing deferred); `/PageLabels` number tree goes stale on reorder;
   `duplicatePage` strips `/StructParents`+`/B` but still shares `/PieceInfo`,
-  `/Tabs`, `/AA`, `/Metadata` verbatim. All documented in ENGINE_OPS.md.
+  `/Tabs`, `/AA`, `/Metadata` verbatim. `removeBookmark` prunes every
+  trailer-unreachable object, including orphans that pre-date the op —
+  not only objects the removed items referenced. All documented in
+  ENGINE_OPS.md.
 - No `.pptx`/`.xlsx` interop; Quill DOCX is real (zip + OOXML).
 - Nitro native build (Swift/Kotlin/C++ side of `Forge`) is unwritten —
   `nf-sys` is the C ABI it will call.
