@@ -133,6 +133,28 @@ mod tests {
         )
     }
     #[test]
+    fn photo_registered_factory_rejects_unsupported_binary_without_mutation() {
+        unsafe {
+            let mut error=std::ptr::null_mut();
+            let kind=std::ffi::CString::new("photo").unwrap();
+            let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(), 5, &mut error);
+            assert!(handle>0); assert!(error.is_null());
+            let before=run(handle,"__snapshot","{}",None,std::ptr::null());
+            assert!(before.command.error_json.is_null());
+            let bytes=std::slice::from_raw_parts(before.output.ptr,before.output.len).to_vec();
+            nf_v1_free_binary_result(before);
+            let rejected=run(handle,"describe","{}",Some(&[1,2,3]),std::ptr::null());
+            assert!(!rejected.command.error_json.is_null());
+            nf_v1_free_binary_result(rejected);
+            let after=run(handle,"__snapshot","{}",None,std::ptr::null());
+            assert!(after.command.error_json.is_null());
+            assert_eq!(std::slice::from_raw_parts(after.output.ptr,after.output.len),bytes);
+            nf_v1_free_binary_result(after);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
     fn binary_ffi_uses_raw_output_and_cancelled_mutations_stay_atomic() {
         unsafe {
             let kind = "tally";

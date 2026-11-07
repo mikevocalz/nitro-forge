@@ -14,6 +14,7 @@ pub enum EngineKind {
     Pitch,
     Tally,
     Quill,
+    Photo,
 }
 
 impl EngineKind {
@@ -26,6 +27,7 @@ impl EngineKind {
             EngineKind::Pitch => "pitch",
             EngineKind::Tally => "tally",
             EngineKind::Quill => "quill",
+            EngineKind::Photo => "photo",
         }
     }
 
@@ -38,6 +40,7 @@ impl EngineKind {
             "pitch" => Some(EngineKind::Pitch),
             "tally" => Some(EngineKind::Tally),
             "quill" => Some(EngineKind::Quill),
+            "photo" => Some(EngineKind::Photo),
             _ => None,
         }
     }

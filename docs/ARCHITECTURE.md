@@ -1,6 +1,6 @@
 # Nitro-Forge Architecture — Ignition Contracts
 
-Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill)
+Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill and Photo)
 implement against these contracts. Changes require touching every engine, so they are
 deliberately small.
 
@@ -137,3 +137,6 @@ The additive C ABI in `nf_v1.h` preserves existing result layouts. Binary inputs
 `Engine::apply_long` checks cancellation before atomic operations. Cadence synthesis checks every 8192 samples and between mix stages; EQ/compressor processing retains continuous state and is not interrupted mid-stage. Folio save and Quill DOCX export add safe read-only checkpoints. Other commands may finish after cancellation was requested; a successful atomic mutation is never reported as cancelled. `cancelled` is a recoverable error. Progress is monotonic checkpoint progress, not elapsed-time estimation. Media decoding is a separate Expo queue and is not cancelled by ForgeTask.
 
 The media cache owns derived bytes only. Capacity is 1..256 MiB, with at most 4096 entries and 1024-byte keys. Put copies input before queueing; get returns a copy and updates LRU order. Close drains earlier work, clears bytes and rejects later operations. Keys must encode source revision and decode options. It neither persists engine documents nor generates waveforms/thumbnails itself. See recovery/PHASE6.md for executed checks and platform gates.
+
+
+The registered Photo engine adds catalog descriptors and version identities to the shared contract. Original bytes, decoder resources and durable asset retention remain host-owned; the catalog performs no I/O or RAW processing. Photo appends persisted/native kind tag 7 without changing established tags 0–6. Its explicit photo/schema-1 snapshot payload is inside unchanged NFD1 framing. Native binaries must include the new registered factory before opening this kind; source registration alone does not establish a target build or app rollout.

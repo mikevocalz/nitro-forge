@@ -18,3 +18,4 @@ folio-engine = { path = "../../packages/folio/rust" }
 pitch-engine = { path = "../../packages/pitch/rust" }
 tally-engine = { path = "../../packages/tally/rust" }
 quill-engine = { path = "../../packages/quill/rust" }
+photo-engine = { path = "../../packages/photo/rust" }

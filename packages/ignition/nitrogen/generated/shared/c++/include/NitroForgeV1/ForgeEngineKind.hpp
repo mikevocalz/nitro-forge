@@ -24,6 +24,7 @@ namespace margelo::nitro::nitroforge::ignitionv1 {
     PITCH      SWIFT_NAME(pitch) = 4,
     TALLY      SWIFT_NAME(tally) = 5,
     QUILL      SWIFT_NAME(quill) = 6,
+    PHOTO      SWIFT_NAME(photo) = 7,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::nitroforge::ignitionv1
@@ -43,6 +44,7 @@ namespace margelo::nitro {
         case hashString("pitch"): return margelo::nitro::nitroforge::ignitionv1::ForgeEngineKind::PITCH;
         case hashString("tally"): return margelo::nitro::nitroforge::ignitionv1::ForgeEngineKind::TALLY;
         case hashString("quill"): return margelo::nitro::nitroforge::ignitionv1::ForgeEngineKind::QUILL;
+        case hashString("photo"): return margelo::nitro::nitroforge::ignitionv1::ForgeEngineKind::PHOTO;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum ForgeEngineKind - invalid value!");
       }
@@ -56,6 +58,7 @@ namespace margelo::nitro {
         case margelo::nitro::nitroforge::ignitionv1::ForgeEngineKind::PITCH: return JSIConverter<std::string>::toJSI(runtime, "pitch");
         case margelo::nitro::nitroforge::ignitionv1::ForgeEngineKind::TALLY: return JSIConverter<std::string>::toJSI(runtime, "tally");
         case margelo::nitro::nitroforge::ignitionv1::ForgeEngineKind::QUILL: return JSIConverter<std::string>::toJSI(runtime, "quill");
+        case margelo::nitro::nitroforge::ignitionv1::ForgeEngineKind::PHOTO: return JSIConverter<std::string>::toJSI(runtime, "photo");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert ForgeEngineKind to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -74,6 +77,7 @@ namespace margelo::nitro {
         case hashString("pitch"):
         case hashString("tally"):
         case hashString("quill"):
+        case hashString("photo"):
           return true;
         default:
           return false;

@@ -20,6 +20,7 @@ std::string_view kindName(ForgeEngineKind kind) {
     case ForgeEngineKind::PITCH: return "pitch";
     case ForgeEngineKind::TALLY: return "tally";
     case ForgeEngineKind::QUILL: return "quill";
+    case ForgeEngineKind::PHOTO: return "photo";
   }
   throw std::invalid_argument("Unknown NitroForge engine kind");
 }

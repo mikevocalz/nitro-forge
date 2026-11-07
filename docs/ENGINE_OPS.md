@@ -459,3 +459,27 @@ Existing JSON/base64 commands remain compatible. `applyBinary`/`startTask` ask f
 | All | none for reserved operations | none | __snapshot (NFD1) |
 
 Exactly one byte input source is required for an input operation. Supplying both a base64 field and sidecar rejects before mutation; unrelated operations reject sidecars. Raw output omits its base64 field and keeps other metadata/events. Version 1 is required. Binary fields are not serialized by serde. Tasks preserve the same operation/undo semantics; cancellation is cooperative at documented safe checkpoints, not a new engine operation.
+
+## photo-engine — `PhotoEngine::new()`
+
+Persistent catalog metadata and version identities only. No decoder, develop renderer, native resource handles or file I/O. Immutable host-claimed original descriptors are **not content verified** by the catalog. Removing a catalog record never deletes host original bytes.
+
+NFD1 payload is `{kind:"photo",schema:1,next_id,originals:{[id]:Original},versions:{[id]:Version}}`.
+`Original={id,sha256,asset_ref,byte_length,camera_make,camera_model,rating,labels}`; `Version={id,original_id,name}`. IDs are generated strings `original-N` / `version-N`; checked counter ≤2^53−1. Hashes must be lowercase 64-hex and unique across originals (duplicate content imports reject). Asset refs are opaque 1..256-byte ASCII identifiers using letters/digits/`._:-`; the host owns durable retention and resolves the key. Byte length is 1..2^53−1. Camera strings ≤128 bytes; version names nonblank ≤128 bytes; labels nonblank ≤64 bytes, unique, at most32 and stored sorted. Strings reject control characters.
+
+Limits: 10,000 originals, 100,000 versions total, 1..100 versions per original, **8MiB maximum encoded catalog state** and 16 undo entries. Structural states share immutable Arc records; changed records use copy-on-write. These are logical caps, not measured process RSS limits. Every mutation validates its candidate state before replacing live state/history. Noops/read operations have no events/journal entries. Batches are atomic and one outer undo entry. Restore requires exact kind/schema, valid identity/reference/counter/metadata/size invariants and rejects unknown fields before state replacement; successful restore clears prior history. Foreign engine payloads reject.
+
+| op | payload | data | notes |
+|---|---|---|---|
+| `new` | `{}` | `{ok}` | empty catalog; no host asset deletion |
+| `describe` | `{}` | complete catalog state | read-only |
+| `readOriginal` | `{id}` | `{original,versions}` | read-only; supplied descriptor metadata only |
+| `addOriginal` | `{sha256,asset_ref,byte_length,camera_make,camera_model}` | `{original_id,version_id}` | immutable descriptor plus initial version named Original, rating0/labels[]; duplicate hash rejects |
+| `removeOriginal` | `{id}` | `{ok}` | removes metadata and associated versions only |
+| `setRating` | `{id,rating}` | `{ok}` | integer0..5 |
+| `setLabels` | `{id,labels:string[]}` | `{ok}` | replace sorted unique labels |
+| `createVersion` | `{original_id,name}` | `{version_id}` | identity/name only, no implicit develop recipe or rendered artifact |
+| `renameVersion` | `{id,name}` | `{ok}` | original reference immutable |
+| `removeVersion` | `{id}` | `{ok}` | must retain at least one version per original |
+
+Registered name `photo` appends native ordinal7 and NFC1/NCC1 tag7, preserving existing0..6. No binary input op is admitted; unsolicited binary sidecars reject. Native binaries require rebuilding for the new kind; source registration alone is not native acceptance.

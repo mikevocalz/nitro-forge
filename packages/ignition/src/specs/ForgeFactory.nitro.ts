@@ -6,7 +6,7 @@ import type { ForgeDocument } from "./ForgeDocument.nitro";
 export * from "#nitro/ForgeFactory";
 
 /**
- * Entry point into the seven Ignition Rust document engines.
+ * Entry point into the registered Ignition Rust document engines.
  *
  * A native constructor may not touch a large Rust document or the UI thread.
  * open() returns a ready, exclusively owned document session asynchronously.

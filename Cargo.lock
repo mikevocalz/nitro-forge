@@ -593,6 +593,7 @@ dependencies = [
  "cadence-engine",
  "folio-engine",
  "ignition-core",
+ "photo-engine",
  "pitch-engine",
  "prism-engine",
  "quill-engine",
@@ -607,6 +608,7 @@ dependencies = [
  "cadence-engine",
  "folio-engine",
  "ignition-core",
+ "photo-engine",
  "pitch-engine",
  "prism-engine",
  "quill-engine",
@@ -655,6 +657,15 @@ name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+
+[[package]]
+name = "photo-engine"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "pin-project-lite"
