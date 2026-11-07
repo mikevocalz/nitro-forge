@@ -30,6 +30,7 @@
 mod formula;
 mod range_ops;
 mod sheet_ops;
+mod protection;
 
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
 use ignition_core::{
@@ -62,6 +63,8 @@ pub struct Sheet {
     pub cells: BTreeMap<String, Cell>,
     #[serde(default)]
     pub tone: Option<String>,
+    #[serde(default)]
+    pub is_protected: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -79,6 +82,7 @@ fn blank_workbook() -> Workbook {
             name: "Sheet1".to_string(),
             cells: BTreeMap::new(),
             tone: None,
+            is_protected: false,
         }],
         active: 0,
     }
@@ -323,6 +327,7 @@ impl TallyEngine {
             name,
             cells: BTreeMap::new(),
             tone: None,
+            is_protected: false,
         };
         self.journal.record(UndoEntry::AddSheet { sheet_id: id });
         self.doc.next_sheet = next_id;
@@ -485,7 +490,7 @@ impl TallyEngine {
             .doc
             .sheets
             .iter()
-            .map(|s| json!({ "name": s.name, "cell_count": s.cells.len(), "tone": s.tone }))
+            .map(|s| json!({ "name": s.name, "cell_count": s.cells.len(), "tone": s.tone, "is_protected": s.is_protected }))
             .collect();
         Ok(Self::readonly(json!({
             "sheets": sheets,
@@ -616,6 +621,7 @@ impl Engine for TallyEngine {
             )));
         }
         let p = &cmd.payload;
+        self.check_protection(&cmd.op, p)?;
         match cmd.op.as_str() {
             "new" => self.op_new(),
             "describe" => self.op_describe(),
@@ -626,6 +632,7 @@ impl Engine for TallyEngine {
             "moveSheet" => self.op_move_sheet(p),
             "duplicateSheet" => self.op_duplicate_sheet(p),
             "setSheetColor" => self.op_set_sheet_color(p),
+            "protectSheet" => self.op_protect_sheet(p),
             "setCell" => self.op_set_cell(p),
             "setRange" => self.op_set_range(p),
             "fillRange" => self.op_fill_range(p),

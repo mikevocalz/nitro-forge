@@ -163,6 +163,7 @@ function TallySurface(props: EngineStudioSurfaceProps) {
     }
   };
   const visibleTabs = loaded.current.document === document ? tabs : null;
+  const cellWritesAllowed = canEdit && !visibleTabs?.tabs.find(tab => tab.id === visibleTabs.activeId)?.isProtected;
   return <View testID="tally-engine-surface" style={{ flex: 1, minHeight: 0 }}>
     {error && <Banner tone="danger" title={error} live="alert"/>}
     {!canEdit && <Text accessibilityLiveRegion="polite" style={{ color: workspaceThemes[props.theme].muted }}>Worksheet edits are unavailable until the current window is loaded.</Text>}
@@ -170,6 +171,7 @@ function TallySurface(props: EngineStudioSurfaceProps) {
       onSelect={id => commit(() => visibleTabs.onSelect(id))} onAdd={() => commit(visibleTabs.onAdd)}
       onRename={(id, name) => commit(() => visibleTabs.onRename(id, name))}
       onDuplicate={id => commit(() => visibleTabs.onDuplicate(id))}
+      onProtectedChange={(id, protectedValue) => commit(() => visibleTabs.onProtectedChange(id, protectedValue))}
       onMove={(id, toIndex) => commit(() => visibleTabs.onMove(id, toIndex))}
       onToneChange={(id, tone) => commit(() => visibleTabs.onToneChange(id, tone))}
       onRemove={id => commit(() => visibleTabs.onRemove(id))}/>}
@@ -181,7 +183,7 @@ function TallySurface(props: EngineStudioSurfaceProps) {
         gate.invalidate();
         store.setState({ range: next, ready: false });
       } }}
-      {...(canEdit && document ? { onCommitCell: (address: string, raw: string) => commit(() => commitTallyGridCell(document, address, raw)),
+      {...(cellWritesAllowed && document ? { onCommitCell: (address: string, raw: string) => commit(() => commitTallyGridCell(document, address, raw)),
         onFillRange: (plan: Parameters<typeof commitTallyFill>[1]) => commit(() => commitTallyFill(document, plan)) } : {})}/>}
     {visibleTabs && document && <ScrollView style={{ maxHeight: 300, flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ padding: scale.space.inset }}>
       <TallyDetailControls document={document} sheetId={visibleTabs.activeId} cells={cells} selection={details.selection} getSelection={details.getSelection}

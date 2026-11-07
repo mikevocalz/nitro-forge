@@ -10,14 +10,20 @@ const ok = <T>(data: T) => Promise.resolve({ events: [], data });
 
 function fakeSheets() {
   const state = { sheets: ["Sheet1", "Sheet2"], active: 0 };
+  const protectedNames = new Set<string>();
   const tones = new Map<string, string | null>();
   const doc = {
-    workbook: vi.fn(() => ok({ sheets: state.sheets.map(name => ({ name, cell_count: 0, tone: tones.get(name) ?? null })), active: state.active })),
+    workbook: vi.fn(() => ok({ sheets: state.sheets.map(name => ({ name, cell_count: 0, tone: tones.get(name) ?? null, is_protected: protectedNames.has(name) })), active: state.active })),
     setActive: vi.fn((i: number) => { state.active = i; return ok({ ok: true }); }),
     addSheet: vi.fn(() => { state.sheets.push("Sheet" + (state.sheets.length + 1)); return ok({ sheet: "x" }); }),
     renameSheet: vi.fn((i: number, to: string) => {
       if (state.sheets.some(n => n.toLowerCase() === to.toLowerCase())) return Promise.reject(new Error(`sheet name '${to}' already exists`));
       state.sheets[i] = to; return ok({ ok: true });
+    }),
+    protectSheet: vi.fn((i: number, value: boolean) => {
+      const name = state.sheets[i]!;
+      if (value) protectedNames.add(name); else protectedNames.delete(name);
+      return ok({ ok: true });
     }),
     duplicateSheet: vi.fn((i: number) => {
       const active = state.sheets[state.active];
@@ -98,9 +104,23 @@ describe("I-08 SheetTabs binding over Tally sheet ops", () => {
     }));
   });
 
+  it("forwards protection and refreshes the canonical lock state", async () => {
+    const { doc, raw } = fakeSheets();
+    const onChanged = vi.fn();
+    const binding = await bindTallySheetTabs(doc, onChanged);
+    await binding.onProtectedChange("0", true);
+    expect(raw.protectSheet).toHaveBeenCalledWith(0, true);
+    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ tabs: [
+      { id: "0", name: "Sheet1", isProtected: true }, { id: "1", name: "Sheet2" },
+    ] }));
+    raw.protectSheet.mockRejectedValueOnce(new Error("rejected"));
+    await expect(binding.onProtectedChange("0", false)).rejects.toThrow("rejected");
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
   it("offers only callbacks Tally can back; the rest are named DEFERs", async () => {
     const binding = await bindTallySheetTabs(fakeSheets().doc, () => {});
-    expect(Object.keys(binding).sort()).toEqual(["activeId", "onAdd", "onDuplicate", "onMove", "onRemove", "onRename", "onSelect", "onToneChange", "tabs"]);
+    expect(Object.keys(binding).sort()).toEqual(["activeId", "onAdd", "onDuplicate", "onMove", "onProtectedChange", "onRemove", "onRename", "onSelect", "onToneChange", "tabs"]);
     for (const op of Object.keys(TALLY_DEFERRED_OPS)) expect(Object.values(OPS)).not.toContain(op);
   });
 });

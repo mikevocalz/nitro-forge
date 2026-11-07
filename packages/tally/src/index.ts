@@ -14,6 +14,7 @@ export const OPS = {
   setActive: "setActive",
   moveSheet: "moveSheet",
   duplicateSheet: "duplicateSheet",
+  protectSheet: "protectSheet",
   setSheetColor: "setSheetColor",
   setCell: "setCell",
   setRange: "setRange",
@@ -43,7 +44,7 @@ export interface CellInfo {
 export type SheetTabTone = "primary" | "accent" | "success" | "info" | "muted";
 
 export interface WorkbookInfo {
-  sheets: { name: string; cell_count: number; tone?: SheetTabTone | null }[];
+  sheets: { name: string; cell_count: number; tone?: SheetTabTone | null; is_protected?: boolean }[];
   active: number;
 }
 
@@ -85,6 +86,9 @@ export class TallyDocument {
   }
   setActive(sheet: string | number) {
     return this.call(OPS.setActive, { sheet });
+  }
+  protectSheet(sheet: string | number, protectedValue: boolean) {
+    return this.call<{ ok: boolean }>(OPS.protectSheet, { sheet, protected: protectedValue });
   }
   duplicateSheet(sheet: string | number) {
     return this.call<{ sheet: { id: number; name: string; index: number } }>(OPS.duplicateSheet, { sheet });

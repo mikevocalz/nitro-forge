@@ -139,7 +139,7 @@ google/ink source admission (#46).
 ## tally-engine — `TallyEngine::new()`
 
 State `{ next_sheet, sheets: [Sheet], active: idx }`,
-`Sheet = { id, name, tone?: string | null, cells: { "A1": { raw: string } } }` — computed values are
+`Sheet = { id, name, tone?: string | null, is_protected?: boolean, cells: { "A1": { raw: string } } }` — computed values are
 derived, not stored. Cell addresses: `$?[A-Z]+$?[0-9]+` (case-insensitive), abs
 markers accepted and normalized to plain `A1`. Every op that takes an address
 (`setCell`, `clearCell`, `getCell`, `getRange`, `setRange`, `fillRange`) returns
@@ -154,6 +154,7 @@ rows) and changes nothing. A formula reference past the sheet evaluates to
 | `renameSheet` | `{sheet,to}` | `{ok}` | sheet = name or index |
 | `removeSheet` | `{sheet}` | `{ok}` | must keep ≥1 sheet |
 | `setActive` | `{sheet}` | `{ok}` | |
+| `protectSheet` | `{sheet,protected:boolean}` | `{ok}` | persisted reversible editing guard; same-value request has no events/journal entry |
 | `duplicateSheet` | `{sheet}` | `{sheet:{id,name,index}}` | deep-copy raw cells and tone immediately after source; unique `source Copy N` name (case insensitive); fresh id; original active sheet preserved; one structural undo entry |
 | `moveSheet` | `{sheet,toIndex}` | `{ok}` | final zero-based index in current sheet range; preserves active sheet identity; one structural undo entry when changed |
 | `setSheetColor` | `{sheet,tone}` | `{ok}` | tone = primary/accent/success/info/muted or null to clear; durable semantic theme token, one structural undo entry when changed |
@@ -164,7 +165,7 @@ rows) and changes nothing. A formula reference past the sheet evaluates to
 | `getCell` | `{addr}` | `{raw,computed}` | `computed` = evaluated value |
 | `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed}]]}` | |
 | `evaluate` | `{formula}` | `{value}` | ad-hoc formula against active sheet, no write |
-| `workbook` | `{}` | `{sheets:[{name,cell_count,tone}],active}` | read-only |
+| `workbook` | `{}` | `{sheets:[{name,cell_count,tone,is_protected}],active}` | read-only |
 
 Formula language (recursive-descent parser, case-insensitive fns):
 numbers, `"strings"`, cell refs, ranges `A1:B2`, unary `-`, binary
@@ -174,6 +175,8 @@ Error values: `#DIV/0! #VALUE! #REF! #NAME? #NUM! #CYCLE!` — cycles detected v
 evaluation-time visited set. Evaluation memoizes per-request.
 
 Undo: per-cell previous `{addr, prev_raw}` (or removal); range edits group changed cells into one entry. No-op range edits emit no event and preserve redo. Fill reads all source cells before writing. Formula strings, names, whitespace and scientific notation remain unchanged; a reference shifted past row 1,048,576 or column XFD becomes `#REF!`, and a range with either endpoint off the sheet becomes a single `#REF!`. Lexically invalid source formulas reject the entire fill without mutation. Numeric series inference and cross-sheet references are not supported.
+
+Protected sheets reject cell/clear/range/fill edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
