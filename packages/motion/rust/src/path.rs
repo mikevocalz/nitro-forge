@@ -113,9 +113,8 @@ impl MotionPath {
     pub fn sample_at(&self, progress: f64) -> Result<(f64, f64, f64), EngineError> {
         self.validate()?;
         let table = self.table();
-        let Some(&first) = table.pts.first() else {
-            return Ok((0., 0., 0.));
-        };
+        // validate() guarantees at least one node, so the table is non-empty.
+        let first = table.pts.first().copied().unwrap_or((0., 0.));
         let total = table.cum.last().copied().unwrap_or(0.);
         if table.pts.len() < 2 || total <= 0. {
             return Ok((first.0, first.1, 0.));

@@ -194,10 +194,7 @@ fn motion_path_validation_clear_and_hostile_restore() {
     .is_err());
     assert_eq!(e.snapshot().unwrap(), baseline);
     // Over-budget and non-finite paths reject at op time.
-    let mut nodes: Vec<Value> = (0..=MAX_PATH_NODES)
-        .map(|i| json!({"x":i,"y":0}))
-        .collect();
-    nodes.truncate(MAX_PATH_NODES + 1);
+    let nodes: Vec<Value> = (0..=MAX_PATH_NODES).map(|i| json!({"x":i,"y":0})).collect();
     assert!(try_call(
         &mut e,
         "setMotionPath",
@@ -277,4 +274,33 @@ fn motion_path_validation_clear_and_hostile_restore() {
     assert_eq!(e.snapshot().unwrap(), cleared_snap);
     assert!(e.redo().unwrap());
     assert_eq!(e.snapshot().unwrap(), attached);
+}
+
+#[test]
+fn extreme_path_offsets_saturate_at_transform_bound() {
+    let mut e = MotionEngine::new();
+    call(&mut e, "new", json!({"width":8,"height":8,"duration_s":1}));
+    let id = layer(&mut e);
+    call(
+        &mut e,
+        "updateLayer",
+        json!({"id":id,"transform":{"tx":5e6,"rotation":1e7}}),
+    );
+    // Node x=1e7 plus tx=5e6 would reach 1.5e7, and the downward segment's
+    // +90deg tangent would push rotation to 1e7+90 — both beyond Prism's
+    // ±1e7 transform bound on an otherwise valid document.
+    call(
+        &mut e,
+        "setMotionPath",
+        json!({"layer":id,"path":{"nodes":[{"x":1e7,"y":0},{"x":1e7,"y":1}],"auto_orient":true}}),
+    );
+    let l = evaluated(&mut e, 0.);
+    assert_eq!(l["transform"]["tx"], json!(1e7));
+    assert_eq!(l["transform"]["ty"], json!(0.));
+    assert_eq!(l["transform"]["rotation"], json!(1e7));
+    // renderFrame must not fail on the saturated transform.
+    let frame = e
+        .apply(Command::new("renderFrame", json!({"time_s":0})).with_binary(None))
+        .unwrap();
+    assert_eq!(frame.data["width"], json!(8));
 }

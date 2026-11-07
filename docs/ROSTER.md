@@ -1120,10 +1120,12 @@ a uniform fraction of total arc length; the offset adds to evaluated
 tx/ty after curves and `auto_orient` adds the flattened-edge tangent angle
 to rotation. Snapshot schema stays 2 via additive serde defaults; validate
 rejects path_progress without a path on hostile restore too. Local
-evidence: `cargo test -p motion-engine` 55 passed (5 new covering exact
+evidence: `cargo test -p motion-engine` 56 passed (6 new covering exact
 polyline arc length/progress, bezier subdivision under the sample cap,
 progress-keyframe positioning with real pixels, auto-orient tangent angles,
-clear/locked/hostile-restore/undo), `cargo build -p nf-cli` clean,
+clear/locked/hostile-restore/undo, extreme path offsets saturating the
+evaluated transform at the ±1e7 Prism bound so renderFrame still succeeds),
+`cargo build -p nf-cli` clean,
 `pnpm install --prefer-offline` clean, `pnpm --filter
 @nitro-forge/motion test` 7 passed across 6 files (1 new nf-cli path case),
 `pnpm --filter @nitro-forge/motion typecheck` clean. Cubic curvature

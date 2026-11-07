@@ -974,10 +974,18 @@ impl MotionEngine {
                     let (px, py, deg) =
                         mpath.sample_at(out.path_progress).map_err(|_| bad("invalid motion path"))?;
                     let orient = mpath.auto_orient;
-                    out.transform.tx += px;
-                    out.transform.ty += py;
+                    // Path nodes/handles are each bounded ±1e7, so sampled
+                    // offsets can reach ~±2e7; adding to an evaluated base
+                    // that is itself ±1e7 could push tx/ty/rotation past
+                    // Prism's transform bound and fail setLayerTransform on
+                    // an otherwise valid document. Saturate at the shared
+                    // ±1e7 bound instead — extreme paths visibly distort at
+                    // the boundary, a documented limitation like the
+                    // parent-compose shear/bounds case.
+                    out.transform.tx = (out.transform.tx + px).clamp(-1e7, 1e7);
+                    out.transform.ty = (out.transform.ty + py).clamp(-1e7, 1e7);
                     if orient {
-                        out.transform.rotation += deg;
+                        out.transform.rotation = (out.transform.rotation + deg).clamp(-1e7, 1e7);
                     }
                 }
                 Ok(out)
