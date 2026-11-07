@@ -60,6 +60,10 @@ export const OPS = {
   updateConnector: "updateConnector",
   addMedia: "addMedia",
   updateMedia: "updateMedia",
+  addChart: "addChart",
+  updateChart: "updateChart",
+  addTable: "addTable",
+  updateTable: "updateTable",
   addImage: "addImage",
   moveObject: "moveObject",
   setObjectOrder: "setObjectOrder",
@@ -289,6 +293,103 @@ export interface PitchMediaUpdate {
   muted?: boolean | null;
   show_controls?: boolean | null;
   hide_when_stopped?: boolean | null;
+}
+/**
+ * Bounded chart kind catalog mirroring NYC-Tron `SheetChartKind`
+ * (`SHEET_CHART_KINDS`): the kinds `@nyc-tron/native-charts` renders.
+ */
+export type PitchChartKind = "line" | "column" | "area";
+/** One chart sample point in data units; x/y are finite within ±1e12. */
+export interface PitchChartPoint {
+  x: number;
+  y: number;
+}
+/**
+ * One named series (NYC-Tron `SheetChartSeries`): `id` is the stable
+ * series identity (non-blank <=64 UTF-8 bytes, unique within a spec),
+ * `label` the display name (non-blank <=128 bytes), `points` 1..=1024
+ * embedded samples.
+ */
+export interface PitchChartSeries {
+  id: string;
+  label: string;
+  points: PitchChartPoint[];
+}
+/**
+ * Stored chart spec (the `chart` field of a `kind:"chart"` object in
+ * `describe`). DATA ONLY: the engine stores bounded embedded series data
+ * plus optional title/axis labels and legend/data-label flags — it never
+ * renders charts; hosts draw from this spec. This is the
+ * `SheetChartSpec`/`SheetChartSeries` contract minus the spreadsheet
+ * source fields (`range`/`seriesIn`/`hasHeader`/`hasXValues`): slide
+ * charts carry their data inline. Bounds enforced by the engine: 1..=32
+ * series, 1..=1024 points per series, <=4096 points total, labels
+ * non-blank <=128 UTF-8 bytes. Snapshots carrying chart objects use the
+ * `{kind:"pitch",schema:7}` wrapper.
+ */
+export interface PitchChartSpec {
+  kind: PitchChartKind;
+  title?: string;
+  x_axis_label?: string;
+  y_axis_label?: string;
+  show_legend?: boolean;
+  show_data_labels?: boolean;
+  series: PitchChartSeries[];
+}
+/**
+ * Partial in-place chart edit inside the `chart` payload: omitted fields
+ * preserve the spec, `series` replaces the whole series array, explicit
+ * `null` clears an optional text/flag field, `kind` replaces the chart
+ * kind (null invalid). Equal or empty patches are eventless no-ops.
+ */
+export interface PitchChartUpdate {
+  kind?: PitchChartKind;
+  title?: string | null;
+  x_axis_label?: string | null;
+  y_axis_label?: string | null;
+  show_legend?: boolean | null;
+  show_data_labels?: boolean | null;
+  series?: PitchChartSeries[];
+}
+/** Bounded table cell value: string (non-blank <=128 UTF-8 bytes), finite number (|v|<=1e12) or boolean. */
+export type PitchTableCellValue = string | number | boolean;
+/**
+ * One sparse table cell: `row`/`col` are 0-based indices within the
+ * spec's `rows`/`cols` dimensions; absent cells render empty. (row, col)
+ * pairs are unique within a spec.
+ */
+export interface PitchTableCell {
+  row: number;
+  col: number;
+  value: PitchTableCellValue;
+}
+/**
+ * Stored table spec (the `table` field of a `kind:"table"` object in
+ * `describe`). DATA ONLY: the engine stores grid dimensions plus sparse
+ * cell values — it never renders tables or evaluates formulas; hosts draw
+ * from this spec. This is the bounded subset of the NYC-Tron
+ * `VirtualSpreadsheetGrid`/`TableCellLayout` contract; per-cell layout
+ * (spans, alignment, borders, fills) is deferred. Bounds enforced by the
+ * engine: rows 1..=100, cols 1..=26, <=1024 cells, cell text non-blank
+ * <=128 UTF-8 bytes. Snapshots carrying table objects use the
+ * `{kind:"pitch",schema:7}` wrapper.
+ */
+export interface PitchTableSpec {
+  rows: number;
+  cols: number;
+  cells?: PitchTableCell[];
+}
+/**
+ * Partial in-place table edit inside the `table` payload: omitted fields
+ * preserve the spec, `cells` replaces the sparse cell set (null clears
+ * to empty), `rows`/`cols` replace the dimensions — the merged spec is
+ * re-validated, so cells cannot survive outside shrunk dimensions.
+ * Equal or empty patches are eventless no-ops.
+ */
+export interface PitchTableUpdate {
+  rows?: number;
+  cols?: number;
+  cells?: PitchTableCell[] | null;
 }
 export type InkKind = "pen" | "highlighter" | "laser";
 /**
@@ -669,6 +770,38 @@ export class PitchDocument {
   /** Partial media spec patch; equal/empty patches are eventless no-ops. */
   updateMedia(slide: number, id: number, patch: PitchMediaUpdate) {
     return this.call<{ ok: boolean }>(OPS.updateMedia, { ...patch, slide, id });
+  }
+  /**
+   * Add a chart object with embedded bounded series data (NYC-Tron
+   * `SheetChartKind`/`SheetChartSeries` contract minus sheet-source
+   * fields). DATA ONLY — the engine stores the spec, hosts render.
+   * Chart objects have real bounds: move/resize/rotate apply.
+   * `w`/`h` must be > 0. Returns the assigned `object_id`.
+   */
+  addChart(slide: number, x: number, y: number, w: number, h: number, chart: PitchChartSpec) {
+    return this.call<{ object_id: number }>(OPS.addChart, {
+      slide, x, y, w, h, chart,
+    });
+  }
+  /** Partial chart spec patch; equal/empty patches are eventless no-ops. */
+  updateChart(slide: number, id: number, patch: PitchChartUpdate) {
+    return this.call<{ ok: boolean }>(OPS.updateChart, { chart: patch, slide, id });
+  }
+  /**
+   * Add a table object with embedded bounded cell data (rows/cols plus a
+   * sparse cell set of string/number/boolean values). DATA ONLY — the
+   * engine stores the spec, hosts render; formulas and per-cell layout
+   * are not modeled. `w`/`h` must be > 0. Returns the assigned
+   * `object_id`.
+   */
+  addTable(slide: number, x: number, y: number, w: number, h: number, table: PitchTableSpec) {
+    return this.call<{ object_id: number }>(OPS.addTable, {
+      slide, x, y, w, h, table,
+    });
+  }
+  /** Partial table spec patch; equal/empty patches are eventless no-ops. */
+  updateTable(slide: number, id: number, patch: PitchTableUpdate) {
+    return this.call<{ ok: boolean }>(OPS.updateTable, { table: patch, slide, id });
   }
   addImage(slide: number, x: number, y: number, w: number, h: number, src: string) {
     return this.call<{ object_id: number }>(OPS.addImage, { slide, x, y, w, h, src });

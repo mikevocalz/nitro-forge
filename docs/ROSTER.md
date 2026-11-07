@@ -793,3 +793,41 @@ through schema:6. Local evidence: `cargo test -p pitch-engine` 77 passed
 nf-cli theme cases), package typecheck clean, `cargo build -p nf-cli`
 clean. No theme application to objects, template bundles, UI wiring or
 native target run is claimed.
+
+## P14 Pitch charts/tables in slides source checkpoint (2026-11-07)
+
+Pitch slides now carry chart and table objects with EMBEDDED bounded data
+(P14 slice 10, the NYC-Tron `ChartAndTableEditor` contract): `addChart`/
+`updateChart` and `addTable`/`updateTable` mutate, `describe` exposes the
+stored specs, and `moveObject`/`resizeObject`/`rotateObject`/`removeObject`
+treat them like media objects (real bounds, cascade removal, animation
+targets allowed). Charts mirror `SheetChartSpec`/`SheetChartSeries` minus
+the sheet-source fields: `kind` is the `line|column|area` catalog,
+`series` is inline `{id,label,points:[{x,y}]}` data with 1..=32 series,
+1..=1024 points per series, <=4096 points total, unique non-blank ids
+<=64 bytes, labels <=128 bytes and point coordinates finite within
+±1e12; optional `title`/`x_axis_label`/`y_axis_label`/`show_legend`/
+`show_data_labels` cover the text and boolean half of `ChartPresentation`.
+Tables are the bounded `VirtualSpreadsheetGrid` subset: `rows` 1..=100,
+`cols` 1..=26, sparse unique `{row,col,value}` cells <=1024 with string
+(<=128 bytes)/number/boolean values; per-cell `TableCellLayout` (spans,
+alignment, borders, fills), formulas, chart number formats and
+per-series colors are deferred. DATA ONLY: the engine stores and
+validates the embedded data — it never renders charts or tables; hosts
+draw from `describe` output. `updateChart`/`updateTable` are partial
+patches mirroring `updateMedia` (series/cells replace wholesale,
+explicit null clears optional fields, merged spec re-validated);
+equal/empty patches are eventless no-ops, hostile restores reject
+kind/spec mismatches, missing specs, duplicate cells, out-of-grid cells,
+non-positive bounds and over-bound collections atomically, and `new`
+drops the objects with the deck. Snapshots carrying chart/table objects
+use the new `{kind:"pitch",schema:7}` wrapper: the `chart`/`table` Obj
+fields are additive like `media`/`morph_name`, so they take schema:7
+even though the new ObjKind variants also fail closed as unknown
+variants; readers accept schema:2 through schema:7 and the legacy-reader
+reject probe moved to schema:8. Local evidence: `cargo test -p
+pitch-engine` 85 passed (8 new data tests), `pnpm --filter
+@nitro-forge/pitch test` 42 passed across 10 files (3 new nf-cli
+chart/table cases), package typecheck clean, `cargo build -p nf-cli`
+clean. No chart/table rendering, NYC-Tron slide-model kind extension,
+formula evaluation or native target run is claimed.
