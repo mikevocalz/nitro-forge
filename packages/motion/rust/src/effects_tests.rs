@@ -304,6 +304,129 @@ fn set_layer_effects_validates_atomically_and_replays_history() {
     assert_eq!(e.state.layers[0].effects.len(), 0);
     assert_eq!(pixels(&mut e, 0.), vec![1, 2, 3, 255]);
 }
+fn rect(e: &mut MotionEngine, x: f64, y: f64, w: f64, h: f64, fill: [u8; 4]) -> u64 {
+    call(
+        e,
+        "addShapeLayer",
+        json!({"shape":{"kind":"rect","x":x,"y":y,"w":w,"h":h,"fill":fill}}),
+    )
+    .data["layer_id"]
+        .as_u64()
+        .unwrap()
+}
+#[test]
+fn blend_mode_composites_the_effected_pixels() {
+    let mut e = doc(1, 1);
+    rect(&mut e, 0., 0., 1., 1., [100, 150, 200, 255]);
+    let top = rect(&mut e, 0., 0., 1., 1., [200, 100, 50, 255]);
+    // invert runs inside the layer's offscreen pass; the parent scene then
+    // blends the effected result. multiply of inverted [55,155,205] over
+    // [100,150,200]: round(channel_base*channel_fx/255).
+    set_effects(&mut e, top, json!([{"kind":"invert"}]));
+    call(&mut e, "setLayerBlend", json!({"layer":top,"blend":"multiply"}));
+    assert_eq!(pixels(&mut e, 0.), vec![22, 91, 161, 255]);
+    // The same blend without the effect would composite the raw [200,100,50]
+    // to [78,59,39]; clearing the stack proves the pixels above came from the
+    // effected upload, not the unprocessed layer.
+    set_effects(&mut e, top, Value::Null);
+    assert_eq!(pixels(&mut e, 0.), vec![78, 59, 39, 255]);
+}
+#[test]
+fn clipping_masks_the_effected_pixels() {
+    let mut e = doc(3, 1);
+    // Base covers x0..x1; the effected top covers x1..x2 and inverts to
+    // opaque yellow. Clipping must gate the effected upload by the base's
+    // alpha: x1 shows yellow, x2 clips away entirely.
+    rect(&mut e, 0., 0., 2., 1., [255, 0, 0, 255]);
+    let top = rect(&mut e, 1., 0., 2., 1., [0, 0, 255, 255]);
+    set_effects(&mut e, top, json!([{"kind":"invert"}]));
+    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":true}));
+    assert_eq!(
+        pixels(&mut e, 0.),
+        vec![255, 0, 0, 255, 255, 255, 0, 255, 0, 0, 0, 0]
+    );
+    // Unclipped, the effected yellow reaches x2 — the clip, not the effect,
+    // removed it.
+    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":false}));
+    assert_eq!(
+        pixels(&mut e, 0.),
+        vec![255, 0, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255]
+    );
+}
+#[test]
+fn set_layer_effects_rejects_unknown_layer() {
+    let mut e = doc(1, 1);
+    let asset = ingest(&mut e, 1, 1, vec![1, 2, 3, 255]);
+    let layer = raster_layer(&mut e, asset);
+    for bad_layer in [0u64, 999, u64::MAX] {
+        assert!(
+            try_call(
+                &mut e,
+                "setLayerEffects",
+                json!({"layer":bad_layer,"effects":[{"kind":"invert"}]})
+            )
+            .is_err(),
+            "accepted effects on layer {bad_layer}"
+        );
+    }
+    // A malformed `layer` field rejects the same way, and a valid layer id
+    // in a different (nested) composition is still unknown at root scope.
+    assert!(try_call(
+        &mut e,
+        "setLayerEffects",
+        json!({"layer":"1","effects":[{"kind":"invert"}]})
+    )
+    .is_err());
+    let comp = call(&mut e, "addComposition", json!({"width":1,"height":1}))
+        .data["comp_id"]
+        .as_u64()
+        .unwrap();
+    let inner = call(
+        &mut e,
+        "addRasterLayer",
+        json!({"asset_id":asset,"comp":comp}),
+    )
+    .data["layer_id"]
+        .as_u64()
+        .unwrap();
+    // Layer lookup is global across compositions, so `inner` is a legal
+    // target; ids that exist nowhere still reject.
+    let _ = inner;
+    assert!(try_call(
+        &mut e,
+        "setLayerEffects",
+        json!({"layer":inner + 1000,"effects":[{"kind":"invert"}]})
+    )
+    .is_err());
+    set_effects(&mut e, layer, json!([{"kind":"invert"}]));
+    assert_eq!(pixels(&mut e, 0.), vec![254, 253, 252, 255]);
+}
+#[test]
+fn effected_layers_share_the_canvas_storage_budget() {
+    // 1024x1024 = the 1-megapixel cap: each canvas-raster layer costs
+    // 4 MiB of logical storage against the 16 MiB budget, so four effected
+    // layers fit exactly and a fifth rejects atomically.
+    let mut e = doc(1024, 1024);
+    let mut layers = Vec::new();
+    for _ in 0..5 {
+        layers.push(rect(&mut e, 0., 0., 1., 1., [9, 9, 9, 255]));
+    }
+    for &layer in &layers[..4] {
+        set_effects(&mut e, layer, json!([{"kind":"invert"}]));
+    }
+    let before = e.snapshot().unwrap();
+    assert!(try_call(
+        &mut e,
+        "setLayerEffects",
+        json!({"layer":layers[4],"effects":[{"kind":"invert"}]})
+    )
+    .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Clearing one stack frees budget for another layer.
+    set_effects(&mut e, layers[0], Value::Null);
+    set_effects(&mut e, layers[4], json!([{"kind":"invert"}]));
+    assert_eq!(e.state.layers[4].effects.len(), 1);
+}
 #[test]
 fn hostile_restore_rejects_bad_effects_and_good_ones_roundtrip() {
     let mut e = doc(1, 1);

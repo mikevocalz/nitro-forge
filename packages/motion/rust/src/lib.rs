@@ -583,9 +583,16 @@ fn validate(s: &State) -> Result<(), EngineError> {
     // Pass 2: per-layer content, transform, curves and parent references.
     for &(key, width, height, duration_s, layers) in &views {
         let members = &comp_members[&key];
-        let raster_count = layers.iter().filter(|l| l.asset_id.is_some()).count();
-        if raster_count > assets::MAX_RASTER_LAYERS
-            || u64::from(width) * u64::from(height) * 4 * raster_count as u64
+        // Asset-backed layers and layers with a non-empty effect stack both
+        // materialize a canvas-sized raster upload in the ephemeral Prism
+        // scene at render (see `stage_effects`), so they share one logical
+        // canvas-storage budget; a layer that is both counts once.
+        let canvas_rasters = layers
+            .iter()
+            .filter(|l| l.asset_id.is_some() || !l.effects.is_empty())
+            .count();
+        if canvas_rasters > assets::MAX_RASTER_LAYERS
+            || u64::from(width) * u64::from(height) * 4 * canvas_rasters as u64
                 > assets::MAX_CANVAS_STORAGE
         {
             return Err(bad("logical raster layer canvas storage exceeds budget"));
