@@ -582,7 +582,7 @@ impl Engine for FolioEngine {
     }
 
     fn binary_input_ops(&self) -> &'static [&'static str] {
-        &["open"]
+        &["open", "addFileAttachment"]
     }
 
     /// `save` checks for cancellation before serializing and again before

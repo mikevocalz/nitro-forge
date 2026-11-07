@@ -191,9 +191,11 @@ fn collect_signatures(doc: &Document) -> Result<Vec<SigEntry>, EngineError> {
 }
 
 /// Decode a signature-dictionary string entry (`/Name`, `/M`, `/Reason`,
-/// `/ContactInfo`, `/Location`). Missing or undecodable → null.
-fn sig_text(dict: &lopdf::Dictionary, key: &[u8]) -> Value {
-    dict.get(key)
+/// `/ContactInfo`, `/Location`). `get_deref` resolves indirect values —
+/// signature dictionaries routinely store `/M`/`/ByteRange` behind
+/// references. Missing or undecodable → null.
+fn sig_text(doc: &Document, dict: &lopdf::Dictionary, key: &[u8]) -> Value {
+    dict.get_deref(key, doc)
         .ok()
         .and_then(|o| lopdf::decode_text_string(o).ok())
         .map(Value::from)
@@ -202,14 +204,25 @@ fn sig_text(dict: &lopdf::Dictionary, key: &[u8]) -> Value {
 
 /// `/ByteRange` reporting: the four integers when the array holds only
 /// integers (sign included — malformed values still report), `null`
-/// otherwise. `well_formed` additionally requires exactly four
+/// otherwise. The array itself and each element may be indirect; both
+/// are dereferenced. `well_formed` additionally requires exactly four
 /// non-negative integers whose second pair starts at or after the end
 /// of the first — a shape check only, never a byte-level verification.
-fn byte_range(dict: &lopdf::Dictionary) -> (Value, bool) {
-    let Some(items) = dict.get(b"ByteRange").ok().and_then(|o| o.as_array().ok()) else {
+fn byte_range(doc: &Document, dict: &lopdf::Dictionary) -> (Value, bool) {
+    let Some(items) = dict
+        .get_deref(b"ByteRange", doc)
+        .ok()
+        .and_then(|o| o.as_array().ok())
+    else {
         return (Value::Null, false);
     };
-    let nums: Option<Vec<i64>> = items.iter().map(|o| o.as_i64().ok()).collect();
+    let nums: Option<Vec<i64>> = items
+        .iter()
+        .map(|o| match doc.dereference(o) {
+            Ok((_, resolved)) => resolved.as_i64().ok(),
+            Err(_) => o.as_i64().ok(),
+        })
+        .collect();
     let Some(nums) = nums else {
         return (Value::Null, false);
     };
@@ -220,8 +233,9 @@ fn byte_range(dict: &lopdf::Dictionary) -> (Value, bool) {
 }
 
 /// Signature name object (`/SubFilter`, `/Type`) as a lossy string.
-fn sig_name(dict: &lopdf::Dictionary, key: &[u8]) -> Value {
-    dict.get(key)
+/// `get_deref` resolves indirect values like `sig_text`.
+fn sig_name(doc: &Document, dict: &lopdf::Dictionary, key: &[u8]) -> Value {
+    dict.get_deref(key, doc)
         .ok()
         .and_then(|o| o.as_name().ok())
         .map(|n| json!(String::from_utf8_lossy(n)))
@@ -260,7 +274,7 @@ fn signature_json(doc: &Document, entry: &SigEntry) -> Value {
     let Ok(sig) = resolved.as_dict() else {
         return unsigned();
     };
-    let (range, well_formed) = byte_range(sig);
+    let (range, well_formed) = byte_range(doc, sig);
     json!({
         "name": name,
         "page": page,
@@ -268,13 +282,13 @@ fn signature_json(doc: &Document, entry: &SigEntry) -> Value {
         "signed": true,
         "byte_range": range,
         "byte_range_well_formed": well_formed,
-        "sub_filter": sig_name(sig, b"SubFilter"),
-        "signer": sig_text(sig, b"Name"),
-        "date": sig_text(sig, b"M"),
-        "reason": sig_text(sig, b"Reason"),
-        "contact": sig_text(sig, b"ContactInfo"),
-        "location": sig_text(sig, b"Location"),
-        "signature_type": sig_name(sig, b"Type"),
+        "sub_filter": sig_name(doc, sig, b"SubFilter"),
+        "signer": sig_text(doc, sig, b"Name"),
+        "date": sig_text(doc, sig, b"M"),
+        "reason": sig_text(doc, sig, b"Reason"),
+        "contact": sig_text(doc, sig, b"ContactInfo"),
+        "location": sig_text(doc, sig, b"Location"),
+        "signature_type": sig_name(doc, sig, b"Type"),
     })
 }
 
@@ -520,6 +534,61 @@ mod tests {
             .find(|s| s["name"] == "sig.vstring")
             .unwrap();
         assert_eq!(v["signed"], false);
+    }
+
+    #[test]
+    fn indirect_signature_values_are_dereferenced() {
+        // Signature dictionaries routinely store /ByteRange, /SubFilter,
+        // /Name and /M behind indirect references; the accessors must
+        // resolve them or they report null.
+        let mut doc = crate::build_blank_doc(1);
+        let page_id = *doc.get_pages().values().next().unwrap();
+        let range_id = doc.add_object(Object::Array(vec![
+            Object::Integer(0), Object::Integer(10),
+            Object::Integer(20), Object::Integer(30),
+        ]));
+        let subfilter_id = doc.add_object(Object::Name(b"adbe.pkcs7.detached".to_vec()));
+        let name_id = doc.add_object(Object::String(
+            b"Indirect Signer".to_vec(),
+            lopdf::StringFormat::Literal,
+        ));
+        let date_id = doc.add_object(lopdf::text_string("D:20260202000000Z"));
+        let sig_id = doc.add_object(Object::Dictionary(dictionary! {
+            "Type" => "Sig",
+            "SubFilter" => Object::Reference(subfilter_id),
+            "Name" => Object::Reference(name_id),
+            "M" => Object::Reference(date_id),
+            "ByteRange" => Object::Reference(range_id),
+        }));
+        let widget = dictionary! {
+            "Type" => "Annot",
+            "Subtype" => "Widget",
+            "Rect" => vec![
+                Object::Real(0.0), Object::Real(0.0),
+                Object::Real(10.0), Object::Real(10.0),
+            ],
+            "FT" => "Sig",
+            "T" => lopdf::text_string("sig.indirect"),
+            "V" => Object::Reference(sig_id),
+        };
+        let wid = doc.add_object(Object::Dictionary(widget));
+        doc.get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Annots", Object::Array(vec![Object::Reference(wid)]));
+        set_acroform_fields(&mut doc, vec![Object::Reference(wid)]);
+
+        let mut e = engine();
+        e.doc = doc;
+        let d = apply(&mut e, "listSignatures", json!({}));
+        let sig = &d["signatures"][0];
+        assert_eq!(sig["signed"], true);
+        assert_eq!(sig["byte_range"], json!([0, 10, 20, 30]));
+        assert_eq!(sig["byte_range_well_formed"], true);
+        assert_eq!(sig["sub_filter"], "adbe.pkcs7.detached");
+        assert_eq!(sig["signer"], "Indirect Signer");
+        assert_eq!(sig["date"], "D:20260202000000Z");
     }
 
     #[test]

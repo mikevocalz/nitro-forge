@@ -14,15 +14,24 @@
 //!   `/Names` arrays reject with Validation — the rebuild used by
 //!   `addFileAttachment` must never silently drop entries.
 //! - `listAttachments` reports `{name, size, description}` per pair:
-//!   `size` is the embedded stream's `/Params` `/Size` (declared
-//!   uncompressed length) or `null` when absent — raw `/Length` is
-//!   never substituted because it may be a compressed length.
-//!   `description` decodes `/Desc` when present.
+//!   `name` is the decoded key, or `""` when the key is not a PDF
+//!   string (the pair is still listed). `size` is the embedded
+//!   stream's `/Params` `/Size` (declared uncompressed length) or
+//!   `null` when absent — raw `/Length` is never substituted because
+//!   it may be a compressed length, and the declared size can differ
+//!   from `getAttachment`'s actual decoded length on PDFs whose
+//!   `/Params` lies. `description` decodes `/Desc` when present.
 //! - `getAttachment {name}` resolves the `/Filespec`→`/EF`→`/F` stream,
 //!   decodes it (`get_plain_content`, so `/Filter` streams decompress)
 //!   and returns the bytes (base64 `bytes_b64`, or binary output when
-//!   requested). Decoded payloads are capped at 64 MiB; larger
-//!   attachments reject rather than materialize unboundedly.
+//!   requested) with `size` = the actual decoded length. The 64 MiB
+//!   cap is checked on the decoded result, but lopdf 0.36 has no
+//!   bounded-decompression API: it materializes the decompressed
+//!   stream unboundedly before the cap rejects it, so a small
+//!   compressed stream can still expand past the cap in memory. This
+//!   is a pre-existing lopdf limitation shared with `pageText` and
+//!   other content reads — hosts should bound input PDF sizes rather
+//!   than rely on the cap to prevent materialization.
 //! - `addFileAttachment {name, data_b64|binary, description?, page?,
 //!   rect?}` appends an `/EmbeddedFile` stream (`/Type /EmbeddedFile`,
 //!   `/Params << /Size /CheckSum(MD5) >>`), a `/Filespec` dictionary,
@@ -34,7 +43,11 @@
 //! - Name-tree writes rebuild the tree as a single sorted leaf: every
 //!   existing pair is re-emitted in ascending key order plus the new
 //!   pair, stored in one new leaf dictionary that replaces
-//!   `/EmbeddedFiles`. Multi-leaf `/Limits` bookkeeping is not
+//!   `/EmbeddedFiles`. Ordering compares the keys' raw encoded string
+//!   bytes — deterministic, and spec-pedantic only since PDF name
+//!   trees order by the string's logical value, which coincides for
+//!   the literal/hex encodings lopdf emits. Multi-leaf `/Limits`
+//!   bookkeeping is not
 //!   maintained (single-leaf trees need none); the old nodes become
 //!   unreachable and are pruned with `page_ops::prune_unreachable`,
 //!   which — like `removeBookmark` — also drops pre-existing orphans.
@@ -52,6 +65,7 @@
 //!   name always rejects, so every accepted add is a real change.
 use super::*;
 use lopdf::Dictionary;
+use md5::Digest as _;
 use std::collections::HashSet;
 
 /// Decoded attachment payload cap for `addFileAttachment` (25 MiB).
@@ -272,7 +286,9 @@ impl FolioEngine {
 
     /// `getAttachment {name}` → `{name, size}` + `bytes_b64` (or binary
     /// output). Read-only; the `/Filespec`→`/EF`→`/F` stream is decoded
-    /// (`/Filter` decompression applied) and capped at 64 MiB.
+    /// (`/Filter` decompression applied) and the decoded result is
+    /// capped at 64 MiB. The cap cannot prevent lopdf from
+    /// materializing an oversized decompression — see module docs.
     pub(super) fn op_get_attachment(
         &self,
         cmd: &Command,
@@ -378,8 +394,9 @@ impl FolioEngine {
         // --- staged clone: every fallible step runs on `next` ----------
         let mut next = self.doc.clone();
 
-        // EmbeddedFile stream with declared size and MD5 checksum.
-        let checksum = md5::compute(&data).0;
+        // EmbeddedFile stream with declared size and MD5 checksum (the
+        // 16 raw digest bytes are the PDF /CheckSum string form).
+        let checksum = md5::Md5::digest(&data);
         let ef_stream = Stream::new(
             dictionary! {
                 "Type" => "EmbeddedFile",

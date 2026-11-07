@@ -155,7 +155,10 @@ export interface FolioSignature {
 /**
  * One embedded-file attachment from `listAttachments`. `size` is the
  * embedded stream's declared `/Params` `/Size` (uncompressed length) or
- * `null` when absent — never the possibly-compressed `/Length`.
+ * `null` when absent — never the possibly-compressed `/Length`. It is a
+ * declared value and can differ from `getAttachment`'s actual decoded
+ * length on PDFs whose `/Params` lies; `name` is `""` for name-tree
+ * keys that are not PDF strings.
  */
 export interface FolioAttachmentInfo {
   name: string;
@@ -428,8 +431,11 @@ export class FolioDocument {
     return this.call<{ attachments: FolioAttachmentInfo[] }>(OPS.listAttachments);
   }
   /**
-   * Extract one attachment's decoded bytes by name (≤64 MiB engine
-   * cap). Resolves `{name, size}` plus `bytes_b64` in `data`.
+   * Extract one attachment's decoded bytes by name. `size` is the actual
+   * decoded length; the ≤64 MiB engine cap applies to the decoded result
+   * but lopdf materializes decompression unboundedly first (pre-existing
+   * lopdf limitation — bound input PDF sizes). Resolves `{name, size}`
+   * plus `bytes_b64` in `data`.
    */
   async getAttachment(name: string) {
     const r = await this.call<{ name: string; size: number; bytes_b64: string }>(
