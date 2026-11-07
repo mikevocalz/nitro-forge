@@ -22,6 +22,10 @@ export interface CadenceDetailControlsProps {
  density:WorkspaceDensity;
  theme:'dark'|'light';
 }
+// alpha.4 has no capability marker. Keep its original contract until a supported host is supplied.
+const midiCapabilities=(MIDIPianoRoll as typeof MIDIPianoRoll & {capabilities?:{version?:number;rationalTimeSignature?:boolean;controlledScrollX?:boolean}}).capabilities;
+const rationalMidiHost=midiCapabilities?.version===1&&midiCapabilities.rationalTimeSignature===true;
+const controlledMidiScroll=midiCapabilities?.version===1&&midiCapabilities.controlledScrollX===true;
 const errorText=(error:unknown)=>error instanceof Error?error.message:String(error);
 /** Observe legacy void callbacks while preserving the original rejection for awaited callers. */
 const observed=<T,>(task:Promise<T>)=>{void task.catch(()=>{});return task;};
@@ -101,7 +105,7 @@ export function CadenceDetailControls(props:CadenceDetailControlsProps){
     {clip&&<>
      <Select label="MIDI clip to edit" value={String(clip.id)} options={track.clips.map(c=>({value:String(c.id),label:`Clip ${c.id} · ${c.length_ticks} ticks`}))}
       disabled={disabled} onValueChange={id=>select({clipId:Number(id),note:undefined,scrollX:0})}/>
-     <MidiEditors key={controlBoundary} document={document} project={project} clip={clip} disabled={disabled} target={scale.size.target} selected={view.note} scrollX={view.scrollBoundary===controlBoundary?view.scrollX:0}
+     <MidiEditors key={controlBoundary} document={document} project={project} clip={clip} disabled={disabled} target={scale.size.target} selected={view.note} requestedScrollX={view.scrollX} scrollX={view.scrollBoundary===controlBoundary?view.scrollX:0}
       onSelect={note=>select({note})} onScrollX={scrollX=>{if(boundaryRef.current===controlBoundary)store.setState({scrollX,scrollBoundary:controlBoundary});}} write={write}/>
     </>}
    </>}
@@ -127,14 +131,14 @@ function InsertParameters({slot,numeric,document,write,disabled}:{slot:MixerInse
   </View>;
  })}</>;
 }
-function MidiEditors({document,project,clip,disabled,target,selected,scrollX,onSelect,onScrollX,write}:{document:CadenceDocument;project:CadenceMixerState;clip:CadenceMixerState['tracks'][number]['clips'][number];disabled:boolean;target:number;selected:number|undefined;scrollX:number;onSelect:(index:number)=>void;onScrollX:(x:number)=>void;write:(action:()=>Promise<unknown>)=>Promise<unknown>}){
+function MidiEditors({document,project,clip,disabled,target,selected,requestedScrollX,scrollX,onSelect,onScrollX,write}:{document:CadenceDocument;project:CadenceMixerState;clip:CadenceMixerState['tracks'][number]['clips'][number];disabled:boolean;target:number;selected:number|undefined;requestedScrollX:number;scrollX:number;onSelect:(index:number)=>void;onScrollX:(x:number)=>void;write:(action:()=>Promise<unknown>)=>Promise<unknown>}){
  const bindings=createCadenceClipBindings(document,clip.id),midi=new CadenceMixerAdapter(document).midi(clip.id);
  const notes=clip.notes.map(n=>({pitch:n.pitch,velocity:n.velocity,startTicks:n.start_ticks,lengthTicks:n.length_ticks,channel:n.channel}));
  const quarterBeatsPerBar=project.time_sig[0]*4/project.time_sig[1];
- const supportsBarGrid=Number.isInteger(quarterBeatsPerBar)&&quarterBeatsPerBar>0;
+ const supportsBarGrid=rationalMidiHost||(Number.isInteger(quarterBeatsPerBar)&&quarterBeatsPerBar>0);
  const selection=selected===undefined||!notes[selected]?{}:{selectedIndex:selected};
  return <View style={{gap:8}}>
-  {supportsBarGrid?<MIDIPianoRoll notes={notes} clipTicks={clip.length_ticks} ppq={project.ppq} beatsPerBar={quarterBeatsPerBar} rowHeight={target} height={352} {...selection} disabled={disabled} onSelect={onSelect} onScrollX={onScrollX}
+  {supportsBarGrid?<MIDIPianoRoll notes={notes} clipTicks={clip.length_ticks} ppq={project.ppq} {...(rationalMidiHost?{timeSignature:project.time_sig}:{beatsPerBar:quarterBeatsPerBar})} {...(controlledMidiScroll?{scrollX:requestedScrollX}:{})} rowHeight={target} height={352} {...selection} disabled={disabled} onSelect={onSelect} onScrollX={onScrollX}
    onNoteAdd={(start,length,pitch)=>write(()=>bindings.onNoteAdd(start,length,pitch))} onNoteMove={(index,start,pitch)=>write(()=>bindings.onNoteMove(index,start,pitch))}
    onNoteResize={(index,length)=>write(()=>bindings.onNoteResize(index,length))} onNoteRemove={index=>write(()=>bindings.onNoteRemove(index))} onNoteChannel={(index,channel)=>write(()=>midi.onNoteChannel(index,channel))}/>:<Banner tone="info" title="The current piano-roll host requires whole quarter-note bars. Velocity editing remains available in project ticks."/>}
   <MIDIVelocityLane notes={notes} clipTicks={clip.length_ticks} inset={PIANO_ROLL_KEY_COLUMN} scrollX={scrollX} {...selection} disabled={disabled} onSelect={onSelect}

@@ -32,3 +32,7 @@ Cadence now composes existing routing, send, insert/preset/parameter and MIDI co
 ## Timeline detail composition checkpoint (2026-11-07)
 
 Splice now composes the canonical marker, transition and batch controls with its existing timeline adapter. Annotation-aware UI bounds and shared clip selection are integrated into the stage without changing the engine's clip duration. See [Splice detail controls](../design/SPLICE_DETAIL_PHASE.md). Builds and source review do not promote the required runtime/platform acceptance fields.
+
+## MIDI grid and scroll checkpoint (2026-11-07)
+
+NYC-Tron `c81ef50` adds rational time-signature grids and controlled horizontal anchors. Forge's capability-aware host binding preserves the alpha.4 fallback while accepting the new source contract. See [MIDI host binding](../design/MIDI_HOST_BINDING_PHASE.md). Static checks and source review do not promote runtime/platform acceptance.
