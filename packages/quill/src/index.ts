@@ -41,6 +41,8 @@ export interface Style {
   underline?: boolean;
   strike?: boolean;
   color?: string;
+  /** Direct Latin run font; null clears an explicit family. Does not install fonts. */
+  font_family?: string | null;
   link?: string;
 }
 export interface LayoutLine {

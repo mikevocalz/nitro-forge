@@ -82,6 +82,8 @@ pub struct Style {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
 }
 
@@ -296,6 +298,20 @@ fn parse_kind(v: &Value) -> Result<BlockKind, EngineError> {
         .ok_or_else(|| EngineError::validation(format!("unknown block kind '{s}'")))
 }
 
+fn validate_font_family(value: &str) -> Result<(), EngineError> {
+    if value.trim().is_empty()
+        || value.chars().count() > 128
+        || value
+            .chars()
+            .any(|c| c.is_control() || c == '\u{fffe}' || c == '\u{ffff}')
+    {
+        return Err(EngineError::validation(
+            "font_family must contain 1..128 non-control characters and cannot be blank",
+        ));
+    }
+    Ok(())
+}
+
 /// A partial style: only fields present in the `applyStyle` payload mutate.
 #[derive(Default)]
 struct StylePatch {
@@ -304,6 +320,7 @@ struct StylePatch {
     underline: Option<bool>,
     strike: Option<bool>,
     color: Option<Option<String>>,
+    font_family: Option<Option<String>>,
     link: Option<Option<String>>,
 }
 
@@ -343,6 +360,10 @@ impl StylePatch {
         };
         opt_str("color", &mut p.color)?;
         opt_str("link", &mut p.link)?;
+        opt_str("font_family", &mut p.font_family)?;
+        if let Some(Some(family)) = &p.font_family {
+            validate_font_family(family)?;
+        }
         Ok(p)
     }
 
@@ -353,6 +374,7 @@ impl StylePatch {
             && self.strike.is_none()
             && self.color.is_none()
             && self.link.is_none()
+            && self.font_family.is_none()
     }
 
     fn apply(&self, s: &mut Style) {
@@ -370,6 +392,9 @@ impl StylePatch {
         }
         if let Some(v) = &self.color {
             s.color = v.clone();
+        }
+        if let Some(v) = &self.font_family {
+            s.font_family = v.clone();
         }
         if let Some(v) = &self.link {
             s.link = v.clone();
@@ -960,6 +985,13 @@ impl Engine for QuillEngine {
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_fmt, payload) = decode_envelope(data)?;
         let state: DocState = serde_json::from_slice(payload)?;
+        for block in &state.blocks {
+            for inline in &block.inlines {
+                if let Some(family) = &inline.style.font_family {
+                    validate_font_family(family)?;
+                }
+            }
+        }
         let mut blocks = state.blocks;
         if blocks.is_empty() {
             blocks.push(Block::empty(BlockKind::Para));
@@ -1982,4 +2014,81 @@ mod tests {
         );
         assert_eq!(r.data["deleted_text"], "héX");
     }
+
+    fn font_style_payload(family: Value) -> Value {
+        json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":3},"style":{"font_family":family}})
+    }
+
+    #[test]
+    fn font_family_set_clear_and_undo_preserve_other_style() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":3},"style":{"bold":true}}));
+        apply(&mut e, "applyStyle", font_style_payload(json!("Aptos")));
+        assert_eq!(e.blocks[0].inlines[0].style.font_family.as_deref(), Some("Aptos"));
+        apply(&mut e, "applyStyle", font_style_payload(Value::Null));
+        assert!(e.blocks[0].inlines[0].style.bold);
+        assert_eq!(e.blocks[0].inlines[0].style.font_family, None);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_family.as_deref(), Some("Aptos"));
+        assert!(e.undo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_family, None);
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_family.as_deref(), Some("Aptos"));
+    }
+
+    #[test]
+    fn invalid_font_patch_preserves_document_and_redo_history() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", font_style_payload(json!("Aptos")));
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        for family in [json!(""), json!("   "), json!("bad\nfont"), json!("x".repeat(129)), json!(42), json!("\u{fffe}")] {
+            let mut payload = font_style_payload(family);
+            payload["style"]["italic"] = json!(true);
+            assert!(e.apply(cmd("applyStyle", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_family.as_deref(), Some("Aptos"));
+        assert!(!e.blocks[0].inlines[0].style.italic);
+    }
+
+    #[test]
+    fn font_snapshot_legacy_default_and_invalid_restore_are_atomic() {
+        let mut e = engine();
+        let legacy = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"abc","style":{"bold":true}}]}]})).unwrap().as_slice());
+        e.restore(&legacy).unwrap();
+        assert_eq!(e.blocks[0].inlines[0].style.font_family, None);
+        apply(&mut e, "applyStyle", font_style_payload(json!("Aptos")));
+        let snapshot = e.snapshot().unwrap();
+        let mut restored = engine();
+        restored.restore(&snapshot).unwrap();
+        assert_eq!(restored.blocks, e.blocks);
+        let bad = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"replacement","style":{"font_family":"\u{0}"}}]}]})).unwrap().as_slice());
+        assert!(e.restore(&bad).is_err());
+        assert_eq!(e.snapshot().unwrap(), snapshot);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_family, None);
+    }
+
+    #[test]
+    fn font_docx_escaped_family_roundtrip_and_clear() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        let family = "A&B \"Quoted\" <Family>";
+        apply(&mut e, "applyStyle", font_style_payload(json!(family)));
+        let bytes = docx::export_docx(&e.blocks).unwrap();
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).unwrap();
+        let mut xml = String::new();
+        std::io::Read::read_to_string(&mut zip.by_name("word/document.xml").unwrap(), &mut xml).unwrap();
+        assert!(xml.contains("A&amp;B &quot;Quoted&quot; &lt;Family&gt;"));
+        assert_eq!(docx::import_docx(&bytes).unwrap(), e.blocks);
+        apply(&mut e, "applyStyle", font_style_payload(Value::Null));
+        let cleared = docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap();
+        assert_eq!(cleared[0].inlines[0].style.font_family, None);
+        assert_eq!(cleared, e.blocks);
+    }
+
 }

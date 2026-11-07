@@ -16,8 +16,6 @@ import type { BlockKind, Pos, QuillDocument, Style } from "./index";
  * have. Each is a DEFER: the matching NYC-Tron prop is left out.
  */
 export const QUILL_DEFERRED_OPS = {
-  /** H-03 font family: `applyStyle` takes bold/italic/underline/strike/color/link only. */
-  setFontFamily: "H-03",
   /** H-03 font size. */
   setFontSize: "H-03",
   /** H-03 highlighter (a run background color). */
@@ -119,13 +117,16 @@ export const QUILL_PARAGRAPH_STYLES = [
 /** Character toggles `applyStyle` stores. */
 export type QuillToggle = "bold" | "italic" | "underline" | "strike";
 
-/** `RichTextRibbon` props Quill can back. Font, size, highlight and case are deferred. */
+/** `RichTextRibbon` props Quill can back. Font size, highlight and case are deferred. */
 export interface QuillRibbonBinding {
   readonly runs: readonly Style[];
   /** The selection's paragraph kind, or "mixed". */
   readonly paragraphStyle: BlockKind | "mixed";
   readonly paragraphStyles: typeof QUILL_PARAGRAPH_STYLES;
   readonly onToggle: (toggle: QuillToggle, on: boolean) => Promise<void>;
+  /** Undefined inherits document defaults; mixed selections remain explicit. */
+  readonly fontFamily: string | "mixed" | undefined;
+  readonly onFontFamilyChange: (family: string | undefined) => Promise<void>;
   /** `undefined` clears the color (Quill takes `null`). */
   readonly onColorChange: (color: string | undefined) => Promise<void>;
   readonly onParagraphStyleChange: (id: string) => Promise<void>;
@@ -152,6 +153,8 @@ export async function bindQuillRibbon(
     paragraphStyle: kinds.size === 1 ? [...kinds][0]! : "mixed",
     paragraphStyles: QUILL_PARAGRAPH_STYLES,
     onToggle: (t, on) => style({ [t]: on }),
+    fontFamily: runs.length && runs.every(run => run.font_family === runs[0]!.font_family) ? runs[0]!.font_family ?? undefined : runs.length ? "mixed" : undefined,
+    onFontFamilyChange: family => style({ font_family: family ?? null }),
     onColorChange: color => style({ color: (color ?? null) as unknown as string }),
     onParagraphStyleChange: id => after(async () => {
       if (!QUILL_PARAGRAPH_STYLES.some(p => p.id === id)) throw new RangeError(`"${id}" is not a Quill paragraph style`);

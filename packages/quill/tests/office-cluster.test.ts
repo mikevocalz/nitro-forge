@@ -79,3 +79,40 @@ describe("H-07 list, H-15 outline, H-21 sections", () => {
     for (const op of Object.keys(QUILL_DEFERRED_OPS)) expect(Object.values(OPS)).not.toContain(op);
   });
 });
+
+describe("direct font-family ribbon binding", () => {
+  it("reports mixed and inherited families and forwards set/clear without invented typing style", async () => {
+    const { doc, calls } = fake();
+    const sel = { start: { block: 1, offset: 0 }, end: { block: 1, offset: 5 } };
+    const changed = vi.fn();
+    const binding = await bindQuillRibbon(doc, sel, changed);
+    expect(binding.fontFamily).toBeUndefined();
+    await binding.onFontFamilyChange("Aptos");
+    await binding.onFontFamilyChange(undefined);
+    expect(calls).toEqual([
+      ["applyStyle", sel.start, sel.end, { font_family: "Aptos" }],
+      ["applyStyle", sel.start, sel.end, { font_family: null }],
+    ]);
+    expect(changed).toHaveBeenCalledTimes(2);
+    // A separate read fixture reports durable mixed state, rather than mutating
+    // the shared fake and making unrelated selection assertions order-dependent.
+    const mixed = { ...doc, blocks: vi.fn(() => ok({ blocks: [{ kind: "para", inlines: [
+      { text: "a", style: { font_family: "Aptos" } }, { text: "b", style: {} },
+    ] }] })) } as unknown as QuillOfficeDocument;
+    const mixedBinding = await bindQuillRibbon(mixed, { start: { block: 0, offset: 0 }, end: { block: 0, offset: 2 } }, () => {});
+    expect(mixedBinding.fontFamily).toBe("mixed");
+    const caret = await bindQuillRibbon(doc, { start: sel.start, end: sel.start }, changed);
+    await expect(caret.onFontFamilyChange("Aptos")).rejects.toThrow(/Select text/);
+    expect(changed).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserves engine rejection and does not publish a refreshed binding after failure", async () => {
+    const { doc } = fake();
+    const failure = new Error("invalid font family");
+    const changed = vi.fn();
+    const rejected = { ...doc, applyStyle: vi.fn(() => Promise.reject(failure)) } as unknown as QuillOfficeDocument;
+    const binding = await bindQuillRibbon(rejected, { start: { block: 1, offset: 0 }, end: { block: 1, offset: 2 } }, changed);
+    await expect(binding.onFontFamilyChange("")).rejects.toBe(failure);
+    expect(changed).not.toHaveBeenCalled();
+  });
+});

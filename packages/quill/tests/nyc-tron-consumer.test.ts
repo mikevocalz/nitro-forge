@@ -12,9 +12,9 @@ import type {
   QuillListBinding, QuillOutlineHeading, QuillRibbonBinding,
 } from "../src/office-cluster";
 
-// RichTextRibbon: the toggles, color and paragraph style Quill can write.
+// RichTextRibbon: the toggles, font family, color and paragraph style Quill can write.
 export const ribbonFits = (b: QuillRibbonBinding): Pick<
-  RichTextRibbonProps, "onToggle" | "onColorChange" | "paragraphStyles" | "onParagraphStyleChange"
+  RichTextRibbonProps, "onToggle" | "fontFamily" | "onFontFamilyChange" | "onColorChange" | "paragraphStyles" | "onParagraphStyleChange"
 > => b;
 // BulletsNumberingEditor: list items, kind and the kinds Quill stores.
 export const listFits = (b: QuillListBinding): Pick<

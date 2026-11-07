@@ -49,9 +49,7 @@ fn esc(s: &str) -> String {
 
 fn build_document_xml(blocks: &[Block]) -> String {
     let mut s = String::with_capacity(blocks.len() * 64 + 256);
-    s.push_str(
-        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
-    );
+    s.push_str(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#);
     s.push_str(
         r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>"#,
     );
@@ -65,6 +63,12 @@ fn build_document_xml(blocks: &[Block]) -> String {
         for inl in &b.inlines {
             s.push_str("<w:r>");
             let mut pr = String::new();
+            if let Some(family) = &inl.style.font_family {
+                let value = esc(family);
+                pr.push_str(&format!(
+                    "<w:rFonts w:ascii=\"{value}\" w:hAnsi=\"{value}\"/>"
+                ));
+            }
             if inl.style.bold {
                 pr.push_str("<w:b/>");
             }
@@ -136,6 +140,25 @@ fn attr_val(e: &BytesStart<'_>, key: &[u8]) -> Option<String> {
     None
 }
 
+// Only direct Latin run fonts are represented; theme/eastAsia/cs fonts remain outside this model.
+fn run_font(e: &BytesStart<'_>) -> Result<Option<String>, EngineError> {
+    for key in [b"ascii".as_slice(), b"hAnsi".as_slice()] {
+        for attribute in e.attributes() {
+            let attribute =
+                attribute.map_err(|_| EngineError::validation("invalid run font attribute"))?;
+            if local_name(attribute.key.as_ref()) == key {
+                let value = attribute
+                    .unescape_value()
+                    .map_err(|_| EngineError::validation("invalid run font value"))?
+                    .into_owned();
+                crate::validate_font_family(&value)?;
+                return Ok(Some(value));
+            }
+        }
+    }
+    Ok(None)
+}
+
 /// OOXML boolean attribute: absent/"true"/"1"/"on" → true; "0"/"false"/"off"/"none" → false.
 fn attr_on(e: &BytesStart<'_>) -> bool {
     match attr_val(e, b"val") {
@@ -184,6 +207,7 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
                 b"t" if in_r => {
                     in_t = true;
                 }
+                b"rFonts" if in_r => style.font_family = run_font(&e)?,
                 b"b" if in_r => style.bold = attr_on(&e),
                 b"i" if in_r => style.italic = attr_on(&e),
                 b"u" if in_r => {
@@ -214,6 +238,7 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
                         kind = pstyle_kind(&v);
                     }
                 }
+                b"rFonts" if in_r => style.font_family = run_font(&e)?,
                 b"b" if in_r => style.bold = attr_on(&e),
                 b"i" if in_r => style.italic = attr_on(&e),
                 b"u" if in_r => {
