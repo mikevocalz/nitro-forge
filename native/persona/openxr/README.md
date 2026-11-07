@@ -61,7 +61,34 @@ This is NOT a headset capture or performance test.
 
 Not implemented here: platform permission UI, app XR-session integration, PICO
 vendor ABI, Android face data-source extension, vendor-to-GNM calibration assets,
-clock anchoring, filtering, network transport, Nitro capture controller or splat
+platform clock acquisition, filtering, network transport, Nitro capture controller or splat
 GPU binding. No claim of installable full persona support is made.
 
 Primary API definitions: https://github.com/KhronosGroup/OpenXR-SDK/tree/24a1f2b92d212501a2b1b8d30ffd53abf55fcfa8/include/openxr
+
+
+## Calibrated controls and CPU deformation
+
+`xr_rig.hpp` adds `SessionClock` (explicit XR/session anchor), `FaceRig`
+(validity-aware sparse matrix retargeting) and `selectFaceControls` (source-aware
+fusion). The calibration matrix and neutral/min/max controls come from the
+asset; no default GNM or vendor index mapping is invented. Unmapped rows remain
+invalid. A valid zero is measured data. Any invalid contributing source invalidates
+that target while unrelated invalid channels do not poison it.
+
+Visual samples override audio only while recent. Vendor audio expressions fill
+holes in the primary audio source. Unknown-origin Android v1 expressions are
+available to inspect/map but are not automatically promoted to visual control;
+Android's data-source extension is still required for automatic provenance.
+
+`rigged_splats.hpp` evaluates supplied sparse mesh expression deltas, then
+updates bound Gaussian centers and full covariance matrices. This is a native
+CPU reference for fitted assets, not a GPU renderer or image-to-avatar model.
+The integration test follows a tongue sample through retargeting, source fusion,
+mesh deformation and Gaussian deformation. It also verifies invalid input leaves
+the immutable asset reusable. No allocation/thermal/frame-rate claim is made.
+
+Verification: CMake/CTest 5/5 pass locally with these additions. The XR rig test
+covers clock precision at large epochs, stale data, partial validity, provenance,
+clamping, unmapped rows and mesh-bound splat motion. Device capture and GPU
+rendering remain unverified.

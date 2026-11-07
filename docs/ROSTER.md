@@ -619,3 +619,5 @@ See [native persona implementation status](../native/persona/README.md).
 - Strict GCC compilation and fake-runtime contract tests against pinned real OpenXR headers PASS.
 - Actual headset SDK capture, Android permissions, PICO ABI, GNM mapping and splat GPU binding NOT RUN / pending.
 - The adapters remain separate from the Nitro v1 performance bridge and document engines.
+
+- Follow-up: XR-to-session clock mapping, validity-aware rig mapping and source-aware fusion implemented; sparse mesh to bound-splat CPU evaluation added. CMake/CTest 5/5 pass locally. Device and GPU tests remain NOT RUN.
