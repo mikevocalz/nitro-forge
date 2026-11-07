@@ -201,7 +201,7 @@ describe("pitch engine e2e (real Rust via nf-cli)", () => {
       re.setSlideTransition(slide, { kind: "fade", duration_ms: 0 }),
     ).rejects.toThrow();
     await expect(
-      re.setSlideTransition(slide, { kind: "morph" as never, duration_ms: 100 }),
+      re.setSlideTransition(slide, { kind: "melt" as never, duration_ms: 100 }),
     ).rejects.toThrow();
     await expect(
       re.setSlideTiming(slide, { duration_ms: 3600001, advance: "manual" }),

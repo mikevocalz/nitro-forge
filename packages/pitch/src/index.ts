@@ -39,6 +39,8 @@ export const OPS = {
   setSlideTransition: "setSlideTransition",
   clearSlideTransition: "clearSlideTransition",
   slideTransition: "slideTransition",
+  setMorphName: "setMorphName",
+  clearMorphName: "clearMorphName",
   setSlideTiming: "setSlideTiming",
   clearSlideTiming: "clearSlideTiming",
   slideTiming: "slideTiming",
@@ -277,7 +279,10 @@ export interface PitchInkStrokePatch {
  * transitions itself. `kind` is bounded to the catalog below; `"none"` in
  * `setSlideTransition` clears the transition. `duration_ms` is a whole
  * millisecond integer within 1..=60,000; `direction` is an optional hint
- * ("left"|"right"|"up"|"down"), meaningful for `wipe`.
+ * ("left"|"right"|"up"|"down"), meaningful for `wipe`. `"morph"` is the
+ * morph transition: the host matches objects across adjacent slides by
+ * their stored `morph_name` tags (see `setMorphName`) — the engine stores
+ * the kind and the tags as data and performs no morph interpolation.
  */
 export type PitchTransitionKind =
   | "fade"
@@ -286,7 +291,8 @@ export type PitchTransitionKind =
   | "slideUp"
   | "slideDown"
   | "wipe"
-  | "zoom";
+  | "zoom"
+  | "morph";
 export type PitchTransitionDirection = "left" | "right" | "up" | "down";
 export interface PitchSlideTransition {
   kind: PitchTransitionKind;
@@ -472,6 +478,20 @@ export class PitchDocument {
   /** Read-only; `transition` is null when the slide has no transition data. */
   slideTransition(slide: number) {
     return this.call<{ transition: PitchSlideTransition | null }>(OPS.slideTransition, { slide });
+  }
+  /**
+   * Tag an object with a morph name for host-side morph matching across
+   * adjacent slides (used with `kind:"morph"` transitions). Names are
+   * non-blank, <=128 UTF-8 bytes and unique per slide; equal re-tags are
+   * eventless no-ops. DATA ONLY: the engine stores the tag, it does not
+   * interpolate morph geometry or pixels.
+   */
+  setMorphName(slide: number, object: number, name: string) {
+    return this.call<{ ok: boolean }>(OPS.setMorphName, { slide, object, name });
+  }
+  /** Remove an object's morph tag; absent tags are eventless no-ops. */
+  clearMorphName(slide: number, object: number) {
+    return this.call<{ ok: boolean }>(OPS.clearMorphName, { slide, object });
   }
   /** Per-slide rehearsal/advance timing; equal patches are eventless no-ops. */
   setSlideTiming(slide: number, timing: PitchSlideTiming) {
