@@ -214,9 +214,14 @@ Runs alongside the Forge waves and gates consumer pin updates.
   for any layout/navigation work, relevant native platform skills
   (Nitro v1, Swift/Kotlin/C++, Expo) before native changes, domain
   skills before engine work, and `no-ai-slop` for user-facing docs.
-  Every slice gets an independent review subagent before merge; merges
-  are performed by the orchestrator only after review approval plus a
-  local verification run.
+  Additionally apply the everything-claude-code skill set installed at
+  `~/.agents/skills/`: `coding-standards` and `tdd-workflow` for all
+  implementation slices, `security-review` for auth/input/secrets/
+  crypto-touching work (e.g. PDF encryption), `verification-loop`
+  before merge, `backend-patterns`/`frontend-patterns` for service/UI
+  work. Every slice gets an independent review subagent before merge;
+  merges are performed by the orchestrator only after review approval
+  plus a local verification run.
 
 ## Risks
 
