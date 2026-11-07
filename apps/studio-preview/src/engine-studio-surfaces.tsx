@@ -17,8 +17,10 @@ import type { TimelineViewport } from '@nyc-tron/ui/components/forge/timeline/vi
 import type { TallyDocument } from '../../../packages/tally/src/index';
 import { readTallyWindow, commitTallyGridCell, type TallyGridData } from '../../../packages/tally/src/grid-adapter';
 import { bindTallySheetTabs, readTallySheetTabs, commitTallyFill, TALLY_SHEET_BOUNDS, type TallySheetTabsBinding } from '../../../packages/tally/src/grid-cluster';
+import { CadenceDetailControls } from './cadence-detail-controls';
+import { CadenceMixerAdapter, mixerClusterChannels, type CadenceMixerState } from '../../../packages/cadence/src/mixer-cluster';
 import type { CadenceDocument } from '../../../packages/cadence/src/index';
-import { createCadenceMixerBindings, createCadenceTempoBindings, toMixerChannels, type CadenceDescribe } from '../../../packages/cadence/src/editor-adapter';
+import { createCadenceTempoBindings } from '../../../packages/cadence/src/editor-adapter';
 import type { SpliceDocument } from '../../../packages/splice/src/index';
 import { SpliceTimelineAdapter, timelineClusterCallbacks, type SpliceTimelineView } from '../../../packages/splice/src/timeline-cluster';
 
@@ -172,17 +174,22 @@ function CadenceSurface(props: EngineStudioSurfaceProps) {
   const document = props.document as CadenceDocument | null;
   const read = useMemo(() => async () => {
     if (!document) throw new Error('The document is still opening.');
-    return (await document.handle.apply<CadenceDescribe>('describe')).data;
+    return (await document.handle.apply<CadenceMixerState>('describe')).data;
   }, [document]);
   const { data: project, error, ready, commit } = useDocumentSurface(document, props.state, read, props.perform, props.disabled);
   const scale = resolveWorkspaceScale(props.density);
   if (!document) return null;
-  const tempo = createCadenceTempoBindings(document), mixer = createCadenceMixerBindings(document);
+  const tempo = createCadenceTempoBindings(document), mixer = new CadenceMixerAdapter(document).mixer();
+  const observedWrite = (write: () => Promise<unknown>) => {
+    const task = commit(write);
+    void task.catch(() => {});
+    return task;
+  };
   return <ScrollView testID="cadence-engine-surface" style={{ flex: 1 }} contentContainerStyle={{ padding: scale.space.group, gap: scale.space.group }}>
     {error && <Banner tone="danger" title={error} live="alert"/>}
     {!ready && <Text accessibilityLiveRegion="polite" style={{ color: workspaceThemes[props.theme].muted }}>Document edits are unavailable until the current state is loaded.</Text>}
     {project && <>
-      <TempoAndMetronome bpm={project.tempo_bpm} timeSignature={project.time_sig} disabled={!ready}
+      <TempoAndMetronome {...{targetSize:scale.size.target}} bpm={project.tempo_bpm} timeSignature={project.time_sig} disabled={!ready}
         onTempoCommit={bpm => {
           const task = commit(() => tempo.onTempoCommit(bpm));
           // alpha.4 awaits numeric entry but invokes tap tempo as a void callback.
@@ -191,11 +198,15 @@ function CadenceSurface(props: EngineStudioSurfaceProps) {
           return task;
         }}
         onTimeSignatureCommit={signature => { void commit(() => tempo.onTimeSignatureCommit(signature)).catch(() => {}); }}/>
-      <MixingConsole channels={toMixerChannels(project)} disabled={!ready}
-        onGainCommit={(id, value) => commit(() => mixer.onGainCommit(id, value))}
-        onPanCommit={(id, value) => commit(() => mixer.onPanCommit(id, value))}
-        onMutedCommit={(id, value) => commit(() => mixer.onMutedCommit(id, value))}
-        onSoloCommit={(id, value) => commit(() => mixer.onSoloCommit(id, value))}/>
+      <MixingConsole {...{targetSize:scale.size.target}} channels={mixerClusterChannels(project)} disabled={!ready}
+        onGainCommit={(id, value) => observedWrite(() => mixer.onGainCommit(id, value))}
+        onPanCommit={(id, value) => observedWrite(() => mixer.onPanCommit(id, value))}
+        onMutedCommit={(id, value) => observedWrite(() => mixer.onMutedCommit(id, value))}
+        onSoloCommit={(id, value) => observedWrite(() => mixer.onSoloCommit(id, value))}
+        onSoloSafeCommit={(id, value) => observedWrite(() => mixer.onSoloSafeCommit(id, value))}
+        onGroupSoloCommit={(group, value) => observedWrite(() => mixer.onGroupSoloCommit(group, value))}
+        onGroupMutedCommit={(group, value) => observedWrite(() => mixer.onGroupMutedCommit(group, value))}/>
+      <CadenceDetailControls document={document} project={project} disabled={!ready} commit={commit} density={props.density} theme={props.theme}/>
     </>}
     <Text style={{ color: workspaceThemes[props.theme].muted, fontSize: scale.type.body }}>Tempo and mixer edits are saved in the document. Audio output and metronome playback require the native audio host.</Text>
   </ScrollView>;

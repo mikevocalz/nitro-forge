@@ -55,3 +55,5 @@ user-facing updates and documentation. Use the relevant React Native, Nitro v1,
 Swift/Kotlin/C++ and native testing skills before implementation or debugging.
 Keep each skill's platform/version guidance aligned with this repository's
 pinned runtime and preserve its state, window and ownership contracts.
+
+User requirement (2026-11-07): use subagents for scoped implementation and independent review. Apply relevant native, domain and project skills, and the no-ai-slop skill, to implementation and reports.

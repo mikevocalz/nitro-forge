@@ -24,3 +24,7 @@ No component has been promoted to fully accepted across all required platforms.
 Each phase appends its report, evidence and commit checkpoint.
 
 Umbrella PRs: [Forge #63](https://github.com/mikevocalz/nitro-forge/pull/63) and [NYC-Tron #54](https://github.com/mikevocalz/NYC-Tron-UI/pull/54).
+
+## Audio detail composition checkpoint (2026-11-07)
+
+Cadence now composes existing routing, send, insert/preset/parameter and MIDI controls through the shared document write gate. This is a source implementation checkpoint; required runtime and platform acceptance remain open. See [Cadence detail controls](../design/CADENCE_DETAIL_PHASE.md). The new audio target propagation is owned by NYC-Tron `48aef26`; consumer alpha.4 pins remain unchanged pending review and release.
