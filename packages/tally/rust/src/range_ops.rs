@@ -7,14 +7,14 @@ fn off_sheet() -> EngineError {
 }
 
 #[derive(Clone, Copy)]
-struct Rect {
+pub(super) struct Rect {
     c0: u32,
     r0: u32,
     c1: u32,
     r1: u32,
 }
 impl Rect {
-    fn read(p: &Value) -> Result<Self, EngineError> {
+    pub(super) fn read(p: &Value) -> Result<Self, EngineError> {
         let (c0, r0) = TallyEngine::addr_coords(p, "from")?;
         let (c1, r1) = TallyEngine::addr_coords(p, "to")?;
         let rect = Self {
@@ -35,6 +35,19 @@ impl Rect {
     }
     fn contains(self, c: u32, r: u32) -> bool {
         c >= self.c0 && c <= self.c1 && r >= self.r0 && r <= self.r1
+    }
+    /// Canonical "A1" addresses of every cell in the rectangle, row-major.
+    /// `read` caps the count at `MAX_GET_RANGE_CELLS`.
+    pub(super) fn addrs(self) -> Vec<String> {
+        let mut out = Vec::with_capacity(
+            ((u64::from(self.c1 - self.c0) + 1) * (u64::from(self.r1 - self.r0) + 1)) as usize,
+        );
+        for r in self.r0..=self.r1 {
+            for c in self.c0..=self.c1 {
+                out.push(fmt_addr(c, r));
+            }
+        }
+        out
     }
 }
 

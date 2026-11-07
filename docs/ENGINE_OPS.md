@@ -139,13 +139,24 @@ google/ink source admission (#46).
 ## tally-engine — `TallyEngine::new()`
 
 State `{ next_sheet, sheets: [Sheet], active: idx }`,
-`Sheet = { id, name, tone?: string | null, is_protected?: boolean, cells: { "A1": { raw: string } } }` — computed values are
-derived, not stored. Cell addresses: `$?[A-Z]+$?[0-9]+` (case-insensitive), abs
+`Sheet = { id, name, tone?: string | null, is_protected?: boolean, cells: { "A1": { raw: string } }, formats?: { "A1": CellFormat } }` — computed values are
+derived, not stored. `formats` is durable per-cell display metadata keyed by
+canonical address, independent of `cells`: it survives content edits, applies
+to empty cells, and never affects evaluation. `CellFormat = { number_format?,
+bold?, italic?, fill?, border? }` — all attributes optional; `number_format` is
+a bounded opaque string (≤64 ASCII graphic/space chars, no `" \ { }`) holding
+a preset id or custom pattern the host interprets; `fill`/`border.color` are
+`#RRGGBB`; `border = { style: thin|medium|thick|dashed|dotted, color, sides:
+[top,right,bottom,left] subset (1–4, deduped, canonical order) }`. Cell
+addresses: `$?[A-Z]+$?[0-9]+` (case-insensitive), abs
 markers accepted and normalized to plain `A1`. Every op that takes an address
-(`setCell`, `clearCell`, `getCell`, `getRange`, `setRange`, `fillRange`) returns
+or range (`setCell`, `clearCell`, `getCell`, `getRange`, `setRange`, `fillRange`,
+`fillSeries`, `setFormat`, `clearFormat`) returns
 `out_of_bounds` for an address past `XFD1048576` (16,384 columns × 1,048,576
 rows) and changes nothing. A formula reference past the sheet evaluates to
-`#REF!`. `restore` rejects a snapshot whose cell keys fall outside the sheet.
+`#REF!`. `restore` rejects a snapshot whose cell or format keys fall outside
+the sheet, and whose stored formats violate the attribute invariants above
+(canonicalizing border side order and dropping empty format objects).
 
 | op | payload | data | notes |
 |---|---|---|---|
@@ -162,9 +173,11 @@ rows) and changes nothing. A formula reference past the sheet evaluates to
 | `setRange` | `{from,values:string[][]}` | `{changed}` | nonempty rectangular paste; empty strings clear; at most 16,384 cells; must fit inside XFD1048576; one undo entry |
 | `fillRange` | `{source:{from,to},target:{from,to}}` | `{changed}` | inclusive rectangles, target contains source; repeat source outside its bounds, shift relative references, preserve `$` locks; each rectangle at most 16,384 cells and inside XFD1048576; one undo entry |
 | `fillSeries` | `{source:{from,to},target:{from,to},step?}` | `{changed}` | linear series; see series-fill rules below |
+| `setFormat` | `{range:{from,to} \| cells:[addr…], format:{…patch}}` | `{changed}` | per-cell format patch; exactly one of `range`/`cells`; see format rules below |
+| `clearFormat` | `{range:{from,to} \| cells:[addr…]}` | `{changed}` | removes stored formats; contents untouched |
 | `clearCell` | `{addr}` | `{ok}` | |
-| `getCell` | `{addr}` | `{raw,computed}` | `computed` = evaluated value |
-| `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed}]]}` | |
+| `getCell` | `{addr}` | `{raw,computed,format?}` | `computed` = evaluated value; `format` present only when stored |
+| `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed,format?}]]}` | |
 | `evaluate` | `{formula}` | `{value}` | ad-hoc formula against active sheet, no write |
 | `workbook` | `{}` | `{sheets:[{name,cell_count,tone,is_protected}],active}` | read-only |
 
@@ -179,7 +192,26 @@ Undo: per-cell previous `{addr, prev_raw}` (or removal); range edits group chang
 
 `fillSeries` rules: `source` must be a single row or a single column of numeric literals (raws that parse as a finite `f64`; formulas, text, booleans and empty cells reject the op). A 1x1 source picks its axis from the target's one-dimensional extension and requires an explicit `step`. `step` is an optional finite JSON number; without it the step is `(last - first) / (count - 1)` along the axis, so inference needs at least two source cells. The first source cell anchors the series: `value(i) = first + step * (i - i_first)` with `i` the column index for a row source or the row index for a column source. The target must contain the source and may not widen perpendicular to the axis; it may extend in either direction along the axis. Target cells inside the source are skipped; every other target cell receives a numeric literal (never a formula), and a non-finite result rejects the whole op. Same bounds and 16,384-cell caps as `fillRange`; one undo entry, eventless when nothing changes.
 
-Protected sheets reject cell/clear/range/fill edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Format rules: `setFormat`/`clearFormat` target the **active sheet** and take
+exactly one of `range` (`{from,to}`, normalized/reversed bounds OK, shared
+16,384-cell and on-sheet caps) or `cells` (array of addresses, deduped,
+same cap). `setFormat`'s `format` object is a patch: each known key
+(`number_format`, `bold`, `italic`, `fill`, `border`) sets its attribute, an
+explicit `null` clears that attribute, absent keys are untouched, and unknown
+keys or wrongly-typed values reject the whole op. Merging that leaves no
+attributes removes the cell's format entry. `clearFormat` deletes stored
+formats only. Cells whose stored format does not actually change are skipped,
+so a no-op patch is eventless, journal-free and preserves redo. Each mutating
+call records one undo entry covering every changed cell; undo/redo restore
+prior formats exactly. Formats are orthogonal to contents — `setCell`,
+`clearCell`, `setRange`, `fillRange` and `fillSeries` never read or write
+them, and an address may hold a format with no content. `getCell`/`getRange`
+expose `format` only when one is stored; `describe` returns the whole
+`formats` map. Rendering `number_format` into display text (dates, currency,
+percent, locale digits) is a host/display-layer concern — evaluation always
+uses raw values, so formats cannot affect formulas, aggregates or errors.
+
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
@@ -189,10 +221,13 @@ Criteria expressions/cell references are evaluated normally; criteria range erro
 
 Snapshots: the NFD1 envelope is unchanged; the JSON payload is normally the bare
 `Workbook` (`{next_sheet,sheets,active}`). When any sheet carries durable
-post-release fields (`tone` set or `is_protected` true), the payload is instead
+post-release fields (`tone` set, `is_protected` true, or a nonempty `formats`
+map), the payload is instead
 `{kind:"tally",schema:1,document:<Workbook>}` so pre-wrapper readers fail closed
 rather than silently dropping those fields (same precedent as pitch schema:2 and
-quill schema:2). `restore` accepts both shapes, strictly validates wrapper
+quill schema:2). `formats` entries ride inside `document` at schema:1 — the
+wrapper boundary, not a schema bump, is what guards them, and `restore`
+re-validates every stored format before replacing state. `restore` accepts both shapes, strictly validates wrapper
 kind/schema/keys (`deny_unknown_fields`), then runs the existing document
 validation before replacing state and resetting the journal; bad input leaves
 state untouched. Workbooks without tone/protection keep the legacy payload, so
