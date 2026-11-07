@@ -29,6 +29,7 @@
 
 mod formula;
 mod range_ops;
+mod sheet_ops;
 
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
 use ignition_core::{
@@ -59,6 +60,8 @@ pub struct Sheet {
     pub id: u64,
     pub name: String,
     pub cells: BTreeMap<String, Cell>,
+    #[serde(default)]
+    pub tone: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -75,6 +78,7 @@ fn blank_workbook() -> Workbook {
             id: 0,
             name: "Sheet1".to_string(),
             cells: BTreeMap::new(),
+            tone: None,
         }],
         active: 0,
     }
@@ -316,6 +320,7 @@ impl TallyEngine {
             id,
             name,
             cells: BTreeMap::new(),
+            tone: None,
         };
         self.journal.record(UndoEntry::AddSheet { sheet_id: id });
         self.doc.next_sheet += 1;
@@ -478,7 +483,7 @@ impl TallyEngine {
             .doc
             .sheets
             .iter()
-            .map(|s| json!({ "name": s.name, "cell_count": s.cells.len() }))
+            .map(|s| json!({ "name": s.name, "cell_count": s.cells.len(), "tone": s.tone }))
             .collect();
         Ok(Self::readonly(json!({
             "sheets": sheets,
@@ -616,6 +621,8 @@ impl Engine for TallyEngine {
             "renameSheet" => self.op_rename_sheet(p),
             "removeSheet" => self.op_remove_sheet(p),
             "setActive" => self.op_set_active(p),
+            "moveSheet" => self.op_move_sheet(p),
+            "setSheetColor" => self.op_set_sheet_color(p),
             "setCell" => self.op_set_cell(p),
             "setRange" => self.op_set_range(p),
             "fillRange" => self.op_fill_range(p),
@@ -657,6 +664,9 @@ impl Engine for TallyEngine {
         let mut seen_ids = std::collections::BTreeSet::new();
         let mut seen_names = std::collections::BTreeSet::new();
         for s in &mut doc.sheets {
+            if !sheet_ops::valid_tone(s.tone.as_deref()) {
+                return Err(EngineError::serialization("invalid sheet tone"));
+            }
             if !seen_ids.insert(s.id) {
                 return Err(EngineError::serialization("duplicate sheet id"));
             }

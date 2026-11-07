@@ -1,4 +1,4 @@
-import type { CellInfo, TallyDocument } from "./index";
+import type { CellInfo, SheetTabTone, TallyDocument } from "./index";
 import {
   TALLY_GRID_MAX_COLUMNS,
   TALLY_GRID_MAX_ROWS,
@@ -25,6 +25,7 @@ import {
 export interface TallySheetTab {
   readonly id: string;
   readonly name: string;
+  readonly tone?: SheetTabTone;
 }
 
 /** `SheetTabs` props this adapter can back with real engine operations. */
@@ -34,10 +35,12 @@ export interface TallySheetTabsBinding {
   readonly onSelect: (id: string) => Promise<void>;
   readonly onAdd: () => Promise<void>;
   readonly onRename: (id: string, name: string) => Promise<void>;
+  readonly onMove: (id: string, toIndex: number) => Promise<void>;
+  readonly onToneChange: (id: string, tone: SheetTabTone | undefined) => Promise<void>;
   readonly onRemove: (id: string) => Promise<void>;
 }
 
-export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | "addSheet" | "renameSheet" | "removeSheet">;
+export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | "addSheet" | "renameSheet" | "removeSheet" | "moveSheet" | "setSheetColor">;
 
 /**
  * Engine operations the cluster's UI can express but Tally does not have yet.
@@ -48,12 +51,8 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
 export const TALLY_DEFERRED_OPS = {
   /** I-08 `onDuplicate`. */
   duplicateSheet: "I-08",
-  /** I-08 `onMove`: sheet reorder. */
-  moveSheet: "I-08",
   /** I-08 `onProtectedChange`. */
   protectSheet: "I-08",
-  /** I-08 `onToneChange`: tab color stored in the workbook. */
-  setSheetColor: "I-08",
   /** I-13 `onInsert`: a chart object saved in the workbook. */
   insertChart: "I-13",
   /** I-14 `onApply`/`onRemove`: sparkline groups saved in the workbook. */
@@ -77,7 +76,7 @@ export async function readTallySheetTabs(document: Pick<TallyDocument, "workbook
   if (!Array.isArray(info.sheets) || !Number.isSafeInteger(info.active)) throw new Error("Tally returned an invalid workbook");
   const tabs = info.sheets.map((sheet, index) => {
     if (!sheet || typeof sheet.name !== "string") throw new Error("Tally returned a malformed sheet");
-    return { id: String(index), name: sheet.name };
+    return { id: String(index), name: sheet.name, ...(sheet.tone ? { tone: sheet.tone } : {}) };
   });
   if (info.active < 0 || info.active >= tabs.length) throw new Error("Tally active sheet is out of range");
   return { tabs, activeId: String(info.active) };
@@ -91,7 +90,7 @@ function sheetIndex(id: string): number {
 
 /**
  * Reads the workbook and returns `SheetTabs` props wired to `setActive`,
- * `addSheet`, `renameSheet` and `removeSheet`. Every callback writes through
+ * `addSheet`, `renameSheet`, `removeSheet`, `moveSheet` and `setSheetColor`. Every callback writes through
  * the engine, then calls `onChanged` with a fresh binding; an engine error
  * rejects with the engine's message, which `SheetTabs` shows. Nothing is
  * applied optimistically.
@@ -112,6 +111,8 @@ export async function bindTallySheetTabs(
     // Tally names new sheets itself; passing no name keeps its default.
     onAdd: () => after(() => document.addSheet()),
     onRename: (id, name) => after(() => document.renameSheet(sheetIndex(id), name)),
+    onMove: (id, toIndex) => after(() => document.moveSheet(sheetIndex(id), toIndex)),
+    onToneChange: (id, tone) => after(() => document.setSheetColor(sheetIndex(id), tone ?? null)),
     onRemove: id => after(() => document.removeSheet(sheetIndex(id))),
   };
 }

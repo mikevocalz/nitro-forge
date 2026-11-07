@@ -12,6 +12,8 @@ export const OPS = {
   renameSheet: "renameSheet",
   removeSheet: "removeSheet",
   setActive: "setActive",
+  moveSheet: "moveSheet",
+  setSheetColor: "setSheetColor",
   setCell: "setCell",
   setRange: "setRange",
   fillRange: "fillRange",
@@ -37,8 +39,10 @@ export interface CellInfo {
   computed: CellValue;
 }
 
+export type SheetTabTone = "primary" | "accent" | "success" | "info" | "muted";
+
 export interface WorkbookInfo {
-  sheets: { name: string; cell_count: number }[];
+  sheets: { name: string; cell_count: number; tone?: SheetTabTone | null }[];
   active: number;
 }
 
@@ -80,6 +84,12 @@ export class TallyDocument {
   }
   setActive(sheet: string | number) {
     return this.call(OPS.setActive, { sheet });
+  }
+  moveSheet(sheet: string | number, toIndex: number) {
+    return this.call<{ ok: boolean }>(OPS.moveSheet, { sheet, toIndex });
+  }
+  setSheetColor(sheet: string | number, tone: SheetTabTone | null) {
+    return this.call<{ ok: boolean }>(OPS.setSheetColor, { sheet, tone });
   }
   setCell(addr: string, value: string) {
     return this.call<{ addr: string; computed: CellValue }>(OPS.setCell, {

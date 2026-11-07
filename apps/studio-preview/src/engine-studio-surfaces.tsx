@@ -166,9 +166,12 @@ function TallySurface(props: EngineStudioSurfaceProps) {
   return <View testID="tally-engine-surface" style={{ flex: 1, minHeight: 0 }}>
     {error && <Banner tone="danger" title={error} live="alert"/>}
     {!canEdit && <Text accessibilityLiveRegion="polite" style={{ color: workspaceThemes[props.theme].muted }}>Worksheet edits are unavailable until the current window is loaded.</Text>}
-    {visibleTabs && <SheetTabs tabs={visibleTabs.tabs} activeId={visibleTabs.activeId}
+    {visibleTabs && <SheetTabs key={JSON.stringify([authority.current.revision, canEdit])} tabs={visibleTabs.tabs} activeId={visibleTabs.activeId}
       onSelect={id => commit(() => visibleTabs.onSelect(id))} onAdd={() => commit(visibleTabs.onAdd)}
-      onRename={(id, name) => commit(() => visibleTabs.onRename(id, name))} onRemove={id => commit(() => visibleTabs.onRemove(id))}/>}
+      onRename={(id, name) => commit(() => visibleTabs.onRename(id, name))}
+      onMove={(id, toIndex) => commit(() => visibleTabs.onMove(id, toIndex))}
+      onToneChange={(id, tone) => commit(() => visibleTabs.onToneChange(id, tone))}
+      onRemove={id => commit(() => visibleTabs.onRemove(id))}/>}
     {visibleTabs && <SpreadsheetGrid key={JSON.stringify([authority.current.revision,visibleTabs.activeId])} selection={details.selection} onSelectionChange={details.onSelectionChange} frozenRows={freeze.frozenRows} frozenColumns={freeze.frozenColumns} sheetId={visibleTabs.activeId} sheetName={visibleTabs.tabs.find(tab => tab.id === visibleTabs.activeId)?.name ?? ''}
       rowCount={TALLY_SHEET_BOUNDS.rowCount} columnCount={TALLY_SHEET_BOUNDS.columnCount} cells={cells}
       rowHeight={scale.size.target} columnWidth={112} style={{ flex: 1, minHeight: 0 }}

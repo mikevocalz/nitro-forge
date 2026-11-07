@@ -139,7 +139,7 @@ google/ink source admission (#46).
 ## tally-engine — `TallyEngine::new()`
 
 State `{ next_sheet, sheets: [Sheet], active: idx }`,
-`Sheet = { id, name, cells: { "A1": { raw: string } } }` — computed values are
+`Sheet = { id, name, tone?: string | null, cells: { "A1": { raw: string } } }` — computed values are
 derived, not stored. Cell addresses: `$?[A-Z]+$?[0-9]+` (case-insensitive), abs
 markers accepted and normalized to plain `A1`. Every op that takes an address
 (`setCell`, `clearCell`, `getCell`, `getRange`, `setRange`, `fillRange`) returns
@@ -154,6 +154,8 @@ rows) and changes nothing. A formula reference past the sheet evaluates to
 | `renameSheet` | `{sheet,to}` | `{ok}` | sheet = name or index |
 | `removeSheet` | `{sheet}` | `{ok}` | must keep ≥1 sheet |
 | `setActive` | `{sheet}` | `{ok}` | |
+| `moveSheet` | `{sheet,toIndex}` | `{ok}` | final zero-based index in current sheet range; preserves active sheet identity; one structural undo entry when changed |
+| `setSheetColor` | `{sheet,tone}` | `{ok}` | tone = primary/accent/success/info/muted or null to clear; durable semantic theme token, one structural undo entry when changed |
 | `setCell` | `{addr,value}` | `{addr,computed}` | on active sheet; `value` string starting `=` is a formula; numeric strings become numbers; empty string clears |
 | `setRange` | `{from,values:string[][]}` | `{changed}` | nonempty rectangular paste; empty strings clear; at most 16,384 cells; must fit inside XFD1048576; one undo entry |
 | `fillRange` | `{source:{from,to},target:{from,to}}` | `{changed}` | inclusive rectangles, target contains source; repeat source outside its bounds, shift relative references, preserve `$` locks; each rectangle at most 16,384 cells and inside XFD1048576; one undo entry |
@@ -161,7 +163,7 @@ rows) and changes nothing. A formula reference past the sheet evaluates to
 | `getCell` | `{addr}` | `{raw,computed}` | `computed` = evaluated value |
 | `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed}]]}` | |
 | `evaluate` | `{formula}` | `{value}` | ad-hoc formula against active sheet, no write |
-| `workbook` | `{}` | `{sheets:[{name,cell_count}],active}` | read-only |
+| `workbook` | `{}` | `{sheets:[{name,cell_count,tone}],active}` | read-only |
 
 Formula language (recursive-descent parser, case-insensitive fns):
 numbers, `"strings"`, cell refs, ranges `A1:B2`, unary `-`, binary
@@ -171,6 +173,8 @@ Error values: `#DIV/0! #VALUE! #REF! #NAME? #NUM! #CYCLE!` — cycles detected v
 evaluation-time visited set. Evaluation memoizes per-request.
 
 Undo: per-cell previous `{addr, prev_raw}` (or removal); range edits group changed cells into one entry. No-op range edits emit no event and preserve redo. Fill reads all source cells before writing. Formula strings, names, whitespace and scientific notation remain unchanged; a reference shifted past row 1,048,576 or column XFD becomes `#REF!`, and a range with either endpoint off the sheet becomes a single `#REF!`. Lexically invalid source formulas reject the entire fill without mutation. Numeric series inference and cross-sheet references are not supported.
+
+Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
 ## cadence-engine — `CadenceEngine::new()`
 
