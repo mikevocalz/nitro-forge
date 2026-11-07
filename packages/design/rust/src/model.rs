@@ -24,6 +24,9 @@ pub const MAX_VARIABLES: usize = 1024;
 pub const MAX_MODES: usize = 128;
 /// Bound on node property bindings.
 pub const MAX_BINDINGS: usize = 4096;
+/// Upper magnitude admitted for C2 constraint extent bounds (min/max
+/// width/height), matching the node geometry size bound.
+pub const MAX_CONSTRAINT_EXTENT: f64 = 1e7;
 /// Shared hop budget for whole-document alias validation; exceeding it
 /// rejects the candidate so hostile snapshots cannot force unbounded walks.
 pub const MAX_ALIAS_HOPS: usize = 1_000_000;
@@ -134,18 +137,35 @@ pub enum VerticalAnchor {
     Stretch,
     Scale,
 }
-/// Responsive anchors stored on absolute children only (the NYC-Tron
-/// `DesignConstraints` h/v axes). C1 is storage + validation: `evaluateLayout`
-/// does not solve anchors yet, and the C2 fields (`minWidth`/`maxWidth`/
-/// `minHeight`/`maxHeight`/`aspectLocked`) are not admitted. `relative_to`
-/// maps NYC-Tron `relativeToId` to the engine's numeric node id; absent means
-/// the parent frame, and any other target is rejected until relative targets
-/// land in C2.
+/// Responsive constraints stored on absolute children only (the NYC-Tron
+/// `DesignConstraints` contract). C1 admitted the h/v anchors; C2 adds
+/// bounded min/max extents, the `aspect_locked` flag and parent-or-sibling
+/// `relative_to` targets. All of it is still storage + validation: no solver
+/// reads these fields, `evaluateLayout` ignores them, and `scale` anchors
+/// remain rejected. `relative_to` maps NYC-Tron `relativeToId` to the
+/// engine's numeric node id; absent means the parent frame.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NodeConstraints {
     pub horizontal: HorizontalAnchor,
     pub vertical: VerticalAnchor,
+    /// Optional lower extent bound per axis in document units; finite,
+    /// 0..=MAX_CONSTRAINT_EXTENT, and <= the matching max when both exist.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_width: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_width: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_height: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_height: Option<f64>,
+    /// NYC-Tron `aspectLocked`: asks a future solver to preserve the current
+    /// width/height ratio. No ratio is stored; the solver derives it from
+    /// geometry at enforcement time.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub aspect_locked: bool,
+    /// NYC-Tron `relativeToId` as a numeric node id: the parent frame or a
+    /// sibling (a node sharing the same parent). Absent means the parent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub relative_to: Option<u64>,
 }
@@ -693,10 +713,10 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
     if visited.len() != s.nodes.len() {
         return Err(bad("unreachable node"));
     }
-    // Constraint anchors are durable state on absolute children only. Flow
-    // children get positions from their parent's layout, the root has no
-    // parent frame, `scale` is deferred solver work, and `relative_to` may
-    // only name the parent until C2 relative targets land.
+    // Constraint state is durable on absolute children only. Flow children
+    // get positions from their parent's layout, the root has no parent
+    // frame, `scale` is deferred solver work, and `relative_to` is bounded
+    // to the parent frame or a sibling until wider targets land.
     for (id, n) in &s.nodes {
         let Some(c) = &n.constraints else {
             continue;
@@ -715,8 +735,37 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
         if c.horizontal == HorizontalAnchor::Scale || c.vertical == VerticalAnchor::Scale {
             return Err(bad("scale constraint anchoring is not supported"));
         }
-        if c.relative_to.is_some_and(|r| r != parent) {
-            return Err(bad("constraint relative_to must name the parent frame"));
+        // C2 extent bounds: each present bound is finite within
+        // 0..=MAX_CONSTRAINT_EXTENT and a present min never exceeds a
+        // present max on the same axis.
+        for (lo, hi) in [
+            (c.min_width, c.max_width),
+            (c.min_height, c.max_height),
+        ] {
+            if [lo, hi].into_iter().flatten().any(|v| {
+                !v.is_finite() || v < 0. || v > MAX_CONSTRAINT_EXTENT
+            }) {
+                return Err(bad("constraint size bounds must be finite within 0..1e7"));
+            }
+            if let (Some(lo), Some(hi)) = (lo, hi) {
+                if lo > hi {
+                    return Err(bad("constraint minimum exceeds maximum"));
+                }
+            }
+        }
+        // C2 relative targets: the parent frame or a sibling sharing that
+        // parent, never the node itself. Every non-root node appears in
+        // `parents`, so ids outside the tree cannot resolve; the root only
+        // resolves when it is the parent. Grandparents, descendants and
+        // nodes under other parents stay deferred.
+        if let Some(r) = c.relative_to {
+            let resolves =
+                r != *id && (r == parent || parents.get(&r) == Some(&parent));
+            if !resolves {
+                return Err(bad(
+                    "constraint relative_to must name the parent frame or a sibling",
+                ));
+            }
         }
     }
     validate_variables(s)?;

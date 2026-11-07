@@ -19,8 +19,14 @@ it('runs constraint anchors through the real nf-cli engine: store, read, wrapper
   // Rejections surface as engine errors with reasons.
   await expect(doc.setConstraints(1,{horizontal:'left',vertical:'top'})).rejects.toThrow(/root/);
   await expect(doc.setConstraints(node_id,{horizontal:'scale',vertical:'top'})).rejects.toThrow(/scale/);
+  // C2 admits siblings as relative_to targets; a node under a different
+  // parent is still out of scope.
+  const other=(await doc.addFrame(1,{x:8,y:0,width:6,height:6})).data.node_id;
+  const cousin=(await doc.addShape(other,'rect',{x:0,y:0,width:1,height:1})).data.node_id;
+  await expect(doc.setConstraints(node_id,{horizontal:'left',vertical:'top',relative_to:cousin})).rejects.toThrow(/relative_to/);
+  // Siblings are in scope now.
   const sibling=(await doc.addShape(1,'rect',{x:5,y:5,width:1,height:1})).data.node_id;
-  await expect(doc.setConstraints(node_id,{horizontal:'left',vertical:'top',relative_to:sibling})).rejects.toThrow(/relative_to/);
+  await doc.setConstraints(node_id,{horizontal:'left',vertical:'top',relative_to:sibling});
   // Flow parents reject anchored children both ways.
   const frame=(await doc.addFrame(1,{x:8,y:0,width:6,height:6})).data.node_id;
   await doc.setFrameLayout(frame,{direction:'row',gap:0,padding_top:0,padding_right:0,padding_bottom:0,padding_left:0,align:'start',justify:'start'});

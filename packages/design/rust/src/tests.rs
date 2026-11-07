@@ -1373,6 +1373,11 @@ fn constraints_store_clear_persist_undo_and_read_silently() {
         Some(NodeConstraints {
             horizontal: HorizontalAnchor::Left,
             vertical: VerticalAnchor::Top,
+            min_width: None,
+            max_width: None,
+            min_height: None,
+            max_height: None,
+            aspect_locked: false,
             relative_to: Some(1),
         })
     );
@@ -1446,11 +1451,16 @@ fn constraints_reject_root_flow_scale_bad_targets_and_hostile_restore() {
             .unwrap_err();
         assert!(err.message.contains("scale"), "{}", err.message);
     }
-    // relative_to must name the parent frame (root1 here), not a sibling.
+    // relative_to must resolve inside the parent/sibling scope: a node under
+    // a different parent is out of scope until wider targets land.
+    let frame0 = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    let cousin = shape(&mut e, frame0, 0., 0., 1., 1., [3; 4]);
     let err = e
         .apply(Command::new(
             "setConstraints",
-            json!({"id":rect,"constraints":{"horizontal":"left","vertical":"top","relative_to":sibling}}),
+            json!({"id":rect,"constraints":{"horizontal":"left","vertical":"top","relative_to":cousin}}),
         ))
         .unwrap_err();
     assert!(err.message.contains("relative_to"), "{}", err.message);
@@ -1566,4 +1576,168 @@ fn constraints_reject_root_flow_scale_bad_targets_and_hostile_restore() {
             json!({"id":sibling,"constraints":null})
         ))
         .is_err());
+}
+#[test]
+fn constraints_c2_bounds_targets_and_hostile_restore() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    let rect = shape(&mut e, 1, 1., 1., 2., 2., [255; 4]);
+    let sibling = shape(&mut e, 1, 5., 5., 2., 2., [0; 4]);
+    // A full C2 constraint set stores every field and reads back intact.
+    let full = json!({"horizontal":"left","vertical":"top","min_width":1.5,"max_width":8.,"min_height":0.5,"aspect_locked":true,"relative_to":sibling});
+    let set = call(
+        &mut e,
+        "setConstraints",
+        json!({"id":rect,"constraints":full}),
+    );
+    assert_eq!(set.events.len(), 1);
+    let node = &e.state.nodes[&rect];
+    let c = node.constraints.as_ref().unwrap();
+    assert_eq!(c.min_width, Some(1.5));
+    assert_eq!(c.max_width, Some(8.));
+    assert_eq!(c.min_height, Some(0.5));
+    assert_eq!(c.max_height, None);
+    assert!(c.aspect_locked);
+    assert_eq!(c.relative_to, Some(sibling));
+    // Storage only: evaluated boxes keep authored x/y.
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert_eq!((boxes[1].x, boxes[1].y), (1., 1.));
+    // readConstraints echoes the stored C2 fields and stays silent.
+    let read = call(&mut e, "readConstraints", json!({"id":rect}));
+    assert!(read.events.is_empty());
+    assert_eq!(read.data["solving"], "storage-only");
+    assert_eq!(read.data["nodes"][0]["enforced"], false);
+    let reported = &read.data["nodes"][0]["constraints"];
+    assert_eq!(reported["min_width"], 1.5);
+    assert_eq!(reported["max_width"], 8.);
+    assert_eq!(reported["aspect_locked"], true);
+    assert_eq!(reported["relative_to"], sibling);
+    assert!(reported.get("max_height").is_none());
+    assert_eq!(
+        read.data["accepted"]["relative_to"],
+        json!(["parent", "sibling"])
+    );
+    // Equal writes are silent no-ops, including one omitting defaulted fields.
+    assert!(call(
+        &mut e,
+        "setConstraints",
+        json!({"id":rect,"constraints":full})
+    )
+    .events
+    .is_empty());
+    // Bounds validation: finite, 0..=1e7, min<=max per axis.
+    for bad in [
+        json!({"horizontal":"left","vertical":"top","min_width":9.,"max_width":2.}),
+        json!({"horizontal":"left","vertical":"top","min_height":4.,"max_height":1.}),
+        json!({"horizontal":"left","vertical":"top","min_width":-0.5}),
+        json!({"horizontal":"left","vertical":"top","max_height":1e8}),
+        json!({"horizontal":"left","vertical":"top","max_width":10000001.}),
+    ] {
+        let err = e
+            .apply(Command::new(
+                "setConstraints",
+                json!({"id":rect,"constraints":bad}),
+            ))
+            .unwrap_err();
+        assert!(err.message.contains("constraint"), "{}", err.message);
+    }
+    // min==max is admitted; a lone bound needs no partner.
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":rect,"constraints":{"horizontal":"right","vertical":"bottom","min_width":3.,"max_width":3.}}),
+    );
+    // relative_to scope: self, unknown ids, the root from a non-root parent,
+    // and nodes outside the sibling set all reject.
+    let frame = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    let inner = shape(&mut e, frame, 0., 0., 1., 1., [9; 4]);
+    for target in [rect, 9999, 1] {
+        let err = e
+            .apply(Command::new(
+                "setConstraints",
+                json!({"id":inner,"constraints":{"horizontal":"left","vertical":"top","relative_to":target}}),
+            ))
+            .unwrap_err();
+        assert!(err.message.contains("relative_to"), "{target}: {}", err.message);
+    }
+    // Parent and sibling targets both resolve for inner.
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":inner,"constraints":{"horizontal":"center","vertical":"stretch","relative_to":frame}}),
+    );
+    let inner_sibling = shape(&mut e, frame, 2., 0., 1., 1., [4; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":inner,"constraints":{"horizontal":"center","vertical":"stretch","relative_to":inner_sibling}}),
+    );
+    // Removing a relative_to target strands the reference: the whole-document
+    // validation rejects the removal atomically instead of dropping it.
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("removeNode", json!({"id":inner_sibling})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Locked nodes reject C2 constraint writes like any other mutation.
+    call(&mut e, "updateNode", json!({"id":sibling,"locked":true}));
+    assert!(e
+        .apply(Command::new(
+            "setConstraints",
+            json!({"id":sibling,"constraints":{"horizontal":"left","vertical":"top","aspect_locked":true}})
+        ))
+        .is_err());
+    call(&mut e, "updateNode", json!({"id":sibling,"locked":false}));
+    // C2 fields keep the schema:2 wrapper; snapshots without them stay
+    // byte-identical (no new keys leak into h/v-only constraints).
+    let wrapped = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&wrapped).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(outer["schema"], 2);
+    let stored = &outer["document"]["nodes"][rect.to_string()]["constraints"];
+    assert_eq!(stored["min_width"], 3.);
+    assert_eq!(stored["max_width"], 3.);
+    assert!(stored.get("aspect_locked").is_none());
+    let plain = &outer["document"]["nodes"][inner_sibling.to_string()];
+    assert!(plain.get("constraints").is_none());
+    // A constraints object carrying only C1 fields serializes without the new
+    // keys, so old schema:2 readers see the same bytes they always did — and
+    // deny_unknown_fields makes them fail closed on C2 fields rather than
+    // silently drop them.
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":inner,"constraints":{"horizontal":"left","vertical":"top"}}),
+    );
+    let mut bare_engine = DesignEngine::new();
+    bare_engine.restore(&wrapped).unwrap();
+    assert_eq!(bare_engine.snapshot().unwrap(), wrapped);
+    // Hostile restores fail closed on bad bounds and out-of-scope targets.
+    let mut hostile_doc = outer.clone();
+    let doc = &mut hostile_doc["document"];
+    doc["nodes"][rect.to_string()]["constraints"]["min_width"] = json!(9.);
+    doc["nodes"][rect.to_string()]["constraints"]["max_width"] = json!(2.);
+    assert!(bare_engine
+        .restore(&encode_envelope(&serde_json::to_vec(&hostile_doc).unwrap()))
+        .is_err());
+    let mut hostile_doc = outer.clone();
+    let doc = &mut hostile_doc["document"];
+    doc["nodes"][inner.to_string()]["constraints"] =
+        json!({"horizontal":"left","vertical":"top","relative_to":rect});
+    assert!(bare_engine
+        .restore(&encode_envelope(&serde_json::to_vec(&hostile_doc).unwrap()))
+        .is_err());
+    // Undo/redo across the C2 write and the plain rewrite.
+    assert!(e.undo().unwrap());
+    assert_eq!(
+        e.state.nodes[&inner].constraints.as_ref().unwrap().relative_to,
+        Some(inner_sibling)
+    );
+    assert!(e.redo().unwrap());
+    assert_eq!(
+        e.state.nodes[&inner].constraints.as_ref().unwrap().relative_to,
+        None
+    );
 }
