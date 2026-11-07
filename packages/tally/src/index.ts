@@ -56,6 +56,11 @@ export const OPS = {
   resolveComment: "resolveComment",
   reopenComment: "reopenComment",
   listComments: "listComments",
+  insertPivot: "insertPivot",
+  updatePivot: "updatePivot",
+  removePivot: "removePivot",
+  listPivots: "listPivots",
+  describePivot: "describePivot",
   clearCell: "clearCell",
   insertRows: "insertRows",
   deleteRows: "deleteRows",
@@ -434,6 +439,99 @@ export interface CommentInfo {
 
 /** `addComment`/`listComments` anchor: exactly one of `cell` or `range`. */
 export type CommentAnchor = { cell: string; range?: never } | { range: { from: string; to: string }; cell?: never };
+
+/** Bounded pivot aggregation kinds the engine stores. */
+export type PivotAgg = "sum" | "count" | "avg" | "min" | "max";
+
+/**
+ * One aggregated value slot: `field` is a 0-based column offset into the
+ * pivot's source range (not a header name — robust against header edits).
+ */
+export interface PivotValueInput {
+  field: number;
+  agg: PivotAgg;
+}
+
+/** One field filter: a source field offset plus 1–64 accepted literal values. */
+export interface PivotFilterInput {
+  field: number;
+  values: string[];
+}
+
+/** Optional result ordering hint over one source field. */
+export interface PivotSortInput {
+  field: number;
+  ascending: boolean;
+}
+
+/**
+ * Input for `insertPivot`'s `pivot` field (id/sheet are engine-assigned).
+ * `source.sheet` accepts a sheet name or index and defaults to the pivot's
+ * output sheet. Storage only — the engine never computes or writes the
+ * pivot grid; update/refresh/materialization are deferred.
+ */
+export interface PivotInput {
+  /** 1–128 byte display name; omit for none. */
+  name?: string;
+  source: {
+    sheet?: string | number;
+    /** Source data rectangle on the source sheet (≤16384 cells). */
+    range: { from: string; to: string };
+  };
+  /** Row fields: ≤16 unique 0-based source column offsets. */
+  rows?: readonly number[];
+  /** Column fields: ≤16 unique 0-based source column offsets. */
+  columns?: readonly number[];
+  /** ≥1 aggregated value slots (≤16). */
+  values: readonly PivotValueInput[];
+  /** ≤32 field filters with unique fields. */
+  filters?: readonly PivotFilterInput[];
+  sort?: PivotSortInput;
+}
+
+/**
+ * `updatePivot` patch: present keys set, explicit `null` clears
+ * `name`/`filters`/`sort`; `source`/`rows`/`columns`/`values` cannot be
+ * null. `source` is a partial `{sheet?, range?}` — at least one key.
+ * An unchanged spec is eventless.
+ */
+export interface PivotPatch {
+  name?: string | null;
+  source?: { sheet?: string | number; range?: { from: string; to: string } };
+  rows?: readonly number[];
+  columns?: readonly number[];
+  values?: readonly PivotValueInput[];
+  filters?: readonly PivotFilterInput[] | null;
+  sort?: PivotSortInput | null;
+}
+
+/**
+ * Durable pivot-table spec bound to an output sheet, sourcing data from a
+ * (possibly different) sheet's canonical range. Storage only — the engine
+ * stores and returns the bounded spec; computing, refreshing and
+ * materializing the pivot grid are deferred to a later slice.
+ */
+export interface PivotInfo {
+  id: number;
+  /** Current output sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  name?: string;
+  source: {
+    /** Current source sheet name, or null if the bound sheet is gone. */
+    sheet: string | null;
+    sheet_id: number;
+    /** Canonical `"A1"`/`"A1:B2"` source range on the source sheet. */
+    range: string;
+  };
+  /** 0-based source column offsets (always emitted, possibly empty). */
+  rows?: number[];
+  /** 0-based source column offsets (always emitted, possibly empty). */
+  columns?: number[];
+  values: PivotValueInput[];
+  filters?: PivotFilterInput[];
+  sort?: PivotSortInput;
+}
 
 /**
  * One durable merged-cell region bound to a sheet. `from`/`to` are the
@@ -899,8 +997,10 @@ export class TallyDocument {
    * coordinate-bound structure: cell/format keys, formula references
    * (deleted refs become `#REF!`, partially-covered ranges shrink),
    * named ranges, validations, conditional formats, filters, charts,
-   * sparklines, sheet views' captured filter specs, comment anchors and
-   * merged regions. Entries fully inside a deleted band are dropped.
+   * sparklines, sheet views' captured filter specs, comment anchors,
+   * pivot source ranges and merged regions. Entries fully inside a
+   * deleted band are dropped (a pivot also drops when a column delete
+   * shrinks its source range below a referenced field).
    * Bounds: `from`/`to` are 1-based inclusive within the sheet caps
    * (1,048,576 rows / 16,384 columns); a delete may not cover every row
    * or column; an insert must fit inside the cap. An insert that would
@@ -960,6 +1060,71 @@ export class TallyDocument {
     return this.call<{ merges: MergedRangeInfo[] }>(OPS.listMergedCells, {
       ...(sheet === undefined ? {} : { sheet }),
     });
+  }
+  /**
+   * Store a pivot-table spec bound to `sheet` (name or index; default
+   * active), sourcing `pivot.source.range` on `pivot.source.sheet`
+   * (default the output sheet). Fields are 0-based column offsets into
+   * the source range. Storage only — the engine writes no cells;
+   * compute/refresh/materialization are deferred.
+   */
+  insertPivot(pivot: PivotInput, sheet?: string | number) {
+    return this.call<{ pivot: PivotInfo }>(OPS.insertPivot, {
+      pivot: {
+        ...(pivot.name === undefined ? {} : { name: pivot.name }),
+        source: {
+          ...(pivot.source.sheet === undefined ? {} : { sheet: pivot.source.sheet }),
+          range: pivot.source.range,
+        },
+        ...(pivot.rows === undefined ? {} : { rows: [...pivot.rows] }),
+        ...(pivot.columns === undefined ? {} : { columns: [...pivot.columns] }),
+        values: pivot.values.map((v) => ({ field: v.field, agg: v.agg })),
+        ...(pivot.filters === undefined
+          ? {}
+          : { filters: pivot.filters.map((f) => ({ field: f.field, values: [...f.values] })) }),
+        ...(pivot.sort === undefined ? {} : { sort: pivot.sort }),
+      },
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Partially update pivot `id`: present patch keys set, `null` clears
+   * `name`/`filters`/`sort`. An unchanged spec is eventless.
+   */
+  updatePivot(id: number, patch: PivotPatch) {
+    const body: Record<string, unknown> = {};
+    if (patch.name !== undefined) body.name = patch.name;
+    if (patch.source !== undefined) {
+      body.source = {
+        ...(patch.source.sheet === undefined ? {} : { sheet: patch.source.sheet }),
+        ...(patch.source.range === undefined ? {} : { range: patch.source.range }),
+      };
+    }
+    if (patch.rows !== undefined) body.rows = [...patch.rows];
+    if (patch.columns !== undefined) body.columns = [...patch.columns];
+    if (patch.values !== undefined) {
+      body.values = patch.values.map((v) => ({ field: v.field, agg: v.agg }));
+    }
+    if (patch.filters !== undefined) {
+      body.filters = patch.filters === null
+        ? null
+        : patch.filters.map((f) => ({ field: f.field, values: [...f.values] }));
+    }
+    if (patch.sort !== undefined) body.sort = patch.sort;
+    return this.call<{ pivot: PivotInfo }>(OPS.updatePivot, { id, patch: body });
+  }
+  removePivot(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removePivot, { id });
+  }
+  /** Read-only pivot list; `sheet` filters to one output sheet, absent lists all. */
+  listPivots(sheet?: string | number) {
+    return this.call<{ pivots: PivotInfo[] }>(OPS.listPivots, {
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /** Read-only single pivot spec by id. */
+  describePivot(id: number) {
+    return this.call<{ pivot: PivotInfo }>(OPS.describePivot, { id });
   }
   getCell(addr: string) {
     return this.call<{ raw: string; computed: CellValue; format?: CellFormat; merged_into?: string }>(OPS.getCell, { addr });

@@ -1185,3 +1185,66 @@ evaluated transform at the ±1e7 Prism bound so renderFrame still succeeds),
 `pnpm --filter @nitro-forge/motion typecheck` clean. Cubic curvature
 between flattened samples, multi-subpath paths, path drawing/editing UI
 and full P11 completion are not implied.
+
+## Tally pivot specs storage source checkpoint (2026-11-07)
+
+Tally gains workbook-level pivot-table specs (backlog item 11, slice 11-A —
+spec storage/create/read/delete only): `insertPivot`/`updatePivot`/
+`removePivot`/`listPivots`/`describePivot` manage `pivots` entries
+`{id, sheet, name?, source:{sheet,range}, rows, columns, values,
+filters?, sort?}` — durable ids, at most 256 per workbook. `sheet` is the
+output sheet id the pivot belongs to; `source.sheet`/`source.range` bind
+the data (canonical A1/B2 rectangles under the shared 16,384-cell cap,
+existing-sheet checked). **Field references are 0-based column offsets
+into the source range**, not header names: `rows`/`columns` ≤16 unique
+indices each, `values` 1–16 `{field,agg}` slots (`sum|count|avg|min|max`),
+`filters` ≤32 `{field,values}` entries and `sort` an optional
+`{field,ascending}` — every field index must lie inside the source
+width; name resolution is deferred to a later refresh slice.
+`name` is an optional ≤128-byte string. `insertPivot {sheet?, pivot}`
+always appends a fresh id (duplicate specs allowed — pivots are objects,
+not keyed rules); `updatePivot {id,patch}` is a partial metadata patch —
+present keys set, explicit `null` clears `name`/`filters`/`sort`,
+`source` is a partial `{sheet?,range?}` needing one key, unknown keys
+and `sheet` alongside `id` reject, and the merged spec re-validates
+before commit (equal patch is eventless). `listPivots {sheet?}` filters
+by output sheet; `describePivot {id}` reads one spec; both silent.
+
+**Storage only — no materialization**: create/update write no cells and
+the engine never computes, refreshes or renders the pivot grid —
+update/refresh/compute ops are explicitly deferred; hosts read source
+cells via `getRange`/`getCell` and compute host-side. Mutations record
+one whole-document undo entry each; `removeSheet` cascade-drops pivots
+whose output OR source sheet is removed into the same undo entry and
+undo re-admits each only while it still satisfies restore invariants;
+`duplicateSheet`/`moveSheet`/`renameSheet` do not copy or retarget
+pivots. A pivot's `source.range` remaps with structural row/column
+edits on the source sheet (insert expands/shifts, delete shrinks or
+drops fully covered ranges — and a pivot additionally drops when a
+column delete shrinks the source below a referenced field index);
+pivots bound to the edited sheet only as output are untouched.
+Protection guards mutations by the output sheet like chart ops — the
+source sheet is a read reference and does not gate.
+
+**Schema bump to 9**: `pivots`/`next_pivot` are new workbook-level
+durable state `Workbook` does not `deny_unknown_fields`, so
+pivot-carrying snapshots emit `{kind:"tally",schema:9}` and restore
+accepts 1–9 with per-table gates (nonempty pivots require 9); restore
+strictly validates pivot shape, id uniqueness, existing output/source
+sheet ids, canonical capped source ranges, bounded names/field lists
+with field indices inside the source width and `next_pivot` id-space
+repair atomically. TS mirror adds the five `OPS` entries,
+`PivotAgg`/`PivotInput`/`PivotPatch`/`PivotInfo`/`PivotValueInput`/
+`PivotFilterInput`/`PivotSortInput` types and `insertPivot`/
+`updatePivot`/`removePivot`/`listPivots`/`describePivot` methods on
+`TallyDocument`; `grid-cluster.ts` docs updated (no UI callback
+changes). Local evidence: `cargo test -p tally-engine` 181 passed
+(13 new pivot_ops tests covering CRUD, bounds/caps, atomic failure,
+undo/redo, sheet-removal cascade + re-admission, hostile restore,
+schema matrix and structural source-range remap), `cargo build -p
+nf-cli` clean, `pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/tally test` 77 Vitest passed across 20 files (1 new live
+nf-cli pivots file, 2 cases), `pnpm --filter @nitro-forge/tally
+typecheck` clean. Deferred: pivot compute/refresh/materialization,
+header-name field resolution, pivot UI wiring — no native/device
+acceptance or full P12–P14 completion is implied.
