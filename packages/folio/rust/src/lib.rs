@@ -34,6 +34,13 @@
 //!   (detected via `PasswordAlgorithm`) instead of failing mid-decrypt.
 //! - `encrypt` needs a trailer `/ID` for key derivation; documents that lack
 //!   one get a random 16-byte ID before encrypting.
+//! - Signature listing (`listSignatures`) reports signature-dictionary
+//!   contents only — `/ByteRange` is a shape check, never cryptographic
+//!   verification (see `signatures.rs`). File attachments
+//!   (`listAttachments`/`getAttachment`/`addFileAttachment`) manage the
+//!   `/Names`→`/EmbeddedFiles` tree; writes rebuild it as a single
+//!   sorted leaf and reject encrypted documents like other structural
+//!   ops (see `attachments.rs`).
 //! - Page ops (`movePage`/`deletePage`/`duplicatePage`/`insertBlankPage`)
 //!   rewrite the page tree flat under the root `/Pages` node after
 //!   materializing inheritable page attributes, and collect objects that
@@ -43,12 +50,14 @@
 //!   would not decrypt) — see `page_ops.rs` and ENGINE_OPS.md.
 
 mod annotation_edit;
+mod attachments;
 mod forms;
 mod ink_link;
 mod markup;
 mod comments;
 mod outlines;
 mod page_ops;
+mod signatures;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -539,6 +548,8 @@ impl FolioEngine {
             "pages": details.len(),
             "has_annots": details.iter().any(|d| d["annots"].as_u64().unwrap_or(0) > 0),
             "has_forms": forms::doc_has_forms(&self.doc),
+            "signature_count": signatures::signature_count(&self.doc)?,
+            "attachment_count": attachments::attachment_count(&self.doc)?,
             "encrypted": self.doc.is_encrypted(),
             "page_details": details,
         }))
@@ -599,6 +610,11 @@ impl Engine for FolioEngine {
                 "command version {} is not supported (only v1)",
                 cmd.v
             )));
+        }
+        // Routed before the payload borrow: the op resolves its byte
+        // input through `Command::bytes_input`, which needs `&mut cmd`.
+        if cmd.op == "addFileAttachment" {
+            return self.op_add_file_attachment(&mut cmd);
         }
         let p = &cmd.payload;
         match cmd.op.as_str() {
@@ -838,6 +854,9 @@ impl Engine for FolioEngine {
             "addBookmark" => self.op_add_bookmark(p),
             "removeBookmark" => self.op_remove_bookmark(p),
             "fillFormField" => self.op_fill_form_field(p),
+            "addFileAttachment" => Err(EngineError::unsupported(
+                "addFileAttachment is dispatched before payload binding",
+            )),
             // --- read-only ---------------------------------------------------
             "pageCount" => Ok(ro(json!({ "pages": self.page_count() }))),
             "pageText" => {
@@ -921,6 +940,9 @@ impl Engine for FolioEngine {
             "listPageInfo" => self.op_list_page_info(),
             "listOutlines" => self.op_list_outlines(),
             "listFormFields" => self.op_list_form_fields(),
+            "listSignatures" => self.op_list_signatures(),
+            "listAttachments" => self.op_list_attachments(),
+            "getAttachment" => self.op_get_attachment(&cmd, p),
             "info" => Ok(ro(json!({
                 "pages": self.page_count(),
                 "has_annots": self.has_annots()?,

@@ -33,6 +33,10 @@ export const OPS = {
   removeBookmark: "removeBookmark",
   listFormFields: "listFormFields",
   fillFormField: "fillFormField",
+  listSignatures: "listSignatures",
+  listAttachments: "listAttachments",
+  getAttachment: "getAttachment",
+  addFileAttachment: "addFileAttachment",
   encrypt: "encrypt",
   decrypt: "decrypt",
   save: "save",
@@ -119,6 +123,44 @@ export interface FolioFormField {
   rect: Rect | null;
   signature: boolean;
   annot: number | null;
+}
+
+/**
+ * One signature field from `listSignatures`. `signed` is true only when
+ * the field's `/V` resolves to a signature dictionary; the detail fields
+ * then report what the parsed object model honestly contains — there is
+ * NO cryptographic verification. `byte_range` is the `/ByteRange` array
+ * when it holds only integers (`null` otherwise);
+ * `byte_range_well_formed` is a shape check only (four non-negative
+ * integers, second pair starting at/after the end of the first) and is
+ * never validated against file bytes. `page`/`annot` are `null` for
+ * signature fields whose widgets never appear on a page.
+ */
+export interface FolioSignature {
+  name: string;
+  page: number | null;
+  annot: number | null;
+  signed: boolean;
+  byte_range: number[] | null;
+  byte_range_well_formed: boolean;
+  sub_filter: string | null;
+  signer: string | null;
+  date: string | null;
+  reason: string | null;
+  contact: string | null;
+  location: string | null;
+  signature_type: string | null;
+}
+
+/**
+ * One embedded-file attachment from `listAttachments`. `size` is the
+ * embedded stream's declared `/Params` `/Size` (uncompressed length) or
+ * `null` when absent — never the possibly-compressed `/Length`.
+ */
+export interface FolioAttachmentInfo {
+  name: string;
+  size: number | null;
+  description: string | null;
 }
 
 /** One row of `listPageInfo`; `mediabox` is `[x1, y1, x2, y2]` PDF user space or null. */
@@ -364,6 +406,67 @@ export class FolioDocument {
       page,
       ...target,
       value,
+    });
+  }
+  /**
+   * Every `/FT /Sig` form field, deduplicated by field dictionary.
+   * Read-only; rejects on encrypted documents (names and signature
+   * strings are ciphertext) — `decrypt` first. Reports signature
+   * dictionary contents (`/ByteRange`, `/SubFilter`, signer `/Name`,
+   * `/M`, `/Reason`, `/ContactInfo`, `/Location`, `/Type`) WITHOUT any
+   * cryptographic verification — see `FolioSignature`.
+   */
+  listSignatures() {
+    return this.call<{ signatures: FolioSignature[] }>(OPS.listSignatures);
+  }
+  /**
+   * Every `/Names`→`/EmbeddedFiles` attachment: name, declared
+   * `/Params` `/Size` (null when absent) and `/Desc`. Read-only;
+   * rejects on encrypted documents.
+   */
+  listAttachments() {
+    return this.call<{ attachments: FolioAttachmentInfo[] }>(OPS.listAttachments);
+  }
+  /**
+   * Extract one attachment's decoded bytes by name (≤64 MiB engine
+   * cap). Resolves `{name, size}` plus `bytes_b64` in `data`.
+   */
+  async getAttachment(name: string) {
+    const r = await this.call<{ name: string; size: number; bytes_b64: string }>(
+      OPS.getAttachment,
+      { name },
+    );
+    return {
+      name: r.data.name,
+      size: r.data.size,
+      bytes: base64ToBytes(r.data.bytes_b64),
+    };
+  }
+  /**
+   * Embed a file attachment: `/EmbeddedFile` stream (with `/Params`
+   * `/Size` + MD5 `/CheckSum`), `/Filespec`, and a `/Names`→
+   * `/EmbeddedFiles` name-tree entry. `data` is the raw file content —
+   * ≤25 MiB decoded. `name` is non-empty, ≤255 UTF-8 bytes, no control
+   * characters, and must be unique (duplicates reject). `page`+`rect`
+   * additionally place a `/FileAttachment` annotation (no appearance
+   * stream is generated — viewers draw their default icon). Rejects on
+   * encrypted documents. There is no remove op in this slice.
+   */
+  addFileAttachment(
+    name: string,
+    data: Uint8Array,
+    options: {
+      description?: string;
+      page?: number;
+      rect?: Rect;
+    } = {},
+  ) {
+    return this.call<{ ok: boolean; name: string }>(OPS.addFileAttachment, {
+      name,
+      data_b64: bytesToBase64(data),
+      ...(options.description === undefined ? {} : { description: options.description }),
+      ...(options.page === undefined ? {} : { page: options.page }),
+      ...(options.rect === undefined ? {} : { rect: options.rect }),
     });
   }
   /** Encrypt the document in place (V4/R4, AES-128). One undo entry; saved bytes stay encrypted. */
