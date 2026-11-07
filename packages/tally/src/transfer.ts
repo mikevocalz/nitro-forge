@@ -1,7 +1,9 @@
 /**
  * Tally formats for the file export sheet (A-30). CSV holds the active
  * sheet's computed values (RFC 4180 quoting), read through `getRange` in
- * row bands that stay under the engine's 16,384-cell cap.
+ * row bands that stay under the engine's 16,384-cell cap — the engine's
+ * bounded `exportCsv` op covers the same ground for in-cap ranges, but
+ * the banded path still serves sheets larger than one op's cap.
  */
 import { NFD_EXPORT, NFD_IMPORT, type ExportFormat, type ImportFormat } from "@nitro-forge/ignition/transfer";
 import type { DocumentHandle } from "@nitro-forge/ignition";
@@ -77,6 +79,29 @@ export const TALLY_CSV_EXPORT: ExportFormat = {
   },
 };
 
+/**
+ * CSV/TSV import through the engine's `importCsv`/`importTsv` ops (slice
+ * 10): the file text goes into the op payload — engines are I/O-free —
+ * and lands on the active sheet at A1. The op is UTF-8 text, so the bytes
+ * are decoded strictly; non-UTF-8 sources are a host-side decode concern
+ * (the import wizard's encoding setting).
+ */
+function delimitedImport(id: string, label: string, extension: string, mime: string, op: "importCsv" | "importTsv"): ImportFormat {
+  return {
+    id,
+    label,
+    extension,
+    mime,
+    metadataFields: [],
+    async run(doc, bytes) {
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      await doc.apply(op, { text });
+    },
+  };
+}
+
+export const TALLY_CSV_IMPORT = delimitedImport("csv", "CSV (active sheet at A1)", "csv", "text/csv", "importCsv");
+export const TALLY_TSV_IMPORT = delimitedImport("tsv", "TSV (active sheet at A1)", "tsv", "text/tab-separated-values", "importTsv");
+
 export const TALLY_EXPORT_FORMATS: readonly ExportFormat[] = [TALLY_CSV_EXPORT, NFD_EXPORT];
-/** CSV import waits for a tally import op (roster BUILD-after-tally-import-op). */
-export const TALLY_IMPORT_FORMATS: readonly ImportFormat[] = [NFD_IMPORT];
+export const TALLY_IMPORT_FORMATS: readonly ImportFormat[] = [TALLY_CSV_IMPORT, TALLY_TSV_IMPORT, NFD_IMPORT];

@@ -59,6 +59,10 @@ export const OPS = {
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
+  importCsv: "importCsv",
+  importTsv: "importTsv",
+  exportCsv: "exportCsv",
+  exportTsv: "exportTsv",
   evaluate: "evaluate",
   workbook: "workbook",
 } as const;
@@ -849,6 +853,55 @@ export class TallyDocument {
   }
   getRange(from: string, to: string) {
     return this.call<{ cells: CellInfo[][] }>(OPS.getRange, { from, to });
+  }
+  /**
+   * Import delimited text into `sheet` (name or index; default active)
+   * starting at `at` (default `A1`). Every parsed row is data — there is
+   * no header handling — and field text is stored verbatim like
+   * `setRange` (`=`-prefixed fields become formulas, numeric-looking text
+   * computes as numbers, empty fields clear cells). RFC 4180 quoting,
+   * CRLF/LF/CR breaks, UTF-8 BOM; completely blank lines are skipped and
+   * rows may be ragged. Atomic: malformed or oversized text (over 16 MiB,
+   * over the sheet bounds or the 1,048,576-cell budget) rejects without
+   * mutation; one undo entry covers the whole import.
+   */
+  importDelimited(text: string, format: "csv" | "tsv", options?: { sheet?: string | number; at?: string }) {
+    return this.call<{ changed: number; rows: number }>(
+      format === "csv" ? OPS.importCsv : OPS.importTsv,
+      {
+        text,
+        ...(options?.sheet === undefined ? {} : { sheet: options.sheet }),
+        ...(options?.at === undefined ? {} : { at: options.at }),
+      },
+    );
+  }
+  importCsv(text: string, options?: { sheet?: string | number; at?: string }) {
+    return this.importDelimited(text, "csv", options);
+  }
+  importTsv(text: string, options?: { sheet?: string | number; at?: string }) {
+    return this.importDelimited(text, "tsv", options);
+  }
+  /**
+   * Export computed values of `sheet` (name or index; default active) as
+   * delimited text. `range` (`{from,to}`) narrows the rectangle; absent it
+   * the export covers the bounding box of the sheet's used cells. Both
+   * forms are capped at 16,384 cells. RFC 4180 quoting with CRLF row
+   * breaks; number formats are ignored.
+   */
+  exportDelimited(format: "csv" | "tsv", options?: { sheet?: string | number; range?: { from: string; to: string } }) {
+    return this.call<{ text: string; rows: number; cols: number }>(
+      format === "csv" ? OPS.exportCsv : OPS.exportTsv,
+      {
+        ...(options?.sheet === undefined ? {} : { sheet: options.sheet }),
+        ...(options?.range === undefined ? {} : { range: options.range }),
+      },
+    );
+  }
+  exportCsv(options?: { sheet?: string | number; range?: { from: string; to: string } }) {
+    return this.exportDelimited("csv", options);
+  }
+  exportTsv(options?: { sheet?: string | number; range?: { from: string; to: string } }) {
+    return this.exportDelimited("tsv", options);
   }
   evaluate(formula: string) {
     return this.call<{ value: CellValue }>(OPS.evaluate, { formula });

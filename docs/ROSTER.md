@@ -1055,3 +1055,42 @@ passed across 17 files (1 new live `nf-cli` comments test file, 4 cases),
 `cargo build -p nf-cli` clean. No threading/replies, anchor remapping on
 row/column edits, comment-pin UI wiring or native/device acceptance is
 claimed.
+
+## Tally CSV/TSV transfer source checkpoint (2026-11-07)
+
+Tally gains delimited-text import/export ops (slice 10, backlog item 10 —
+"CSV/TSV import-export ops now; XLSX blocked on dependency admission"):
+`importCsv`/`importTsv` take the file text in `text` (engines are I/O-free
+— never a path) plus optional `sheet` (name or index, default active) and
+`at` anchor (default `A1`); `exportCsv`/`exportTsv` are silent reads
+returning `{text,rows,cols}` over `range:{from,to}` or the bounding box
+of the sheet's used cells. One parser serves both, parameterized by `,`/`\t`:
+RFC 4180 quoting with `""` escapes and embedded newlines, strict rejection
+of unterminated quotes or data after a closing quote, CRLF/LF/lone-CR
+breaks, one leading UTF-8 BOM stripped, completely blank lines skipped
+(`",,"` stays a real row of empty fields), no header handling — every row
+is data. Field text stores verbatim like `setRange` (`=` fields become
+formulas, numeric text computes as numbers, empty fields clear cells);
+rows may be ragged. Import is atomic — 16 MiB text cap, full parse,
+`XFD1048576` bounds from `at` and a 1,048,576-cell budget all check before
+`commit_cells_on_sheet` stages — one undo entry, eventless when nothing
+changes. Export writes *computed* values in display text form
+(`fmt_num`/`TRUE`/`FALSE`/`#…!` literals, formats ignored) with the same
+quoting rules and a trailing CRLF; the explicit or used-bounds rectangle
+is capped at the shared 16,384 cells. Bound-sheet protection guards both
+import ops; exports stay ungated reads. These are pure cell reads/writes —
+no durable state, so **no schema bump** (stays schema:7-capable). TS
+mirror adds `OPS` entries, `importCsv`/`importTsv`/`exportCsv`/`exportTsv`
+(and shared `importDelimited`/`exportDelimited`) on `TallyDocument`, and
+`transfer.ts` gains `csv`/`tsv` `ImportFormat`s decoding UTF-8 strictly
+through `runImport`; the banded `getRange` CSV export stays for sheets
+larger than one op's cell cap. `TALLY_DEFERRED_OPS` was already empty —
+nothing to lift. Local evidence: `cargo test -p tally-engine` 148 passed
+(13 new across csv_ops: round-trip, quoting/CRLF/embedded-newline/BOM,
+ragged rows, blank-line skip, `at`/`sheet` targeting, atomic rejects,
+undo, protection, unicode, sparse-sheet export bounds),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/tally test` 68 Vitest passed across 18 files
+(1 new live `nf-cli` csv-transfer file, 5 cases), `pnpm --filter
+@nitro-forge/tally typecheck` clean. XLSX import, header-row options,
+encoding selection (host-side) and any import-preview UI remain deferred.

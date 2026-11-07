@@ -61,6 +61,7 @@
 mod chart_ops;
 mod comment_ops;
 mod conditional_ops;
+mod csv_ops;
 mod filter_ops;
 mod formula;
 mod format_ops;
@@ -1229,6 +1230,10 @@ impl Engine for TallyEngine {
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
+            "importCsv" => self.op_import_delimited(p, b','),
+            "importTsv" => self.op_import_delimited(p, b'\t'),
+            "exportCsv" => self.op_export_delimited(p, b','),
+            "exportTsv" => self.op_export_delimited(p, b'\t'),
             "evaluate" => self.op_evaluate(p),
             "workbook" => self.op_workbook(),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
