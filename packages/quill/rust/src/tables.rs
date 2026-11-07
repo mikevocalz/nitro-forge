@@ -1,4 +1,4 @@
-//! Tables (P12 slice 7-A): block-model tables with per-cell paragraph lists.
+//! Tables (P12 slices 7-A/7-B): block-model tables with per-cell paragraph lists.
 //!
 //! A table is a single block of kind `"table"` in the top-level block stream;
 //! its `table` payload holds a dense row-major grid of cells, and each cell
@@ -195,7 +195,8 @@ fn table_index(p: &Value) -> Result<usize, EngineError> {
 
 /// Row/column structural-op position: the documented `row`/`col` key, with
 /// `index`/`at` accepted as aliases (mirroring `insertTable`'s `index`/`at`
-/// pair). Exactly one spelling may appear; a missing position rejects.
+/// pair). Precedence when several spellings appear: canonical `row`/`col`,
+/// then `index`, then `at`; a missing position rejects.
 fn table_axis_position(p: &Value, key: &str) -> Result<usize, EngineError> {
     if let Some(v) = p.get(key) {
         return as_usize(v, key);
@@ -267,11 +268,7 @@ impl QuillEngine {
         {
             return Err(EngineError::validation("table limit reached"));
         }
-        let cells = (0..rows * cols)
-            .map(|_| TableCell {
-                blocks: vec![Block::empty(BlockKind::Para)],
-            })
-            .collect();
+        let cells = (0..rows * cols).map(|_| empty_cell()).collect();
         let table = Block {
             kind: BlockKind::Table,
             list: None,
