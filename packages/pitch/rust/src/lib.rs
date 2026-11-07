@@ -61,6 +61,10 @@ const MAX_MEDIA_TRIM_MS: u32 = 86_400_000;
 const MAX_TRANSITION_MS: u32 = 60_000;
 /// Per-slide rehearsal/advance timing is bounded to one hour per slide.
 const MAX_SLIDE_TIMING_MS: u32 = 3_600_000;
+/// Morph names tag objects for host-side morph matching across slides;
+/// they are bounded non-blank strings, unique per slide. The engine stores
+/// the tags only — it never interpolates morph geometry or pixels.
+const MAX_MORPH_NAME_BYTES: usize = 128;
 const SLIDE_IN_OFFSET: f64 = 200.0;
 const ZOOM_START_SCALE: f64 = 0.5;
 
@@ -379,6 +383,12 @@ pub struct Obj {
     /// decode/playback/pixels.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub media: Option<MediaSpec>,
+    /// Optional morph tag: a bounded non-blank name, unique per slide,
+    /// used by hosts to match this object to same-named objects on
+    /// adjacent slides during a `"morph"` transition. DATA ONLY — the
+    /// engine performs no morph interpolation or rendering.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub morph_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub src: Option<String>,
 }
@@ -440,6 +450,11 @@ pub enum TransitionKind {
     SlideDown,
     Wipe,
     Zoom,
+    /// Morph transition: the host matches objects across adjacent slides by
+    /// their stored `morph_name` tags and interpolates between them. DATA
+    /// ONLY — the engine stores the kind and the tags; it performs no morph
+    /// evaluation, interpolation or rendering.
+    Morph,
 }
 
 impl TransitionKind {
@@ -452,6 +467,7 @@ impl TransitionKind {
             "slideDown" => Some(Self::SlideDown),
             "wipe" => Some(Self::Wipe),
             "zoom" => Some(Self::Zoom),
+            "morph" => Some(Self::Morph),
             _ => None,
         }
     }
@@ -686,6 +702,20 @@ fn check_shape_stroke(stroke: &ShapeStroke) -> Result<(), EngineError> {
     if !stroke.width.is_finite() || stroke.width <= 0.0 || stroke.width > MAX_SHAPE_STROKE_WIDTH {
         return Err(EngineError::validation(format!(
             "shape stroke width must be finite, >0 and <= {MAX_SHAPE_STROKE_WIDTH}"
+        )));
+    }
+    Ok(())
+}
+
+/// Morph names tag objects for host-side morph matching across adjacent
+/// slides (the `"morph"` transition kind). Bounded non-blank strings,
+/// unique per slide — uniqueness is enforced by the ops and by restore so
+/// a host never sees two same-named candidates on one slide. DATA ONLY:
+/// the engine stores the tag; it performs no morph interpolation.
+fn check_morph_name(name: &str) -> Result<(), EngineError> {
+    if name.trim().is_empty() || name.len() > MAX_MORPH_NAME_BYTES {
+        return Err(EngineError::validation(format!(
+            "morph name must be non-blank and <= {MAX_MORPH_NAME_BYTES} UTF-8 bytes"
         )));
     }
     Ok(())
@@ -1419,6 +1449,7 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: None,
                     media: None,
+                    morph_name: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1494,6 +1525,7 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: None,
                     media: None,
+                    morph_name: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1535,6 +1567,7 @@ impl Engine for PitchEngine {
                     stroke,
                     connector: None,
                     media: None,
+                    morph_name: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1564,6 +1597,7 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: None,
                     media: None,
+                    morph_name: None,
                     src: Some(src),
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1597,6 +1631,7 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: None,
                     media: Some(media),
+                    morph_name: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1713,6 +1748,7 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: Some(ConnectorSpec { from, to, route, arrows, stroke }),
                     media: None,
+                    morph_name: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1848,6 +1884,41 @@ impl Engine for PitchEngine {
                 candidate.animations.retain(|a| !dropped.contains(&a.object_id));
                 animation::validate_slide(&candidate)?;
                 self.journal.record(self.state.clone());self.state.slides[slide]=candidate;
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "setMorphName" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let oi = self.object_index(slide, req_u64(p, "object")?)?;
+                let name = req_str(p, "name")?;
+                check_morph_name(name)?;
+                let object_id = self.state.slides[slide].objects[oi].id;
+                // Morph names are unique per slide so a host matching
+                // objects across adjacent slides never sees two candidates
+                // with the same tag on one slide.
+                if self.state.slides[slide]
+                    .objects
+                    .iter()
+                    .any(|o| o.id != object_id && o.morph_name.as_deref() == Some(name))
+                {
+                    return Err(EngineError::validation(
+                        "morph name is already used by another object on this slide",
+                    ));
+                }
+                if self.state.slides[slide].objects[oi].morph_name.as_deref() == Some(name) {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].objects[oi].morph_name = Some(name.to_string());
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "clearMorphName" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let oi = self.object_index(slide, req_u64(p, "object")?)?;
+                if self.state.slides[slide].objects[oi].morph_name.is_none() {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].objects[oi].morph_name = None;
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
             "addAnimation" | "addTriggeredAnimationV1" => {
@@ -1993,7 +2064,7 @@ impl Engine for PitchEngine {
                 }
                 let kind = TransitionKind::parse(req_str(p, "kind")?).ok_or_else(|| {
                     EngineError::validation(
-                        "transition kind must be \"none\"|\"fade\"|\"slideLeft\"|\"slideRight\"|\"slideUp\"|\"slideDown\"|\"wipe\"|\"zoom\"",
+                        "transition kind must be \"none\"|\"fade\"|\"slideLeft\"|\"slideRight\"|\"slideUp\"|\"slideDown\"|\"wipe\"|\"zoom\"|\"morph\"",
                     )
                 })?;
                 let duration_ms =
@@ -2147,7 +2218,11 @@ impl Engine for PitchEngine {
         // additive fields do not). schema:4 also carries slide masters,
         // layouts, placeholder regions and slide→layout bindings (P14
         // slice 8a); a schema:≤3 reader rejects schema:4 rather than
-        // silently dropping `masters`/`layouts`/`layout_id`.
+        // silently dropping `masters`/`layouts`/`layout_id`. schema:5
+        // additionally carries morph transition kinds and per-object morph
+        // names (P14 slice 11); a schema:≤4 reader would silently drop the
+        // additive `morph_name` field (the `"morph"` kind enum variant
+        // already fails closed), so morph data takes schema:5.
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
@@ -2163,7 +2238,12 @@ impl Engine for PitchEngine {
             || slide.layout_id.is_some())
             || !self.state.masters.is_empty()
             || !self.state.layouts.is_empty();
-        let payload = if schema4 {
+        let schema5 = self.state.slides.iter().any(|slide|
+            slide.objects.iter().any(|object| object.morph_name.is_some())
+            || slide.transition.as_ref().is_some_and(|t| t.kind == TransitionKind::Morph));
+        let payload = if schema5 {
+            serde_json::to_vec(&json!({"kind":"pitch","schema":5,"document":self.state}))?
+        } else if schema4 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":4,"document":self.state}))?
         } else if schema3 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":3,"document":self.state}))?
@@ -2183,8 +2263,9 @@ impl Engine for PitchEngine {
             let wrapper: Versioned = serde_json::from_value(value)?;
             // schema:2 = extended features only; schema:3 = notes/ink/
             // transition/timing-capable; schema:4 = shape presets/strokes/
-            // connectors/media objects.
-            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4) {
+            // connectors/media objects; schema:5 = morph transitions and
+            // per-object morph names.
+            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4 || wrapper.schema == 5) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
             wrapper.document
@@ -2231,6 +2312,9 @@ impl Engine for PitchEngine {
                 check_ink_stroke(stroke)
                     .map_err(|_| EngineError::serialization("invalid ink stroke"))?;
             }
+            // Morph names are bounded and unique per slide so hosts can
+            // match objects across adjacent slides unambiguously.
+            let mut morph_names = std::collections::BTreeSet::new();
             for object in &slide.objects {
                 if object.id == 0 || !ids.insert(object.id) {
                     return Err(EngineError::serialization("invalid or duplicate identity"));
@@ -2313,6 +2397,15 @@ impl Engine for PitchEngine {
                         ));
                     }
                     _ => {}
+                }
+                if let Some(name) = &object.morph_name {
+                    check_morph_name(name)
+                        .map_err(|_| EngineError::serialization("invalid morph name"))?;
+                    if !morph_names.insert(name.as_str()) {
+                        return Err(EngineError::serialization(
+                            "duplicate morph name on slide",
+                        ));
+                    }
                 }
             }
         }
@@ -3725,6 +3818,192 @@ mod tests {
     }
 
     #[test]
+    fn morph_names_tag_objects_and_round_trip_through_schema5() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        let s2 = apply(&mut e, "addSlide", json!({ "layout": "blank" }))["slide_id"]
+            .as_u64()
+            .unwrap();
+        let a1 = apply(&mut e, "addRect", json!({ "slide": s1, "x": 0, "y": 0, "w": 10, "h": 10, "fill": [1,2,3,255] }))["object_id"].as_u64().unwrap();
+        let a2 = apply(&mut e, "addText", json!({ "slide": s2, "x": 0, "y": 0, "w": 10, "h": 10, "text": "morph me" }))["object_id"].as_u64().unwrap();
+
+        // morph transition kind is admitted and stored as data
+        let result = e
+            .apply(cmd(
+                "setSlideTransition",
+                json!({ "slide": s1, "kind": "morph", "duration_ms": 700 }),
+            ))
+            .unwrap();
+        assert_eq!(result.events.len(), 1);
+        assert_eq!(
+            apply(&mut e, "slideTransition", json!({ "slide": s1 }))["transition"]["kind"],
+            json!("morph")
+        );
+
+        // equal-name tags on DIFFERENT slides are the morph pairing contract
+        apply(&mut e, "setMorphName", json!({ "slide": s1, "object": a1, "name": "hero" }));
+        apply(&mut e, "setMorphName", json!({ "slide": s2, "object": a2, "name": "hero" }));
+        let described = apply(&mut e, "describe", json!({}));
+        assert_eq!(described["slides"][0]["objects"][0]["morph_name"], json!("hero"));
+        assert_eq!(described["slides"][1]["objects"][0]["morph_name"], json!("hero"));
+
+        // morph data forces the schema:5 wrapper
+        let snap = e.snapshot().unwrap();
+        let (_, payload) = decode_envelope(&snap).unwrap();
+        let wrapped: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(wrapped["kind"], json!("pitch"));
+        assert_eq!(wrapped["schema"], json!(5));
+        assert_eq!(
+            wrapped["document"]["slides"][0]["objects"][0]["morph_name"],
+            json!("hero")
+        );
+
+        // persists through snapshot/restore byte-identically
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&snap).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), snap);
+        assert_eq!(
+            apply(&mut reopened, "describe", json!({}))["slides"][1]["objects"][0]["morph_name"],
+            json!("hero")
+        );
+
+        // equal re-tag and clearing an absent tag are eventless no-ops
+        assert!(e
+            .apply(cmd("setMorphName", json!({ "slide": s2, "object": a2, "name": "hero" })))
+            .unwrap()
+            .events
+            .is_empty());
+        let plain = apply(&mut e, "addRect", json!({ "slide": s1, "x": 5, "y": 5, "w": 4, "h": 4, "fill": [0,0,0,255] }))["object_id"].as_u64().unwrap();
+        assert!(e
+            .apply(cmd("clearMorphName", json!({ "slide": s1, "object": plain })))
+            .unwrap()
+            .events
+            .is_empty());
+
+        // retag, clear, undo/redo keep one history entry per change
+        apply(&mut e, "setMorphName", json!({ "slide": s1, "object": a1, "name": "title-card" }));
+        apply(&mut e, "clearMorphName", json!({ "slide": s1, "object": a1 }));
+        assert!(apply(&mut e, "describe", json!({}))["slides"][0]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|o| o["morph_name"].is_null()));
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "describe", json!({}))["slides"][0]["objects"][0]["morph_name"],
+            json!("title-card")
+        );
+        assert!(e.redo().unwrap());
+        assert!(apply(&mut e, "describe", json!({}))["slides"][0]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|o| o["morph_name"].is_null()));
+        // the tag dies with its object
+        apply(&mut e, "setMorphName", json!({ "slide": s2, "object": a2, "name": "hero" }));
+        apply(&mut e, "removeObject", json!({ "slide": s2, "id": a2 }));
+        assert!(apply(&mut e, "describe", json!({}))["slides"][1]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|o| o["morph_name"].is_null()));
+    }
+
+    #[test]
+    fn morph_names_validate_atomically_and_bounded() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        let s2 = apply(&mut e, "addSlide", json!({ "layout": "blank" }))["slide_id"]
+            .as_u64()
+            .unwrap();
+        let a = apply(&mut e, "addText", json!({ "slide": s1, "x": 0, "y": 0, "w": 10, "h": 10, "text": "one" }))["object_id"].as_u64().unwrap();
+        let b = apply(&mut e, "addText", json!({ "slide": s1, "x": 0, "y": 20, "w": 10, "h": 10, "text": "two" }))["object_id"].as_u64().unwrap();
+        let before = e.snapshot().unwrap();
+
+        for payload in [
+            json!({ "slide": s1, "object": a, "name": "" }),
+            json!({ "slide": s1, "object": a, "name": "   " }),
+            json!({ "slide": s1, "object": a, "name": "x".repeat(MAX_MORPH_NAME_BYTES + 1) }),
+            json!({ "slide": s1, "object": a, "name": 42 }),
+            json!({ "slide": s1, "object": 99999, "name": "hero" }),
+            json!({ "slide": 99999, "object": a, "name": "hero" }),
+        ] {
+            assert!(e.apply(cmd("setMorphName", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // boundary: exactly MAX_MORPH_NAME_BYTES is admitted
+        let exact = "m".repeat(MAX_MORPH_NAME_BYTES);
+        apply(&mut e, "setMorphName", json!({ "slide": s1, "object": a, "name": exact }));
+        let tagged = e.snapshot().unwrap();
+        // duplicate morph name on the SAME slide rejects atomically; the
+        // same name on another slide is the intended cross-slide pairing
+        assert!(e
+            .apply(cmd("setMorphName", json!({ "slide": s1, "object": b, "name": exact })))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), tagged);
+        let c = apply(&mut e, "addText", json!({ "slide": s2, "x": 0, "y": 0, "w": 10, "h": 10, "text": "other slide" }))["object_id"].as_u64().unwrap();
+        apply(&mut e, "setMorphName", json!({ "slide": s2, "object": c, "name": exact }));
+        assert_eq!(
+            apply(&mut e, "describe", json!({}))["slides"][1]["objects"][0]["morph_name"],
+            json!(exact)
+        );
+        // morph tag follows object identity across reorder
+        apply(&mut e, "moveSlide", json!({ "from": 1, "to": 0 }));
+        assert_eq!(
+            apply(&mut e, "describe", json!({}))["slides"][0]["objects"][0]["morph_name"],
+            json!(exact)
+        );
+    }
+
+    #[test]
+    fn morph_restore_rejects_duplicate_and_invalid_names() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        let a = apply(&mut e, "addText", json!({ "slide": s1, "x": 0, "y": 0, "w": 10, "h": 10, "text": "one" }))["object_id"].as_u64().unwrap();
+        let b = apply(&mut e, "addText", json!({ "slide": s1, "x": 0, "y": 20, "w": 10, "h": 10, "text": "two" }))["object_id"].as_u64().unwrap();
+        apply(&mut e, "setMorphName", json!({ "slide": s1, "object": a, "name": "hero" }));
+        let snap = e.snapshot().unwrap();
+        let (_, payload) = decode_envelope(&snap).unwrap();
+        let mut wrapped: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(wrapped["schema"], json!(5));
+        // a hostile payload duplicating the morph name across two objects on
+        // one slide must reject without touching state
+        wrapped["document"]["slides"][0]["objects"][1]["morph_name"] = json!("hero");
+        let before = e.snapshot().unwrap();
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // overlong and blank persisted names reject too
+        for bad in [json!(""), json!("x".repeat(MAX_MORPH_NAME_BYTES + 1))] {
+            let mut hostile = wrapped.clone();
+            hostile["document"]["slides"][0]["objects"][0]["morph_name"] = bad;
+            hostile["document"]["slides"][0]["objects"][1]
+                .as_object_mut()
+                .unwrap()
+                .remove("morph_name");
+            assert!(e
+                .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+                .is_err());
+        }
+        // and a schema:4-labeled wrapper carrying morph_name still reads
+        // (readers are lenient on schema); schema:≤4 writers never emit it
+        let mut downgraded = wrapped.clone();
+        downgraded["schema"] = json!(4);
+        downgraded["document"]["slides"][0]["objects"][1]
+            .as_object_mut()
+            .unwrap()
+            .remove("morph_name");
+        e.restore(&encode_envelope(&serde_json::to_vec(&downgraded).unwrap()))
+            .unwrap();
+        assert_eq!(
+            e.state.slides[0].objects[0].morph_name.as_deref(),
+            Some("hero")
+        );
+        let _ = (a, b);
+    }
+
+    #[test]
     fn slide_timing_set_clear_undo_persist_and_bounds() {
         let mut e = PitchEngine::new();
         let s1 = slide_id(&mut e, 0);
@@ -3838,7 +4117,7 @@ mod tests {
         }
         // unknown enum variants fail deserialization before state replacement
         for (field, bad) in [
-            ("transition", json!({ "kind": "morph", "duration_ms": 100 })),
+            ("transition", json!({ "kind": "melt", "duration_ms": 100 })),
             ("transition", json!({ "kind": "wipe", "duration_ms": 100, "direction": "diagonal" })),
             ("timing", json!({ "duration_ms": 1000, "advance": "auto" })),
         ] {
