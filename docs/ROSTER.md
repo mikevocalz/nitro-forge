@@ -790,3 +790,24 @@ plus schema-matrix and protection coverage), `pnpm --filter
 @nitro-forge/tally` typecheck clean and 54 Vitest passed across 14 files
 (3 new live `nf-cli` sort-filter tests), `cargo build -p nf-cli` clean.
 No UI wiring, XLSX or native/device acceptance is claimed.
+
+Review fixes on the same slice (2026-11-07, second pass): `sortRange` now
+commits through `commit_cells_on_sheet` so the permutation, prior-value
+lookup and undo entry all target the resolved `sheet` — sorting a
+non-active sheet no longer writes into the active one, and the protection
+guard and mutation agree on the same sheet (regression tests cover
+active+target permutations, protected-active/unprotected-target, and the
+inverse). Sort work is charged *during* comparison through the evaluator
+(one unit per key examined; the comparator short-circuits on exhaustion
+and the op rejects before mutation), duplicate resolved key columns are
+deduplicated before evaluation, and text keys are lowercased once at key
+evaluation instead of per comparison — the corrected bound (~229k units
+worst case under the 16,384-cell cap) is documented in the module docs
+and ENGINE_OPS. `evaluateFilters`' 65,536 cap is documented as the
+worst-case product (whole-row rules are charged full width despite
+evaluation short-circuit). The stale "schema:3 is highest" test comment
+and the TS `SortKey` type (now a discriminated union rejecting `{}` and
+`{column,offset}`) were corrected. Local evidence: `cargo test
+-p tally-engine` 113 passed (4 new sort regression tests), `pnpm
+--filter @nitro-forge/tally` typecheck clean and 54 Vitest passed,
+`cargo build -p nf-cli` clean.

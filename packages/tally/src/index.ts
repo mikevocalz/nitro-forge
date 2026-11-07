@@ -207,15 +207,26 @@ export interface ConditionalMatch {
   matches: ConditionalRuleInfo[];
 }
 
-/** One key of a `sortRange` call: exactly one of `column`/`offset`. */
-export interface SortKey {
-  /** Column letter inside the sort range, e.g. `"B"`. */
-  column?: string;
-  /** 0-based column offset from the range's left edge. */
-  offset?: number;
-  /** Sort direction; defaults to ascending. */
-  ascending?: boolean;
-}
+/**
+ * One key of a `sortRange` call: exactly one of `column`/`offset`, enforced
+ * by the discriminated union — `{}` and `{column, offset}` both fail to
+ * typecheck (the engine rejects them too).
+ */
+export type SortKey =
+  | {
+      /** Column letter inside the sort range, e.g. `"B"`. */
+      column: string;
+      offset?: never;
+      /** Sort direction; defaults to ascending. */
+      ascending?: boolean;
+    }
+  | {
+      /** 0-based column offset from the range's left edge. */
+      offset: number;
+      column?: never;
+      /** Sort direction; defaults to ascending. */
+      ascending?: boolean;
+    };
 
 /**
  * Durable row-filter rule bound to one sheet. `range` is a canonical

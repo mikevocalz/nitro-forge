@@ -382,13 +382,19 @@ sheet, canonical in-bounds range, valid criteria, unique id, no overlap);
 `duplicateSheet`/`moveSheet` do not copy or retarget rules.
 
 Sort rules: `sortRange` permutes **whole rows** inside `range:{from,to}`
-(shared 16,384-cell and on-sheet caps) on `sheet` (name or index, default
-active) — rows are reordered, never deleted or duplicated, and every
-column of the range moves together. `keys` is a nonempty array of at most
-16 entries, each with exactly one of `column` (a column letter inside the
-range) or `offset` (0-based column offset from the range's left edge) plus
-optional `ascending` (default `true`); earlier keys dominate and the sort
-is stable, so rows equal on every key keep their original order.
+on `sheet` (name or index, default active) — rows are reordered, never
+deleted or duplicated, and every column of the range moves together. The
+permutation commits to the **resolved target sheet** (`commit_cells_on_sheet`):
+prior-value lookup, the undo entry's sheet id and the mutation all follow
+`sheet`, so sorting a non-active sheet never reads from or writes to the
+active one, and protection guards that same sheet. `keys` is a nonempty
+array of at most 16 entries, each with exactly one of `column` (a column
+letter inside the range) or `offset` (0-based column offset from the
+range's left edge) plus optional `ascending` (default `true`); earlier
+keys dominate and the sort is stable, so rows equal on every key keep
+their original order. Keys resolving to the same column are deduplicated
+(first occurrence wins — a later key on an already-decided column is
+inert) before evaluation.
 `has_header:true` keeps the range's first row in place and sorts only the
 rows below it. Keys compare **computed** cell values — formulas included —
 under a documented total order: class rank empty < finite number < text <
@@ -406,11 +412,18 @@ hosts needing that must not rely on `sortRange`. `formats` are
 address-keyed display metadata and do not move with contents; cells
 outside the range (including other columns of the same sheet rows) are
 untouched. The op is atomic — everything validates and stages before
-`commit_cells` writes — and records one undo entry, so undo/redo restore
-the exact prior row order; an already-sorted range is eventless and
-journal-free. Each key-cell evaluation and each key-level comparison
-charges the evaluator's shared 1,000,000-step conditional allowance
-(`Evaluator::charge_work`); exhaustion rejects before any mutation.
+`commit_cells_on_sheet` writes — and records one undo entry, so undo/redo
+restore the exact prior row order; an already-sorted range is eventless
+and journal-free. Each key-cell evaluation charges one unit and each
+key-level comparison charges one unit **as the comparison runs** (the
+sort comparator spends through `Evaluator::charge_work`, one unit per key
+examined; text keys are lowercased once at evaluation, not per
+comparison) against the evaluator's shared 1,000,000-step conditional
+allowance; exhaustion rejects before any mutation. Because effective keys
+never exceed the range width and `rows × width ≤ 16,384` cells, the worst
+case (~`n·⌈log₂n⌉` comparisons × width key examinations, ≈229k units for
+a single-column 16,384-row range) stays far under the allowance; the
+charge-during-sort remains the fail-closed defense.
 
 Filter rules: rules are **workbook-scoped** entries bound to one sheet by
 durable sheet id (same model as names/validation/conditional), at most 256
@@ -449,9 +462,13 @@ reports `matched` — rows outside the rule's row span report `matched:true`
 because the rule imposes no constraint. Evaluation runs against computed
 values through the normal evaluator, so results track edits, undo and
 reopen; every cell-test charges the shared conditional allowance via
-`match_value`, and the total cell-test product (rows × covering rules ×
-tested columns) is capped at 65,536 — beyond it the read rejects with
-`out_of_bounds` rather than emitting an unbounded report. `removeSheet`
+`match_value`. The pre-check caps the **worst-case** cell-test product —
+rows × covering rules × each rule's full column span — at 65,536, counted
+before any evaluation so oversized reports reject without work.
+Whole-row rules short-circuit on the first failing column at evaluation
+time, so the cap can reject a report whose *actual* test count would fit;
+that conservative bound is deliberate (no tighter bound exists without
+evaluating). `removeSheet`
 cascade-drops the sheet's rules into the same undo entry and undo
 re-admits each only while it still satisfies the restore invariants
 (existing sheet, canonical in-bounds range, parseable criteria, in-range

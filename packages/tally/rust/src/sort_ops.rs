@@ -38,15 +38,26 @@
 //!   rely on `sortRange` for it.
 //! * Atomicity: everything is validated and staged before mutation; any
 //!   error leaves the document untouched. Changed cells record one undo
-//!   entry (via the shared `commit_cells`), so undo/redo restore the exact
-//!   prior row order, and `document:changed` emits once.
-//! * Work bound: each key-cell evaluation charges one unit and the whole
-//!   sort charges one unit per key-level comparison against the
-//!   evaluator's shared 1,000,000-step conditional allowance
-//!   (`Evaluator::charge_work`); exhaustion rejects the op before any
-//!   mutation. The 16,384-cell range cap keeps the worst case — at most
-//!   16,384 rows × 16 keys × ~14 comparisons × 16 key scans — far under
-//!   the allowance.
+//!   entry against the **resolved target sheet** (payload `sheet`, name or
+//!   index, default active) via `commit_cells_on_sheet` — prior-value
+//!   lookup, the undo entry's sheet id and the mutation all follow that
+//!   sheet, so sorting a non-active sheet never reads from or writes to
+//!   the active one — and `document:changed` emits once.
+//! * Work bound: each key-cell evaluation and each key-level comparison
+//!   charges one unit of the evaluator's shared 1,000,000-step conditional
+//!   allowance (`Evaluator::charge_work`) **as it runs** — comparisons
+//!   spend through the evaluator inside the sort comparator, so allowance
+//!   exhaustion aborts the op before any mutation (fail-closed; the
+//!   `#NUM!` exhaustion maps to a validation error). Duplicate resolved
+//!   key columns are dropped before evaluation — a later key on a column
+//!   an earlier key already decided can never change the outcome — and
+//!   text keys are lowercased once at evaluation time, not per
+//!   comparison. Because effective keys never exceed the range width and
+//!   `rows × width ≤ 16,384` cells, the worst case — roughly
+//!   `n·⌈log₂n⌉` row comparisons × `width` key examinations, at most
+//!   ~229k units for a single-column 16,384-row range — stays far under
+//!   the allowance; charging during the sort remains the fail-closed
+//!   defense if that bound is ever wrong.
 //!
 //! Protection: `sortRange` mutates cells, so it is guarded by the target
 //! sheet exactly like `setRange` (payload `sheet`, default active).
@@ -58,59 +69,83 @@ use std::cmp::Ordering;
 /// Maximum sort keys per `sortRange` call.
 pub const MAX_SORT_KEYS: usize = 16;
 
-/// Rank of a computed value for sorting. Errors (and anything that cannot
-/// produce a scalar — non-finite numbers, lists) share the top rank so they
-/// always sort last regardless of direction.
-fn rank(v: &formula::Value) -> u8 {
+/// A key-cell value normalized once at evaluation time. Text arrives
+/// already `to_lowercase()`d — the collation `cmp_in_class` applies — so
+/// comparisons never re-allocate, and every non-scalar (errors,
+/// non-finite numbers, lists) collapses to `Err`, which always sorts last
+/// in both directions.
+enum SortKeyVal {
+    Empty,
+    Num(f64),
+    Text(String),
+    Bool(bool),
+    Err,
+}
+
+fn sort_val(v: &formula::Value) -> SortKeyVal {
     match v {
-        formula::Value::Empty => 0,
-        formula::Value::Num(n) if n.is_finite() => 1,
-        formula::Value::Str(_) => 2,
-        formula::Value::Bool(_) => 3,
-        _ => 4,
+        formula::Value::Empty => SortKeyVal::Empty,
+        formula::Value::Num(n) if n.is_finite() => SortKeyVal::Num(*n),
+        formula::Value::Str(s) => SortKeyVal::Text(s.to_lowercase()),
+        formula::Value::Bool(b) => SortKeyVal::Bool(*b),
+        _ => SortKeyVal::Err,
     }
 }
 
-/// In-class comparison for two same-rank, non-error values.
-fn cmp_in_class(a: &formula::Value, b: &formula::Value) -> Ordering {
+/// Rank of a computed value for sorting. Errors (and anything that cannot
+/// produce a scalar — non-finite numbers, lists) share the top rank so they
+/// always sort last regardless of direction.
+fn rank(v: &SortKeyVal) -> u8 {
+    match v {
+        SortKeyVal::Empty => 0,
+        SortKeyVal::Num(_) => 1,
+        SortKeyVal::Text(_) => 2,
+        SortKeyVal::Bool(_) => 3,
+        SortKeyVal::Err => 4,
+    }
+}
+
+/// In-class comparison for two same-rank, non-error values. Text is
+/// pre-lowercased, so this is a plain byte-order compare.
+fn cmp_in_class(a: &SortKeyVal, b: &SortKeyVal) -> Ordering {
     match (a, b) {
-        (formula::Value::Num(x), formula::Value::Num(y)) => {
+        (SortKeyVal::Num(x), SortKeyVal::Num(y)) => {
             x.partial_cmp(y).unwrap_or(Ordering::Equal)
         }
-        (formula::Value::Str(x), formula::Value::Str(y)) => {
-            x.to_lowercase().cmp(&y.to_lowercase())
-        }
-        (formula::Value::Bool(x), formula::Value::Bool(y)) => x.cmp(y),
+        (SortKeyVal::Text(x), SortKeyVal::Text(y)) => x.cmp(y),
+        (SortKeyVal::Bool(x), SortKeyVal::Bool(y)) => x.cmp(y),
         _ => Ordering::Equal,
     }
 }
 
-/// Compare two rows' key values, charging `work` once per key examined.
-/// Returns `Ordering::Greater` whenever `a` must sort after `b`. Class rank
-/// is never inverted (errors always last); `ascending` inverts only the
-/// within-class comparison.
+/// Compare two rows' key values, charging the shared conditional
+/// allowance through `ev` **per key examined** so work is spent during
+/// the sort, not accounted after it. Returns `Ordering::Greater` whenever
+/// `a` must sort after `b`; `Err(())` reports allowance exhaustion (the
+/// `#NUM!` error value). Class rank is never inverted (errors always
+/// last); `ascending` inverts only the within-class comparison.
 fn cmp_rows(
-    a: &[formula::Value],
-    b: &[formula::Value],
+    a: &[SortKeyVal],
+    b: &[SortKeyVal],
     asc: &[bool],
-    work: &mut usize,
-) -> Ordering {
+    ev: &mut Evaluator<'_, Sheet>,
+) -> Result<Ordering, ()> {
     for ((va, vb), &ascending) in a.iter().zip(b.iter()).zip(asc.iter()) {
-        *work += 1;
+        ev.charge_work(1).map_err(|_| ())?;
         let ra = rank(va);
         let rb = rank(vb);
         if ra != rb {
-            return ra.cmp(&rb);
+            return Ok(ra.cmp(&rb));
         }
         if ra == 4 {
             continue; // both errors: fall through to the next key
         }
         let ord = cmp_in_class(va, vb);
         if ord != Ordering::Equal {
-            return if ascending { ord } else { ord.reverse() };
+            return Ok(if ascending { ord } else { ord.reverse() });
         }
     }
-    Ordering::Equal
+    Ok(Ordering::Equal)
 }
 
 /// One parsed sort key: absolute 0-based column plus direction.
@@ -181,6 +216,14 @@ impl TallyEngine {
             };
             keys.push(SortKey { col, ascending });
         }
+        // A later key on an already-resolved column is semantically inert:
+        // the first key on that column decides whenever the values differ,
+        // and equal values make every same-column key compare Equal. Drop
+        // duplicates (first occurrence wins, direction included) so the
+        // effective key count — and its per-comparison work charge —
+        // reflects what the sort actually examines.
+        let mut seen_cols = std::collections::HashSet::new();
+        keys.retain(|key| seen_cols.insert(key.col));
         let has_header = match p.get("has_header") {
             None | Some(Value::Null) => false,
             Some(v) => v
@@ -199,11 +242,13 @@ impl TallyEngine {
         let n = data_rows as usize;
         let k = keys.len();
         let asc: Vec<bool> = keys.iter().map(|key| key.ascending).collect();
-        // Evaluate every key cell once against the pre-sort state and stage
-        // the permutation; nothing mutates until `commit_cells`.
+        // Evaluate every key cell once against the pre-sort state, normalize
+        // each to a `SortKeyVal` (text lowercased once here, not per
+        // comparison), and stage the permutation; nothing mutates until
+        // `commit_cells_on_sheet`.
         let staged = {
             let mut ev = self.evaluator_for(idx);
-            let mut keyvals: Vec<Vec<formula::Value>> = Vec::with_capacity(n);
+            let mut keyvals: Vec<Vec<SortKeyVal>> = Vec::with_capacity(n);
             for i in 0..n {
                 let row = data_r0 + i as u32;
                 let mut vals = Vec::with_capacity(k);
@@ -213,16 +258,31 @@ impl TallyEngine {
                             "sort evaluation exceeded the work allowance",
                         ));
                     }
-                    vals.push(ev.eval_cell(&fmt_addr(key.col, row)));
+                    vals.push(sort_val(&ev.eval_cell(&fmt_addr(key.col, row))));
                 }
                 keyvals.push(vals);
             }
             // Stable permutation: `sort_by` keeps original order on ties.
-            // `work` counts key-level comparisons for the allowance charge.
+            // `sort_by` cannot return errors, so the comparator spends the
+            // shared allowance *during* the sort through `ev` — one unit
+            // per key examined — and the first exhaustion flags
+            // `exhausted`, after which comparisons short-circuit to Equal;
+            // the op then rejects before any mutation.
             let mut order: Vec<usize> = (0..n).collect();
-            let mut work = 0usize;
-            order.sort_by(|&a, &b| cmp_rows(&keyvals[a], &keyvals[b], &asc, &mut work));
-            if ev.charge_work(work).is_err() {
+            let mut exhausted = false;
+            order.sort_by(|&a, &b| {
+                if exhausted {
+                    return Ordering::Equal;
+                }
+                match cmp_rows(&keyvals[a], &keyvals[b], &asc, &mut ev) {
+                    Ok(ord) => ord,
+                    Err(()) => {
+                        exhausted = true;
+                        Ordering::Equal
+                    }
+                }
+            });
+            if exhausted {
                 return Err(EngineError::validation(
                     "sort comparison exceeded the work allowance",
                 ));
@@ -246,7 +306,10 @@ impl TallyEngine {
             }
             staged
         };
-        let mut result = self.commit_cells(staged);
+        // Commit against the resolved target sheet (`idx`), not the active
+        // sheet: `sheet_index` already validated the payload's `sheet`, and
+        // `check_protection` guarded that same sheet.
+        let mut result = self.commit_cells_on_sheet(idx, staged);
         if let Value::Object(map) = &mut result.data {
             map.insert("sorted_rows".to_string(), json!(n));
         }
@@ -484,5 +547,113 @@ mod tests {
         assert_eq!(raw(&mut e2, "B2"), json!("1"));
         assert_eq!(raw(&mut e2, "C1"), json!("keep"));
         assert_eq!(raw(&mut e2, "C2"), json!("stay"));
+    }
+
+    #[test]
+    fn sort_commits_to_the_resolved_sheet_not_the_active_one() {
+        let mut e = TallyEngine::new();
+        // Active Sheet1 holds sentinel data that must not move.
+        seed_col(&mut e, &["s1a", "s1b", "s1c", "s1d"]);
+        data(&mut e, "addSheet", json!({"name":"Data"}));
+        // Seed Sheet2 while it is active, then return to Sheet1.
+        data(&mut e, "setActive", json!({"sheet":"Data"}));
+        seed_col(&mut e, &["3", "1", "2"]);
+        data(&mut e, "setActive", json!({"sheet":0}));
+        let sheet1_before = e.doc.sheets[0].cells.clone();
+        let sheet2_raw = |e: &TallyEngine, addr: &str| {
+            e.doc.sheets[1]
+                .cells
+                .get(addr)
+                .map(|c| c.raw.as_str())
+                .unwrap_or("")
+                .to_string()
+        };
+        let r = data(
+            &mut e,
+            "sortRange",
+            json!({"sheet":"Data","range":{"from":"A1","to":"A3"},"keys":[{"offset":0}]}),
+        );
+        assert_eq!(r["sorted_rows"], json!(3));
+        // Sheet2 permuted; Sheet1 byte-identical.
+        assert_eq!(e.doc.sheets[0].cells, sheet1_before);
+        assert_eq!(sheet2_raw(&e, "A1"), "1");
+        assert_eq!(sheet2_raw(&e, "A2"), "2");
+        assert_eq!(sheet2_raw(&e, "A3"), "3");
+        // Undo/redo restore Sheet2's row order and still leave Sheet1 alone.
+        assert!(e.undo().unwrap());
+        assert_eq!(e.doc.sheets[0].cells, sheet1_before);
+        assert_eq!(sheet2_raw(&e, "A1"), "3");
+        assert_eq!(sheet2_raw(&e, "A2"), "1");
+        assert_eq!(sheet2_raw(&e, "A3"), "2");
+        assert!(e.redo().unwrap());
+        assert_eq!(sheet2_raw(&e, "A1"), "1");
+    }
+
+    #[test]
+    fn sort_on_unprotected_sheet_ignores_protected_active() {
+        let mut e = TallyEngine::new();
+        seed_col(&mut e, &["2", "1"]);
+        data(&mut e, "addSheet", json!({"name":"Data"}));
+        data(&mut e, "setActive", json!({"sheet":"Data"}));
+        seed_col(&mut e, &["b", "a"]);
+        data(&mut e, "setActive", json!({"sheet":0}));
+        data(&mut e, "protectSheet", json!({"sheet":0,"protected":true}));
+        let sheet1_before = e.doc.sheets[0].cells.clone();
+        // The payload targets unprotected Sheet2: the sort must succeed
+        // there even though the *active* Sheet1 is protected — the guard
+        // and the mutation both follow the resolved sheet.
+        let r = data(
+            &mut e,
+            "sortRange",
+            json!({"sheet":"Data","range":{"from":"A1","to":"A2"},"keys":[{"offset":0}]}),
+        );
+        assert_eq!(r["sorted_rows"], json!(2));
+        assert_eq!(e.doc.sheets[0].cells, sheet1_before);
+        data(&mut e, "setActive", json!({"sheet":"Data"}));
+        assert_eq!(raws(&mut e, 0, 2), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn sort_rejects_a_protected_target_sheet() {
+        let mut e = TallyEngine::new();
+        seed_col(&mut e, &["1", "2"]);
+        data(&mut e, "addSheet", json!({"name":"Data"}));
+        data(&mut e, "setActive", json!({"sheet":"Data"}));
+        seed_col(&mut e, &["b", "a"]);
+        data(&mut e, "protectSheet", json!({"sheet":"Data","protected":true}));
+        data(&mut e, "setActive", json!({"sheet":0}));
+        // Protected Sheet2 rejects even though the active Sheet1 is not.
+        let before = e.snapshot().unwrap();
+        assert!(e
+            .apply(Command::new(
+                "sortRange",
+                json!({"sheet":"Data","range":{"from":"A1","to":"A2"},"keys":[{"offset":0}]})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // And the default (active-sheet) target still guards Sheet1.
+        data(&mut e, "protectSheet", json!({"sheet":0,"protected":true}));
+        let before = e.snapshot().unwrap();
+        assert!(e
+            .apply(Command::new(
+                "sortRange",
+                json!({"range":{"from":"A1","to":"A2"},"keys":[{"offset":0}]})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+
+    #[test]
+    fn duplicate_key_columns_dedupe_first_wins() {
+        let mut e = TallyEngine::new();
+        seed_col(&mut e, &["b", "a", "c"]);
+        // The second key resolves to the same column as the first; it is
+        // inert, so the first key's ascending direction decides — the
+        // result is ascending, not the duplicate's descending.
+        sort(&mut e, json!([{"offset":0},{"column":"A","ascending":false}]));
+        assert_eq!(
+            raws(&mut e, 0, 9),
+            vec!["", "", "", "", "", "", "a", "b", "c"]
+        );
     }
 }

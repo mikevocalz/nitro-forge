@@ -705,8 +705,9 @@ mod tests {
         set_rule(&mut e, ("A1", "A1"), ">5", json!({"bold": true, "fill": "#123456"}));
         set_rule(&mut e, ("B1", "B1"), "x", json!({"underline": true}));
         let saved = e.snapshot().unwrap();
-        // Conditional rules emit the schema:3 wrapper (the highest tally
-        // schema; schema:2 is validations-only, schema:1 the legacy wrapper).
+        // Conditional rules emit the schema:3 wrapper (schema:4 is the
+        // filters tier, schema:2 validations-only, schema:1 the legacy
+        // wrapper).
         let payload: Value = serde_json::from_slice(decode_envelope(&saved).unwrap().1).unwrap();
         assert_eq!(payload["kind"], json!("tally"));
         assert_eq!(payload["schema"], json!(3));

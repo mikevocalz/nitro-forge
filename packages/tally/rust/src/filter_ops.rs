@@ -47,9 +47,15 @@ use super::*;
 /// Maximum filter rules per workbook.
 pub const MAX_FILTERS: usize = 256;
 /// `evaluateFilters` bound on total cell-tests (rows × covering rules ×
-/// tested columns). Beyond it the read rejects rather than emitting an
-/// unbounded report; mutations already charge the shared 1,000,000-step
-/// conditional allowance per match attempt.
+/// tested columns). The count is a **worst-case product**: whole-row rules
+/// are charged their full range width even though evaluation
+/// short-circuits on the first failing column, so the cap can reject a
+/// report whose *actual* test count would fit. That is deliberate — the
+/// pre-check runs before any evaluation so oversized reports reject
+/// without work, and no honest tighter bound exists without evaluating.
+/// Beyond it the read rejects rather than emitting an unbounded report;
+/// mutations already charge the shared 1,000,000-step conditional
+/// allowance per match attempt.
 pub const MAX_FILTER_TESTS: u64 = 65_536;
 
 /// One durable rule: `id` is a workbook-unique handle, `sheet` the bound
@@ -417,8 +423,11 @@ impl TallyEngine {
                 matcher,
             });
         }
-        // Pre-check the cell-test product so oversized reports reject
-        // before any evaluation work happens.
+        // Pre-check the worst-case cell-test product (every covering
+        // rule's full column span per row) so oversized reports reject
+        // before any evaluation work happens. Whole-row rules short-circuit
+        // on the first failing column at evaluation time, so this count
+        // overstates actual tests — see `MAX_FILTER_TESTS`.
         let mut total_tests: u64 = 0;
         for r in r0..=r1 {
             for a in &armed {
