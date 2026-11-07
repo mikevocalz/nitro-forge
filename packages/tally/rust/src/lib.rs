@@ -778,7 +778,7 @@ mod tests {
         assert_eq!(r["ok"], json!(true));
         assert_eq!(
             data(&mut e, "workbook", json!({})),
-            json!({"sheets":[{"name":"Sheet1","cell_count":0}],"active":0})
+            json!({"sheets":[{"name":"Sheet1","cell_count":0,"tone":null,"is_protected":false}],"active":0})
         );
     }
 
@@ -852,7 +852,7 @@ mod tests {
         // state unchanged
         assert_eq!(
             data(&mut e, "workbook", json!({})),
-            json!({"sheets":[{"name":"Sheet1","cell_count":0}],"active":0})
+            json!({"sheets":[{"name":"Sheet1","cell_count":0,"tone":null,"is_protected":false}],"active":0})
         );
     }
 
@@ -1018,8 +1018,8 @@ mod tests {
             data(&mut e, "workbook", json!({})),
             json!({
                 "sheets":[
-                    {"name":"Sheet1","cell_count":1},
-                    {"name":"Two","cell_count":1}
+                    {"name":"Sheet1","cell_count":1,"tone":null,"is_protected":false},
+                    {"name":"Two","cell_count":1,"tone":null,"is_protected":false}
                 ],
                 "active":1
             })
