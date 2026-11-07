@@ -19,6 +19,7 @@ export const OPS = {
   setCell: "setCell",
   setRange: "setRange",
   fillRange: "fillRange",
+  fillSeries: "fillSeries",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -111,6 +112,14 @@ export class TallyDocument {
   /** Repeat the source into a containing target, shifting relative formulas. */
   fillRange(source: { from: string; to: string }, target: { from: string; to: string }) {
     return this.call<{ changed: number }>(OPS.fillRange, { source, target });
+  }
+  /** Linear series fill from a single-row/column numeric source; writes literals. */
+  fillSeries(source: { from: string; to: string }, target: { from: string; to: string }, step?: number) {
+    return this.call<{ changed: number }>(OPS.fillSeries, {
+      source,
+      target,
+      ...(step === undefined ? {} : { step }),
+    });
   }
   clearCell(addr: string) {
     return this.call(OPS.clearCell, { addr });

@@ -74,6 +74,26 @@ struct Workbook {
     active: usize,
 }
 
+/// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
+/// only when the workbook carries durable sheet fields (`tone`,
+/// `is_protected`) that pre-wrapper readers would silently drop; workbooks
+/// without them keep the legacy bare-`Workbook` payload so older engines can
+/// still read them.
+#[derive(Serialize)]
+struct VersionedSnapshot<'a> {
+    kind: &'static str,
+    schema: u32,
+    document: &'a Workbook,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VersionedDoc {
+    kind: String,
+    schema: u32,
+    document: Workbook,
+}
+
 fn blank_workbook() -> Workbook {
     Workbook {
         next_sheet: 1,
@@ -636,6 +656,7 @@ impl Engine for TallyEngine {
             "setCell" => self.op_set_cell(p),
             "setRange" => self.op_set_range(p),
             "fillRange" => self.op_fill_range(p),
+            "fillSeries" => self.op_fill_series(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -646,14 +667,48 @@ impl Engine for TallyEngine {
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        let payload = serde_json::to_vec(&self.doc)?;
+        // Sheets with a tone or protection flag carry durable fields added
+        // after the first release; older readers ignore unknown `Sheet`
+        // fields, so wrap those documents and let old engines fail closed
+        // instead of silently discarding them. Plain workbooks keep the
+        // legacy payload shape.
+        let extended = self
+            .doc
+            .sheets
+            .iter()
+            .any(|s| s.tone.is_some() || s.is_protected);
+        let payload = if extended {
+            serde_json::to_vec(&VersionedSnapshot {
+                kind: "tally",
+                schema: 1,
+                document: &self.doc,
+            })?
+        } else {
+            serde_json::to_vec(&self.doc)?
+        };
         Ok(encode_envelope(&payload))
     }
 
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_tag, payload) = decode_envelope(data)?;
         // Decode + validate into a local first so failures leave state untouched.
-        let mut doc: Workbook = serde_json::from_slice(payload)?;
+        let value: Value = serde_json::from_slice(payload)?;
+        let wrapped = value.as_object().is_some_and(|object| {
+            ["kind", "schema", "document"]
+                .iter()
+                .any(|key| object.contains_key(*key))
+        });
+        let mut doc: Workbook = if wrapped {
+            let wrapper: VersionedDoc = serde_json::from_value(value)?;
+            if wrapper.kind != "tally" || wrapper.schema != 1 {
+                return Err(EngineError::unsupported(
+                    "unsupported Tally snapshot kind/schema",
+                ));
+            }
+            wrapper.document
+        } else {
+            serde_json::from_value(value)?
+        };
         if doc.sheets.is_empty() {
             return Err(EngineError::serialization(
                 "workbook must contain at least one sheet",
@@ -1152,6 +1207,108 @@ mod tests {
         );
         // state untouched throughout
         assert_eq!(describe(&mut e), before);
+    }
+
+    #[test]
+    fn snapshot_wraps_only_when_durable_sheet_fields_present() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"5"}));
+
+        // A plain workbook keeps the legacy bare-Workbook payload.
+        let plain = e.snapshot().unwrap();
+        let (_tag, payload) = decode_envelope(&plain).unwrap();
+        let v: Value = serde_json::from_slice(&payload).unwrap();
+        assert!(v.get("sheets").is_some());
+        assert!(v.get("kind").is_none());
+
+        // tone / is_protected are durable fields older readers would drop;
+        // their presence switches the payload to {kind:"tally",schema:1}.
+        data(&mut e, "setSheetColor", json!({"sheet":0,"tone":"accent"}));
+        data(&mut e, "protectSheet", json!({"sheet":0,"protected":true}));
+        let snap = e.snapshot().unwrap();
+        let (_tag, payload) = decode_envelope(&snap).unwrap();
+        let v: Value = serde_json::from_slice(&payload).unwrap();
+        assert_eq!(v["kind"], json!("tally"));
+        assert_eq!(v["schema"], json!(1));
+        assert!(v["document"]["sheets"].is_array());
+        // No root workbook fields, so pre-wrapper readers fail closed rather
+        // than silently discarding tone/is_protected.
+        assert!(v.get("sheets").is_none());
+        assert!(serde_json::from_value::<Workbook>(v.clone()).is_err());
+
+        // The wrapped snapshot restores identically.
+        let before = describe(&mut e);
+        let mut e2 = TallyEngine::new();
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&mut e2), before);
+        assert_eq!(
+            data(&mut e2, "workbook", json!({}))["sheets"][0]["is_protected"],
+            json!(true)
+        );
+    }
+
+    #[test]
+    fn restore_accepts_wrapped_and_legacy_raw_payloads() {
+        let doc = json!({
+            "next_sheet": 2,
+            "sheets": [{
+                "id": 0, "name": "Data", "tone": "info", "is_protected": true,
+                "cells": {"B2": {"raw": "=A1*2"}}
+            }],
+            "active": 0
+        });
+        // Hand-built wrapped payload (as a future writer might emit).
+        let wrapped = json!({"kind":"tally","schema":1,"document":doc});
+        let mut e = TallyEngine::new();
+        e.restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
+            .unwrap();
+        assert_eq!(
+            data(&mut e, "workbook", json!({}))["sheets"][0]["tone"],
+            json!("info")
+        );
+        assert_eq!(get_cell(&mut e, "A1")["computed"], json!(null));
+
+        // The same document as a legacy bare payload still restores.
+        let mut e2 = TallyEngine::new();
+        e2.restore(&encode_envelope(&serde_json::to_vec(&doc).unwrap()))
+            .unwrap();
+        assert_eq!(describe(&mut e), describe(&mut e2));
+    }
+
+    #[test]
+    fn versioned_snapshot_rejects_bad_kind_schema_atomically() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"5"}));
+        let before = describe(&mut e);
+
+        let doc = json!({
+            "next_sheet": 1,
+            "sheets": [{"id":0,"name":"S","cells":{"A1":{"raw":"9"}}}],
+            "active": 0
+        });
+        for wrapper in [
+            // wrong schema / wrong kind fail closed
+            json!({"kind":"tally","schema":2,"document":doc}),
+            json!({"kind":"quill","schema":1,"document":doc}),
+            // unknown wrapper keys rejected by deny_unknown_fields
+            json!({"kind":"tally","schema":1,"document":doc,"extra":true}),
+            // wrapper whose document fails document validation
+            json!({"kind":"tally","schema":1,"document":{
+                "next_sheet":1,
+                "sheets":[{"id":0,"name":"S","cells":{"A1048577":{"raw":"x"}}}],
+                "active":0
+            }}),
+        ] {
+            let bytes = encode_envelope(&serde_json::to_vec(&wrapper).unwrap());
+            assert!(e.restore(&bytes).is_err(), "accepted {wrapper}");
+            assert_eq!(describe(&mut e), before, "state mutated by {wrapper}");
+        }
+
+        // A correct wrapper restores and replaces state + journal.
+        let ok = json!({"kind":"tally","schema":1,"document":doc});
+        e.restore(&encode_envelope(&serde_json::to_vec(&ok).unwrap()))
+            .unwrap();
+        assert_eq!(get_cell(&mut e, "A1")["computed"], json!(9.0));
     }
 
     #[test]

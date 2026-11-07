@@ -4,7 +4,9 @@ use super::*;
 impl TallyEngine {
     pub(super) fn check_protection(&self, op: &str, p: &Value) -> Result<(), EngineError> {
         let protected = match op {
-            "setCell" | "clearCell" | "setRange" | "fillRange" => self.active_sheet().is_protected,
+            "setCell" | "clearCell" | "setRange" | "fillRange" | "fillSeries" => {
+                self.active_sheet().is_protected
+            }
             "renameSheet" | "removeSheet" | "duplicateSheet" | "moveSheet" | "setSheetColor" => {
                 self.doc.sheets[self.resolve_sheet(Self::field(p, "sheet")?)?].is_protected
             }
@@ -60,6 +62,7 @@ mod tests {
             ("clearCell", json!({"addr":"A1"})),
             ("setRange", json!({"from":"A1","values":[["x"]]})),
             ("fillRange", json!({"source":{"from":"A1","to":"A1"},"target":{"from":"A1","to":"A2"}})),
+            ("fillSeries", json!({"source":{"from":"A1","to":"A1"},"target":{"from":"A1","to":"A2"},"step":1})),
             ("renameSheet", json!({"sheet":0,"to":"Renamed"})),
             ("removeSheet", json!({"sheet":0})),
             ("duplicateSheet", json!({"sheet":0})),

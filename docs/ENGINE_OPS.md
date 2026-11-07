@@ -161,6 +161,7 @@ rows) and changes nothing. A formula reference past the sheet evaluates to
 | `setCell` | `{addr,value}` | `{addr,computed}` | on active sheet; `value` string starting `=` is a formula; numeric strings become numbers; empty string clears |
 | `setRange` | `{from,values:string[][]}` | `{changed}` | nonempty rectangular paste; empty strings clear; at most 16,384 cells; must fit inside XFD1048576; one undo entry |
 | `fillRange` | `{source:{from,to},target:{from,to}}` | `{changed}` | inclusive rectangles, target contains source; repeat source outside its bounds, shift relative references, preserve `$` locks; each rectangle at most 16,384 cells and inside XFD1048576; one undo entry |
+| `fillSeries` | `{source:{from,to},target:{from,to},step?}` | `{changed}` | linear series; see series-fill rules below |
 | `clearCell` | `{addr}` | `{ok}` | |
 | `getCell` | `{addr}` | `{raw,computed}` | `computed` = evaluated value |
 | `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed}]]}` | |
@@ -174,7 +175,9 @@ functions `SUM AVERAGE MIN MAX COUNT COUNTA COUNTIF SUMIF IF(cond,a,b) ROUND(x,n
 Error values: `#DIV/0! #VALUE! #REF! #NAME? #NUM! #CYCLE!` — cycles detected via
 evaluation-time visited set. Evaluation memoizes per-request.
 
-Undo: per-cell previous `{addr, prev_raw}` (or removal); range edits group changed cells into one entry. No-op range edits emit no event and preserve redo. Fill reads all source cells before writing. Formula strings, names, whitespace and scientific notation remain unchanged; a reference shifted past row 1,048,576 or column XFD becomes `#REF!`, and a range with either endpoint off the sheet becomes a single `#REF!`. Lexically invalid source formulas reject the entire fill without mutation. Numeric series inference and cross-sheet references are not supported.
+Undo: per-cell previous `{addr, prev_raw}` (or removal); range edits group changed cells into one entry. No-op range edits emit no event and preserve redo. Fill reads all source cells before writing. Formula strings, names, whitespace and scientific notation remain unchanged; a reference shifted past row 1,048,576 or column XFD becomes `#REF!`, and a range with either endpoint off the sheet becomes a single `#REF!`. Lexically invalid source formulas reject the entire fill without mutation. Series inference lives in `fillSeries` (numeric literals only; no date serials — `formula.rs` has no date helpers); cross-sheet references are not supported.
+
+`fillSeries` rules: `source` must be a single row or a single column of numeric literals (raws that parse as a finite `f64`; formulas, text, booleans and empty cells reject the op). A 1x1 source picks its axis from the target's one-dimensional extension and requires an explicit `step`. `step` is an optional finite JSON number; without it the step is `(last - first) / (count - 1)` along the axis, so inference needs at least two source cells. The first source cell anchors the series: `value(i) = first + step * (i - i_first)` with `i` the column index for a row source or the row index for a column source. The target must contain the source and may not widen perpendicular to the axis; it may extend in either direction along the axis. Target cells inside the source are skipped; every other target cell receives a numeric literal (never a formula), and a non-finite result rejects the whole op. Same bounds and 16,384-cell caps as `fillRange`; one undo entry, eventless when nothing changes.
 
 Protected sheets reject cell/clear/range/fill edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
@@ -183,6 +186,17 @@ Sheet creation/duplication reject exhausted ids before mutation; restore rejects
 Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteria[,sum_range])` require direct same-sheet cell/rectangular references (≤16384 cells). SUMIF ranges must have identical dimensions; mismatches return #VALUE! rather than adopting Excel's resized range behavior. Numeric criteria (numbers or strings with optional =/<>/</<=/>/>= prefix) compare evaluated numbers only, without text/Boolean coercion. Text =/<> criteria support * (sequence), ? (one original Unicode scalar), and ~ escaping * ? ~; other tildes are literal. Matching is ASCII-case-insensitive, non-ASCII exact, with no locale/casefold/normalization claim. Non-numeric relational text criteria return #VALUE!. Boolean criteria match evaluated Booleans only. Empty or empty-text criteria match empty cells and empty evaluated strings; * alone matches text, not empty cells. Comparisons do not cross value types.
 
 Criteria expressions/cell references are evaluated normally; criteria range errors/cycles propagate. SUMIF evaluates sum cells only for matches, ignores matched nonnumeric values and propagates matched errors; nonfinite accumulated sums return #NUM!. Existing per-request memoization/depth/cycle rules remain intact. Each conditional rectangle is capped at16384 cells, criteria at255 Unicode scalars and matched text at4096 UTF-8 bytes (#VALUE! for string limits). A shared per-Evaluator allowance of1000000 conditional scan/string/DP steps returns #NUM! on exhaustion; matcher allocation work is charged before bounded DP buffers. These are explicit Tally semantics, not full Excel compatibility.
+
+Snapshots: the NFD1 envelope is unchanged; the JSON payload is normally the bare
+`Workbook` (`{next_sheet,sheets,active}`). When any sheet carries durable
+post-release fields (`tone` set or `is_protected` true), the payload is instead
+`{kind:"tally",schema:1,document:<Workbook>}` so pre-wrapper readers fail closed
+rather than silently dropping those fields (same precedent as pitch schema:2 and
+quill schema:2). `restore` accepts both shapes, strictly validates wrapper
+kind/schema/keys (`deny_unknown_fields`), then runs the existing document
+validation before replacing state and resetting the journal; bad input leaves
+state untouched. Workbooks without tone/protection keep the legacy payload, so
+older snapshots and older readers round-trip unchanged.
 
 ## cadence-engine — `CadenceEngine::new()`
 

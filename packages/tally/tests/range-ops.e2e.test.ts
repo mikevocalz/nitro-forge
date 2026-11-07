@@ -76,6 +76,29 @@ it("fills mixed sources upward and keeps references on the sheet", async () => {
   } finally { await doc.close(); }
 });
 
+it("fillSeries writes numeric literals, honors step and rejects atomically", async () => {
+  const doc = await TallyDocument.open(host);
+  try {
+    await doc.setRange("A1", [["1"], ["3"], ["5"]]);
+    await doc.setCell("C1", "10");
+    await doc.setCell("D1", "20");
+    const result = await doc.fillSeries({ from: "A1", to: "A3" }, { from: "A1", to: "A5" });
+    expect(result.data?.changed).toBe(2);
+    expect((await doc.getCell("A4")).data).toEqual({ raw: "7", computed: 7 });
+    expect((await doc.getCell("A5")).data?.raw).toBe("9");
+    const stepped = await doc.fillSeries({ from: "C1", to: "D1" }, { from: "C1", to: "E1" }, 5);
+    expect(stepped.data?.changed).toBe(1);
+    expect((await doc.getCell("E1")).data).toEqual({ raw: "20", computed: 20 });
+    const before = await doc.save();
+    await expect(doc.fillSeries({ from: "A1", to: "B1" }, { from: "A1", to: "B3" })).rejects.toMatchObject({ code: "validation" });
+    await expect(doc.fillSeries({ from: "C1", to: "C1" }, { from: "C1", to: "C3" })).rejects.toMatchObject({ code: "validation" });
+    expect(await doc.save()).toEqual(before);
+    // Three series fills plus two setRange/setCell writes undo in one entry each.
+    for (let i = 0; i < 5; i++) expect(await doc.undo()).toBe(true);
+    expect((await doc.getCell("A1")).data?.raw).toBe("");
+  } finally { await doc.close(); }
+});
+
 it("rejects every address past XFD1048576 before mutating and evaluates such references as #REF!", async () => {
   const doc = await TallyDocument.open(host);
   try {
