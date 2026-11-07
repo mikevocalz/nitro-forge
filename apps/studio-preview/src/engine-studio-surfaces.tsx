@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef } from 'react';
 import { PrismEditor, type PrismEditorProps } from '@nitro-forge/studio-workspace/prism';
 import type { PrismDocument } from '../../../packages/prism/src/index';
 import { PrismCanvasAdapter } from '../../../packages/prism/src/canvas-cluster';
+import {PrismNodeOverlay,prismNodeTransform,PRISM_NODE_EDITING_SUPPORTED} from './prism-node-overlay';
 import { PrismDetailControls } from './prism-detail-controls';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
-import { Banner, ScrollView, Text, TokenScope, View } from '@nitro-forge/studio-workspace/ui';
+import { Button, Banner, ScrollView, Text, TokenScope, View } from '@nitro-forge/studio-workspace/ui';
 import { resolveWorkspaceScale, workspaceThemes, type WorkspaceDensity } from '@nitro-forge/studio-workspace/theme';
 import { nycTronTokens } from '@nitro-forge/studio-workspace/directions';
 import { SpreadsheetGrid, type SpreadsheetWindowRequest } from '@nyc-tron/ui/components/forge/SpreadsheetGrid';
@@ -66,8 +67,10 @@ function PrismSurface(props: EngineStudioSurfaceProps) {
     return adapter.read();
   }, [adapter]);
   const surface = useDocumentSurface(document, props.state, read, props.perform, props.disabled);
-  const selection = useMemo(() => createStore(() => ({ id: null as number | null })), [document]);
+  const selection = useMemo(() => createStore(() => ({ id: null as number | null, nodes: false })), [document]);
   const selectedId = useStore(selection, state => state.id);
+  const nodes = useStore(selection, state => state.nodes);
+  const editablePath = PRISM_NODE_EDITING_SUPPORTED && selectedId !== null && surface.data && prismNodeTransform(surface.data, selectedId, surface.data.width, surface.data.height) !== null;
   const latest = useRef({ document, selection });
   latest.current = { document, selection };
   const onSelectLayer = (id: number | null) => {
@@ -83,8 +86,12 @@ function PrismSurface(props: EngineStudioSurfaceProps) {
   };
   return <View testID="prism-engine-surface" style={{ flex: 1, minHeight: 0 }}>
     {surface.error && <Banner tone="danger" title={surface.error} live="alert"/>}
+    {PRISM_NODE_EDITING_SUPPORTED&&<Button title={nodes ? 'Finish editing path nodes' : 'Edit path nodes'} disabled={!surface.ready || !editablePath}
+      onPress={() => { if(surface.ready && editablePath) selection.setState({nodes:!nodes}); }}/>}
     <PrismEditor state={props.state} apply={apply} reload={props.reload} documentIdentity={document} applyOwnsRefresh theme={props.theme} density={props.density}
       {...(props.direction ? { direction: props.direction } : {})} {...(props.personas ? { personas: props.personas } : {})} {...(props.onComposePersona ? { onComposePersona: props.onComposePersona } : {})}
+      {...(nodes && editablePath && document && surface.data && selectedId !== null ? {renderCanvasOverlay: ({width,height,disabled,color}: {width:number;height:number;disabled:boolean;color:string}) =>
+        <PrismNodeOverlay document={document} state={surface.data!} layerId={selectedId} width={width} height={height} color={color} disabled={disabled || !surface.ready} commit={surface.commit}/>} : {})}
       selectedLayerId={selectedId} onSelectLayer={onSelectLayer} busy={!surface.ready}/>
     {document && surface.data && <ScrollView style={{ maxHeight: 300, flexGrow: 0, flexShrink: 1 }}>
       <PrismDetailControls document={document} state={surface.data} selectedLayerId={selectedId}

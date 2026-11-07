@@ -1,6 +1,6 @@
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 import type { StudioViewRef } from './ui';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Image, Pressable, ScrollView, Text, View, Menu, Button, IconButton, Banner, Badge, EmptyState, NightScope, TokenScope } from './ui';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -35,6 +35,8 @@ export interface PrismEditorProps {
   documentIdentity?: unknown;
   /** The apply owner already refreshes its authoritative state after writes. */
   applyOwnsRefresh?: boolean;
+  /** Host overlay uses this exact measured artboard, while the shape gesture yields ownership. */
+  renderCanvasOverlay?: (viewport: { width: number; height: number; disabled: boolean; color: string }) => ReactNode;
   theme?: 'dark' | 'light';
   density?: WorkspaceDensity;
   /** Material comparison only; document state remains in the same host session. */
@@ -393,7 +395,8 @@ export function PrismEditor(props: PrismEditorProps) {
   }} style={{ flex: 1, minHeight: 0, position: 'relative', backgroundColor: mat.deep }}>
     <View pointerEvents="box-none" style={{ position: 'absolute', left: canvasLeft, top: canvasTop, right: canvasRight, bottom: canvasBottom, alignItems: 'center', justifyContent: 'center' }}>
       {doc && <PrismCanvas document={doc} width={canvasWidth} height={canvasHeight} selectedId={selectedId}
-        disabled={busy || !!props.busy || rendering || !!previewError} color={colors.accent}
+        disabled={busy || !!props.busy || rendering || !!previewError || !!props.renderCanvasOverlay} color={colors.accent}
+        overlay={props.renderCanvasOverlay?.({ width: canvasWidth, height: canvasHeight, color: colors.accent, disabled: busy || !!props.busy || rendering || !!previewError })}
         onSelect={id => selectPrimary(id)}
         onMoveShape={(id, dx, dy) => { void run('transformShape', { id, dx, dy, scale_x: 1, scale_y: 1 }, 'Shape moved'); }}>
         {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}><Text style={{ color: colors.paperInk, fontSize: 12, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}

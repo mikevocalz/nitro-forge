@@ -1,6 +1,8 @@
 import { keyboardKey, type StudioKeyboardEvent } from './keyboard-event';
 import type { StudioViewRef } from './ui';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import {useStore} from 'zustand';
+import {createStore} from 'zustand/vanilla';
 import { Platform } from 'react-native';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { View, Text, Button } from './ui';
@@ -32,7 +34,7 @@ function TransparencyChecker({ width, height }: { width: number; height: number 
 /** Touch/pointer edits commit once on release. The overlay previews bounds only. */
 export function PrismCanvas(props: {
   document: CanvasDocument; width: number; height: number; selectedId: number | null;
-  disabled: boolean; color: string; children: ReactNode;
+  disabled: boolean; color: string; children: ReactNode; overlay?: ReactNode;
   onSelect: (id: number | null) => void;
   onMoveShape: (id: number, dx: number, dy: number) => void;
 }) {
@@ -40,7 +42,9 @@ export function PrismCanvas(props: {
   const selection = useRef(props.selectedId); selection.current = props.selectedId;
   const view = useRef<StudioViewRef>(null);
   const mounted = useRef(true);
-  const [preview, setPreview] = useState<CanvasPreview>(null);
+  const previewStore=useMemo(()=>createStore(()=>({preview:null as CanvasPreview})),[]);
+  const preview=useStore(previewStore,state=>state.preview);
+  const setPreview=(preview:CanvasPreview)=>previewStore.setState({preview});
   const controller = useRef<ReturnType<typeof createCanvasGesture> | null>(null);
   if (!controller.current) controller.current = createCanvasGesture({
     context: () => ({ ...current.current, selectedId: selection.current, disabled: current.current.disabled || !mounted.current }),
@@ -86,7 +90,8 @@ export function PrismCanvas(props: {
     style={{ ...touchStyle, width: props.width, height: props.height, backgroundColor: ARTBOARD_CHECKER.light, overflow: 'hidden', boxShadow: '0 12px 35px #00000035' }}>
     <TransparencyChecker width={props.width} height={props.height} />
     <View pointerEvents="none" style={{ position: 'absolute', inset: 0 }}>{props.children}</View>
-    {outline && <View pointerEvents="none" testID="prism-selection-bounds" style={{ position: 'absolute', left: outline.x, top: outline.y, width: outline.width, height: outline.height, borderWidth: 2, borderColor: props.color, borderStyle: preview ? 'dashed' : 'solid' }} />}
+    {props.overlay}
+    {!props.overlay && outline && <View pointerEvents="none" testID="prism-selection-bounds" style={{ position: 'absolute', left: outline.x, top: outline.y, width: outline.width, height: outline.height, borderWidth: 2, borderColor: props.color, borderStyle: preview ? 'dashed' : 'solid' }} />}
     {preview && <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: '#111827', padding: 4 }}>
       <Text style={{ color: '#FFFFFF', fontSize: 11 }}>Move preview · release to apply</Text>
       <Button title="Cancel move" aria-label="Cancel shape move" onPress={() => gesture.cancel()} variant="ghost" size="sm" tone="carolina" cornerRadius={4} />
