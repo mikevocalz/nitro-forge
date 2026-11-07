@@ -14,7 +14,13 @@ No blocking source defect was found in the reviewed MIDI changes and host featur
 
 ## Cadence analysis
 
-Source review in progress; no runtime or measurement result is certified here.
+Inspected the canonical automation lane/mode, EQ/dynamics graph and offline measurement composition, plus its parent Analysis tab. Automation writes retain the original engine indices after the visible-window filter. The preview caps point count and window length and states the pinned lane's unsupported fractional-quarter bar case. It does not offer unsupported live recording modes.
+
+EQ response and compressor transfer curves come from existing engine APIs, not app-side approximations. Offline loudness and spectrogram run only on request, on a first-range window capped by clip end and ten seconds. Requests are sequential and an in-instance synchronous lock prevents duplicate admission. Results and failures require the same document, project, selected panel/track/insert/window and enabled generation. Replies from an obsolete generation are discarded; the underlying read API cannot abort a calculation already running. No live meter or player ownership is inferred.
+
+The source review found a late-write gap at the parent tab boundary: passing the raw surface commit bypassed the detail panel's synchronous selection invalidation, while a passive mounted cleanup left a short unmount window. The revised parent passes its guarded write wrapper, and the analysis mounted flag now clears in layout cleanup. The child still guards its own selection generation; the original rejected promise reaches awaited callers. This addresses that source admission gap.
+
+No further blocking source defect was found in the reviewed analysis composition after the correction. It is suitable for its source checkpoint after combined static checks. This review ran no analysis, browser or native scenario. Snapshot consistency with writers outside this document owner, long-job behavior, graph interaction, cancellation semantics, visual layout, native accessibility and actual measurements remain later acceptance work.
 
 ## Worksheet detail controls
 

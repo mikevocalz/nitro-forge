@@ -9,6 +9,7 @@ import {PluginPresetBrowser} from '@nyc-tron/ui/components/forge/audio/PluginPre
 import {PrecisionScrubber} from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
 import {MIDIPianoRoll,PIANO_ROLL_KEY_COLUMN} from '@nyc-tron/ui/components/forge/midi/MIDIPianoRoll';
 import {MIDIVelocityLane} from '@nyc-tron/ui/components/forge/midi/MIDIVelocityLane';
+import {CadenceAnalysisControls} from './cadence-analysis-controls';
 import {CadenceMixerAdapter,mixerClusterRoutes,mixerClusterSlots,type CadenceMixerState,type MixerInsert} from '../../../packages/cadence/src/mixer-cluster';
 import {createCadenceClipBindings} from '../../../packages/cadence/src/editor-adapter';
 import type {CadenceDocument,CompressorParams,EqBandType,InsertPreset} from '../../../packages/cadence/src/index';
@@ -34,7 +35,7 @@ const observed=<T,>(task:Promise<T>)=>{void task.catch(()=>{});return task;};
 export function CadenceDetailControls(props:CadenceDetailControlsProps){
  const {document,project,disabled,commit}=props,scale=resolveWorkspaceScale(props.density);
  const adapter=useMemo(()=>new CadenceMixerAdapter(document),[document]);
- const store=useMemo(()=>createStore(()=>({panel:'routing' as 'routing'|'effects'|'midi',trackId:null as number|null,slotId:null as number|null,clipId:null as number|null,note:undefined as number|undefined,scrollX:0,scrollBoundary:'',
+ const store=useMemo(()=>createStore(()=>({panel:'routing' as 'routing'|'effects'|'midi'|'analysis',trackId:null as number|null,slotId:null as number|null,clipId:null as number|null,note:undefined as number|undefined,scrollX:0,scrollBoundary:'',
   presetKey:'',presets:[] as InsertPreset[],presetStatus:'loading' as 'loading'|'ready'|'error',presetError:'',retry:0})),[document]);
  const view=useStore(store,s=>s);
  const selectableTracks=view.panel==='midi'?project.tracks.filter(t=>t.kind==='midi'):project.tracks;
@@ -76,14 +77,15 @@ export function CadenceDetailControls(props:CadenceDetailControlsProps){
  const routes=mixerClusterRoutes(project),routing=adapter.routing();
  const numeric=(label:string,value:number,min:number,max:number,step:number,unit:string,action:(value:number)=>Promise<unknown>)=><PrecisionScrubber key={controlBoundary+label} label={label} value={value} min={min} max={max} step={step} unit={unit} disabled={disabled} {...{targetSize:scale.size.target}} onCommit={value=>write(()=>action(value))}/>;
  return <View testID="cadence-detail-controls" style={{gap:scale.space.group}}>
-  <TabBar semantics="tabs" density="compact" aria-label="Audio detail panels" tabs={(['routing','effects','midi'] as const).map(panel=>({key:panel,label:panel==='midi'?'MIDI':panel==='routing'?'Routing':'Effects',icon:null,active:view.panel===panel,onPress:()=>select({panel,note:undefined,scrollX:0})}))}/>
+  <TabBar semantics="tabs" density="compact" aria-label="Audio detail panels" tabs={(['routing','effects','midi','analysis'] as const).map(panel=>({key:panel,label:panel==='midi'?'MIDI':panel==='routing'?'Routing':panel==='analysis'?'Analysis':'Effects',icon:null,active:view.panel===panel,onPress:()=>select({panel,note:undefined,scrollX:0})}))}/>
+  {view.panel==='analysis'&&<CadenceAnalysisControls document={document} project={project} disabled={disabled} commit={write} density={props.density} theme={props.theme}/>}
   {view.panel==='routing'&&<>
   <Button title="Add bus" disabled={disabled} targetSize={scale.size.target} variant="ghost" onPress={()=>{void write(()=>document.addTrack('bus'));}}/>
   <BusAndRoutingMatrix key={controlBoundary} {...routes} disabled={disabled} onOutputCommit={(id,bus)=>write(()=>routing.onOutputCommit(id,bus))}
    onSendCommit={(id,bus,level)=>write(()=>routing.onSendCommit(id,bus,level))} onSendRemove={(id,bus)=>write(()=>routing.onSendRemove(id,bus))}/>
   </>}
-  {view.panel!=='routing'&&!track&&<Button title="Add MIDI track" variant="ghost" disabled={disabled} targetSize={scale.size.target} onPress={()=>{void write(()=>document.addTrack('midi'));}}/>}
-  {view.panel!=='routing'&&track&&<>
+  {view.panel!=='routing'&&view.panel!=='analysis'&&!track&&<Button title="Add MIDI track" variant="ghost" disabled={disabled} targetSize={scale.size.target} onPress={()=>{void write(()=>document.addTrack('midi'));}}/>}
+  {view.panel!=='routing'&&view.panel!=='analysis'&&track&&<>
    <Select label="Track to edit" value={String(track.id)} options={selectableTracks.map(t=>({value:String(t.id),label:t.name}))}
     disabled={disabled} onValueChange={id=>select({trackId:Number(id),slotId:null,clipId:null,note:undefined,scrollX:0})}/>
    {view.panel==='effects'&&<>

@@ -36,3 +36,7 @@ Splice now composes the canonical marker, transition and batch controls with its
 ## MIDI grid and scroll checkpoint (2026-11-07)
 
 NYC-Tron `c81ef50` adds rational time-signature grids and controlled horizontal anchors. Forge's capability-aware host binding preserves the alpha.4 fallback while accepting the new source contract. See [MIDI host binding](../design/MIDI_HOST_BINDING_PHASE.md). Static checks and source review do not promote runtime/platform acceptance.
+
+## Cadence automation and analysis checkpoint (2026-11-07)
+
+The Analysis panel composes supported automation edits, engine response curves and bounded on-demand offline analysis. Parent/child selection and source admission guard writes and reads. See [Cadence automation and analysis](../design/CADENCE_ANALYSIS_PHASE.md). Static checks/source review do not promote runtime/native acceptance; no audio host or simulated live measurements were added.
