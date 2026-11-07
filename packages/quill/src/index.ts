@@ -35,6 +35,12 @@ export const OPS = {
   updateStyle: "updateStyle",
   removeStyle: "removeStyle",
   listStyles: "listStyles",
+  addComment: "addComment",
+  updateComment: "updateComment",
+  removeComment: "removeComment",
+  resolveComment: "resolveComment",
+  reopenComment: "reopenComment",
+  listComments: "listComments",
   applyNamedStyle: "applyNamedStyle",
   setBlockStyle: "setBlockStyle",
   blocks: "blocks",
@@ -109,6 +115,24 @@ export interface FindOptions {
   to?: Pos;
   /** Defaults to false (case-insensitive per-scalar Unicode lowercase). */
   caseSensitive?: boolean;
+}
+/** One end of a comment's anchored range (same unit as `Pos`). */
+export type CommentAnchor = Pos;
+/**
+ * A range-anchored comment. `from` is left-gravity and `to` right-gravity,
+ * so typing at either boundary extends the range; a range whose text is
+ * deleted collapses toward the deletion start rather than dropping.
+ * Bodies are plain text (newlines allowed), at most 8192 characters;
+ * authors at most 128. No threading/replies and no timestamps — the
+ * engine has no clock.
+ */
+export interface DocComment {
+  id: string;
+  from: CommentAnchor;
+  to: CommentAnchor;
+  author: string | null;
+  body: string;
+  resolved: boolean;
 }
 /** Paper orientation stored per section. */
 export type SectionOrientation = "portrait" | "landscape";
@@ -367,6 +391,44 @@ export class QuillDocument {
   /** Read-only; definitions sorted by id. */
   listStyles() {
     return this.call<{ styles: NamedStyle[] }>(OPS.listStyles);
+  }
+  /**
+   * Anchor a comment to the `from..to` range (`from == to` anchors a
+   * point). Ids are unique tokens, 1–64 non-blank non-control characters;
+   * at most 1024 comments. `resolved` defaults to false.
+   */
+  addComment(comment: {
+    id: string;
+    from: Pos;
+    to: Pos;
+    author?: string;
+    body: string;
+    resolved?: boolean;
+  }) {
+    return this.call<{ ok: boolean; id: string }>(OPS.addComment, comment);
+  }
+  /**
+   * Replace `body` and/or `author` on a comment; `author: null` clears.
+   * Absent fields keep their values; no effective change is eventless.
+   * Anchors cannot be re-pointed — they move only through document edits.
+   */
+  updateComment(id: string, changes: { author?: string | null; body?: string }) {
+    return this.call<{ ok: boolean; id: string }>(OPS.updateComment, { id, ...changes });
+  }
+  removeComment(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.removeComment, { id });
+  }
+  /** Set `resolved: true`; already-resolved is eventless. */
+  resolveComment(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.resolveComment, { id });
+  }
+  /** Set `resolved: false`; already-open is eventless. */
+  reopenComment(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.reopenComment, { id });
+  }
+  /** Read-only; sorted by anchor position then id. */
+  listComments() {
+    return this.call<{ comments: DocComment[] }>(OPS.listComments);
   }
   /**
    * Copy a `"character"` style's properties onto the inlines in `from..to`

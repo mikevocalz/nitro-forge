@@ -51,20 +51,13 @@ impl QuillEngine {
                     .ok_or_else(|| EngineError::validation("changeCase context exceeds 1 MiB"))?;
             }
         }
-        // Re-anchor bookmarks inside the affected blocks through the
+        // Re-anchor position marks inside the affected blocks through the
         // conversion: each mark keeps the output offset produced by the
         // source scalars before it (case mapping can expand one scalar
-        // into several, e.g. ß → SS).
-        let mut pending: Vec<(usize, usize, usize)> = self
-            .bookmarks
-            .iter()
-            .enumerate()
-            .filter(|(_, b)| (from.block..=to.block).contains(&b.block))
-            .map(|(i, b)| (i, b.block, b.offset))
-            .collect();
-        pending.sort_by_key(|&(_, block, offset)| (block, offset));
-        let mut bm_pi = 0usize;
-        let mut bookmark_updates: Vec<(usize, usize)> = Vec::new();
+        // into several, e.g. ß → SS). `offset_maps` records, per affected
+        // block, the output offset before each source scalar (plus the
+        // final length); bookmarks and comment anchors share the mapping.
+        let mut offset_maps: Vec<(usize, Vec<usize>)> = Vec::with_capacity(span.len());
         let mut next = Vec::with_capacity(span.len());
         let mut output_bytes = 0usize;
         let mut changed = false;
@@ -88,6 +81,7 @@ impl QuillEngine {
             let mut selected_chars = 0;
             let mut inlines = Vec::new();
             let mut produced = 0usize;
+            let mut offset_map = Vec::with_capacity(offset + 1);
             let mut word = false;
             let mut sentence = true;
             let mut punctuation = false;
@@ -150,28 +144,17 @@ impl QuillEngine {
                     } else {
                         c.to_string()
                     };
-                    // Bookmarks at this source boundary keep the output
+                    // Marks at this source boundary keep the output
                     // offset produced so far.
-                    while bm_pi < pending.len()
-                        && pending[bm_pi].1 == block_index
-                        && pending[bm_pi].2 == offset
-                    {
-                        bookmark_updates.push((pending[bm_pi].0, produced));
-                        bm_pi += 1;
-                    }
+                    offset_map.push(produced);
                     append(&mut inlines, &text, &inline.style);
                     produced += text.chars().count();
                     offset += 1;
                 }
             }
             // Marks at the block end map to the converted block length.
-            while bm_pi < pending.len()
-                && pending[bm_pi].1 == block_index
-                && pending[bm_pi].2 == offset
-            {
-                bookmark_updates.push((pending[bm_pi].0, produced));
-                bm_pi += 1;
-            }
+            offset_map.push(produced);
+            offset_maps.push((block_index, offset_map));
             if lower.next().is_some() {
                 return Err(EngineError::unsupported(
                     "Unicode lowercase alignment changed",
@@ -191,15 +174,30 @@ impl QuillEngine {
             return Ok(Self::read_only(response(to)));
         }
         let bookmarks_before = self.bookmarks.clone();
-        for (bm_idx, new_offset) in bookmark_updates {
-            self.bookmarks[bm_idx].offset = new_offset;
+        let comments_before = self.comments.clone();
+        for (bi, map) in &offset_maps {
+            for bm in self.bookmarks.iter_mut().filter(|b| b.block == *bi) {
+                bm.offset = map[bm.offset];
+            }
+            for c in self.comments.iter_mut() {
+                if c.from.block == *bi {
+                    c.from.offset = map[c.from.offset];
+                }
+                if c.to.block == *bi {
+                    c.to.offset = map[c.to.offset];
+                }
+            }
         }
         let removed = span.to_vec();
         self.record_undo(
             from.block,
             removed,
             next.clone(),
-            Collections::bookmarks(bookmarks_before),
+            Collections {
+                bookmarks: Some(bookmarks_before),
+                comments: Some(comments_before),
+                ..Default::default()
+            },
         );
         self.blocks.splice(from.block..=to.block, next);
         Ok(CommandResult::data(response(end)))
