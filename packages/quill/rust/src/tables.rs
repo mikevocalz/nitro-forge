@@ -1,4 +1,4 @@
-//! Tables (P12 slice 7-A): block-model tables with per-cell paragraph lists.
+//! Tables (P12 slices 7-A/7-B): block-model tables with per-cell paragraph lists.
 //!
 //! A table is a single block of kind `"table"` in the top-level block stream;
 //! its `table` payload holds a dense row-major grid of cells, and each cell
@@ -9,10 +9,10 @@
 //! position on it, and cell text is unreachable by `Pos` — cell edits go
 //! through `setCellText` and never move top-level anchors.
 //!
-//! Scope is deliberately bounded: insert/delete, cell text replacement, and
-//! read ops only. Row/column insert/delete, cell merge, table styling,
-//! nested tables, in-cell find/replace, `text`/`layout` cell coverage, and
-//! DOCX table import/export are deferred (see docs/ENGINE_OPS.md).
+//! Scope: insert/delete, row/column insert/delete, cell text replacement,
+//! and read ops. Cell merge/split, table styling, nested tables, in-cell
+//! find/replace, `text`/`layout` cell coverage, and DOCX table
+//! import/export are deferred (see docs/ENGINE_OPS.md).
 //!
 //! Schema: no bump. Every snapshot tier deserializes `Block.kind` through
 //! the `BlockKind` enum, so a schema≤3 reader fails closed on the unknown
@@ -193,6 +193,30 @@ fn table_index(p: &Value) -> Result<usize, EngineError> {
     Err(EngineError::invalid("payload missing 'index'"))
 }
 
+/// Row/column structural-op position: the documented `row`/`col` key, with
+/// `index`/`at` accepted as aliases (mirroring `insertTable`'s `index`/`at`
+/// pair). Precedence when several spellings appear: canonical `row`/`col`,
+/// then `index`, then `at`; a missing position rejects.
+fn table_axis_position(p: &Value, key: &str) -> Result<usize, EngineError> {
+    if let Some(v) = p.get(key) {
+        return as_usize(v, key);
+    }
+    for alias in ["index", "at"] {
+        if let Some(v) = p.get(alias) {
+            return as_usize(v, alias);
+        }
+    }
+    Err(EngineError::invalid(format!("payload missing '{key}'")))
+}
+
+/// One cell in the shape `setCellText` produces for empty content: a
+/// single empty `para` block.
+fn empty_cell() -> TableCell {
+    TableCell {
+        blocks: vec![Block::empty(BlockKind::Para)],
+    }
+}
+
 /// Plain text of a cell: its blocks joined with `\n` (same convention as
 /// the `text` op across top-level blocks).
 fn cell_text(cell: &TableCell) -> String {
@@ -244,11 +268,7 @@ impl QuillEngine {
         {
             return Err(EngineError::validation("table limit reached"));
         }
-        let cells = (0..rows * cols)
-            .map(|_| TableCell {
-                blocks: vec![Block::empty(BlockKind::Para)],
-            })
-            .collect();
+        let cells = (0..rows * cols).map(|_| empty_cell()).collect();
         let table = Block {
             kind: BlockKind::Table,
             list: None,
@@ -406,6 +426,155 @@ impl QuillEngine {
         validate_tables(&candidate)?;
         self.blocks[index] = new.clone();
         self.record_undo(index, vec![old], vec![new], Collections::default());
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// Commit a rebuilt `Table` onto block `index`: stage the new block on
+    /// a candidate block list, run the same `validate_tables` gate restore
+    /// uses (dimension/cell-count bounds plus the document-wide cell-block
+    /// budget), then splice it in and record one block-splice undo entry.
+    /// The table stays a single top-level block, so no anchor collection
+    /// can move and none is remapped — identical to `setCellText`.
+    fn commit_table(&mut self, index: usize, new_table: Table) -> Result<(), EngineError> {
+        let old = self.blocks[index].clone();
+        let mut new = old.clone();
+        new.table = Some(new_table);
+        let mut candidate = self.blocks.clone();
+        candidate[index] = new.clone();
+        validate_tables(&candidate)?;
+        self.blocks[index] = new.clone();
+        self.record_undo(index, vec![old], vec![new], Collections::default());
+        Ok(())
+    }
+
+    /// `insertTableRow {block,row}` — inserts one row of `cols` fresh
+    /// cells (one empty paragraph each, the `setCellText` empty shape)
+    /// before row `row` (0..=rows; `rows` appends). `index`/`at` are
+    /// accepted aliases for `row`. Bounds: the table must stay within
+    /// `TABLE_ROWS_MAX`; new cell blocks count against the document-wide
+    /// cell-block budget via the staged `validate_tables` call.
+    pub(super) fn op_insert_table_row(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let index = self.table_block_index(p)?;
+        let pos = table_axis_position(p, "row")?;
+        let table = self.blocks[index]
+            .table
+            .as_ref()
+            .expect("table block validated");
+        if table.rows >= TABLE_ROWS_MAX {
+            return Err(EngineError::validation("table row limit reached"));
+        }
+        if pos > table.rows {
+            return Err(EngineError::out_of_bounds(format!(
+                "row index {pos} out of range ({} rows)",
+                table.rows
+            )));
+        }
+        let (rows, cols) = (table.rows, table.cols);
+        let mut cells = Vec::with_capacity((rows + 1) * cols);
+        cells.extend_from_slice(&table.cells[..pos * cols]);
+        cells.extend((0..cols).map(|_| empty_cell()));
+        cells.extend_from_slice(&table.cells[pos * cols..]);
+        self.commit_table(index, Table { rows: rows + 1, cols, cells })?;
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// `deleteTableRow {block,row}` — removes row `row` and its `cols`
+    /// cells. The table must keep at least one row; `row` out of range
+    /// rejects. Deleting a row discards its cell content — content ops
+    /// are destructive by contract.
+    pub(super) fn op_delete_table_row(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let index = self.table_block_index(p)?;
+        let pos = table_axis_position(p, "row")?;
+        let table = self.blocks[index]
+            .table
+            .as_ref()
+            .expect("table block validated");
+        if pos >= table.rows {
+            return Err(EngineError::out_of_bounds(format!(
+                "row {pos} out of range ({} rows)",
+                table.rows
+            )));
+        }
+        if table.rows == 1 {
+            return Err(EngineError::validation(
+                "table must keep at least one row",
+            ));
+        }
+        let (rows, cols) = (table.rows, table.cols);
+        let mut cells = Vec::with_capacity((rows - 1) * cols);
+        cells.extend_from_slice(&table.cells[..pos * cols]);
+        cells.extend_from_slice(&table.cells[(pos + 1) * cols..]);
+        self.commit_table(index, Table { rows: rows - 1, cols, cells })?;
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// `insertTableColumn {block,col}` — inserts one column of `rows`
+    /// fresh cells before column `col` (0..=cols; `cols` appends).
+    /// `index`/`at` are accepted aliases for `col`. Bounds mirror
+    /// `insertTableRow`: `TABLE_COLS_MAX` cap plus the cell-block budget.
+    pub(super) fn op_insert_table_column(
+        &mut self,
+        p: &Value,
+    ) -> Result<CommandResult, EngineError> {
+        let index = self.table_block_index(p)?;
+        let pos = table_axis_position(p, "col")?;
+        let table = self.blocks[index]
+            .table
+            .as_ref()
+            .expect("table block validated");
+        if table.cols >= TABLE_COLS_MAX {
+            return Err(EngineError::validation("table column limit reached"));
+        }
+        if pos > table.cols {
+            return Err(EngineError::out_of_bounds(format!(
+                "column index {pos} out of range ({} cols)",
+                table.cols
+            )));
+        }
+        let (rows, cols) = (table.rows, table.cols);
+        let mut cells = Vec::with_capacity(rows * (cols + 1));
+        for r in 0..rows {
+            let row = &table.cells[r * cols..(r + 1) * cols];
+            cells.extend_from_slice(&row[..pos]);
+            cells.push(empty_cell());
+            cells.extend_from_slice(&row[pos..]);
+        }
+        self.commit_table(index, Table { rows, cols: cols + 1, cells })?;
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// `deleteTableColumn {block,col}` — removes column `col` and its
+    /// `rows` cells. The table must keep at least one column; `col` out
+    /// of range rejects. Cell content in the column is discarded.
+    pub(super) fn op_delete_table_column(
+        &mut self,
+        p: &Value,
+    ) -> Result<CommandResult, EngineError> {
+        let index = self.table_block_index(p)?;
+        let pos = table_axis_position(p, "col")?;
+        let table = self.blocks[index]
+            .table
+            .as_ref()
+            .expect("table block validated");
+        if pos >= table.cols {
+            return Err(EngineError::out_of_bounds(format!(
+                "column {pos} out of range ({} cols)",
+                table.cols
+            )));
+        }
+        if table.cols == 1 {
+            return Err(EngineError::validation(
+                "table must keep at least one column",
+            ));
+        }
+        let (rows, cols) = (table.rows, table.cols);
+        let mut cells = Vec::with_capacity(rows * (cols - 1));
+        for r in 0..rows {
+            let row = &table.cells[r * cols..(r + 1) * cols];
+            cells.extend_from_slice(&row[..pos]);
+            cells.extend_from_slice(&row[pos + 1..]);
+        }
+        self.commit_table(index, Table { rows, cols: cols - 1, cells })?;
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -1065,5 +1234,191 @@ mod tests {
             definition: std::sync::Arc::new(lists::definition(1, lists::ListKind::Bullet)),
         });
         assert!(validate_tables(&[listed]).is_err());
+    }
+
+    // -- row/column structural ops (slice B) ---------------------------------
+
+    #[test]
+    fn insert_table_row_shifts_cells_and_appends() {
+        let mut e = fixture(); // 2x2 table at block 2
+        apply(&mut e, "setCellText", json!({"block":2,"row":0,"col":1,"text":"keep"}));
+        // Insert before row 0: existing content shifts down one row.
+        apply(&mut e, "insertTableRow", json!({"block":2,"row":0}));
+        let d = describe_table(&mut e, 2);
+        assert_eq!(d["rows"], 3);
+        assert_eq!(d["cols"], 2);
+        assert_eq!(d["cells"], json!([["",""],["","keep"],["",""]]));
+        // `index` alias works and appends after the last row when equal.
+        apply(&mut e, "insertTableRow", json!({"block":2,"index":3}));
+        let d = describe_table(&mut e, 2);
+        assert_eq!(d["rows"], 4);
+        assert_eq!(d["cells"][3], json!(["",""]));
+        // New cells are strict empty paragraphs.
+        let cell = &e.blocks[2].table.as_ref().unwrap().cells[0];
+        assert_eq!(cell.blocks.len(), 1);
+        assert_eq!(cell.blocks[0].kind, BlockKind::Para);
+        assert!(cell.blocks[0].inlines.is_empty());
+    }
+
+    #[test]
+    fn delete_table_row_removes_cells_and_content() {
+        let mut e = fixture();
+        apply(&mut e, "setCellText", json!({"block":2,"row":1,"col":1,"text":"gone"}));
+        apply(&mut e, "deleteTableRow", json!({"block":2,"row":1}));
+        let d = describe_table(&mut e, 2);
+        assert_eq!(d["rows"], 1);
+        assert_eq!(d["cells"], json!([["",""]]));
+        assert_eq!(e.blocks[2].table.as_ref().unwrap().cells.len(), 2);
+    }
+
+    #[test]
+    fn row_ops_bounds_min_dims_and_atomic_rejects() {
+        let mut e = fixture();
+        let before = e.snapshot().unwrap();
+        for payload in [
+            json!({"block":2,"row":3}),   // past the append position (rows=2)
+            json!({"block":0,"row":0}),   // not a table
+            json!({"block":9,"row":0}),
+            json!({"block":2}),           // missing position
+            json!({"block":2,"row":"x"}),
+        ] {
+            assert!(e.apply(cmd("insertTableRow", payload.clone())).is_err(), "{payload}");
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // When both spellings appear the documented `row` key wins.
+        apply(&mut e, "insertTableRow", json!({"block":2,"row":2,"index":0}));
+        assert_eq!(describe_table(&mut e, 2)["rows"], 3);
+        // deleteTableRow bounds: row 3 out of range on the now-3-row table.
+        assert!(err(&mut e, "deleteTableRow", json!({"block":2,"row":3})).code == ErrorCode::OutOfBounds);
+        // Min dims: deleting the last row or last column rejects. A 1x2
+        // table may lose one column (leaving 1x1) but never its last row.
+        let mut one = engine();
+        insert_table(&mut one, 0, 1, 2);
+        let before1 = one.snapshot().unwrap();
+        assert!(err(&mut one, "deleteTableRow", json!({"block":0,"row":0})).code == ErrorCode::Validation);
+        assert_eq!(one.snapshot().unwrap(), before1);
+        apply(&mut one, "deleteTableColumn", json!({"block":0,"col":0}));
+        assert_eq!(describe_table(&mut one, 0)["cols"], 1);
+        let after_delete = one.snapshot().unwrap();
+        assert!(err(&mut one, "deleteTableColumn", json!({"block":0,"col":0})).code == ErrorCode::Validation);
+        assert!(err(&mut one, "deleteTableRow", json!({"block":0,"row":0})).code == ErrorCode::Validation);
+        assert_eq!(one.snapshot().unwrap(), after_delete);
+        // Dimension caps.
+        let mut maxed = engine();
+        insert_table(&mut maxed, 0, TABLE_ROWS_MAX, 1);
+        let before2 = maxed.snapshot().unwrap();
+        assert!(err(&mut maxed, "insertTableRow", json!({"block":0,"row":64})).code == ErrorCode::Validation);
+        assert_eq!(maxed.snapshot().unwrap(), before2);
+        let mut maxedc = engine();
+        insert_table(&mut maxedc, 0, 1, TABLE_COLS_MAX);
+        assert!(err(&mut maxedc, "insertTableColumn", json!({"block":0,"col":26})).code == ErrorCode::Validation);
+    }
+
+    #[test]
+    fn insert_table_column_shifts_cells_per_row() {
+        let mut e = fixture();
+        apply(&mut e, "setCellText", json!({"block":2,"row":0,"col":1,"text":"right"}));
+        apply(&mut e, "setCellText", json!({"block":2,"row":1,"col":0,"text":"bl"}));
+        // Insert before column 1: column 1 content moves to column 2.
+        apply(&mut e, "insertTableColumn", json!({"block":2,"col":1}));
+        let d = describe_table(&mut e, 2);
+        assert_eq!(d["rows"], 2);
+        assert_eq!(d["cols"], 3);
+        assert_eq!(d["cells"], json!([["","","right"],["bl","",""]]));
+        // Append at cols; `at` alias.
+        apply(&mut e, "insertTableColumn", json!({"block":2,"at":3}));
+        assert_eq!(describe_table(&mut e, 2)["cols"], 4);
+    }
+
+    #[test]
+    fn delete_table_column_removes_cells_and_content() {
+        let mut e = fixture();
+        apply(&mut e, "setCellText", json!({"block":2,"row":0,"col":0,"text":"gone"}));
+        apply(&mut e, "setCellText", json!({"block":2,"row":1,"col":1,"text":"stay"}));
+        apply(&mut e, "deleteTableColumn", json!({"block":2,"col":0}));
+        let d = describe_table(&mut e, 2);
+        assert_eq!(d["cols"], 1);
+        assert_eq!(d["cells"], json!([[""],["stay"]]));
+        assert!(err(&mut e, "deleteTableColumn", json!({"block":2,"col":1})).code == ErrorCode::OutOfBounds);
+    }
+
+    #[test]
+    fn row_column_ops_enforce_cell_block_budget() {
+        // Nearly saturate the document-wide cell-block budget, then a row
+        // insert that would overflow must reject atomically. A 60x26 table
+        // (below the 64-row cap so inserts stay legal) with 1015 cells at
+        // the 64-block cap totals 65505 blocks; one row insert (+26) fits,
+        // the second overflows 65536.
+        let mut e = engine();
+        let mut cells = Vec::with_capacity(60 * TABLE_COLS_MAX);
+        for i in 0..60 * TABLE_COLS_MAX {
+            let n = if i < 1015 { CELL_BLOCKS_MAX } else { 1 };
+            cells.push(TableCell {
+                blocks: vec![Block::empty(BlockKind::Para); n],
+            });
+        }
+        e.blocks = vec![Block {
+            kind: BlockKind::Table,
+            list: None,
+            style_id: None,
+            table: Some(Table {
+                rows: 60,
+                cols: TABLE_COLS_MAX,
+                cells,
+            }),
+            inlines: Vec::new(),
+        }];
+        apply(&mut e, "insertTableRow", json!({"block":0,"row":60}));
+        let before = e.snapshot().unwrap();
+        let er = err(&mut e, "insertTableRow", json!({"block":0,"row":61}));
+        assert_eq!(er.code, ErrorCode::Validation);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // The rejected write changed nothing: the snapshot still restores.
+        let mut r = engine();
+        r.restore(&before).unwrap();
+    }
+
+    #[test]
+    fn row_column_ops_undo_redo_and_snapshot() {
+        let mut e = fixture();
+        apply(&mut e, "setCellText", json!({"block":2,"row":0,"col":0,"text":"hi"}));
+        apply(&mut e, "insertTableRow", json!({"block":2,"row":0}));
+        apply(&mut e, "insertTableColumn", json!({"block":2,"col":0}));
+        let full = e.snapshot().unwrap();
+        assert_eq!(describe_table(&mut e, 2)["cells"][1][1], "hi");
+        // Three undos: column, row, setCellText — table back to 2x2 empty.
+        assert!(e.undo().unwrap());
+        assert!(e.undo().unwrap());
+        assert!(e.undo().unwrap());
+        assert_eq!(describe_table(&mut e, 2)["rows"], 2);
+        assert_eq!(describe_table(&mut e, 2)["cells"][0][0], "");
+        while e.redo().unwrap() {}
+        assert_eq!(e.snapshot().unwrap(), full);
+        assert_eq!(describe_table(&mut e, 2)["cells"][1][1], "hi");
+        // Deletes undo too: row then column removal restores content.
+        apply(&mut e, "deleteTableRow", json!({"block":2,"row":0}));
+        assert!(e.undo().unwrap());
+        assert_eq!(describe_table(&mut e, 2)["rows"], 3);
+        // Snapshot round-trip preserves the rebuilt grid.
+        let bytes = e.snapshot().unwrap();
+        let mut r = engine();
+        r.restore(&bytes).unwrap();
+        assert_eq!(r.snapshot().unwrap(), bytes);
+        assert_eq!(describe_table(&mut r, 2)["cells"][1][1], "hi");
+    }
+
+    #[test]
+    fn row_column_ops_do_not_move_anchors() {
+        // Structural row/col edits keep the table a single block, so
+        // bookmarks/comments/sections anchored on or after it never move.
+        let mut e = fixture();
+        apply(&mut e, "insertBlock", json!({"index": 3})); // [AA,BB,T,para]
+        apply(&mut e, "addBookmark", json!({"name":"bm","pos":{"block":3,"offset":0}}));
+        apply(&mut e, "insertTableRow", json!({"block":2,"row":0}));
+        apply(&mut e, "deleteTableColumn", json!({"block":2,"col":1}));
+        let bms = apply(&mut e, "listBookmarks", json!({})).data;
+        assert_eq!(bms["bookmarks"][0]["pos"]["block"], 3);
+        assert_eq!(describe_table(&mut e, 2)["rows"], 3);
+        assert_eq!(describe_table(&mut e, 2)["cols"], 1);
     }
 }

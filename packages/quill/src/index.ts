@@ -46,6 +46,10 @@ export const OPS = {
   insertTable: "insertTable",
   deleteTable: "deleteTable",
   setCellText: "setCellText",
+  insertTableRow: "insertTableRow",
+  deleteTableRow: "deleteTableRow",
+  insertTableColumn: "insertTableColumn",
+  deleteTableColumn: "deleteTableColumn",
   listTables: "listTables",
   describeTable: "describeTable",
   blocks: "blocks",
@@ -472,8 +476,8 @@ export class QuillDocument {
   }
   /**
    * Insert a `rows`x`cols` table (each cell starts with one empty
-   * paragraph) as a single block at `index` (0..=block count). Row/column
-   * insert/delete, cell merge, styling, and DOCX table interop are deferred.
+   * paragraph) as a single block at `index` (0..=block count). Cell merge,
+   * styling, and DOCX table interop are deferred.
    */
   insertTable(index: number, rows: number, cols: number) {
     return this.call<{ ok: boolean; block_index: number }>(OPS.insertTable, {
@@ -494,6 +498,29 @@ export class QuillDocument {
    */
   setCellText(block: number, row: number, col: number, text: string) {
     return this.call<{ ok: boolean }>(OPS.setCellText, { block, row, col, text });
+  }
+  /**
+   * Insert one row of empty cells before `row` (0..=rows; `rows` appends).
+   * The table must stay within 64 rows; new cell blocks count against the
+   * document-wide cell-block budget.
+   */
+  insertTableRow(block: number, row: number) {
+    return this.call<{ ok: boolean }>(OPS.insertTableRow, { block, row });
+  }
+  /** Remove row `row` and its cell content; a table must keep ≥1 row. */
+  deleteTableRow(block: number, row: number) {
+    return this.call<{ ok: boolean }>(OPS.deleteTableRow, { block, row });
+  }
+  /**
+   * Insert one column of empty cells before `col` (0..=cols; `cols`
+   * appends). The table must stay within 26 columns.
+   */
+  insertTableColumn(block: number, col: number) {
+    return this.call<{ ok: boolean }>(OPS.insertTableColumn, { block, col });
+  }
+  /** Remove column `col` and its cell content; a table must keep ≥1 column. */
+  deleteTableColumn(block: number, col: number) {
+    return this.call<{ ok: boolean }>(OPS.deleteTableColumn, { block, col });
   }
   /** Read-only; table blocks in document order. */
   listTables() {
