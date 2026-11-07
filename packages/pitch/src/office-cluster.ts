@@ -45,9 +45,10 @@ type Rgba = readonly [number, number, number, number];
  * A slide object as NYC-Tron `SlideObject` takes it. Ids are the engine's
  * numeric ids as strings. The pinned NYC-Tron `SlideObjectKind` union is
  * `"text" | "rect" | "image"` only: `readPitchDeck` refuses shape presets
- * beyond `rect` and connectors with a clear error rather than mislabeling
- * them, and `stroke` is retained as metadata the pinned renderer does not
- * yet draw (same honesty boundary as `sourceTrigger` on animations).
+ * beyond `rect`, connectors and media objects with a clear error rather
+ * than mislabeling them, and `stroke`/`media` are retained as metadata the
+ * pinned renderer does not yet draw (same honesty boundary as
+ * `sourceTrigger` on animations).
  */
 export interface PitchSlideObject {
   readonly id: string;
@@ -135,7 +136,7 @@ export function pitchId(id: string): number {
 
 /** Object kinds the engine stores that the pinned NYC-Tron slide renderer cannot draw. */
 const UNSUPPORTED_OBJECT_KINDS: ReadonlySet<string> = new Set([
-  "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star", "connector",
+  "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star", "connector", "media",
 ]);
 
 function toObject(o: RawObj): PitchSlideObject {

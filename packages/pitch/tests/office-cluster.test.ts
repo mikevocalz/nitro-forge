@@ -61,6 +61,12 @@ describe("Pitch deck read for J-01/J-02/J-05/J-09", () => {
       connector: { from: { type: "free", x: 0, y: 0 }, to: { type: "free", x: 5, y: 5 }, route: "straight", arrows: "none" },
     });
     await expect(readPitchDeck(fake(withConnector).doc)).rejects.toThrow(/newer NYC-Tron slide renderer/);
+    const withMedia = structuredClone(state) as { slides: { objects: Record<string, unknown>[] }[] };
+    withMedia.slides[0]!.objects.push({
+      id: 9, kind: "media", x: 0, y: 0, w: 10, h: 10, rotation_deg: 0,
+      media: { src: "clip.mp4", kind: "video" },
+    });
+    await expect(readPitchDeck(fake(withMedia).doc)).rejects.toThrow(/newer NYC-Tron slide renderer/);
   });
 });
 
