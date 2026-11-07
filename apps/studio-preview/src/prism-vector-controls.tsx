@@ -51,8 +51,8 @@ export function PrismVectorControls({document,state,layerId,disabled,write}:Pris
    onSetBooleanOp={request=>write(()=>boolean.onSetBooleanOp(request))}
    onRelease={request=>write(()=>boolean.onRelease(request))}
    onExpand={request=>write(()=>boolean.onExpand(request))}/>}
-  <Button title="Group selected layers" disabled={disabled||!groupable} onPress={()=>{void write(()=>document.groupLayers(selected.map(layer=>layer.id)));}}/>
-  {focused?.content.type==='group'&&<Button title="Ungroup layer" disabled={disabled||focused.locked} onPress={()=>{void write(()=>document.ungroupLayer(focused.id));}}/>}
+  <Button title="Group selected layers" disabled={disabled||!groupable} onPress={()=>{void write(()=>document.groupLayers(selected.map(layer=>layer.id))).catch(()=>undefined);}}/>
+  {focused?.content.type==='group'&&<Button title="Ungroup layer" disabled={disabled||focused.locked} onPress={()=>{void write(()=>document.ungroupLayer(focused.id)).catch(()=>undefined);}}/>}
   {path&&focused&&vector&&bounds&&!disabled&&!focused.locked&&<>
    <Text>Path fill and stroke. New gradients span the path control points.</Text>
    <FillStrokeInspector kind="path" fill={path.fill} stroke={path.stroke?{...path.stroke,join:path.stroke.join??'miter',cap:path.stroke.cap??'butt',miter_limit:path.stroke.miter_limit??4,dash:path.stroke.dash??[],dash_offset:path.stroke.dash_offset??0}:null} fillRule={path.fill_rule} paintOrder={path.paint_order} bounds={bounds}
