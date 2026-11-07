@@ -20,6 +20,8 @@ export const OPS = {
   setRange: "setRange",
   fillRange: "fillRange",
   fillSeries: "fillSeries",
+  setFormat: "setFormat",
+  clearFormat: "clearFormat",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -40,7 +42,42 @@ export interface CellInfo {
   addr: string;
   raw: string;
   computed: CellValue;
+  /** Present only when the cell has a stored format. */
+  format?: CellFormat;
 }
+
+export type BorderSide = "top" | "right" | "bottom" | "left";
+export type BorderStyle = "thin" | "medium" | "thick" | "dashed" | "dotted";
+
+/** One border spec; `color` is `#RRGGBB`, `sides` a nonempty subset. */
+export interface CellBorder {
+  style: BorderStyle;
+  color: string;
+  sides: BorderSide[];
+}
+
+/** Stored per-cell format; every attribute optional. */
+export interface CellFormat {
+  /** Preset id or bounded custom pattern (≤64 chars); host-interpreted. */
+  number_format?: string;
+  bold?: boolean;
+  italic?: boolean;
+  /** `#RRGGBB` fill color. */
+  fill?: string;
+  border?: CellBorder;
+}
+
+/** `setFormat` patch: present keys set, explicit `null` clears, absent keys untouched. */
+export interface CellFormatPatch {
+  number_format?: string | null;
+  bold?: boolean | null;
+  italic?: boolean | null;
+  fill?: string | null;
+  border?: CellBorder | null;
+}
+
+/** Format target: a rectangle `{from,to}` or an explicit deduped address list. */
+export type FormatTarget = { from: string; to: string } | readonly string[];
 
 export type SheetTabTone = "primary" | "accent" | "success" | "info" | "muted";
 
@@ -121,11 +158,25 @@ export class TallyDocument {
       ...(step === undefined ? {} : { step }),
     });
   }
+  /** Apply a format patch to a range or explicit cell list; `null` clears an attribute. */
+  setFormat(target: FormatTarget, format: CellFormatPatch) {
+    const payload = Array.isArray(target)
+      ? { cells: [...target], format }
+      : { range: target, format };
+    return this.call<{ changed: number }>(OPS.setFormat, payload);
+  }
+  /** Remove stored formats from a range or explicit cell list; contents are untouched. */
+  clearFormat(target: FormatTarget) {
+    const payload = Array.isArray(target)
+      ? { cells: [...target] }
+      : { range: target };
+    return this.call<{ changed: number }>(OPS.clearFormat, payload);
+  }
   clearCell(addr: string) {
     return this.call(OPS.clearCell, { addr });
   }
   getCell(addr: string) {
-    return this.call<{ raw: string; computed: CellValue }>(OPS.getCell, { addr });
+    return this.call<{ raw: string; computed: CellValue; format?: CellFormat }>(OPS.getCell, { addr });
   }
   getRange(from: string, to: string) {
     return this.call<{ cells: CellInfo[][] }>(OPS.getRange, { from, to });

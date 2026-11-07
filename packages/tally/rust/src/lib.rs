@@ -3,9 +3,12 @@
 //!
 //! Implements the `tally-engine` op surface from `docs/ENGINE_OPS.md` against
 //! `ignition_core::Engine`. State is `{ next_sheet, sheets: [Sheet], active }`;
-//! each `Sheet` is `{ id, name, cells: { "A1": { raw } } }`. Only raw cell text
-//! is stored — computed values are always derived live by the formula
-//! evaluator (`formula` module).
+//! each `Sheet` is `{ id, name, cells: { "A1": { raw } }, formats?: { "A1":
+//! CellFormat } }`. Only raw cell text is stored — computed values are always
+//! derived live by the formula evaluator (`formula` module). `formats` is
+//! durable per-cell display metadata (number format, font, fill, borders)
+//! kept in a separate map so it survives content edits and never affects
+//! evaluation (see `format_ops`).
 //!
 //! Semantics documented for reviewers:
 //! * Cell addresses `$?[A-Z]+$?[0-9]+` (case-insensitive); `$` markers are
@@ -28,10 +31,12 @@
 //!   `new` reset the journal's view of the world appropriately.
 
 mod formula;
+mod format_ops;
 mod range_ops;
 mod sheet_ops;
 mod protection;
 
+use format_ops::CellFormat;
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -61,6 +66,11 @@ pub struct Sheet {
     pub id: u64,
     pub name: String,
     pub cells: BTreeMap<String, Cell>,
+    /// Durable per-cell format metadata keyed by canonical "A1" address.
+    /// Independent of `cells`: formats survive content edits, apply to empty
+    /// cells, and never affect formula evaluation (see `format_ops`).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub formats: BTreeMap<String, CellFormat>,
     #[serde(default)]
     pub tone: Option<String>,
     #[serde(default)]
@@ -75,10 +85,10 @@ struct Workbook {
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
-/// only when the workbook carries durable sheet fields (`tone`,
-/// `is_protected`) that pre-wrapper readers would silently drop; workbooks
-/// without them keep the legacy bare-`Workbook` payload so older engines can
-/// still read them.
+/// only when the workbook carries durable post-release fields (`tone`,
+/// `is_protected`, `formats`) that pre-wrapper readers would silently drop;
+/// workbooks without them keep the legacy bare-`Workbook` payload so older
+/// engines can still read them.
 #[derive(Serialize)]
 struct VersionedSnapshot<'a> {
     kind: &'static str,
@@ -101,6 +111,7 @@ fn blank_workbook() -> Workbook {
             id: 0,
             name: "Sheet1".to_string(),
             cells: BTreeMap::new(),
+            formats: BTreeMap::new(),
             tone: None,
             is_protected: false,
         }],
@@ -143,6 +154,17 @@ enum UndoEntry {
         sheet: u64,
         addr: String,
         prev: Option<String>,
+    },
+    /// One inverse entry for an atomic multi-cell format edit.
+    Formats {
+        sheet: u64,
+        cells: Vec<(String, Option<CellFormat>)>,
+    },
+    /// Previous format of a cell (`None` = the cell had no format).
+    Format {
+        sheet: u64,
+        addr: String,
+        prev: Option<CellFormat>,
     },
     /// A sheet was added; undo removes it.
     AddSheet { sheet_id: u64 },
@@ -346,6 +368,7 @@ impl TallyEngine {
             id,
             name,
             cells: BTreeMap::new(),
+            formats: BTreeMap::new(),
             tone: None,
             is_protected: false,
         };
@@ -464,7 +487,13 @@ impl TallyEngine {
             .map(|c| c.raw.clone())
             .unwrap_or_default();
         let computed = Evaluator::new(sheet).eval_cell(&addr).to_json();
-        Ok(Self::readonly(json!({ "raw": raw, "computed": computed })))
+        let mut out = serde_json::Map::new();
+        out.insert("raw".to_string(), Value::String(raw));
+        out.insert("computed".to_string(), computed);
+        if let Some(f) = sheet.formats.get(&addr) {
+            out.insert("format".to_string(), serde_json::to_value(f)?);
+        }
+        Ok(Self::readonly(Value::Object(out)))
     }
 
     fn op_get_range(&self, p: &Value) -> Result<CommandResult, EngineError> {
@@ -492,7 +521,14 @@ impl TallyEngine {
                     .map(|c| c.raw.clone())
                     .unwrap_or_default();
                 let computed = ev.eval_cell(&addr).to_json();
-                row.push(json!({ "addr": addr, "raw": raw, "computed": computed }));
+                let mut cell = serde_json::Map::new();
+                cell.insert("addr".to_string(), Value::String(addr.clone()));
+                cell.insert("raw".to_string(), Value::String(raw));
+                cell.insert("computed".to_string(), computed);
+                if let Some(f) = sheet.formats.get(&addr) {
+                    cell.insert("format".to_string(), serde_json::to_value(f)?);
+                }
+                row.push(Value::Object(cell));
             }
             rows.push(Value::Array(row));
         }
@@ -556,6 +592,49 @@ impl TallyEngine {
                     }
                 }
                 UndoEntry::Cell {
+                    sheet,
+                    addr,
+                    prev: cur,
+                }
+            }
+            UndoEntry::Formats { sheet, cells } => {
+                let inverse = cells
+                    .into_iter()
+                    .map(|(addr, prev)| {
+                        match self.invert(UndoEntry::Format {
+                            sheet,
+                            addr,
+                            prev,
+                        }) {
+                            UndoEntry::Format { addr, prev, .. } => (addr, prev),
+                            _ => unreachable!(),
+                        }
+                    })
+                    .collect();
+                UndoEntry::Formats {
+                    sheet,
+                    cells: inverse,
+                }
+            }
+            UndoEntry::Format { sheet, addr, prev } => {
+                let cur = self
+                    .doc
+                    .sheets
+                    .iter()
+                    .find(|s| s.id == sheet)
+                    .and_then(|s| s.formats.get(&addr))
+                    .cloned();
+                if let Some(s) = self.sheet_by_id_mut(sheet) {
+                    match &prev {
+                        Some(f) => {
+                            s.formats.insert(addr.clone(), f.clone());
+                        }
+                        None => {
+                            s.formats.remove(&addr);
+                        }
+                    }
+                }
+                UndoEntry::Format {
                     sheet,
                     addr,
                     prev: cur,
@@ -657,6 +736,8 @@ impl Engine for TallyEngine {
             "setRange" => self.op_set_range(p),
             "fillRange" => self.op_fill_range(p),
             "fillSeries" => self.op_fill_series(p),
+            "setFormat" => self.op_set_format(p),
+            "clearFormat" => self.op_clear_format(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -667,16 +748,14 @@ impl Engine for TallyEngine {
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        // Sheets with a tone or protection flag carry durable fields added
-        // after the first release; older readers ignore unknown `Sheet`
-        // fields, so wrap those documents and let old engines fail closed
-        // instead of silently discarding them. Plain workbooks keep the
-        // legacy payload shape.
-        let extended = self
-            .doc
-            .sheets
-            .iter()
-            .any(|s| s.tone.is_some() || s.is_protected);
+        // Sheets with a tone, protection flag or stored formats carry durable
+        // fields added after the first release; older readers ignore unknown
+        // `Sheet` fields, so wrap those documents and let old engines fail
+        // closed instead of silently discarding them. Plain workbooks keep
+        // the legacy payload shape.
+        let extended = self.doc.sheets.iter().any(|s| {
+            s.tone.is_some() || s.is_protected || !s.formats.is_empty()
+        });
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
@@ -746,6 +825,25 @@ impl Engine for TallyEngine {
                         EngineError::serialization(format!("invalid cell key '{}'", key.0))
                     })?;
                 s.cells.insert(formula::fmt_addr(col, row), key.1);
+            }
+            // Format keys get the same canonical-address treatment as cell
+            // keys, and every stored format must satisfy the op-level
+            // invariants (bounded strings, #RRGGBB colors, sane borders).
+            for (key, mut fmt) in std::mem::take(&mut s.formats).into_iter() {
+                let (col, row) = formula::parse_addr(&key)
+                    .filter(|&(c, r)| formula::on_sheet(c, r))
+                    .ok_or_else(|| {
+                        EngineError::serialization(format!("invalid format key '{key}'"))
+                    })?;
+                if !format_ops::valid_format(&fmt) {
+                    return Err(EngineError::serialization(format!(
+                        "invalid cell format at '{key}'"
+                    )));
+                }
+                format_ops::canonicalize(&mut fmt);
+                if !fmt.is_empty() {
+                    s.formats.insert(formula::fmt_addr(col, row), fmt);
+                }
             }
         }
         self.doc = doc;

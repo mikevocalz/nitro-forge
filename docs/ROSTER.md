@@ -625,3 +625,19 @@ The base64 decoder now rejects malformed alphabet/padding/trailing bits before a
 ## Office and circular drafting source checkpoint (2026-11-07)
 
 Quill now persists bounded explicit list definitions and actual DOCX numbering; Pitch evaluates explicit host click histories plus emphasis/exit effects; Draft persists circles/arcs and evaluates analytic circular snaps; Folio writes bounded PDF text-markup quadrilaterals. Quill/Pitch/Draft protect new feature snapshots from permissive old readers using local versioned containers, with unchanged framing and engine identities. Local checks pass 123 office Rust/51 office TypeScript tests and 60 backend Rust/20 source-CLI tests; preview TypeScript and the completion validator pass. See [current status](completion/STATUS.md) and linked reports for commands, contracts and remaining work. These source checks do not establish native rendering, Word/PDF viewer interoperability or full original phase/platform acceptance.
+
+## Tally cell formats source checkpoint (2026-11-07)
+
+Tally persists per-cell format metadata (`number_format`, `bold`, `italic`,
+`fill`, `border`) in a `formats` map on each sheet, exposed through new
+`setFormat`/`clearFormat` ops (range or explicit cells, patch semantics with
+`null` clearing attributes), `getCell`/`getRange` `format` members and
+`describe`. Formats are independent of cell contents, never affect formula
+evaluation, and are protection-checked writes with atomic apply, single
+journal entries and NFD1-unchanged snapshots. Nonempty formats trigger the
+existing `{kind:"tally",schema:1}` wrapper; `restore` re-validates keys,
+bounds and attribute shapes atomically. Local checks: `cargo test -p
+tally-engine` 64 passed (9 new), `pnpm --filter @nitro-forge/tally` typecheck
+and 41 Vitest tests passed including two new live `nf-cli` format tests.
+Number-format rendering is host-side; no locale-aware display, XLSX or
+native/device acceptance is claimed.
