@@ -7,3 +7,5 @@ The alpha.4 path retains its whole-quarter bar fallback, fractional-quarter limi
 Source build, package/public-slot typecheck and independent source review are recorded in NYC-Tron's P09-midi-grid-scroll.md. Forge's final preview typecheck and static build are recorded at this checkpoint. Runtime, keyboard, native gesture/accessibility, large-text and full-suite acceptance remain deferred to the user's review gate. Consumer pins and published assets remain unchanged.
 
 Canonical source checkpoint: NYC-Tron `c81ef50`. The alpha.4 capability marker remains absent, so the existing fallback remains active until an accepted release supplies the new host.
+
+Source follow-up `37645d1` rejects stale raw native scroll offsets before clamping/acknowledgement. The version-1 consumer contract is unchanged. Native event ordering remains an acceptance gate.

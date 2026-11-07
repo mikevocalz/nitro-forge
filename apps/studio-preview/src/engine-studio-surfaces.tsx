@@ -14,6 +14,7 @@ import { FRAME_RATES, type FrameRate } from '@nyc-tron/ui/components/forge/timeb
 import { TimelineRuler } from '@nyc-tron/ui/components/forge/timeline/TimelineRuler';
 import { OverlayAndEffectsTrackStack } from '@nyc-tron/ui/components/forge/timeline/OverlayAndEffectsTrackStack';
 import { clampViewport, followPlayhead, type TimelineViewport } from '@nyc-tron/ui/components/forge/timeline/viewport';
+import { TallyDetailControls, boundedTallyFreeze, useTallyDetailView } from './tally-detail-controls';
 import type { TallyDocument } from '../../../packages/tally/src/index';
 import { readTallyWindow, commitTallyGridCell, type TallyGridData } from '../../../packages/tally/src/grid-adapter';
 import { bindTallySheetTabs, readTallySheetTabs, commitTallyFill, TALLY_SHEET_BOUNDS, type TallySheetTabsBinding } from '../../../packages/tally/src/grid-cluster';
@@ -53,14 +54,23 @@ const initialWindow: SpreadsheetWindowRequest = { startRow: 0, endRow: 64, start
 function TallySurface(props: EngineStudioSurfaceProps) {
   const document = props.document as TallyDocument | null;
   const store = useMemo(() => createStore(() => ({ cells: {} as TallyGridData, tabs: null as TallySheetTabsBinding | null,
-    range: initialWindow, error: null as string | null, busy: false, ready: false, revision: 0 })), []);
-  const { cells, tabs, range, error, busy, ready, revision } = useStore(store, s => s);
+    range: initialWindow, error: null as string | null, busy: false, ready: false, revision: 0, gridSize: { width: 0, height: 0 } })), []);
+  const { cells, tabs, range, error, busy, ready, revision, gridSize } = useStore(store, s => s);
+  const details = useTallyDetailView(document, tabs?.activeId ?? '');
+  const scale = resolveWorkspaceScale(props.density);
+  const freeze = boundedTallyFreeze(details.freeze, gridSize, scale.size.target, range);
+  const readRange = useMemo(() => ({ ...range, frozenRows: freeze.frozenRows, frozenColumns: freeze.frozenColumns }), [range, freeze.frozenRows, freeze.frozenColumns]);
+  const authority = useRef({ document, state: props.state, revision: 0 });
+  if (authority.current.document !== document || authority.current.state !== props.state)
+    authority.current = { document, state: props.state, revision: authority.current.revision + 1 };
+  useEffect(() => {
+    if (details.freeze.frozenRows !== freeze.frozenRows || details.freeze.frozenColumns !== freeze.frozenColumns) details.onFreezeChange(freeze);
+  }, [details.freeze.frozenRows, details.freeze.frozenColumns, freeze.frozenRows, freeze.frozenColumns, details.onFreezeChange]);
   const latest = useRef({ document, state: props.state });
   latest.current = { document, state: props.state };
   const gate = useRef(new SurfaceAdmission()).current;
-  gate.update(document, props.state, range, props.disabled);
+  gate.update(document, props.state, readRange, props.disabled);
   const loaded = useRef<{ document: TallyDocument | null; state: unknown; range: SpreadsheetWindowRequest }>({ document: null, state: null, range: initialWindow });
-  const scale = resolveWorkspaceScale(props.density);
   useEffect(() => {
     const token = gate.beginRead();
     store.setState({ ready: false });
@@ -74,18 +84,18 @@ function TallySurface(props: EngineStudioSurfaceProps) {
     const read = async () => {
       // The callback is deliberately inert: this surface coordinates its own refresh.
       const binding = await bindTallySheetTabs(document, () => {});
-      const next = await readTallyWindow(document, range);
+      const next = await readTallyWindow(document, readRange);
       const confirmed = await readTallySheetTabs(document);
       if (JSON.stringify(confirmed) !== JSON.stringify({ tabs: binding.tabs, activeId: binding.activeId }))
         throw new Error('The active worksheet changed while its cells were loading. Refresh the workbook.');
       if (gate.acceptRead(token)) {
-        loaded.current = { document, state: props.state, range };
+        loaded.current = { document, state: props.state, range: readRange };
         store.setState({ tabs: binding, cells: next, error: null, ready: true });
       }
     };
     void read().catch(error => { if (current()) store.setState({ error: message(error), ready: false }); });
     return () => { if (gate.current(token)) gate.invalidate(); };
-  }, [document, props.state, props.disabled, range, revision, store, gate]);
+  }, [document, props.state, props.disabled, readRange, revision, store, gate]);
   const token = gate.capture();
   const canEdit = ready && gate.ready && !busy;
   const commit = async (write: () => Promise<unknown>) => {
@@ -116,15 +126,20 @@ function TallySurface(props: EngineStudioSurfaceProps) {
     {visibleTabs && <SheetTabs tabs={visibleTabs.tabs} activeId={visibleTabs.activeId}
       onSelect={id => commit(() => visibleTabs.onSelect(id))} onAdd={() => commit(visibleTabs.onAdd)}
       onRename={(id, name) => commit(() => visibleTabs.onRename(id, name))} onRemove={id => commit(() => visibleTabs.onRemove(id))}/>}
-    {visibleTabs && <SpreadsheetGrid sheetId={visibleTabs.activeId} sheetName={visibleTabs.tabs.find(tab => tab.id === visibleTabs.activeId)?.name ?? ''}
+    {visibleTabs && <SpreadsheetGrid key={JSON.stringify([authority.current.revision,visibleTabs.activeId])} selection={details.selection} onSelectionChange={details.onSelectionChange} frozenRows={freeze.frozenRows} frozenColumns={freeze.frozenColumns} sheetId={visibleTabs.activeId} sheetName={visibleTabs.tabs.find(tab => tab.id === visibleTabs.activeId)?.name ?? ''}
       rowCount={TALLY_SHEET_BOUNDS.rowCount} columnCount={TALLY_SHEET_BOUNDS.columnCount} cells={cells}
       rowHeight={scale.size.target} columnWidth={112} style={{ flex: 1, minHeight: 0 }}
+      onLayout={event => { const { width, height } = event.nativeEvent.layout; if (width > 0 && height > 0) store.setState(current => current.gridSize.width === width && current.gridSize.height === height ? current : { gridSize: { width, height } }); }}
       onWindowChange={next => { if (JSON.stringify(next) !== JSON.stringify(store.getState().range)) {
         gate.invalidate();
         store.setState({ range: next, ready: false });
       } }}
       {...(canEdit && document ? { onCommitCell: (address: string, raw: string) => commit(() => commitTallyGridCell(document, address, raw)),
         onFillRange: (plan: Parameters<typeof commitTallyFill>[1]) => commit(() => commitTallyFill(document, plan)) } : {})}/>}
+    {visibleTabs && document && <ScrollView style={{ maxHeight: 300, flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ padding: scale.space.inset }}>
+      <TallyDetailControls document={document} sheetId={visibleTabs.activeId} cells={cells} selection={details.selection} getSelection={details.getSelection}
+        freeze={freeze} viewport={gridSize} window={readRange} onFreezeChange={details.onFreezeChange} disabled={!canEdit} commit={commit} density={props.density} theme={props.theme}/>
+    </ScrollView>}
   </View>;
 }
 

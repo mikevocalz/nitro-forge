@@ -40,3 +40,7 @@ NYC-Tron `c81ef50` adds rational time-signature grids and controlled horizontal 
 ## Cadence automation and analysis checkpoint (2026-11-07)
 
 The Analysis panel composes supported automation edits, engine response curves and bounded on-demand offline analysis. Parent/child selection and source admission guard writes and reads. See [Cadence automation and analysis](../design/CADENCE_ANALYSIS_PHASE.md). Static checks/source review do not promote runtime/native acceptance; no audio host or simulated live measurements were added.
+
+## Tally data and view checkpoint (2026-11-07)
+
+Tally now composes controlled selection, bounded atomic TSV paste/clear and view-only freeze commands with active-sheet checks. Measured freeze limits feed the same bounded cell reads and admission generation. See [Tally data/view controls](../design/TALLY_DETAIL_PHASE.md). Unsupported formatting/data-structure operations, legacy widget focus/scroll resets and runtime/native acceptance remain explicit. No full acceptance field is promoted.
