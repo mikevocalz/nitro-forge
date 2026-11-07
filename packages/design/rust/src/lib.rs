@@ -8,7 +8,7 @@ use ignition_core::{
     Journal, TaskContext,
 };
 use model::*;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 fn id(p: &Value, key: &str) -> Result<u64, EngineError> {
@@ -116,6 +116,9 @@ impl DesignEngine {
             if !b.visible {
                 continue;
             }
+            // Text nodes are layout boxes only: `renderable:false` in
+            // evaluateLayout and no glyphs here. The fill still draws as a
+            // plain rect background; real text rendering is a Prism/font gate.
             let kind = if b.kind == Kind::Ellipse {
                 "ellipse"
             } else {
@@ -253,6 +256,67 @@ impl Engine for DesignEngine {
                     .push(node_id);
                 data = json!({"node_id":node_id});
             }
+            "addText" => {
+                // `parent` is optional and defaults to the root canvas, unlike
+                // addFrame/addShape which require it explicitly.
+                let parent = match p.get("parent") {
+                    Some(v) => v
+                        .as_u64()
+                        .ok_or_else(|| bad("expected integer parent"))?,
+                    None => 1,
+                };
+                next.editable(parent, false)?;
+                if next.nodes[&parent].kind != Kind::Frame {
+                    return Err(bad("parent must be a frame"));
+                }
+                let node_id = next.next_id;
+                next.next_id = node_id
+                    .checked_add(1)
+                    .ok_or_else(|| bad("identity exhausted"))?;
+                let object = p
+                    .as_object()
+                    .ok_or_else(|| bad("expected node object"))?;
+                let content = object
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| bad("text content must be a string"))?;
+                let mut style = TextStyle {
+                    content: content.into(),
+                    ..Default::default()
+                };
+                // `style` carries font fields only; content is top-level so it
+                // cannot be set twice.
+                if let Some(sv) = object.get("style") {
+                    style = merge(
+                        &style,
+                        sv,
+                        &[
+                            "font_family",
+                            "font_size",
+                            "font_weight",
+                            "font_style",
+                        ],
+                    )?;
+                }
+                let mut patch = object.clone();
+                for k in ["parent", "content", "style"] {
+                    patch.remove(k);
+                }
+                let mut node = Node::frame(node_id, 100., 100.);
+                node.kind = Kind::Text;
+                node.name = "Text".into();
+                node.text = Some(style);
+                node = merge(
+                    &node,
+                    &Value::Object(patch),
+                    &["name", "x", "y", "width", "height", "fill", "visible"],
+                )?;
+                next.nodes.insert(node_id, Arc::new(node));
+                Arc::make_mut(next.nodes.get_mut(&parent).unwrap())
+                    .children
+                    .push(node_id);
+                data = json!({"node_id":node_id});
+            }
             "updateNode" => {
                 let node_id = id(p, "id")?;
                 let mut patch = p
@@ -260,7 +324,12 @@ impl Engine for DesignEngine {
                     .ok_or_else(|| bad("expected patch object"))?
                     .clone();
                 patch.remove("id");
+                // `text` counts toward the patch length so a combined
+                // locked+text patch is not mistaken for a lock-only unlock.
                 let unlock = patch.len() == 1 && patch.contains_key("locked");
+                // `text` is a partial TextStyle patch (or null), merged over
+                // the node's current style; handled after the node merge.
+                let text_patch = patch.remove("text");
                 next.editable(node_id, unlock)?;
                 if node_id == 1
                     && patch
@@ -278,13 +347,39 @@ impl Engine for DesignEngine {
                 {
                     return Err(bad("switch to fixed sizing before editing a fixed extent"));
                 }
-                let changed = merge(
+                let mut changed = merge(
                     &**node,
                     &Value::Object(patch),
                     &[
                         "name", "x", "y", "width", "height", "fill", "visible", "locked",
                     ],
                 )?;
+                if let Some(tv) = text_patch {
+                    if changed.kind != Kind::Text {
+                        return Err(bad("text style requires a text node"));
+                    }
+                    match tv {
+                        // Reserved: a text node cannot exist without a style
+                        // and non-text nodes reject `text` above, so clearing
+                        // can never validate. Reject explicitly.
+                        Value::Null => return Err(bad("text style cannot be cleared")),
+                        Value::Object(_) => {
+                            let current = changed.text.clone().unwrap_or_default();
+                            changed.text = Some(merge(
+                                &current,
+                                &tv,
+                                &[
+                                    "content",
+                                    "font_family",
+                                    "font_size",
+                                    "font_weight",
+                                    "font_style",
+                                ],
+                            )?);
+                        }
+                        _ => return Err(bad("text patch must be an object or null")),
+                    }
+                }
                 next.nodes.insert(node_id, Arc::new(changed));
             }
             "setAxisSizing" => {
@@ -442,14 +537,48 @@ impl Engine for DesignEngine {
         Ok(result)
     }
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        Ok(encode_envelope(&serde_json::to_vec(&*self.state)?))
+        // Presence-triggered versioning (quill/pitch/draft precedent): the
+        // schema:2 wrapper `{kind:"design",schema:2,document:<state>}` is
+        // emitted only when schema-2 features (text nodes) exist, so
+        // schema:1-only documents stay byte-identical and old readers fail
+        // closed on `kind:"text"`/`text` instead of silently dropping them.
+        let payload = if requires_wrapper(&self.state) {
+            serde_json::to_vec(&json!({
+                "kind": "design",
+                "schema": 2,
+                "document": &*self.state,
+            }))?
+        } else {
+            serde_json::to_vec(&*self.state)?
+        };
+        Ok(encode_envelope(&payload))
     }
     fn restore(&mut self, bytes: &[u8]) -> Result<(), EngineError> {
         let (_, payload) = decode_envelope(bytes)?;
         if payload.len() > MAX_BYTES {
             return Err(bad("design state exceeds budget"));
         }
-        let next: State = serde_json::from_slice(payload)?;
+        let value: Value = serde_json::from_slice(payload)?;
+        let next: State = if value.get("document").is_some() {
+            #[derive(Deserialize)]
+            #[serde(deny_unknown_fields)]
+            struct Wrapper {
+                kind: String,
+                schema: u32,
+                document: State,
+            }
+            let wrapper: Wrapper = serde_json::from_value(value)?;
+            if wrapper.kind != "design" || wrapper.schema != 2 {
+                return Err(bad("unsupported design snapshot wrapper"));
+            }
+            wrapper.document
+        } else {
+            let state: State = serde_json::from_value(value)?;
+            if requires_wrapper(&state) {
+                return Err(bad("extended design snapshot requires schema2 wrapper"));
+            }
+            state
+        };
         validate(&next)?;
         layout::evaluate(&next)?;
         self.state = Arc::new(next);

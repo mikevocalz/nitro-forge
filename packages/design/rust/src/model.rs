@@ -6,6 +6,10 @@ use std::{
 };
 pub const MAX_BYTES: usize = 8 * 1024 * 1024;
 pub const SAFE_ID: u64 = 9_007_199_254_740_991;
+/// UTF-8 byte cap for text-node content (64 KiB).
+pub const MAX_TEXT_BYTES: usize = 64 * 1024;
+/// UTF-8 byte cap for the text font family name.
+pub const MAX_FONT_FAMILY_BYTES: usize = 256;
 pub fn bad(s: &str) -> EngineError {
     EngineError::validation(s)
 }
@@ -15,6 +19,9 @@ pub enum Kind {
     Frame,
     Rect,
     Ellipse,
+    /// Layout box only: glyphs are a Prism/font-metrics gate. `renderFrame`
+    /// draws the node's fill as a plain rect background and no text.
+    Text,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -88,6 +95,50 @@ impl Axis {
         }
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TextFontStyle {
+    Normal,
+    Italic,
+}
+/// Bounded text style. `content` is the only payload-bearing field; every
+/// field is validated in `State::validate` via `TextStyle::valid`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TextStyle {
+    pub content: String,
+    pub font_family: String,
+    pub font_size: f64,
+    pub font_weight: u16,
+    pub font_style: TextFontStyle,
+}
+impl Default for TextStyle {
+    fn default() -> Self {
+        Self {
+            content: String::new(),
+            font_family: "sans-serif".into(),
+            font_size: 16.,
+            font_weight: 400,
+            font_style: TextFontStyle::Normal,
+        }
+    }
+}
+impl TextStyle {
+    pub fn valid(&self) -> bool {
+        self.content.len() <= MAX_TEXT_BYTES
+            && self
+                .content
+                .chars()
+                .all(|c| c == '\n' || c == '\t' || !c.is_control())
+            && !self.font_family.is_empty()
+            && self.font_family.len() <= MAX_FONT_FAMILY_BYTES
+            && !self.font_family.chars().any(char::is_control)
+            && self.font_size.is_finite()
+            && self.font_size > 0.
+            && self.font_size <= 1e4
+            && (1..=1000).contains(&self.font_weight)
+    }
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Node {
@@ -105,6 +156,10 @@ pub struct Node {
     pub layout: Option<Layout>,
     #[serde(default, skip_serializing_if = "Sizing::is_fixed")]
     pub sizing: Sizing,
+    /// Present only on `Kind::Text` nodes; its presence is what triggers the
+    /// schema:2 snapshot wrapper (see `requires_wrapper`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<TextStyle>,
 }
 impl Node {
     pub fn frame(id: u64, width: f64, height: f64) -> Self {
@@ -122,6 +177,7 @@ impl Node {
             children: vec![],
             layout: None,
             sizing: Sizing::default(),
+            text: None,
         }
     }
 }
@@ -175,6 +231,14 @@ impl State {
         ids
     }
 }
+/// Schema-2 features (currently text nodes) require the versioned snapshot
+/// wrapper so schema:1 documents stay byte-identical and old readers fail
+/// closed on the unknown `kind:"text"` node variant or `text` field.
+pub fn requires_wrapper(s: &State) -> bool {
+    s.nodes
+        .values()
+        .any(|n| n.kind == Kind::Text || n.text.is_some())
+}
 pub fn validate(s: &State) -> Result<(), EngineError> {
     if s.kind != "design"
         || s.schema != 1
@@ -214,6 +278,12 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
         }
         if n.kind != Kind::Frame && (!n.children.is_empty() || n.layout.is_some()) {
             return Err(bad("only frames own children or layout"));
+        }
+        match (&n.kind, &n.text) {
+            (Kind::Text, Some(t)) if t.valid() => {}
+            (Kind::Text, _) => return Err(bad("text node requires a valid text style")),
+            (_, Some(_)) => return Err(bad("text style requires a text node")),
+            _ => {}
         }
         if let Some(l) = &n.layout {
             if ![
