@@ -32,7 +32,7 @@ export const boundsFit: Pick<SpreadsheetGridProps, "rowCount" | "columnCount"> =
 // forge/spreadsheet subpaths (alpha.2). The sheet-tab binding spreads straight
 // into SheetTabs (I-08); deferred callbacks are absent, so their controls hide.
 export const sheetTabsFit = (binding: TallySheetTabsBinding): Pick<
-  SheetTabsProps, "tabs" | "activeId" | "onSelect" | "onAdd" | "onRename" | "onRemove" | "onMove" | "onToneChange"
+  SheetTabsProps, "tabs" | "activeId" | "onSelect" | "onAdd" | "onRename" | "onRemove" | "onMove" | "onToneChange" | "onDuplicate"
 > => binding;
 // readTallyRange output feeds ChartBuilder (I-13), SparklineEditor (I-14) and
 // SpreadsheetCardsView (I-20).

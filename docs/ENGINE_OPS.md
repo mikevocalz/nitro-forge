@@ -154,6 +154,7 @@ rows) and changes nothing. A formula reference past the sheet evaluates to
 | `renameSheet` | `{sheet,to}` | `{ok}` | sheet = name or index |
 | `removeSheet` | `{sheet}` | `{ok}` | must keep ≥1 sheet |
 | `setActive` | `{sheet}` | `{ok}` | |
+| `duplicateSheet` | `{sheet}` | `{sheet:{id,name,index}}` | deep-copy raw cells and tone immediately after source; unique `source Copy N` name (case insensitive); fresh id; original active sheet preserved; one structural undo entry |
 | `moveSheet` | `{sheet,toIndex}` | `{ok}` | final zero-based index in current sheet range; preserves active sheet identity; one structural undo entry when changed |
 | `setSheetColor` | `{sheet,tone}` | `{ok}` | tone = primary/accent/success/info/muted or null to clear; durable semantic theme token, one structural undo entry when changed |
 | `setCell` | `{addr,value}` | `{addr,computed}` | on active sheet; `value` string starting `=` is a formula; numeric strings become numbers; empty string clears |
@@ -174,7 +175,7 @@ evaluation-time visited set. Evaluation memoizes per-request.
 
 Undo: per-cell previous `{addr, prev_raw}` (or removal); range edits group changed cells into one entry. No-op range edits emit no event and preserve redo. Fill reads all source cells before writing. Formula strings, names, whitespace and scientific notation remain unchanged; a reference shifted past row 1,048,576 or column XFD becomes `#REF!`, and a range with either endpoint off the sheet becomes a single `#REF!`. Lexically invalid source formulas reject the entire fill without mutation. Numeric series inference and cross-sheet references are not supported.
 
-Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
+Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
 ## cadence-engine — `CadenceEngine::new()`
 

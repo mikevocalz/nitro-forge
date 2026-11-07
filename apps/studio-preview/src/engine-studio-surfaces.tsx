@@ -169,6 +169,7 @@ function TallySurface(props: EngineStudioSurfaceProps) {
     {visibleTabs && <SheetTabs key={JSON.stringify([authority.current.revision, canEdit])} tabs={visibleTabs.tabs} activeId={visibleTabs.activeId}
       onSelect={id => commit(() => visibleTabs.onSelect(id))} onAdd={() => commit(visibleTabs.onAdd)}
       onRename={(id, name) => commit(() => visibleTabs.onRename(id, name))}
+      onDuplicate={id => commit(() => visibleTabs.onDuplicate(id))}
       onMove={(id, toIndex) => commit(() => visibleTabs.onMove(id, toIndex))}
       onToneChange={(id, tone) => commit(() => visibleTabs.onToneChange(id, tone))}
       onRemove={id => commit(() => visibleTabs.onRemove(id))}/>}

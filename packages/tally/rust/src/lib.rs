@@ -313,6 +313,8 @@ impl TallyEngine {
             }
         }
         let id = self.doc.next_sheet;
+        let next_id = id.checked_add(1)
+            .ok_or_else(|| EngineError::validation("sheet id space exhausted"))?;
         let name = name
             .map(str::to_string)
             .unwrap_or_else(|| self.default_sheet_name(id));
@@ -323,7 +325,7 @@ impl TallyEngine {
             tone: None,
         };
         self.journal.record(UndoEntry::AddSheet { sheet_id: id });
-        self.doc.next_sheet += 1;
+        self.doc.next_sheet = next_id;
         self.doc.sheets.push(sheet);
         let index = self.doc.sheets.len() - 1;
         Ok(Self::changed(json!({
@@ -622,6 +624,7 @@ impl Engine for TallyEngine {
             "removeSheet" => self.op_remove_sheet(p),
             "setActive" => self.op_set_active(p),
             "moveSheet" => self.op_move_sheet(p),
+            "duplicateSheet" => self.op_duplicate_sheet(p),
             "setSheetColor" => self.op_set_sheet_color(p),
             "setCell" => self.op_set_cell(p),
             "setRange" => self.op_set_range(p),
@@ -656,7 +659,8 @@ impl Engine for TallyEngine {
         }
         if let Some(max_id) = doc.sheets.iter().map(|s| s.id).max() {
             if doc.next_sheet <= max_id {
-                doc.next_sheet = max_id + 1;
+                doc.next_sheet = max_id.checked_add(1)
+                    .ok_or_else(|| EngineError::serialization("sheet id space exhausted"))?;
             }
         }
         // Reject crafted snapshots: sheet ids/names must be unique and every

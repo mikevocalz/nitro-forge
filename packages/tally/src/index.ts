@@ -13,6 +13,7 @@ export const OPS = {
   removeSheet: "removeSheet",
   setActive: "setActive",
   moveSheet: "moveSheet",
+  duplicateSheet: "duplicateSheet",
   setSheetColor: "setSheetColor",
   setCell: "setCell",
   setRange: "setRange",
@@ -84,6 +85,9 @@ export class TallyDocument {
   }
   setActive(sheet: string | number) {
     return this.call(OPS.setActive, { sheet });
+  }
+  duplicateSheet(sheet: string | number) {
+    return this.call<{ sheet: { id: number; name: string; index: number } }>(OPS.duplicateSheet, { sheet });
   }
   moveSheet(sheet: string | number, toIndex: number) {
     return this.call<{ ok: boolean }>(OPS.moveSheet, { sheet, toIndex });

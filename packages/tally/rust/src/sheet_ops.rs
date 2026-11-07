@@ -6,6 +6,33 @@ pub(super) fn valid_tone(tone: Option<&str>) -> bool {
 }
 
 impl TallyEngine {
+    pub(super) fn op_duplicate_sheet(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let index = self.resolve_sheet(Self::field(p, "sheet")?)?;
+        let id = self.doc.next_sheet;
+        let next_id = id.checked_add(1)
+            .ok_or_else(|| EngineError::validation("sheet id space exhausted"))?;
+        let mut copy = self.doc.sheets[index].clone();
+        let base = copy.name.clone();
+        let mut suffix = 1u64;
+        loop {
+            let candidate = format!("{base} Copy {suffix}");
+            if !self.name_taken(&candidate, None) {
+                copy.name = candidate;
+                break;
+            }
+            suffix = suffix.checked_add(1)
+                .ok_or_else(|| EngineError::validation("sheet copy name space exhausted"))?;
+        }
+        copy.id = id;
+        let name = copy.name.clone();
+        let active_id = self.doc.sheets[self.doc.active].id;
+        self.journal.record(UndoEntry::Reset { prev: self.doc.clone() });
+        self.doc.next_sheet = next_id;
+        self.doc.sheets.insert(index + 1, copy);
+        self.doc.active = self.doc.sheets.iter().position(|s| s.id == active_id).unwrap();
+        Ok(Self::changed(json!({ "sheet": { "id": id, "name": name, "index": index + 1 } })))
+    }
+
     pub(super) fn op_move_sheet(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let from = self.resolve_sheet(Self::field(p, "sheet")?)?;
         let to = Self::field(p, "toIndex")?.as_u64()
@@ -53,6 +80,61 @@ mod tests {
 
     fn apply(engine: &mut TallyEngine, op: &str, payload: Value) {
         engine.apply(Command::new(op, payload)).unwrap();
+    }
+
+    #[test]
+    fn exhausted_ids_reject_without_snapshot_or_history_changes() {
+        let mut engine = TallyEngine::new();
+        engine.doc.next_sheet = u64::MAX;
+        apply(&mut engine, "setCell", json!({"addr":"A1","value":"pending"}));
+        assert!(engine.undo().unwrap());
+        let before = engine.snapshot().unwrap();
+        for op in ["addSheet", "duplicateSheet"] {
+            assert!(engine.apply(Command::new(op, json!({"sheet":0}))).is_err());
+            assert_eq!(engine.snapshot().unwrap(), before);
+        }
+        let invalid = json!({"next_sheet":0,"sheets":[{"id":u64::MAX,"name":"Overflow","cells":{}}],"active":0});
+        assert!(engine.restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap())).is_err());
+        assert_eq!(engine.snapshot().unwrap(), before);
+        assert!(engine.redo().unwrap());
+        assert_eq!(engine.active_sheet().cells["A1"].raw, "pending");
+        assert!(engine.undo().unwrap());
+        assert!(!engine.undo().unwrap());
+    }
+
+    #[test]
+    fn duplicate_is_independent_durable_and_preserves_active_identity() {
+        let mut engine = TallyEngine::new();
+        apply(&mut engine, "setCell", json!({"addr":"A1","value":"=1+2"}));
+        apply(&mut engine, "setSheetColor", json!({"sheet":0,"tone":"info"}));
+        apply(&mut engine, "addSheet", json!({"name":"sheet1 copy 1"}));
+        apply(&mut engine, "setActive", json!({"sheet":1}));
+        let active_id = engine.active_sheet().id;
+        let before = engine.snapshot().unwrap();
+        apply(&mut engine, "duplicateSheet", json!({"sheet":0}));
+        assert_eq!(engine.doc.sheets[1].name, "Sheet1 Copy 2");
+        assert_ne!(engine.doc.sheets[0].id, engine.doc.sheets[1].id);
+        assert_eq!(engine.doc.sheets[1].cells["A1"].raw, "=1+2");
+        assert_eq!(engine.doc.sheets[1].tone.as_deref(), Some("info"));
+        assert_eq!(engine.active_sheet().id, active_id);
+        let duplicated = engine.snapshot().unwrap();
+        assert!(engine.undo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), before);
+        assert!(engine.redo().unwrap());
+        assert_eq!(engine.snapshot().unwrap(), duplicated);
+        let mut reopened = TallyEngine::new();
+        reopened.restore(&duplicated).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), duplicated);
+        apply(&mut reopened, "setActive", json!({"sheet":1}));
+        apply(&mut reopened, "setCell", json!({"addr":"A1","value":"copy only"}));
+        assert_eq!(reopened.doc.sheets[0].cells["A1"].raw, "=1+2");
+        let stable = reopened.snapshot().unwrap();
+        assert!(reopened.apply(Command::new("duplicateSheet", json!({"sheet":"missing"}))).is_err());
+        assert_eq!(reopened.snapshot().unwrap(), stable);
+        apply(&mut reopened, "duplicateSheet", json!({"sheet":1}));
+        assert_eq!(reopened.active_sheet().name, "Sheet1 Copy 2");
+        let ids: std::collections::BTreeSet<_> = reopened.doc.sheets.iter().map(|s| s.id).collect();
+        assert_eq!(ids.len(), reopened.doc.sheets.len());
     }
 
     #[test]

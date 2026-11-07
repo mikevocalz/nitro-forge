@@ -35,12 +35,13 @@ export interface TallySheetTabsBinding {
   readonly onSelect: (id: string) => Promise<void>;
   readonly onAdd: () => Promise<void>;
   readonly onRename: (id: string, name: string) => Promise<void>;
+  readonly onDuplicate: (id: string) => Promise<void>;
   readonly onMove: (id: string, toIndex: number) => Promise<void>;
   readonly onToneChange: (id: string, tone: SheetTabTone | undefined) => Promise<void>;
   readonly onRemove: (id: string) => Promise<void>;
 }
 
-export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | "addSheet" | "renameSheet" | "removeSheet" | "moveSheet" | "setSheetColor">;
+export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | "addSheet" | "renameSheet" | "removeSheet" | "moveSheet" | "setSheetColor" | "duplicateSheet">;
 
 /**
  * Engine operations the cluster's UI can express but Tally does not have yet.
@@ -49,8 +50,6 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * lifts the deferral.
  */
 export const TALLY_DEFERRED_OPS = {
-  /** I-08 `onDuplicate`. */
-  duplicateSheet: "I-08",
   /** I-08 `onProtectedChange`. */
   protectSheet: "I-08",
   /** I-13 `onInsert`: a chart object saved in the workbook. */
@@ -111,6 +110,7 @@ export async function bindTallySheetTabs(
     // Tally names new sheets itself; passing no name keeps its default.
     onAdd: () => after(() => document.addSheet()),
     onRename: (id, name) => after(() => document.renameSheet(sheetIndex(id), name)),
+    onDuplicate: id => after(() => document.duplicateSheet(sheetIndex(id))),
     onMove: (id, toIndex) => after(() => document.moveSheet(sheetIndex(id), toIndex)),
     onToneChange: (id, tone) => after(() => document.setSheetColor(sheetIndex(id), tone ?? null)),
     onRemove: id => after(() => document.removeSheet(sheetIndex(id))),

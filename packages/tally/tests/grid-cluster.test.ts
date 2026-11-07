@@ -19,6 +19,14 @@ function fakeSheets() {
       if (state.sheets.some(n => n.toLowerCase() === to.toLowerCase())) return Promise.reject(new Error(`sheet name '${to}' already exists`));
       state.sheets[i] = to; return ok({ ok: true });
     }),
+    duplicateSheet: vi.fn((i: number) => {
+      const active = state.sheets[state.active];
+      const name = state.sheets[i]! + " Copy 1";
+      state.sheets.splice(i + 1, 0, name);
+      tones.set(name, tones.get(state.sheets[i]!) ?? null);
+      state.active = state.sheets.indexOf(active!);
+      return ok({ sheet: { id: 2, name, index: i + 1 } });
+    }),
     moveSheet: vi.fn((i: number, to: number) => {
       const active = state.sheets[state.active];
       const [sheet] = state.sheets.splice(i, 1);
@@ -79,9 +87,20 @@ describe("I-08 SheetTabs binding over Tally sheet ops", () => {
     expect((changes.at(-1) as { tabs: unknown[] }).tabs[1]).not.toHaveProperty("tone");
   });
 
+  it("forwards duplication and refreshes canonical tabs", async () => {
+    const { doc, raw } = fakeSheets();
+    const onChanged = vi.fn();
+    const binding = await bindTallySheetTabs(doc, onChanged);
+    await binding.onDuplicate("0");
+    expect(raw.duplicateSheet).toHaveBeenCalledWith(0);
+    expect(onChanged).toHaveBeenCalledWith(expect.objectContaining({
+      tabs: [{ id: "0", name: "Sheet1" }, { id: "1", name: "Sheet1 Copy 1" }, { id: "2", name: "Sheet2" }], activeId: "0",
+    }));
+  });
+
   it("offers only callbacks Tally can back; the rest are named DEFERs", async () => {
     const binding = await bindTallySheetTabs(fakeSheets().doc, () => {});
-    expect(Object.keys(binding).sort()).toEqual(["activeId", "onAdd", "onMove", "onRemove", "onRename", "onSelect", "onToneChange", "tabs"]);
+    expect(Object.keys(binding).sort()).toEqual(["activeId", "onAdd", "onDuplicate", "onMove", "onRemove", "onRename", "onSelect", "onToneChange", "tabs"]);
     for (const op of Object.keys(TALLY_DEFERRED_OPS)) expect(Object.values(OPS)).not.toContain(op);
   });
 });
