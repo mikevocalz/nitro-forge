@@ -26,121 +26,621 @@
     {
       "app": "Affinity",
       "startingUrl": "https://www.affinity.studio/ipad-app",
-      "status": "Official iPad page checked; no screenshot matrix captured",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": true
+      "startingUrlChecked": true,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Affinity+Canva&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "c23592f61af93fe7f0e44514f1718a2b006866d333923360714f095f06201498",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 6751323445,
+      "appStoreUrl": "https://apps.apple.com/us/app/affinity-by-canva/id6751323445?uo=4",
+      "listingName": "Affinity by Canva",
+      "listingVersion": "3.3.3",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/1c/0b/92/1c0b92f6-5a20-a33c-e89e-84ddb6cb5dea/iPad-01.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "a6499f0e8bf0231f8b492dc2ab385026684b9c3d8c2b38dddd0280e32bd6e3c9",
+          "bytes": 33434,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/13/f9/bd/13f9bdf4-4abe-b410-1b97-c7e06780dd92/iPad-02.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "4f3faea6a43ebc283007c2f9004ba853712a5c07c13f143b11a4411d1b43a918",
+          "bytes": 30307,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": false
+        }
+      ]
     },
     {
       "app": "Procreate",
       "startingUrl": "https://procreate.com",
-      "status": "Capture pending; retrieved handbook search results identify older editions",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Procreate&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "84179ad61f8455ad9eb907ee91e3bd933caee6d319887ab7b279e7fea5b5c3c2",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 425073498,
+      "appStoreUrl": "https://apps.apple.com/us/app/procreate/id425073498?uo=4",
+      "listingName": "Procreate",
+      "listingVersion": "5.4.14",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/0a/ff/53/0aff5369-6507-af49-9372-78312812bfd0/2.png/552x414bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "3cd446f31563714ff6aa271f924c10bd1f0db62dd88f59d22c6ebb4c57a03af0",
+          "bytes": 257103,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/a0/59/7d/a0597dfa-434b-e969-13bd-d7363146cebb/3.png/552x414bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "30ede6fb4d64c0114623351e1d1801f5fb1129b14711de5ecdd7b12d7bda9855",
+          "bytes": 195031,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": false
+        }
+      ]
     },
     {
       "app": "Procreate Dreams",
       "startingUrl": "https://procreate.com/dreams",
-      "status": "Capture pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Procreate+Dreams&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "89846bf270d703c588e2c84acb957760229fca889be41ed7d3aabea1f59767fc",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 1595520602,
+      "appStoreUrl": "https://apps.apple.com/us/app/procreate-dreams/id1595520602?uo=4",
+      "listingName": "Procreate Dreams",
+      "listingVersion": "2.1.2",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/06/dc/f3/06dcf34f-5239-7227-d1c5-62b353978122/2.png/552x414bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "493b83b3de0fbeab255a9ef757e9e3c9fca98ac8aa48b71ecb6fafa42c40bc5c",
+          "bytes": 220454,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/c8/57/11/c8571184-32ba-cad7-dbd0-2abe0214bb54/3.png/552x414bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "25955b3c055f08d28883678164290d4f6e163676e5092c302743123a1736a243",
+          "bytes": 205824,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": false
+        }
+      ]
     },
     {
       "app": "Logic Pro",
       "startingUrl": "https://support.apple.com/en-ca/guide/logicpro-ipad/dev780a0e575/ipados",
-      "status": "Official iPad guide checked; no screenshot matrix captured",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": true
+      "startingUrlChecked": true,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Logic+Pro&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "04264ac47ebb264e1a9a7b9d8379b847c9814833b1e93559c5a339244ea07845",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 1615087040,
+      "appStoreUrl": "https://apps.apple.com/us/app/logic-pro-make-music/id1615087040?uo=4",
+      "listingName": "Logic Pro: Make Music",
+      "listingVersion": "3.4",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/42/53/30/42533050-f6b5-e73b-fbe3-680256666373/83693f1b-57ea-4142-bd48-dfc06e508813_1._20240325_-_Hero_-_LPiP_-_129_-_iPad_Pro_-_EN.png/552x414bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "632d992413a62fbde400c4a516fd5bd08b01ae81aaaad8c90232beab4745e3d3",
+          "bytes": 108061,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/cc/28/fb/cc28fb0f-7517-d54b-66e3-af52baf882b4/f6822d62-d2b0-47d4-9dc8-6466ca0f1e12_2._20240329_-_Bass_Session_Player_-_LPiP_-_129_iPad_Pro_-_EN.PNG/552x414bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "b3a9bae288fca6576cb4900cbd64c62ad8a53747c285956dd1b86469e2dfa036",
+          "bytes": 108514,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": false
+        }
+      ]
     },
     {
       "app": "Photoshop",
       "startingUrl": "https://www.adobe.com/products/photoshop/ipad.html",
-      "status": "Capture and current capability verification pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Adobe+Photoshop&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "39e54bbafdd2f00bdd7f8958079fe58b47e5583bd5ad81aa2e89f3a61189d8f4",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 1457771281,
+      "appStoreUrl": "https://apps.apple.com/us/app/adobe-photoshop-photo-editor/id1457771281?uo=4",
+      "listingName": "Adobe Photoshop: Photo Editor",
+      "listingVersion": "7.8.2",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/8b/58/b4/8b58b458-88cc-8be8-a858-2e0b931e1ef3/caf3edba-88dc-4342-bea8-b71d19f0cd62_01_Photoshop_ApplePencil_iPadPro12_2732x2048_EN.jpg/552x414bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "7b64d787d9988bd8b5bd6a261cb5de74107364378b558ad0b74434ae174a9be8",
+          "bytes": 68995,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/87/b3/44/87b34408-dad7-ad7f-28d7-bdcc8b7b3dbd/39ed0b6e-760c-4259-b9c6-2a313676a171_02_Photoshop_Raw_iPadPro12_2732x2048_EN.jpg/552x414bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "c9b3f91d4c17031bd944f360bfab58f6c359ed009a3634ac922633d29b97cfa6",
+          "bytes": 73264,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": false
+        }
+      ]
     },
     {
       "app": "Illustrator",
       "startingUrl": "https://www.adobe.com/products/illustrator/ipad.html",
-      "status": "Capture and current capability verification pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Adobe+Illustrator&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "c65b586906977f2fa69ad158d8b911e06aec89c219a42523b45a9db06c24d154",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 1018784575,
+      "appStoreUrl": "https://apps.apple.com/us/app/adobe-illustrator-graphic-art/id1018784575?uo=4",
+      "listingName": "Adobe Illustrator: Graphic Art",
+      "listingVersion": "3.0.10",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple122/v4/4c/a4/6e/4ca46ecf-5863-91b6-342c-4ae0efb3f0b6/84a36daf-ec2c-4560-bffb-799111a3fcc9_01_Proteus_Precision_iPadPro12_2732x2048_EN__U2013_3.jpg/552x414bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "bfbb20b5b6a51b02de2b1017447675ccea8bbb60426f1838adc00e5a6dc3595a",
+          "bytes": 94551,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple112/v4/02/fb/99/02fb9987-b3d6-c184-9c05-cf1fec086c5d/d1745abf-9f7b-4dea-8131-a8777ca54daf_01_Proteus_Precision_iPadPro12_2732x2048_EN.png/552x414bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "3df3537c88f1bf09aacc4c398cede82593417da7f5bf3d84e13ffde0a40220b3",
+          "bytes": 155515,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Fresco",
       "startingUrl": "https://www.adobe.com/products/fresco.html",
-      "status": "Capture and current capability verification pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Adobe+Fresco&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "cf2d2163ec890aad7f68b1d9da9a990c08a6f83282e9d9d8a0871c3230340b2e",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 1458660369,
+      "appStoreUrl": "https://apps.apple.com/us/app/adobe-fresco-draw-paint-app/id1458660369?uo=4",
+      "listingName": "Adobe Fresco: Draw & Paint App",
+      "listingVersion": "8.0.0",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/5f/7f/b1/5f7fb174-991b-d45a-5394-78938ad3ed41/96345c11-0e8f-4fc4-95c1-967ebbf1eac2_A_01_Adobe_Fresco_iPad12.9_2ndGen_DrawingTool_2732x2048_CA.png/576x768bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "0c20dcd404f720b0c0bf0a047489ef25e8109e88013cd02d52b49f5fc5879149",
+          "bytes": 582704,
+          "pixelWidth": 576,
+          "pixelHeight": 768,
+          "assetOrientation": "portrait",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/b7/0b/60/b70b6020-6281-2a09-4df0-5ad08b769b10/9a611307-3da9-404c-b932-64123aab1653_A_02_Adobe_Fresco_iPad12.9_2ndGen_Precision_2732x2048_CA.png/576x768bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "017413ff58d0ce471449b32ba278d72c73a30d5cc0850a515a28cf1c6bd8690f",
+          "bytes": 430847,
+          "pixelWidth": 576,
+          "pixelHeight": 768,
+          "assetOrientation": "portrait",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Lightroom",
       "startingUrl": "https://www.adobe.com/products/photoshop-lightroom/mobile.html",
-      "status": "Capture and current capability verification pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Adobe+Lightroom&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "13260789a84acd486b10eda33fa195b28ac36518961ee4fedb1eacd7613c727e",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 804177739,
+      "appStoreUrl": "https://apps.apple.com/us/app/adobe-lightroom-for-ipad/id804177739?uo=4",
+      "listingName": "Adobe Lightroom for iPad",
+      "listingVersion": "12.0",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/da/fc/ef/dafcefd8-5f88-dd72-aa5f-becb035c3abd/bdf85b35-761a-4e66-8033-f3ee173dc55a_01_LrCC_Apple_iPad_2732x2048_EN-US.png/552x414bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "904219e7415af7effffdaa8c3c687cabacaf2a410740e89a97d400ad19da1fc0",
+          "bytes": 407131,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/0e/6c/81/0e6c8183-599d-89d1-2f42-da7e02872e46/af69f593-27f6-47c1-8db7-b01e05e14b76_AIRemove_LrCC_Apple_iPad_2732x2048_EN-US.jpg/552x414bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "5925706102b3cd13c456eb3d57935f41fe30f94ddc96365d206f41a30e6f84f2",
+          "bytes": 53043,
+          "pixelWidth": 552,
+          "pixelHeight": 414,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Premiere",
       "startingUrl": "https://www.adobe.com/products/premiere/app.html",
-      "status": "iPad availability and capture pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Adobe+Premiere&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "2dfbaade53c1303578d5ff6e85d71fd47827c037b41ed7c5b8e359c9a0aa1d96",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 6742757464,
+      "appStoreUrl": "https://apps.apple.com/us/app/adobe-premiere-ai-video-editor/id6742757464?uo=4",
+      "listingName": "Adobe Premiere AI Video Editor",
+      "listingVersion": "26.23.0",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/b4/5d/ef/b45defd9-5237-b323-4d33-2402886e9e69/Adobe_Premiere_EN_iOS_13_Screenshots_HR_260608_01.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "4b7847d1416a300ed35f755ac88100884184903e9409aa6fa26adba2e3663701",
+          "bytes": 36805,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/88/2f/33/882f339c-8613-f2aa-49a3-079103fb8bec/Adobe_Premiere_EN_iOS_13_Screenshots_HR_260608_03.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "8fe8838fb1e8a453d2e34e7064dea4bf0ff64fc94d275c819d44f5ec0d8122c2",
+          "bytes": 30712,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Creative Cloud",
       "startingUrl": "https://www.adobe.com/creativecloud/mobile.html",
-      "status": "iPad availability and capture pending",
+      "status": "No exact Creative Cloud app match in this search; availability unresolved",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Adobe+Creative+Cloud&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "c409145860ce2a7b11d64771c955ac9ba55d5584dbf10b274ddbea7587e1a399",
+      "retrievedDate": "2026-11-07",
+      "galleryPreviews": []
     },
     {
       "app": "Behance",
       "startingUrl": "https://www.behance.net",
-      "status": "iPad availability and capture pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Behance&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "99c45ab44bee3e1e7ab94e7eec32bffe015dc35d9882fac0ac85dfdaa5754516",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 489667151,
+      "appStoreUrl": "https://apps.apple.com/us/app/behance-creative-portfolios/id489667151?uo=4",
+      "listingName": "Behance \u2013 Creative Portfolios",
+      "listingVersion": "26.924.723",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/87/6e/ea/876eeaa9-ae24-7106-6a62-08c5de644940/0-ipadPro2Gen129.png/576x768bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "d91bd477046157b3d770ac50a1f240fab115680d00e61823b6c5109e9dea85f1",
+          "bytes": 320354,
+          "pixelWidth": 576,
+          "pixelHeight": 768,
+          "assetOrientation": "portrait",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/0c/58/c2/0c58c28e-5a1e-79f1-99b8-cb1fa8f64df0/1-ipadPro2Gen129.png/576x768bb.png",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "7986759870cb5fb196969b6b82909bf773bcf9a7ef093ecf0a29c640ddc29408",
+          "bytes": 307700,
+          "pixelWidth": 576,
+          "pixelHeight": 768,
+          "assetOrientation": "portrait",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Word",
       "startingUrl": "https://apps.apple.com/us/app/microsoft-word/id586447913",
-      "status": "iPad listing/capture pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Microsoft+Word&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "94a0152d492da69cb6f68c7096a00dcb768b334c683028bd037412ae0c116c01",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 586447913,
+      "appStoreUrl": "https://apps.apple.com/us/app/microsoft-word/id586447913?uo=4",
+      "listingName": "Microsoft Word",
+      "listingVersion": "2.115.2",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/ad/57/2c/ad572cff-92cb-0156-dba5-aa4573766f4f/AS_iPad_Hero.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "35aaee7d64a6a0911026572841b6d42d429ec7ba6ecb5a771ebb7d0ac78daf16",
+          "bytes": 47088,
+          "pixelWidth": 360,
+          "pixelHeight": 480,
+          "assetOrientation": "portrait",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/70/6e/e4/706ee420-520b-2e85-c078-826965407c89/AS_iPad_Value_1.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "c90feeacd1f918f3570c8125b8101b9249a07e9f973a4104af4a6933597dfeb1",
+          "bytes": 42388,
+          "pixelWidth": 360,
+          "pixelHeight": 480,
+          "assetOrientation": "portrait",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Excel",
       "startingUrl": "https://apps.apple.com/us/app/microsoft-excel/id586683407",
-      "status": "iPad listing/capture pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Microsoft+Excel&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "13f9d4ee73cf73d3c47f35eee5100749e4d465754c05e0816568fe9674453956",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 586683407,
+      "appStoreUrl": "https://apps.apple.com/us/app/microsoft-excel/id586683407?uo=4",
+      "listingName": "Microsoft Excel",
+      "listingVersion": "2.115.2",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/d2/a0/b4/d2a0b411-6849-807e-e301-db25b3ea9548/AS_iPad_Hero.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "fb98169c87a3adbc3b5ef38f3262f445aad116be6b9fc017b67d49066b84b451",
+          "bytes": 28334,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/e1/91/43/e19143fe-83d1-d0a5-1ad3-e5f0dec841c6/AS_iPad_Value_1.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "8a9832f60af8be3182f9f711e515287f0088f0af19e475b38310d654a3385b13",
+          "bytes": 30826,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "PowerPoint",
       "startingUrl": "https://apps.apple.com/us/app/microsoft-powerpoint/id586449534",
-      "status": "iPad listing/capture pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Microsoft+PowerPoint&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "b13b90b50e41e034e924b557e404a3b92a0d6254340192f4b1e1103a09b18596",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 586449534,
+      "appStoreUrl": "https://apps.apple.com/us/app/microsoft-powerpoint/id586449534?uo=4",
+      "listingName": "Microsoft PowerPoint",
+      "listingVersion": "2.115.2",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/f0/35/81/f03581c9-98f0-1054-2b93-0ec0cc156f31/AS_iPad_Hero.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "ec30c6096ca2b544c4821ebae97cb9a745b23562a1d652d8f67af8d0c9af66bb",
+          "bytes": 30809,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/bc/bb/ae/bcbbae8a-b6c8-0c57-7946-ac1375251d6e/AS_iPad_Value_1.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "f02f6608ea8a71be1b9b778c11015ea11dcaeccdad8d7ce600c956d732adb8ce",
+          "bytes": 29161,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Figma",
       "startingUrl": "https://help.figma.com/hc/en-us/articles/1500007537281-Guide-to-the-Figma-mobile-app",
-      "status": "Official mobile/iPad capability guide checked; desktop editor parity not established",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": true
+      "startingUrlChecked": true,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Figma&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "d17f7d52d052d259bd5b0c7a594f57c4a637ea796b064026d141fcba2236a892",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 1152747299,
+      "appStoreUrl": "https://apps.apple.com/us/app/figma/id1152747299?uo=4",
+      "listingName": "Figma",
+      "listingVersion": "26.42.0",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/c3/eb/55/c3eb5552-7d78-7205-8814-22bcfc321f0c/0_APP_IPAD_PRO_3GEN_129_0.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "9149e3d918813dd0cbd4bc6bf4aede47dbd51a1a3c8db5bc4fdcd6d370133959",
+          "bytes": 44405,
+          "pixelWidth": 360,
+          "pixelHeight": 480,
+          "assetOrientation": "portrait",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/36/b6/8c/36b68cff-dda0-cc9c-d416-84c47c19720f/1_APP_IPAD_PRO_3GEN_129_1.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "f93116bb6f96aa9087cf271642f818b0641af2395d51a2340366152190cac582",
+          "bytes": 40891,
+          "pixelWidth": 360,
+          "pixelHeight": 480,
+          "assetOrientation": "portrait",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Sketchbook",
       "startingUrl": "https://www.sketchbook.com",
-      "status": "Capture pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Sketchbook&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "860414e4767f8df565aea5a41115e1bcee8c1915506f8519406d6be10179dd73",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 883738213,
+      "appStoreUrl": "https://apps.apple.com/us/app/sketchbook/id883738213?uo=4",
+      "listingName": "Sketchbook\u00ae",
+      "listingVersion": "6.3",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/82/56/22/82562218-3f93-aa9d-c202-76b3d1564980/9b208daf-271c-4dc6-bab5-383c11f7fe04_iPad_Pro_12.9_EN_-_1.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "eafbb5a728c431ecc84e8f4ef599a98667da79fcff9fee64109048d09a04fa3b",
+          "bytes": 40809,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/31/92/6c/31926cb2-3e81-4f5a-8748-297b3cd9d09a/a7d5d0a0-23ef-4a2d-b720-8374402424e5_iPad_Pro_12.9_EN_-_2.png/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "1f1824c73f93982f5ea371c3298ef78f913c8d058076183d2287e1196c03a537",
+          "bytes": 49612,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        }
+      ]
     },
     {
       "app": "Mockup",
       "startingUrl": "https://apps.apple.com/us/app/mockup-ui-ux-design/id1527554407",
-      "status": "iPad listing/capture pending",
+      "status": "Official iPad gallery previews downloaded and visually reviewed; required native capture matrix incomplete",
       "captures": [],
-      "startingUrlChecked": false
+      "startingUrlChecked": false,
+      "officialSearchUrl": "https://itunes.apple.com/search?term=Mockup+UI+UX+Design&entity=iPadSoftware&country=us&limit=5",
+      "searchSha256": "05261fe6193cc1c77984b90610143e0e1b5593a2b0e0e33c94a3818d5bba8165",
+      "retrievedDate": "2026-11-07",
+      "appStoreId": 1527554407,
+      "appStoreUrl": "https://apps.apple.com/us/app/mockup-ui-ux-design/id1527554407?uo=4",
+      "listingName": "Mockup - UI/UX Design",
+      "listingVersion": "4.6.1",
+      "galleryScreenshotVersion": "not established",
+      "deviceSize": "not established",
+      "galleryPreviews": [
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/b4/87/76/b487767d-8857-5186-50df-85bda6c21f36/01.jpg/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "12caff44cc1606fba935f48003375b03c8d1935818c54f1f4db50ed4762a4ebc",
+          "bytes": 31451,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        },
+        {
+          "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/c0/92/05/c09205bc-e736-1246-33d3-003d33241b7d/02.jpg/360x480bb.jpg",
+          "assetUse": "Private reference only; not copied to public repository",
+          "sha256": "c7491fdb0e1bcfda7f9217ab35169adb290a74e89112078920906f006cf0ac57",
+          "bytes": 22194,
+          "pixelWidth": 360,
+          "pixelHeight": 270,
+          "assetOrientation": "landscape",
+          "visuallyReviewed": true
+        }
+      ]
     }
   ]
 }

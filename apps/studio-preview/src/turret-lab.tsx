@@ -88,10 +88,8 @@ export function TurretLab() {
   </View>;
 
   const inspector = <View testID="lab-inspector" style={style(chrome({ width: phone ? s.width - 32 : 340 }))}>
-    <TokenScope variables={nycTronTokensFor(palette)}>
-      <PrecisionScrubber label="Layer opacity" value={s.opacity} min={0} max={100} step={1} unit="%" detents={[0, 25, 50, 75, 100]}
-        forcedColors={!!prefs.forcedColors} onCommit={value => store.setState({ opacity: Math.round(value) })} />
-    </TokenScope>
+    <PrecisionScrubber label="Layer opacity" value={s.opacity} min={0} max={100} step={1} unit="%" detents={[0, 25, 50, 75, 100]}
+      forcedColors={!!prefs.forcedColors} onCommit={value => store.setState({ opacity: Math.round(value) })} />
     <View testID="lab-fill-row" style={{ flexDirection: 'row', alignItems: 'center', gap: 2, borderTopWidth: 1, borderTopColor: m.panelEdge, paddingTop: scale.space.element }}>
       <Text style={{ color: m.muted, fontSize: scale.type.label, marginRight: scale.space.element }}>Fill</Text>
       {prismFillSwatches.map((swatch, index) => <Pressable key={swatch.name} accessibilityRole="button" accessibilityLabel={`Choose ${swatch.name} fill`}
@@ -131,6 +129,6 @@ export function TurretLab() {
         </>}
     </View>
   </View>;
-  // Canonical controls take their night palette from NightScope, as in PrismEditor.
-  return s.scheme === 'dark' ? <NightScope>{page}</NightScope> : page;
+  const themed = <TokenScope variables={nycTronTokensFor(palette)}>{page}</TokenScope>;
+  return s.scheme === 'dark' ? <NightScope>{themed}</NightScope> : themed;
 }

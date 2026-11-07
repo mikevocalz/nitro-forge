@@ -37,20 +37,20 @@
 - [Apple's Logic Pro for iPad guide](https://support.apple.com/en-ca/guide/logicpro-ipad/dev780a0e575/ipados) supports iPad-specific professional editing and Pencil automation. It is not a measurement of Forge performance.
 - [Adobe's Spectrum 2 introduction](https://adobe.design/ideas/introducing-spectrum-2) supports shared design-system foundations across products. [Fluent 2](https://fluent2.microsoft.design/get-started/whatisnew) explicitly distinguishes system and platform changes. Neither is permission to copy trade dress or infer unseen tablet layouts.
 
-No third-party screenshots or private design-pack content were copied into this public repository. No reference capture, App Store review study, independent critique, iPad rendering or device/performance test was performed in this audit. The reference index records those gaps.
+No third-party screenshots or private design-pack content were copied into this public repository. Follow-up research downloaded 32 official iPad gallery previews for 16 exact app matches into a private local evidence folder. A research agent visually reviewed the first preview for all 16 apps and additional previews where noted in IPAD_REFERENCE_OBSERVATIONS.md. These are low-resolution marketing/gallery images, not native captures; screenshot build versions and physical device sizes remain unknown. Creative Cloud has no exact match in this query and remains unresolved. No App Store review study, native iPad run or device/performance test was performed. The reference index records those gaps.
 
-## Missing input
+## Private pack located
 
-The named private `forge-designer-pro` adaptation was not found in the searched skill roots: `~/.agents/skills`, `~/.codex/skills`, and `nyc-mon/skills`. The installed `web-designer-pro` is a different pack. Its presence does not establish the private adaptation's tokens or licensing. The user has been asked for the adaptation's location. Continue source/reference auditing; do not fabricate its contents or publish its files.
+The first search of skill roots did not find the named pack. A subsequent targeted Downloads search found the private `forge-designer-pro` adaptation and its ZIP. The skill and its relevant roster, research, studio-discovery and design references were read locally. The earlier request for its location is resolved. No private files, implementation code, commercial assets or ZIP content enter this public repository. Placeholder package paths inside the pack are interpreted through the actual repository ownership rules.
 
 ## Delivery sequence
 
 1. Reconcile the brief with existing ownership and evidence: this audit and the reference index. This is an audit checkpoint, not completion of the brief's Phase 0.
 2. Finish iPad reference capture and actual user-job research. Record app/build, device size, orientation, source, observation versus inference and allowed asset use. Keep iPhone pattern mining separate. Do not turn proposed jobs into claimed interviews or reviews.
-3. Once the private pack is located, compare its tokens privately with the current system. Produce public, original token contracts and three real-task screen comparisons. Preserve the existing direction decision unless evidence or user direction changes it.
+3. Compare the located private pack privately with the current system. Produce public, original token contracts and three real-task screen comparisons. Preserve the existing direction decision unless evidence or user direction changes it.
 4. Consolidate host-owned tokens and density through existing NYC-Tron slots. Wire native overlays and motion per interaction. Keep native resources above layout wrappers and typed engine mutations below Forge adapters.
 5. Prove the design editor's real select/edit/undo/save/reopen workflow, then independently mount the remaining studio editors. Preserve separate app entry and serialized document contracts.
 6. After user implementation review, run type, source, browser and native acceptance, then physical accessibility/performance checks. Missing device evidence remains open. Release and consumer pin changes follow acceptance.
 7. Prove rebranding in an isolated throwaway checkout without rewriting stable engine protocol IDs or existing documents. Do not rename the working repository as a demonstration.
 
-Each implementation batch records its changes, checks and limits, then commits and pushes. The existing native player worktree remains preserved. No baseline player files, dependencies, release pins or app configuration changed in this audit.
+Each implementation batch records its changes, checks and limits, then commits and pushes. The existing native player worktree remains preserved. No baseline player files, dependencies, release pins or app configuration changed in this audit. A separately owned web-preview server and headless browser processes rendered the existing three directions at 1194 × 834; these captures are web evidence only.
