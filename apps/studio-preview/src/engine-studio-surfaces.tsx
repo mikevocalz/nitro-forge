@@ -13,7 +13,7 @@ import { TimelineZoomAndScroll } from '@nyc-tron/ui/components/forge/timeline/Ti
 import { FRAME_RATES, type FrameRate } from '@nyc-tron/ui/components/forge/timebase';
 import { TimelineRuler } from '@nyc-tron/ui/components/forge/timeline/TimelineRuler';
 import { OverlayAndEffectsTrackStack } from '@nyc-tron/ui/components/forge/timeline/OverlayAndEffectsTrackStack';
-import type { TimelineViewport } from '@nyc-tron/ui/components/forge/timeline/viewport';
+import { clampViewport, followPlayhead, type TimelineViewport } from '@nyc-tron/ui/components/forge/timeline/viewport';
 import type { TallyDocument } from '../../../packages/tally/src/index';
 import { readTallyWindow, commitTallyGridCell, type TallyGridData } from '../../../packages/tally/src/grid-adapter';
 import { bindTallySheetTabs, readTallySheetTabs, commitTallyFill, TALLY_SHEET_BOUNDS, type TallySheetTabsBinding } from '../../../packages/tally/src/grid-cluster';
@@ -21,6 +21,7 @@ import { CadenceDetailControls } from './cadence-detail-controls';
 import { CadenceMixerAdapter, mixerClusterChannels, type CadenceMixerState } from '../../../packages/cadence/src/mixer-cluster';
 import type { CadenceDocument } from '../../../packages/cadence/src/index';
 import { createCadenceTempoBindings } from '../../../packages/cadence/src/editor-adapter';
+import { SpliceDetailControls, SpliceTransitionOverlay, spliceTimelineExtent, useSpliceDetailSelection } from './splice-detail-controls';
 import type { SpliceDocument } from '../../../packages/splice/src/index';
 import { SpliceTimelineAdapter, timelineClusterCallbacks, type SpliceTimelineView } from '../../../packages/splice/src/timeline-cluster';
 
@@ -225,12 +226,13 @@ function spliceRate(fps: number): FrameRate | null {
 }
 function SpliceSurface(props: EngineStudioSurfaceProps) {
   const document = props.document as SpliceDocument | null;
+  const selection = useSpliceDetailSelection(document);
   const fps = (props.state as { fps?: number } | null)?.fps ?? 30;
   const rate = useMemo(() => spliceRate(fps), [fps]);
   const adapter = useMemo(() => document && rate ? new SpliceTimelineAdapter(document, rate) : null, [document, rate]);
   const store = useMemo(() => createStore(() => ({
-    viewport: { startFrame: 0, pxPerFrame: 2, widthPx: 600 } as TimelineViewport, selected: undefined as string | undefined, frame: 0, width: 800 })), []);
-  const { viewport, selected, frame, width } = useStore(store, s => s);
+    viewport: { startFrame: 0, pxPerFrame: 2, widthPx: 600 } as TimelineViewport, frame: 0, width: 800 })), []);
+  const { viewport, frame, width } = useStore(store, s => s);
   const read = useMemo(() => async () => {
     if (!adapter) throw new Error('The document is still opening.');
     return adapter.read();
@@ -238,8 +240,24 @@ function SpliceSurface(props: EngineStudioSurfaceProps) {
   const { data: view, error, ready, commit } = useDocumentSurface<SpliceTimelineView>(document, props.state, read, props.perform, props.disabled);
   const scale = resolveWorkspaceScale(props.density), compact = width < 700, headerWidth = compact ? 56 : 232;
   useEffect(() => {
-    store.setState({ selected: undefined, frame: 0 });
+    store.setState({ frame: 0 });
   }, [document, store]);
+  const extent = view ? spliceTimelineExtent(view) : 0;
+  const cursor = Math.max(0, Math.min(frame, extent));
+  const knownClips = new Set(view?.tracks.flatMap(track => track.clips.map(clip => clip.id)) ?? []);
+  const selectedClipIds = selection.selectedClipIds.filter(id => knownClips.has(id));
+  const selected = selectedClipIds.length === 1 ? selectedClipIds[0] : undefined;
+  useEffect(() => {
+    store.setState(current => {
+      const frame = Math.max(0, Math.min(current.frame, extent));
+      const viewport = clampViewport(current.viewport, extent);
+      return frame === current.frame && viewport.startFrame === current.viewport.startFrame ? current : { frame, viewport };
+    });
+  }, [extent, store]);
+  const seekMarker = (frame: number) => {
+    const next = Math.max(0, Math.min(frame, extent));
+    store.setState(current => ({ frame: next, viewport: followPlayhead(current.viewport, next, extent, 'center') }));
+  };
   if (!rate) return <Banner tone="danger" title={`The sequence rate ${fps} cannot be represented by the timeline controls.`} live="alert"/>;
   if (!adapter) return null;
   const bindings = timelineClusterCallbacks(adapter);
@@ -247,20 +265,23 @@ function SpliceSurface(props: EngineStudioSurfaceProps) {
     onLayout={event => { const width = event.nativeEvent.layout.width; if (width > 0) store.setState(current => ({ width, viewport: { ...current.viewport, widthPx: Math.max(1, width - (width < 700 ? 56 : 232) - scale.space.element * 2) } })); }}>
     {error && <Banner tone="danger" title={error} live="alert"/>}
     {view && <>
-      <TimelineZoomAndScroll viewport={viewport} onViewportChange={viewport => store.setState({ viewport })} durationFrames={view.durationFrames} rate={rate} playheadFrame={frame} disabled={!ready}/>
-      <View style={{ marginLeft: headerWidth }}><TimelineRuler viewport={viewport} rate={rate} durationFrames={view.durationFrames} frame={frame}
+      <TimelineZoomAndScroll viewport={viewport} onViewportChange={viewport => store.setState({ viewport })} durationFrames={extent} rate={rate} playheadFrame={cursor} disabled={!ready}/>
+      <View style={{ marginLeft: headerWidth }}><TimelineRuler viewport={viewport} rate={rate} durationFrames={extent} frame={cursor}
         disabled={!ready} onSeek={frame => store.setState({ frame })}/>
-        <TimelinePlayhead viewport={viewport} frame={frame} durationFrames={view.durationFrames} rate={rate} height={44}
+        <TimelinePlayhead viewport={viewport} frame={cursor} durationFrames={extent} rate={rate} height={44}
           disabled={!ready} onSeek={frame => store.setState({ frame })}/>
       </View>
       <OverlayAndEffectsTrackStack tracks={view.tracks} viewport={viewport} onViewportChange={viewport => store.setState({ viewport })}
-        rate={rate} durationFrames={view.durationFrames} playheadFrame={frame} {...(selected ? { selectedClipId: selected } : {})}
-        onSelect={selected => store.setState({ selected })} onEdit={edit => { void commit(() => bindings.onEdit(edit)).catch(() => {}); }}
+        rate={rate} durationFrames={extent} playheadFrame={cursor} {...(selected ? { selectedClipId: selected } : {})}
+        selectedClipIds={selectedClipIds} onSelect={selection.selectClip} onToggleSelect={selection.toggleClip}
+        laneOverlay={<SpliceTransitionOverlay adapter={adapter} view={view} rate={rate} viewport={viewport} selection={selection} disabled={!ready} commit={commit} laneHeight={Math.max(56, scale.size.target)}/>} onEdit={edit => { void commit(() => bindings.onEdit(edit)).catch(() => {}); }}
         compactHeaders={compact} headerWidth={headerWidth} laneHeight={Math.max(56, scale.size.target)} disabled={!ready}
         onSetFlag={(id, flag, value) => { void commit(() => bindings.onSetFlag(id, flag, value)).catch(() => {}); }}
         onRename={(id, name) => { void commit(() => bindings.onRename(id, name)).catch(() => {}); }}
         onMoveTrack={(id, index) => { void commit(() => bindings.onMoveTrack(id, index)).catch(() => {}); }}
         onAddTrack={kind => { void commit(() => bindings.onAddTrack(kind)).catch(() => {}); }}/>
+      <SpliceDetailControls adapter={adapter} view={view} rate={rate} viewport={viewport} selection={selection} disabled={!ready} commit={commit}
+        frame={cursor} onSeek={seekMarker} theme={props.theme} density={props.density}/>
     </>}
   </ScrollView>;
 }

@@ -28,3 +28,7 @@ Umbrella PRs: [Forge #63](https://github.com/mikevocalz/nitro-forge/pull/63) and
 ## Audio detail composition checkpoint (2026-11-07)
 
 Cadence now composes existing routing, send, insert/preset/parameter and MIDI controls through the shared document write gate. This is a source implementation checkpoint; required runtime and platform acceptance remain open. See [Cadence detail controls](../design/CADENCE_DETAIL_PHASE.md). The new audio target propagation is owned by NYC-Tron `48aef26`; consumer alpha.4 pins remain unchanged pending review and release.
+
+## Timeline detail composition checkpoint (2026-11-07)
+
+Splice now composes the canonical marker, transition and batch controls with its existing timeline adapter. Annotation-aware UI bounds and shared clip selection are integrated into the stage without changing the engine's clip duration. See [Splice detail controls](../design/SPLICE_DETAIL_PHASE.md). Builds and source review do not promote the required runtime/platform acceptance fields.
