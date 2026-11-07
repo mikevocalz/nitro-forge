@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { PrismEditor, type PrismEditorProps } from '@nitro-forge/studio-workspace/prism';
+import type { PrismDocument } from '../../../packages/prism/src/index';
+import { PrismCanvasAdapter } from '../../../packages/prism/src/canvas-cluster';
+import { PrismDetailControls } from './prism-detail-controls';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { Banner, ScrollView, Text, TokenScope, View } from '@nitro-forge/studio-workspace/ui';
@@ -27,7 +31,10 @@ import type { SpliceDocument } from '../../../packages/splice/src/index';
 import { SpliceTimelineAdapter, timelineClusterCallbacks, type SpliceTimelineView } from '../../../packages/splice/src/timeline-cluster';
 
 export interface EngineStudioSurfaceProps {
-  studio: 'tally' | 'cadence' | 'splice';
+  studio: 'tally' | 'cadence' | 'splice' | 'prism';
+  direction?: PrismEditorProps['direction'];
+  personas?: PrismEditorProps['personas'];
+  onComposePersona?: () => void;
   /** The already-open typed document; this surface never creates an engine session. */
   document: unknown;
   state: unknown;
@@ -46,8 +53,44 @@ const message = (error: unknown) => error instanceof Error ? error.message : Str
 /** App composition only. Every reusable instrument is owned by NYC-Tron. */
 export function EngineStudioSurface(props: EngineStudioSurfaceProps) {
   return <TokenScope variables={nycTronTokens(props.theme)}>
-    {props.studio === 'tally' ? <TallySurface {...props}/> : props.studio === 'cadence' ? <CadenceSurface {...props}/> : <SpliceSurface {...props}/>}
+    {props.studio === 'prism' ? <PrismSurface {...props}/> : props.studio === 'tally' ? <TallySurface {...props}/> : props.studio === 'cadence' ? <CadenceSurface {...props}/> : <SpliceSurface {...props}/>}
   </TokenScope>;
+}
+
+/** Shares the host write lock with history/files and keeps raster reads outside it. */
+function PrismSurface(props: EngineStudioSurfaceProps) {
+  const document = props.document as PrismDocument | null;
+  const adapter = useMemo(() => document ? new PrismCanvasAdapter(document) : null, [document]);
+  const read = useMemo(() => async () => {
+    if (!adapter) throw new Error('The document is still opening.');
+    return adapter.read();
+  }, [adapter]);
+  const surface = useDocumentSurface(document, props.state, read, props.perform, props.disabled);
+  const selection = useMemo(() => createStore(() => ({ id: null as number | null })), [document]);
+  const selectedId = useStore(selection, state => state.id);
+  const latest = useRef({ document, selection });
+  latest.current = { document, selection };
+  const onSelectLayer = (id: number | null) => {
+    if (latest.current.document === document) selection.setState({ id });
+  };
+  const apply: PrismEditorProps['apply'] = async (op, payload) => {
+    if (!document) throw new Error('The document is still opening.');
+    // These operations only inspect/render pixels. A read must never reload its own source.
+    if (op === 'flatten' || op === 'describe' || op === 'renderRegion') return document.handle.apply(op, payload);
+    let result: unknown;
+    await surface.commit(async () => { result = await document.handle.apply(op, payload); return result; });
+    return result;
+  };
+  return <View testID="prism-engine-surface" style={{ flex: 1, minHeight: 0 }}>
+    {surface.error && <Banner tone="danger" title={surface.error} live="alert"/>}
+    <PrismEditor state={props.state} apply={apply} reload={props.reload} documentIdentity={document} applyOwnsRefresh theme={props.theme} density={props.density}
+      {...(props.direction ? { direction: props.direction } : {})} {...(props.personas ? { personas: props.personas } : {})} {...(props.onComposePersona ? { onComposePersona: props.onComposePersona } : {})}
+      selectedLayerId={selectedId} onSelectLayer={onSelectLayer} busy={!surface.ready}/>
+    {document && surface.data && <ScrollView style={{ maxHeight: 300, flexGrow: 0, flexShrink: 1 }}>
+      <PrismDetailControls document={document} state={surface.data} selectedLayerId={selectedId}
+        onSelectLayer={onSelectLayer} disabled={!surface.ready} commit={surface.commit} theme={props.theme} density={props.density}/>
+    </ScrollView>}
+  </View>;
 }
 
 const initialWindow: SpreadsheetWindowRequest = { startRow: 0, endRow: 64, startColumn: 0, endColumn: 16, frozenRows: 0, frozenColumns: 0 };

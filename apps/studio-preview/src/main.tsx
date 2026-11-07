@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
@@ -9,8 +9,8 @@ import { getEditorConfig } from '../../example/src/editors';
 import { useEditorDoc } from './useDocument';
 import { WORKSPACE_DENSITIES, isWorkspaceDensity, workspaceThemes, type WorkspaceDensity } from '@nitro-forge/studio-workspace/theme';
 import { FORGE_DIRECTION_IDS, isForgeDirection, nycTronTokens, type ForgeDirectionId } from '@nitro-forge/studio-workspace/directions';
-import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { EngineStudioSurface } from './engine-studio-surfaces';
+import { exportPrismPng } from './prism-png-export';
 import { AppLauncher } from './app-launcher';
 import { Page, Main, Nav, Link, Text as SemanticText } from '@nyc-tron/ui/components/html';
 import { FilePicker } from '@nyc-tron/ui/components/files/FilePicker';
@@ -26,6 +26,12 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
   const textEditor = useRef<QuillTextEditorHandle>(null);
   const config = getEditorConfig(studio);
   const editor = useEditorDoc(config.open);
+  const exportOwner = useRef<{ document: typeof editor.doc; active: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const owner = { document: editor.doc, active: true };
+    exportOwner.current = owner;
+    return () => { owner.active = false; };
+  }, [editor.doc]);
   const store = useMemo(() => createStore(() => ({ busy: false, error: null as string | null, notice: '', documentTitle: 'Untitled document' })), []);
   const loadPreset = useCallback(async () => localStorage.getItem(`nitroforge.workspace.v1.${studio}`), [studio]);
   const persistPreset = useCallback(async (raw: string) => { localStorage.setItem(`nitroforge.workspace.v1.${studio}`, raw); }, [studio]);
@@ -75,6 +81,22 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
     <FilePicker unstyled className="document-action min-h-11 px-3 flex-row items-center justify-center rounded-control hover:bg-surface-sunken" labelClassName="text-text text-sm font-semibold" label="Open" disabled={busy || !editor.doc}
       accept={studio === 'quill' ? '.docx,.nfd' : '.nfd'}
       onFiles={files => { const file = files[0]; if (file) void openFile(file).catch(() => {}); }} /></DropZone>
+      {studio === 'prism' && <Button aria-label="Export PNG, up to one megapixel" title="Export PNG" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
+        void run(async () => {
+          const current = editor.doc as { handle: DocumentHandle } | null;
+          if (!current) throw new Error('The document is still opening.');
+          const owner = exportOwner.current;
+          if (!owner?.active || owner.document !== editor.doc) throw new Error('The document changed. Retry the export.');
+          const bytes = await exportPrismPng(current.handle);
+          if (!owner.active || exportOwner.current !== owner) return;
+          const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'image/png' }));
+          try {
+            const link = document.createElement('a');
+            link.href = url; link.download = 'prism-canvas.png'; link.click();
+          } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+          store.setState({ notice: 'PNG download requested from the engine canvas' });
+        }).catch(() => {});
+      }} />}
       {studio === 'quill' && <Button aria-label="Export Word document" title="Export Word" variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" disabled={busy || !editor.doc} onPress={() => {
         void run(async () => {
           await textEditor.current?.flush();
@@ -96,8 +118,7 @@ function StudioEditor({ studio, theme, headerTrailing, density='standard', direc
       onUndo={() => run(editor.undo)} onRedo={() => run(editor.redo)}
       onSave={() => run(save)} onRefresh={() => run(editor.reload)}
       busy={busy || !editor.doc} error={error ?? editor.error}>
-      {studio === 'quill' ? <QuillTextEditor density={density} ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} density={density} direction={direction} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc}
-        personas={prismPersonaStore()} onComposePersona={() => { window.location.hash = COMPOSER_LAB_HASH; }} /> : studio === 'tally' || studio === 'cadence' || studio === 'splice' ? <EngineStudioSurface disabled={busy || !editor.doc} perform={run} studio={studio} document={editor.doc} state={editor.state} reload={editor.reload} theme={theme} density={density} /> : undefined}
+      {studio === 'quill' ? <QuillTextEditor density={density} ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' || studio === 'tally' || studio === 'cadence' || studio === 'splice' ? <EngineStudioSurface disabled={busy || !editor.doc} perform={run} studio={studio} document={editor.doc} state={editor.state} reload={editor.reload} theme={theme} density={density} direction={direction} personas={studio === 'prism' ? prismPersonaStore() : undefined} onComposePersona={() => { window.location.hash = COMPOSER_LAB_HASH; }} /> : undefined}
     </ForgeWorkspace>
     {notice && <Banner tone="info" title={notice} className="rounded-[4px]" />}
   </>;
@@ -182,19 +203,18 @@ function App() {
       <View style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: theme === 'dark' ? '#ADB3C4' : '#687287', fontSize: 11 }}>Preview</Text></View>
     </Menu>{themeToggle}
   </Page>;
-  if (route.startsWith('#/lab/turret')) return <Main dataSet={{theme}}><TurretLab/></Main>;
-  if (isPrismComparisonRoute()) return <Main dataSet={{theme:readComparison().theme}}><PrismComparison/></Main>;
-  if (isComposerLabRoute()) return <Main dataSet={{ theme }}><ComposerLab theme={theme} /></Main>;
+  const lab = route.startsWith('#/lab/turret') ? <TurretLab/> : isPrismComparisonRoute() ? <PrismComparison/> : isComposerLabRoute() ? <ComposerLab theme={theme}/> : null;
   return <Main dataSet={{ theme }}>
-    {!app && <Nav className="launcher-nav" aria-label="App navigation">
+    {lab}
+    {!lab && !app && <Nav className="launcher-nav" aria-label="App navigation">
       <Link className="suite-label" href="#/"><SemanticText className="suite-mark" aria-hidden>N</SemanticText>NitroForge <SemanticText className="suite-caption">The creative collection</SemanticText></Link>
       {themeToggle}
     </Nav>}
-    {opened.map(id => <Page key={id} className="workspace-container" data-host-width={hostWidth} hidden={app !== id}
-      style={{ display: app === id ? 'flex' : 'none', width: hostWidth === 'desktop' ? '100%' : hostWidth === 'tablet' ? 768 : hostWidth === 'split' ? 724 : 390 }}>
+    {opened.map(id => <Page key={id} className="workspace-container" data-host-width={hostWidth} hidden={!!lab || app !== id}
+      style={{ display: !lab && app === id ? 'flex' : 'none', width: hostWidth === 'desktop' ? '100%' : hostWidth === 'tablet' ? 768 : hostWidth === 'split' ? 724 : 390 }}>
       <StudioEditor studio={id} theme={theme} density={density} onDensityChange={value=>store.setState({density:value})} headerTrailing={editorControls} />
     </Page>)}
-    {!app && <AppLauncher opened={opened} theme={theme} />}
+    {!lab && !app && <AppLauncher opened={opened} theme={theme} />}
   </Main>;
 }
 

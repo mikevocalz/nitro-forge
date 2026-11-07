@@ -31,11 +31,18 @@ export interface PrismEditorProps {
   state: unknown;
   apply: (op: string, payload?: unknown) => Promise<unknown>;
   reload: () => Promise<void>;
+  /** A stable session identity for rejecting work completed after replacement. */
+  documentIdentity?: unknown;
+  /** The apply owner already refreshes its authoritative state after writes. */
+  applyOwnsRefresh?: boolean;
   theme?: 'dark' | 'light';
   density?: WorkspaceDensity;
   /** Material comparison only; document state remains in the same host session. */
   direction?: ForgeDirectionId;
   busy?: boolean;
+  /** Optional host-owned primary focus shared with document inspectors. */
+  selectedLayerId?: number | null;
+  onSelectLayer?: (id: number | null) => void;
   /** Persona session for this document. Omitted: the editor keeps its own. */
   personas?: PersonaStore;
   /** Host feedback for turret detents and commits (haptics on native). */
@@ -93,7 +100,8 @@ export function PrismEditor(props: PrismEditorProps) {
   const localRef = useRef<StoreApi<LocalState> | null>(null);
   if (!localRef.current) localRef.current = createStore<LocalState>(() => ({ selectedId: null, uri: null, rendering: false, busy: false, error: null, previewError: null, notice: '', layersOpen: false, personaOpen: false, personaStatus: '', trigger: { x: 0, width: 0 }, toolbarHeight: 48, railWidth: 52, fillHeight: 52, feedbackHeight: 0, popoverHeight: 0, width: 800, height: 600, retry: 0, color: 0 }));
   const store = localRef.current;
-  const selectedId = useStore(store, s => s.selectedId);
+  const localSelectedId = useStore(store, s => s.selectedId);
+  const selectedId = props.selectedLayerId === undefined ? localSelectedId : props.selectedLayerId;
   const uri = useStore(store, s => s.uri);
   const rendering = useStore(store, s => s.rendering);
   const busy = useStore(store, s => s.busy);
@@ -108,6 +116,11 @@ export function PrismEditor(props: PrismEditorProps) {
   const color = useStore(store, s => s.color);
   const current = useRef(props);
   current.current = props;
+  const readPrimary = () => current.current.selectedLayerId === undefined ? store.getState().selectedId : current.current.selectedLayerId;
+  const selectPrimary = (id: number | null) => {
+    if (current.current.selectedLayerId === undefined) store.setState({ selectedId: id });
+    current.current.onSelectLayer?.(id);
+  };
   const mounted = useRef(true);
   const firstMeasurement = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -137,8 +150,8 @@ export function PrismEditor(props: PrismEditorProps) {
   useEffect(() => {
     const next = readState(props.state);
     if (!next) { store.setState({ uri: null, rendering: false }); return; }
-    const selection = store.getState().selectedId;
-    if (!next.layers.some(layer => layer.id === selection)) store.setState({ selectedId: next.layers.at(-1)?.id ?? null });
+    const selection = readPrimary();
+    if (!next.layers.some(layer => layer.id === selection)) selectPrimary(next.layers.at(-1)?.id ?? null);
     try { validatePreviewSize(next.width, next.height); }
     catch (cause) { store.setState({ uri: null, rendering: false, previewError: message(cause) }); return; }
     let active = true;
@@ -160,13 +173,16 @@ export function PrismEditor(props: PrismEditorProps) {
 
   const run = async (op: string, payload: unknown, label: string) => {
     if (store.getState().busy || current.current.busy || !current.current.state) return;
+    const admitted = current.current;
+    const stillOwned = () => mounted.current && current.current.documentIdentity === admitted.documentIdentity && current.current.reload === admitted.reload;
     store.setState({ busy: true, error: null, notice: '' });
     try {
-      const result = await current.current.apply(op, payload) as { data?: { layer_id?: number } };
-      if (mounted.current && typeof result.data?.layer_id === 'number') store.setState({ selectedId: result.data.layer_id });
-      await current.current.reload();
-      if (mounted.current) store.setState({ notice: label });
-    } catch (cause) { if (mounted.current) store.setState({ error: message(cause) }); }
+      const result = await admitted.apply(op, payload) as { data?: { layer_id?: number } };
+      if (!stillOwned()) return;
+      if (typeof result.data?.layer_id === 'number') selectPrimary(result.data.layer_id);
+      if (!admitted.applyOwnsRefresh) await admitted.reload();
+      if (stillOwned()) store.setState({ notice: label });
+    } catch (cause) { if (stillOwned()) store.setState({ error: message(cause) }); }
     finally { if (mounted.current) store.setState({ busy: false }); }
   };
   /** One LayerStack callback becomes at most one engine operation (one undo step). */
@@ -228,7 +244,7 @@ export function PrismEditor(props: PrismEditorProps) {
       {layers.length
         ? <LayerStack testID="prism-layer-stack" layers={prismLayerRows(layers)} {...(selectedRow === undefined ? {} : { selectedId: selectedRow })} accentColor={forced ? systemColor('Highlight') : chrome.accent}
           style={{ maxHeight: layerListMaxHeight, flexShrink: 1, borderRadius: 0 }}
-          onSelect={id => store.setState({ selectedId: Number(id) })}
+          onSelect={id => selectPrimary(Number(id))}
           onToggleVisible={id => runLayerCommand(rows => prismVisibilityCommand(rows, id))}
           onOpacityCommit={(id, value) => runLayerCommand(rows => prismOpacityCommand(rows, id, value))}
           onMove={(id, toIndex) => runLayerCommand(rows => prismMoveCommand(rows, id, toIndex))}
@@ -378,7 +394,7 @@ export function PrismEditor(props: PrismEditorProps) {
     <View pointerEvents="box-none" style={{ position: 'absolute', left: canvasLeft, top: canvasTop, right: canvasRight, bottom: canvasBottom, alignItems: 'center', justifyContent: 'center' }}>
       {doc && <PrismCanvas document={doc} width={canvasWidth} height={canvasHeight} selectedId={selectedId}
         disabled={busy || !!props.busy || rendering || !!previewError} color={colors.accent}
-        onSelect={id => store.setState({ selectedId: id })}
+        onSelect={id => selectPrimary(id)}
         onMoveShape={(id, dx, dy) => { void run('transformShape', { id, dx, dy, scale_x: 1, scale_y: 1 }, 'Shape moved'); }}>
         {uri && !previewError ? <Image testID="prism-composite" accessible accessibilityLabel="Prism canvas composite" source={{ uri }} resizeMode="contain" style={{ width: '100%', height: '100%' }} onError={() => { if (store.getState().uri === uri) store.setState({ previewError: 'The canvas preview could not be displayed. Retry the preview.' }); }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}><Text style={{ color: colors.paperInk, fontSize: 12, textAlign: 'center' }}>{previewError ? 'Preview unavailable' : 'Rendering canvas…'}</Text></View>}
       </PrismCanvas>}
@@ -388,7 +404,7 @@ export function PrismEditor(props: PrismEditorProps) {
       {selected?.content?.type === 'shape' && !props.busy && <Menu key={selected.id} title="Transform shape" triggerLabel="Transform shape"
         actions={SHAPE_TRANSFORMS.map(({ id, title }) => ({ id, title, disabled: busy || !!props.busy }))}
         onAction={action => {
-          const selection = store.getState().selectedId;
+          const selection = readPrimary();
           // Reject stale callbacks. Keep the trigger mounted across our own
           // relative edits so repeated keyboard actions retain focus.
           if (selection !== selected.id || current.current.state !== props.state) return;
