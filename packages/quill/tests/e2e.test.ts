@@ -158,6 +158,67 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("sections carry page setup and headers through edits and snapshots", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "one\ntwo\nthree\nfour");
+    const first = await doc.listSections();
+    expect(first.data.sections).toHaveLength(1);
+    expect(first.data.sections[0]?.block).toBe(0);
+    expect(first.data.sections[0]?.page.width).toBe(612);
+
+    await doc.setPageSetup(0, {
+      width: 595,
+      height: 842,
+      orientation: "landscape",
+      columns: 2,
+      column_gap: 36,
+      start: "continuous",
+    });
+    await doc.setHeaderFooter(0, {
+      header: "Running head",
+      footer: "Page",
+      different_first: true,
+      first_header: "First",
+      page_numbers: true,
+      number_start: 3,
+      number_format: "roman",
+    });
+    const inserted = await doc.insertSection(2, {
+      page_setup: { margin_top: 100 },
+      header_footer: { footer: "Second section" },
+    });
+    expect(inserted.data.section).toBe(1);
+    const listed = await doc.listSections();
+    expect(listed.data.sections.map((s) => s.block)).toEqual([0, 2]);
+    // Inherits the owning section's settings, patch applied on top.
+    expect(listed.data.sections[1]?.page.width).toBe(595);
+    expect(listed.data.sections[1]?.page.margin_top).toBe(100);
+    expect(listed.data.sections[1]?.header_footer.header).toBe("Running head");
+    expect(listed.data.sections[1]?.header_footer.footer).toBe("Second section");
+
+    // Boundaries track block edits: one newline at block 0 shifts section 1.
+    await doc.insertText({ block: 0, offset: 0 }, "x\ny");
+    expect((await doc.listSections()).data.sections.map((s) => s.block)).toEqual([0, 3]);
+
+    // Invalid page setup rejects without touching state.
+    await expect(
+      doc.setPageSetup(1, { margin_top: 2000 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.insertSection(0)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.removeSection(0)).rejects.toBeInstanceOf(EngineError);
+
+    // Snapshot keeps sections; undo/redo round-trips them.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.listSections()).data.sections.map((s) => s.block)).toEqual([0, 3]);
+    await re.removeSection(1);
+    expect((await re.listSections()).data.sections).toHaveLength(1);
+    expect(await re.undo()).toBe(true);
+    expect((await re.listSections()).data.sections).toHaveLength(2);
+    await re.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");

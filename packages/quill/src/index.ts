@@ -26,6 +26,11 @@ export const OPS = {
   addBookmark: "addBookmark",
   removeBookmark: "removeBookmark",
   listBookmarks: "listBookmarks",
+  insertSection: "insertSection",
+  removeSection: "removeSection",
+  setPageSetup: "setPageSetup",
+  setHeaderFooter: "setHeaderFooter",
+  listSections: "listSections",
   defineStyle: "defineStyle",
   updateStyle: "updateStyle",
   removeStyle: "removeStyle",
@@ -104,6 +109,80 @@ export interface FindOptions {
   to?: Pos;
   /** Defaults to false (case-insensitive per-scalar Unicode lowercase). */
   caseSensitive?: boolean;
+}
+/** Paper orientation stored per section. */
+export type SectionOrientation = "portrait" | "landscape";
+/** How a section begins relative to the previous one. */
+export type SectionStartKind = "continuous" | "next-page" | "even-page" | "odd-page";
+/** Page-number numeral format stored per section. */
+export type PageNumberFormat = "decimal" | "roman" | "letters";
+/**
+ * Page setup in points, mirroring the NYC-Tron `PageSetupPanel` contract.
+ * Bounds: width/height 36..14400, margins and column gap non-negative,
+ * columns 1..32, and margins plus gaps must leave a positive text area.
+ * Stored only — no layout/pagination consumes it yet.
+ */
+export interface PageSetup {
+  width: number;
+  height: number;
+  orientation: SectionOrientation;
+  margin_top: number;
+  margin_bottom: number;
+  margin_left: number;
+  margin_right: number;
+  columns: number;
+  column_gap: number;
+  start: SectionStartKind;
+}
+/** Partial page-setup update; absent fields keep their values. */
+export type PageSetupPatch = Partial<PageSetup>;
+/**
+ * Header/footer bodies for one section, mirroring the NYC-Tron
+ * `HeaderFooterSettings` contract. Bodies are optional plain text (at most
+ * 8192 characters each); null clears. `different_first`/`different_odd_even`
+ * gate whether the first/even bodies apply. Inheritance/link-previous
+ * resolution is left to consumers.
+ */
+export interface HeaderFooter {
+  header?: string;
+  footer?: string;
+  first_header?: string;
+  first_footer?: string;
+  even_header?: string;
+  even_footer?: string;
+  different_first: boolean;
+  different_odd_even: boolean;
+  page_numbers: boolean;
+  number_start?: number;
+  number_format: PageNumberFormat;
+  link_previous: boolean;
+}
+/** Partial header/footer update; absent fields keep their values. */
+export type HeaderFooterPatch = {
+  [K in
+    | "header"
+    | "footer"
+    | "first_header"
+    | "first_footer"
+    | "even_header"
+    | "even_footer"]?: string | null;
+} & Partial<
+  Pick<
+    HeaderFooter,
+    | "different_first"
+    | "different_odd_even"
+    | "page_numbers"
+    | "number_format"
+    | "link_previous"
+  >
+> & { number_start?: number | null };
+/** One document section as reported by `listSections`. */
+export interface SectionInfo {
+  index: number;
+  /** Index of the section's first block. */
+  block: number;
+  page: PageSetup;
+  header_footer: HeaderFooter;
 }
 
 export class QuillDocument {
@@ -218,6 +297,54 @@ export class QuillDocument {
   /** Read-only; sorted by document position then name. */
   listBookmarks() {
     return this.call<{ bookmarks: Bookmark[] }>(OPS.listBookmarks);
+  }
+  /**
+   * Start a new section at block `at` (1..block count, not already a section
+   * start). The new section copies the page setup and header/footer of the
+   * section owning `at`; `page_setup`/`header_footer` partial patches
+   * override the copy. Boundaries track block edits like bookmarks do.
+   */
+  insertSection(
+    at: number,
+    options: { page_setup?: PageSetupPatch; header_footer?: HeaderFooterPatch } = {},
+  ) {
+    return this.call<{ ok: boolean; section: number }>(OPS.insertSection, {
+      at,
+      ...(options.page_setup === undefined ? {} : { page_setup: options.page_setup }),
+      ...(options.header_footer === undefined
+        ? {}
+        : { header_footer: options.header_footer }),
+    });
+  }
+  /**
+   * Delete the boundary at `section`, merging its blocks into the previous
+   * section (which keeps its own settings). The first section cannot be
+   * removed.
+   */
+  removeSection(section: number) {
+    return this.call<{ ok: boolean }>(OPS.removeSection, { section });
+  }
+  /** Patch page-setup fields on one section; the merged result is validated. */
+  setPageSetup(section: number, patch: PageSetupPatch) {
+    return this.call<{ ok: boolean; section: number }>(OPS.setPageSetup, {
+      section,
+      ...patch,
+    });
+  }
+  /**
+   * Patch header/footer fields on one section. String bodies accept a
+   * string or null (clear); the rest are typed. At most 8192 characters
+   * per body.
+   */
+  setHeaderFooter(section: number, patch: HeaderFooterPatch) {
+    return this.call<{ ok: boolean; section: number }>(OPS.setHeaderFooter, {
+      section,
+      ...patch,
+    });
+  }
+  /** Read-only; sections in document order. */
+  listSections() {
+    return this.call<{ sections: SectionInfo[] }>(OPS.listSections);
   }
   /**
    * Define a durable named style. Ids are unique, 1–64 non-blank

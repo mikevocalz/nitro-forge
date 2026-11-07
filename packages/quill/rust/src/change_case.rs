@@ -195,7 +195,12 @@ impl QuillEngine {
             self.bookmarks[bm_idx].offset = new_offset;
         }
         let removed = span.to_vec();
-        self.record_undo(from.block, removed, next.clone(), Some(bookmarks_before));
+        self.record_undo(
+            from.block,
+            removed,
+            next.clone(),
+            Collections::bookmarks(bookmarks_before),
+        );
         self.blocks.splice(from.block..=to.block, next);
         Ok(CommandResult::data(response(end)))
     }
