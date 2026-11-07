@@ -91,3 +91,13 @@ Design9 (`58e3d33`) supplies fixed frame trees, row/column layout and actual Pri
 NYC-Tron Android `101016b` now directly owns MediaPlayer/SurfaceView without automatic VideoView focus, with generation/resource guards and aspect-fit layout. Corrected final source passes actual Kotlin compilation, nine architectural checks and scoped TypeScript. Those checks are not native behavior acceptance. The user explicitly said to continue code while additional disk space is unavailable; APK/emulator/runtime validation remains pending. The parent reclaimed only this task's generated Rust incremental cache after checking that no Rust compiler jobs were active, preserving source, binaries, evidence and global caches.
 
 The current code checkpoints are committed and pushed separately. Remaining original scope includes production RAW/develop/storage, wider motion/compositing, complete document/office/PDF processing, design/prototype and general CAD/3D workflows, product/native integration and acceptance. No original phase is newly closed by these bounded source checkpoints.
+
+## Wrapped layout, drafting commands and PDF threads (2026-11-07)
+
+Design wrapping (`373858f`) adds actual row/column line breaking, per-line alignment/justification and rendered pixels while retaining legacy nonwrap snapshots; all eleven Design tests and scoped TypeScript pass. Hug/fill and actual product adoption remain open.
+
+Draft command/guides (`88d2710`) add real anchor-dependent ortho/polar projections, an explicit bounded command parser and atomic line creation. Eleven engine tests and five binding/real-CLI tests pass. Canonical source bindings require host admission and retain the full source revision so stale query feedback is withheld. Published alpha.4 lacks those CAD subpaths; no default consumer is activated.
+
+Folio replies/review (`8a6d036`) persist actual PDF replies, separate author-specific Review state records and atomic descendant deletion. Twenty-seven engine tests and eight TypeScript tests pass, including saved PDFs, shared-page ownership, generic annotation deletion, stale metadata and target-payload protection. Reply/resolve requires caller identity/time and a generation/write gate; no identity or clock is fabricated. Rendering, general imported-PDF coverage, native consumer/runtime checks and wider P15 exits remain open.
+
+After these checkpoints, the scoped preview TypeScript and completion validator pass. Acceptance remains 0 fully verified across the required platform matrix; source count remains 329/329. Experimental player/monitor files remain preserved local opt-in candidates, outside these staged changes. Android APK/emulator checks remain deferred by the user's explicit capacity constraint.
