@@ -1,4 +1,4 @@
-use crate::{constraints, model::*, render, snaps};
+use crate::{commands, constraints, model::*, render, snaps};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -80,6 +80,55 @@ impl DraftEngine {
         self.revision = revision;
         Ok(CommandResult::data(data))
     }
+    fn execute_command(&mut self, text: &str) -> Result<CommandResult, EngineError> {
+        match commands::parse(text)? {
+            commands::Plan::Command {
+                op,
+                payload,
+                message,
+            } => {
+                // Re-enter the authoritative operation, retaining locks, batch/read guards and history.
+                let mut result = self.apply(Command::new(op, payload))?;
+                if op == "solve" && result.data["status"] == "inconsistent" {
+                    return Err(bad(&format!("Linear solve inconsistent: {}", result.data)));
+                }
+                let message = if op == "solve" {
+                    format!(
+                        "Linear solve: {}",
+                        result.data["status"].as_str().unwrap_or("unknown")
+                    )
+                } else {
+                    message.to_string()
+                };
+                result.data = json!({"message":message,"result":result.data});
+                Ok(result)
+            }
+            commands::Plan::Line { a, b } => {
+                let mut staged = Self {
+                    state: self.state.clone(),
+                    journal: Journal::new(1),
+                    revision: self.revision,
+                    in_batch: true,
+                };
+                let first = staged
+                    .apply(Command::new("addPoint", json!({"x":a[0],"y":a[1]})))?
+                    .data["point_id"]
+                    .as_u64()
+                    .ok_or_else(|| bad("point operation returned no identity"))?;
+                let second = staged
+                    .apply(Command::new("addPoint", json!({"x":b[0],"y":b[1]})))?
+                    .data["point_id"]
+                    .as_u64()
+                    .ok_or_else(|| bad("point operation returned no identity"))?;
+                let segment = staged
+                    .apply(Command::new("addSegment", json!({"a":first,"b":second})))?
+                    .data["segment_id"]
+                    .as_u64()
+                    .ok_or_else(|| bad("segment operation returned no identity"))?;
+                self.publish((*staged.state).clone(),json!({"message":"Line created","result":{"point_ids":[first,second],"segment_id":segment}}))
+            }
+        }
+    }
 }
 impl Engine for DraftEngine {
     fn kind(&self) -> EngineKind {
@@ -115,6 +164,11 @@ impl Engine for DraftEngine {
         }
         let p = &cmd.payload;
         match cmd.op.as_str() {
+            "executeCommand" => {
+                fields(p, &["command"])?;
+                let text: String = get(p, "command")?;
+                return self.execute_command(&text);
+            }
             "describe" => {
                 fields(p, &[])?;
                 let mut value = serde_json::to_value(&*self.state)?;
@@ -128,12 +182,13 @@ impl Engine for DraftEngine {
                 ));
             }
             "querySnap" => {
-                fields(p, &["x", "y", "tolerance"])?;
+                fields(p, &["x", "y", "tolerance", "anchor"])?;
                 let candidate = snaps::query(
                     &self.state,
                     get(p, "x")?,
                     get(p, "y")?,
                     get(p, "tolerance")?,
+                    optional(p, "anchor", None)?,
                 )?;
                 return Ok(CommandResult::read_only(
                     json!({"candidate":candidate,"source_revision":self.revision}),
@@ -268,6 +323,9 @@ impl Engine for DraftEngine {
                         "midpoint",
                         "projection",
                         "intersection",
+                        "ortho",
+                        "polar",
+                        "polar_increment",
                     ],
                 )?;
             }

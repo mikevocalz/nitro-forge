@@ -61,6 +61,15 @@ pub struct SnapSettings {
     pub midpoint: bool,
     pub projection: bool,
     pub intersection: bool,
+    #[serde(default)]
+    pub ortho: bool,
+    #[serde(default)]
+    pub polar: bool,
+    #[serde(default = "default_polar_increment")]
+    pub polar_increment: f64,
+}
+fn default_polar_increment() -> f64 {
+    45.
 }
 impl Default for SnapSettings {
     fn default() -> Self {
@@ -73,6 +82,9 @@ impl Default for SnapSettings {
             midpoint: true,
             projection: true,
             intersection: true,
+            ortho: false,
+            polar: false,
+            polar_increment: default_polar_increment(),
         }
     }
 }
@@ -217,7 +229,9 @@ impl State {
             }
         }
         let s = &self.snaps;
-        if !s.spacing.is_finite()
+        if !s.polar_increment.is_finite()
+            || !(0.01..=360.).contains(&s.polar_increment)
+            || !s.spacing.is_finite()
             || s.spacing < 1e-6
             || s.spacing > LIMIT
             || !coord(s.origin_x)
