@@ -656,6 +656,7 @@ impl Engine for TallyEngine {
             "setCell" => self.op_set_cell(p),
             "setRange" => self.op_set_range(p),
             "fillRange" => self.op_fill_range(p),
+            "fillSeries" => self.op_fill_series(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),

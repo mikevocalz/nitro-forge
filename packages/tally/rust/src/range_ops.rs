@@ -154,6 +154,135 @@ impl TallyEngine {
         }
         Ok(self.commit_cells(staged))
     }
+
+    /// `fillSeries {source:{from,to},target:{from,to},step?}` — linear series.
+    ///
+    /// The source must be a single row or a single column (a 1x1 source picks
+    /// its axis from the target's one-dimensional extension). Every source
+    /// cell must hold a numeric literal: raws that parse as a finite `f64`
+    /// and are not formulas. Formulas, text, booleans and empty cells reject
+    /// the whole op before any mutation. `step` is an optional finite JSON
+    /// number; without it the step is inferred as
+    /// `(last - first) / (count - 1)` along the axis, so inference needs at
+    /// least two source cells. The first source cell anchors the series:
+    /// `value(i) = first + step * (i - i_first)` where `i` is the column
+    /// index for a row source or the row index for a column source. Target
+    /// cells inside the source are skipped; every other target cell gets a
+    /// literal number (via `fmt_num`), never a formula — matching how
+    /// `setRange`/`fillRange` store raw strings. The target must contain the
+    /// source and may not widen perpendicular to the axis. A computed value
+    /// that is not finite rejects the op atomically. Date serials are not
+    /// supported: series are numeric-only because `formula.rs` has no date
+    /// serial helpers.
+    pub(super) fn op_fill_series(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let source = Rect::read(Self::field(p, "source")?)?;
+        let target = Rect::read(Self::field(p, "target")?)?;
+        if !target.contains(source.c0, source.r0) || !target.contains(source.c1, source.r1) {
+            return Err(EngineError::validation(
+                "fill target must contain its source",
+            ));
+        }
+        let sw = source.c1 - source.c0 + 1;
+        let sh = source.r1 - source.r0 + 1;
+        // `true` = horizontal (single-row source, fill along columns).
+        let horizontal = if sh == 1 && sw > 1 {
+            true
+        } else if sw == 1 && sh > 1 {
+            false
+        } else if sw == 1 && sh == 1 {
+            let tw = target.c1 - target.c0 + 1;
+            let th = target.r1 - target.r0 + 1;
+            if tw > 1 && th == 1 {
+                true
+            } else if th > 1 && tw == 1 {
+                false
+            } else {
+                return Err(EngineError::validation(
+                    "a single-cell series source needs a one-cell-wide or one-cell-tall target",
+                ));
+            }
+        } else {
+            return Err(EngineError::validation(
+                "series source must be a single row or a single column",
+            ));
+        };
+        // The target may extend only along the fill axis.
+        if horizontal {
+            if target.r0 != source.r0 || target.r1 != source.r1 {
+                return Err(EngineError::validation(
+                    "series target must not widen perpendicular to a row source",
+                ));
+            }
+        } else if target.c0 != source.c0 || target.c1 != source.c1 {
+            return Err(EngineError::validation(
+                "series target must not widen perpendicular to a column source",
+            ));
+        }
+        let n = if horizontal { sw } else { sh } as usize;
+        let mut values = Vec::with_capacity(n);
+        for i in 0..n {
+            let (c, r) = if horizontal {
+                (source.c0 + i as u32, source.r0)
+            } else {
+                (source.c0, source.r0 + i as u32)
+            };
+            let addr = fmt_addr(c, r);
+            let raw = self
+                .active_sheet()
+                .cells
+                .get(&addr)
+                .map(|cell| cell.raw.as_str())
+                .unwrap_or("");
+            match raw.trim().parse::<f64>() {
+                Ok(v) if v.is_finite() => values.push(v),
+                _ => {
+                    return Err(EngineError::validation(format!(
+                        "series source cell {addr} is not a numeric literal"
+                    )))
+                }
+            }
+        }
+        let step = match p.get("step") {
+            None | Some(Value::Null) => {
+                if n < 2 {
+                    return Err(EngineError::validation(
+                        "cannot infer a series step from fewer than two numeric cells; pass step",
+                    ));
+                }
+                (values[n - 1] - values[0]) / (n as f64 - 1.0)
+            }
+            Some(v) => v
+                .as_f64()
+                .filter(|s| s.is_finite())
+                .ok_or_else(|| EngineError::validation("step must be a finite number"))?,
+        };
+        let base_index = if horizontal {
+            i64::from(source.c0)
+        } else {
+            i64::from(source.r0)
+        };
+        let mut staged = Vec::new();
+        for r in target.r0..=target.r1 {
+            for c in target.c0..=target.c1 {
+                if source.contains(c, r) {
+                    continue;
+                }
+                let i = if horizontal {
+                    i64::from(c)
+                } else {
+                    i64::from(r)
+                };
+                let value = values[0] + step * (i - base_index) as f64;
+                if !value.is_finite() {
+                    return Err(EngineError::validation(
+                        "series value is not finite",
+                    ));
+                }
+                staged.push((fmt_addr(c, r), formula::fmt_num(value)));
+            }
+        }
+        Ok(self.commit_cells(staged))
+    }
 }
 
 #[cfg(test)]
@@ -314,6 +443,126 @@ mod tests {
         assert_eq!(raw(&mut e, "XFD1"), "x");
         e.undo().unwrap();
         assert_eq!(e.snapshot().unwrap(), before);
+    }
+    #[test]
+    fn series_fill_infers_steps_and_writes_literals() {
+        let mut e = TallyEngine::new();
+        run(
+            &mut e,
+            "setRange",
+            json!({"from":"A1","values":[["1"],["3"],["5"]]}),
+        );
+        let before = e.snapshot().unwrap();
+        // Inferred step 2 continues down; source cells are untouched.
+        let result = run(
+            &mut e,
+            "fillSeries",
+            json!({"source":{"from":"A1","to":"A3"},"target":{"from":"A1","to":"A6"}}),
+        );
+        assert_eq!(result.data["changed"], 3);
+        assert_eq!(result.events.len(), 1);
+        assert_eq!(raw(&mut e, "A4"), "7");
+        assert_eq!(raw(&mut e, "A5"), "9");
+        assert_eq!(raw(&mut e, "A6"), "11");
+        assert_eq!(
+            run(&mut e, "getCell", json!({"addr":"A4"})).data["computed"],
+            7.0
+        );
+        // Horizontal row source, explicit step overrides inference.
+        run(
+            &mut e,
+            "setRange",
+            json!({"from":"C1","values":[["10","20","30"]]}),
+        );
+        run(
+            &mut e,
+            "fillSeries",
+            json!({"source":{"from":"C1","to":"E1"},"target":{"from":"C1","to":"G1"},"step":5}),
+        );
+        assert_eq!(raw(&mut e, "F1"), "25");
+        assert_eq!(raw(&mut e, "G1"), "30");
+        // Single-cell source works only with an explicit step.
+        run(&mut e, "setCell", json!({"addr":"J1","value":"7"}));
+        run(
+            &mut e,
+            "fillSeries",
+            json!({"source":{"from":"J1","to":"J1"},"target":{"from":"J1","to":"J4"},"step":2}),
+        );
+        assert_eq!(raw(&mut e, "J2"), "9");
+        assert_eq!(raw(&mut e, "J3"), "11");
+        assert_eq!(raw(&mut e, "J4"), "13");
+        // Extension above the source uses negative offsets.
+        run(&mut e, "setCell", json!({"addr":"L5","value":"4"}));
+        run(&mut e, "setCell", json!({"addr":"L6","value":"6"}));
+        run(
+            &mut e,
+            "fillSeries",
+            json!({"source":{"from":"L5","to":"L6"},"target":{"from":"L3","to":"L6"}}),
+        );
+        assert_eq!(raw(&mut e, "L3"), "0");
+        assert_eq!(raw(&mut e, "L4"), "2");
+        // Undo the eight writes after `before`, one entry each; redo reapplies.
+        let filled = e.snapshot().unwrap();
+        for _ in 0..8 {
+            assert!(e.undo().unwrap());
+        }
+        assert_eq!(e.snapshot().unwrap(), before);
+        for _ in 0..8 {
+            assert!(e.redo().unwrap());
+        }
+        assert_eq!(e.snapshot().unwrap(), filled);
+    }
+    #[test]
+    fn series_fill_rejects_without_mutation() {
+        let mut e = TallyEngine::new();
+        run(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        run(&mut e, "setCell", json!({"addr":"A2","value":"3"}));
+        run(&mut e, "setCell", json!({"addr":"B1","value":"x"}));
+        run(&mut e, "setCell", json!({"addr":"B2","value":"=A1+1"}));
+        run(&mut e, "setCell", json!({"addr":"D1","value":"0"}));
+        run(&mut e, "setCell", json!({"addr":"D2","value":"1"}));
+        let before = e.snapshot().unwrap();
+        let bad = [
+            // Non-numeric literal, formula and empty source cells.
+            json!({"source":{"from":"B1","to":"B2"},"target":{"from":"B1","to":"B4"},"step":1}),
+            json!({"source":{"from":"A1","to":"C1"},"target":{"from":"A1","to":"C1"}}),
+            // Single cell cannot infer a step.
+            json!({"source":{"from":"A1","to":"A1"},"target":{"from":"A1","to":"A3"}}),
+            // 2-D source and perpendicular-widening targets.
+            json!({"source":{"from":"A1","to":"B2"},"target":{"from":"A1","to":"C3"},"step":1}),
+            json!({"source":{"from":"A1","to":"A2"},"target":{"from":"A1","to":"B2"},"step":1}),
+            json!({"source":{"from":"A1","to":"B1"},"target":{"from":"A1","to":"A3"},"step":1}),
+            // Non-finite or non-number step.
+            json!({"source":{"from":"A1","to":"A2"},"target":{"from":"A1","to":"A4"},"step":"x"}),
+            // Non-finite result rejects the whole op.
+            json!({"source":{"from":"D1","to":"D2"},"target":{"from":"D1","to":"D4"},"step":1e308}),
+        ];
+        for p in bad {
+            assert!(e.apply(Command::new("fillSeries", p)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // Bounds still apply through the shared rectangle reader.
+        assert!(e
+            .apply(Command::new(
+                "fillSeries",
+                json!({"source":{"from":"A1","to":"A1"},"target":{"from":"A1","to":"A1048577"},"step":1})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    #[test]
+    fn series_fill_zero_change_is_eventless() {
+        let mut e = TallyEngine::new();
+        run(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        run(&mut e, "setCell", json!({"addr":"A2","value":"2"}));
+        run(&mut e, "setCell", json!({"addr":"A3","value":"3"}));
+        let result = run(
+            &mut e,
+            "fillSeries",
+            json!({"source":{"from":"A1","to":"A2"},"target":{"from":"A1","to":"A3"}}),
+        );
+        assert_eq!(result.data["changed"], 0);
+        assert!(result.events.is_empty());
     }
     #[test]
     fn references_and_writes_stay_on_the_sheet() {
