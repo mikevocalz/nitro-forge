@@ -208,6 +208,15 @@ Runs alongside the Forge waves and gates consumer pin updates.
 - `docs/ROSTER.md` and this directory's reports record only executed
   checks; unverified stays unverified. User-facing docs follow the
   no-ai-slop skill.
+- Execution rule (user requirement, 2026-11-11): always use skills and
+  subagents. Every implementation subagent must read the applicable
+  skills before coding — the pinned `mikevocalz-foldable-layouts` skill
+  for any layout/navigation work, relevant native platform skills
+  (Nitro v1, Swift/Kotlin/C++, Expo) before native changes, domain
+  skills before engine work, and `no-ai-slop` for user-facing docs.
+  Every slice gets an independent review subagent before merge; merges
+  are performed by the orchestrator only after review approval plus a
+  local verification run.
 
 ## Risks
 
