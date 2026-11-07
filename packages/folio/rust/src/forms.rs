@@ -15,8 +15,11 @@
 //!   name joins every `/T` on the chain (root→leaf) with `.`.
 //! - `/V` is written on the *field* dictionary, never assumed to be the
 //!   widget: the target is the first chain node (widget first) carrying
-//!   any field key (`/T`, `/FT`, `/V`, `/Ff`, `/Opt`, `/Kids`, `/DA`,
-//!   `/Q`). For a merged field/widget that is the widget dict itself;
+//!   a field-identity key (`/FT`, `/V`, `/Ff`, `/Opt`, `/Kids`, with
+//!   `/T` only as a last resort). Inheritable presentation attributes
+//!   (`/DA`, `/Q`) are deliberately not field identity — widget
+//!   dictionaries legitimately carry them. For a merged field/widget
+//!   that is the widget dict itself;
 //!   for a separate widget kid it is the parent field dict, so filling
 //!   through one widget updates every widget of the field. Field dicts
 //!   stored inline (non-indirect) reject with Unsupported — lopdf has
@@ -40,8 +43,11 @@
 //!   field `/V` is set to it, the matching kid's `/AS` takes the name
 //!   and every sibling widget kid's `/AS` becomes `/Off`. Radio widgets
 //!   without `/AP` appearance states cannot be addressed and reject.
-//!   `/AS` is written only on indirect widget dictionaries; inline ones
-//!   are skipped (they cannot be mutated through lopdf's object map).
+//!   `/AS` is written only on indirect dictionaries that are real
+//!   widget annotations (`/Subtype /Widget`, or no subtype with `/FT`
+//!   and `/Rect`); inline ones are skipped (they cannot be mutated
+//!   through lopdf's object map), and pure field dicts never receive
+//!   `/AS` even when they double as chain targets.
 //! - Both ops reject encrypted documents with Unsupported. `lopdf`'s
 //!   `encrypt` rewrites strings in place, so `/T` names and `Tx`/`Ch`
 //!   `/V` values are ciphertext (listFormFields would report garbage),
@@ -56,7 +62,9 @@
 //!   bytes (`Btn` names). Traversal is cycle-safe; every fallible step
 //!   runs before the journal records, and the mutation commits a cloned
 //!   document — one undo entry, one `document:changed`. Filling the
-//!   current value is an eventless no-op.
+//!   current value is an eventless no-op (`Btn` fills also require the
+//!   computed `/AS` states to already match, so a divergent foreign
+//!   document is repaired rather than reported equal).
 use super::*;
 use lopdf::Dictionary;
 use std::collections::HashSet;
@@ -74,9 +82,13 @@ const FF_RADIO: i64 = 1 << 15;
 /// `/Ff` bit 16 (mask 0x10000): pushbutton — not fillable.
 const FF_PUSHBUTTON: i64 = 1 << 16;
 /// Dictionary keys that mark a chain node as a field rather than a
-/// pure widget annotation. `/T` alone is deliberately excluded: it is
-/// also the annotation title key, so it only counts as a last resort.
-const FIELD_KEYS: [&[u8]; 7] = [b"FT", b"V", b"Ff", b"Opt", b"Kids", b"DA", b"Q"];
+/// pure widget annotation. Only field-identity keys count: `/DA` and
+/// `/Q` are inheritable *presentation* attributes that widget
+/// dictionaries legitimately carry, so they must never pull `/V` onto
+/// a widget kid. `/T` alone is deliberately excluded from this set: it
+/// is also the annotation title key, so it only counts as a last
+/// resort in `field_node_index`.
+const FIELD_KEYS: [&[u8]; 5] = [b"FT", b"V", b"Ff", b"Opt", b"Kids"];
 
 /// One link in a widget's `/Parent` chain, leaf (the widget) first.
 /// `dict` is a clone so callers can inspect it after the borrow ends;
@@ -106,10 +118,13 @@ fn resolve_dict<'a>(
     resolved.as_dict().ok().map(|d| (id, d))
 }
 
-/// Widget-annotation test for `/Annots` entries: `/Subtype /Widget`,
-/// or no `/Subtype` with `/FT` present (merged field/widget missing
-/// its subtype). `/T` alone never qualifies — it is also the
-/// annotation title key on ordinary annotations.
+/// Widget-annotation test: `/Subtype /Widget` explicitly, or — when
+/// `/Subtype` is absent — a merged field/widget carrying both `/FT`
+/// and `/Rect`. Widgets have geometry; a bare `/FT` dictionary with
+/// no `/Subtype` and no `/Rect` is a pure field dict, not an
+/// annotation, and must never receive `/AS`. `/T` alone never
+/// qualifies — it is also the annotation title key on ordinary
+/// annotations.
 fn annot_is_widget(doc: &Document, dict: &Dictionary) -> bool {
     match dict
         .get_deref(b"Subtype", doc)
@@ -118,9 +133,10 @@ fn annot_is_widget(doc: &Document, dict: &Dictionary) -> bool {
     {
         Some(b"Widget") => true,
         Some(_) => false,
-        // No subtype: only /FT marks a field/widget — /T alone is the
-        // annotation title and /Rect+/Parent appear on comment annots.
-        None => dict.has(b"FT"),
+        // No subtype: /FT plus /Rect marks a merged field/widget —
+        // /FT alone is a field dict, /T alone is the annotation title,
+        // and /Rect+/Parent appear on comment annots.
+        None => dict.has(b"FT") && dict.has(b"Rect"),
     }
 }
 
@@ -332,17 +348,24 @@ fn field_widget_kids(
         return kids;
     };
     for kid in array {
+        if kids.len() >= MAX_FORM_FIELDS {
+            break; // bounded: a hostile /Kids array cannot spin forever
+        }
         if let Some((id, dict)) = resolve_dict(doc, kid) {
             // A kid is a widget when it is explicitly `/Subtype /Widget`
             // or looks like a bare widget annotation (geometry, no
-            // field keys, no `/Kids`). Sub-fields carrying `/FT`, `/T`,
-            // `/V` etc. are not widgets and never receive `/AS`.
-            let explicit = dict
-                .get(b"Subtype")
+            // subtype, no field keys, no `/Kids`). Sub-fields carrying
+            // `/FT`, `/T`, `/V` etc. are not widgets and never receive
+            // `/AS`. Only field-identity keys disqualify a bare kid —
+            // inheritable presentation attrs like `/DA`/`/Q` that real
+            // widget dicts legitimately carry do not.
+            let subtype = dict
+                .get_deref(b"Subtype", doc)
                 .ok()
-                .and_then(|o| o.as_name().ok())
-                == Some(b"Widget");
-            let bare = dict.has(b"Rect")
+                .and_then(|o| o.as_name().ok());
+            let explicit = subtype == Some(b"Widget");
+            let bare = subtype.is_none()
+                && dict.has(b"Rect")
                 && !dict.has(b"Kids")
                 && !dict.has(b"T")
                 && FIELD_KEYS.iter().all(|k| !dict.has(k));
@@ -389,6 +412,9 @@ impl FolioEngine {
         let mut fields = Vec::new();
         for (num, page_id) in self.doc.get_pages() {
             for entry in page_widget_entries(&self.doc, page_id)? {
+                if fields.len() >= MAX_FORM_FIELDS {
+                    return Err(EngineError::validation("form field limit exceeded"));
+                }
                 let ft = field_type(&self.doc, &entry.chain);
                 let ff = field_flags(&self.doc, &entry.chain);
                 fields.push(json!({
@@ -401,9 +427,6 @@ impl FolioEngine {
                     "signature": ft.as_deref() == Some("Sig"),
                     "annot": entry.annot_id,
                 }));
-                if fields.len() >= MAX_FORM_FIELDS {
-                    return Err(EngineError::validation("form field limit exceeded"));
-                }
             }
         }
         Ok(ro(json!({ "fields": fields })))
@@ -594,10 +617,24 @@ impl FolioEngine {
                 let current = chain_get(&self.doc, &entry.chain, b"V")
                     .and_then(|o| o.as_name().ok())
                     .map(|n| n.to_vec());
+                // Equal /V is not enough for an eventless no-op: a
+                // foreign document can carry /V=/B while every widget
+                // still shows /AS=/Off — repair the divergence instead
+                // of reporting success without touching anything.
+                let as_equal = updates.iter().all(|(id, state)| {
+                    self.doc
+                        .get_object(*id)
+                        .and_then(Object::as_dict)
+                        .ok()
+                        .and_then(|d| d.get(b"AS").ok())
+                        .and_then(|o| o.as_name().ok())
+                        .map(|n| n == state.as_slice())
+                        .unwrap_or(false)
+                });
                 (
                     Object::Name(name_bytes.clone()),
                     updates,
-                    current.as_deref() == Some(name_bytes.as_slice()),
+                    current.as_deref() == Some(name_bytes.as_slice()) && as_equal,
                 )
             }
             other => {
@@ -1308,5 +1345,179 @@ mod tests {
         e.doc = doc;
         let err = apply_err(&mut e, "listFormFields", json!({}));
         assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+    }
+
+    /// M1 regression: a separate widget kid carrying inheritable
+    /// presentation attributes (`/DA`, `/Q`) must not be mistaken for
+    /// the field dictionary — `/V` lands on the field dict.
+    #[test]
+    fn fill_writes_v_on_field_dict_not_da_carrying_widget() {
+        let mut doc = build_blank_doc(1);
+        let page_id = *doc.get_pages().values().next().unwrap();
+        let field = doc.new_object_id();
+        let mut w = widget_base();
+        w.remove(b"P");
+        w.set("Parent", Object::Reference(field));
+        w.set("DA", lopdf::text_string("/Helv 12 Tf 0 g"));
+        w.set("Q", 1);
+        let wid = add_annot(&mut doc, page_id, w);
+        doc.objects.insert(
+            field,
+            Object::Dictionary(dictionary! {
+                "FT" => "Tx",
+                "T" => lopdf::text_string("styled"),
+                "V" => lopdf::text_string("old"),
+                "Kids" => vec![Object::Reference(wid)],
+            }),
+        );
+        let mut e = FolioEngine::new();
+        e.doc = doc;
+        apply(
+            &mut e,
+            "fillFormField",
+            json!({"page": 0, "field": "styled", "value": "new"}),
+        );
+        let field_dict = e.doc.get_object(field).unwrap().as_dict().unwrap();
+        assert_eq!(
+            lopdf::decode_text_string(field_dict.get(b"V").unwrap()).unwrap(),
+            "new"
+        );
+        let widget_dict = e.doc.get_object(wid).unwrap().as_dict().unwrap();
+        assert!(
+            widget_dict.get(b"V").is_err(),
+            "widget kid carrying /DA must not receive /V"
+        );
+        assert_eq!(
+            fields(&mut e)
+                .iter()
+                .find(|r| r["name"] == "styled")
+                .unwrap()["v"],
+            "new"
+        );
+    }
+
+    /// M2 regression: `/AS` lands only on real widget annotations —
+    /// a separate field dict (no `/Subtype`, no `/Rect`) gets `/V`
+    /// but never `/AS`; its widget kid gets both.
+    #[test]
+    fn fill_checkbox_as_skips_pure_field_dict() {
+        let mut doc = build_blank_doc(1);
+        let page_id = *doc.get_pages().values().next().unwrap();
+        let field = doc.new_object_id();
+        let mut w = widget_base();
+        w.remove(b"P");
+        w.set("Parent", Object::Reference(field));
+        let wid = add_annot(&mut doc, page_id, w);
+        doc.objects.insert(
+            field,
+            Object::Dictionary(dictionary! {
+                "FT" => "Btn",
+                "T" => lopdf::text_string("agree2"),
+                "V" => Object::Name(b"Off".to_vec()),
+                "Kids" => vec![Object::Reference(wid)],
+            }),
+        );
+        let mut e = FolioEngine::new();
+        e.doc = doc;
+        apply(
+            &mut e,
+            "fillFormField",
+            json!({"page": 0, "field": "agree2", "value": "Yes"}),
+        );
+        let field_dict = e.doc.get_object(field).unwrap().as_dict().unwrap();
+        assert!(
+            field_dict.get(b"AS").is_err(),
+            "pure field dict must not receive /AS"
+        );
+        assert_eq!(
+            field_dict.get(b"V").unwrap().as_name().unwrap(),
+            b"Yes"
+        );
+        let widget_dict = e.doc.get_object(wid).unwrap().as_dict().unwrap();
+        assert_eq!(widget_dict.get(b"AS").unwrap().as_name().unwrap(), b"Yes");
+    }
+
+    /// L2 regression: equal `/V` with divergent `/AS` is repaired,
+    /// not treated as an eventless no-op; a second identical fill is.
+    #[test]
+    fn fill_repairs_divergent_as_on_equal_v() {
+        let mut doc = build_blank_doc(1);
+        let page_id = *doc.get_pages().values().next().unwrap();
+        let mut d = widget_base();
+        d.set("FT", "Btn");
+        d.set("T", lopdf::text_string("cb"));
+        d.set("V", Object::Name(b"B".to_vec()));
+        d.set("AS", Object::Name(b"Off".to_vec()));
+        d.set("Ff", 0);
+        d.set("P", Object::Reference(page_id));
+        add_annot(&mut doc, page_id, d);
+        let mut e = FolioEngine::new();
+        e.doc = doc;
+        let undo_len = e.journal.undo_len();
+        let result = e
+            .apply(Command::new(
+                "fillFormField",
+                json!({"page": 0, "field": "cb", "value": "B"}),
+            ))
+            .unwrap();
+        assert!(!result.events.is_empty(), "divergent /AS must be repaired");
+        assert_eq!(e.journal.undo_len(), undo_len + 1);
+        // The merged widget now shows /AS=/B.
+        let page_id = e.page_id(0).unwrap();
+        let entries = annot_entries(&e.doc, page_id).unwrap();
+        let (_, dict) = resolve_dict(&e.doc, &entries[0]).unwrap();
+        assert_eq!(dict.get(b"AS").unwrap().as_name().unwrap(), b"B");
+        // A genuinely equal fill is eventless.
+        let result = e
+            .apply(Command::new(
+                "fillFormField",
+                json!({"page": 0, "field": "cb", "value": "B"}),
+            ))
+            .unwrap();
+        assert!(result.events.is_empty());
+        assert_eq!(e.journal.undo_len(), undo_len + 1);
+    }
+
+    /// L4 empirical check: `Btn` on-state names containing spaces,
+    /// `#`, and non-ASCII bytes survive a save/open round-trip —
+    /// lopdf `#XX`-escapes names on write and decodes them on parse.
+    #[test]
+    fn button_on_state_name_with_special_chars_round_trips() {
+        let mut doc = build_blank_doc(1);
+        let page_id = *doc.get_pages().values().next().unwrap();
+        let mut d = widget_base();
+        d.set("FT", "Btn");
+        d.set("T", lopdf::text_string("cb2"));
+        d.set("V", Object::Name(b"Off".to_vec()));
+        d.set("AS", Object::Name(b"Off".to_vec()));
+        d.set("Ff", 0);
+        d.set("P", Object::Reference(page_id));
+        add_annot(&mut doc, page_id, d);
+        let mut e = FolioEngine::new();
+        e.doc = doc;
+        let value = "on #state/with ☃ space";
+        apply(
+            &mut e,
+            "fillFormField",
+            json!({"page": 0, "field": "cb2", "value": value}),
+        );
+        // The serialized PDF must not contain the raw delimiter bytes
+        // inside the name — check the escaped form appears instead.
+        let saved = apply(&mut e, "save", json!({}));
+        let bytes = b64_decode(saved["bytes_b64"].as_str().unwrap()).unwrap();
+        let text = String::from_utf8_lossy(&bytes);
+        assert!(text.contains("#23"), "expected #23 escape for '#'");
+        assert!(text.contains("#20"), "expected #20 escape for space");
+        assert!(!text.contains(&format!("/{value}")));
+        // Round-trip: the name decodes back to the exact input bytes.
+        let mut e2 = FolioEngine::new();
+        apply(&mut e2, "open", json!({"bytes_b64": saved["bytes_b64"]}));
+        assert_eq!(
+            fields(&mut e2)
+                .iter()
+                .find(|r| r["name"] == "cb2")
+                .unwrap()["v"],
+            value
+        );
     }
 }
