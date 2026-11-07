@@ -6,7 +6,9 @@ export type MotionKeyInput=Omit<MotionKey,'id'>&{id?:number};
 export interface Transform{tx:number;ty:number;sx:number;sy:number;rotation:number;ox:number;oy:number}
 export interface Shape{kind:'rect'|'ellipse';x:number;y:number;w:number;h:number;fill:[number,number,number,number]}
 export type LayerKind='shape'|'raster'|'comp';
-interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number}
+/** The 13 W3C Compositing Level 1 blend modes Prism implements; `null`/`"normal"` is the default source-over. */
+export type MotionBlendMode='normal'|'multiply'|'screen'|'overlay'|'darken'|'lighten'|'color-dodge'|'color-burn'|'hard-light'|'soft-light'|'difference'|'exclusion'|'add';
+interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean}
 /** Exactly one real content source; no placeholder shape for raster or comp layers. `comp` is the composition id a comp layer instantiates (0 is never a valid target). */
 export type MotionLayer=MotionLayerCommon&({shape:Shape;asset_id?:never;comp_id?:never}|{asset_id:number;shape?:never;comp_id?:never}|{comp_id:number;shape?:never;asset_id?:never});
 export const MOTION_RASTER_FORMAT='rgba8-straight-srgb' as const;
@@ -43,6 +45,10 @@ export class MotionDocument{
  removeComposition(id:number){return this.document.apply<{ok:boolean}>('removeComposition',{id});}
  /** Transform parenting within one composition; null clears. Parent and child must share a composition. */
  setLayerParent(layer:number,parent:number|null){return this.document.apply<{ok:boolean}>('setLayerParent',{layer,parent});}
+ /** W3C blend mode against the layers below in the same composition; null or "normal" clears to source-over. */
+ setLayerBlend(layer:number,blend:MotionBlendMode|null){return this.document.apply<{ok:boolean}>('setLayerBlend',{layer,blend});}
+ /** Clip this layer to the alpha of the nearest unclipped sibling below it in the same composition; the bottom layer of a composition cannot be clipped. */
+ setLayerClipped(layer:number,clipped:boolean){return this.document.apply<{ok:boolean}>('setLayerClipped',{layer,clipped});}
  /** Move a layer to another composition at `index`; comp 0 selects the root. Cross-comp moves clear transform-parent links. */
  reparentLayer(layer:number,comp:number,index:number){return this.document.apply<{ok:boolean}>('reparentLayer',{layer,comp,index});}
  updateLayer(id:number,patch:Partial<Pick<MotionLayer,'name'|'visible'|'locked'|'opacity'|'shape'|'asset_id'>>&{transform?:Partial<Transform>}){return this.document.apply<{ok:boolean}>('updateLayer',{...patch,id});}

@@ -641,3 +641,7 @@ tally-engine` 64 passed (9 new), `pnpm --filter @nitro-forge/tally` typecheck
 and 41 Vitest tests passed including two new live `nf-cli` format tests.
 Number-format rendering is host-side; no locale-aware display, XLSX or
 native/device acceptance is claimed.
+
+## P11 Motion blend modes and clipping source checkpoint (2026-11-07)
+
+Motion layers now carry an optional W3C `blend` mode (all 13 Prism modes, `null`/`"normal"` clears) and a `clipped` flag that masks a layer to the alpha of the nearest unclipped sibling below it in the same composition, via `setLayerBlend`/`setLayerClipped` ops mapped onto the ephemeral Prism scene. Snapshot schema stays 2: both fields are additive serde defaults skipped when unset, so pre-B1 snapshots restore unchanged. Local evidence: 30 Motion engine tests pass (5 new covering every blend mode's pixels, clip runs, comp-layer/raster composition, undo/redo and hostile restore), 4 Motion CLI/TypeScript tests pass including a new nf-cli blend/clip case, and package typecheck passes. No native target run, mattes/effects/expressions or full P11 completion is implied.

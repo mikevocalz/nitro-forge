@@ -109,6 +109,48 @@ struct Curve {
     property: Property,
     keys: Arc<Vec<Key>>,
 }
+/// W3C Compositing Level 1 blend modes; wire names match Prism's kebab-case
+/// `BlendMode` exactly so they pass through to `setLayerBlend` unchanged.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum BlendMode {
+    Normal,
+    Multiply,
+    Screen,
+    Overlay,
+    Darken,
+    Lighten,
+    ColorDodge,
+    ColorBurn,
+    HardLight,
+    SoftLight,
+    Difference,
+    Exclusion,
+    Add,
+}
+impl BlendMode {
+    fn parse(s: &str) -> Option<Self> {
+        serde_json::from_value(Value::String(s.to_string())).ok()
+    }
+    /// Prism `setLayerBlend` payload name (identical kebab-case names).
+    fn prism_name(self) -> &'static str {
+        match self {
+            Self::Normal => "normal",
+            Self::Multiply => "multiply",
+            Self::Screen => "screen",
+            Self::Overlay => "overlay",
+            Self::Darken => "darken",
+            Self::Lighten => "lighten",
+            Self::ColorDodge => "color-dodge",
+            Self::ColorBurn => "color-burn",
+            Self::HardLight => "hard-light",
+            Self::SoftLight => "soft-light",
+            Self::Difference => "difference",
+            Self::Exclusion => "exclusion",
+            Self::Add => "add",
+        }
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum LayerKind {
@@ -136,6 +178,15 @@ struct Layer {
     /// Transform parent: another layer in the same composition.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     parent_id: Option<u64>,
+    /// W3C blend mode against the layers below in the same composition;
+    /// absent means normal. `"normal"`/`null` both clear to absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    blend: Option<BlendMode>,
+    /// Clipping mask: the layer renders only through the alpha of the
+    /// nearest unclipped sibling below it in the same composition (Prism
+    /// `clipped`; consecutive clipped layers share that base's alpha).
+    #[serde(default, skip_serializing_if = "is_false")]
+    clipped: bool,
     transform: Transform,
     opacity: f64,
     curves: Vec<Curve>,
@@ -212,6 +263,9 @@ fn initial_comp_id() -> u64 {
 }
 fn is_initial_comp_id(id: &u64) -> bool {
     *id == 1
+}
+fn is_false(v: &bool) -> bool {
+    !*v
 }
 /// schema:1 snapshots predate `kind`; infer it from the content source.
 /// Hostile or inconsistent explicit kinds are left for `validate` to reject.
@@ -495,7 +549,12 @@ fn validate(s: &State) -> Result<(), EngineError> {
         {
             return Err(bad("logical raster layer canvas storage exceeds budget"));
         }
-        for l in layers {
+        for (index, l) in layers.iter().enumerate() {
+            // Layers are bottom-to-top; a clipped layer needs a sibling below
+            // to clip to (Prism `setClipped` parity).
+            if l.clipped && index == 0 {
+                return Err(bad("clipped layer requires a sibling below it"));
+            }
             match (l.kind, &l.shape, l.asset_id, l.comp_id) {
                 (Some(LayerKind::Shape), Some(sh), None, None) => {
                     if !["rect", "ellipse"].contains(&sh.kind.as_str())
@@ -884,6 +943,18 @@ impl MotionEngine {
                 "setLayerVisible",
                 json!({"id":layer,"visible":l.visible}),
             ))?;
+            if let Some(blend) = l.blend {
+                prism.apply(Command::new(
+                    "setLayerBlend",
+                    json!({"id":layer,"blend":blend.prism_name()}),
+                ))?;
+            }
+            if l.clipped {
+                prism.apply(Command::new(
+                    "setClipped",
+                    json!({"id":layer,"clipped":true}),
+                ))?;
+            }
         }
         if let Some(c) = ctx {
             c.checkpoint()?
@@ -1239,6 +1310,8 @@ impl Engine for MotionEngine {
                     asset_id: None,
                     comp_id: Some(comp_id),
                     parent_id: None,
+                    blend: None,
+                    clipped: false,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1300,6 +1373,49 @@ impl Engine for MotionEngine {
                 }
                 dest.insert(index, removed);
             }
+            "setLayerBlend" => {
+                let layer_id = id(p, "layer")?;
+                // `null` and `"normal"` both clear to the default (absent).
+                let blend = match p.get("blend") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => {
+                        let s = v
+                            .as_str()
+                            .ok_or_else(|| bad("blend must be a W3C mode name or null"))?;
+                        match BlendMode::parse(s) {
+                            Some(BlendMode::Normal) => None,
+                            Some(mode) => Some(mode),
+                            None => return Err(bad("unknown blend mode")),
+                        }
+                    }
+                };
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                let mut nl = (*arc).clone();
+                nl.blend = blend;
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
+            "setLayerClipped" => {
+                let layer_id = id(p, "layer")?;
+                let clipped = p
+                    .get("clipped")
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| bad("clipped must be a boolean"))?;
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                let mut nl = (*arc).clone();
+                nl.clipped = clipped;
+                // validate() rejects a clipped layer with no sibling below.
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
             "addShapeLayer" => {
                 let shape: Shape = serde_json::from_value(
                     p.get("shape")
@@ -1324,6 +1440,8 @@ impl Engine for MotionEngine {
                     asset_id: None,
                     comp_id: None,
                     parent_id: None,
+                    blend: None,
+                    clipped: false,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1353,6 +1471,8 @@ impl Engine for MotionEngine {
                     asset_id: Some(asset_id),
                     comp_id: None,
                     parent_id: None,
+                    blend: None,
+                    clipped: false,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1864,6 +1984,8 @@ mod tests {
         assert_eq!(e.snapshot().unwrap(), baseline);
     }
 }
+#[cfg(test)]
+mod blend_tests;
 #[cfg(test)]
 mod raster_tests;
 #[cfg(test)]
