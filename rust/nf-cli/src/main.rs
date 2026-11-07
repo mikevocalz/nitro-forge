@@ -15,6 +15,7 @@ fn factory(kind: EngineKind) -> Option<Box<dyn Engine>> {
         EngineKind::Quill => Some(Box::new(quill_engine::QuillEngine::new())),
         EngineKind::Photo => Some(Box::new(photo_engine::PhotoEngine::new())),
         EngineKind::Motion => Some(Box::new(motion_engine::MotionEngine::new())),
+        EngineKind::Design => Some(Box::new(design_engine::DesignEngine::new())),
     }
 }
 

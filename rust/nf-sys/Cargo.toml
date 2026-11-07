@@ -21,3 +21,4 @@ quill-engine = { path = "../../packages/quill/rust" }
 photo-engine = { path = "../../packages/photo/rust" }
 
 motion-engine = { path = "../../packages/motion/rust" }
+design-engine = { path = "../../packages/design/rust" }

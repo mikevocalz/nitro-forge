@@ -516,3 +516,28 @@ NFD1 header/format remains unchanged; JSON payload carries `kind:"motion",schema
 | `renderFrame` | `{time_s}` | `{width,height,pixels_b64?}` + binary output if requested | Ephemeral Prism scene composites actual RGBA; original command controls JSON/binary delivery. No encoder/export queue. |
 
 Whole proposed state validates before one journal/event on actual change; equal/empty writes and net-unchanged shared `__batch` preserve redo/events. Sixteen Arc/COW history entries, 16MiB serialized state cap; width/height1..4096 and <=1,048,576 output pixels, <=128 layers/curves, <=10,000 keys/curve and <=100,000 total. Duration finite >0..604800s, keys separated >=1e-6s; rational frame rate num1..240000/den1..1001 with quotient1..240. RGBA channels are bytes; geometry finite/positive extents bounded1e7, transform translation/origin/rotation ±1e7, scale magnitude1e-6..1e4 with keys/handles retaining base sign, opacity0..1. Handles must stay in their adjacent time segments/property range. IDs positive and below their next counter, counters <=9007199254740991. Names/title <=512 UTF-8 bytes. Restore validates full kind/schema/state before replacing document/history. Render tasks checkpoint between layers and before/after synchronous Prism flatten; no cancellation within the compositor is claimed. No binary-input operations, 3D, nesting, spring, matte/effect, expression, particle, media or encoded-queue implementation in this slice.
+
+## design-engine — `DesignEngine::new()` (fixed-frame layout slice)
+
+Registered Design/design at appended checkpoint/native ordinal9 after Motion8; prior ordinals stay unchanged. Snapshot NFD1 JSON owns `kind:"design",schema:1,title,next_id,nodes`. Root node1 is a fixed canvas frame; all other nodes form one ordered acyclic tree of frames/rectangles/ellipses. Coordinates/sizes are fixed document units; no hug/fill, wrapping, constraints, text, component/variable/prototype runtime or clipping is admitted.
+
+| Op | Payload | Result | Notes |
+| --- | --- | --- | --- |
+| `new` | `{title?,width?,height?}` | `{ok}` | Replaces document with an empty root canvas; defaults640×360. |
+| `setComposition` | `{title?,width?,height?}` | `{ok}` | Root must be editable; canvas dimensions positive integers. |
+| `describe` | `{}` | full state | Read only. |
+| `addFrame` | `{parent,name?,x?,y?,width?,height?,fill?,visible?}` | `{node_id}` | Parent must be an editable frame. Defaults0,0/100×100/transparent. |
+| `addShape` | same + `kind:"rect"|"ellipse"` | `{node_id}` | Real Prism shape primitives. |
+| `updateNode` | `{id,name?,x?,y?,width?,height?,fill?,visible?,locked?}` | `{ok}` | Root geometry uses setComposition. Locked node requires a separate lock-only unlock; locked ancestors block it. |
+| `setFrameLayout` | `{id,layout:null|{direction:"row"|"column",gap,padding_top,padding_right,padding_bottom,padding_left,align:"start"|"center"|"end"|"stretch",justify:"start"|"center"|"end"|"space-between"}}` | `{ok}` | Complete flow settings; null restores absolute child positioning. |
+| `setChildOrder` | `{parent,order:[id,...]}` | `{ok}` | Exact unique permutation of existing direct children. |
+| `reparentNode` | `{id,parent,index}` | `{ok}` | Index in destination after removal; retains authored local coordinates; rejects cycles. |
+| `removeNode` | `{id}` | `{ok}` | Deletes subtree; root cannot be removed; every descendant must be editable. |
+| `evaluateLayout` | `{}` | `{boxes:[{id,kind,x,y,width,height,fill,visible}]}` | Read-only world-space preorder boxes. |
+| `renderFrame` | `{}` | `{width,height,pixels_b64?}` + binary output if requested | Actual ephemeral Prism RGBA scene; no encoder/file delivery. |
+
+Absolute children use parent origin plus local x/y. Flow overrides child x/y in computed output, retains authored fixed sizes, and applies padding/gap, cross-axis alignment and main-axis distribution. Stretch overrides evaluated cross size without changing stored size. Extra main space is nonnegative; overflowing fixed children retain size and start from leading padding. Center/end may overflow cross-axis bounds. Hidden nodes still occupy flow space and validate; visibility is inherited. Frames do not clip descendants. Every computed box, including hidden boxes, must satisfy Prism's finite ±1e7 coordinate/positive size constraints. Effective nested frame padding must leave positive content size. These checks precede mutation and restore.
+
+Lock is authored edit permission on a node and its descendants, not a frozen world-space result: unlocked ancestor layout/reparent/order operations can reposition locked descendants. Separate unlock admits only the locked field; subtree removal checks every descendant. Root new/restore/history remain full-document lifecycle operations.
+
+Whole candidate validation precedes one history/event entry; equal writes and net-equal atomic batches preserve redo/events. Sixteen Arc/COW history states, <=1024 nodes, <=64 parent edges, <=512-byte names/title, safe-integer IDs below next counter, 8MiB encoded state. Local x/y and positive sizes bounded1e6; gap/padding0..100000. Root width/height1..4096 and <=1,048,576 pixels before allocation. Restore checks kind/schema/tree/bounds/evaluated geometry before replacing state/history. Render tasks checkpoint between nodes and before/after synchronous Prism flatten; no inside-compositor interruption is claimed. Binary input, app activation and native rebuilt support remain outside this slice.

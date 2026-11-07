@@ -5,7 +5,7 @@ import type { EngineKind } from "./types";
 // Persisted NFC1 tags are fixed independently of the runtime engine list's
 // order. Adding an engine requires an explicit new tag, never renumbering.
 const ENGINE_TAGS: Readonly<Record<EngineKind, number>> = {
-  prism: 0, cadence: 1, splice: 2, folio: 3, pitch: 4, tally: 5, quill: 6, photo: 7, motion: 8,
+  prism: 0, cadence: 1, splice: 2, folio: 3, pitch: 4, tally: 5, quill: 6, photo: 7, motion: 8, design: 9,
 };
 const MAX_CHECKPOINT_BYTES = 256 * 1024 * 1024;
 const ENGINES_BY_TAG = new Map(Object.entries(ENGINE_TAGS).map(([kind, tag]) => [tag, kind as EngineKind]));

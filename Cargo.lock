@@ -254,6 +254,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "design-engine"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "prism-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -601,6 +611,7 @@ name = "nf-cli"
 version = "0.1.0"
 dependencies = [
  "cadence-engine",
+ "design-engine",
  "folio-engine",
  "ignition-core",
  "motion-engine",
@@ -617,6 +628,7 @@ name = "nf-sys"
 version = "0.1.0"
 dependencies = [
  "cadence-engine",
+ "design-engine",
  "folio-engine",
  "ignition-core",
  "motion-engine",
