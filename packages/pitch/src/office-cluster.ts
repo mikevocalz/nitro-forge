@@ -136,7 +136,7 @@ export function pitchId(id: string): number {
 
 /** Object kinds the engine stores that the pinned NYC-Tron slide renderer cannot draw. */
 const UNSUPPORTED_OBJECT_KINDS: ReadonlySet<string> = new Set([
-  "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star", "connector", "media",
+  "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star", "connector", "media", "chart", "table",
 ]);
 
 function toObject(o: RawObj): PitchSlideObject {

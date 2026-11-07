@@ -24,9 +24,13 @@ use serde_json::{json, Value};
 
 mod sections;
 mod animation;
+mod data;
 mod masters;
 mod themes;
 pub use animation::Trigger;
+pub use data::{
+    ChartKind, ChartPoint, ChartSeries, ChartSpec, TableCell, TableCellValue, TableSpec,
+};
 use sections::Section;
 
 const JOURNAL_CAPACITY: usize = 64;
@@ -79,8 +83,9 @@ pub enum Layout {
 
 /// Object kinds. `Text`/`Rect`/`Image` are the legacy set; the remaining
 /// variants are the bounded shape presets admitted by `addShape` plus
-/// `Connector`, admitted by `addConnector`, and `Media`, admitted by
-/// `addMedia`. Shape geometry is deterministic: every preset is inscribed
+/// `Connector`, admitted by `addConnector`, `Media`, admitted by
+/// `addMedia`, and `Chart`/`Table`, admitted by `addChart`/`addTable`.
+/// Shape geometry is deterministic: every preset is inscribed
 /// in the object's axis-aligned `x,y,w,h` bounds before `rotation_deg` is
 /// applied (see docs/ENGINE_OPS.md for the per-kind outline contract hosts
 /// render). Connectors are different: their `x,y,w,h` are unused zeros and
@@ -88,6 +93,9 @@ pub enum Layout {
 /// spec at read time (see `connector_points`). Media objects DO have real
 /// bounds (move/resize/rotate apply) and carry a bounded `media` metadata
 /// spec; the engine stores the spec only — decode/playback is host-side.
+/// Chart/table objects also have real bounds and carry bounded embedded
+/// data specs (`chart`/`table`); the engine stores the data only — hosts
+/// render charts and tables (see data.rs).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ObjKind {
@@ -103,6 +111,8 @@ pub enum ObjKind {
     Star,
     Connector,
     Media,
+    Chart,
+    Table,
 }
 
 impl ObjKind {
@@ -384,6 +394,16 @@ pub struct Obj {
     /// decode/playback/pixels.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub media: Option<MediaSpec>,
+    /// Bounded embedded chart data spec; present iff `kind == Chart`
+    /// (enforced by `addChart`/`updateChart` and by restore). Data only —
+    /// the engine never renders charts; hosts draw from this spec.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chart: Option<ChartSpec>,
+    /// Bounded embedded table data spec; present iff `kind == Table`
+    /// (enforced by `addTable`/`updateTable` and by restore). Data only —
+    /// the engine never renders tables; hosts draw from this spec.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub table: Option<TableSpec>,
     /// Optional morph tag: a bounded non-blank name, unique per slide,
     /// used by hosts to match this object to same-named objects on
     /// adjacent slides during a `"morph"` transition. DATA ONLY — the
@@ -1291,6 +1311,9 @@ impl Engine for PitchEngine {
             }
             "addTheme"|"renameTheme"|"setThemeColor"|"setThemeFont"
             |"removeTheme"|"setDeckTheme" => themes::apply(self, &cmd),
+            "addChart"|"updateChart"|"addTable"|"updateTable" => {
+                data::apply(self, &cmd)
+            }
             "setSlideSize" => {
                 let size: SlideSize = serde_json::from_value(p.clone())?;
                 if !size.valid() { return Err(EngineError::validation("slide dimensions must be finite, positive and at most 100000")); }
@@ -1460,6 +1483,8 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: None,
                     media: None,
+                    chart: None,
+                    table: None,
                     morph_name: None,
                     src: None,
                 });
@@ -1536,6 +1561,8 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: None,
                     media: None,
+                    chart: None,
+                    table: None,
                     morph_name: None,
                     src: None,
                 });
@@ -1578,6 +1605,8 @@ impl Engine for PitchEngine {
                     stroke,
                     connector: None,
                     media: None,
+                    chart: None,
+                    table: None,
                     morph_name: None,
                     src: None,
                 });
@@ -1608,6 +1637,8 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: None,
                     media: None,
+                    chart: None,
+                    table: None,
                     morph_name: None,
                     src: Some(src),
                 });
@@ -1642,6 +1673,8 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: None,
                     media: Some(media),
+                    chart: None,
+                    table: None,
                     morph_name: None,
                     src: None,
                 });
@@ -1759,6 +1792,8 @@ impl Engine for PitchEngine {
                     stroke: None,
                     connector: Some(ConnectorSpec { from, to, route, arrows, stroke }),
                     media: None,
+                    chart: None,
+                    table: None,
                     morph_name: None,
                     src: None,
                 });
@@ -2247,7 +2282,11 @@ impl Engine for PitchEngine {
         // additionally carries named deck themes and the deck→theme
         // binding (P14 slice 9); a schema:≤5 reader would silently drop
         // the additive `themes`/`deck_theme` fields, so theme state takes
-        // schema:6.
+        // schema:6. schema:7 additionally carries chart and table objects
+        // with embedded bounded data (P14 slice 10); the `chart`/`table`
+        // Obj fields are additive like `media`/`morph_name`, so chart/table
+        // data takes schema:7 even though the new ObjKind variants also
+        // fail closed as unknown variants on old readers.
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
@@ -2267,7 +2306,12 @@ impl Engine for PitchEngine {
             slide.objects.iter().any(|object| object.morph_name.is_some())
             || slide.transition.as_ref().is_some_and(|t| t.kind == TransitionKind::Morph));
         let schema6 = !self.state.themes.is_empty() || self.state.deck_theme.is_some();
-        let payload = if schema6 {
+        let schema7 = self.state.slides.iter().any(|slide|
+            slide.objects.iter().any(|object|
+                matches!(object.kind, ObjKind::Chart | ObjKind::Table)));
+        let payload = if schema7 {
+            serde_json::to_vec(&json!({"kind":"pitch","schema":7,"document":self.state}))?
+        } else if schema6 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":6,"document":self.state}))?
         } else if schema5 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":5,"document":self.state}))?
@@ -2293,8 +2337,9 @@ impl Engine for PitchEngine {
             // transition/timing-capable; schema:4 = shape presets/strokes/
             // connectors/media objects; schema:5 = morph transitions and
             // per-object morph names; schema:6 = named deck themes and the
-            // deck→theme binding.
-            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4 || wrapper.schema == 5 || wrapper.schema == 6) {
+            // deck→theme binding; schema:7 = chart/table objects with
+            // embedded bounded data.
+            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4 || wrapper.schema == 5 || wrapper.schema == 6 || wrapper.schema == 7) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
             wrapper.document
@@ -2426,6 +2471,50 @@ impl Engine for PitchEngine {
                         ));
                     }
                     _ => {}
+                }
+                // Chart/table objects follow the media rule: real bounds,
+                // no text/fill/src/connector/media payloads, and the spec
+                // field present iff the kind matches.
+                for (is_chart, spec_present) in [
+                    (true, object.chart.is_some()),
+                    (false, object.table.is_some()),
+                ] {
+                    let kind_matches = if is_chart {
+                        object.kind == ObjKind::Chart
+                    } else {
+                        object.kind == ObjKind::Table
+                    };
+                    if kind_matches != spec_present {
+                        return Err(EngineError::serialization(
+                            "chart/table spec does not match the object kind",
+                        ));
+                    }
+                }
+                if object.kind == ObjKind::Chart || object.kind == ObjKind::Table {
+                    if ![object.x, object.y, object.w, object.h, object.rotation_deg]
+                        .iter()
+                        .all(|v| v.is_finite())
+                        || object.w <= 0.0
+                        || object.h <= 0.0
+                        || object.text.is_some()
+                        || object.fill.is_some()
+                        || object.src.is_some()
+                        || object.connector.is_some()
+                        || object.media.is_some()
+                        || (object.kind == ObjKind::Chart && object.table.is_some())
+                        || (object.kind == ObjKind::Table && object.chart.is_some())
+                    {
+                        return Err(EngineError::serialization(
+                            "chart/table object carries invalid geometry or content fields",
+                        ));
+                    }
+                    if let Some(spec) = &object.chart {
+                        data::check_chart_spec_restore(spec)?;
+                    }
+                    if let Some(spec) = &object.table {
+                        data::check_table_spec(spec)
+                            .map_err(|_| EngineError::serialization("invalid table spec"))?;
+                    }
                 }
                 if let Some(name) = &object.morph_name {
                     check_morph_name(name)
