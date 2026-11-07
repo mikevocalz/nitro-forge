@@ -277,6 +277,141 @@ fn style_at(b: &Block, offset: usize) -> Style {
 }
 
 // ---------------------------------------------------------------------------
+// Find / replace
+// ---------------------------------------------------------------------------
+
+/// Parsed `findText`/`replaceText` search parameters. Positions are Unicode
+/// scalar offsets; matches never span block boundaries.
+struct FindQuery {
+    chars: Vec<char>,
+    case_sensitive: bool,
+    from: Pos,
+    to: Pos,
+}
+
+fn parse_find_query(p: &Value, blocks: &[Block]) -> Result<FindQuery, EngineError> {
+    let query = as_str(field(p, "query")?, "query")?;
+    if query.is_empty() {
+        return Err(EngineError::validation("query must not be empty"));
+    }
+    let case_sensitive = match p.get("case_sensitive") {
+        Some(v) => v
+            .as_bool()
+            .ok_or_else(|| EngineError::invalid("'case_sensitive' must be a bool"))?,
+        None => false,
+    };
+    let doc_start = Pos {
+        block: 0,
+        offset: 0,
+    };
+    let doc_end = blocks.last().map_or(doc_start, |b| Pos {
+        block: blocks.len() - 1,
+        offset: block_len(b),
+    });
+    let (from, to) = match (p.get("from"), p.get("to")) {
+        (None, None) => (doc_start, doc_end),
+        (fv, tv) => {
+            let from = match fv {
+                Some(v) => parse_pos(v)?,
+                None => doc_start,
+            };
+            let to = match tv {
+                Some(v) => parse_pos(v)?,
+                None => doc_end,
+            };
+            (from, to)
+        }
+    };
+    if blocks.is_empty() {
+        return Err(EngineError::validation("document has no blocks"));
+    }
+    // Validate positions against the live block list without an engine.
+    for pos in [from, to] {
+        let Some(b) = blocks.get(pos.block) else {
+            return Err(EngineError::out_of_bounds(format!(
+                "block {} out of range ({} blocks)",
+                pos.block,
+                blocks.len()
+            )));
+        };
+        let len = block_len(b);
+        if pos.offset > len {
+            return Err(EngineError::out_of_bounds(format!(
+                "offset {} out of range (block {} has {} chars)",
+                pos.offset, pos.block, len
+            )));
+        }
+    }
+    if !from.le(to) {
+        return Err(EngineError::validation("range end precedes range start"));
+    }
+    Ok(FindQuery {
+        chars: query.chars().collect(),
+        case_sensitive,
+        from,
+        to,
+    })
+}
+
+/// Per-scalar case-insensitive equality using default Unicode lowercase
+/// mappings. A scalar whose lowercase expands to multiple scalars never
+/// equals a single other scalar, keeping offsets unambiguous.
+fn scalar_eq(a: char, b: char, ignore_case: bool) -> bool {
+    if ignore_case {
+        a.to_lowercase().eq(b.to_lowercase())
+    } else {
+        a == b
+    }
+}
+
+/// Non-overlapping matches of `q` inside `hay[s..e]`; returns (start,end)
+/// scalar offsets, `end` exclusive.
+fn find_in_chars(hay: &[char], s: usize, e: usize, q: &[char], ignore_case: bool) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    if q.is_empty() || e.saturating_sub(s) < q.len() {
+        return out;
+    }
+    let mut i = s;
+    while i + q.len() <= e {
+        let mut j = 0;
+        while j < q.len() && scalar_eq(hay[i + j], q[j], ignore_case) {
+            j += 1;
+        }
+        if j == q.len() {
+            out.push((i, i + q.len()));
+            i += q.len();
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+/// All non-overlapping matches across `blocks` within the query range.
+/// Returns `(block_index, start, end)` scalar offsets. Matches are confined
+/// to a single block; the block boundary itself is never matched.
+fn find_matches(blocks: &[Block], q: &FindQuery) -> Vec<(usize, usize, usize)> {
+    let mut out = Vec::new();
+    let ignore_case = !q.case_sensitive;
+    for (bi, b) in blocks.iter().enumerate().take(q.to.block + 1).skip(q.from.block) {
+        let s = if bi == q.from.block { q.from.offset } else { 0 };
+        let e = if bi == q.to.block {
+            q.to.offset
+        } else {
+            block_len(b)
+        };
+        if e <= s {
+            continue;
+        }
+        let hay: Vec<char> = block_text(b).chars().collect();
+        for (ms, me) in find_in_chars(&hay, s, e, &q.chars, ignore_case) {
+            out.push((bi, ms, me));
+        }
+    }
+    out
+}
+
+// ---------------------------------------------------------------------------
 // Payload parsing
 // ---------------------------------------------------------------------------
 
@@ -903,6 +1038,95 @@ impl QuillEngine {
         Ok(Self::read_only(json!({ "text": text })))
     }
 
+    /// `findText {query, from?, to?, case_sensitive?}` — read-only search.
+    /// Matches are per-block, non-overlapping, and reported as
+    /// `{from:Pos,to:Pos,text}` with scalar offsets.
+    fn op_find_text(&self, p: &Value) -> Result<CommandResult, EngineError> {
+        let q = parse_find_query(p, &self.blocks)?;
+        let matches = find_matches(&self.blocks, &q);
+        let arr: Vec<Value> = matches
+            .iter()
+            .map(|&(bi, s, e)| {
+                json!({
+                    "from": {"block": bi, "offset": s},
+                    "to": {"block": bi, "offset": e},
+                    "text": block_text_slice(&self.blocks[bi], s, e),
+                })
+            })
+            .collect();
+        let count = arr.len();
+        Ok(Self::read_only(json!({ "matches": arr, "count": count })))
+    }
+
+    /// `replaceText {query, replacement, from?, to?, case_sensitive?}` —
+    /// replace every non-overlapping match in the range as one atomic
+    /// command: one journal entry, one `document:changed`, staged validation
+    /// before mutation. `replacement` inherits the style of the first matched
+    /// scalar; it must not contain newlines (matches never span blocks).
+    /// Zero matches or an unchanged document is eventless.
+    fn op_replace_text(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let replacement = as_str(field(p, "replacement")?, "replacement")?;
+        if replacement.contains('\n') || replacement.contains('\r') {
+            return Err(EngineError::validation(
+                "replacement must not contain newlines; matches never span blocks",
+            ));
+        }
+        let q = parse_find_query(p, &self.blocks)?;
+        let matches = find_matches(&self.blocks, &q);
+        if matches.is_empty() {
+            return Ok(Self::read_only(json!({ "replaced": 0 })));
+        }
+
+        let mut staged = Self {
+            blocks: self.blocks.clone(),
+            journal: Journal::new(1),
+        };
+        // Group consecutive matches by block (find_matches is block-ordered),
+        // then apply each block's matches right-to-left so earlier scalar
+        // offsets stay valid.
+        let mut i = 0;
+        while i < matches.len() {
+            let bi = matches[i].0;
+            let mut j = i;
+            let mut per: Vec<(usize, usize)> = Vec::new();
+            while j < matches.len() && matches[j].0 == bi {
+                per.push((matches[j].1, matches[j].2));
+                j += 1;
+            }
+            per.sort_by(|a, b| b.0.cmp(&a.0));
+            for (s, e) in per {
+                // Style of the first matched scalar: style_at(b, s+1) reads
+                // the char at index s.
+                let style = style_at(&staged.blocks[bi], s + 1);
+                let b = &mut staged.blocks[bi];
+                let (head, _mid, tail) = split3(&b.inlines, s, e);
+                let mut inlines = head;
+                if !replacement.is_empty() {
+                    inlines.push(Inline {
+                        text: replacement.to_string(),
+                        style,
+                    });
+                }
+                inlines.extend(tail);
+                b.inlines = normalize_inlines(inlines);
+            }
+            i = j;
+        }
+
+        lists::validate(&staged.blocks)?;
+        let replaced = matches.len();
+        if staged.blocks == self.blocks {
+            return Ok(Self::read_only(json!({ "replaced": replaced })));
+        }
+        self.journal.record(UndoEntry {
+            index: 0,
+            removed: self.blocks.clone(),
+            inserted: staged.blocks.clone(),
+        });
+        self.blocks = staged.blocks;
+        Ok(CommandResult::data(json!({ "replaced": replaced })))
+    }
+
     fn op_blocks(&self) -> Result<CommandResult, EngineError> {
         Ok(Self::read_only(serde_json::to_value(SnapshotRef {
             blocks: &self.blocks,
@@ -1078,6 +1302,8 @@ impl Engine for QuillEngine {
             "splitBlock" => self.op_split_block(&cmd.payload),
             "mergeBlock" => self.op_merge_block(&cmd.payload),
             "text" => self.op_text(&cmd.payload),
+            "findText" => self.op_find_text(&cmd.payload),
+            "replaceText" => self.op_replace_text(&cmd.payload),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
             "exportDocx" => self.op_export_docx(&cmd, None),
@@ -2383,5 +2609,252 @@ mod tests {
         );
         e.restore(&legacy).unwrap();
         assert_eq!(e.blocks[0].inlines[0].style.highlight, None);
+    }
+
+    // -- findText / replaceText ------------------------------------------------
+
+    fn find(e: &mut QuillEngine, payload: Value) -> CommandResult {
+        apply(e, "findText", payload)
+    }
+
+    #[test]
+    fn find_text_case_insensitive_by_default_and_sensitive_on_request() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "Foo foo FOO");
+        let r = find(&mut e, json!({"query": "foo"}));
+        assert_eq!(r.data["count"], 3);
+        assert_eq!(r.events.len(), 0, "read-only op emits no events");
+        let matches = r.data["matches"].as_array().unwrap();
+        assert_eq!(matches[0]["from"]["offset"], 0);
+        assert_eq!(matches[0]["to"]["offset"], 3);
+        assert_eq!(matches[0]["text"], "Foo");
+        let r = find(&mut e, json!({"query": "foo", "case_sensitive": true}));
+        assert_eq!(r.data["count"], 1);
+        assert_eq!(r.data["matches"][0]["from"]["offset"], 4);
+        // non-bool flag rejects
+        assert_eq!(
+            err(&mut e, "findText", json!({"query": "x", "case_sensitive": "yes"})).code,
+            ErrorCode::InvalidCommand
+        );
+    }
+
+    #[test]
+    fn find_text_range_bounded_and_empty_query_rejected() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "one two one");
+        let r = find(
+            &mut e,
+            json!({
+                "query": "one",
+                "from": {"block": 0, "offset": 4},
+                "to": {"block": 0, "offset": 11}
+            }),
+        );
+        assert_eq!(r.data["count"], 1);
+        assert_eq!(r.data["matches"][0]["from"]["offset"], 8);
+        // a match clipped by the range end is not reported
+        let r = find(
+            &mut e,
+            json!({
+                "query": "one",
+                "from": {"block": 0, "offset": 0},
+                "to": {"block": 0, "offset": 2}
+            }),
+        );
+        assert_eq!(r.data["count"], 0);
+        // empty query and inverted range reject, state unchanged
+        let before = describe(&mut e);
+        assert_eq!(
+            err(&mut e, "findText", json!({"query": ""})).code,
+            ErrorCode::Validation
+        );
+        assert_eq!(
+            err(
+                &mut e,
+                "findText",
+                json!({
+                    "query": "x",
+                    "from": {"block": 0, "offset": 5},
+                    "to": {"block": 0, "offset": 1}
+                })
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        assert_eq!(describe(&mut e), before);
+    }
+
+    #[test]
+    fn find_text_matches_across_blocks_but_never_spans_them() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "cat");
+        apply(
+            &mut e,
+            "splitBlock",
+            json!({"at": {"block": 0, "offset": 3}}),
+        );
+        insert(&mut e, 1, 0, "dog cat");
+        // "cat" exists in block0 and inside block1 — two per-block matches
+        let r = find(&mut e, json!({"query": "cat"}));
+        assert_eq!(r.data["count"], 2);
+        assert_eq!(r.data["matches"][0]["from"]["block"], 0);
+        assert_eq!(r.data["matches"][1]["from"]["block"], 1);
+        assert_eq!(r.data["matches"][1]["from"]["offset"], 4);
+        // "t\nd"-style cross-block text never matches: query "catdog" absent
+        let r = find(&mut e, json!({"query": "catdog"}));
+        assert_eq!(r.data["count"], 0);
+        // range starting mid-document finds only later blocks
+        let r = find(
+            &mut e,
+            json!({
+                "query": "cat",
+                "from": {"block": 1, "offset": 0}
+            }),
+        );
+        assert_eq!(r.data["count"], 1);
+        assert_eq!(r.data["matches"][0]["from"]["block"], 1);
+    }
+
+    #[test]
+    fn replace_text_all_matches_one_undo_entry() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "foo bar foo baz foo");
+        let before = describe(&mut e);
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({"query": "foo", "replacement": "qux"}),
+        );
+        assert_eq!(r.data["replaced"], 3);
+        assert_eq!(text(&mut e), "qux bar qux baz qux");
+        assert_eq!(r.events.len(), 1);
+        let after = describe(&mut e);
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&mut e), before, "single undo restores all");
+        assert!(e.redo().unwrap());
+        assert_eq!(describe(&mut e), after);
+    }
+
+    #[test]
+    fn replace_text_case_and_range_and_style_inheritance() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "Foo foo");
+        apply(
+            &mut e,
+            "applyStyle",
+            json!({
+                "from": {"block": 0, "offset": 4},
+                "to": {"block": 0, "offset": 7},
+                "style": {"bold": true}
+            }),
+        );
+        // case-insensitive replace across a styled run: replacement inherits
+        // each match's own first-char style
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({"query": "foo", "replacement": "X"}),
+        );
+        assert_eq!(r.data["replaced"], 2);
+        assert_eq!(text(&mut e), "X X");
+        let d = describe(&mut e);
+        let inls = d["blocks"][0]["inlines"].as_array().unwrap();
+        // "X "(plain) + "X"(bold) + trailing space? text is "X X": plain X,
+        // space, bold X? second match was bold "foo" → its X is bold.
+        let bolds: Vec<bool> = inls
+            .iter()
+            .map(|i| i["style"]["bold"].as_bool().unwrap())
+            .collect();
+        assert_eq!(bolds, vec![false, true]);
+        assert_eq!(inls[1]["text"], "X");
+    }
+
+    #[test]
+    fn replace_text_respects_range_bounds() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "foo foo foo");
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({
+                "query": "foo",
+                "replacement": "X",
+                "from": {"block": 0, "offset": 4},
+                "to": {"block": 0, "offset": 7}
+            }),
+        );
+        assert_eq!(r.data["replaced"], 1);
+        assert_eq!(text(&mut e), "foo X foo");
+        // multi-block range: matches only inside [from,to)
+        insert(&mut e, 0, 9, "\nfoo");
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({
+                "query": "foo",
+                "replacement": "Y",
+                "from": {"block": 1, "offset": 0}
+            }),
+        );
+        assert_eq!(r.data["replaced"], 1);
+        assert_eq!(text(&mut e), "foo X foo\nY");
+    }
+
+    #[test]
+    fn replace_text_empty_match_set_and_newline_replacement_rejected() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        // zero matches: eventless, no journal entry
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({"query": "zzz", "replacement": "q"}),
+        );
+        assert_eq!(r.data["replaced"], 0);
+        assert_eq!(r.events.len(), 0);
+        assert!(e.undo().unwrap(), "only the setup insert is undoable");
+        assert!(!e.undo().unwrap());
+        // newline replacement rejects without mutating
+        let before = describe(&mut e);
+        assert_eq!(
+            err(
+                &mut e,
+                "replaceText",
+                json!({"query": "a", "replacement": "x\ny"})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        assert_eq!(
+            err(
+                &mut e,
+                "replaceText",
+                json!({"query": "", "replacement": "x"})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        assert_eq!(describe(&mut e), before);
+    }
+
+    #[test]
+    fn replace_text_delete_only_and_snapshot_restore_unaffected() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "a1b1c");
+        let r = apply(
+            &mut e,
+            "replaceText",
+            json!({"query": "1", "replacement": ""}),
+        );
+        assert_eq!(r.data["replaced"], 2);
+        assert_eq!(text(&mut e), "abc");
+        // snapshot/restore round-trips the replaced document identically
+        let snap = e.snapshot().unwrap();
+        let mut e2 = engine();
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&mut e2), describe(&mut e));
+        // find works after restore too
+        let r = find(&mut e2, json!({"query": "b"}));
+        assert_eq!(r.data["count"], 1);
     }
 }

@@ -65,6 +65,24 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("findText locates matches and replaceText swaps them in one undo", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "Foo bar foo");
+    const found = await doc.findText("foo");
+    expect(found.data.count).toBe(2);
+    expect(found.data.matches[0]?.text).toBe("Foo");
+    const sensitive = await doc.findText("foo", { caseSensitive: true });
+    expect(sensitive.data.count).toBe(1);
+    expect(sensitive.data.matches[0]?.from.offset).toBe(8);
+
+    const replaced = await doc.replaceText("foo", "qux");
+    expect(replaced.data.replaced).toBe(2);
+    expect((await doc.text()).data.text).toBe("qux bar qux");
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.text()).data.text).toBe("Foo bar foo");
+    await doc.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");

@@ -21,6 +21,8 @@ export const OPS = {
   splitBlock: "splitBlock",
   mergeBlock: "mergeBlock",
   text: "text",
+  findText: "findText",
+  replaceText: "replaceText",
   blocks: "blocks",
   layout: "layout",
   exportDocx: "exportDocx",
@@ -65,6 +67,17 @@ export interface LayoutLine {
 }
 export interface LayoutPage {
   lines: LayoutLine[];
+}
+export interface FindMatch {
+  from: Pos;
+  to: Pos;
+  text: string;
+}
+export interface FindOptions {
+  from?: Pos;
+  to?: Pos;
+  /** Defaults to false (case-insensitive per-scalar Unicode lowercase). */
+  caseSensitive?: boolean;
 }
 
 export class QuillDocument {
@@ -137,6 +150,29 @@ export class QuillDocument {
   }
   text(from?: Pos, to?: Pos) {
     return this.call<{ text: string }>(OPS.text, { from, to });
+  }
+  /** Read-only search; matches never span block boundaries. */
+  findText(query: string, options: FindOptions = {}) {
+    return this.call<{ matches: FindMatch[]; count: number }>(OPS.findText, {
+      query,
+      ...(options.from === undefined ? {} : { from: options.from }),
+      ...(options.to === undefined ? {} : { to: options.to }),
+      ...(options.caseSensitive === undefined
+        ? {}
+        : { case_sensitive: options.caseSensitive }),
+    });
+  }
+  /** Replace every non-overlapping match in range as one undo step. */
+  replaceText(query: string, replacement: string, options: FindOptions = {}) {
+    return this.call<{ replaced: number }>(OPS.replaceText, {
+      query,
+      replacement,
+      ...(options.from === undefined ? {} : { from: options.from }),
+      ...(options.to === undefined ? {} : { to: options.to }),
+      ...(options.caseSensitive === undefined
+        ? {}
+        : { case_sensitive: options.caseSensitive }),
+    });
   }
   blocks<T = unknown>() {
     return this.call<T>(OPS.blocks);
