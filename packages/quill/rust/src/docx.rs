@@ -63,6 +63,9 @@ fn build_document_xml(blocks: &[Block]) -> String {
         for inl in &b.inlines {
             s.push_str("<w:r>");
             let mut pr = String::new();
+            if let Some(highlight) = &inl.style.highlight {
+                pr.push_str(&format!("<w:shd w:val=\"clear\" w:fill=\"{}\"/>", &highlight[1..]));
+            }
             if let Some(size) = inl.style.font_size {
                 let half_points = (size * 2.0) as u32;
                 pr.push_str(&format!("<w:sz w:val=\"{half_points}\"/><w:szCs w:val=\"{half_points}\"/>"));
@@ -107,6 +110,9 @@ fn build_document_xml(blocks: &[Block]) -> String {
 
 /// Serialize `blocks` to a minimal valid .docx (ZIP bytes).
 pub fn export_docx(blocks: &[Block]) -> Result<Vec<u8>, EngineError> {
+    for inline in blocks.iter().flat_map(|block| &block.inlines) {
+        if let Some(value) = &inline.style.highlight { crate::validate_highlight(value)?; }
+    }
     let document = build_document_xml(blocks);
     let cursor = Cursor::new(Vec::new());
     let mut zip = zip::ZipWriter::new(cursor);
@@ -142,6 +148,30 @@ fn attr_val(e: &BytesStart<'_>, key: &[u8]) -> Option<String> {
         }
     }
     None
+}
+
+fn run_shading(e: &BytesStart<'_>) -> Result<Option<String>, EngineError> {
+    let mut fill = None;
+    for attribute in e.attributes() {
+        let attribute = attribute.map_err(|_| EngineError::validation("invalid run shading attribute"))?;
+        let value = attribute.unescape_value().map_err(|_| EngineError::validation("invalid run shading value"))?;
+        match local_name(attribute.key.as_ref()) {
+            b"fill" => fill = Some(format!("#{value}")),
+            b"val" if value != "clear" => return Err(EngineError::validation("patterned run shading is not supported")),
+            b"themeFill" | b"themeFillTint" | b"themeFillShade" => return Err(EngineError::validation("theme run shading is not supported")),
+            _ => {}
+        }
+    }
+    let value = fill.ok_or_else(|| EngineError::validation("run shading requires an explicit RGB fill"))?;
+    crate::validate_highlight(&value)?;
+    Ok(Some(value))
+}
+
+fn run_named_highlight(e: &BytesStart<'_>) -> Result<(), EngineError> {
+    if attr_val(e, b"val").as_deref() != Some("none") {
+        return Err(EngineError::validation("named DOCX highlights are not supported; use explicit RGB run shading"));
+    }
+    Ok(())
 }
 
 fn run_font_size(e: &BytesStart<'_>) -> Result<f64, EngineError> {
@@ -227,6 +257,8 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
                 b"t" if in_r => {
                     in_t = true;
                 }
+                b"shd" if in_r => style.highlight = run_shading(&e)?,
+                b"highlight" if in_r => run_named_highlight(&e)?,
                 b"sz" if in_r => style.font_size = Some(run_font_size(&e)?),
                 b"szCs" if in_r => complex_size = Some(run_font_size(&e)?),
                 b"rFonts" if in_r => style.font_family = run_font(&e)?,
@@ -260,6 +292,8 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
                         kind = pstyle_kind(&v);
                     }
                 }
+                b"shd" if in_r => style.highlight = run_shading(&e)?,
+                b"highlight" if in_r => run_named_highlight(&e)?,
                 b"sz" if in_r => style.font_size = Some(run_font_size(&e)?),
                 b"szCs" if in_r => complex_size = Some(run_font_size(&e)?),
                 b"rFonts" if in_r => style.font_family = run_font(&e)?,
@@ -369,5 +403,31 @@ mod font_size_tests {
             let xml = format!("<w:document xmlns:w=\"urn:test\"><w:body><w:p><w:r><w:rPr>{properties}</w:rPr><w:t>x</w:t></w:r></w:p></w:body></w:document>");
             assert!(parse_document(&xml).is_err());
         }
+    }
+}
+
+
+#[cfg(test)]
+mod highlight_tests {
+    use super::*;
+
+    #[test]
+    fn rgb_shading_preserves_color_without_named_palette_quantization() {
+        for element in ["<w:shd w:val=\"clear\" w:fill=\"12aBcF\"/>", "<w:shd w:fill=\"12aBcF\"></w:shd>"] {
+            let xml = format!("<w:document xmlns:w=\"urn:test\"><w:body><w:p><w:r><w:rPr>{element}</w:rPr><w:t>x</w:t></w:r></w:p></w:body></w:document>");
+            let blocks = parse_document(&xml).unwrap();
+            assert_eq!(blocks[0].inlines[0].style.highlight.as_deref(), Some("#12aBcF"));
+            assert!(build_document_xml(&blocks).contains("w:fill=\"12aBcF\""));
+        }
+    }
+
+    #[test]
+    fn unsupported_highlight_and_shading_are_not_silently_lost() {
+        for element in ["<w:highlight w:val=\"yellow\"/>", "<w:shd w:fill=\"auto\"/>", "<w:shd w:fill=\"FFFF00\" w:val=\"pct50\"/>", "<w:shd w:themeFill=\"accent1\" w:fill=\"FFFF00\"/>", "<w:shd/>"] {
+            let xml = format!("<w:document xmlns:w=\"urn:test\"><w:body><w:p><w:r><w:rPr>{element}</w:rPr><w:t>x</w:t></w:r></w:p></w:body></w:document>");
+            assert!(parse_document(&xml).is_err());
+        }
+        let blocks = parse_document("<w:document xmlns:w=\"urn:test\"><w:body><w:p><w:r><w:rPr><w:highlight w:val=\"none\"/></w:rPr><w:t>x</w:t></w:r></w:p></w:body></w:document>").unwrap();
+        assert_eq!(blocks[0].inlines[0].style.highlight, None);
     }
 }

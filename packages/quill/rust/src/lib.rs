@@ -82,6 +82,8 @@ pub struct Style {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub highlight: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_family: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_size: Option<f64>,
@@ -300,6 +302,13 @@ fn parse_kind(v: &Value) -> Result<BlockKind, EngineError> {
         .ok_or_else(|| EngineError::validation(format!("unknown block kind '{s}'")))
 }
 
+fn validate_highlight(value: &str) -> Result<(), EngineError> {
+    if value.len() != 7 || !value.starts_with('#') || !value.as_bytes()[1..].iter().all(u8::is_ascii_hexdigit) {
+        return Err(EngineError::validation("highlight must be an exact #RRGGBB color"));
+    }
+    Ok(())
+}
+
 fn validate_font_size(value: f64) -> Result<(), EngineError> {
     if !value.is_finite() || !(1.0..=1638.0).contains(&value) || (value * 2.0).fract() != 0.0 {
         return Err(EngineError::validation("font_size must be 1..1638 points in half-point increments"));
@@ -329,6 +338,7 @@ struct StylePatch {
     underline: Option<bool>,
     strike: Option<bool>,
     color: Option<Option<String>>,
+    highlight: Option<Option<String>>,
     font_family: Option<Option<String>>,
     font_size: Option<Option<f64>>,
     link: Option<Option<String>>,
@@ -369,6 +379,8 @@ impl StylePatch {
             Ok(())
         };
         opt_str("color", &mut p.color)?;
+        opt_str("highlight", &mut p.highlight)?;
+        if let Some(Some(value)) = &p.highlight { validate_highlight(value)?; }
         opt_str("link", &mut p.link)?;
         opt_str("font_family", &mut p.font_family)?;
         if let Some(Some(family)) = &p.font_family {
@@ -390,6 +402,7 @@ impl StylePatch {
             && self.underline.is_none()
             && self.strike.is_none()
             && self.color.is_none()
+            && self.highlight.is_none()
             && self.link.is_none()
             && self.font_family.is_none()
             && self.font_size.is_none()
@@ -408,6 +421,7 @@ impl StylePatch {
         if let Some(v) = self.strike {
             s.strike = v;
         }
+        if let Some(v) = &self.highlight { s.highlight = v.clone(); }
         if let Some(v) = &self.color {
             s.color = v.clone();
         }
@@ -1006,6 +1020,7 @@ impl Engine for QuillEngine {
         let state: DocState = serde_json::from_slice(payload)?;
         for block in &state.blocks {
             for inline in &block.inlines {
+                if let Some(highlight) = &inline.style.highlight { validate_highlight(highlight)?; }
                 if let Some(size) = inline.style.font_size { validate_font_size(size)?; }
                 if let Some(family) = &inline.style.font_family {
                     validate_font_family(family)?;
@@ -2162,6 +2177,55 @@ mod tests {
         let legacy = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"old","style":{}}]}]})).unwrap().as_slice());
         e.restore(&legacy).unwrap();
         assert_eq!(e.blocks[0].inlines[0].style.font_size, None);
+    }
+
+    fn highlight_payload(color: Value) -> Value {
+        json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":3},"style":{"highlight":color}})
+    }
+
+    #[test]
+    fn highlight_roundtrip_snapshot_clear_and_history_preserve_font() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", font_size_payload(json!(10.5)));
+        apply(&mut e, "applyStyle", highlight_payload(json!("#12aBcF")));
+        let snapshot = e.snapshot().unwrap();
+        let mut restored = engine();
+        restored.restore(&snapshot).unwrap();
+        assert_eq!(restored.blocks, e.blocks);
+        assert_eq!(docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap(), e.blocks);
+        apply(&mut e, "applyStyle", highlight_payload(Value::Null));
+        assert_eq!(e.blocks[0].inlines[0].style.highlight, None);
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, Some(10.5));
+        assert_eq!(docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap(), e.blocks);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.highlight.as_deref(), Some("#12aBcF"));
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.highlight, None);
+    }
+
+    #[test]
+    fn invalid_highlight_patch_and_restore_are_atomic_and_keep_redo() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", highlight_payload(json!("#123456")));
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        for color in [json!("yellow"), json!("#fff"), json!("#12345z"), json!("#12345678"), json!(""), json!(7)] {
+            let mut payload = highlight_payload(color.clone());
+            payload["style"]["bold"] = json!(true);
+            assert!(e.apply(cmd("applyStyle", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+            let bad = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"other","style":{"highlight":color}}]}]})).unwrap().as_slice());
+            assert!(e.restore(&bad).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.highlight.as_deref(), Some("#123456"));
+        assert!(!e.blocks[0].inlines[0].style.bold);
+        let legacy = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"old","style":{}}]}]})).unwrap().as_slice());
+        e.restore(&legacy).unwrap();
+        assert_eq!(e.blocks[0].inlines[0].style.highlight, None);
     }
 
 }

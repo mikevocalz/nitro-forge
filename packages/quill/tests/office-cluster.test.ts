@@ -143,3 +143,30 @@ describe("font-size ribbon binding", () => {
     await expect(caret.onFontSizeChange(12)).rejects.toThrow(/Select text/);
   });
 });
+
+describe("RGB highlight ribbon binding", () => {
+  it("reports mixed background, clears explicitly and preserves engine rejection", async () => {
+    const { doc, calls } = fake();
+    const highlighted = { ...doc, blocks: vi.fn(() => ok({ blocks: [{ kind: "para", inlines: [
+      { text: "a", style: { highlight: "#123456" } }, { text: "b", style: {} },
+    ] }] })) } as unknown as QuillOfficeDocument;
+    const sel = { start: { block: 0, offset: 0 }, end: { block: 0, offset: 2 } };
+    const changed = vi.fn();
+    const binding = await bindQuillRibbon(highlighted, sel, changed);
+    expect(binding.highlight).toBe("mixed");
+    await binding.onHighlightChange("#12aBcF");
+    await binding.onHighlightChange(undefined);
+    expect(calls).toEqual([
+      ["applyStyle", sel.start, sel.end, { highlight: "#12aBcF" }],
+      ["applyStyle", sel.start, sel.end, { highlight: null }],
+    ]);
+    const failure = new Error("RGB highlight required");
+    const rejected = { ...highlighted, applyStyle: vi.fn(() => Promise.reject(failure)) } as unknown as QuillOfficeDocument;
+    const onChanged = vi.fn();
+    const invalid = await bindQuillRibbon(rejected, sel, onChanged);
+    await expect(invalid.onHighlightChange("yellow")).rejects.toBe(failure);
+    expect(onChanged).not.toHaveBeenCalled();
+    const caret = await bindQuillRibbon(highlighted, { start: sel.start, end: sel.start }, changed);
+    await expect(caret.onHighlightChange("#123456")).rejects.toThrow(/Select text/);
+  });
+});

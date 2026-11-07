@@ -14,7 +14,7 @@ import type {
 
 // RichTextRibbon: the toggles, font family, color and paragraph style Quill can write.
 export const ribbonFits = (b: QuillRibbonBinding): Pick<
-  RichTextRibbonProps, "onToggle" | "fontFamily" | "onFontFamilyChange" | "fontSize" | "onFontSizeChange" | "onColorChange" | "paragraphStyles" | "onParagraphStyleChange"
+  RichTextRibbonProps, "onToggle" | "fontFamily" | "onFontFamilyChange" | "fontSize" | "onFontSizeChange" | "highlight" | "onHighlightChange" | "onColorChange" | "paragraphStyles" | "onParagraphStyleChange"
 > => b;
 // BulletsNumberingEditor: list items, kind and the kinds Quill stores.
 export const listFits = (b: QuillListBinding): Pick<

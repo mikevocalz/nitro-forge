@@ -41,6 +41,8 @@ export interface Style {
   underline?: boolean;
   strike?: boolean;
   color?: string;
+  /** Exact #RRGGBB inline background color; null clears. */
+  highlight?: string | null;
   /** Direct Latin run font; null clears an explicit family. Does not install fonts. */
   font_family?: string | null;
   /** Points, 1..1638 in half-point increments; null clears an explicit size. */

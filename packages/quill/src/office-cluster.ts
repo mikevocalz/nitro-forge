@@ -16,8 +16,6 @@ import type { BlockKind, Pos, QuillDocument, Style } from "./index";
  * have. Each is a DEFER: the matching NYC-Tron prop is left out.
  */
 export const QUILL_DEFERRED_OPS = {
-  /** H-03 highlighter (a run background color). */
-  setHighlight: "H-03",
   /**
    * H-03 change case. Doing it as `deleteRange` + `insertText` would drop the
    * runs' styles, so it waits for an engine op that rewrites text in place.
@@ -115,7 +113,7 @@ export const QUILL_PARAGRAPH_STYLES = [
 /** Character toggles `applyStyle` stores. */
 export type QuillToggle = "bold" | "italic" | "underline" | "strike";
 
-/** `RichTextRibbon` props Quill can back. Highlight and case are deferred. */
+/** `RichTextRibbon` props Quill can back. Case conversion remains deferred. */
 export interface QuillRibbonBinding {
   readonly runs: readonly Style[];
   /** The selection's paragraph kind, or "mixed". */
@@ -125,6 +123,8 @@ export interface QuillRibbonBinding {
   /** Undefined inherits document defaults; mixed selections remain explicit. */
   readonly fontFamily: string | "mixed" | undefined;
   readonly fontSize: number | "mixed" | undefined;
+  readonly highlight: string | "mixed" | undefined;
+  readonly onHighlightChange: (color: string | undefined) => Promise<void>;
   readonly onFontSizeChange: (size: number | undefined) => Promise<void>;
   readonly onFontFamilyChange: (family: string | undefined) => Promise<void>;
   /** `undefined` clears the color (Quill takes `null`). */
@@ -155,6 +155,8 @@ export async function bindQuillRibbon(
     onToggle: (t, on) => style({ [t]: on }),
     fontFamily: runs.length && runs.every(run => run.font_family === runs[0]!.font_family) ? runs[0]!.font_family ?? undefined : runs.length ? "mixed" : undefined,
     fontSize: runs.length && runs.every(run => run.font_size === runs[0]!.font_size) ? runs[0]!.font_size ?? undefined : runs.length ? "mixed" : undefined,
+    highlight: runs.length && runs.every(run => run.highlight === runs[0]!.highlight) ? runs[0]!.highlight ?? undefined : runs.length ? "mixed" : undefined,
+    onHighlightChange: color => style({ highlight: color ?? null }),
     onFontSizeChange: size => style({ font_size: size ?? null }),
     onFontFamilyChange: family => style({ font_family: family ?? null }),
     onColorChange: color => style({ color: (color ?? null) as unknown as string }),

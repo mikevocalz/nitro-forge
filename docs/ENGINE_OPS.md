@@ -411,7 +411,7 @@ concatenated text). Ranges `{ start:Pos, end:Pos }`, `end` exclusive.
 | `insertText` | `{at:Pos,text}` | `{ok}` | inherits style of char to the left (or right if at 0); `\n` splits block |
 | `deleteRange` | `{from:Pos,to:Pos}` | `{deleted_text}` | cross-block merges survivors |
 | `replaceRange` | `{from:Pos,to:Pos,text}` | `{deleted_text}` | `deleteRange` then `insertText` at `from` as one command; validates before mutating; one undo entry |
-| `applyStyle` | `{from,to,style:{bold?,italic?,underline?,strike?,color?,link?,font_family?,font_size?}}` | `{ok}` | re-splits inlines at range bounds; `font_family` string sets direct Latin family, null clears; 1–128 non-control characters, nonblank; `font_size` is 1–1638 points in half-point increments, null clears |
+| `applyStyle` | `{from,to,style:{bold?,italic?,underline?,strike?,color?,link?,font_family?,font_size?,highlight?}}` | `{ok}` | re-splits inlines at range bounds; `font_family` string sets direct Latin family, null clears; 1–128 non-control characters, nonblank; `font_size` is 1–1638 points in half-point increments, null clears; `highlight` is exact `#RRGGBB` run background, null clears (DOCX explicit RGB shd only) |
 | `setBlockKind` | `{block,kind}` | `{ok}` | |
 | `insertBlock` | `{index,kind?}` | `{block_index}` | |
 | `splitBlock` | `{at:Pos}` | `{new_block_index}` | |
