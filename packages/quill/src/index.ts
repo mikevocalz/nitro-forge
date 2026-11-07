@@ -104,6 +104,27 @@ export interface FindMatch {
   to: Pos;
   text: string;
 }
+/**
+ * A position inside a table cell, used by `findText`'s `cell_matches`.
+ * `Pos` cannot address cell text (a table block's only valid offset is
+ * 0), so cell matches carry their own qualifier: `block` is the table
+ * block's index, `row`/`col` the grid cell, `cell_block` the paragraph
+ * index within the cell's block list, and `offset` the scalar offset
+ * inside that paragraph.
+ */
+export interface CellPos {
+  block: number;
+  row: number;
+  col: number;
+  cell_block: number;
+  offset: number;
+}
+/** A `findText` match inside a table cell (never spans paragraphs/cells). */
+export interface CellFindMatch {
+  from: CellPos;
+  to: CellPos;
+  text: string;
+}
 export interface Bookmark {
   name: string;
   pos: Pos;
@@ -326,12 +347,29 @@ export class QuillDocument {
   mergeBlock(index: number) {
     return this.call(OPS.mergeBlock, { index });
   }
+  /**
+   * Plain document text, `\n` between blocks. A table block contributes
+   * its cell serialization: rows `\n`-joined, cells `\t`-separated, each
+   * cell's paragraphs `\n`-joined (covered merge cells report "").
+   */
   text(from?: Pos, to?: Pos) {
     return this.call<{ text: string }>(OPS.text, { from, to });
   }
-  /** Read-only search; matches never span block boundaries. */
+  /**
+   * Read-only search; matches never span block boundaries. Top-level
+   * matches stay in `matches`/`count` (a `Pos` shape); matches inside
+   * table cells are reported separately in `cell_matches`/`cell_count`
+   * with cell-qualified `CellPos` endpoints, since `Pos` cannot address
+   * cell text. A table's cells are searched when the block range covers
+   * the table's index (same inclusive coverage `deleteRange` applies).
+   */
   findText(query: string, options: FindOptions = {}) {
-    return this.call<{ matches: FindMatch[]; count: number }>(OPS.findText, {
+    return this.call<{
+      matches: FindMatch[];
+      count: number;
+      cell_matches: CellFindMatch[];
+      cell_count: number;
+    }>(OPS.findText, {
       query,
       ...(options.from === undefined ? {} : { from: options.from }),
       ...(options.to === undefined ? {} : { to: options.to }),
@@ -340,7 +378,12 @@ export class QuillDocument {
         : { case_sensitive: options.caseSensitive }),
     });
   }
-  /** Replace every non-overlapping match in range as one undo step. */
+  /**
+   * Replace every non-overlapping match in range as one undo step.
+   * Covers table cells too: in-cell matches rewrite the cell's paragraph
+   * inlines (merge-covered cells are always empty, so they never match)
+   * and `replaced` counts top-level plus in-cell edits.
+   */
   replaceText(query: string, replacement: string, options: FindOptions = {}) {
     return this.call<{ replaced: number }>(OPS.replaceText, {
       query,
@@ -574,6 +617,12 @@ export class QuillDocument {
   blocks<T = unknown>() {
     return this.call<T>(OPS.blocks);
   }
+  /**
+   * Greedy wrap pagination. Line `{block,start,end}` spans index the
+   * same per-block serialization `text` reports — for a table block
+   * that is the cell-grid serialization above; no cell geometry is
+   * modeled.
+   */
   layout(pageWidth: number, fontSize: number, pageHeight?: number) {
     return this.call<{ pages: LayoutPage[] }>(OPS.layout, {
       page_width: pageWidth,
