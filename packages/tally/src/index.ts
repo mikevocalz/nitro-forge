@@ -57,6 +57,13 @@ export const OPS = {
   reopenComment: "reopenComment",
   listComments: "listComments",
   clearCell: "clearCell",
+  insertRows: "insertRows",
+  deleteRows: "deleteRows",
+  insertCols: "insertCols",
+  deleteCols: "deleteCols",
+  mergeCells: "mergeCells",
+  unmergeCells: "unmergeCells",
+  listMergedCells: "listMergedCells",
   getCell: "getCell",
   getRange: "getRange",
   importCsv: "importCsv",
@@ -82,6 +89,12 @@ export interface CellInfo {
   computed: CellValue;
   /** Present only when the cell has a stored format. */
   format?: CellFormat;
+  /**
+   * Present only on a cell covered by a merged region: the anchor cell's
+   * address (e.g. `"B2"`). The covered cell keeps its stored value/format —
+   * merges are render metadata, never data loss.
+   */
+  merged_into?: string;
 }
 
 export type BorderSide = "top" | "right" | "bottom" | "left";
@@ -400,10 +413,10 @@ export interface SheetViewInfo {
 
 /**
  * Durable cell/range-anchored comment bound to one sheet. `anchor` is a
- * canonical `"A1"`/`"A1:B2"` coordinate string — static grid coordinates,
- * never remapped by content edits (sorts move cell contents, not anchors;
- * row/column insert/delete ops are deferred). Single-entry, not threaded:
- * replies are a deferred host-side concern.
+ * canonical `"A1"`/`"A1:B2"` coordinate string that remaps with row/column
+ * insert/delete edits like Excel (an anchor inside a deleted band is
+ * dropped with its comment); sorts move cell contents, not anchors.
+ * Single-entry, not threaded: replies are a deferred host-side concern.
  */
 export interface CommentInfo {
   id: number;
@@ -421,6 +434,38 @@ export interface CommentInfo {
 
 /** `addComment`/`listComments` anchor: exactly one of `cell` or `range`. */
 export type CommentAnchor = { cell: string; range?: never } | { range: { from: string; to: string }; cell?: never };
+
+/**
+ * One durable merged-cell region bound to a sheet. `from`/`to` are the
+ * canonical A1 corners of an inclusive rectangle spanning at least two
+ * cells; regions never overlap. Covered cells report `merged_into` (the
+ * `from` anchor) in `getCell`/`getRange`; every cell stays live to
+ * formulas and reads. Regions remap with row/column insert/delete edits
+ * and shrink or drop when their band is deleted.
+ */
+export interface MergedRangeInfo {
+  sheet: string;
+  sheet_id: number;
+  /** Top-left (anchor) cell, e.g. `"B2"`. */
+  from: string;
+  /** Bottom-right cell, e.g. `"D4"`. */
+  to: string;
+}
+
+/**
+ * Structural band edit payload: 1-based inclusive row/column indexes on
+ * `sheet` (name or index; default active). `from`/`to` may span many rows
+ * or columns; inserts shift every coordinate-bound structure at or after
+ * `from`, deletes remove the band and remap the rest (see
+ * docs/ENGINE_OPS.md § tally for the full remap matrix).
+ */
+export interface BandEdit {
+  sheet?: string | number;
+  /** First row/column of the band, 1-based inclusive. */
+  from: number;
+  /** Last row/column of the band, 1-based inclusive. */
+  to: number;
+}
 
 export class TallyDocument {
   private constructor(private doc: DocumentHandle) {}
@@ -848,8 +893,76 @@ export class TallyDocument {
       ...(options?.range === undefined ? {} : { range: options.range }),
     });
   }
+  /**
+   * Structural row/column band edits. Each is atomic (one undo entry),
+   * protection-gated on the target sheet, and remaps every
+   * coordinate-bound structure: cell/format keys, formula references
+   * (deleted refs become `#REF!`, partially-covered ranges shrink),
+   * named ranges, validations, conditional formats, filters, charts,
+   * sparklines, sheet views' captured filter specs, comment anchors and
+   * merged regions. Entries fully inside a deleted band are dropped.
+   * Bounds: `from`/`to` are 1-based inclusive within the sheet caps
+   * (1,048,576 rows / 16,384 columns); a delete may not cover every row
+   * or column; an insert must fit inside the cap. An insert that would
+   * push any stored content (cells, formats, merges, rule/name/chart/
+   * sparkline/view/comment ranges) past the sheet edge rejects with
+   * `out_of_bounds` before mutating — deletes never reject for this.
+   * A no-op band (nothing stored at/after it for inserts, nothing to
+   * delete) still succeeds without recording undo.
+   */
+  private bandEdit(op: string, band: BandEdit) {
+    return this.call<{ ok: boolean; changed: number }>(op, {
+      ...(band.sheet === undefined ? {} : { sheet: band.sheet }),
+      from: band.from,
+      to: band.to,
+    });
+  }
+  insertRows(band: BandEdit) {
+    return this.bandEdit(OPS.insertRows, band);
+  }
+  deleteRows(band: BandEdit) {
+    return this.bandEdit(OPS.deleteRows, band);
+  }
+  insertCols(band: BandEdit) {
+    return this.bandEdit(OPS.insertCols, band);
+  }
+  deleteCols(band: BandEdit) {
+    return this.bandEdit(OPS.deleteCols, band);
+  }
+  /**
+   * Merge `range` (`{from,to}` A1 corners, at least two cells) on `sheet`
+   * (name or index; default active). Regions may not overlap; merging an
+   * already-merged region is an idempotent no-op. Covered cells report
+   * `merged_into` in `getCell`/`getRange` but keep their contents —
+   * formulas and reads still see every cell.
+   */
+  mergeCells(range: { from: string; to: string }, sheet?: string | number) {
+    return this.call<{ ok: boolean; range: string }>(OPS.mergeCells, {
+      range,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Unmerge every region overlapping `range` on `sheet` — a single-cell
+   * range selects the merge covering it (Excel-style). Returns the count
+   * of regions cleared; `0` is an eventless no-op. `range` is capped at
+   * the shared 16,384-cell rectangle limit, so clearing a larger span
+   * takes multiple calls.
+   */
+  unmergeCells(range: { from: string; to: string }, sheet?: string | number) {
+    return this.call<{ cleared: number }>(OPS.unmergeCells, {
+      range,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /** List merged regions; `sheet` narrows to one sheet, absent lists all. */
+  listMergedCells(sheet?: string | number) {
+    return this.call<{ merges: MergedRangeInfo[] }>(OPS.listMergedCells, {
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
   getCell(addr: string) {
-    return this.call<{ raw: string; computed: CellValue; format?: CellFormat }>(OPS.getCell, { addr });
+    return this.call<{ raw: string; computed: CellValue; format?: CellFormat; merged_into?: string }>(OPS.getCell, { addr });
   }
   getRange(from: string, to: string) {
     return this.call<{ cells: CellInfo[][] }>(OPS.getRange, { from, to });

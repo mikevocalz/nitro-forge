@@ -594,6 +594,264 @@ pub fn shift_references(raw: &str, dc: i64, dr: i64) -> Result<String, ()> {
 }
 
 // ---------------------------------------------------------------------------
+// Structural row/column edits (insert/delete)
+// ---------------------------------------------------------------------------
+
+/// Axis a structural edit moves references along.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RefAxis {
+    /// Whole-row insert/delete: row coordinates move, columns are fixed.
+    Row,
+    /// Whole-column insert/delete: column coordinates move, rows are fixed.
+    Col,
+}
+
+/// Which end of a range an axis coordinate sits on. Deleting rows/columns
+/// clamps a partially covered range endpoint to the surviving edge instead
+/// of producing `#REF!`; a range entirely inside the deleted band dies.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum BandEdge {
+    /// Lowest coordinate of the range: clamps to the band's start.
+    Low,
+    /// Highest coordinate: clamps to just below the band's start.
+    High,
+    /// A standalone reference: inside the band means `#REF!`.
+    Single,
+}
+
+/// Map one 0-based coordinate on the edited axis through a structural band
+/// edit. `start`/`count` are 0-based; `deleting` selects delete semantics
+/// (band `[start, start+count)` removed, later positions shifted back)
+/// versus insert semantics (positions at/after `start` shifted forward).
+/// `max` is the sheet bound on that axis. `edge` selects the range-endpoint
+/// clamp; `None` means deleted or pushed past the sheet edge.
+pub(crate) fn band_map(
+    x: u32,
+    start: u32,
+    count: u32,
+    deleting: bool,
+    max: u32,
+    edge: BandEdge,
+) -> Option<u32> {
+    let (x, s, c) = (u64::from(x), u64::from(start), u64::from(count));
+    let v = if !deleting {
+        if x < s {
+            x
+        } else {
+            x + c
+        }
+    } else if x < s {
+        x
+    } else if x < s + c {
+        match edge {
+            BandEdge::Single => return None,
+            BandEdge::Low => s,
+            // `s == 0` with a surviving high endpoint is unreachable (the
+            // whole range would sit inside the band and die first), so the
+            // checked sub is defensive only.
+            BandEdge::High => s.checked_sub(1)?,
+        }
+    } else {
+        x - c
+    };
+    u32::try_from(v).ok().filter(|&v| v < max)
+}
+
+/// Whether a stored rectangle `[lo, hi]` on the edited axis lies entirely
+/// inside the deleted band — the only case where the whole range dies.
+pub(crate) fn band_covers(lo: u32, hi: u32, start: u32, count: u32) -> bool {
+    u64::from(lo) >= u64::from(start) && u64::from(hi) < u64::from(start) + u64::from(count)
+}
+
+/// `$` lock flags of a reference word (`$` before the column letters fixes
+/// the column, `$` before the digits fixes the row).
+fn ref_locks(word: &str) -> (bool, bool) {
+    let b = word.as_bytes();
+    let mut i = 0usize;
+    let fixed_col = b.first() == Some(&b'$');
+    if fixed_col {
+        i = 1;
+    }
+    while i < b.len() && b[i].is_ascii_alphabetic() {
+        i += 1;
+    }
+    let fixed_row = b.get(i) == Some(&b'$');
+    (fixed_col, fixed_row)
+}
+
+/// Rebuild a reference word from coordinates, preserving its `$` markers.
+fn fmt_locked_ref(col: u32, row: u32, fixed_col: bool, fixed_row: bool) -> String {
+    let addr = fmt_addr(col, row);
+    let split = addr.find(|ch: char| ch.is_ascii_digit()).unwrap_or(addr.len());
+    let mut out = String::with_capacity(addr.len() + 2);
+    if fixed_col {
+        out.push('$');
+    }
+    out.push_str(&addr[..split]);
+    if fixed_row {
+        out.push('$');
+    }
+    out.push_str(&addr[split..]);
+    out
+}
+
+/// Remap one reference token through a structural band edit. `$` locks are
+/// preserved in the output but do **not** pin the coordinate — like Excel,
+/// inserting/deleting rows or columns moves absolute references too.
+/// `None` when the reference is deleted or lands off the sheet.
+fn remap_ref_word(
+    word: &str,
+    axis: RefAxis,
+    start: u32,
+    count: u32,
+    deleting: bool,
+) -> Option<String> {
+    let (mut c, mut r) = parse_addr(word)?;
+    let (coord, max) = match axis {
+        RefAxis::Row => (r, SHEET_MAX_ROWS),
+        RefAxis::Col => (c, SHEET_MAX_COLUMNS),
+    };
+    let mapped = band_map(coord, start, count, deleting, max, BandEdge::Single)?;
+    match axis {
+        RefAxis::Row => r = mapped,
+        RefAxis::Col => c = mapped,
+    }
+    if !on_sheet(c, r) {
+        return None;
+    }
+    let (fixed_col, fixed_row) = ref_locks(word);
+    Some(fmt_locked_ref(c, r, fixed_col, fixed_row))
+}
+
+/// Remap one endpoint of a reference pair: the edited-axis coordinate maps
+/// with `Low`/`High` edge semantics (chosen by which end of the range the
+/// coordinate sits on), the other axis is untouched. `None` when the
+/// endpoint lands off the sheet.
+fn remap_pair_endpoint(
+    word: &str,
+    (c, r): (u32, u32),
+    is_low: bool,
+    axis: RefAxis,
+    start: u32,
+    count: u32,
+    deleting: bool,
+) -> Option<String> {
+    let (coord, max) = match axis {
+        RefAxis::Row => (r, SHEET_MAX_ROWS),
+        RefAxis::Col => (c, SHEET_MAX_COLUMNS),
+    };
+    let edge = if is_low { BandEdge::Low } else { BandEdge::High };
+    let mapped = band_map(coord, start, count, deleting, max, edge)?;
+    let (nc, nr) = match axis {
+        RefAxis::Row => (c, mapped),
+        RefAxis::Col => (mapped, r),
+    };
+    if !on_sheet(nc, nr) {
+        return None;
+    }
+    let (fixed_col, fixed_row) = ref_locks(word);
+    Some(fmt_locked_ref(nc, nr, fixed_col, fixed_row))
+}
+
+/// Remap both endpoints of a `A1:B2`-style pair, preserving the original
+/// separator text. Range endpoints clamp to the surviving edge when the
+/// band covers part of the range; a range entirely inside the deleted band
+/// or with an endpoint off the sheet yields `None`, which the caller
+/// renders as a single `#REF!` (same convention as `shift_references`).
+fn remap_ref_pair(
+    a: &str,
+    b: &str,
+    sep: &str,
+    axis: RefAxis,
+    start: u32,
+    count: u32,
+    deleting: bool,
+) -> Option<String> {
+    let (ca, ra) = parse_addr(a)?;
+    let (cb, rb) = parse_addr(b)?;
+    let (aa, ab) = match axis {
+        RefAxis::Row => (ra, rb),
+        RefAxis::Col => (ca, cb),
+    };
+    if deleting && band_covers(aa.min(ab), aa.max(ab), start, count) {
+        return None;
+    }
+    // The lower axis coordinate gets the Low edge, the higher the High
+    // edge; equal coordinates only occur outside a covering band, where
+    // both edges agree.
+    let a_is_low = aa <= ab;
+    let wa = remap_pair_endpoint(a, (ca, ra), a_is_low, axis, start, count, deleting)?;
+    let wb = remap_pair_endpoint(b, (cb, rb), !a_is_low, axis, start, count, deleting)?;
+    Some(format!("{wa}{sep}{wb}"))
+}
+
+/// Remap reference tokens in a stored raw cell string through a structural
+/// row/column band edit — the `shift_references` counterpart for
+/// `insertRows`/`deleteRows`/`insertCols`/`deleteCols`. Same lexical
+/// guarantees: literals, names, whitespace and function identifiers are
+/// preserved; a reference deleted by the band or pushed off the sheet
+/// becomes `#REF!`; a range partially covered by a delete shrinks to its
+/// surviving cells and a fully covered range becomes one `#REF!`.
+/// `$` markers are preserved but do not pin coordinates (Excel semantics).
+/// Non-formula raws return unchanged; malformed lexical input is `Err` so
+/// the caller can keep the raw verbatim.
+pub fn remap_references(
+    raw: &str,
+    axis: RefAxis,
+    start: u32,
+    count: u32,
+    deleting: bool,
+) -> Result<String, ()> {
+    if !raw.starts_with('=') {
+        return Ok(raw.to_string());
+    }
+    let mut refs = Vec::new();
+    tokenize_refs(raw, Some(&mut refs))?;
+    let mut result = String::with_capacity(raw.len());
+    let mut previous = 0;
+    let mut k = 0;
+    while k < refs.len() {
+        let (start_b, end_b) = refs[k];
+        result.push_str(&raw[previous..start_b]);
+        // `A1 : B2` is one range when only a colon and whitespace separate
+        // two reference tokens; the parser reads it the same way.
+        let pair = refs
+            .get(k + 1)
+            .copied()
+            .filter(|&(next, _)| raw[end_b..next].trim() == ":");
+        match pair {
+            Some((next_start, next_end)) => {
+                let sep = &raw[end_b..next_start];
+                match remap_ref_pair(
+                    &raw[start_b..end_b],
+                    &raw[next_start..next_end],
+                    sep,
+                    axis,
+                    start,
+                    count,
+                    deleting,
+                ) {
+                    Some(text) => result.push_str(&text),
+                    None => result.push_str(ERR_REF),
+                }
+                previous = next_end;
+                k += 2;
+            }
+            None => match remap_ref_word(&raw[start_b..end_b], axis, start, count, deleting) {
+                Some(shifted) => result.push_str(&shifted),
+                None => result.push_str(ERR_REF),
+            },
+        }
+        if pair.is_none() {
+            previous = end_b;
+        }
+        k += usize::from(pair.is_none());
+    }
+    result.push_str(&raw[previous..]);
+    Ok(result)
+}
+
+// ---------------------------------------------------------------------------
 // AST + parser
 // ---------------------------------------------------------------------------
 
