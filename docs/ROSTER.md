@@ -1249,6 +1249,67 @@ typecheck` clean. Deferred: pivot compute/refresh/materialization,
 header-name field resolution, pivot UI wiring — no native/device
 acceptance or full P12–P14 completion is implied.
 
+## Tally table objects source checkpoint (2026-11-07)
+
+Tally gains workbook-level table objects (backlog item 12, slice 12 —
+Excel Table / ListObject storage + CRUD/read only):
+`insertTable`/`updateTable`/`removeTable`/`listTables`/`describeTable`
+manage `tables` entries `{id, sheet, name, range, show_headers?,
+show_totals?, banded_rows?, banded_columns?}` — durable ids, at most 256
+per workbook. `sheet` is the bound sheet id; `range` is a canonical
+A1/B2 rectangle under the shared 16,384-cell cap covering at least two
+cells, its top row acting as the header row. `name` is the display name —
+`[A-Za-z_][A-Za-z0-9_.]*`, ≤128 bytes, **unique case-insensitively across
+the whole workbook** (Excel's rule); omitted, the engine assigns the
+smallest free `"Table{n}"`. The four flags are storage-only display
+intent: the engine writes no cells, computes no totals and applies no
+banding. On one sheet table ranges may not overlap each other or any
+merged region, and `mergeCells` symmetrically rejects rectangles that
+intersect a table — Excel's no-merged-cells-inside-tables rule in both
+directions.
+
+`insertTable {sheet?, table}` declares the range a table outright (no
+conversion workflow); `updateTable {id,patch}` is a partial patch —
+present keys set, no field accepts `null`, unknown keys and `sheet`
+alongside `id` reject, the merged spec re-validates name uniqueness and
+overlap before commit, and an unchanged spec is eventless.
+`listTables {sheet?}` filters by bound sheet; `describeTable {id}` reads
+one spec; both silent. **Storage only** — structured references
+(`Table1[Col]`), totals computation, autofilter integration and any
+table UI are explicitly deferred. Mutations record one whole-document
+undo entry each; `removeSheet` cascade-drops the sheet's tables into the
+same undo entry and undo re-admits each only while it still satisfies
+restore invariants; `duplicateSheet`/`moveSheet`/`renameSheet` do not
+copy or retarget tables. A table's `range` remaps with structural
+row/column edits on its sheet like every other bound range — inserting
+inside expands it (Excel behavior), partial deletes shrink it and a
+fully covered range drops the table; disjoint structures stay disjoint
+through the shared `Band`. Protection guards mutations by the bound
+sheet like the other rule tables; reads stay allowed.
+
+**Schema bump to 10**: `tables`/`next_table` are new workbook-level
+durable state `Workbook` does not `deny_unknown_fields`, so
+table-carrying snapshots emit `{kind:"tally",schema:10}` and restore
+accepts 1–10 with per-table gates (nonempty tables require 10); restore
+strictly validates table shape, id uniqueness, existing bound sheet ids,
+name legality and workbook-wide case-insensitive uniqueness, canonical
+capped ranges with no same-sheet table/table or table/merge overlap, and
+`next_table` id-space repair atomically. TS mirror adds the five `OPS`
+entries, `TableInput`/`TablePatch`/`TableInfo` types and
+`insertTable`/`updateTable`/`removeTable`/`listTables`/`describeTable`
+methods on `TallyDocument`; `grid-cluster.ts` docs updated (no UI
+callback changes). Local evidence: `cargo test -p tally-engine` 195
+passed (14 new table_ops tests covering CRUD, bounds/caps, name
+legality/uniqueness/auto-naming, overlap and merge rejection, atomic
+failure, undo/redo, sheet-removal cascade + re-admission, hostile
+restore, schema matrix and structural range remap), `cargo build -p
+nf-cli` clean, `pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/tally test` 79 Vitest passed across 21 files (1 new live
+nf-cli tables file, 2 cases), `pnpm --filter @nitro-forge/tally
+typecheck` clean. Deferred: structured references, totals computation,
+autofilter integration, table UI wiring — no native/device acceptance
+or full P12–P14 completion is implied.
+
 ## P12 Quill tables slice 7-D checkpoint (2026-11-07)
 
 Quill closes the two tractable deferred table items (P12 slice 7-D): in-cell

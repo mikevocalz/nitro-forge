@@ -259,6 +259,28 @@ impl TallyEngine {
                         .iter()
                         .any(|s| s.id == pv.sheet && s.is_protected)
                 }),
+            // Table objects are workbook metadata bound to one sheet:
+            // insertTable guards its target sheet (payload `sheet`,
+            // default active), updateTable/removeTable guard the stored
+            // table's sheet. Unknown ids fall through — the op reports
+            // not_found. listTables/describeTable are ungated reads.
+            "insertTable" => {
+                let idx = match p.get("sheet") {
+                    Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                    _ => self.doc.active,
+                };
+                self.doc.sheets[idx].is_protected
+            }
+            "updateTable" | "removeTable" => p
+                .get("id")
+                .and_then(Value::as_u64)
+                .and_then(|id| self.doc.tables.iter().find(|t| t.id == id))
+                .is_some_and(|t| {
+                    self.doc
+                        .sheets
+                        .iter()
+                        .any(|s| s.id == t.sheet && s.is_protected)
+                }),
             "new" => self.doc.sheets.iter().any(|s| s.is_protected),
             _ => false,
         };

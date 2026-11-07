@@ -132,7 +132,7 @@ fn insert_overflow() -> EngineError {
 }
 
 /// Overlap test for two inclusive rectangles.
-fn rects_overlap(a: name_ops::RefersCoords, b: name_ops::RefersCoords) -> bool {
+pub(super) fn rects_overlap(a: name_ops::RefersCoords, b: name_ops::RefersCoords) -> bool {
     a.0 <= b.2 && b.0 <= a.2 && a.1 <= b.3 && b.1 <= a.3
 }
 
@@ -504,6 +504,31 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) -> Result<(), En
         }
         doc.pivots = kept;
     }
+    // Table objects: `range` is the table's anchor and remaps like every
+    // other bound range — inserts shift/expand it, deletes shrink it, and
+    // a range fully covered by a deleted band drops the table (Excel
+    // removes a table whose rows/columns are all deleted). Because every
+    // bound structure remaps through the same `Band`, disjoint table and
+    // merge ranges stay disjoint.
+    {
+        let mut items = mem::take(&mut doc.tables);
+        let mut kept = Vec::with_capacity(items.len());
+        for mut t in items.drain(..) {
+            if t.sheet == sheet_id {
+                match band.range_str(&t.range) {
+                    Some(range) => t.range = range,
+                    None => {
+                        if !band.deleting && band.overflows(&t.range) {
+                            return Err(insert_overflow());
+                        }
+                        continue;
+                    }
+                }
+            }
+            kept.push(t);
+        }
+        doc.tables = kept;
+    }
     Ok(())
 }
 
@@ -647,6 +672,18 @@ impl TallyEngine {
         {
             return Err(EngineError::validation(
                 "merge overlaps an existing merged region",
+            ));
+        }
+        // Excel forbids merged cells inside a table: a merge may not
+        // intersect a table object bound to this sheet (the reverse
+        // direction is enforced by `insertTable`/`updateTable`).
+        if self.doc.tables.iter().any(|t| {
+            t.sheet == sheet.id
+                && table_ops::range_coords(t)
+                    .is_some_and(|c| rects_overlap(c, coords))
+        }) {
+            return Err(EngineError::validation(
+                "merge overlaps a table object",
             ));
         }
         self.journal.record(UndoEntry::Reset {
