@@ -14,7 +14,15 @@ export type MotionMatteMode='alpha'|'alpha-inverted'|'luma'|'luma-inverted';
 export interface MotionMatte{source_layer:number;mode:MotionMatteMode;feather:number;enabled:boolean}
 /** setLayerMatte input: feather defaults to 0 and enabled defaults to true. */
 export interface MotionMatteInput{source_layer:number;mode:MotionMatteMode;feather?:number;enabled?:boolean}
-interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte}
+/** Bounded CPU effect stack entries (engine slice C). Wire `kind` is kebab-case; params are validated engine-side. `brightness.amount` is -1..=1, `contrast.amount` a 0..=4 linear-light factor, `gaussian-blur.radius_px` 0..=64, `fill` takes an RGBA `color` plus optional `opacity` 0..=1 (default 1). At most 16 effects per layer. */
+export type MotionEffect=
+ |{kind:'invert'}
+ |{kind:'grayscale'}
+ |{kind:'brightness';amount:number}
+ |{kind:'contrast';amount:number}
+ |{kind:'gaussian-blur';radius_px:number}
+ |{kind:'fill';color:[number,number,number,number];opacity?:number};
+interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[]}
 /** Exactly one real content source; no placeholder shape for raster or comp layers. `comp` is the composition id a comp layer instantiates (0 is never a valid target). */
 export type MotionLayer=MotionLayerCommon&({shape:Shape;asset_id?:never;comp_id?:never}|{asset_id:number;shape?:never;comp_id?:never}|{comp_id:number;shape?:never;asset_id?:never});
 export const MOTION_RASTER_FORMAT='rgba8-straight-srgb' as const;
@@ -57,6 +65,8 @@ export class MotionDocument{
  setLayerClipped(layer:number,clipped:boolean){return this.document.apply<{ok:boolean}>('setLayerClipped',{layer,clipped});}
  /** Track matte: mask this layer's own alpha with another layer's rendered subtree in the same composition; null clears. */
  setLayerMatte(layer:number,matte:MotionMatteInput|null){return this.document.apply<{ok:boolean}>('setLayerMatte',{layer,matte});}
+ /** Replace the layer's effect stack (full replace, at most 16); null or [] clears. Effects run on the layer's rendered pixels after its transform and before opacity/blend/clip/matte. */
+ setLayerEffects(layer:number,effects:readonly MotionEffect[]|null){return this.document.apply<{ok:boolean}>('setLayerEffects',{layer,effects});}
  /** Move a layer to another composition at `index`; comp 0 selects the root. Cross-comp moves clear transform-parent links. */
  reparentLayer(layer:number,comp:number,index:number){return this.document.apply<{ok:boolean}>('reparentLayer',{layer,comp,index});}
  updateLayer(id:number,patch:Partial<Pick<MotionLayer,'name'|'visible'|'locked'|'opacity'|'shape'|'asset_id'>>&{transform?:Partial<Transform>}){return this.document.apply<{ok:boolean}>('updateLayer',{...patch,id});}
