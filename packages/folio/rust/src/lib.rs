@@ -34,11 +34,19 @@
 //!   (detected via `PasswordAlgorithm`) instead of failing mid-decrypt.
 //! - `encrypt` needs a trailer `/ID` for key derivation; documents that lack
 //!   one get a random 16-byte ID before encrypting.
+//! - Page ops (`movePage`/`deletePage`/`duplicatePage`/`insertBlankPage`)
+//!   rewrite the page tree flat under the root `/Pages` node after
+//!   materializing inheritable page attributes, and collect objects that
+//!   become unreachable; `duplicatePage` shares `/Contents`/`/Resources`
+//!   but deep-copies annotations. Structural ops reject encrypted
+//!   documents (lopdf ciphertext is keyed by object id, so cloned objects
+//!   would not decrypt) — see `page_ops.rs` and ENGINE_OPS.md.
 
 mod annotation_edit;
 mod ink_link;
 mod markup;
 mod comments;
+mod page_ops;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -201,6 +209,31 @@ fn annots_loc(doc: &Document, page_id: ObjectId) -> Result<AnnotsLoc, EngineErro
         Ok(Object::Reference(r)) => Ok(AnnotsLoc::Ref(*r)),
         Ok(Object::Array(_)) => Ok(AnnotsLoc::Inline),
         _ => Ok(AnnotsLoc::Missing),
+    }
+}
+
+/// Raw `/Annots` array items — indirect references and inline dictionaries
+/// alike, in page order. Unlike `annot_ids` nothing is filtered out, so a
+/// caller that rewrites the array (`duplicatePage`) preserves every entry.
+fn annot_entries(doc: &Document, page_id: ObjectId) -> Result<Vec<Object>, EngineError> {
+    match annots_loc(doc, page_id)? {
+        AnnotsLoc::Missing => Ok(Vec::new()),
+        AnnotsLoc::Inline => {
+            let page = doc
+                .get_object(page_id)
+                .and_then(|o| o.as_dict())
+                .map_err(ser_err)?;
+            Ok(page
+                .get(b"Annots")
+                .and_then(|o| o.as_array())
+                .map_err(ser_err)?
+                .clone())
+        }
+        AnnotsLoc::Ref(r) => Ok(doc
+            .get_object(r)
+            .and_then(|o| o.as_array())
+            .map_err(ser_err)?
+            .clone()),
     }
 }
 
@@ -799,6 +832,10 @@ impl Engine for FolioEngine {
                     .set("Rotate", Object::Integer(norm as i64));
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
+            "movePage" => self.op_move_page(p),
+            "deletePage" => self.op_delete_page(p),
+            "duplicatePage" => self.op_duplicate_page(p),
+            "insertBlankPage" => self.op_insert_blank(p),
             // --- read-only ---------------------------------------------------
             "pageCount" => Ok(ro(json!({ "pages": self.page_count() }))),
             "pageText" => {
@@ -879,6 +916,7 @@ impl Engine for FolioEngine {
                 Ok(ro(json!({ "annots": annots })))
             }
             "save" => self.op_save(&cmd, None),
+            "listPageInfo" => self.op_list_page_info(),
             "info" => Ok(ro(json!({
                 "pages": self.page_count(),
                 "has_annots": self.has_annots()?,

@@ -105,6 +105,68 @@ describe("folio engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("moves, duplicates, inserts and deletes pages through save/reopen", async () => {
+    const doc = await FolioDocument.create(host, 3);
+    await doc.rotatePage(0, 90);
+    await doc.rotatePage(2, 180);
+    const annot = await doc.addAnnotation(0, [10, 10, 20, 20], "page zero note", "Text");
+
+    // listPageInfo reflects order, rotation and annotations.
+    let info = (await doc.listPageInfo()).data.pages;
+    expect(info.map(p => p.rotate)).toEqual([90, 0, 180]);
+    expect(info[0]!.annots_count).toBe(1);
+    expect(info[0]!.mediabox).toEqual([0, 0, 612, 792]);
+
+    // Reorder: page 0 lands at index 2.
+    await doc.movePage(0, 2);
+    info = (await doc.listPageInfo()).data.pages;
+    expect(info.map(p => p.rotate)).toEqual([0, 180, 90]);
+    expect(info[2]!.annots_count).toBe(1);
+
+    // Duplicate page 2 (the annotated original): the copy lands at index 3.
+    const dup = await doc.duplicatePage(2);
+    expect(dup.data.page).toBe(3);
+    expect((await doc.pageCount()).data.pages).toBe(4);
+    info = (await doc.listPageInfo()).data.pages;
+    expect(info.map(p => p.rotate)).toEqual([0, 180, 90, 90]);
+    expect(info[3]!.annots_count).toBe(1);
+
+    // The copy's annotation is a distinct object: editing it leaves the source alone.
+    const copyAnnots = (await doc.listAnnotations(3)).data.annots;
+    expect(copyAnnots).toHaveLength(1);
+    expect(copyAnnots[0]!.id).not.toBe(annot.data.annot_id);
+    await doc.setAnnotationContents(3, copyAnnots[0]!.id, "copied note");
+    expect((await doc.listAnnotations(2)).data.annots[0]!.contents).toBe("page zero note");
+
+    // Insert blank at the front, then delete the original annotated page (index 2).
+    await doc.insertBlankPage(0);
+    expect((await doc.pageCount()).data.pages).toBe(5);
+    await doc.deletePage(3); // annotated original shifted +1 by the insert
+    expect((await doc.pageCount()).data.pages).toBe(4);
+    const after = (await doc.listPageInfo()).data.pages;
+    expect(after.map(p => p.rotate)).toEqual([0, 0, 180, 90]);
+    expect(after[0]!.has_contents).toBe(false);
+    expect(after[3]!.annots_count).toBe(1); // the copy survives
+
+    // Bounds and the last-page floor reject without mutating.
+    await expect(doc.movePage(0, 9)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deletePage(9)).rejects.toBeInstanceOf(EngineError);
+    while ((await doc.pageCount()).data.pages > 1) {
+      await doc.deletePage(0);
+    }
+    await expect(doc.deletePage(0)).rejects.toBeInstanceOf(EngineError);
+    expect((await doc.pageCount()).data.pages).toBe(1);
+
+    // Everything survives a real save → open round-trip.
+    const { bytes } = await doc.savePdf();
+    await doc.close();
+    const re = await FolioDocument.openPdf(host, bytes);
+    expect((await re.pageCount()).data.pages).toBe(1);
+    const reInfo = (await re.listPageInfo()).data.pages;
+    expect(reInfo[0]!.mediabox).toEqual([0, 0, 612, 792]);
+    await re.close();
+  });
+
   it("snapshot/save/reopen preserves annotations", async () => {
     const doc = await FolioDocument.create(host, 1);
     await doc.addAnnotation(0, [0, 0, 50, 50], "note", "Text");

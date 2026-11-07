@@ -23,6 +23,11 @@ export const OPS = {
   removeAnnotation: "removeAnnotation",
   setAnnotationContents: "setAnnotationContents",
   rotatePage: "rotatePage",
+  movePage: "movePage",
+  deletePage: "deletePage",
+  duplicatePage: "duplicatePage",
+  insertBlankPage: "insertBlankPage",
+  listPageInfo: "listPageInfo",
   encrypt: "encrypt",
   decrypt: "decrypt",
   save: "save",
@@ -70,6 +75,15 @@ export interface Annotation {
 export interface FolioCommentMetadata { author: string; modified: string }
 export interface FolioCommentEntry { id: number; contents: string; author?: string; modified?: string }
 export interface FolioCommentThread extends FolioCommentEntry { subtype: string; rect: Rect | null; replies: FolioCommentEntry[]; resolved?: boolean; review_state?: string }
+/** One row of `listPageInfo`; `mediabox` is `[x1, y1, x2, y2]` PDF user space or null. */
+export interface FolioPageInfo {
+  index: number;
+  mediabox: [number, number, number, number] | null;
+  rotate: number;
+  annots_count: number;
+  /** True when the page's decoded content streams carry bytes; null on encrypted documents (streams are ciphertext). */
+  has_contents: boolean | null;
+}
 
 export class FolioDocument {
   private constructor(private doc: DocumentHandle) {}
@@ -198,6 +212,50 @@ export class FolioDocument {
   /** Engine validates: degrees must be a multiple of 90. */
   rotatePage(page: number, degrees: number) {
     return this.call(OPS.rotatePage, { page, degrees });
+  }
+  /**
+   * Reorder pages: the page at 0-based `from` is removed and reinserted at
+   * `to`. Both indices must be within the current page count; `from === to`
+   * is an eventless no-op. Structural page ops rewrite the page tree flat
+   * under the root `/Pages` node, garbage-collect objects that become
+   * unreachable, and reject on encrypted documents (decrypt first).
+   */
+  movePage(from: number, to: number) {
+    return this.call<{ ok: boolean }>(OPS.movePage, { from, to });
+  }
+  /**
+   * Delete the page at 0-based `page`. Rejects when it is the last
+   * remaining page or when the document is encrypted; objects reachable
+   * only through the deleted page (its exclusive content streams and
+   * annotations) are collected. Inbound named destinations and outline
+   * actions that referenced the deleted page keep it reachable as an
+   * orphaned `/Type /Page` object — see docs/ENGINE_OPS.md.
+   */
+  deletePage(page: number) {
+    return this.call<{ ok: boolean }>(OPS.deletePage, { page });
+  }
+  /**
+   * Deep-copy the page at 0-based `page` and insert the copy immediately
+   * after it; resolves to the copy's index. Rejects on encrypted
+   * documents. The copy shares `/Contents` streams and `/Resources` with
+   * the source but gets fresh annotation objects, so editing or deleting
+   * one page's annotations never touches the other's; `/StructParents`
+   * and `/B` are stripped from the copy.
+   */
+  duplicatePage(page: number) {
+    return this.call<{ ok: boolean; page: number }>(OPS.duplicatePage, { page });
+  }
+  /**
+   * Insert a blank US-Letter page at 0-based `index` (`0..=pageCount`;
+   * `pageCount` appends). Resolves to the new page's index. Rejects on
+   * encrypted documents.
+   */
+  insertBlankPage(index: number) {
+    return this.call<{ ok: boolean; page: number }>(OPS.insertBlankPage, { index });
+  }
+  /** Per-page details: index, inherited-aware mediabox/rotate, annot count, content presence. */
+  listPageInfo() {
+    return this.call<{ pages: FolioPageInfo[] }>(OPS.listPageInfo);
   }
   /** Encrypt the document in place (V4/R4, AES-128). One undo entry; saved bytes stay encrypted. */
   encrypt(options: FolioEncryptOptions) {
