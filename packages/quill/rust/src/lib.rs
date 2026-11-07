@@ -17,6 +17,8 @@ mod comments;
 use comments::{validate_comments, Comment};
 mod sections;
 use sections::{default_sections, is_default_sections, validate_sections, Section};
+mod tables;
+use tables::{validate_tables, Table};
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -51,6 +53,13 @@ pub enum BlockKind {
     List,
     #[serde(rename = "quote")]
     Quote,
+    /// A table block: `inlines` stays empty and `Block::table` carries the
+    /// grid. Deliberately absent from `BlockKind::parse`, so `setBlockKind`
+    /// and `insertBlock` cannot create tables — only `insertTable` does.
+    /// Pre-table readers fail closed on the unknown serde variant, which is
+    /// why tables need no snapshot schema bump.
+    #[serde(rename = "table")]
+    Table,
 }
 
 impl BlockKind {
@@ -118,6 +127,11 @@ pub struct Block {
     pub style_id: Option<String>,
     #[serde(default)]
     pub inlines: Vec<Inline>,
+    /// Table payload, present exactly when `kind == BlockKind::Table`
+    /// (enforced by `tables::validate_tables` on restore and by op guards).
+    /// Cell blocks are reachable only through table ops, never through `Pos`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub table: Option<Table>,
 }
 
 impl Block {
@@ -127,6 +141,7 @@ impl Block {
             list: None,
             style_id: None,
             inlines: Vec::new(),
+            table: None,
         }
     }
 }
@@ -607,6 +622,18 @@ fn validate_style_token(value: &str, what: &str) -> Result<(), EngineError> {
     Ok(())
 }
 
+/// Top-level blocks plus every table-cell block. Cell blocks cannot nest
+/// tables (`tables::validate_tables` rejects them), so depth is one.
+fn all_blocks(blocks: &[Block]) -> impl Iterator<Item = &Block> {
+    blocks.iter().flat_map(|b| {
+        std::iter::once(b).chain(
+            b.table
+                .iter()
+                .flat_map(|t| t.cells.iter().flat_map(|c| c.blocks.iter())),
+        )
+    })
+}
+
 /// Full style validation for restore: ids, names, property grammar, and
 /// every `Block::style_id` reference (must name a paragraph style). Runs
 /// before live state is replaced.
@@ -627,7 +654,7 @@ fn validate_styles(styles: &[StyleDef], blocks: &[Block]) -> Result<(), EngineEr
         // Rejects non-object properties and out-of-range style fields.
         StylePatch::parse(&def.properties)?;
     }
-    for block in blocks {
+    for block in all_blocks(blocks) {
         if let Some(id) = &block.style_id {
             let Some(def) = styles.iter().find(|d| &d.id == id) else {
                 return Err(EngineError::validation(format!(
@@ -1112,6 +1139,11 @@ impl QuillEngine {
         let at = parse_pos(field(p, "at")?)?;
         let text = as_str(field(p, "text")?, "text")?.to_string();
         self.check_pos(at)?;
+        if self.blocks[at.block].kind == BlockKind::Table {
+            return Err(EngineError::validation(
+                "cannot insert text into a table block; use setCellText",
+            ));
+        }
         if text.is_empty() {
             return Ok(CommandResult::data(json!({ "ok": true })));
         }
@@ -1130,6 +1162,7 @@ impl QuillEngine {
                     list: old.list.clone(),
                     style_id: old.style_id.clone(),
                     inlines: normalize_inlines(std::mem::take(&mut head)),
+                    table: None,
                 });
             }
             if !seg.is_empty() {
@@ -1145,6 +1178,7 @@ impl QuillEngine {
             list: old.list.clone(),
             style_id: old.style_id.clone(),
             inlines: normalize_inlines(head),
+            table: None,
         });
 
         let inserted = out.clone();
@@ -1172,6 +1206,15 @@ impl QuillEngine {
         if from == to {
             return Ok(CommandResult::data(json!({ "deleted_text": "" })));
         }
+        // A range starting on a table block would merge the surviving tail
+        // into a table-kind block with no payload; cell content is only
+        // reachable through table ops. Ranges that merely cover a table
+        // (start on a normal block) delete it like any covered block.
+        if self.blocks[from.block].kind == BlockKind::Table {
+            return Err(EngineError::validation(
+                "cannot deleteRange from a table block; use deleteTable",
+            ));
+        }
 
         let removed: Vec<Block> = self.blocks[from.block..=to.block].to_vec();
         let deleted_text;
@@ -1188,6 +1231,7 @@ impl QuillEngine {
                 list: b.list.clone(),
                 style_id: b.style_id.clone(),
                 inlines: normalize_inlines(inlines),
+                table: b.table.clone(),
             }];
         } else {
             let first = &self.blocks[from.block];
@@ -1211,6 +1255,7 @@ impl QuillEngine {
                 list: first.list.clone(),
                 style_id: first.style_id.clone(),
                 inlines: normalize_inlines(inlines),
+                table: first.table.clone(),
             }];
         }
 
@@ -1309,6 +1354,7 @@ impl QuillEngine {
                 list: b.list.clone(),
                 style_id: b.style_id.clone(),
                 inlines: normalize_inlines(inlines),
+                table: b.table.clone(),
             });
         }
         (removed, new_span)
@@ -1337,6 +1383,11 @@ impl QuillEngine {
                 "block {index} out of range"
             )));
         };
+        if b.kind == BlockKind::Table {
+            return Err(EngineError::validation(
+                "cannot change a table block's kind; use deleteTable",
+            ));
+        }
         if b.kind == kind {
             return Ok(CommandResult::data(json!({ "ok": true })));
         }
@@ -1387,6 +1438,11 @@ impl QuillEngine {
     fn op_split_block(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let at = parse_pos(field(p, "at")?)?;
         self.check_pos(at)?;
+        if self.blocks[at.block].kind == BlockKind::Table {
+            return Err(EngineError::validation(
+                "cannot split a table block",
+            ));
+        }
         let old = self.blocks[at.block].clone();
         let (head, tail) = split_inlines(&old.inlines, at.offset);
         let new_span = vec![
@@ -1395,12 +1451,14 @@ impl QuillEngine {
                 list: old.list.clone(),
                 style_id: old.style_id.clone(),
                 inlines: normalize_inlines(head),
+                table: old.table.clone(),
             },
             Block {
                 kind: old.kind,
                 list: old.list.clone(),
                 style_id: old.style_id.clone(),
                 inlines: normalize_inlines(tail),
+                table: old.table.clone(),
             },
         ];
         self.validate_list_splice(at.block, 1, &new_span)?;
@@ -1436,6 +1494,13 @@ impl QuillEngine {
                 "block 0 has no previous block to merge into",
             ));
         }
+        if self.blocks[index - 1].kind == BlockKind::Table
+            || self.blocks[index].kind == BlockKind::Table
+        {
+            return Err(EngineError::validation(
+                "cannot merge a table block; use deleteTable",
+            ));
+        }
         let removed: Vec<Block> = self.blocks[index - 1..=index].to_vec();
         let head_len = block_len(&self.blocks[index - 1]);
         let bookmarks_before = self.bookmarks.clone();
@@ -1448,6 +1513,7 @@ impl QuillEngine {
             list: self.blocks[index - 1].list.clone(),
             style_id: self.blocks[index - 1].style_id.clone(),
             inlines: normalize_inlines(inlines),
+            table: self.blocks[index - 1].table.clone(),
         }];
         self.blocks
             .splice(index - 1..=index, merged.iter().cloned());
@@ -2051,6 +2117,11 @@ impl QuillEngine {
                 "block {index} out of range"
             )));
         };
+        if old.kind == BlockKind::Table {
+            return Err(EngineError::validation(
+                "cannot apply a block style to a table block",
+            ));
+        }
         let patch = match &style_id {
             Some(id) => {
                 let def = self
@@ -2150,11 +2221,18 @@ impl QuillEngine {
     /// `exportDocx {}` → `.docx` bytes as `bytes_b64`, or as binary output.
     /// As a task: stage 1 builds the archive (progress 0.5), stage 2 returns
     /// it; cancellation between stages returns nothing. Read-only.
+    /// DOCX table export is deferred: documents containing table blocks
+    /// reject rather than silently dropping cell content.
     fn op_export_docx(
         &self,
         cmd: &Command,
         ctx: Option<&TaskContext>,
     ) -> Result<CommandResult, EngineError> {
+        if self.blocks.iter().any(|b| b.kind == BlockKind::Table) {
+            return Err(EngineError::validation(
+                "DOCX export does not support tables yet",
+            ));
+        }
         let bytes = docx::export_docx(&self.blocks)?;
         if let Some(ctx) = ctx {
             ctx.set_progress(0.5);
@@ -2272,6 +2350,11 @@ impl Engine for QuillEngine {
             "listComments" => self.op_list_comments(),
             "applyNamedStyle" => self.op_apply_named_style(&cmd.payload),
             "setBlockStyle" => self.op_set_block_style(&cmd.payload),
+            "insertTable" => self.op_insert_table(&cmd.payload),
+            "deleteTable" => self.op_delete_table(&cmd.payload),
+            "setCellText" => self.op_set_cell_text(&cmd.payload),
+            "listTables" => self.op_list_tables(),
+            "describeTable" => self.op_describe_table(&cmd.payload),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
             "exportDocx" => self.op_export_docx(&cmd, None),
@@ -2441,6 +2524,7 @@ impl Engine for QuillEngine {
             (doc.blocks, Vec::new(), Vec::new(), Vec::new(), default_sections())
         };
         lists::validate(&state_blocks)?;
+        validate_tables(&state_blocks)?;
         for block in &state_blocks {
             for inline in &block.inlines {
                 if let Some(highlight) = &inline.style.highlight {
