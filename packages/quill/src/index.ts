@@ -21,6 +21,11 @@ export const OPS = {
   splitBlock: "splitBlock",
   mergeBlock: "mergeBlock",
   text: "text",
+  findText: "findText",
+  replaceText: "replaceText",
+  addBookmark: "addBookmark",
+  removeBookmark: "removeBookmark",
+  listBookmarks: "listBookmarks",
   blocks: "blocks",
   layout: "layout",
   exportDocx: "exportDocx",
@@ -65,6 +70,21 @@ export interface LayoutLine {
 }
 export interface LayoutPage {
   lines: LayoutLine[];
+}
+export interface FindMatch {
+  from: Pos;
+  to: Pos;
+  text: string;
+}
+export interface Bookmark {
+  name: string;
+  pos: Pos;
+}
+export interface FindOptions {
+  from?: Pos;
+  to?: Pos;
+  /** Defaults to false (case-insensitive per-scalar Unicode lowercase). */
+  caseSensitive?: boolean;
 }
 
 export class QuillDocument {
@@ -137,6 +157,48 @@ export class QuillDocument {
   }
   text(from?: Pos, to?: Pos) {
     return this.call<{ text: string }>(OPS.text, { from, to });
+  }
+  /** Read-only search; matches never span block boundaries. */
+  findText(query: string, options: FindOptions = {}) {
+    return this.call<{ matches: FindMatch[]; count: number }>(OPS.findText, {
+      query,
+      ...(options.from === undefined ? {} : { from: options.from }),
+      ...(options.to === undefined ? {} : { to: options.to }),
+      ...(options.caseSensitive === undefined
+        ? {}
+        : { case_sensitive: options.caseSensitive }),
+    });
+  }
+  /** Replace every non-overlapping match in range as one undo step. */
+  replaceText(query: string, replacement: string, options: FindOptions = {}) {
+    return this.call<{ replaced: number }>(OPS.replaceText, {
+      query,
+      replacement,
+      ...(options.from === undefined ? {} : { from: options.from }),
+      ...(options.to === undefined ? {} : { to: options.to }),
+      ...(options.caseSensitive === undefined
+        ? {}
+        : { case_sensitive: options.caseSensitive }),
+    });
+  }
+  /**
+   * Named zero-width mark at `pos`. Names are unique, 1–64 non-blank
+   * non-control characters. Bookmarks have right gravity: edits shift them
+   * deterministically (see docs/ENGINE_OPS.md); a bookmark whose block is
+   * deleted inside a range is removed, edge blocks clamp.
+   */
+  addBookmark(name: string, pos: Pos) {
+    return this.call<{ ok: boolean; name: string }>(OPS.addBookmark, { name, pos });
+  }
+  removeBookmarkByName(name: string) {
+    return this.call<{ ok: boolean; name: string }>(OPS.removeBookmark, { name });
+  }
+  removeBookmarkAt(pos: Pos) {
+    return this.call<{ ok: boolean; name: string }>(OPS.removeBookmark, { pos });
+  }
+  /** Read-only; sorted by document position then name. */
+  listBookmarks() {
+    return this.call<{ bookmarks: Bookmark[] }>(OPS.listBookmarks);
   }
   blocks<T = unknown>() {
     return this.call<T>(OPS.blocks);

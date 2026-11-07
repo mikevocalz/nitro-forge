@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  QUILL_DEFERRED_OPS, bindQuillList, bindQuillRibbon, quillSectionOf, quillSelectionRuns, readQuillBlocks, readQuillOutline,
-  type QuillOfficeDocument,
+  QUILL_DEFERRED_OPS, bindQuillBookmarks, bindQuillList, bindQuillRibbon, quillSectionOf, quillSelectionRuns, readQuillBlocks, readQuillBookmarks, readQuillOutline,
+  type QuillBookmarkBinding, type QuillOfficeDocument,
 } from "../src/office-cluster";
-import { OPS } from "../src/index";
+import { OPS, type Pos } from "../src/index";
 
 const ok = <T>(data: T) => Promise.resolve({ events: [], data });
 const blocks = {
@@ -83,6 +83,47 @@ describe("H-07 list, H-15 outline, H-21 sections", () => {
 
   it("names deferred ops that Quill's OPS does not have", () => {
     for (const op of Object.keys(QUILL_DEFERRED_OPS)) expect(Object.values(OPS)).not.toContain(op);
+  });
+
+  it("bookmark binding reads, jumps and mutates through the real ops", async () => {
+    let marks = [{ name: "a", pos: { block: 0, offset: 2 } }];
+    const calls: unknown[][] = [];
+    const doc = {
+      listBookmarks: vi.fn(async () => ok({ bookmarks: marks })),
+      addBookmark: vi.fn(async (name: string, pos: Pos) => {
+        calls.push(["addBookmark", name, pos]);
+        marks = [...marks, { name, pos }];
+        return ok({ ok: true, name });
+      }),
+      removeBookmarkByName: vi.fn(async (name: string) => {
+        calls.push(["removeBookmarkByName", name]);
+        marks = marks.filter(m => m.name !== name);
+        return ok({ ok: true, name });
+      }),
+    };
+    const jumps: Pos[] = [];
+    const changed = vi.fn();
+    const binding = await bindQuillBookmarks(doc, pos => jumps.push(pos), changed);
+    expect(binding.bookmarks).toEqual([{ id: "a", name: "a" }]);
+    // jump resolves the position at call time, not bind time
+    marks = [{ name: "a", pos: { block: 1, offset: 4 } }];
+    await binding.onJumpToBookmark({ id: "a", name: "a" });
+    expect(jumps).toEqual([{ block: 1, offset: 4 }]);
+    await binding.addBookmark("b", { block: 2, offset: 0 });
+    await binding.removeBookmark("a");
+    expect(calls).toEqual([
+      ["addBookmark", "b", { block: 2, offset: 0 }],
+      ["removeBookmarkByName", "a"],
+    ]);
+    expect(changed).toHaveBeenCalledTimes(2);
+    const latest = changed.mock.calls[1]![0] as QuillBookmarkBinding;
+    expect(latest.bookmarks.map(b => b.name)).toEqual(["b"]);
+    await expect(binding.onJumpToBookmark({ id: "ghost", name: "ghost" })).rejects.toThrow(/Unknown bookmark/);
+  });
+
+  it("readQuillBookmarks rejects malformed engine data", async () => {
+    const doc = { listBookmarks: vi.fn(async () => ok({ bookmarks: [{ name: "a" }] })) };
+    await expect(readQuillBookmarks(doc as never)).rejects.toThrow(/malformed bookmark/);
   });
 });
 

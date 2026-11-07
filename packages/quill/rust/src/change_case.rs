@@ -51,6 +51,20 @@ impl QuillEngine {
                     .ok_or_else(|| EngineError::validation("changeCase context exceeds 1 MiB"))?;
             }
         }
+        // Re-anchor bookmarks inside the affected blocks through the
+        // conversion: each mark keeps the output offset produced by the
+        // source scalars before it (case mapping can expand one scalar
+        // into several, e.g. ß → SS).
+        let mut pending: Vec<(usize, usize, usize)> = self
+            .bookmarks
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| (from.block..=to.block).contains(&b.block))
+            .map(|(i, b)| (i, b.block, b.offset))
+            .collect();
+        pending.sort_by_key(|&(_, block, offset)| (block, offset));
+        let mut bm_pi = 0usize;
+        let mut bookmark_updates: Vec<(usize, usize)> = Vec::new();
         let mut next = Vec::with_capacity(span.len());
         let mut output_bytes = 0usize;
         let mut changed = false;
@@ -73,6 +87,7 @@ impl QuillEngine {
             let mut offset = 0;
             let mut selected_chars = 0;
             let mut inlines = Vec::new();
+            let mut produced = 0usize;
             let mut word = false;
             let mut sentence = true;
             let mut punctuation = false;
@@ -135,9 +150,27 @@ impl QuillEngine {
                     } else {
                         c.to_string()
                     };
+                    // Bookmarks at this source boundary keep the output
+                    // offset produced so far.
+                    while bm_pi < pending.len()
+                        && pending[bm_pi].1 == block_index
+                        && pending[bm_pi].2 == offset
+                    {
+                        bookmark_updates.push((pending[bm_pi].0, produced));
+                        bm_pi += 1;
+                    }
                     append(&mut inlines, &text, &inline.style);
+                    produced += text.chars().count();
                     offset += 1;
                 }
+            }
+            // Marks at the block end map to the converted block length.
+            while bm_pi < pending.len()
+                && pending[bm_pi].1 == block_index
+                && pending[bm_pi].2 == offset
+            {
+                bookmark_updates.push((pending[bm_pi].0, produced));
+                bm_pi += 1;
             }
             if lower.next().is_some() {
                 return Err(EngineError::unsupported(
@@ -156,12 +189,12 @@ impl QuillEngine {
         if !changed {
             return Ok(Self::read_only(response(to)));
         }
+        let bookmarks_before = self.bookmarks.clone();
+        for (bm_idx, new_offset) in bookmark_updates {
+            self.bookmarks[bm_idx].offset = new_offset;
+        }
         let removed = span.to_vec();
-        self.journal.record(UndoEntry {
-            index: from.block,
-            removed,
-            inserted: next.clone(),
-        });
+        self.record_undo(from.block, removed, next.clone(), Some(bookmarks_before));
         self.blocks.splice(from.block..=to.block, next);
         Ok(CommandResult::data(response(end)))
     }
