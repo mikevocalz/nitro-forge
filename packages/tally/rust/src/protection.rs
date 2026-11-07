@@ -46,19 +46,40 @@ impl TallyEngine {
                 };
                 current || retarget
             }
-            // Conditional rules follow the same rule as names/validation:
-            // each is bound to one sheet, so setConditionalFormat guards its
-            // target sheet and clearConditionalFormat guards the rule's
+            // Sheet-bound rule tables follow the same rule as names:
+            // each rule is bound to one sheet, so setValidation/
+            // setConditionalFormat guard their target sheet and
+            // clearValidation/clearConditionalFormat guard the rule's
             // sheet (by id) or the target sheet (by range). Unknown ids
-            // fall through — the op reports not_found. The get/evaluate
-            // reads are ungated.
-            "setConditionalFormat" => {
+            // fall through — the op reports not_found. The get/evaluate/
+            // validate reads are ungated.
+            "setValidation" | "setConditionalFormat" => {
                 let idx = match p.get("sheet") {
                     Some(v) if !v.is_null() => self.resolve_sheet(v)?,
                     _ => self.doc.active,
                 };
                 self.doc.sheets[idx].is_protected
             }
+            "clearValidation" => match p.get("id").and_then(Value::as_u64) {
+                Some(id) => self
+                    .doc
+                    .validations
+                    .iter()
+                    .find(|r| r.id == id)
+                    .is_some_and(|r| {
+                        self.doc
+                            .sheets
+                            .iter()
+                            .any(|s| s.id == r.sheet && s.is_protected)
+                    }),
+                None => {
+                    let idx = match p.get("sheet") {
+                        Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                        _ => self.doc.active,
+                    };
+                    self.doc.sheets[idx].is_protected
+                }
+            },
             "clearConditionalFormat" => match p.get("id").and_then(Value::as_u64) {
                 Some(id) => self
                     .doc
@@ -134,6 +155,9 @@ mod tests {
             ("fillSeries", json!({"source":{"from":"A1","to":"A1"},"target":{"from":"A1","to":"A2"},"step":1})),
             ("setFormat", json!({"range":{"from":"A1","to":"A1"},"format":{"bold":true}})),
             ("clearFormat", json!({"cells":["A1"]})),
+            ("setValidation", json!({"range":{"from":"A1","to":"A1"},"rule":{"kind":"list","values":["a"]}})),
+            ("clearValidation", json!({"range":{"from":"A1","to":"A1"}})),
+            ("clearValidation", json!({"id":1})),
             ("setConditionalFormat", json!({"range":{"from":"A1","to":"A1"},"rule":{"criteria":">1","format":{"bold":true}}})),
             ("clearConditionalFormat", json!({"range":{"from":"A1","to":"A1"}})),
             ("clearConditionalFormat", json!({"id":1})),

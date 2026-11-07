@@ -27,6 +27,9 @@ export const OPS = {
   removeName: "removeName",
   listNames: "listNames",
   functionCatalog: "functionCatalog",
+  setValidation: "setValidation",
+  clearValidation: "clearValidation",
+  validateCell: "validateCell",
   setConditionalFormat: "setConditionalFormat",
   clearConditionalFormat: "clearConditionalFormat",
   getConditionalFormats: "getConditionalFormats",
@@ -107,6 +110,45 @@ export interface NamedRangeInfo {
   sheet: string | null;
   sheet_id: number;
   refers_to: string;
+}
+
+/**
+ * Validation criteria kinds the engine can evaluate. Field names are the
+ * wire format (snake_case). Deferred kinds — date bounds, custom formulas,
+ * whole-row/column ranges — are rejected by the engine.
+ */
+export type ValidationCriteria =
+  /** Computed value must be a finite number within optional inclusive bounds; `integer` requires an integral value. */
+  | { kind: "number"; min?: number; max?: number; integer?: boolean }
+  /** Computed value's text form must exactly equal one of `values` (case-sensitive). */
+  | { kind: "list"; values: string[] }
+  /** Computed value's text form must have a character length within optional inclusive bounds. */
+  | { kind: "text"; min_length?: number; max_length?: number };
+
+/**
+ * Durable per-range validation rule bound to one sheet (by durable sheet id).
+ * `range` is a canonical same-sheet `"A1"` or `"A1:B2"`. Rules on one sheet
+ * may not overlap; `setValidation` on an identical sheet+range replaces the
+ * criteria in place (keeping `id`).
+ */
+export interface ValidationRuleInfo {
+  id: number;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  range: string;
+  criteria: ValidationCriteria;
+}
+
+/** Result of the read-only `validateCell` op. */
+export interface CellValidation {
+  valid: boolean;
+  /** Present only when a rule covers the cell. */
+  rule?: ValidationRuleInfo;
+  /** Human-readable expectation, present only when a rule covers the cell. */
+  expected?: string;
+  /** The cell's computed value, present only when a rule covers the cell. */
+  actual?: CellValue;
 }
 
 /** One entry of the read-only `functionCatalog` op. */
@@ -274,6 +316,35 @@ export class TallyDocument {
   /** Read-only catalog of the bounded function set the evaluator supports. */
   functionCatalog() {
     return this.call<{ functions: FunctionInfo[] }>(OPS.functionCatalog, {});
+  }
+  /**
+   * Create or replace the validation rule for `range` on `sheet` (name or
+   * index; default active). The range must not partially overlap an existing
+   * rule on that sheet; an identical sheet+range replaces the criteria.
+   */
+  setValidation(range: { from: string; to: string }, rule: ValidationCriteria, sheet?: string | number) {
+    return this.call<{ rule: ValidationRuleInfo }>(OPS.setValidation, {
+      range,
+      rule,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Remove validation rules: by rule `id`, or every rule on `sheet`
+   * (default active) intersecting `range`.
+   */
+  clearValidation(target: number | { from: string; to: string }, sheet?: string | number) {
+    const payload = typeof target === "number"
+      ? { id: target }
+      : { range: target, ...(sheet === undefined ? {} : { sheet }) };
+    return this.call<{ cleared: number }>(OPS.clearValidation, payload);
+  }
+  /** Read-only: does the cell's computed value satisfy its covering rule? */
+  validateCell(addr: string, sheet?: string | number) {
+    return this.call<CellValidation>(OPS.validateCell, {
+      addr,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
   }
   /**
    * Append a conditional-format rule to `sheet` (name or index; default

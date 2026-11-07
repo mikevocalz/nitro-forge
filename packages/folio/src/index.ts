@@ -31,6 +31,8 @@ export const OPS = {
   listOutlines: "listOutlines",
   addBookmark: "addBookmark",
   removeBookmark: "removeBookmark",
+  listFormFields: "listFormFields",
+  fillFormField: "fillFormField",
   encrypt: "encrypt",
   decrypt: "decrypt",
   save: "save",
@@ -95,6 +97,28 @@ export interface FolioOutlineItem {
   page: number | null;
   dest?: string | unknown[];
   children: FolioOutlineItem[];
+}
+
+/**
+ * One widget annotation from `listFormFields`. `name` is the flattened
+ * field name (`/T` partial names joined with `.`); `ft` is the resolved
+ * field type (`Tx`/`Btn`/`Ch`/`Sig` or a foreign name, `null` when no
+ * `/FT` resolves); `v` is the current `/V` — decoded text for `Tx`/`Ch`,
+ * the state name for `Btn`, an array for multi-value choice fields,
+ * `null` when absent or undecodable; `ff` the resolved `/Ff` flags or
+ * null; `rect` `[x, y, w, h]` or null; `signature` true for `/FT /Sig`;
+ * `annot` the widget's `/Annots` object number — pass it back to
+ * `fillFormField` as `{annot}` (`null` for inline foreign widgets).
+ */
+export interface FolioFormField {
+  page: number;
+  name: string;
+  ft: string | null;
+  v: string | (string | null)[] | null;
+  ff: number | null;
+  rect: Rect | null;
+  signature: boolean;
+  annot: number | null;
 }
 
 /** One row of `listPageInfo`; `mediabox` is `[x1, y1, x2, y2]` PDF user space or null. */
@@ -310,6 +334,37 @@ export class FolioDocument {
    */
   removeBookmark(id: number) {
     return this.call<{ ok: boolean }>(OPS.removeBookmark, { id });
+  }
+  /**
+   * Every form widget on every page, flattened. Read-only; rejects on
+   * encrypted documents (field names and values are ciphertext) —
+   * `decrypt` first. Capped at 10 000 fields.
+   */
+  listFormFields() {
+    return this.call<{ fields: FolioFormField[] }>(OPS.listFormFields);
+  }
+  /**
+   * Set a form field's `/V`. `target` is `{field}` — the flattened name
+   * from `listFormFields`, matched on `page` (ambiguous names reject;
+   * use `{annot}` with the widget's object number instead) — or
+   * `{annot}`. `value` is always a string: `Tx`/`Ch` store it as a text
+   * string, `Btn` treats it as an appearance-state name (`""`, `off`,
+   * `false`, `no`, `0` clear to `/Off`; radio groups match the name
+   * against kid `/AP` states). Signature and pushbutton fields reject,
+   * as do encrypted documents. Appearance streams are NOT regenerated —
+   * the engine sets `/NeedAppearances true` on the AcroForm dict.
+   * Filling the current value is an eventless no-op.
+   */
+  fillFormField(
+    page: number,
+    target: { field: string } | { annot: number },
+    value: string,
+  ) {
+    return this.call<{ ok: boolean }>(OPS.fillFormField, {
+      page,
+      ...target,
+      value,
+    });
   }
   /** Encrypt the document in place (V4/R4, AES-128). One undo entry; saved bytes stay encrypted. */
   encrypt(options: FolioEncryptOptions) {

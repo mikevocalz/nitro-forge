@@ -43,6 +43,7 @@
 //!   would not decrypt) — see `page_ops.rs` and ENGINE_OPS.md.
 
 mod annotation_edit;
+mod forms;
 mod ink_link;
 mod markup;
 mod comments;
@@ -537,6 +538,7 @@ impl FolioEngine {
         Ok(json!({
             "pages": details.len(),
             "has_annots": details.iter().any(|d| d["annots"].as_u64().unwrap_or(0) > 0),
+            "has_forms": forms::doc_has_forms(&self.doc),
             "encrypted": self.doc.is_encrypted(),
             "page_details": details,
         }))
@@ -835,6 +837,7 @@ impl Engine for FolioEngine {
             "insertBlankPage" => self.op_insert_blank(p),
             "addBookmark" => self.op_add_bookmark(p),
             "removeBookmark" => self.op_remove_bookmark(p),
+            "fillFormField" => self.op_fill_form_field(p),
             // --- read-only ---------------------------------------------------
             "pageCount" => Ok(ro(json!({ "pages": self.page_count() }))),
             "pageText" => {
@@ -917,6 +920,7 @@ impl Engine for FolioEngine {
             "save" => self.op_save(&cmd, None),
             "listPageInfo" => self.op_list_page_info(),
             "listOutlines" => self.op_list_outlines(),
+            "listFormFields" => self.op_list_form_fields(),
             "info" => Ok(ro(json!({
                 "pages": self.page_count(),
                 "has_annots": self.has_annots()?,

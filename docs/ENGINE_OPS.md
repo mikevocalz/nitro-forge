@@ -142,7 +142,7 @@ google/ink source admission (#46).
 
 ## tally-engine — `TallyEngine::new()`
 
-State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], conditional_formats: [ConditionalRule], next_conditional }`,
+State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation, conditional_formats: [ConditionalRule], next_conditional }`,
 `Sheet = { id, name, tone?: string | null, is_protected?: boolean, cells: { "A1": { raw: string } }, formats?: { "A1": CellFormat } }` — computed values are
 derived, not stored. `formats` is durable per-cell display metadata keyed by
 canonical address, independent of `cells`: it survives content edits, applies
@@ -154,7 +154,12 @@ durable workbook-level conditional-format rule bound to one sheet; `range`
 is a canonical `"A1"`/`"A1:B2"`, `criteria` a COUNTIF-style string (see
 conditional-format rules below), and `format` a bounded style payload
 `{ bold?, italic?, underline?, color?, fill? }` — `color`/`fill` are
-`#RRGGBB`, at least one attribute required. `CellFormat = { number_format?,
+`#RRGGBB`, at least one attribute required. `ValidationRule = { id, sheet:
+sheet-id, range, criteria }` is a durable workbook-level data-validation
+rule bound to one sheet; `range` is a canonical `"A1"` or `"A1:B2"` on that
+sheet and `criteria` is a bounded kind-tagged object (see validation rules
+below). Validation rules on one sheet may not overlap; conditional rules
+may. `CellFormat = { number_format?,
 bold?, italic?, fill?, border? }` — all attributes optional; `number_format` is
 a bounded opaque string (≤64 ASCII graphic/space chars, no `" \ { }`) holding
 a preset id or custom pattern the host interprets; `fill`/`border.color` are
@@ -192,6 +197,9 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `removeName` | `{name}` | `{ok}` | name lookup is case-insensitive; missing → `not_found` |
 | `listNames` | `{}` | `{names:[{name,sheet,sheet_id,refers_to}]}` | read-only; `sheet` is the current sheet name |
 | `functionCatalog` | `{}` | `{functions:[{name,min_args,max_args,signature}]}` | read-only; `max_args:null` = variadic |
+| `setValidation` | `{sheet?,range:{from,to},rule:{kind,…}}` | `{rule}` | create/replace the rule for an exact sheet+range; see validation rules below |
+| `clearValidation` | `{id}` xor `{sheet?,range:{from,to}}` | `{cleared}` | by rule id, or every rule on the sheet intersecting the range; eventless when nothing matches |
+| `validateCell` | `{sheet?,addr}` (`cell` alias accepted) | `{valid[,rule,expected,actual]}` | read-only; silent, no journal/events |
 | `setConditionalFormat` | `{sheet?,range:{from,to},rule:{criteria,format}}` | `{rule}` | append a conditional-format rule; see conditional-format rules below |
 | `clearConditionalFormat` | `{id}` xor `{sheet?,range:{from,to}}` | `{cleared}` | remove one rule by id, or every rule on the sheet intersecting the range |
 | `getConditionalFormats` | `{sheet?}` | `{rules:[{id,sheet,sheet_id,range,criteria,format}]}` | read-only; `sheet` absent lists all rules |
@@ -305,7 +313,53 @@ variants (`formula`, `color-scale`, `icon-set`, `data-bar`), `styleId`
 host-style references, `enabled`/`stopIfTrue` ordering semantics, whole-
 row/column ranges, and any pixel output — all host-side concerns.
 
-Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Conditional-format mutations follow the same bound-sheet rule: `setConditionalFormat` guards its target sheet and `clearConditionalFormat` guards the rule's sheet (by id) or the target sheet (by range); the get/evaluate reads stay allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Validation rules: rules are **workbook-scoped** entries bound to one sheet by
+durable sheet id, like names — `ValidationRule = { id, sheet: sheet-id,
+range, criteria }` with `range` a canonical `"A1"`/`"A1:B2"` (endpoints in
+either order, `$` allowed, re-canonicalized on restore) capped at the shared
+16,384-cell bound, and `id` a workbook-unique handle from `next_validation`.
+At most 256 rules per workbook. `criteria` is a flat kind-tagged object —
+`{"kind":"number",min?,max?,integer?}` (computed value must be a finite number
+within the optional inclusive bounds; `integer:true` requires an integral
+value; no bounds means "must be a number"), `{"kind":"list",values:[…]}`
+(computed value's text form must exactly equal one entry, case-sensitive;
+1–512 nonempty entries of ≤8192 chars, matching the NYC-Tron
+`ValidationDropdown` contract), or `{"kind":"text",min_length?,max_length?}`
+(computed value's text form must have a Unicode-scalar length within the
+optional inclusive bounds, each 1–65536, at least one required). Fields
+belonging to other kinds reject. The text form is the string itself, finite
+numbers via `fmt_num`, `TRUE`/`FALSE` for booleans, and the literal for
+errors; empty cells, non-finite numbers and range results have none. Deferred
+kinds — date bounds (the evaluator has no date serials), custom-formula
+criteria, whole-row/column ranges, and the dropdown's `allowOther`/
+`allowBlank` commit policy — are host concerns and reject as unknown kinds
+or stray fields. `setValidation` targets `sheet` (name or index, default
+active) plus `range:{from,to}`; rules on one sheet may not overlap — a
+partial overlap rejects atomically, while the exact same sheet+range replaces
+`criteria` in place keeping `id` (the edit path; identical resubmission is
+eventless and journal-free). `clearValidation` takes exactly one of `id`
+(removes that rule, `not_found` when absent) or `range`+optional `sheet`
+(removes every rule on that sheet intersecting the rectangle; `{cleared:0}`
+is eventless); `sheet` alongside `id` rejects rather than being ignored.
+`validateCell` is a silent read: `{valid:true}` alone when no
+rule covers the cell, otherwise `{valid,rule,expected,actual}` where `rule`
+resolves the bound sheet's current name and `actual` is the computed value;
+a blank cell (no stored raw — a formula computing to Empty is *not* blank
+and must satisfy the criteria) reports valid under any rule — hosts enforce
+"value required" at commit time, and error values satisfy `list` only via a
+literal error-text entry and never satisfy `number`/`text`. Note the
+`sheet` key differs by payload: op results (`setValidation`'s `rule`,
+`validateCell`'s `rule`) report `sheet` as the bound sheet's current *name*
+plus `sheet_id` (the durable id), while `describe` returns the raw stored
+`Workbook` where each `validations[].sheet` is the durable sheet id, not a
+name. Mutations record
+one whole-document undo entry each like name ops; `removeSheet`
+cascade-drops the sheet's rules into the same undo entry and undo/redo
+re-admit them only while they still satisfy the restore invariants (existing
+sheet, canonical in-bounds range, valid criteria, unique id, no overlap);
+`duplicateSheet`/`moveSheet` do not copy or retarget rules.
+
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats` and `evaluateConditionalFormats` stay allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
@@ -314,29 +368,33 @@ Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteri
 Criteria expressions/cell references are evaluated normally; criteria range errors/cycles propagate. SUMIF evaluates sum cells only for matches, ignores matched nonnumeric values and propagates matched errors; nonfinite accumulated sums return #NUM!. Existing per-request memoization/depth/cycle rules remain intact. Each conditional rectangle is capped at16384 cells, criteria at255 Unicode scalars and matched text at4096 UTF-8 bytes (#VALUE! for string limits). A shared per-Evaluator allowance of1000000 conditional scan/string/DP steps returns #NUM! on exhaustion; matcher allocation work is charged before bounded DP buffers. These are explicit Tally semantics, not full Excel compatibility.
 
 Snapshots: the NFD1 envelope is unchanged; the JSON payload is normally the bare
-`Workbook` (`{next_sheet,sheets,active,names?,conditional_formats?,next_conditional}`). When any sheet carries durable
+`Workbook` (`{next_sheet,sheets,active,names?,validations?,next_validation?,conditional_formats?,next_conditional}`). When any sheet carries durable
 post-release fields (`tone` set, `is_protected` true, or a nonempty `formats`
-map) **or the workbook has any names or conditional rules**, the payload is instead
-`{kind:"tally",schema:N,document:<Workbook>}` so pre-wrapper readers fail closed
-rather than silently dropping those fields (same precedent as pitch schema:2 and
-quill schema:2). `N` is `1` for tone/protection/formats/names-only documents and
-`3` when `conditional_formats` is nonempty — schema:2 is reserved by the
-unmerged data-validation slice (`codex/w6-tally-validation`, which emits
-schema:2 for its `validations` table); this build accepts only schema 1 and 3
-so a validation snapshot fails closed here instead of being silently stripped.
-Merge reconciliation when both slices land: accept schemas 1–3 and emit 3 when
-`conditional_formats` is nonempty, else 2 when `validations` is nonempty, else 1.
-`formats`/`conditional_formats` entries ride inside `document` — the
-wrapper boundary, not a schema bump alone, is what guards them, and `restore`
-re-validates every stored format and rule before replacing state. `restore` accepts both shapes, strictly validates wrapper
-kind/schema/keys (`deny_unknown_fields`), then runs the existing document
-validation — including name uniqueness, name legality, on-sheet `refers_to`
-and existing sheet ids, conditional-rule id uniqueness, sheet binding,
-criteria parseability, range canonicalization/caps and format shapes, all
-re-canonicalized — before replacing state and
-resetting the journal; bad input leaves state untouched. Workbooks without
-tone/protection/formats/names/conditional rules keep the legacy payload, so older snapshots and
-older readers round-trip unchanged.
+map) **or the workbook has any names, validation rules or conditional rules**,
+the payload is instead `{kind:"tally",schema:N,document:<Workbook>}` so
+pre-wrapper readers fail closed rather than silently dropping those fields
+(same precedent as pitch schema:2 and quill schema:2). `N` is `1` for
+tone/protection/formats/names-only documents, `2` when `validations` is
+nonempty and `conditional_formats` is empty, and `3` when
+`conditional_formats` is nonempty — a schema:3 document may carry both rule
+tables. `Workbook` does not deny unknown fields, so each newer table bumps
+the schema: schema:1 readers would silently drop `validations` or
+`conditional_formats`, and the higher schemas make them reject the snapshot
+instead. `formats`/`names`/`validations`/`conditional_formats` entries ride
+inside `document`; `restore` accepts schemas 1, 2 and 3, strictly validates
+wrapper kind/schema/keys (`deny_unknown_fields`), then runs the existing
+document validation — including name uniqueness, name legality, on-sheet
+`refers_to`, existing sheet ids, validation-rule count/id uniqueness, bound
+sheet existence, canonical in-sheet ranges within the cell cap, criteria
+invariants, no overlapping validation rules per sheet, and conditional-rule
+id uniqueness, sheet binding, criteria parseability, range
+canonicalization/caps and format shapes, all re-canonicalized — before
+replacing state and resetting the journal; bad input leaves state untouched.
+Both rule tables are serde-optional, so a schema:2 payload (validations
+only) restores with an empty `conditional_formats` and vice versa.
+Workbooks without tone/protection/formats/names/validations/conditional
+rules keep the legacy payload, so older snapshots and older readers
+round-trip unchanged.
 
 ## cadence-engine — `CadenceEngine::new()`
 
@@ -534,6 +592,8 @@ until `new`/`open`.
 | `addBookmark` | `{title,page,parent?}` | `{ok,id}` | mutating; appends an outline item as the last child of `parent` (an item `id`) or top-level when omitted. `title` non-empty ≤2048 UTF-16 code units; `page` 0-based index → `/Dest [page /Fit]`; `id` = new item dict object number. Hand-built `/Outlines` root+item dicts with correct `/First`/`/Last`/`/Next`/`/Prev`/`/Parent` links and spec `/Count` (visible descendants, sign = open/closed). One undo entry |
 | `removeBookmark` | `{id}` | `{ok}` | mutating; removes the item `id` and its whole descendant subtree, repairs neighbour/parent links from the walked `/First`→`/Next` order (raw `/Prev`/`/Last` backlinks are never trusted), recounts `/Count`, deletes the objects, then prunes every object unreachable from the trailer — including orphans that pre-date the op, not only objects the removed items referenced. Rejects Unsupported when a surviving object still references the removed set (dangling-link guard; the scan covers `doc.objects` but not `doc.trailer` entries) |
 | `listOutlines` | `{}` | `{outlines:[{id,title,page,dest?,children}]}` | read-only nested `/Outlines` tree. `id` = item dict object number (`null` for inline foreign items); `page` = 0-based index the `/Dest` or `/A`→`/D` resolves to (`null` when unresolvable — named dests that do not decode, remote go-to, deleted-page ghosts); `dest` = explicit-dest tail (`/Fit` + coords) or the unresolved dest name. Rejects encrypted documents (titles are ciphertext) |
+| `listFormFields` | `{}` | `{fields:[{page,name,ft,v,ff,rect,signature,annot}]}` | read-only; walks each page's `/Annots` for widget annotations (`/Subtype /Widget`, or no `/Subtype` with `/FT` and `/Rect`). `name` = flattened field name (`/T` partials joined `.`), `ft` = nearest `/FT` up the `/Parent` chain (`Tx`/`Btn`/`Ch`/`Sig`/foreign name, null when unresolved), `v` = decoded `/V` (text for `Tx`/`Ch`, name for `Btn`, array for multi-value `Ch`, null otherwise), `ff` = nearest `/Ff`, `rect` = `[x,y,w,h]` or null, `signature` = `ft==="Sig"`, `annot` = `/Annots` object number (null for inline widgets). ≤10 000 fields, cycle-safe, indirect deref throughout. Rejects encrypted documents (names/values are ciphertext) |
+| `fillFormField` | `{page,field|annot,value}` | `{ok}` | mutating; exactly one of `field` (flattened name, per-page match — ambiguous names reject, use `annot`) or `annot` (widget object number). Writes `/V` on the *field* dict (first `/Parent`-chain node with a field-identity key `/FT`/`/V`/`/Ff`/`/Opt`/`/Kids` — `/T` only as last resort; inheritable presentation attrs `/DA`/`/Q` never count — merged widget or parent field), never assumed to be the widget. `Tx`/`Ch`: `value` string ≤32 767 UTF-16 units → PDF text string (`/I` index arrays and `/Opt` validation not written). `Btn`: `value` ≤1024 bytes → `/V` name; `""`/`off`/`false`/`no`/`0` (case-insensitive) → `/Off`, anything else verbatim on-state name. Checkbox mirrors the name into `/AS` on the field's indirect widget dicts only (pure field dicts never get `/AS`; checkbox on-state names are NOT validated against `/AP`→`/N`, unlike radio); radio (`/Ff` bit 15) requires a kid `/AP`→`/N` state matching `value` (matching kid `/AS` = name, siblings `/Off`; no appearance states → reject). `/FT /Sig`, pushbuttons (`/Ff` bit 16), missing `/FT`, and inline field dicts reject. Sets `/NeedAppearances true` on `/AcroForm` (created if absent) — appearance streams are NOT regenerated. Equal `/V` → eventless no-op, except `Btn` fills also compare computed `/AS` states so a divergent foreign document is repaired. Rejects encrypted documents. One undo entry |
 | `info` | `{}` | `{pages,has_annots,encrypted}` | read-only; `encrypted` mirrors `describe.encrypted` and the `open` flag |
 
 Undo: previous serialized `doc` (lopdf Document clone — it implements Clone; cap 8). `encrypt`/`decrypt` record undo like every mutating op, so encryption state round-trips through undo/redo for free.
@@ -555,6 +615,8 @@ Square/Circle annotations use positive bounded caller rectangles and standard PD
 Page-tree ops (`movePage`/`deletePage`/`duplicatePage`/`insertBlankPage`) treat the document's page order as the depth-first `/Kids` order under the catalog's `/Pages` root. Each structural op rewrites that root's `/Kids`/`/Count` as a flat array of page references and reparents every page to the root, so intermediate `/Pages` nodes are dropped; before reparenting, inheritable page attributes (`/MediaBox`, `/CropBox`, `/Rotate`, `/Resources`, `/UserUnit`) that a page does not define itself are materialized onto it from its ancestor chain, preserving effective values. Before the rewrite, the page iterator's yield is compared against a full recursive `/Kids` walk that counts terminal entries regardless of `/Type` (references and inline dictionaries alike); a mismatch means the tree hides subtrees from `get_pages` and the op rejects with Validation rather than silently dropping pages. All four ops reject encrypted documents with Unsupported: lopdf's `encrypt` rewrites strings and streams in place keyed by object id, so objects cloned under fresh ids (a duplicated page or its annotations) would carry ciphertext that decrypts to garbage under the new id — `decrypt` first. `listPageInfo` still works read-only on encrypted documents for the structural fields; `has_contents` reports `null` because content streams are ciphertext. Afterwards, objects that became unreachable from the trailer (orphaned `/Pages` nodes, a deleted page's exclusive contents/annots, replaced `/Annots` arrays) are removed — lopdf's writer emits every object in `doc.objects`, so orphans would otherwise persist as dead bytes; objects still referenced elsewhere (shared content streams after `duplicatePage`, shared `/Resources`, annots reachable from surviving pages) are kept. Page object ids are never renumbered, so named destinations, structure parents and `/ParentTree` entries stay valid for `movePage`/`duplicatePage`/`insertBlankPage`; for `deletePage` they stay *syntactically* valid but can resolve to a ghost: named destinations (`/Names`→`/Dests`, a root `/Dests` dict), `/Outlines` `/Dest`/`/A`→`/GoTo` actions, `/OpenAction` and `/StructTreeRoot` references to the deleted page's object id keep it reachable, leaving an orphaned `/Type /Page` object that is no longer in `/Kids`. Dest scrubbing is not performed in this slice. The catalog `/PageLabels` number tree is index-keyed, so it goes stale after any move/delete/insert (labels no longer match the new page order) and is not updated. `duplicatePage` copies the page dictionary and each annotation into fresh indirect objects — inline (non-reference) annotation dicts are preserved as inline `/Annots` entries — and remaps intra-page annotation links (`/IRT`, `/Popup`, and `/Parent` when it names another annotation — a widget's field `/Parent` stays shared); an annotation whose `/IRT`/`/Popup` points outside the page's annotation set rejects the whole op. `/StructParents` and `/B` are stripped from the copy (a shared struct-parent index would corrupt MCID mapping in tagged PDFs, and bead arrays would chain the copy into the source's thread beads); `/PieceInfo`, `/Tabs`, `/AA` and page `/Metadata` are still copied verbatim and remain shared/stale. `/Contents` streams and `/Resources` are shared between source and copy by reference. All page ops require an indirect `/Pages` root and validate fully before journaling; `movePage {from,to}` with `from === to` is an eventless no-op; each mutating op records one undo entry and emits one `document:changed`.
 
 Outline ops (`listOutlines`/`addBookmark`/`removeBookmark`) hand-build and maintain the catalog `/Outlines` dictionary tree directly — lopdf 0.36's `Bookmark`/`build_outline` helpers were rejected because they keep a parallel bookmark table, emit `/A` action objects instead of `/Dest`, cannot insert or remove single items, and compute `/Count` as direct-child counts rather than the spec's visible-descendant count. Each item is an indirect dictionary with `/Title` (PDF text string), `/Parent`, `/Dest [page /Fit]`, and the `/First`/`/Last`/`/Next`/`/Prev` sibling links; `/Count` is recomputed for the whole tree after every mutation as the number of visible descendants, preserving each item's open/closed sign, and the root `/Count` is the total visible item count. Item identity is the dictionary's object number (the same `.0` convention as `annot_id`); it is stable across adds/removes because objects are never renumbered, so `removeBookmark {id}` keeps working after sibling edits, `movePage`, `duplicatePage`, `insertBlankPage` and save→open round-trips. `addBookmark` always appends as the *last* child of `parent` (or top-level); there is no insert-at-index in this slice. All three ops reject encrypted documents with Unsupported — new `/Title` strings would be plaintext in an encrypted file and existing titles are ciphertext — and the mutating ops additionally reject any outline tree containing inline (non-indirect) item dictionaries rather than risk corrupting nested dict values; `listOutlines` still lists them with `id: null`. `/Title` may be an indirect string (dereferenced before decoding). Sibling order, parent scopes and scope `/First`/`/Last` edge pointers are derived from the `/First`→`/Next` walk only: `/Prev` is never traversed and `/Last` is never trusted, so forged or stale backlinks cannot redirect a link repair into an unrelated object; `addBookmark` appends after the scope's last *walked* child and rejects a scope the walk saw as empty but that still carries a `/Last` chain pointer, and `removeBookmark` rewrites the scope's `/First`/`/Last` unconditionally from walked truth and re-walks the staged tree afterwards, rejecting if any previously reachable item id was lost. Bounds: non-empty titles ≤2048 UTF-16 code units, ≤4096 items, top-level items at depth 0 with the deepest admitted item at depth 64 (a chain can be 65 items deep), cycle-safe walks, named-destination collection capped at 4096 entries (names past the cap report as unresolved). The root `/Count` is omitted rather than written as 0 when the outline is empty. `removeBookmark` deletes the item plus its descendant subtree and then scans every surviving object for references into the removed set — an `/OpenAction`, named destination or stray link rejects the whole op with Unsupported instead of committing a dangling reference (the scan iterates `doc.objects`; trailer entries are not scanned) — before recounting and pruning every trailer-unreachable object, which includes pre-existing orphans, not only objects the removed items referenced. Destinations keep stable page object ids: `movePage`/`duplicatePage`/`insertBlankPage` leave outlines valid and `listOutlines` resolves the *current* page index, while `deletePage` never scrubs outline dests — the `/Dest` page reference keeps the deleted page reachable as an orphaned `/Type /Page` ghost (same documented behaviour as named destinations) and `listOutlines` reports `page: null` for it.
+
+Form field ops (`listFormFields`/`fillFormField`) discover widgets by walking page `/Annots` — not the catalog `/AcroForm` `/Fields` tree — so fields without an on-page widget are never listed, and `/T` alone never marks an annot as a widget (it is also the annotation title key; the no-subtype fallback requires `/FT` plus `/Rect` — widgets have geometry, so a bare `/FT` dict without `/Subtype`/`/Rect` is a pure field dict). `/FT`, `/V`, `/Ff` and `/T` partial names inherit leaf→root through `/Parent` with the nearest definition winning; the flattened name joins every `/T` root→leaf with `.`. `fillFormField` writes `/V` on the first chain node carrying a field-identity key (`/FT`/`/V`/`/Ff`/`/Opt`/`/Kids`, `/T` last resort) — deliberately excluding inheritable presentation attributes `/DA` and `/Q`, which widget dictionaries legitimately carry and which would otherwise pull `/V` onto a widget kid while the parent field keeps a stale value — which is the merged widget dict for merged fields and the parent field dict for separate widget kids — so one fill updates every widget of the field, and `duplicatePage`'s shared field references mean filling through either copy's widget sets the same `/V`. Button semantics are a documented subset: `Btn` `/V` is a name object; the off-set is exactly `""`, `off`, `false`, `no`, `0` (case-insensitive) → `/Off`, every other value is stored verbatim as the on-state name (lopdf `#XX`-escapes on write). Checkbox on-state names are stored verbatim and are NOT validated against the widget's `/AP`→`/N` states (radio values are) — a name with no matching appearance stream still writes `/V`/`/AS` and relies on `/NeedAppearances`. Checkboxes mirror the state into `/AS` on every indirect widget dict of the field — real widget annotations only (`/Subtype /Widget`, or no subtype with `/FT` and `/Rect`); pure field dicts and inline dictionaries never receive `/AS`. Radio groups resolve `value` against kid `/AP`→`/N` state names — the matching kid's `/AS` takes the name, siblings take `/Off`, and kids or merged fields without appearance states cannot be selected. `/AS` writes skip inline (non-indirect) widget dictionaries, which lopdf cannot mutate through its object map; `/V` stays authoritative and `/NeedAppearances true` asks viewers to repaint. A `Btn` fill whose `/V` already matches is still a real mutation when any computed `/AS` differs, so foreign documents with divergent appearance states get repaired instead of an eventless no-op. `Tx`/`Ch` store a single PDF text string — choice `/I` indices, multi-select arrays and `/Opt` membership are not written. Signature fields (`/FT /Sig`) list with `signature: true` but always reject fills, as do pushbuttons and fields with no resolvable `/FT`. Both ops reject encrypted documents: `/T`/`/V` strings are ciphertext under lopdf's in-place encryption and a plaintext `/V` written post-encrypt would save unencrypted — `decrypt` first. `describe` gains `has_forms` (AcroForm `/Fields` non-empty or any widget annot); `signature_count` is deferred to consumers of `listFormFields`. Bounds are fail-closed by design: a `/Parent` chain deeper than 64 links or more than 10 000 listed fields rejects the whole op rather than returning a partial list, and `fillFormField` scans at most 10 000 widget entries per page.
 
 Freehand Ink annotations persist real `/InkList` stroke geometry — an array of paths, each alternating x/y coordinates (not path-painting operators) — with `/Rect` computed from the stroke bounds and an explicit `/BS` border; `color` maps to `/C` and `opacity` to `/CA`. Link annotations persist `/A << /S /URI /URI (…) >>` behind an invisible border; URI validation is syntactic (scheme shape, length, no whitespace/controls) and never checks reachability. Both carry optional Contents/author/date metadata under the `addAnnotation` rules, join generic list/delete/save/history like every annotation, and stay outside the Text/Highlight comment-edit/reply/review contract. `listAnnotations` surfaces decodable `/A /URI` as `uri` and `/Dest` (string, name or numeric array) as `dest`.
 

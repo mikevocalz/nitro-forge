@@ -13,7 +13,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | cadence-engine tests (incl. real PCM render) | 21 pass | `cargo test -p cadence-engine` |
 | splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch) | 44 pass | `cargo test -p splice-engine` |
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
-| folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines) | 76 pass | `cargo test -p folio-engine` |
+| folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields) | 92 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
 | quill-engine tests (incl. real DOCX zip round-trip) | 25 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI round-trip test | 1 pass | `cargo test -p nf-sys` |
@@ -43,7 +43,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Tally engine | Spreadsheet eng (subagent ddf87203) | formula parser/evaluator | ✅ 27 tests |
 | Cadence engine | Audio/DSP eng (subagent 75836ea5) | MIDI clips, transport, PCM render | ✅ 21 tests |
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch | ✅ 44 tests |
-| Folio engine | PDF eng (subagent bdd8014e) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption, outline (bookmark) ops | ✅ 76 tests |
+| Folio engine | PDF eng (subagent bdd8014e) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption, outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset) | ✅ 92 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
 | Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX | ✅ 25 tests |
 | Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |
@@ -688,13 +688,57 @@ resubmission is eventless, mutations journal whole-document undo entries,
 re-admission, and bound-sheet protection guards apply. `evaluateConditionalFormats`
 reports `{addr, computed, matches}` per cell — matches only, no style
 application, merge or rendering (host-side). Rules-carrying snapshots emit
-`{kind:"tally",schema:3}`; schema:2 is reserved by the unmerged
-`codex/w6-tally-validation` slice, which this build rejects fail-closed —
-merge reconciliation (accept 1–3, emit 3/2/1 by feature) is documented in
-`docs/ENGINE_OPS.md`. Deferred: NYC-Tron `kind` variants (formula,
+`{kind:"tally",schema:3}`; after the data-validation slice merged, `restore`
+accepts schemas 1–3 and emits 1/2/3 by feature (bare workbook / validations
+only / conditional rules present, possibly alongside validations) — the
+final three-tier contract is documented in `docs/ENGINE_OPS.md`. Deferred:
+NYC-Tron `kind` variants (formula,
 color-scale, icon-set, data-bar), `styleId`, `enabled`/`stopIfTrue`,
-whole-row/column ranges, pixel output. Local evidence: `cargo test -p
-tally-engine` 82 passed (6 new), `pnpm --filter @nitro-forge/tally` 47
-Vitest passed across 12 files (2 new live `nf-cli` cases), package
-typecheck clean, `cargo build -p nf-cli` clean. No native target run, XLSX
-or full P13 completion is implied.
+whole-row/column ranges, pixel output. Local evidence (post-merge with the
+data-validation slice): `cargo test -p tally-engine` 94 passed including a
+new emit+restore schema-matrix test covering bare/schema:2/schema:3/both,
+`pnpm --filter @nitro-forge/tally` 51 Vitest passed across 13 files (2 new
+live `nf-cli` cases), package typecheck clean, `cargo build -p nf-cli`
+clean. Pre-merge this slice alone reported 82 engine tests and 47 Vitest.
+No native target run, XLSX or full P13 completion is implied.
+
+## Tally data validation source checkpoint (2026-11-07)
+
+Tally persists workbook-level data-validation rules (`{id, sheet, range,
+criteria}`) through new `setValidation`/`clearValidation` ops and the
+read-only `validateCell` op. Criteria are bounded to what the engine honestly
+evaluates: `number` (optional inclusive min/max, `integer` flag), `list`
+(1–512 exact case-sensitive text-form entries, matching the NYC-Tron
+ValidationDropdown caps) and `text` (optional inclusive length bounds).
+Date bounds, custom formulas, whole-row/column ranges and the dropdown's
+allowOther/allowBlank commit policy are deferred and documented in
+`docs/ENGINE_OPS.md`. Rules cannot overlap per sheet; same sheet+range
+replaces criteria in place keeping the id. Sheet removal cascade-drops rules
+into the same undo entry and undo re-admits them only while they satisfy the
+restore invariants. Snapshots carrying rules emit `{kind:"tally",schema:2}`
+because `Workbook` does not deny unknown fields and schema:1 readers would
+silently drop them; `restore` accepts schema 1 and 2 and re-validates rule
+count, id uniqueness, bound sheets, canonical in-bounds ranges, criteria
+invariants and per-sheet overlap atomically. Mutations are protection-checked
+against the bound sheet like name ops. Local evidence: `cargo test -p
+tally-engine` 85 passed (9 new), `pnpm --filter @nitro-forge/tally` typecheck
+clean and 49 Vitest tests passed including four new live `nf-cli`
+data-validation tests, `cargo build -p nf-cli` clean. No UI wiring, XLSX or
+native/device acceptance is claimed.
+
+Review follow-up on the same slice: `validateCell`'s `text` criteria now
+rejects error values before consulting the text form (previously `=1/0`
+could satisfy a length rule via the literal `"#DIV/0!"` text), and the
+blank check narrowed to "no stored raw" so a formula computing to `Empty`
+no longer passes every rule (both match the already-documented semantics).
+`clearValidation {id, sheet}` now rejects the mixed selectors, and
+`validateCell {addr:null, cell}` treats explicit null as absent like
+`sheet:null`. `describe` vs op-result `sheet` key semantics (durable id vs
+current name + `sheet_id`) are documented in `docs/ENGINE_OPS.md`. Local
+evidence: `cargo test -p tally-engine` 87 passed (2 new), `pnpm --filter
+@nitro-forge/tally test` 49 passed, typecheck clean, `cargo build -p
+nf-cli` clean. After the conditional-formats slice merged on top, snapshots
+keep the three-tier contract: schema:2 for validations-only documents,
+schema:3 whenever `conditional_formats` is nonempty (which may also carry
+validations), schema:1 otherwise; `restore` accepts 1–3 and both rule tables
+are serde-optional so each restores with the other's table empty.
