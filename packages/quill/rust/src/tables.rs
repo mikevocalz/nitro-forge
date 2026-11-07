@@ -34,8 +34,9 @@ pub const CELL_BLOCKS_TOTAL_MAX: usize = 65536;
 /// `setCellText` payload bound (plain text, `\n` splits paragraphs).
 const CELL_TEXT_MAX: usize = 8192;
 
-/// One table cell: an ordered list of paragraph blocks (never empty, never
-/// a nested table, never list members — see `validate_tables`).
+/// One table cell: an ordered list of plain `para` blocks (never empty,
+/// never another kind, never list members, never styled, never carrying a
+/// `table` payload — see `validate_tables`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TableCell {
@@ -54,11 +55,16 @@ pub struct Table {
 
 /// Full table validation for restore and staged op results: the
 /// kind/payload invariant, dimension and cell-count bounds, per-cell block
-/// limits, the document-wide cell-block budget, and the no-nesting/no-list
-/// cell rules. Cell paragraphs are plain default-style only: a cell-block
-/// `style_id` is rejected here because no op can set one (`setCellText`
-/// builds `Block::empty` paragraphs and cell blocks are unreachable by
-/// `Pos`, so `setBlockStyle`/`removeStyle` never see them).
+/// limits, the document-wide cell-block budget, and the cell-block rules.
+/// A `kind:"table"` block carries nothing but its payload: empty `inlines`
+/// (so only offset 0 is a valid `Pos` on it), no `style_id` (`setBlockStyle`
+/// rejects tables, so a reference is unreachable by design), and no `list`
+/// membership. Cell paragraphs are plain default-style `para` blocks only:
+/// `setCellText` builds `Block::empty(Para)` paragraphs and cell blocks are
+/// unreachable by `Pos`, so no op can give them another kind, a `style_id`,
+/// list membership, or a stray `table` payload — all rejected here because
+/// a cell block's own `table` payload would escape `all_blocks` traversal
+/// and bypass inline-style and `style_id` validation on restore.
 pub fn validate_tables(blocks: &[Block]) -> Result<(), EngineError> {
     let mut tables = 0usize;
     let mut cell_blocks_total = 0usize;
@@ -68,6 +74,21 @@ pub fn validate_tables(blocks: &[Block]) -> Result<(), EngineError> {
                 tables += 1;
                 if tables > TABLES_MAX {
                     return Err(EngineError::validation("table limit reached"));
+                }
+                if !b.inlines.is_empty() {
+                    return Err(EngineError::validation(
+                        "table blocks must not carry inlines",
+                    ));
+                }
+                if b.style_id.is_some() {
+                    return Err(EngineError::validation(
+                        "table blocks cannot carry a style_id",
+                    ));
+                }
+                if b.list.is_some() {
+                    return Err(EngineError::validation(
+                        "table blocks cannot be list members",
+                    ));
                 }
                 validate_table(table, &mut cell_blocks_total)?;
             }
@@ -118,9 +139,13 @@ fn validate_table(table: &Table, total: &mut usize) -> Result<(), EngineError> {
             return Err(EngineError::validation("table cell block budget exceeded"));
         }
         for cb in &cell.blocks {
-            if cb.kind == BlockKind::Table {
+            // Cell blocks are strictly plain `para` paragraphs: `setCellText`
+            // is the only op that writes them and it only produces `Para`,
+            // so headings/quotes/list kinds (with or without list metadata)
+            // and nested tables are all unreachable by design.
+            if cb.kind != BlockKind::Para {
                 return Err(EngineError::validation(
-                    "nested tables are not supported",
+                    "table cells may only contain paragraph blocks",
                 ));
             }
             if cb.list.is_some() {
@@ -131,6 +156,14 @@ fn validate_table(table: &Table, total: &mut usize) -> Result<(), EngineError> {
             if cb.style_id.is_some() {
                 return Err(EngineError::validation(
                     "named styles are not supported inside table cells",
+                ));
+            }
+            // A stray payload on a cell block would hide its inner blocks
+            // from `all_blocks`, bypassing inline-style and `style_id`
+            // validation on restore.
+            if cb.table.is_some() {
+                return Err(EngineError::validation(
+                    "table cell blocks must not carry a table payload",
                 ));
             }
         }
@@ -904,6 +937,60 @@ mod tests {
                     json!([{"text":"x","style":{"font_size":2000}}]);
                 serde_json::to_value(v).unwrap()
             },
+            // stray table payload on a cell paragraph hiding an invalid
+            // inline style — the payload's inner blocks escape all_blocks,
+            // so only the cell-block payload check can reject this
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][2]["table"]["cells"][0]["blocks"][0]["table"] = json!({
+                    "rows":1,"cols":1,
+                    "cells":[{"blocks":[{"kind":"para","inlines":[{"text":"x","style":{"font_size":2000}}]}]}]
+                });
+                serde_json::to_value(v).unwrap()
+            },
+            // stray (otherwise valid) table payload on a cell paragraph —
+            // the kind⇔payload invariant holds inside cells too
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][2]["table"]["cells"][0]["blocks"][0]["table"] = json!({
+                    "rows":1,"cols":1,
+                    "cells":[{"blocks":[{"kind":"para","inlines":[]}]}]
+                });
+                serde_json::to_value(v).unwrap()
+            },
+            // nonempty inlines smuggled onto the table block itself —
+            // Pos offsets would become valid and text ops would see them
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][2]["inlines"] = json!([{"text":"smuggled","style":{}}]);
+                serde_json::to_value(v).unwrap()
+            },
+            // style_id on the table block (unknown id — validate_tables
+            // rejects before validate_styles even resolves the reference)
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][2]["style_id"] = json!("ghost");
+                serde_json::to_value(v).unwrap()
+            },
+            // cell block with a non-para kind: heading
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][2]["table"]["cells"][0]["blocks"][0]["kind"] = json!("h1");
+                serde_json::to_value(v).unwrap()
+            },
+            // cell block with kind "list" but no list metadata —
+            // lists::validate only walks top-level blocks
+            {
+                let mut v = value.clone();
+                let doc = if v.get("document").is_some() { &mut v["document"] } else { &mut v };
+                doc["blocks"][2]["table"]["cells"][0]["blocks"][0]["kind"] = json!("list");
+                serde_json::to_value(v).unwrap()
+            },
         ];
         for (i, v) in cases.iter().enumerate() {
             let bytes = encode_envelope(&serde_json::to_vec(v).unwrap());
@@ -931,5 +1018,49 @@ mod tests {
         }
         assert!(serde_json::from_value::<OldKind>(json!("table")).is_err());
         assert!(serde_json::from_value::<OldKind>(json!("para")).is_ok());
+    }
+
+    #[test]
+    fn validate_tables_rejects_stray_fields_on_table_block() {
+        // `setBlockStyle` rejects table blocks, so `style_id`/`list`/`inlines`
+        // on one are unreachable by design. validate_tables must reject them
+        // outright — validate_styles alone would happily resolve a
+        // style_id that names a real paragraph style.
+        let table = || Table {
+            rows: 1,
+            cols: 1,
+            cells: vec![TableCell {
+                blocks: vec![Block::empty(BlockKind::Para)],
+            }],
+        };
+        let block = |style_id: Option<&str>, inlines: Vec<Inline>| Block {
+            kind: BlockKind::Table,
+            list: None,
+            style_id: style_id.map(str::to_string),
+            table: Some(table()),
+            inlines,
+        };
+        // Baseline: a clean table block validates.
+        assert!(validate_tables(&[block(None, Vec::new())]).is_ok());
+        // style_id rejects even though nothing here proves it dangles —
+        // the reference is unreachable by design, not merely unresolvable.
+        assert!(validate_tables(&[block(Some("any-style"), Vec::new())]).is_err());
+        // Smuggled inlines would make Pos offsets >0 valid on a table.
+        assert!(validate_tables(&[block(
+            None,
+            vec![Inline {
+                text: "x".to_string(),
+                style: Style::default(),
+            }]
+        )])
+        .is_err());
+        // List membership on a table block (lists::validate also rejects
+        // this, but validate_tables stays self-contained for staged calls).
+        let mut listed = block(None, Vec::new());
+        listed.list = Some(ListItem {
+            level: 0,
+            definition: std::sync::Arc::new(lists::definition(1, lists::ListKind::Bullet)),
+        });
+        assert!(validate_tables(&[listed]).is_err());
     }
 }
