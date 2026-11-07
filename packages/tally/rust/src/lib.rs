@@ -35,7 +35,7 @@ mod protection;
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    Journal, TaskContext,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -624,15 +624,7 @@ impl Engine for TallyEngine {
 
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
-            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
-            if result.events.iter().any(|event| event.kind == "document:changed") {
-                let prev = self.doc.clone();
-                self.journal.record(UndoEntry::Reset { prev });
-                self.doc = staged.doc;
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         if cmd.v != SUPPORTED_VERSION {
             return Err(EngineError::unsupported(format!(
@@ -664,6 +656,25 @@ impl Engine for TallyEngine {
             "workbook" => self.op_workbook(),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
+    }
+
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
+        let (staged, result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if result.events.iter().any(|event| event.kind == "document:changed") {
+            let prev = self.doc.clone();
+            self.journal.record(UndoEntry::Reset { prev });
+            self.doc = staged.doc;
+        }
+        Ok(result)
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {

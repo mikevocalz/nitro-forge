@@ -17,7 +17,7 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Journal,
+    Journal, TaskContext,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -480,14 +480,7 @@ impl Engine for PitchEngine {
 
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let staged = Self { state: self.state.clone(), journal: Journal::new(1) };
-            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
-            if result.events.iter().any(|event| event.kind == "document:changed") {
-                self.journal.record(self.state.clone());
-                self.state = staged.state;
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
@@ -984,6 +977,24 @@ impl Engine for PitchEngine {
             "describe" => Ok(ro(serde_json::to_value(&self.state)?)),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
+    }
+
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let staged = Self { state: self.state.clone(), journal: Journal::new(1) };
+        let (staged, result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if result.events.iter().any(|event| event.kind == "document:changed") {
+            self.journal.record(self.state.clone());
+            self.state = staged.state;
+        }
+        Ok(result)
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {

@@ -15,6 +15,10 @@ Universal ops every engine MUST support in `apply`:
   operations, unknown step fields and binary sidecars are rejected. Input and
   aggregate output JSON are bounded to 32 MiB. Binary output is available through
   the existing single-command transport, not nested batch steps.
+  When `__batch` runs as a task (`apply_long`), every step executes through the
+  staged engine's `apply_long` on a scoped progress window: steps checkpoint for
+  cancellation (a cancelled step rejects the whole batch with `Cancelled`,
+  leaving document and history untouched) and task progress advances per step.
 
 Snapshot/undo protocol (implemented by host, engines implement trait):
 `snapshot()` → `encode_envelope(json(doc))`; `restore(bytes)` → `decode_envelope` then
@@ -355,6 +359,9 @@ JavaScript numbers. `restore` rejects snapshots that break these invariants or
 carry duplicate ids, two transitions on one cut, `fps` ≤ 0, empty sources,
 header flags that do not fit the track kind, or invalid markers and loop range.
 A `batch` whose ops change nothing records no undo entry and emits no event.
+As a task (`apply_long`), each op runs through `apply_long` on a scoped
+progress window, so cancellation lands between ops or inside a long one; a
+cancelled op rejects the whole batch with `Cancelled` and no state change.
 
 Undo: whole-document snapshot per op (capacity 64). Event `timeline:changed`
 on structural ops; marker and loop ops emit `document:changed` only.

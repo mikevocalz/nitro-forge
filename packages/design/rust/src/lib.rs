@@ -150,19 +150,7 @@ impl Engine for DesignEngine {
     }
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let staged = Self {
-                state: self.state.clone(),
-                journal: Journal::new(1),
-            };
-            let (staged, mut result) = ignition_core::execute_batch(staged, batch)?;
-            if self.state != staged.state {
-                self.journal.record(self.state.clone());
-                self.state = staged.state;
-            } else {
-                result.events.clear();
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         if cmd.v != 1 || cmd.input.is_some() {
             return Err(bad("design requires v1 and no binary input"));
@@ -519,11 +507,36 @@ impl Engine for DesignEngine {
         self.state = Arc::new(next);
         Ok(CommandResult::data(data))
     }
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let staged = Self {
+            state: self.state.clone(),
+            journal: Journal::new(1),
+        };
+        let (staged, mut result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if self.state != staged.state {
+            self.journal.record(self.state.clone());
+            self.state = staged.state;
+        } else {
+            result.events.clear();
+        }
+        Ok(result)
+    }
     fn apply_long(
         &mut self,
         cmd: Command,
         ctx: &TaskContext,
     ) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            return self.apply_batch(cmd, Some(ctx));
+        }
         ctx.checkpoint()?;
         let result = if cmd.op == "renderFrame" {
             if cmd.v != 1 || cmd.input.is_some() {
