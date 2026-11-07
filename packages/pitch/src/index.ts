@@ -77,6 +77,7 @@ export const OPS = {
   updateTriggeredAnimationV1: "updateTriggeredAnimationV1",
   slideAt: "slideAt",
   slideAtWithClicksV1: "slideAtWithClicksV1",
+  slideScene: "slideScene",
   deck: "deck",
 } as const;
 
@@ -482,6 +483,86 @@ export interface AnimatedObject {
   opacity: number;
 }
 
+/**
+ * One object inside a `slideScene` result: the stored `describe` payload
+ * plus scene fields. `x/y/w/h/rotation_deg` are the STATIC stored
+ * geometry; `z` is the bottom-to-top paint index (array order). `frame`
+ * is present only when the read supplied `tS`: it is the `slideAt`
+ * entry verbatim (`{id,x,y,w,h,rotation,opacity}`) — the animation-
+ * resolved transform at that presentation time. `resolved` appears on
+ * connector objects only, mirroring `describe`'s resolved polyline.
+ * Per-kind payloads (`text`, `fill`, `stroke`, `src`, `connector`,
+ * `media`, `chart`, `table`, `morph_name`) are present iff stored.
+ */
+export interface PitchSceneObject {
+  id: number;
+  kind: string;
+  z: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rotation_deg: number;
+  text?: {
+    content: string;
+    font_size: number;
+    color: Rgba;
+    bold: boolean;
+    italic: boolean;
+  };
+  fill?: Rgba;
+  stroke?: PitchShapeStroke;
+  src?: string;
+  connector?: PitchConnectorSpec;
+  resolved?: {
+    from: { x: number; y: number };
+    to: { x: number; y: number };
+    points: [number, number][];
+  };
+  media?: PitchMediaSpec;
+  chart?: PitchChartSpec;
+  table?: PitchTableSpec;
+  morph_name?: string;
+  frame?: AnimatedObject;
+}
+
+/** Serialized `Anim` entry in a scene's `animations` program. */
+export interface PitchSceneAnimation {
+  object_id: number;
+  kind: AnimKind;
+  start_s: number;
+  duration_s: number;
+  trigger?: PitchAnimationTrigger;
+}
+
+/**
+ * `slideScene` result: one slide's complete STRUCTURED scene description
+ * for host rendering — filmstrip thumbnails (the NYC-Tron
+ * `SlideSummary`/`SlideObject` contract is a projection of these fields)
+ * and presenter views alike. HONESTY BOUNDARY: the engine has no
+ * rasterizer, so this returns data only — never pixels. `objects` are in
+ * bottom-to-top z-order; `animations` is the verbatim program;
+ * `schedule` appears only when `tS` was supplied (same resolved
+ * start/end instants `slideAt` reports, pending clicks as null).
+ * `ink_count` reports persistent-ink presence; full stroke geometry
+ * stays on `slideInk`/`describe`.
+ */
+export interface PitchScene {
+  slide: number;
+  index: number;
+  background: Rgba | null;
+  size: { width: number; height: number };
+  layout: Layout;
+  layout_id: number | null;
+  notes: string | null;
+  ink_count: number;
+  transition: PitchSlideTransition | null;
+  timing: PitchSlideTiming | null;
+  objects: PitchSceneObject[];
+  animations: PitchSceneAnimation[];
+  schedule?: PitchAnimationSchedule[];
+}
+
 export class PitchDocument {
   private constructor(private doc: DocumentHandle) {}
 
@@ -840,6 +921,35 @@ export class PitchDocument {
     return this.call<{ objects: AnimatedObject[]; schedule: PitchAnimationSchedule[] }>(clickTimes === undefined ? OPS.slideAt : OPS.slideAtWithClicksV1, {
       slide,
       t_s: tS,
+      ...(clickTimes === undefined ? {} : { click_times: [...clickTimes] }),
+    });
+  }
+  /**
+   * Read-only structured scene description for one slide: chrome
+   * (background/layout/notes/transition/timing), every object in
+   * bottom-to-top z-order with stored geometry and per-kind payloads,
+   * the animation program, and — when `tS` is given — per-object
+   * animation-resolved `frame` transforms plus `schedule` (identical to
+   * `slideAt` evaluation). STRUCTURED DATA ONLY: no pixels; hosts render
+   * thumbnails/canvases from this. `clickTimes` requires `tS` and follows
+   * the same bounded ordered-history rules as `slideAt`.
+   */
+  slideScene(slide: number, options?: { tS?: number; clickTimes?: readonly number[] }) {
+    const tS = options?.tS;
+    const clickTimes = options?.clickTimes;
+    if (clickTimes !== undefined && tS === undefined) {
+      throw new RangeError("slideScene clickTimes requires tS");
+    }
+    if (tS !== undefined && !Number.isFinite(tS)) {
+      throw new RangeError("slideScene tS must be finite");
+    }
+    if (clickTimes && (clickTimes.length > 256 || clickTimes.some((time, index) =>
+      !Number.isFinite(time) || time < 0 || time > 86400 || (index > 0 && time < clickTimes[index - 1]!)))) {
+      throw new RangeError("Click times must be a bounded ordered slide-relative history");
+    }
+    return this.call<PitchScene>(OPS.slideScene, {
+      slide,
+      ...(tS === undefined ? {} : { t_s: tS }),
       ...(clickTimes === undefined ? {} : { click_times: [...clickTimes] }),
     });
   }

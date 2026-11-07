@@ -1202,6 +1202,91 @@ fn ro(data: Value) -> CommandResult {
     }
 }
 
+/// `slideScene` read: one slide's complete STRUCTURED scene description —
+/// slide chrome (background, layout, layout binding, notes, ink count,
+/// transition, timing), every object in bottom-to-top z-order with its
+/// stored geometry and per-kind payload (text/fill/stroke/src, connector
+/// spec plus resolved polyline, media/chart/table specs, morph tag), the
+/// animation program, and — only when `t_s` is given — the animation
+/// `frame` transform per object plus the resolved `schedule`, evaluated
+/// by the same `slideAt` path so geometry, opacity and pending-click
+/// semantics match exactly.
+///
+/// HONESTY BOUNDARY: this is data only. The engine has no rasterizer —
+/// no pixels, no thumbnail bitmap — so hosts render filmstrip thumbnails
+/// and slide canvases from this description (the NYC-Tron
+/// `SlideSummary`/`SlideObject` filmstrip contract is a projection of
+/// these fields). Ink stroke geometry stays on `slideInk`/`describe`
+/// (`ink_count` reports presence without duplicating the bounded but
+/// potentially large point payload).
+fn slide_scene(
+    state: &PitchState,
+    slide_index: usize,
+    t_s: Option<f64>,
+    clicks: &[f64],
+) -> Result<CommandResult, EngineError> {
+    let slide = &state.slides[slide_index];
+    let evaluated = match t_s {
+        Some(t) => Some(animation::slide_at(slide, t, clicks)?.data),
+        None => None,
+    };
+    let mut objects = Vec::with_capacity(slide.objects.len());
+    for (z, obj) in slide.objects.iter().enumerate() {
+        let mut value = serde_json::to_value(obj)
+            .map_err(|e| EngineError::serialization(e.to_string()))?;
+        let Some(map) = value.as_object_mut() else {
+            continue;
+        };
+        map.insert("z".to_string(), json!(z));
+        // Same resolved-polyline contract as `describe`: computed from
+        // CURRENT slide state so bound endpoints follow object moves.
+        if obj.kind == ObjKind::Connector {
+            if let Some(spec) = &obj.connector {
+                if let Some(points) = connector_points(spec, slide) {
+                    map.insert(
+                        "resolved".to_string(),
+                        json!({
+                            "from": { "x": points[0][0], "y": points[0][1] },
+                            "to": { "x": points[points.len() - 1][0], "y": points[points.len() - 1][1] },
+                            "points": points,
+                        }),
+                    );
+                }
+            }
+        }
+        if let Some(eval) = &evaluated {
+            // `slideAt` emits one entry per object in slide order; zip by
+            // index. `frame` is that entry verbatim (id included) so it
+            // matches `slideAt` output exactly.
+            if let Some(frame) = eval["objects"].get(z) {
+                map.insert("frame".to_string(), frame.clone());
+            }
+        }
+        objects.push(value);
+    }
+    let mut out = json!({
+        "slide": slide.id,
+        "index": slide_index,
+        "background": slide.background,
+        "size": {
+            "width": state.size.width,
+            "height": state.size.height,
+        },
+        "layout": slide.layout,
+        "layout_id": slide.layout_id,
+        "notes": slide.notes,
+        "ink_count": slide.ink.len(),
+        "transition": slide.transition,
+        "timing": slide.timing,
+        "objects": objects,
+        "animations": slide.animations,
+    });
+    if let Some(eval) = &evaluated {
+        out["schedule"] = eval["schedule"].clone();
+    }
+    Ok(ro(out))
+}
+
 // ---------------------------------------------------------------------------
 // PitchEngine
 // ---------------------------------------------------------------------------
@@ -2166,6 +2251,20 @@ impl Engine for PitchEngine {
                 let t = req_f64(p, "t_s")?;
                 let clicks=animation::parse_clicks(p)?;
                 animation::slide_at(&self.state.slides[slide],t,&clicks)
+            }
+            "slideScene" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let t_s = match p.get("t_s") {
+                    None | Some(Value::Null) => None,
+                    Some(_) => Some(req_f64(p, "t_s")?),
+                };
+                // Click history only has meaning against an evaluation time;
+                // reject it explicitly rather than silently ignoring it.
+                if t_s.is_none() && p.get("click_times").is_some_and(|v| !v.is_null()) {
+                    return Err(EngineError::validation("click_times requires t_s"));
+                }
+                let clicks = animation::parse_clicks(p)?;
+                slide_scene(&self.state, slide, t_s, &clicks)
             }
             "deck" => Ok(ro(json!({
                 "title": self.state.meta.title,
@@ -5427,5 +5526,197 @@ mod tests {
         // the admitted snapshot still restores cleanly afterwards
         e.restore(&snap).unwrap();
         assert_eq!(e.snapshot().unwrap(), snap);
+    }
+
+    // --- slideScene (P14 slice 12) -------------------------------------
+
+    #[test]
+    fn slide_scene_reports_chrome_objects_payloads_and_z_order() {
+        let mut e = PitchEngine::new();
+        let slide = apply(&mut e, "describe", json!({}))["slides"][0]["id"]
+            .as_u64()
+            .unwrap();
+        let text = apply(
+            &mut e,
+            "addText",
+            json!({"slide":slide,"x":10,"y":20,"w":200,"h":40,"text":"Title","font_size":32}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let rect = apply(
+            &mut e,
+            "addRect",
+            json!({"slide":slide,"x":0,"y":0,"w":960,"h":540,"fill":[9,8,7,255]}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let chart = apply(
+            &mut e,
+            "addChart",
+            json!({"slide":slide,"x":300,"y":100,"w":400,"h":200,"chart":{"kind":"column","series":[{"id":"s1","label":"Rev","points":[{"x":0,"y":1},{"x":1,"y":2}]}]}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        apply(&mut e, "setBackground", json!({"slide":slide,"color":[1,2,3,255]}));
+        apply(&mut e, "setNotes", json!({"slide":slide,"text":"speaker note"}));
+        apply(
+            &mut e,
+            "setSlideTransition",
+            json!({"slide":slide,"kind":"fade","duration_ms":400}),
+        );
+        apply(
+            &mut e,
+            "setSlideTiming",
+            json!({"slide":slide,"duration_ms":5000,"advance":"after"}),
+        );
+        apply(&mut e, "addInkStroke", json!({"slide":slide,"stroke":{"kind":"pen","points":[[0,0],[1,1]],"width":2,"color":[0,0,0,255]}}));
+
+        let scene = apply(&mut e, "slideScene", json!({"slide":slide}));
+        assert_eq!(scene["slide"], json!(slide));
+        assert_eq!(scene["index"], json!(0));
+        assert_eq!(scene["background"], json!([1,2,3,255]));
+        assert_eq!(scene["size"]["width"], json!(960.0));
+        assert_eq!(scene["layout"], json!("blank"));
+        assert_eq!(scene["notes"], json!("speaker note"));
+        assert_eq!(scene["ink_count"], json!(1));
+        assert_eq!(scene["transition"]["kind"], json!("fade"));
+        assert_eq!(scene["timing"]["advance"], json!("after"));
+        assert!(scene.get("frame").is_none());
+        assert!(scene.get("schedule").is_none());
+
+        let objects = scene["objects"].as_array().unwrap();
+        assert_eq!(objects.len(), 3);
+        // Bottom-to-top z-order is the stored object order.
+        assert_eq!(
+            objects.iter().map(|o| o["id"].as_u64().unwrap()).collect::<Vec<_>>(),
+            vec![text, rect, chart]
+        );
+        for (z, o) in objects.iter().enumerate() {
+            assert_eq!(o["z"], json!(z));
+            assert!(o.get("frame").is_none());
+        }
+        assert_eq!(objects[0]["kind"], json!("text"));
+        assert_eq!(objects[0]["text"]["content"], json!("Title"));
+        assert_eq!(objects[0]["text"]["font_size"], json!(32.0));
+        assert_eq!(objects[1]["kind"], json!("rect"));
+        assert_eq!(objects[1]["fill"], json!([9,8,7,255]));
+        assert_eq!(objects[2]["kind"], json!("chart"));
+        assert_eq!(objects[2]["chart"]["kind"], json!("column"));
+        assert_eq!(objects[2]["chart"]["series"][0]["id"], json!("s1"));
+        // The animation program is exposed verbatim for host scheduling.
+        assert_eq!(scene["animations"], json!([]));
+    }
+
+    #[test]
+    fn slide_scene_frame_matches_slide_at_and_schedule_is_exposed() {
+        let mut e = PitchEngine::new();
+        let slide = apply(&mut e, "describe", json!({}))["slides"][0]["id"]
+            .as_u64()
+            .unwrap();
+        let obj = apply(
+            &mut e,
+            "addRect",
+            json!({"slide":slide,"x":10,"y":20,"w":40,"h":20,"fill":[255,0,0,255]}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "addAnimation",
+            json!({"slide":slide,"object":obj,"kind":"fadeIn","start_s":0,"duration_s":2,"trigger":{"type":"on-click","click_index":0}}),
+        );
+
+        let before = e.snapshot().unwrap();
+        // Pending click: frame opacity is 0 and schedule reports null starts.
+        let pending = apply(&mut e, "slideScene", json!({"slide":slide,"t_s":5}));
+        assert_eq!(pending["objects"][0]["frame"]["opacity"], json!(0.0));
+        assert!(pending["schedule"][0]["start_s"].is_null());
+        // Explicit click history resolves the same frame slideAt computes.
+        let scene = apply(
+            &mut e,
+            "slideScene",
+            json!({"slide":slide,"t_s":2,"click_times":[1.0]}),
+        );
+        let at = apply(
+            &mut e,
+            "slideAtWithClicksV1",
+            json!({"slide":slide,"t_s":2,"click_times":[1.0]}),
+        );
+        assert_eq!(scene["objects"][0]["frame"], at["objects"][0]);
+        assert_eq!(scene["schedule"], at["schedule"]);
+        // Static geometry stays alongside the evaluated frame.
+        assert_eq!(scene["objects"][0]["x"], json!(10.0));
+        assert_eq!(scene["objects"][0]["rotation_deg"], json!(0.0));
+        // Read-only: no state drift, and the reads added no journal
+        // entries (undo still pops the addAnimation mutation, then redo
+        // restores the exact snapshot).
+        assert_eq!(e.snapshot().unwrap(), before);
+        assert!(e.undo().unwrap());
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // A mutation-free engine proves the read itself records nothing.
+        let mut fresh = PitchEngine::new();
+        apply(&mut fresh, "slideScene", json!({"slide":1}));
+        assert!(!fresh.undo().unwrap());
+    }
+
+    #[test]
+    fn slide_scene_rejects_bad_input_and_reports_connector_resolution() {
+        let mut e = PitchEngine::new();
+        let slide = apply(&mut e, "describe", json!({}))["slides"][0]["id"]
+            .as_u64()
+            .unwrap();
+        let a = apply(
+            &mut e,
+            "addRect",
+            json!({"slide":slide,"x":10,"y":20,"w":100,"h":50,"fill":[0,0,0,255]}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let b = apply(
+            &mut e,
+            "addRect",
+            json!({"slide":slide,"x":300,"y":200,"w":80,"h":40,"fill":[0,0,0,255]}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let conn = apply(
+            &mut e,
+            "addConnector",
+            json!({"slide":slide,"from":{"type":"bound","object_id":a,"side":"top"},"to":{"type":"bound","object_id":b,"side":"left"}}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+
+        let scene = apply(&mut e, "slideScene", json!({"slide":slide}));
+        let connector = scene["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(conn))
+            .unwrap();
+        assert_eq!(connector["kind"], json!("connector"));
+        assert_eq!(connector["resolved"]["points"], json!([[60.0,20.0],[300.0,220.0]]));
+        // Connector stored bounds stay the zero placeholder.
+        assert_eq!(connector["w"], json!(0.0));
+
+        let before = e.snapshot().unwrap();
+        for payload in [
+            json!({"slide":999}),
+            json!({"slide":slide,"click_times":[0.5]}),
+            json!({"slide":slide,"t_s":"soon"}),
+            json!({"slide":slide,"t_s":1,"click_times":[2,1]}),
+        ] {
+            assert!(e.apply(cmd("slideScene", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // t_s null behaves like an omitted time; click_times still rejects.
+        assert!(e
+            .apply(cmd("slideScene", json!({"slide":slide,"t_s":null})))
+            .is_ok());
+        assert!(e
+            .apply(cmd("slideScene", json!({"slide":slide,"t_s":null,"click_times":[]})))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
     }
 }
