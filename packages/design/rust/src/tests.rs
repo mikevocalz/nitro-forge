@@ -958,3 +958,40 @@ fn text_snapshot_wrapper_presence_trigger_and_reader_gates() {
         n["kind"] == "text" || n.get("text").is_some()
     }));
 }
+#[test]
+fn locked_text_node_rejects_combined_lock_and_text_patch_atomically() {
+    let mut e = DesignEngine::new();
+    let t = add_text(&mut e, 1, "Hi");
+    // Unlocked nodes may combine lock and text fields in one patch.
+    call(
+        &mut e,
+        "updateNode",
+        json!({"id":t,"locked":true,"text":{"content":"Combined"}}),
+    );
+    assert!(e.state.nodes[&t].locked);
+    assert_eq!(e.state.nodes[&t].text.as_ref().unwrap().content, "Combined");
+    let locked = e.snapshot().unwrap();
+    // On a locked node a text patch is not a lock-only unlock, whether the
+    // lock field is true or false; state and history stay intact.
+    for p in [
+        json!({"id":t,"locked":true,"text":{"content":"No"}}),
+        json!({"id":t,"locked":false,"text":{"content":"No"}}),
+        json!({"id":t,"locked":false,"text":null}),
+        json!({"id":t,"text":{"content":"No"},"name":"Also no"}),
+    ] {
+        assert!(e.apply(Command::new("updateNode", p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), locked);
+    }
+    // The lock-only unlock is still admitted on its own, then text edits work.
+    call(&mut e, "updateNode", json!({"id":t,"locked":false}));
+    assert!(!e.state.nodes[&t].locked);
+    call(
+        &mut e,
+        "updateNode",
+        json!({"id":t,"text":{"content":"After unlock"}}),
+    );
+    assert_eq!(
+        e.state.nodes[&t].text.as_ref().unwrap().content,
+        "After unlock"
+    );
+}

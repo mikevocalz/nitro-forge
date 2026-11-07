@@ -1,4 +1,4 @@
-import {DocumentHandle,type EngineHost} from '@nitro-forge/ignition';
+import {DocumentHandle,type CommandResult,type EngineHost} from '@nitro-forge/ignition';
 /** Op names — mirrors docs/ENGINE_OPS.md § design-engine. */
 export const OPS={
  new:'new',
@@ -26,8 +26,11 @@ export type NodeKind='frame'|'rect'|'ellipse'|'text';
 export type TextFontStyle='normal'|'italic';
 /** Bounded text style; content ≤64KiB UTF-8, font_family ≤256 bytes, font_size>0≤1e4, font_weight 1..=1000. */
 export interface TextStyle{content:string;font_family:string;font_size:number;font_weight:number;font_style:TextFontStyle}
-/** Partial text patch accepted by updateNode `text` and addText `style` font fields. */
-export type TextStylePatch=Partial<Omit<TextStyle,'content'>>;
+/** Partial font patch accepted by addText `style`; content is top-level there. */
+export type FontStylePatch=Partial<Omit<TextStyle,'content'>>;
+/** Partial text patch accepted by updateNode `text`, content included. `null`
+ * is reserved and always rejected: a text node cannot exist without a style. */
+export type TextStylePatch=FontStylePatch & {content?:string};
 export interface FrameLayout{direction:'row'|'column';wrap?:boolean;gap:number;padding_top:number;padding_right:number;padding_bottom:number;padding_left:number;align:'start'|'center'|'end'|'stretch';justify:'start'|'center'|'end'|'space-between'}
 export interface NodeGeometry{x:number;y:number;width:number;height:number}
 export interface DesignNode extends NodeGeometry{id:number;kind:NodeKind;name:string;fill:[number,number,number,number];visible:boolean;locked:boolean;children:number[];layout:FrameLayout|null;sizing?:SizingSettings;text?:TextStyle}
@@ -36,9 +39,9 @@ export interface CompositionSettings{title:string;width:number;height:number}
  * wrapper `{kind:'design',schema:2,document}` exists only inside snapshot
  * bytes and only when text nodes are present. */
 export interface DesignState{kind:'design';schema:1;title:string;next_id:number;nodes:Record<string,DesignNode>}
-export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'|'locked'>> & {text?:TextStylePatch|null};
+export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'|'locked'>> & {text?:TextStylePatch};
 export type NewNode=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'>>;
-export interface NewTextNode extends NewNode{content:string;style?:TextStylePatch}
+export interface NewTextNode extends NewNode{content:string;style?:FontStylePatch}
 export interface EvaluatedBox extends NodeGeometry{id:number;kind:NodeKind;fill:[number,number,number,number];visible:boolean;renderable:boolean}
 /** Bounded fixed/hug/fill layout and real Prism RGBA. Text nodes are layout
  * boxes only (renderable:false, fill background draws, no glyphs); no
@@ -52,8 +55,10 @@ export class DesignDocument{
  setComposition(patch:Partial<CompositionSettings>){return this.document.apply<{ok:boolean}>(OPS.setComposition,patch);}
  addFrame(parent:number,node:NewNode={}){return this.document.apply<{node_id:number}>(OPS.addFrame,{...node,parent});}
  addShape(parent:number,kind:'rect'|'ellipse',node:NewNode={}){return this.document.apply<{node_id:number}>(OPS.addShape,{...node,parent,kind});}
- /** parent defaults to the root canvas when omitted. `style` carries font fields only; content is top-level. */
- addText(parent:number|undefined,node:NewTextNode){const {content,style,...rest}=node;return this.document.apply<{node_id:number}>(OPS.addText,{...rest,...(parent===undefined?{}:{parent}),content,...(style?{style}:{})});}
+ /** parent defaults to the root canvas when omitted: `addText(node)` or `addText(parent,node)`. `style` carries font fields only; content is top-level. */
+ addText(node:NewTextNode):Promise<CommandResult<{node_id:number}>>;
+ addText(parent:number|undefined,node:NewTextNode):Promise<CommandResult<{node_id:number}>>;
+ addText(parent:number|NewTextNode|undefined,node?:NewTextNode){const spec=(typeof parent==='object'?parent:node) as NewTextNode;const p=typeof parent==='number'?parent:undefined;const {content,style,...rest}=spec;return this.document.apply<{node_id:number}>(OPS.addText,{...rest,...(p===undefined?{}:{parent:p}),content,...(style?{style}:{})});}
  updateNode(id:number,patch:NodePatch){return this.document.apply<{ok:boolean}>(OPS.updateNode,{...patch,id});}
  /** Fixed without a value freezes evaluated size; explicit fixed values resize. Other modes retain authored fallback. */
  setAxisSizing(id:number,axis:Axis,update:AxisSizingUpdate){return this.document.apply<{ok:boolean}>(OPS.setAxisSizing,{id,axis,mode:update.mode,...(update.mode==='fixed'&&update.value!==undefined?{value:update.value}:{})});}

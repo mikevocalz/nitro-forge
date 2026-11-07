@@ -324,10 +324,12 @@ impl Engine for DesignEngine {
                     .ok_or_else(|| bad("expected patch object"))?
                     .clone();
                 patch.remove("id");
+                // `text` counts toward the patch length so a combined
+                // locked+text patch is not mistaken for a lock-only unlock.
+                let unlock = patch.len() == 1 && patch.contains_key("locked");
                 // `text` is a partial TextStyle patch (or null), merged over
                 // the node's current style; handled after the node merge.
                 let text_patch = patch.remove("text");
-                let unlock = patch.len() == 1 && patch.contains_key("locked");
                 next.editable(node_id, unlock)?;
                 if node_id == 1
                     && patch
@@ -357,7 +359,10 @@ impl Engine for DesignEngine {
                         return Err(bad("text style requires a text node"));
                     }
                     match tv {
-                        Value::Null => changed.text = None,
+                        // Reserved: a text node cannot exist without a style
+                        // and non-text nodes reject `text` above, so clearing
+                        // can never validate. Reject explicitly.
+                        Value::Null => return Err(bad("text style cannot be cleared")),
                         Value::Object(_) => {
                             let current = changed.text.clone().unwrap_or_default();
                             changed.text = Some(merge(
