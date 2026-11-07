@@ -93,19 +93,19 @@ const FIELD_KEYS: [&[u8]; 5] = [b"FT", b"V", b"Ff", b"Opt", b"Kids"];
 /// One link in a widget's `/Parent` chain, leaf (the widget) first.
 /// `dict` is a clone so callers can inspect it after the borrow ends;
 /// `id` is the indirect object id when the dictionary is indirect.
-struct ChainNode {
-    id: Option<ObjectId>,
-    dict: Dictionary,
+pub(super) struct ChainNode {
+    pub(super) id: Option<ObjectId>,
+    pub(super) dict: Dictionary,
 }
 
 /// A page `/Annots` entry recognized as a form widget, with its resolved
 /// field chain.
-struct WidgetEntry {
+pub(super) struct WidgetEntry {
     /// The `/Annots` array item's reference id (`.0` reported as `annot`);
     /// `None` for inline dictionaries, which cannot be targeted by id.
-    annot_id: Option<u64>,
+    pub(super) annot_id: Option<u64>,
     /// Widget dict first, then `/Parent` ancestors leaf→root.
-    chain: Vec<ChainNode>,
+    pub(super) chain: Vec<ChainNode>,
 }
 
 /// Resolve an object (reference or inline) to its dictionary without
@@ -142,7 +142,7 @@ fn annot_is_widget(doc: &Document, dict: &Dictionary) -> bool {
 
 /// Build the `/Parent` chain for one widget dictionary object.
 /// Leaf first; cycle-safe via visited ids plus the depth cap.
-fn widget_chain(doc: &Document, widget: &Object) -> Result<Vec<ChainNode>, EngineError> {
+pub(super) fn widget_chain(doc: &Document, widget: &Object) -> Result<Vec<ChainNode>, EngineError> {
     let Some((wid, wdict)) = resolve_dict(doc, widget) else {
         return Err(EngineError::validation("widget annotation is not a dictionary"));
     };
@@ -177,7 +177,7 @@ fn widget_chain(doc: &Document, widget: &Object) -> Result<Vec<ChainNode>, Engin
 
 /// First value for `key` walking the chain leaf→root, with indirect
 /// references inside the dictionaries dereferenced.
-fn chain_get<'a>(doc: &'a Document, chain: &'a [ChainNode], key: &[u8]) -> Option<&'a Object> {
+pub(super) fn chain_get<'a>(doc: &'a Document, chain: &'a [ChainNode], key: &[u8]) -> Option<&'a Object> {
     chain
         .iter()
         .find_map(|node| node.dict.get_deref(key, doc).ok())
@@ -185,7 +185,7 @@ fn chain_get<'a>(doc: &'a Document, chain: &'a [ChainNode], key: &[u8]) -> Optio
 
 /// First chain node (leaf→root) that looks like a field dictionary:
 /// carries one of the strong field keys, or `/T` as a last resort.
-fn field_node_index(chain: &[ChainNode]) -> Option<usize> {
+pub(super) fn field_node_index(chain: &[ChainNode]) -> Option<usize> {
     if let Some(i) = chain
         .iter()
         .position(|n| FIELD_KEYS.iter().any(|k| n.dict.has(k)))
@@ -197,7 +197,7 @@ fn field_node_index(chain: &[ChainNode]) -> Option<usize> {
 
 /// Flattened field name: every `/T` on the chain, root→leaf, joined
 /// with `.`. Missing or undecodable partial names are skipped.
-fn flattened_name(doc: &Document, chain: &[ChainNode]) -> String {
+pub(super) fn flattened_name(doc: &Document, chain: &[ChainNode]) -> String {
     let mut parts = Vec::new();
     for node in chain.iter().rev() {
         if let Ok(t) = node.dict.get_deref(b"T", doc) {
@@ -213,7 +213,7 @@ fn flattened_name(doc: &Document, chain: &[ChainNode]) -> String {
 
 /// `/FT` name resolved leaf→root (`"Tx"`, `"Btn"`, `"Ch"`, `"Sig"`, or
 /// whatever name a foreign document used).
-fn field_type(doc: &Document, chain: &[ChainNode]) -> Option<String> {
+pub(super) fn field_type(doc: &Document, chain: &[ChainNode]) -> Option<String> {
     chain_get(doc, chain, b"FT")
         .and_then(|o| o.as_name().ok())
         .map(|n| String::from_utf8_lossy(n).into_owned())
@@ -272,7 +272,7 @@ fn widget_rect(chain: &[ChainNode]) -> Value {
 /// All widget entries on one page, in `/Annots` order. Cycle-safe,
 /// capped at `MAX_FORM_FIELDS`; duplicate indirect references are
 /// reported once.
-fn page_widget_entries(doc: &Document, page_id: ObjectId) -> Result<Vec<WidgetEntry>, EngineError> {
+pub(super) fn page_widget_entries(doc: &Document, page_id: ObjectId) -> Result<Vec<WidgetEntry>, EngineError> {
     let entries = annot_entries(doc, page_id)?;
     let mut seen = HashSet::new();
     let mut out = Vec::new();

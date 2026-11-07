@@ -46,7 +46,7 @@ fn check_annots(doc: &Document, page_id: ObjectId, loc: &AnnotsLoc) -> Result<()
 
 /// Append `annot` to the page's `/Annots` inside `doc` (inline array or
 /// indirect array object) and return the new annotation's object id.
-fn attach(
+pub(super) fn attach(
     doc: &mut Document,
     page_id: ObjectId,
     loc: &AnnotsLoc,

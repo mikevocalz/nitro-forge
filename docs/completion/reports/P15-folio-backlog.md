@@ -63,6 +63,20 @@ lift `FOLIO_DEFERRED_OPS` entries where applicable.
   F-11 `insertPageImage` (JPEG DCTDecode passthrough / PNG FlateDecode;
   camera capture stays host-side).
 
+## Known limitations (engine-side, lopdf 0.36)
+
+- **Unbounded stream decompression.** `getAttachment`'s 64 MiB cap and
+  `pageText`/content reads apply to the *decoded* result, but lopdf
+  0.36 has no bounded-decompression API: `get_plain_content`/
+  `get_page_content` materialize the decompressed stream fully before
+  any cap can reject it, so a small compressed stream can expand past
+  the cap in memory (decompression bomb). Pre-existing across all
+  filtered-stream read paths, not introduced by the signatures/
+  attachments slice; a bounded inflater was deliberately not built
+  (scope/risk). Mitigation is host-side: bound input PDF sizes before
+  `open`. Revisit if lopdf adds a capped decode or a different backend
+  is admitted.
+
 ## Blocked on host `folio-render` pdfium service
 
 renderPage/thumbnails/layouts (K-01–03); glyph positions, selection,
