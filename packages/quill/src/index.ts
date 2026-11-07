@@ -81,8 +81,7 @@ export class QuillDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<QuillDocument> {
-    const doc = await DocumentHandle.openInitialized(host, "quill",
-      (document) => document.restore(bytes));
+    const doc = await DocumentHandle.openSnapshot(host, "quill", bytes);
     return new QuillDocument(doc);
   }
 

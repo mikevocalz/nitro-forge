@@ -43,6 +43,15 @@ export class DocumentHandle {
     }
   }
 
+  /** Own borrowed snapshot bytes before asynchronous native session allocation.
+   * The engine validates its envelope/schema; failed restores retain cleanup semantics. */
+  static async openSnapshot(host: EngineHost, kind: EngineKind, bytes: Uint8Array): Promise<DocumentHandle> {
+    if (bytes.byteLength > 256 * 1024 * 1024)
+      throw new RangeError("Snapshot exceeds the 256 MiB document boundary");
+    const owned = Uint8Array.from(bytes);
+    return DocumentHandle.openInitialized(host, kind, document => document.restore(owned));
+  }
+
   private assertOpen() {
     if (this.closed) {
       throw new Error(`document handle ${this.id} is closed`);

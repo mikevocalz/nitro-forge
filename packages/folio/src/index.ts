@@ -55,8 +55,7 @@ export class FolioDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<FolioDocument> {
-    const doc = await DocumentHandle.openInitialized(host, "folio",
-      (document) => document.restore(bytes));
+    const doc = await DocumentHandle.openSnapshot(host, "folio", bytes);
     return new FolioDocument(doc);
   }
 

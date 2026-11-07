@@ -91,8 +91,7 @@ export class SpliceDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<SpliceDocument> {
-    const doc = await DocumentHandle.openInitialized(host, "splice",
-      (document) => document.restore(bytes));
+    const doc = await DocumentHandle.openSnapshot(host, "splice", bytes);
     return new SpliceDocument(doc);
   }
 

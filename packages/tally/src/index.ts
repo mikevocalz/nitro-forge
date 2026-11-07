@@ -62,8 +62,7 @@ export class TallyDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<TallyDocument> {
-    const doc = await DocumentHandle.openInitialized(host, "tally",
-      (document) => document.restore(bytes));
+    const doc = await DocumentHandle.openSnapshot(host, "tally", bytes);
     return new TallyDocument(doc);
   }
 

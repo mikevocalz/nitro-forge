@@ -176,8 +176,7 @@ export class CadenceDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<CadenceDocument> {
-    const doc = await DocumentHandle.openInitialized(host, "cadence",
-      (document) => document.restore(bytes));
+    const doc = await DocumentHandle.openSnapshot(host, "cadence", bytes);
     return new CadenceDocument(doc);
   }
 

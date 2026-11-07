@@ -73,8 +73,7 @@ export class PitchDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<PitchDocument> {
-    const doc = await DocumentHandle.openInitialized(host, "pitch",
-      (document) => document.restore(bytes));
+    const doc = await DocumentHandle.openSnapshot(host, "pitch", bytes);
     return new PitchDocument(doc);
   }
 

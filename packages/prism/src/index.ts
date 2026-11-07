@@ -148,8 +148,7 @@ export class PrismDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<PrismDocument> {
-    const doc = await DocumentHandle.openInitialized(host, "prism",
-      (document) => document.restore(bytes));
+    const doc = await DocumentHandle.openSnapshot(host, "prism", bytes);
     return new PrismDocument(doc);
   }
 
