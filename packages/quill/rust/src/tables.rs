@@ -59,7 +59,10 @@ pub struct Table {
 /// A `kind:"table"` block carries nothing but its payload: empty `inlines`
 /// (so only offset 0 is a valid `Pos` on it), no `style_id` (`setBlockStyle`
 /// rejects tables, so a reference is unreachable by design), and no `list`
-/// membership. Cell paragraphs are plain default-style `para` blocks only:
+/// membership. Cell paragraphs are strict `para` blocks with no `style_id`,
+/// `list` or stray `table` payload; their inlines get the same restore
+/// validation as top-level inlines (`setCellText` only ever writes
+/// default-style text and no op can reach inside a cell):
 /// `setCellText` builds `Block::empty(Para)` paragraphs and cell blocks are
 /// unreachable by `Pos`, so no op can give them another kind, a `style_id`,
 /// list membership, or a stray `table` payload — all rejected here because
