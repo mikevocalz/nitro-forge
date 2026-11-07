@@ -29,6 +29,23 @@ authoritative; this plan only orders the work and names entry points.
 
 ## Phase 0 — reconciliation and baseline
 
+Baseline recorded 2026-11-07 against `codex/complete-all-components` @
+`48c4b21` (forge-complete) and `d5207cc` (tron-complete):
+
+- Forge `cargo test --workspace`: all engine and FFI test binaries pass
+  (27 `test result: ok` lines, zero failures).
+- Forge `pnpm -r test`: all packages pass; `packages/cadence` WAV-export
+  e2e hit the 5000 ms vitest timeout once under parallel load and passed
+  40/40 on isolated rerun — recorded as a flake, not a regression.
+  `packages/telemetry` passed 15/15 on rerun after the recursive run
+  aborted.
+- Forge `pnpm -r typecheck`: all 27 projects clean.
+- NYC-Tron `pnpm test`: 969 tests, 0 failures.
+- NYC-Tron branch audit: every local and remote branch is merged into
+  `codex/complete-all-components`; nothing to port.
+- Forge remote-branch audit (30 branches with unreachable commits) is in
+  progress; merge-or-abandon decisions land before Wave 1 dispatch.
+
 1. Audit each unmerged Forge remote branch; merge genuinely unique work or
    record it as abandoned with reason. Preserve the experimental
    player/monitor working-tree candidates exactly as they are.
