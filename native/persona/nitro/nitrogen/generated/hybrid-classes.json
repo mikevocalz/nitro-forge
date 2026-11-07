@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "classes": {
+    "PersonaPerformance": {
+      "android": {
+        "implementation": {
+          "className": "HybridPersonaPerformance",
+          "include": "<NitroForgePersona/HybridPersonaPerformance.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridPersonaPerformance",
+          "include": "<NitroForgePersona/HybridPersonaPerformance.hpp>"
+        },
+        "language": "c++"
+      }
+    }
+  }
+}

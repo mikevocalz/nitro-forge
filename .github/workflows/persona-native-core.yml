@@ -1,0 +1,21 @@
+name: Persona native core
+on:
+  pull_request:
+    paths: ['native/persona/**', '.github/workflows/persona-native-core.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash native/persona/test.sh
+      - run: cmake -S native/persona -B /tmp/persona-cmake -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build /tmp/persona-cmake
+      - run: ctest --test-dir /tmp/persona-cmake --output-on-failure
+      - if: runner.os == 'Linux'
+        run: PERSONA_SANITIZE=1 bash native/persona/test.sh

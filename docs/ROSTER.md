@@ -600,3 +600,15 @@ Workspace/presets, contextual overflow, file transfer, color dialog and presente
 ## Recovery phase 6
 
 See [PHASE6](recovery/PHASE6.md): 340 Rust / 446 Forge package tests pass, one pre-existing native check skipped. Actual linked C++ task/binary/cache and FIFO tests and generated-header compilation pass. NYC-Tron has 716 source tests, 435 full Chromium tests and an actual iOS simulator app build. Native runtime, Android decoder, complete RNW app and QNX gates remain explicitly open.
+
+## Native digital-human personas — 2026-11-07
+
+First standalone SDK slice in `native/persona` (unrelated to studio editing-mode
+personas): bounded C++ performance timeline, calibrated coefficient retargeting,
+named NVIDIA Audio2X frame ingestion, CPU mesh-bound splat deformation, C ABI,
+CMake/SwiftPM entry points and Nitro v1 generated adapter. Linux strict native/C
+consumer tests, CMake/CTest (2/2), ASan/UBSan (leak detection unavailable), Nitro
+v1 codegen and generated constructor/implementation syntax compilation passed.
+No CUDA inference, model weights, GNM evaluator, capture/reconstruction, GPU
+rasterizer, linked RN host, SwiftPM build or headset validation is claimed.
+See [native persona implementation status](../native/persona/README.md).

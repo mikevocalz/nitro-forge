@@ -1,0 +1,11 @@
+{
+  "name": "@nitro-forge/persona-native",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "exports": {".": "./src/PersonaPerformance.nitro.ts"},
+  "imports": {"#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs"},
+  "scripts": {"codegen": "nitrogen"},
+  "peerDependencies": {"nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0"},
+  "devDependencies": {"nitrogen": "1.0.0-alpha.nightly.120.g33ef045b96c0"}
+}
