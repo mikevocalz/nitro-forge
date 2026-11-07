@@ -165,6 +165,22 @@ mod tests {
     }
 
     #[test]
+    fn motion_binary_raster_ingest_owns_bytes_and_returns_real_frames() {
+        unsafe {
+            let mut error=std::ptr::null_mut();let kind=std::ffi::CString::new("motion").unwrap();let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(),6,&mut error);assert!(handle>0);assert!(error.is_null());
+            let initialized=run(handle,"new",r#"{"width":2,"height":1}"#,None,std::ptr::null());assert!(initialized.command.error_json.is_null());nf_v1_free_binary_result(initialized);
+            let mut original=vec![11,22,33,255,44,55,66,0];let added=run(handle,"addRasterAsset",r#"{"width":2,"height":1,"format":"rgba8-straight-srgb"}"#,Some(&original),std::ptr::null());assert!(added.command.error_json.is_null());nf_v1_free_binary_result(added);original.fill(0);
+            let layer=run(handle,"addRasterLayer",r#"{"asset_id":1}"#,None,std::ptr::null());assert!(layer.command.error_json.is_null());nf_v1_free_binary_result(layer);
+            let frame=run(handle,"renderFrame",r#"{"time_s":0}"#,None,std::ptr::null());assert!(frame.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(frame.output.ptr,frame.output.len),&[11,22,33,255,0,0,0,0]);nf_v1_free_binary_result(frame);
+            let asset=run(handle,"readRasterAsset",r#"{"id":1}"#,None,std::ptr::null());assert!(asset.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(asset.output.ptr,asset.output.len),&[11,22,33,255,44,55,66,0]);nf_v1_free_binary_result(asset);
+            let before=run(handle,"__snapshot","{}",None,std::ptr::null());let snapshot=std::slice::from_raw_parts(before.output.ptr,before.output.len).to_vec();nf_v1_free_binary_result(before);
+            for(payload,input)in [(r#"{"width":1,"height":1,"format":"rgba8-straight-srgb"}"#,&[1u8,2,3][..]),(r#"{"width":1,"height":1,"format":"rgba8-straight-srgb","pixels_b64":"AAAAAA=="}"#,&[0u8;4][..])]{let rejected=run(handle,"addRasterAsset",payload,Some(input),std::ptr::null());assert!(!rejected.command.error_json.is_null());nf_v1_free_binary_result(rejected);}
+            let after=run(handle,"__snapshot","{}",None,std::ptr::null());assert_eq!(std::slice::from_raw_parts(after.output.ptr,after.output.len),snapshot);nf_v1_free_binary_result(after);assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+
+    #[test]
     fn motion_registered_factory_returns_real_binary_rgba() {
         unsafe {
             let mut error=std::ptr::null_mut();

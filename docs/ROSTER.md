@@ -608,3 +608,8 @@ See [PHASE6](recovery/PHASE6.md): 340 Rust / 446 Forge package tests pass, one p
 ## P10 photo catalog source checkpoint (2026-11-07)
 
 Registered `photo` catalog metadata/version engine and typed API. Focused crate, CLI/tag/ordinal and v1 FFI checks plus source typechecks are recorded in [the source report](completion/reports/P10-registered-photo-catalog-source.md). This is not a RAW provider, develop renderer, native consumer acceptance or full P10 completion. Existing seven engine tags/ordinals are preserved and photo appends7.
+
+
+## P11 immutable Motion raster source checkpoint (2026-11-07)
+
+Motion now persists owned immutable straight-sRGB RGBA8 assets and real raster layers using the existing Prism binary upload/compositor. Focused evidence: full Motion engine suite 14 passed; registered binary FFI ownership/pixel/invalid-input case 1 passed; actual CLI caller-subview copy/shared-layer/opacity/reopen and empty/legacy describe cases 2 passed; direct source typecheck passed. Exact commands, logical storage budgets, old-shape compatibility and remaining gates are in the [raster source report](completion/reports/P11-motion-raster-source.md). No native target run, decoder/encoder, default product activation or full P11 completion is implied.
