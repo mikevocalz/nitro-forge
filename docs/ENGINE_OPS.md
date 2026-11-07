@@ -413,8 +413,19 @@ transition?:SlideTransition, timing?:SlideTiming }`,
 `SlideTransition = { kind:"fade"|"slideLeft"|"slideRight"|"slideUp"|"slideDown"|"wipe"|"zoom",
 duration_ms:1..=60000, direction?:"left"|"right"|"up"|"down" }`,
 `SlideTiming = { duration_ms:1..=3600000, advance:"manual"|"after" }`.
-`Obj = { id, kind:"text"|"rect"|"image", x,y,w,h, rotation_deg,
-text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
+`Obj = { id, kind:"text"|"rect"|"image"|"roundedRect"|"ellipse"|"triangle"|"diamond"|"line"|"arrow"|"star", x,y,w,h, rotation_deg,
+text?{content,font_size,color,bold,italic}, fill?[u8;4], stroke?:{width,color:[u8;4]}, src?:string }`.
+Shape presets are inscribed in the object's axis-aligned `x,y,w,h` bounds
+before `rotation_deg`: `roundedRect` is a rectangle with corner radius
+`min(w,h)/4`; `ellipse` is the inscribed ellipse; `triangle` is isosceles
+with apex at top-center and base on the bottom edge; `diamond` joins the
+edge midpoints; `star` is a 5-point star inscribed in the bounds; `line` is
+the horizontal segment from the left to the right edge midpoint and `arrow`
+the same segment with a triangular head at the right end — `line`/`arrow`
+are open shapes rendered from `stroke`. `stroke.width` is a finite slide-unit
+measure >0 and <=10,000; `stroke` is admitted only on shape kinds (restore
+rejects it on text/image). The engine stores kind/fill/stroke as data; hosts
+own path rendering and hit testing.
 `Anim = { object_id, kind:"fadeIn"|"slideInLeft"|"zoomIn"|"pulse"|"spin"|"fadeOut"|"zoomOut", start_s, duration_s, trigger? }`,
 `InkStroke = { id, kind:"pen"|"highlighter"|"laser", points:[[x,y]..], width, color:[r,g,b,a], opacity?:0..=1 }`.
 Ink `points` are `[x, y]` pairs in slide-space units (the same coordinate space
@@ -454,6 +465,7 @@ document `next_id` identity space.
 | `setText` | `{slide,id,text}` | `{ok}` | |
 | `setTextStyle` | `{slide,id,font_size?,bold?,italic?,color?}` | `{ok}` | Text objects only. Partial patch preserves omitted fields/content/geometry. Font size finite and >0; bold/italic strict booleans; color four integer RGBA channels 0..255. Explicit null invalid. Validated before mutation; one history entry/event only for a changed style. Empty/equal patch preserves redo and emits no event. |
 | `addRect` | `{slide,x,y,w,h,fill}` | `{object_id}` | |
+| `addShape` | `{slide,kind,x,y,w,h,fill?,stroke?}` | `{object_id}` | `kind` is the bounded preset set `rect|roundedRect|ellipse|triangle|diamond|line|arrow|star`; `fill` optional `[r,g,b,a]` (absent/null = no fill), `stroke` optional `{width,color:[r,g,b,a]}` with width finite >0 <=10,000; validated before mutation; same 4096-object/identity caps as `addRect`; one undo entry; new kinds/strokes emit the schema:4 snapshot wrapper |
 | `addImage` | `{slide,x,y,w,h,src}` | `{object_id}` | |
 | `moveObject` | `{slide,id,x,y}` | `{ok}` | |
 | `setObjectOrder` | `{slide,id,to}` | `{ok}` | Absolute bottom-to-top object index within the slide; atomic undo; same-index request preserves history; animation references retain identity |
@@ -484,7 +496,7 @@ Animation evaluation caps at4096 objects/animations per slide; references and ob
 
 The pinned alpha.4 SlideAnimationPane supports effect/add/remove but lacks timing/trigger edit callbacks. The adapter offers all seven real effects, retains nonabsolute sourceTrigger metadata and refuses to bind that old pane over triggered programs rather than mislabel relative delays as absolute starts. Typed engine APIs/readPitchSlideAt accept explicit click history. No fake preview timer, host UI activation or new Pitch renderer is provided. Actual CPU pixel integration is checked through the existing Prism renderer.
 
-Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads rather than dropping notes/ink/transitions/timing. Readers accept legacy root payloads and both schema:2 and schema:3 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
+Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text` or an object `stroke` uses `{kind:"pitch",schema:4,document:PitchState}`. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads and schema:≤3 readers reject schema:4 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke` field does not, which is why shapes/strokes take schema:4 rather than reusing schema:3). Readers accept legacy root payloads and schema:2, schema:3 and schema:4 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
 
 ## quill-engine — `QuillEngine::new()`
 

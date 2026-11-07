@@ -39,6 +39,8 @@ const MAX_INK_POINTS_PER_STROKE: usize = 2_048;
 /// finite and within ±this bound. Width is finite, >0 and at most this bound.
 const MAX_INK_COORD: f64 = 1_000_000.0;
 const MAX_INK_WIDTH: f64 = 10_000.0;
+/// Shape stroke width shares the ink width bound: finite, >0, <=10,000.
+const MAX_SHAPE_STROKE_WIDTH: f64 = 10_000.0;
 /// Slide transitions are bounded descriptors stored per slide; the engine
 /// never renders them — hosts animate from this data (same honesty boundary
 /// as the prototype runtime).
@@ -56,12 +58,67 @@ pub enum Layout {
     TitleBody,
 }
 
+/// Object kinds. `Text`/`Rect`/`Image` are the legacy set; the remaining
+/// variants are the bounded shape presets admitted by `addShape`. Shape
+/// geometry is deterministic: every preset is inscribed in the object's
+/// axis-aligned `x,y,w,h` bounds before `rotation_deg` is applied (see
+/// docs/ENGINE_OPS.md for the per-kind outline contract hosts render).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ObjKind {
     Text,
     Rect,
     Image,
+    RoundedRect,
+    Ellipse,
+    Triangle,
+    Diamond,
+    Line,
+    Arrow,
+    Star,
+}
+
+impl ObjKind {
+    /// Shape presets share the legacy `rect` bounds-plus-fill model; `line`
+    /// and `arrow` are open shapes rendered from `stroke`.
+    fn is_shape(self) -> bool {
+        matches!(
+            self,
+            Self::Rect
+                | Self::RoundedRect
+                | Self::Ellipse
+                | Self::Triangle
+                | Self::Diamond
+                | Self::Line
+                | Self::Arrow
+                | Self::Star
+        )
+    }
+
+    /// Bounded preset catalog for `addShape`; `"rect"` is admitted so the op
+    /// covers the whole shape set (`addRect` remains the legacy spelling).
+    fn parse_shape(s: &str) -> Option<Self> {
+        match s {
+            "rect" => Some(Self::Rect),
+            "roundedRect" => Some(Self::RoundedRect),
+            "ellipse" => Some(Self::Ellipse),
+            "triangle" => Some(Self::Triangle),
+            "diamond" => Some(Self::Diamond),
+            "line" => Some(Self::Line),
+            "arrow" => Some(Self::Arrow),
+            "star" => Some(Self::Star),
+            _ => None,
+        }
+    }
+}
+
+/// Optional stroke outline for shape objects: a finite width in slide units
+/// (1e-9..=MAX_SHAPE_STROKE_WIDTH exclusive of zero, bounded like ink width)
+/// plus an RGBA color. Absent means no outline.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ShapeStroke {
+    pub width: f64,
+    pub color: [u8; 4],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -113,6 +170,10 @@ pub struct Obj {
     pub text: Option<TextProps>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fill: Option<[u8; 4]>,
+    /// Optional stroke outline; only shape kinds may carry one (enforced by
+    /// `addShape` and by restore validation).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stroke: Option<ShapeStroke>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub src: Option<String>,
 }
@@ -379,6 +440,34 @@ fn parse_color(v: &Value) -> Result<[u8; 4], EngineError> {
             .map_err(|_| EngineError::validation("color channels must be 0-255"))?;
     }
     Ok(out)
+}
+
+/// `stroke` payload of `addShape`: `{width, color}`. Width is a finite
+/// slide-unit measure >0 and <=MAX_SHAPE_STROKE_WIDTH; color is RGBA.
+fn parse_shape_stroke(v: &Value) -> Result<ShapeStroke, EngineError> {
+    let width = field(v, "width")?
+        .as_f64()
+        .ok_or_else(|| EngineError::invalid("shape stroke width must be a number"))?;
+    if !width.is_finite() || width <= 0.0 || width > MAX_SHAPE_STROKE_WIDTH {
+        return Err(EngineError::validation(format!(
+            "shape stroke width must be finite, >0 and <= {MAX_SHAPE_STROKE_WIDTH}"
+        )));
+    }
+    Ok(ShapeStroke {
+        width,
+        color: parse_color(field(v, "color")?)?,
+    })
+}
+
+/// Structural check shared by restore (mapped to serialization errors); ops
+/// validate through `parse_shape_stroke` before this runs on candidates.
+fn check_shape_stroke(stroke: &ShapeStroke) -> Result<(), EngineError> {
+    if !stroke.width.is_finite() || stroke.width <= 0.0 || stroke.width > MAX_SHAPE_STROKE_WIDTH {
+        return Err(EngineError::validation(format!(
+            "shape stroke width must be finite, >0 and <= {MAX_SHAPE_STROKE_WIDTH}"
+        )));
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -804,6 +893,7 @@ impl Engine for PitchEngine {
                         italic: false,
                     }),
                     fill: None,
+                    stroke: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -876,6 +966,46 @@ impl Engine for PitchEngine {
                     rotation_deg: 0.0,
                     text: None,
                     fill: Some(fill),
+                    stroke: None,
+                    src: None,
+                });
+                Ok(CommandResult::data(json!({ "object_id": id })))
+            }
+            "addShape" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let kind = ObjKind::parse_shape(req_str(p, "kind")?).ok_or_else(|| {
+                    EngineError::validation(
+                        "shape kind must be \"rect\"|\"roundedRect\"|\"ellipse\"|\"triangle\"|\"diamond\"|\"line\"|\"arrow\"|\"star\"",
+                    )
+                })?;
+                let (x, y, w, h) = (
+                    req_f64(p, "x")?,
+                    req_f64(p, "y")?,
+                    req_f64(p, "w")?,
+                    req_f64(p, "h")?,
+                );
+                let fill = match p.get("fill") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => Some(parse_color(v)?),
+                };
+                let stroke = match p.get("stroke") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => Some(parse_shape_stroke(v)?),
+                };
+                self.preflight_object(slide)?;
+                self.journal.record(self.state.clone());
+                let id = self.alloc_id();
+                self.state.slides[slide].objects.push(Obj {
+                    id,
+                    kind,
+                    x,
+                    y,
+                    w,
+                    h,
+                    rotation_deg: 0.0,
+                    text: None,
+                    fill,
+                    stroke,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -902,6 +1032,7 @@ impl Engine for PitchEngine {
                     rotation_deg: 0.0,
                     text: None,
                     fill: None,
+                    stroke: None,
                     src: Some(src),
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1198,7 +1329,11 @@ impl Engine for PitchEngine {
         // (size/sections/triggered or non-entrance animations). schema:3
         // additionally carries speaker notes, persistent ink, slide
         // transitions and slide timing; a schema:2 reader rejects schema:3
-        // instead of silently dropping those fields.
+        // instead of silently dropping those fields. schema:4 additionally
+        // carries shape presets beyond rect and object strokes; a schema:3
+        // reader rejects schema:4 rather than silently dropping the `stroke`
+        // field (new ObjKind variants already fail closed as unknown
+        // variants, but the additive `stroke` field does not).
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
@@ -1206,7 +1341,13 @@ impl Engine for PitchEngine {
         let schema3 = self.state.slides.iter().any(|slide|
             slide.notes.is_some() || !slide.ink.is_empty()
             || slide.transition.is_some() || slide.timing.is_some());
-        let payload = if schema3 {
+        let schema4 = self.state.slides.iter().any(|slide|
+            slide.objects.iter().any(|object|
+                !matches!(object.kind, ObjKind::Text | ObjKind::Rect | ObjKind::Image)
+                || object.stroke.is_some()));
+        let payload = if schema4 {
+            serde_json::to_vec(&json!({"kind":"pitch","schema":4,"document":self.state}))?
+        } else if schema3 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":3,"document":self.state}))?
         } else if extended {
             serde_json::to_vec(&json!({"kind":"pitch","schema":2,"document":self.state}))?
@@ -1223,8 +1364,8 @@ impl Engine for PitchEngine {
             struct Versioned { kind: String, schema: u32, document: PitchState }
             let wrapper: Versioned = serde_json::from_value(value)?;
             // schema:2 = extended features only; schema:3 = notes/ink/
-            // transition/timing-capable.
-            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3) {
+            // transition/timing-capable; schema:4 = shape presets/strokes.
+            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
             wrapper.document
@@ -1274,6 +1415,15 @@ impl Engine for PitchEngine {
             for object in &slide.objects {
                 if object.id == 0 || !ids.insert(object.id) {
                     return Err(EngineError::serialization("invalid or duplicate identity"));
+                }
+                if let Some(stroke) = &object.stroke {
+                    if !object.kind.is_shape() {
+                        return Err(EngineError::serialization(
+                            "stroke outline on a non-shape object",
+                        ));
+                    }
+                    check_shape_stroke(stroke)
+                        .map_err(|_| EngineError::serialization("invalid shape stroke"))?;
                 }
             }
         }
@@ -2835,6 +2985,218 @@ mod tests {
         // undo chain still restores the wrapped form
         assert!(e.undo().unwrap());
         assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), snap);
+    }
+
+    fn shape_snapshot_schema(snap: &[u8]) -> u64 {
+        let (_, payload) = decode_envelope(snap).unwrap();
+        let value: Value = serde_json::from_slice(payload).unwrap();
+        value["schema"].as_u64().unwrap_or(1)
+    }
+
+    #[test]
+    fn add_shape_covers_the_bounded_preset_catalog() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        for kind in [
+            "rect", "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star",
+        ] {
+            let id = apply(
+                &mut e,
+                "addShape",
+                json!({"slide":slide,"kind":kind,"x":1,"y":2,"w":30,"h":40,
+                       "fill":[10,20,30,255],
+                       "stroke":{"width":2.5,"color":[200,100,50,128]}}),
+            )["object_id"]
+                .as_u64()
+                .unwrap();
+            let described = apply(&mut e, "describe", json!({}));
+            let obj = described["slides"][0]["objects"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|o| o["id"] == json!(id))
+                .unwrap()
+                .clone();
+            assert_eq!(obj["kind"], json!(kind));
+            assert_eq!(obj["x"], json!(1.0));
+            assert_eq!(obj["w"], json!(30.0));
+            assert_eq!(obj["fill"], json!([10, 20, 30, 255]));
+            assert_eq!(
+                obj["stroke"],
+                json!({"width": 2.5, "color": [200, 100, 50, 128]})
+            );
+        }
+        // shapes are ordinary objects: move/resize/rotate/order/remove apply
+        let ellipse = apply(
+            &mut e,
+            "addShape",
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":10,"h":10}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        apply(&mut e, "moveObject", json!({"slide":slide,"id":ellipse,"x":5,"y":6}));
+        apply(&mut e, "resizeObject", json!({"slide":slide,"id":ellipse,"w":20,"h":8}));
+        apply(&mut e, "rotateObject", json!({"slide":slide,"id":ellipse,"degrees":45}));
+        let described = apply(&mut e, "describe", json!({}));
+        let obj = described["slides"][0]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["id"] == json!(ellipse))
+            .unwrap();
+        assert_eq!(obj["kind"], json!("ellipse"));
+        assert_eq!(obj["x"], json!(5.0));
+        assert_eq!(obj["w"], json!(20.0));
+        assert_eq!(obj["rotation_deg"], json!(45.0));
+        // slideAt evaluates shapes through the same geometry path
+        let at = apply(&mut e, "slideAt", json!({"slide":slide,"t_s":0}));
+        assert!(at["objects"].as_array().unwrap().iter().any(|o| o["id"] == json!(ellipse)));
+        apply(&mut e, "removeObject", json!({"slide":slide,"id":ellipse}));
+        let described = apply(&mut e, "describe", json!({}));
+        assert!(!described["slides"][0]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|o| o["id"] == json!(ellipse)));
+    }
+
+    #[test]
+    fn add_shape_optional_fields_omit_and_undo_restores() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        // minimal payload: no fill, no stroke
+        let id = apply(
+            &mut e,
+            "addShape",
+            json!({"slide":slide,"kind":"star","x":0,"y":0,"w":10,"h":10}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        let described = apply(&mut e, "describe", json!({}));
+        let obj = &described["slides"][0]["objects"][0];
+        assert_eq!(obj["kind"], json!("star"));
+        assert!(obj.get("fill").is_none());
+        assert!(obj.get("stroke").is_none());
+        // one undo entry removes the object
+        assert!(e.undo().unwrap());
+        let described = apply(&mut e, "describe", json!({}));
+        assert_eq!(described["slides"][0]["objects"].as_array().unwrap().len(), 0);
+        assert!(e.redo().unwrap());
+        let described = apply(&mut e, "describe", json!({}));
+        assert_eq!(described["slides"][0]["objects"][0]["id"], json!(id));
+    }
+
+    #[test]
+    fn add_shape_validates_kind_geometry_and_stroke_atomically() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let before = e.snapshot().unwrap();
+        for payload in [
+            json!({"slide":slide,"kind":"pentagon","x":0,"y":0,"w":1,"h":1}),
+            json!({"slide":slide,"kind":"TEXT","x":0,"y":0,"w":1,"h":1}),
+            json!({"slide":slide,"kind":null,"x":0,"y":0,"w":1,"h":1}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1}),
+            json!({"slide":slide,"kind":"ellipse","x":"0","y":0,"w":1,"h":1}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"fill":[1,2,3]}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"fill":[1,2,3,256]}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"stroke":{"width":0,"color":[0,0,0,255]}}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"stroke":{"width":-2,"color":[0,0,0,255]}}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"stroke":{"width":10001,"color":[0,0,0,255]}}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"stroke":{"width":"2","color":[0,0,0,255]}}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"stroke":{"width":2}}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"stroke":{"width":2,"color":[0,0,0,255,9]}}),
+            json!({"slide":slide,"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"stroke":"red"}),
+            json!({"slide":999,"kind":"ellipse","x":0,"y":0,"w":1,"h":1}),
+        ] {
+            apply_err(&mut e, "addShape", payload);
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // failed adds consumed no identity and preserved redo state
+        assert!(e.undo().is_ok());
+    }
+
+    #[test]
+    fn shape_stroke_persists_through_schema4_wrapper_and_restore() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        apply(
+            &mut e,
+            "addShape",
+            json!({"slide":slide,"kind":"roundedRect","x":10,"y":20,"w":100,"h":50,
+                   "fill":[1,2,3,255],"stroke":{"width":3,"color":[9,8,7,255]}}),
+        );
+        let snap = e.snapshot().unwrap();
+        // shape presets/strokes emit the schema:4 wrapper
+        assert_eq!(shape_snapshot_schema(&snap), 4);
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&snap).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), snap);
+        let described = apply(&mut reopened, "describe", json!({}));
+        let obj = &described["slides"][0]["objects"][0];
+        assert_eq!(obj["kind"], json!("roundedRect"));
+        assert_eq!(obj["stroke"], json!({"width": 3.0, "color": [9, 8, 7, 255]}));
+        // a schema:3-only reader rejects schema:4 rather than dropping stroke
+        #[derive(Deserialize)]
+        struct Schema3OnlyReader { kind: String, schema: u32 }
+        let (_, payload) = decode_envelope(&snap).unwrap();
+        let old_view: Schema3OnlyReader =
+            serde_json::from_slice(payload).unwrap();
+        assert!(!(old_view.kind == "pitch" && old_view.schema <= 3));
+        // a schema:2-only document feature (extended but no schema:3/4 data)
+        // still wraps at schema:2, not schema:4
+        let mut plain = PitchEngine::new();
+        let s = slide_id(&mut plain, 0);
+        apply(&mut plain, "setSlideSize", json!({"width":800,"height":600}));
+        apply(&mut plain, "addRect", json!({"slide":s,"x":0,"y":0,"w":5,"h":5,"fill":[0,0,0,255]}));
+        assert_eq!(shape_snapshot_schema(&plain.snapshot().unwrap()), 2);
+    }
+
+    #[test]
+    fn shape_restore_rejects_hostile_stroke_and_kind_payloads() {
+        let mut e = PitchEngine::new();
+        let slide = slide_id(&mut e, 0);
+        let text = apply(
+            &mut e,
+            "addText",
+            json!({"slide":slide,"x":0,"y":0,"w":10,"h":10,"text":"hi"}),
+        )["object_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "addShape",
+            json!({"slide":slide,"kind":"diamond","x":0,"y":0,"w":10,"h":10,
+                   "stroke":{"width":1,"color":[0,0,0,255]}}),
+        );
+        let snap = e.snapshot().unwrap();
+        let mut hostile = serde_json::to_value(&e.state).unwrap();
+        // stroke on a text object must fail closed
+        let objects = hostile["slides"][0]["objects"].as_array_mut().unwrap();
+        let text_obj = objects.iter_mut().find(|o| o["id"] == json!(text)).unwrap();
+        text_obj["stroke"] = json!({"width":1,"color":[0,0,0,255]});
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+            .is_err());
+        // out-of-bound stroke width must fail closed
+        let mut hostile = serde_json::to_value(&e.state).unwrap();
+        hostile["slides"][0]["objects"][1]["stroke"]["width"] = json!(0);
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+            .is_err());
+        let mut hostile = serde_json::to_value(&e.state).unwrap();
+        hostile["slides"][0]["objects"][1]["stroke"]["width"] = json!(20000);
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+            .is_err());
+        // unknown shape kind string fails serde closed
+        let mut hostile = serde_json::to_value(&e.state).unwrap();
+        hostile["slides"][0]["objects"][1]["kind"] = json!("hexagon");
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+            .is_err());
+        // the admitted snapshot still restores cleanly afterwards
+        e.restore(&snap).unwrap();
         assert_eq!(e.snapshot().unwrap(), snap);
     }
 }

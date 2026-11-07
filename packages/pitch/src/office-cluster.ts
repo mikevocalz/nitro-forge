@@ -41,7 +41,14 @@ export const PITCH_ANIMATION_EFFECTS = [
 
 type Rgba = readonly [number, number, number, number];
 
-/** A slide object as NYC-Tron `SlideObject` takes it. Ids are the engine's numeric ids as strings. */
+/**
+ * A slide object as NYC-Tron `SlideObject` takes it. Ids are the engine's
+ * numeric ids as strings. The pinned NYC-Tron `SlideObjectKind` union is
+ * `"text" | "rect" | "image"` only: `readPitchDeck` refuses shape presets
+ * beyond `rect` with a clear error rather than mislabeling them, and `stroke`
+ * is retained as metadata the pinned renderer does not yet draw (same
+ * honesty boundary as `sourceTrigger` on animations).
+ */
 export interface PitchSlideObject {
   readonly id: string;
   readonly kind: "text" | "rect" | "image";
@@ -56,6 +63,8 @@ export interface PitchSlideObject {
   readonly italic?: boolean;
   readonly color?: Rgba;
   readonly fill?: Rgba;
+  /** Engine stroke outline; the pinned NYC-Tron renderer does not draw it yet. */
+  readonly stroke?: { readonly width: number; readonly color: Rgba };
   readonly src?: string;
   readonly opacity?: number;
 }
@@ -96,7 +105,7 @@ export type PitchOfficeDocument = Pick<PitchDocument,
 interface RawObj {
   id: number; kind: string; x: number; y: number; w: number; h: number; rotation_deg: number;
   text?: { content: string; font_size: number; color: number[]; bold: boolean; italic: boolean };
-  fill?: number[]; src?: string;
+  fill?: number[]; stroke?: { width: number; color: number[] }; src?: string;
 }
 interface RawSlide { id: number; background: number[] | null; objects: RawObj[]; animations: { object_id: number; kind: string; start_s: number; duration_s: number; trigger?: PitchAnimationTrigger }[] }
 interface RawState { sections?: {id:number;label:string;start_slide_id:number}[]; size?: { width: number; height: number }; meta: { title: string }; slides: RawSlide[] }
@@ -124,7 +133,15 @@ export function pitchId(id: string): number {
   return n;
 }
 
+/** Shape presets the engine stores that the pinned NYC-Tron slide renderer cannot draw. */
+const UNSUPPORTED_SHAPE_KINDS: ReadonlySet<string> = new Set([
+  "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star",
+]);
+
 function toObject(o: RawObj): PitchSlideObject {
+  if (UNSUPPORTED_SHAPE_KINDS.has(o.kind)) {
+    throw new Error(`Pitch shape kind "${o.kind}" needs a newer NYC-Tron slide renderer`);
+  }
   const kind: PitchSlideObject["kind"] | undefined = o.kind === "text" || o.kind === "rect" || o.kind === "image" ? o.kind : undefined;
   if (!kind || ![o.x, o.y, o.w, o.h, o.rotation_deg].every(Number.isFinite)) throw new Error("Pitch returned a malformed object");
   const base: PitchSlideObject = { id: String(o.id), kind, x: o.x, y: o.y, w: o.w, h: o.h, rotation: o.rotation_deg };
@@ -132,7 +149,14 @@ function toObject(o: RawObj): PitchSlideObject {
     const color = rgba(o.text.color);
     return { ...base, text: o.text.content, fontSize: o.text.font_size, bold: o.text.bold, italic: o.text.italic, ...(color ? { color } : {}) };
   }
-  if (kind === "rect") { const fill = rgba(o.fill); return fill ? { ...base, fill } : base; }
+  if (kind === "rect") {
+    const fill = rgba(o.fill);
+    const strokeColor = o.stroke ? rgba(o.stroke.color) : undefined;
+    const stroke = o.stroke && typeof o.stroke.width === "number" && Number.isFinite(o.stroke.width) && o.stroke.width > 0 && strokeColor
+      ? { width: o.stroke.width, color: strokeColor }
+      : undefined;
+    return { ...base, ...(fill ? { fill } : {}), ...(stroke ? { stroke } : {}) };
+  }
   if (kind === "image" && typeof o.src === "string") return { ...base, src: o.src };
   return base;
 }

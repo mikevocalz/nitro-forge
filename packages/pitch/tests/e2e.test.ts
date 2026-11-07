@@ -213,4 +213,63 @@ describe("pitch engine e2e (real Rust via nf-cli)", () => {
     await re.close();
     await doc.close();
   });
+
+  it("shape presets add/read/persist/undo with stroke and bounds", async () => {
+    const doc = await PitchDocument.open(host, "Shapes");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    for (const kind of [
+      "rect", "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star",
+    ] as const) {
+      const id = (
+        await doc.addShape(slide, kind, 10, 20, 100, 50, [10, 20, 30, 255], {
+          width: 2.5,
+          color: [200, 100, 50, 128],
+        })
+      ).data.object_id;
+      const described = await doc.describe<any>();
+      const obj = described.data.slides[0].objects.find((o: any) => o.id === id);
+      expect(obj.kind).toBe(kind);
+      expect(obj.stroke).toEqual({ width: 2.5, color: [200, 100, 50, 128] });
+    }
+    // minimal payload omits fill/stroke
+    const bare = (
+      await doc.addShape(slide, "ellipse", 0, 0, 40, 40)
+    ).data.object_id;
+    const described = await doc.describe<any>();
+    const bareObj = described.data.slides[0].objects.find((o: any) => o.id === bare);
+    expect(bareObj.kind).toBe("ellipse");
+    expect(bareObj.fill).toBeUndefined();
+    expect(bareObj.stroke).toBeUndefined();
+
+    // bounds and hostile payloads reject without mutating
+    await expect(
+      doc.addShape(slide, "hexagon" as never, 0, 0, 1, 1),
+    ).rejects.toThrow();
+    await expect(
+      doc.addShape(slide, "ellipse", 0, 0, 1, 1, null, { width: 0, color: [0, 0, 0, 255] }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addShape(slide, "ellipse", 0, 0, 1, 1, [1, 2, 3] as never),
+    ).rejects.toThrow();
+
+    // persist through snapshot, undo removes the last add
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    const reDescribed = await re.describe<any>();
+    expect(
+      reDescribed.data.slides[0].objects.filter((o: any) => o.kind === "star"),
+    ).toHaveLength(1);
+    const star = reDescribed.data.slides[0].objects.find((o: any) => o.kind === "star");
+    expect(star.stroke.width).toBe(2.5);
+    await re.removeObject(slide, star.id);
+    expect(
+      (await re.describe<any>()).data.slides[0].objects.some((o: any) => o.id === star.id),
+    ).toBe(false);
+    await re.undo();
+    expect(
+      (await re.describe<any>()).data.slides[0].objects.some((o: any) => o.id === star.id),
+    ).toBe(true);
+    await re.close();
+    await doc.close();
+  });
 });
