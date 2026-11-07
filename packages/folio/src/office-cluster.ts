@@ -18,6 +18,7 @@ import type { AnnotSubtype, FolioDocument, Rect } from "./index";
  * Each is a DEFER: the matching NYC-Tron prop is left out or the tool is not
  * listed.
  */
+/** The engine supports setAnnotationContents; the pinned comments control has no edit callback. */
 export const FOLIO_DEFERRED_OPS = {
   /** K-04/K-06/K-18: page pixels for highlighting hits, placing marks and following the reader. */
   renderPage: "K-04",
@@ -37,8 +38,6 @@ export const FOLIO_DEFERRED_OPS = {
   replyAnnotation: "K-07",
   /** K-07 resolve and reopen (`/State`, `/StateModel Review`). */
   setAnnotationState: "K-07",
-  /** K-07 edit a comment's text in place. */
-  setAnnotationContents: "K-07",
 } as const;
 export type FolioDeferredOp = keyof typeof FOLIO_DEFERRED_OPS;
 

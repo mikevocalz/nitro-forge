@@ -354,12 +354,15 @@ until `new`/`open`.
 | `pageText` | `{page}` | `{text}` | 0-based page; extracts strings from `Tj`/`TJ`/`'`/`"` ops in content stream; may be lossy — documented |
 | `addAnnotation` | `{page,rect:[x,y,w,h],contents,subtype?}` | `{annot_id}` | real PDF: appends obj to page `/Annots` (`/Subtype /Text|/Highlight`, `/Rect`, `/Contents`) |
 | `listAnnotations` | `{page}` | `{annots:[{id,subtype,rect,contents}]}` | |
+| `setAnnotationContents` | `{page,id,contents}` | `{ok}` | page-owned Text/Highlight only; at most 32767 UTF-16 code units (64 KiB including BOM); real PDF text string; same-text request is eventless/no history |
 | `removeAnnotation` | `{page,id}` | `{ok}` | |
 | `rotatePage` | `{page,degrees}` | `{ok}` | sets `/Rotate`, must be multiple of 90 |
 | `save` | `{}` | `{bytes_b64,size}` | `doc.save_to` → real PDF bytes |
 | `info` | `{}` | `{pages,has_annots}` | read-only |
 
 Undo: previous serialized `doc` (lopdf Document clone — it implements Clone; cap 8).
+
+Annotation creation/editing encodes ASCII as PDFDocEncoding and non-ASCII as UTF-16BE via lopdf text_string. Annotation listing decodes PDF text strings; pageText remains the existing lossy content-stream extraction. Comment edits preserve the annotation id/type/geometry and unrelated PDF dictionary entries, with one undo entry; no author/date/appearance/reply/state is fabricated.
 
 ## pitch-engine — `PitchEngine::new()`
 

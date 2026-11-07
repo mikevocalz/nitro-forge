@@ -20,6 +20,8 @@
 //! - `new {pages}` is capped at 10_000 pages to keep a malformed command from
 //!   allocating unbounded object graphs.
 
+mod annotation_edit;
+
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -519,7 +521,7 @@ impl Engine for FolioEngine {
                     "Type" => "Annot",
                     "Subtype" => subtype,
                     "Rect" => Object::Array(pdf_rect),
-                    "Contents" => Object::string_literal(contents),
+                    "Contents" => lopdf::text_string(contents),
                 };
                 let annot_id = self.doc.add_object(Object::Dictionary(annot));
                 match loc {
@@ -552,6 +554,7 @@ impl Engine for FolioEngine {
                 }
                 Ok(CommandResult::data(json!({ "annot_id": annot_id.0 })))
             }
+            "setAnnotationContents" => self.op_set_annotation_contents(p),
             "removeAnnotation" => {
                 let page = req_u64(p, "page")?;
                 let page_id = self.page_id(page)?;
@@ -689,7 +692,7 @@ impl Engine for FolioEngine {
                     let contents = dict
                         .get(b"Contents")
                         .ok()
-                        .and_then(obj_string)
+                        .and_then(|o| lopdf::decode_text_string(o).ok())
                         .unwrap_or_default();
                     annots.push(json!({
                         "id": id.0,

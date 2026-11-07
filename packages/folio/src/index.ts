@@ -16,6 +16,7 @@ export const OPS = {
   addAnnotation: "addAnnotation",
   listAnnotations: "listAnnotations",
   removeAnnotation: "removeAnnotation",
+  setAnnotationContents: "setAnnotationContents",
   rotatePage: "rotatePage",
   save: "save",
   info: "info",
@@ -87,6 +88,10 @@ export class FolioDocument {
   }
   listAnnotations(page: number) {
     return this.call<{ annots: Annotation[] }>(OPS.listAnnotations, { page });
+  }
+  /** Edit a page-owned Text/Highlight comment; PDF text string encoding is handled by the engine. */
+  setAnnotationContents(page: number, id: number, contents: string) {
+    return this.call<{ ok: boolean }>(OPS.setAnnotationContents, { page, id, contents });
   }
   removeAnnotation(page: number, id: number) {
     return this.call(OPS.removeAnnotation, { page, id });
