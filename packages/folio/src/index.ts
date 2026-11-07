@@ -28,6 +28,9 @@ export const OPS = {
   duplicatePage: "duplicatePage",
   insertBlankPage: "insertBlankPage",
   listPageInfo: "listPageInfo",
+  listOutlines: "listOutlines",
+  addBookmark: "addBookmark",
+  removeBookmark: "removeBookmark",
   encrypt: "encrypt",
   decrypt: "decrypt",
   save: "save",
@@ -75,6 +78,23 @@ export interface Annotation {
 export interface FolioCommentMetadata { author: string; modified: string }
 export interface FolioCommentEntry { id: number; contents: string; author?: string; modified?: string }
 export interface FolioCommentThread extends FolioCommentEntry { subtype: string; rect: Rect | null; replies: FolioCommentEntry[]; resolved?: boolean; review_state?: string }
+/**
+ * One node of the PDF outline (bookmark) tree from `listOutlines`.
+ * `id` is the outline item dictionary's object number — pass it to
+ * `removeBookmark`; `null` for inline items in foreign PDFs, which the
+ * mutating outline ops reject anyway. `page` is the 0-based page index
+ * the destination resolves to (`null` when unresolvable, e.g. a deleted
+ * page ghost). `dest` is the explicit-destination tail (`/Fit` plus
+ * coordinates) when the item carries an array destination.
+ */
+export interface FolioOutlineItem {
+  id: number | null;
+  title: string;
+  page: number | null;
+  dest?: (string | number | null)[];
+  children: FolioOutlineItem[];
+}
+
 /** One row of `listPageInfo`; `mediabox` is `[x1, y1, x2, y2]` PDF user space or null. */
 export interface FolioPageInfo {
   index: number;
@@ -256,6 +276,38 @@ export class FolioDocument {
   /** Per-page details: index, inherited-aware mediabox/rotate, annot count, content presence. */
   listPageInfo() {
     return this.call<{ pages: FolioPageInfo[] }>(OPS.listPageInfo);
+  }
+  /**
+   * The document's outline (bookmark) tree, nested. Read-only; rejects on
+   * encrypted documents because outline titles are ciphertext — decrypt
+   * first. Outline `page` fields track page object ids, so they stay
+   * correct across `movePage`/`duplicatePage`/`insertBlankPage`.
+   */
+  listOutlines() {
+    return this.call<{ outlines: FolioOutlineItem[] }>(OPS.listOutlines);
+  }
+  /**
+   * Append an outline item as the last child of `parent` (an item `id`
+   * from `listOutlines`/`addBookmark`) or at the top level when `parent`
+   * is omitted. `page` is the 0-based page index. `title` must be
+   * non-empty, ≤2048 UTF-16 code units. Rejects on encrypted documents
+   * and on foreign trees containing inline outline dictionaries.
+   * Resolves to `{ ok, id }` — the stable id `removeBookmark` takes.
+   */
+  addBookmark(title: string, page: number, parent?: number) {
+    return this.call<{ ok: boolean; id: number }>(OPS.addBookmark, {
+      title,
+      page,
+      ...(parent === undefined ? {} : { parent }),
+    });
+  }
+  /**
+   * Remove the outline item `id` and its whole descendant subtree,
+   * repairing sibling/parent links and recounting. Rejects when a
+   * surviving object still references the removed subtree.
+   */
+  removeBookmark(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removeBookmark, { id });
   }
   /** Encrypt the document in place (V4/R4, AES-128). One undo entry; saved bytes stay encrypted. */
   encrypt(options: FolioEncryptOptions) {

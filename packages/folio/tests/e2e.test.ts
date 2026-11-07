@@ -167,6 +167,75 @@ describe("folio engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("builds a nested outline tree that survives save/reopen, undo and page moves", async () => {
+    const doc = await FolioDocument.create(host, 3);
+    expect((await doc.listOutlines()).data.outlines).toEqual([]);
+
+    const ch1 = await doc.addBookmark("Chapter 1", 0);
+    const s11 = await doc.addBookmark("Section 1.1", 1, ch1.data.id);
+    await doc.addBookmark("Section 1.2", 2, ch1.data.id);
+    await doc.addBookmark("Chapter 2", 2);
+
+    let tree = (await doc.listOutlines()).data.outlines;
+    expect(tree).toHaveLength(2);
+    expect(tree[0]!.title).toBe("Chapter 1");
+    expect(tree[0]!.page).toBe(0);
+    expect(tree[0]!.children.map(c => c.title)).toEqual(["Section 1.1", "Section 1.2"]);
+    expect(tree[0]!.children[0]!.id).toBe(s11.data.id);
+    expect(tree[0]!.children[0]!.page).toBe(1);
+    expect(tree[1]!.title).toBe("Chapter 2");
+
+    // Destinations follow page object ids across reorders.
+    await doc.movePage(0, 2);
+    tree = (await doc.listOutlines()).data.outlines;
+    expect(tree[0]!.page).toBe(2);
+    expect(tree[0]!.children[0]!.page).toBe(0);
+
+    // Validation rejects without mutating.
+    await expect(doc.addBookmark("", 0)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.addBookmark("x".repeat(2049), 0)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.addBookmark("bad page", 9)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.addBookmark("bad parent", 0, 999999)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.removeBookmark(999999)).rejects.toBeInstanceOf(EngineError);
+
+    // Undo/redo round-trips the tree.
+    await doc.undo(); // movePage
+    tree = (await doc.listOutlines()).data.outlines;
+    expect(tree[0]!.page).toBe(0);
+    await doc.redo();
+    tree = (await doc.listOutlines()).data.outlines;
+    expect(tree[0]!.page).toBe(2);
+
+    // Real save → open keeps ids, titles, pages and nesting.
+    const { bytes } = await doc.savePdf();
+    await doc.close();
+    const re = await FolioDocument.openPdf(host, bytes);
+    const reTree = (await re.listOutlines()).data.outlines;
+    expect(reTree).toHaveLength(2);
+    expect(reTree[0]!.children.map(c => c.title)).toEqual(["Section 1.1", "Section 1.2"]);
+    expect(reTree[0]!.children[0]!.page).toBe(0);
+
+    // Removing the parent drops its whole subtree.
+    await re.removeBookmark(reTree[0]!.id!);
+    const after = (await re.listOutlines()).data.outlines;
+    expect(after).toHaveLength(1);
+    expect(after[0]!.title).toBe("Chapter 2");
+    await re.close();
+  });
+
+  it("rejects outline ops on encrypted documents and restores them after decrypt", async () => {
+    const doc = await FolioDocument.create(host, 1);
+    const bm = await doc.addBookmark("Secret", 0);
+    await doc.encrypt({ password: "pw" });
+    await expect(doc.listOutlines()).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.addBookmark("Nope", 0)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.removeBookmark(bm.data.id)).rejects.toBeInstanceOf(EngineError);
+    await doc.decrypt("pw");
+    const tree = (await doc.listOutlines()).data.outlines;
+    expect(tree[0]!.title).toBe("Secret");
+    await doc.close();
+  });
+
   it("snapshot/save/reopen preserves annotations", async () => {
     const doc = await FolioDocument.create(host, 1);
     await doc.addAnnotation(0, [0, 0, 50, 50], "note", "Text");

@@ -172,7 +172,7 @@ fn reachable_objects(doc: &Document) -> HashSet<ObjectId> {
 /// Drop objects no longer reachable from the trailer. Skipped entirely
 /// when the trailer has no indirect `/Root` so a malformed document can
 /// never lose its whole object table to the sweep.
-fn prune_unreachable(doc: &mut Document) {
+pub(super) fn prune_unreachable(doc: &mut Document) {
     if doc
         .trailer
         .get(b"Root")

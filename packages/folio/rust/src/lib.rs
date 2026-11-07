@@ -46,6 +46,7 @@ mod annotation_edit;
 mod ink_link;
 mod markup;
 mod comments;
+mod outlines;
 mod page_ops;
 
 use ignition_core::{
@@ -836,6 +837,8 @@ impl Engine for FolioEngine {
             "deletePage" => self.op_delete_page(p),
             "duplicatePage" => self.op_duplicate_page(p),
             "insertBlankPage" => self.op_insert_blank(p),
+            "addBookmark" => self.op_add_bookmark(p),
+            "removeBookmark" => self.op_remove_bookmark(p),
             // --- read-only ---------------------------------------------------
             "pageCount" => Ok(ro(json!({ "pages": self.page_count() }))),
             "pageText" => {
@@ -917,6 +920,7 @@ impl Engine for FolioEngine {
             }
             "save" => self.op_save(&cmd, None),
             "listPageInfo" => self.op_list_page_info(),
+            "listOutlines" => self.op_list_outlines(),
             "info" => Ok(ro(json!({
                 "pages": self.page_count(),
                 "has_annots": self.has_annots()?,

@@ -13,7 +13,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | cadence-engine tests (incl. real PCM render) | 21 pass | `cargo test -p cadence-engine` |
 | splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch) | 44 pass | `cargo test -p splice-engine` |
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
-| folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption) | 59 pass | `cargo test -p folio-engine` |
+| folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines) | 68 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
 | quill-engine tests (incl. real DOCX zip round-trip) | 25 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI round-trip test | 1 pass | `cargo test -p nf-sys` |

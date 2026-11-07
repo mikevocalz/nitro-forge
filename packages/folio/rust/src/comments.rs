@@ -371,7 +371,7 @@ fn entry(n: &Node) -> Value {
     }
     v
 }
-fn references_removed(
+pub(super) fn references_removed(
     object: &Object,
     remove: &BTreeSet<ObjectId>,
     depth: usize,
