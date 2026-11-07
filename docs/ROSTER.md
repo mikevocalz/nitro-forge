@@ -926,3 +926,45 @@ Local evidence: `cargo test -p design-engine` 36 passed (5 new component tests c
 Independent-review fixes on the slice-D component model. Expansion now reads template ids/children/clone sources from the pre-expansion node map, so in-place expansion of instances stored inside component subtrees no longer leaks synthetic children into a later instance's template walk (previously orphan clones could fail `evaluateLayout` on fill/hug sizing and waste the node budget). Cloned `component` nodes get their variant override targets retargeted at expansion clones, and `detachInstance` re-identifies those targets through its id map — detaching an instance whose template embeds a component bearing variants previously failed validation. `setAxisSizing` rejects hug/fill on instances and `validate` rejects non-fixed instance sizing on hostile restore, matching the documented fixed-only contract. The component acyclicity check gains ancestor→descendant containment edges, so component-in-component nesting with a back reference rejects at validation instead of only failing reads at the depth cap. New bounds: 64 variants per component, 256 overrides per instance spec or variant bundle. `EvaluatedBox.id` documents synthetic `>= 2^53-1` ids as read-only handles; `detachInstance` documents whole-document (bounded) expansion.
 
 Local evidence: `cargo test -p design-engine` 41 passed (5 new tests: pristine-template nested expansion, detach variant retarget, instance fixed sizing mutation+restore, containment-cycle validation, override/variant budgets), `pnpm --filter @nitro-forge/design` typecheck clean and 11 Vitest passed across 8 files, `cargo build -p nf-cli` clean. No native/device acceptance or full P16 completion is implied.
+
+## Tally charts/sparklines persistence source checkpoint (2026-11-07)
+
+Tally gains durable chart objects and sparkline specs (P13 slice 7), lifting
+the `insertChart`/`setSparkline` entries from `TALLY_DEFERRED_OPS` (the
+`setSheetView` deferral remains). Charts are workbook-scoped
+`ChartSpec = {id, sheet, kind, title?, range, series?, colors?}` objects
+bound to one sheet by durable id — bounded `line|column|bar|area|pie`
+kind, nonempty ≤512-byte title, canonical `"A1"`/`"A1:B2"` data anchor under
+the shared 16,384-cell cap, ≤32 `{name?,range?}` series overrides and ≤16
+deduped `#RRGGBB` colors, at most 256 per workbook. Ops: `insertChart`,
+`updateChart` (partial patch — `null` clears optionals, equal patch
+eventless, `sheet` alongside `id` and unknown patch keys reject),
+`removeChart`, read-only `listCharts`. Sparklines are workbook-scoped
+`SparklineSpec = {id, sheet, target, data, kind}` entries — canonical
+target anchor (`cell` or `range`, exactly one) plus canonical data range,
+bounded `line|column|bar|winloss` kind, at most 256 per workbook. Ops:
+`setSparkline` (identical sheet+target+data+kind eventless, same target
+with a different spec replaces in place keeping the id), `clearSparkline`
+(`{id}` xor `{sheet?,cell|range}`, mixed selectors reject), read-only
+`listSparklines`. Both tables are STORAGE ONLY: the engine never evaluates
+series/data ranges, computes geometry or renders — hosts read cells and
+draw (honest boundary; no chart evaluation is claimed). Mutations record
+one whole-document undo entry each, emit `document:changed` once, and
+`removeSheet` cascade-drops bound charts/sparklines into the same undo
+entry with `readd_ok` re-admission; `duplicateSheet`/`moveSheet` do not
+copy or retarget them. Bound-sheet protection guards apply like the other
+rule tables. Snapshots carrying either table emit
+`{kind:"tally",schema:5}` — the bump is required because `Workbook` does
+not deny unknown fields and schema:4 readers would silently drop the new
+top-level tables (same reasoning as filters' schema:4); `restore` accepts
+schemas 1–5, fails closed on charts/sparklines under lower or bare
+schemas, and re-validates count/id uniqueness, bound sheets,
+re-canonicalized in-cap ranges (series ranges included), bounded
+fields and `next_chart`/`next_sparkline` id-space repair atomically.
+`TALLY_DEFERRED_OPS` drops `insertChart`/`setSparkline`; NYC-Tron
+`ChartBuilder.onInsert`/`SparklineEditor` wiring is host-side. Local
+evidence: `cargo test -p tally-engine` 123 passed (10 new across
+chart_ops/sparkline_ops plus schema-matrix and smuggle coverage), `pnpm
+--filter @nitro-forge/tally` typecheck clean and 57 Vitest passed across
+15 files (3 new live `nf-cli` chart/sparkline tests), `cargo build -p
+nf-cli` clean. No rendering, XLSX or native/device acceptance is claimed.

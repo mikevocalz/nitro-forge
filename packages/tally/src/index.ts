@@ -39,6 +39,13 @@ export const OPS = {
   clearFilter: "clearFilter",
   getFilters: "getFilters",
   evaluateFilters: "evaluateFilters",
+  insertChart: "insertChart",
+  updateChart: "updateChart",
+  removeChart: "removeChart",
+  listCharts: "listCharts",
+  setSparkline: "setSparkline",
+  clearSparkline: "clearSparkline",
+  listSparklines: "listSparklines",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -265,6 +272,85 @@ export interface FilterRowMatch {
   /** Whether the row passes the selected rule; rows outside its range pass. */
   matched: boolean;
 }
+
+/** Bounded chart kinds the engine stores; rendering is host-side. */
+export type ChartKind = "line" | "column" | "bar" | "area" | "pie";
+
+/**
+ * Optional per-series override on a chart: a display `name` and/or a
+ * `range` (`{from,to}` on the chart's sheet). At least one field required.
+ */
+export interface ChartSeriesInput {
+  name?: string;
+  range?: { from: string; to: string };
+}
+
+/** Input for `insertChart`'s `chart` field (id/sheet are engine-assigned). */
+export interface ChartInput {
+  kind: ChartKind;
+  /** 1-512 byte title; omit for none. */
+  title?: string;
+  /** Data anchor range on the bound sheet (≤16384 cells). */
+  range: { from: string; to: string };
+  /** ≤32 series overrides. */
+  series?: readonly ChartSeriesInput[];
+  /** ≤16 `#RRGGBB` palette entries (deduped engine-side). */
+  colors?: readonly string[];
+}
+
+/**
+ * Durable chart object bound to one sheet. The engine stores the bounded
+ * spec only — it never evaluates series data or renders; hosts read cell
+ * values and draw.
+ */
+export interface ChartInfo {
+  id: number;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  kind: ChartKind;
+  title?: string;
+  /** Canonical `"A1"`/`"A1:B2"` data anchor on the bound sheet. */
+  range: string;
+  series?: { name?: string; range?: string }[];
+  colors?: string[];
+}
+
+/**
+ * `updateChart` patch: present keys set, explicit `null` clears
+ * `title`/`series`/`colors`; `kind`/`range` cannot be null. An update that
+ * changes nothing is eventless.
+ */
+export interface ChartPatch {
+  kind?: ChartKind;
+  title?: string | null;
+  range?: { from: string; to: string };
+  series?: readonly ChartSeriesInput[] | null;
+  colors?: readonly string[] | null;
+}
+
+/** Bounded sparkline kinds the engine stores; rendering is host-side. */
+export type SparklineKind = "line" | "column" | "bar" | "winloss";
+
+/**
+ * Durable sparkline spec bound to one sheet. `target` is the canonical
+ * anchor the sparkline is drawn in, `data` the canonical source range it
+ * summarizes. Storage only — the engine never evaluates or renders.
+ */
+export interface SparklineInfo {
+  id: number;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  /** Canonical `"A1"`/`"A1:B2"` anchor on the bound sheet. */
+  target: string;
+  /** Canonical `"A1"`/`"A1:B2"` source range on the bound sheet. */
+  data: string;
+  kind: SparklineKind;
+}
+
+/** `setSparkline` anchor: exactly one of `cell` or `range`. */
+export type SparklineTarget = { cell: string; range?: never } | { range: { from: string; to: string }; cell?: never };
 
 export class TallyDocument {
   private constructor(private doc: DocumentHandle) {}
@@ -534,6 +620,74 @@ export class TallyDocument {
         ...(options?.id === undefined ? {} : { id: options.id }),
       },
     );
+  }
+  /**
+   * Insert a chart object bound to `sheet` (name or index; default
+   * active). Stores the bounded spec only — rendering is host-side.
+   */
+  insertChart(chart: ChartInput, sheet?: string | number) {
+    return this.call<{ chart: ChartInfo }>(OPS.insertChart, {
+      chart: {
+        kind: chart.kind,
+        ...(chart.title === undefined ? {} : { title: chart.title }),
+        range: chart.range,
+        ...(chart.series === undefined ? {} : { series: chart.series.map((s) => ({
+          ...(s.name === undefined ? {} : { name: s.name }),
+          ...(s.range === undefined ? {} : { range: s.range }),
+        })) }),
+        ...(chart.colors === undefined ? {} : { colors: chart.colors }),
+      },
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Partially update chart `id`: present patch keys set, `null` clears
+   * `title`/`series`/`colors`. An unchanged spec is eventless.
+   */
+  updateChart(id: number, patch: ChartPatch) {
+    return this.call<{ chart: ChartInfo }>(OPS.updateChart, { id, patch });
+  }
+  removeChart(id: number) {
+    return this.call<{ ok: boolean }>(OPS.removeChart, { id });
+  }
+  /** Read-only chart list; `sheet` filters to one sheet, absent lists all. */
+  listCharts(sheet?: string | number) {
+    return this.call<{ charts: ChartInfo[] }>(OPS.listCharts, {
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Attach a sparkline spec to a `cell` or `range` anchor on `sheet`
+   * (default active), summarizing `data` (a `{from,to}` range). Identical
+   * sheet+target+data+kind is eventless; the same target with a different
+   * spec replaces in place keeping the id. Storage only — host renders.
+   */
+  setSparkline(target: SparklineTarget, data: { from: string; to: string }, kind: SparklineKind, sheet?: string | number) {
+    return this.call<{ sparkline: SparklineInfo }>(OPS.setSparkline, {
+      ...("cell" in target ? { cell: target.cell } : { range: target.range }),
+      data,
+      kind,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /**
+   * Remove sparkline specs: by rule `id`, or every spec on `sheet`
+   * (default active) with the given `cell`/`range` target.
+   */
+  clearSparkline(target: number | SparklineTarget, sheet?: string | number) {
+    const payload = typeof target === "number"
+      ? { id: target }
+      : {
+          ...("cell" in target ? { cell: target.cell } : { range: target.range }),
+          ...(sheet === undefined ? {} : { sheet }),
+        };
+    return this.call<{ cleared: number }>(OPS.clearSparkline, payload);
+  }
+  /** Read-only sparkline list; `sheet` filters to one sheet, absent lists all. */
+  listSparklines(sheet?: string | number) {
+    return this.call<{ sparklines: SparklineInfo[] }>(OPS.listSparklines, {
+      ...(sheet === undefined ? {} : { sheet }),
+    });
   }
   getCell(addr: string) {
     return this.call<{ raw: string; computed: CellValue; format?: CellFormat }>(OPS.getCell, { addr });

@@ -120,6 +120,55 @@ impl TallyEngine {
                     self.doc.sheets[idx].is_protected
                 }
             },
+            // Charts and sparklines are workbook metadata bound to one
+            // sheet: insertChart/setSparkline guard their target sheet,
+            // updateChart/removeChart/clearSparkline-by-id guard the
+            // stored spec's sheet, clearSparkline-by-target guards the
+            // resolved sheet. Unknown ids fall through — the op reports
+            // not_found. listCharts/listSparklines are ungated reads.
+            "insertChart" | "setSparkline" => {
+                let idx = match p.get("sheet") {
+                    Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                    _ => self.doc.active,
+                };
+                self.doc.sheets[idx].is_protected
+            }
+            "updateChart" | "removeChart" => p
+                .get("id")
+                .and_then(Value::as_u64)
+                .and_then(|id| {
+                    self.doc
+                        .charts
+                        .iter()
+                        .find(|c| c.id == id)
+                        .map(|c| c.sheet)
+                })
+                .is_some_and(|sheet_id| {
+                    self.doc
+                        .sheets
+                        .iter()
+                        .any(|s| s.id == sheet_id && s.is_protected)
+                }),
+            "clearSparkline" => match p.get("id").and_then(Value::as_u64) {
+                Some(id) => self
+                    .doc
+                    .sparklines
+                    .iter()
+                    .find(|s| s.id == id)
+                    .is_some_and(|s| {
+                        self.doc
+                            .sheets
+                            .iter()
+                            .any(|sh| sh.id == s.sheet && sh.is_protected)
+                    }),
+                None => {
+                    let idx = match p.get("sheet") {
+                        Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                        _ => self.doc.active,
+                    };
+                    self.doc.sheets[idx].is_protected
+                }
+            },
             "new" => self.doc.sheets.iter().any(|s| s.is_protected),
             _ => false,
         };
