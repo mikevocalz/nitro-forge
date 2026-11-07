@@ -766,3 +766,195 @@ fn intrinsic_renderer_extent_limit_rejects_before_mutation_or_history() {
     assert_eq!(e.snapshot().unwrap(), before);
     assert!(e.redo().unwrap());
 }
+
+fn add_text(e: &mut DesignEngine, parent: u64, content: &str) -> u64 {
+    call(
+        e,
+        "addText",
+        json!({"parent":parent,"content":content}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap()
+}
+#[test]
+fn text_nodes_layout_hug_render_update_and_undo() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":40,"height":30}));
+    let t = add_text(&mut e, 1, "Hi");
+    let node = &e.state.nodes[&t];
+    assert_eq!(node.kind, Kind::Text);
+    assert_eq!(node.text.as_ref().unwrap().content, "Hi");
+    assert_eq!(node.text.as_ref().unwrap().font_size, 16.);
+    // describe exposes the text style; evaluateLayout marks it non-renderable.
+    let described = call(&mut e, "describe", json!({}));
+    assert_eq!(described.data["nodes"][t.to_string()]["kind"], "text");
+    assert_eq!(
+        described.data["nodes"][t.to_string()]["text"]["content"],
+        "Hi"
+    );
+    let boxes = layout::evaluate(&e.state).unwrap();
+    let b = boxes.iter().find(|b| b.id == t).unwrap();
+    assert_eq!(b.kind, Kind::Text);
+    assert!(!b.renderable);
+    // Hug uses the deterministic stub metrics: longest line 2 chars * 16 * 0.6.
+    size(&mut e, t, "x", "hug");
+    size(&mut e, t, "y", "hug");
+    let caps = call(&mut e, "readAxisSizing", json!({"id":t}));
+    assert_eq!(caps.data["x"]["resolvedValue"], 19.2);
+    assert_eq!(caps.data["y"]["resolvedValue"], 19.2);
+    assert_eq!(caps.data["x"]["canHug"], true);
+    // Fill background still rasterizes; no glyphs exist to draw.
+    call(&mut e, "updateNode", json!({"id":t,"fill":[9,8,7,255]}));
+    let pixels = e
+        .apply(Command::new("renderFrame", json!({})).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert_eq!(pixels[0..4], [9, 8, 7, 255]);
+    // Partial text patch merges over the current style.
+    call(
+        &mut e,
+        "updateNode",
+        json!({"id":t,"text":{"content":"Hello","font_size":20,"font_style":"italic"}}),
+    );
+    let style = &e.state.nodes[&t].text.as_ref().unwrap();
+    assert_eq!(style.content, "Hello");
+    assert_eq!(style.font_size, 20.);
+    assert_eq!(style.font_weight, 400);
+    assert_eq!(style.font_style, TextFontStyle::Italic);
+    // Undo/redo across the whole text lifecycle.
+    assert!(e.undo().unwrap());
+    assert_eq!(e.state.nodes[&t].text.as_ref().unwrap().content, "Hi");
+    assert!(e.redo().unwrap());
+    assert_eq!(e.state.nodes[&t].text.as_ref().unwrap().content, "Hello");
+    // Generic structural ops already cover text nodes.
+    let frame = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    call(
+        &mut e,
+        "reparentNode",
+        json!({"id":t,"parent":frame,"index":0}),
+    );
+    assert_eq!(e.state.parent(t), Some(frame));
+    call(&mut e, "removeNode", json!({"id":t}));
+    assert!(!e.state.nodes.contains_key(&t));
+}
+#[test]
+fn text_validation_caps_and_atomic_rejection() {
+    let mut e = DesignEngine::new();
+    let t = add_text(&mut e, 1, "ok");
+    let before = e.snapshot().unwrap();
+    for p in [
+        // Missing content, oversize content, control characters.
+        json!({"parent":1}),
+        json!({"parent":1,"content":"x".repeat(MAX_TEXT_BYTES + 1)}),
+        json!({"parent":1,"content":"a\u{7}b"}),
+        json!({"parent":1,"content":"ok","style":{"font_size":0}}),
+        json!({"parent":1,"content":"ok","style":{"font_weight":0}}),
+        json!({"parent":1,"content":"ok","style":{"font_weight":1001}}),
+        json!({"parent":1,"content":"ok","style":{"font_family":""}}),
+        json!({"parent":1,"content":"ok","style":{"font_family":"f".repeat(MAX_FONT_FAMILY_BYTES + 1)}}),
+        json!({"parent":1,"content":"ok","style":{"font_style":"bold"}}),
+        json!({"parent":1,"content":"ok","style":{"unexpected":1}}),
+        json!({"parent":1,"content":"ok","kind":"rect"}),
+    ] {
+        assert!(e.apply(Command::new("addText", p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    // Boundary content is admitted.
+    let max = "x".repeat(MAX_TEXT_BYTES);
+    let big = add_text(&mut e, 1, &max);
+    assert_eq!(e.state.nodes[&big].text.as_ref().unwrap().content.len(), MAX_TEXT_BYTES);
+    // updateNode text patches validate the same bounds.
+    for patch in [
+        json!({"content":"a\u{0}b"}),
+        json!({"font_size":-1}),
+        json!({"font_weight":70000}),
+        json!({"nope":1}),
+    ] {
+        assert!(e
+            .apply(Command::new(
+                "updateNode",
+                json!({"id":t,"text":patch})
+            ))
+            .is_err());
+        assert_eq!(e.state.nodes[&t].text.as_ref().unwrap().content, "ok");
+    }
+    // text patch on a non-text node and null on a text node both reject.
+    let rect = shape(&mut e, 1, 0., 0., 1., 1., [255; 4]);
+    assert!(e
+        .apply(Command::new(
+            "updateNode",
+            json!({"id":rect,"text":{"content":"no"}})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new("updateNode", json!({"id":t,"text":null})))
+        .is_err());
+    // Batch admission covers addText atomically.
+    let batch = json!({"commands":[
+        {"op":"addText","payload":{"content":"batched"}},
+        {"op":"updateNode","payload":{"id":t,"text":{"content":"changed"}}}
+    ]});
+    call(&mut e, ignition_core::OP_BATCH, batch);
+    assert_eq!(e.state.nodes[&t].text.as_ref().unwrap().content, "changed");
+    assert!(e.state.nodes.values().any(|n| n.kind == Kind::Text
+        && n.text.as_ref().is_some_and(|s| s.content == "batched")));
+}
+#[test]
+fn text_snapshot_wrapper_presence_trigger_and_reader_gates() {
+    let mut e = DesignEngine::new();
+    // Schema:1-only document stays byte-identical bare state.
+    let legacy = e.snapshot().unwrap();
+    let payload: Value =
+        serde_json::from_slice(&decode_envelope(&legacy).unwrap().1).unwrap();
+    assert_eq!(payload["schema"], 1);
+    assert!(payload.get("document").is_none());
+    let t = add_text(&mut e, 1, "wrapped");
+    let wrapped = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&wrapped).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(outer["kind"], "design");
+    assert_eq!(outer["schema"], 2);
+    assert_eq!(outer["document"]["schema"], 1);
+    assert_eq!(outer["document"]["nodes"][t.to_string()]["kind"], "text");
+    // Round-trip through a fresh engine preserves bytes exactly.
+    let mut reopen = DesignEngine::new();
+    reopen.restore(&wrapped).unwrap();
+    assert_eq!(reopen.snapshot().unwrap(), wrapped);
+    // Unwrapped extended state is rejected: old readers must fail closed.
+    let bare = serde_json::to_vec(&*e.state).unwrap();
+    assert!(reopen
+        .restore(&encode_envelope(&bare))
+        .is_err());
+    // Wrapper kind/schema/extra-field/missing-document mutations all reject.
+    for mutation in ["kind", "schema", "extra", "bare_document"] {
+        let mut outer = outer.clone();
+        match mutation {
+            "kind" => outer["kind"] = json!("photo"),
+            "schema" => outer["schema"] = json!(3),
+            "extra" => outer["surprise"] = json!(true),
+            _ => {
+                outer.as_object_mut().unwrap().remove("document");
+                outer["title"] = json!("x");
+            }
+        }
+        assert!(reopen
+            .restore(&encode_envelope(&serde_json::to_vec(&outer).unwrap()))
+            .is_err());
+        assert_eq!(reopen.snapshot().unwrap(), wrapped);
+    }
+    // Removing the last text node returns snapshots to the bare schema:1
+    // form (next_id legitimately advanced, so compare shape not bytes).
+    call(&mut e, "removeNode", json!({"id":t}));
+    let snap = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&snap).unwrap();
+    let bare: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(bare["schema"], 1);
+    assert!(bare.get("document").is_none());
+    assert!(!bare["nodes"].as_object().unwrap().values().any(|n| {
+        n["kind"] == "text" || n.get("text").is_some()
+    }));
+}

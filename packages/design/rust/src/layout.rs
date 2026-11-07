@@ -11,6 +11,9 @@ pub struct BoxNode {
     pub height: f64,
     pub fill: [u8; 4],
     pub visible: bool,
+    /// False for `Kind::Text`: the box participates in layout but
+    /// `renderFrame` emits only its fill background, never glyphs.
+    pub renderable: bool,
 }
 pub fn evaluate(s: &State) -> Result<Vec<BoxNode>, EngineError> {
     let sizes = sizing::evaluate(s)?;
@@ -48,6 +51,7 @@ fn place(
         height,
         fill: n.fill,
         visible,
+        renderable: n.kind != Kind::Text,
     });
     if let Some(l) = &n.layout {
         let axis = sizing::main(l);
