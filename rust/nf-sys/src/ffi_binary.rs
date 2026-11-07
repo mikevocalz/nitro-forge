@@ -133,6 +133,23 @@ mod tests {
         )
     }
     #[test]
+    fn motion_registered_factory_returns_real_binary_rgba() {
+        unsafe {
+            let mut error=std::ptr::null_mut();
+            let kind=std::ffi::CString::new("motion").unwrap();
+            let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(),6,&mut error);
+            assert!(handle>0);assert!(error.is_null());
+            for(op,payload)in [("new",r#"{"width":1,"height":1}"#),("addShapeLayer",r#"{"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[7,8,9,255]}}"#)]{
+                let result=run(handle,op,payload,None,std::ptr::null());assert!(result.command.error_json.is_null());nf_v1_free_binary_result(result);
+            }
+            let result=run(handle,"renderFrame",r#"{"time_s":0}"#,None,std::ptr::null());
+            assert!(result.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(result.output.ptr,result.output.len),&[7,8,9,255]);nf_v1_free_binary_result(result);
+            let rejected=run(handle,"renderFrame",r#"{"time_s":0}"#,Some(&[1]),std::ptr::null());assert!(!rejected.command.error_json.is_null());nf_v1_free_binary_result(rejected);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
     fn photo_registered_factory_rejects_unsupported_binary_without_mutation() {
         unsafe {
             let mut error=std::ptr::null_mut();

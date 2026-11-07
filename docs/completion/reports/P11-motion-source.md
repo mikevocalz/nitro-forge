@@ -1,0 +1,19 @@
+# P11 Motion: registered bounded 2D source
+
+2026-11-07. Motion now appends engine/native/checkpoint identity 8 after Photo 7. Existing identities 0–7 and the NFD1 snapshot header remain unchanged. The JSON snapshot payload carries `kind:"motion",schema:1`. This checkpoint advances one backend slice; P11 remains incomplete.
+
+The engine persists flat rect/ellipse layers, rational frame rate, duration, transforms/opacity and globally identified hold/linear/Bezier keys. Cubic evaluation inverts absolute handle time before sampling value. An ephemeral Prism engine owns actual rasterization and compositing; Motion returns those real RGBA bytes through the original JSON/base64 or binary result contract. It does not maintain a second renderer or persistent frame cache.
+
+Every proposed state validates before mutation. Equal writes and net-equal batches preserve redo/events; actual changes make one journal entry/event. Sixteen Arc/COW history entries share unchanged state/layers/key arrays. Logical limits include a 16 MiB serialized state, one-megapixel output, 128 layers/curves and 100,000 total keys. Snapshot restore validates kind/schema, identities, bounds and budgets before replacing state/history. Snapshot opening uses the shared owning DocumentHandle.openSnapshot helper.
+
+Final source inspection verified Prism's public coordinate limit is 1e7, so Motion uses that same bound for shape geometry, translation, pivot and rotation. Scale magnitude matches Prism's 1e-6..1e4 contract; keys/handles preserve the base sign instead of accepting a curve the public renderer would reject. The focused compatibility test accepts/renders the boundary and rejects values above it without changing state. Pivot is set while the temporary Prism layer has an identity transform, before applying the desired transform, preserving Prism's actual pivot compensation semantics.
+
+## Executed checks
+
+- `cargo test -p motion-engine`: 9 passed after the final coordinate-bound correction. Covers scalar math, real translated and pivot-mirrored pixels, JSON/binary delivery, history/no-op/batch behavior, corrupt/foreign/oversized restore, cancellation, key/layer budgets and the sixteen-entry history limit. Malformed key regression uses catch_unwind for primitive/null/array/invalid-object inputs, alone and after a staged valid key, preserving snapshots/counters/redo.
+- `cargo test -p nf-sys motion_registered_factory`: 1 passed; registered FFI factory returns actual bounded RGBA and rejects unsolicited binary input.
+- Direct Vitest Motion/Photo registration files: 4 passed; real CLI frames/shared snapshot opening plus all nine checkpoint/native enum tags, preserving Photo and earlier identities.
+- Direct TypeScript checks for Motion and Ignition passed. Registered Motion/CLI/FFI cargo checks with tests passed. Nitro code generation passed and appended only Motion8 to the generated enum. Static diff checking passed.
+- The parent independently reported 39 focused Rust and 4 registration checks before the final coordinate-limit regression. Those are separate execution evidence, not additional unique tests to add to the counts above. The independent reviewer inspected source and the malformed-key correction; see [review](P11-motion-independent-source-review.md).
+
+No native target build, device acceptance, default product activation, consumer publication or full P19/P20 suite was performed. Read-only render tasks checkpoint between layers and before/after Prism flatten; they do not promise interruption inside the synchronous compositor. Remaining P11 scope includes nesting, spring evaluation, media, matte/effect processing, expressions, particles, 3D, node execution, native/UI adoption and encoded render queues with actual destination artifacts. This checkpoint does not mark that phase complete.

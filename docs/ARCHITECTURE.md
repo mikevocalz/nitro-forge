@@ -1,6 +1,6 @@
 # Nitro-Forge Architecture — Ignition Contracts
 
-Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill and Photo)
+Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill, Photo and Motion)
 implement against these contracts. Changes require touching every engine, so they are
 deliberately small.
 
@@ -140,3 +140,8 @@ The media cache owns derived bytes only. Capacity is 1..256 MiB, with at most 40
 
 
 The registered Photo engine adds catalog descriptors and version identities to the shared contract. Original bytes, decoder resources and durable asset retention remain host-owned; the catalog performs no I/O or RAW processing. Photo appends persisted/native kind tag 7 without changing established tags 0–6. Its explicit photo/schema-1 snapshot payload is inside unchanged NFD1 framing. Native binaries must include the new registered factory before opening this kind; source registration alone does not establish a target build or app rollout.
+
+
+The registered Motion engine appends native and NFC1/NCC1 tag 8 after Photo 7; tags 0–7 stay fixed. Its `kind:"motion",schema:1` JSON payload uses the unchanged NFD1 envelope header. Motion owns bounded flat 2D shape layers and scalar hold/linear/absolute-handle Bezier curves; frame evaluation materializes an ephemeral Prism engine and returns its actual RGBA composite through the original JSON/binary command result contract. It does not duplicate the renderer or own media/encoder resources. Geometry/translation/origin/rotation bounds match Prism's public 1e7 coordinate limit, with scale magnitude 1e-6..1e4 and same-sign scale curves.
+
+Motion validates the complete candidate before mutation and retains sixteen Arc/COW history entries under a 16 MiB serialized-state cap. Render tasks checkpoint between layers and before/after synchronous Prism flatten, without promising interruption inside that compositor. Snapshot opening uses the shared owning DocumentHandle.openSnapshot helper. Registration, focused host tests and generated enum checks do not establish a native target rebuild, app rollout, encoding queue or complete P11 acceptance.

@@ -1,12 +1,14 @@
 # P10/P11 engine prerequisites and first vertical slices
 
-2026-11-07. This is a source/dependency plan, not an implementation or acceptance result. No dependency was installed and no native or runtime test was run. The existing user review gate remains in force.
+2026-11-07. The plan below records the original missing responsibilities. Subsequent source checkpoints now register Photo (tag 7) and implement Motion (tag 8); required phase/platform acceptance remains open.
 
-The current [EngineKind](../../rust/ignition-core/src/engine.rs) and [factory](../../rust/nf-sys/src/lib.rs) support seven engines. Neither P10's photo/catalog model nor P11's composition model has a corresponding Forge engine/API. NYC-Tron's photo and motion controls already expose controlled host contracts; their settings, request fixtures and local math helpers do not supply these missing backends. The [P02–P11 map](P02-P11-IMPLEMENTATION-MAP.md) records the wider phase criteria.
+Photo's bounded catalog is committed in `40bfd4c`, with shared owning snapshot admission, stable originals/versions, ratings/labels and atomic history. See [registered catalog source](reports/P10-registered-photo-catalog-source.md). Genuine LibRaw decode and a Prism pixel/snapshot roundtrip passed in an isolated macOS prototype (`d902db3`); see [RAW proof and limits](reports/P10-libraw-isolated-decode-source.md). This does not supply a production native RAW provider, durable original store or develop pipeline.
+
+Motion's bounded 2D composition backend adds real Prism frame rendering, rational timing, scalar hold/linear/Bezier curves and atomic snapshots/history. See [independent source review](reports/P11-motion-independent-source-review.md). Native app integration, full compositing and encoded output remain open. Source registration does not make an older native factory support the new engine kind.
 
 ## Shared integration work
 
-A proposed `photo` or `motion` identifier must be added coherently rather than passed as an unknown string to the old factory. The names below are proposals; neither is currently a valid engine identifier.
+The `photo` and `motion` identifiers must remain coherent across the following boundaries. Their source registrations are additive; consumers need a rebuilt matching native factory before use.
 
 | Boundary | Existing files to extend or reuse |
 | --- | --- |
@@ -71,4 +73,4 @@ This slice deliberately does not enable unsupported particle, 3D, expression or 
 
 ## Entry gates and reporting
 
-Both slices need reviewed op/schema limits, cross-engine restore rejection, one gesture/one undo semantics and direct typed bindings before the corresponding controls become enabled. New dependencies need exact source/license/build admission first. Source builds/types remain separate from later runtime/platform evidence. No P10/P11 phase or component is marked complete by this plan, and no new artifact or backend is claimed to exist.
+Both slices need reviewed op/schema limits, cross-engine restore rejection, one gesture/one undo semantics and direct typed bindings before the corresponding controls become enabled. New dependencies need exact source/license/build admission first. Source builds/types remain separate from later runtime/platform evidence. No P10/P11 phase or component is marked complete by this plan. The linked source and prototype reports define which backends and artifacts now exist and their remaining limits.

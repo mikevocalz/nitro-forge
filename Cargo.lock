@@ -581,6 +581,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "motion-engine"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "prism-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "multiversion_no_op"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -593,6 +603,7 @@ dependencies = [
  "cadence-engine",
  "folio-engine",
  "ignition-core",
+ "motion-engine",
  "photo-engine",
  "pitch-engine",
  "prism-engine",
@@ -608,6 +619,7 @@ dependencies = [
  "cadence-engine",
  "folio-engine",
  "ignition-core",
+ "motion-engine",
  "photo-engine",
  "pitch-engine",
  "prism-engine",

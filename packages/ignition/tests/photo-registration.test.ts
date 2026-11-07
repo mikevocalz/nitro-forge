@@ -8,7 +8,7 @@ import {CliHost} from '../src/host-cli';
 
 it('preserves all seven persisted tags and appends photo as tag 7 in both formats',async()=>{
  const kinds:EngineKind[]=['prism','cadence','splice','folio','pitch','tally','quill','photo'];
- expect(ENGINE_KINDS).toEqual(kinds);
+ expect(ENGINE_KINDS.slice(0,8)).toEqual(kinds);
  const snapshot=new Uint8Array([78,70,68,49,0,0,0,0,0]);
  for(const [tag,kind] of kinds.entries()){
   let bytes:Uint8Array|undefined;

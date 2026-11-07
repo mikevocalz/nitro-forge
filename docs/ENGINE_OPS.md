@@ -483,3 +483,22 @@ Limits: 10,000 originals, 100,000 versions total, 1..100 versions per original, 
 | `removeVersion` | `{id}` | `{ok}` | must retain at least one version per original |
 
 Registered name `photo` appends native ordinal7 and NFC1/NCC1 tag7, preserving existing0..6. No binary input op is admitted; unsolicited binary sidecars reject. Native binaries require rebuilding for the new kind; source registration alone is not native acceptance.
+
+## motion-engine — `MotionEngine::new()` (bounded 2D slice)
+
+NFD1 header/format remains unchanged; JSON payload carries `kind:"motion",schema:1`. Motion appends native/checkpoint tag 8 after Photo7; prior tags are unchanged. Persistent composition owns width/height/duration/rational frame rate, monotonic safe-integer layer/key IDs and bottom-to-top rect/ellipse shape layers. Every layer owns visible/locked/name, Prism-style pivoted 2D transform, opacity and scalar curves for tx/ty/sx/sy/rotation/ox/oy/opacity. Curves use hold/linear/Bezier keys with absolute time/value handles; exact key times resolve that key, outside keyed intervals holds endpoints, empty curves use layer base values. Bezier time is inverted, not substituted as its parameter.
+
+| Op | Payload | Result | Notes |
+| --- | --- | --- | --- |
+| `new` | `{title?,width?,height?,duration_s?,frame_rate?}` | `{ok}` | Defaults640×360/10s/30fps, replaces document atomically. |
+| `describe` | `{}` | full state | Read only. |
+| `setComposition` | `{title?,width?,height?,duration_s?,frame_rate?}` | `{ok}` | Proposed duration must contain every retained key. |
+| `addShapeLayer` | `{name?,shape:{kind:"rect"|"ellipse",x,y,w,h,fill:[r,g,b,a]}}` | `{layer_id}` | Uses real Prism rendering. |
+| `updateLayer` | `{id,name?,visible?,locked?,shape?,transform?:{tx?,ty?,sx?,sy?,rotation?,ox?,oy?},opacity?}` | `{ok}` | Locked layers require a separate unlock before editing. |
+| `removeLayer` | `{id}` | `{ok}` | Removes owned curves; locked layer rejected. |
+| `setLayerOrder` | `{order:[id,...]}` | `{ok}` | Exact unique permutation, identities retained. |
+| `setPropertyKeys` | `{layer,property,keys:[{id?,time,value,interpolation,in_handle,out_handle}]}` | `{key_ids}` | Complete property-curve replacement; known IDs must belong to that curve, omitted IDs allocate; empty clears. Handles nullable `{time,value}`. |
+| `evaluate` | `{time_s}` | `{layers}` | Actual evaluated 2D state, read only; time within composition. |
+| `renderFrame` | `{time_s}` | `{width,height,pixels_b64?}` + binary output if requested | Ephemeral Prism scene composites actual RGBA; original command controls JSON/binary delivery. No encoder/export queue. |
+
+Whole proposed state validates before one journal/event on actual change; equal/empty writes and net-unchanged shared `__batch` preserve redo/events. Sixteen Arc/COW history entries, 16MiB serialized state cap; width/height1..4096 and <=1,048,576 output pixels, <=128 layers/curves, <=10,000 keys/curve and <=100,000 total. Duration finite >0..604800s, keys separated >=1e-6s; rational frame rate num1..240000/den1..1001 with quotient1..240. RGBA channels are bytes; geometry finite/positive extents bounded1e7, transform translation/origin/rotation ±1e7, scale magnitude1e-6..1e4 with keys/handles retaining base sign, opacity0..1. Handles must stay in their adjacent time segments/property range. IDs positive and below their next counter, counters <=9007199254740991. Names/title <=512 UTF-8 bytes. Restore validates full kind/schema/state before replacing document/history. Render tasks checkpoint between layers and before/after synchronous Prism flatten; no cancellation within the compositor is claimed. No binary-input operations, 3D, nesting, spring, matte/effect, expression, particle, media or encoded-queue implementation in this slice.
