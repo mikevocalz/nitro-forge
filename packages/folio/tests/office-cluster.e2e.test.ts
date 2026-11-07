@@ -40,7 +40,11 @@ describe("real Rust Folio engine behind the NYC-Tron PDF controls", () => {
 
       const id = await addFolioAnnotation(doc, "note", 2, [72, 700, 20, 20], "Where is the 60% from?");
       await addFolioAnnotation(doc, "highlight", 0, [72, 715, 150, 14], "");
-      await expect(addFolioAnnotation(doc, "ink", 0, [0, 0, 1, 1], "")).rejects.toThrow(RangeError);
+      const inkId = await addFolioAnnotation(doc, "ink", 0, [0, 0, 1, 1], "", {
+        paths: [[[72, 600], [90, 580], [110, 610]]], color: [0, 0, 0], width: 1.5,
+      });
+      const annots = (await doc.listAnnotations(0)).data.annots;
+      expect(annots.find(a => a.id === inkId)?.subtype).toBe("Ink");
       const threads = await readFolioThreads(doc);
       expect(threads.map(t => [t.page, t.subtype, t.body])).toEqual([[0, "Highlight", ""], [2, "Text", "Where is the 60% from?"]]);
       expect(threads[1]!.id).toBe(`2:${id}`);

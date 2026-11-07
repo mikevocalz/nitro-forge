@@ -18,6 +18,7 @@ function fake() {
     listCommentThreads: vi.fn((p: number, reviewAuthor?: string) => ok({ threads: (annots[p] ?? []).map(a => ({ ...a, replies: [], ...(reviewAuthor ? { resolved: false } : {}) })) })),
     listAnnotations: vi.fn((p: number) => ok({ annots: annots[p] ?? [] })),
     addAnnotation: vi.fn((...a: unknown[]) => { calls.push(["addAnnotation", ...a]); return ok({ annot_id: 12 }); }),
+    addInkAnnotation: vi.fn((...a: unknown[]) => { calls.push(["addInkAnnotation", ...a]); return ok({ annot_id: 13 }); }),
     removeAnnotation: vi.fn((page: number, id: number) => { calls.push(["removeAnnotation", page, id]); annots[page] = (annots[page] ?? []).filter(x => x.id !== id); return ok({ ok: true }); }),
     undo: vi.fn(() => ok({})), redo: vi.fn(() => ok({})),
   };
@@ -41,7 +42,7 @@ describe("K-04 / K-18 page text", () => {
 describe("K-06 / K-07 annotations", () => {
   it("saves only the tools Folio can store", async () => {
     const { doc, calls } = fake();
-    expect(FOLIO_ANNOTATION_TOOLS).toEqual(["select", "note", "highlight", "underline", "strike", "rectangle", "ellipse"]);
+    expect(FOLIO_ANNOTATION_TOOLS).toEqual(["select", "note", "highlight", "underline", "strike", "ink", "rectangle", "ellipse"]);
     expect(await addFolioAnnotation(doc, "note", 0, [10, 20, 30, 40], "Why?")).toBe(12);
     await addFolioAnnotation(doc, "highlight", 1, [0, 0, 1, 1], "");
     expect(calls).toEqual([["addAnnotation", 0, [10, 20, 30, 40], "Why?", "Text"], ["addAnnotation", 1, [0, 0, 1, 1], "", "Highlight"]]);
@@ -51,7 +52,15 @@ describe("K-06 / K-07 annotations", () => {
     await addFolioAnnotation(doc, "rectangle", 0, [1,2,3,4], "box");
     await addFolioAnnotation(doc, "ellipse", 0, [1,2,3,4], "oval");
     expect(calls.slice(-2)).toEqual([["addAnnotation",0,[1,2,3,4],"box","Square"],["addAnnotation",0,[1,2,3,4],"oval","Circle"]]);
-    await expect(addFolioAnnotation(doc, "ink", 0, [0, 0, 1, 1], "")).rejects.toThrow(/FOLIO_DEFERRED_OPS/);
+    // ink routes to addInkAnnotation with the drawn strokes, not addAnnotation
+    await expect(addFolioAnnotation(doc, "ink", 0, [0, 0, 1, 1], "")).rejects.toThrow(/stroke\.paths/);
+    await expect(addFolioAnnotation(doc, "ink", 0, [0, 0, 1, 1], "", { paths: [] })).rejects.toThrow(/stroke\.paths/);
+    expect(await addFolioAnnotation(doc, "ink", 0, [0, 0, 1, 1], "", {
+      paths: [[[10, 20], [30, 40], [50, 20]], [[100, 100], [110, 90]]],
+      color: [1, 0, 0], width: 2.5, opacity: 0.5,
+    })).toBe(13);
+    expect(calls.at(-1)).toEqual(["addInkAnnotation", 0, [[[10, 20], [30, 40], [50, 20]], [[100, 100], [110, 90]]], { color: [1, 0, 0], width: 2.5, opacity: 0.5 }]);
+    expect(calls.filter(c => c[0] === "addAnnotation")).toHaveLength(6);
   });
 
   it("lists annotations as one-comment threads and deletes through removeAnnotation", async () => {

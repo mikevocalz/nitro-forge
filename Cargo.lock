@@ -352,6 +352,7 @@ version = "0.1.0"
 dependencies = [
  "ignition-core",
  "lopdf",
+ "rand",
  "serde",
  "serde_json",
 ]
