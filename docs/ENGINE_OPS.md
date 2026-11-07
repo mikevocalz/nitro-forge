@@ -386,7 +386,7 @@ Square/Circle annotations use positive bounded caller rectangles and standard PD
 State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide], sections:[Section], next_section_id }`,
 `Section = { id, label, start_slide_id }` is a stable deck boundary. Older snapshots default to `sections:[]` and `next_section_id:1`.
 `Slide = { id, layout:"blank"|"title"|"titleBody", background:[r,g,b,a]|null,
-objects:[Obj], animations:[Anim] }`,
+objects:[Obj], animations:[Anim], notes?:string }`,
 `Obj = { id, kind:"text"|"rect"|"image", x,y,w,h, rotation_deg,
 text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 `Anim = { object_id, kind:"fadeIn"|"slideInLeft"|"zoomIn"|"pulse"|"spin"|"fadeOut"|"zoomOut", start_s, duration_s, trigger? }`.
@@ -404,6 +404,7 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `moveSlides` | `{order:number[]}` | `{ok}` | Complete unique slide-ID permutation; one undo entry. Identical order is a no-op. |
 | `removeSlides` | `{ids:number[]}` | `{ok}` | Unique existing slide IDs; must keep ≥1 slide; one undo entry. Empty selection is a no-op. |
 | `setBackground` | `{slide,color|null}` | `{ok}` | slide = id |
+| `setNotes` | `{slide,text}` | `{ok}` | slide = id; speaker notes are plain text ≤32768 UTF-8 bytes; empty string clears notes (absent ≡ cleared); equal/no-change patch is an eventless no-op that preserves redo; notes die with their slide (removeSlide/moveSlide/removeSlides follow slide identity) |
 | `addText` | `{slide,x,y,w,h,text,font_size?}` | `{object_id}` | |
 | `setText` | `{slide,id,text}` | `{ok}` | |
 | `setTextStyle` | `{slide,id,font_size?,bold?,italic?,color?}` | `{ok}` | Text objects only. Partial patch preserves omitted fields/content/geometry. Font size finite and >0; bold/italic strict booleans; color four integer RGBA channels 0..255. Explicit null invalid. Validated before mutation; one history entry/event only for a changed style. Empty/equal patch preserves redo and emits no event. |
@@ -415,9 +416,13 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `rotateObject` | `{slide,id,degrees}` | `{ok}` | |
 | `removeObject` | `{slide,id}` | `{ok}` | also drops its animations |
 | `addAnimation` | `{slide,object,kind,start_s,duration_s,trigger?}` | `{index}` | duration > 0 |
+| `addTriggeredAnimationV1` | same as `addAnimation` | `{index}` | explicit-trigger alias; old engines reject the unknown name rather than silently dropping `trigger` |
 | `updateAnimation` | `{slide,index,kind?,start_s?,duration_s?,trigger?}` | `{ok}` | Partial in-place patch retains target object and list position. Existing index required; admitted effect kinds, finite start/delay >=0 and finite duration >0, both ≤86400; explicit null invalid. Validate before mutation, one history entry/event only for actual change; empty/equal patch preserves redo and emits no event. Trigger updates are validated against the complete candidate timeline; list order is unchanged. |
+| `updateTriggeredAnimationV1` | same as `updateAnimation` | `{ok}` | explicit-trigger alias; old engines reject the unknown name |
 | `removeAnimation` | `{slide,index}` | `{ok}` | staged validation; reject if a first relative animation would lose its predecessor |
 | `slideAt` | `{slide,t_s,click_times?:number[]}` | `{objects:[{id,x,y,w,h,rotation,opacity}],schedule:[{index,start_s:number|null,end_s:number|null}]}` | read-only deterministic evaluation; missing click dependencies remain null/pending |
+| `slideAtWithClicksV1` | same as `slideAt` | same as `slideAt` | explicit click-history alias; old engines reject the unknown name rather than silently ignoring `click_times` |
+| `slideNotes` | `{slide}` | `{notes:string\|null}` | read-only speaker notes for the slide id; `null` when unset |
 | `deck` | `{}` | `{title,slide_count}` | read-only |
 
 Undo: prior slide/object/animation state.
@@ -434,7 +439,7 @@ Animation evaluation caps at4096 objects/animations per slide; references and ob
 
 The pinned alpha.4 SlideAnimationPane supports effect/add/remove but lacks timing/trigger edit callbacks. The adapter offers all seven real effects, retains nonabsolute sourceTrigger metadata and refuses to bind that old pane over triggered programs rather than mislabel relative delays as absolute starts. Typed engine APIs/readPitchSlideAt accept explicit click history. No fake preview timer, host UI activation or new Pitch renderer is provided. Actual CPU pixel integration is checked through the existing Prism renderer.
 
-Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing. Root `meta` is absent so legacy readers fail rather than silently discard fields. New readers accept legacy root payloads and strictly validate wrapper kind/schema/keys before replacement. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
+Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, slide speaker notes, nonabsolute triggers or new effects use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing. Root `meta` is absent so legacy readers fail rather than silently discard fields. New readers accept legacy root payloads and strictly validate wrapper kind/schema/keys before replacement. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
 
 ## quill-engine — `QuillEngine::new()`
 

@@ -18,6 +18,8 @@ export const OPS = {
   removeSlides: "removeSlides",
   setBackground: "setBackground",
   setSlideSize: "setSlideSize",
+  setNotes: "setNotes",
+  slideNotes: "slideNotes",
   addText: "addText",
   setText: "setText",
   setTextStyle: "setTextStyle",
@@ -133,6 +135,14 @@ export class PitchDocument {
   }
   setBackground(slide: number, color: Rgba | null) {
     return this.call(OPS.setBackground, { slide, color });
+  }
+  /** Speaker notes: plain text up to 32768 UTF-8 bytes; "" clears. */
+  setNotes(slide: number, text: string) {
+    return this.call<{ ok: boolean }>(OPS.setNotes, { slide, text });
+  }
+  /** Read-only; `notes` is null when the slide has no speaker notes. */
+  slideNotes(slide: number) {
+    return this.call<{ notes: string | null }>(OPS.slideNotes, { slide });
   }
   addText(slide: number, x: number, y: number, w: number, h: number, text: string, fontSize?: number) {
     return this.call<{ object_id: number }>(OPS.addText, {

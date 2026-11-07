@@ -29,6 +29,8 @@ use sections::Section;
 
 const JOURNAL_CAPACITY: usize = 64;
 const DEFAULT_FONT_SIZE: f64 = 18.0;
+/// Speaker notes are bounded plain text stored per slide; empty clears them.
+const MAX_NOTES_BYTES: usize = 32_768;
 const SLIDE_IN_OFFSET: f64 = 200.0;
 const ZOOM_START_SCALE: f64 = 0.5;
 
@@ -118,6 +120,9 @@ pub struct Slide {
     pub background: Option<[u8; 4]>,
     pub objects: Vec<Obj>,
     pub animations: Vec<Anim>,
+    /// Optional speaker notes; absent (None) for slides without notes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -165,6 +170,7 @@ impl PitchState {
                 background: None,
                 objects: Vec::new(),
                 animations: Vec::new(),
+                notes: None,
             }],
         }
     }
@@ -359,6 +365,7 @@ impl Engine for PitchEngine {
                     background: None,
                     objects: Vec::new(),
                     animations: Vec::new(),
+                    notes: None,
                 });
                 Ok(CommandResult::data(json!({ "slide_id": id })))
             }
@@ -437,6 +444,23 @@ impl Engine for PitchEngine {
                 };
                 self.journal.record(self.state.clone());
                 self.state.slides[slide].background = color;
+                Ok(CommandResult::data(json!({ "ok": true })))
+            }
+            "setNotes" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                let text = req_str(p, "text")?;
+                if text.len() > MAX_NOTES_BYTES {
+                    return Err(EngineError::validation(format!(
+                        "speaker notes exceed {MAX_NOTES_BYTES} UTF-8 bytes"
+                    )));
+                }
+                // Empty text clears the notes; absent and empty are equivalent.
+                let next = if text.is_empty() { None } else { Some(text.to_string()) };
+                if self.state.slides[slide].notes == next {
+                    return Ok(ro(json!({ "ok": true })));
+                }
+                self.journal.record(self.state.clone());
+                self.state.slides[slide].notes = next;
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
             "addText" => {
@@ -713,6 +737,12 @@ impl Engine for PitchEngine {
                 "title": self.state.meta.title,
                 "slide_count": self.state.slides.len(),
             }))),
+            "slideNotes" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                Ok(ro(json!({
+                    "notes": self.state.slides[slide].notes,
+                })))
+            }
             "describe" => Ok(ro(serde_json::to_value(&self.state)?)),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
@@ -721,6 +751,7 @@ impl Engine for PitchEngine {
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
+            || self.state.slides.iter().any(|slide| slide.notes.is_some())
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
                 !anim.trigger.is_absolute() || !matches!(anim.kind, AnimKind::FadeIn | AnimKind::SlideInLeft | AnimKind::ZoomIn));
         let payload = if extended {
@@ -749,6 +780,9 @@ impl Engine for PitchEngine {
         for slide in &state.slides {
             if slide.id == 0 || !ids.insert(slide.id) {
                 return Err(EngineError::serialization("invalid or duplicate identity"));
+            }
+            if slide.notes.as_ref().is_some_and(|n| n.len() > MAX_NOTES_BYTES) {
+                return Err(EngineError::serialization("speaker notes exceed bound"));
             }
             for object in &slide.objects {
                 if object.id == 0 || !ids.insert(object.id) {
@@ -1433,5 +1467,153 @@ mod tests {
         apply_err(&mut e, "moveSlide", json!({ "from": 0, "to": 5 }));
         assert_eq!(apply(&mut e, "describe", json!({})), before);
         assert_eq!(e.journal.undo_len(), undo_before);
+    }
+
+    #[test]
+    fn speaker_notes_set_read_clear_undo_redo() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        // absent notes read as null
+        assert_eq!(
+            apply(&mut e, "slideNotes", json!({ "slide": s1 }))["notes"],
+            json!(null)
+        );
+        let before = e.snapshot().unwrap();
+        // no notes anywhere → legacy unwrapped payload
+        let (_, legacy_payload) = decode_envelope(&before).unwrap();
+        let legacy: Value = serde_json::from_slice(legacy_payload).unwrap();
+        assert!(legacy.get("kind").is_none());
+
+        let result = e
+            .apply(cmd("setNotes", json!({ "slide": s1, "text": "Open with the Q3 numbers" })))
+            .unwrap();
+        assert_eq!(result.events.len(), 1);
+        assert_eq!(
+            apply(&mut e, "slideNotes", json!({ "slide": s1 }))["notes"],
+            json!("Open with the Q3 numbers")
+        );
+        // describe exposes notes on the slide
+        assert_eq!(
+            apply(&mut e, "describe", json!({}))["slides"][0]["notes"],
+            json!("Open with the Q3 numbers")
+        );
+        // notes presence triggers the schema:2 wrapper
+        let snap = e.snapshot().unwrap();
+        let (_, wrapped_payload) = decode_envelope(&snap).unwrap();
+        let wrapped: Value = serde_json::from_slice(wrapped_payload).unwrap();
+        assert_eq!(wrapped["kind"], "pitch");
+        assert_eq!(wrapped["schema"], 2);
+        assert!(wrapped["document"]["slides"][0]["notes"].is_string());
+        // a legacy reader (PitchState at payload root) rejects the wrapper
+        assert!(serde_json::from_value::<PitchState>(wrapped.clone()).is_err());
+        let mut reopened = PitchEngine::new();
+        reopened.restore(&snap).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), snap);
+        assert_eq!(
+            apply(&mut reopened, "slideNotes", json!({ "slide": s1 }))["notes"],
+            json!("Open with the Q3 numbers")
+        );
+
+        // equal patch is an eventless no-op that preserves redo
+        assert!(e
+            .apply(cmd("setNotes", json!({ "slide": s1, "text": "Open with the Q3 numbers" })))
+            .unwrap()
+            .events
+            .is_empty());
+        // clearing via empty text
+        apply(&mut e, "setNotes", json!({ "slide": s1, "text": "" }));
+        assert_eq!(
+            apply(&mut e, "slideNotes", json!({ "slide": s1 }))["notes"],
+            json!(null)
+        );
+        // clearing again is a no-op; snapshot drops back to the legacy shape
+        assert!(e
+            .apply(cmd("setNotes", json!({ "slide": s1, "text": "" })))
+            .unwrap()
+            .events
+            .is_empty());
+        assert_eq!(e.snapshot().unwrap(), before);
+
+        // undo restores notes, redo clears them again
+        apply(&mut e, "setNotes", json!({ "slide": s1, "text": "remember the demo" }));
+        let with_notes = e.snapshot().unwrap();
+        apply(&mut e, "setNotes", json!({ "slide": s1, "text": "" }));
+        let cleared = e.snapshot().unwrap();
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), with_notes);
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), cleared);
+
+        // validation: missing/non-string text, unknown slide, oversize notes
+        for payload in [
+            json!({ "slide": s1 }),
+            json!({ "slide": s1, "text": null }),
+            json!({ "slide": s1, "text": 42 }),
+            json!({ "slide": 99999, "text": "x" }),
+            json!({ "slide": s1, "text": "x".repeat(MAX_NOTES_BYTES + 1) }),
+        ] {
+            assert!(e.apply(cmd("setNotes", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), cleared);
+        }
+        // boundary: exactly MAX_NOTES_BYTES is admitted
+        apply(
+            &mut e,
+            "setNotes",
+            json!({ "slide": s1, "text": "x".repeat(MAX_NOTES_BYTES) }),
+        );
+        assert_eq!(
+            apply(&mut e, "slideNotes", json!({ "slide": s1 }))["notes"]
+                .as_str()
+                .unwrap()
+                .len(),
+            MAX_NOTES_BYTES
+        );
+    }
+
+    #[test]
+    fn speaker_notes_die_with_their_slide() {
+        let mut e = PitchEngine::new();
+        let s1 = slide_id(&mut e, 0);
+        let s2 = apply(&mut e, "addSlide", json!({}))["slide_id"]
+            .as_u64()
+            .unwrap();
+        apply(&mut e, "setNotes", json!({ "slide": s2, "text": "bye" }));
+        // moveSlide carries notes with the slide identity
+        apply(&mut e, "moveSlide", json!({ "from": 1, "to": 0 }));
+        assert_eq!(
+            apply(&mut e, "slideNotes", json!({ "slide": s2 }))["notes"],
+            json!("bye")
+        );
+        // removeSlide drops the notes with the slide
+        apply(&mut e, "removeSlide", json!({ "id": s2 }));
+        assert_eq!(
+            apply(&mut e, "describe", json!({}))["slides"].as_array().unwrap().len(),
+            1
+        );
+        let err = apply_err(&mut e, "slideNotes", json!({ "slide": s2 }));
+        assert_eq!(err.code, ignition_core::ErrorCode::NotFound);
+        // undo restores slide and its notes
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "slideNotes", json!({ "slide": s2 }))["notes"],
+            json!("bye")
+        );
+        // bulk removal also drops notes
+        let s3 = apply(&mut e, "addSlide", json!({}))["slide_id"]
+            .as_u64()
+            .unwrap();
+        apply(&mut e, "setNotes", json!({ "slide": s3, "text": "bulk" }));
+        apply(&mut e, "removeSlides", json!({ "ids": [s3] }));
+        assert!(apply_err(&mut e, "slideNotes", json!({ "slide": s3 })).code
+            == ignition_core::ErrorCode::NotFound);
+        // restore rejects oversize persisted notes without touching state
+        let mut state = serde_json::to_value(&e.state).unwrap();
+        state["slides"][0]["notes"] = json!("x".repeat(MAX_NOTES_BYTES + 1));
+        let before = e.snapshot().unwrap();
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&state).unwrap()))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+        let _ = s1;
     }
 }

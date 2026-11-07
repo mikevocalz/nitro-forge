@@ -65,4 +65,28 @@ describe("pitch engine e2e (real Rust via nf-cli)", () => {
     expect(at.data.objects.some((x) => x.id === o)).toBe(true);
     await doc.close();
   });
+
+  it("speaker notes set/read/clear and persist through snapshots", async () => {
+    const doc = await PitchDocument.open(host, "Notes");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    expect((await doc.slideNotes(slide)).data.notes).toBeNull();
+    await doc.setNotes(slide, "remember the demo");
+    expect((await doc.slideNotes(slide)).data.notes).toBe("remember the demo");
+    const described = await doc.describe<any>();
+    expect(described.data.slides[0].notes).toBe("remember the demo");
+
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    expect((await re.slideNotes(slide)).data.notes).toBe("remember the demo");
+
+    await re.setNotes(slide, "");
+    expect((await re.slideNotes(slide)).data.notes).toBeNull();
+    await re.undo();
+    expect((await re.slideNotes(slide)).data.notes).toBe("remember the demo");
+    await expect(
+      re.setNotes(slide, "x".repeat(32769)),
+    ).rejects.toThrow();
+    await re.close();
+    await doc.close();
+  });
 });
