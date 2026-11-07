@@ -114,8 +114,11 @@ export function TurretLab() {
         <Text accessibilityRole="header" style={{ color: m.text, fontSize: scale.type.title, fontWeight: '600', letterSpacing: -0.3 }}>{direction.name}</Text>
         <Text style={{ color: m.muted, fontSize: scale.type.label, maxWidth: 520 }}>{direction.concept}</Text>
       </View>
-      <SegmentedControl aria-label="Direction" className="border border-transparent" segmentClassName="border border-transparent" value={s.direction} onChange={setDirection}
-        options={FORGE_DIRECTION_IDS.map(id => ({ value: id, label: directionShort[id] }))} />
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,alignItems:'center'}}>
+        <SegmentedControl aria-label="Direction" className="border border-transparent" segmentClassName="border border-transparent" value={s.direction} onChange={setDirection}
+          options={FORGE_DIRECTION_IDS.map(id => ({ value: id, label: directionShort[id] }))} />
+        <Button title="Real Prism task" variant="ghost" onPress={()=>{window.location.hash='#/lab/prism?direction='+s.direction+'&density=standard&theme='+s.scheme;}}/>
+      </View>
     </View>
     <View testID="lab-stage" style={{ backgroundColor: canvas.mat, borderRadius: scale.radius.panel, padding: phone ? 16 : 32, gap: phone ? 0 : 16, minHeight: phone ? undefined : 640, flex: phone ? undefined : 1 }}>
       {trigger}

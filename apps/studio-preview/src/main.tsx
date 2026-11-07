@@ -7,19 +7,21 @@ import { bytesToBase64, base64ToBytes, type DocumentHandle } from '@nitro-forge/
 import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
 import { getEditorConfig } from '../../example/src/editors';
 import { useEditorDoc } from './useDocument';
+import { WORKSPACE_DENSITIES, isWorkspaceDensity, workspaceThemes, type WorkspaceDensity } from '@nitro-forge/studio-workspace/theme';
+import { FORGE_DIRECTION_IDS, isForgeDirection, nycTronTokens, type ForgeDirectionId } from '@nitro-forge/studio-workspace/directions';
 import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
 import { AppLauncher } from './app-launcher';
 import { Page, Main, Nav, Link, Text as SemanticText } from '@nyc-tron/ui/components/html';
 import { FilePicker } from '@nyc-tron/ui/components/files/FilePicker';
-import { Text, View, Menu, Button, Banner, DropZone, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
+import { Text, View, Menu, Button, Banner, DropZone, TokenScope, SegmentedControl, StudioUIProvider } from '@nitro-forge/studio-workspace/ui';
 import { studioUI } from './studio-ui';
-import { TurretLab, isTurretLabRoute } from './turret-lab';
+import { TurretLab } from './turret-lab';
 import { ComposerLab, isComposerLabRoute, COMPOSER_LAB_HASH } from './composer-lab';
 import { ComposerGlyph } from '@nitro-forge/studio-workspace/composer';
 import { prismPersonaStore } from './persona-storage';
 import './style.css';
 
-function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme: 'dark' | 'light'; headerTrailing: ReactNode }) {
+function StudioEditor({ studio, theme, headerTrailing, density='standard', direction='workbench', onDensityChange }: { studio: Studio; theme: 'dark' | 'light'; headerTrailing: ReactNode; density?:WorkspaceDensity; direction?:ForgeDirectionId; onDensityChange?:(density:WorkspaceDensity)=>void }) {
   const textEditor = useRef<QuillTextEditorHandle>(null);
   const config = getEditorConfig(studio);
   const editor = useEditorDoc(config.open);
@@ -87,33 +89,84 @@ function StudioEditor({ studio, theme, headerTrailing }: { studio: Studio; theme
   </Page>;
   return <>
     <ForgeWorkspace headerLeading={<Link className="back-link" href="#/"><SemanticText className="back-chevron" aria-hidden><ComposerGlyph name="chevron-left" size={14} color="currentColor" /></SemanticText>All apps</Link>} headerTrailing={headerTrailing} leadingActions={leadingActions} studioId={studio} title={config.title} documentTitle={documentTitle}
-      theme={theme} loadPreset={loadPreset} persistPreset={persistPreset}
+      theme={theme} density={density} {...(onDensityChange?{onDensityChange}:{})} loadPreset={loadPreset} persistPreset={persistPreset}
       state={editor.state} rows={config.rows(editor.state)}
       actions={config.actions.map(action => ({ title: action.title, run: () => run(() => action.run(editor)) }))}
       onUndo={() => run(editor.undo)} onRedo={() => run(editor.redo)}
       onSave={() => run(save)} onRefresh={() => run(editor.reload)}
       busy={busy || !editor.doc} error={error ?? editor.error}>
-      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc}
+      {studio === 'quill' ? <QuillTextEditor ref={textEditor} state={editor.state} documentTitle={documentTitle} theme={theme} apply={editor.apply} reload={editor.reload} /> : studio === 'prism' ? <PrismEditor state={editor.state} theme={theme} density={density} direction={direction} apply={editor.apply} reload={editor.reload} busy={busy || !editor.doc}
         personas={prismPersonaStore()} onComposePersona={() => { window.location.hash = COMPOSER_LAB_HASH; }} /> : undefined}
     </ForgeWorkspace>
     {notice && <Banner tone="info" title={notice} className="rounded-[4px]" />}
   </>;
 }
 
+const isPrismComparisonRoute = () => window.location.hash.startsWith('#/lab/prism');
+function readComparison() {
+  const query = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+  const direction = query.get('direction'), density = query.get('density');
+  return {
+    direction: isForgeDirection(direction) ? direction : 'workbench' as ForgeDirectionId,
+    density: isWorkspaceDensity(density) ? density : 'standard' as WorkspaceDensity,
+    theme: query.get('theme') === 'light' ? 'light' as const : 'dark' as const,
+  };
+}
+function DensityMenu({ density, theme, onChange, label = 'Workspace density' }: {
+  density: WorkspaceDensity; theme: 'dark' | 'light'; onChange: (value: WorkspaceDensity) => void; label?: string;
+}) {
+  return <Menu title="Density" triggerLabel={label}
+    actions={WORKSPACE_DENSITIES.map(id => ({ id, title: id[0]!.toUpperCase() + id.slice(1) + (density === id ? ' (current)' : '') }))}
+    onAction={value => { if (isWorkspaceDensity(value)) onChange(value); }}>
+    <View style={{ minHeight: 44, paddingHorizontal: 8, justifyContent: 'center' }}>
+      <Text style={{ color: workspaceThemes[theme].muted, fontSize: 12 }}>{density}</Text>
+    </View>
+  </Menu>;
+}
+function PrismComparison() {
+  const store = useMemo(() => createStore(() => readComparison()), []);
+  const state = useStore(store, s => s);
+  useEffect(() => {
+    const sync = () => store.setState(readComparison());
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, [store]);
+  const set = (key: 'direction' | 'density' | 'theme', value: string) => {
+    const query = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+    query.set(key, value);
+    window.location.hash = '#/lab/prism?' + query.toString();
+  };
+  const controls = <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 12, paddingVertical: 4 }}>
+    <SegmentedControl aria-label="Prism material direction" value={state.direction}
+      options={FORGE_DIRECTION_IDS.map(value => ({ value, label: value === 'workbench' ? 'Workbench' : value === 'optics' ? 'Optics' : 'Atelier' }))}
+      onChange={value => { if (isForgeDirection(value)) set('direction', value); }} />
+    <DensityMenu density={state.density} theme={state.theme} label="Prism density" onChange={value => set('density', value)} />
+    <Button title={state.theme === 'dark' ? 'Light' : 'Dark'} aria-label="Change Prism comparison theme" size="sm" variant="ghost"
+      onPress={() => set('theme', state.theme === 'dark' ? 'light' : 'dark')} />
+  </View>;
+  return <TokenScope variables={nycTronTokens(state.theme)}>
+    <Page className="workspace-container" style={{ flex: 1, minHeight: 0, width: '100%' }}>
+      {controls}
+      <StudioEditor studio="prism" theme={state.theme} density={state.density} direction={state.direction} headerTrailing={null} onDensityChange={value=>set('density',value)} />
+    </Page>
+  </TokenScope>;
+}
 function currentApp(): Studio | null {
   const id = window.location.hash.replace(/^#\/apps\//, '');
   return STUDIOS.find(studio => studio === id) ?? null;
 }
 function App() {
-  const store = useMemo(() => createStore(() => ({ app: currentApp(), opened: currentApp() ? [currentApp()!] : [] as Studio[], theme: 'dark' as 'dark' | 'light', hostWidth: 'desktop' as 'desktop' | 'tablet' | 'split' | 'phone' })), []);
+  const store = useMemo(() => createStore(() => ({ route: window.location.hash, app: currentApp(), opened: currentApp() ? [currentApp()!] : [] as Studio[], theme: 'dark' as 'dark' | 'light', density: 'standard' as WorkspaceDensity, hostWidth: 'desktop' as 'desktop' | 'tablet' | 'split' | 'phone' })), []);
   const app = useStore(store, s => s.app);
+  const route = useStore(store, s => s.route);
   const opened = useStore(store, s => s.opened);
   const theme = useStore(store, s => s.theme);
   const hostWidth = useStore(store, s => s.hostWidth);
+  const density = useStore(store, s => s.density);
   useEffect(() => {
     const navigate = () => {
       const next = currentApp();
-      store.setState(current => ({ app: next, opened: next && !current.opened.includes(next) ? [...current.opened, next] : current.opened }));
+      store.setState(current => ({ route: window.location.hash, app: next, opened: next && !current.opened.includes(next) ? [...current.opened, next] : current.opened }));
     };
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
@@ -128,6 +181,8 @@ function App() {
       <View style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: theme === 'dark' ? '#ADB3C4' : '#687287', fontSize: 11 }}>Preview</Text></View>
     </Menu>{themeToggle}
   </Page>;
+  if (route.startsWith('#/lab/turret')) return <Main dataSet={{theme}}><TurretLab/></Main>;
+  if (isPrismComparisonRoute()) return <Main dataSet={{theme:readComparison().theme}}><PrismComparison/></Main>;
   if (isComposerLabRoute()) return <Main dataSet={{ theme }}><ComposerLab theme={theme} /></Main>;
   return <Main dataSet={{ theme }}>
     {!app && <Nav className="launcher-nav" aria-label="App navigation">
@@ -136,10 +191,10 @@ function App() {
     </Nav>}
     {opened.map(id => <Page key={id} className="workspace-container" data-host-width={hostWidth} hidden={app !== id}
       style={{ display: app === id ? 'flex' : 'none', width: hostWidth === 'desktop' ? '100%' : hostWidth === 'tablet' ? 768 : hostWidth === 'split' ? 724 : 390 }}>
-      <StudioEditor studio={id} theme={theme} headerTrailing={editorControls} />
+      <StudioEditor studio={id} theme={theme} density={density} onDensityChange={value=>store.setState({density:value})} headerTrailing={editorControls} />
     </Page>)}
     {!app && <AppLauncher opened={opened} theme={theme} />}
   </Main>;
 }
 
-createRoot(document.getElementById('root')!).render(<StudioUIProvider components={studioUI}>{isTurretLabRoute() ? <TurretLab /> : <App />}</StudioUIProvider>);
+createRoot(document.getElementById('root')!).render(<StudioUIProvider components={studioUI}><App /></StudioUIProvider>);

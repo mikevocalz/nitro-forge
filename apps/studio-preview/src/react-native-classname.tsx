@@ -33,3 +33,5 @@ export const ScrollView = withClassName(RNW.ScrollView as ComponentType<Styled>)
 // Named here because `export *` from RNW's CommonJS entry is not visible to
 // ESM importers in Vite dev. NYC-Tron draws no Image, so it needs no binding.
 export const Image = RNW.Image;
+export const Platform = RNW.Platform;
+export const PanResponder = RNW.PanResponder;
