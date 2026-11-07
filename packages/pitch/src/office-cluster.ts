@@ -19,11 +19,9 @@ import type { AnimKind, PitchDocument } from "./index";
  * Each is a DEFER: the matching NYC-Tron prop is left out. Adding the op to
  * `packages/pitch/rust` and `OPS` is what lifts the deferral.
  */
-/** Text restyling and animation updates are engine operations; released alpha.4
- * SlideCanvas/SlideAnimationPane expose no corresponding edit callbacks yet. */
+/** Text restyling, animation updates and boundary sections are engine operations;
+ * pinned alpha.4 controls expose no corresponding edit/section callbacks yet. */
 export const PITCH_DEFERRED_OPS = {
-  /** J-01 sections in the filmstrip: Pitch slides carry no section. */
-  setSlideSection: "J-01",
   /** J-09 triggers (on click, with previous, after previous): Pitch animations have absolute start times only. */
   setAnimationTrigger: "J-09",
   /** J-09 emphasis and exit effects: `addAnimation` accepts fadeIn, slideInLeft and zoomIn only. */
@@ -83,6 +81,8 @@ export interface PitchDeck {
   readonly title: string;
   readonly size: { readonly width: number; readonly height: number };
   readonly slides: readonly PitchSlideSummary[];
+  /** Authoritative boundary metadata; pinned alpha.4 controls expose no section callbacks/props. */
+  readonly sections: readonly { id: string; label: string; startSlideId: string }[];
   /** Animations per slide id. */
   readonly animations: Readonly<Record<string, readonly PitchSlideAnimation[]>>;
 }
@@ -97,10 +97,17 @@ interface RawObj {
   fill?: number[]; src?: string;
 }
 interface RawSlide { id: number; background: number[] | null; objects: RawObj[]; animations: { object_id: number; kind: string; start_s: number; duration_s: number }[] }
-interface RawState { size?: { width: number; height: number }; meta: { title: string }; slides: RawSlide[] }
+interface RawState { sections?: {id:number;label:string;start_slide_id:number}[]; size?: { width: number; height: number }; meta: { title: string }; slides: RawSlide[] }
 
 const rgba = (c: unknown): Rgba | undefined =>
   Array.isArray(c) && c.length === 4 && c.every(n => Number.isInteger(n) && n >= 0 && n <= 255) ? [c[0], c[1], c[2], c[3]] : undefined;
+
+/** UTF-8 budget without requiring a platform TextEncoder global. */
+function utf8Length(value: string): number {
+  let bytes = 0;
+  for (const character of value) { const point = character.codePointAt(0)!; bytes += point <= 0x7f ? 1 : point <= 0x7ff ? 2 : point <= 0xffff ? 3 : 4; }
+  return bytes;
+}
 
 function requireData<T>(response: { data?: T }, op: string): T {
   if (response.data === undefined || response.data === null) throw new Error(`Pitch ${op} returned no data`);
@@ -143,7 +150,11 @@ export async function readPitchDeck(document: Pick<PitchDocument, "describe">): 
     const background = rgba(s.background);
     return { id: String(s.id), objects: s.objects.map(toObject), ...(background ? { background } : {}) };
   });
-  return { title: state.meta.title, size, slides, animations };
+  const rawSections = state.sections ?? [];
+  if (!Array.isArray(rawSections) || rawSections.length > 1024 || rawSections.some(s => !s || typeof s !== 'object' || !Number.isSafeInteger(s.id) || s.id <= 0 || !Number.isSafeInteger(s.start_slide_id) || typeof s.label !== 'string' || !s.label.trim() || utf8Length(s.label) > 1024 || !slides.some(slide => slide.id === String(s.start_slide_id)))) throw new Error('Pitch returned invalid section metadata');
+  if (new Set(rawSections.map(s => s.id)).size !== rawSections.length || new Set(rawSections.map(s => s.start_slide_id)).size !== rawSections.length) throw new Error('Pitch returned duplicate section boundaries');
+  const sections = rawSections.map(s => ({ id: String(s.id), label: s.label, startSlideId: String(s.start_slide_id) }));
+  return { title: state.meta.title, size, slides, animations, sections };
 }
 
 /** Single from/to moves (valid indexes at each step) that turn `before` into `after`. */

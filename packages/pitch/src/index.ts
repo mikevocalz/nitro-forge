@@ -9,6 +9,9 @@ export const OPS = {
   newDoc: "new",
   describe: "describe",
   addSlide: "addSlide",
+  addSection: "addSection",
+  updateSection: "updateSection",
+  removeSection: "removeSection",
   removeSlide: "removeSlide",
   moveSlide: "moveSlide",
   moveSlides: "moveSlides",
@@ -40,6 +43,8 @@ export interface PitchTextStyle {
   italic?: boolean;
   color?: Rgba;
 }
+/** Stable boundary; follows start_slide_id on reorder. Removing that slide removes this boundary. */
+export interface PitchSection { id: number; label: string; start_slide_id: number }
 export type Layout = "blank" | "title" | "titleBody";
 export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn";
 
@@ -87,6 +92,14 @@ export class PitchDocument {
   addSlide(layout: Layout = "blank") {
     return this.call<{ slide_id: number }>(OPS.addSlide, { layout });
   }
+  addSection(label: string, startSlide: number) {
+    return this.call<{ section_id: number }>(OPS.addSection, { label, start_slide: startSlide });
+  }
+  updateSection(id: number, patch: { label?: string; start_slide?: number }) {
+    return this.call<{ ok: boolean }>(OPS.updateSection, { ...patch, id });
+  }
+  /** Removes only the boundary, retaining every slide. */
+  removeSection(id: number) { return this.call<{ ok: boolean }>(OPS.removeSection, { id }); }
   removeSlide(id: number) {
     return this.call(OPS.removeSlide, { id });
   }

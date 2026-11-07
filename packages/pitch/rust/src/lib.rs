@@ -28,6 +28,9 @@ use ignition_core::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+mod sections;
+use sections::Section;
+
 const JOURNAL_CAPACITY: usize = 64;
 const DEFAULT_FONT_SIZE: f64 = 18.0;
 const SLIDE_IN_OFFSET: f64 = 200.0;
@@ -134,11 +137,17 @@ struct PitchState {
     meta: Meta,
     next_id: u64,
     slides: Vec<Slide>,
+    #[serde(default)]
+    sections: Vec<Section>,
+    #[serde(default="sections::default_next_id")]
+    next_section_id: u64,
 }
 
 impl PitchState {
     fn fresh(title: &str) -> Self {
         Self {
+            sections: Vec::new(),
+            next_section_id: 1,
             size: SlideSize::default(),
             meta: Meta {
                 title: title.to_string(),
@@ -338,6 +347,7 @@ impl Engine for PitchEngine {
                 self.state = PitchState::fresh(&title);
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
+            "addSection"|"updateSection"|"removeSection" => sections::apply(self,&cmd),
             "setSlideSize" => {
                 let size: SlideSize = serde_json::from_value(p.clone())?;
                 if !size.valid() { return Err(EngineError::validation("slide dimensions must be finite, positive and at most 100000")); }
@@ -377,6 +387,7 @@ impl Engine for PitchEngine {
                 }
                 self.journal.record(self.state.clone());
                 self.state.slides.remove(idx);
+                self.state.sections.retain(|section|section.start_slide_id!=id);
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
             "moveSlide" => {
@@ -431,6 +442,7 @@ impl Engine for PitchEngine {
                         .collect();
                 } else {
                     self.state.slides.retain(|slide| !seen.contains(&slide.id));
+                    self.state.sections.retain(|section|!seen.contains(&section.start_slide_id));
                 }
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
@@ -740,6 +752,7 @@ impl Engine for PitchEngine {
         if !state.size.valid() {
             return Err(EngineError::serialization("invalid slide size"));
         }
+        sections::validate(&state)?;
         // Commit only after the payload fully decoded.
         self.state = state;
         // A replacement document cannot reuse the previous document history.

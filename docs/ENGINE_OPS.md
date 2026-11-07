@@ -366,7 +366,8 @@ Annotation creation/editing encodes ASCII as PDFDocEncoding and non-ASCII as UTF
 
 ## pitch-engine — `PitchEngine::new()`
 
-State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide] }`,
+State `{ meta:{title}, size:{width,height}, next_id, slides:[Slide], sections:[Section], next_section_id }`,
+`Section = { id, label, start_slide_id }` is a stable deck boundary. Older snapshots default to `sections:[]` and `next_section_id:1`.
 `Slide = { id, layout:"blank"|"title"|"titleBody", background:[r,g,b,a]|null,
 objects:[Obj], animations:[Anim] }`,
 `Obj = { id, kind:"text"|"rect"|"image", x,y,w,h, rotation_deg,
@@ -378,6 +379,9 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 | `new` | `{title?}` | `{ok}` | one blank slide |
 | `setSlideSize` | `{width,height}` | `{ok}` | finite positive dimensions ≤100000; deck coordinates only, no object scaling or app window changes; one undo entry; identical size is eventless no-op |
 | `addSlide` | `{layout?}` | `{slide_id}` | |
+| `addSection` | `{label,start_slide}` | `{section_id}` | Creates a stable boundary at a unique existing slide. |
+| `updateSection` | `{id,label?,start_slide?}` | `{ok}` | Rename/reassign boundary without changing its ID; equal/empty patch is eventless and preserves redo. |
+| `removeSection` | `{id}` | `{ok}` | Removes only the boundary; retains all slides. |
 | `removeSlide` | `{id}` | `{ok}` | must keep ≥1 slide |
 | `moveSlide` | `{from,to}` | `{ok}` | |
 | `moveSlides` | `{order:number[]}` | `{ok}` | Complete unique slide-ID permutation; one undo entry. Identical order is a no-op. |
@@ -402,6 +406,8 @@ text?{content,font_size,color,bold,italic}, fill?[u8;4], src?:string }`,
 Undo: prior slide/object/animation state.
 
 Legacy snapshots without size default to 960×540; invalid sizes reject restore before replacing state. Canvas adapters read persisted size.
+
+Section count is at most 1024; labels are nonblank and at most 1024 UTF-8 bytes. IDs are positive, distinct and below `next_section_id`, with that counter within 1..9007199254740991. Every boundary starts at a distinct existing slide. Add/update validates the full candidate before one journal entry/event; failures consume no identities or redo history. Reordering carries boundaries with their start-slide IDs. Single/bulk slide deletion removes boundaries whose start slides are removed in the same undo step; no silent reassignment. Restore validates section identities/counter/labels/references before replacing state/history. Pinned alpha.4 slide controls have no section props/mutation callbacks; typed operations and read metadata do not imply default UI activation.
 
 ## quill-engine — `QuillEngine::new()`
 

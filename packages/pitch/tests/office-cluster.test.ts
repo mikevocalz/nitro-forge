@@ -16,11 +16,11 @@ const state = {
     { id: 6, layout: "blank", background: null, animations: [], objects: [] },
   ],
 };
-function fake() {
+function fake(snapshot: unknown = state) {
   const calls: unknown[][] = [];
   const rec = (name: string) => vi.fn((...args: unknown[]) => { calls.push([name, ...args]); return ok({ ok: true }); });
   const doc = {
-    describe: vi.fn(() => ok(state)), addSlide: rec("addSlide"), removeSlide: rec("removeSlide"), moveSlide: rec("moveSlide"), moveSlides: rec("moveSlides"), removeSlides: rec("removeSlides"),
+    describe: vi.fn(() => ok(snapshot)), addSlide: rec("addSlide"), removeSlide: rec("removeSlide"), moveSlide: rec("moveSlide"), moveSlides: rec("moveSlides"), removeSlides: rec("removeSlides"),
     moveObject: rec("moveObject"), resizeObject: rec("resizeObject"), rotateObject: rec("rotateObject"), setText: rec("setText"),
     removeObject: rec("removeObject"), addAnimation: rec("addAnimation"), removeAnimation: rec("removeAnimation"), slideAt: rec("slideAt"),
   };
@@ -120,4 +120,17 @@ it("feeds persisted deck geometry to the canonical canvas, with legacy fallback"
   expect((await readPitchDeck(persisted as never)).size).toEqual({ width: 720, height: 1280 });
   const invalid = { describe: vi.fn(() => ok({ ...state, size: { width: 0, height: 1280 } })) };
   await expect(readPitchDeck(invalid as never)).rejects.toThrow("invalid slide dimensions");
+});
+
+
+describe('Pitch authoritative section metadata without pinned UI activation', () => {
+  it('reads legacy defaults and stable boundary identities', async () => {
+    expect((await readPitchDeck(fake().doc)).sections).toEqual([]);
+    expect((await readPitchDeck(fake({ ...state, sections: [{ id: 7, label: 'Opening', start_slide_id: 2 }] }).doc)).sections)
+      .toEqual([{ id: '7', label: 'Opening', startSlideId: '2' }]);
+  });
+  it('rejects malformed, duplicate and orphan boundary metadata', async () => {
+    for (const sections of [[null], [{ id: 1, label: 'A', start_slide_id: 999 }], [{ id: 1, label: ' ', start_slide_id: 1 }], [{ id: 1, label: 'é'.repeat(513), start_slide_id: 1 }], [{ id: 1, label: 'A', start_slide_id: 1 }, { id: 2, label: 'B', start_slide_id: 1 }]])
+      await expect(readPitchDeck(fake({ ...state, sections }).doc)).rejects.toThrow();
+  });
 });
