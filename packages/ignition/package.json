@@ -13,7 +13,12 @@
     "./workspace": "./src/workspace.ts",
     "./transfer": "./src/transfer.ts",
     "./workspace-ui": "./src/workspace-ui.ts",
-    "./transfer-ui": "./src/transfer-ui.ts"
+    "./transfer-ui": "./src/transfer-ui.ts",
+    "./autosave": "./src/autosave.ts",
+    "./transactions": "./src/transactions.ts",
+    "./collaboration": "./src/collaboration.ts",
+    "./collaboration-http": "./src/collaboration-http.ts",
+    "./collaboration-checkpoint": "./src/collaboration-checkpoint.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

@@ -47,3 +47,13 @@ for existing controls; keep app navigation, tabs and radio choices distinct.
 ## Advanced native UI extraction
 
 NYC-Tron UI is the single owner of reusable native controls, released as [NYC-Tron `v0.1.0-alpha.3`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v0.1.0-alpha.3), the release `tooling/nyc-tron.json` pins (GitHub Release tarballs, not npm; the controls came in via NYC-Tron PR #2). Forge adds only Rust/native engine behavior and typed adapters. Inspect [the source-port roster](docs/ADVANCED_NATIVE_PORT_ROSTER.md) before introducing an upstream port; file-level license review is mandatory. Never recreate the knob, graph, crop overlay, or generic native popup inside Forge.
+
+## Writing and native skills
+
+User requirement (2026-11-06): apply `nyc-mon/skills/no-ai-slop/SKILL.md` to
+user-facing updates and documentation. Use the relevant React Native, Nitro v1,
+Swift/Kotlin/C++ and native testing skills before implementation or debugging.
+Keep each skill's platform/version guidance aligned with this repository's
+pinned runtime and preserve its state, window and ownership contracts.
+
+User requirement (2026-11-07): use subagents for scoped implementation and independent review. Apply relevant native, domain and project skills, and the no-ai-slop skill, to implementation and reports.

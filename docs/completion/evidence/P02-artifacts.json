@@ -1,0 +1,43 @@
+{
+  "forgeRevision": "543df8bec77907f6ba810da915bcded0e1757e6f",
+  "nycTronRevision": "55126d684c81ac95ca31796aa5048546a7547380",
+  "artifacts": {
+    "native-artifacts/cadence-completion-P02.apk": "59065f17abd0aafda39a1877106c93f13f607d5874955bc0bf3eaecc00dd8514",
+    "checkpoint-ios-derived/Build/Products/Debug-iphonesimulator/NitroForgeCadenceNative.app/NitroForgeCadenceNative": "327e56661848af244fb251a6fea05af743d004870fef7dbb81a52117e5774e41",
+    "checkpoint-ios-derived/Build/Products/Debug-iphonesimulator/NitroForgeCadenceNative.app/NitroForgeCadenceNative.debug.dylib": "38f9ed93bb9701868464302ddc1865a16527a4e75d227dbf6230d1a000024d26",
+    "completion-candidate-packs/nyc-tron-platform-services-0.1.0-alpha.4.tgz": "4cc0667e9854b84cea678b435d993b5e5894d73abe3a04ce18f7084957d1c462"
+  },
+  "ios": {
+    "environment": "iOS 27.1 iPhone Duo simulator",
+    "result": "disk recovery, corruption fallback, I/O failure/retry, process relaunch passed",
+    "orientations": [
+      "UIInterfaceOrientationPortrait",
+      "UIInterfaceOrientationPortraitUpsideDown",
+      "UIInterfaceOrientationLandscapeLeft",
+      "UIInterfaceOrientationLandscapeRight"
+    ],
+    "tabletOrientations": [
+      "UIInterfaceOrientationPortrait",
+      "UIInterfaceOrientationPortraitUpsideDown",
+      "UIInterfaceOrientationLandscapeLeft",
+      "UIInterfaceOrientationLandscapeRight"
+    ],
+    "requiresFullScreen": false
+  },
+  "android": {
+    "environment": "Android 16/API 36 arm64 emulator-5554",
+    "result": "disk recovery, corruption fallback, I/O failure/retry, process relaunch passed",
+    "mergedManifest": "examples/native-cadence/android/app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml",
+    "fileProvider": {
+      "name": "com.nyctron.platformservices.NYCTronFileProvider",
+      "authorities": "ai.nitroforge.cadence.studio.nyctron.files",
+      "exported": "false",
+      "grantUriPermissions": "true"
+    },
+    "orientation": "unspecified"
+  },
+  "web": {
+    "environment": "Chrome 156.0.8078.81",
+    "result": "ownership, transaction abort, retention, cleanup and page-reload persistence passed"
+  }
+}

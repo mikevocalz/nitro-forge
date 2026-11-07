@@ -1,4 +1,6 @@
-import type { BlockKind, Pos, QuillDocument, Style } from "./index";
+import type { BlockKind, Pos, QuillDocument, Style, ListItem, ListFormat, ListKind, TextCase } from "./index";
+import {deriveQuillListMarkers} from './list-markers';
+export {deriveQuillListMarkers} from './list-markers';
 
 /**
  * Engine side of NYC-Tron's document controls (Forge roster H-03
@@ -16,25 +18,6 @@ import type { BlockKind, Pos, QuillDocument, Style } from "./index";
  * have. Each is a DEFER: the matching NYC-Tron prop is left out.
  */
 export const QUILL_DEFERRED_OPS = {
-  /** H-03 font family: `applyStyle` takes bold/italic/underline/strike/color/link only. */
-  setFontFamily: "H-03",
-  /** H-03 font size. */
-  setFontSize: "H-03",
-  /** H-03 highlighter (a run background color). */
-  setHighlight: "H-03",
-  /**
-   * H-03 change case. Doing it as `deleteRange` + `insertText` would drop the
-   * runs' styles, so it waits for an engine op that rewrites text in place.
-   */
-  changeCase: "H-03",
-  /**
-   * H-07 numbering definitions (bullet vs number, per-level format). Quill's
-   * `list` block exports as Word's ListParagraph style without numPr, so no
-   * marker is stored.
-   */
-  setListFormat: "H-07",
-  /** H-07 nesting: Quill blocks have no list level. */
-  setListLevel: "H-07",
   /** H-15 bookmarks: Quill has no named positions. */
   bookmarks: "H-15",
   /** H-15 page thumbnails: `layout` gives line spans, not pixels. */
@@ -52,6 +35,7 @@ export interface QuillRun {
 export interface QuillBlock {
   readonly index: number;
   readonly kind: BlockKind;
+  readonly list?:ListItem;
   readonly text: string;
   readonly runs: readonly QuillRun[];
 }
@@ -62,7 +46,7 @@ export interface QuillSelection {
   readonly end: Pos;
 }
 
-export type QuillOfficeDocument = Pick<QuillDocument, "blocks" | "applyStyle" | "setBlockKind" | "layout">;
+export type QuillOfficeDocument = Pick<QuillDocument, "blocks" | "applyStyle" | "changeCase" | "setBlockKind" | "setListKind" | "setListFormat" | "shiftListLevel" | "layout">;
 
 const KINDS = new Set<BlockKind>(["para", "h1", "h2", "h3", "list", "quote"]);
 
@@ -73,11 +57,11 @@ function requireData<T>(response: { data?: T }, op: string): T {
 
 /** Reads every block through `blocks`. */
 export async function readQuillBlocks(document: Pick<QuillDocument, "blocks">): Promise<QuillBlock[]> {
-  const data = requireData(await document.blocks<{ blocks: { kind: BlockKind; inlines: QuillRun[] }[] }>(), "blocks");
+  const data = requireData(await document.blocks<{ blocks: { kind: BlockKind; list?:ListItem; inlines: QuillRun[] }[] }>(), "blocks");
   if (!Array.isArray(data.blocks)) throw new Error("Quill returned invalid blocks");
   return data.blocks.map((b, index) => {
     if (!KINDS.has(b.kind) || !Array.isArray(b.inlines)) throw new Error(`Quill returned a malformed block ${index}`);
-    return { index, kind: b.kind, runs: b.inlines, text: b.inlines.map(r => r.text).join("") };
+    return { index, kind: b.kind,...(b.list?{list:b.list}:{}), runs: b.inlines, text: b.inlines.map(r => r.text).join("") };
   });
 }
 
@@ -119,13 +103,23 @@ export const QUILL_PARAGRAPH_STYLES = [
 /** Character toggles `applyStyle` stores. */
 export type QuillToggle = "bold" | "italic" | "underline" | "strike";
 
-/** `RichTextRibbon` props Quill can back. Font, size, highlight and case are deferred. */
+/** `RichTextRibbon` props backed by persistent Quill style and case operations. */
 export interface QuillRibbonBinding {
+  /** Host selection metadata; synchronize the actual range after case expansions. */
+  readonly selection: QuillSelection;
   readonly runs: readonly Style[];
   /** The selection's paragraph kind, or "mixed". */
   readonly paragraphStyle: BlockKind | "mixed";
   readonly paragraphStyles: typeof QUILL_PARAGRAPH_STYLES;
+  readonly onChangeCase: (mode: TextCase) => Promise<void>;
   readonly onToggle: (toggle: QuillToggle, on: boolean) => Promise<void>;
+  /** Undefined inherits document defaults; mixed selections remain explicit. */
+  readonly fontFamily: string | "mixed" | undefined;
+  readonly fontSize: number | "mixed" | undefined;
+  readonly highlight: string | "mixed" | undefined;
+  readonly onHighlightChange: (color: string | undefined) => Promise<void>;
+  readonly onFontSizeChange: (size: number | undefined) => Promise<void>;
+  readonly onFontFamilyChange: (family: string | undefined) => Promise<void>;
   /** `undefined` clears the color (Quill takes `null`). */
   readonly onColorChange: (color: string | undefined) => Promise<void>;
   readonly onParagraphStyleChange: (id: string) => Promise<void>;
@@ -149,9 +143,21 @@ export async function bindQuillRibbon(
   });
   return {
     runs,
+    selection: sel,
     paragraphStyle: kinds.size === 1 ? [...kinds][0]! : "mixed",
     paragraphStyles: QUILL_PARAGRAPH_STYLES,
+    onChangeCase: async mode => {
+      if (collapsed) throw new RangeError("Select text to change its case");
+      const range = requireData(await document.changeCase(sel.start, sel.end, mode), "changeCase");
+      onChanged(await bindQuillRibbon(document, { start: range.from, end: range.to }, onChanged));
+    },
     onToggle: (t, on) => style({ [t]: on }),
+    fontFamily: runs.length && runs.every(run => run.font_family === runs[0]!.font_family) ? runs[0]!.font_family ?? undefined : runs.length ? "mixed" : undefined,
+    fontSize: runs.length && runs.every(run => run.font_size === runs[0]!.font_size) ? runs[0]!.font_size ?? undefined : runs.length ? "mixed" : undefined,
+    highlight: runs.length && runs.every(run => run.highlight === runs[0]!.highlight) ? runs[0]!.highlight ?? undefined : runs.length ? "mixed" : undefined,
+    onHighlightChange: color => style({ highlight: color ?? null }),
+    onFontSizeChange: size => style({ font_size: size ?? null }),
+    onFontFamilyChange: family => style({ font_family: family ?? null }),
     onColorChange: color => style({ color: (color ?? null) as unknown as string }),
     onParagraphStyleChange: id => after(async () => {
       if (!QUILL_PARAGRAPH_STYLES.some(p => p.id === id)) throw new RangeError(`"${id}" is not a Quill paragraph style`);
@@ -160,37 +166,46 @@ export async function bindQuillRibbon(
   };
 }
 
-/** `BulletsNumberingEditor` props Quill can back: list on or off. Formats and levels are deferred. */
+/** Actual source capability from the linked H-07 module; absent/unknown versions keep the old gate. */
+export interface QuillListHostCapabilities {readonly version:number;readonly authoritativeMarkers?:boolean}
+/** Without authoritative marker support the preview needs one context and default starts. */
 export interface QuillListBinding {
-  /** The selected blocks as list items (every level is 0). */
-  readonly items: readonly { id: string; text: string; level: 0 }[];
-  readonly kind: "none" | "bullet" | "mixed";
-  /** Quill stores "a list paragraph" only, offered as the bulleted kind. */
-  readonly kinds: readonly ["none", "bullet"];
-  readonly onKindChange: (kind: string) => Promise<void>;
+ readonly items:readonly {id:string;text:string;level:number;marker?:string}[];
+ readonly selectionStart:number;readonly selectionEnd:number;
+ readonly kind:ListKind|"mixed";readonly kinds:readonly ListKind[];
+ readonly levelFormats?:readonly ListFormat[];
+ readonly onKindChange:(kind:ListKind)=>Promise<void>;
+ readonly onLevelFormatChange?:(level:number,format:ListFormat)=>Promise<void>;
+ readonly onShiftLevel?:(direction:1|-1)=>Promise<void>;
 }
+export async function bindQuillList(document:QuillOfficeDocument,first:number,last:number,onChanged:(next:QuillListBinding)=>void,capabilities?:QuillListHostCapabilities):Promise<QuillListBinding>{
+ const blocks=await readQuillBlocks(document);
+ if(!Number.isSafeInteger(first)||!Number.isSafeInteger(last)||first<0||last<first||last>=blocks.length)throw new RangeError("Block range is out of the document");
+ const authoritative=capabilities?.version===1&&capabilities.authoritativeMarkers===true;
+ const markers=authoritative?deriveQuillListMarkers(blocks):undefined;
+ const chosen=blocks.slice(first,last+1),lists=chosen.filter(b=>b.kind==='list');
+ let context=chosen,kind:ListKind|"mixed"='none',formats:ListFormat[]|undefined;
+ if(lists.length){
+  const list=chosen[0]!.list;
+  const coherent=lists.length===chosen.length&&(list?chosen.every(b=>b.list?.definition.id===list.definition.id):chosen.every(b=>!b.list));
+  if(!coherent){
+   if(!authoritative)throw new Error(lists.length!==chosen.length?'Canonical list preview cannot represent mixed list/nonlist paragraphs':'Canonical list preview needs one list definition');
+   const kinds=new Set(chosen.map(b=>b.kind==='list'?(b.list?.definition.kind??'bullet'):'none'));
+   kind=kinds.size===1?[...kinds][0]!:'mixed';
+  }else if(list){
+   context=blocks.filter(b=>b.kind==='list'&&b.list?.definition.id===list.definition.id);
+   if(list.definition.levels.length!==9||!authoritative&&context.some(b=>list.definition.levels[b.list!.level]?.start!==1))throw new Error('Canonical list preview cannot represent nondefault numbering starts');
+   kind=list.definition.kind;formats=list.definition.levels.map(l=>l.format);
+  }else{
+   let start=first,end=last;while(start>0&&blocks[start-1]!.kind==='list'&&!blocks[start-1]!.list)start--;while(end+1<blocks.length&&blocks[end+1]!.kind==='list'&&!blocks[end+1]!.list)end++;
+   context=blocks.slice(start,end+1);kind='bullet';formats=Array<ListFormat>(9).fill('bullet');
+  }
+ }
 
-/** Binds the list editor to blocks `[first, last]`. */
-export async function bindQuillList(
-  document: QuillOfficeDocument, first: number, last: number, onChanged: (next: QuillListBinding) => void,
-): Promise<QuillListBinding> {
-  const blocks = await readQuillBlocks(document);
-  if (first < 0 || last < first || last >= blocks.length) throw new RangeError("Block range is out of the document");
-  const chosen = blocks.slice(first, last + 1);
-  const lists = chosen.filter(b => b.kind === "list").length;
-  const after = async (write: () => Promise<unknown>) => {
-    await write();
-    onChanged(await bindQuillList(document, first, last, onChanged));
-  };
-  return {
-    items: chosen.map(b => ({ id: String(b.index), text: b.text, level: 0 as const })),
-    kind: lists === 0 ? "none" : lists === chosen.length ? "bullet" : "mixed",
-    kinds: ["none", "bullet"],
-    onKindChange: kind => after(async () => {
-      if (kind !== "none" && kind !== "bullet") throw new RangeError(`Quill cannot store a "${kind}" list (see QUILL_DEFERRED_OPS.setListFormat)`);
-      for (const b of chosen) await document.setBlockKind(b.index, kind === "none" ? "para" : "list");
-    }),
-  };
+ const after=async(write:()=>Promise<unknown>)=>{await write();onChanged(await bindQuillList(document,first,last,onChanged,capabilities));};
+ return {items:context.map(b=>({id:String(b.index),text:b.text,level:b.list?.level??0,...(markers?{marker:markers[b.index]!}:{})})),selectionStart:context.findIndex(b=>b.index===first),selectionEnd:context.findIndex(b=>b.index===last),kind,kinds:['none','bullet','numbered','multilevel'],
+  onKindChange:kind=>after(()=>document.setListKind(first,last,kind)),
+  ...(formats?{levelFormats:formats,onLevelFormatChange:(level:number,format:ListFormat)=>after(()=>document.setListFormat(first,last,level,format)),onShiftLevel:(direction:1|-1)=>after(()=>document.shiftListLevel(first,last,direction))}:{})};
 }
 
 /** A heading as NYC-Tron `OutlineHeading` takes it. */

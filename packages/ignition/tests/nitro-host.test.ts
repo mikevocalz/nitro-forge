@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { NitroHost, type ForgeDocumentNative } from "../src/host";
+import { NitroHost, normalizeNativeEngineError, type ForgeDocumentNative } from "../src/host";
 import { EngineError } from "../src/types";
 
 function document(): ForgeDocumentNative {
@@ -12,6 +12,20 @@ function document(): ForgeDocumentNative {
 }
 
 describe('Nitro v1 host', () => {
+  it('preserves actual v1 envelope and legacy Rust error codes and recoverability', () => {
+    expect(normalizeNativeEngineError(new Error('__batch: {"ok":false,"error":{"code":"validation","message":"bad tempo","recoverable":true}}')))
+      .toMatchObject({ code: 'validation', message: 'bad tempo', recoverable: true });
+    expect(normalizeNativeEngineError(new Error('snapshot: Serialization: truncated')))
+      .toMatchObject({ code: 'serialization', message: 'truncated', recoverable: true });
+    expect(normalizeNativeEngineError(new Error('applyBinary: {"ok":false,"error":{"code":"cancelled","message":"task cancelled","recoverable":true}}')))
+      .toMatchObject({ code: 'cancelled', recoverable: true });
+    expect(normalizeNativeEngineError(new Error('open: Internal: panic')))
+      .toMatchObject({ code: 'internal', recoverable: false });
+    expect(normalizeNativeEngineError(new Error('restore: Validation: Internal: document label')))
+      .toMatchObject({ code: 'validation', message: 'Internal: document label', recoverable: true });
+    expect(normalizeNativeEngineError(new Error('{"code":"future","message":"unknown","recoverable":true}')))
+      .toMatchObject({ code: 'internal', recoverable: false });
+  });
   it('adapts typed commands, results and events', async () => {
     const doc = document(); const host = new NitroHost({ open: async () => doc });
     const handle = await host.open('tally');

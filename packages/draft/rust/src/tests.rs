@@ -1,0 +1,924 @@
+use super::*;
+use ignition_core::{decode_envelope, encode_envelope, Command, CommandResult, Engine};
+use serde_json::{json, Value};
+fn apply(e: &mut DraftEngine, op: &str, p: Value) -> CommandResult {
+    e.apply(Command::new(op, p)).unwrap()
+}
+fn point(e: &mut DraftEngine, x: f64, y: f64) -> u64 {
+    apply(e, "addPoint", json!({"x":x,"y":y})).data["point_id"]
+        .as_u64()
+        .unwrap()
+}
+fn segment(e: &mut DraftEngine, a: u64, b: u64) -> u64 {
+    apply(e, "addSegment", json!({"a":a,"b":b})).data["segment_id"]
+        .as_u64()
+        .unwrap()
+}
+fn constraint(e: &mut DraftEngine, d: Value) -> u64 {
+    apply(e, "addConstraint", json!({"definition":d})).data["constraint_id"]
+        .as_u64()
+        .unwrap()
+}
+fn state(e: &DraftEngine) -> model::State {
+    let value: Value =
+        serde_json::from_slice(decode_envelope(&e.snapshot().unwrap()).unwrap().1).unwrap();
+    serde_json::from_value(value.get("document").cloned().unwrap_or(value)).unwrap()
+}
+fn viewport() -> Value {
+    json!({"width":3,"height":1,"origin_x":0,"origin_y":0,"scale":1})
+}
+#[test]
+fn all_admitted_linear_kinds_rank_dof_and_atomic_solved_geometry() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 3.);
+    let b = point(&mut e, 5., 9.);
+    let c = point(&mut e, 7., 4.);
+    let d = point(&mut e, 0., 0.);
+    let ab = segment(&mut e, a, b);
+    let ad = segment(&mut e, a, d);
+    constraint(&mut e, json!({"kind":"fixed","point":a,"x":1,"y":2}));
+    constraint(&mut e, json!({"kind":"distance_x","a":a,"b":b,"value":4}));
+    constraint(&mut e, json!({"kind":"horizontal","segment":ab}));
+    let under = apply(&mut e, "solve", json!({}));
+    assert_eq!(under.data["status"], "underconstrained");
+    assert_eq!(under.data["rank"], 4);
+    assert_eq!(under.data["dof"], 4);
+    constraint(&mut e, json!({"kind":"coincident","a":b,"b":c}));
+    constraint(&mut e, json!({"kind":"vertical","segment":ad}));
+    constraint(&mut e, json!({"kind":"distance_y","a":a,"b":d,"value":-2}));
+    let before = e.snapshot().unwrap();
+    let solved = apply(&mut e, "solve", json!({}));
+    assert_eq!(solved.data["status"], "solved");
+    assert_eq!(solved.data["rank"], 8);
+    assert_eq!(solved.data["dof"], 0);
+    assert_eq!(solved.data["residual"].as_f64(), Some(0.));
+    assert_eq!(solved.events.len(), 1);
+    let s = state(&e);
+    for (id, x, y) in [(a, 1., 2.), (b, 5., 2.), (c, 5., 2.), (d, 1., 0.)] {
+        let p = s.point(id).unwrap();
+        assert_eq!((p.x, p.y), (x, y));
+    }
+    let after = e.snapshot().unwrap();
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), after);
+    let noop = apply(&mut e, "solve", json!({}));
+    assert!(noop.events.is_empty());
+    assert_eq!(noop.data["applied"], false);
+}
+#[test]
+fn inconsistent_rows_locked_coordinates_and_world_limits_never_publish_false_solution() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    apply(&mut e, "updatePoint", json!({"id":a,"locked":true}));
+    let fixed = constraint(&mut e, json!({"kind":"fixed","point":a,"x":0.0001,"y":0}));
+    let before = e.snapshot().unwrap();
+    let approx = apply(&mut e, "solve", json!({"tolerance":0.001}));
+    assert_eq!(approx.data["status"], "solved");
+    assert!(approx.events.is_empty());
+    assert_eq!(state(&e).point(a).unwrap().x, 0.);
+    assert_eq!(e.snapshot().unwrap(), before);
+    let strict = apply(&mut e, "solve", json!({"tolerance":1e-9}));
+    assert_eq!(strict.data["status"], "inconsistent");
+    assert_eq!(strict.data["unsatisfied_constraints"], json!([fixed]));
+    assert!(strict.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 0., 0.);
+    constraint(&mut e, json!({"kind":"fixed","point":a,"x":1000000,"y":0}));
+    constraint(
+        &mut e,
+        json!({"kind":"distance_x","a":a,"b":b,"value":1000000}),
+    );
+    let before = e.snapshot().unwrap();
+    assert!(e.apply(Command::new("solve", json!({}))).is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+#[test]
+fn snaps_are_real_finite_candidates_with_deterministic_ties() {
+    let mut e = DraftEngine::new();
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"grid":false,"endpoint":false,"midpoint":false,"projection":false,"intersection":false}),
+    );
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 4., 0.);
+    let ab = segment(&mut e, a, b);
+    let c = point(&mut e, 2., -2.);
+    let d = point(&mut e, 2., 2.);
+    let cd = segment(&mut e, c, d);
+    for (mode, x, y, tol, expected, kind) in [
+        ("midpoint", 2., 0.2, 0.3, (2., 0.), "midpoint"),
+        ("projection", 5., 0.2, 1.1, (4., 0.), "projection"),
+        ("intersection", 2.1, 0.1, 0.2, (2., 0.), "intersection"),
+    ] {
+        apply(&mut e, "setSnapSettings", json!({mode:true}));
+        let result = apply(&mut e, "querySnap", json!({"x":x,"y":y,"tolerance":tol}));
+        assert_eq!(result.data["candidate"]["kind"], kind);
+        assert_eq!(
+            (
+                result.data["candidate"]["x"].as_f64().unwrap(),
+                result.data["candidate"]["y"].as_f64().unwrap()
+            ),
+            expected
+        );
+        if mode == "intersection" {
+            assert_eq!(result.data["candidate"]["sources"], json!([ab, cd]));
+        }
+        apply(&mut e, "setSnapSettings", json!({mode:false}));
+    }
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"endpoint":true,"projection":true}),
+    );
+    let snap = apply(&mut e, "querySnap", json!({"x":0,"y":0,"tolerance":0.1}));
+    assert_eq!(snap.data["candidate"]["kind"], "endpoint");
+    assert_eq!(snap.data["candidate"]["sources"], json!([a]));
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"endpoint":false,"projection":false,"grid":true,"spacing":10}),
+    );
+    let snap = apply(&mut e, "querySnap", json!({"x":5,"y":5,"tolerance":8}));
+    assert_eq!(snap.data["candidate"]["x"].as_f64(), Some(10.));
+    assert_eq!(snap.data["candidate"]["y"].as_f64(), Some(10.));
+    assert!(e
+        .apply(Command::new(
+            "querySnap",
+            json!({"x":0,"y":0,"tolerance":0})
+        ))
+        .is_err());
+}
+#[test]
+fn actual_prism_rgba_degenerate_segments_and_projection_bounds() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.5);
+    let b = point(&mut e, 3., 0.5);
+    let seg = segment(&mut e, a, b);
+    apply(
+        &mut e,
+        "updateSegment",
+        json!({"id":seg,"color":[255,0,0,255]}),
+    );
+    let output = e
+        .apply(Command::new("renderFrame", viewport()).with_binary(None))
+        .unwrap();
+    assert_eq!(
+        output.output.unwrap(),
+        vec![255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255]
+    );
+    assert!(output.events.is_empty());
+    let result = apply(&mut e, "renderFrame", viewport());
+    assert!(result.data["pixels_b64"].is_string());
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new(
+            "renderFrame",
+            json!({"width":3,"height":1,"origin_x":-1000000,"origin_y":0,"scale":10000})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    apply(&mut e, "updatePoint", json!({"id":b,"x":0,"y":0.5}));
+    let blank = e
+        .apply(Command::new("renderFrame", viewport()).with_binary(None))
+        .unwrap();
+    assert_eq!(blank.output.unwrap(), vec![0; 12]);
+}
+#[test]
+fn batch_revision_reads_reject_atomically_and_snapshots_validate_references() {
+    let mut e = DraftEngine::new();
+    let p = point(&mut e, 1., 2.);
+    let original = e.snapshot().unwrap();
+    apply(&mut e, "updatePoint", json!({"id":p,"x":3}));
+    let changed = e.snapshot().unwrap();
+    assert!(e.undo().unwrap());
+    for op in ["querySnap", "describe", "evaluate"] {
+        let payload = if op == "querySnap" {
+            json!({"x":0,"y":0,"tolerance":1})
+        } else {
+            json!({})
+        };
+        assert!(e.apply(Command::new(ignition_core::OP_BATCH,json!({"commands":[{"op":"updatePoint","payload":{"id":p,"x":5}},{"op":op,"payload":payload}]}))).is_err());
+        assert_eq!(e.snapshot().unwrap(), original);
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), changed);
+        assert!(e.undo().unwrap());
+    }
+    let saved = e.snapshot().unwrap();
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&saved).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), saved);
+    let mut invalid = serde_json::to_value(state(&e)).unwrap();
+    invalid["next_id"] = json!(p);
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), saved);
+    assert!(e
+        .apply(Command::new(
+            "addConstraint",
+            json!({"definition":{"kind":"circle_tangent","a":p,"b":p}})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), saved);
+}
+#[test]
+fn resource_noop_history_and_exact_segment_locks_are_enforced() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 1., 0.);
+    let ab = segment(&mut e, a, b);
+    apply(&mut e, "updateSegment", json!({"id":ab,"locked":true}));
+    constraint(&mut e, json!({"kind":"fixed","point":b,"x":1.0001,"y":0}));
+    let before = e.snapshot().unwrap();
+    let report = apply(&mut e, "solve", json!({"tolerance":0.001}));
+    assert_eq!(state(&e).point(b).unwrap().x, 1.);
+    assert!(report.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert!(e
+        .apply(Command::new("updatePoint", json!({"id":b,"x":2})))
+        .is_err());
+    let mut e = DraftEngine::new();
+    let p = point(&mut e, 1., 2.);
+    let original = e.snapshot().unwrap();
+    apply(&mut e, "updatePoint", json!({"id":p,"x":3}));
+    let changed = e.snapshot().unwrap();
+    assert!(e.undo().unwrap());
+    let revision = apply(&mut e, "describe", json!({})).data["source_revision"].clone();
+    assert!(apply(&mut e, "updatePoint", json!({"id":p,"x":1}))
+        .events
+        .is_empty());
+    assert!(e
+        .apply(Command::new("addPoint", json!({"x":1000001,"y":0})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), original);
+    assert_eq!(
+        apply(&mut e, "describe", json!({})).data["source_revision"],
+        revision
+    );
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), changed);
+    let mut e = DraftEngine::new();
+    for i in 0..64 {
+        point(&mut e, f64::from(i), 0.);
+    }
+    let max = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("addPoint", json!({"x":0,"y":0})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), max);
+    let mut undone = 0;
+    while e.undo().unwrap() {
+        undone += 1
+    }
+    assert_eq!(undone, 16);
+    let mut e = DraftEngine::new();
+    let initial = apply(&mut e, "describe", json!({})).data["source_revision"]
+        .as_u64()
+        .unwrap();
+    apply(
+        &mut e,
+        ignition_core::OP_BATCH,
+        json!({"commands":[{"op":"addPoint","payload":{"x":0,"y":0}},{"op":"addPoint","payload":{"x":1,"y":0}}]}),
+    );
+    assert_eq!(
+        apply(&mut e, "describe", json!({})).data["source_revision"]
+            .as_u64()
+            .unwrap(),
+        initial + 1
+    );
+}
+#[test]
+fn endpoint_source_ties_and_collinear_intersection_absence_are_explicit() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, -1., 0.);
+    let b = point(&mut e, 1., 0.);
+    let ab = segment(&mut e, a, b);
+    apply(&mut e, "updateSegment", json!({"id":ab,"visible":false}));
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"grid":false,"midpoint":false,"projection":false,"intersection":false}),
+    );
+    let snap = apply(&mut e, "querySnap", json!({"x":0,"y":0,"tolerance":1}));
+    assert_eq!(snap.data["candidate"]["sources"], json!([a])); // all authored points, including hidden-segment endpoints
+    apply(&mut e, "updateSegment", json!({"id":ab,"visible":true}));
+    segment(&mut e, a, b);
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"endpoint":false,"intersection":true}),
+    );
+    assert!(
+        apply(&mut e, "querySnap", json!({"x":0,"y":0,"tolerance":1})).data["candidate"].is_null()
+    );
+}
+
+#[test]
+fn oversized_restore_and_cancelled_reads_preserve_document() {
+    use ignition_core::TaskContext;
+    let mut e = DraftEngine::new();
+    point(&mut e, 0., 0.);
+    let before = e.snapshot().unwrap();
+    let oversized = encode_envelope(&vec![b' '; model::MAX_BYTES + 1]);
+    let error = e.restore(&oversized).unwrap_err();
+    assert!(error.message.contains("8 MiB"));
+    assert_eq!(e.snapshot().unwrap(), before);
+    let context = TaskContext::new();
+    context.cancel();
+    assert!(e
+        .apply_long(Command::new("renderFrame", viewport()), &context)
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+#[test]
+fn anchor_guides_use_real_axes_allowed_rays_and_world_tolerance() {
+    let mut e = DraftEngine::new();
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"grid":false,"endpoint":false,"midpoint":false,"projection":false,"intersection":false,"ortho":true}),
+    );
+    let before = e.snapshot().unwrap();
+    let none = apply(&mut e, "querySnap", json!({"x":12,"y":12,"tolerance":3}));
+    assert!(none.data["candidate"].is_null());
+    let snap = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":12,"y":12,"tolerance":2,"anchor":{"x":10,"y":10}}),
+    );
+    assert_eq!(snap.data["candidate"]["kind"], "ortho");
+    assert_eq!(snap.data["candidate"]["angle_degrees"].as_f64(), Some(0.));
+    assert_eq!(snap.data["candidate"]["x"].as_f64(), Some(12.));
+    assert_eq!(snap.data["candidate"]["y"].as_f64(), Some(10.));
+    assert_eq!(e.snapshot().unwrap(), before);
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"ortho":false,"polar":true,"polar_increment":100}),
+    );
+    let r = 350_f64.to_radians();
+    let (x, y) = (3. + 10. * r.cos(), 4. + 10. * r.sin());
+    let snap = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":x,"y":y,"tolerance":2,"anchor":{"x":3,"y":4}}),
+    );
+    assert_eq!(snap.data["candidate"]["angle_degrees"].as_f64(), Some(0.));
+    assert!((snap.data["candidate"]["x"].as_f64().unwrap() - x).abs() < 1e-12);
+    assert_eq!(snap.data["candidate"]["y"].as_f64(), Some(4.));
+    apply(&mut e, "setSnapSettings", json!({"polar_increment":360}));
+    let snap = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":-3,"y":1,"tolerance":4,"anchor":{"x":0,"y":0}}),
+    );
+    assert_eq!(snap.data["candidate"]["x"].as_f64(), Some(0.));
+    assert_eq!(snap.data["candidate"]["y"].as_f64(), Some(0.));
+    let snap = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":7,"y":8,"tolerance":0.1,"anchor":{"x":7,"y":8}}),
+    );
+    assert_eq!(snap.data["candidate"]["angle_degrees"].as_f64(), Some(0.));
+    assert_eq!(snap.data["candidate"]["distance"].as_f64(), Some(0.));
+    apply(&mut e, "setSnapSettings", json!({"polar_increment":0.01}));
+    let snap = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":1,"y":1,"tolerance":0.001,"anchor":{"x":0,"y":0}}),
+    );
+    assert_eq!(snap.data["candidate"]["angle_degrees"].as_f64(), Some(45.));
+    let before = e.snapshot().unwrap();
+    for value in [json!(0), json!(360.1), Value::Null] {
+        assert!(e
+            .apply(Command::new(
+                "setSnapSettings",
+                json!({"polar_increment":value})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before)
+    }
+}
+#[test]
+fn command_line_creates_actual_geometry_and_one_history_entry() {
+    let mut e = DraftEngine::new();
+    let initial = e.snapshot().unwrap();
+    let line = apply(
+        &mut e,
+        "executeCommand",
+        json!({"command":"line 0 0.5 3 0.5"}),
+    );
+    assert_eq!(line.events.len(), 1);
+    assert_eq!(line.data["result"]["point_ids"], json!([1, 2]));
+    assert_eq!(line.data["result"]["segment_id"], 3);
+    let created = e.snapshot().unwrap();
+    let rendered = e
+        .apply(Command::new("renderFrame", viewport()).with_binary(None))
+        .unwrap();
+    assert_eq!(
+        rendered.output.unwrap(),
+        vec![0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255]
+    );
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), initial);
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), created);
+    apply(&mut e, "executeCommand", json!({"command":"MOVE 2 2 0.5"}));
+    let rendered = e
+        .apply(Command::new("renderFrame", viewport()).with_binary(None))
+        .unwrap();
+    assert_eq!(
+        rendered.output.unwrap(),
+        vec![0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 0]
+    );
+    let point = apply(&mut e, "executeCommand", json!({"command":"POINT 1e1 -2"})).data["result"]
+        ["point_id"]
+        .as_u64()
+        .unwrap();
+    let seg = apply(
+        &mut e,
+        "executeCommand",
+        json!({"command":format!("SEGMENT 2 {point}")}),
+    )
+    .data["result"]["segment_id"]
+        .as_u64()
+        .unwrap();
+    apply(
+        &mut e,
+        "executeCommand",
+        json!({"command":format!("DELETE SEGMENT {seg}")}),
+    );
+    apply(
+        &mut e,
+        "executeCommand",
+        json!({"command":format!("DELETE POINT {point}")}),
+    );
+    assert_eq!(state(&e).points.len(), 2);
+    let original = e.snapshot().unwrap();
+    apply(&mut e, "executeCommand", json!({"command":"MOVE 2 1 0.5"}));
+    let changed = e.snapshot().unwrap();
+    assert!(e.undo().unwrap());
+    for text in [
+        "SPHERE 0 0 1",
+        "POINT 1 2; DELETE POINT 1",
+        "POINT (1+2) 3",
+        "POINT NaN 1",
+        "POINT 1e999 2",
+        "MOVE 1 2",
+        "DELETE LAYER 1",
+        "POINT 1 2 3",
+        "__batch",
+    ] {
+        assert!(e
+            .apply(Command::new("executeCommand", json!({"command":text})))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), original)
+    }
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), changed);
+    let saved = e.snapshot().unwrap();
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&saved).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), saved);
+}
+#[test]
+fn command_snap_keeps_batch_revision_guard_and_failed_line_staging_is_atomic() {
+    let mut e = DraftEngine::new();
+    point(&mut e, 0., 0.);
+    let before = e.snapshot().unwrap();
+    assert!(e.apply(Command::new(ignition_core::OP_BATCH,json!({"commands":[{"op":"updatePoint","payload":{"id":1,"x":2}},{"op":"executeCommand","payload":{"command":"SNAP 0 0 1"}}]}))).is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let snap = apply(
+        &mut e,
+        "executeCommand",
+        json!({"command":"SNAP 0 0 1 0 0"}),
+    );
+    assert_eq!(
+        snap.data["result"]["source_revision"],
+        apply(&mut e, "describe", json!({})).data["source_revision"]
+    );
+    for i in 1..63 {
+        point(&mut e, f64::from(i), 0.);
+    }
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new(
+            "executeCommand",
+            json!({"command":"LINE 0 0 1 1"})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let mut legacy = serde_json::to_value(state(&e)).unwrap();
+    for key in ["ortho", "polar", "polar_increment"] {
+        legacy["snaps"].as_object_mut().unwrap().remove(key);
+    }
+    e.restore(&encode_envelope(&serde_json::to_vec(&legacy).unwrap()))
+        .unwrap();
+    assert!(!state(&e).snaps.ortho);
+    assert!(!state(&e).snaps.polar);
+    assert_eq!(state(&e).snaps.polar_increment, 45.);
+}
+
+#[test]
+fn circular_analytic_intersections_tangents_and_directed_arcs() {
+    use crate::circular::Geometry;
+    let c = Geometry {
+        id: 1,
+        center: (0., 0.),
+        radius: 1.,
+        start: 0.,
+        sweep: 360.,
+        closed: true,
+    };
+    let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-10, "{a} != {b}");
+    assert_eq!(c.segment_hits((-2., 0.), (2., 0.)).len(), 2);
+    assert_eq!(c.segment_hits((-2., 1.), (2., 1.)).len(), 1);
+    assert!(c
+        .segment_hits((-2., 1.00000001), (2., 1.00000001))
+        .is_empty());
+    assert!(c.segment_hits((1., 0.), (1., 0.)).is_empty());
+    for (x, r, n) in [
+        (2., 1., 1),
+        (1., 1., 2),
+        (0.5, 0.5, 1),
+        (0., 1., 0),
+        (0., 0.5, 0),
+        (3., 1., 0),
+    ] {
+        let other = Geometry {
+            center: (x, 0.),
+            radius: r,
+            ..c
+        };
+        let hits = c.circle_hits(&other);
+        assert_eq!(hits.len(), n);
+        for (px, py) in hits {
+            near(px.hypot(py), 1.);
+            near((px - x).hypot(py), r);
+        }
+    }
+    assert_eq!(
+        c.circle_hits(&Geometry {
+            center: (1e-12, 0.),
+            ..c
+        })
+        .len(),
+        2
+    );
+    assert!(c.tangents((0.999999999, 0.)).is_empty());
+    assert_eq!(c.tangents((1., 0.)).len(), 1);
+    let ts = c.tangents((2., 0.));
+    assert_eq!(ts.len(), 2);
+    for (x, y) in ts {
+        near(x.hypot(y), 1.);
+        near(x * (2. - x) - y * y, 0.);
+    }
+    let a = Geometry {
+        start: 10.,
+        sweep: -100.,
+        closed: false,
+        ..c
+    };
+    assert!(a.contains(a.point(-45.)));
+    assert!(!a.contains(a.point(90.)));
+    assert_eq!(a.ends().len(), 2);
+    let closest = a.closest((-2., 0.));
+    near(closest.0, 0.);
+    near(closest.1, -1.);
+    assert_eq!(a.nodes().len(), 3);
+    let full = Geometry { sweep: -360., ..a };
+    assert_eq!(full.ends().len(), 1);
+    let nodes = full.nodes();
+    near(nodes[0].x, nodes[4].x);
+    near(nodes[0].y, nodes[4].y);
+    let tiny = Geometry { radius: 1e-6, ..c };
+    assert!(tiny
+        .segment_hits((-1e-5, 1.0001e-6), (1e-5, 1.0001e-6))
+        .is_empty());
+}
+
+#[test]
+fn circular_entities_locks_order_history_and_corrupt_restore_are_atomic() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 0.);
+    let s1 = segment(&mut e, a, b);
+    let circle = apply(&mut e, "addCircle", json!({"center":a,"radius":1})).data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let arc = apply(
+        &mut e,
+        "addArc",
+        json!({"center":a,"radius":2,"start_deg":30,"sweep_deg":-180}),
+    )
+    .data["arc_id"]
+        .as_u64()
+        .unwrap();
+    let s2 = segment(&mut e, a, b);
+    apply(&mut e, "setSegmentOrder", json!({"order":[s2,s1]}));
+    assert_eq!(state(&e).order, vec![s2, circle, arc, s1]);
+    apply(
+        &mut e,
+        "setEntityOrder",
+        json!({"order":[arc,s1,circle,s2]}),
+    );
+    apply(&mut e, "updateCircle", json!({"id":circle,"locked":true}));
+    let original = e.snapshot().unwrap();
+    for (op, p) in [
+        ("updatePoint", json!({"id":a,"x":1})),
+        ("updateCircle", json!({"id":circle,"radius":2})),
+        ("removeCircle", json!({"id":circle})),
+        ("removePoint", json!({"id":a})),
+        ("updateArc", json!({"id":arc,"sweep_deg":0})),
+        ("updateArc", json!({"id":arc,"radius":1000001})),
+    ] {
+        assert!(e.apply(Command::new(op, p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), original);
+    }
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["scope"], "point_coordinates");
+    assert_eq!(state(&e).points[&a].x, 0.);
+    apply(&mut e, "updateCircle", json!({"id":circle,"locked":false}));
+    let unlocked = e.snapshot().unwrap();
+    apply(&mut e, "updateCircle", json!({"id":circle,"radius":2}));
+    let changed = e.snapshot().unwrap();
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), unlocked);
+    apply(&mut e, "updateCircle", json!({"id":circle,"radius":1}));
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), changed);
+    let mut corrupt = serde_json::to_value(state(&e)).unwrap();
+    corrupt["circles"][circle.to_string()]["center"] = json!(999);
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&corrupt).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), changed);
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&changed).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), changed);
+    apply(&mut e, "removeCircle", json!({"id":circle}));
+    apply(&mut e, "removeArc", json!({"id":arc}));
+    assert!(state(&e).points.contains_key(&a));
+}
+
+#[test]
+fn circular_commands_pixels_snap_defaults_and_projection_limits() {
+    let mut e = DraftEngine::new();
+    let empty = e.snapshot().unwrap();
+    let described = apply(&mut e, "describe", json!({}));
+    assert_eq!(described.data["circles"], json!({}));
+    assert_eq!(described.data["snaps"]["tangent"], false);
+    apply(
+        &mut e,
+        "executeCommand",
+        json!({"command":"CIRCLE 2.5 2.5 1.5"}),
+    );
+    let saved = e.snapshot().unwrap();
+    assert_eq!(state(&e).points.len(), 1);
+    assert_eq!(state(&e).circles.len(), 1);
+    let v = json!({"width":5,"height":5,"origin_x":0,"origin_y":0,"scale":1});
+    let pixels = e
+        .apply(Command::new("renderFrame", v.clone()).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert_eq!(pixels[3], 0);
+    assert!(pixels[(1 * 5 + 2) * 4 + 3] > pixels[(2 * 5 + 2) * 4 + 3]);
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), empty);
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), saved);
+    for command in [
+        "CIRCLE 0 0 -1",
+        "ARC 0 0 1 0 0",
+        "ARC 0 0 1 0 361",
+        "CIRCLE 1000000 0 1",
+    ] {
+        assert!(e
+            .apply(Command::new("executeCommand", json!({"command":command})))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), saved);
+    }
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"grid":false,"endpoint":false,"midpoint":false,"projection":false,"intersection":false,"center":true,"nearest_circle":false}),
+    );
+    assert_eq!(
+        apply(
+            &mut e,
+            "querySnap",
+            json!({"x":2.5,"y":2.5,"tolerance":1e-9})
+        )
+        .data["candidate"]["kind"],
+        "center"
+    );
+    assert!(e
+        .apply(Command::new(
+            "renderFrame",
+            json!({"width":1,"height":1,"origin_x":-1000000,"origin_y":0,"scale":10000})
+        ))
+        .is_err());
+    let mut arc_engine = DraftEngine::new();
+    apply(
+        &mut arc_engine,
+        "executeCommand",
+        json!({"command":"ARC 2.5 2.5 1 0 90"}),
+    );
+    let p = arc_engine
+        .apply(Command::new("renderFrame", v.clone()).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert!(p[(3 * 5 + 3) * 4 + 3] > 0);
+    assert_eq!(p[(1 * 5 + 1) * 4 + 3], 0);
+    apply(
+        &mut arc_engine,
+        "updateArc",
+        json!({"id":2,"sweep_deg":-90}),
+    );
+    let p = arc_engine
+        .apply(Command::new("renderFrame", v.clone()).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert!(p[(1 * 5 + 3) * 4 + 3] > 0);
+    assert_eq!(p[(3 * 5 + 1) * 4 + 3], 0);
+    apply(
+        &mut arc_engine,
+        "updateArc",
+        json!({"id":2,"sweep_deg":360}),
+    );
+    arc_engine
+        .apply(Command::new("renderFrame", v).with_binary(None))
+        .unwrap();
+}
+
+#[test]
+fn circular_query_returns_actual_center_nearest_tangent_and_intersection_sources() {
+    let mut e = DraftEngine::new();
+    let c = point(&mut e, 0., 0.);
+    let circle = apply(&mut e, "addCircle", json!({"center":c,"radius":1})).data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let a = point(&mut e, -2., 0.);
+    let b = point(&mut e, 2., 0.);
+    let seg = segment(&mut e, a, b);
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"grid":false,"endpoint":false,"midpoint":false,"projection":false,"intersection":true}),
+    );
+    let hit = apply(&mut e, "querySnap", json!({"x":1,"y":0,"tolerance":1e-9}));
+    assert_eq!(hit.data["candidate"]["kind"], "intersection");
+    let mut sources = vec![circle, seg];
+    sources.sort();
+    assert_eq!(hit.data["candidate"]["sources"], json!(sources));
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"intersection":false,"nearest_circle":true}),
+    );
+    let hit = apply(&mut e, "querySnap", json!({"x":2,"y":0,"tolerance":1}));
+    assert_eq!(hit.data["candidate"]["x"], 1.);
+    assert_eq!(hit.data["candidate"]["kind"], "nearest_circle");
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"nearest_circle":false,"tangent":true}),
+    );
+    assert!(apply(
+        &mut e,
+        "querySnap",
+        json!({"x":0.5,"y":0.8660254037844386,"tolerance":0.01})
+    )
+    .data["candidate"]
+        .is_null());
+    let hit = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":0.5,"y":0.8660254037844386,"tolerance":0.01,"anchor":{"x":2,"y":0}}),
+    );
+    assert_eq!(hit.data["candidate"]["kind"], "tangent");
+    assert!((hit.data["candidate"]["x"].as_f64().unwrap() - 0.5).abs() < 1e-12);
+    apply(&mut e, "updateCircle", json!({"id":circle,"visible":false}));
+    assert!(apply(
+        &mut e,
+        "querySnap",
+        json!({"x":0.5,"y":0.8660254037844386,"tolerance":1,"anchor":{"x":2,"y":0}})
+    )
+    .data["candidate"]
+        .is_null());
+}
+
+#[test]
+fn legacy_snapshot_defaults_and_locked_curve_solver_scope_are_explicit() {
+    let mut e = DraftEngine::new();
+    let empty = e.snapshot().unwrap();
+    let payload: Value = serde_json::from_slice(decode_envelope(&empty).unwrap().1).unwrap();
+    assert!(payload.get("circles").is_none());
+    assert!(payload.get("arcs").is_none());
+    for key in ["center", "nearest_circle", "tangent"] {
+        assert!(payload["snaps"].get(key).is_none());
+    }
+    e.restore(&empty).unwrap();
+    assert_eq!(e.snapshot().unwrap(), empty);
+    let center = point(&mut e, 0., 0.);
+    apply(
+        &mut e,
+        "addArc",
+        json!({"center":center,"radius":1,"start_deg":0,"sweep_deg":-360,"locked":true}),
+    );
+    constraint(
+        &mut e,
+        json!({"kind":"fixed","point":center,"x":0.0001,"y":0}),
+    );
+    let before = e.snapshot().unwrap();
+    let result = apply(&mut e, "solve", json!({"tolerance":0.0000001}));
+    assert_eq!(result.data["scope"], "point_coordinates");
+    assert_eq!(result.data["status"], "inconsistent");
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert_eq!(state(&e).points[&center].x, 0.);
+    assert!(e
+        .apply(Command::new(
+            "addConstraint",
+            json!({"definition":{"kind":"radius","circle":2,"value":3}})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+
+#[test]
+fn extended_snapshots_require_matching_readers_without_changing_legacy_or_envelope() {
+    // Even an old reader permissive about unknown keys must find its original required fields.
+    #[derive(serde::Deserialize)]
+    #[allow(dead_code)]
+    struct LegacyRoot {
+        kind: String,
+        schema: u32,
+        units: String,
+        next_id: u64,
+        points: Value,
+        segments: Value,
+        order: Value,
+        constraints: Value,
+        snaps: Value,
+    }
+    let mut e = DraftEngine::new();
+    let legacy = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&legacy).unwrap();
+    assert!(serde_json::from_slice::<LegacyRoot>(payload).is_ok());
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&legacy).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), legacy);
+    for flag in ["center", "nearest_circle", "tangent"] {
+        apply(&mut e, "setSnapSettings", json!({flag:true}));
+        let extended = e.snapshot().unwrap();
+        let (_, payload) = decode_envelope(&extended).unwrap();
+        assert!(serde_json::from_slice::<LegacyRoot>(payload).is_err());
+        let value: Value = serde_json::from_slice(payload).unwrap();
+        assert_eq!(value["kind"], "draft");
+        assert_eq!(value["schema"], 2);
+        assert_eq!(value["document"]["schema"], 1);
+        reopened.restore(&extended).unwrap();
+        assert_eq!(reopened.snapshot().unwrap(), extended);
+        apply(&mut e, "setSnapSettings", json!({flag:false}));
+        assert_eq!(e.snapshot().unwrap(), legacy);
+    }
+    apply(&mut e, "executeCommand", json!({"command":"CIRCLE 0 0 1"}));
+    let extended = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&extended).unwrap();
+    assert!(serde_json::from_slice::<LegacyRoot>(payload).is_err());
+    let wrapped: Value = serde_json::from_slice(payload).unwrap();
+    reopened.restore(&extended).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), extended);
+    let before = reopened.snapshot().unwrap();
+    let mut wrong_kind = wrapped.clone();
+    wrong_kind["kind"] = json!("motion");
+    let mut wrong_schema = wrapped.clone();
+    wrong_schema["schema"] = json!(3);
+    let mut extra = wrapped.clone();
+    extra["units"] = json!("mm");
+    for invalid in [wrong_kind, wrong_schema, extra, wrapped["document"].clone()] {
+        assert!(reopened
+            .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+            .is_err());
+        assert_eq!(reopened.snapshot().unwrap(), before);
+    }
+    let mut arcs = DraftEngine::new();
+    apply(
+        &mut arcs,
+        "executeCommand",
+        json!({"command":"ARC 0 0 1 0 90"}),
+    );
+    let arc_snapshot = arcs.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&arc_snapshot).unwrap();
+    assert!(serde_json::from_slice::<LegacyRoot>(payload).is_err());
+    reopened.restore(&arc_snapshot).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), arc_snapshot);
+}

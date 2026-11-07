@@ -1,4 +1,4 @@
-import type { AnnotSubtype, FolioDocument, Rect } from "./index";
+import type { AnnotSubtype, FolioDocument, FolioCommentMetadata, FolioCommentEntry, Rect } from "./index";
 
 /**
  * Engine side of NYC-Tron's PDF controls (Forge roster K-04
@@ -18,32 +18,19 @@ import type { AnnotSubtype, FolioDocument, Rect } from "./index";
  * Each is a DEFER: the matching NYC-Tron prop is left out or the tool is not
  * listed.
  */
+/** The engine supports setAnnotationContents; the pinned comments control has no edit callback. */
 export const FOLIO_DEFERRED_OPS = {
   /** K-04/K-06/K-18: page pixels for highlighting hits, placing marks and following the reader. */
   renderPage: "K-04",
   /** K-04 hit rectangles: `pageText` is lossy and carries no glyph positions. */
   textPositions: "K-04",
-  /** K-06 underline markup (`/Subtype /Underline`): `addAnnotation` writes Text and Highlight only. */
-  underlineAnnotation: "K-06",
-  /** K-06 strikethrough markup (`/StrikeOut`). */
-  strikeOutAnnotation: "K-06",
   /** K-06 freehand ink (`/Ink`). */
   inkAnnotation: "K-06",
-  /** K-06 rectangle and ellipse (`/Square`, `/Circle`). */
-  shapeAnnotations: "K-06",
-  /** K-07 author and date (`/T`, `/M`): `listAnnotations` reports id, subtype, rect and contents. */
-  annotationAuthor: "K-07",
-  /** K-07 replies (`/IRT` reply annotations). */
-  replyAnnotation: "K-07",
-  /** K-07 resolve and reopen (`/State`, `/StateModel Review`). */
-  setAnnotationState: "K-07",
-  /** K-07 edit a comment's text in place. */
-  setAnnotationContents: "K-07",
 } as const;
 export type FolioDeferredOp = keyof typeof FOLIO_DEFERRED_OPS;
 
 export type FolioOfficeDocument = Pick<FolioDocument,
-  "pageCount" | "pageText" | "listAnnotations" | "addAnnotation" | "removeAnnotation" | "undo" | "redo">;
+  "pageCount" | "pageText" | "listAnnotations" | "addAnnotation" | "removeAnnotation" | "listCommentThreads" | "addAnnotationReply" | "setAnnotationReview" | "undo" | "redo">;
 
 function requireData<T>(response: { data?: T }, op: string): T {
   if (response.data === undefined || response.data === null) throw new Error(`Folio ${op} returned no data`);
@@ -86,19 +73,19 @@ export async function readFolioReadAloudBlocks(document: Pick<FolioDocument, "pa
 }
 
 /** Tools Folio can save, for `AnnotationToolbar.tools`. */
-export const FOLIO_ANNOTATION_TOOLS = ["select", "note", "highlight"] as const;
+export const FOLIO_ANNOTATION_TOOLS = ["select", "note", "highlight", "underline", "strike", "rectangle", "ellipse"] as const;
 export type FolioAnnotationTool = (typeof FOLIO_ANNOTATION_TOOLS)[number];
 
-const SUBTYPE: Record<Exclude<FolioAnnotationTool, "select">, AnnotSubtype> = { note: "Text", highlight: "Highlight" };
+const SUBTYPE: Record<Exclude<FolioAnnotationTool, "select">, AnnotSubtype> = { note: "Text", highlight: "Highlight", underline: "Underline", strike: "StrikeOut", rectangle: "Square", ellipse: "Circle" };
 
 /**
- * Saves what the active tool made on a page: a note (`Text`) or a highlight.
+ * Saves what the active tool made on a page: a note, one axis-aligned horizontal markup quad or a bounded rectangle/ellipse.
  * `rect` is `[x, y, w, h]` in PDF user space, from the host's page view.
  */
 export async function addFolioAnnotation(
   document: Pick<FolioDocument, "addAnnotation">, tool: string, page: number, rect: Rect, contents: string,
 ): Promise<number> {
-  if (tool !== "note" && tool !== "highlight") throw new RangeError(`Folio cannot save a "${tool}" annotation (see FOLIO_DEFERRED_OPS)`);
+  if (tool !== "note" && tool !== "highlight" && tool !== "underline" && tool !== "strike" && tool !== "rectangle" && tool !== "ellipse") throw new RangeError(`Folio cannot save a "${tool}" annotation (see FOLIO_DEFERRED_OPS)`);
   return requireData(await document.addAnnotation(page, rect, contents, SUBTYPE[tool]), "addAnnotation").annot_id;
 }
 
@@ -110,29 +97,38 @@ export function bindFolioHistory(document: Pick<FolioDocument, "undo" | "redo">,
   };
 }
 
-/** A thread as NYC-Tron `CommentThread` takes it. Folio threads have no author, time, replies or state. */
-export interface FolioThread {
-  /** `<page>:<annotation object id>`. */
-  readonly id: string;
-  readonly page: number;
-  readonly body: string;
-  readonly subtype: string;
-  readonly rect: Rect | null;
-  readonly replies: readonly never[];
+/** Author/time come only from actual PDF metadata and an optional app formatter. */
+export interface FolioThreadEntry { readonly id: string; readonly body: string; readonly author?: string; readonly modified?: string; readonly timeLabel?: string }
+export interface FolioThread extends FolioThreadEntry {
+  readonly page: number; readonly subtype: string; readonly rect: Rect | null;
+  readonly replies: readonly FolioThreadEntry[]; readonly resolved?: boolean; readonly reviewState?: string;
 }
-
-/** Every annotation in the document as a one-comment thread, in page order. */
-export async function readFolioThreads(document: Pick<FolioDocument, "pageCount" | "listAnnotations">): Promise<FolioThread[]> {
+export interface FolioCommentContext {
+  readonly reviewAuthor: string;
+  readonly metadata: () => FolioCommentMetadata | Promise<FolioCommentMetadata>;
+  readonly isCurrent: () => boolean;
+  /** Host generation/document lock; native operations do not provide expected-revision CAS. */
+  readonly commit: (action: () => Promise<unknown>) => Promise<unknown>;
+  readonly formatTime?: (pdfDate: string) => string;
+}
+function commentEntry(entry: FolioCommentEntry, page: number, context?: FolioCommentContext): FolioThreadEntry {
+  return { id: `${page}:${entry.id}`, body: entry.contents,
+    ...(entry.author === undefined ? {} : { author: entry.author }),
+    ...(entry.modified === undefined ? {} : { modified: entry.modified }),
+    ...(entry.modified === undefined || !context?.formatTime ? {} : { timeLabel: context.formatTime(entry.modified) }) };
+}
+export async function readFolioThreads(document: Pick<FolioDocument, "pageCount" | "listCommentThreads">, context?: FolioCommentContext): Promise<FolioThread[]> {
+  if (context && !context.isCurrent()) throw new Error("The comment document changed");
   const pageCount = await readFolioPageCount(document);
+  if (context && !context.isCurrent()) throw new Error("The comment document changed");
   const out: FolioThread[] = [];
   for (let page = 0; page < pageCount; page++) {
-    const { annots } = requireData(await document.listAnnotations(page), "listAnnotations");
-    if (!Array.isArray(annots)) throw new Error("Folio returned invalid annotations");
-    for (const a of annots) {
-      if (!Number.isSafeInteger(a.id)) throw new Error("Folio returned a malformed annotation");
-      out.push({ id: `${page}:${a.id}`, page, body: typeof a.contents === "string" ? a.contents : "", subtype: a.subtype,
-        rect: Array.isArray(a.rect) ? a.rect : null, replies: [] });
-    }
+    if (context && !context.isCurrent()) throw new Error("The comment document changed");
+    const { threads } = requireData(await document.listCommentThreads(page, context?.reviewAuthor), "listCommentThreads");
+    if (context && !context.isCurrent()) throw new Error("The comment document changed");
+    for (const thread of threads) out.push({ ...commentEntry(thread, page, context), page, subtype: thread.subtype, rect: thread.rect,
+      replies: thread.replies.map(reply => commentEntry(reply, page, context)),
+      ...(thread.resolved === undefined ? {} : { resolved: thread.resolved }), ...(thread.review_state === undefined ? {} : { reviewState: thread.review_state }) });
   }
   return out;
 }
@@ -144,23 +140,47 @@ export function folioThreadRef(id: string): { page: number; annotation: number }
   return { page: Number(m[1]), annotation: Number(m[2]) };
 }
 
-/** `CommentsThreadPanel` props Folio can back: threads and delete. Reply and resolve are deferred. */
+/** Reply/review actions require explicit caller metadata, generation admission and write gate. */
 export interface FolioCommentsBinding {
   readonly threads: readonly FolioThread[];
   readonly onDelete: (threadId: string) => Promise<void>;
+  readonly onReply?: (threadId: string, body: string, mentions?: readonly string[]) => Promise<void>;
+  readonly onResolvedChange?: (threadId: string, resolved: boolean) => Promise<void>;
 }
-
-/** Binds the comments panel; delete goes through `removeAnnotation` and re-reads. */
 export async function bindFolioComments(
-  document: FolioOfficeDocument, onChanged: (next: FolioCommentsBinding) => void,
+  document: FolioOfficeDocument, onChanged: (next: FolioCommentsBinding) => void, context?: FolioCommentContext,
 ): Promise<FolioCommentsBinding> {
-  const threads = await readFolioThreads(document);
+  if (context && (!context.reviewAuthor.trim() || context.reviewAuthor.length > 256)) throw new Error("A bounded review author is required");
+  const threads = await readFolioThreads(document, context);
+  const assertCurrent = () => { if (context && !context.isCurrent()) throw new Error("The comment document changed"); };
+  const refresh = async () => { assertCurrent(); const next = await bindFolioComments(document, onChanged, context); assertCurrent(); onChanged(next); };
+  const metadataWrite = async (id: string, action: (page: number, annotation: number, metadata: FolioCommentMetadata) => Promise<unknown>) => {
+    if (!context) throw new Error("Comment author metadata and admission are required");
+    assertCurrent(); const original = threads.find(thread => thread.id === id); if (!original) throw new Error("Comment not found");
+    const supplied = await context.metadata();
+    const metadata = { author: supplied.author, modified: supplied.modified }; assertCurrent();
+    if (metadata.author !== context.reviewAuthor) throw new Error("Comment author changed");
+    await context.commit(async () => {
+      assertCurrent(); const current = await readFolioThreads(document, context); assertCurrent();
+      if (JSON.stringify(current.find(thread => thread.id === id)) !== JSON.stringify(original)) throw new Error("The comment thread changed");
+      const { page, annotation } = folioThreadRef(id); assertCurrent(); await action(page, annotation, metadata);
+    });
+    await refresh();
+  };
   return {
     threads,
     onDelete: async id => {
-      const { page, annotation } = folioThreadRef(id);
-      await document.removeAnnotation(page, annotation);
-      onChanged(await bindFolioComments(document, onChanged));
+      const { page, annotation } = folioThreadRef(id); assertCurrent();
+      const write = async () => { assertCurrent(); await document.removeAnnotation(page, annotation); };
+      if (context) await context.commit(write); else await write();
+      await refresh();
     },
+    ...(context ? {
+      onReply: async (id: string, body: string, mentions?: readonly string[]) => {
+        if (mentions?.length) throw new Error("PDF comment mentions are not supported");
+        await metadataWrite(id, (page, annotation, metadata) => document.addAnnotationReply(page, annotation, body, metadata));
+      },
+      onResolvedChange: async (id: string, resolved: boolean) => metadataWrite(id, (page, annotation, metadata) => document.setAnnotationReview(page, annotation, resolved, metadata)),
+    } : {}),
   };
 }

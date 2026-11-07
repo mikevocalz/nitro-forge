@@ -58,8 +58,10 @@ jobs:
           corepack pnpm --filter @nitro-forge/pitch exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
           corepack pnpm --filter @nitro-forge/quill exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
           corepack pnpm --filter @nitro-forge/folio exec vitest run tests/office-cluster.test.ts tests/nyc-tron-consumer.test.ts
+      - name: Test office engine document and interchange contracts
+        run: cargo test --locked -p pitch-engine -p quill-engine -p folio-engine
       - name: Compile real Rust engine host
-        run: cargo build -p nf-cli
+        run: cargo build --locked -p nf-cli
       - name: Test adapters and existing engine e2e against real Rust
         run: |
           corepack pnpm --filter @nitro-forge/pitch exec vitest run

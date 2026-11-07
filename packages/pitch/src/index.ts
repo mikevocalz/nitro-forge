@@ -9,28 +9,64 @@ export const OPS = {
   newDoc: "new",
   describe: "describe",
   addSlide: "addSlide",
+  addSection: "addSection",
+  updateSection: "updateSection",
+  removeSection: "removeSection",
   removeSlide: "removeSlide",
   moveSlide: "moveSlide",
   moveSlides: "moveSlides",
   removeSlides: "removeSlides",
   setBackground: "setBackground",
+  setSlideSize: "setSlideSize",
   addText: "addText",
   setText: "setText",
+  setTextStyle: "setTextStyle",
   addRect: "addRect",
   addImage: "addImage",
   moveObject: "moveObject",
+  setObjectOrder: "setObjectOrder",
   resizeObject: "resizeObject",
   rotateObject: "rotateObject",
   removeObject: "removeObject",
   addAnimation: "addAnimation",
   removeAnimation: "removeAnimation",
+  updateAnimation: "updateAnimation",
   slideAt: "slideAt",
   deck: "deck",
 } as const;
 
 export type Rgba = [number, number, number, number];
+/** Omitted text attributes remain unchanged; null is invalid. RGBA channels are 0..255. */
+export interface PitchTextStyle {
+  font_size?: number;
+  bold?: boolean;
+  italic?: boolean;
+  color?: Rgba;
+}
+/** Stable boundary; follows start_slide_id on reorder. Removing that slide removes this boundary. */
+export interface PitchSection { id: number; label: string; start_slide_id: number }
 export type Layout = "blank" | "title" | "titleBody";
-export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn";
+export type AnimKind = "fadeIn" | "slideInLeft" | "zoomIn" | "pulse" | "spin" | "fadeOut" | "zoomOut";
+export type PitchAnimationTrigger = {type:"absolute"}|{type:"on-click";click_index:number}|{type:"with-previous"}|{type:"after-previous"};
+function ownAnimationTrigger(value:PitchAnimationTrigger):PitchAnimationTrigger {
+ if(!value||typeof value!=='object')throw new TypeError('Animation trigger must be explicit');
+ const keys=Object.keys(value);
+ if(value.type==='on-click'){
+  if(keys.length!==2||!keys.includes('type')||!keys.includes('click_index')||!Number.isInteger(value.click_index)||value.click_index<0||value.click_index>=256)throw new RangeError('Invalid click trigger');
+  return {type:'on-click',click_index:value.click_index};
+ }
+ if(keys.length!==1||keys[0]!=='type'||!['absolute','with-previous','after-previous'].includes(value.type))throw new RangeError('Invalid animation trigger');
+ return {type:value.type};
+}
+export interface PitchAnimationSchedule {index:number;start_s:number|null;end_s:number|null}
+
+/** Partial in-place animation edit; omitted fields preserve the effect and timing. */
+export interface PitchAnimationUpdate {
+  trigger?: PitchAnimationTrigger;
+  kind?: AnimKind;
+  start_s?: number;
+  duration_s?: number;
+}
 
 export interface AnimatedObject {
   id: number;
@@ -46,8 +82,8 @@ export class PitchDocument {
   private constructor(private doc: DocumentHandle) {}
 
   static async open(host: EngineHost, title = "Untitled"): Promise<PitchDocument> {
-    const doc = await DocumentHandle.open(host, "pitch");
-    await doc.apply(OPS.newDoc, { title });
+    const doc = await DocumentHandle.openInitialized(host, "pitch",
+      (document) => document.apply(OPS.newDoc, { title }));
     return new PitchDocument(doc);
   }
 
@@ -55,8 +91,7 @@ export class PitchDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<PitchDocument> {
-    const doc = await DocumentHandle.open(host, "pitch");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openSnapshot(host, "pitch", bytes);
     return new PitchDocument(doc);
   }
 
@@ -70,6 +105,14 @@ export class PitchDocument {
   addSlide(layout: Layout = "blank") {
     return this.call<{ slide_id: number }>(OPS.addSlide, { layout });
   }
+  addSection(label: string, startSlide: number) {
+    return this.call<{ section_id: number }>(OPS.addSection, { label, start_slide: startSlide });
+  }
+  updateSection(id: number, patch: { label?: string; start_slide?: number }) {
+    return this.call<{ ok: boolean }>(OPS.updateSection, { ...patch, id });
+  }
+  /** Removes only the boundary, retaining every slide. */
+  removeSection(id: number) { return this.call<{ ok: boolean }>(OPS.removeSection, { id }); }
   removeSlide(id: number) {
     return this.call(OPS.removeSlide, { id });
   }
@@ -84,6 +127,10 @@ export class PitchDocument {
   removeSlides(ids: readonly number[]) {
     return this.call(OPS.removeSlides, { ids });
   }
+  /** Deck coordinates only; does not resize objects or the application window. */
+  setSlideSize(width: number, height: number) {
+    return this.call<{ ok: boolean }>(OPS.setSlideSize, { width, height });
+  }
   setBackground(slide: number, color: Rgba | null) {
     return this.call(OPS.setBackground, { slide, color });
   }
@@ -95,11 +142,19 @@ export class PitchDocument {
   setText(slide: number, id: number, text: string) {
     return this.call(OPS.setText, { slide, id, text });
   }
+  /** Apply a partial text style in one history entry; equal/empty patches are no-ops. */
+  setTextStyle(slide: number, id: number, style: PitchTextStyle) {
+    return this.call<{ ok: boolean }>(OPS.setTextStyle, { ...style, slide, id });
+  }
   addRect(slide: number, x: number, y: number, w: number, h: number, fill: Rgba) {
     return this.call<{ object_id: number }>(OPS.addRect, { slide, x, y, w, h, fill });
   }
   addImage(slide: number, x: number, y: number, w: number, h: number, src: string) {
     return this.call<{ object_id: number }>(OPS.addImage, { slide, x, y, w, h, src });
+  }
+  /** Absolute bottom-to-top object index; object and animation identities are unchanged. */
+  setObjectOrder(slide: number, id: number, to: number) {
+    return this.call(OPS.setObjectOrder, { slide, id, to });
   }
   moveObject(slide: number, id: number, x: number, y: number) {
     return this.call(OPS.moveObject, { slide, id, x, y });
@@ -113,19 +168,25 @@ export class PitchDocument {
   removeObject(slide: number, id: number) {
     return this.call(OPS.removeObject, { slide, id });
   }
-  addAnimation(slide: number, object: number, kind: AnimKind, startS: number, durationS: number) {
-    return this.call<{ index: number }>(OPS.addAnimation, {
-      slide, object, kind, start_s: startS, duration_s: durationS,
+  addAnimation(slide: number, object: number, kind: AnimKind, startS: number, durationS: number, trigger?: PitchAnimationTrigger) {
+    return this.call<{ index: number }>(trigger === undefined ? OPS.addAnimation : "addTriggeredAnimationV1", {
+      slide, object, kind, start_s: startS, duration_s: durationS, ...(trigger === undefined ? {} : { trigger: ownAnimationTrigger(trigger) }),
     });
+  }
+  /** Retains target object and list index; equal/empty patches preserve history. */
+  updateAnimation(slide: number, index: number, patch: PitchAnimationUpdate) {
+    return this.call<{ ok: boolean }>(patch.trigger === undefined ? OPS.updateAnimation : "updateTriggeredAnimationV1", { ...patch, ...(patch.trigger === undefined ? {} : { trigger: ownAnimationTrigger(patch.trigger) }), slide, index });
   }
   removeAnimation(slide: number, index: number) {
     return this.call(OPS.removeAnimation, { slide, index });
   }
   /** Resolve slide objects at presentation time t (animations applied). */
-  slideAt(slide: number, tS: number) {
-    return this.call<{ objects: AnimatedObject[] }>(OPS.slideAt, {
+  slideAt(slide: number, tS: number, clickTimes?: readonly number[]) {
+    if(clickTimes && (clickTimes.length>256||clickTimes.some((time,index)=>!Number.isFinite(time)||time<0||time>86400||(index>0&&time<clickTimes[index-1]!))))throw new RangeError("Click times must be a bounded ordered slide-relative history");
+    return this.call<{ objects: AnimatedObject[]; schedule: PitchAnimationSchedule[] }>(clickTimes === undefined ? OPS.slideAt : "slideAtWithClicksV1", {
       slide,
       t_s: tS,
+      ...(clickTimes === undefined ? {} : { click_times: [...clickTimes] }),
     });
   }
   deck() {

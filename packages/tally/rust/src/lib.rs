@@ -29,6 +29,8 @@
 
 mod formula;
 mod range_ops;
+mod sheet_ops;
+mod protection;
 
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator, Value as FVal};
 use ignition_core::{
@@ -59,6 +61,10 @@ pub struct Sheet {
     pub id: u64,
     pub name: String,
     pub cells: BTreeMap<String, Cell>,
+    #[serde(default)]
+    pub tone: Option<String>,
+    #[serde(default)]
+    pub is_protected: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -75,6 +81,8 @@ fn blank_workbook() -> Workbook {
             id: 0,
             name: "Sheet1".to_string(),
             cells: BTreeMap::new(),
+            tone: None,
+            is_protected: false,
         }],
         active: 0,
     }
@@ -309,6 +317,8 @@ impl TallyEngine {
             }
         }
         let id = self.doc.next_sheet;
+        let next_id = id.checked_add(1)
+            .ok_or_else(|| EngineError::validation("sheet id space exhausted"))?;
         let name = name
             .map(str::to_string)
             .unwrap_or_else(|| self.default_sheet_name(id));
@@ -316,9 +326,11 @@ impl TallyEngine {
             id,
             name,
             cells: BTreeMap::new(),
+            tone: None,
+            is_protected: false,
         };
         self.journal.record(UndoEntry::AddSheet { sheet_id: id });
-        self.doc.next_sheet += 1;
+        self.doc.next_sheet = next_id;
         self.doc.sheets.push(sheet);
         let index = self.doc.sheets.len() - 1;
         Ok(Self::changed(json!({
@@ -478,7 +490,7 @@ impl TallyEngine {
             .doc
             .sheets
             .iter()
-            .map(|s| json!({ "name": s.name, "cell_count": s.cells.len() }))
+            .map(|s| json!({ "name": s.name, "cell_count": s.cells.len(), "tone": s.tone, "is_protected": s.is_protected }))
             .collect();
         Ok(Self::readonly(json!({
             "sheets": sheets,
@@ -591,6 +603,17 @@ impl Engine for TallyEngine {
     }
 
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            let batch = ignition_core::parse_batch(cmd)?;
+            let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
+            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
+            if result.events.iter().any(|event| event.kind == "document:changed") {
+                let prev = self.doc.clone();
+                self.journal.record(UndoEntry::Reset { prev });
+                self.doc = staged.doc;
+            }
+            return Ok(result);
+        }
         if cmd.v != SUPPORTED_VERSION {
             return Err(EngineError::unsupported(format!(
                 "unsupported command version {} (expected {SUPPORTED_VERSION})",
@@ -598,6 +621,7 @@ impl Engine for TallyEngine {
             )));
         }
         let p = &cmd.payload;
+        self.check_protection(&cmd.op, p)?;
         match cmd.op.as_str() {
             "new" => self.op_new(),
             "describe" => self.op_describe(),
@@ -605,6 +629,10 @@ impl Engine for TallyEngine {
             "renameSheet" => self.op_rename_sheet(p),
             "removeSheet" => self.op_remove_sheet(p),
             "setActive" => self.op_set_active(p),
+            "moveSheet" => self.op_move_sheet(p),
+            "duplicateSheet" => self.op_duplicate_sheet(p),
+            "setSheetColor" => self.op_set_sheet_color(p),
+            "protectSheet" => self.op_protect_sheet(p),
             "setCell" => self.op_set_cell(p),
             "setRange" => self.op_set_range(p),
             "fillRange" => self.op_fill_range(p),
@@ -638,7 +666,8 @@ impl Engine for TallyEngine {
         }
         if let Some(max_id) = doc.sheets.iter().map(|s| s.id).max() {
             if doc.next_sheet <= max_id {
-                doc.next_sheet = max_id + 1;
+                doc.next_sheet = max_id.checked_add(1)
+                    .ok_or_else(|| EngineError::serialization("sheet id space exhausted"))?;
             }
         }
         // Reject crafted snapshots: sheet ids/names must be unique and every
@@ -646,6 +675,9 @@ impl Engine for TallyEngine {
         let mut seen_ids = std::collections::BTreeSet::new();
         let mut seen_names = std::collections::BTreeSet::new();
         for s in &mut doc.sheets {
+            if !sheet_ops::valid_tone(s.tone.as_deref()) {
+                return Err(EngineError::serialization("invalid sheet tone"));
+            }
             if !seen_ids.insert(s.id) {
                 return Err(EngineError::serialization("duplicate sheet id"));
             }
@@ -746,7 +778,7 @@ mod tests {
         assert_eq!(r["ok"], json!(true));
         assert_eq!(
             data(&mut e, "workbook", json!({})),
-            json!({"sheets":[{"name":"Sheet1","cell_count":0}],"active":0})
+            json!({"sheets":[{"name":"Sheet1","cell_count":0,"tone":null,"is_protected":false}],"active":0})
         );
     }
 
@@ -820,7 +852,7 @@ mod tests {
         // state unchanged
         assert_eq!(
             data(&mut e, "workbook", json!({})),
-            json!({"sheets":[{"name":"Sheet1","cell_count":0}],"active":0})
+            json!({"sheets":[{"name":"Sheet1","cell_count":0,"tone":null,"is_protected":false}],"active":0})
         );
     }
 
@@ -986,8 +1018,8 @@ mod tests {
             data(&mut e, "workbook", json!({})),
             json!({
                 "sheets":[
-                    {"name":"Sheet1","cell_count":1},
-                    {"name":"Two","cell_count":1}
+                    {"name":"Sheet1","cell_count":1,"tone":null,"is_protected":false},
+                    {"name":"Two","cell_count":1,"tone":null,"is_protected":false}
                 ],
                 "active":1
             })

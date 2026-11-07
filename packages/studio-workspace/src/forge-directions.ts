@@ -294,6 +294,8 @@ export function nycTronTokensFor(colors: WorkspaceColors, selected = colors.rais
     '--color-border': colors.line,
     '--color-text': colors.text,
     '--color-text-muted': colors.muted,
+    '--color-primary': colors.accent,
+    '--color-on-primary': colors.ink,
     '--color-accent': colors.accent,
     '--color-focus': colors.accent,
     '--radius-control': `${workspaceScale.radius.control}px`,

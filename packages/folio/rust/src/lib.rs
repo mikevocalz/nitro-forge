@@ -20,6 +20,10 @@
 //! - `new {pages}` is capped at 10_000 pages to keep a malformed command from
 //!   allocating unbounded object graphs.
 
+mod annotation_edit;
+mod markup;
+mod comments;
+
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -419,6 +423,16 @@ impl Engine for FolioEngine {
     }
 
     fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            let batch = ignition_core::parse_batch(cmd)?;
+            let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
+            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
+            if result.events.iter().any(|event| event.kind == "document:changed") {
+                self.journal.record(self.doc.clone());
+                self.doc = staged.doc;
+            }
+            return Ok(result);
+        }
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
                 "command version {} is not supported (only v1)",
@@ -460,16 +474,26 @@ impl Engine for FolioEngine {
                 let page_id = self.page_id(page)?;
                 let rect = req_rect(p)?;
                 let contents = req_str(p, "contents")?;
+                if contents.encode_utf16().count() > 32767 {
+                    return Err(EngineError::validation("annotation contents exceeds 32767 UTF-16 units"));
+                }
+                let metadata = if p.get("author").is_some() || p.get("modified").is_some() { Some(comments::metadata(p)?) } else { None };
                 let subtype = match p.get("subtype").and_then(Value::as_str) {
                     None => "Text",
                     Some(s) if s.eq_ignore_ascii_case("text") => "Text",
                     Some(s) if s.eq_ignore_ascii_case("highlight") => "Highlight",
+                    Some(s) if s.eq_ignore_ascii_case("underline") => "Underline",
+                    Some(s) if s.eq_ignore_ascii_case("strikeout") => "StrikeOut",
+                    Some(s) if s.eq_ignore_ascii_case("square") => "Square",
+                    Some(s) if s.eq_ignore_ascii_case("circle") => "Circle",
                     Some(s) => {
                         return Err(EngineError::validation(format!(
-                            "unsupported annotation subtype '{s}' (expected Text|Highlight)"
+                            "unsupported annotation subtype '{s}' (expected Text|Highlight|Underline|StrikeOut|Square|Circle)"
                         )))
                     }
                 };
+                let quad = markup::quad(rect, subtype != "Text")?;
+                let shape_version = if matches!(subtype, "Square" | "Circle") { Some(markup::shape_version(&self.doc.version)?) } else { None };
                 // PDF /Rect is [x1, y1, x2, y2]; payload is [x, y, w, h].
                 let pdf_rect = vec![
                     Object::Real(rect[0] as f32),
@@ -505,12 +529,20 @@ impl Engine for FolioEngine {
                     }
                 }
                 self.journal.record(self.doc.clone());
-                let annot = dictionary! {
+                let mut annot = dictionary! {
                     "Type" => "Annot",
                     "Subtype" => subtype,
                     "Rect" => Object::Array(pdf_rect),
-                    "Contents" => Object::string_literal(contents),
+                    "Contents" => lopdf::text_string(contents),
                 };
+                if let Some(quad) = quad.filter(|_| matches!(subtype, "Highlight" | "Underline" | "StrikeOut")) { annot.set("QuadPoints", Object::Array(quad)); }
+                if let Some((author, modified)) = metadata { annot.set("T", lopdf::text_string(&author)); annot.set("M", lopdf::text_string(&modified)); }
+                if let Some(version) = shape_version {
+                    self.doc.version = version;
+                    annot.set("BS", dictionary! {"Type"=>"Border", "W"=>1, "S"=>"S"});
+                    annot.set("C", vec![Object::Integer(0)]);
+                    annot.set("IC", Vec::<Object>::new());
+                }
                 let annot_id = self.doc.add_object(Object::Dictionary(annot));
                 match loc {
                     AnnotsLoc::Inline => {
@@ -542,89 +574,11 @@ impl Engine for FolioEngine {
                 }
                 Ok(CommandResult::data(json!({ "annot_id": annot_id.0 })))
             }
-            "removeAnnotation" => {
-                let page = req_u64(p, "page")?;
-                let page_id = self.page_id(page)?;
-                let id = req_u64(p, "id")?;
-                let loc = annots_loc(&self.doc, page_id)?;
-                // Confirm the annotation exists (read-only) before recording
-                // an undo entry — a NotFound must not consume an undo slot.
-                let exists = match loc {
-                    AnnotsLoc::Inline => self
-                        .doc
-                        .get_object(page_id)
-                        .and_then(|o| o.as_dict())
-                        .ok()
-                        .and_then(|d| d.get(b"Annots").ok())
-                        .and_then(|o| o.as_array().ok())
-                        .map(|a| {
-                            a.iter().any(|o| {
-                                matches!(o, Object::Reference(r) if u64::from(r.0) == id)
-                            })
-                        })
-                        .unwrap_or(false),
-                    AnnotsLoc::Ref(r) => self
-                        .doc
-                        .get_object(r)
-                        .and_then(|o| o.as_array())
-                        .ok()
-                        .map(|a| {
-                            a.iter().any(|o| {
-                                matches!(o, Object::Reference(r) if u64::from(r.0) == id)
-                            })
-                        })
-                        .unwrap_or(false),
-                    AnnotsLoc::Missing => false,
-                };
-                if !exists {
-                    return Err(EngineError::not_found(format!(
-                        "no annotation with id {id} on page {page}"
-                    )));
-                }
-                self.journal.record(self.doc.clone());
-                let removed = match loc {
-                    AnnotsLoc::Inline => {
-                        let page_dict = self
-                            .doc
-                            .get_object_mut(page_id)
-                            .and_then(|o| o.as_dict_mut())
-                            .map_err(ser_err)?;
-                        let arr = page_dict
-                            .get_mut(b"Annots")
-                            .and_then(|o| o.as_array_mut())
-                            .map_err(ser_err)?;
-                        match arr.iter().position(|o| {
-                            matches!(o, Object::Reference(r) if u64::from(r.0) == id)
-                        }) {
-                            Some(i) => Some(arr.remove(i)),
-                            None => None,
-                        }
-                    }
-                    AnnotsLoc::Ref(r) => {
-                        let arr = self
-                            .doc
-                            .get_object_mut(r)
-                            .and_then(|o| o.as_array_mut())
-                            .map_err(ser_err)?;
-                        match arr.iter().position(|o| {
-                            matches!(o, Object::Reference(r) if u64::from(r.0) == id)
-                        }) {
-                            Some(i) => Some(arr.remove(i)),
-                            None => None,
-                        }
-                    }
-                    AnnotsLoc::Missing => None,
-                };
-                match removed {
-                    Some(Object::Reference(annot_id)) => {
-                        self.doc.objects.remove(&annot_id);
-                        Ok(CommandResult::data(json!({ "ok": true })))
-                    }
-                    _ => Err(EngineError::not_found(format!(
-                        "no annotation with id {id} on page {page}"
-                    ))),
-                }
-            }
+            "setAnnotationContents" => self.op_set_annotation_contents(p),
+            "removeAnnotation" => self.op_remove_comment_tree(p),
+            "addAnnotationReply" => self.op_comment_reply(p, false),
+            "setAnnotationReview" => self.op_comment_reply(p, true),
+            "listCommentThreads" => self.op_list_comment_threads(p),
             "rotatePage" => {
                 let page = req_u64(p, "page")?;
                 let page_id = self.page_id(page)?;
@@ -679,7 +633,7 @@ impl Engine for FolioEngine {
                     let contents = dict
                         .get(b"Contents")
                         .ok()
-                        .and_then(obj_string)
+                        .and_then(|o| lopdf::decode_text_string(o).ok())
                         .unwrap_or_default();
                     annots.push(json!({
                         "id": id.0,
@@ -715,6 +669,8 @@ impl Engine for FolioEngine {
         let doc = Document::load_mem(&bytes).map_err(ser_err)?;
         // Only commit after every decode step succeeded.
         self.doc = doc;
+        // A replacement document cannot reuse the previous document history.
+        self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
     }
 

@@ -126,7 +126,7 @@ fn handle_frame(
             let Some(kind) = kind.and_then(EngineKind::parse) else {
                 return err_resp(
                     req.id,
-                    EngineError::invalid("open requires payload.kind (prism|cadence|splice|folio|pitch|tally|quill)"),
+                    EngineError::invalid("open requires payload.kind (prism|cadence|splice|folio|pitch|tally|quill|photo|motion|design|draft)"),
                 );
             };
             match factory(kind) {

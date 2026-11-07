@@ -600,3 +600,28 @@ Workspace/presets, contextual overflow, file transfer, color dialog and presente
 ## Recovery phase 6
 
 See [PHASE6](recovery/PHASE6.md): 340 Rust / 446 Forge package tests pass, one pre-existing native check skipped. Actual linked C++ task/binary/cache and FIFO tests and generated-header compilation pass. NYC-Tron has 716 source tests, 435 full Chromium tests and an actual iOS simulator app build. Native runtime, Android decoder, complete RNW app and QNX gates remain explicitly open.
+
+## Focused P02 recovery follow-up, 2026-11-07
+
+`pnpm --filter @nitro-forge/ignition exec vitest run tests/recovery-ownership.test.ts tests/autosave.test.ts tests/collaboration-checkpoint.test.ts` passed 20 tests in 3 files. Seven new fault-injected cases cover Buffer ownership, recovery cancellation boundaries, aggregate cleanup errors and close-during-notification scheduling. This is focused JS/CLI evidence; native/device cancellation and platform storage acceptance remain NOT RUN.
+
+## P10 photo catalog source checkpoint (2026-11-07)
+
+Registered `photo` catalog metadata/version engine and typed API. Focused crate, CLI/tag/ordinal and v1 FFI checks plus source typechecks are recorded in [the source report](completion/reports/P10-registered-photo-catalog-source.md). This is not a RAW provider, develop renderer, native consumer acceptance or full P10 completion. Existing seven engine tags/ordinals are preserved and photo appends7.
+
+
+## P11 immutable Motion raster source checkpoint (2026-11-07)
+
+Motion now persists owned immutable straight-sRGB RGBA8 assets and real raster layers using the existing Prism binary upload/compositor. Focused evidence: full Motion engine suite 14 passed; registered binary FFI ownership/pixel/invalid-input case 1 passed; actual CLI caller-subview copy/shared-layer/opacity/reopen and empty/legacy describe cases 2 passed; direct source typecheck passed. Exact commands, logical storage budgets, old-shape compatibility and remaining gates are in the [raster source report](completion/reports/P11-motion-raster-source.md). No native target run, decoder/encoder, default product activation or full P11 completion is implied.
+
+## P10 decoded develop preview source checkpoint (2026-11-07)
+
+Photo persists version recipes and processes real bounded straight-alpha sRGB RGBA8. Eleven Photo engine tests and eight TypeScript tests pass, including identity/color/alpha, persistence, stale authority, owned input and malformed/oversized responses. The parent independently verifies a binary FFI preview and a real Photo-to-Motion CLI pixel/history/reopen flow. Those use synthetic decoded pixels, not a RAW decoder or original-file provenance proof. See [the develop source report](completion/reports/P10-nondestructive-develop-preview-source.md). No native target, full RAW controls or P10 acceptance is inferred.
+
+## Shared decoder and backend test entry (2026-11-07)
+
+The base64 decoder now rejects malformed alphabet/padding/trailing bits before allocation while retaining valid unpadded input (`6949110`); seven decoder/host tests pass. New package test scripts and the shared source runner make Photo/Motion/Design/Draft tests discoverable in workspace and existing CI runs. Local evidence: 54 scoped Rust tests, 18 source/CLI tests, four binary FFI checks and preview TypeScript pass. See [test entry report](completion/reports/backend-test-discovery.md). These results do not establish remote CI, native consumer or required-platform acceptance.
+
+## Office and circular drafting source checkpoint (2026-11-07)
+
+Quill now persists bounded explicit list definitions and actual DOCX numbering; Pitch evaluates explicit host click histories plus emphasis/exit effects; Draft persists circles/arcs and evaluates analytic circular snaps; Folio writes bounded PDF text-markup quadrilaterals. Quill/Pitch/Draft protect new feature snapshots from permissive old readers using local versioned containers, with unchanged framing and engine identities. Local checks pass 123 office Rust/51 office TypeScript tests and 60 backend Rust/20 source-CLI tests; preview TypeScript and the completion validator pass. See [current status](completion/STATUS.md) and linked reports for commands, contracts and remaining work. These source checks do not establish native rendering, Word/PDF viewer interoperability or full original phase/platform acceptance.

@@ -1,0 +1,9 @@
+Native tool observation excerpt, 2026-11-06.
+Environment: iOS 27.1 iPhone Duo simulator BBCC4078-E64D-4642-893B-ACF80ACB29A1.
+App: ai.nitroforge.cadence.native; linked UIKit reserved-regions bridge.
+Injected F6 before folding: AXAdjustable “Gain” value="0.9".
+Argent fold open: inner panel, angle180; “Reserved regions: linked; 3 reported.”; Gain0.9.
+Argent fold half-open: inner panel, angle120; three regions; Gain0.9.
+Argent fold closed: cover panel, angle0; “Reserved regions: linked; 2 reported.”; Gain0.9.
+Document/session remained mounted above adaptive viewport. App orientation remains default.
+Simulator geometry/continuity evidence only; no physical foldable acceptance.

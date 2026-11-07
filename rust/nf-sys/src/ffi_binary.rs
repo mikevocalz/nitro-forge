@@ -133,6 +133,131 @@ mod tests {
         )
     }
     #[test]
+    fn draft_registered_factory_returns_real_binary_path_rgba() {
+        unsafe {
+            let mut error=std::ptr::null_mut();let kind=std::ffi::CString::new("draft").unwrap();
+            let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(),5,&mut error);assert!(handle>0);assert!(error.is_null());
+            for(op,payload)in [("addPoint",r#"{"x":0,"y":0.5}"#),("addPoint",r#"{"x":1,"y":0.5}"#),("addSegment",r#"{"a":1,"b":2,"color":[11,22,33,255]}"#)] {
+                let result=run(handle,op,payload,None,std::ptr::null());assert!(result.command.error_json.is_null());nf_v1_free_binary_result(result);
+            }
+            let frame=run(handle,"renderFrame",r#"{"width":1,"height":1,"origin_x":0,"origin_y":0,"scale":1}"#,None,std::ptr::null());
+            assert!(frame.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(frame.output.ptr,frame.output.len),&[11,22,33,255]);nf_v1_free_binary_result(frame);
+            let rejected=run(handle,"describe","{}",Some(&[1]),std::ptr::null());assert!(!rejected.command.error_json.is_null());nf_v1_free_binary_result(rejected);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
+    fn design_registered_factory_returns_real_binary_rgba() {
+        unsafe {
+            let mut error=std::ptr::null_mut();
+            let kind=std::ffi::CString::new("design").unwrap();
+            let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(),6,&mut error);
+            assert!(handle>0);assert!(error.is_null());
+            for(op,payload)in [("new",r#"{"width":1,"height":1}"#),("addShape",r#"{"parent":1,"kind":"rect","width":1,"height":1,"fill":[7,8,9,255]}"#)]{
+                let result=run(handle,op,payload,None,std::ptr::null());assert!(result.command.error_json.is_null());nf_v1_free_binary_result(result);
+            }
+            let result=run(handle,"renderFrame","{}",None,std::ptr::null());
+            assert!(result.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(result.output.ptr,result.output.len),&[7,8,9,255]);nf_v1_free_binary_result(result);
+            let rejected=run(handle,"renderFrame","{}",Some(&[1]),std::ptr::null());assert!(!rejected.command.error_json.is_null());nf_v1_free_binary_result(rejected);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
+    fn motion_binary_raster_ingest_owns_bytes_and_returns_real_frames() {
+        unsafe {
+            let mut error=std::ptr::null_mut();let kind=std::ffi::CString::new("motion").unwrap();let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(),6,&mut error);assert!(handle>0);assert!(error.is_null());
+            let initialized=run(handle,"new",r#"{"width":2,"height":1}"#,None,std::ptr::null());assert!(initialized.command.error_json.is_null());nf_v1_free_binary_result(initialized);
+            let mut original=vec![11,22,33,255,44,55,66,0];let added=run(handle,"addRasterAsset",r#"{"width":2,"height":1,"format":"rgba8-straight-srgb"}"#,Some(&original),std::ptr::null());assert!(added.command.error_json.is_null());nf_v1_free_binary_result(added);original.fill(0);
+            let layer=run(handle,"addRasterLayer",r#"{"asset_id":1}"#,None,std::ptr::null());assert!(layer.command.error_json.is_null());nf_v1_free_binary_result(layer);
+            let frame=run(handle,"renderFrame",r#"{"time_s":0}"#,None,std::ptr::null());assert!(frame.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(frame.output.ptr,frame.output.len),&[11,22,33,255,0,0,0,0]);nf_v1_free_binary_result(frame);
+            let asset=run(handle,"readRasterAsset",r#"{"id":1}"#,None,std::ptr::null());assert!(asset.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(asset.output.ptr,asset.output.len),&[11,22,33,255,44,55,66,0]);nf_v1_free_binary_result(asset);
+            let before=run(handle,"__snapshot","{}",None,std::ptr::null());let snapshot=std::slice::from_raw_parts(before.output.ptr,before.output.len).to_vec();nf_v1_free_binary_result(before);
+            for(payload,input)in [(r#"{"width":1,"height":1,"format":"rgba8-straight-srgb"}"#,&[1u8,2,3][..]),(r#"{"width":1,"height":1,"format":"rgba8-straight-srgb","pixels_b64":"AAAAAA=="}"#,&[0u8;4][..])]{let rejected=run(handle,"addRasterAsset",payload,Some(input),std::ptr::null());assert!(!rejected.command.error_json.is_null());nf_v1_free_binary_result(rejected);}
+            let after=run(handle,"__snapshot","{}",None,std::ptr::null());assert_eq!(std::slice::from_raw_parts(after.output.ptr,after.output.len),snapshot);nf_v1_free_binary_result(after);assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
+    fn motion_registered_factory_returns_real_binary_rgba() {
+        unsafe {
+            let mut error=std::ptr::null_mut();
+            let kind=std::ffi::CString::new("motion").unwrap();
+            let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(),6,&mut error);
+            assert!(handle>0);assert!(error.is_null());
+            for(op,payload)in [("new",r#"{"width":1,"height":1}"#),("addShapeLayer",r#"{"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[7,8,9,255]}}"#)]{
+                let result=run(handle,op,payload,None,std::ptr::null());assert!(result.command.error_json.is_null());nf_v1_free_binary_result(result);
+            }
+            let result=run(handle,"renderFrame",r#"{"time_s":0}"#,None,std::ptr::null());
+            assert!(result.command.error_json.is_null());assert_eq!(std::slice::from_raw_parts(result.output.ptr,result.output.len),&[7,8,9,255]);nf_v1_free_binary_result(result);
+            let rejected=run(handle,"renderFrame",r#"{"time_s":0}"#,Some(&[1]),std::ptr::null());assert!(!rejected.command.error_json.is_null());nf_v1_free_binary_result(rejected);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
+    fn photo_develop_binary_preview_returns_real_pixels_without_mutation() {
+        unsafe {
+            let mut error = std::ptr::null_mut();
+            let kind = std::ffi::CString::new("photo").unwrap();
+            let handle = crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(), 5, &mut error);
+            assert!(handle > 0 && error.is_null());
+            let recipe = serde_json::json!({"schema":1,"exposure_ev":1,"contrast":1,"rgb_gain":[1,1,1]});
+            for (op, payload) in [
+                ("addOriginal", serde_json::json!({"sha256":"a".repeat(64),"asset_ref":"retained:raw","byte_length":20,"camera_make":"Pentax","camera_model":"K-7"})),
+                ("setDevelop", serde_json::json!({"id":"version-2","develop":recipe})),
+            ] {
+                let result = run(handle, op, &payload.to_string(), None, std::ptr::null());
+                assert!(result.command.error_json.is_null());
+                nf_v1_free_binary_result(result);
+            }
+            let before = run(handle, "__snapshot", "{}", None, std::ptr::null());
+            assert!(before.command.error_json.is_null());
+            let snapshot = std::slice::from_raw_parts(before.output.ptr, before.output.len).to_vec();
+            nf_v1_free_binary_result(before);
+            let mut payload = serde_json::json!({"version_id":"version-2","original_id":"original-1","original_sha256":"a".repeat(64),"expected_develop":recipe,"format":"rgba8-straight-srgb","width":1,"height":1});
+            let preview = run(handle, "processPreview", &payload.to_string(), Some(&[128,64,32,99]), std::ptr::null());
+            assert!(preview.command.error_json.is_null());
+            assert_eq!(preview.command.event_count, 0);
+            assert_eq!(std::slice::from_raw_parts(preview.output.ptr, preview.output.len), &[176,90,47,99]);
+            nf_v1_free_binary_result(preview);
+            payload["original_sha256"] = serde_json::json!("b".repeat(64));
+            let rejected = run(handle, "processPreview", &payload.to_string(), Some(&[128,64,32,99]), std::ptr::null());
+            assert!(!rejected.command.error_json.is_null());
+            assert!(rejected.output.ptr.is_null());
+            nf_v1_free_binary_result(rejected);
+            let after = run(handle, "__snapshot", "{}", None, std::ptr::null());
+            assert!(after.command.error_json.is_null());
+            assert_eq!(std::slice::from_raw_parts(after.output.ptr, after.output.len), snapshot);
+            nf_v1_free_binary_result(after);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle), 1);
+        }
+    }
+
+    #[test]
+    fn photo_registered_factory_rejects_unsupported_binary_without_mutation() {
+        unsafe {
+            let mut error=std::ptr::null_mut();
+            let kind=std::ffi::CString::new("photo").unwrap();
+            let handle=crate::ffi_v1::nf_v1_open(kind.as_ptr().cast(), 5, &mut error);
+            assert!(handle>0); assert!(error.is_null());
+            let before=run(handle,"__snapshot","{}",None,std::ptr::null());
+            assert!(before.command.error_json.is_null());
+            let bytes=std::slice::from_raw_parts(before.output.ptr,before.output.len).to_vec();
+            nf_v1_free_binary_result(before);
+            let rejected=run(handle,"describe","{}",Some(&[1,2,3]),std::ptr::null());
+            assert!(!rejected.command.error_json.is_null());
+            nf_v1_free_binary_result(rejected);
+            let after=run(handle,"__snapshot","{}",None,std::ptr::null());
+            assert!(after.command.error_json.is_null());
+            assert_eq!(std::slice::from_raw_parts(after.output.ptr,after.output.len),bytes);
+            nf_v1_free_binary_result(after);
+            assert_eq!(crate::ffi_v1::nf_v1_close(handle),1);
+        }
+    }
+
+    #[test]
     fn binary_ffi_uses_raw_output_and_cancelled_mutations_stay_atomic() {
         unsafe {
             let kind = "tally";

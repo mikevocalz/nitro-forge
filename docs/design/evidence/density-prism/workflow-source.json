@@ -1,0 +1,421 @@
+{
+  "status": "passed",
+  "viewport": {
+    "width": 1194,
+    "height": 834
+  },
+  "source": "actual nf-cli Rust engine via loopback browser host",
+  "opens": 1,
+  "layerId": 2,
+  "opacity": 0.37,
+  "savedBytes": 350278,
+  "errors": [],
+  "operations": [
+    {
+      "op": "open",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "new",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "addRasterLayer",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "addShape",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 1,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 1,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "setLayerOpacity",
+      "handle": 7,
+      "ok": true,
+      "payload": {
+        "id": 2,
+        "opacity": 0.37
+      }
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.37,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.37,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "undo",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 1,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 1,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 1,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "redo",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.37,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.37,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.37,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "snapshot",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.37,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "setLayerOpacity",
+      "handle": 7,
+      "ok": true,
+      "payload": {
+        "id": 2,
+        "opacity": 0.82
+      }
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.82,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.82,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "restore",
+      "handle": 7,
+      "ok": true
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.37,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "describe",
+      "handle": 7,
+      "ok": true,
+      "layers": [
+        {
+          "id": 1,
+          "name": "Layer 1",
+          "opacity": 1,
+          "type": "raster"
+        },
+        {
+          "id": 2,
+          "name": "Rectangle 2",
+          "opacity": 0.37,
+          "type": "shape"
+        }
+      ]
+    },
+    {
+      "op": "flatten",
+      "handle": 7,
+      "ok": true
+    }
+  ]
+}

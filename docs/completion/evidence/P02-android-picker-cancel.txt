@@ -1,0 +1,44 @@
+{
+  "tapped": true,
+  "timestampMs": 1793975458264
+}
+--- Screen after action ---
+Saved: /var/folders/37/s0s6qm2x3cx1mdsr_fv0y1pr0000gn/T/simserver-i3A1ko/media/733103000-1793975459740.png
+--- Elements after action (describe) ---
+Source: android-devtools
+Mode: nested
+Coordinates are normalized [0,1] fractions of the screen (x, y, width, height), not pixels.
+Pass them straight to gesture-tap / gesture-swipe / gesture-pinch, which expect this same space.
+To tap an element, use its centre: tap_x = frame.x + frame.width / 2, tap_y = frame.y + frame.height / 2.
+
+ROOT  Screen (0.000, 0.000, 1.000, 1.000)
+
+  Image "Back" id="com.android.launcher3:id/back" [clickable,long-clickable]  (0.152, 0.950, 0.174, 0.048)
+  Image "Home" id="com.android.launcher3:id/home" [clickable,long-clickable]  (0.402, 0.950, 0.194, 0.048)
+  Image "Recents" id="com.android.launcher3:id/recent_apps" [clickable,long-clickable]  (0.672, 0.950, 0.174, 0.048)
+  ScrollView "Cadence native instrument editor" [scrollable]  (0.000, 0.000, 1.000, 1.000)
+    StaticText "Cadence / Native"  (0.039, 0.033, 0.922, 0.042)
+    StaticText "SwiftUI · Jetpack Compose · Rust-owned document"  (0.039, 0.083, 0.922, 0.021)
+    ComposeView  (0.039, 0.124, 0.399, 0.180)
+      SeekBar "Gain"  (0.039, 0.124, 0.399, 0.180)
+        StaticText "1.000"  (0.187, 0.192, 0.104, 0.026)
+        StaticText "Gain"  (0.210, 0.218, 0.057, 0.018)
+    ComposeView  (0.563, 0.124, 0.398, 0.180)
+      SeekBar "Pan"  (0.563, 0.124, 0.398, 0.180)
+        StaticText "0.000"  (0.710, 0.192, 0.104, 0.026)
+        StaticText "Pan"  (0.738, 0.218, 0.049, 0.018)
+    StaticText "Native instrument 01"  (0.075, 0.338, 0.850, 0.021)
+    StaticText "Gain 1.00 · Pan 0.00 · 120 BPM"  (0.075, 0.363, 0.850, 0.021)
+    RadioButton "SwiftUI / Compose knob" [clickable]  (0.039, 0.418, 0.446, 0.052)
+    RadioButton "React Native knob" [clickable]  (0.509, 0.418, 0.354, 0.052)
+    RadioButton "Gain / Pan pad" [clickable]  (0.039, 0.482, 0.298, 0.052)
+    Button "Reconnect native engine" [clickable]  (0.039, 0.552, 0.453, 0.052)
+    Button "Verify native engines" [clickable]  (0.516, 0.552, 0.397, 0.052)
+    Button "Verify native services" [clickable]  (0.039, 0.615, 0.405, 0.052)
+    Button "Verify native telemetry" [clickable]  (0.468, 0.615, 0.423, 0.052)
+    Button "Test picker cancellation" [clickable]  (0.039, 0.679, 0.441, 0.052)
+    Button "Share test snapshot" [clickable]  (0.504, 0.679, 0.381, 0.052)
+    Button "Undo" [clickable]  (0.039, 0.742, 0.229, 0.052)
+    Button "Redo" [clickable]  (0.292, 0.742, 0.229, 0.052)
+    Button "Snapshot" [clickable]  (0.544, 0.742, 0.229, 0.052)
+    StaticText "Native picker cancellation passed: OS picker returned no documents."  (0.039, 0.812, 0.922, 0.039)

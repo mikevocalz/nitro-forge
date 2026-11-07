@@ -1,0 +1,11 @@
+# Quill exact RGB inline background source checkpoint
+
+Quill stores optional `highlight` as an exact #RRGGBB run background. `applyStyle` accepts six hexadecimal digits after #, preserving their spelling, or null to clear. Other CSS color forms, names and alpha values reject before any style mutation or history change. Restore validates before replacing state/history; old snapshots default to no explicit background. Existing inline split/merge and cloned journal records carry the field.
+
+DOCX export uses w:shd with w:val="clear" and exact w:fill RGB; it does not quantize colors to Word's named highlight palette. Import accepts explicit RGB shading, either self-closing or paired elements, with absent/clear pattern. Named colored w:highlight, automatic fills, patterns and theme-fill references reject explicitly rather than silently dropping or approximating them. w:highlight="none" is accepted as no named highlight and does not erase independent shading. This intentionally supports one representation; it is not a complete DOCX shading/highlight model. The export entry point validates highlight before constructing XML.
+
+TypeScript Style and the ribbon binding expose highlight as a known color, mixed, or unspecified and onHighlightChange forwards exact set/null clear commands. The pinned NYC-Tron consumer type contract includes these props. Collapsed selections reject rather than creating a fake pending typing style. No app palette, renderer, font shaping or native provider is added; app composition remains separate.
+
+Unrun regression cases cover exact mixed-case RGB round-trip through DOCX and snapshot, clear/undo/redo without losing font size, malformed colors and invalid restore preserving redo/history, legacy default, paired/self-closing shading, unsupported DOCX formats, canonical binding mixed/read/set/clear, caret rejection and original engine rejection without publishing new state. Shared fixtures remain unchanged.
+
+Validation: cargo check -p quill-engine --tests compiles cases without execution; direct scoped TypeScript checking and git diff --check pass. No runtime, engine test suite, native build or app acceptance was run under the review gate. No package, dependency, lock or window configuration changes were made. Independent source review is required before commit.

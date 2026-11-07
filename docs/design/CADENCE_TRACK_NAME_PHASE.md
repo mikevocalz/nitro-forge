@@ -1,0 +1,9 @@
+# Cadence track naming host binding
+
+The existing Cadence detail controls now expose `renameTrack` for the selected track through the strict workspace TextInput and Button providers. The engine already stores track names durably and records rename in its undo journal; this change adds the missing host command binding. The public alpha.4 pins are unchanged.
+
+The draft lives in a per-instance vanilla Zustand store owned by the selected track component. Switching track remounts that owner; changing document or authoritative track name replaces its draft store. Unrelated project reads, density, and geometry do not reset the draft or remount its input. Keyboard/focus runtime acceptance remains open. The rename target uses the workspace density target size. The existing parent write gate rejects stale document/project/selection callbacks and preserves rejected promises for awaited callers while observing legacy void events. The host does not trim or truncate the submitted name; Cadence's current string contract remains authoritative. The action is disabled for unchanged or whitespace-only drafts.
+
+Audit scope: Cadence Routing/Effects/MIDI and Analysis composition, Splice detail composition, typed Cadence APIs, and actual Cadence rename implementation. Analysis already owns automation mode/points, EQ/dynamics graphs, and offline analysis; no duplicate tab was retained. Splice already binds track rename. Native playback/routing/recording and broader host gaps remain separate; this bounded pass does not certify all P04–P09 exit criteria or other products.
+
+Validation: scoped studio-preview TypeScript and whitespace checks passed. Existing surface-admission regressions passed 4/4, covering stale document/viewport callbacks and failed writes; these are gate checks, not a mounted editor/focus test. No device, browser, playback, or accessibility runtime was launched. Native acceptance remains open.

@@ -1,0 +1,35 @@
+# MIDI, analysis and worksheet source review
+
+2026-11-07. Independent source review of three implementation batches. The user's component-review gate keeps runtime, browser, native and full-suite execution deferred. This review inspected code and reports; it does not infer device behavior, visual quality or released-consumer acceptance from source. Reported builds and typechecks belong to their executing agents.
+
+## MIDI grid and horizontal position
+
+The new notation-grid helper keeps PPQ as quarter-note ticks and computes denominator beats and measure boundaries separately. Fractional-tick grid positions do not change note values or snap precision. Long grids retain a bounded line count. Legacy beatsPerBar remains the path when a musical timeSignature is absent; invalid signatures, grid budgets and scroll requests are rejected.
+
+MIDIPianoRoll retains imperative handles, measured viewport size, reached offsets and pending restoration positions in refs. Restoration waits for measurement, clamps to content bounds and acknowledges reached positions through onScrollX. A user drag clears the pending programmatic target; obsolete restoration events are filtered, and unmounted bodies cannot update the retained scroll position through their scroll callbacks. These are source properties, not a replay of native event ordering or momentum behavior.
+
+The optional versioned capability marker stays on the existing component export. Forge checks the version and individual features before sending timeSignature or scrollX, so alpha.4 keeps its explicit unsupported-signature path. Requested horizontal position and acknowledged velocity-lane position remain distinct. This avoids declaring that an unknown prop on an older component implements a new capability.
+
+A further source review found that clamping a stale old-layout offset before comparing it with a pending target could falsely acknowledge a new bound. The follow-up now validates and compares the raw native offset first, rejects out-of-range obsolete offsets, and reissues restoration through the existing mounted/drag guards. Rejected events do not replace the retained or reached position. Native event ordering remains unexecuted.
+
+No blocking source defect remains in the reviewed MIDI changes, raw-offset correction and host feature probe. The phase is suitable for a source checkpoint after the parent's static checks. Rational-grid rendering, user drag versus programmatic restoration, momentum, clamping after content changes, note/velocity alignment, focus and native accessibility remain acceptance scenarios. Published alpha.4 and the 329/329 library implementation count are not promoted by this verdict.
+
+## Cadence analysis
+
+Inspected the canonical automation lane/mode, EQ/dynamics graph and offline measurement composition, plus its parent Analysis tab. Automation writes retain the original engine indices after the visible-window filter. The preview caps point count and window length and states the pinned lane's unsupported fractional-quarter bar case. It does not offer unsupported live recording modes.
+
+EQ response and compressor transfer curves come from existing engine APIs, not app-side approximations. Offline loudness and spectrogram run only on request, on a first-range window capped by clip end and ten seconds. Requests are sequential and an in-instance synchronous lock prevents duplicate admission. Results and failures require the same document, project, selected panel/track/insert/window and enabled generation. Replies from an obsolete generation are discarded; the underlying read API cannot abort a calculation already running. No live meter or player ownership is inferred.
+
+The source review found a late-write gap at the parent tab boundary: passing the raw surface commit bypassed the detail panel's synchronous selection invalidation, while a passive mounted cleanup left a short unmount window. The revised parent passes its guarded write wrapper, and the analysis mounted flag now clears in layout cleanup. The child still guards its own selection generation; the original rejected promise reaches awaited callers. This addresses that source admission gap.
+
+No further blocking source defect was found in the reviewed analysis composition after the correction. It is suitable for its source checkpoint after combined static checks. This review ran no analysis, browser or native scenario. Snapshot consistency with writers outside this document owner, long-job behavior, graph interaction, cancellation semantics, visual layout, native accessibility and actual measurements remain later acceptance work.
+
+## Worksheet detail controls
+
+Inspected the Selection/Data/View composition and final TallySurface wiring. Clear and TSV apply use one existing setRange command with bounded rectangular input, destination bounds and original rejection. No local text is represented as a computed workbook value. The captured document, sheet, source cells and selection must still match, including a synchronous selection-store getter that closes the selection-change-before-render window. Active-sheet verification and data writes remain inside the existing shared document lock.
+
+The measured canonical grid viewport, current window and density feed boundedTallyFreeze on every render. It reserves a body row/column and bounds each frozen-prefix quadrant against the existing read budget. The effective prefixes feed the grid, memoized readRange and SurfaceAdmission generation; readTallyWindow already fetches the body and frozen quadrants. Final binding confirmation and the read token prevent an obsolete sheet/window response from reopening write admission. Retained freeze is reduced when the current geometry/budget requires it. Unfreeze remains reachable when data writes are unavailable. Split commands are absent without an integrated split host.
+
+The review found that the local tool error survived a successful retry of unchanged source after a transient failure. The revised attempt path clears the local error on admission while retaining the input and catch behavior. The source/worksheet grid key cancels older released local edit/fill state when authoritative source or sheet changes; it does not key on every cell-window fetch or viewport, avoiding that form of prefetch/reset cycle. This key also changes on authoritative reloads, including refresh/save-driven reads, so preservation of grid-local focus/scroll is not certified by the source checkpoint.
+
+No blocking source defect remains in the reviewed worksheet composition and wiring after that correction. It is suitable for a source checkpoint after the parent's combined static checks. The bounded viewport/data logic still needs runtime resize, freeze/unfreeze recovery, sheet-switch, TSV failure/retry, keyboard/fill, focus/scroll and native accessibility scenarios. Persisted formatting, structural sheet operations and the other documented engine gaps remain open. No runtime scenario or published release was accepted by this critique.

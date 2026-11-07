@@ -1,0 +1,11 @@
+# Quill exact font-size source checkpoint
+
+Quill stores optional `font_size` in points on durable inline Style. `applyStyle` accepts 1–1638 points in exact half-point increments; null clears the explicit size. Missing values keep the existing style. Nonfinite values, other fractions, out-of-range values and nonnumeric types reject before mutation. Restore validates the field before replacing document state or history; old snapshots default to unspecified size.
+
+The half-point restriction is deliberate: DOCX w:sz/w:szCs use integer half-points. Export writes both with the exact integer value and never rounds an unsupported fraction. Import reads both empty and explicit-end forms, validates integer half-points and accepts szCs alone as a fallback. If both Latin and complex-script sizes are supplied with different values, import rejects instead of collapsing two distinct values into the single-size model. Font inheritance through document styles/theme and distinct script-size storage remain outside this slice.
+
+The office binding exposes fontSize as a numeric point size, mixed, or unspecified, plus onFontSizeChange. Clearing uses null through applyStyle. The pinned NYC-Tron type contract now includes fontSize/onFontSizeChange. Canonical ribbon stepping supplies integer sizes within this range; arbitrary engine callers must also obey the half-point constraint. Collapsed selections retain existing rejection rather than inventing pending typing state. No app control, font-dependent layout or shaping provider was added.
+
+Added unrun regression cases cover exact lower/upper/half-point DOCX round-trips, emitted sz/szCs values, clearing without losing family, snapshot round-trip/default, invalid patch/restore atomicity with redo preservation, both XML element forms and ordering, szCs fallback, differing script-size rejection, malformed bounds/fractions, callback set/clear and rejection behavior. Shared mock fixtures are unchanged.
+
+Validation performed: cargo check -p quill-engine --tests compiles the new cases; scoped direct TypeScript checking and git diff --check pass. No test cases were executed and no native or editor runtime validation was performed. Independent source review remains required. Dependency pins, locks and app configuration are unchanged.

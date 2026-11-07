@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { Button, Banner, ScrollView, Text, TextInput, View } from './ui';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { workspaceThemes, workspaceScale as scale } from './theme';
+import { workspaceThemes, resolveWorkspaceScale, type WorkspaceDensity } from './theme';
 import { ForgeIcon } from '@nitro-forge/icons/native';
 import { plainText, textEdit } from './text-diff';
 
@@ -14,6 +14,8 @@ export interface QuillTextEditorHandle {
 export interface QuillTextEditorProps {
   state: unknown;
   theme?: 'dark' | 'light';
+  /** Chrome density never changes manuscript type or page geometry. */
+  density?: WorkspaceDensity;
   apply: (op: string, payload?: unknown) => Promise<unknown>;
   reload: () => Promise<void>;
   documentTitle?: string;
@@ -23,6 +25,8 @@ const errorMessage = (e: unknown) => e instanceof Error ? e.message : String(e);
 
 /** A local essay draft; only Apply text (or a host flush) writes to Quill. */
 export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditorProps>(function QuillTextEditor(props, ref) {
+  const scale = resolveWorkspaceScale(props.density);
+  const controlClass = 'rounded-[4px]' + (props.density === 'comfortable' ? ' min-h-12 min-w-12' : '');
   const storeRef = useRef<StoreApi<Draft> | null>(null);
   if (!storeRef.current) {
     const initial = plainText(props.state);
@@ -129,14 +133,14 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
   const compact = width < 600;
   return <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled"
     onLayout={event => { const next = event.nativeEvent.layout.width; if (next > 0 && next !== store.getState().width) store.setState({ width: next }); }}
-    contentContainerStyle={{ paddingHorizontal: compact ? 16 : 40, paddingTop: compact ? 18 : 32, paddingBottom: 48, gap: 16 }}>
+    contentContainerStyle={{ paddingHorizontal: compact ? 16 : 40, paddingTop: compact ? 18 : 32, paddingBottom: 48, gap: scale.space.group }}>
     <View style={{ width: '100%', maxWidth: 792, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <ForgeIcon name="file" size={14} color={colors.muted} reducedMotion />
         <Text style={{ color: colors.muted, fontSize: 11 }}>{wordCount} {wordCount === 1 ? 'word' : 'words'}{dirty ? ' · Draft changes' : ' · Up to date'}</Text>
       </View>
       <Button aria-label="Apply essay text" title={busy ? 'Applying…' : 'Apply text'} disabled={busy || !dirty || conflict} loading={busy}
-        onPress={() => { void flush().catch(() => {}); }} variant={dirty ? 'primary' : 'ghost'} tone="carolina" size="sm" cornerRadius={scale.radius.control} className="rounded-[4px]"
+        onPress={() => { void flush().catch(() => {}); }} variant={dirty ? 'primary' : 'ghost'} tone="carolina" size="sm" cornerRadius={scale.radius.control} targetSize={scale.size.target} className={controlClass}
         icon={<ForgeIcon name="check" size={16} color={colors.accent} reducedMotion />} />
     </View>
     <View style={{ width: '100%', maxWidth: 792, alignSelf: 'center', minHeight: 760, backgroundColor: colors.paper,
@@ -149,6 +153,6 @@ export const QuillTextEditor = forwardRef<QuillTextEditorHandle, QuillTextEditor
           fontSize: compact ? 17 : 19, lineHeight: compact ? 29 : 34, borderWidth: 0 }} />
     </View>
     {(error || conflict || dirty) && <View style={{ maxWidth: 792, width: '100%', alignSelf: 'center' }}><Banner tone={error || conflict ? 'danger' : 'info'} title={error ?? (conflict ? 'Your draft conflicts with the latest document.' : status)} live={error || conflict ? 'alert' : 'status'} className="rounded-[4px]" /></View>}
-    {conflict && <Button title="Discard draft and load latest document" aria-label="Discard draft and load latest document" disabled={busy} onPress={() => { void loadLatest(); }} variant="ghost" tone="carolina" size="sm" cornerRadius={scale.radius.control} className="rounded-[4px]" />}
+    {conflict && <Button title="Discard draft and load latest document" aria-label="Discard draft and load latest document" disabled={busy} onPress={() => { void loadLatest(); }} variant="ghost" tone="carolina" size="sm" cornerRadius={scale.radius.control} targetSize={scale.size.target} className={controlClass} />}
   </ScrollView>;
 });

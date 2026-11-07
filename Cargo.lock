@@ -254,6 +254,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "design-engine"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "prism-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -272,6 +282,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.9",
+]
+
+[[package]]
+name = "draft-engine"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "prism-engine",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -581,6 +601,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "motion-engine"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "prism-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "multiversion_no_op"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -591,8 +621,12 @@ name = "nf-cli"
 version = "0.1.0"
 dependencies = [
  "cadence-engine",
+ "design-engine",
+ "draft-engine",
  "folio-engine",
  "ignition-core",
+ "motion-engine",
+ "photo-engine",
  "pitch-engine",
  "prism-engine",
  "quill-engine",
@@ -605,8 +639,12 @@ name = "nf-sys"
 version = "0.1.0"
 dependencies = [
  "cadence-engine",
+ "design-engine",
+ "draft-engine",
  "folio-engine",
  "ignition-core",
+ "motion-engine",
+ "photo-engine",
  "pitch-engine",
  "prism-engine",
  "quill-engine",
@@ -655,6 +693,15 @@ name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+
+[[package]]
+name = "photo-engine"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "pin-project-lite"
@@ -736,6 +783,7 @@ dependencies = [
  "quick-xml",
  "serde",
  "serde_json",
+ "unicode-normalization",
  "zip",
 ]
 

@@ -12,6 +12,7 @@
     "test:ui-modules": "node verify-ui-modules.mjs"
   },
   "dependencies": {
+    "expo-linear-gradient": "58.0.3",
     "@nitro-forge/studio-workspace": "workspace:*",
     "@nitro-forge/studio-layout": "workspace:*",
     "@nitro-forge/ignition": "workspace:*",

@@ -93,6 +93,9 @@ export class CadenceInstrumentSession {
     const document = await CadenceDocument.open(host, tempo);
     try {
       const trackId = (await document.addTrack("midi", name)).data.track_id;
+      // Session setup is the baseline, not a user edit. Round-tripping the
+      // initialized snapshot clears setup history without deleting its track.
+      await document.handle.restore(await document.save());
       const result = await document.describe<EngineProject>();
       const state = readActualTrack(result.data, trackId);
       return new CadenceInstrumentSession(document, trackId, state);
@@ -140,6 +143,17 @@ export class CadenceInstrumentSession {
     };
   }
 
+  /** Normalized props for NYC-Tron's existing InstrumentXYPad: X is pan,
+   * Y is gain. Both coordinates are committed as one engine transaction. */
+  get xyPad() {
+    return {
+      x: (this.current.pan + 1) / 2,
+      y: this.current.gain,
+      step: 0.01,
+      onCommit: (point: { x: number; y: number }) => this.setGainAndPan(point.y, point.x * 2 - 1),
+    };
+  }
+
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
     if (this.closing) return Promise.reject(new Error("Cadence session is closed"));
     const result = this.tail.then(operation);
@@ -176,6 +190,17 @@ export class CadenceInstrumentSession {
 
   setGain(value: number) { return this.mutate("gain", value); }
   setPan(value: number) { return this.mutate("pan", value); }
+  setGainAndPan(gain: number, pan: number): Promise<Readonly<CadenceInstrumentState>> {
+    if (!Number.isFinite(gain) || gain < 0 || gain > 1 || !Number.isFinite(pan) || pan < -1 || pan > 1)
+      return Promise.reject(new RangeError("Gain/pan values are out of range"));
+    return this.enqueue(async () => {
+      await this.document.handle.applyBatch([
+        { op: "setTrackGain", payload: { id: this.trackId, volume: gain } },
+        { op: "setTrackPan", payload: { id: this.trackId, pan } },
+      ]);
+      return this.syncFromEngine();
+    });
+  }
   refresh() { return this.enqueue(() => this.syncFromEngine()); }
 
   undo(): Promise<boolean> {

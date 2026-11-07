@@ -1,0 +1,2315 @@
+diff --git a/examples/native-cadence/App.tsx b/examples/native-cadence/App.tsx
+index d8ba331..bc2e8f4 100644
+--- a/examples/native-cadence/App.tsx
++++ b/examples/native-cadence/App.tsx
+@@ -283,17 +283,18 @@ export default function App() {
+                   {" / "}{String(state.panPreview ?? actual.pan)}
+                 </Text> : null}
+           </View>
+-          <View accessibilityRole="radiogroup" accessibilityLabel="Knob renderer"
+-            style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+-            <Action label="SwiftUI / Compose knob" selected={state.renderer === "native"}
+-              onPress={() => store.setState({ renderer: "native" })}/>
+-            <Action label="React Native knob" selected={state.renderer === "react-native"}
+-              onPress={() => store.setState({ renderer: "react-native" })}/>
+-            <Action label="Precision scrubbers" selected={state.renderer === "precision"}
+-              onPress={() => store.setState({ renderer: "precision" })}/>
+-            <Action label="Gain / Pan pad" selected={state.renderer === "xy"}
+-              onPress={() => store.setState({ renderer: "xy" })}/>
+-          </View>
++          <SegmentedControl unstyled aria-label="Instrument renderer" value={state.renderer}
++            disabled={state.pending} options={[
++              { value: "native", label: "SwiftUI / Compose knob" },
++              { value: "react-native", label: "React Native knob" },
++              { value: "precision", label: "Precision scrubbers" },
++              { value: "xy", label: "Gain / Pan pad" },
++            ]} labelStyle={{ color: colors.text }} style={{ gap: 10 }}
++            segmentStyle={({ selected }) => ({ minHeight: 48, paddingHorizontal: 14,
++              borderWidth: 1, borderRadius: 9, borderColor: selected ? colors.accent : colors.border,
++              backgroundColor: colors.surface })}
++            onChange={renderer => store.setState({ renderer })}/>
++
+           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+             <Action label="Reconnect native engine" disabled={state.pending} onPress={() =>
+               store.setState(s => ({ attempt: s.attempt + 1 }))}/>
+diff --git a/examples/native-cadence/metro.config.js b/examples/native-cadence/metro.config.js
+index 00042d2..5e5786a 100644
+--- a/examples/native-cadence/metro.config.js
++++ b/examples/native-cadence/metro.config.js
+@@ -16,11 +16,12 @@ config.watchFolders = [
+   path.join(forgeRoot, "packages/ignition"),
+   path.join(forgeRoot, "packages/cadence"),
+   path.join(forgeRoot, "packages/telemetry"),
++  path.join(forgeRoot, "packages/media-ui"),
+ ];
+ 
+ // Explicit lab mode serves a separate acceptance entry. Normal consumers keep
+ // their released dependency graph; candidate-only exports are isolated here.
+-const acceptanceEntry = { media: "media-acceptance", checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance", collaboration: "collaboration-acceptance" }[process.env.FORGE_ACCEPTANCE];
++const acceptanceEntry = { player: "player-acceptance", media: "media-acceptance", checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance", collaboration: "collaboration-acceptance" }[process.env.FORGE_ACCEPTANCE];
+ if (acceptanceEntry) {
+   const rewrite = config.server?.rewriteRequestUrl;
+   config.server = {
+@@ -33,7 +34,7 @@ if (acceptanceEntry) {
+ }
+ 
+ module.exports = withNycTronDevLink(
+-  pinToApp(config, { projectRoot, packages: [...SHARED_RUNTIME, "react-native-nitro-modules"] }),
++  pinToApp(config, { projectRoot, packages: [...SHARED_RUNTIME, "react-native-nitro-modules", "react-native-video"] }),
+   { projectRoot, ...(process.env.NYC_TRON_PACKAGES ? {
+     includePackages: process.env.NYC_TRON_PACKAGES.split(",").map(name => name.trim()).filter(Boolean),
+   } : {}) },
+diff --git a/examples/native-cadence/package.json b/examples/native-cadence/package.json
+index 9dca971..633c9f2 100644
+--- a/examples/native-cadence/package.json
++++ b/examples/native-cadence/package.json
+@@ -13,8 +13,12 @@
+     "@expo/ui": "58.0.27",
+     "@nitro-forge/cadence": "workspace:*",
+     "@nitro-forge/ignition": "workspace:*",
++    "@nitro-forge/telemetry": "workspace:*",
++    "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz",
++    "@nyc-tron/hardware-keys": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz",
+     "@nyc-tron/native-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz",
+     "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz",
++    "@nyc-tron/reserved-regions": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz",
+     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
+     "expo": "58.0.23",
+     "expo-constants": "58.0.15",
+@@ -22,17 +26,14 @@
+     "react": "19.3.0",
+     "react-native": "0.88.1",
+     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+-    "zustand": "5.0.16",
+-    "@nitro-forge/telemetry": "workspace:*",
+-    "@nyc-tron/hardware-keys": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz",
+-    "@nyc-tron/reserved-regions": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz",
+-    "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz"
++    "zustand": "5.0.16"
+   },
+   "devDependencies": {
+     "@react-native-community/cli": "20.2.0",
+     "@react-native-community/cli-platform-android": "20.2.0",
+     "@react-native-community/cli-platform-ios": "20.2.0",
+     "@types/react": "~19.3.0",
++    "react-native-video": "file:../../tooling/react-native-video-v1/experimental-build-v1.tgz",
+     "typescript": "~6.0.3"
+   },
+   "packageManager": "pnpm@10.32.1"
+diff --git a/examples/native-cadence/pnpm-lock.yaml b/examples/native-cadence/pnpm-lock.yaml
+index a1cc7fc..ae5a900 100644
+--- a/examples/native-cadence/pnpm-lock.yaml
++++ b/examples/native-cadence/pnpm-lock.yaml
+@@ -30,7 +30,7 @@ importers:
+     dependencies:
+       '@expo/ui':
+         specifier: 58.0.27
+-        version: 58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++        version: 58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+       '@nitro-forge/cadence':
+         specifier: workspace:*
+         version: link:../../packages/cadence
+@@ -45,10 +45,10 @@ importers:
+         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz
+       '@nyc-tron/hardware-keys':
+         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz
+-        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz(patch_hash=d9496df15ade7c40c91bef806eef49908eb8b0e18d70f3dea4a585f66cd94e5e)(@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0)))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz(patch_hash=d9496df15ade7c40c91bef806eef49908eb8b0e18d70f3dea4a585f66cd94e5e)(@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0)))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+       '@nyc-tron/native-controls':
+         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz
+-        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+       '@nyc-tron/platform-services':
+         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz
+         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz(patch_hash=d64ac031559a17b81b6cc9227162b64bcc692d438a1a1e258dc3f26c08a3be9a)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
+@@ -57,10 +57,10 @@ importers:
+         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz(patch_hash=f783ad7251e3d776f4fcfc7a41fa9c6ae629a9533b5d4eb5ae9a37a02d5e54cc)(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
+       '@nyc-tron/ui':
+         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz
+-        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
++        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
+       expo:
+         specifier: 58.0.23
+-        version: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++        version: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       expo-constants:
+         specifier: 58.0.15
+         version: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)
+@@ -92,6 +92,9 @@ importers:
+       '@types/react':
+         specifier: ~19.3.0
+         version: 19.3.0
++      react-native-video:
++        specifier: file:../../tooling/react-native-video-v1/experimental-build-v1.tgz
++        version: file:../../tooling/react-native-video-v1/experimental-build-v1.tgz(react-dom@19.3.1(react@19.3.0))(react-native-nitro-modules@1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
+       typescript:
+         specifier: ~6.0.3
+         version: 6.0.3
+@@ -104,7 +107,7 @@ importers:
+     devDependencies:
+       '@nyc-tron/ui':
+         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz
+-        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
++        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
+       '@types/react':
+         specifier: ~19.3.0
+         version: 19.3.0
+@@ -1325,6 +1328,16 @@ packages:
+   '@sinclair/typebox@0.27.12':
+     resolution: {integrity: sha512-hhyNJ+nbR6ZR7pToHvllEFun9TL0sbL+tk/ON75lo+Xas054uez98qRbsuNt7MBCyZKK4+8Yli/OAGZhmfBZ/g==}
+ 
++  '@svta/cml-error-codes@0.1.2':
++    resolution: {integrity: sha512-q1xL8W9JR0Yj7h2kAyRWqb7iT7UlOb/rXMDSVpY5EcXUR5w0zHfl22YG4+dYVqtV9XpoIxhp+nXSqZkTo3TSTg==}
++    engines: {node: '>=20'}
++    peerDependencies:
++      '@svta/cml-utils': ^1.6.2
++
++  '@svta/cml-utils@1.7.0':
++    resolution: {integrity: sha512-NNa9v5CxrmULRAu5zx1ENHVwF4xKfclEdm+OmaIZDwoTNLVpf7JGgwbxkYsbRQYPCZrQTTLlR4sVjwgS6gcmug==}
++    engines: {node: '>=20'}
++
+   '@ts-morph/common@0.29.0':
+     resolution: {integrity: sha512-35oUmphHbJvQ/+UTwFNme/t2p3FoKiGJ5auTjjpNTop2dyREspirjMy82PLSC1pnDJ8ah1GU98hwpVt64YXQsg==}
+ 
+@@ -1481,6 +1494,96 @@ packages:
+   '@ungap/structured-clone@1.4.0':
+     resolution: {integrity: sha512-1mEZtMKPM09vDmQt5y7YvmN2+DFTP7Tg0EWXdic8/C6VRnpb33e4ghisCIE3WZjsE2N8mf+QV1Zqh7ZFYLWInQ==}
+ 
++  '@videojs/core@10.3.0':
++    resolution: {integrity: sha512-JiH3Z8tjxAZdt5s+hSztgtTVMU2lI02in1cFdn2nm1n+LxbvWwwdjsRbUZSJsk1bURBNNiLctn9W7DK59JIdEQ==}
++
++  '@videojs/media@10.3.0':
++    resolution: {integrity: sha512-xZ/33XPTLcQwIDW3b0GSASGYDzXwrqWZjlYdfn3dh/344/7G80wjwDkbgech8+LnL9yEAHGRQ9u+Wue4c/pQZw==}
++
++  '@videojs/native-hls-video@10.3.0':
++    resolution: {integrity: sha512-5UYFBXcnpSwxBfZ2WkTCH+ehftRHCTa301y3Ks+tCiKTT1LjrTlsrqwHqrLTuKVGhaHHDXTBP8FybmgHa1xxag==}
++
++  '@videojs/react@10.3.0':
++    resolution: {integrity: sha512-hL9CnKykyk6GD14eB5B8jjvit8xCeIcYeTAbUssFXnr+jyXpd5qflIGpFBTLPGzDOR8N/P7Am3G8TOj1VOKsZw==}
++    peerDependencies:
++      '@videojs/cloudflare-video': 10.3.0
++      '@videojs/dailymotion-video': 10.3.0
++      '@videojs/dash-video': 10.3.0
++      '@videojs/google-analytics': 10.3.0
++      '@videojs/google-cast': 10.3.0
++      '@videojs/hlsjs-video': 10.3.0
++      '@videojs/mixcloud-audio': 10.3.0
++      '@videojs/mux-audio': 10.3.0
++      '@videojs/mux-data': 10.3.0
++      '@videojs/mux-video': 10.3.0
++      '@videojs/playerjs-video': 10.3.0
++      '@videojs/shaka-video': 10.3.0
++      '@videojs/soundcloud-audio': 10.3.0
++      '@videojs/spotify-audio': 10.3.0
++      '@videojs/tiktok-video': 10.3.0
++      '@videojs/twitch-video': 10.3.0
++      '@videojs/vimeo-video': 10.3.0
++      '@videojs/wistia-video': 10.3.0
++      '@videojs/youtube-video': 10.3.0
++      react: ^18.0.0 || ^19.0.0
++      react-dom: ^18.0.0 || ^19.0.0
++    peerDependenciesMeta:
++      '@videojs/cloudflare-video':
++        optional: true
++      '@videojs/dailymotion-video':
++        optional: true
++      '@videojs/dash-video':
++        optional: true
++      '@videojs/google-analytics':
++        optional: true
++      '@videojs/google-cast':
++        optional: true
++      '@videojs/hlsjs-video':
++        optional: true
++      '@videojs/mixcloud-audio':
++        optional: true
++      '@videojs/mux-audio':
++        optional: true
++      '@videojs/mux-data':
++        optional: true
++      '@videojs/mux-video':
++        optional: true
++      '@videojs/playerjs-video':
++        optional: true
++      '@videojs/shaka-video':
++        optional: true
++      '@videojs/soundcloud-audio':
++        optional: true
++      '@videojs/spotify-audio':
++        optional: true
++      '@videojs/tiktok-video':
++        optional: true
++      '@videojs/twitch-video':
++        optional: true
++      '@videojs/vimeo-video':
++        optional: true
++      '@videojs/wistia-video':
++        optional: true
++      '@videojs/youtube-video':
++        optional: true
++
++  '@videojs/spf@10.3.0':
++    resolution: {integrity: sha512-/Rde9nglitWTl5JXGUEy+P1kDv+Dth216pnWJRGhDbliYYIX/YD+dQDLKummw6IAus1I+N+X2OODK3+0L18GFw==}
++
++  '@videojs/store@10.3.0':
++    resolution: {integrity: sha512-mcQuqXgFV9KoGDADHwUgsvqf6k1+5H65oz/g/+JCwen7RCBt0RQmLjTxQ5Q2n+V4OqnhF40mVlEWHN0gvhLjjw==}
++    peerDependencies:
++      '@videojs/element': 10.3.0
++      react: ^18.0.0 || ^19.0.0
++    peerDependenciesMeta:
++      '@videojs/element':
++        optional: true
++      react:
++        optional: true
++
++  '@videojs/utils@10.3.0':
++    resolution: {integrity: sha512-BvkO1yfy/dhesnNAbFJ9yDcmFOvbQ7ZbBszJqwt73eJJVQFTdFtxpPiVQmxlolA9ifNJvHaLrh9TkUUyig3sZQ==}
++
+   '@vitest/mocker@5.1.0':
+     resolution: {integrity: sha512-5umB9/jlWcqVS6fsrFmv5Gdnpu6wAUio/lEOwAmvB7v+lFo/IW2B9FhAD0p19GCULTgMzLCdUmuCDCnAzWgppQ==}
+     peerDependencies:
+@@ -2933,9 +3036,19 @@ packages:
+     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
+     engines: {node: '>= 0.10'}
+ 
++  react-compiler-runtime@1.0.0:
++    resolution: {integrity: sha512-rRfjYv66HlG8896yPUDONgKzG5BxZD1nV9U6rkm+7VCuvQc903C4MjcoZR4zPw53IKSOX9wMQVpA1IAbRtzQ7w==}
++    peerDependencies:
++      react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
++
+   react-devtools-core@6.1.5:
+     resolution: {integrity: sha512-ePrwPfxAnB+7hgnEr8vpKxL9cmnp7F322t8oqcPshbIQQhDKgFDW4tjhF2wjVbdXF9O/nyuy3sQWd9JGpiLPvA==}
+ 
++  react-dom@19.3.1:
++    resolution: {integrity: sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==}
++    peerDependencies:
++      react: ^19.3.1
++
+   react-is@18.3.1:
+     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
+ 
+@@ -2945,6 +3058,15 @@ packages:
+       react: '*'
+       react-native: '>=0.88.0'
+ 
++  react-native-video@file:../../tooling/react-native-video-v1/experimental-build-v1.tgz:
++    resolution: {integrity: sha512-izGcGMnqrgsw/851nRIxynxTg5jvbP29rnE15ZlxUZlLo9VmSvBrRow8JDNbY77+rop0dIeR221uGyHGF57P7w==, tarball: file:../../tooling/react-native-video-v1/experimental-build-v1.tgz}
++    version: 7.0.0-beta.12-nitrov1-experimental.1
++    peerDependencies:
++      react: '*'
++      react-native: '>=0.88.0'
++      react-native-nitro-modules: 1.0.0-alpha.nightly.120.g33ef045b96c0
++      zustand: ^5.0.0
++
+   react-native@0.88.1:
+     resolution: {integrity: sha512-wajWcLZ93GCN7k4Uwh4CS4L2Ah8ohcvkOXnvIYmh4Yvuqho5j3APZ9qozK+nQrHWSgauq4h8D3HN5DKK84SrHA==}
+     engines: {node: ^22.13.0 || ^24.3.0 || >= 26.0.0}
+@@ -3112,6 +3234,9 @@ packages:
+   signal-exit@3.0.7:
+     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
+ 
++  signal-polyfill@0.2.2:
++    resolution: {integrity: sha512-p63Y4Er5/eMQ9RHg0M0Y64NlsQKpiu6MDdhBXpyywRuWiPywhJTpKJ1iB5K2hJEbFZ0BnDS7ZkJ+0AfTuL37Rg==}
++
+   simple-plist@1.3.1:
+     resolution: {integrity: sha512-iMSw5i0XseMnrhtIzRb7XpQEXepa9xhWxGUojHBL43SIpQuDQkh3Wpy67ZbDzZVr6EKxvwVChnVpdl8hEVLDiw==}
+ 
+@@ -3331,6 +3456,9 @@ packages:
+     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
+     engines: {node: '>= 0.8'}
+ 
++  video.js@10.3.0:
++    resolution: {integrity: sha512-IzlvcWxJ9ox1gHkYma9FsVdWf7jmWFpyFjvISJQW6wA7tsT7IcpxK8T1aFZebGCezyWxG2c5xTyuOzHIfwQPFQ==}
++
+   vite@7.3.7:
+     resolution: {integrity: sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA==}
+     engines: {node: ^20.19.0 || >=22.12.0}
+@@ -3580,6 +3708,7 @@ snapshots:
+   2g@1.0.1(typescript@7.0.2):
+     optionalDependencies:
+       typescript: 7.0.2
++    optional: true
+ 
+   '@babel/code-frame@7.29.7':
+     dependencies:
+@@ -4113,7 +4242,7 @@ snapshots:
+   '@esbuild/win32-x64@0.28.2':
+     optional: true
+ 
+-  '@expo/cli@58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)':
++  '@expo/cli@58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)':
+     dependencies:
+       2g: 1.0.1(typescript@6.0.3)
+       '@expo/code-signing-certificates': 0.0.7
+@@ -4135,7 +4264,7 @@ snapshots:
+       '@expo/plist': 0.10.1
+       '@expo/prebuild-config': 58.0.19(typescript@6.0.3)
+       '@expo/require-utils': 58.0.5(typescript@6.0.3)
+-      '@expo/router-server': 58.0.21(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react@19.3.0)
++      '@expo/router-server': 58.0.21(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react@19.3.0)
+       '@expo/schema-utils': 58.0.3
+       '@expo/spawn-async': 1.8.0
+       '@expo/ws-tunnel': 2.0.1(ws@8.22.1)
+@@ -4153,7 +4282,7 @@ snapshots:
+       compression: 1.8.2
+       connect: 3.7.0
+       dnssd-advertise: 1.1.6
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       expo-server: 58.0.6
+       fetch-nodeshim: 0.4.10
+       getenv: 2.0.0
+@@ -4193,7 +4322,7 @@ snapshots:
+       - typescript
+       - utf-8-validate
+ 
+-  '@expo/cli@58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)':
++  '@expo/cli@58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)':
+     dependencies:
+       2g: 1.0.1(typescript@7.0.2)
+       '@expo/code-signing-certificates': 0.0.7
+@@ -4215,7 +4344,7 @@ snapshots:
+       '@expo/plist': 0.10.1
+       '@expo/prebuild-config': 58.0.19(typescript@7.0.2)
+       '@expo/require-utils': 58.0.5(typescript@7.0.2)
+-      '@expo/router-server': 58.0.21(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react@19.3.0)
++      '@expo/router-server': 58.0.21(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react@19.3.0)
+       '@expo/schema-utils': 58.0.3
+       '@expo/spawn-async': 1.8.0
+       '@expo/ws-tunnel': 2.0.1(ws@8.22.1)
+@@ -4233,7 +4362,7 @@ snapshots:
+       compression: 1.8.2
+       connect: 3.7.0
+       dnssd-advertise: 1.1.6
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       expo-server: 58.0.6
+       fetch-nodeshim: 0.4.10
+       getenv: 2.0.0
+@@ -4272,6 +4401,7 @@ snapshots:
+       - supports-color
+       - typescript
+       - utf-8-validate
++    optional: true
+ 
+   '@expo/code-signing-certificates@0.0.7':
+     dependencies:
+@@ -4314,6 +4444,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   '@expo/config-types@58.0.3': {}
+ 
+@@ -4346,6 +4477,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   '@expo/devcert@1.2.2':
+     dependencies:
+@@ -4358,7 +4490,7 @@ snapshots:
+     dependencies:
+       chalk: 4.1.2
+     optionalDependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+ 
+@@ -4366,21 +4498,23 @@ snapshots:
+     dependencies:
+       chalk: 4.1.2
+     optionalDependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
++    optional: true
+ 
+   '@expo/dom-webview@58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+ 
+   '@expo/dom-webview@58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
++    optional: true
+ 
+   '@expo/env@2.5.4':
+     dependencies:
+@@ -4431,6 +4565,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   '@expo/inline-modules@0.2.9(typescript@6.0.3)':
+     dependencies:
+@@ -4445,6 +4580,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   '@expo/json-file@11.2.1':
+     dependencies:
+@@ -4466,6 +4602,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   '@expo/log-box-utils@58.0.2': {}
+ 
+@@ -4478,7 +4615,7 @@ snapshots:
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+       stacktrace-parser: 0.1.11
+     optionalDependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+ 
+   '@expo/log-box@58.0.15(@expo/dom-webview@58.0.2)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
+     dependencies:
+@@ -4489,7 +4626,8 @@ snapshots:
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
+       stacktrace-parser: 0.1.11
+     optionalDependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++    optional: true
+ 
+   '@expo/metro-config@58.0.21(expo@58.0.23)(typescript@6.0.3)':
+     dependencies:
+@@ -4522,7 +4660,7 @@ snapshots:
+       resolve-from: 5.0.0
+       tinyglobby: 0.2.17
+     optionalDependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+     transitivePeerDependencies:
+       - bufferutil
+       - supports-color
+@@ -4560,12 +4698,13 @@ snapshots:
+       resolve-from: 5.0.0
+       tinyglobby: 0.2.17
+     optionalDependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+     transitivePeerDependencies:
+       - bufferutil
+       - supports-color
+       - typescript
+       - utf-8-validate
++    optional: true
+ 
+   '@expo/metro-file-map@58.0.5(typescript@6.0.3)':
+     dependencies:
+@@ -4590,6 +4729,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   '@expo/metro@58.0.0':
+     dependencies:
+@@ -4676,6 +4816,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   '@expo/require-utils@58.0.5(typescript@6.0.3)':
+     dependencies:
+@@ -4696,15 +4837,18 @@ snapshots:
+       typescript: 7.0.2
+     transitivePeerDependencies:
+       - supports-color
++    optional: true
+ 
+-  '@expo/router-server@58.0.21(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react@19.3.0)':
++  '@expo/router-server@58.0.21(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react@19.3.0)':
+     dependencies:
+       debug: 4.4.3
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       expo-constants: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)
+       expo-font: 58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+       expo-server: 58.0.6
+       react: 19.3.0
++    optionalDependencies:
++      react-dom: 19.3.1(react@19.3.0)
+     transitivePeerDependencies:
+       - supports-color
+ 
+@@ -4718,23 +4862,25 @@ snapshots:
+ 
+   '@expo/sudo-prompt@9.3.2': {}
+ 
+-  '@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
++  '@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+       sf-symbols-typescript: 2.2.0
+     optionalDependencies:
+       '@babel/core': 7.29.13
++      react-dom: 19.3.1(react@19.3.0)
+ 
+-  '@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
++  '@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
+       sf-symbols-typescript: 2.2.0
+     optionalDependencies:
+       '@babel/core': 7.29.13
++      react-dom: 19.3.1(react@19.3.0)
+     optional: true
+ 
+   '@expo/ws-tunnel@2.0.1(ws@8.22.1)':
+@@ -4832,23 +4978,23 @@ snapshots:
+ 
+   '@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz': {}
+ 
+-  ? '@nyc-tron/hardware-keys@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz(patch_hash=d9496df15ade7c40c91bef806eef49908eb8b0e18d70f3dea4a585f66cd94e5e)(@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0)))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)'
++  ? '@nyc-tron/hardware-keys@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz(patch_hash=d9496df15ade7c40c91bef806eef49908eb8b0e18d70f3dea4a585f66cd94e5e)(@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0)))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)'
+   : dependencies:
+-      '@nyc-tron/ui': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      '@nyc-tron/ui': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+ 
+-  '@nyc-tron/native-controls@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
++  '@nyc-tron/native-controls@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
+     dependencies:
+-      '@expo/ui': 58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      '@expo/ui': 58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+ 
+   '@nyc-tron/platform-services@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz(patch_hash=d64ac031559a17b81b6cc9227162b64bcc692d438a1a1e258dc3f26c08a3be9a)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))':
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+       zustand: 5.0.16(@types/react@19.3.0)(react@19.3.0)
+@@ -4856,26 +5002,26 @@ snapshots:
+   '@nyc-tron/reserved-regions@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz(patch_hash=f783ad7251e3d776f4fcfc7a41fa9c6ae629a9533b5d4eb5ae9a37a02d5e54cc)(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))':
+     dependencies:
+       '@nyc-tron/core': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+       zustand: 5.0.16(@types/react@19.3.0)(react@19.3.0)
+ 
+-  '@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))':
++  '@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))':
+     dependencies:
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+     optionalDependencies:
+-      '@expo/ui': 58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++      '@expo/ui': 58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+       '@nyc-tron/core': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz
+       zustand: 5.0.16(@types/react@19.3.0)(react@19.3.0)
+ 
+-  '@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))':
++  '@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(patch_hash=631a63d45339662ab4bae6f758514d00087a70291110a9e78d4d8bafeaa36ec3)(@expo/ui@58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0))':
+     dependencies:
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
+     optionalDependencies:
+-      '@expo/ui': 58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++      '@expo/ui': 58.0.27(patch_hash=31bc17a2705543809605aed1a85f8e0f3581c684d2d76eefc2d710336d39e282)(@babel/core@7.29.13)(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+       '@nyc-tron/core': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz
+       zustand: 5.0.16(@types/react@19.3.0)(react@19.3.0)
+ 
+@@ -5258,6 +5404,12 @@ snapshots:
+ 
+   '@sinclair/typebox@0.27.12': {}
+ 
++  '@svta/cml-error-codes@0.1.2(@svta/cml-utils@1.7.0)':
++    dependencies:
++      '@svta/cml-utils': 1.7.0
++
++  '@svta/cml-utils@1.7.0': {}
++
+   '@ts-morph/common@0.29.0':
+     dependencies:
+       minimatch: 10.2.6
+@@ -5359,6 +5511,57 @@ snapshots:
+ 
+   '@ungap/structured-clone@1.4.0': {}
+ 
++  '@videojs/core@10.3.0(react@19.3.0)':
++    dependencies:
++      '@videojs/media': 10.3.0
++      '@videojs/store': 10.3.0(react@19.3.0)
++      '@videojs/utils': 10.3.0
++      video.js: 10.3.0
++    transitivePeerDependencies:
++      - '@videojs/element'
++      - react
++
++  '@videojs/media@10.3.0':
++    dependencies:
++      '@videojs/utils': 10.3.0
++
++  '@videojs/native-hls-video@10.3.0':
++    dependencies:
++      '@videojs/media': 10.3.0
++      '@videojs/spf': 10.3.0
++      '@videojs/utils': 10.3.0
++
++  '@videojs/react@10.3.0(react-dom@19.3.1(react@19.3.0))(react@19.3.0)':
++    dependencies:
++      '@videojs/core': 10.3.0(react@19.3.0)
++      '@videojs/media': 10.3.0
++      '@videojs/native-hls-video': 10.3.0
++      '@videojs/spf': 10.3.0
++      '@videojs/store': 10.3.0(react@19.3.0)
++      '@videojs/utils': 10.3.0
++      react: 19.3.0
++      react-compiler-runtime: 1.0.0(react@19.3.0)
++      react-dom: 19.3.1(react@19.3.0)
++    transitivePeerDependencies:
++      - '@videojs/element'
++
++  '@videojs/spf@10.3.0':
++    dependencies:
++      '@svta/cml-error-codes': 0.1.2(@svta/cml-utils@1.7.0)
++      '@svta/cml-utils': 1.7.0
++      '@videojs/media': 10.3.0
++      '@videojs/utils': 10.3.0
++      signal-polyfill: 0.2.2
++
++  '@videojs/store@10.3.0(react@19.3.0)':
++    dependencies:
++      '@videojs/utils': 10.3.0
++      react-compiler-runtime: 1.0.0(react@19.3.0)
++    optionalDependencies:
++      react: 19.3.0
++
++  '@videojs/utils@10.3.0': {}
++
+   '@vitest/mocker@5.1.0(vite@7.3.7(@types/node@26.6.6)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1))':
+     dependencies:
+       '@jridgewell/trace-mapping': 0.3.31
+@@ -5525,7 +5728,7 @@ snapshots:
+       react-refresh: 0.14.2
+     optionalDependencies:
+       '@babel/runtime': 7.29.13
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+     transitivePeerDependencies:
+       - '@babel/core'
+       - supports-color
+@@ -5886,7 +6089,7 @@ snapshots:
+   expo-asset@58.0.20(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3):
+     dependencies:
+       '@expo/image-utils': 0.12.6(typescript@6.0.3)
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       expo-constants: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+@@ -5897,19 +6100,20 @@ snapshots:
+   expo-asset@58.0.20(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2):
+     dependencies:
+       '@expo/image-utils': 0.12.6(typescript@7.0.2)
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       expo-constants: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(typescript@7.0.2)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3):
+     dependencies:
+       '@expo/env': 2.5.4
+       '@expo/require-utils': 58.0.5(typescript@6.0.3)
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+     transitivePeerDependencies:
+       - supports-color
+@@ -5919,37 +6123,40 @@ snapshots:
+     dependencies:
+       '@expo/env': 2.5.4
+       '@expo/require-utils': 58.0.5(typescript@7.0.2)
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   expo-file-system@58.0.13(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)):
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+ 
+   expo-file-system@58.0.13(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)):
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
++    optional: true
+ 
+   expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
+ 
+   expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
++    optional: true
+ 
+   expo-keep-awake@58.0.3(expo@58.0.23)(react@19.3.0):
+     dependencies:
+-      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      expo: 58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       react: 19.3.0
+ 
+   expo-modules-autolinking@58.0.17(typescript@6.0.3):
+@@ -5973,6 +6180,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+       - typescript
++    optional: true
+ 
+   expo-modules-cli@0.4.0:
+     dependencies:
+@@ -5994,6 +6202,7 @@ snapshots:
+       invariant: 2.2.4
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
++    optional: true
+ 
+   expo-modules-jsi@58.0.22(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)):
+     dependencies:
+@@ -6002,6 +6211,7 @@ snapshots:
+   expo-modules-jsi@58.0.22(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)):
+     dependencies:
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
++    optional: true
+ 
+   expo-modules-macros@0.29.0:
+     optionalDependencies:
+@@ -6012,10 +6222,10 @@ snapshots:
+ 
+   expo-server@58.0.6: {}
+ 
+-  expo@58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3):
++  expo@58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3):
+     dependencies:
+       '@babel/runtime': 7.29.13
+-      '@expo/cli': 58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
++      '@expo/cli': 58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+       '@expo/config': 58.0.11(typescript@6.0.3)
+       '@expo/config-plugins': 58.0.12(typescript@6.0.3)
+       '@expo/devtools': 58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+@@ -6042,6 +6252,7 @@ snapshots:
+       whatwg-url-minimum: 0.2.0
+     optionalDependencies:
+       '@expo/dom-webview': 58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++      react-dom: 19.3.1(react@19.3.0)
+     transitivePeerDependencies:
+       - '@babel/core'
+       - bufferutil
+@@ -6054,10 +6265,10 @@ snapshots:
+       - typescript
+       - utf-8-validate
+ 
+-  expo@58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2):
++  expo@58.0.23(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2):
+     dependencies:
+       '@babel/runtime': 7.29.13
+-      '@expo/cli': 58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
++      '@expo/cli': 58.1.19(@expo/dom-webview@58.0.2)(expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.23)(react-dom@19.3.1(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
+       '@expo/config': 58.0.11(typescript@7.0.2)
+       '@expo/config-plugins': 58.0.12(typescript@7.0.2)
+       '@expo/devtools': 58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+@@ -6084,6 +6295,7 @@ snapshots:
+       whatwg-url-minimum: 0.2.0
+     optionalDependencies:
+       '@expo/dom-webview': 58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++      react-dom: 19.3.1(react@19.3.0)
+     transitivePeerDependencies:
+       - '@babel/core'
+       - bufferutil
+@@ -6095,6 +6307,7 @@ snapshots:
+       - supports-color
+       - typescript
+       - utf-8-validate
++    optional: true
+ 
+   exponential-backoff@3.1.3: {}
+ 
+@@ -7103,6 +7316,10 @@ snapshots:
+       iconv-lite: 0.7.3
+       unpipe: 1.0.0
+ 
++  react-compiler-runtime@1.0.0(react@19.3.0):
++    dependencies:
++      react: 19.3.0
++
+   react-devtools-core@6.1.5:
+     dependencies:
+       shell-quote: 1.12.0
+@@ -7111,6 +7328,11 @@ snapshots:
+       - bufferutil
+       - utf-8-validate
+ 
++  react-dom@19.3.1(react@19.3.0):
++    dependencies:
++      react: 19.3.0
++      scheduler: 0.28.0
++
+   react-is@18.3.1: {}
+ 
+   react-native-nitro-modules@1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
+@@ -7125,6 +7347,36 @@ snapshots:
+       react: 19.3.0
+       react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@7.0.2))(@types/react@19.3.0)(react@19.3.0)
+ 
++  react-native-video@file:../../tooling/react-native-video-v1/experimental-build-v1.tgz(react-dom@19.3.1(react@19.3.0))(react-native-nitro-modules@1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.0)):
++    dependencies:
++      '@videojs/react': 10.3.0(react-dom@19.3.1(react@19.3.0))(react@19.3.0)
++      react: 19.3.0
++      react-native: 0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0)
++      react-native-nitro-modules: 1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
++      zustand: 5.0.16(@types/react@19.3.0)(react@19.3.0)
++    transitivePeerDependencies:
++      - '@videojs/cloudflare-video'
++      - '@videojs/dailymotion-video'
++      - '@videojs/dash-video'
++      - '@videojs/element'
++      - '@videojs/google-analytics'
++      - '@videojs/google-cast'
++      - '@videojs/hlsjs-video'
++      - '@videojs/mixcloud-audio'
++      - '@videojs/mux-audio'
++      - '@videojs/mux-data'
++      - '@videojs/mux-video'
++      - '@videojs/playerjs-video'
++      - '@videojs/shaka-video'
++      - '@videojs/soundcloud-audio'
++      - '@videojs/spotify-audio'
++      - '@videojs/tiktok-video'
++      - '@videojs/twitch-video'
++      - '@videojs/vimeo-video'
++      - '@videojs/wistia-video'
++      - '@videojs/youtube-video'
++      - react-dom
++
+   react-native@0.88.1(@babel/core@7.29.13)(@react-native-community/cli@20.2.0(typescript@6.0.3))(@types/react@19.3.0)(react@19.3.0):
+     dependencies:
+       '@react-native/asset-utils': 0.88.1
+@@ -7394,6 +7646,8 @@ snapshots:
+ 
+   signal-exit@3.0.7: {}
+ 
++  signal-polyfill@0.2.2: {}
++
+   simple-plist@1.3.1:
+     dependencies:
+       bplist-creator: 0.1.0
+@@ -7599,6 +7853,8 @@ snapshots:
+ 
+   vary@1.1.2: {}
+ 
++  video.js@10.3.0: {}
++
+   vite@7.3.7(@types/node@26.6.6)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1):
+     dependencies:
+       esbuild: 0.28.2
+diff --git a/packages/media-ui/package.json b/packages/media-ui/package.json
+index 42c2dbe..f9b5f88 100644
+--- a/packages/media-ui/package.json
++++ b/packages/media-ui/package.json
+@@ -15,6 +15,10 @@
+     "./math": {
+       "types": "./src/timebase.ts",
+       "default": "./src/timebase.ts"
++    },
++    "./video": {
++      "types": "./src/video/index.ts",
++      "default": "./src/video/index.ts"
+     }
+   },
+   "scripts": {
+@@ -22,16 +26,25 @@
+     "test": "vitest run tests"
+   },
+   "dependencies": {
+-    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz"
++    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
++    "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz"
+   },
+   "peerDependencies": {
+     "@expo/ui": "^58.0.0",
+     "expo": "^58.0.0",
+     "react": ">=19.0.0",
+-    "react-native": ">=0.88.0"
++    "react-native": ">=0.88.0",
++    "zustand": "^5.0.16",
++    "react-native-video": "7.0.0-beta.12-nitrov1-experimental.1"
+   },
+   "devDependencies": {
+     "vitest": "^3.2.7",
+-    "@types/react": "^19.2.0"
++    "@types/react": "^19.2.0",
++    "react-native-video": "file:../../tooling/react-native-video-v1/experimental-build-v1.tgz"
++  },
++  "peerDependenciesMeta": {
++    "react-native-video": {
++      "optional": true
++    }
+   }
+ }
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 75c54cc..9cd1d0c 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -692,6 +692,9 @@ importers:
+       '@expo/ui':
+         specifier: ^58.0.0
+         version: 58.0.27(patch_hash=cbc7fc26f91e08d8f0f57a12112f9a40f53222c7b831fde8ea4538e53e6728d6)(@babel/core@7.29.7(supports-color@8.1.1))(expo@58.0.23)(react-dom@19.3.1(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
++      '@nyc-tron/platform-services':
++        specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz
++        version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1)))
+       '@nyc-tron/ui':
+         specifier: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz
+         version: https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(db948bd2d20f087aff105fb60e0a3901)
+@@ -704,10 +707,16 @@ importers:
+       react-native:
+         specifier: '>=0.88.0'
+         version: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
++      zustand:
++        specifier: ^5.0.16
++        version: 5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
+     devDependencies:
+       '@types/react':
+         specifier: ^19.2.0
+         version: 19.3.0
++      react-native-video:
++        specifier: file:../../tooling/react-native-video-v1/experimental-build-v1.tgz
++        version: file:tooling/react-native-video-v1/experimental-build-v1.tgz(react-dom@19.3.1(react@19.3.1))(react-native-nitro-modules@1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1)))
+       vitest:
+         specifier: ^3.2.7
+         version: 3.2.7(@types/node@26.6.6)(jiti@2.7.0)(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+@@ -860,13 +869,6 @@ importers:
+         version: 5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+ 
+ packages:
+-  expo-linear-gradient@58.0.3:
+-    resolution: {integrity: sha512-sh6LXrlaCtlDlZ1CPPFRJWd3bl9lAr8e0hT61PvzMmkxd5sd3POe9QuWtct58wpp7PgOH2okB3iw4tq3ICA4Sg==}
+-    peerDependencies:
+-      expo: '*'
+-      react: '*'
+-      react-native: '*'
+-
+ 
+   2g@1.0.1:
+     resolution: {integrity: sha512-+uViadKOS/wwR4pFu5g8TPn3QHpKqoX19JHCnp8k/3cLpImdcXozwvZA6Q/5PeW3AcU8neL8faaMidBcv7o8CA==}
+@@ -2308,6 +2310,16 @@ packages:
+   '@sinclair/typebox@0.27.12':
+     resolution: {integrity: sha512-hhyNJ+nbR6ZR7pToHvllEFun9TL0sbL+tk/ON75lo+Xas054uez98qRbsuNt7MBCyZKK4+8Yli/OAGZhmfBZ/g==}
+ 
++  '@svta/cml-error-codes@0.1.2':
++    resolution: {integrity: sha512-q1xL8W9JR0Yj7h2kAyRWqb7iT7UlOb/rXMDSVpY5EcXUR5w0zHfl22YG4+dYVqtV9XpoIxhp+nXSqZkTo3TSTg==}
++    engines: {node: '>=20'}
++    peerDependencies:
++      '@svta/cml-utils': ^1.6.2
++
++  '@svta/cml-utils@1.7.0':
++    resolution: {integrity: sha512-NNa9v5CxrmULRAu5zx1ENHVwF4xKfclEdm+OmaIZDwoTNLVpf7JGgwbxkYsbRQYPCZrQTTLlR4sVjwgS6gcmug==}
++    engines: {node: '>=20'}
++
+   '@tailwindcss/node@4.3.3':
+     resolution: {integrity: sha512-/T8IKEsf9VTU6tLjgC7+sv2mOPtQxzE2jMw7u4Tt40Tx+QSZxpzh95/H6cMKoja9XuW7iMdLJYBB0o9G1CaAgg==}
+ 
+@@ -2687,6 +2699,96 @@ packages:
+   '@ungap/structured-clone@1.4.0':
+     resolution: {integrity: sha512-1mEZtMKPM09vDmQt5y7YvmN2+DFTP7Tg0EWXdic8/C6VRnpb33e4ghisCIE3WZjsE2N8mf+QV1Zqh7ZFYLWInQ==}
+ 
++  '@videojs/core@10.3.0':
++    resolution: {integrity: sha512-JiH3Z8tjxAZdt5s+hSztgtTVMU2lI02in1cFdn2nm1n+LxbvWwwdjsRbUZSJsk1bURBNNiLctn9W7DK59JIdEQ==}
++
++  '@videojs/media@10.3.0':
++    resolution: {integrity: sha512-xZ/33XPTLcQwIDW3b0GSASGYDzXwrqWZjlYdfn3dh/344/7G80wjwDkbgech8+LnL9yEAHGRQ9u+Wue4c/pQZw==}
++
++  '@videojs/native-hls-video@10.3.0':
++    resolution: {integrity: sha512-5UYFBXcnpSwxBfZ2WkTCH+ehftRHCTa301y3Ks+tCiKTT1LjrTlsrqwHqrLTuKVGhaHHDXTBP8FybmgHa1xxag==}
++
++  '@videojs/react@10.3.0':
++    resolution: {integrity: sha512-hL9CnKykyk6GD14eB5B8jjvit8xCeIcYeTAbUssFXnr+jyXpd5qflIGpFBTLPGzDOR8N/P7Am3G8TOj1VOKsZw==}
++    peerDependencies:
++      '@videojs/cloudflare-video': 10.3.0
++      '@videojs/dailymotion-video': 10.3.0
++      '@videojs/dash-video': 10.3.0
++      '@videojs/google-analytics': 10.3.0
++      '@videojs/google-cast': 10.3.0
++      '@videojs/hlsjs-video': 10.3.0
++      '@videojs/mixcloud-audio': 10.3.0
++      '@videojs/mux-audio': 10.3.0
++      '@videojs/mux-data': 10.3.0
++      '@videojs/mux-video': 10.3.0
++      '@videojs/playerjs-video': 10.3.0
++      '@videojs/shaka-video': 10.3.0
++      '@videojs/soundcloud-audio': 10.3.0
++      '@videojs/spotify-audio': 10.3.0
++      '@videojs/tiktok-video': 10.3.0
++      '@videojs/twitch-video': 10.3.0
++      '@videojs/vimeo-video': 10.3.0
++      '@videojs/wistia-video': 10.3.0
++      '@videojs/youtube-video': 10.3.0
++      react: ^18.0.0 || ^19.0.0
++      react-dom: ^18.0.0 || ^19.0.0
++    peerDependenciesMeta:
++      '@videojs/cloudflare-video':
++        optional: true
++      '@videojs/dailymotion-video':
++        optional: true
++      '@videojs/dash-video':
++        optional: true
++      '@videojs/google-analytics':
++        optional: true
++      '@videojs/google-cast':
++        optional: true
++      '@videojs/hlsjs-video':
++        optional: true
++      '@videojs/mixcloud-audio':
++        optional: true
++      '@videojs/mux-audio':
++        optional: true
++      '@videojs/mux-data':
++        optional: true
++      '@videojs/mux-video':
++        optional: true
++      '@videojs/playerjs-video':
++        optional: true
++      '@videojs/shaka-video':
++        optional: true
++      '@videojs/soundcloud-audio':
++        optional: true
++      '@videojs/spotify-audio':
++        optional: true
++      '@videojs/tiktok-video':
++        optional: true
++      '@videojs/twitch-video':
++        optional: true
++      '@videojs/vimeo-video':
++        optional: true
++      '@videojs/wistia-video':
++        optional: true
++      '@videojs/youtube-video':
++        optional: true
++
++  '@videojs/spf@10.3.0':
++    resolution: {integrity: sha512-/Rde9nglitWTl5JXGUEy+P1kDv+Dth216pnWJRGhDbliYYIX/YD+dQDLKummw6IAus1I+N+X2OODK3+0L18GFw==}
++
++  '@videojs/store@10.3.0':
++    resolution: {integrity: sha512-mcQuqXgFV9KoGDADHwUgsvqf6k1+5H65oz/g/+JCwen7RCBt0RQmLjTxQ5Q2n+V4OqnhF40mVlEWHN0gvhLjjw==}
++    peerDependencies:
++      '@videojs/element': 10.3.0
++      react: ^18.0.0 || ^19.0.0
++    peerDependenciesMeta:
++      '@videojs/element':
++        optional: true
++      react:
++        optional: true
++
++  '@videojs/utils@10.3.0':
++    resolution: {integrity: sha512-BvkO1yfy/dhesnNAbFJ9yDcmFOvbQ7ZbBszJqwt73eJJVQFTdFtxpPiVQmxlolA9ifNJvHaLrh9TkUUyig3sZQ==}
++
+   '@vitest/expect@3.2.7':
+     resolution: {integrity: sha512-E8eBXaKibuvH2pSZErOjdVb5vF4PbKYcrnluBTYxEk1l/VhhwZg1kZQsdtjq+CsF5CFydf2Rdkz7jDHKSisi3w==}
+ 
+@@ -3276,6 +3378,13 @@ packages:
+       expo: '*'
+       react: '*'
+ 
++  expo-linear-gradient@58.0.3:
++    resolution: {integrity: sha512-sh6LXrlaCtlDlZ1CPPFRJWd3bl9lAr8e0hT61PvzMmkxd5sd3POe9QuWtct58wpp7PgOH2okB3iw4tq3ICA4Sg==}
++    peerDependencies:
++      expo: '*'
++      react: '*'
++      react-native: '*'
++
+   expo-linking@58.0.16:
+     resolution: {integrity: sha512-yGz7w4nySktoOba7fS08DzzQXfEgLd60248Sz3u4m/Vzi8SKhC5xBXWmP4scGh0Ele89I350k/uvo2moVmmZJw==}
+     peerDependencies:
+@@ -4156,6 +4265,11 @@ packages:
+     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
+     engines: {node: '>= 0.6'}
+ 
++  react-compiler-runtime@1.0.0:
++    resolution: {integrity: sha512-rRfjYv66HlG8896yPUDONgKzG5BxZD1nV9U6rkm+7VCuvQc903C4MjcoZR4zPw53IKSOX9wMQVpA1IAbRtzQ7w==}
++    peerDependencies:
++      react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
++
+   react-devtools-core@6.1.5:
+     resolution: {integrity: sha512-ePrwPfxAnB+7hgnEr8vpKxL9cmnp7F322t8oqcPshbIQQhDKgFDW4tjhF2wjVbdXF9O/nyuy3sQWd9JGpiLPvA==}
+ 
+@@ -4278,6 +4392,15 @@ packages:
+       react: '*'
+       react-native: '*'
+ 
++  react-native-video@file:tooling/react-native-video-v1/experimental-build-v1.tgz:
++    resolution: {integrity: sha512-izGcGMnqrgsw/851nRIxynxTg5jvbP29rnE15ZlxUZlLo9VmSvBrRow8JDNbY77+rop0dIeR221uGyHGF57P7w==, tarball: file:tooling/react-native-video-v1/experimental-build-v1.tgz}
++    version: 7.0.0-beta.12-nitrov1-experimental.1
++    peerDependencies:
++      react: '*'
++      react-native: '>=0.88.0'
++      react-native-nitro-modules: 1.0.0-alpha.nightly.120.g33ef045b96c0
++      zustand: ^5.0.0
++
+   react-native-web@0.21.4:
+     resolution: {integrity: sha512-77B6KlalB4osNIck91TNFixPkYPsTbuNEvw8P7IV+4v4/5wZSBRKZnw0Zhx6YjuauDTz71gc8IW+fVhcBMjr5A==}
+     peerDependencies:
+@@ -4458,6 +4581,9 @@ packages:
+   signal-exit@3.0.7:
+     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
+ 
++  signal-polyfill@0.2.2:
++    resolution: {integrity: sha512-p63Y4Er5/eMQ9RHg0M0Y64NlsQKpiu6MDdhBXpyywRuWiPywhJTpKJ1iB5K2hJEbFZ0BnDS7ZkJ+0AfTuL37Rg==}
++
+   simple-plist@1.3.1:
+     resolution: {integrity: sha512-iMSw5i0XseMnrhtIzRb7XpQEXepa9xhWxGUojHBL43SIpQuDQkh3Wpy67ZbDzZVr6EKxvwVChnVpdl8hEVLDiw==}
+ 
+@@ -4754,6 +4880,9 @@ packages:
+     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
+     engines: {node: '>= 0.8'}
+ 
++  video.js@10.3.0:
++    resolution: {integrity: sha512-IzlvcWxJ9ox1gHkYma9FsVdWf7jmWFpyFjvISJQW6wA7tsT7IcpxK8T1aFZebGCezyWxG2c5xTyuOzHIfwQPFQ==}
++
+   vite-node@3.2.4:
+     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
+     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+@@ -5048,34 +5177,6 @@ packages:
+         optional: true
+ 
+ snapshots:
+-  expo-linear-gradient@58.0.3(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1):
+-    dependencies:
+-      expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(expo-router@58.0.30)(react-dom@19.3.1(react@19.3.1))(react-native-web@0.21.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)
+-      react: 19.3.1
+-      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
+-
+-  '@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(6c5431a2d997a25db4a1134d2bcac6f8)':
+-    dependencies:
+-      react: 19.3.1
+-      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
+-    optionalDependencies:
+-      '@expo/ui': 58.0.27(patch_hash=cbc7fc26f91e08d8f0f57a12112f9a40f53222c7b831fde8ea4538e53e6728d6)(@babel/core@7.29.7(supports-color@8.1.1))(expo@58.0.23)(react-dom@19.3.1(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
+-      '@nyc-tron/core': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz
+-      expo-drag-drop-content-view: 0.9.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
+-      expo-linear-gradient: 58.0.3(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
+-      react-native-gesture-handler: 3.4.0(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
+-      uniwind: 1.13.1(@expo/metro-config@58.0.21(expo@58.0.23)(supports-color@8.1.1)(typescript@7.0.2))(metro-cache@0.87.2(supports-color@8.1.1))(metro-transform-worker@0.87.2(supports-color@8.1.1))(metro@0.87.2(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(tailwindcss@4.3.4)
+-      zustand: 5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
+-
+-  '@nyc-tron/expo-controls@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-expo-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27)(@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(6c5431a2d997a25db4a1134d2bcac6f8))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1)))':
+-    dependencies:
+-      '@expo/ui': 58.0.27(patch_hash=cbc7fc26f91e08d8f0f57a12112f9a40f53222c7b831fde8ea4538e53e6728d6)(@babel/core@7.29.7(supports-color@8.1.1))(expo@58.0.23)(react-dom@19.3.1(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
+-      '@nyc-tron/ui': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(6c5431a2d997a25db4a1134d2bcac6f8)
+-      expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(expo-router@58.0.30)(react-dom@19.3.1(react@19.3.1))(react-native-web@0.21.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)
+-      react: 19.3.1
+-      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
+-      zustand: 5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
+-
+ 
+   2g@1.0.1(typescript@6.0.3):
+     optionalDependencies:
+@@ -5740,86 +5841,6 @@ snapshots:
+       - typescript
+       - utf-8-validate
+ 
+-  '@expo/cli@58.1.19(@expo/dom-webview@58.0.2)(@expo/metro-runtime@58.0.17)(expo-constants@58.0.15)(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(expo@58.0.23)(react-dom@19.3.0(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2)':
+-    dependencies:
+-      2g: 1.0.1(typescript@7.0.2)
+-      '@expo/code-signing-certificates': 0.0.7
+-      '@expo/config': 58.0.11(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/config-plugins': 58.0.12(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/devcert': 1.2.2(supports-color@8.1.1)
+-      '@expo/env': 2.5.4(supports-color@8.1.1)
+-      '@expo/image-utils': 0.12.6(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/inline-modules': 0.2.9(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/json-file': 11.2.1
+-      '@expo/log-box': 58.0.15(@expo/dom-webview@58.0.2)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+-      '@expo/log-box-utils': 58.0.2
+-      '@expo/metro': 58.0.0(supports-color@8.1.1)
+-      '@expo/metro-config': 58.0.21(expo@58.0.23)(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/metro-file-map': 58.0.5(patch_hash=d94b3c98e687527dc3346ea62612e0bee7783585d2b9851b7c09bdb871739662)(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/osascript': 2.8.1
+-      '@expo/package-manager': 1.14.2
+-      '@expo/platforms': 58.0.1
+-      '@expo/plist': 0.10.1
+-      '@expo/prebuild-config': 58.0.19(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/require-utils': 58.0.5(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/router-server': 58.0.21(@expo/metro-runtime@58.0.17)(expo-constants@58.0.15)(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(expo-server@58.0.6)(expo@58.0.23)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@8.1.1)
+-      '@expo/schema-utils': 58.0.3
+-      '@expo/spawn-async': 1.8.0
+-      '@expo/ws-tunnel': 2.0.1(ws@8.22.0)
+-      '@expo/xcpretty': 4.4.6
+-      '@react-native/asset-utils': 0.88.1
+-      '@react-native/dev-middleware': 0.88.1(supports-color@8.1.1)
+-      '@react-native/js-polyfills': 0.88.1
+-      accepts: 1.3.8
+-      agent-cli-detector: 0.1.7
+-      arg: 5.0.2
+-      bplist-creator: 0.1.0
+-      bplist-parser: 0.3.2
+-      chalk: 4.1.2
+-      ci-info: 3.9.0
+-      compression: 1.8.2(supports-color@8.1.1)
+-      connect: 3.7.0(supports-color@8.1.1)
+-      dnssd-advertise: 1.1.6
+-      expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(react-dom@19.3.0(react@19.3.0))(react-native-web@0.21.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2)
+-      expo-server: 58.0.6
+-      fetch-nodeshim: 0.4.10
+-      getenv: 2.0.0
+-      glob: 13.0.6
+-      lan-network: 0.2.1
+-      multitars: 1.0.2
+-      node-forge: 1.4.0
+-      npm-package-arg: 11.0.3
+-      ora: 3.4.0
+-      picomatch: 4.0.7
+-      pretty-format: 29.7.0
+-      progress: 2.0.3
+-      prompts: 2.4.2
+-      resolve-from: 5.0.0
+-      sandbox-cli-detector: 0.2.0
+-      semver: 7.8.5
+-      send: 0.19.2(supports-color@8.1.1)
+-      slugify: 1.6.9
+-      stacktrace-parser: 0.1.11
+-      structured-headers: 0.4.1
+-      terminal-link: 2.1.1
+-      toqr: 0.1.1
+-      wrap-ansi: 7.0.0
+-      ws: 8.22.0
+-    optionalDependencies:
+-      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+-    transitivePeerDependencies:
+-      - '@expo/dom-webview'
+-      - '@expo/metro-runtime'
+-      - bufferutil
+-      - expo-constants
+-      - expo-font
+-      - react
+-      - react-dom
+-      - react-server-dom-webpack
+-      - supports-color
+-      - typescript
+-      - utf-8-validate
+-
+   '@expo/cli@58.1.19(@expo/dom-webview@58.0.2)(@expo/metro-runtime@58.0.17)(expo-constants@58.0.15)(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1))(expo-router@58.0.30)(expo@58.0.23)(react-dom@19.3.1(react@19.3.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)':
+     dependencies:
+       2g: 1.0.1(typescript@7.0.2)
+@@ -6495,6 +6516,15 @@ snapshots:
+ 
+   '@nyc-tron/core@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz': {}
+ 
++  '@nyc-tron/expo-controls@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-expo-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27)(@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(6c5431a2d997a25db4a1134d2bcac6f8))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1)))':
++    dependencies:
++      '@expo/ui': 58.0.27(patch_hash=cbc7fc26f91e08d8f0f57a12112f9a40f53222c7b831fde8ea4538e53e6728d6)(@babel/core@7.29.7(supports-color@8.1.1))(expo@58.0.23)(react-dom@19.3.1(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
++      '@nyc-tron/ui': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(6c5431a2d997a25db4a1134d2bcac6f8)
++      expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(expo-router@58.0.30)(react-dom@19.3.1(react@19.3.1))(react-native-web@0.21.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)
++      react: 19.3.1
++      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
++      zustand: 5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
++
+   '@nyc-tron/expo-controls@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-expo-controls-0.1.0-alpha.4.tgz(@expo/ui@58.0.27)(@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(db948bd2d20f087aff105fb60e0a3901))(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1)))':
+     dependencies:
+       '@expo/ui': 58.0.27(patch_hash=cbc7fc26f91e08d8f0f57a12112f9a40f53222c7b831fde8ea4538e53e6728d6)(@babel/core@7.29.7(supports-color@8.1.1))(expo@58.0.23)(react-dom@19.3.1(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
+@@ -6526,6 +6556,19 @@ snapshots:
+       react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
+       zustand: 5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
+ 
++  '@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(6c5431a2d997a25db4a1134d2bcac6f8)':
++    dependencies:
++      react: 19.3.1
++      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
++    optionalDependencies:
++      '@expo/ui': 58.0.27(patch_hash=cbc7fc26f91e08d8f0f57a12112f9a40f53222c7b831fde8ea4538e53e6728d6)(@babel/core@7.29.7(supports-color@8.1.1))(expo@58.0.23)(react-dom@19.3.1(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
++      '@nyc-tron/core': https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz
++      expo-drag-drop-content-view: 0.9.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
++      expo-linear-gradient: 58.0.3(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
++      react-native-gesture-handler: 3.4.0(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
++      uniwind: 1.13.1(@expo/metro-config@58.0.21(expo@58.0.23)(supports-color@8.1.1)(typescript@7.0.2))(metro-cache@0.87.2(supports-color@8.1.1))(metro-transform-worker@0.87.2(supports-color@8.1.1))(metro@0.87.2(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(tailwindcss@4.3.4)
++      zustand: 5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
++
+   '@nyc-tron/ui@https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz(db948bd2d20f087aff105fb60e0a3901)':
+     dependencies:
+       react: 19.3.1
+@@ -6990,6 +7033,12 @@ snapshots:
+ 
+   '@sinclair/typebox@0.27.12': {}
+ 
++  '@svta/cml-error-codes@0.1.2(@svta/cml-utils@1.7.0)':
++    dependencies:
++      '@svta/cml-utils': 1.7.0
++
++  '@svta/cml-utils@1.7.0': {}
++
+   '@tailwindcss/node@4.3.3':
+     dependencies:
+       '@jridgewell/remapping': 2.3.5
+@@ -7248,6 +7297,57 @@ snapshots:
+ 
+   '@ungap/structured-clone@1.4.0': {}
+ 
++  '@videojs/core@10.3.0(react@19.3.1)':
++    dependencies:
++      '@videojs/media': 10.3.0
++      '@videojs/store': 10.3.0(react@19.3.1)
++      '@videojs/utils': 10.3.0
++      video.js: 10.3.0
++    transitivePeerDependencies:
++      - '@videojs/element'
++      - react
++
++  '@videojs/media@10.3.0':
++    dependencies:
++      '@videojs/utils': 10.3.0
++
++  '@videojs/native-hls-video@10.3.0':
++    dependencies:
++      '@videojs/media': 10.3.0
++      '@videojs/spf': 10.3.0
++      '@videojs/utils': 10.3.0
++
++  '@videojs/react@10.3.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
++    dependencies:
++      '@videojs/core': 10.3.0(react@19.3.1)
++      '@videojs/media': 10.3.0
++      '@videojs/native-hls-video': 10.3.0
++      '@videojs/spf': 10.3.0
++      '@videojs/store': 10.3.0(react@19.3.1)
++      '@videojs/utils': 10.3.0
++      react: 19.3.1
++      react-compiler-runtime: 1.0.0(react@19.3.1)
++      react-dom: 19.3.1(react@19.3.1)
++    transitivePeerDependencies:
++      - '@videojs/element'
++
++  '@videojs/spf@10.3.0':
++    dependencies:
++      '@svta/cml-error-codes': 0.1.2(@svta/cml-utils@1.7.0)
++      '@svta/cml-utils': 1.7.0
++      '@videojs/media': 10.3.0
++      '@videojs/utils': 10.3.0
++      signal-polyfill: 0.2.2
++
++  '@videojs/store@10.3.0(react@19.3.1)':
++    dependencies:
++      '@videojs/utils': 10.3.0
++      react-compiler-runtime: 1.0.0(react@19.3.1)
++    optionalDependencies:
++      react: 19.3.1
++
++  '@videojs/utils@10.3.0': {}
++
+   '@vitest/expect@3.2.7':
+     dependencies:
+       '@types/chai': 5.2.3
+@@ -7782,17 +7882,6 @@ snapshots:
+       - supports-color
+       - typescript
+ 
+-  expo-asset@58.0.20(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2):
+-    dependencies:
+-      '@expo/image-utils': 0.12.6(supports-color@8.1.1)(typescript@7.0.2)
+-      expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(react-dom@19.3.0(react@19.3.0))(react-native-web@0.21.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2)
+-      expo-constants: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
+-      react: 19.3.0
+-      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+-    transitivePeerDependencies:
+-      - supports-color
+-      - typescript
+-
+   expo-asset@58.0.20(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2):
+     dependencies:
+       '@expo/image-utils': 0.12.6(supports-color@8.1.1)(typescript@7.0.2)
+@@ -7821,16 +7910,6 @@ snapshots:
+       - supports-color
+       - typescript
+ 
+-  expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2):
+-    dependencies:
+-      '@expo/env': 2.5.4(supports-color@8.1.1)
+-      '@expo/require-utils': 58.0.5(supports-color@8.1.1)(typescript@7.0.2)
+-      expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(react-dom@19.3.0(react@19.3.0))(react-native-web@0.21.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2)
+-      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+-    transitivePeerDependencies:
+-      - supports-color
+-      - typescript
+-
+   expo-constants@58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2):
+     dependencies:
+       '@expo/env': 2.5.4(supports-color@8.1.1)
+@@ -7936,6 +8015,12 @@ snapshots:
+       expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(expo-router@58.0.30)(react-dom@19.3.1(react@19.3.1))(react-native-web@0.21.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)
+       react: 19.3.1
+ 
++  expo-linear-gradient@58.0.3(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1):
++    dependencies:
++      expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(expo-router@58.0.30)(react-dom@19.3.1(react@19.3.1))(react-native-web@0.21.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)
++      react: 19.3.1
++      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
++
+   expo-linking@58.0.16(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2):
+     dependencies:
+       expo: 58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(expo-router@58.0.30)(react-dom@19.3.1(react@19.3.1))(react-native-web@0.21.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)
+@@ -8154,51 +8239,6 @@ snapshots:
+       - typescript
+       - utf-8-validate
+ 
+-  expo@58.0.23(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@58.0.17)(react-dom@19.3.0(react@19.3.0))(react-native-web@0.21.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2):
+-    dependencies:
+-      '@babel/runtime': 7.29.10
+-      '@expo/cli': 58.1.19(@expo/dom-webview@58.0.2)(@expo/metro-runtime@58.0.17)(expo-constants@58.0.15)(expo-font@58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(expo@58.0.23)(react-dom@19.3.0(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/config': 58.0.11(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/config-plugins': 58.0.12(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/devtools': 58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+-      '@expo/dom-webview': 58.0.2(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+-      '@expo/fingerprint': 0.21.9(supports-color@8.1.1)
+-      '@expo/local-build-cache-provider': 58.0.11(supports-color@8.1.1)(typescript@7.0.2)
+-      '@expo/log-box': 58.0.15(@expo/dom-webview@58.0.2)(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+-      '@expo/log-box-utils': 58.0.2
+-      '@expo/metro': 58.0.0(supports-color@8.1.1)
+-      '@expo/metro-config': 58.0.21(expo@58.0.23)(supports-color@8.1.1)(typescript@7.0.2)
+-      '@ungap/structured-clone': 1.4.0
+-      babel-preset-expo: 58.0.24(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(expo@58.0.23)(react-refresh@0.14.2)(supports-color@8.1.1)
+-      expo-asset: 58.0.20(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2)
+-      expo-constants: 58.0.15(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
+-      expo-file-system: 58.0.13(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))
+-      expo-font: 58.0.11(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+-      expo-keep-awake: 58.0.3(expo@58.0.23)(react@19.3.0)
+-      expo-modules-autolinking: 58.0.17(supports-color@8.1.1)(typescript@7.0.2)
+-      expo-modules-cli: 0.4.0
+-      expo-modules-core: 58.0.30(react-native-worklets@0.13.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+-      pretty-format: 29.7.0
+-      react: 19.3.0
+-      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+-      react-refresh: 0.14.2
+-      whatwg-url-minimum: 0.2.0
+-    optionalDependencies:
+-      '@expo/metro-runtime': 58.0.17(@expo/log-box@58.0.15)(expo@58.0.23)(react-dom@19.3.0(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+-      react-dom: 19.3.0(react@19.3.0)
+-      react-native-web: 0.21.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+-    transitivePeerDependencies:
+-      - '@babel/core'
+-      - bufferutil
+-      - expo-mcp
+-      - expo-router
+-      - expo-widgets
+-      - react-native-worklets
+-      - react-server-dom-webpack
+-      - supports-color
+-      - typescript
+-      - utf-8-validate
+-
+   exponential-backoff@3.1.3: {}
+ 
+   fb-dotslash@0.5.8: {}
+@@ -8937,6 +8977,10 @@ snapshots:
+ 
+   range-parser@1.2.1: {}
+ 
++  react-compiler-runtime@1.0.0(react@19.3.1):
++    dependencies:
++      react: 19.3.1
++
+   react-devtools-core@6.1.5:
+     dependencies:
+       shell-quote: 1.12.0
+@@ -9068,6 +9112,36 @@ snapshots:
+       react: 19.3.1
+       react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
+ 
++  react-native-video@file:tooling/react-native-video-v1/experimental-build-v1.tgz(react-dom@19.3.1(react@19.3.1))(react-native-nitro-modules@1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(zustand@5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))):
++    dependencies:
++      '@videojs/react': 10.3.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
++      react: 19.3.1
++      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1)
++      react-native-nitro-modules: 1.0.0-alpha.nightly.120.g33ef045b96c0(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
++      zustand: 5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
++    transitivePeerDependencies:
++      - '@videojs/cloudflare-video'
++      - '@videojs/dailymotion-video'
++      - '@videojs/dash-video'
++      - '@videojs/element'
++      - '@videojs/google-analytics'
++      - '@videojs/google-cast'
++      - '@videojs/hlsjs-video'
++      - '@videojs/mixcloud-audio'
++      - '@videojs/mux-audio'
++      - '@videojs/mux-data'
++      - '@videojs/mux-video'
++      - '@videojs/playerjs-video'
++      - '@videojs/shaka-video'
++      - '@videojs/soundcloud-audio'
++      - '@videojs/spotify-audio'
++      - '@videojs/tiktok-video'
++      - '@videojs/twitch-video'
++      - '@videojs/vimeo-video'
++      - '@videojs/wistia-video'
++      - '@videojs/youtube-video'
++      - react-dom
++
+   react-native-web@0.21.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+     dependencies:
+       '@babel/runtime': 7.29.10
+@@ -9412,6 +9486,8 @@ snapshots:
+ 
+   signal-exit@3.0.7: {}
+ 
++  signal-polyfill@0.2.2: {}
++
+   simple-plist@1.3.1:
+     dependencies:
+       bplist-creator: 0.1.0
+@@ -9714,6 +9790,8 @@ snapshots:
+ 
+   vary@1.1.2: {}
+ 
++  video.js@10.3.0: {}
++
+   vite-node@3.2.4(@types/node@26.6.6)(jiti@2.7.0)(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1):
+     dependencies:
+       cac: 6.7.14
+diff --git a/tooling/typecheck-checkpoint-acceptance.mjs b/tooling/typecheck-checkpoint-acceptance.mjs
+index 33900dc..4a73857 100644
+--- a/tooling/typecheck-checkpoint-acceptance.mjs
++++ b/tooling/typecheck-checkpoint-acceptance.mjs
+@@ -19,7 +19,7 @@ try {
+       typeRoots: [join(app, "node_modules/@types")],
+       paths: { "@nyc-tron/platform-services/checkpoints": [declaration] },
+     },
+-    include: [join(app, "MediaAcceptance.tsx"), join(app, "verify-media.ts"), join(app, "CheckpointAcceptance.tsx"), join(app, "verify-checkpoints.ts"),
++    include: [join(app, "PlayerAcceptance.tsx"), join(app, "MediaAcceptance.tsx"), join(app, "verify-media.ts"), join(app, "CheckpointAcceptance.tsx"), join(app, "verify-checkpoints.ts"),
+       join(app, "TransactionsAcceptance.tsx"), join(app, "verify-transactions.ts"),
+       join(app, "TelemetryAcceptance.tsx"), join(app, "verify-telemetry.ts"),
+       join(app, "CollaborationAcceptance.tsx"), join(app, "verify-collaboration.ts")],
+diff --git a/packages/media-ui/src/video/NativeVideoMonitor.tsx b/packages/media-ui/src/video/NativeVideoMonitor.tsx
+new file mode 100644
+index 0000000..62164c8
+--- /dev/null
++++ b/packages/media-ui/src/video/NativeVideoMonitor.tsx
+@@ -0,0 +1,211 @@
++import { useLayoutEffect, useMemo, useImperativeHandle, useRef, forwardRef } from "react";
++import { Image, Text, View, Platform } from "react-native";
++import { useStore } from "zustand";
++import type { StoreApi } from "zustand/vanilla";
++import { VideoPlayer, VideoView } from "react-native-video";
++import { createPlatformMediaDecoder } from "@nyc-tron/platform-services/media";
++import { NativeSeekBar } from "@nyc-tron/ui/components/forge/NativeSeekBar";
++import { TransportControls } from "@nyc-tron/ui/components/forge/timeline/TransportControls";
++import type { FrameRate } from "../timebase";
++import { createFrameSession, createVideoMonitorStore, indexAtTime, presentationIndex, type FrameSession, type FrameResult, type VideoMonitorState } from "./frameSession";
++
++export interface NativeVideoMonitorProps {
++  /** A local file or granted content URI. Import remote media before editing it. */
++  readonly uri: string;
++  /** Source/container presentation timestamps. Omit to request the linked decoder's optional v1 index; alpha.4 binaries require explicit timestamps. */
++  readonly presentationTimesUs?: readonly number[];
++  /** Timecode labels for frame indices; seeks always use presentationTimesUs. */
++  readonly displayFrameRate: FrameRate;
++  readonly store?: StoreApi<VideoMonitorState>;
++  readonly height?: number;
++  readonly testID?: string;
++  /** Configuration for source opening, not reactive playback state. */
++  readonly options?: Parameters<VideoPlayer["configure"]>[0];
++}
++export interface NativeVideoMonitorHandle {
++  play(): Promise<void>;
++  pause(): Promise<void>;
++  commitFrame(index: number): Promise<FrameResult>;
++}
++interface Source { readonly uri: string; readonly times: readonly number[] | undefined; readonly store: StoreApi<VideoMonitorState> }
++interface Owner { readonly player: VideoPlayer; readonly session: FrameSession; readonly source: Source; intent: number; run<T>(action: () => Promise<T>): Promise<T> }
++
++/** Editor adapter for the selected Nitro v1 player and real local decoder. */
++export const NativeVideoMonitor = forwardRef<NativeVideoMonitorHandle, NativeVideoMonitorProps>(function NativeVideoMonitor(
++  { uri, presentationTimesUs, displayFrameRate, store: provided, height = 220, testID, options }, ref,
++) {
++  const local = useRef<StoreApi<VideoMonitorState> | null>(null);
++  if (!local.current) local.current = createVideoMonitorStore();
++  const store = provided ?? local.current;
++  const state = useStore(store, value => value);
++  const owner = useRef<Owner | null>(null);
++  const indexSequence = useRef(0);
++  const source = useMemo<Source>(() => ({ uri, times: presentationTimesUs, store }), [uri, presentationTimesUs, store]);
++  const committedSource = useRef<Source | null>(null);
++  const initialOptions = useRef(options);
++  initialOptions.current = options;
++  useLayoutEffect(() => {
++    committedSource.current = source;
++    let disposed = false, released = false;
++    const indexCancellation = new AbortController();
++    const indexToken = ++indexSequence.current;
++    let resource: Owner | null = null;
++    let player: VideoPlayer | null = null;
++    const live = () => !disposed && !released && committedSource.current === source;
++    let transportTail: Promise<void> = Promise.resolve();
++    const run = <T,>(action: () => Promise<T>): Promise<T> => {
++      const task = transportTail.then(async () => {
++        if (!live() || !resource || owner.current !== resource) throw Error("The video source changed before transport admission");
++        const result = await action();
++        if (!live() || owner.current !== resource) throw Error("The video source changed during the transport action");
++        return result;
++      });
++      transportTail = task.then(() => undefined, () => undefined);
++      return task;
++    };
++    const release = () => {
++      if (released) return;
++      released = true;
++      indexCancellation.abort();
++      if (owner.current === resource) owner.current = null;
++      resource?.session.close();
++      player?.release();
++    };
++    store.setState({ status: "loading", playing: false, playbackTimeUs: 0, bufferedTimeUs: 0, durationUs: 0, decoded: null, requestedIndex: null, pendingIndexToken: indexToken, error: null });
++    const open = async () => {
++      try {
++        if (!live() || store.getState().pendingIndexToken !== indexToken) return;
++        if (Platform.OS === "web") throw Error("Indexed native video monitoring is not available on web in this build");
++        const decoder = createPlatformMediaDecoder();
++        if (!decoder.isAvailable) throw Error("The native media decoder is not linked in this build");
++        // Structural extension keeps this source compatible with released alpha.4 types.
++        const indexed = decoder as typeof decoder & {
++          readonly presentationIndexVersion?: 1;
++          presentationIndex?(sourceUri: string, options: { readonly signal: AbortSignal }): Promise<{
++            readonly durationUs: number; readonly timesUs: readonly number[];
++          }>;
++        };
++        let timesUs: readonly number[];
++        let indexedDurationUs: number | undefined;
++        if (presentationTimesUs !== undefined) timesUs = presentationIndex(presentationTimesUs);
++        else {
++          if (indexed.presentationIndexVersion !== 1 || typeof indexed.presentationIndex !== "function")
++            throw Error("This build has no v1 presentation index. Supply actual presentationTimesUs or link the new native decoder source candidate.");
++          const index = await indexed.presentationIndex(uri, { signal: indexCancellation.signal });
++          if (!live() || store.getState().pendingIndexToken !== indexToken) return;
++          if (!Number.isSafeInteger(index.durationUs) || index.durationUs <= 0) throw Error("The decoder returned an invalid index duration");
++          timesUs = presentationIndex(index.timesUs);
++          if (timesUs.at(-1)! >= index.durationUs) throw Error("Presentation index exceeds its source duration");
++          indexedDurationUs = index.durationUs;
++        }
++        if (!live() || store.getState().pendingIndexToken !== indexToken) return;
++        // No player is allocated while the cancellable index lookup is pending.
++        player = new VideoPlayer({ uri, initializeOnCreation: false });
++        const ownedPlayer = player;
++        const session = createFrameSession({ uri, timesUs, decoder,
++          transport: { pause: () => run(() => ownedPlayer.pause()), seekTo: seconds => run(() => ownedPlayer.seekTo(seconds)) }, store });
++        resource = { player, session, source, run, intent: 0 };
++        owner.current = resource;
++        player.addEventListener("onPlaybackStateChange", value => { if (live() && (!value.isPlaying || store.getState().requestedIndex === null)) store.setState({ playing: value.isPlaying }); });
++        player.addEventListener("onProgress", value => {
++          if (live()) store.setState({ playbackTimeUs: Math.round(value.currentTime * 1_000_000), bufferedTimeUs: Math.round((value.currentTime + value.bufferDuration) * 1_000_000) });
++        });
++        player.addEventListener("onError", error => {
++          if (!live()) return;
++          release();
++          if (committedSource.current === source) store.setState({ status: "error", playing: false, pendingIndexToken: null, error: error.message });
++        });
++        await player.configure(initialOptions.current ?? {});
++        if (!live()) return;
++        const [probe] = await Promise.all([decoder.probe(uri), player.initialize()]);
++        if (!live()) return;
++        if (!probe.video || session.timesUs.at(-1)! >= probe.durationUs ||
++          (indexedDurationUs !== undefined && indexedDurationUs !== probe.durationUs)) throw Error("Presentation index exceeds the source video");
++        store.setState({ durationUs: probe.durationUs, pendingIndexToken: null });
++        await session.commit(0);
++      } catch (error) {
++        if (live()) {
++          release();
++          if (committedSource.current === source) store.setState({ status: "error", playing: false, pendingIndexToken: null, error: error instanceof Error ? error.message : String(error) });
++        }
++      }
++    };
++    void open();
++    return () => {
++      disposed = true;
++      if (committedSource.current === source) committedSource.current = null;
++      release();
++      if (store.getState().pendingIndexToken === indexToken) store.setState({ pendingIndexToken: null });
++    };
++  }, [source, uri, presentationTimesUs, store]);
++  const requireOwner = (allowFrameError = false) => {
++    const status = store.getState().status;
++    if (committedSource.current !== source || owner.current?.source !== source ||
++      (status !== "ready" && !(allowFrameError && status === "error"))) throw Error("The video monitor is not ready");
++    return owner.current;
++  };
++  type Admission = { owner: Owner; intent: number };
++  const pause = async (admission?: Admission) => {
++    const current = admission?.owner ?? requireOwner();
++    const intent = admission?.intent ?? ++current.intent;
++    await current.run(async () => { if (current.intent === intent) await current.player.pause(); });
++    if (current.intent !== intent) return;
++    await current.session.commit(indexAtTime(current.session.timesUs, Math.round(current.player.currentTime * 1_000_000)));
++  };
++  const play = async (admission?: Admission) => {
++    const current = admission?.owner ?? requireOwner();
++    if (store.getState().requestedIndex !== null) throw Error("Wait for the requested frame before playing");
++    const intent = admission?.intent ?? ++current.intent;
++    await current.run(async () => {
++      if (current.intent !== intent) return;
++      if (store.getState().requestedIndex !== null) throw Error("Wait for the requested frame before playing");
++      await current.player.play();
++    });
++  };
++  useImperativeHandle(ref, () => ({ play: () => play(), pause: () => pause(), commitFrame: async index => {
++    const current = requireOwner(true);
++    if (!Number.isInteger(index) || index < 0 || index >= current.session.timesUs.length) throw RangeError("Frame index is out of range");
++    ++current.intent;
++    return current.session.commit(index);
++  } }));
++  const perform = (action: (admission: Admission) => Promise<unknown>) => {
++    const expected = owner.current;
++    const admitted = expected && expected.source === source && committedSource.current === source;
++    const intent = admitted ? ++expected.intent : -1;
++    const task = Promise.resolve().then(() => {
++      if (!admitted || !expected || expected.source !== source || owner.current !== expected || committedSource.current !== source)
++        throw Error("The video source changed before this action began");
++      if (expected.intent !== intent) return;
++      return action({ owner: expected, intent });
++    }).catch(error => {
++      if (expected && expected.intent === intent && owner.current === expected && committedSource.current === source)
++        store.setState({ status: "error", error: error instanceof Error ? error.message : String(error) });
++      throw error;
++    });
++    // Transport callbacks may be void; seek controls still receive the original rejection.
++    void task.catch(() => {});
++    return task;
++  };
++  const resource = owner.current?.source === source ? owner.current : null;
++  const visible = committedSource.current === source ? state : { ...state, status: "loading" as const, playing: false, decoded: null, error: null };
++  const canSeek = !!resource && (state.status === "ready" || state.status === "error");
++  const transportBlocked = visible.status !== "ready" || state.requestedIndex !== null;
++  const timesUs = resource?.session.timesUs ?? presentationTimesUs ?? [];
++  const count = timesUs.length;
++  const shown = visible.playing ? indexAtTime(timesUs, state.playbackTimeUs) : visible.decoded?.index ?? 0;
++  return <View testID={testID} style={{ gap: 8 }}>
++    <View style={{ height }}>
++      {resource ? <VideoView player={resource.player} controls={false} resizeMode="contain" style={{ width: "100%", height: "100%" }}/> : null}
++      {!visible.playing && visible.decoded ? <Image source={{ uri: visible.decoded.frame.uri }} resizeMode="contain"
++        accessibilityLabel={`Decoded frame ${visible.decoded.index} at ${visible.decoded.frame.actualTimeUs} microseconds`}
++        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}/> : null}
++    </View>
++    <Text accessibilityLiveRegion="polite">{visible.error ?? (visible.status === "loading" ? "Loading video" : visible.decoded ? `Decoded frame ${visible.decoded.index}, presentation ${visible.decoded.frame.actualTimeUs} µs` : "Video ready")}</Text>
++    <NativeSeekBar frame={shown} durationFrames={Math.max(0, count - 1)} frameRate={displayFrameRate} disabled={!canSeek}
++      onPreview={index => perform(() => requireOwner(true).session.preview(index))} onCommit={index => perform(() => requireOwner(true).session.commit(index))}/>
++    <TransportControls playing={visible.playing} frame={shown} durationFrames={Math.max(0, count - 1)}
++      {...(transportBlocked ? { disabledReason: visible.error ?? (state.requestedIndex !== null ? "Loading frame" : "Loading video") } : {})}
++      onPlayPause={() => perform(admission => store.getState().playing ? pause(admission) : play(admission))} onStop={() => perform(() => requireOwner().session.commit(0))}
++      onSeek={index => perform(() => requireOwner(true).session.commit(index))}/>
++  </View>;
++});
+diff --git a/packages/media-ui/src/video/frameSession.ts b/packages/media-ui/src/video/frameSession.ts
+new file mode 100644
+index 0000000..3d03c6f
+--- /dev/null
++++ b/packages/media-ui/src/video/frameSession.ts
+@@ -0,0 +1,132 @@
++import { createStore, type StoreApi } from "zustand/vanilla";
++import type { DecodedFrame, MediaDecoder } from "@nyc-tron/platform-services/media";
++
++export interface VideoMonitorState {
++  readonly status: "loading" | "ready" | "error" | "closed";
++  readonly playing: boolean;
++  readonly playbackTimeUs: number;
++  readonly bufferedTimeUs: number;
++  readonly durationUs: number;
++  readonly requestedIndex: number | null;
++  /** Current source-index load admission, never a native resource handle. */
++  readonly pendingIndexToken: number | null;
++  /** Set only from a decoder result whose real presentation time matches the index. */
++  readonly decoded: { readonly index: number; readonly frame: DecodedFrame } | null;
++  readonly error: string | null;
++}
++export const createVideoMonitorStore = (): StoreApi<VideoMonitorState> => createStore(() => ({
++  status: "loading", playing: false, playbackTimeUs: 0, bufferedTimeUs: 0,
++  durationUs: 0, requestedIndex: null, pendingIndexToken: null, decoded: null, error: null,
++}));
++
++/** A real presentation-time index, supplied by the source/container owner. No FPS extrapolation. */
++export function presentationIndex(times: readonly number[]): readonly number[] {
++  if (!times.length || times.length > 200_000) throw new RangeError("Presentation index must contain 1...200000 frames");
++  let previous = -1;
++  for (const time of times) {
++    if (!Number.isSafeInteger(time) || time <= previous) throw new RangeError("Presentation times must be distinct, increasing nonnegative integer microseconds");
++    previous = time;
++  }
++  return Object.freeze([...times]);
++}
++
++export function indexAtTime(times: readonly number[], timeUs: number): number {
++  let low = 0, high = times.length;
++  while (low < high) {
++    const mid = Math.floor((low + high) / 2);
++    if (times[mid]! <= timeUs) low = mid + 1; else high = mid;
++  }
++  return Math.max(0, low - 1);
++}
++
++export interface FrameTransport { pause(): Promise<void>; seekTo(seconds: number): Promise<void> }
++export type FrameResult = { readonly kind: "decoded"; readonly frame: DecodedFrame; readonly index: number } | { readonly kind: "superseded" };
++export interface FrameSession {
++  readonly timesUs: readonly number[];
++  preview(index: number): Promise<FrameResult>;
++  commit(index: number): Promise<FrameResult>;
++  close(): void;
++}
++
++type Request = {
++  readonly generation: number; readonly index: number; readonly final: boolean;
++  readonly resolve: (result: FrameResult) => void; readonly reject: (error: unknown) => void;
++};
++
++/** One decode in flight, one replaceable pending request, and a checked final presentation time. */
++export function createFrameSession(options: {
++  readonly uri: string;
++  readonly timesUs: readonly number[];
++  readonly decoder: Pick<MediaDecoder, "decodeFrame"> & {
++    readonly indexedFrameVersion?: 1;
++    decodeIndexedFrame?(uri: string, options: Parameters<MediaDecoder["decodeFrame"]>[1]): ReturnType<MediaDecoder["decodeFrame"]>;
++  };
++  readonly transport: FrameTransport;
++  readonly store: StoreApi<VideoMonitorState>;
++}): FrameSession {
++  const timesUs = presentationIndex(options.timesUs);
++  let generation = 0, closed = false, running = false;
++  const cancellation = new AbortController();
++  let pending: Request | null = null;
++  let active: Request | null = null;
++  const current = (request: Request) => !closed && request.generation === generation;
++  async function drain(): Promise<void> {
++    if (running) return;
++    running = true;
++    try {
++      while (pending && !closed) {
++        const request: Request = pending;
++        active = request;
++        pending = null;
++        try {
++          await options.transport.pause();
++          if (!current(request)) { request.resolve({ kind: "superseded" }); continue; }
++          options.store.setState({ playing: false });
++          if (!current(request)) { request.resolve({ kind: "superseded" }); continue; }
++          const timeUs = timesUs[request.index]!;
++          if (request.final) await options.transport.seekTo(timeUs / 1_000_000);
++          if (!current(request)) { request.resolve({ kind: "superseded" }); continue; }
++          const requestOptions = { timeUs, signal: cancellation.signal };
++          const decoder = options.decoder;
++          const frame = decoder.indexedFrameVersion === 1 && typeof decoder.decodeIndexedFrame === "function"
++            ? await decoder.decodeIndexedFrame(options.uri, requestOptions)
++            : await decoder.decodeFrame(options.uri, requestOptions);
++          if (!current(request)) { request.resolve({ kind: "superseded" }); continue; }
++          if (frame.timing !== "presentation" || frame.actualTimeUs !== timeUs) {
++            throw new Error(`Decoder returned ${frame.actualTimeUs}us (${frame.timing}); frame ${request.index} requires ${timeUs}us`);
++          }
++          options.store.setState({ status: "ready", requestedIndex: null, decoded: { index: request.index, frame }, error: null });
++          if (!current(request)) { request.resolve({ kind: "superseded" }); continue; }
++          request.resolve({ kind: "decoded", index: request.index, frame });
++        } catch (error) {
++          if (!current(request)) { request.resolve({ kind: "superseded" }); continue; }
++          options.store.setState({ status: "error", requestedIndex: null, error: error instanceof Error ? error.message : String(error) });
++          if (!current(request)) { request.resolve({ kind: "superseded" }); continue; }
++          request.reject(error);
++        } finally { active = null; }
++      }
++    } finally { running = false; }
++  }
++  function request(index: number, final: boolean): Promise<FrameResult> {
++    if (closed) return Promise.reject(Error("Frame session is closed"));
++    if (!Number.isSafeInteger(index) || index < 0 || index >= timesUs.length) return Promise.reject(RangeError("Frame index is outside this source"));
++    const ticket = ++generation;
++    pending?.resolve({ kind: "superseded" });
++    const result = new Promise<FrameResult>((resolve, reject) => { pending = { generation: ticket, index, final, resolve, reject }; });
++    options.store.setState({ requestedIndex: index, error: null });
++    void drain();
++    return result;
++  }
++  return {
++    timesUs,
++    preview: index => request(index, false),
++    commit: index => request(index, true),
++    close() {
++      if (closed) return;
++      closed = true; generation++; cancellation.abort();
++      pending?.resolve({ kind: "superseded" }); active?.resolve({ kind: "superseded" }); pending = null;
++      options.store.setState({ status: "closed", playing: false, requestedIndex: null });
++      // The decoder's bounded cache is shared. A monitor must not delete another monitor's outputs.
++    },
++  };
++}
+diff --git a/packages/media-ui/src/video/index.ts b/packages/media-ui/src/video/index.ts
+new file mode 100644
+index 0000000..55fabdb
+--- /dev/null
++++ b/packages/media-ui/src/video/index.ts
+@@ -0,0 +1,4 @@
++export { NativeVideoMonitor } from "./NativeVideoMonitor";
++export type { NativeVideoMonitorProps, NativeVideoMonitorHandle } from "./NativeVideoMonitor";
++export { createVideoMonitorStore, createFrameSession, presentationIndex, indexAtTime } from "./frameSession";
++export type { VideoMonitorState, FrameSession, FrameResult, FrameTransport } from "./frameSession";
+diff --git a/packages/media-ui/tests/frame-session.test.ts b/packages/media-ui/tests/frame-session.test.ts
+new file mode 100644
+index 0000000..8b823c5
+--- /dev/null
++++ b/packages/media-ui/tests/frame-session.test.ts
+@@ -0,0 +1,130 @@
++import { describe, expect, it, vi } from "vitest";
++import { createFrameSession, createVideoMonitorStore, indexAtTime, presentationIndex } from "../src/video/frameSession";
++
++const frame = (actualTimeUs: number, timing: "presentation" | "seek-target" = "presentation") => ({ uri: `file:///frame-${actualTimeUs}.jpg`, actualTimeUs, timing, width: 192, height: 128 });
++function deferred<T>() {
++  let resolve!: (value: T) => void, reject!: (error: Error) => void;
++  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
++  return { promise, resolve, reject };
++}
++function setup(decodeFrame = vi.fn(async (_uri: string, request: { timeUs: number }) => frame(request.timeUs))) {
++  const store = createVideoMonitorStore();
++  const transport = { pause: vi.fn(async () => {}), seekTo: vi.fn(async (_seconds: number) => {}) };
++  const session = createFrameSession({ uri: "file:///source.mp4", timesUs: [0, 40_000, 90_000, 150_000], decoder: { decodeFrame }, transport, store });
++  return { session, store, transport, decodeFrame };
++}
++
++describe("presentation-index frame ownership", () => {
++  it("accepts variable presentation intervals and protects the index from caller mutation", () => {
++    const source = [0, 40_000, 90_000, 150_000];
++    const index = presentationIndex(source);
++    source[1] = 5;
++    expect(index[1]).toBe(40_000);
++    expect(indexAtTime(index, 89_999)).toBe(1);
++    expect(indexAtTime(index, 90_000)).toBe(2);
++    for (const bad of [[], [0, 0], [-1], [1.5], [3, 2]]) expect(() => presentationIndex(bad)).toThrow(RangeError);
++  });
++  it("seeks to the indexed timestamp, then reports only an exact native presentation result", async () => {
++    const { session, store, transport } = setup();
++    const result = await session.commit(2);
++    expect(result.kind).toBe("decoded");
++    expect(transport.seekTo).toHaveBeenCalledWith(.09);
++    expect(store.getState().decoded?.frame.actualTimeUs).toBe(90_000);
++    expect(store.getState().requestedIndex).toBeNull();
++  });
++  it("coalesces drag bursts and prevents a late decode from overwriting the final frame", async () => {
++    const first = deferred<ReturnType<typeof frame>>();
++    const decode = vi.fn(async (_uri: string, request: { timeUs: number }) => request.timeUs === 0 ? first.promise : frame(request.timeUs));
++    const { session, store, transport } = setup(decode);
++    const a = session.preview(0);
++    await vi.waitFor(() => expect(decode).toHaveBeenCalledTimes(1));
++    const b = session.preview(1), c = session.preview(2), final = session.commit(3);
++    first.resolve(frame(0));
++    expect(await a).toEqual({ kind: "superseded" });
++    expect(await b).toEqual({ kind: "superseded" });
++    expect(await c).toEqual({ kind: "superseded" });
++    expect((await final).kind).toBe("decoded");
++    expect(decode.mock.calls.map(([, request]) => request.timeUs)).toEqual([0, 150_000]);
++    expect(transport.seekTo.mock.calls).toEqual([[.15]]);
++    expect(store.getState().decoded?.index).toBe(3);
++  });
++  it("does not publish an obsolete failure and continues the queued final commit", async () => {
++    const first = deferred<ReturnType<typeof frame>>();
++    const { session, store, decodeFrame } = setup(vi.fn(async (_uri: string, request: { timeUs: number }) => request.timeUs === 0 ? first.promise : frame(request.timeUs)));
++    const old = session.preview(0);
++    await vi.waitFor(() => expect(decodeFrame).toHaveBeenCalledTimes(1));
++    const final = session.commit(2);
++    first.reject(Error("Obsolete codec error"));
++    expect(await old).toEqual({ kind: "superseded" });
++    await final;
++    expect(store.getState().error).toBeNull();
++    expect(store.getState().decoded?.index).toBe(2);
++  });
++  it.each([frame(89_999), frame(90_000, "seek-target")])("rejects approximate or browser seek evidence", async result => {
++    const { session, store } = setup(vi.fn(async () => result));
++    await expect(session.commit(2)).rejects.toThrow("requires 90000us");
++    expect(store.getState().decoded).toBeNull();
++    expect(store.getState().status).toBe("error");
++  });
++  it("settles waiters on close and ignores a codec result that arrives after unmount", async () => {
++    const pending = deferred<ReturnType<typeof frame>>();
++    const { session, store, decodeFrame } = setup(vi.fn(async () => pending.promise));
++    const active = session.preview(0);
++    await vi.waitFor(() => expect(decodeFrame).toHaveBeenCalledTimes(1));
++    const queued = session.commit(2);
++    session.close(); session.close();
++    expect(await active).toEqual({ kind: "superseded" });
++    expect(await queued).toEqual({ kind: "superseded" });
++    pending.resolve(frame(0));
++    await Promise.resolve(); await Promise.resolve();
++    expect(store.getState().status).toBe("closed");
++    expect(store.getState().decoded).toBeNull();
++    await expect(session.commit(0)).rejects.toThrow("closed");
++  });
++  it("preserves a newer request submitted synchronously by a store subscriber", async () => {
++    const { session, store, decodeFrame } = setup();
++    let final: ReturnType<typeof session.commit> | undefined;
++    const unsubscribe = store.subscribe(state => {
++      if (state.requestedIndex === 0 && !final) final = session.commit(2);
++    });
++    const old = session.preview(0);
++    expect(await old).toEqual({ kind: "superseded" });
++    expect((await final!).kind).toBe("decoded");
++    expect(decodeFrame.mock.calls.map(([, request]) => request.timeUs)).toEqual([90_000]);
++    unsubscribe();
++  });
++  it("rejects a failed transport operation without starting a decode", async () => {
++    const { session, transport, decodeFrame } = setup();
++    transport.seekTo.mockRejectedValueOnce(Error("Released transport"));
++    await expect(session.commit(1)).rejects.toThrow("Released transport");
++    expect(decodeFrame).not.toHaveBeenCalled();
++    await expect(session.commit(1)).resolves.toMatchObject({ kind: "decoded", index: 1 });
++  });
++  it("supersedes a decoded acknowledgement when a subscriber requests the next frame", async () => {
++    const { session, store } = setup();
++    let final: ReturnType<typeof session.commit> | undefined;
++    const unsubscribe = store.subscribe(state => {
++      if (state.decoded?.index === 0 && state.requestedIndex === null && !final)
++        final = session.commit(2);
++    });
++    expect(await session.preview(0)).toEqual({ kind: "superseded" });
++    expect(await final!).toMatchObject({ kind: "decoded", index: 2 });
++    expect(store.getState().decoded?.index).toBe(2);
++    unsubscribe();
++  });
++  it("supersedes an error acknowledgement when a subscriber retries synchronously", async () => {
++    const { session, store } = setup(vi.fn(async (_uri: string, request: { timeUs: number }) => {
++      if (request.timeUs === 0) throw Error("Retryable decode error");
++      return frame(request.timeUs);
++    }));
++    let final: ReturnType<typeof session.commit> | undefined;
++    const unsubscribe = store.subscribe(state => {
++      if (state.status === "error" && state.error && !final) final = session.commit(2);
++    });
++    expect(await session.preview(0)).toEqual({ kind: "superseded" });
++    expect(await final!).toMatchObject({ kind: "decoded", index: 2 });
++    expect(store.getState().error).toBeNull();
++    unsubscribe();
++  });
++
++});
+diff --git a/packages/media-ui/tests/indexed-frame-session.test.ts b/packages/media-ui/tests/indexed-frame-session.test.ts
+new file mode 100644
+index 0000000..92d4601
+--- /dev/null
++++ b/packages/media-ui/tests/indexed-frame-session.test.ts
+@@ -0,0 +1,34 @@
++import {describe,expect,it,vi} from "vitest";
++import {createFrameSession,createVideoMonitorStore} from "../src/video/frameSession";
++
++const frame = (actualTimeUs:number) => ({uri:"file:///frame.jpg",actualTimeUs,timing:"presentation" as const,width:64,height:64});
++const transport = () => ({pause:async()=>{},seekTo:async(_seconds:number)=>{}});
++
++describe("versioned exact frame capability admission",()=>{
++  it("prefers the advertised exact method and binds its actual result to the indexed frame",async()=>{
++    const ordinary=vi.fn(async()=>frame(0));
++    const exact=vi.fn(async(_uri:string,options:{timeUs:number})=>frame(options.timeUs));
++    const store=createVideoMonitorStore();
++    const session=createFrameSession({uri:"file:///movie.mp4",timesUs:[0,33333,66667],decoder:{decodeFrame:ordinary,indexedFrameVersion:1,decodeIndexedFrame:exact},transport:transport(),store});
++    await session.commit(1);
++    expect(exact).toHaveBeenCalledWith("file:///movie.mp4",expect.objectContaining({timeUs:33333,signal:expect.any(AbortSignal)}));
++    expect(ordinary).not.toHaveBeenCalled();
++    expect(store.getState().decoded?.frame.actualTimeUs).toBe(33333);
++    session.close();
++  });
++  it("keeps old-binary actual-time rejection instead of treating the previous frame as exact",async()=>{
++    const session=createFrameSession({uri:"file:///movie.mp4",timesUs:[0,33333],decoder:{decodeFrame:async()=>frame(0)},transport:transport(),store:createVideoMonitorStore()});
++    await expect(session.commit(1)).rejects.toThrow("requires 33333us");
++    session.close();
++  });
++  it("does not fall back after an advertised exact method fails",async()=>{
++    const failure=new Error("index exceeds native budget");
++    const ordinary=vi.fn(async()=>frame(33333));
++    const store=createVideoMonitorStore();
++    const session=createFrameSession({uri:"file:///movie.mp4",timesUs:[0,33333],decoder:{decodeFrame:ordinary,indexedFrameVersion:1,decodeIndexedFrame:async()=>{throw failure;}},transport:transport(),store});
++    await expect(session.commit(1)).rejects.toBe(failure);
++    expect(ordinary).not.toHaveBeenCalled();
++    expect(store.getState().decoded).toBeNull();
++    session.close();
++  });
++});
+diff --git a/examples/native-cadence/PlayerAcceptance.tsx b/examples/native-cadence/PlayerAcceptance.tsx
+new file mode 100644
+index 0000000..b50f2a3
+--- /dev/null
++++ b/examples/native-cadence/PlayerAcceptance.tsx
+@@ -0,0 +1,103 @@
++import { useEffect, useRef } from "react";
++import { Pressable, ScrollView, Text } from "react-native";
++import { createStore, type StoreApi } from "zustand/vanilla";
++import { useStore } from "zustand";
++import { File, Paths } from "expo-file-system";
++import { VideoPlayer, VideoView, type onLoadData, type onProgressData } from "react-native-video";
++
++type State = { mounted: boolean; generation: number; continueReady: boolean; result: string };
++function waitFor<T>(subscribe: (receive: (value: T) => void) => { remove(): void },
++  accept: (value: T) => boolean, signal: AbortSignal, timeoutMs = 15000): Promise<T> {
++  return new Promise((resolve, reject) => {
++    let settled = false;
++    let subscription: { remove(): void } | undefined;
++    const finish = (error?: Error, value?: T) => {
++      if (settled) return;
++      settled = true;
++      clearTimeout(timeout); subscription?.remove(); signal.removeEventListener("abort", abort);
++      if (error) reject(error); else resolve(value as T);
++    };
++    const abort = () => finish(Error("Player verification cancelled"));
++    const timeout = setTimeout(() => finish(Error("Native player event timed out")), timeoutMs);
++    signal.addEventListener("abort", abort, { once: true });
++    if (signal.aborted) { abort(); return; }
++    subscription = subscribe(value => { if (accept(value)) finish(undefined, value); });
++    if (settled) subscription.remove();
++  });
++}
++
++/** Real native acceptance; its explicit pause permits a screenshot before teardown. */
++export default function PlayerAcceptance() {
++  const local = useRef<StoreApi<State> | null>(null);
++  local.current ??= createStore<State>(() => ({ mounted: false, generation: 0, continueReady: false, result: "Opening selected native player…" }));
++  const store = local.current;
++  const state = useStore(store, value => value);
++  const owner = useRef<VideoPlayer | null>(null);
++  const continueRun = useRef<(() => void) | null>(null);
++  useEffect(() => {
++    const abort = new AbortController();
++    let player: VideoPlayer | null = null;
++    const run = async () => {
++      const evidence: string[] = [];
++      try {
++        const fixture = new File(Paths.cache, "P03-decoder.mp4");
++        if (!fixture.exists) throw Error("Generated media fixture is missing");
++        for (let cycle = 0; cycle < 3; cycle++) {
++          if (abort.signal.aborted) return;
++          player = new VideoPlayer({ uri: fixture.uri, initializeOnCreation: false });
++          owner.current = player;
++          await player.configure({ muted: true, loop: false });
++          const load = waitFor<onLoadData>(receive => player!.addEventListener("onLoad", receive), () => true, abort.signal);
++          const ready = waitFor<void>(receive => player!.addEventListener("onReadyToDisplay", receive), () => true, abort.signal);
++          store.setState({ mounted: true, generation: cycle, result: `Native cycle ${cycle + 1}/3 loading…` });
++          const [metadata] = await Promise.all([load, ready, player.initialize()]);
++          if (metadata.width !== 192 || metadata.height !== 128) throw Error(`Native dimensions ${metadata.width}x${metadata.height}`);
++          if (!player.muted) throw Error("Initialization lost configured mute");
++          const progress = waitFor<onProgressData>(receive => player!.addEventListener("onProgress", receive), value => value.currentTime > .2, abort.signal);
++          await player.play();
++          const position = await progress;
++          await player.pause();
++          const seek = waitFor<number>(receive => player!.addEventListener("onSeek", receive), value => Math.abs(value - .75) < .06, abort.signal);
++          await player.seekTo(.75);
++          const sought = await seek;
++          evidence.push(`cycle ${cycle + 1}: 192x128, native progress ${position.currentTime.toFixed(3)}s, reported seek ${sought.toFixed(3)}s`);
++          if (cycle === 0) {
++            store.setState({ continueReady: true, result: "Paused native Fabric video at reported 0.750s. Capture the rendered frame, then continue the replacement and release checks." });
++            await waitFor<void>(receive => {
++              continueRun.current = receive;
++              return { remove() { continueRun.current = null; } };
++            }, () => true, abort.signal, 120000);
++            store.setState({ continueReady: false });
++          }
++          const replaced = waitFor<onLoadData>(receive => player!.addEventListener("onLoad", receive), value => value.width === 192 && value.height === 128, abort.signal);
++          await Promise.all([replaced, player.replaceSourceAsync({ uri: fixture.uri, initializeOnCreation: false })]);
++          if (!player.muted) throw Error("Replacement lost configured mute");
++          evidence.push(`cycle ${cycle + 1}: source replacement loaded`);
++          owner.current = null;
++          store.setState({ mounted: false });
++          player.release();
++          player.release();
++          let deadline: ReturnType<typeof setTimeout> | undefined;
++          const rejected = await Promise.race([
++            player.initialize().then(() => false, () => true),
++            new Promise<never>((_, reject) => { deadline = setTimeout(() => reject(Error("Released-player initialization did not settle")), 3000); }),
++          ]).finally(() => clearTimeout(deadline));
++          if (!rejected) throw Error("Released player accepted initialization");
++          evidence.push(`cycle ${cycle + 1}: repeated release safe; initialization rejects`);
++        }
++        if (abort.signal.aborted) return;
++        console.info("[player-acceptance]", JSON.stringify(evidence));
++        store.setState({ result: `Native selected player passed three mount/play/pause/seek/replace/release cycles. ${evidence.join("; ")}. Decoder pixel/frame accuracy is a separate check.` });
++      } catch (error) {
++        if (!abort.signal.aborted) store.setState({ continueReady: false, result: `Error: ${error instanceof Error ? error.message : String(error)}` });
++      }
++    };
++    void run();
++    return () => { abort.abort(); continueRun.current = null; owner.current = null; player?.release(); };
++  }, [store]);
++  return <ScrollView style={{ flex: 1, backgroundColor: "#101017" }} contentContainerStyle={{ padding: 20, gap: 16 }}>
++    <Text accessibilityLiveRegion="polite" style={{ color: "white" }}>{state.result}</Text>
++    {state.mounted && owner.current ? <VideoView key={state.generation} player={owner.current} controls={false} resizeMode="contain" style={{ width: "100%", height: 240 }}/> : null}
++    {state.continueReady ? <Pressable accessibilityRole="button" accessibilityLabel="Continue native lifecycle verification" onPress={() => continueRun.current?.()} style={{ padding: 16, backgroundColor: "#344269" }}><Text style={{ color: "white" }}>Continue native lifecycle verification</Text></Pressable> : null}
++  </ScrollView>;
++}
+diff --git a/examples/native-cadence/player-acceptance.js b/examples/native-cadence/player-acceptance.js
+new file mode 100644
+index 0000000..ee96d3f
+--- /dev/null
++++ b/examples/native-cadence/player-acceptance.js
+@@ -0,0 +1,3 @@
++import { registerRootComponent } from "expo";
++import PlayerAcceptance from "./PlayerAcceptance";
++registerRootComponent(PlayerAcceptance);
+diff --git a/scripts/check-video-v1-contract.mjs b/scripts/check-video-v1-contract.mjs
+new file mode 100644
+index 0000000..5da112b
+--- /dev/null
++++ b/scripts/check-video-v1-contract.mjs
+@@ -0,0 +1,21 @@
++import { readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++
++// Read-only prerequisite probe. Inputs are extracted official npm packages or
++// upstream source trees, not guessed device capability. A pass is NOT playback.
++const [videoRoot, coreRoot] = process.argv.slice(2);
++if (!videoRoot || !coreRoot) {
++  console.error('Usage: node scripts/check-video-v1-contract.mjs <react-native-video package> <nitro-core package>');
++  process.exit(2);
++}
++const read = (root, file) => readFileSync(resolve(root, file), 'utf8');
++const video = JSON.parse(read(videoRoot, 'package.json'));
++const core = JSON.parse(read(coreRoot, 'package.json'));
++const factory = read(videoRoot, 'src/core/utils/playerFactory.ts');
++const proxy = read(coreRoot, 'js/src/NitroModulesProxy.ts');
++console.log(`Checking ${video.name}@${video.version} against ${core.name}@${core.version}`);
++if (/NitroModules\.createHybridObject/.test(factory) && !/\bcreateHybridObject\s*[<(]/.test(proxy)) {
++  console.error('BLOCKED: the video native factory requires createHybridObject, absent from this Nitro v1 proxy. Port factory/specs/native bindings; do not downgrade Nitro or substitute Expo Video.');
++  process.exit(1);
++}
++console.log('Factory API prerequisite passed. Native generation, compile/link and device tests are still required.');

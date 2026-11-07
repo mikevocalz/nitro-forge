@@ -82,8 +82,8 @@ export class SpliceDocument {
   private constructor(private doc: DocumentHandle) {}
 
   static async open(host: EngineHost, fps = 30): Promise<SpliceDocument> {
-    const doc = await DocumentHandle.open(host, "splice");
-    await doc.apply(OPS.newDoc, { fps });
+    const doc = await DocumentHandle.openInitialized(host, "splice",
+      (document) => document.apply(OPS.newDoc, { fps }));
     return new SpliceDocument(doc);
   }
 
@@ -91,8 +91,7 @@ export class SpliceDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<SpliceDocument> {
-    const doc = await DocumentHandle.open(host, "splice");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openSnapshot(host, "splice", bytes);
     return new SpliceDocument(doc);
   }
 

@@ -1,4 +1,4 @@
-import type { AnimKind, PitchDocument } from "./index";
+import type { AnimKind, PitchDocument, PitchAnimationTrigger } from "./index";
 
 /**
  * Engine side of NYC-Tron's slide controls (Forge roster J-01 SlideFilmstrip,
@@ -19,25 +19,13 @@ import type { AnimKind, PitchDocument } from "./index";
  * Each is a DEFER: the matching NYC-Tron prop is left out. Adding the op to
  * `packages/pitch/rust` and `OPS` is what lifts the deferral.
  */
+/** Text restyling, animation updates and boundary sections are engine operations;
+ * pinned alpha.4 controls expose no corresponding edit/section callbacks yet. */
 export const PITCH_DEFERRED_OPS = {
-  /** J-01 sections in the filmstrip: Pitch slides carry no section. */
-  setSlideSection: "J-01",
-  /** J-05: the deck's coordinate space. Pitch stores none, so the adapter uses {@link PITCH_SLIDE_SIZE}. */
-  setSlideSize: "J-05",
-  /** J-05 bring forward / send backward: objects keep insertion order. */
-  setObjectOrder: "J-05",
-  /** J-05 text formatting on the canvas (font size, bold, italic, color after creation). */
-  setTextStyle: "J-05",
-  /** J-09 edit an animation's timing or effect in place (today: remove and add). */
-  updateAnimation: "J-09",
-  /** J-09 triggers (on click, with previous, after previous): Pitch animations have absolute start times only. */
-  setAnimationTrigger: "J-09",
-  /** J-09 emphasis and exit effects: `addAnimation` accepts fadeIn, slideInLeft and zoomIn only. */
-  emphasisAndExitEffects: "J-09",
 } as const;
 export type PitchDeferredOp = keyof typeof PITCH_DEFERRED_OPS;
 
-/** Coordinate space the adapter assumes for Pitch decks (Pitch stores none; see `setSlideSize`). */
+/** Legacy coordinate space for decks saved before persisted slide sizes. */
 export const PITCH_SLIDE_SIZE = { width: 960, height: 540 } as const;
 
 /** Effects `addAnimation` accepts, with the names the animation pane shows. */
@@ -45,7 +33,11 @@ export const PITCH_ANIMATION_EFFECTS = [
   { kind: "fadeIn", category: "entrance", label: "Fade in" },
   { kind: "slideInLeft", category: "entrance", label: "Fly in from left" },
   { kind: "zoomIn", category: "entrance", label: "Zoom in" },
-] as const satisfies readonly { kind: AnimKind; category: "entrance"; label: string }[];
+  { kind: "pulse", category: "emphasis", label: "Pulse" },
+  { kind: "spin", category: "emphasis", label: "Spin" },
+  { kind: "fadeOut", category: "exit", label: "Fade out" },
+  { kind: "zoomOut", category: "exit", label: "Zoom out" },
+] as const satisfies readonly { kind: AnimKind; category: "entrance" | "emphasis" | "exit"; label: string }[];
 
 type Rgba = readonly [number, number, number, number];
 
@@ -82,12 +74,17 @@ export interface PitchSlideAnimation {
   readonly kind: string;
   readonly startS: number;
   readonly durationS: number;
+  /** Host metadata; the pinned animation pane cannot edit relative/click timing. */
+  readonly sourceTrigger?: PitchAnimationTrigger;
 }
 
 /** The deck read from `describe`. */
 export interface PitchDeck {
   readonly title: string;
+  readonly size: { readonly width: number; readonly height: number };
   readonly slides: readonly PitchSlideSummary[];
+  /** Authoritative boundary metadata; pinned alpha.4 controls expose no section callbacks/props. */
+  readonly sections: readonly { id: string; label: string; startSlideId: string }[];
   /** Animations per slide id. */
   readonly animations: Readonly<Record<string, readonly PitchSlideAnimation[]>>;
 }
@@ -101,11 +98,18 @@ interface RawObj {
   text?: { content: string; font_size: number; color: number[]; bold: boolean; italic: boolean };
   fill?: number[]; src?: string;
 }
-interface RawSlide { id: number; background: number[] | null; objects: RawObj[]; animations: { object_id: number; kind: string; start_s: number; duration_s: number }[] }
-interface RawState { meta: { title: string }; slides: RawSlide[] }
+interface RawSlide { id: number; background: number[] | null; objects: RawObj[]; animations: { object_id: number; kind: string; start_s: number; duration_s: number; trigger?: PitchAnimationTrigger }[] }
+interface RawState { sections?: {id:number;label:string;start_slide_id:number}[]; size?: { width: number; height: number }; meta: { title: string }; slides: RawSlide[] }
 
 const rgba = (c: unknown): Rgba | undefined =>
   Array.isArray(c) && c.length === 4 && c.every(n => Number.isInteger(n) && n >= 0 && n <= 255) ? [c[0], c[1], c[2], c[3]] : undefined;
+
+/** UTF-8 budget without requiring a platform TextEncoder global. */
+function utf8Length(value: string): number {
+  let bytes = 0;
+  for (const character of value) { const point = character.codePointAt(0)!; bytes += point <= 0x7f ? 1 : point <= 0x7ff ? 2 : point <= 0xffff ? 3 : 4; }
+  return bytes;
+}
 
 function requireData<T>(response: { data?: T }, op: string): T {
   if (response.data === undefined || response.data === null) throw new Error(`Pitch ${op} returned no data`);
@@ -137,16 +141,23 @@ function toObject(o: RawObj): PitchSlideObject {
 export async function readPitchDeck(document: Pick<PitchDocument, "describe">): Promise<PitchDeck> {
   const state = requireData(await document.describe<RawState>(), "describe");
   if (!state || !Array.isArray(state.slides) || typeof state.meta?.title !== "string") throw new Error("Pitch returned an invalid deck");
+  const size = state.size === undefined ? PITCH_SLIDE_SIZE : state.size;
+  if (!size || ![size.width, size.height].every(n => Number.isFinite(n) && n > 0 && n <= 100_000)) throw new Error("Pitch returned invalid slide dimensions");
   const animations: Record<string, PitchSlideAnimation[]> = {};
   const slides = state.slides.map(s => {
     if (!Number.isSafeInteger(s.id) || !Array.isArray(s.objects) || !Array.isArray(s.animations)) throw new Error("Pitch returned a malformed slide");
     animations[String(s.id)] = s.animations.map((a, index) => ({
       index, objectId: String(a.object_id), kind: a.kind, startS: a.start_s, durationS: a.duration_s,
+      ...(a.trigger && a.trigger.type !== "absolute" ? { sourceTrigger: a.trigger } : {}),
     }));
     const background = rgba(s.background);
     return { id: String(s.id), objects: s.objects.map(toObject), ...(background ? { background } : {}) };
   });
-  return { title: state.meta.title, slides, animations };
+  const rawSections = state.sections ?? [];
+  if (!Array.isArray(rawSections) || rawSections.length > 1024 || rawSections.some(s => !s || typeof s !== 'object' || !Number.isSafeInteger(s.id) || s.id <= 0 || !Number.isSafeInteger(s.start_slide_id) || typeof s.label !== 'string' || !s.label.trim() || utf8Length(s.label) > 1024 || !slides.some(slide => slide.id === String(s.start_slide_id)))) throw new Error('Pitch returned invalid section metadata');
+  if (new Set(rawSections.map(s => s.id)).size !== rawSections.length || new Set(rawSections.map(s => s.start_slide_id)).size !== rawSections.length) throw new Error('Pitch returned duplicate section boundaries');
+  const sections = rawSections.map(s => ({ id: String(s.id), label: s.label, startSlideId: String(s.start_slide_id) }));
+  return { title: state.meta.title, size, slides, animations, sections };
 }
 
 /** Single from/to moves (valid indexes at each step) that turn `before` into `after`. */
@@ -215,7 +226,7 @@ export async function bindPitchSlideList(
 /** `SlideCanvas` callbacks for one slide, each one engine write. */
 export interface PitchCanvasBinding {
   readonly slide: PitchSlideSummary;
-  readonly size: typeof PITCH_SLIDE_SIZE;
+  readonly size: { readonly width: number; readonly height: number };
   readonly onMoveObject: (id: string, x: number, y: number) => Promise<void>;
   readonly onResizeObject: (id: string, w: number, h: number) => Promise<void>;
   readonly onRotateObject: (id: string, degrees: number) => Promise<void>;
@@ -236,7 +247,7 @@ export async function bindPitchCanvas(
     onChanged(await bindPitchCanvas(document, slideId, onChanged));
   };
   return {
-    slide, size: PITCH_SLIDE_SIZE,
+    slide, size: deck.size,
     onMoveObject: (id, x, y) => after(() => document.moveObject(s, pitchId(id), x, y)),
     onResizeObject: (id, w, h) => after(() => document.resizeObject(s, pitchId(id), w, h)),
     onRotateObject: (id, degrees) => after(() => document.rotateObject(s, pitchId(id), degrees)),
@@ -262,6 +273,7 @@ export async function bindPitchAnimations(
   const deck = await readPitchDeck(document);
   const animations = deck.animations[slideId];
   if (!animations) throw new RangeError(`Unknown slide "${slideId}"`);
+  if (animations.some(animation => animation.sourceTrigger && animation.sourceTrigger.type !== "absolute")) throw new RangeError("The pinned animation pane cannot edit triggered timelines");
   const s = pitchId(slideId);
   const after = async (write: () => Promise<unknown>) => {
     await write();
@@ -270,7 +282,7 @@ export async function bindPitchAnimations(
   return {
     animations, effects: PITCH_ANIMATION_EFFECTS,
     onAdd: a => after(() => {
-      if (!ANIM_KINDS.has(a.kind)) throw new RangeError(`Pitch cannot play "${a.kind}" (see PITCH_DEFERRED_OPS.emphasisAndExitEffects)`);
+      if (!ANIM_KINDS.has(a.kind)) throw new RangeError(`Pitch cannot play "${a.kind}" (not an admitted Pitch effect)`);
       return document.addAnimation(s, pitchId(a.objectId), a.kind as AnimKind, a.startS, a.durationS);
     }),
     onRemove: index => after(() => document.removeAnimation(s, index)),
@@ -281,11 +293,11 @@ export async function bindPitchAnimations(
  * The slide with each object's geometry and opacity at presentation time
  * `tS`, from `slideAt`, for the canvas's animation preview (J-05 + J-09).
  */
-export async function readPitchSlideAt(document: PitchOfficeDocument, slideId: string, tS: number): Promise<PitchSlideSummary> {
+export async function readPitchSlideAt(document: PitchOfficeDocument, slideId: string, tS: number, clickTimes?: readonly number[]): Promise<PitchSlideSummary> {
   const deck = await readPitchDeck(document);
   const slide = deck.slides.find(s => s.id === slideId);
   if (!slide) throw new RangeError(`Unknown slide "${slideId}"`);
-  const at = requireData(await document.slideAt(pitchId(slideId), tS), "slideAt");
+  const at = requireData(await document.slideAt(pitchId(slideId), tS, clickTimes), "slideAt");
   const byId = new Map(at.objects.map(o => [String(o.id), o]));
   return {
     ...slide,

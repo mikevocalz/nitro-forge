@@ -1,0 +1,9 @@
+Native tool observation excerpt, 2026-11-06.
+Environment: iOS 27.1 iPhone Duo simulator BBCC4078-E64D-4642-893B-ACF80ACB29A1.
+App: ai.nitroforge.cadence.native; current Rust Cadence document, canonical PrecisionScrubber.
+Tapped “Decrease Gain”: AXTextField “Gain value” value="0.99";
+AXStaticText “Gain 0.99 · Pan 0.00 · 120 BPM”.
+Injected F7: AXStaticText “Shortcut: Undo”; AXTextField “Gain value” value="1".
+Injected F8: AXStaticText “Shortcut: Redo”; AXTextField “Gain value” value="0.99";
+AXStaticText “Gain 0.99 · Pan 0.00 · 120 BPM”.
+Observed through Argent ax-service. Simulator-injected keys, not physical keyboard or VoiceOver acceptance.

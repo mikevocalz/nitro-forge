@@ -36,6 +36,12 @@
       "file": "nyc-tron-native-controls-0.1.0-alpha.4.tgz",
       "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz",
       "sha256": "e9fca1947ea29278b3b2016fbb38a3a4ec38939220f8d46a883df357a9ee6b8c"
+    },
+    "@nyc-tron/hardware-keys": {
+      "version": "0.1.0-alpha.4",
+      "url": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz",
+      "sha256": "abe42ac57d106a3d18c601845370a5878197e06b9e82f3e298e6527ea28a568f",
+      "file": "nyc-tron-hardware-keys-0.1.0-alpha.4.tgz"
     }
   },
   "repository": "mikevocalz/NYC-Tron-UI",

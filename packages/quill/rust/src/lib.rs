@@ -9,6 +9,10 @@
 #![forbid(unsafe_code)]
 
 mod docx;
+mod lists;
+mod numbering;
+use lists::ListItem;
+mod change_case;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -82,6 +86,12 @@ pub struct Style {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub highlight: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
 }
 
@@ -95,6 +105,8 @@ pub struct Inline {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Block {
     pub kind: BlockKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub list: Option<ListItem>,
     #[serde(default)]
     pub inlines: Vec<Inline>,
 }
@@ -103,6 +115,7 @@ impl Block {
     fn empty(kind: BlockKind) -> Self {
         Self {
             kind,
+            list: None,
             inlines: Vec::new(),
         }
     }
@@ -116,6 +129,20 @@ struct SnapshotRef<'a> {
 #[derive(Deserialize)]
 struct DocState {
     blocks: Vec<Block>,
+}
+
+#[derive(Serialize)]
+struct ListSnapshotRef<'a> {
+    kind: &'static str,
+    schema: u32,
+    document: SnapshotRef<'a>,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ListDocState {
+    kind: String,
+    schema: u32,
+    document: DocState,
 }
 
 // ---------------------------------------------------------------------------
@@ -273,9 +300,8 @@ fn as_usize(v: &Value, name: &str) -> Result<usize, EngineError> {
 }
 
 fn as_f64(v: &Value, name: &str) -> Result<f64, EngineError> {
-    v.as_f64().ok_or_else(|| {
-        EngineError::invalid(format!("'{name}' must be a number"))
-    })
+    v.as_f64()
+        .ok_or_else(|| EngineError::invalid(format!("'{name}' must be a number")))
 }
 
 fn as_str<'a>(v: &'a Value, name: &str) -> Result<&'a str, EngineError> {
@@ -292,8 +318,42 @@ fn parse_pos(v: &Value) -> Result<Pos, EngineError> {
 
 fn parse_kind(v: &Value) -> Result<BlockKind, EngineError> {
     let s = as_str(v, "kind")?;
-    BlockKind::parse(s)
-        .ok_or_else(|| EngineError::validation(format!("unknown block kind '{s}'")))
+    BlockKind::parse(s).ok_or_else(|| EngineError::validation(format!("unknown block kind '{s}'")))
+}
+
+fn validate_highlight(value: &str) -> Result<(), EngineError> {
+    if value.len() != 7
+        || !value.starts_with('#')
+        || !value.as_bytes()[1..].iter().all(u8::is_ascii_hexdigit)
+    {
+        return Err(EngineError::validation(
+            "highlight must be an exact #RRGGBB color",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_font_size(value: f64) -> Result<(), EngineError> {
+    if !value.is_finite() || !(1.0..=1638.0).contains(&value) || (value * 2.0).fract() != 0.0 {
+        return Err(EngineError::validation(
+            "font_size must be 1..1638 points in half-point increments",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_font_family(value: &str) -> Result<(), EngineError> {
+    if value.trim().is_empty()
+        || value.chars().count() > 128
+        || value
+            .chars()
+            .any(|c| c.is_control() || c == '\u{fffe}' || c == '\u{ffff}')
+    {
+        return Err(EngineError::validation(
+            "font_family must contain 1..128 non-control characters and cannot be blank",
+        ));
+    }
+    Ok(())
 }
 
 /// A partial style: only fields present in the `applyStyle` payload mutate.
@@ -304,6 +364,9 @@ struct StylePatch {
     underline: Option<bool>,
     strike: Option<bool>,
     color: Option<Option<String>>,
+    highlight: Option<Option<String>>,
+    font_family: Option<Option<String>>,
+    font_size: Option<Option<f64>>,
     link: Option<Option<String>>,
 }
 
@@ -315,9 +378,10 @@ impl StylePatch {
         let mut p = StylePatch::default();
         let flag = |name: &str, slot: &mut Option<bool>| -> Result<(), EngineError> {
             if let Some(val) = obj.get(name) {
-                *slot = Some(val.as_bool().ok_or_else(|| {
-                    EngineError::invalid(format!("style.{name} must be a bool"))
-                })?);
+                *slot =
+                    Some(val.as_bool().ok_or_else(|| {
+                        EngineError::invalid(format!("style.{name} must be a bool"))
+                    })?);
             }
             Ok(())
         };
@@ -325,9 +389,7 @@ impl StylePatch {
         flag("italic", &mut p.italic)?;
         flag("underline", &mut p.underline)?;
         flag("strike", &mut p.strike)?;
-        let opt_str = |name: &str,
-                           slot: &mut Option<Option<String>>|
-         -> Result<(), EngineError> {
+        let opt_str = |name: &str, slot: &mut Option<Option<String>>| -> Result<(), EngineError> {
             if let Some(val) = obj.get(name) {
                 if val.is_null() {
                     *slot = Some(None);
@@ -342,7 +404,26 @@ impl StylePatch {
             Ok(())
         };
         opt_str("color", &mut p.color)?;
+        opt_str("highlight", &mut p.highlight)?;
+        if let Some(Some(value)) = &p.highlight {
+            validate_highlight(value)?;
+        }
         opt_str("link", &mut p.link)?;
+        opt_str("font_family", &mut p.font_family)?;
+        if let Some(Some(family)) = &p.font_family {
+            validate_font_family(family)?;
+        }
+        if let Some(size) = obj.get("font_size") {
+            p.font_size = Some(if size.is_null() {
+                None
+            } else {
+                let value = size.as_f64().ok_or_else(|| {
+                    EngineError::invalid("style.font_size must be a number or null")
+                })?;
+                validate_font_size(value)?;
+                Some(value)
+            });
+        }
         Ok(p)
     }
 
@@ -352,7 +433,10 @@ impl StylePatch {
             && self.underline.is_none()
             && self.strike.is_none()
             && self.color.is_none()
+            && self.highlight.is_none()
             && self.link.is_none()
+            && self.font_family.is_none()
+            && self.font_size.is_none()
     }
 
     fn apply(&self, s: &mut Style) {
@@ -368,8 +452,17 @@ impl StylePatch {
         if let Some(v) = self.strike {
             s.strike = v;
         }
+        if let Some(v) = &self.highlight {
+            s.highlight = v.clone();
+        }
         if let Some(v) = &self.color {
             s.color = v.clone();
+        }
+        if let Some(v) = self.font_size {
+            s.font_size = v;
+        }
+        if let Some(v) = &self.font_family {
+            s.font_family = v.clone();
         }
         if let Some(v) = &self.link {
             s.link = v.clone();
@@ -416,9 +509,7 @@ impl QuillEngine {
         self.check_pos(from)?;
         self.check_pos(to)?;
         if !from.le(to) {
-            return Err(EngineError::validation(
-                "range end precedes range start",
-            ));
+            return Err(EngineError::validation("range end precedes range start"));
         }
         Ok(())
     }
@@ -449,6 +540,16 @@ impl QuillEngine {
         })?))
     }
 
+    fn validate_list_splice(
+        &self,
+        index: usize,
+        count: usize,
+        inserted: &[Block],
+    ) -> Result<(), EngineError> {
+        let mut next = self.blocks.clone();
+        next.splice(index..index + count, inserted.iter().cloned());
+        lists::validate(&next)
+    }
     fn op_insert_text(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let at = parse_pos(field(p, "at")?)?;
         let text = as_str(field(p, "text")?, "text")?.to_string();
@@ -468,6 +569,7 @@ impl QuillEngine {
             if i > 0 {
                 out.push(Block {
                     kind,
+                    list: old.list.clone(),
                     inlines: normalize_inlines(std::mem::take(&mut head)),
                 });
             }
@@ -481,10 +583,12 @@ impl QuillEngine {
         head.extend(tail);
         out.push(Block {
             kind,
+            list: old.list.clone(),
             inlines: normalize_inlines(head),
         });
 
         let inserted = out.clone();
+        self.validate_list_splice(at.block, 1, &out)?;
         self.blocks.splice(at.block..at.block + 1, out);
         self.journal.record(UndoEntry {
             index: at.block,
@@ -514,6 +618,7 @@ impl QuillEngine {
             inlines.extend(tail);
             new_span = vec![Block {
                 kind: b.kind,
+                list: b.list.clone(),
                 inlines: normalize_inlines(inlines),
             }];
         } else {
@@ -535,6 +640,7 @@ impl QuillEngine {
             // kind of the block where the range started.
             new_span = vec![Block {
                 kind: first.kind,
+                list: first.list.clone(),
                 inlines: normalize_inlines(inlines),
             }];
         }
@@ -552,49 +658,38 @@ impl QuillEngine {
     /// Replace `from..to` with `text` as one command and one undo entry, so a
     /// selection replace never leaves the deletion applied without the insert.
     fn op_replace_range(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
-        // Validate everything before touching the document.
         let from = parse_pos(field(p, "from")?)?;
         let to = parse_pos(field(p, "to")?)?;
-        let text = as_str(field(p, "text")?, "text")?.to_string();
+        let text = as_str(field(p, "text")?, "text")?.to_owned();
         self.check_range(from, to)?;
-        let deletes = from != to;
-        let inserts = !text.is_empty();
-        if !deletes && !inserts {
-            return Ok(CommandResult::data(json!({ "deleted_text": "" })));
+        let mut staged = Self {
+            blocks: self.blocks.clone(),
+            journal: Journal::new(1),
+        };
+        let mut deleted = String::new();
+        if from != to {
+            deleted = staged.op_delete_range(p)?.data["deleted_text"]
+                .as_str()
+                .unwrap_or_default()
+                .into();
         }
-
-        let removed: Vec<Block> = self.blocks[from.block..=to.block].to_vec();
-        let total_before = self.blocks.len();
-        let mut deleted_text = String::new();
-        if deletes {
-            let r = self.op_delete_range(&json!({
-                "from": { "block": from.block, "offset": from.offset },
-                "to": { "block": to.block, "offset": to.offset },
-            }))?;
-            deleted_text = r.data["deleted_text"].as_str().unwrap_or_default().to_string();
-            self.journal.pop_undo();
+        if !text.is_empty() {
+            staged.op_insert_text(
+                &json!({"at":{"block":from.block,"offset":from.offset},"text":text}),
+            )?;
         }
-        // After the delete, `from` is still a valid position in the merged block.
-        let span_after_delete = if deletes { 1 } else { removed.len() };
-        if inserts {
-            let at = json!({ "block": from.block, "offset": from.offset });
-            if let Err(e) = self.op_insert_text(&json!({ "at": at, "text": text })) {
-                let end = from.block + span_after_delete;
-                self.blocks.splice(from.block..end, removed);
-                return Err(e);
-            }
-            self.journal.pop_undo();
+        lists::validate(&staged.blocks)?;
+        let data = json!({"deleted_text":deleted});
+        if staged.blocks == self.blocks {
+            return Ok(Self::read_only(data));
         }
-        // Everything outside the original span is untouched, so the new span
-        // is whatever the block count grew or shrank by.
-        let inserted_len = self.blocks.len() + removed.len() - total_before;
-        let inserted = self.blocks[from.block..from.block + inserted_len].to_vec();
         self.journal.record(UndoEntry {
-            index: from.block,
-            removed,
-            inserted,
+            index: 0,
+            removed: self.blocks.clone(),
+            inserted: staged.blocks.clone(),
         });
-        Ok(CommandResult::data(json!({ "deleted_text": deleted_text })))
+        self.blocks = staged.blocks;
+        Ok(CommandResult::data(data))
     }
 
     fn op_apply_style(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
@@ -611,7 +706,11 @@ impl QuillEngine {
         for (i, b) in self.blocks[from.block..=to.block].iter().enumerate() {
             let bi = from.block + i;
             let s = if bi == from.block { from.offset } else { 0 };
-            let e = if bi == to.block { to.offset } else { block_len(b) };
+            let e = if bi == to.block {
+                to.offset
+            } else {
+                block_len(b)
+            };
             if s == e {
                 new_span.push(b.clone());
                 continue;
@@ -625,6 +724,7 @@ impl QuillEngine {
             inlines.extend(tail);
             new_span.push(Block {
                 kind: b.kind,
+                list: b.list.clone(),
                 inlines: normalize_inlines(inlines),
             });
         }
@@ -653,6 +753,10 @@ impl QuillEngine {
         let old = b.clone();
         let mut new = old.clone();
         new.kind = kind;
+        if kind != BlockKind::List {
+            new.list = None;
+        }
+        self.validate_list_splice(index, 1, std::slice::from_ref(&new))?;
         self.blocks[index] = new.clone();
         self.journal.record(UndoEntry {
             index,
@@ -675,7 +779,10 @@ impl QuillEngine {
             )));
         }
         let old = self.blocks.clone();
-        self.blocks.insert(index, Block::empty(kind));
+        let mut next = old.clone();
+        next.insert(index, Block::empty(kind));
+        lists::validate(&next)?;
+        self.blocks = next;
         self.journal.record(UndoEntry {
             index: 0,
             removed: old,
@@ -692,13 +799,16 @@ impl QuillEngine {
         let new_span = vec![
             Block {
                 kind: old.kind,
+                list: old.list.clone(),
                 inlines: normalize_inlines(head),
             },
             Block {
                 kind: old.kind,
+                list: old.list.clone(),
                 inlines: normalize_inlines(tail),
             },
         ];
+        self.validate_list_splice(at.block, 1, &new_span)?;
         self.blocks
             .splice(at.block..at.block + 1, new_span.iter().cloned());
         self.journal.record(UndoEntry {
@@ -706,7 +816,9 @@ impl QuillEngine {
             removed: vec![old],
             inserted: new_span,
         });
-        Ok(CommandResult::data(json!({ "new_block_index": at.block + 1 })))
+        Ok(CommandResult::data(
+            json!({ "new_block_index": at.block + 1 }),
+        ))
     }
 
     fn op_merge_block(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
@@ -727,9 +839,11 @@ impl QuillEngine {
         inlines.extend(self.blocks[index].inlines.iter().cloned());
         let merged = vec![Block {
             kind: self.blocks[index - 1].kind,
+            list: self.blocks[index - 1].list.clone(),
             inlines: normalize_inlines(inlines),
         }];
-        self.blocks.splice(index - 1..=index, merged.iter().cloned());
+        self.blocks
+            .splice(index - 1..=index, merged.iter().cloned());
         self.journal.record(UndoEntry {
             index: index - 1,
             removed,
@@ -744,7 +858,10 @@ impl QuillEngine {
             (fv, tv) => {
                 let from = match fv {
                     Some(v) => parse_pos(v)?,
-                    None => Pos { block: 0, offset: 0 },
+                    None => Pos {
+                        block: 0,
+                        offset: 0,
+                    },
                 };
                 let to = match tv {
                     Some(v) => parse_pos(v)?,
@@ -774,8 +891,7 @@ impl QuillEngine {
             (Some(from), Some(to)) => {
                 let first = &self.blocks[from.block];
                 let last = &self.blocks[to.block];
-                let mut parts =
-                    vec![block_text_slice(first, from.offset, block_len(first))];
+                let mut parts = vec![block_text_slice(first, from.offset, block_len(first))];
                 for b in &self.blocks[from.block + 1..to.block] {
                     parts.push(block_text(b));
                 }
@@ -871,6 +987,7 @@ impl QuillEngine {
     fn op_import_docx(&mut self, cmd: &mut Command) -> Result<CommandResult, EngineError> {
         let bytes = cmd.bytes_input("bytes_b64", base64_decode)?;
         let blocks = docx::import_docx(&bytes)?;
+        lists::validate(&blocks)?;
         let old = std::mem::replace(&mut self.blocks, blocks);
         self.journal.record(UndoEntry {
             index: 0,
@@ -900,7 +1017,11 @@ impl Engine for QuillEngine {
 
     /// `exportDocx` checks for cancellation between building and returning
     /// the archive. Other ops run to completion once started.
-    fn apply_long(&mut self, cmd: Command, ctx: &TaskContext) -> Result<CommandResult, EngineError> {
+    fn apply_long(
+        &mut self,
+        cmd: Command,
+        ctx: &TaskContext,
+    ) -> Result<CommandResult, EngineError> {
         ctx.checkpoint()?;
         let result = if cmd.op == "exportDocx" && cmd.v == 1 {
             self.op_export_docx(&cmd, Some(ctx))
@@ -912,6 +1033,29 @@ impl Engine for QuillEngine {
     }
 
     fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            let batch = ignition_core::parse_batch(cmd)?;
+            let staged = Self {
+                blocks: self.blocks.clone(),
+                journal: Journal::new(1),
+            };
+            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
+            if result
+                .events
+                .iter()
+                .any(|event| event.kind == "document:changed")
+            {
+                let inserted = staged.blocks.clone();
+                let removed = self.blocks.clone();
+                self.journal.record(UndoEntry {
+                    index: 0,
+                    removed,
+                    inserted,
+                });
+                self.blocks = staged.blocks;
+            }
+            return Ok(result);
+        }
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
                 "command version {} not supported",
@@ -925,6 +1069,10 @@ impl Engine for QuillEngine {
             "deleteRange" => self.op_delete_range(&cmd.payload),
             "replaceRange" => self.op_replace_range(&cmd.payload),
             "applyStyle" => self.op_apply_style(&cmd.payload),
+            "changeCase" => self.op_change_case(&cmd.payload),
+            "setListKind" | "setListFormat" | "shiftListLevel" => {
+                self.op_lists(&cmd.op, &cmd.payload)
+            }
             "setBlockKind" => self.op_set_block_kind(&cmd.payload),
             "insertBlock" => self.op_insert_block(&cmd.payload),
             "splitBlock" => self.op_split_block(&cmd.payload),
@@ -939,15 +1087,56 @@ impl Engine for QuillEngine {
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        let payload = serde_json::to_vec(&SnapshotRef {
+        let document = SnapshotRef {
             blocks: &self.blocks,
-        })?;
+        };
+        // Legacy readers ignore unknown Block fields. Removing root blocks makes
+        // them reject numbered metadata instead of silently losing it.
+        let payload = if self.blocks.iter().any(|block| block.list.is_some()) {
+            serde_json::to_vec(&ListSnapshotRef {
+                kind: "quill",
+                schema: 2,
+                document,
+            })?
+        } else {
+            serde_json::to_vec(&document)?
+        };
         Ok(encode_envelope(&payload))
     }
 
     fn restore(&mut self, data: &[u8]) -> Result<(), EngineError> {
         let (_fmt, payload) = decode_envelope(data)?;
-        let state: DocState = serde_json::from_slice(payload)?;
+        let value: Value = serde_json::from_slice(payload)?;
+        let wrapped = value.as_object().is_some_and(|object| {
+            ["kind", "schema", "document"]
+                .iter()
+                .any(|key| object.contains_key(*key))
+        });
+        let state: DocState = if wrapped {
+            let wrapper: ListDocState = serde_json::from_value(value)?;
+            if wrapper.kind != "quill" || wrapper.schema != 2 {
+                return Err(EngineError::unsupported(
+                    "unsupported Quill snapshot kind/schema",
+                ));
+            }
+            wrapper.document
+        } else {
+            serde_json::from_value(value)?
+        };
+        lists::validate(&state.blocks)?;
+        for block in &state.blocks {
+            for inline in &block.inlines {
+                if let Some(highlight) = &inline.style.highlight {
+                    validate_highlight(highlight)?;
+                }
+                if let Some(size) = inline.style.font_size {
+                    validate_font_size(size)?;
+                }
+                if let Some(family) = &inline.style.font_family {
+                    validate_font_family(family)?;
+                }
+            }
+        }
         let mut blocks = state.blocks;
         if blocks.is_empty() {
             blocks.push(Block::empty(BlockKind::Para));
@@ -1049,10 +1238,15 @@ fn wrap_block(text: &str, max: usize) -> Vec<(usize, usize)> {
 
 const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+#[cfg(test)]
 fn base64_encode(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
-        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let b = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
         let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
         out.push(B64[(n >> 18) as usize & 63] as char);
         out.push(B64[(n >> 12) as usize & 63] as char);
@@ -1145,10 +1339,7 @@ mod tests {
     fn new_gives_one_empty_para() {
         let mut e = engine();
         let d = describe(&mut e);
-        assert_eq!(
-            d["blocks"],
-            json!([{ "kind": "para", "inlines": [] }])
-        );
+        assert_eq!(d["blocks"], json!([{ "kind": "para", "inlines": [] }]));
         let r = apply(&mut e, "new", json!({}));
         assert_eq!(r.data["ok"], true);
     }
@@ -1163,7 +1354,8 @@ mod tests {
                 v: 2,
                 op: "text".into(),
                 payload: json!({}),
-                input: None, binary_output: false,
+                input: None,
+                binary_output: false,
             })
             .unwrap_err();
         assert_eq!(er.code, ErrorCode::Unsupported);
@@ -1419,19 +1611,11 @@ mod tests {
     fn structural_ops() {
         let mut e = engine();
         insert(&mut e, 0, 0, "para one");
-        let r = apply(
-            &mut e,
-            "setBlockKind",
-            json!({"block": 0, "kind": "h1"}),
-        );
+        let r = apply(&mut e, "setBlockKind", json!({"block": 0, "kind": "h1"}));
         assert_eq!(r.data["ok"], true);
         assert_eq!(describe(&mut e)["blocks"][0]["kind"], "h1");
 
-        let r = apply(
-            &mut e,
-            "insertBlock",
-            json!({"index": 1, "kind": "quote"}),
-        );
+        let r = apply(&mut e, "insertBlock", json!({"index": 1, "kind": "quote"}));
         assert_eq!(r.data["block_index"], 1);
         assert_eq!(describe(&mut e)["blocks"][1]["kind"], "quote");
 
@@ -1556,7 +1740,12 @@ mod tests {
             ErrorCode::OutOfBounds
         );
         assert_eq!(
-            err(&mut e, "insertText", json!({"at": {"block": 0, "offset": 0}})).code,
+            err(
+                &mut e,
+                "insertText",
+                json!({"at": {"block": 0, "offset": 0}})
+            )
+            .code,
             ErrorCode::InvalidCommand
         );
         assert_eq!(describe(&mut e), before);
@@ -1597,11 +1786,7 @@ mod tests {
     fn layout_long_word_hard_breaks_and_headings_are_wider() {
         let mut e = engine();
         insert(&mut e, 0, 0, "supercalifragilistic");
-        apply(
-            &mut e,
-            "setBlockKind",
-            json!({"block": 0, "kind": "h1"}),
-        );
+        apply(&mut e, "setBlockKind", json!({"block": 0, "kind": "h1"}));
         // h1: eff=14, advance=7 → 100/7 ≈ 14 chars/line
         let r = apply(
             &mut e,
@@ -1623,10 +1808,7 @@ mod tests {
             insert(&mut e, 0, 0, "line\n");
         }
         insert(&mut e, 9, 0, "line");
-        assert_eq!(
-            describe(&mut e)["blocks"].as_array().unwrap().len(),
-            10
-        );
+        assert_eq!(describe(&mut e)["blocks"].as_array().unwrap().len(), 10);
         // font 10 para: line_height 14; page_height 50 → 3 lines/page
         let r = apply(
             &mut e,
@@ -1682,11 +1864,7 @@ mod tests {
     fn docx_round_trip_preserves_text_kinds_and_flags() {
         let mut e = engine();
         insert(&mut e, 0, 0, "Title Here");
-        apply(
-            &mut e,
-            "setBlockKind",
-            json!({"block": 0, "kind": "h1"}),
-        );
+        apply(&mut e, "setBlockKind", json!({"block": 0, "kind": "h1"}));
         apply(
             &mut e,
             "splitBlock",
@@ -1709,16 +1887,8 @@ mod tests {
             json!({"at": {"block": 1, "offset": 14}}),
         );
         insert(&mut e, 2, 0, "item one");
-        apply(
-            &mut e,
-            "setBlockKind",
-            json!({"block": 2, "kind": "list"}),
-        );
-        apply(
-            &mut e,
-            "insertBlock",
-            json!({"index": 3, "kind": "quote"}),
-        );
+        apply(&mut e, "setBlockKind", json!({"block": 2, "kind": "list"}));
+        apply(&mut e, "insertBlock", json!({"index": 3, "kind": "quote"}));
         insert(&mut e, 3, 0, "struck & <tagged>");
         apply(
             &mut e,
@@ -1795,7 +1965,11 @@ mod tests {
         assert_eq!(text(&mut e), "hello bar world");
         let after = describe(&mut e);
         assert!(e.undo().unwrap());
-        assert_eq!(describe(&mut e), before, "one undo restores the original text");
+        assert_eq!(
+            describe(&mut e),
+            before,
+            "one undo restores the original text"
+        );
         assert!(e.redo().unwrap());
         assert_eq!(describe(&mut e), after);
     }
@@ -1824,9 +1998,17 @@ mod tests {
     fn replace_range_pure_insert_and_pure_delete_record_one_entry() {
         let mut e = engine();
         insert(&mut e, 0, 0, "abc");
-        apply(&mut e, "replaceRange", json!({"from": {"block":0,"offset":1}, "to": {"block":0,"offset":1}, "text": "Z"}));
+        apply(
+            &mut e,
+            "replaceRange",
+            json!({"from": {"block":0,"offset":1}, "to": {"block":0,"offset":1}, "text": "Z"}),
+        );
         assert_eq!(text(&mut e), "aZbc");
-        apply(&mut e, "replaceRange", json!({"from": {"block":0,"offset":0}, "to": {"block":0,"offset":2}, "text": ""}));
+        apply(
+            &mut e,
+            "replaceRange",
+            json!({"from": {"block":0,"offset":0}, "to": {"block":0,"offset":2}, "text": ""}),
+        );
         assert_eq!(text(&mut e), "bc");
         assert!(e.undo().unwrap());
         assert_eq!(text(&mut e), "aZbc");
@@ -1896,15 +2078,9 @@ mod tests {
         let mut e = engine();
         insert(&mut e, 0, 0, "x");
         apply(&mut e, "insertBlock", json!({"index": 1}));
-        assert_eq!(
-            describe(&mut e)["blocks"].as_array().unwrap().len(),
-            2
-        );
+        assert_eq!(describe(&mut e)["blocks"].as_array().unwrap().len(), 2);
         assert!(e.undo().unwrap());
-        assert_eq!(
-            describe(&mut e)["blocks"].as_array().unwrap().len(),
-            1
-        );
+        assert_eq!(describe(&mut e)["blocks"].as_array().unwrap().len(), 1);
         apply(&mut e, "new", json!({}));
         assert_eq!(text(&mut e), "");
         // undo of `new` restores the previous document
@@ -1930,11 +2106,7 @@ mod tests {
                 "style": {"underline": true, "color": "#00ff00", "link": "https://x"}
             }),
         );
-        apply(
-            &mut e,
-            "setBlockKind",
-            json!({"block": 1, "kind": "h2"}),
-        );
+        apply(&mut e, "setBlockKind", json!({"block": 1, "kind": "h2"}));
         let before = describe(&mut e);
         let snap = e.snapshot().unwrap();
         assert_eq!(&snap[0..4], b"NFD1");
@@ -1969,5 +2141,247 @@ mod tests {
             }),
         );
         assert_eq!(r.data["deleted_text"], "héX");
+    }
+
+    fn font_style_payload(family: Value) -> Value {
+        json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":3},"style":{"font_family":family}})
+    }
+
+    #[test]
+    fn font_family_set_clear_and_undo_preserve_other_style() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(
+            &mut e,
+            "applyStyle",
+            json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":3},"style":{"bold":true}}),
+        );
+        apply(&mut e, "applyStyle", font_style_payload(json!("Aptos")));
+        assert_eq!(
+            e.blocks[0].inlines[0].style.font_family.as_deref(),
+            Some("Aptos")
+        );
+        apply(&mut e, "applyStyle", font_style_payload(Value::Null));
+        assert!(e.blocks[0].inlines[0].style.bold);
+        assert_eq!(e.blocks[0].inlines[0].style.font_family, None);
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            e.blocks[0].inlines[0].style.font_family.as_deref(),
+            Some("Aptos")
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_family, None);
+        assert!(e.redo().unwrap());
+        assert_eq!(
+            e.blocks[0].inlines[0].style.font_family.as_deref(),
+            Some("Aptos")
+        );
+    }
+
+    #[test]
+    fn invalid_font_patch_preserves_document_and_redo_history() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", font_style_payload(json!("Aptos")));
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        for family in [
+            json!(""),
+            json!("   "),
+            json!("bad\nfont"),
+            json!("x".repeat(129)),
+            json!(42),
+            json!("\u{fffe}"),
+        ] {
+            let mut payload = font_style_payload(family);
+            payload["style"]["italic"] = json!(true);
+            assert!(e.apply(cmd("applyStyle", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(
+            e.blocks[0].inlines[0].style.font_family.as_deref(),
+            Some("Aptos")
+        );
+        assert!(!e.blocks[0].inlines[0].style.italic);
+    }
+
+    #[test]
+    fn font_snapshot_legacy_default_and_invalid_restore_are_atomic() {
+        let mut e = engine();
+        let legacy = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"abc","style":{"bold":true}}]}]})).unwrap().as_slice());
+        e.restore(&legacy).unwrap();
+        assert_eq!(e.blocks[0].inlines[0].style.font_family, None);
+        apply(&mut e, "applyStyle", font_style_payload(json!("Aptos")));
+        let snapshot = e.snapshot().unwrap();
+        let mut restored = engine();
+        restored.restore(&snapshot).unwrap();
+        assert_eq!(restored.blocks, e.blocks);
+        let bad = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"replacement","style":{"font_family":"\u{0}"}}]}]})).unwrap().as_slice());
+        assert!(e.restore(&bad).is_err());
+        assert_eq!(e.snapshot().unwrap(), snapshot);
+        assert!(e.undo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_family, None);
+    }
+
+    #[test]
+    fn font_docx_escaped_family_roundtrip_and_clear() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        let family = "A&B \"Quoted\" <Family>";
+        apply(&mut e, "applyStyle", font_style_payload(json!(family)));
+        let bytes = docx::export_docx(&e.blocks).unwrap();
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).unwrap();
+        let mut xml = String::new();
+        std::io::Read::read_to_string(&mut zip.by_name("word/document.xml").unwrap(), &mut xml)
+            .unwrap();
+        assert!(xml.contains("A&amp;B &quot;Quoted&quot; &lt;Family&gt;"));
+        assert_eq!(docx::import_docx(&bytes).unwrap(), e.blocks);
+        apply(&mut e, "applyStyle", font_style_payload(Value::Null));
+        let cleared = docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap();
+        assert_eq!(cleared[0].inlines[0].style.font_family, None);
+        assert_eq!(cleared, e.blocks);
+    }
+
+    fn font_size_payload(size: Value) -> Value {
+        json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":3},"style":{"font_size":size}})
+    }
+
+    #[test]
+    fn font_size_clear_undo_and_exact_docx_half_points() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", font_style_payload(json!("Aptos")));
+        for size in [1.0, 10.5, 1638.0] {
+            apply(&mut e, "applyStyle", font_size_payload(json!(size)));
+            let imported = docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap();
+            assert_eq!(imported, e.blocks);
+            assert_eq!(imported[0].inlines[0].style.font_size, Some(size));
+        }
+        let snapshot = e.snapshot().unwrap();
+        let mut restored = engine();
+        restored.restore(&snapshot).unwrap();
+        assert_eq!(restored.blocks, e.blocks);
+        apply(&mut e, "applyStyle", font_size_payload(Value::Null));
+        let imported = docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap();
+        assert_eq!(imported[0].inlines[0].style.font_size, None);
+        assert_eq!(
+            imported[0].inlines[0].style.font_family.as_deref(),
+            Some("Aptos")
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, Some(1638.0));
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, None);
+    }
+
+    #[test]
+    fn invalid_size_patch_and_restore_preserve_state_and_history() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", font_size_payload(json!(10.5)));
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        for size in [
+            json!(0),
+            json!(-1),
+            json!(1638.5),
+            json!(10.25),
+            json!("12"),
+        ] {
+            let mut payload = font_size_payload(size.clone());
+            payload["style"]["italic"] = json!(true);
+            assert!(e.apply(cmd("applyStyle", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+            let bad = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"other","style":{"font_size":size}}]}]})).unwrap().as_slice());
+            assert!(e.restore(&bad).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, Some(10.5));
+        assert!(!e.blocks[0].inlines[0].style.italic);
+        let legacy = encode_envelope(
+            serde_json::to_vec(
+                &json!({"blocks":[{"kind":"para","inlines":[{"text":"old","style":{}}]}]}),
+            )
+            .unwrap()
+            .as_slice(),
+        );
+        e.restore(&legacy).unwrap();
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, None);
+    }
+
+    fn highlight_payload(color: Value) -> Value {
+        json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":3},"style":{"highlight":color}})
+    }
+
+    #[test]
+    fn highlight_roundtrip_snapshot_clear_and_history_preserve_font() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", font_size_payload(json!(10.5)));
+        apply(&mut e, "applyStyle", highlight_payload(json!("#12aBcF")));
+        let snapshot = e.snapshot().unwrap();
+        let mut restored = engine();
+        restored.restore(&snapshot).unwrap();
+        assert_eq!(restored.blocks, e.blocks);
+        assert_eq!(
+            docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap(),
+            e.blocks
+        );
+        apply(&mut e, "applyStyle", highlight_payload(Value::Null));
+        assert_eq!(e.blocks[0].inlines[0].style.highlight, None);
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, Some(10.5));
+        assert_eq!(
+            docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap(),
+            e.blocks
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            e.blocks[0].inlines[0].style.highlight.as_deref(),
+            Some("#12aBcF")
+        );
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.highlight, None);
+    }
+
+    #[test]
+    fn invalid_highlight_patch_and_restore_are_atomic_and_keep_redo() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", highlight_payload(json!("#123456")));
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        for color in [
+            json!("yellow"),
+            json!("#fff"),
+            json!("#12345z"),
+            json!("#12345678"),
+            json!(""),
+            json!(7),
+        ] {
+            let mut payload = highlight_payload(color.clone());
+            payload["style"]["bold"] = json!(true);
+            assert!(e.apply(cmd("applyStyle", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+            let bad = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"other","style":{"highlight":color}}]}]})).unwrap().as_slice());
+            assert!(e.restore(&bad).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(
+            e.blocks[0].inlines[0].style.highlight.as_deref(),
+            Some("#123456")
+        );
+        assert!(!e.blocks[0].inlines[0].style.bold);
+        let legacy = encode_envelope(
+            serde_json::to_vec(
+                &json!({"blocks":[{"kind":"para","inlines":[{"text":"old","style":{}}]}]}),
+            )
+            .unwrap()
+            .as_slice(),
+        );
+        e.restore(&legacy).unwrap();
+        assert_eq!(e.blocks[0].inlines[0].style.highlight, None);
     }
 }
