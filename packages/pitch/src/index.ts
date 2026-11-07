@@ -35,6 +35,7 @@ export const OPS = {
   setText: "setText",
   setTextStyle: "setTextStyle",
   addRect: "addRect",
+  addShape: "addShape",
   addImage: "addImage",
   moveObject: "moveObject",
   setObjectOrder: "setObjectOrder",
@@ -62,6 +63,26 @@ export interface PitchTextStyle {
 /** Stable boundary; follows start_slide_id on reorder. Removing that slide removes this boundary. */
 export interface PitchSection { id: number; label: string; start_slide_id: number }
 export type Layout = "blank" | "title" | "titleBody";
+/**
+ * Bounded shape-preset catalog admitted by `addShape`. Every preset is
+ * inscribed in the object's axis-aligned x/y/w/h bounds before rotation;
+ * `line` and `arrow` are open shapes drawn from `stroke`. `"rect"` is the
+ * same outline as `addRect`.
+ */
+export type PitchShapeKind =
+  | "rect"
+  | "roundedRect"
+  | "ellipse"
+  | "triangle"
+  | "diamond"
+  | "line"
+  | "arrow"
+  | "star";
+/** Optional stroke outline for shape objects; width is finite >0 and <=10,000 slide units. */
+export interface PitchShapeStroke {
+  width: number;
+  color: Rgba;
+}
 export type InkKind = "pen" | "highlighter" | "laser";
 /**
  * Persistent annotation stroke. `points` are `[x, y]` pairs in slide-space
@@ -274,6 +295,27 @@ export class PitchDocument {
   }
   addRect(slide: number, x: number, y: number, w: number, h: number, fill: Rgba) {
     return this.call<{ object_id: number }>(OPS.addRect, { slide, x, y, w, h, fill });
+  }
+  /**
+   * Add a bounded shape preset. `fill`/`stroke` are optional; omitted or null
+   * means no fill/outline. `line` and `arrow` are open shapes rendered from
+   * `stroke`. Returns the assigned `object_id`.
+   */
+  addShape(
+    slide: number,
+    kind: PitchShapeKind,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fill?: Rgba | null,
+    stroke?: PitchShapeStroke | null,
+  ) {
+    return this.call<{ object_id: number }>(OPS.addShape, {
+      slide, kind, x, y, w, h,
+      ...(fill === undefined ? {} : { fill }),
+      ...(stroke === undefined ? {} : { stroke }),
+    });
   }
   addImage(slide: number, x: number, y: number, w: number, h: number, src: string) {
     return this.call<{ object_id: number }>(OPS.addImage, { slide, x, y, w, h, src });
