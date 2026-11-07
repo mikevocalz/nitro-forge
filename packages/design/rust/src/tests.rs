@@ -995,3 +995,347 @@ fn locked_text_node_rejects_combined_lock_and_text_patch_atomically() {
         "After unlock"
     );
 }
+
+fn mode(e: &mut DesignEngine, id: &str, name: &str) {
+    call(e, "defineMode", json!({"id":id,"name":name}));
+}
+fn var(e: &mut DesignEngine, id: &str, name: &str, ty: &str) {
+    call(e, "defineVariable", json!({"id":id,"name":name,"type":ty}));
+}
+fn val(kind: &str, value: Value) -> Value {
+    json!({"kind":kind,"value":value})
+}
+fn alias(target: &str) -> Value {
+    json!({"kind":"alias","variable_id":target})
+}
+#[test]
+fn variables_modes_aliases_and_describe_resolve_per_mode() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    mode(&mut e, "light", "Light");
+    mode(&mut e, "dark", "Dark");
+    var(&mut e, "gap", "Gap", "number");
+    var(&mut e, "gap-alias", "Gap alias", "number");
+    var(&mut e, "label", "Label", "string");
+    call(&mut e, "setVariableValue", json!({"id":"gap","mode":"light","value":val("number",json!(4))}));
+    call(&mut e, "setVariableValue", json!({"id":"gap","mode":"dark","value":val("number",json!(8))}));
+    call(&mut e, "setVariableValue", json!({"id":"gap-alias","mode":"light","value":alias("gap")}));
+    call(&mut e, "setVariableValue", json!({"id":"label","mode":"light","value":val("string",json!("hi"))}));
+    // Alias chains resolve through describeVariables.
+    let before = e.snapshot().unwrap();
+    let d = call(&mut e, "describeVariables", json!({}));
+    assert!(d.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let vars = d.data["variables"].as_array().unwrap();
+    let gap_alias = vars.iter().find(|v| v["id"] == "gap-alias").unwrap();
+    assert_eq!(gap_alias["resolved"]["light"]["value"], 4.);
+    // Sparse coverage: gap-alias has no dark value, so dark is unresolved.
+    assert!(gap_alias["resolved"].get("dark").is_none());
+    let label = vars.iter().find(|v| v["id"] == "label").unwrap();
+    assert_eq!(label["resolved"]["light"]["value"], "hi");
+    // Mode switch changes resolved output and surfaces coverage diagnostics.
+    call(&mut e, "setActiveMode", json!({"id":"dark"}));
+    let d = call(&mut e, "describeVariables", json!({}));
+    let gap_alias = d.data["variables"].as_array().unwrap().iter().find(|v| v["id"] == "gap-alias").unwrap();
+    assert!(gap_alias["problems"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|p| p.as_str().unwrap().contains("no value in active mode")));
+    // Undo across the mode switch restores the prior mode, then none.
+    assert!(e.undo().unwrap());
+    assert_eq!(e.state.active_mode, None);
+    // Auto-generated ids and rename/remove lifecycle.
+    call(&mut e, "defineMode", json!({"name":"Auto"}));
+    assert!(e.state.modes.iter().any(|m| m.id == "mode-1"));
+    call(&mut e, "renameMode", json!({"id":"mode-1","name":"Automatic"}));
+    assert_eq!(e.state.modes.iter().find(|m| m.id == "mode-1").unwrap().name, "Automatic");
+    call(&mut e, "removeMode", json!({"id":"dark"}));
+    assert!(!e.state.variables["gap"].values.contains_key("dark"));
+    assert!(e.state.modes.iter().all(|m| m.id != "dark"));
+}
+#[test]
+fn alias_cycles_type_mismatch_coverage_and_bounds_reject_atomically() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":4,"height":4}));
+    mode(&mut e, "m1", "M1");
+    mode(&mut e, "m2", "M2");
+    var(&mut e, "a", "A", "number");
+    var(&mut e, "b", "B", "number");
+    var(&mut e, "s", "S", "string");
+    var(&mut e, "cov", "Cov", "number");
+    call(&mut e, "setVariableValue", json!({"id":"b","mode":"m1","value":val("number",json!(2))}));
+    call(&mut e, "setVariableValue", json!({"id":"b","mode":"m2","value":val("number",json!(3))}));
+    call(&mut e, "setVariableValue", json!({"id":"s","mode":"m1","value":val("string",json!("x"))}));
+    call(&mut e, "setVariableValue", json!({"id":"cov","mode":"m1","value":val("number",json!(1))}));
+    let before = e.snapshot().unwrap();
+    for p in [
+        // Unknown target, type mismatch, missing mode coverage, self cycle.
+        json!({"id":"a","mode":"m1","value":alias("ghost")}),
+        json!({"id":"a","mode":"m1","value":alias("s")}),
+        json!({"id":"a","mode":"m2","value":alias("cov")}),
+        json!({"id":"a","mode":"m1","value":alias("a")}),
+        json!({"id":"a","mode":"m1","value":val("number",json!(1e9+1.))}),
+        json!({"id":"a","mode":"m1","value":val("string",json!("x"))}),
+        json!({"id":"a","mode":"nope","value":val("number",json!(1))}),
+        json!({"id":"ghost","mode":"m1","value":val("number",json!(1))}),
+    ] {
+        assert!(e.apply(Command::new("setVariableValue", p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    // Two-hop alias is admitted; closing the cycle back is rejected.
+    call(&mut e, "setVariableValue", json!({"id":"a","mode":"m1","value":alias("b")}));
+    call(&mut e, "setVariableValue", json!({"id":"a","mode":"m2","value":val("number",json!(9))}));
+    call(&mut e, "setVariableValue", json!({"id":"b","mode":"m2","value":alias("a")}));
+    // b(m2) -> a(m2) literal 9 resolves; a(m1) -> b(m1) literal 2 resolves.
+    let d = call(&mut e, "describeVariables", json!({}));
+    let a = d.data["variables"].as_array().unwrap().iter().find(|v| v["id"] == "a").unwrap();
+    assert_eq!(a["resolved"]["m1"]["value"], 2.);
+    assert_eq!(a["resolved"]["m2"]["value"], 9.);
+    let b = d.data["variables"].as_array().unwrap().iter().find(|v| v["id"] == "b").unwrap();
+    assert_eq!(b["resolved"]["m2"]["value"], 9.);
+    // Closing the loop back into a cycle rejects atomically: a(m2) -> b(m2)
+    // -> a(m2).
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("setVariableValue", json!({"id":"a","mode":"m2","value":alias("b")})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // A two-variable cycle introduced through defineVariable values also
+    // rejects atomically on the second definition.
+    call(&mut e, "defineVariable", json!({"id":"d","name":"D","type":"number","values":{"m1":{"kind":"number","value":5}}}));
+    call(&mut e, "defineVariable", json!({"id":"c","name":"C","type":"number","values":{"m1":{"kind":"alias","variable_id":"d"}}}));
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new(
+            "setVariableValue",
+            json!({"id":"d","mode":"m1","value":{"kind":"alias","variable_id":"c"}})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Literal kind mismatch inside defineVariable values rejects atomically.
+    assert!(e
+        .apply(Command::new(
+            "defineVariable",
+            json!({"id":"e","name":"E","type":"number","values":{"m1":{"kind":"string","value":"no"}}})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+#[test]
+fn bindings_drive_layout_render_sizing_and_undo_across_mode_switch() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":12,"height":4}));
+    mode(&mut e, "compact", "Compact");
+    mode(&mut e, "roomy", "Roomy");
+    var(&mut e, "gapv", "Gap", "number");
+    var(&mut e, "fillv", "Width", "number");
+    call(&mut e, "setVariableValue", json!({"id":"gapv","mode":"compact","value":val("number",json!(1))}));
+    call(&mut e, "setVariableValue", json!({"id":"gapv","mode":"roomy","value":val("number",json!(3))}));
+    call(&mut e, "setVariableValue", json!({"id":"fillv","mode":"compact","value":val("number",json!(2))}));
+    call(&mut e, "setVariableValue", json!({"id":"fillv","mode":"roomy","value":val("number",json!(5))}));
+    call(&mut e, "setActiveMode", json!({"id":"compact"}));
+    let a = shape(&mut e, 1, 0., 0., 1., 1., [255, 0, 0, 255]);
+    let b = shape(&mut e, 1, 0., 0., 1., 1., [0, 255, 0, 255]);
+    call(&mut e, "setFrameLayout", json!({"id":1,"layout":{"direction":"row","gap":0,"padding_top":0,"padding_right":0,"padding_bottom":0,"padding_left":0,"align":"start","justify":"start"}}));
+    // Bind root gap and child b's fixed width.
+    call(&mut e, "bindVariable", json!({"node_id":1,"path":"gap","variable_id":"gapv"}));
+    call(&mut e, "bindVariable", json!({"node_id":b,"path":"width","variable_id":"fillv"}));
+    let boxes = layout::evaluate(&variables::effective(&e.state)).unwrap();
+    assert_eq!((boxes[1].x, boxes[2].x, boxes[2].width), (0., 2., 2.));
+    // Fill sibling sees the bound width: b is fixed+bound, a stays put.
+    // Switch mode: gap and width both change evaluateLayout output.
+    call(&mut e, "setActiveMode", json!({"id":"roomy"}));
+    let boxes = layout::evaluate(&variables::effective(&e.state)).unwrap();
+    assert_eq!((boxes[1].x, boxes[2].x, boxes[2].width), (0., 4., 5.));
+    // renderFrame pixels move with the binding.
+    let pixels = |e: &mut DesignEngine| {
+        e.apply(Command::new("renderFrame", json!({})).with_binary(None))
+            .unwrap()
+            .output
+            .unwrap()
+    };
+    let roomy = pixels(&mut e);
+    call(&mut e, "setActiveMode", json!({"id":"compact"}));
+    let compact = pixels(&mut e);
+    assert_ne!(roomy, compact);
+    // Undo across the mode switch restores compact geometry.
+    assert!(e.undo().unwrap());
+    assert_eq!(e.state.active_mode.as_deref(), Some("roomy"));
+    assert!(e.undo().unwrap());
+    assert_eq!(e.state.active_mode.as_deref(), Some("compact"));
+    let boxes = layout::evaluate(&variables::effective(&e.state)).unwrap();
+    assert_eq!(boxes[2].x, 2.);
+    // A fill-sized sibling resolves against the bound fixed width: compact
+    // gap1 + b(2) leaves a=(12-2-1)/1=9 of the 12px canvas.
+    size(&mut e, a, "x", "fill");
+    let boxes = layout::evaluate(&variables::effective(&e.state)).unwrap();
+    assert_eq!((boxes[1].width, boxes[2].width), (9., 2.));
+    // Rebind check: listBindings reports resolved values per mode.
+    let list = call(&mut e, "listBindings", json!({"node_id":b}));
+    assert_eq!(list.data["bindings"].as_array().unwrap().len(), 1);
+    assert_eq!(list.data["bindings"][0]["resolved"], 2.);
+    assert!(list.events.is_empty());
+}
+#[test]
+fn binding_validation_lifecycle_cleanup_and_caps() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":8,"height":8}));
+    mode(&mut e, "m", "M");
+    var(&mut e, "n", "N", "number");
+    var(&mut e, "t", "T", "string");
+    call(&mut e, "setVariableValue", json!({"id":"n","mode":"m","value":val("number",json!(7))}));
+    call(&mut e, "setActiveMode", json!({"id":"m"}));
+    let rect = shape(&mut e, 1, 0., 0., 1., 1., [255; 4]);
+    let frame = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"].as_u64().unwrap();
+    let before = e.snapshot().unwrap();
+    for p in [
+        json!({"node_id":999,"path":"fill_r","variable_id":"n"}),
+        json!({"node_id":rect,"path":"color","variable_id":"n"}),
+        json!({"node_id":rect,"path":"fill_r","variable_id":"ghost"}),
+        json!({"node_id":rect,"path":"fill_r","variable_id":"t"}),
+        json!({"node_id":1,"path":"x","variable_id":"n"}),
+        json!({"node_id":rect,"path":"gap","variable_id":"n"}),
+        json!({"node_id":frame,"path":"width","variable_id":"n","extra":1}),
+    ] {
+        // frame width is fixed so the last-but-one is valid; drop the extra-field case into its own check.
+        assert!(e.apply(Command::new("bindVariable", p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    // width binding requires fixed sizing on that axis.
+    size(&mut e, frame, "x", "hug");
+    assert!(e
+        .apply(Command::new("bindVariable", json!({"node_id":frame,"path":"width","variable_id":"n"})))
+        .is_err());
+    size(&mut e, frame, "x", "fixed");
+    // x/y binding rejected inside flow layout.
+    call(&mut e, "setFrameLayout", json!({"id":frame,"layout":{"direction":"row","gap":0,"padding_top":0,"padding_right":0,"padding_bottom":0,"padding_left":0,"align":"start","justify":"start"}}));
+    let inner = shape(&mut e, frame, 0., 0., 1., 1., [0; 4]);
+    assert!(e
+        .apply(Command::new("bindVariable", json!({"node_id":inner,"path":"x","variable_id":"n"})))
+        .is_err());
+    call(&mut e, "setFrameLayout", json!({"id":frame,"layout":null}));
+    // Absolute x binding moves the box.
+    call(&mut e, "bindVariable", json!({"node_id":inner,"path":"x","variable_id":"n"}));
+    let boxes = layout::evaluate(&variables::effective(&e.state)).unwrap();
+    let b = boxes.iter().find(|b| b.id == inner).unwrap();
+    assert_eq!(b.x, 7.);
+    // Rebind same path replaces; unbind absent is a silent no-op.
+    call(&mut e, "unbindVariable", json!({"node_id":rect,"path":"fill_a"}));
+    assert!(call(&mut e, "unbindVariable", json!({"node_id":rect,"path":"fill_a"})).events.is_empty());
+    call(&mut e, "bindVariable", json!({"node_id":rect,"path":"fill_r","variable_id":"n"}));
+    call(&mut e, "bindVariable", json!({"node_id":rect,"path":"fill_r","variable_id":"n"}));
+    assert_eq!(e.state.bindings.iter().filter(|b| b.node_id == rect && b.path == BindPath::FillR).count(), 1);
+    // removeVariable drops its bindings; removeNode drops node bindings.
+    call(&mut e, "removeVariable", json!({"id":"n"}));
+    assert!(e.state.bindings.is_empty());
+    assert!(e
+        .apply(Command::new("bindVariable", json!({"node_id":rect,"path":"fill_g","variable_id":"n"})))
+        .is_err());
+    // Caps: variables and modes are bounded. "t" is removed first so the
+    // variable loop fills the cap exactly; "m" remains so the mode loop
+    // leaves exactly one slot short of MAX_MODES.
+    call(&mut e, "removeVariable", json!({"id":"t"}));
+    for i in 0..MAX_VARIABLES {
+        call(&mut e, "defineVariable", json!({"id":format!("v{i}"),"name":"v","type":"number"}));
+    }
+    assert!(e
+        .apply(Command::new("defineVariable", json!({"id":"overflow","name":"v","type":"number"})))
+        .is_err());
+    for i in 0..MAX_MODES - 1 {
+        call(&mut e, "defineMode", json!({"id":format!("mode-{i}"),"name":"m"}));
+    }
+    assert_eq!(e.state.modes.len(), MAX_MODES);
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("defineMode", json!({"id":"mode-overflow","name":"m"})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+#[test]
+fn root_canvas_rejects_width_height_bindings_but_allows_fill() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":8,"height":8}));
+    mode(&mut e, "m", "M");
+    var(&mut e, "n", "N", "number");
+    var(&mut e, "big", "Big", "number");
+    call(&mut e, "setVariableValue", json!({"id":"n","mode":"m","value":val("number",json!(4))}));
+    call(&mut e, "setVariableValue", json!({"id":"big","mode":"m","value":val("number",json!(1e9))}));
+    call(&mut e, "setActiveMode", json!({"id":"m"}));
+    let before = e.snapshot().unwrap();
+    // Root width/height bypass setComposition's canvas budget (<=4096 per
+    // axis, w*h <= 1_048_576, integer) if admitted; both paths reject.
+    for path in ["width", "height"] {
+        assert!(e
+            .apply(Command::new(
+                "bindVariable",
+                json!({"node_id":1,"path":path,"variable_id":"n"})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    // Hostile restore with a root width binding fails validate_variables.
+    let mut hostile = serde_json::to_value(&*e.state).unwrap();
+    hostile["bindings"] = json!([{"node_id":1,"path":"width","variable_id":"big"}]);
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Fill channels on the root stay allowed.
+    call(&mut e, "bindVariable", json!({"node_id":1,"path":"fill_r","variable_id":"n"}));
+    assert_eq!(e.state.bindings.len(), 1);
+    let boxes = layout::evaluate(&variables::effective(&e.state)).unwrap();
+    assert_eq!(boxes[0].fill[0], 4);
+}
+#[test]
+fn variables_snapshot_wrapper_hostile_restore_and_cleanup() {
+    let mut e = DesignEngine::new();
+    // Bare schema:1 stays bare; variables alone trigger the schema:2 wrapper.
+    let legacy = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&legacy).unwrap();
+    assert_eq!(serde_json::from_slice::<Value>(&raw).unwrap()["schema"], 1);
+    mode(&mut e, "m", "M");
+    var(&mut e, "v", "V", "number");
+    call(&mut e, "setActiveMode", json!({"id":"m"}));
+    let wrapped = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&wrapped).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(outer["schema"], 2);
+    assert_eq!(outer["document"]["variables"]["v"]["type"], "number");
+    let mut reopen = DesignEngine::new();
+    reopen.restore(&wrapped).unwrap();
+    assert_eq!(reopen.snapshot().unwrap(), wrapped);
+    // Unwrapped state carrying variables fails closed.
+    let bare = serde_json::to_vec(&*e.state).unwrap();
+    assert!(reopen.restore(&encode_envelope(&bare)).is_err());
+    // Hostile wrapper mutations reject without touching live state.
+    for mutation in ["cycle", "bad_binding", "dangling_value_mode", "active_ghost"] {
+        let mut outer = outer.clone();
+        match mutation {
+            "cycle" => {
+                outer["document"]["variables"]["v"]["values"] = json!({"m":{"kind":"alias","variable_id":"v"}});
+            }
+            "bad_binding" => {
+                outer["document"]["bindings"] = json!([{"node_id":1,"path":"fill_r","variable_id":"ghost"}]);
+            }
+            "dangling_value_mode" => {
+                outer["document"]["variables"]["v"]["values"] = json!({"ghost":{"kind":"number","value":1}});
+            }
+            _ => outer["document"]["active_mode"] = json!("ghost"),
+        }
+        assert!(reopen
+            .restore(&encode_envelope(&serde_json::to_vec(&outer).unwrap()))
+            .is_err());
+        assert_eq!(reopen.snapshot().unwrap(), wrapped);
+    }
+    // Clearing every variable feature returns snapshots to bare schema:1.
+    call(&mut e, "removeVariable", json!({"id":"v"}));
+    call(&mut e, "removeMode", json!({"id":"m"}));
+    let snap = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&snap).unwrap();
+    let bare: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(bare["schema"], 1);
+    assert!(bare.get("document").is_none());
+    assert!(bare.get("variables").is_none());
+    assert!(bare.get("bindings").is_none());
+}
