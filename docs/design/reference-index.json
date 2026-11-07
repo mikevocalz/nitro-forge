@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "briefSha256": "6cd469784805aaeae2f65db17ff9ace35f3b30f0578929d6de79f9a4147566f3",
+  "phase0Status": "incomplete",
+  "requiredCaptureMatrix": {
+    "deviceSizes": [
+      "11in",
+      "13in"
+    ],
+    "orientations": [
+      "portrait",
+      "landscape"
+    ],
+    "requiredMetadata": [
+      "appVersion",
+      "device",
+      "orientation",
+      "sourceUrl",
+      "captureDate",
+      "observation",
+      "inference",
+      "assetUse"
+    ]
+  },
+  "references": [
+    {
+      "app": "Affinity",
+      "startingUrl": "https://www.affinity.studio/ipad-app",
+      "status": "Official iPad page checked; no screenshot matrix captured",
+      "captures": [],
+      "startingUrlChecked": true
+    },
+    {
+      "app": "Procreate",
+      "startingUrl": "https://procreate.com",
+      "status": "Capture pending; retrieved handbook search results identify older editions",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Procreate Dreams",
+      "startingUrl": "https://procreate.com/dreams",
+      "status": "Capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Logic Pro",
+      "startingUrl": "https://support.apple.com/en-ca/guide/logicpro-ipad/dev780a0e575/ipados",
+      "status": "Official iPad guide checked; no screenshot matrix captured",
+      "captures": [],
+      "startingUrlChecked": true
+    },
+    {
+      "app": "Photoshop",
+      "startingUrl": "https://www.adobe.com/products/photoshop/ipad.html",
+      "status": "Capture and current capability verification pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Illustrator",
+      "startingUrl": "https://www.adobe.com/products/illustrator/ipad.html",
+      "status": "Capture and current capability verification pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Fresco",
+      "startingUrl": "https://www.adobe.com/products/fresco.html",
+      "status": "Capture and current capability verification pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Lightroom",
+      "startingUrl": "https://www.adobe.com/products/photoshop-lightroom/mobile.html",
+      "status": "Capture and current capability verification pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Premiere",
+      "startingUrl": "https://www.adobe.com/products/premiere/app.html",
+      "status": "iPad availability and capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Creative Cloud",
+      "startingUrl": "https://www.adobe.com/creativecloud/mobile.html",
+      "status": "iPad availability and capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Behance",
+      "startingUrl": "https://www.behance.net",
+      "status": "iPad availability and capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Word",
+      "startingUrl": "https://apps.apple.com/us/app/microsoft-word/id586447913",
+      "status": "iPad listing/capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Excel",
+      "startingUrl": "https://apps.apple.com/us/app/microsoft-excel/id586683407",
+      "status": "iPad listing/capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "PowerPoint",
+      "startingUrl": "https://apps.apple.com/us/app/microsoft-powerpoint/id586449534",
+      "status": "iPad listing/capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Figma",
+      "startingUrl": "https://help.figma.com/hc/en-us/articles/1500007537281-Guide-to-the-Figma-mobile-app",
+      "status": "Official mobile/iPad capability guide checked; desktop editor parity not established",
+      "captures": [],
+      "startingUrlChecked": true
+    },
+    {
+      "app": "Sketchbook",
+      "startingUrl": "https://www.sketchbook.com",
+      "status": "Capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    },
+    {
+      "app": "Mockup",
+      "startingUrl": "https://apps.apple.com/us/app/mockup-ui-ux-design/id1527554407",
+      "status": "iPad listing/capture pending",
+      "captures": [],
+      "startingUrlChecked": false
+    }
+  ]
+}
