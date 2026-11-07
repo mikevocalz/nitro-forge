@@ -1106,3 +1106,26 @@ undo, protection, unicode, sparse-sheet export bounds),
 (1 new live `nf-cli` csv-transfer file, 5 cases), `pnpm --filter
 @nitro-forge/tally typecheck` clean. XLSX import, header-row options,
 encoding selection (host-side) and any import-preview UI remain deferred.
+
+## P11 Motion slice E motion paths source checkpoint (2026-11-07)
+
+Motion layers now carry an optional `path` — a single Prism-style node
+subpath (x/y anchors, `in`/`out` cubic handles as node offsets, optional
+`closed`, `auto_orient`) set via `setMotionPath` (null clears path, progress
+base and `path_progress` curve atomically) — plus `path_progress`, the new
+`Property::PathProgress` curve property (0..=1) evaluated by the existing
+key machinery. Evaluation flattens each path per call into at most 4096
+vertices with a cumulative arc-length table, so progress selects a point at
+a uniform fraction of total arc length; the offset adds to evaluated
+tx/ty after curves and `auto_orient` adds the flattened-edge tangent angle
+to rotation. Snapshot schema stays 2 via additive serde defaults; validate
+rejects path_progress without a path on hostile restore too. Local
+evidence: `cargo test -p motion-engine` 55 passed (5 new covering exact
+polyline arc length/progress, bezier subdivision under the sample cap,
+progress-keyframe positioning with real pixels, auto-orient tangent angles,
+clear/locked/hostile-restore/undo), `cargo build -p nf-cli` clean,
+`pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/motion test` 7 passed across 6 files (1 new nf-cli path case),
+`pnpm --filter @nitro-forge/motion typecheck` clean. Cubic curvature
+between flattened samples, multi-subpath paths, path drawing/editing UI
+and full P11 completion are not implied.

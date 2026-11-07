@@ -2,9 +2,11 @@
 mod assets;
 mod curve;
 mod effects;
+mod path;
 use assets::RasterAsset;
 use curve::{evaluate, Key};
 use effects::{apply_effects, LayerEffect};
+use path::MotionPath;
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -75,11 +77,15 @@ enum Property {
     Ox,
     Oy,
     Opacity,
+    /// Arc-length progress along `Layer.path` (slice E); wire name keeps the
+    /// snake_case convention of the transform properties.
+    #[serde(rename = "path_progress")]
+    PathProgress,
 }
 impl Property {
     fn bounds(self) -> (f64, f64) {
         match self {
-            Self::Opacity => (0., 1.),
+            Self::Opacity | Self::PathProgress => (0., 1.),
             Self::Sx | Self::Sy => (-1e4, 1e4),
             _ => (-1e7, 1e7),
         }
@@ -94,6 +100,7 @@ impl Property {
             Self::Ox => l.transform.ox,
             Self::Oy => l.transform.oy,
             Self::Opacity => l.opacity,
+            Self::PathProgress => l.path_progress,
         }
     }
     fn write(self, l: &mut Layer, v: f64) {
@@ -106,6 +113,7 @@ impl Property {
             Self::Ox => l.transform.ox = v,
             Self::Oy => l.transform.oy = v,
             Self::Opacity => l.opacity = v,
+            Self::PathProgress => l.path_progress = v,
         }
     }
 }
@@ -228,6 +236,19 @@ struct Layer {
     /// schema at 2; empty stacks serialize identically to effect-free layers.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     effects: Vec<LayerEffect>,
+    /// Optional motion path (slice E): one Prism-style node subpath in the
+    /// layer's transform space. `path_progress` curves select the arc-length
+    /// position; the sampled offset adds to evaluated `tx`/`ty` and, when
+    /// `path.auto_orient` is set, the tangent angle adds to `rotation`.
+    /// Additive serde default keeps schema at 2; path-free layers serialize
+    /// identically to pre-E snapshots.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    path: Option<MotionPath>,
+    /// Authored base arc-length progress along `path` (0..=1); a
+    /// `path_progress` curve overrides it at evaluation. Validate rejects
+    /// nonzero values and `path_progress` curves when `path` is absent.
+    #[serde(default, skip_serializing_if = "is_zero_f64")]
+    path_progress: f64,
     transform: Transform,
     opacity: f64,
     curves: Vec<Curve>,
@@ -307,6 +328,9 @@ fn is_initial_comp_id(id: &u64) -> bool {
 }
 fn is_false(v: &bool) -> bool {
     !*v
+}
+fn is_zero_f64(v: &f64) -> bool {
+    *v == 0.
 }
 /// schema:1 snapshots predate `kind`; infer it from the content source.
 /// Hostile or inconsistent explicit kinds are left for `validate` to reject.
@@ -619,6 +643,15 @@ fn validate(s: &State) -> Result<(), EngineError> {
             {
                 return Err(bad("invalid layer effect stack"));
             }
+            if let Some(mpath) = &l.path {
+                mpath.validate().map_err(|_| bad("invalid motion path"))?;
+            } else if l.path_progress != 0.
+                || l.curves
+                    .iter()
+                    .any(|c| c.property == Property::PathProgress)
+            {
+                return Err(bad("path progress requires a motion path"));
+            }
             match (l.kind, &l.shape, l.asset_id, l.comp_id) {
                 (Some(LayerKind::Shape), Some(sh), None, None) => {
                     if !["rect", "ellipse"].contains(&sh.kind.as_str())
@@ -682,6 +715,7 @@ fn validate(s: &State) -> Result<(), EngineError> {
                 Property::Ox,
                 Property::Oy,
                 Property::Opacity,
+                Property::PathProgress,
             ] {
                 let (min, max) = p.bounds();
                 let v = p.read(l);
@@ -931,6 +965,21 @@ impl MotionEngine {
                     c.property.write(&mut out, value)
                 }
                 out.curves.clear();
+                // Motion path (slice E): the evaluated progress selects an
+                // arc-length point whose offset adds to tx/ty in the layer's
+                // transform space; auto_orient adds the tangent angle to
+                // rotation. Runs after curves so path_progress keys win and
+                // tx/ty keys compose with (never replace) the path offset.
+                if let Some(mpath) = &out.path {
+                    let (px, py, deg) =
+                        mpath.sample_at(out.path_progress).map_err(|_| bad("invalid motion path"))?;
+                    let orient = mpath.auto_orient;
+                    out.transform.tx += px;
+                    out.transform.ty += py;
+                    if orient {
+                        out.transform.rotation += deg;
+                    }
+                }
                 Ok(out)
             })
             .collect()
@@ -1622,6 +1671,8 @@ impl Engine for MotionEngine {
                     clipped: false,
                     matte: None,
                     effects: vec![],
+                    path: None,
+                    path_progress: 0.,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1784,6 +1835,36 @@ impl Engine for MotionEngine {
                 nl.effects = stack;
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
+            "setMotionPath" => {
+                let layer_id = id(p, "layer")?;
+                // `path:null` (or absent) clears the path, its progress base
+                // and any `path_progress` curve in one atomic write;
+                // otherwise a full MotionPath replacement. The stored
+                // `path_progress` base and `path_progress` curve survive a
+                // path replacement so progress keys keep animating.
+                let path = match p.get("path") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => {
+                        let mpath: MotionPath = serde_json::from_value(v.clone())
+                            .map_err(|_| bad("invalid motion path"))?;
+                        mpath.validate().map_err(|_| bad("invalid motion path"))?;
+                        Some(mpath)
+                    }
+                };
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                let mut nl = (*arc).clone();
+                nl.path = path;
+                if nl.path.is_none() {
+                    nl.path_progress = 0.;
+                    nl.curves.retain(|c| c.property != Property::PathProgress);
+                }
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
             "addShapeLayer" => {
                 let shape: Shape = serde_json::from_value(
                     p.get("shape")
@@ -1812,6 +1893,8 @@ impl Engine for MotionEngine {
                     clipped: false,
                     matte: None,
                     effects: vec![],
+                    path: None,
+                    path_progress: 0.,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -1845,6 +1928,8 @@ impl Engine for MotionEngine {
                     clipped: false,
                     matte: None,
                     effects: vec![],
+                    path: None,
+                    path_progress: 0.,
                     transform: Transform::default(),
                     opacity: 1.,
                     curves: vec![],
@@ -2391,3 +2476,5 @@ mod effects_tests;
 mod raster_tests;
 #[cfg(test)]
 mod comp_tests;
+#[cfg(test)]
+mod path_tests;
