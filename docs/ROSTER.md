@@ -1145,3 +1145,12 @@ nf-cli structural-merges file, 7 cases), `pnpm --filter
 @nitro-forge/tally typecheck` clean. Deferred: merge render/fill
 semantics, sort/format interaction rules, and any row/column UI wiring —
 no native/device acceptance or full P13+ completion is implied.
+
+Review follow-up (same slice): inserts now reject atomically with
+`out_of_bounds` when any stored coordinate would shift past the sheet
+edge (previously the off-sheet entry was silently dropped while the op
+reported `changed:1`); `mergeCells`' idempotent no-op reports the
+canonical `range` like a fresh merge; `unmergeCells`' inherited
+16,384-cell range cap is documented. `cargo test -p tally-engine` 168
+passed (4 new tests: edge-overflow rejection across cells/merges/names/
+validations/comments, locked-ref remap and range expansion).

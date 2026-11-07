@@ -671,7 +671,14 @@ on the resolved sheet (default active). `from`/`to` must be integers
 ≥1 with `to >= from` inside the sheet caps (1,048,576 rows / 16,384
 columns) — `out_of_bounds` past the cap. An insert must fit inside the
 cap (`start+count <= max`); a delete may not cover every row or column
-(`count < max`, `validation`). Each op validates the payload, stages the
+(`count < max`, `validation`). An **insert rejects with `out_of_bounds`
+when any stored coordinate on the edited sheet would shift past the
+sheet edge** — cells, formats, merge rectangles and the range endpoints
+of names/validations/conditional formats/filters/charts/sparklines/
+views/comments all count, checked before any mutation so the op is
+atomic (Excel rejects the whole edit rather than silently dropping the
+off-sheet content). Deletes never reject for this: in-band entries drop
+legally. Each op validates the payload, stages the
 whole remap on a cloned document and commits as **one whole-document
 undo entry** — the same `UndoEntry::Reset` shape `sortRange` uses —
 only when something actually changed; a band that moves/drops nothing
@@ -719,7 +726,11 @@ not; **contents are never cleared or hidden from formulas/reads** —
 merges are render metadata only in this slice (no fill-down, no
 sort/format interaction rules). `unmergeCells {sheet?,range}` removes
 every merge overlapping the rectangle — a single-cell range selects the
-merge covering it (Excel-style); `cleared:0` is eventless. Merges are
+merge covering it (Excel-style); `cleared:0` is eventless. The `range`
+parameter is a canonical A1 rectangle under the shared 16,384-cell cap,
+so clearing more merges than fit in one rectangle takes multiple
+`unmergeCells` calls (each removes every merge its range overlaps).
+Merges are
 one whole-document undo entry each and protection-gated on their sheet.
 `duplicateSheet` copies merges; `removeSheet` drops them with the sheet;
 `moveSheet`/`renameSheet`/`setActive` do not retarget them.

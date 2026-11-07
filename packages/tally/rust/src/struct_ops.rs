@@ -110,6 +110,25 @@ impl Band {
         let coords = name_ops::parse_refers_to(range).ok()?;
         self.rect(coords).map(name_ops::canonical_refers_to)
     }
+
+    /// Whether `range` parses but its rectangle cannot remap under this
+    /// band. Only meaningful for inserts (`!deleting`), which have no
+    /// delete band — there a `None` remap is always an endpoint pushed
+    /// past the sheet edge. Unparseable strings return `false`: they are
+    /// dropped by the normal path either way and are not overflow.
+    fn overflows(&self, range: &str) -> bool {
+        name_ops::parse_refers_to(range)
+            .map(|coords| self.rect(coords).is_none())
+            .unwrap_or(false)
+    }
+}
+
+/// Error for an insert that would push stored content off the sheet.
+/// Inserts have no delete band, so any coordinate that cannot remap
+/// necessarily overflowed the edge — the op rejects atomically rather
+/// than silently dropping the entry (Excel rejects the whole edit).
+fn insert_overflow() -> EngineError {
+    EngineError::out_of_bounds("insert would push stored content off the sheet")
 }
 
 /// Overlap test for two inclusive rectangles.
@@ -148,8 +167,12 @@ pub(super) fn merge_anchor(sheet: &Sheet, c: u32, r: u32) -> Option<String> {
 
 /// Apply `band` to every coordinate-bound structure in `doc`. Only
 /// entries bound to the edited sheet id remap; other sheets are
-/// untouched (formulas have no cross-sheet references).
-fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
+/// untouched (formulas have no cross-sheet references). Deletes may
+/// drop in-band entries; inserts never legitimately drop anything, so
+/// an insert that would push a stored coordinate past the sheet edge
+/// fails with `out_of_bounds` instead of losing the entry — callers
+/// stage on a clone, so the error leaves the live document untouched.
+fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) -> Result<(), EngineError> {
     let sheet_id = doc.sheets[sheet_idx].id;
     // Per-sheet geometry first: cell contents (with formula-reference
     // rewriting), formats and merge regions all key off addresses.
@@ -165,6 +188,11 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
                 RefAxis::Col => c,
             };
             let Some(mapped) = band.map(coord) else {
+                // On an insert, `None` is always edge overflow for an
+                // in-bounds coordinate — reject rather than drop the cell.
+                if !band.deleting && coord < band.axis_max() {
+                    return Err(insert_overflow());
+                }
                 continue;
             };
             let (nc, nr) = match band.axis {
@@ -198,6 +226,9 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
                 RefAxis::Col => c,
             };
             let Some(mapped) = band.map(coord) else {
+                if !band.deleting && coord < band.axis_max() {
+                    return Err(insert_overflow());
+                }
                 continue;
             };
             let (nc, nr) = match band.axis {
@@ -210,16 +241,22 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
         }
         let merges = mem::take(&mut sheet.merges);
         for m in merges {
-            if let Some(coords) = band.rect(merge_coords(&m)) {
-                // A merge shrunk to a single cell is no longer a merge.
-                if coords.2 > coords.0 || coords.3 > coords.1 {
-                    sheet.merges.push(MergeRegion {
-                        c0: coords.0,
-                        r0: coords.1,
-                        c1: coords.2,
-                        r1: coords.3,
-                    });
+            let Some(coords) = band.rect(merge_coords(&m)) else {
+                // Inserts cannot shrink a merge to nothing — a `None`
+                // rect is an endpoint pushed off the sheet.
+                if !band.deleting {
+                    return Err(insert_overflow());
                 }
+                continue;
+            };
+            // A merge shrunk to a single cell is no longer a merge.
+            if coords.2 > coords.0 || coords.3 > coords.1 {
+                sheet.merges.push(MergeRegion {
+                    c0: coords.0,
+                    r0: coords.1,
+                    c1: coords.2,
+                    r1: coords.3,
+                });
             }
         }
     }
@@ -233,7 +270,12 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
         if n.sheet == sheet_id {
             match band.range_str(&n.refers_to) {
                 Some(range) => n.refers_to = range,
-                None => continue,
+                None => {
+                    if !band.deleting && band.overflows(&n.refers_to) {
+                        return Err(insert_overflow());
+                    }
+                    continue;
+                }
             }
         }
         kept_names.push(n);
@@ -247,7 +289,12 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
                 if item.sheet == sheet_id {
                     match band.range_str(&item.$field) {
                         Some(range) => item.$field = range,
-                        None => continue,
+                        None => {
+                            if !band.deleting && band.overflows(&item.$field) {
+                                return Err(insert_overflow());
+                            }
+                            continue;
+                        }
                     }
                 }
                 kept.push(item);
@@ -265,15 +312,25 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
         for mut f in items.drain(..) {
             if f.sheet == sheet_id {
                 let Some(range) = band.range_str(&f.range) else {
+                    if !band.deleting && band.overflows(&f.range) {
+                        return Err(insert_overflow());
+                    }
                     continue;
                 };
                 if band.axis == RefAxis::Col {
                     if let Some(col) = &f.column {
-                        let survives = filter_ops::column_index(col)
-                            .and_then(|idx| band.map(idx))
-                            .map(|mapped| filter_ops::column_name(mapped));
-                        match survives {
-                            Some(name) => f.column = Some(name),
+                        match filter_ops::column_index(col) {
+                            Some(idx) => match band.map(idx) {
+                                Some(mapped) => {
+                                    f.column = Some(filter_ops::column_name(mapped));
+                                }
+                                None => {
+                                    if !band.deleting {
+                                        return Err(insert_overflow());
+                                    }
+                                    continue;
+                                }
+                            },
                             None => continue,
                         }
                     }
@@ -293,6 +350,9 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
         for mut c in items.drain(..) {
             if c.sheet == sheet_id {
                 let Some(range) = band.range_str(&c.range) else {
+                    if !band.deleting && band.overflows(&c.range) {
+                        return Err(insert_overflow());
+                    }
                     continue;
                 };
                 c.range = range;
@@ -302,7 +362,12 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
                         if let Some(sr) = &mut s.range {
                             match band.range_str(sr) {
                                 Some(mapped) => *sr = mapped,
-                                None => s.range = None,
+                                None => {
+                                    if !band.deleting && band.overflows(sr.as_str()) {
+                                        return Err(insert_overflow());
+                                    }
+                                    s.range = None;
+                                }
                             }
                         }
                         if s.name.is_some() || s.range.is_some() {
@@ -330,7 +395,13 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
                         s.target = target;
                         s.data = data;
                     }
-                    _ => continue,
+                    _ => {
+                        if !band.deleting && (band.overflows(&s.target) || band.overflows(&s.data))
+                        {
+                            return Err(insert_overflow());
+                        }
+                        continue;
+                    }
                 }
             }
             kept.push(s);
@@ -349,15 +420,25 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
             let mut kept_specs = Vec::with_capacity(v.filters.len());
             for mut f in mem::take(&mut v.filters).into_iter() {
                 let Some(range) = band.range_str(&f.range) else {
+                    if !band.deleting && band.overflows(&f.range) {
+                        return Err(insert_overflow());
+                    }
                     continue;
                 };
                 if band.axis == RefAxis::Col {
                     if let Some(col) = &f.column {
-                        let survives = filter_ops::column_index(col)
-                            .and_then(|idx| band.map(idx))
-                            .map(|mapped| filter_ops::column_name(mapped));
-                        match survives {
-                            Some(name) => f.column = Some(name),
+                        match filter_ops::column_index(col) {
+                            Some(idx) => match band.map(idx) {
+                                Some(mapped) => {
+                                    f.column = Some(filter_ops::column_name(mapped));
+                                }
+                                None => {
+                                    if !band.deleting {
+                                        return Err(insert_overflow());
+                                    }
+                                    continue;
+                                }
+                            },
                             None => continue,
                         }
                     }
@@ -379,13 +460,19 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) {
             if c.sheet == sheet_id {
                 match band.range_str(&c.anchor) {
                     Some(anchor) => c.anchor = anchor,
-                    None => continue,
+                    None => {
+                        if !band.deleting && band.overflows(&c.anchor) {
+                            return Err(insert_overflow());
+                        }
+                        continue;
+                    }
                 }
             }
             kept.push(c);
         }
         doc.comments = kept;
     }
+    Ok(())
 }
 
 impl TallyEngine {
@@ -461,7 +548,7 @@ impl TallyEngine {
     ) -> Result<CommandResult, EngineError> {
         let (idx, band) = self.band_payload(p, axis, insert)?;
         let mut next = self.doc.clone();
-        remap_band(&mut next, idx, band);
+        remap_band(&mut next, idx, band)?;
         if next == self.doc {
             return Ok(Self::readonly(json!({ "ok": true, "changed": 0 })));
         }
@@ -511,8 +598,12 @@ impl TallyEngine {
         let (idx, coords) = self.merge_rect(p, true)?;
         let sheet = &self.doc.sheets[idx];
         if sheet.merges.iter().any(|m| merge_coords(m) == coords) {
-            // Idempotent: merging an already-merged region is a no-op.
-            return Ok(Self::readonly(json!({ "ok": true })));
+            // Idempotent: merging an already-merged region is a no-op;
+            // it still reports the canonical range like a fresh merge.
+            return Ok(Self::readonly(json!({
+                "ok": true,
+                "range": name_ops::canonical_refers_to(coords),
+            })));
         }
         if sheet.merges.len() >= MAX_MERGES {
             return Err(EngineError::validation("too many merged regions"));
@@ -761,6 +852,111 @@ mod tests {
         assert!(e.apply(Command::new("listMergedCells", json!({"sheet":"Second"}))).is_ok());
     }
 
+    // -- insert overflow at the sheet edge --------------------------------------
+
+    #[test]
+    fn insert_past_last_row_rejects_atomically() {
+        let mut e = TallyEngine::new();
+        run(&mut e, "setCell", json!({"addr":"A1048576","value":"edge"}));
+        let before = e.snapshot().unwrap();
+        // The last-row cell would shift to row 1048577 — Excel rejects
+        // the whole op; Tally rejects before any mutation.
+        let err = run_err(&mut e, "insertRows", json!({"from":1048576,"to":1048576}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // An insert anywhere above pushes it off too — same rejection.
+        let err = run_err(&mut e, "insertRows", json!({"from":1,"to":1}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // The only undo entry is the setCell — the rejected inserts
+        // recorded nothing.
+        assert!(e.undo().unwrap());
+        assert!(!e.undo().unwrap());
+        // Content adjacent to the edge still shifts legally.
+        let mut e2 = TallyEngine::new();
+        run(&mut e2, "setCell", json!({"addr":"A1048575","value":"near"}));
+        let r = run(&mut e2, "insertRows", json!({"from":1048575,"to":1048575}));
+        assert_eq!(r.data["changed"], 1);
+        assert_eq!(raw(&mut e2, "A1048576"), "near");
+        // And an insert band below all content stays a no-op.
+        let mut e3 = TallyEngine::new();
+        run(&mut e3, "setCell", json!({"addr":"A1","value":"low"}));
+        let r = run(&mut e3, "insertRows", json!({"from":1048576,"to":1048576}));
+        assert_eq!(r.data["changed"], 0);
+    }
+
+    #[test]
+    fn insert_past_last_col_rejects_atomically() {
+        let mut e = TallyEngine::new();
+        run(&mut e, "setCell", json!({"addr":"XFD1","value":"edge"}));
+        let before = e.snapshot().unwrap();
+        let err = run_err(&mut e, "insertCols", json!({"from":16384,"to":16384}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+        assert!(e.undo().unwrap());
+        assert!(!e.undo().unwrap());
+        // XFC is one in from the edge: it shifts onto XFD legally.
+        let mut e2 = TallyEngine::new();
+        run(&mut e2, "setCell", json!({"addr":"XFC1","value":"near"}));
+        let r = run(&mut e2, "insertCols", json!({"from":16383,"to":16383}));
+        assert_eq!(r.data["changed"], 1);
+        assert_eq!(raw(&mut e2, "XFD1"), "near");
+    }
+
+    #[test]
+    fn insert_overflow_covers_every_bound_structure() {
+        // Merge at the last row.
+        let mut e = TallyEngine::new();
+        run(&mut e, "mergeCells", json!({"range":{"from":"A1048575","to":"B1048576"}}));
+        let before = e.snapshot().unwrap();
+        let err = run_err(&mut e, "insertRows", json!({"from":1048576,"to":1048576}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Defined name at the last row.
+        let mut e = TallyEngine::new();
+        run(&mut e, "defineName", json!({"name":"Edge","refers_to":"A1048576"}));
+        let before = e.snapshot().unwrap();
+        let err = run_err(&mut e, "insertRows", json!({"from":1048576,"to":1048576}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Validation rule anchored at the last row.
+        let mut e = TallyEngine::new();
+        run(&mut e, "setValidation", json!({"range":{"from":"A1048576","to":"B1048576"},"rule":{"kind":"number","min":0}}));
+        let before = e.snapshot().unwrap();
+        let err = run_err(&mut e, "insertRows", json!({"from":1048576,"to":1048576}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Comment anchor at the last column.
+        let mut e = TallyEngine::new();
+        run(&mut e, "addComment", json!({"cell":"XFD1","body":"note"}));
+        let before = e.snapshot().unwrap();
+        let err = run_err(&mut e, "insertCols", json!({"from":16384,"to":16384}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Deletes at the same edge still work — in-band drops are legal.
+        run(&mut e, "deleteCols", json!({"from":16384,"to":16384}));
+        let d = run(&mut e, "describe", json!({})).data;
+        assert_eq!(field_len(&d, "comments"), 0);
+    }
+
+    #[test]
+    fn insert_remaps_locked_refs_and_expands_ranges() {
+        let mut e = TallyEngine::new();
+        run(&mut e, "setCell", json!({"addr":"B5","value":"=$A$3+1"}));
+        run(&mut e, "setCell", json!({"addr":"D1","value":"=SUM(A1:B2)"}));
+        run(&mut e, "setCell", json!({"addr":"E2","value":"=SUM($A$1:$B$2)"}));
+        run(&mut e, "insertRows", json!({"from":2,"to":2}));
+        // `$` locks are preserved syntactically but do not pin: $A$3
+        // (row idx 2, at/after the band) shifts to $A$4; the cell itself
+        // moved B5 -> B6.
+        assert_eq!(raw(&mut e, "B6"), "=$A$4+1");
+        // A band inside a range expands it (Excel): A1:B2 -> A1:B3.
+        assert_eq!(raw(&mut e, "D1"), "=SUM(A1:B3)");
+        // Locked endpoints keep their `$` through the same expansion;
+        // E2 sits on the band so the cell moved to E3.
+        assert_eq!(raw(&mut e, "E3"), "=SUM($A$1:$B$3)");
+    }
+
     // -- workbook table remap ---------------------------------------------------
 
     #[test]
@@ -839,9 +1035,10 @@ mod tests {
         run(&mut e, "setCell", json!({"addr":"C3","value":"hidden-but-live"}));
         let r = run(&mut e, "mergeCells", json!({"range":{"from":"B2","to":"D4"}}));
         assert_eq!(r.data["range"], "B2:D4");
-        // Idempotent re-merge is eventless.
+        // Idempotent re-merge is eventless but still reports the range.
         let again = run(&mut e, "mergeCells", json!({"range":{"from":"B2","to":"D4"}}));
         assert!(again.events.is_empty());
+        assert_eq!(again.data["range"], "B2:D4");
         // Covered cells report merged_into; contents stay live.
         let cov = run(&mut e, "getCell", json!({"addr":"C3"})).data;
         assert_eq!(cov["merged_into"], "B2");

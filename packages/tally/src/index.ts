@@ -903,9 +903,12 @@ export class TallyDocument {
    * merged regions. Entries fully inside a deleted band are dropped.
    * Bounds: `from`/`to` are 1-based inclusive within the sheet caps
    * (1,048,576 rows / 16,384 columns); a delete may not cover every row
-   * or column; an insert must fit inside the cap. A no-op band (nothing
-   * stored at/after it for inserts, nothing to delete) still succeeds
-   * without recording undo.
+   * or column; an insert must fit inside the cap. An insert that would
+   * push any stored content (cells, formats, merges, rule/name/chart/
+   * sparkline/view/comment ranges) past the sheet edge rejects with
+   * `out_of_bounds` before mutating — deletes never reject for this.
+   * A no-op band (nothing stored at/after it for inserts, nothing to
+   * delete) still succeeds without recording undo.
    */
   private bandEdit(op: string, band: BandEdit) {
     return this.call<{ ok: boolean; changed: number }>(op, {
@@ -942,7 +945,9 @@ export class TallyDocument {
   /**
    * Unmerge every region overlapping `range` on `sheet` — a single-cell
    * range selects the merge covering it (Excel-style). Returns the count
-   * of regions cleared; `0` is an eventless no-op.
+   * of regions cleared; `0` is an eventless no-op. `range` is capped at
+   * the shared 16,384-cell rectangle limit, so clearing a larger span
+   * takes multiple calls.
    */
   unmergeCells(range: { from: string; to: string }, sheet?: string | number) {
     return this.call<{ cleared: number }>(OPS.unmergeCells, {
