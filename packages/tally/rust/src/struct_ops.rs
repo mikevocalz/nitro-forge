@@ -517,7 +517,9 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) -> Result<(), En
     // Table objects: `range` is the table's anchor and remaps like every
     // other bound range — inserts shift/expand it, deletes shrink it, and
     // a range fully covered by a deleted band drops the table (Excel
-    // removes a table whose rows/columns are all deleted). Because every
+    // removes a table whose rows/columns are all deleted); a remap that
+    // would leave under two cells drops it too, and growth past the
+    // shared 16,384-cell cap rejects atomically. Because every
     // bound structure remaps through the same `Band`, disjoint table and
     // merge ranges stay disjoint.
     {
