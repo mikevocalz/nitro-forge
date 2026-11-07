@@ -763,3 +763,30 @@ keep the three-tier contract: schema:2 for validations-only documents,
 schema:3 whenever `conditional_formats` is nonempty (which may also carry
 validations), schema:1 otherwise; `restore` accepts 1–3 and both rule tables
 are serde-optional so each restores with the other's table empty.
+
+## Tally sort/filter source checkpoint (2026-11-07)
+
+Tally gains `sortRange` plus the durable row-filter table behind
+`setFilter`/`clearFilter`/`getFilters`/`evaluateFilters`. Sort permutes
+whole rows inside a rectangle by computed key-cell values under a
+documented total order (class rank empty < number < text < boolean <
+error, fixed in both directions; errors always last; text uses the same
+lowercase-then-byte collation as formula comparisons). Formulas move
+verbatim with no reference rewriting — a deliberate, documented subset
+that differs from Excel. `has_header` pins the first row; the sort is
+stable, atomic, protection-guarded and undoable via the shared
+`commit_cells` path, and charges the shared 1,000,000-step conditional
+allowance per key-cell evaluation and per key-level comparison. Filters
+hide, never delete: visibility is derived live from rules plus computed
+values (no stored hidden flag), `column`-less rules AND across the row's
+range slice, overlapping rules all must pass, and `evaluateFilters`
+reports per-row `visible`/`matched`/`failed` (or single-rule `matched`)
+with a 65,536 cell-test report cap. Sheet removal cascade-drops filter
+rules into the same undo entry with `readd_ok` re-admission. Snapshots
+carrying filters emit `{kind:"tally",schema:4}`; `restore` accepts 1–4
+and fails closed on filters under lower or bare schemas. Local evidence:
+`cargo test -p tally-engine` 109 passed (11 new across sort_ops/filter_ops
+plus schema-matrix and protection coverage), `pnpm --filter
+@nitro-forge/tally` typecheck clean and 54 Vitest passed across 14 files
+(3 new live `nf-cli` sort-filter tests), `cargo build -p nf-cli` clean.
+No UI wiring, XLSX or native/device acceptance is claimed.

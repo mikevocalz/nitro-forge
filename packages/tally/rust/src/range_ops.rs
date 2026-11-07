@@ -56,7 +56,7 @@ impl Rect {
 }
 
 impl TallyEngine {
-    fn commit_cells(&mut self, staged: Vec<(String, String)>) -> CommandResult {
+    pub(super) fn commit_cells(&mut self, staged: Vec<(String, String)>) -> CommandResult {
         let staged: Vec<_> = staged
             .into_iter()
             .filter(|(addr, raw)| {

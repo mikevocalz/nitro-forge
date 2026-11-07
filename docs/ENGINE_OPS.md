@@ -142,7 +142,7 @@ google/ink source admission (#46).
 
 ## tally-engine — `TallyEngine::new()`
 
-State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation, conditional_formats: [ConditionalRule], next_conditional }`,
+State `{ next_sheet, sheets: [Sheet], active: idx, names: [NamedRange], validations: [ValidationRule], next_validation, conditional_formats: [ConditionalRule], next_conditional, filters: [FilterRule], next_filter }`,
 `Sheet = { id, name, tone?: string | null, is_protected?: boolean, cells: { "A1": { raw: string } }, formats?: { "A1": CellFormat } }` — computed values are
 derived, not stored. `formats` is durable per-cell display metadata keyed by
 canonical address, independent of `cells`: it survives content edits, applies
@@ -158,7 +158,11 @@ conditional-format rules below), and `format` a bounded style payload
 sheet-id, range, criteria }` is a durable workbook-level data-validation
 rule bound to one sheet; `range` is a canonical `"A1"` or `"A1:B2"` on that
 sheet and `criteria` is a bounded kind-tagged object (see validation rules
-below). Validation rules on one sheet may not overlap; conditional rules
+below). `FilterRule = { id, sheet: sheet-id, range, column?, criteria }` is
+a durable workbook-level row-filter rule bound to one sheet; `range` is a
+canonical `"A1"`/`"A1:B2"`, `column` an optional column letter inside that
+range, and `criteria` a COUNTIF-style string (see filter rules below).
+Validation rules on one sheet may not overlap; conditional and filter rules
 may. `CellFormat = { number_format?,
 bold?, italic?, fill?, border? }` — all attributes optional; `number_format` is
 a bounded opaque string (≤64 ASCII graphic/space chars, no `" \ { }`) holding
@@ -204,6 +208,11 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `clearConditionalFormat` | `{id}` xor `{sheet?,range:{from,to}}` | `{cleared}` | remove one rule by id, or every rule on the sheet intersecting the range |
 | `getConditionalFormats` | `{sheet?}` | `{rules:[{id,sheet,sheet_id,range,criteria,format}]}` | read-only; `sheet` absent lists all rules |
 | `evaluateConditionalFormats` | `{sheet?,range:{from,to}}` | `{cells:[{addr,computed,matches:[rule…]}]}` | read-only match report against computed values; see conditional-format rules below |
+| `sortRange` | `{sheet?,range:{from,to},keys:[{column\|offset,ascending?}],has_header?}` | `{changed,sorted_rows}` | stable row permutation by computed key values; see sort rules below |
+| `setFilter` | `{sheet?,range:{from,to},column?,criteria}` | `{rule}` | append a row-filter rule; see filter rules below |
+| `clearFilter` | `{id}` xor `{sheet?,range:{from,to}}` | `{cleared}` | remove one rule by id, or every rule on the sheet intersecting the range |
+| `getFilters` | `{sheet?}` | `{rules:[{id,sheet,sheet_id,range,column?,criteria}]}` | read-only; `sheet` absent lists all rules |
+| `evaluateFilters` | `{sheet?,range:{from,to},id?}` | `{rows:[{row,visible,matched,failed}\|{row,matched}]}` | read-only per-row visibility report; see filter rules below |
 | `clearCell` | `{addr}` | `{ok}` | |
 | `getCell` | `{addr}` | `{raw,computed,format?}` | `computed` = evaluated value; `format` present only when stored |
 | `getRange` | `{from,to}` | `{cells:[[{addr,raw,computed,format?}]]}` | |
@@ -372,7 +381,87 @@ re-admit them only while they still satisfy the restore invariants (existing
 sheet, canonical in-bounds range, valid criteria, unique id, no overlap);
 `duplicateSheet`/`moveSheet` do not copy or retarget rules.
 
-Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats` and `evaluateConditionalFormats` stay allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Sort rules: `sortRange` permutes **whole rows** inside `range:{from,to}`
+(shared 16,384-cell and on-sheet caps) on `sheet` (name or index, default
+active) — rows are reordered, never deleted or duplicated, and every
+column of the range moves together. `keys` is a nonempty array of at most
+16 entries, each with exactly one of `column` (a column letter inside the
+range) or `offset` (0-based column offset from the range's left edge) plus
+optional `ascending` (default `true`); earlier keys dominate and the sort
+is stable, so rows equal on every key keep their original order.
+`has_header:true` keeps the range's first row in place and sorts only the
+rows below it. Keys compare **computed** cell values — formulas included —
+under a documented total order: class rank empty < finite number < text <
+boolean < error is fixed in both directions, and within a class numbers
+compare numerically, text compares by Unicode `to_lowercase()` then byte
+order (the same collation the formula `=`/`<` comparisons use — not
+locale-aware), booleans `false < true`. Error values (`#DIV/0!`,
+`#CYCLE!`, non-finite numbers, non-scalars) always sort **last in both
+directions**; `ascending:false` inverts only the within-class comparison.
+**Formulas move verbatim**: raw cell text — including `=A1` references — is
+copied to the new row with no `shift_references` rewriting, so a moved
+`=A1` still points at address `A1`, which may now hold a different row's
+content. This deliberately differs from Excel's reference adjustment;
+hosts needing that must not rely on `sortRange`. `formats` are
+address-keyed display metadata and do not move with contents; cells
+outside the range (including other columns of the same sheet rows) are
+untouched. The op is atomic — everything validates and stages before
+`commit_cells` writes — and records one undo entry, so undo/redo restore
+the exact prior row order; an already-sorted range is eventless and
+journal-free. Each key-cell evaluation and each key-level comparison
+charges the evaluator's shared 1,000,000-step conditional allowance
+(`Evaluator::charge_work`); exhaustion rejects before any mutation.
+
+Filter rules: rules are **workbook-scoped** entries bound to one sheet by
+durable sheet id (same model as names/validation/conditional), at most 256
+per workbook, and may overlap — a row is visible only when every covering
+rule passes. `setFilter` takes `range:{from,to}` (shared 16,384-cell and
+on-sheet caps, canonicalized to `"A1"`/`"A1:B2"`), optional `sheet` (name
+or index, default active), optional `column` (a column letter that must lie
+inside `range`), and `criteria` — a COUNTIF-style string evaluated by the
+same `CriteriaMatcher` conditional formats use, so the same bounds apply
+(≤255 chars, wildcards `*`/`?`/`~`, numbers compare numbers only,
+relational non-numeric text rejects, error values never match). With
+`column` set the rule tests that one cell per row; without it the rule
+tests **every** column of its range at that row and the row passes only
+when all of them satisfy the criteria (AND across columns — the honest
+whole-row subset; NYC-Tron's per-column `SheetFilter` operator/operand UI
+maps onto criteria strings host-side). A rule "covers" a row when the row
+lies in its range's row span. An identical sheet+range+column+criteria
+resubmission is an eventless no-op returning the existing rule; anything
+else appends a new rule with a fresh workbook-unique id (there is no
+update op — clear and re-set). `clearFilter` takes exactly one of `id` or
+`range`+optional `sheet`, removing every rule on that sheet intersecting
+the rectangle (`{cleared}` counts removals; no hits is eventless); `sheet`
+alongside `id` rejects rather than being ignored, and `sheet:null` counts
+as absent. **Hide-vs-delete: filters hide, never delete.** The engine
+stores rules only; row visibility is a pure function of the rules and the
+computed cell values, so it cannot go stale after edits, undo or reopen —
+there is no separate stored hidden flag. Hidden rows stay fully
+readable and writable: `getRange`, `setCell` and every other op treat
+them normally, and hiding is presentation metadata the host applies at
+render time. `getFilters {sheet?}` lists rules (absent `sheet` lists the
+workbook); `evaluateFilters {sheet?,range:{from,to},id?}` is a silent
+read reporting per 1-based sheet row inside `range`: without `id`, each
+row reports `visible` plus the `matched`/`failed` covering-rule ids; with
+`id` (a rule on the resolved sheet, `not_found` otherwise), each row
+reports `matched` — rows outside the rule's row span report `matched:true`
+because the rule imposes no constraint. Evaluation runs against computed
+values through the normal evaluator, so results track edits, undo and
+reopen; every cell-test charges the shared conditional allowance via
+`match_value`, and the total cell-test product (rows × covering rules ×
+tested columns) is capped at 65,536 — beyond it the read rejects with
+`out_of_bounds` rather than emitting an unbounded report. `removeSheet`
+cascade-drops the sheet's rules into the same undo entry and undo
+re-admits each only while it still satisfies the restore invariants
+(existing sheet, canonical in-bounds range, parseable criteria, in-range
+column, unique id, under the cap); `duplicateSheet`/`moveSheet` do not
+copy or retarget rules. Mutations record one whole-document undo entry
+each; all three read ops are silent. Deferred loudly: per-operator filter
+UI state, sort-by-header-text, Excel-style reference adjustment on sort,
+and any actual row hiding in `getRange` output — all host concerns.
+
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
@@ -381,20 +470,23 @@ Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteri
 Criteria expressions/cell references are evaluated normally; criteria range errors/cycles propagate. SUMIF evaluates sum cells only for matches, ignores matched nonnumeric values and propagates matched errors; nonfinite accumulated sums return #NUM!. Existing per-request memoization/depth/cycle rules remain intact. Each conditional rectangle is capped at16384 cells, criteria at255 Unicode scalars and matched text at4096 UTF-8 bytes (#VALUE! for string limits). A shared per-Evaluator allowance of1000000 conditional scan/string/DP steps returns #NUM! on exhaustion; matcher allocation work is charged before bounded DP buffers, and `Evaluator::match_value` (used by `evaluateConditionalFormats`) charges one flat unit per candidate rule-cell evaluation up front so every comparison path — numeric, boolean, empty-criteria, wildcard and type-mismatch — counts against the same allowance. These are explicit Tally semantics, not full Excel compatibility.
 
 Snapshots: the NFD1 envelope is unchanged; the JSON payload is normally the bare
-`Workbook` (`{next_sheet,sheets,active,names?,validations?,next_validation?,conditional_formats?,next_conditional}`). When any sheet carries durable
+`Workbook` (`{next_sheet,sheets,active,names?,validations?,next_validation?,conditional_formats?,next_conditional,filters?,next_filter}`). When any sheet carries durable
 post-release fields (`tone` set, `is_protected` true, or a nonempty `formats`
-map) **or the workbook has any names, validation rules or conditional rules**,
+map) **or the workbook has any names, validation rules, conditional rules or
+filter rules**,
 the payload is instead `{kind:"tally",schema:N,document:<Workbook>}` so
 pre-wrapper readers fail closed rather than silently dropping those fields
 (same precedent as pitch schema:2 and quill schema:2). `N` is `1` for
 tone/protection/formats/names-only documents, `2` when `validations` is
-nonempty and `conditional_formats` is empty, and `3` when
-`conditional_formats` is nonempty — a schema:3 document may carry both rule
-tables. `Workbook` does not deny unknown fields, so each newer table bumps
-the schema: schema:1 readers would silently drop `validations` or
-`conditional_formats`, and the higher schemas make them reject the snapshot
-instead. `formats`/`names`/`validations`/`conditional_formats` entries ride
-inside `document`; `restore` accepts schemas 1, 2 and 3, strictly validates
+nonempty and no later table is, `3` when `conditional_formats` is nonempty
+and `filters` is empty — a schema:3 document may carry both earlier rule
+tables — and `4` when `filters` is nonempty, which may carry every earlier
+table. `Workbook` does not deny unknown fields, so each newer table bumps
+the schema: schema:1 readers would silently drop `validations`,
+`conditional_formats` or `filters`, and the higher schemas make them reject
+the snapshot instead. `formats`/`names`/`validations`/`conditional_formats`/`filters`
+entries ride
+inside `document`; `restore` accepts schemas 1, 2, 3 and 4, strictly validates
 wrapper kind/schema/keys (`deny_unknown_fields`), then runs the existing
 document validation — including name uniqueness, name legality, on-sheet
 `refers_to`, existing sheet ids, validation-rule count/id uniqueness, bound
@@ -402,17 +494,21 @@ sheet existence, canonical in-sheet ranges within the cell cap, criteria
 invariants, no overlapping validation rules per sheet, and conditional-rule
 id uniqueness, sheet binding, criteria parseability, range
 canonicalization/caps and format shapes (with the op-path `false`-boolean
-normalization applied first), all re-canonicalized — before
+normalization applied first), filter-rule count/id uniqueness, bound sheet
+existence, canonical in-sheet ranges within the cell cap, criteria
+parseability, in-range columns, and `next_filter` id-space repair — all
+re-canonicalized — before
 replacing state and resetting the journal; bad input leaves state untouched.
 Each table also restores only under the schema that introduced it:
-nonempty `conditional_formats` requires schema:3 and nonempty
+nonempty `filters` requires schema:4, nonempty `conditional_formats`
+requires schema:3 and nonempty
 `validations` requires schema:2, so crafted lower-schema or bare-workbook
-payloads carrying either table fail closed rather than silently dropping
-version markers. Both rule tables are serde-optional, so a schema:2 payload
-(validations only) restores with an empty `conditional_formats` and vice
-versa.
+payloads carrying any table fail closed rather than silently dropping
+version markers. Every rule table is serde-optional, so a schema:2 payload
+(validations only) restores with empty `conditional_formats`/`filters`, a
+schema:3 payload restores with empty `filters`, and vice versa.
 Workbooks without tone/protection/formats/names/validations/conditional
-rules keep the legacy payload, so older snapshots and older readers
+rules/filters keep the legacy payload, so older snapshots and older readers
 round-trip unchanged.
 
 ## cadence-engine — `CadenceEngine::new()`

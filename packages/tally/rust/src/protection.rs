@@ -53,13 +53,33 @@ impl TallyEngine {
             // sheet (by id) or the target sheet (by range). Unknown ids
             // fall through — the op reports not_found. The get/evaluate/
             // validate reads are ungated.
-            "setValidation" | "setConditionalFormat" => {
+            "setValidation" | "setConditionalFormat" | "setFilter" | "sortRange" => {
                 let idx = match p.get("sheet") {
                     Some(v) if !v.is_null() => self.resolve_sheet(v)?,
                     _ => self.doc.active,
                 };
                 self.doc.sheets[idx].is_protected
             }
+            "clearFilter" => match p.get("id").and_then(Value::as_u64) {
+                Some(id) => self
+                    .doc
+                    .filters
+                    .iter()
+                    .find(|r| r.id == id)
+                    .is_some_and(|r| {
+                        self.doc
+                            .sheets
+                            .iter()
+                            .any(|s| s.id == r.sheet && s.is_protected)
+                    }),
+                None => {
+                    let idx = match p.get("sheet") {
+                        Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                        _ => self.doc.active,
+                    };
+                    self.doc.sheets[idx].is_protected
+                }
+            },
             "clearValidation" => match p.get("id").and_then(Value::as_u64) {
                 Some(id) => self
                     .doc
@@ -161,6 +181,10 @@ mod tests {
             ("setConditionalFormat", json!({"range":{"from":"A1","to":"A1"},"rule":{"criteria":">1","format":{"bold":true}}})),
             ("clearConditionalFormat", json!({"range":{"from":"A1","to":"A1"}})),
             ("clearConditionalFormat", json!({"id":1})),
+            ("sortRange", json!({"range":{"from":"A1","to":"A2"},"keys":[{"offset":0}]})),
+            ("setFilter", json!({"range":{"from":"A1","to":"A1"},"criteria":">1"})),
+            ("clearFilter", json!({"range":{"from":"A1","to":"A1"}})),
+            ("clearFilter", json!({"id":1})),
             ("renameSheet", json!({"sheet":0,"to":"Renamed"})),
             ("removeSheet", json!({"sheet":0})),
             ("duplicateSheet", json!({"sheet":0})),
