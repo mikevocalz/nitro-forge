@@ -682,7 +682,11 @@ box of the sheet's used cells; both forms are capped at the shared
 import: a field is quoted when it contains the separator, a quote or a
 line break, `"` escapes as `""`, rows join with CRLF and the text ends
 with a trailing CRLF; values export in display text form (`fmt_num`,
-`TRUE`/`FALSE`, the `#…!` literal, empty for empty cells). These ops carry
+`TRUE`/`FALSE`, the `#…!` literal, empty for empty cells). Display text
+round-trips but value *types* do not: a re-imported `#DIV/0!` or `TRUE`
+lands as literal text, not an error/boolean — matching Excel's CSV
+behavior closely enough for interchange, and documented so hosts do not
+expect typed fidelity. These ops carry
 no durable state — they are pure cell reads/writes, so snapshots need no
 schema bump (XLSX import stays deferred on dependency admission).
 
