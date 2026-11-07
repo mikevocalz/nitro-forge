@@ -116,3 +116,30 @@ describe("direct font-family ribbon binding", () => {
     expect(changed).not.toHaveBeenCalled();
   });
 });
+
+describe("font-size ribbon binding", () => {
+  it("reads durable half-point size, forwards set/clear and preserves engine rejection", async () => {
+    const { doc, calls } = fake();
+    const sized = { ...doc, blocks: vi.fn(() => ok({ blocks: [{ kind: "para", inlines: [
+      { text: "a", style: { font_size: 10.5 } }, { text: "b", style: { font_size: 10.5 } },
+    ] }] })) } as unknown as QuillOfficeDocument;
+    const sel = { start: { block: 0, offset: 0 }, end: { block: 0, offset: 2 } };
+    const changed = vi.fn();
+    const binding = await bindQuillRibbon(sized, sel, changed);
+    expect(binding.fontSize).toBe(10.5);
+    await binding.onFontSizeChange(12);
+    await binding.onFontSizeChange(undefined);
+    expect(calls).toEqual([
+      ["applyStyle", sel.start, sel.end, { font_size: 12 }],
+      ["applyStyle", sel.start, sel.end, { font_size: null }],
+    ]);
+    const failure = new Error("size must use half-points");
+    const rejected = { ...sized, applyStyle: vi.fn(() => Promise.reject(failure)) } as unknown as QuillOfficeDocument;
+    const onChanged = vi.fn();
+    const invalid = await bindQuillRibbon(rejected, sel, onChanged);
+    await expect(invalid.onFontSizeChange(10.25)).rejects.toBe(failure);
+    expect(onChanged).not.toHaveBeenCalled();
+    const caret = await bindQuillRibbon(sized, { start: sel.start, end: sel.start }, changed);
+    await expect(caret.onFontSizeChange(12)).rejects.toThrow(/Select text/);
+  });
+});

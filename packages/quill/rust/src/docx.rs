@@ -63,6 +63,10 @@ fn build_document_xml(blocks: &[Block]) -> String {
         for inl in &b.inlines {
             s.push_str("<w:r>");
             let mut pr = String::new();
+            if let Some(size) = inl.style.font_size {
+                let half_points = (size * 2.0) as u32;
+                pr.push_str(&format!("<w:sz w:val=\"{half_points}\"/><w:szCs w:val=\"{half_points}\"/>"));
+            }
             if let Some(family) = &inl.style.font_family {
                 let value = esc(family);
                 pr.push_str(&format!(
@@ -140,6 +144,20 @@ fn attr_val(e: &BytesStart<'_>, key: &[u8]) -> Option<String> {
     None
 }
 
+fn run_font_size(e: &BytesStart<'_>) -> Result<f64, EngineError> {
+    for attribute in e.attributes() {
+        let attribute = attribute.map_err(|_| EngineError::validation("invalid run size attribute"))?;
+        if local_name(attribute.key.as_ref()) == b"val" {
+            let value = attribute.unescape_value().map_err(|_| EngineError::validation("invalid run size value"))?;
+            let half_points: u32 = value.parse().map_err(|_| EngineError::validation("run font size must be integer half-points"))?;
+            let points = f64::from(half_points) / 2.0;
+            crate::validate_font_size(points)?;
+            return Ok(points);
+        }
+    }
+    Err(EngineError::validation("run font size is missing val"))
+}
+
 // Only direct Latin run fonts are represented; theme/eastAsia/cs fonts remain outside this model.
 fn run_font(e: &BytesStart<'_>) -> Result<Option<String>, EngineError> {
     for key in [b"ascii".as_slice(), b"hAnsi".as_slice()] {
@@ -178,6 +196,7 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
     let mut kind = BlockKind::Para;
     let mut inlines: Vec<Inline> = Vec::new();
     let mut style = Style::default();
+    let mut complex_size: Option<f64> = None;
     let mut text = String::new();
 
     loop {
@@ -202,11 +221,14 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
                 b"r" if in_p && !in_r => {
                     in_r = true;
                     style = Style::default();
+                    complex_size = None;
                     text.clear();
                 }
                 b"t" if in_r => {
                     in_t = true;
                 }
+                b"sz" if in_r => style.font_size = Some(run_font_size(&e)?),
+                b"szCs" if in_r => complex_size = Some(run_font_size(&e)?),
                 b"rFonts" if in_r => style.font_family = run_font(&e)?,
                 b"b" if in_r => style.bold = attr_on(&e),
                 b"i" if in_r => style.italic = attr_on(&e),
@@ -238,6 +260,8 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
                         kind = pstyle_kind(&v);
                     }
                 }
+                b"sz" if in_r => style.font_size = Some(run_font_size(&e)?),
+                b"szCs" if in_r => complex_size = Some(run_font_size(&e)?),
                 b"rFonts" if in_r => style.font_family = run_font(&e)?,
                 b"b" if in_r => style.bold = attr_on(&e),
                 b"i" if in_r => style.italic = attr_on(&e),
@@ -266,6 +290,10 @@ fn parse_document(xml: &str) -> Result<Vec<Block>, EngineError> {
                 b"r" if in_r => {
                     in_r = false;
                     in_t = false;
+                    if let (Some(latin), Some(complex)) = (style.font_size, complex_size) {
+                        if latin != complex { return Err(EngineError::validation("separate Latin and complex-script font sizes are not supported")); }
+                    }
+                    if style.font_size.is_none() { style.font_size = complex_size; }
                     if !text.is_empty() {
                         inlines.push(Inline {
                             text: std::mem::take(&mut text),
@@ -317,4 +345,29 @@ pub fn import_docx(bytes: &[u8]) -> Result<Vec<Block>, EngineError> {
     let xml = String::from_utf8(buf)
         .map_err(|_| EngineError::serialization("document.xml is not valid UTF-8"))?;
     parse_document(&xml)
+}
+
+
+#[cfg(test)]
+mod font_size_tests {
+    use super::*;
+
+    #[test]
+    fn exact_half_point_elements_and_complex_size_fallback() {
+        for properties in ["<w:sz w:val=\"21\"/><w:szCs w:val=\"21\"/>", "<w:szCs w:val=\"21\"></w:szCs><w:sz w:val=\"21\"></w:sz>", "<w:szCs w:val=\"21\"/>"] {
+            let xml = format!("<w:document xmlns:w=\"urn:test\"><w:body><w:p><w:r><w:rPr>{properties}</w:rPr><w:t>x</w:t></w:r></w:p></w:body></w:document>");
+            let blocks = parse_document(&xml).unwrap();
+            assert_eq!(blocks[0].inlines[0].style.font_size, Some(10.5));
+            let exported = build_document_xml(&blocks);
+            assert!(exported.contains("<w:sz w:val=\"21\"/><w:szCs w:val=\"21\"/>"));
+        }
+    }
+
+    #[test]
+    fn malformed_or_unrepresentable_docx_sizes_reject() {
+        for properties in ["<w:sz w:val=\"21.5\"/>", "<w:sz w:val=\"0\"/>", "<w:sz w:val=\"3277\"/>", "<w:sz/>", "<w:sz w:val=\"20\"/><w:szCs w:val=\"21\"/>"] {
+            let xml = format!("<w:document xmlns:w=\"urn:test\"><w:body><w:p><w:r><w:rPr>{properties}</w:rPr><w:t>x</w:t></w:r></w:p></w:body></w:document>");
+            assert!(parse_document(&xml).is_err());
+        }
+    }
 }

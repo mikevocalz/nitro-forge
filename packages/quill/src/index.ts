@@ -43,6 +43,8 @@ export interface Style {
   color?: string;
   /** Direct Latin run font; null clears an explicit family. Does not install fonts. */
   font_family?: string | null;
+  /** Points, 1..1638 in half-point increments; null clears an explicit size. */
+  font_size?: number | null;
   link?: string;
 }
 export interface LayoutLine {

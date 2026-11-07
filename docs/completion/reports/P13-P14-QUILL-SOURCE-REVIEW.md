@@ -20,3 +20,21 @@ The partial style parser distinguishes omitted, null and string family values an
 DOCX emits escaped double-quoted direct Latin ascii/hAnsi font attributes. Both empty-element and start-element import paths unescape and validate direct family attributes. The single-family representation deliberately leaves theme, separate script families and installed fonts outside its contract. Binding selection state and clear callback use the durable engine field. Layout/shaping, UI adoption and runtime/DOCX round-trip acceptance remain open. Tests added in source were not executed by this reviewer.
 
 None of these slices establishes complete P13/P14 or overall component acceptance.
+
+## Tally duplicate follow-up
+
+The duplicate operation validates its selector and checks the next-ID increment before journaling. It deep-clones the selected sheet, finds an ASCII-case-insensitively unique generated name, assigns a fresh internal ID, inserts beside the source and retains the active worksheet by stable internal ID. The complete Reset history entry preserves the old counter, active selection and sheets for undo; snapshot state includes copied cells and tone. The typed document and binding call the actual operation, with regression source covering collision, independence, restore and undo/redo. No tests executed by this reviewer.
+
+A related pre-existing invariant gap needs correction before relying on monotonic allocation: restore computes `max_id + 1` and addSheet increments next_sheet without checked arithmetic. A restored maximum ID can panic or wrap; fix allocation and restore before journal/state replacement. The duplicate's own checked addition is correct. No workbook-wide sheet or aggregate cloned-cell memory cap exists in the inspected engine, so this review does not claim bounded duplicate memory.
+
+### Allocation follow-up corrected
+
+Subsequent source inspection confirms addSheet checks the counter increment before recording history and restore checks max-ID normalization before state replacement. The reported overflow paths are corrected. Exhausted allocation rejects; this does not introduce a workbook memory cap.
+
+## Pitch partial text style follow-up
+
+No additional source blocker found. setTextStyle resolves stable slide/object IDs and rejects non-text targets. It clones text properties, validates finite positive size, strict booleans and exactly four integer byte color channels, then journals and replaces only after the complete patch succeeds. Null and wrong-type present fields reject; omitted fields and content are retained. Empty/equal patches return read-only, preserving redo. The TypeScript method prevents style payload fields from overriding the supplied slide/object identity. Unrun regression source covers these paths; no runtime or test execution by this reviewer.
+
+## Quill exact font size follow-up
+
+No additional source blocker found. Optional size preserves legacy unspecified state and distinguishes omitted from null clear. The parser and restore reject nonfinite, out-of-range and non-half-point values before replacing state. Exact half-points within 1..1638 points convert without rounding to DOCX integer sz/szCs attributes. Import validates both empty/start element forms, handles order and complex-size fallback, and rejects conflicting Latin/complex sizes under the single-size model. Binding set/clear/mixed state matches the typed engine field. Font-aware layout, shaping, inheritance, app adoption and executed acceptance remain outside this source slice. New regression cases were inspected but not executed.

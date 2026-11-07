@@ -84,6 +84,8 @@ pub struct Style {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_family: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
 }
 
@@ -298,6 +300,13 @@ fn parse_kind(v: &Value) -> Result<BlockKind, EngineError> {
         .ok_or_else(|| EngineError::validation(format!("unknown block kind '{s}'")))
 }
 
+fn validate_font_size(value: f64) -> Result<(), EngineError> {
+    if !value.is_finite() || !(1.0..=1638.0).contains(&value) || (value * 2.0).fract() != 0.0 {
+        return Err(EngineError::validation("font_size must be 1..1638 points in half-point increments"));
+    }
+    Ok(())
+}
+
 fn validate_font_family(value: &str) -> Result<(), EngineError> {
     if value.trim().is_empty()
         || value.chars().count() > 128
@@ -321,6 +330,7 @@ struct StylePatch {
     strike: Option<bool>,
     color: Option<Option<String>>,
     font_family: Option<Option<String>>,
+    font_size: Option<Option<f64>>,
     link: Option<Option<String>>,
 }
 
@@ -364,6 +374,13 @@ impl StylePatch {
         if let Some(Some(family)) = &p.font_family {
             validate_font_family(family)?;
         }
+        if let Some(size) = obj.get("font_size") {
+            p.font_size = Some(if size.is_null() { None } else {
+                let value = size.as_f64().ok_or_else(|| EngineError::invalid("style.font_size must be a number or null"))?;
+                validate_font_size(value)?;
+                Some(value)
+            });
+        }
         Ok(p)
     }
 
@@ -375,6 +392,7 @@ impl StylePatch {
             && self.color.is_none()
             && self.link.is_none()
             && self.font_family.is_none()
+            && self.font_size.is_none()
     }
 
     fn apply(&self, s: &mut Style) {
@@ -393,6 +411,7 @@ impl StylePatch {
         if let Some(v) = &self.color {
             s.color = v.clone();
         }
+        if let Some(v) = self.font_size { s.font_size = v; }
         if let Some(v) = &self.font_family {
             s.font_family = v.clone();
         }
@@ -987,6 +1006,7 @@ impl Engine for QuillEngine {
         let state: DocState = serde_json::from_slice(payload)?;
         for block in &state.blocks {
             for inline in &block.inlines {
+                if let Some(size) = inline.style.font_size { validate_font_size(size)?; }
                 if let Some(family) = &inline.style.font_family {
                     validate_font_family(family)?;
                 }
@@ -2089,6 +2109,59 @@ mod tests {
         let cleared = docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap();
         assert_eq!(cleared[0].inlines[0].style.font_family, None);
         assert_eq!(cleared, e.blocks);
+    }
+
+    fn font_size_payload(size: Value) -> Value {
+        json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":3},"style":{"font_size":size}})
+    }
+
+    #[test]
+    fn font_size_clear_undo_and_exact_docx_half_points() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", font_style_payload(json!("Aptos")));
+        for size in [1.0, 10.5, 1638.0] {
+            apply(&mut e, "applyStyle", font_size_payload(json!(size)));
+            let imported = docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap();
+            assert_eq!(imported, e.blocks);
+            assert_eq!(imported[0].inlines[0].style.font_size, Some(size));
+        }
+        let snapshot = e.snapshot().unwrap();
+        let mut restored = engine();
+        restored.restore(&snapshot).unwrap();
+        assert_eq!(restored.blocks, e.blocks);
+        apply(&mut e, "applyStyle", font_size_payload(Value::Null));
+        let imported = docx::import_docx(&docx::export_docx(&e.blocks).unwrap()).unwrap();
+        assert_eq!(imported[0].inlines[0].style.font_size, None);
+        assert_eq!(imported[0].inlines[0].style.font_family.as_deref(), Some("Aptos"));
+        assert!(e.undo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, Some(1638.0));
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, None);
+    }
+
+    #[test]
+    fn invalid_size_patch_and_restore_preserve_state_and_history() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "abc");
+        apply(&mut e, "applyStyle", font_size_payload(json!(10.5)));
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        for size in [json!(0), json!(-1), json!(1638.5), json!(10.25), json!("12")] {
+            let mut payload = font_size_payload(size.clone());
+            payload["style"]["italic"] = json!(true);
+            assert!(e.apply(cmd("applyStyle", payload)).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+            let bad = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"other","style":{"font_size":size}}]}]})).unwrap().as_slice());
+            assert!(e.restore(&bad).is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, Some(10.5));
+        assert!(!e.blocks[0].inlines[0].style.italic);
+        let legacy = encode_envelope(serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"old","style":{}}]}]})).unwrap().as_slice());
+        e.restore(&legacy).unwrap();
+        assert_eq!(e.blocks[0].inlines[0].style.font_size, None);
     }
 
 }
