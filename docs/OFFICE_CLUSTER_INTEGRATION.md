@@ -47,7 +47,7 @@ these ops lands, the deferral lifts.
   - `bookmarks` and `renderPage` (H-15).
 - Folio (`FOLIO_DEFERRED_OPS`):
   - `renderPage` and `textPositions` (K-04, K-06 and K-18 on-page parts): `pageText` is lossy and has no glyph boxes, so hits and marks can be listed but not drawn on the page.
-  - `underlineAnnotation`, `strikeOutAnnotation`, `inkAnnotation` and `shapeAnnotations` (K-06).
+  - `underlineAnnotation`, `strikeOutAnnotation` and `shapeAnnotations` (K-06). `inkAnnotation` lifted with `addInkAnnotation`/`addLinkAnnotation` (P15 Slice A).
   - `annotationAuthor`, `replyAnnotation`, `setAnnotationState` and `setAnnotationContents` (K-07): annotations come back as single comments with no author, replies or resolve.
 
 The office packages pin NYC-Tron UI `v0.1.0-alpha.2`. Each package includes

@@ -14,6 +14,8 @@ export const OPS = {
   pageCount: "pageCount",
   pageText: "pageText",
   addAnnotation: "addAnnotation",
+  addInkAnnotation: "addInkAnnotation",
+  addLinkAnnotation: "addLinkAnnotation",
   listAnnotations: "listAnnotations",
   listCommentThreads: "listCommentThreads",
   addAnnotationReply: "addAnnotationReply",
@@ -28,7 +30,17 @@ export const OPS = {
 } as const;
 
 export type Rect = [number, number, number, number]; // x, y, w, h (PDF user space)
-export type AnnotSubtype = "Text" | "Highlight" | "Underline" | "StrikeOut" | "Square" | "Circle";
+/**
+ * PDF annotation subtypes. `Ink`/`Link` are listed for completeness — create
+ * them through `addInkAnnotation`/`addLinkAnnotation`; `addAnnotation`
+ * rejects those subtypes.
+ */
+export type AnnotSubtype =
+  | "Text" | "Highlight" | "Underline" | "StrikeOut" | "Square" | "Circle"
+  | "Ink" | "Link";
+/** One ink stroke: an array of at least 2 `[x, y]` points in PDF user space. */
+export type InkStroke = readonly (readonly [number, number])[];
+export type InkPaths = readonly InkStroke[];
 /** PDF Standard-handler permission names accepted by `encrypt` (all granted when omitted). */
 export type FolioPermission =
   | "print" | "modify" | "copy" | "annotate" | "fill"
@@ -49,6 +61,10 @@ export interface Annotation {
   subtype: string;
   rect: Rect;
   contents: string;
+  /** Present on `/Link` annotations with a `/URI` action. */
+  uri?: string;
+  /** Present when the annotation carries an explicit `/Dest`. */
+  dest?: string | number[];
 }
 
 export interface FolioCommentMetadata { author: string; modified: string }
@@ -109,6 +125,55 @@ export class FolioDocument {
       contents,
       subtype,
       ...(metadata === undefined ? {} : { author: metadata.author, modified: metadata.modified }),
+    });
+  }
+  /**
+   * Freehand ink annotation (`/Subtype /Ink`). `paths` is 1–64 strokes of
+   * `[x, y]` points (≥2 per stroke, ≤2048 points total, coordinates finite
+   * within ±1 000 000 PDF units). `color` is an optional `[r, g, b]` triplet
+   * in 0..=1; `width` the `/BS` stroke width in points (default 1, max 100);
+   * `opacity` 0..=1 emits `/CA`. `/Rect` is derived from the stroke bounds.
+   */
+  addInkAnnotation(
+    page: number,
+    paths: InkPaths,
+    options: {
+      color?: [number, number, number];
+      width?: number;
+      opacity?: number;
+      contents?: string;
+      metadata?: FolioCommentMetadata;
+    } = {},
+  ) {
+    return this.call<{ annot_id: number }>(OPS.addInkAnnotation, {
+      page,
+      paths,
+      ...(options.color === undefined ? {} : { color: options.color }),
+      ...(options.width === undefined ? {} : { width: options.width }),
+      ...(options.opacity === undefined ? {} : { opacity: options.opacity }),
+      ...(options.contents === undefined ? {} : { contents: options.contents }),
+      ...(options.metadata === undefined ? {} : { author: options.metadata.author, modified: options.metadata.modified }),
+    });
+  }
+  /**
+   * URI link annotation (`/Subtype /Link`, `/A << /S /URI /URI (…) >>`).
+   * `rect` is `[x, y, w, h]` in PDF user space and must be positive,
+   * nondegenerate and within ±1 000 000. `uri` must be non-empty, ≤2048
+   * bytes, carry a valid scheme and contain no whitespace or control
+   * characters.
+   */
+  addLinkAnnotation(
+    page: number,
+    rect: Rect,
+    uri: string,
+    options: { contents?: string; metadata?: FolioCommentMetadata } = {},
+  ) {
+    return this.call<{ annot_id: number }>(OPS.addLinkAnnotation, {
+      page,
+      rect,
+      uri,
+      ...(options.contents === undefined ? {} : { contents: options.contents }),
+      ...(options.metadata === undefined ? {} : { author: options.metadata.author, modified: options.metadata.modified }),
     });
   }
   listCommentThreads(page: number, reviewAuthor?: string) {

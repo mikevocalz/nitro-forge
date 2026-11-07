@@ -64,6 +64,47 @@ describe("folio engine e2e (real Rust via nf-cli)", () => {
     await doc.close();
   });
 
+  it("adds ink and link annotations that survive save/reopen and undo", async () => {
+    const doc = await FolioDocument.create(host, 1);
+    const ink = await doc.addInkAnnotation(0, [[[72, 600], [90, 580], [110, 610]], [[200, 200], [220, 220]]], {
+      color: [1, 0, 0], width: 2, opacity: 0.8, contents: "doodle",
+    });
+    const link = await doc.addLinkAnnotation(0, [72, 700, 150, 20], "https://example.com/spec", { contents: "spec" });
+    expect(ink.data.annot_id).toBeGreaterThan(0);
+    expect(link.data.annot_id).toBeGreaterThan(0);
+
+    const annots = (await doc.listAnnotations(0)).data.annots;
+    const inkRow = annots.find(a => a.id === ink.data.annot_id)!;
+    const linkRow = annots.find(a => a.id === link.data.annot_id)!;
+    expect(inkRow.subtype).toBe("Ink");
+    expect(inkRow.contents).toBe("doodle");
+    expect(linkRow.subtype).toBe("Link");
+    expect(linkRow.uri).toBe("https://example.com/spec");
+    expect(linkRow.rect).toEqual([72, 700, 150, 20]);
+
+    // bounds and URI validation reject without mutating
+    await expect(doc.addInkAnnotation(0, [])).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.addInkAnnotation(0, Array.from({ length: 65 }, () => [[0, 0], [1, 1]] as [number, number][]))).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.addInkAnnotation(0, [[[0, 0], [1e7, 1]]])).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.addLinkAnnotation(0, [1, 2, 3, 4], "not a uri")).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.addLinkAnnotation(0, [1, 2, 3, 4], "")).rejects.toBeInstanceOf(EngineError);
+    expect((await doc.listAnnotations(0)).data.annots).toHaveLength(2);
+
+    // undo removes the link only; redo restores it
+    await doc.undo();
+    expect((await doc.listAnnotations(0)).data.annots.map(a => a.subtype)).toEqual(["Ink"]);
+    await doc.redo();
+    expect((await doc.listAnnotations(0)).data.annots.map(a => a.subtype).sort()).toEqual(["Ink", "Link"]);
+
+    const { bytes } = await doc.savePdf();
+    await doc.close();
+    const re = await FolioDocument.openPdf(host, bytes);
+    const rows = (await re.listAnnotations(0)).data.annots;
+    expect(rows.find(a => a.subtype === "Ink")?.contents).toBe("doodle");
+    expect(rows.find(a => a.subtype === "Link")?.uri).toBe("https://example.com/spec");
+    await re.close();
+  });
+
   it("snapshot/save/reopen preserves annotations", async () => {
     const doc = await FolioDocument.create(host, 1);
     await doc.addAnnotation(0, [0, 0, 50, 50], "note", "Text");

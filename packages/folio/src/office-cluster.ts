@@ -1,4 +1,4 @@
-import type { AnnotSubtype, FolioDocument, FolioCommentMetadata, FolioCommentEntry, Rect } from "./index";
+import type { AnnotSubtype, FolioDocument, FolioCommentMetadata, FolioCommentEntry, InkPaths, Rect } from "./index";
 
 /**
  * Engine side of NYC-Tron's PDF controls (Forge roster K-04
@@ -24,13 +24,11 @@ export const FOLIO_DEFERRED_OPS = {
   renderPage: "K-04",
   /** K-04 hit rectangles: `pageText` is lossy and carries no glyph positions. */
   textPositions: "K-04",
-  /** K-06 freehand ink (`/Ink`). */
-  inkAnnotation: "K-06",
 } as const;
 export type FolioDeferredOp = keyof typeof FOLIO_DEFERRED_OPS;
 
 export type FolioOfficeDocument = Pick<FolioDocument,
-  "pageCount" | "pageText" | "listAnnotations" | "addAnnotation" | "removeAnnotation" | "listCommentThreads" | "addAnnotationReply" | "setAnnotationReview" | "undo" | "redo">;
+  "pageCount" | "pageText" | "listAnnotations" | "addAnnotation" | "addInkAnnotation" | "addLinkAnnotation" | "removeAnnotation" | "listCommentThreads" | "addAnnotationReply" | "setAnnotationReview" | "undo" | "redo">;
 
 function requireData<T>(response: { data?: T }, op: string): T {
   if (response.data === undefined || response.data === null) throw new Error(`Folio ${op} returned no data`);
@@ -73,19 +71,37 @@ export async function readFolioReadAloudBlocks(document: Pick<FolioDocument, "pa
 }
 
 /** Tools Folio can save, for `AnnotationToolbar.tools`. */
-export const FOLIO_ANNOTATION_TOOLS = ["select", "note", "highlight", "underline", "strike", "rectangle", "ellipse"] as const;
+export const FOLIO_ANNOTATION_TOOLS = ["select", "note", "highlight", "underline", "strike", "ink", "rectangle", "ellipse"] as const;
 export type FolioAnnotationTool = (typeof FOLIO_ANNOTATION_TOOLS)[number];
 
-const SUBTYPE: Record<Exclude<FolioAnnotationTool, "select">, AnnotSubtype> = { note: "Text", highlight: "Highlight", underline: "Underline", strike: "StrikeOut", rectangle: "Square", ellipse: "Circle" };
+const SUBTYPE: Record<Exclude<FolioAnnotationTool, "select">, AnnotSubtype> = { note: "Text", highlight: "Highlight", underline: "Underline", strike: "StrikeOut", ink: "Ink", rectangle: "Square", ellipse: "Circle" };
+
+/** Drawn strokes for the `ink` tool: `paths` in PDF user space plus optional ink style. */
+export interface FolioInkStroke {
+  readonly paths: InkPaths;
+  readonly color?: readonly [number, number, number];
+  readonly width?: number;
+  readonly opacity?: number;
+}
 
 /**
- * Saves what the active tool made on a page: a note, one axis-aligned horizontal markup quad or a bounded rectangle/ellipse.
- * `rect` is `[x, y, w, h]` in PDF user space, from the host's page view.
+ * Saves what the active tool made on a page: a note, one axis-aligned horizontal markup quad, a bounded rectangle/ellipse, or freehand ink strokes.
+ * `rect` is `[x, y, w, h]` in PDF user space, from the host's page view; `ink`
+ * ignores it and `contents` and takes the drawn `stroke.paths` instead.
  */
 export async function addFolioAnnotation(
-  document: Pick<FolioDocument, "addAnnotation">, tool: string, page: number, rect: Rect, contents: string,
+  document: Pick<FolioDocument, "addAnnotation" | "addInkAnnotation">, tool: string, page: number, rect: Rect, contents: string,
+  stroke?: FolioInkStroke,
 ): Promise<number> {
-  if (tool !== "note" && tool !== "highlight" && tool !== "underline" && tool !== "strike" && tool !== "rectangle" && tool !== "ellipse") throw new RangeError(`Folio cannot save a "${tool}" annotation (see FOLIO_DEFERRED_OPS)`);
+  if (tool !== "note" && tool !== "highlight" && tool !== "underline" && tool !== "strike" && tool !== "ink" && tool !== "rectangle" && tool !== "ellipse") throw new RangeError(`Folio cannot save a "${tool}" annotation (see FOLIO_DEFERRED_OPS)`);
+  if (tool === "ink") {
+    if (stroke === undefined || stroke.paths.length === 0) throw new RangeError('The "ink" tool needs stroke.paths from the page view');
+    return requireData(await document.addInkAnnotation(page, stroke.paths, {
+      ...(stroke.color === undefined ? {} : { color: [...stroke.color] as [number, number, number] }),
+      ...(stroke.width === undefined ? {} : { width: stroke.width }),
+      ...(stroke.opacity === undefined ? {} : { opacity: stroke.opacity }),
+    }), "addInkAnnotation").annot_id;
+  }
   return requireData(await document.addAnnotation(page, rect, contents, SUBTYPE[tool]), "addAnnotation").annot_id;
 }
 

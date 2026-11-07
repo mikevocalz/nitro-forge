@@ -36,6 +36,7 @@
 //!   one get a random 16-byte ID before encrypting.
 
 mod annotation_edit;
+mod ink_link;
 mod markup;
 mod comments;
 
@@ -773,6 +774,8 @@ impl Engine for FolioEngine {
                 }
                 Ok(CommandResult::data(json!({ "annot_id": annot_id.0 })))
             }
+            "addInkAnnotation" => self.op_add_ink(p),
+            "addLinkAnnotation" => self.op_add_link(p),
             "setAnnotationContents" => self.op_set_annotation_contents(p),
             "removeAnnotation" => self.op_remove_comment_tree(p),
             "addAnnotationReply" => self.op_comment_reply(p, false),
@@ -834,12 +837,44 @@ impl Engine for FolioEngine {
                         .ok()
                         .and_then(|o| lopdf::decode_text_string(o).ok())
                         .unwrap_or_default();
-                    annots.push(json!({
+                    let mut entry = json!({
                         "id": id.0,
                         "subtype": subtype,
                         "rect": rect,
                         "contents": contents,
-                    }));
+                    });
+                    // Link annotations: surface the URI action and any
+                    // explicit destination when they decode cheaply.
+                    if let Ok(action) = dict.get(b"A").and_then(|o| o.as_dict()) {
+                        if let Ok(uri) = action
+                            .get(b"URI")
+                            .and_then(lopdf::decode_text_string)
+                        {
+                            entry["uri"] = json!(uri);
+                        }
+                    }
+                    if let Ok(dest) = dict.get(b"Dest") {
+                        match dest {
+                            Object::String(..) => {
+                                if let Ok(s) = lopdf::decode_text_string(dest) {
+                                    entry["dest"] = json!(s);
+                                }
+                            }
+                            Object::Name(n) => {
+                                entry["dest"] =
+                                    json!(String::from_utf8_lossy(n).into_owned());
+                            }
+                            Object::Array(items) => {
+                                let nums: Option<Vec<f64>> =
+                                    items.iter().map(obj_f64).collect();
+                                if let Some(nums) = nums {
+                                    entry["dest"] = json!(nums);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    annots.push(entry);
                 }
                 Ok(ro(json!({ "annots": annots })))
             }
