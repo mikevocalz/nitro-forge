@@ -1468,7 +1468,15 @@ impl Engine for MotionEngine {
                     let merged = merge(
                         &*l,
                         &patch,
-                        &["name", "visible", "locked", "shape", "transform", "opacity"],
+                        &[
+                            "name",
+                            "visible",
+                            "locked",
+                            "shape",
+                            "transform",
+                            "opacity",
+                            "asset_id",
+                        ],
                     )?;
                     comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(merged);
                 } else {
@@ -1566,8 +1574,11 @@ impl Engine for MotionEngine {
         let wire: Value = serde_json::from_slice(payload)?;
         assets::preflight(&wire)?;
         let mut next: State = serde_json::from_value(wire)?;
-        // schema:1 payloads lack `kind`; infer it before validation.
-        normalize_layers(&mut next);
+        // Only schema:1 payloads lack `kind`; schema:2 writers always emit it,
+        // so a missing kind there is hostile input for `validate` to reject.
+        if next.schema == 1 {
+            normalize_layers(&mut next);
+        }
         validate(&next)?;
         self.state = Arc::new(next);
         self.journal = Journal::new(HISTORY);
