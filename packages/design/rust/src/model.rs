@@ -55,6 +55,39 @@ pub struct Layout {
     pub align: Align,
     pub justify: Justify,
 }
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SizeMode {
+    #[default]
+    Fixed,
+    Hug,
+    Fill,
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Sizing {
+    pub x: SizeMode,
+    pub y: SizeMode,
+}
+impl Sizing {
+    fn is_fixed(&self) -> bool {
+        *self == Self::default()
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Axis {
+    X,
+    Y,
+}
+impl Axis {
+    pub fn other(self) -> Self {
+        match self {
+            Self::X => Self::Y,
+            Self::Y => Self::X,
+        }
+    }
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Node {
@@ -70,6 +103,8 @@ pub struct Node {
     pub locked: bool,
     pub children: Vec<u64>,
     pub layout: Option<Layout>,
+    #[serde(default, skip_serializing_if = "Sizing::is_fixed")]
+    pub sizing: Sizing,
 }
 impl Node {
     pub fn frame(id: u64, width: f64, height: f64) -> Self {
@@ -86,6 +121,7 @@ impl Node {
             locked: false,
             children: vec![],
             layout: None,
+            sizing: Sizing::default(),
         }
     }
 }
@@ -169,11 +205,10 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
             || *id >= s.next_id
             || n.name.len() > 512
             || n.name.chars().any(char::is_control)
-            || ![n.x, n.y, n.width, n.height]
+            || ![n.x, n.y].iter().all(|v| v.is_finite() && v.abs() <= 1e6)
+            || ![n.width, n.height]
                 .iter()
-                .all(|v| v.is_finite() && v.abs() <= 1e6)
-            || n.width <= 0.
-            || n.height <= 0.
+                .all(|v| v.is_finite() && *v > 0. && *v <= 1e7)
         {
             return Err(bad("invalid node identity or geometry"));
         }
@@ -190,8 +225,6 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
             ]
             .iter()
             .all(|v| v.is_finite() && *v >= 0. && *v <= 100000.)
-                || l.padding_left + l.padding_right >= n.width
-                || l.padding_top + l.padding_bottom >= n.height
             {
                 return Err(bad("invalid layout or empty content box"));
             }

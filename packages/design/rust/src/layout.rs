@@ -1,4 +1,4 @@
-use crate::model::*;
+use crate::{model::*, sizing};
 use ignition_core::EngineError;
 use serde::Serialize;
 #[derive(Clone, Debug, Serialize)]
@@ -12,32 +12,23 @@ pub struct BoxNode {
     pub fill: [u8; 4],
     pub visible: bool,
 }
-/// Fixed authored sizes; stretch is an evaluated cross-axis override, never a stored resize.
 pub fn evaluate(s: &State) -> Result<Vec<BoxNode>, EngineError> {
+    let sizes = sizing::evaluate(s)?;
     let mut out = vec![];
-    place(
-        s,
-        1,
-        0.,
-        0.,
-        s.nodes[&1].width,
-        s.nodes[&1].height,
-        true,
-        &mut out,
-    )?;
+    place(s, &sizes, 1, 0., 0., true, &mut out)?;
     Ok(out)
 }
 fn place(
     s: &State,
+    sizes: &sizing::Sizes,
     id: u64,
     x: f64,
     y: f64,
-    width: f64,
-    height: f64,
     visible: bool,
     out: &mut Vec<BoxNode>,
 ) -> Result<(), EngineError> {
-    // Match Prism Shape::validate, including hidden boxes, before state admission.
+    let width = sizes.values[&(id, Axis::X)];
+    let height = sizes.values[&(id, Axis::Y)];
     if ![x, y, width, height]
         .iter()
         .all(|v| v.is_finite() && v.abs() <= 1e7)
@@ -59,7 +50,8 @@ fn place(
         visible,
     });
     if let Some(l) = &n.layout {
-        let row = l.direction == Direction::Row;
+        let axis = sizing::main(l);
+        let row = axis == Axis::X;
         let inner_w = width - l.padding_left - l.padding_right;
         let inner_h = height - l.padding_top - l.padding_bottom;
         if inner_w <= 0. || inner_h <= 0. {
@@ -67,53 +59,22 @@ fn place(
         }
         let main = if row { inner_w } else { inner_h };
         let cross = if row { inner_h } else { inner_w };
-        // Greedy fixed-size line breaking. Oversized children occupy their own line.
-        let mut lines: Vec<Vec<u64>> = vec![];
-        let mut line = vec![];
-        let mut used = 0.;
-        for id in &n.children {
-            let child = &s.nodes[id];
-            let size = if row { child.width } else { child.height };
-            if l.wrap && !line.is_empty() && used + l.gap + size > main {
-                lines.push(std::mem::take(&mut line));
-                used = 0.;
-            }
-            if !line.is_empty() {
-                used += l.gap;
-            }
-            line.push(*id);
-            used += size;
-        }
-        if !line.is_empty() {
-            lines.push(line);
-        }
+        let lines = sizing::lines(&n.children, main, l.gap, l.wrap, |id| {
+            sizes.values[&(id, axis)]
+        });
         let mut cross_cursor = 0.;
         for line in lines {
-            let count = line.len();
             let line_cross = if l.wrap {
                 line.iter()
-                    .map(|id| {
-                        let c = &s.nodes[id];
-                        if row {
-                            c.height
-                        } else {
-                            c.width
-                        }
-                    })
+                    .map(|id| sizes.values[&(*id, axis.other())])
                     .fold(0., f64::max)
             } else {
                 cross
             };
+            let count = line.len();
             let used = line
                 .iter()
-                .map(|id| {
-                    let c = &s.nodes[id];
-                    if row {
-                        c.width
-                    } else {
-                        c.height
-                    }
-                })
+                .map(|id| sizes.values[&(*id, axis)])
                 .sum::<f64>()
                 + l.gap * count.saturating_sub(1) as f64;
             let extra = (main - used).max(0.);
@@ -129,42 +90,34 @@ fn place(
                     0.
                 };
             for id in line {
-                let child = &s.nodes[&id];
-                let size = if row { child.height } else { child.width };
+                let size = sizes.values[&(id, axis.other())];
                 let offset = match l.align {
                     Align::Center => (line_cross - size) / 2.,
                     Align::End => line_cross - size,
                     _ => 0.,
                 };
-                let stretched = if l.align == Align::Stretch {
-                    line_cross
+                let (cx, cy) = if row {
+                    (cursor, cross_cursor + offset)
                 } else {
-                    size
-                };
-                let (cx, cy, cw, ch) = if row {
-                    (cursor, cross_cursor + offset, child.width, stretched)
-                } else {
-                    (cross_cursor + offset, cursor, stretched, child.height)
+                    (cross_cursor + offset, cursor)
                 };
                 place(
                     s,
+                    sizes,
                     id,
                     x + l.padding_left + cx,
                     y + l.padding_top + cy,
-                    cw,
-                    ch,
                     visible,
                     out,
                 )?;
-                cursor += if row { child.width } else { child.height };
-                cursor += gap;
+                cursor += sizes.values[&(id, axis)] + gap;
             }
             cross_cursor += line_cross + l.gap;
         }
     } else {
         for id in &n.children {
             let c = &s.nodes[id];
-            place(s, *id, x + c.x, y + c.y, c.width, c.height, visible, out)?;
+            place(s, sizes, *id, x + c.x, y + c.y, visible, out)?;
         }
     }
     Ok(())

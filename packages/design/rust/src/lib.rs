@@ -2,6 +2,7 @@
 //! Fixed-size design hierarchy/layout. Prism owns actual rasterization.
 mod layout;
 mod model;
+mod sizing;
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -45,6 +46,60 @@ impl DesignEngine {
             state: Arc::new(State::default()),
             journal: Journal::new(16),
         }
+    }
+    fn read_axis_sizing(&self, p: &Value) -> Result<CommandResult, EngineError> {
+        let node_id = id(p, "id")?;
+        let node = self
+            .state
+            .nodes
+            .get(&node_id)
+            .ok_or_else(|| bad("unknown node"))?;
+        let sizes = sizing::evaluate(&self.state)?;
+        let unavailable = if node_id == 1 {
+            Some("Root canvas sizing uses setComposition".to_string())
+        } else {
+            self.state.editable(node_id, false).err().map(|e| e.message)
+        };
+        let axis_info = |axis: Axis| -> Value {
+            let capability = |mode: SizeMode| -> Result<(), EngineError> {
+                if let Some(reason) = &unavailable {
+                    return Err(bad(reason));
+                }
+                let mut next = (*self.state).clone();
+                let n = Arc::make_mut(next.nodes.get_mut(&node_id).unwrap());
+                if axis == Axis::X {
+                    n.sizing.x = mode;
+                } else {
+                    n.sizing.y = mode;
+                }
+                validate(&next)?;
+                layout::evaluate(&next)?;
+                Ok(())
+            };
+            let hug = capability(SizeMode::Hug);
+            let fill = capability(SizeMode::Fill);
+            let current_mode = sizing::mode(node, axis);
+            let resolved = sizes.values[&(node_id, axis)];
+            let value = if current_mode == SizeMode::Fixed {
+                sizing::authored(node, axis)
+            } else {
+                resolved
+            };
+            let mut info = json!({"mode":current_mode,"value":value,"fixedValue":sizing::authored(node,axis),"resolvedValue":resolved,"canHug":hug.is_ok(),"canFill":fill.is_ok()});
+            if let Some(reason) = &unavailable {
+                info["unavailableReason"] = json!(reason);
+            }
+            if let Err(error) = hug {
+                info["hugReason"] = json!(error.message);
+            }
+            if let Err(error) = fill {
+                info["fillReason"] = json!(error.message);
+            }
+            info
+        };
+        Ok(CommandResult::read_only(
+            json!({"x":axis_info(Axis::X),"y":axis_info(Axis::Y)}),
+        ))
     }
     fn render(
         &self,
@@ -123,6 +178,9 @@ impl Engine for DesignEngine {
             }
             "renderFrame" => return self.render(&cmd, None),
             _ => {}
+        }
+        if cmd.op == "readAxisSizing" {
+            return self.read_axis_sizing(p);
         }
         let mut next = (*self.state).clone();
         let mut data = json!({"ok":true});
@@ -215,6 +273,11 @@ impl Engine for DesignEngine {
                     .nodes
                     .get(&node_id)
                     .ok_or_else(|| bad("unknown node"))?;
+                if (patch.contains_key("width") && node.sizing.x != SizeMode::Fixed)
+                    || (patch.contains_key("height") && node.sizing.y != SizeMode::Fixed)
+                {
+                    return Err(bad("switch to fixed sizing before editing a fixed extent"));
+                }
                 let changed = merge(
                     &**node,
                     &Value::Object(patch),
@@ -223,6 +286,58 @@ impl Engine for DesignEngine {
                     ],
                 )?;
                 next.nodes.insert(node_id, Arc::new(changed));
+            }
+            "setAxisSizing" => {
+                if p.as_object().is_none_or(|o| {
+                    o.keys()
+                        .any(|k| !["id", "axis", "mode", "value"].contains(&k.as_str()))
+                }) {
+                    return Err(bad("unknown sizing field"));
+                }
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                if node_id == 1 {
+                    return Err(bad("root canvas sizing uses setComposition"));
+                }
+                let axis: Axis = serde_json::from_value(
+                    p.get("axis").cloned().ok_or_else(|| bad("axis required"))?,
+                )?;
+                let mode: SizeMode = serde_json::from_value(
+                    p.get("mode").cloned().ok_or_else(|| bad("mode required"))?,
+                )?;
+                let value = p
+                    .get("value")
+                    .map(|v| {
+                        v.as_f64()
+                            .ok_or_else(|| bad("sizing value must be numeric"))
+                    })
+                    .transpose()?;
+                if mode != SizeMode::Fixed && value.is_some() {
+                    return Err(bad("only fixed sizing accepts a numeric value"));
+                }
+                let value = if mode == SizeMode::Fixed
+                    && value.is_none()
+                    && sizing::mode(&self.state.nodes[&node_id], axis) != SizeMode::Fixed
+                {
+                    Some(sizing::evaluate(&self.state)?.values[&(node_id, axis)])
+                } else {
+                    value
+                };
+                let node = Arc::make_mut(next.nodes.get_mut(&node_id).unwrap());
+                match axis {
+                    Axis::X => {
+                        node.sizing.x = mode;
+                        if let Some(v) = value {
+                            node.width = v;
+                        }
+                    }
+                    Axis::Y => {
+                        node.sizing.y = mode;
+                        if let Some(v) = value {
+                            node.height = v;
+                        }
+                    }
+                }
             }
             "setFrameLayout" => {
                 let node_id = id(p, "id")?;

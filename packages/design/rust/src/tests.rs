@@ -437,3 +437,332 @@ fn wrap_invalid_type_and_nested_effective_padding_preserve_history() {
     call(&mut e, "setFrameLayout", json!({"id":1,"layout":layout}));
     assert_eq!(layout::evaluate(&e.state).unwrap()[1].width, 3.);
 }
+
+fn size(e: &mut DesignEngine, id: u64, axis: &str, mode: &str) {
+    call(e, "setAxisSizing", json!({"id":id,"axis":axis,"mode":mode}));
+}
+#[test]
+fn hug_uses_real_flow_extents_padding_and_pixels_not_fixed_fallback() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":4,"height":1}));
+    let frame = call(&mut e, "addFrame", json!({"parent":1,"fill":[0,0,255,255]})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    shape(&mut e, frame, 0., 0., 1., 1., [255, 0, 0, 255]);
+    shape(&mut e, frame, 0., 0., 1., 1., [0, 255, 0, 255]);
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":frame,"layout":{"direction":"row","gap":1,"padding_top":0,"padding_right":0,"padding_bottom":0,"padding_left":0,"align":"start","justify":"start"}}),
+    );
+    size(&mut e, frame, "x", "hug");
+    size(&mut e, frame, "y", "hug");
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert_eq!((boxes[1].width, boxes[1].height), (3., 1.));
+    assert_eq!(e.state.nodes[&frame].width, 100.);
+    let pixels = e
+        .apply(Command::new("renderFrame", json!({})).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    assert_eq!(
+        pixels,
+        vec![255, 0, 0, 255, 0, 0, 255, 255, 0, 255, 0, 255, 0, 0, 0, 0]
+    );
+    let read = call(&mut e, "readAxisSizing", json!({"id":frame}));
+    assert!(read.events.is_empty());
+    assert_eq!(read.data["x"]["mode"], "hug");
+    assert_eq!(read.data["x"]["value"], 3.);
+    assert_eq!(read.data["x"]["fixedValue"], 100.);
+    assert_eq!(read.data["x"]["resolvedValue"], 3.);
+    // Padding may exceed inactive fixed fallback; the actual hugged box must validate instead.
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":frame,"layout":{"direction":"row","gap":1,"padding_top":0,"padding_right":100,"padding_bottom":0,"padding_left":100,"align":"start","justify":"start"}}),
+    );
+    assert_eq!(layout::evaluate(&e.state).unwrap()[1].width, 203.);
+}
+#[test]
+fn fill_distributes_real_remaining_space_and_tracks_stretched_ancestors() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":8}));
+    let a = shape(&mut e, 1, 0., 0., 2., 1., [255; 4]);
+    let b = shape(&mut e, 1, 0., 0., 1., 1., [255; 4]);
+    let c = shape(&mut e, 1, 0., 0., 1., 1., [255; 4]);
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":1,"layout":flow("row","start","start",1.)}),
+    );
+    size(&mut e, b, "x", "fill");
+    size(&mut e, c, "x", "fill");
+    size(&mut e, b, "y", "fill");
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert_eq!((boxes[1].id, boxes[1].x, boxes[1].width), (a, 1., 2.));
+    assert_eq!((boxes[2].x, boxes[2].width, boxes[2].height), (4., 2., 6.));
+    assert_eq!((boxes[3].x, boxes[3].width), (7., 2.));
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("updateNode", json!({"id":a,"width":8})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":6}));
+    let frame = call(&mut e, "addFrame", json!({"parent":1,"width":3,"height":2})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    let child = shape(&mut e, frame, 0., 0., 1., 1., [255; 4]);
+    let layout = json!({"direction":"column","gap":0,"padding_top":0,"padding_right":0,"padding_bottom":0,"padding_left":0,"align":"start","justify":"start"});
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":frame,"layout":layout}),
+    );
+    size(&mut e, child, "x", "fill");
+    size(&mut e, child, "y", "fill");
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":1,"layout":{"direction":"row","gap":0,"padding_top":0,"padding_right":0,"padding_bottom":0,"padding_left":0,"align":"stretch","justify":"start"}}),
+    );
+    let boxes = layout::evaluate(&e.state).unwrap();
+    assert_eq!(
+        (boxes[1].height, boxes[2].width, boxes[2].height),
+        (6., 3., 6.)
+    );
+}
+#[test]
+fn sizing_cycles_unsupported_wrap_modes_and_shape_hug_report_real_capabilities() {
+    let mut e = DesignEngine::new();
+    let frame = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    let child = shape(&mut e, frame, 0., 0., 1., 1., [255; 4]);
+    size(&mut e, child, "x", "fill");
+    call(&mut e, "updateNode", json!({"id":frame,"name":"Redo"}));
+    e.undo().unwrap();
+    let before = e.snapshot().unwrap();
+    let caps = call(&mut e, "readAxisSizing", json!({"id":frame}));
+    assert_eq!(caps.data["x"]["canHug"], false);
+    assert!(caps.data["x"]["hugReason"]
+        .as_str()
+        .unwrap()
+        .contains("cyclic"));
+    assert!(e
+        .apply(Command::new(
+            "setAxisSizing",
+            json!({"id":frame,"axis":"x","mode":"hug"})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let mut cycle = serde_json::to_value(&*e.state).unwrap();
+    cycle["nodes"][frame.to_string()]["sizing"] = json!({"x":"hug","y":"fixed"});
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&cycle).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert!(e.redo().unwrap());
+    size(&mut e, child, "x", "fixed");
+    let mut wrap = flow("row", "start", "start", 0.);
+    wrap["wrap"] = json!(true);
+    call(&mut e, "setFrameLayout", json!({"id":frame,"layout":wrap}));
+    let caps = call(&mut e, "readAxisSizing", json!({"id":frame}));
+    assert_eq!(caps.data["x"]["canHug"], false);
+    let caps = call(&mut e, "readAxisSizing", json!({"id":child}));
+    assert_eq!(caps.data["x"]["canFill"], false);
+    assert_eq!(caps.data["y"]["canFill"], false);
+    assert_eq!(caps.data["x"]["canHug"], false);
+    let before = e.snapshot().unwrap();
+    for p in [
+        json!({"id":child,"axis":"x","mode":"fill"}),
+        json!({"id":frame,"axis":"x","mode":"hug"}),
+        json!({"id":child,"axis":"x","mode":"hug"}),
+        json!({"id":child,"axis":"x","mode":"fixed","unexpected":true}),
+    ] {
+        assert!(e.apply(Command::new("setAxisSizing", p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+}
+#[test]
+fn wrapped_cross_hug_uses_line_measurement_and_empty_hug_is_editable() {
+    let mut e = DesignEngine::new();
+    let frame = call(&mut e, "addFrame", json!({"parent":1,"width":6})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    let a = shape(&mut e, frame, 0., 0., 3., 2., [255; 4]);
+    let b = shape(&mut e, frame, 0., 0., 3., 3., [255; 4]);
+    let mut settings = flow("row", "stretch", "start", 1.);
+    settings["wrap"] = json!(true);
+    call(
+        &mut e,
+        "setFrameLayout",
+        json!({"id":frame,"layout":settings}),
+    );
+    size(&mut e, frame, "y", "hug");
+    assert_eq!(layout::evaluate(&e.state).unwrap()[1].height, 8.);
+    call(&mut e, "removeNode", json!({"id":b}));
+    assert_eq!(layout::evaluate(&e.state).unwrap()[1].height, 4.);
+    call(&mut e, "removeNode", json!({"id":a}));
+    assert!((layout::evaluate(&e.state).unwrap()[1].height - 2.001).abs() < 1e-12);
+    // Absolute hug anchors its origin; negative leading content stays visible overflow.
+    call(&mut e, "setFrameLayout", json!({"id":frame,"layout":null}));
+    size(&mut e, frame, "x", "hug");
+    let child = shape(&mut e, frame, -5., -5., 1., 1., [255; 4]);
+    assert_eq!(layout::evaluate(&e.state).unwrap()[1].width, 0.001);
+    call(
+        &mut e,
+        "reparentNode",
+        json!({"id":child,"parent":1,"index":0}),
+    );
+    assert_eq!(layout::evaluate(&e.state).unwrap()[2].width, 0.001);
+}
+#[test]
+fn sizing_snapshot_legacy_defaults_corruption_noops_and_boundaries_are_atomic() {
+    let mut e = DesignEngine::new();
+    let frame = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    shape(&mut e, frame, 1., 0., 2., 1., [255; 4]);
+    let fixed = e.snapshot().unwrap();
+    assert!(
+        serde_json::to_value(&*e.state).unwrap()["nodes"][frame.to_string()]
+            .get("sizing")
+            .is_none()
+    );
+    size(&mut e, frame, "x", "hug");
+    let hugged = e.snapshot().unwrap();
+    let mut restored = DesignEngine::new();
+    restored.restore(&hugged).unwrap();
+    assert_eq!(restored.snapshot().unwrap(), hugged);
+    restored.restore(&fixed).unwrap();
+    assert_eq!(restored.snapshot().unwrap(), fixed);
+    assert_eq!(restored.state.nodes[&frame].sizing, Sizing::default());
+    assert!(e.undo().unwrap());
+    assert!(call(
+        &mut e,
+        "setAxisSizing",
+        json!({"id":frame,"axis":"x","mode":"fixed"})
+    )
+    .events
+    .is_empty());
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), hugged);
+    for p in [
+        json!({"id":frame,"axis":"x","mode":null}),
+        json!({"id":frame,"axis":"z","mode":"fixed"}),
+        json!({"id":frame,"axis":"x","mode":"fixed","value":0}),
+        json!({"id":frame,"axis":"x","mode":"fixed","value":"10"}),
+    ] {
+        assert!(e.apply(Command::new("setAxisSizing", p)).is_err());
+        assert_eq!(e.snapshot().unwrap(), hugged);
+    }
+    let mut state = serde_json::to_value(&*e.state).unwrap();
+    state["nodes"]["1"]["sizing"] = json!({"x":"hug","y":"fixed"});
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&state).unwrap()))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), hugged);
+    call(&mut e, "updateNode", json!({"id":frame,"locked":true}));
+    let locked = e.snapshot().unwrap();
+    let caps = call(&mut e, "readAxisSizing", json!({"id":frame}));
+    assert_eq!(caps.data["x"]["canHug"], false);
+    assert!(caps.data["x"]["unavailableReason"].is_string());
+    assert_eq!(e.snapshot().unwrap(), locked);
+    assert!(e
+        .apply(Command::new(
+            "setAxisSizing",
+            json!({"id":frame,"axis":"x","mode":"fixed"})
+        ))
+        .is_err());
+}
+
+#[test]
+fn switching_hug_and_fill_to_fixed_freezes_geometry_and_pixels_including_large_values() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":4,"height":1}));
+    let frame = call(&mut e, "addFrame", json!({"parent":1,"fill":[0,0,255,255]})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    shape(&mut e, frame, 0., 0., 2., 1., [255, 0, 0, 255]);
+    size(&mut e, frame, "x", "hug");
+    size(&mut e, frame, "y", "hug");
+    let pixels = e
+        .apply(Command::new("renderFrame", json!({})).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    size(&mut e, frame, "x", "fixed");
+    assert_eq!(e.state.nodes[&frame].width, 2.);
+    assert_eq!(
+        e.apply(Command::new("renderFrame", json!({})).with_binary(None))
+            .unwrap()
+            .output
+            .unwrap(),
+        pixels
+    );
+    assert!(e.undo().unwrap());
+    assert_eq!(e.state.nodes[&frame].sizing.x, SizeMode::Hug);
+    assert_eq!(e.state.nodes[&frame].width, 100.);
+    size(&mut e, frame, "x", "fill");
+    let before = layout::evaluate(&e.state).unwrap()[1].width;
+    let fill_pixels = e
+        .apply(Command::new("renderFrame", json!({})).with_binary(None))
+        .unwrap()
+        .output
+        .unwrap();
+    size(&mut e, frame, "x", "fixed");
+    assert_eq!(
+        e.apply(Command::new("renderFrame", json!({})).with_binary(None))
+            .unwrap()
+            .output
+            .unwrap(),
+        fill_pixels
+    );
+    assert_eq!(e.state.nodes[&frame].width, before);
+    assert_eq!(layout::evaluate(&e.state).unwrap()[1].width, before);
+    let mut e = DesignEngine::new();
+    let frame = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    shape(&mut e, frame, 1e6, 0., 500000., 1., [255; 4]);
+    size(&mut e, frame, "x", "hug");
+    assert_eq!(layout::evaluate(&e.state).unwrap()[1].width, 1_500_000.);
+    size(&mut e, frame, "x", "fixed");
+    assert_eq!(e.state.nodes[&frame].width, 1_500_000.);
+    assert_eq!(layout::evaluate(&e.state).unwrap()[1].width, 1_500_000.);
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new(
+            "setAxisSizing",
+            json!({"id":frame,"axis":"x","mode":"fixed","value":1e7+1.})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+
+#[test]
+fn intrinsic_renderer_extent_limit_rejects_before_mutation_or_history() {
+    let mut e = DesignEngine::new();
+    let frame = call(&mut e, "addFrame", json!({"parent":1})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    shape(&mut e, frame, 1e6, 0., 1e7, 1., [255; 4]);
+    call(&mut e, "updateNode", json!({"id":frame,"name":"Redo"}));
+    e.undo().unwrap();
+    let before = e.snapshot().unwrap();
+    let caps = call(&mut e, "readAxisSizing", json!({"id":frame}));
+    assert_eq!(caps.data["x"]["canHug"], false);
+    assert!(caps.data["x"]["hugReason"]
+        .as_str()
+        .unwrap()
+        .contains("renderer bounds"));
+    assert!(e
+        .apply(Command::new(
+            "setAxisSizing",
+            json!({"id":frame,"axis":"x","mode":"hug"})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert!(e.redo().unwrap());
+}
