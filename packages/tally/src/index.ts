@@ -22,6 +22,11 @@ export const OPS = {
   fillSeries: "fillSeries",
   setFormat: "setFormat",
   clearFormat: "clearFormat",
+  defineName: "defineName",
+  updateName: "updateName",
+  removeName: "removeName",
+  listNames: "listNames",
+  functionCatalog: "functionCatalog",
   clearCell: "clearCell",
   getCell: "getCell",
   getRange: "getRange",
@@ -84,6 +89,29 @@ export type SheetTabTone = "primary" | "accent" | "success" | "info" | "muted";
 export interface WorkbookInfo {
   sheets: { name: string; cell_count: number; tone?: SheetTabTone | null; is_protected?: boolean }[];
   active: number;
+}
+
+/**
+ * Workbook-scoped named range bound to one sheet (by durable sheet id).
+ * `refers_to` is a canonical same-sheet `"A1"` or `"A1:B2"`; formulas on the
+ * bound sheet resolve the name (case-insensitive), names on other sheets
+ * evaluate to `#NAME?`.
+ */
+export interface NamedRangeInfo {
+  name: string;
+  /** Current sheet name, or null if the bound sheet is gone. */
+  sheet: string | null;
+  sheet_id: number;
+  refers_to: string;
+}
+
+/** One entry of the read-only `functionCatalog` op. */
+export interface FunctionInfo {
+  name: string;
+  min_args: number;
+  /** `null` marks a variadic function. */
+  max_args: number | null;
+  signature: string;
 }
 
 export class TallyDocument {
@@ -174,6 +202,32 @@ export class TallyDocument {
   }
   clearCell(addr: string) {
     return this.call(OPS.clearCell, { addr });
+  }
+  /** Define a workbook-scoped name bound to `sheet` (name or index; default active). */
+  defineName(name: string, refersTo: string, sheet?: string | number) {
+    return this.call<{ name: NamedRangeInfo }>(OPS.defineName, {
+      name,
+      refers_to: refersTo,
+      ...(sheet === undefined ? {} : { sheet }),
+    });
+  }
+  /** Retarget a name's sheet and/or refers_to; at least one field required. */
+  updateName(name: string, patch: { sheet?: string | number; refersTo?: string }) {
+    return this.call<{ name: NamedRangeInfo }>(OPS.updateName, {
+      name,
+      ...(patch.sheet === undefined ? {} : { sheet: patch.sheet }),
+      ...(patch.refersTo === undefined ? {} : { refers_to: patch.refersTo }),
+    });
+  }
+  removeName(name: string) {
+    return this.call<{ ok: boolean }>(OPS.removeName, { name });
+  }
+  listNames() {
+    return this.call<{ names: NamedRangeInfo[] }>(OPS.listNames, {});
+  }
+  /** Read-only catalog of the bounded function set the evaluator supports. */
+  functionCatalog() {
+    return this.call<{ functions: FunctionInfo[] }>(OPS.functionCatalog, {});
   }
   getCell(addr: string) {
     return this.call<{ raw: string; computed: CellValue; format?: CellFormat }>(OPS.getCell, { addr });

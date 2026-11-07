@@ -896,6 +896,50 @@ fn parse_formula(src: &str) -> Result<Expr, ()> {
 // Evaluator
 // ---------------------------------------------------------------------------
 
+/// Resolved named-range target: inclusive 0-based coordinates bound to one
+/// sheet id. Built by the engine from its durable `names` table; the
+/// evaluator only resolves a name when `sheet` matches the sheet it was
+/// created for (cross-sheet name references stay `#NAME?`, like cross-sheet
+/// cell references).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NameTarget {
+    pub sheet: u64,
+    pub c0: u32,
+    pub r0: u32,
+    pub c1: u32,
+    pub r1: u32,
+}
+
+/// Static description of one supported function for the `functionCatalog`
+/// read op. `max_args: None` marks a variadic function.
+#[derive(Clone, Copy, Debug)]
+pub struct FnSpec {
+    pub name: &'static str,
+    pub min_args: u32,
+    pub max_args: Option<u32>,
+    pub signature: &'static str,
+}
+
+/// The bounded function set `eval_call` implements, in catalog order.
+/// `TRUE`/`FALSE` are also bare literals; listed here because they are
+/// callable with zero arguments (`TRUE()`).
+pub const FUNCTION_CATALOG: &[FnSpec] = &[
+    FnSpec { name: "SUM", min_args: 0, max_args: None, signature: "SUM(value...)" },
+    FnSpec { name: "AVERAGE", min_args: 0, max_args: None, signature: "AVERAGE(value...)" },
+    FnSpec { name: "MIN", min_args: 0, max_args: None, signature: "MIN(value...)" },
+    FnSpec { name: "MAX", min_args: 0, max_args: None, signature: "MAX(value...)" },
+    FnSpec { name: "COUNT", min_args: 0, max_args: None, signature: "COUNT(value...)" },
+    FnSpec { name: "COUNTA", min_args: 0, max_args: None, signature: "COUNTA(value...)" },
+    FnSpec { name: "COUNTIF", min_args: 2, max_args: Some(2), signature: "COUNTIF(range,criteria)" },
+    FnSpec { name: "SUMIF", min_args: 2, max_args: Some(3), signature: "SUMIF(range,criteria[,sum_range])" },
+    FnSpec { name: "IF", min_args: 2, max_args: Some(3), signature: "IF(condition,then[,else])" },
+    FnSpec { name: "ROUND", min_args: 2, max_args: Some(2), signature: "ROUND(number,digits)" },
+    FnSpec { name: "ABS", min_args: 1, max_args: Some(1), signature: "ABS(number)" },
+    FnSpec { name: "CONCAT", min_args: 0, max_args: None, signature: "CONCAT(value...)" },
+    FnSpec { name: "TRUE", min_args: 0, max_args: Some(0), signature: "TRUE()" },
+    FnSpec { name: "FALSE", min_args: 0, max_args: Some(0), signature: "FALSE()" },
+];
+
 /// Read access to one sheet's raw cell contents. Ranges iterate only stored
 /// cells, so a `A1:ZZ1000000` range costs O(#stored cells), not O(rect area).
 pub trait CellLookup {
@@ -917,6 +961,9 @@ pub struct Evaluator<'a, S: CellLookup + ?Sized> {
     memo: HashMap<String, Value>,
     depth: usize,
     conditional_work: usize,
+    /// `(this sheet's id, name → target)` when the engine supplies its
+    /// workbook `names` table; `None` keeps bare identifiers at `#NAME?`.
+    names: Option<(u64, HashMap<String, NameTarget>)>,
 }
 
 impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
@@ -927,7 +974,20 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
             memo: HashMap::new(),
             depth: 0,
             conditional_work: 0,
+            names: None,
         }
+    }
+
+    /// Evaluator with workbook named-range resolution enabled. `names` keys
+    /// are uppercase names; only targets bound to `sheet_id` resolve.
+    pub fn with_names(
+        sheet: &'a S,
+        sheet_id: u64,
+        names: HashMap<String, NameTarget>,
+    ) -> Self {
+        let mut ev = Self::new(sheet);
+        ev.names = Some((sheet_id, names));
+        ev
     }
 
     /// Evaluated value of a normalized cell address ("A1"). Empty cells →
@@ -987,7 +1047,7 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
             Expr::Bool(b) => Value::Bool(*b),
             Expr::Empty => Value::Empty,
             Expr::ErrLit(x) => Value::Err(x),
-            Expr::Name(_) => Value::Err(ERR_NAME),
+            Expr::Name(name) => self.eval_name(name),
             Expr::BadRef => Value::Err(ERR_REF),
             Expr::Cell(a) => self.eval_cell(a),
             Expr::Range { c0, r0, c1, r1 } => self.eval_range(*c0, *r0, *c1, *r1),
@@ -1015,6 +1075,39 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
             Expr::Bin(op, l, r) => self.eval_bin(*op, l, r),
             Expr::Call(name, args) => self.eval_call(name, args),
         }
+    }
+
+    /// Resolve a bare identifier against the workbook `names` table. A name
+    /// bound to a different sheet — or any name when no table was supplied —
+    /// stays `#NAME?`. A single-cell target evaluates like a cell reference;
+    /// a multi-cell target produces a range `List` for aggregates.
+    fn eval_name(&mut self, name: &str) -> Value {
+        let target = match &self.names {
+            Some((sheet_id, table)) => table
+                .get(&name.to_ascii_uppercase())
+                .copied()
+                .filter(|t| t.sheet == *sheet_id),
+            None => None,
+        };
+        match target {
+            Some(t) if t.c0 == t.c1 && t.r0 == t.r1 => {
+                self.eval_cell(&fmt_addr(t.c0, t.r0))
+            }
+            Some(t) => self.eval_range(t.c0, t.r0, t.c1, t.r1),
+            None => Value::Err(ERR_NAME),
+        }
+    }
+
+    /// Resolved coordinates of a name bound to this evaluator's sheet, for
+    /// consumers that need a rectangle rather than a value (COUNTIF/SUMIF).
+    pub(super) fn name_rect(&self, name: &str) -> Option<(u32, u32, u32, u32)> {
+        self.names.as_ref().and_then(|(sheet_id, table)| {
+            table
+                .get(&name.to_ascii_uppercase())
+                .copied()
+                .filter(|t| t.sheet == *sheet_id)
+                .map(|t| (t.c0, t.r0, t.c1, t.r1))
+        })
     }
 
     fn eval_range(&mut self, c0: u32, r0: u32, c1: u32, r1: u32) -> Value {
@@ -1106,7 +1199,10 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
     fn eval_items(&mut self, args: &[Expr]) -> Vec<(Value, bool)> {
         let mut out = Vec::new();
         for a in args {
-            let lenient = matches!(a, Expr::Cell(_) | Expr::Range { .. } | Expr::BadRef);
+            let lenient = matches!(
+                a,
+                Expr::Cell(_) | Expr::Range { .. } | Expr::BadRef | Expr::Name(_)
+            );
             match self.eval_expr(a) {
                 Value::List(items) => out.extend(items.into_iter().map(|v| (v, true))),
                 v => out.push((v, lenient)),

@@ -148,16 +148,7 @@ struct Rect {
     w: u32,
     h: u32,
 }
-fn rect(expr: &Expr) -> Result<Rect, Value> {
-    let (c0, r0, c1, r1) = match expr {
-        Expr::Cell(a) => {
-            let (c, r) = parse_addr(a).ok_or(Value::Err(ERR_REF))?;
-            (c, r, c, r)
-        }
-        Expr::Range { c0, r0, c1, r1 } => (*c0, *r0, *c1, *r1),
-        Expr::BadRef => return Err(Value::Err(ERR_REF)),
-        _ => return Err(Value::Err(ERR_VALUE)),
-    };
+fn rect_coords(c0: u32, r0: u32, c1: u32, r1: u32) -> Result<Rect, Value> {
     if !on_sheet(c0, r0) || !on_sheet(c1, r1) {
         return Err(Value::Err(ERR_REF));
     }
@@ -168,15 +159,42 @@ fn rect(expr: &Expr) -> Result<Rect, Value> {
     }
     Ok(Rect { c: c0, r: r0, w, h })
 }
+
+fn rect(expr: &Expr) -> Result<Rect, Value> {
+    let (c0, r0, c1, r1) = match expr {
+        Expr::Cell(a) => {
+            let (c, r) = parse_addr(a).ok_or(Value::Err(ERR_REF))?;
+            (c, r, c, r)
+        }
+        Expr::Range { c0, r0, c1, r1 } => (*c0, *r0, *c1, *r1),
+        Expr::BadRef => return Err(Value::Err(ERR_REF)),
+        _ => return Err(Value::Err(ERR_VALUE)),
+    };
+    rect_coords(c0, r0, c1, r1)
+}
+
 impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
+    /// Range argument for COUNTIF/SUMIF: a literal ref/range, or a defined
+    /// name bound to this sheet (unresolved names stay `#VALUE!`, matching
+    /// how a non-rectangle argument is rejected).
+    fn rect_arg(&self, expr: &Expr) -> Result<Rect, Value> {
+        if let Expr::Name(name) = expr {
+            if let Some((c0, r0, c1, r1)) = self.name_rect(name) {
+                return rect_coords(c0, r0, c1, r1);
+            }
+            return Err(Value::Err(ERR_VALUE));
+        }
+        rect(expr)
+    }
+
     pub(super) fn conditional(&mut self, args: &[Expr], sum: bool) -> Value {
         let result = (|| -> Result<Value, Value> {
             if (!sum && args.len() != 2) || (sum && !(2..=3).contains(&args.len())) {
                 return Err(Value::Err(ERR_VALUE));
             }
-            let criteria_range = rect(&args[0])?;
+            let criteria_range = self.rect_arg(&args[0])?;
             let sum_range = if sum && args.len() == 3 {
-                rect(&args[2])?
+                self.rect_arg(&args[2])?
             } else {
                 criteria_range
             };
