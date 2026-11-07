@@ -4,6 +4,7 @@ mod commands;
 mod constraints;
 mod engine;
 mod model;
+mod profiles;
 mod render;
 mod snaps;
 pub use engine::DraftEngine;
