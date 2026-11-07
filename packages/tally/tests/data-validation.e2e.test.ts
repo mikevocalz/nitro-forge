@@ -122,8 +122,11 @@ describe("tally data validation (real Rust via nf-cli)", () => {
       const described = await doc.describe<{ validations?: unknown[] }>();
       expect(described.data.validations).toHaveLength(1);
       await doc.undo();
-      const restored = await doc.describe<{ validations?: { sheet_id: number }[] }>();
+      // describe returns the raw Workbook: `validations[].sheet` is the
+      // durable sheet id (unlike op results, which emit name + sheet_id).
+      const restored = await doc.describe<{ validations?: { sheet: number }[] }>();
       expect(restored.data.validations).toHaveLength(2);
+      expect(restored.data.validations?.some((r) => r.sheet === 1)).toBe(true);
       await doc.redo();
       const dropped = await doc.describe<{ validations?: unknown[] }>();
       expect(dropped.data.validations).toHaveLength(1);

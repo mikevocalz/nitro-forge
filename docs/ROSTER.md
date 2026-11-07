@@ -683,3 +683,16 @@ tally-engine` 85 passed (9 new), `pnpm --filter @nitro-forge/tally` typecheck
 clean and 49 Vitest tests passed including four new live `nf-cli`
 data-validation tests, `cargo build -p nf-cli` clean. No UI wiring, XLSX or
 native/device acceptance is claimed.
+
+Review follow-up on the same slice: `validateCell`'s `text` criteria now
+rejects error values before consulting the text form (previously `=1/0`
+could satisfy a length rule via the literal `"#DIV/0!"` text), and the
+blank check narrowed to "no stored raw" so a formula computing to `Empty`
+no longer passes every rule (both match the already-documented semantics).
+`clearValidation {id, sheet}` now rejects the mixed selectors, and
+`validateCell {addr:null, cell}` treats explicit null as absent like
+`sheet:null`. `describe` vs op-result `sheet` key semantics (durable id vs
+current name + `sheet_id`) are documented in `docs/ENGINE_OPS.md`. Local
+evidence: `cargo test -p tally-engine` 87 passed (2 new), `pnpm --filter
+@nitro-forge/tally test` 49 passed, typecheck clean, `cargo build -p
+nf-cli` clean.

@@ -189,6 +189,11 @@ fn check_criteria(c: &ValidationCriteria, v: &formula::Value) -> bool {
                 .any(|entry| entry == &t)
         }
         CriteriaKind::Text => {
+            // Errors never satisfy text bounds (module doc); `text_form`
+            // maps them to literal error text for `list` only.
+            if matches!(v, formula::Value::Err(_)) {
+                return false;
+            }
             let Some(t) = text_form(v) else {
                 return false;
             };
@@ -384,11 +389,18 @@ impl TallyEngine {
 
     /// `clearValidation` — exactly one of `id` (rule handle) or
     /// `range:{from,to}` (+ optional `sheet`, default active) removing every
-    /// rule on that sheet intersecting the rectangle.
+    /// rule on that sheet intersecting the rectangle. `sheet` alongside `id`
+    /// rejects rather than being silently ignored.
     pub(super) fn op_clear_validation(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let has_id = p.get("id").is_some_and(|v| !v.is_null());
         let has_range = p.get("range").is_some_and(|v| !v.is_null());
+        // `sheet` only applies to the `range` selector; with `id` it would be
+        // silently ignored, so reject the mix instead.
+        let has_sheet = p.get("sheet").is_some_and(|v| !v.is_null());
         match (has_id, has_range) {
+            (true, false) if has_sheet => Err(EngineError::invalid(
+                "clearValidation 'sheet' requires the 'range' selector",
+            )),
             (true, false) => {
                 let id = p
                     .get("id")
@@ -441,9 +453,11 @@ impl TallyEngine {
     /// the `actual` computed value when a rule applies.
     pub(super) fn op_validate_cell(&self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.validation_sheet_index(p)?;
-        let s = p
-            .get("addr")
-            .or_else(|| p.get("cell"))
+        // Explicit `null` counts as absent, matching `sheet?:` handling.
+        let s = ["addr", "cell"]
+            .iter()
+            .filter_map(|k| p.get(*k))
+            .find(|v| !v.is_null())
             .and_then(Value::as_str)
             .ok_or_else(|| EngineError::invalid("validateCell requires 'addr'"))?;
         let (c, r) = parse_addr(s)
@@ -460,12 +474,18 @@ impl TallyEngine {
         }) else {
             return Ok(Self::readonly(json!({ "valid": true })));
         };
+        // Blank means *no stored raw*: a cell holding a formula that computes
+        // to Empty is not blank and must satisfy the criteria like any other
+        // value (its text form is absent, so every kind rejects it).
+        let has_raw = sheet
+            .cell_raw(&addr)
+            .is_some_and(|raw| !raw.is_empty());
         let mut ev = self.evaluator_for(idx);
         let computed = ev.eval_cell(&addr);
-        // Blank cells pass every criteria kind (documented ignore-blank).
-        let valid = match &computed {
-            formula::Value::Empty => true,
-            v => check_criteria(&rule.criteria, v),
+        let valid = if has_raw {
+            check_criteria(&rule.criteria, &computed)
+        } else {
+            true
         };
         let mut out = serde_json::Map::new();
         out.insert("valid".to_string(), json!(valid));
@@ -635,6 +655,75 @@ mod tests {
         assert_eq!(
             data(&mut e, "getCell", json!({"addr":"A6"}))["raw"],
             json!("ab")
+        );
+    }
+
+    #[test]
+    fn error_and_computed_empty_never_pass_bounds() {
+        let mut e = TallyEngine::new();
+        set_cell(&mut e, "A1", "=1/0"); // computes to #DIV/0!
+        set_cell(&mut e, "A2", "=B2"); // B2 is empty → computes to Empty
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"A1","to":"A1"},"rule":{"kind":"text","min_length":1,"max_length":10}}),
+        );
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"A2","to":"A2"},"rule":{"kind":"number","min":0}}),
+        );
+        // Error values never satisfy text bounds (docs), even though their
+        // text form ("#DIV/0!", 6 chars) would fit min_length..=max_length.
+        let err = validate(&mut e, json!({"addr":"A1"}));
+        assert_eq!(err["valid"], json!(false));
+        assert_eq!(err["actual"], json!("#DIV/0!"));
+        // A stored formula computing to Empty is not blank: it fails the
+        // number rule instead of passing like a cell with no stored raw.
+        let empty = validate(&mut e, json!({"addr":"A2"}));
+        assert_eq!(empty["valid"], json!(false));
+        assert_eq!(empty["actual"], Value::Null);
+        // ...while a truly blank covered cell still passes (ignore-blank).
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"A3","to":"A3"},"rule":{"kind":"text","min_length":1}}),
+        );
+        assert_eq!(validate(&mut e, json!({"addr":"A3"}))["valid"], json!(true));
+        // `list` still matches a literal error-text entry.
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"A4","to":"A4"},"rule":{"kind":"list","values":["#DIV/0!"]}}),
+        );
+        set_cell(&mut e, "A4", "=1/0");
+        assert_eq!(validate(&mut e, json!({"addr":"A4"}))["valid"], json!(true));
+    }
+
+    #[test]
+    fn payload_null_and_selector_edges() {
+        let mut e = TallyEngine::new();
+        set_cell(&mut e, "A1", "x");
+        data(
+            &mut e,
+            "setValidation",
+            json!({"range":{"from":"A1","to":"A1"},"rule":{"kind":"text","min_length":1}}),
+        );
+        // Explicit null addr/cell count as absent like `sheet:null`: the
+        // `cell` alias still resolves when `addr` is null.
+        assert_eq!(
+            validate(&mut e, json!({"addr":null,"cell":"A1"}))["valid"],
+            json!(true)
+        );
+        // `sheet` alongside `id` rejects rather than being ignored.
+        assert_eq!(
+            apply_err(&mut e, "clearValidation", json!({"id":1,"sheet":"Sheet1"})).code,
+            ErrorCode::InvalidCommand
+        );
+        // A null `sheet` with `id` is still the absent case.
+        assert_eq!(
+            data(&mut e, "clearValidation", json!({"id":1,"sheet":null}))["cleared"],
+            json!(1)
         );
     }
 

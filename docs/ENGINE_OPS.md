@@ -294,12 +294,19 @@ partial overlap rejects atomically, while the exact same sheet+range replaces
 eventless and journal-free). `clearValidation` takes exactly one of `id`
 (removes that rule, `not_found` when absent) or `range`+optional `sheet`
 (removes every rule on that sheet intersecting the rectangle; `{cleared:0}`
-is eventless). `validateCell` is a silent read: `{valid:true}` alone when no
+is eventless); `sheet` alongside `id` rejects rather than being ignored.
+`validateCell` is a silent read: `{valid:true}` alone when no
 rule covers the cell, otherwise `{valid,rule,expected,actual}` where `rule`
 resolves the bound sheet's current name and `actual` is the computed value;
-a blank cell (no stored raw) reports valid under any rule — hosts enforce
+a blank cell (no stored raw — a formula computing to Empty is *not* blank
+and must satisfy the criteria) reports valid under any rule — hosts enforce
 "value required" at commit time, and error values satisfy `list` only via a
-literal error-text entry and never satisfy `number`/`text`. Mutations record
+literal error-text entry and never satisfy `number`/`text`. Note the
+`sheet` key differs by payload: op results (`setValidation`'s `rule`,
+`validateCell`'s `rule`) report `sheet` as the bound sheet's current *name*
+plus `sheet_id` (the durable id), while `describe` returns the raw stored
+`Workbook` where each `validations[].sheet` is the durable sheet id, not a
+name. Mutations record
 one whole-document undo entry each like name ops; `removeSheet`
 cascade-drops the sheet's rules into the same undo entry and undo/redo
 re-admit them only while they still satisfy the restore invariants (existing
