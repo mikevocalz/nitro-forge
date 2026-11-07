@@ -40,6 +40,8 @@
 
 mod conditional;
 
+pub(crate) use conditional::CriteriaMatcher;
+
 use serde_json::{json, Value as JsonValue};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};

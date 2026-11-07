@@ -46,6 +46,39 @@ impl TallyEngine {
                 };
                 current || retarget
             }
+            // Conditional rules follow the same rule as names/validation:
+            // each is bound to one sheet, so setConditionalFormat guards its
+            // target sheet and clearConditionalFormat guards the rule's
+            // sheet (by id) or the target sheet (by range). Unknown ids
+            // fall through — the op reports not_found. The get/evaluate
+            // reads are ungated.
+            "setConditionalFormat" => {
+                let idx = match p.get("sheet") {
+                    Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                    _ => self.doc.active,
+                };
+                self.doc.sheets[idx].is_protected
+            }
+            "clearConditionalFormat" => match p.get("id").and_then(Value::as_u64) {
+                Some(id) => self
+                    .doc
+                    .conditional_formats
+                    .iter()
+                    .find(|r| r.id == id)
+                    .is_some_and(|r| {
+                        self.doc
+                            .sheets
+                            .iter()
+                            .any(|s| s.id == r.sheet && s.is_protected)
+                    }),
+                None => {
+                    let idx = match p.get("sheet") {
+                        Some(v) if !v.is_null() => self.resolve_sheet(v)?,
+                        _ => self.doc.active,
+                    };
+                    self.doc.sheets[idx].is_protected
+                }
+            },
             "new" => self.doc.sheets.iter().any(|s| s.is_protected),
             _ => false,
         };
@@ -101,6 +134,9 @@ mod tests {
             ("fillSeries", json!({"source":{"from":"A1","to":"A1"},"target":{"from":"A1","to":"A2"},"step":1})),
             ("setFormat", json!({"range":{"from":"A1","to":"A1"},"format":{"bold":true}})),
             ("clearFormat", json!({"cells":["A1"]})),
+            ("setConditionalFormat", json!({"range":{"from":"A1","to":"A1"},"rule":{"criteria":">1","format":{"bold":true}}})),
+            ("clearConditionalFormat", json!({"range":{"from":"A1","to":"A1"}})),
+            ("clearConditionalFormat", json!({"id":1})),
             ("renameSheet", json!({"sheet":0,"to":"Renamed"})),
             ("removeSheet", json!({"sheet":0})),
             ("duplicateSheet", json!({"sheet":0})),

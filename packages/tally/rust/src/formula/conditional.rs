@@ -11,11 +11,13 @@ enum Op {
     Gt,
     Ge,
 }
+#[derive(Clone, Copy)]
 enum Token {
     Literal(char),
     Any,
     Star,
 }
+#[derive(Clone)]
 enum Criterion {
     Number(Op, f64),
     Text(Op, Vec<Token>),
@@ -141,6 +143,35 @@ impl Criterion {
         }
     }
 }
+/// A parsed COUNTIF-style criteria string, reusable across many computed
+/// values (conditional-format rules evaluate one criteria per cell).
+#[derive(Clone)]
+pub struct CriteriaMatcher(Criterion);
+
+impl CriteriaMatcher {
+    /// Parse a criteria string (`">=3"`, `"apple*"`, `""`, …) under the same
+    /// rules `COUNTIF` applies to its criteria argument: numbers and
+    /// `=`/`<>`/`<`/`<=`/`>`/`>=`-prefixed numerics compare numbers only,
+    /// text supports `*`/`?`/`~` wildcards with ASCII-case-insensitive
+    /// matching, and relational non-numeric text rejects.
+    pub fn parse(criteria: &str) -> Result<Self, Value> {
+        let mut work = 0usize;
+        criterion(Value::Str(criteria.to_string()), &mut work).map(Self)
+    }
+
+    /// Whether `criteria` parses; used by op validation and hostile-restore
+    /// checks so stored rules always satisfy the matcher.
+    pub fn is_valid(criteria: &str) -> bool {
+        Self::parse(criteria).is_ok()
+    }
+
+    /// Test a computed cell value against the criteria. `work` is the shared
+    /// per-evaluator conditional allowance; exhaustion returns `#NUM!`.
+    pub fn matches(&self, value: &Value, work: &mut usize) -> Result<bool, Value> {
+        self.0.matches(value.clone(), work)
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Rect {
     c: u32,
@@ -230,6 +261,21 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
             Ok(Value::Num(result))
         })();
         result.unwrap_or_else(|error| error)
+    }
+
+    /// Test an already-computed value against `matcher`, sharing the
+    /// evaluator's conditional work allowance. Error-valued cells never
+    /// match; matcher failures (work exhaustion, over-long text) surface as
+    /// `Err`. Pair with `eval_cell` so the cell evaluates once per request.
+    pub fn match_value(
+        &mut self,
+        value: &Value,
+        matcher: &CriteriaMatcher,
+    ) -> Result<bool, Value> {
+        match value {
+            Value::Err(_) => Ok(false),
+            _ => matcher.matches(value, &mut self.conditional_work),
+        }
     }
 }
 

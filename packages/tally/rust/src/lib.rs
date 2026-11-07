@@ -12,6 +12,11 @@
 //! workbook-level named-range table (see `name_ops`): each entry binds a
 //! validated name to one sheet id and a canonical `"A1"`/`"A1:B2"` target;
 //! formulas resolve names bound to the sheet being evaluated.
+//! `conditional_formats` is the durable workbook-level conditional-format
+//! table (see `conditional_ops`): each rule binds a sheet id, a canonical
+//! range, a COUNTIF-style criteria string and a bounded style payload;
+//! the engine reports which rules match which computed cell values —
+//! applying the styles is host-side.
 //!
 //! Semantics documented for reviewers:
 //! * Cell addresses `$?[A-Z]+$?[0-9]+` (case-insensitive); `$` markers are
@@ -33,6 +38,7 @@
 //!   `new` — a strict superset of the spec's per-cell undo. `restore` and
 //!   `new` reset the journal's view of the world appropriately.
 
+mod conditional_ops;
 mod formula;
 mod format_ops;
 mod name_ops;
@@ -40,6 +46,7 @@ mod range_ops;
 mod sheet_ops;
 mod protection;
 
+use conditional_ops::ConditionalRule;
 use format_ops::CellFormat;
 use formula::{fmt_addr, fmt_num, parse_addr, CellLookup, Evaluator};
 use ignition_core::{
@@ -99,6 +106,12 @@ struct Workbook {
     /// Durable named ranges; empty in legacy documents.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     names: Vec<NamedRange>,
+    /// Durable conditional-format rules; empty in legacy documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    conditional_formats: Vec<ConditionalRule>,
+    /// Next id handed out by `setConditionalFormat`.
+    #[serde(default)]
+    next_conditional: u64,
 }
 
 /// Versioned snapshot wrapper, mirroring the quill/pitch precedent. Emitted
@@ -135,6 +148,8 @@ fn blank_workbook() -> Workbook {
         }],
         active: 0,
         names: Vec::new(),
+        conditional_formats: Vec::new(),
+        next_conditional: 1,
     }
 }
 
@@ -188,15 +203,18 @@ enum UndoEntry {
     /// A sheet was added; undo removes it.
     AddSheet { sheet_id: u64 },
     /// A sheet was removed; undo re-inserts it at `index`, restores `active`
-    /// and re-adds `dropped_names` (names bound to the removed sheet are
-    /// cascade-dropped on removal). Re-admission skips any dropped name whose
-    /// case-insensitive twin already exists or that would exceed `MAX_NAMES`,
-    /// keeping `doc.names` inside the invariants `restore` enforces.
+    /// and re-adds `dropped_names`/`dropped_conditional_formats` (names and
+    /// conditional rules bound to the removed sheet are cascade-dropped on
+    /// removal). Re-admission skips entries whose case-insensitive name
+    /// twin already exists, that would exceed the table caps, or (for rules)
+    /// that no longer satisfy the stored-rule invariants, keeping `doc`
+    /// inside the invariants `restore` enforces.
     RemoveSheet {
         index: usize,
         sheet: Sheet,
         prev_active: usize,
         dropped_names: Vec<NamedRange>,
+        dropped_conditional_formats: Vec<ConditionalRule>,
     },
     RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
@@ -322,10 +340,10 @@ impl TallyEngine {
         self.doc.sheets.iter_mut().find(|s| s.id == id)
     }
 
-    /// Fresh per-request evaluator over the active sheet, with workbook
+    /// Fresh per-request evaluator over one sheet, with workbook
     /// named-range resolution enabled when `names` is nonempty.
-    fn evaluator(&self) -> Evaluator<'_, Sheet> {
-        let sheet = self.active_sheet();
+    fn evaluator_for(&self, index: usize) -> Evaluator<'_, Sheet> {
+        let sheet = &self.doc.sheets[index];
         if self.doc.names.is_empty() {
             Evaluator::new(sheet)
         } else {
@@ -333,10 +351,18 @@ impl TallyEngine {
         }
     }
 
+    /// Fresh per-request evaluator over the active sheet.
+    fn evaluator(&self) -> Evaluator<'_, Sheet> {
+        self.evaluator_for(self.doc.active)
+    }
+
     /// Remove sheet at `idx`, fixing `active` exactly like `removeSheet` and
-    /// cascade-dropping names bound to the removed sheet id. Returns the
-    /// removed sheet and the dropped names.
-    fn remove_sheet_at(&mut self, idx: usize) -> (Sheet, Vec<NamedRange>) {
+    /// cascade-dropping names and conditional rules bound to the removed
+    /// sheet id. Returns the removed sheet and the dropped entries.
+    fn remove_sheet_at(
+        &mut self,
+        idx: usize,
+    ) -> (Sheet, Vec<NamedRange>, Vec<ConditionalRule>) {
         let removed = self.doc.sheets.remove(idx);
         let len = self.doc.sheets.len();
         if self.doc.active > idx {
@@ -353,7 +379,16 @@ impl TallyEngine {
                 true
             }
         });
-        (removed, dropped)
+        let mut dropped_rules = Vec::new();
+        self.doc.conditional_formats.retain(|r| {
+            if r.sheet == removed.id {
+                dropped_rules.push(r.clone());
+                false
+            } else {
+                true
+            }
+        });
+        (removed, dropped, dropped_rules)
     }
 
     // -- op results -----------------------------------------------------------
@@ -448,8 +483,9 @@ impl TallyEngine {
         if self.doc.sheets.len() <= 1 {
             return Err(EngineError::validation("workbook must keep at least one sheet"));
         }
-        // Names bound to the removed sheet are cascade-dropped; the undo
-        // entry carries them so undo/redo restore them exactly.
+        // Names and conditional rules bound to the removed sheet are
+        // cascade-dropped; the undo entry carries them so undo/redo restore
+        // them exactly.
         let sheet_id = self.doc.sheets[idx].id;
         let dropped_names: Vec<NamedRange> = self
             .doc
@@ -458,11 +494,19 @@ impl TallyEngine {
             .filter(|n| n.sheet == sheet_id)
             .cloned()
             .collect();
+        let dropped_conditional_formats: Vec<ConditionalRule> = self
+            .doc
+            .conditional_formats
+            .iter()
+            .filter(|r| r.sheet == sheet_id)
+            .cloned()
+            .collect();
         let entry = UndoEntry::RemoveSheet {
             index: idx,
             sheet: self.doc.sheets[idx].clone(),
             prev_active: self.doc.active,
             dropped_names,
+            dropped_conditional_formats,
         };
         self.journal.record(entry);
         self.remove_sheet_at(idx);
@@ -696,12 +740,14 @@ impl TallyEngine {
                 match self.doc.sheets.iter().position(|s| s.id == sheet_id) {
                     Some(idx) => {
                         let prev_active = self.doc.active;
-                        let (removed, dropped_names) = self.remove_sheet_at(idx);
+                        let (removed, dropped_names, dropped_conditional_formats) =
+                            self.remove_sheet_at(idx);
                         UndoEntry::RemoveSheet {
                             index: idx,
                             sheet: removed,
                             prev_active,
                             dropped_names,
+                            dropped_conditional_formats,
                         }
                     }
                     // Already gone — nothing changed; emit a no-op entry.
@@ -715,6 +761,7 @@ impl TallyEngine {
                 sheet,
                 prev_active,
                 dropped_names,
+                dropped_conditional_formats,
             } => {
                 let idx = index.min(self.doc.sheets.len());
                 let sheet_id = sheet.id;
@@ -739,6 +786,18 @@ impl TallyEngine {
                         continue;
                     }
                     self.doc.names.push(n);
+                }
+                // Conditional rules cascade-dropped with the sheet come back
+                // under the same discipline: each is re-admitted only while
+                // it still satisfies the invariants `restore` enforces
+                // (existing sheet, canonical in-bounds range, parseable
+                // criteria, valid format, unique id, under the cap). Rules
+                // cannot be created for a sheet while it is gone, so
+                // conflicts are defensive.
+                for r in dropped_conditional_formats {
+                    if conditional_ops::readd_ok(&self.doc, &r) {
+                        self.doc.conditional_formats.push(r);
+                    }
                 }
                 UndoEntry::AddSheet { sheet_id }
             }
@@ -809,6 +868,10 @@ impl Engine for TallyEngine {
             "removeName" => self.op_remove_name(p),
             "listNames" => self.op_list_names(),
             "functionCatalog" => self.op_function_catalog(),
+            "setConditionalFormat" => self.op_set_conditional_format(p),
+            "clearConditionalFormat" => self.op_clear_conditional_format(p),
+            "getConditionalFormats" => self.op_get_conditional_formats(p),
+            "evaluateConditionalFormats" => self.op_evaluate_conditional_formats(p),
             "clearCell" => self.op_clear_cell(p),
             "getCell" => self.op_get_cell(p),
             "getRange" => self.op_get_range(p),
@@ -838,19 +901,28 @@ impl Engine for TallyEngine {
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        // Sheets with a tone, protection flag, stored formats, or any
-        // workbook names carry durable fields added after the first release;
-        // older readers ignore unknown `Sheet`/`Workbook` fields, so wrap
-        // those documents and let old engines fail
-        // closed instead of silently discarding them. Plain workbooks keep
-        // the legacy payload shape.
+        // Sheets with a tone, protection flag, stored formats, workbook
+        // names, or conditional-format rules carry durable fields added
+        // after the first release; older readers ignore unknown
+        // `Sheet`/`Workbook` fields, so wrap those documents and let old
+        // engines fail closed instead of silently discarding them. Plain
+        // workbooks keep the legacy payload shape. `conditional_formats`
+        // postdates the schema:1 wrapper fields and `Workbook` does not
+        // deny unknown fields, so documents carrying rules emit schema:3 —
+        // schema:1 readers reject them. schema:2 is reserved by the
+        // unmerged data-validation slice (`codex/w6-tally-validation`); this
+        // build emits and accepts only {1,3} so a validation snapshot fails
+        // closed here rather than being silently stripped (see
+        // docs/ENGINE_OPS.md for the merge reconciliation note).
+        let has_conditional = !self.doc.conditional_formats.is_empty();
         let extended = self.doc.sheets.iter().any(|s| {
             s.tone.is_some() || s.is_protected || !s.formats.is_empty()
-        }) || !self.doc.names.is_empty();
+        }) || !self.doc.names.is_empty()
+            || has_conditional;
         let payload = if extended {
             serde_json::to_vec(&VersionedSnapshot {
                 kind: "tally",
-                schema: 1,
+                schema: if has_conditional { 3 } else { 1 },
                 document: &self.doc,
             })?
         } else {
@@ -870,7 +942,10 @@ impl Engine for TallyEngine {
         });
         let mut doc: Workbook = if wrapped {
             let wrapper: VersionedDoc = serde_json::from_value(value)?;
-            if wrapper.kind != "tally" || wrapper.schema != 1 {
+            // schema:2 is intentionally absent: it belongs to the unmerged
+            // validation slice and this build cannot honor its rules, so
+            // accepting it would silently drop them on the next save.
+            if wrapper.kind != "tally" || !matches!(wrapper.schema, 1 | 3) {
                 return Err(EngineError::unsupported(
                     "unsupported Tally snapshot kind/schema",
                 ));
@@ -963,6 +1038,58 @@ impl Engine for TallyEngine {
             let coords = name_ops::parse_refers_to(&n.refers_to)
                 .map_err(|_| EngineError::serialization("invalid refers_to"))?;
             n.refers_to = name_ops::canonical_refers_to(coords);
+        }
+        // Conditional rules get the same hostile-input treatment: bounded
+        // count, unique ids, existing sheet ids, canonical on-sheet ranges
+        // within the shared cell cap, criteria the matcher accepts, and
+        // valid format payloads.
+        if doc.conditional_formats.len() > conditional_ops::MAX_CONDITIONAL_RULES {
+            return Err(EngineError::serialization(
+                "too many conditional format rules",
+            ));
+        }
+        let mut seen_rule_ids = std::collections::BTreeSet::new();
+        for r in &mut doc.conditional_formats {
+            if !seen_rule_ids.insert(r.id) {
+                return Err(EngineError::serialization(
+                    "duplicate conditional rule id",
+                ));
+            }
+            if !doc.sheets.iter().any(|s| s.id == r.sheet) {
+                return Err(EngineError::serialization(
+                    "conditional rule references a missing sheet",
+                ));
+            }
+            if !formula::CriteriaMatcher::is_valid(&r.criteria) {
+                return Err(EngineError::serialization(
+                    "invalid conditional criteria",
+                ));
+            }
+            if !conditional_ops::valid_conditional_format(&r.format) {
+                return Err(EngineError::serialization(
+                    "invalid conditional format",
+                ));
+            }
+            let coords = name_ops::parse_refers_to(&r.range)
+                .map_err(|_| EngineError::serialization("invalid conditional range"))?;
+            if (coords.2 - coords.0 + 1) as u64 * (coords.3 - coords.1 + 1) as u64
+                > MAX_GET_RANGE_CELLS
+            {
+                return Err(EngineError::serialization(
+                    "conditional range exceeds 16384 cells",
+                ));
+            }
+            r.range = name_ops::canonical_refers_to(coords);
+        }
+        if let Some(max_id) = doc.conditional_formats.iter().map(|r| r.id).max() {
+            if doc.next_conditional <= max_id {
+                doc.next_conditional = max_id.checked_add(1).ok_or_else(|| {
+                    EngineError::serialization("conditional rule id space exhausted")
+                })?;
+            }
+        }
+        if doc.next_conditional == 0 {
+            doc.next_conditional = 1;
         }
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
@@ -1409,6 +1536,7 @@ mod tests {
             sheet: ghost_sheet(77),
             prev_active: 0,
             dropped_names: vec![dropped_name("Foo"), dropped_name("Bar")],
+            dropped_conditional_formats: Vec::new(),
         });
         assert!(e.undo().unwrap());
         // "foo" (defined meanwhile) wins; "Foo" is skipped, "Bar" returns.
@@ -1449,6 +1577,7 @@ mod tests {
             sheet: ghost_sheet(77),
             prev_active: 0,
             dropped_names: vec![dropped_name("Extra")],
+            dropped_conditional_formats: Vec::new(),
         });
         assert!(e.undo().unwrap());
         assert_eq!(e.doc.names.len(), name_ops::MAX_NAMES);

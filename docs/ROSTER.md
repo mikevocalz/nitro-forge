@@ -670,3 +670,31 @@ Motion layers now carry an optional `effects` stack (at most 16 typed entries: `
 ## P14 Pitch morph transitions source checkpoint (2026-11-07)
 
 Pitch slide transitions now admit `kind:"morph"` and objects carry an optional `morph_name` tag set via `setMorphName`/`clearMorphName`. Names are non-blank, <=128 UTF-8 bytes and unique per slide (the same name on different slides is the intended cross-slide pairing); equal re-tags and absent clears are eventless no-ops, tags die with their objects, and hostile restores reject duplicate or out-of-bound names. DATA ONLY: the engine stores the morph kind and the tags for the host to match objects across adjacent slides; it performs no morph evaluation, interpolation or rendering. Snapshots carrying morph data use the new `{kind:"pitch",schema:5}` wrapper because `morph_name` is an additive field old readers would silently drop (the `"morph"` kind variant already fails closed); readers accept schema:2 through schema:5. Local evidence: `cargo test -p pitch-engine` 71 passed (3 new morph tests), `pnpm --filter @nitro-forge/pitch test` 36 passed across 8 files (2 new nf-cli morph cases), package typecheck clean, `cargo build -p nf-cli` clean. No native target run, morph pixel evaluation or full P14 completion is implied.
+
+## Tally conditional formats source checkpoint (2026-11-07)
+
+Tally persists workbook-level conditional-format rules (`id`, bound sheet id,
+canonical `"A1"`/`"A1:B2"` range, COUNTIF-style `criteria`, bounded `format`
+payload of `bold`/`italic`/`underline`/`color`/`fill`) via new
+`setConditionalFormat`/`clearConditionalFormat`/`getConditionalFormats`/
+`evaluateConditionalFormats` ops. Criteria reuse the `COUNTIF`/`SUMIF`
+matcher (`formula::conditional`, now exposed as `CriteriaMatcher` +
+`Evaluator::match_value`), so comparisons, wildcards and empty-text
+semantics match the aggregate functions exactly; evaluation runs against
+computed cell values through the normal evaluator, so matches track edits,
+undo and reopen. Rules may overlap (unlike validation); an identical
+resubmission is eventless, mutations journal whole-document undo entries,
+`removeSheet` cascade-drops rules into the undo entry with `readd_ok`
+re-admission, and bound-sheet protection guards apply. `evaluateConditionalFormats`
+reports `{addr, computed, matches}` per cell — matches only, no style
+application, merge or rendering (host-side). Rules-carrying snapshots emit
+`{kind:"tally",schema:3}`; schema:2 is reserved by the unmerged
+`codex/w6-tally-validation` slice, which this build rejects fail-closed —
+merge reconciliation (accept 1–3, emit 3/2/1 by feature) is documented in
+`docs/ENGINE_OPS.md`. Deferred: NYC-Tron `kind` variants (formula,
+color-scale, icon-set, data-bar), `styleId`, `enabled`/`stopIfTrue`,
+whole-row/column ranges, pixel output. Local evidence: `cargo test -p
+tally-engine` 82 passed (6 new), `pnpm --filter @nitro-forge/tally` 47
+Vitest passed across 12 files (2 new live `nf-cli` cases), package
+typecheck clean, `cargo build -p nf-cli` clean. No native target run, XLSX
+or full P13 completion is implied.
