@@ -1326,3 +1326,45 @@ stranding and snapshot round-trip), `cargo build -p nf-cli` clean,
 @nitro-forge/motion test` 8 passed across 7 files (1 new nf-cli particles
 case), `pnpm --filter @nitro-forge/motion typecheck` clean. Particle UI,
 GPU sims, per-particle curves and full P11 completion are not implied.
+
+## P11 Motion slice G1 3D model/eval source checkpoint (2026-11-08)
+
+Motion layers gain an optional `transform3d` (`{rx,ry,z}` — X/Y euler
+rotations in degrees about the layer's anchor plus view depth) set via the
+new `setLayer3D` op (null clears the transform and any `rx`/`ry`/`z` curves
+atomically, the `setMotionPath` precedent). `rx`/`ry`/`z` are ordinary scalar
+curve properties on the existing `setPropertyKeys` machinery bounded ±1e7
+with no angle wrapping; `rotation` remains the Z-axis roll so no new
+position/scale/roll/anchor fields exist. Presence of `transform3d` marks the
+layer 3D-enabled and is required by 3D curves — `validate` rejects orphan
+3D curves on hostile restore too. **Storage/eval only, no raster**:
+`renderFrame` ignores `transform3d` entirely (nonzero rx/ry/z produce
+byte-identical pixels, verified), while `evaluate` reports each 3D layer's
+evaluated `{rx,ry,z}` plus a read-only computed `projected_transform`
+`{a,b,c,d,e,f}` — the orthographic projection (view axis = layer-local Z,
+depth dropped) of the evaluated local transform as raw 2x3 coefficients,
+because the projected affine can carry shear the pivoted `Transform` fields
+cannot express. Documented limitations: `z` never enters the orthographic
+coefficients, the 2D `rotation` roll composes inside the pre-tilt transform
+rather than the euler chain, projection is local-only like every other
+`evaluate` transform report, `describe`/snapshots carry authored values only,
+and there is no camera, lights, depth sorting or true projection rendering —
+the backlog's `Camera`/`Light[]` G1 entries are deferred (camera parameters
+are meaningless until G2 defines the view model; lights belong to G3).
+Snapshot schema stays 2 via additive serde defaults; old readers fail closed
+(`transform3d` is unknown under `deny_unknown_fields`, `rx`/`ry`/`z` curve
+names fail the strict `Property` enum) — never silently dropped, the same
+accepted cost as blend/clipped/matte/effects/path/emitter. `updateLayer`
+does not patch `transform3d` (dedicated op only); equal writes and
+clear-when-absent are eventless.
+
+Local evidence: `cargo test -p motion-engine` 71 passed (8 new: 5 engine
+tests covering set/eval curves, hand-verified projected affine coefficients,
+edge-on collapse, render no-op byte-identity, snapshot round-trip,
+undo/redo, atomic clear, equal-write eventless, bounds/locked/hostile-restore
+rejection and nested-comp projection, plus 3 projection unit tests),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/motion test` 9 passed across 8 files (1 new
+nf-cli transform3d case), `pnpm --filter @nitro-forge/motion typecheck`
+clean. 3D rasterization, camera, lights, depth ordering and full P11
+completion are not implied.
