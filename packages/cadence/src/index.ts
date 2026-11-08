@@ -30,6 +30,7 @@ export const OPS = {
   setVelocity: "setVelocity",
   project: "project",
   render: "render",
+  renderStems: "renderStems",
   setTrackOutput: "setTrackOutput",
   setSend: "setSend",
   removeSend: "removeSend",
@@ -388,6 +389,25 @@ export class CadenceDocument {
       samples: new Float32Array(base64ToBytes(r.data.samples_b64).buffer),
       frames: r.data.frames,
     };
+  }
+  /**
+   * Offline-render the range to per-track/bus stereo stems. Each stem is the
+   * track's post-fader output before it reaches the master, in document
+   * order; muted or silent tracks return zeroed stems. Same range and
+   * sample-rate bounds as `render`. Read-only.
+   */
+  async renderStems(fromTicks: number, toTicks: number, sampleRate = 44100) {
+    const r = await this.call<{ stems_b64: string; frames: number; stems: { id: number }[] }>(
+      OPS.renderStems,
+      { from_ticks: fromTicks, to_ticks: toTicks, sample_rate: sampleRate },
+    );
+    const all = new Float32Array(base64ToBytes(r.data.stems_b64).buffer);
+    const perStem = r.data.frames * 2;
+    const stems = r.data.stems.map((s, i) => ({
+      id: s.id,
+      samples: all.subarray(i * perStem, (i + 1) * perStem),
+    }));
+    return { stems, frames: r.data.frames, channels: 2 as const };
   }
   describe<T = unknown>() {
     return this.call<T>(OPS.describe);

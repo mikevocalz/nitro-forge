@@ -364,6 +364,43 @@ impl CadenceEngine {
                 })).with_bytes(cmd,"samples_b64",render::to_f32le(&mix.master)))
 
  }
+
+/// `renderStems`: the same bounded mixdown as `render`, but returns each
+/// track's and bus's post-fader stereo output instead of the master. Stems
+/// are concatenated in document order into one f32le blob under
+/// `stems_b64`; every stem has `frames` samples, so stem i occupies
+/// `[i*frames*8, (i+1)*frames*8)` bytes. The metronome only ever mixes into
+/// the master, so it is not part of any stem and the op takes no
+/// `include_metronome`.
+fn render_stems_command(&self,cmd:&Command,ctx:Option<&TaskContext>)->Result<CommandResult,EngineError>{
+ let p=&cmd.payload;
+                let from = req_ticks(p, "from_ticks")?;
+                let to = req_ticks(p, "to_ticks")?;
+                let sample_rate = req_u64(p, "sample_rate")?;
+                if to <= from {
+                    return Err(EngineError::validation("to_ticks must be > from_ticks"));
+                }
+                if sample_rate == 0 {
+                    return Err(EngineError::validation("sample_rate must be > 0"));
+                }
+                let mix = render::mixdown_with_context(&self.doc, from, to, sample_rate, false, true,ctx)?;
+                let mut bytes = Vec::with_capacity(mix.stems.len() * mix.frames * 8);
+                for (_, sig) in &mix.stems {
+                    bytes.extend_from_slice(&render::to_f32le(sig));
+                }
+                let stems: Vec<Value> = mix.stems.iter().map(|(id, _)| json!({ "id": id })).collect();
+                Ok(Self::read_only(json!({
+                    "frames": mix.frames,
+                    "channels": 2,
+                    "stems": stems,
+                })).with_bytes(cmd,"stems_b64",bytes))
+ }
+
+/// Task-path dispatcher: `render` and `renderStems` share the same bounded
+/// mixdown, so both checkpoint inside synthesis.
+fn render_or_stems(&self,cmd:&Command,ctx:Option<&TaskContext>)->Result<CommandResult,EngineError>{
+ if cmd.op=="renderStems"{self.render_stems_command(cmd,ctx)}else{self.render_command(cmd,ctx)}
+}
 }
 
 impl Engine for CadenceEngine {
@@ -374,7 +411,7 @@ impl Engine for CadenceEngine {
     fn apply_long(&mut self,cmd:Command,ctx:&TaskContext)->Result<CommandResult,EngineError>{
         if cmd.op==ignition_core::OP_BATCH{return self.apply_batch(cmd,Some(ctx));}
         ctx.checkpoint()?;
-        let result=if cmd.op=="render"&&cmd.v==1{self.render_command(&cmd,Some(ctx))}else{self.apply(cmd)}?;
+        let result=if matches!(cmd.op.as_str(),"render"|"renderStems")&&cmd.v==1{self.render_or_stems(&cmd,Some(ctx))}else{self.apply(cmd)}?;
         ctx.set_progress(1.0);Ok(result)
     }
 
@@ -824,6 +861,7 @@ impl Engine for CadenceEngine {
                 })))
             }
             "render" => self.render_command(&cmd,None),
+            "renderStems" => self.render_stems_command(&cmd,None),
 
             other => self
                 .apply_mixer(other, p)

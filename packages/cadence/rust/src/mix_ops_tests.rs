@@ -535,6 +535,56 @@ fn snapshots_from_before_the_mixer_fields_restore() {
     assert_eq!(d["tracks"][0]["clips"][0]["notes"][0]["channel"], 0);
 }
 
+// ---- renderStems -----------------------------------------------------------------
+
+#[test]
+fn render_stems_returns_one_post_fader_stem_per_track_and_bus() {
+    let mut e = CadenceEngine::new();
+    let (a, _) = tone_track(&mut e);
+    let (b, _) = tone_track(&mut e);
+    ok(&mut e, "setMuted", json!({"id": b, "muted": true}));
+    let bus = bus(&mut e);
+    ok(&mut e, "setTrackOutput", json!({"id": a, "output": bus}));
+    ok(&mut e, "setTrackGain", json!({"id": bus, "volume": 0.5}));
+    let depth = undo_depth(&mut e);
+    let r = ok(&mut e, "renderStems", json!({"from_ticks": 240, "to_ticks": 720, "sample_rate": 8000}));
+    assert_eq!(r["frames"], 2000);
+    assert_eq!(r["channels"], 2);
+    // Document order: track a, track b, bus.
+    assert_eq!(r["stems"], json!([{"id": a}, {"id": b}, {"id": bus}]));
+    let bytes = b64(r["stems_b64"].as_str().unwrap());
+    assert_eq!(bytes.len(), 3 * 2000 * 8, "three stereo f32 stems");
+    let f: Vec<f32> = bytes.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
+    let peak = |stem: usize| -> f64 {
+        let base = stem * 2000 * 2;
+        (0..2000).fold(0f64, |m, i| m.max(f[base + i * 2].abs() as f64).max(f[base + i * 2 + 1].abs() as f64))
+    };
+    // Track a sounds through its own stem; muted b is silent; the bus stem
+    // carries a's signal at the bus fader.
+    assert!((peak(0) - CENTRE).abs() < 0.02, "stem a {}", peak(0));
+    assert_eq!(peak(1), 0.0, "muted stem b");
+    assert!((peak(2) - CENTRE * 0.5).abs() < 0.02, "bus stem {}", peak(2));
+    // Read-only: no undo entries, no events recorded by `ok`.
+    assert_eq!(undo_depth(&mut e), depth);
+    rejects(&mut e, "renderStems", json!({"from_ticks": 720, "to_ticks": 240, "sample_rate": 8000}), ErrorCode::Validation);
+    rejects(&mut e, "renderStems", json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 0}), ErrorCode::Validation);
+}
+
+#[test]
+fn task_render_stems_matches_sync_output() {
+    use ignition_core::{base64_decode, TaskContext};
+    let mut e = CadenceEngine::new();
+    tone_track(&mut e);
+    let payload = json!({"from_ticks":0,"to_ticks":960,"sample_rate":48000});
+    let before = e.snapshot().unwrap();
+    let legacy = e.apply(Command::new("renderStems",payload.clone())).unwrap();
+    let context = TaskContext::new();
+    let task = e.apply_long(Command::new("renderStems",payload).with_binary(None), &context).unwrap();
+    assert_eq!(task.output.unwrap(), base64_decode(legacy.data["stems_b64"].as_str().unwrap()).unwrap());
+    assert_eq!(context.progress(),1.0);
+    assert_eq!(e.snapshot().unwrap(),before);
+}
+
 #[test]
 fn task_render_can_cancel_inside_synthesis(){
  use ignition_core::{Engine,TaskContext};

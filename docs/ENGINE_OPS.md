@@ -1069,6 +1069,7 @@ passes `include_metronome: true`.
 | `setVelocity` | `{clip,index,velocity}` | `{ok}` | 0..127 integer |
 | `project` | `{}` | meta: tempo, sig, track/clip/note counts, length_ticks | read-only |
 | `render` | `{from_ticks,to_ticks,sample_rate,include_metronome?}` | `{samples_b64,frames,channels:2}` | f32le stereo mixdown per the signal flow above; ≤10 min at 48 kHz |
+| `renderStems` | `{from_ticks,to_ticks,sample_rate}` | `{stems_b64,frames,channels:2,stems:[{id}]}` | read-only; same bounds as `render`. `stems_b64` is every track's and bus's post-fader stereo output concatenated in document order (same f32le convention as `samples_b64`); each stem is `frames` frames long, so stem i occupies bytes `[i*frames*8,(i+1)*frames*8)`. The metronome only mixes into the master, so it never appears in a stem |
 | `addTrack` kind `bus` | `{name?,kind:"bus"}` | `{track_id}` | default name `Bus N` |
 | `removeTrack` (bus) | `{id}` | `{ok}` | tracks routed or sending to it fall back to the master in the same step |
 | `setTrackOutput` | `{id,output}` | `{ok}` | `output` bus id or `null` (master); buses and missing ids rejected |

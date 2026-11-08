@@ -182,6 +182,27 @@ describe("mixer ops against the real Rust Cadence engine", () => {
     }
   });
 
+  it("renders per-track stems through the real engine", async () => {
+    const { doc, track, bus } = await setup();
+    try {
+      await doc.setTrackOutput(track, bus);
+      await doc.setTrackGain(bus, 0.5);
+      const r = await doc.renderStems(240, 720, 8000);
+      expect(r.frames).toBe(2000);
+      expect(r.stems.map(s => s.id)).toEqual([track, bus]);
+      const peak = (s: Float32Array) => s.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+      // Track stem is post-fader; bus stem carries it at the bus's half gain.
+      expect(peak(r.stems[0]!.samples)).toBeCloseTo(Math.SQRT1_2, 1);
+      expect(peak(r.stems[1]!.samples)).toBeCloseTo(Math.SQRT1_2 * 0.5, 1);
+      // The master render still works alongside; stems are read-only.
+      const master = await doc.render(240, 720, 8000);
+      expect(master.samples.some(v => v !== 0)).toBe(true);
+      await rejectsWith(doc.handle.apply(OPS.renderStems, { from_ticks: 720, to_ticks: 240, sample_rate: 8000 }), "validation");
+    } finally {
+      await doc.close();
+    }
+  });
+
   it("measures loudness and a spectrogram", async () => {
     const { doc } = await setup();
     try {
