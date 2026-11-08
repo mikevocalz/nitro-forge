@@ -9,7 +9,7 @@ output actually exists; anything not executed is marked NOT RUN.
 |---|---|---|
 | ignition-core contract tests | 5 pass | `cargo test -p ignition-core` |
 | prism-engine unit tests | 135 pass | `cargo test -p prism-engine` |
-| tally-engine unit + formula tests | 27 pass | `cargo test -p tally-engine` |
+| tally-engine unit + formula tests | 212 pass | `cargo test -p tally-engine` |
 | cadence-engine tests (incl. real PCM render, stems, clip split/gain/mute, beat detection) | 70 pass | `cargo test -p cadence-engine` |
 | @nitro-forge/cadence vitest e2e via nf-cli | 45 pass | `pnpm --filter @nitro-forge/cadence test` |
 | splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch, keyframed speed) | 51 pass | `cargo test -p splice-engine` |
