@@ -30,7 +30,7 @@ pub fn render(
     {
         return Err(bad("invalid bounded world viewport"));
     }
-    let mut paths = Vec::new();
+    let mut paths = crate::hatch::render(s, view.origin_x, view.origin_y, view.scale, ctx)?;
     let circular = circular::geometries(s);
     for id in &s.order {
         if let Some(ctx) = ctx {

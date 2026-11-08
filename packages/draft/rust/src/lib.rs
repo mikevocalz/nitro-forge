@@ -3,6 +3,7 @@ mod circular;
 mod commands;
 mod constraints;
 mod engine;
+mod hatch;
 mod model;
 mod profiles;
 mod render;
