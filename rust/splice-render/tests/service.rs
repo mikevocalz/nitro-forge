@@ -686,3 +686,190 @@ fn output_is_deterministic() {
     }));
     assert_eq!(a["bytes_b64"], b["bytes_b64"]);
 }
+
+// ---- cache-key regression tests --------------------------------------------
+
+fn frame_bytes(data: &Value) -> Vec<u8> {
+    base64_decode(data["bytes_b64"].as_str().unwrap()).unwrap()
+}
+
+#[test]
+fn cache_key_covers_plan_and_sources_without_salts() {
+    let mut svc = RenderService::new();
+    let red = solid(200, 0, 0);
+    let blue = solid(0, 0, 200);
+    // Two plans that differ only in which source they reference; same
+    // t, size, fit, and NO snapshot/media salts.
+    let pa = plan(vec![vec![clip(1, 7, 0.0, 1.0, 0.0, 1.0)]], vec![vec![]]);
+    let pb = plan(vec![vec![clip(1, 8, 0.0, 1.0, 0.0, 1.0)]], vec![vec![]]);
+    let src = json!({
+        "7": vsource(vec![frame(0.0, &red)]),
+        "8": vsource(vec![frame(0.0, &blue)]),
+    });
+    let payload = |p: &Value, s: &Value| {
+        json!({
+            "width": W, "height": H, "time_s": 0.5,
+            "plan": p, "sources": s,
+        })
+    };
+
+    let a1 = call(&mut svc, 1, "renderFrame", payload(&pa, &src));
+    assert_eq!(a1["cached"], false);
+    assert_eq!(uniform(&frame_bytes(&a1)), [200, 0, 0, 255]);
+    // Identical inputs, still no salts → hit.
+    let a2 = call(&mut svc, 2, "renderFrame", payload(&pa, &src));
+    assert_eq!(a2["cached"], true);
+    // Different plan, same t/W/H/fit, no salts → MUST miss and produce
+    // the correct (blue) frame, not plan A's cached red.
+    let b1 = call(&mut svc, 3, "renderFrame", payload(&pb, &src));
+    assert_eq!(b1["cached"], false);
+    assert_eq!(uniform(&frame_bytes(&b1)), [0, 0, 200, 255]);
+    // Plan A's entry must still be intact and hitting.
+    let a3 = call(&mut svc, 4, "renderFrame", payload(&pa, &src));
+    assert_eq!(a3["cached"], true);
+    assert_eq!(a3["bytes_b64"], a1["bytes_b64"]);
+
+    // Same plan, different decoded source content → miss + correct.
+    let src2 = json!({
+        "7": vsource(vec![frame(0.0, &blue)]),
+        "8": vsource(vec![frame(0.0, &blue)]),
+    });
+    let c1 = call(&mut svc, 5, "renderFrame", payload(&pa, &src2));
+    assert_eq!(c1["cached"], false);
+    assert_eq!(uniform(&frame_bytes(&c1)), [0, 0, 200, 255]);
+
+    // renderRange/nextFrame jobs carry the same digest: two jobs with
+    // different plans and no salts must not share cache entries.
+    let job_payload = |p: &Value, s: &Value| {
+        json!({
+            "width": W, "height": H, "fps": 10.0, "duration_s": 0.1,
+            "plan": p, "sources": s,
+        })
+    };
+    let ja = call(&mut svc, 6, "renderRange", job_payload(&pa, &src));
+    let jb = call(&mut svc, 7, "renderRange", job_payload(&pb, &src));
+    let ja_id = ja["job"].as_u64().unwrap();
+    let jb_id = jb["job"].as_u64().unwrap();
+    // Both first frames land on t=0.0 — same key modulo the digest.
+    let fa = call(&mut svc, 8, "nextFrame", json!({ "job": ja_id }));
+    let fb = call(&mut svc, 9, "nextFrame", json!({ "job": jb_id }));
+    assert_eq!(fa["time_s"], fb["time_s"]);
+    // Neither t=0.0 frame was cached by the t=0.5 renderFrame calls, so
+    // both are misses — and job B must NOT hit job A's entry (same
+    // salts=none, same t/W/H/fit; only the plan digest differs). Under
+    // the pre-fix key job B would have returned job A's red frame.
+    assert_eq!(fa["cached"], false);
+    assert_eq!(fb["cached"], false);
+    assert_eq!(uniform(&frame_bytes(&fa)), [200, 0, 0, 255]);
+    assert_eq!(uniform(&frame_bytes(&fb)), [0, 0, 200, 255]);
+    // Drain both jobs so they don't leak into later tests' job cap.
+    for _ in 0..(ja["frames"].as_u64().unwrap() as usize) {
+        call(&mut svc, 10, "nextFrame", json!({ "job": ja_id }));
+    }
+    for _ in 0..(jb["frames"].as_u64().unwrap() as usize) {
+        call(&mut svc, 11, "nextFrame", json!({ "job": jb_id }));
+    }
+}
+
+#[test]
+fn cache_salt_fields_cannot_collide_across_boundaries() {
+    let mut svc = RenderService::new();
+    let red = solid(200, 0, 0);
+    let blue = solid(0, 0, 200);
+    let pa = plan(vec![vec![clip(1, 7, 0.0, 1.0, 0.0, 1.0)]], vec![vec![]]);
+    let pb = plan(vec![vec![clip(1, 8, 0.0, 1.0, 0.0, 1.0)]], vec![vec![]]);
+    let src = json!({
+        "7": vsource(vec![frame(0.0, &red)]),
+        "8": vsource(vec![frame(0.0, &blue)]),
+    });
+    // Legacy bare-'|' keys made ("a|b","c") == ("a","b|c"). With
+    // length-prefixed fields these must be distinct cache entries.
+    let d1 = call(&mut svc, 1, "renderFrame", json!({
+        "width": W, "height": H, "time_s": 0.5,
+        "snapshot": "a|b", "media": "c",
+        "plan": pa, "sources": src,
+    }));
+    assert_eq!(d1["cached"], false);
+    assert_eq!(uniform(&frame_bytes(&d1)), [200, 0, 0, 255]);
+    let d2 = call(&mut svc, 2, "renderFrame", json!({
+        "width": W, "height": H, "time_s": 0.5,
+        "snapshot": "a", "media": "b|c",
+        "plan": pb, "sources": src,
+    }));
+    // Must NOT hit plan A's entry: distinct salts AND distinct plan
+    // digest. A hit here would return red bytes for a blue plan.
+    assert_eq!(d2["cached"], false);
+    assert_eq!(uniform(&frame_bytes(&d2)), [0, 0, 200, 255]);
+    // Repeat of the first salt pair still hits its own entry.
+    let d3 = call(&mut svc, 3, "renderFrame", json!({
+        "width": W, "height": H, "time_s": 0.5,
+        "snapshot": "a|b", "media": "c",
+        "plan": pa, "sources": src,
+    }));
+    assert_eq!(d3["cached"], true);
+    assert_eq!(d3["bytes_b64"], d1["bytes_b64"]);
+}
+
+#[test]
+fn u64_fields_reject_wraparound_and_transition_span_must_match() {
+    let mut svc = RenderService::new();
+    let red = solid(200, 0, 0);
+    let p = plan(vec![vec![clip(1, 7, 0.0, 1.0, 0.0, 1.0)]], vec![vec![]]);
+    let src = json!({ "7": vsource(vec![frame(0.0, &red)]) });
+
+    // width = 2^32 + 4 must NOT wrap to 4 and pass the canvas bound.
+    assert_eq!(
+        call_err(&mut svc, "renderFrame", json!({
+            "width": 4294967300u64, "height": 4, "time_s": 0.0,
+            "plan": p, "sources": src,
+        })),
+        ErrorCode::OutOfBounds
+    );
+    // Source width = 2^32 + 4096 must not wrap into MAX_SOURCE_DIM.
+    let bad_src = json!({ "7": { "width": 4294971392u64, "height": 4, "frames": [
+        { "t_s": 0.0, "bytes_b64": base64_encode(&solid(1, 2, 3)) }
+    ]}});
+    assert_eq!(
+        call_err(&mut svc, "renderFrame", json!({
+            "width": W, "height": H, "time_s": 0.0, "plan": p, "sources": bad_src,
+        })),
+        ErrorCode::OutOfBounds
+    );
+    // mixAudio sample_rate = 2^32 + 48000 must not wrap to 48000.
+    assert_eq!(
+        call_err(&mut svc, "mixAudio", json!({
+            "plan": p, "duration_s": 0.1, "sample_rate": 4295015296u64,
+            "sources": {},
+        })),
+        ErrorCode::OutOfBounds
+    );
+
+    // Transition duration_s disagreeing with end_s - start_s fails
+    // closed (engine guarantees equality; hostile plans rejected).
+    let mut p2 = plan(
+        vec![vec![
+            clip(11, 7, 0.0, 1.0, 0.0, 1.0),
+            clip(12, 7, 1.0, 2.0, 1.0, 2.0),
+        ]],
+        vec![vec![trans("cross_dissolve", 11, 12, 0.5, 1.5, 2.0)]],
+    );
+    assert_eq!(
+        call_err(&mut svc, "renderFrame", json!({
+            "width": W, "height": H, "time_s": 1.0,
+            "plan": p2, "sources": src,
+        })),
+        ErrorCode::Validation
+    );
+    // Consistent values still pass validation (decode-failed is fine —
+    // sources here only cover what the clips need at t=1.0... use a
+    // fully covered fixture instead).
+    let dense = json!({ "7": vsource(vec![
+        frame(0.0, &red), frame(1.0, &red), frame(2.0, &red),
+    ])});
+    p2["transitions"][0][0]["duration_s"] = json!(1.0);
+    let ok = call(&mut svc, 5, "renderFrame", json!({
+        "width": W, "height": H, "time_s": 1.0,
+        "plan": p2, "sources": dense,
+    }));
+    assert!(ok["bytes_b64"].as_str().unwrap().len() > 0);
+}

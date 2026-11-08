@@ -26,12 +26,22 @@
 //! - audio mix: per-clip `gain_db`/`pan`, `cross_fade` equal-power
 //!   ramps, mixed to interleaved stereo f32 at a caller-chosen rate;
 //! - a host-side render cache (D-28) keyed by
-//!   (snapshot salt, media salt, time, size, fit, provider version).
+//!   (snapshot salt, media salt, plan+sources content digest, time,
+//!   size, fit, provider version). The digest is an FNV-1a hash of the
+//!   canonical JSON serialization of the `plan` and `sources` payload
+//!   values, so two different plans or decoded inputs can never share a
+//!   cached frame even when the caller supplies no salts. Salts remain
+//!   for callers that want to force misses (e.g. identical inputs under
+//!   a new logical edit); they are length-prefixed in the key so `|` or
+//!   `:` inside a salt cannot collide across field boundaries.
 //!
 //! Determinism: fixed operation order, nearest/bilinear sampling only,
 //! no platform SIMD math, no threading. The same inputs produce
-//! byte-identical output on a given build; floating-point results are
-//! IEEE-754 deterministic for a fixed operation order.
+//! byte-identical output on a given build **and platform**;
+//! floating-point results are IEEE-754 deterministic for a fixed
+//! operation order, but libm transcendental results (`sin`, `cos`,
+//! `ln`, `exp`, `powf`) may differ by ulps across OSes/architectures,
+//! so cross-platform byte-identity is not guaranteed.
 //!
 //! Bounds (fail-closed, folio-render style): canvas ≤ 1920×1080, source
 //! frames ≤ 4096 px/side and ≤ 64 MiB decoded each, ≤ 64 sources and
@@ -39,6 +49,16 @@
 //! ≤ 60 s per `renderRange`/`mixAudio` call, ≤ 30 fps, ≤ 1800 frames
 //! per job, ≤ 4 live jobs, PCM sources ≤ 128 MiB each, cache ≤ 64
 //! entries / ≤ 256 MiB, JSON-lines frames ≤ 256 MiB.
+//!
+//! Honesty notes (see README for detail): video media time outside the
+//! supplied stills clamps to the nearest edge frame, while audio PCM
+//! outside its declared span is an honest `decode-failed` error — an
+//! intentional asymmetry. Bilinear sampling interpolates straight-alpha
+//! channels, so RGB of fully transparent texels can bleed into
+//! semi-transparent edges. Worst-case live-job memory is ~2 GiB
+//! (4 jobs × 256 MiB video + 256 MiB PCM). `fps` values so small that
+//! `duration_s * fps` rounds to zero yield a single frame; the reported
+//! `end_s` in that case is cosmetic only.
 
 use ignition_core::{base64_decode, base64_encode, EngineError, ErrorCode, FrameRequest, FrameResponse};
 use serde_json::{json, Value};
@@ -122,6 +142,13 @@ fn decode_failed(msg: impl Into<String>) -> EngineError {
 
 fn finite(v: f64) -> bool {
     v.is_finite()
+}
+
+/// `u64 → u32` without wraparound: values above `u32::MAX` are
+/// rejected, never truncated — a wrapped `2^32 + 1920` must not slip
+/// past a dimension or sample-rate bound check.
+fn u64_to_u32(n: u64, what: &str) -> Result<u32, EngineError> {
+    u32::try_from(n).map_err(|_| out_of_bounds(format!("{what} {n} exceeds u32::MAX")))
 }
 
 // ---- Plan model ---------------------------------------------------------
@@ -423,6 +450,17 @@ fn parse_plan(plan: &Value) -> Result<Plan, EngineError> {
             if end <= start {
                 return Err(validation_msg("transition has end_s <= start_s"));
             }
+            // The engine guarantees duration_s == end_s - start_s.
+            // `progress()` ramps over `duration` while the active
+            // window is `start..end`; a hostile plan where they
+            // disagree would ramp outside its own window, so fail
+            // closed. Tolerance covers f64 rounding of large times.
+            let span = end - start;
+            if (dur - span).abs() > 1e-9 * span.max(1.0) {
+                return Err(validation_msg(format!(
+                    "transition duration_s {dur} disagrees with end_s-start_s {span}"
+                )));
+            }
             transitions.push(Transition {
                 kind: tkind,
                 left: req_u64(tv2, "left_clip_id")?,
@@ -722,14 +760,18 @@ fn parse_video_sources(v: Option<&Value>) -> Result<HashMap<u64, VSource>, Engin
     let mut total_bytes = 0usize;
     for (key, sv) in map {
         let id = parse_u64_key(key)?;
-        let w = sv
-            .get("width")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| invalid(format!("source {id} requires width")))? as u32;
-        let h = sv
-            .get("height")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| invalid(format!("source {id} requires height")))? as u32;
+        let w = u64_to_u32(
+            sv.get("width")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| invalid(format!("source {id} requires width")))?,
+            &format!("source {id} width"),
+        )?;
+        let h = u64_to_u32(
+            sv.get("height")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| invalid(format!("source {id} requires height")))?,
+            &format!("source {id} height"),
+        )?;
         if w == 0 || h == 0 || w > MAX_SOURCE_DIM || h > MAX_SOURCE_DIM {
             return Err(out_of_bounds(format!(
                 "source {id} dimensions {w}x{h} outside 1..={MAX_SOURCE_DIM}"
@@ -803,19 +845,23 @@ fn parse_audio_sources(v: Option<&Value>) -> Result<HashMap<u64, ASource>, Engin
     let mut total_bytes = 0usize;
     for (key, sv) in map {
         let id = parse_u64_key(key)?;
-        let rate = sv
-            .get("sample_rate")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| invalid(format!("audio source {id} requires sample_rate")))? as u32;
+        let rate = u64_to_u32(
+            sv.get("sample_rate")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| invalid(format!("audio source {id} requires sample_rate")))?,
+            &format!("audio source {id} sample_rate"),
+        )?;
         if !(MIN_SOURCE_SAMPLE_RATE..=MAX_SOURCE_SAMPLE_RATE).contains(&rate) {
             return Err(out_of_bounds(format!(
                 "audio source {id} sample_rate {rate} outside {MIN_SOURCE_SAMPLE_RATE}..={MAX_SOURCE_SAMPLE_RATE}"
             )));
         }
-        let channels = sv
-            .get("channels")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| invalid(format!("audio source {id} requires channels")))? as u32;
+        let channels = u64_to_u32(
+            sv.get("channels")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| invalid(format!("audio source {id} requires channels")))?,
+            &format!("audio source {id} channels"),
+        )?;
         if channels != 1 && channels != 2 {
             return Err(invalid(format!(
                 "audio source {id} channels must be 1 or 2"
@@ -1440,6 +1486,9 @@ struct RenderJob {
     fit: Fit,
     snapshot: Option<String>,
     media: Option<String>,
+    /// Content digest of the job's plan+sources, computed once at
+    /// creation; folded into every per-frame cache key.
+    digest: String,
 }
 
 /// The splice-render service: stateless compositor plus a bounded
@@ -1465,18 +1514,58 @@ impl RenderService {
         }
     }
 
+    /// Content digest of the render inputs: FNV-1a 64 over the
+    /// canonical JSON serialization of the `plan` and `sources`
+    /// payload values. `serde_json::Value` maps are B-tree ordered, so
+    /// `to_string` is canonical — semantically identical inputs hash
+    /// identically, and any difference in clips, transitions, decoded
+    /// pixels, or PCM produces a different digest. This makes the cache
+    /// key independent of caller-supplied salts: two different plans
+    /// at the same `t`/size/`fit` can never collide.
+    fn inputs_digest(plan: &Value, sources: Option<&Value>) -> String {
+        // FNV-1a 64-bit.
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        let mut mix = |bytes: &[u8]| {
+            for &b in bytes {
+                h ^= b as u64;
+                h = h.wrapping_mul(0x0000_0100_0000_01b3);
+            }
+        };
+        // serde_json::to_string on a Value cannot fail; unwrap_or("")
+        // keeps the digest total even in the impossible case.
+        mix(plan.to_string().as_bytes());
+        mix(b"\x00"); // field separator (NUL cannot appear in JSON text)
+        mix(sources.map(Value::to_string).unwrap_or_default().as_bytes());
+        format!("{h:016x}")
+    }
+
+    /// Length-prefixed field writer: `len:value|`. Prefixing every
+    /// caller-controlled string field makes boundary collisions
+    /// impossible — `("a|b", "c")` and `("a", "b|c")` produce different
+    /// keys, unlike a bare `|` join.
+    fn key_field(out: &mut String, s: &str) {
+        out.push_str(&s.len().to_string());
+        out.push(':');
+        out.push_str(s);
+        out.push('|');
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn cache_key(
         snapshot: Option<&str>,
         media: Option<&str>,
+        digest: &str,
         t: f64,
         w: u32,
         h: u32,
         fit: Fit,
     ) -> String {
-        format!(
-            "{}|{}|{:016x}|{}x{}|{}|{}",
-            snapshot.unwrap_or(""),
-            media.unwrap_or(""),
+        let mut k = String::new();
+        Self::key_field(&mut k, snapshot.unwrap_or(""));
+        Self::key_field(&mut k, media.unwrap_or(""));
+        Self::key_field(&mut k, digest);
+        k.push_str(&format!(
+            "{:016x}|{}x{}|{}|{}",
             t.to_bits(),
             w,
             h,
@@ -1485,11 +1574,23 @@ impl RenderService {
                 Fit::Fill => "fill",
             },
             PROVIDER_VERSION
-        )
+        ));
+        k
     }
 
     fn cache_get(&self, key: &str) -> Option<Vec<u8>> {
         self.cache.get(key).map(|e| e.bytes.clone())
+    }
+
+    /// LRU touch: move `key` to the back (most-recently-used) of the
+    /// eviction order. O(cache capacity) — the cache is capped at
+    /// [`MAX_CACHE_ENTRIES`], so the linear scan is trivial.
+    fn cache_touch(order: &mut VecDeque<String>, key: &str) {
+        if let Some(pos) = order.iter().position(|k| k == key) {
+            if let Some(k) = order.remove(pos) {
+                order.push_back(k);
+            }
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1534,8 +1635,10 @@ impl RenderService {
         snapshot: Option<&str>,
         media: Option<&str>,
     ) -> Result<(Vec<u8>, bool), EngineError> {
-        let key = Self::cache_key(snapshot, media, t, w, h, fit);
+        let digest = Self::inputs_digest(plan_v, sources_v);
+        let key = Self::cache_key(snapshot, media, &digest, t, w, h, fit);
         if let Some(hit) = self.cache_get(&key) {
+            Self::cache_touch(&mut self.cache_order, &key);
             return Ok((hit, true));
         }
         let plan = parse_plan(plan_v)?;
@@ -1546,14 +1649,20 @@ impl RenderService {
     }
 
     fn dims(payload: &Value) -> Result<(u32, u32), EngineError> {
-        let w = payload
-            .get("width")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| invalid("requires payload.width"))? as u32;
-        let h = payload
-            .get("height")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| invalid("requires payload.height"))? as u32;
+        let w = u64_to_u32(
+            payload
+                .get("width")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| invalid("requires payload.width"))?,
+            "payload.width",
+        )?;
+        let h = u64_to_u32(
+            payload
+                .get("height")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| invalid("requires payload.height"))?,
+            "payload.height",
+        )?;
         if w == 0 || h == 0 || w > MAX_OUTPUT_WIDTH || h > MAX_OUTPUT_HEIGHT {
             return Err(out_of_bounds(format!(
                 "canvas {w}x{h} outside 1..={MAX_OUTPUT_WIDTH}x{MAX_OUTPUT_HEIGHT}"
@@ -1637,8 +1746,13 @@ impl RenderService {
             )));
         }
         let fit = Fit::parse(Self::opt_str(payload, "fit"))?;
-        let plan = parse_plan(Self::plan_ref(payload)?)?;
-        let sources = parse_video_sources(payload.get("sources"))?;
+        let plan_v = Self::plan_ref(payload)?;
+        let sources_v = payload.get("sources");
+        // Digest the raw payload values once, at job creation; every
+        // nextFrame cache key reuses it (no per-frame re-hash).
+        let digest = Self::inputs_digest(plan_v, sources_v);
+        let plan = parse_plan(plan_v)?;
+        let sources = parse_video_sources(sources_v)?;
         let frames = ((duration_s * fps).round() as usize).clamp(1, MAX_RANGE_FRAMES);
         if (duration_s * fps).round() as usize > MAX_RANGE_FRAMES {
             return Err(out_of_bounds(format!(
@@ -1661,6 +1775,7 @@ impl RenderService {
                 fit,
                 snapshot: Self::opt_str(payload, "snapshot").map(str::to_string),
                 media: Self::opt_str(payload, "media").map(str::to_string),
+                digest,
             },
         );
         Ok(json!({
@@ -1695,13 +1810,19 @@ impl RenderService {
                 let key = Self::cache_key(
                     job.snapshot.as_deref(),
                     job.media.as_deref(),
+                    &job.digest,
                     t,
                     job.width,
                     job.height,
                     job.fit,
                 );
                 let (px, cached) = if let Some(hit) = self.cache.get(&key) {
-                    (hit.bytes.clone(), true)
+                    let bytes = hit.bytes.clone();
+                    // LRU touch: `job` borrows self.jobs and `hit`'s
+                    // borrow of self.cache has ended, so the disjoint
+                    // self.cache_order field can be mutated here.
+                    Self::cache_touch(&mut self.cache_order, &key);
+                    (bytes, true)
                 } else {
                     let px = composite(&job.plan, &job.sources, job.width, job.height, t, job.fit)?;
                     Self::cache_put(
@@ -1757,11 +1878,12 @@ impl RenderService {
             .and_then(Value::as_f64)
             .filter(|x| finite(*x) && *x > 0.0)
             .ok_or_else(|| invalid("mixAudio requires payload.duration_s > 0"))?;
-        let rate = payload
-            .get("sample_rate")
-            .and_then(Value::as_u64)
-            .map(|r| r as u32)
-            .unwrap_or(DEFAULT_MIX_SAMPLE_RATE);
+        // Missing or non-integer sample_rate keeps the historical
+        // default; an integer above u32::MAX is rejected, not wrapped.
+        let rate = match payload.get("sample_rate").and_then(Value::as_u64) {
+            Some(r) => u64_to_u32(r, "sample_rate")?,
+            None => DEFAULT_MIX_SAMPLE_RATE,
+        };
         let pcm = mix_audio(&plan, &sources, start_s, duration_s, rate)?;
         let mut bytes = Vec::with_capacity(pcm.len() * 4);
         for s in &pcm {

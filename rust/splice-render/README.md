@@ -32,10 +32,15 @@ output for the encoder provider (`MediaEncoder`) and preview surfaces:
   caller-chosen rate with per-output-sample linear-interpolation
   resampling through the same retime function.
 - **Render cache (D-28)** — host-side, keyed by
-  `(snapshot, media, time_s, width, height, fit, provider_version)`.
-  `snapshot`/`media` are caller-supplied salts that MUST change when the
-  document snapshot or the decoded inputs change; the provider cannot
-  see document or media identity itself.
+  `(snapshot, media, inputs_digest, time_s, width, height, fit,
+  provider_version)`. `inputs_digest` is an FNV-1a hash of the
+  canonical JSON of the `plan` and `sources` payloads, so different
+  plans or decoded inputs can never share a cached frame even when no
+  salts are supplied. `snapshot`/`media` are optional caller-supplied
+  salts for forcing misses (e.g. a new logical edit over identical
+  bytes); they are length-prefixed in the key, so `|` or `:` inside a
+  salt cannot collide across field boundaries. The cache evicts
+  least-recently-used first (hits refresh an entry's position).
 
 ## Wire shape (dual, like folio-render)
 
@@ -82,9 +87,12 @@ f32 at the requested `sample_rate` (default 48000, range 8000–96000).
 
 Fixed operation order, bilinear/nearest sampling only, no platform SIMD
 math, no threading, no wall-clock or address-dependent behavior. The
-same inputs produce byte-identical output for a given build; render-cache
-keys and test fixtures are stable. Floating-point math is IEEE-754 with
-a fixed operation order.
+same inputs produce byte-identical output **on a given build and
+platform**; render-cache keys and test fixtures are stable.
+Floating-point math is IEEE-754 with a fixed operation order, but
+libm transcendental results (`sin`, `cos`, `ln`, `exp`, `powf`) may
+differ by ulps across OSes/architectures — byte-identity across
+platforms is not guaranteed.
 
 ## Bounds (fail-closed)
 
@@ -112,6 +120,26 @@ exists for tests and small/non-Rust consumers.
 - The audio mix assumes decoder PCM at a single program rate with
   resampling at ingest; the provider does per-sample linear
   interpolation only — no SRC filtering.
+- Media-time handling is asymmetric by design: video media time beyond
+  the supplied stills clamps to the nearest edge frame (nearest-frame
+  selection), while audio PCM outside its declared
+  `[media_start_s, media_end_s)` span — including transition
+  head/tail handles — is an honest `decode-failed` (`NotFound`)
+  error. Hosts must supply enough decoded media for the plan's full
+  footprint.
+- Bilinear sampling interpolates all four straight-alpha channels, so
+  RGB values inside fully transparent texels can bleed into
+  semi-transparent edges. Decoders that store premultiplied or
+  color-bleed-free alpha should be preferred for overlay-heavy
+  content.
+- Worst-case live-job memory is ~2 GiB: up to 4 concurrent
+  `renderRange` jobs × (≤256 MiB decoded video RGBA + ≤256 MiB PCM)
+  plus plan overhead. Hosts rendering many sources should drop jobs
+  promptly (`dropJob`) rather than rely on the cap.
+- `fps` is only required to be finite and > 0 up to the 30 fps cap; a
+  value so small that `duration_s * fps` rounds to zero yields a
+  single frame, and the `end_s` reported by `renderRange` in that case
+  (`start_s + frames / fps`) is cosmetic, not a media bound.
 - Software 1080p30 composite cost is unmeasured (decision record
   "Honest limitations"); the ≤1080p/≤30 fps v1 bound must be proven on
   the slowest supported target before admission claims. The provider
