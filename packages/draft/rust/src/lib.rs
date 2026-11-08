@@ -2,6 +2,7 @@
 mod circular;
 mod commands;
 mod constraints;
+mod dimensions;
 mod engine;
 mod hatch;
 mod model;

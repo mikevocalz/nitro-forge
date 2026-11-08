@@ -1636,3 +1636,58 @@ Local evidence: `cargo test -p quill-engine` 175 passed 0 failed
 `cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/quill test` 36
 passed across 6 files (1 new revisions e2e), `pnpm --filter @nitro-forge/quill
 typecheck` clean.
+
+## Draft associative dimensions slice A3 (2026-11-07)
+
+Draft gains bounded associative dimensions (`addDimension`/`updateDimension`/
+`removeDimension`, at most64) with kinds `linear` (two point ids + required
+`axis:"x"|"y"`), `aligned` (two point ids), `angular` (vertex + two ray point
+ids, unsigned 0..180 degrees) and `radial`/`diameter` (circle/arc `entity` id).
+Dimensions store only authored references — measured geometry is re-derived on
+every `evaluate`/`renderFrame` in the new `dimensions` module, so moving
+referenced points or curve centers recomputes results; `evaluate` reports each
+dimension's `status` (`linked`/`orphaned`) plus `measured` (`value` in world
+units or degrees, `null` only for a degenerate angular anchor, and bounded
+world-space stroke lines: extension lines, dimension line, open chevron
+arrowheads, angle rays and a <=24-segment arc polyline). Writes require every
+reference to resolve, but point/circle/arc deletions deliberately do NOT
+reject on dimension references — the dimension becomes `orphaned` with
+`measured:null` and no rendered strokes while authored refs stay for
+re-linking (a documented divergence from constraint references, which block
+deletion); style-only updates on orphans stay allowed while any
+kind/points/entity/axis change must resolve again. References resolving to
+the wrong identity kind are malformed and fail validation; absent ids are
+legal orphans. Dimensions honor `visible`/layer visibility, reject edits on
+locked layers/entities, block `removeLayer` while referenced, join
+undo/redo, stay out of `order`/snaps/`findProfiles`/`point_fixed`/the solver,
+and force the existing strict `{kind:"draft",schema:2}` wrapper — no schema:3
+because the field is an additive serde default and `deny_unknown_fields`
+fails old readers closed (same argument as layers/hatches). There is no glyph
+backend, so numeric labels and filled arrowheads are deferred (same gate as
+Quill fonts); dimension strokes composite above entity strokes as real Prism
+paths within the same projection budgets. Arrowhead legs are schematic
+overshoot, not authored geometry: a chevron leg that would exceed the ±1e6
+world budget is omitted independently rather than failing
+`evaluate`/`renderFrame` (the dimension/extension lines themselves derive
+from authored in-bounds points and still error if they ever exceed it; a
+lopsided chevron at the boundary is accepted clipping). The angular arc
+polyline is likewise schematic: it is sampled provisionally and emitted
+together with its two arc arrowheads only when every vertex stays inside
+the ±1e6 budget — a single overshooting vertex drops the whole arc while
+the authored rays still draw — and it runs arc-start to arc-end through
+the per-15-degree samples (an earlier revision emitted a spurious
+vertex-to-first-sample stroke instead). Orphan re-linking matches references
+by raw id identity: monotonic in-session id allocation prevents reuse through
+normal ops, but a crafted snapshot with a regressed `next_id` could re-link an
+orphan to new geometry (trusted-snapshot caveat). `diameter`/`radial` on an
+arc report the underlying circle's radius/diameter and draw the chord at
+`start_deg`; for small arcs the chord may not touch the arc itself (documented
+semantics, not a bug).
+
+Local evidence: `cargo test -p draft-engine` 41 passed (8 dimension
+tests), `cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/draft test` 11 passed across 5 files (1 nf-cli
+dimension e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. Dimension
+text, offsets, filled arrowheads, ordinate/projection kinds, dimension
+stylesheets and UI adoption remain deferred; native acceptance and full P17
+completion are not implied.

@@ -12,8 +12,16 @@ export type DraftHatchLoops=Array<Array<[number,number]>>;
 /** Built-in patterns only: `solid` fills; `ansi31`/`crosshatch`/`horizontal` are bounded line families. */
 export type DraftHatchPattern='solid'|'ansi31'|'crosshatch'|'horizontal';
 export interface DraftHatch{id:number;name:string;pattern:DraftHatchPattern;color:[number,number,number,number];angle:number;scale:number;width:number;visible:boolean;locked:boolean;layer?:number;loops:DraftHatchLoops}
+/** Associative dimension kinds: `linear` needs `axis` ('x'|'y'), point kinds take `points` ids (absent for radial/diameter, which serialize no `points` field), `radial`/`diameter` take a circle/arc `entity` id. Measured geometry is derived per read, never stored; there is no text/glyph backend so numeric labels are not rendered. */
+export type DraftDimensionKind='linear'|'aligned'|'angular'|'radial'|'diameter';
+export type DraftDimensionAxis='x'|'y';
+export interface DraftDimension{id:number;kind:DraftDimensionKind;points?:number[];entity?:number;axis?:DraftDimensionAxis;name:string;color:[number,number,number,number];width:number;visible:boolean;locked:boolean;layer?:number}
+/** Derived world-space annotation strokes (extension lines, dimension line, arrowhead legs, angle rays/arc polyline); `value` is world units or degrees, `null` only for a degenerate angular anchor. */
+export interface DraftDimensionMeasured{value:number|null;lines:Array<[[number,number],[number,number]]>}
+/** `evaluate` projection of a dimension: authored fields plus read-derived status and measured geometry. Orphaned dimensions (references deleted after writes) keep authored refs with `measured:null`. */
+export interface DraftDimensionState extends DraftDimension{status:'linked'|'orphaned';measured:DraftDimensionMeasured|null}
 export interface SnapSettings{grid:boolean;spacing:number;origin_x:number;origin_y:number;endpoint:boolean;midpoint:boolean;projection:boolean;intersection:boolean;ortho:boolean;polar:boolean;polar_increment:number;center:boolean;nearest_circle:boolean;tangent:boolean}
-export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>;hatches?:Record<string,DraftHatch>}
+export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>;hatches?:Record<string,DraftHatch>;dimensions?:Record<string,DraftDimension>}
 export interface SolveReport{scope:'point_coordinates';status:'solved'|'underconstrained'|'inconsistent';rank:number;dof:number;residual:number;unsatisfied_constraints:number[];unsatisfied_locked_points:number[];applied:boolean}
 export interface SnapResult{kind:'grid'|'endpoint'|'midpoint'|'projection'|'intersection'|'ortho'|'polar'|'center'|'nearest_circle'|'tangent';x:number;y:number;distance:number;sources:number[];angle_degrees?:number}
 export interface DraftSnapQuery{candidate:SnapResult|null;source_revision:number}
@@ -52,6 +60,10 @@ export class DraftDocument{
  addHatch(options:{loops:DraftHatchLoops}|{boundary_ids:number[]},patch:Partial<Pick<DraftHatch,'name'|'pattern'|'color'|'angle'|'scale'|'width'|'visible'|'locked'|'layer'>>&{tolerance?:number}={}){return this.document.apply<{hatch_id:number}>('addHatch',{...patch,...options});}
  updateHatch(id:number,patch:Partial<Omit<DraftHatch,'id'|'loops'>>&{loops?:DraftHatchLoops|{boundary_ids:number[];tolerance?:number}}){const{loops,...rest}=patch;const boundary=loops&&'boundary_ids' in loops?{boundary_ids:loops.boundary_ids,...(loops.tolerance!==undefined?{tolerance:loops.tolerance}:{})}:loops!==undefined?{loops}:{};return this.document.apply<{ok:boolean}>('updateHatch',{...rest,...boundary,id});}
  removeHatch(id:number){return this.document.apply<{ok:boolean}>('removeHatch',{id});}
+ /** Associative dimension: `points` are 2 point ids (linear/aligned) or 3 (angular vertex,first,second); `entity` is a circle/arc id for radial/diameter; `axis` is required for linear and rejected elsewhere. Writes require every reference to resolve; deleting referenced geometry later orphans the dimension (status `orphaned`, no measured geometry, no rendered strokes). */
+ addDimension(options:{kind:DraftDimensionKind;points?:number[];entity?:number;axis?:DraftDimensionAxis}&Partial<Pick<DraftDimension,'name'|'color'|'width'|'visible'|'locked'|'layer'>>){return this.document.apply<{dimension_id:number}>('addDimension',options);}
+ updateDimension(id:number,patch:Partial<Omit<DraftDimension,'id'>>){return this.document.apply<{ok:boolean}>('updateDimension',{...patch,id});}
+ removeDimension(id:number){return this.document.apply<{ok:boolean}>('removeDimension',{id});}
  setSnapSettings(patch:Partial<SnapSettings>){return this.document.apply<{ok:boolean}>('setSnapSettings',patch);}
  /** Tolerance is world units; the host converts any screen tolerance with its actual viewport. */
  querySnap(x:number,y:number,tolerance:number,anchor?:{x:number;y:number}){return this.document.apply<DraftSnapQuery>('querySnap',{x,y,tolerance,...(anchor?{anchor}:{})});}
@@ -64,7 +76,7 @@ export class DraftDocument{
  solve(tolerance=1e-7){return this.document.apply<SolveReport>('solve',{tolerance});}
  /** Read-only deterministic closed-loop tracing; tolerance is world units (default 1e-6). */
  findProfiles(tolerance?:number){return this.document.apply<DraftProfiles>('findProfiles',tolerance===undefined?{}:{tolerance});}
- evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'hatches'|'order'>&{source_revision:number}>('evaluate',{});}
+ evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'hatches'|'order'>&{dimensions:Record<string,DraftDimensionState>;source_revision:number}>('evaluate',{});}
  renderFrame(viewport:DraftViewport){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',viewport);}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}
 }
