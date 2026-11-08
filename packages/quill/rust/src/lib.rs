@@ -17,6 +17,7 @@ mod comments;
 use comments::{validate_comments, Comment};
 mod footnotes;
 use footnotes::{validate_footnotes, Footnote};
+mod merge;
 mod toc;
 use toc::{validate_toc, TocField};
 mod revisions;
@@ -2975,6 +2976,9 @@ impl Engine for QuillEngine {
             "updateToc" => self.op_update_toc(&cmd.payload),
             "refreshToc" => self.op_refresh_toc(&cmd.payload),
             "listToc" => self.op_list_toc(&cmd.payload),
+            "listMergeFields" => self.op_list_merge_fields(),
+            "previewMerge" => self.op_preview_merge(&cmd.payload),
+            "runMerge" => self.op_run_merge(&cmd.payload),
             "setTrackChanges" => self.op_set_track_changes(&cmd.payload),
             "listRevisions" => self.op_list_revisions(),
             "acceptRevision" => self.op_revision_decision(&cmd.payload, true),

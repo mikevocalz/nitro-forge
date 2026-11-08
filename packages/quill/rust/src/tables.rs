@@ -360,6 +360,32 @@ pub(super) fn table_text(table: &Table) -> String {
         .join("\n")
 }
 
+/// `table_text` with each cell paragraph mapped through `f` before the
+/// same row/`\n`-cell/`\t`/paragraph-`\n` serialization — used by mail
+/// merge to substitute field values inside cell text while keeping the
+/// `text` op's exact output shape.
+pub(super) fn table_text_map<F>(table: &Table, f: F) -> String
+where
+    F: Fn(&Block) -> String,
+{
+    (0..table.rows)
+        .map(|r| {
+            (0..table.cols)
+                .map(|c| {
+                    table.cells[r * table.cols + c]
+                        .blocks
+                        .iter()
+                        .map(|b| f(b))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                })
+                .collect::<Vec<_>>()
+                .join("\t")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 impl QuillEngine {
     /// Resolve `{block}` to the index of a table block.
     fn table_block_index(&self, p: &Value) -> Result<usize, EngineError> {
