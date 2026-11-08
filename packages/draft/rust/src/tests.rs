@@ -2400,3 +2400,131 @@ fn dimension_degenerate_angle_and_hidden_dimension_render_honestly() {
         .unwrap();
     assert!((got - 90.).abs() < 1e-9);
 }
+#[test]
+fn command_grammar_layers_hatches_dimensions_and_deletes() {
+    let mut e = DraftEngine::new();
+    let cmd = |e: &mut DraftEngine, text: &str| {
+        apply(e, "executeCommand", json!({"command":text})).data
+    };
+    // LAYER lifecycle routes through the same layer ops, one undo each.
+    let lay = cmd(&mut e, "layer new Walls")["result"]["layer_id"]
+        .as_u64()
+        .unwrap();
+    cmd(&mut e, &format!("LAYER RENAME {lay} Partitions"));
+    cmd(&mut e, &format!("LAYER LOCK {lay} on"));
+    let s = state(&e);
+    assert_eq!(s.layers[&lay].name, "Partitions");
+    assert!(s.layers[&lay].locked);
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new(
+            "executeCommand",
+            json!({"command":format!("LAYER VISIBLE {lay} off")})
+        ))
+        .is_ok());
+    assert!(!state(&e).layers[&lay].visible);
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Layer 0 stays reserved through the grammar.
+    assert!(e
+        .apply(Command::new(
+            "executeCommand",
+            json!({"command":"LAYER VISIBLE 0 off"})
+        ))
+        .is_err());
+    // HATCH traces real segment boundaries into the hatch model.
+    let edges = square(&mut e, 4., 0);
+    let ids = edges
+        .iter()
+        .map(u64::to_string)
+        .collect::<Vec<_>>()
+        .join(" ");
+    let hid = cmd(&mut e, &format!("HATCH ansi31 {ids}"))["result"]["hatch_id"]
+        .as_u64()
+        .unwrap();
+    let h = &state(&e).hatches[&hid];
+    assert_eq!(h.pattern, "ansi31");
+    assert_eq!(h.loops.len(), 1);
+    assert!(pixels(&mut e, 6, 6).iter().any(|v| *v != 0));
+    // DIM kinds create linked dimensions measured by evaluate.
+    let p = |e: &mut DraftEngine, x: f64, y: f64| {
+        cmd(e, &format!("POINT {x} {y}"))["result"]["point_id"]
+            .as_u64()
+            .unwrap()
+    };
+    let a = p(&mut e, 0., 0.);
+    let b = p(&mut e, 4., 0.);
+    let c = p(&mut e, 4., 3.);
+    let linear = cmd(&mut e, &format!("DIM LINEAR {a} {b} x"))["result"]
+        ["dimension_id"]
+        .as_u64()
+        .unwrap();
+    let aligned = cmd(&mut e, &format!("dim aligned {a} {c}"))["result"]
+        ["dimension_id"]
+        .as_u64()
+        .unwrap();
+    let angular = cmd(&mut e, &format!("DIM ANGULAR {a} {b} {c}"))["result"]
+        ["dimension_id"]
+        .as_u64()
+        .unwrap();
+    let circle = cmd(&mut e, "CIRCLE 20 0 2")["result"]["entity"]["circle_id"]
+        .as_u64()
+        .unwrap();
+    let arc = cmd(&mut e, "ARC 20 0 2 0 90")["result"]["entity"]["arc_id"]
+        .as_u64()
+        .unwrap();
+    let radial = cmd(&mut e, &format!("DIM RADIAL {circle}"))["result"]
+        ["dimension_id"]
+        .as_u64()
+        .unwrap();
+    let diameter = cmd(&mut e, &format!("DIM DIAMETER {arc}"))["result"]
+        ["dimension_id"]
+        .as_u64()
+        .unwrap();
+    let ev = apply(&mut e, "evaluate", json!({})).data;
+    let dims = &ev["dimensions"];
+    assert_eq!(dims[&linear.to_string()]["status"], "linked");
+    assert_eq!(dims[&linear.to_string()]["measured"]["value"], 4.);
+    assert_eq!(dims[&aligned.to_string()]["status"], "linked");
+    assert_eq!(dims[&angular.to_string()]["status"], "linked");
+    assert_eq!(dims[&radial.to_string()]["measured"]["value"], 2.);
+    assert_eq!(dims[&diameter.to_string()]["measured"]["value"], 4.);
+    // Each grammar command is exactly one undo entry.
+    let before = e.snapshot().unwrap();
+    cmd(&mut e, &format!("DELETE DIMENSION {diameter}"));
+    assert!(!state(&e).dimensions.contains_key(&diameter));
+    assert!(e.undo().unwrap());
+    assert!(state(&e).dimensions.contains_key(&diameter));
+    assert_eq!(e.snapshot().unwrap(), before);
+    cmd(&mut e, &format!("DELETE HATCH {hid}"));
+    assert!(!state(&e).hatches.contains_key(&hid));
+    cmd(&mut e, &format!("DELETE LAYER {lay}"));
+    assert!(!state(&e).layers.contains_key(&lay));
+    // Honest failures: unknown verbs/subcommands, bad flags, bad patterns,
+    // bad axes, unresolved references and arity all reject without mutation.
+    let before = e.snapshot().unwrap();
+    for text in [
+        "BLOCK 1 2",
+        "LAYER FROB 1",
+        "LAYER VISIBLE 1 maybe",
+        "LAYER NEW",
+        "LAYER RENAME 1",
+        "HATCH bogus 1",
+        "HATCH ansi31",
+        "HATCH ansi31 999999",
+        "DIM FROB 1",
+        "DIM LINEAR 1 2 z",
+        "DIM LINEAR 1 2",
+        "DIM RADIAL 1 2",
+        "DIM LINEAR 999999 999998 x",
+        "DELETE FROB 1",
+        "DELETE DIMENSION 999999",
+    ] {
+        assert!(
+            e.apply(Command::new("executeCommand", json!({"command":text})))
+                .is_err(),
+            "{text} must reject"
+        );
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+}

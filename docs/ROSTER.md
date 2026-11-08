@@ -1691,3 +1691,37 @@ dimension e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. Dimension
 text, offsets, filled arrowheads, ordinate/projection kinds, dimension
 stylesheets and UI adoption remain deferred; native acceptance and full P17
 completion are not implied.
+
+## Draft command grammar slice A8 (2026-11-07)
+
+Draft's bounded `executeCommand` grammar gains the drafting command set on
+top of the existing POINT/LINE/CIRCLE/ARC/SEGMENT/MOVE/DELETE/SOLVE/SNAP
+surface: `LAYER NEW name`, `LAYER RENAME id name`, `LAYER VISIBLE id flag`,
+`LAYER LOCK id flag`, `LAYER DELETE id`; `HATCH pattern id [id ...]`
+(1..6 boundary entity ids traced through the A4 `boundary_ids` path);
+`DIM LINEAR a b x|y`, `DIM ALIGNED a b`, `DIM ANGULAR vertex first second`,
+`DIM RADIAL entity`, `DIM DIAMETER entity` wired to the A3 associative
+dimension model; and `DELETE` extended to `HATCH`, `DIMENSION` and `LAYER`.
+Every new form re-enters the same typed op (`addLayer`/`updateLayer`/
+`removeLayer`, `addHatch`, `addDimension`, `removeHatch`/`removeDimension`/
+`removeLayer`), so locks, reference resolution, budgets, atomicity and the
+single journal entry per command are identical to typed calls — verified by
+tests asserting one-undo restoration. Parser bounds are unchanged (4096
+ASCII bytes, 1..8 tokens of at most64 bytes, case-insensitive keywords,
+finite numbers, safe integer ids); flags accept on/off/true/false/yes/no/1/0,
+HATCH patterns are restricted to the four built-ins before dispatch, and
+DIM axes to x/y. Honest gaps, documented in `docs/ENGINE_OPS.md`: no
+current-layer or entity-to-layer assignment in the grammar (typed ops keep
+the `layer` field), HATCH has no explicit coordinate-loop form (typed
+`addHatch` keeps `loops`), DIM takes authored ids rather than interactive
+point picking, and `BLOCK` rejects as unsupported until the deferred A9
+blocks slice. `DRAFT_COMMAND_COMPLETIONS` lists all new forms. No schema or
+snapshot change: commands are behavior, not state.
+
+Local evidence: `cargo test -p draft-engine` 42 passed (1 new grammar test
+covering the full LAYER/HATCH/DIM/DELETE lifecycle, single-undo entries,
+case-insensitivity and 16 hostile-input rejections), `cargo build -p
+nf-cli` clean, `pnpm --filter @nitro-forge/draft test` 12 passed across 5
+files (1 new nf-cli grammar e2e), `pnpm --filter @nitro-forge/draft
+typecheck` clean. UI adoption, native acceptance and full P17 completion are
+not implied.
