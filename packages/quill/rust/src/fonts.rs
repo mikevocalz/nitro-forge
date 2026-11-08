@@ -291,14 +291,25 @@ impl FaceMeasure {
     ) -> Option<Vec<f64>> {
         let char_count = byte_offsets.len();
         let mut buffer = harfrust::Buffer::new();
-        buffer.push_str(text);
-        buffer.guess_segment_properties();
-        let shaper = harfrust::ShaperFont::new(&self.font);
+        // Everything that touches font/layout tables runs inside the
+        // guard: `ShaperFont::new` eagerly reads GSUB/GPOS/GDEF paths
+        // that `advance_units` never touches, so a panic there must take
+        // the same unshaped-fallback path as a panic inside `shape`.
         let shaped = catch_unwind(AssertUnwindSafe(|| {
-            harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::new())
+            buffer.push_str(text);
+            buffer.guess_segment_properties();
+            let shaper = harfrust::ShaperFont::new(&self.font);
+            harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::new()).is_ok()
+                // `shape` returns `Ok` even when the buffer failed
+                // internally (max_ops/index failure zeroes advances);
+                // treat that as a shape failure so the caller falls
+                // back to unshaped metrics instead of emitting
+                // silently-wrong widths.
+                && buffer.allocation_successful()
         }));
-        // Outer `Result` is the `catch_unwind` guard, inner the shape call.
-        shaped.ok()?.ok()?;
+        if !shaped.unwrap_or(false) {
+            return None;
+        }
 
         let infos = buffer.glyph_infos();
         let positions = buffer.glyph_positions();
