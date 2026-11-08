@@ -51,6 +51,7 @@ export const OPS = {
   getSelection: "getSelection",
   groupLayers: "groupLayers",
   ungroupLayer: "ungroupLayer",
+  duplicateLayer: "duplicateLayer",
   setLayerParent: "setLayerParent",
   setLayerLocked: "setLayerLocked",
   setLayerBlend: "setLayerBlend",
@@ -303,6 +304,16 @@ export class PrismDocument {
   }
   ungroupLayer(id: number) {
     return this.call(OPS.ungroupLayer, { id });
+  }
+  /**
+   * Deep-copy a layer — for groups and booleans the whole subtree is
+   * duplicated with fresh ids and remapped parents. The copy keeps every
+   * property (transform, mask, blend, lock, clipping) and lands directly
+   * above the source among its siblings; `name` renames the copied root
+   * (default `"<name> copy"`). One undo step.
+   */
+  duplicateLayer(id: number, name?: string) {
+    return this.call<{ layer_id: number }>(OPS.duplicateLayer, { id, name });
   }
   setLayerParent(id: number, parent: number | null) {
     return this.call(OPS.setLayerParent, { id, parent });

@@ -107,6 +107,7 @@ visibility and lock stay allowed.
 | `getSelection` | `{}` | `{empty}` or `{bounds,mask_b64,width,height}` | read-only |
 | `groupLayers` | `{ids,name?}` | `{layer_id}` | siblings only; group sits above the topmost member |
 | `ungroupLayer` | `{id}` | `{ok}` | group or boolean; group transform baked into children (rejects if that would skew), group opacity multiplied in; a masked group is rejected |
+| `duplicateLayer` | `{id,name?}` | `{layer_id}` | deep copy of the layer; groups/booleans copy the whole subtree with fresh ids and remapped parents. All properties (transform, mask, blend, lock, clipped) are preserved; the copy lands directly above the source among its siblings; `name` renames only the copied root (default `"<name> copy"`). Object selection is untouched; duplicating a locked layer is allowed (it does not edit the source) and the copy stays locked. One undo entry |
 | `setLayerParent` | `{id,parent}` | `{ok}` | parent group/boolean or null; keeps the on-canvas position; no cycles |
 | `setLayerLocked` / `setLayerBlend` / `setClipped` | `{id,locked}` / `{id,blend}` / `{id,clipped}` | `{ok}` | 13 W3C blend modes; a clipped layer clips to the nearest unclipped sibling below |
 | `layerThumbnail` | `{id,max}` | `{width,height,pixels_b64}` | canvas extent, area-averaged to fit `max` (1..=1024); read-only |
