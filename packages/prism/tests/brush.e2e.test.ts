@@ -226,6 +226,45 @@ describe("prism brush/stroke ops e2e (real Rust via nf-cli)", () => {
     await doc.close();
   });
 
+  it("eraseStroke vector mode removes whole entities intersecting the footprint", async () => {
+    const doc = await PrismDocument.open(host, 32, 32);
+    const hit = (await doc.addShape({
+      kind: "rect", x: 2, y: 2, w: 8, h: 8, fill: [200, 10, 10, 255],
+    })).data.layer_id;
+    const miss = (await doc.addShape({
+      kind: "rect", x: 20, y: 20, w: 8, h: 8, fill: [10, 10, 200, 255],
+    })).data.layer_id;
+    const samples = line(8, 3, 6, 1);
+    const brush = { size: 6, color: [0, 0, 0, 255] as [number, number, number, number], spacing: 0.5 };
+    // Dry run reports the would-be removal without mutating.
+    const dry = await doc.eraseStroke({ mode: "vector", brush, samples, commit: false });
+    expect(dry.data.mode).toBe("vector");
+    expect(dry.data.dabs).toBeGreaterThan(0);
+    expect(dry.data.removed).toEqual([hit]);
+    let desc = await doc.describe<any>();
+    expect(desc.data.layers.map((l: any) => l.id)).toContain(hit);
+    // Commit removes only the hit entity; undo restores it.
+    const out = await doc.eraseStroke({ mode: "vector", brush, samples });
+    expect(out.data.removed).toEqual([hit]);
+    desc = await doc.describe<any>();
+    const ids = desc.data.layers.map((l: any) => l.id);
+    expect(ids).not.toContain(hit);
+    expect(ids).toContain(miss);
+    expect(await doc.undo()).toBe(true);
+    desc = await doc.describe<any>();
+    expect(desc.data.layers.map((l: any) => l.id)).toContain(hit);
+    // A stroke missing every entity is eventless: describe unchanged.
+    const before = await doc.describe<any>();
+    const noop = await doc.eraseStroke({
+      mode: "vector",
+      brush: { size: 4, color: [0, 0, 0, 255] },
+      samples: line(4, 24, 31, 1),
+    });
+    expect(noop.data.removed).toEqual([]);
+    expect((await doc.describe<any>()).data).toEqual(before.data);
+    await doc.close();
+  });
+
   it("eraseStroke validates modes, layers, brushes and budgets", async () => {
     const doc = await PrismDocument.open(host, 16, 16);
     const layer = (await doc.addRasterLayer()).data.layer_id;
@@ -233,9 +272,9 @@ describe("prism brush/stroke ops e2e (real Rust via nf-cli)", () => {
       kind: "rect", x: 0, y: 0, w: 4, h: 4, fill: [0, 0, 0, 255],
     })).data.layer_id;
     const samples = line(4, 1, 2, 1);
-    // Vector mode is not implemented.
+    // Vector mode rejects a non-u64 scope id.
     await expect(
-      doc.eraseStroke({ id: layer, mode: "vector" as any, brush: { size: 4 }, samples }),
+      doc.eraseStroke({ id: "x" as any, mode: "vector", brush: { size: 4 }, samples }),
     ).rejects.toBeInstanceOf(EngineError);
     // Pixel mode rejects non-raster layers; mask mode requires a mask.
     await expect(

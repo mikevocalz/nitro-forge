@@ -1797,8 +1797,8 @@ fn erase_stroke_rejections() {
     let l = id(&run(&mut e, "addRasterLayer", json!({})));
     let s = id(&run(&mut e, "addShape", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "fill": [0,0,0,255]}})));
     let samples = stroke_samples(4, 1.0, 2.0, 1.0);
-    // Unknown mode.
-    rejects(&mut e, "eraseStroke", json!({"id": l, "mode": "vector", "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+    // Unknown mode (vector is valid since the B-18 vector eraser landed).
+    rejects(&mut e, "eraseStroke", json!({"id": l, "mode": "lasso", "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
     rejects(&mut e, "eraseStroke", json!({"id": l, "mode": 3, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::InvalidCommand);
     // Pixel mode on a non-raster layer.
     rejects(&mut e, "eraseStroke", json!({"id": s, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
@@ -1832,4 +1832,187 @@ fn erase_stroke_mask_mode_on_non_raster_layer() {
     let d = describe(&mut e);
     let mask = b64::decode(layer(&d, s)["mask"]["mask_b64"].as_str().unwrap()).unwrap();
     assert!(mask[8 * 16 + 6] < 255);
+}
+
+// -- vector eraser (B-18) -----------------------------------------------------
+
+#[test]
+fn erase_stroke_vector_removes_hit_entities() {
+    let mut e = eng(32, 32);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let b = rect(&mut e, 20.0, 20.0, 8.0, 8.0, BLUE);
+    let brush = json!({"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    let samples = stroke_samples(8, 3.0, 6.0, 1.0);
+    // Dry run reports the would-be removal without mutating.
+    let dry = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples.clone(), "commit": false}),
+    );
+    assert_eq!(dry["mode"], "vector");
+    assert_eq!(dry["removed"], json!([a]));
+    assert!(layer(&describe(&mut e), a).is_object(), "dry run must not remove");
+    // Commit: exactly one undo step removes only the hit entity.
+    let out = one_step(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples}),
+    );
+    assert_eq!(out["removed"], json!([a]));
+    let d = describe(&mut e);
+    assert!(d["layers"].as_array().unwrap().iter().all(|l| l["id"] != a));
+    assert!(layer(&d, b).is_object(), "untouched entity survives");
+}
+
+#[test]
+fn erase_stroke_vector_miss_is_eventless() {
+    let mut e = eng(32, 32);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let samples = stroke_samples(4, 24.0, 28.0, 1.0);
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"mode": "vector", "brush": {"size": 4.0, "color": [0, 0, 0, 255]}, "samples": samples}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty(), "zero-hit vector erase must be eventless");
+    assert_eq!(r.data["removed"], json!([]));
+    assert_eq!(e.journal.undo_len(), depth);
+    assert!(layer(&describe(&mut e), a).is_object());
+}
+
+#[test]
+fn erase_stroke_vector_scoped_to_subtree() {
+    let mut e = eng(32, 32);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let b = rect(&mut e, 20.0, 2.0, 8.0, 8.0, BLUE);
+    let _g = id(&run(&mut e, "groupLayers", json!({"ids": [a, b]})));
+    let brush = json!({"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    // A stroke spanning both shapes, scoped to `a`: only `a` can go.
+    let samples = stroke_samples(20, 3.0, 6.0, 1.3);
+    let out = run(
+        &mut e,
+        "eraseStroke",
+        json!({"id": a, "mode": "vector", "brush": brush, "samples": samples.clone()}),
+    );
+    assert_eq!(out["removed"], json!([a]));
+    let d = describe(&mut e);
+    assert!(layer(&d, b).is_object());
+    // Document scope (no id) now removes `b` — the group itself is never
+    // an erase target.
+    let out2 = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples}),
+    );
+    assert_eq!(out2["removed"], json!([b]));
+    assert!(e.undo().unwrap(), "second erase records one undo");
+    assert!(layer(&describe(&mut e), b).is_object());
+}
+
+#[test]
+fn erase_stroke_vector_path_paint_rules() {
+    let mut e = eng(16, 16);
+    // Stroked-only open path along y=8.
+    let p = id(&run(
+        &mut e,
+        "addPath",
+        json!({"path": {"subpaths": [{"closed": false, "nodes": [{"x": 2, "y": 8}, {"x": 14, "y": 8}]}]},
+               "stroke": {"paint": {"type": "solid", "color": RED}, "width": 2}}),
+    ));
+    // Unpainted path (no fill, no stroke) sitting right under the stroke:
+    // it paints nothing, so the eraser must not touch it.
+    let q = id(&run(
+        &mut e,
+        "addPath",
+        json!({"path": {"subpaths": [{"closed": true, "nodes": [
+            {"x": 4, "y": 6}, {"x": 12, "y": 6}, {"x": 12, "y": 10}, {"x": 4, "y": 10}
+        ]}]}}),
+    ));
+    let samples = stroke_samples(10, 2.0, 8.0, 1.3);
+    let out = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": {"size": 4.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples}),
+    );
+    assert_eq!(out["removed"], json!([p]), "stroke band hits the stroked path only");
+    let d = describe(&mut e);
+    assert!(d["layers"].as_array().unwrap().iter().all(|l| l["id"] != p));
+    assert!(layer(&d, q).is_object(), "unpainted path survives");
+}
+
+#[test]
+fn erase_stroke_vector_boolean_operand_and_invisible() {
+    let mut e = eng(16, 8);
+    let a = rect(&mut e, 0.0, 0.0, 6.0, 4.0, RED);
+    let b = rect(&mut e, 4.0, 0.0, 6.0, 4.0, BLUE);
+    let bo = id(&run(&mut e, "booleanLayers", json!({"ids": [a, b], "op": "subtract"})));
+    let brush = json!({"size": 3.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    // Stroke over operand `a` only (last dab center x=1.9 + radius 1.5
+    // reaches 3.4, clear of b's x=4 edge).
+    let samples = stroke_samples(3, 0.5, 2.0, 0.7);
+    let out = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples.clone()}),
+    );
+    assert_eq!(out["removed"], json!([a]));
+    let d = describe(&mut e);
+    assert!(layer(&d, bo).is_object(), "boolean container survives");
+    assert!(layer(&d, b).is_object(), "other operand survives");
+    // Invisible entities are skipped: hide the boolean, erase again → miss.
+    run(&mut e, "setLayerVisible", json!({"id": bo, "visible": false}));
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"mode": "vector", "brush": brush, "samples": samples}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty());
+    assert_eq!(r.data["removed"], json!([]));
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn erase_stroke_vector_locked_and_bad_scope() {
+    let mut e = eng(16, 16);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let samples = stroke_samples(6, 3.0, 6.0, 1.0);
+    let brush = json!({"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    // Locked hit entity rejects the whole op atomically.
+    run(&mut e, "setLayerLocked", json!({"id": a, "locked": true}));
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples.clone()}),
+        ErrorCode::Validation,
+    );
+    run(&mut e, "setLayerLocked", json!({"id": a, "locked": false}));
+    // Scope id validation: wrong type / unknown layer.
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"id": "x", "mode": "vector", "brush": brush, "samples": samples.clone()}),
+        ErrorCode::InvalidCommand,
+    );
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"id": 999, "mode": "vector", "brush": brush, "samples": samples.clone()}),
+        ErrorCode::NotFound,
+    );
+    // Raster scope contains no vector entities → eventless.
+    let ras = id(&run(&mut e, "addRasterLayer", json!({})));
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": ras, "mode": "vector", "brush": brush, "samples": samples}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty());
+    assert_eq!(r.data["removed"], json!([]));
+    assert_eq!(e.journal.undo_len(), depth);
 }

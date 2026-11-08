@@ -16,8 +16,8 @@ use serde_json::{json, Value};
 use crate::b64;
 use crate::geom::{Affine, Rect};
 use crate::model::{
-    Artboard, BlendMode, BoolOp, Content, FillRule, Layer, Mask, Node, NodeKind, Paint, PaintOrder, PathData,
-    Stroke, Subpath, Transform, MAX_COORD,
+    Artboard, BlendMode, BoolOp, Content, FillRule, Layer, LineCap, Mask, Node, NodeKind, Paint,
+    PaintOrder, PathData, Stroke, Subpath, Transform, MAX_COORD,
 };
 use crate::raster;
 use crate::render::{self, Scene};
@@ -2355,7 +2355,11 @@ impl PrismEngine {
             h: (y1 - y0) as u32,
         };
         if !commit {
-            return Ok(PreparedStroke::Preview { dabs: dab_count, bounds });
+            return Ok(PreparedStroke::Preview {
+                count: dab_count,
+                bounds,
+                dabs: canvas_dabs,
+            });
         }
 
         // A stroke that cannot put down a single semi-transparent dab —
@@ -2407,7 +2411,7 @@ impl PrismEngine {
                     data: json!({ "ok": true, "dabs": dabs }),
                 });
             }
-            PreparedStroke::Preview { dabs, bounds } => {
+            PreparedStroke::Preview { count: dabs, bounds, .. } => {
                 return Ok(CommandResult {
                     output: None,
                     events: Vec::new(),
@@ -2590,8 +2594,8 @@ impl PrismEngine {
 
     /// `eraseStroke {id, mode?, brush_id?|brush?, samples, params?, commit?}`
     /// — the eraser counterpart of `paintStroke`. `mode` is `"pixel"`
-    /// (default) or `"mask"`; the vector eraser mode is deferred (see
-    /// docs/ENGINE_OPS.md).
+    /// (default), `"mask"` or `"vector"`; `id` is required for pixel/mask
+    /// and optional for vector (absent = whole-document scope).
     ///
     /// `pixel`: raster layer only, unlocked. Identical geometry to
     /// `paintStroke` — canvas-space samples mapped through the layer's
@@ -2620,9 +2624,10 @@ impl PrismEngine {
             None | Some(Value::Null) => EraseMode::Pixel,
             Some(Value::String(s)) if s == "pixel" => EraseMode::Pixel,
             Some(Value::String(s)) if s == "mask" => EraseMode::Mask,
+            Some(Value::String(s)) if s == "vector" => EraseMode::Vector,
             Some(Value::String(s)) => {
                 return Err(EngineError::validation(format!(
-                    "unknown erase mode '{s}' (expected 'pixel' or 'mask')"
+                    "unknown erase mode '{s}' (expected 'pixel', 'mask' or 'vector')"
                 )));
             }
             Some(_) => return Err(EngineError::invalid("field 'mode' must be a string")),
@@ -2638,6 +2643,7 @@ impl PrismEngine {
                 self.ensure_unlocked(idx)?;
                 self.erase_stroke_mask(idx, p, ctx, mode)
             }
+            EraseMode::Vector => self.erase_stroke_vector(p, ctx),
         }
     }
 
@@ -2658,7 +2664,7 @@ impl PrismEngine {
                         data: json!({ "ok": true, "dabs": dabs, "mode": mode.as_str() }),
                     });
                 }
-                PreparedStroke::Preview { dabs, bounds } => {
+                PreparedStroke::Preview { count: dabs, bounds, .. } => {
                     return Ok(CommandResult {
                         output: None,
                         events: Vec::new(),
@@ -2894,7 +2900,7 @@ impl PrismEngine {
                         data: json!({ "ok": true, "dabs": dabs, "mode": mode.as_str() }),
                     });
                 }
-                PreparedStroke::Preview { dabs, bounds } => {
+                PreparedStroke::Preview { count: dabs, bounds, .. } => {
                     return Ok(CommandResult {
                         output: None,
                         events: Vec::new(),
@@ -2964,6 +2970,388 @@ impl PrismEngine {
             json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
         ))
     }
+
+    // -- vector eraser (B-18 engine side) -------------------------------------
+
+    /// `mode:"vector"` — object eraser, NOT a path boolean. Removes whole
+    /// vector entities (shape and path layers) whose painted geometry
+    /// intersects the brush footprint; it never cuts or reshapes geometry.
+    ///
+    /// `id` is optional and acts as a scope root: absent → every layer in
+    /// the document is a candidate; present → only the subtree of that
+    /// layer (the layer itself when it is a shape/path). Groups, boolean
+    /// containers and raster layers are never removed — boolean *operands*
+    /// are ordinary vector entities, so erasing one changes the boolean's
+    /// rendered result through its remaining operands.
+    ///
+    /// Footprint: each dab with `alpha > 0` contributes its outer-radius
+    /// disc in canvas space (dab alpha magnitude does not scale the hit —
+    /// the eraser is binary per entity). Painted geometry is the same
+    /// model `hitTest`/`layerBounds` use: the fill region (fill-rule aware
+    /// winding of the flattened subpaths, present when the layer defines a
+    /// fill — a path with neither fill nor stroke paints nothing and is
+    /// never a hit) unioned with the stroke band, i.e. points within
+    /// `stroke.width · mean_scale / 2` of the centerline. Miter tips beyond
+    /// that band and square-cap dot corners are approximated, matching
+    /// `hitTest`'s distance model. Layer visibility gates candidates;
+    /// opacity, blend mode, masks, clipping and paint alpha do not — this
+    /// is object-level erase, documented in ENGINE_OPS.md.
+    ///
+    /// Committed strokes that hit nothing return eventless with
+    /// `removed: []`; a hit on a locked entity rejects the whole op with
+    /// `Validation` before any mutation. One document undo entry per
+    /// committed stroke. Geometry testing is bounded by
+    /// [`MAX_VECTOR_ERASE_TESTS`] primitive visits → `Validation`.
+    fn erase_stroke_vector(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let scope: Option<HashSet<u64>> = match p.get("id") {
+            None | Some(Value::Null) => None,
+            Some(v) => {
+                let id = v
+                    .as_u64()
+                    .ok_or_else(|| EngineError::invalid("field 'id' must be a u64"))?;
+                // Validate existence (NotFound) even though subtree_ids
+                // only needs the id value.
+                self.layer_index(id)?;
+                Some(self.subtree_ids(id))
+            }
+        };
+        match self.prepare_stroke_dabs(p, ctx)? {
+            PreparedStroke::Empty { dabs } => read(json!({
+                "ok": true,
+                "dabs": dabs,
+                "mode": EraseMode::Vector.as_str(),
+                "removed": [],
+            })),
+            PreparedStroke::Preview {
+                count,
+                bounds,
+                dabs,
+            } => {
+                let footprint: Vec<stroke::Dab> =
+                    dabs.iter().copied().filter(|d| d.alpha > 0.0).collect();
+                let hits = self.vector_erase_hits(&footprint, scope.as_ref(), ctx)?;
+                let removed: Vec<u64> = hits.iter().map(|&i| self.layers[i].id).collect();
+                read(json!({
+                    "dabs": count,
+                    "mode": EraseMode::Vector.as_str(),
+                    "bounds": { "x": bounds.x, "y": bounds.y, "w": bounds.w, "h": bounds.h },
+                    "removed": removed,
+                }))
+            }
+            PreparedStroke::Ready { dabs, count, .. } => {
+                let footprint: Vec<stroke::Dab> =
+                    dabs.into_iter().filter(|d| d.alpha > 0.0).collect();
+                let hits = self.vector_erase_hits(&footprint, scope.as_ref(), ctx)?;
+                if hits.is_empty() {
+                    return read(json!({
+                        "ok": true,
+                        "dabs": count,
+                        "mode": EraseMode::Vector.as_str(),
+                        "removed": [],
+                    }));
+                }
+                // Validate every hit is unlocked before recording — a
+                // locked entity anywhere in the footprint rejects the
+                // whole stroke atomically.
+                for &i in &hits {
+                    self.ensure_unlocked(i)?;
+                }
+                self.record();
+                let doomed: HashSet<u64> = hits.iter().map(|&i| self.layers[i].id).collect();
+                let removed: Vec<u64> = self
+                    .layers
+                    .iter()
+                    .filter(|l| doomed.contains(&l.id))
+                    .map(|l| l.id)
+                    .collect();
+                self.layers.retain(|l| !doomed.contains(&l.id));
+                self.selected.retain(|s| !doomed.contains(s));
+                Ok(CommandResult::data(json!({
+                    "ok": true,
+                    "dabs": count,
+                    "mode": EraseMode::Vector.as_str(),
+                    "removed": removed,
+                })))
+            }
+        }
+    }
+
+    /// Indices of in-scope, effectively visible vector entities whose
+    /// painted geometry intersects any footprint dab disc, in layer order.
+    /// Read-only; shared by the committed and dry-run paths.
+    fn vector_erase_hits(
+        &self,
+        dabs: &[stroke::Dab],
+        scope: Option<&HashSet<u64>>,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<Vec<usize>, EngineError> {
+        if dabs.is_empty() {
+            return Ok(Vec::new());
+        }
+        // Footprint AABB for the cheap entity-level reject.
+        let (mut fx0, mut fy0, mut fx1, mut fy1) =
+            (f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY);
+        for d in dabs {
+            fx0 = fx0.min(d.x - d.radius);
+            fy0 = fy0.min(d.y - d.radius);
+            fx1 = fx1.max(d.x + d.radius);
+            fy1 = fy1.max(d.y + d.radius);
+        }
+        let mut cands = Vec::new();
+        for (i, l) in self.layers.iter().enumerate() {
+            if !l.is_vector() {
+                continue;
+            }
+            if let Some(s) = scope {
+                if !s.contains(&l.id) {
+                    continue;
+                }
+            }
+            if !self.effectively_visible(i) {
+                continue;
+            }
+            cands.push(i);
+        }
+        let mut hits = Vec::new();
+        let mut tests = 0u64;
+        let task = RenderTask::new(ctx, cands.len().max(1) as u64);
+        for (k, &i) in cands.iter().enumerate() {
+            task.tick(k, 8, k as f32 / cands.len().max(1) as f32)?;
+            let Some(g) = self.vector_erase_geom(i) else {
+                continue;
+            };
+            tests += 1;
+            if tests > MAX_VECTOR_ERASE_TESTS {
+                return Err(vector_erase_budget_error());
+            }
+            if g.bounds.2 < fx0 || g.bounds.0 > fx1 || g.bounds.3 < fy0 || g.bounds.1 > fy1 {
+                continue;
+            }
+            if vector_geom_hit(&g, dabs, &mut tests, &task)? {
+                hits.push(i);
+            }
+        }
+        Ok(hits)
+    }
+
+    /// `visible` flags of the layer and every ancestor.
+    fn effectively_visible(&self, idx: usize) -> bool {
+        let mut cur = Some(idx);
+        let mut steps = 0;
+        while let Some(i) = cur {
+            if !self.layers[i].visible {
+                return false;
+            }
+            steps += 1;
+            if steps > self.layers.len() {
+                return false;
+            }
+            cur = self.layers[i]
+                .parent
+                .and_then(|p| self.layers.iter().position(|l| l.id == p));
+        }
+        true
+    }
+
+    /// Flattened painted geometry of one vector layer in canvas space, for
+    /// the eraser footprint test. `None` for non-vector content and for
+    /// paths that define neither fill nor stroke (they paint nothing).
+    fn vector_erase_geom(&self, idx: usize) -> Option<VectorEraseGeom> {
+        let layer = &self.layers[idx];
+        let m = self.scene().effective_affine(layer);
+        let shape_subs;
+        let (subpaths, has_fill, fill_rule, stroke): (&[Subpath], bool, FillRule, Option<&Stroke>) =
+            match &layer.content {
+                Content::Shape(s) => {
+                    shape_subs = vector::shape_to_subpaths(s);
+                    (shape_subs.as_slice(), true, FillRule::Nonzero, None)
+                }
+                Content::Path(p) => {
+                    if p.fill.is_none() && p.stroke.is_none() {
+                        return None;
+                    }
+                    (p.subpaths.as_slice(), p.fill.is_some(), p.fill_rule, p.stroke.as_ref())
+                }
+                _ => return None,
+            };
+        let polys = vector::flatten(subpaths, &m);
+        let stroke_hw = stroke.map(|s| s.width * m.mean_scale() / 2.0).unwrap_or(0.0);
+        let mut segs: Vec<(f64, f64, f64, f64, f64)> = Vec::new();
+        let mut dots: Vec<(f64, f64, f64)> = Vec::new();
+        let (mut x0, mut y0, mut x1, mut y1) =
+            (f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY);
+        let mut pts_total = 0usize;
+        for pl in &polys {
+            let pts = &pl.pts;
+            pts_total += pts.len();
+            let n = pts.len();
+            if n == 0 {
+                continue;
+            }
+            for p in pts {
+                x0 = x0.min(p.0);
+                y0 = y0.min(p.1);
+                x1 = x1.max(p.0);
+                y1 = y1.max(p.1);
+            }
+            if n == 1 {
+                // Zero-length subpath: a stroked dot only with round/square
+                // caps (butt draws nothing). Approximated as a disc of the
+                // stroke half-width — square-cap corners under-cover.
+                if let Some(s) = stroke {
+                    if s.cap != LineCap::Butt {
+                        dots.push((pts[0].0, pts[0].1, stroke_hw));
+                    }
+                }
+                continue;
+            }
+            for i in 0..n {
+                let a = pts[i];
+                let b = pts[(i + 1) % n];
+                if (a.0 - b.0).abs() < 1e-9 && (a.1 - b.1).abs() < 1e-9 {
+                    continue;
+                }
+                // Fill treats every subpath as a closed ring; the stroke
+                // centerline is closed only when the subpath is. A segment
+                // that is both gets the stroke pad, which subsumes the
+                // fill-edge threshold. The open-path closing edge exists
+                // only for the fill — skip it for stroke-only geometry.
+                let stroked = stroke.is_some() && (i + 1 < n || pl.closed);
+                if !(has_fill || stroked) {
+                    continue;
+                }
+                let pad = if stroked { stroke_hw } else { 0.0 };
+                segs.push((a.0, a.1, b.0, b.1, pad));
+            }
+        }
+        if segs.is_empty() && dots.is_empty() && !has_fill {
+            return None;
+        }
+        if !x0.is_finite() {
+            return None;
+        }
+        let pad = stroke_hw.max(0.0);
+        Some(VectorEraseGeom {
+            polys,
+            has_fill,
+            fill_rule,
+            segs,
+            dots,
+            pts_total,
+            bounds: (x0 - pad, y0 - pad, x1 + pad, y1 + pad),
+        })
+    }
+}
+
+/// Geometry-test budget for `eraseStroke mode:"vector"`: every dab×entity
+/// AABB check, segment visit, dot visit and fill-winding edge pass counts
+/// once, so hostile path/dab combinations reject with `Validation` before
+/// they can stall the op.
+const MAX_VECTOR_ERASE_TESTS: u64 = 1 << 24;
+
+fn vector_erase_budget_error() -> EngineError {
+    EngineError::validation(format!(
+        "vector erase geometry test exceeds the {MAX_VECTOR_ERASE_TESTS} budget"
+    ))
+}
+
+/// One vector entity's painted geometry in canvas space.
+struct VectorEraseGeom {
+    /// Flattened subpaths for the fill winding test.
+    polys: Vec<vector::Polyline>,
+    /// Whether a fill region exists (fill-rule aware).
+    has_fill: bool,
+    fill_rule: FillRule,
+    /// `(ax, ay, bx, by, pad)` distance-test segments: a dab hits when the
+    /// center-to-segment distance is ≤ `dab.radius + pad`.
+    segs: Vec<(f64, f64, f64, f64, f64)>,
+    /// `(x, y, pad)` degenerate stroked points.
+    dots: Vec<(f64, f64, f64)>,
+    /// Total polyline points — charged per winding evaluation.
+    pts_total: usize,
+    /// `(minx, miny, maxx, maxy)` including the stroke pad.
+    bounds: (f64, f64, f64, f64),
+}
+
+/// Squared-free point-to-segment distance.
+fn point_seg_dist(px: f64, py: f64, ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
+    let (dx, dy) = (bx - ax, by - ay);
+    let l2 = dx * dx + dy * dy;
+    let t = if l2 > 0.0 {
+        (((px - ax) * dx + (py - ay) * dy) / l2).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let (qx, qy) = (ax + t * dx, ay + t * dy);
+    (px - qx).hypot(py - qy)
+}
+
+/// Does any footprint dab disc intersect the entity's painted geometry?
+/// `tests` accumulates primitive visits against [`MAX_VECTOR_ERASE_TESTS`];
+/// `task` checkpoints per dab batch for cancellation.
+fn vector_geom_hit(
+    g: &VectorEraseGeom,
+    dabs: &[stroke::Dab],
+    tests: &mut u64,
+    task: &RenderTask<'_>,
+) -> Result<bool, EngineError> {
+    for (di, d) in dabs.iter().enumerate() {
+        task.tick(di, 32, di as f32 / dabs.len().max(1) as f32)?;
+        let r = d.radius;
+        *tests += 1;
+        if *tests > MAX_VECTOR_ERASE_TESTS {
+            return Err(vector_erase_budget_error());
+        }
+        // Dab disc vs entity bounds (bounds already carry the max pad).
+        if d.x + r < g.bounds.0
+            || d.x - r > g.bounds.2
+            || d.y + r < g.bounds.1
+            || d.y - r > g.bounds.3
+        {
+            continue;
+        }
+        for &(ax, ay, bx, by, pad) in &g.segs {
+            *tests += 1;
+            if *tests > MAX_VECTOR_ERASE_TESTS {
+                return Err(vector_erase_budget_error());
+            }
+            let rr = r + pad;
+            let (sx0, sy0) = (ax.min(bx), ay.min(by));
+            let (sx1, sy1) = (ax.max(bx), ay.max(by));
+            if sx1 < d.x - rr || sx0 > d.x + rr || sy1 < d.y - rr || sy0 > d.y + rr {
+                continue;
+            }
+            if point_seg_dist(d.x, d.y, ax, ay, bx, by) <= rr {
+                return Ok(true);
+            }
+        }
+        for &(px, py, pad) in &g.dots {
+            *tests += 1;
+            if *tests > MAX_VECTOR_ERASE_TESTS {
+                return Err(vector_erase_budget_error());
+            }
+            if point_seg_dist(d.x, d.y, px, py, px, py) <= r + pad {
+                return Ok(true);
+            }
+        }
+        if g.has_fill {
+            // Containment case: a dab disc strictly inside the fill (or a
+            // hole) crosses no edge, so only the winding test at the dab
+            // center distinguishes them. Charged per polyline point.
+            *tests += g.pts_total as u64;
+            if *tests > MAX_VECTOR_ERASE_TESTS {
+                return Err(vector_erase_budget_error());
+            }
+            if vector::point_in_fill(&g.polys, g.fill_rule, d.x, d.y) {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }
 
 /// Result of [`PrismEngine::prepare_stroke_dabs`]'s front half.
@@ -2971,8 +3359,14 @@ enum PreparedStroke {
     /// Stroke produced no usable dabs or is fully transparent — the caller
     /// returns `{ok:true, dabs}` eventless.
     Empty { dabs: usize },
-    /// `commit:false` dry run — the caller returns `{dabs, bounds}`.
-    Preview { dabs: usize, bounds: DabBounds },
+    /// `commit:false` dry run — the caller returns `{dabs, bounds}`. The
+    /// canvas-space dabs ride along so `mode:"vector"` can report which
+    /// entities the footprint would erase; raster/mask callers ignore them.
+    Preview {
+        count: usize,
+        bounds: DabBounds,
+        dabs: Vec<stroke::Dab>,
+    },
     /// Committed stroke ready to stamp: canvas-space dabs, dab count, and
     /// the brush color (paint needs the full RGBA; erase uses `color[3]`
     /// as its strength multiplier). The clipped canvas bounds were only
@@ -2997,6 +3391,7 @@ struct DabBounds {
 enum EraseMode {
     Pixel,
     Mask,
+    Vector,
 }
 
 impl EraseMode {
@@ -3004,6 +3399,7 @@ impl EraseMode {
         match self {
             EraseMode::Pixel => "pixel",
             EraseMode::Mask => "mask",
+            EraseMode::Vector => "vector",
         }
     }
 }
