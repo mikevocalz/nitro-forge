@@ -149,7 +149,9 @@ P02/P03 proceed in parallel with Wave 1; P04–P09 follow their dependencies.
   color-management dependency admission.
 - P08: Splice compositor/render cache, decoder-derived thumbnails/probes,
   encoder/export, effects/stickers/keyframed speed; consumes the P03
-  decoder and an encoder provider.
+  decoder and an encoder provider
+  ([decision record](reports/P-encoder-provider-decision.md), pending the
+  open decision points it flags).
 - P09: Cadence device routing/recording/comping/latency/surround,
   offline DSP/model features, valid audio export; native input/output
   host and interruption handling.
