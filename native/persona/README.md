@@ -181,5 +181,8 @@ implements the companion-phone transport half: it packages the sealed
 samples plus a manifest and POSTs them to a host-supplied endpoint, mapping
 a 2xx response to the transfer acknowledgement that unblocks
 `transferAcknowledged()`. No proprietary sync protocol is implied; the
-headset receiver and generation host remain separate concerns. Generation/fitting, phone-headset
+headset receiver and generation host remain separate concerns. The
+capture screen's review stage is fully wired: NYC-Tron SliderField
+warmth/brightness, touch-up toggle and Save/Recapture drive the Nitro
+appearance API and the session's explicit save/recapture safety. Generation/fitting, phone-headset
 transport and persistence are still host-owned and not implemented.

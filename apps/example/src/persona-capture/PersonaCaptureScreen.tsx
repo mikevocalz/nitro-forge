@@ -18,6 +18,7 @@ import {
 import { runOnJS } from 'react-native-worklets';
 import { Accelerometer } from 'expo-sensors';
 import { Button as TronButton } from '@nyc-tron/ui/components/Button';
+import { SliderField } from '@nyc-tron/ui/components/shell/SliderField';
 import { PersonaCapture } from '@nitro-forge/persona-native/capture';
 import { CAPTURE_SOURCE, CAPTURE_STEPS, CAPTURE_STEP_IDS, CAPTURE_STEP_SKIPPABLE } from './steps';
 import {
@@ -112,6 +113,9 @@ export function PersonaCaptureScreen() {
   const [completed, setCompleted] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
+  const [review, setReview] = useState<{
+    warmth: number; brightness: number; touchUp: boolean; backgroundFill: string;
+  } | null>(null);
   const captureRef = useRef<PersonaCapture | null>(null);
   const epochRef = useRef(0);
   const busyRef = useRef(false);
@@ -388,6 +392,46 @@ export function PersonaCaptureScreen() {
     }
   }, [completed]);
 
+  // Hydrate review controls whenever the session enters review stage.
+  useEffect(() => {
+    const capture = captureRef.current;
+    if (stage === 'review' && capture && !review) {
+      setReview({
+        warmth: capture.appearanceWarmth(),
+        brightness: capture.appearanceBrightness(),
+        touchUp: capture.appearanceTouchUp(),
+        backgroundFill: capture.appearanceBackgroundFill(),
+      });
+    }
+    if (stage !== 'review') setReview(null);
+  }, [stage, review]);
+
+  const onSave = useCallback(() => {
+    const capture = captureRef.current;
+    if (!capture || capture.stage() !== 'review') return;
+    try {
+      capture.save();
+      setStage(capture.stage());
+      setNotice(capture.savedAsset() ? 'Persona saved' : null);
+    } catch (e) {
+      setNotice(`Save failed: ${String(e)}`);
+    }
+  }, []);
+
+  const onRecapture = useCallback(() => {
+    const capture = captureRef.current;
+    if (!capture) return;
+    try {
+      capture.forget();
+      epochRef.current = capture.start(true);
+      setCompleted(0);
+      setStage(capture.stage());
+      setNotice('Recapture started — previous avatar preserved until a new one is saved');
+    } catch (e) {
+      setNotice(`Recapture failed: ${String(e)}`);
+    }
+  }, []);
+
   const onGenerate = useCallback(() => {
     const capture = captureRef.current;
     if (!capture || capture.stage() !== 'capture') return;
@@ -465,6 +509,65 @@ export function PersonaCaptureScreen() {
             Processing — generation host pending (fitting module not yet wired).
           </Text>
         ) : null}
+        {stage === 'review' && review ? (
+          <View style={styles.review}>
+            <Text style={styles.prompt}>Review your persona</Text>
+            <SliderField
+              unstyled
+              label="Warmth"
+              value={review.warmth}
+              min={0}
+              max={1}
+              step={0.01}
+              onCommit={(v: number) => {
+                const next = { ...review, warmth: v };
+                setReview(next);
+                captureRef.current?.setAppearance(next.warmth, next.brightness, next.touchUp, next.backgroundFill);
+              }}
+            />
+            <SliderField
+              unstyled
+              label="Brightness"
+              value={review.brightness}
+              min={0}
+              max={1}
+              step={0.01}
+              onCommit={(v: number) => {
+                const next = { ...review, brightness: v };
+                setReview(next);
+                captureRef.current?.setAppearance(next.warmth, next.brightness, next.touchUp, next.backgroundFill);
+              }}
+            />
+            <TronButton
+              title={review.touchUp ? 'Portrait touch-up: on' : 'Portrait touch-up: off'}
+              variant="secondary"
+              unstyled
+              style={styles.button}
+              labelClassName="text-white font-semibold"
+              onPress={() => {
+                const next = { ...review, touchUp: !review.touchUp };
+                setReview(next);
+                captureRef.current?.setAppearance(next.warmth, next.brightness, next.touchUp, next.backgroundFill);
+              }}
+            />
+            <TronButton
+              title="Save persona"
+              variant="primary"
+              unstyled
+              style={styles.button}
+              labelClassName="text-white font-semibold"
+              onPress={onSave}
+            />
+            <TronButton
+              title="Recapture"
+              variant="secondary"
+              unstyled
+              style={styles.button}
+              labelClassName="text-white font-semibold"
+              onPress={onRecapture}
+            />
+          </View>
+        ) : null}
         {capturing ? <Text style={styles.hint}>Capturing frame…</Text> : null}
         {notice ? <Text style={styles.notice}>{notice}</Text> : null}
       </View>
@@ -490,4 +593,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { color: '#fff', fontWeight: '600' },
+  review: { gap: 10, marginTop: 8 },
 });
