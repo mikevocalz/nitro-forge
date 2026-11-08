@@ -48,12 +48,12 @@ export class DraftDocument{
  addPoint(x:number,y:number,locked=false){return this.document.apply<{point_id:number}>('addPoint',{x,y,locked});}
  updatePoint(id:number,patch:Partial<Pick<DraftPoint,'x'|'y'|'locked'>>){return this.document.apply<{ok:boolean}>('updatePoint',{...patch,id});}
  removePoint(id:number){return this.document.apply<{ok:boolean}>('removePoint',{id});}
- addSegment(a:number,b:number,options:Partial<Pick<DraftSegment,'name'|'color'|'width'|'visible'|'locked'|'layer'>>={}){return this.document.apply<{segment_id:number}>('addSegment',{...options,a,b});}
+ addSegment(a:number,b:number,options:Partial<Pick<DraftSegment,'name'|'color'|'width'|'visible'|'locked'|'layer'|'block'>>={}){return this.document.apply<{segment_id:number}>('addSegment',{...options,a,b});}
  updateSegment(id:number,patch:Partial<Omit<DraftSegment,'id'>>){return this.document.apply<{ok:boolean}>('updateSegment',{...patch,id});}
  removeSegment(id:number){return this.document.apply<{ok:boolean}>('removeSegment',{id});}
  setSegmentOrder(order:readonly number[]){return this.document.apply<{ok:boolean}>('setSegmentOrder',{order});}
- addCircle(center:number,radius:number,options:Partial<Pick<DraftCircle,'name'|'color'|'width'|'visible'|'locked'|'layer'>>={}){return this.document.apply<{circle_id:number}>('addCircle',{...options,center,radius});}
- addArc(center:number,radius:number,start_deg:number,sweep_deg:number,options:Partial<Pick<DraftArc,'name'|'color'|'width'|'visible'|'locked'|'layer'>>={}){return this.document.apply<{arc_id:number}>('addArc',{...options,center,radius,start_deg,sweep_deg});}
+ addCircle(center:number,radius:number,options:Partial<Pick<DraftCircle,'name'|'color'|'width'|'visible'|'locked'|'layer'|'block'>>={}){return this.document.apply<{circle_id:number}>('addCircle',{...options,center,radius});}
+ addArc(center:number,radius:number,start_deg:number,sweep_deg:number,options:Partial<Pick<DraftArc,'name'|'color'|'width'|'visible'|'locked'|'layer'|'block'>>={}){return this.document.apply<{arc_id:number}>('addArc',{...options,center,radius,start_deg,sweep_deg});}
  updateCircle(id:number,patch:Partial<Omit<DraftCircle,'id'>>){return this.document.apply<{ok:boolean}>('updateCircle',{...patch,id});}
  updateArc(id:number,patch:Partial<Omit<DraftArc,'id'>>){return this.document.apply<{ok:boolean}>('updateArc',{...patch,id});}
  removeCircle(id:number){return this.document.apply<{ok:boolean}>('removeCircle',{id});}
