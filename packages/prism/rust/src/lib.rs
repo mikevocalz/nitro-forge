@@ -18,6 +18,7 @@ mod vector;
 #[cfg(test)]
 mod tests_v2;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use ignition_core::{
@@ -1202,6 +1203,24 @@ impl Engine for PrismEngine {
         for b in &wire.brushes {
             b.validate()
                 .map_err(|_| EngineError::serialization("invalid brush in snapshot"))?;
+        }
+        // Brush ids share the document id counter with layers and
+        // artboards: reject duplicates and cross-space collisions so a
+        // crafted snapshot cannot make `brush_id` lookups ambiguous.
+        {
+            let mut brush_ids = HashSet::with_capacity(wire.brushes.len());
+            for b in &wire.brushes {
+                if !brush_ids.insert(b.id) {
+                    return Err(EngineError::serialization("duplicate brush id in snapshot"));
+                }
+                if layers.iter().any(|l| l.id == b.id)
+                    || wire.artboards.iter().any(|a| a.id == b.id)
+                {
+                    return Err(EngineError::serialization(
+                        "brush id collides with a layer or artboard id in snapshot",
+                    ));
+                }
+            }
         }
         let brushes = wire.brushes;
         self.width = wire.width;

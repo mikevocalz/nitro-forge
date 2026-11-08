@@ -24,8 +24,9 @@
 //!
 //! Budgets (decision record §5): ≤ [`MAX_SAMPLES`] input samples per op,
 //! ≤ [`MAX_BRUSHES`] brushes per document, ≤ [`MAX_DABS`] dabs per stroke,
-//! ≤ [`MAX_MODEL_OUTPUTS`] modeled points per stroke. All validation happens
-//! before any mutation, keeping `apply` atomic.
+//! ≤ [`MAX_MODEL_OUTPUTS`] modeled points per stroke, and ≤
+//! [`MAX_STROKE_PIXELS`] dab-stamp pixel visits per `paintStroke`. All
+//! validation happens before any mutation, keeping `apply` atomic.
 
 use std::collections::VecDeque;
 
@@ -49,6 +50,12 @@ pub const MAX_DABS: usize = 262_144;
 pub const MAX_MODEL_OUTPUTS: usize = 32768;
 /// Lookahead points `predict` may emit.
 pub const MAX_PREDICT_STEPS: u32 = 64;
+/// Total dab-stamp pixel visits allowed per `paintStroke` — the same
+/// ceiling as the canvas pixel budget (`MAX_PIXELS` in lib.rs). A dab's
+/// clipped bounding box is the unit: overlapping dabs count once per visit,
+/// so a dense stroke over the whole canvas can exceed it. Enforced by
+/// [`stamp_pixel_work`] before any mutation; see docs/ENGINE_OPS.md.
+pub const MAX_STROKE_PIXELS: u64 = crate::MAX_PIXELS;
 
 // -- small vec math ---------------------------------------------------------
 
@@ -115,15 +122,10 @@ fn nearest_point_on_segment(a: V2, b: V2, point: V2) -> f64 {
 /// `InterpAngle`.
 fn interp_angle(start: f64, end: f64, amount: f64) -> f64 {
     const TWO_PI: f64 = std::f64::consts::TAU;
-    let norm = |mut a: f64| {
-        while a < 0.0 {
-            a += TWO_PI;
-        }
-        while a > TWO_PI {
-            a -= TWO_PI;
-        }
-        a
-    };
+    // `rem_euclid` is O(1) and total for any finite input — a `while`
+    // subtract loop here would hang on hostile angles (e.g. an
+    // `orientation` of 1e10 passed straight to `model_stroke`).
+    let norm = |a: f64| a.rem_euclid(TWO_PI);
     let (mut s, mut e) = (norm(start), norm(end));
     let delta = e - s;
     if delta < -std::f64::consts::PI {
@@ -148,9 +150,11 @@ pub struct StrokeSample {
     pub y: f64,
     /// -1 = unknown.
     pub pressure: f64,
-    /// -1 = unknown; radians when known.
+    /// -1 = unknown; radians when known, normalized to [0, 2π) by
+    /// [`parse_samples`].
     pub tilt: f64,
-    /// -1 = unknown; radians when known.
+    /// -1 = unknown; radians when known, normalized to [0, 2π) by
+    /// [`parse_samples`].
     pub orientation: f64,
     pub contact: bool,
 }
@@ -177,6 +181,19 @@ fn opt_state(v: Option<f64>, what: &str) -> Result<f64, EngineError> {
         Some(_) => Err(EngineError::validation(format!(
             "sample {what} must be a finite number >= 0"
         ))),
+    }
+}
+
+/// Stylus angles (`tilt`, `orientation`): same domain as [`opt_state`],
+/// then wrapped into `[0, 2π)`. `orientation` is periodic so the wrap is
+/// lossless; `tilt` is normalized over π/2 downstream and saturates anyway,
+/// so bounding it here only rejects meaningless magnitudes. Either way the
+/// modeler never sees an unbounded angle — defense in depth behind the
+/// O(1) `rem_euclid` in [`interp_angle`].
+fn opt_angle(v: Option<f64>, what: &str) -> Result<f64, EngineError> {
+    match opt_state(v, what)? {
+        x if x < 0.0 => Ok(x),
+        x => Ok(x.rem_euclid(std::f64::consts::TAU)),
     }
 }
 
@@ -224,8 +241,8 @@ pub fn parse_samples(v: Option<&Value>) -> Result<Vec<StrokeSample>, EngineError
             pressure: opt_state(w.pressure, "pressure").map_err(|_| {
                 EngineError::validation(format!("sample {i} pressure must be finite >= 0"))
             })?,
-            tilt: opt_state(w.tilt, "tilt")?,
-            orientation: opt_state(w.orientation, "orientation")?,
+            tilt: opt_angle(w.tilt, "tilt")?,
+            orientation: opt_angle(w.orientation, "orientation")?,
             contact: w.contact.unwrap_or(true),
         });
     }
@@ -1438,9 +1455,50 @@ pub fn dabs_bounds(dabs: &[Dab]) -> Option<(f64, f64, f64, f64)> {
     b
 }
 
+/// Exact count of pixels `stamp_dabs` will visit for `dabs` clipped to the
+/// destination rect `(dst_ox, dst_oy, dst_w, dst_h)` — every pixel inside a
+/// dab's clipped bounding box is examined (the circle/coverage tests run
+/// inside), so this sum is the true work unit behind [`MAX_STROKE_PIXELS`].
+/// Callers must run this before mutating; it is the same clip math
+/// `stamp_dabs` uses, so it cannot underestimate.
+pub fn stamp_pixel_work(
+    dabs: &[Dab],
+    dst_w: usize,
+    dst_h: usize,
+    dst_ox: usize,
+    dst_oy: usize,
+) -> u64 {
+    let mut work = 0u64;
+    for dab in dabs {
+        if dab.alpha <= 0.0 {
+            continue;
+        }
+        let x0 = ((dab.x - dab.radius).floor() as i64).max(dst_ox as i64);
+        let y0 = ((dab.y - dab.radius).floor() as i64).max(dst_oy as i64);
+        let x1 = ((dab.x + dab.radius).ceil() as i64).min((dst_ox + dst_w) as i64);
+        let y1 = ((dab.y + dab.radius).ceil() as i64).min((dst_oy + dst_h) as i64);
+        if x1 <= x0 || y1 <= y0 {
+            continue;
+        }
+        work = work.saturating_add(((x1 - x0) as u64).saturating_mul((y1 - y0) as u64));
+    }
+    work
+}
+
 /// Stamp dabs into `dst` (a `dst_w * dst_h` RGBA region whose pixel (0,0)
 /// sits at canvas `(dst_ox, dst_oy)`). Src-over via `raster::blend_pixel`;
-/// checkpoints every [`CHECKPOINT_EVERY_PX`] blended pixels.
+/// checkpoints every [`CHECKPOINT_EVERY_PX`] *examined* pixels so
+/// cancellation stays responsive even when coverage or the selection gates
+/// most of them out.
+///
+/// `selection`, when present, is a canvas-sized coverage mask already
+/// pulled back into this buffer's coordinate space (see
+/// `select::pullback_coverage`); `sel_stride` is the canvas width used to
+/// index it. Each stamped pixel's alpha is additionally scaled by the
+/// selection value at that texel — the same gate `floodFill` applies.
+///
+/// Callers must enforce [`MAX_STROKE_PIXELS`] via [`stamp_pixel_work`]
+/// before calling; this function does not re-check the budget.
 pub fn stamp_dabs(
     dst: &mut [u8],
     dst_w: usize,
@@ -1449,6 +1507,8 @@ pub fn stamp_dabs(
     dst_oy: usize,
     dabs: &[Dab],
     color: [u8; 4],
+    selection: Option<&[u8]>,
+    sel_stride: usize,
     task: &mut RenderTask,
 ) -> Result<(), EngineError> {
     let src = [color[0], color[1], color[2], color[3]];
@@ -1469,6 +1529,8 @@ pub fn stamp_dabs(
         for py in y0..y1 {
             let cy = py as f64 + 0.5;
             for px in x0..x1 {
+                done_px += 1;
+                task.tick(done_px, CHECKPOINT_EVERY_PX, di as f32 / total_dabs)?;
                 let cx = px as f64 + 0.5;
                 let d2 = (cx - dab.x) * (cx - dab.x) + (cy - dab.y) * (cy - dab.y);
                 if d2 > r2 {
@@ -1485,6 +1547,16 @@ pub fn stamp_dabs(
                 if coverage <= 0.0 {
                     continue;
                 }
+                let alpha = match selection {
+                    Some(sel) => {
+                        let si = py as usize * sel_stride + px as usize;
+                        coverage * dab.alpha * sel.get(si).copied().unwrap_or(0) as f64 / 255.0
+                    }
+                    None => coverage * dab.alpha,
+                };
+                if alpha <= 0.0 {
+                    continue;
+                }
                 let lx = (px as usize) - dst_ox;
                 let ly = (py as usize) - dst_oy;
                 if lx >= dst_w || ly >= dst_h {
@@ -1492,9 +1564,7 @@ pub fn stamp_dabs(
                 }
                 let o = (ly * dst_w + lx) * 4;
                 if o + 4 <= dst.len() {
-                    raster::blend_pixel(&mut dst[o..o + 4], &src, coverage * dab.alpha);
-                    done_px += 1;
-                    task.tick(done_px, CHECKPOINT_EVERY_PX, di as f32 / total_dabs)?;
+                    raster::blend_pixel(&mut dst[o..o + 4], &src, alpha);
                 }
             }
         }
@@ -1677,7 +1747,7 @@ mod tests {
         let mut buf = vec![0u8; 8 * 8 * 4];
         let dab = Dab { x: 4.5, y: 4.5, radius: 3.0, inner: 0.0, alpha: 1.0, hardness: 0.0 };
         let mut task = RenderTask::new(None, 1);
-        stamp_dabs(&mut buf, 8, 8, 0, 0, &[dab], [255, 0, 0, 255], &mut task).unwrap();
+        stamp_dabs(&mut buf, 8, 8, 0, 0, &[dab], [255, 0, 0, 255], None, 8, &mut task).unwrap();
         let center = (4 * 8 + 4) * 4;
         assert_eq!(&buf[center..center + 4], &[255, 0, 0, 255]);
         // Corner untouched.
@@ -1685,6 +1755,47 @@ mod tests {
         // Edge pixel partially covered (center (2.5,4.5), d=2 of r=3).
         let edge = (4 * 8 + 2) * 4;
         assert!(buf[edge + 3] > 0 && buf[edge + 3] < 255);
+    }
+
+    #[test]
+    fn hostile_orientation_wraps_instead_of_hanging() {
+        // Regression: `interp_angle` used to normalize with `while` loops —
+        // orientation 1e10 spun forever. `rem_euclid` + parse-time wrapping
+        // make any finite angle O(1); 1e15 must model quickly with sane
+        // (wrapped) output.
+        let v = json!([
+            {"t": 0.0, "x": 0.0, "y": 0.0, "orientation": 1e15, "tilt": 1e15},
+            {"t": 0.01, "x": 5.0, "y": 0.0, "orientation": 1e15, "tilt": 1e15},
+        ]);
+        let samples = parse_samples(Some(&v)).unwrap();
+        assert!(samples.iter().all(|s| {
+            (0.0..std::f64::consts::TAU).contains(&s.orientation) && s.orientation >= 0.0
+                && (0.0..std::f64::consts::TAU).contains(&s.tilt)
+        }));
+        let (segs, _) = model_stroke(&samples, &StrokeParams::default(), None, None).unwrap();
+        for p in segs.iter().flatten() {
+            if let Some(o) = p.orientation {
+                assert!((0.0..std::f64::consts::TAU).contains(&o), "orientation {o}");
+            }
+            if let Some(t) = p.tilt {
+                assert!(t.is_finite() && t >= 0.0);
+            }
+        }
+        // interp_angle itself is total for any finite input.
+        assert!(interp_angle(1e15, -1e15, 0.5).is_finite());
+        assert!(interp_angle(f64::MAX, f64::MIN_POSITIVE, 0.25).is_finite());
+    }
+
+    #[test]
+    fn stamp_pixel_work_matches_stamp_visit_count() {
+        let dab = Dab { x: 4.5, y: 4.5, radius: 3.0, inner: 0.0, alpha: 1.0, hardness: 0.0 };
+        // 8x8 dst: bbox x 2..7 (floor 1.5→1? compute: 4.5-3=1.5 floor 1, 4.5+3=7.5 ceil 8 → clipped 0..8)
+        let work = stamp_pixel_work(&[dab], 8, 8, 0, 0);
+        assert_eq!(work, 7 * 7, "bbox 1..8 x 1..8");
+        // Off-dst dab contributes nothing; zero-alpha dab is skipped.
+        let far = Dab { x: 100.0, y: 100.0, ..dab };
+        let ghost = Dab { alpha: 0.0, ..dab };
+        assert_eq!(stamp_pixel_work(&[far, ghost], 8, 8, 0, 0), 0);
     }
 
     #[test]

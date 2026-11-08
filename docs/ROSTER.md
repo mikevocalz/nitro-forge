@@ -8,7 +8,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Check | Result | Command |
 |---|---|---|
 | ignition-core contract tests | 5 pass | `cargo test -p ignition-core` |
-| prism-engine unit tests | 151 pass | `cargo test -p prism-engine` |
+| prism-engine unit tests | 158 pass | `cargo test -p prism-engine` |
 | tally-engine unit + formula tests | 212 pass | `cargo test -p tally-engine` |
 | cadence-engine tests (incl. real PCM render, stems, clip split/gain/mute, beat detection) | 70 pass | `cargo test -p cadence-engine` |
 | @nitro-forge/cadence vitest e2e via nf-cli | 45 pass | `pnpm --filter @nitro-forge/cadence test` |
@@ -30,7 +30,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Folio slice E (redactRect + comparePdf, 2026-11-07 `codex/w1-folio-redact`; review fixes `codex/w1-folio-e`) | 133 folio Rust tests + 35 folio vitest pass; nf-cli build + folio typecheck clean | `cargo test -p folio-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/folio test`, `pnpm --filter @nitro-forge/folio typecheck` |
 | Splice per-clip mix (`gain_db`/`pan`, `setClipMix`; `codex/w4-splice-mix`) | 55 splice Rust tests + 39 splice vitest pass; nf-cli build + splice typecheck clean | `cargo test -p splice-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/splice test`, `pnpm --filter @nitro-forge/splice typecheck` |
 | Folio slice F (encryption reconciliation + insertPageImage, 2026-11-11 `codex/w1-folio-f`; review fixes same branch) | 149 folio Rust tests + 39 folio vitest pass; nf-cli build + folio typecheck clean; nf-sys 28 pass | `cargo test -p folio-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/folio test`, `pnpm --filter @nitro-forge/folio typecheck`, `cargo test -p nf-sys` |
-| Prism brush/stroke engine (P06; `codex/w5-prism-brush`, per `docs/completion/reports/P-prism-brush-ink-decision.md`) | 151 prism Rust tests + 32 prism vitest pass (incl. 5 new brush/stroke e2e via real nf-cli); `cargo build -p nf-cli` + prism typecheck clean; `pnpm install --prefer-offline` clean | `cargo test -p prism-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/prism test`, `pnpm --filter @nitro-forge/prism typecheck` |
+| Prism brush/stroke engine (P06; `codex/w5-prism-brush`, per `docs/completion/reports/P-prism-brush-ink-decision.md`) | 158 prism Rust tests + 32 prism vitest pass (incl. 5 new brush/stroke e2e via real nf-cli); `cargo build -p nf-cli` + prism typecheck clean; `pnpm install --prefer-offline` clean | `cargo test -p prism-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/prism test`, `pnpm --filter @nitro-forge/prism typecheck` |
 
 ## Transport status
 
@@ -49,7 +49,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Ignition contracts | Architect (main session) | ARCHITECTURE.md, ignition-core, protocol, envelope, journal, registry | ✅ verified |
 | C FFI | Platform eng (main session) | nf-sys | ✅ verified (1 test) |
 | TS host/DX | API eng (main session) | EngineHost/NitroHost/CliHost/DocumentHandle, 7 typed APIs | ✅ verified via e2e |
-| Prism engine | Graphics eng (subagent 3ba36e7a) | layers, pixels, filters, flatten; 2026-11-05 W2 ops slice: `modifySelection` smooth, `crop` (intersection semantics; transformed rasters reject), `samplePixels` (composite eyedropper, premultiplied average); 2026-11-11 W2 slice: `duplicateLayer` (subtree-aware deep copy, fresh ids, remapped parents); 2026-11-05 W5 slice: brush/stroke engine (`modelStroke`, brush CRUD, `paintStroke` dab pipeline per ink-admission decision) | ✅ 151 tests |
+| Prism engine | Graphics eng (subagent 3ba36e7a) | layers, pixels, filters, flatten; 2026-11-05 W2 ops slice: `modifySelection` smooth, `crop` (intersection semantics; transformed rasters reject), `samplePixels` (composite eyedropper, premultiplied average); 2026-11-11 W2 slice: `duplicateLayer` (subtree-aware deep copy, fresh ids, remapped parents); 2026-11-05 W5 slice: brush/stroke engine (`modelStroke`, brush CRUD, `paintStroke` dab pipeline per ink-admission decision; review fixes: angle-wrap hardening, layer-transform/selection-aware stamping, 2^28 stamp-pixel budget, eventless no-ops, brush-id restore validation) | ✅ 158 tests |
 | Tally engine | Spreadsheet eng (subagent ddf87203) | formula parser/evaluator | ✅ 27 tests |
 | Cadence engine | Audio/DSP eng (subagent 75836ea5) | MIDI clips, transport, PCM render; 2026-11-05 w3: renderStems, splitClip/setClipGain/setClipMute, detectBeats | ✅ 70 tests |
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch; 2026-11-07: keyframed speed (`speed_keys`, `setSpeedKeys`, integral footprint through all structural ops); 2026-11-08: per-clip mix (`gain_db` -60..=12, `pan` -1..=1, `setClipMix`, renderPlan exposure — storage/plan metadata only, no mixer) | ✅ 55 tests |

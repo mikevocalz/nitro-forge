@@ -152,7 +152,9 @@ envelope 0→1 over the first arc-length fraction and 1→0 over the last
 (`start+end` ≤ 1).
 
 Stroke samples are `{t,x,y,pressure?,tilt?,orientation?,contact?}`: `t` in
-**seconds**, `x`/`y` canvas px, `tilt`/`orientation` in radians,
+**seconds**, `x`/`y` canvas px, `tilt`/`orientation` in radians (wrapped
+into `[0, 2π)` at parse — any finite non-negative value is accepted, so a
+hostile `1e15` cannot hang the angle interpolation),
 `contact:false` lifts the pen and splits the stroke into segments. The
 modeler (a spec-level reimplementation of the google/ink
 ink-stroke-modeler behavior — no code copied, no dependency) runs
@@ -166,7 +168,11 @@ ratio, default 72), `end_of_stroke_stopping_distance` (px, default 0.01),
 `end_of_stroke_max_iterations` (default 20). `predict` is `false`/absent,
 `true` (defaults), or `{steps:1..=64 (default 8), interval? (s, default
 1/min_output_rate)}` of velocity lookahead. Budgets: ≤ 4096 samples per
-op, ≤ 32768 modeled points per stroke, deterministic across targets.
+op, ≤ 32768 modeled points per stroke, ≤ 262144 dabs per stroke, ≤ 2^28
+dab-stamp pixel visits per `paintStroke` (every pixel inside a dab's
+clipped bounding box counts once per dab, so overlapping dabs multiply;
+checked before any mutation → `Validation`), deterministic across
+targets.
 
 | op | payload | data | notes |
 |---|---|---|---|
@@ -175,7 +181,7 @@ op, ≤ 32768 modeled points per stroke, deterministic across targets.
 | `setBrush` | `{id,…patch}` | `{ok,changed}` | partial merge; identical result → `changed:false`, no undo/event |
 | `removeBrush` | `{id}` | `{ok}` | NotFound if absent |
 | `listBrushes` | `{}` | `{brushes:[…]}` | read-only |
-| `paintStroke` | `{id, brush_id?|brush?, samples, params?, commit?}` | `{ok,dabs}` or dry-run `{dabs,bounds:{x,y,w,h}}` | raster layer only, unlocked; exactly one of `brush_id`/`brush` (inline brush = addBrush fields without `id`). Models samples, resolves dynamics+taper into dabs (≤262144), stamps circular anti-aliased coverage src-over. One pixel-region undo entry per committed stroke; `commit:false` is read-only and records nothing |
+| `paintStroke` | `{id, brush_id?|brush?, samples, params?, commit?}` | `{ok,dabs}` or dry-run `{dabs,bounds?}` | raster layer only, unlocked; exactly one of `brush_id`/`brush` (inline brush = addBrush fields without `id`). Samples are canvas-space: dab centers are mapped through the layer's complete transform (own + ancestors) into layer-local texels and radii scaled by its mean scale — under non-uniform scale a dab is approximated by a circle of `radius/mean_scale`. The pixel selection gates each stamped pixel via canvas→local coverage pullback, same as `floodFill`. Models samples, resolves dynamics+taper into dabs (≤262144), stamps circular anti-aliased coverage src-over within the ≤2^28 stamp-pixel budget. One pixel-region undo entry per committed stroke; `commit:false` is read-only and records nothing; empty, fully off-canvas, or fully transparent strokes return eventless with no journal entry. Dry-run `bounds` is canvas-space and absent when there are no dabs or they land off-canvas |
 
 Deferred from the P06 scope (see
 `docs/completion/reports/P-prism-brush-ink-decision.md`): erase modes
@@ -193,6 +199,13 @@ pixel (max, a·(1-b), min, xor). Normal-mode compositing keeps the original
 Brush engine ops (B-15, B-16, B-29, B-33) landed after the google/ink
 source admission (#46) — see the brush/stroke section above for payloads
 and the deferred erase/timelapse/UI scope.
+
+Snapshots written by this version carry the `brushes` table. Older
+engines ignore unknown snapshot fields, so restoring such a snapshot on
+a pre-brush engine **silently drops every brush** (layers, pixels and
+selection survive); the brush table is document metadata, not geometry.
+Restoring on this engine enforces brush count/field validation and
+rejects duplicate brush ids or ids colliding with layer/artboard ids.
 
 ## tally-engine — `TallyEngine::new()`
 

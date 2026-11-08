@@ -2298,9 +2298,24 @@ impl PrismEngine {
 
     /// `paintStroke {id, brush_id?|brush?, samples, params?, commit?}` —
     /// model the samples, resolve dabs through the brush, and stamp them
-    /// src-over onto a raster layer. One undo entry (pixel region) per
-    /// committed stroke; `commit:false` is a read-only dry run returning the
-    /// dab count and bounds. Exactly one of `brush_id`/`brush` is required.
+    /// src-over onto a raster layer. Samples are **canvas-space**; the
+    /// raster buffer is layer-local, so dab centers are mapped through the
+    /// inverse of the layer's complete transform (own + ancestors) and
+    /// radii scaled by its mean scale — the same convention stroke widths
+    /// use (under non-uniform scale a dab is approximated by a circle of
+    /// `radius / mean_scale`; see docs/ENGINE_OPS.md). The pixel selection
+    /// is honored exactly like `floodFill`: canvas coverage is pulled back
+    /// into layer-local texels and gates each stamped pixel.
+    ///
+    /// One undo entry (pixel region) per committed stroke; `commit:false`
+    /// is a read-only dry run returning the dab count and canvas-space
+    /// bounds. Exactly one of `brush_id`/`brush` is required. A stroke
+    /// that cannot put down a single semi-transparent dab — transparent
+    /// brush/color, or dabs landing fully outside the layer's texels —
+    /// returns eventless with no journal entry, like the other no-op
+    /// paths. Total stamp work is capped at [`stroke::MAX_STROKE_PIXELS`]
+    /// (checked before any mutation); over-budget strokes are rejected
+    /// with `Validation`.
     fn op_paint_stroke(
         &mut self,
         p: &Value,
@@ -2335,9 +2350,9 @@ impl PrismEngine {
         };
 
         let (segments, _) = stroke::model_stroke(&samples, &params, None, ctx)?;
-        let dabs = stroke::generate_dabs(&segments, &brush)?;
-        let dab_count = dabs.len();
-        let Some((bx0, by0, bx1, by1)) = stroke::dabs_bounds(&dabs) else {
+        let canvas_dabs = stroke::generate_dabs(&segments, &brush)?;
+        let dab_count = canvas_dabs.len();
+        let Some((bx0, by0, bx1, by1)) = stroke::dabs_bounds(&canvas_dabs) else {
             return Ok(CommandResult {
                 output: None,
                 events: Vec::new(),
@@ -2370,6 +2385,84 @@ impl PrismEngine {
             });
         }
 
+        // A stroke that cannot put down a single semi-transparent dab —
+        // transparent brush color or zero alpha on every dab — changes no
+        // pixel, so it is eventless: no undo entry, no document:changed.
+        if brush.color[3] == 0 || canvas_dabs.iter().all(|d| d.alpha <= 0.0) {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count }),
+            });
+        }
+
+        // Map canvas-space dabs into the layer's local texel space. The
+        // raster buffer is canvas-sized but indexed by layer-local pixels;
+        // `effective_affine` maps local → canvas (same convention as
+        // floodFill's coverage pullback).
+        let transform = self.scene().effective_affine(&self.layers[idx]);
+        let inv = transform
+            .invert()
+            .ok_or_else(|| EngineError::validation("layer transform cannot be inverted"))?;
+        let dabs: Vec<stroke::Dab> = if transform.is_identity() {
+            canvas_dabs
+        } else {
+            let s = transform.mean_scale().max(1e-9);
+            canvas_dabs
+                .iter()
+                .map(|d| {
+                    let (x, y) = inv.apply(d.x, d.y);
+                    stroke::Dab {
+                        x,
+                        y,
+                        radius: d.radius / s,
+                        inner: d.inner / s,
+                        alpha: d.alpha,
+                        hardness: d.hardness,
+                    }
+                })
+                .collect()
+        };
+        // Recompute the stamp region in layer-local coordinates; dabs whose
+        // transformed centers land outside the buffer's texels clip away.
+        let Some((lx0, ly0, lx1, ly1)) = stroke::dabs_bounds(&dabs) else {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count }),
+            });
+        };
+        let x0 = (lx0.floor() as i64).max(0);
+        let y0 = (ly0.floor() as i64).max(0);
+        let x1 = (lx1.ceil() as i64).min(self.width as i64);
+        let y1 = (ly1.ceil() as i64).min(self.height as i64);
+        if x1 <= x0 || y1 <= y0 {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count }),
+            });
+        }
+        let (cx, cy) = (x0 as u32, y0 as u32);
+        let (cw, ch) = ((x1 - x0) as u32, (y1 - y0) as u32);
+
+        // Pixel-work budget: the stamp visits every pixel in each dab's
+        // clipped bbox, so overlapping dabs multiply the cost. Check the
+        // exact visit count against the canvas-pixel ceiling BEFORE any
+        // journal entry or mutation — a rejected stroke is fully atomic.
+        let (bw, bh, box_, boy) = if ctx.is_some() {
+            (cw as usize, ch as usize, cx as usize, cy as usize)
+        } else {
+            (self.width as usize, self.height as usize, 0usize, 0usize)
+        };
+        let stamp_work = stroke::stamp_pixel_work(&dabs, bw, bh, box_, boy);
+        if stamp_work > stroke::MAX_STROKE_PIXELS {
+            return Err(EngineError::validation(format!(
+                "stroke would visit {stamp_work} stamp pixels, exceeding the {} budget",
+                stroke::MAX_STROKE_PIXELS
+            )));
+        }
+
         let canvas_w = self.width as usize;
         let canvas_h = self.height as usize;
         let buf = self
@@ -2383,7 +2476,26 @@ impl PrismEngine {
             cw as usize,
             ch as usize,
         );
-        let mut task = RenderTask::new(ctx, 1);
+        let mut task = RenderTask::new(ctx, 2);
+        // The pixel selection lives in canvas space; pull it back into
+        // layer-local coverage exactly like floodFill (identity transform
+        // reuses the mask directly). Owned locals keep the borrows clear of
+        // the later `&mut self` calls.
+        let selection_arc = self.selection.clone();
+        let sel_pulled: Option<Vec<u8>> = match &selection_arc {
+            Some(sel) if !transform.is_identity() => Some(select::pullback_coverage(
+                sel,
+                canvas_w,
+                canvas_h,
+                &transform,
+                &mut task,
+            )?),
+            _ => None,
+        };
+        let sel_mask: Option<&[u8]> = sel_pulled
+            .as_deref()
+            .or_else(|| selection_arc.as_deref().map(|v| v.as_slice()));
+        task.step_done();
         if ctx.is_some() {
             // Cancellable path: stamp into a scratch copy of the region,
             // checkpointing per dab pixel batch, then commit once.
@@ -2396,6 +2508,8 @@ impl PrismEngine {
                 cy as usize,
                 &dabs,
                 brush.color,
+                sel_mask,
+                canvas_w,
                 &mut task,
             )?;
             task.checkpoint()?;
@@ -2441,6 +2555,8 @@ impl PrismEngine {
             0,
             &dabs,
             brush.color,
+            sel_mask,
+            canvas_w,
             &mut task,
         )?;
         Ok(CommandResult::data(json!({ "ok": true, "dabs": dab_count })))

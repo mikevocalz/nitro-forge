@@ -254,8 +254,9 @@ export interface PaintStrokeResult {
   dabs: number;
 }
 
-/** Result of `paintStroke` with `commit:false`. */
+/** Result of `paintStroke` with `commit:false`. `bounds` is absent when the
+ * stroke produces no dabs or lands fully off-canvas. */
 export interface PaintStrokePreview {
   dabs: number;
-  bounds: { x: number; y: number; w: number; h: number };
+  bounds?: { x: number; y: number; w: number; h: number };
 }
