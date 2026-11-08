@@ -59,7 +59,13 @@ fn arrows(lines: &mut Vec<Line>, tip: XY, inward: XY, span: f64) {
     let base = inward.1.atan2(inward.0);
     for sign in [-1., 1.] {
         let angle = base + sign * ARROW_HALF_ANGLE;
-        push(lines, tip, (tip.0 + len * angle.cos(), tip.1 + len * angle.sin()));
+        let end = (tip.0 + len * angle.cos(), tip.1 + len * angle.sin());
+        // Arrowheads are schematic overshoot, not authored geometry: a leg
+        // that would leave the ±1e6 world budget is omitted rather than
+        // failing the whole measurement.
+        if coord(end.0) && coord(end.1) {
+            push(lines, tip, end);
+        }
     }
 }
 

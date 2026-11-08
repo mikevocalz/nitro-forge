@@ -12,10 +12,10 @@ export type DraftHatchLoops=Array<Array<[number,number]>>;
 /** Built-in patterns only: `solid` fills; `ansi31`/`crosshatch`/`horizontal` are bounded line families. */
 export type DraftHatchPattern='solid'|'ansi31'|'crosshatch'|'horizontal';
 export interface DraftHatch{id:number;name:string;pattern:DraftHatchPattern;color:[number,number,number,number];angle:number;scale:number;width:number;visible:boolean;locked:boolean;layer?:number;loops:DraftHatchLoops}
-/** Associative dimension kinds: `linear` needs `axis` ('x'|'y'), point kinds take `points` ids, `radial`/`diameter` take a circle/arc `entity` id. Measured geometry is derived per read, never stored; there is no text/glyph backend so numeric labels are not rendered. */
+/** Associative dimension kinds: `linear` needs `axis` ('x'|'y'), point kinds take `points` ids (absent for radial/diameter, which serialize no `points` field), `radial`/`diameter` take a circle/arc `entity` id. Measured geometry is derived per read, never stored; there is no text/glyph backend so numeric labels are not rendered. */
 export type DraftDimensionKind='linear'|'aligned'|'angular'|'radial'|'diameter';
 export type DraftDimensionAxis='x'|'y';
-export interface DraftDimension{id:number;kind:DraftDimensionKind;points:number[];entity?:number;axis?:DraftDimensionAxis;name:string;color:[number,number,number,number];width:number;visible:boolean;locked:boolean;layer?:number}
+export interface DraftDimension{id:number;kind:DraftDimensionKind;points?:number[];entity?:number;axis?:DraftDimensionAxis;name:string;color:[number,number,number,number];width:number;visible:boolean;locked:boolean;layer?:number}
 /** Derived world-space annotation strokes (extension lines, dimension line, arrowhead legs, angle rays/arc polyline); `value` is world units or degrees, `null` only for a degenerate angular anchor. */
 export interface DraftDimensionMeasured{value:number|null;lines:Array<[[number,number],[number,number]]>}
 /** `evaluate` projection of a dimension: authored fields plus read-derived status and measured geometry. Orphaned dimensions (references deleted after writes) keep authored refs with `measured:null`. */

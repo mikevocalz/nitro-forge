@@ -1616,9 +1616,19 @@ because the field is an additive serde default and `deny_unknown_fields`
 fails old readers closed (same argument as layers/hatches). There is no glyph
 backend, so numeric labels and filled arrowheads are deferred (same gate as
 Quill fonts); dimension strokes composite above entity strokes as real Prism
-paths within the same projection budgets.
+paths within the same projection budgets. Arrowhead legs are schematic
+overshoot, not authored geometry: a chevron leg that would exceed the ±1e6
+world budget is omitted rather than failing `evaluate`/`renderFrame` (the
+dimension/extension lines themselves derive from authored in-bounds points
+and still error if they ever exceed it). Orphan re-linking matches references
+by raw id identity: monotonic in-session id allocation prevents reuse through
+normal ops, but a crafted snapshot with a regressed `next_id` could re-link an
+orphan to new geometry (trusted-snapshot caveat). `diameter`/`radial` on an
+arc report the underlying circle's radius/diameter and draw the chord at
+`start_deg`; for small arcs the chord may not touch the arc itself (documented
+semantics, not a bug).
 
-Local evidence: `cargo test -p draft-engine` 38 passed (5 new dimension
+Local evidence: `cargo test -p draft-engine` 39 passed (6 dimension
 tests), `cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
 `pnpm --filter @nitro-forge/draft test` 11 passed across 5 files (1 new nf-cli
 dimension e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. Dimension

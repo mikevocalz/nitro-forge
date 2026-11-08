@@ -2231,6 +2231,70 @@ fn dimension_layers_locks_removal_and_matching_reader_restore() {
     assert_eq!(ev["dimensions"][dim.to_string()]["status"], "orphaned");
 }
 #[test]
+fn dimension_arrow_overshoot_at_world_budget_boundary_omits_legs() {
+    let mut e = DraftEngine::new();
+    // Points authored exactly on the ±1e6 world budget: the derived
+    // dimension/extension lines stay in bounds, but schematic arrowhead
+    // legs would overshoot past it. Overshooting legs are omitted rather
+    // than failing the whole measurement.
+    let a = point(&mut e, 0., 1e6);
+    let b = point(&mut e, 4., 1e6);
+    let linear = dimension(
+        &mut e,
+        json!({"kind":"linear","points":[a,b],"axis":"x"}),
+    );
+    let aligned = dimension(&mut e, json!({"kind":"aligned","points":[a,b]}));
+    let ev = evaluate(&mut e);
+    for id in [linear, aligned] {
+        let m = &ev["dimensions"][id.to_string()]["measured"];
+        assert_eq!(m["value"], 4.);
+        let lines = m["lines"].as_array().unwrap();
+        // The three authored-derived strokes survive; at least one
+        // arrowhead leg per tip pointed back inside the budget.
+        assert!(lines.len() >= 3 && lines.len() < 7);
+        for line in lines {
+            for p in line.as_array().unwrap() {
+                for c in p.as_array().unwrap() {
+                    assert!(c.as_f64().unwrap().abs() <= 1e6);
+                }
+            }
+        }
+    }
+    // renderFrame projects the same boundary geometry without error.
+    let framed = apply(
+        &mut e,
+        "renderFrame",
+        json!({"width":8,"height":4,"origin_x":0,"origin_y":0,"scale":1e-6}),
+    );
+    assert!(framed.data["pixels_b64"].is_string());
+    // Radial/diameter on a boundary-fitting circle still measure and draw.
+    let center = point(&mut e, 0., 999999.);
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":1.}))
+        .data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let arc = apply(
+        &mut e,
+        "addArc",
+        json!({"center":center,"radius":1.,"start_deg":90.,"sweep_deg":90.}),
+    )
+    .data["arc_id"]
+    .as_u64()
+    .unwrap();
+    let radial = dimension(&mut e, json!({"kind":"radial","entity":circle}));
+    let diameter = dimension(&mut e, json!({"kind":"diameter","entity":arc}));
+    let ev = evaluate(&mut e);
+    assert_eq!(ev["dimensions"][radial.to_string()]["measured"]["value"], 1.);
+    assert_eq!(ev["dimensions"][diameter.to_string()]["measured"]["value"], 2.);
+    assert!(apply(
+        &mut e,
+        "renderFrame",
+        json!({"width":8,"height":4,"origin_x":0,"origin_y":0,"scale":1e-6}),
+    )
+    .data["pixels_b64"]
+    .is_string());
+}
+#[test]
 fn dimension_degenerate_angle_and_hidden_dimension_render_honestly() {
     let mut e = DraftEngine::new();
     let v = point(&mut e, 0., 0.);
