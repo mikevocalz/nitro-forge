@@ -2,10 +2,13 @@
 //!
 //! A document is an ordered list of sections; each section starts at a block
 //! boundary (`Section.block`, the index of its first block) and carries page
-//! setup plus optional plain-text header/footer bodies. Layout metrics and
-//! pagination are out of scope: `layout` keeps its own `page_width`/
-//! `font_size` parameters and never reads section page setup, and DOCX
-//! `sectPr` import/export is deferred.
+//! setup plus optional plain-text header/footer bodies. R3 (renderPage
+//! decision) binds this model into `layout`/`renderPage` via the opt-in
+//! `use_sections` flag — `layout_pages_sectioned` paginates on each
+//! section's `PageSetup` and `render_page_rgba_sectioned` draws the
+//! header/footer bands; without the flag both ops keep their explicit
+//! uniform geometry and ignore sections entirely. DOCX `sectPr`
+//! import/export is still deferred.
 //!
 //! Position stability: blocks carry no identity, so a section stores a live
 //! `{block}` boundary re-anchored by every block-count-changing op, the same
@@ -92,10 +95,13 @@ impl Default for PageSetup {
 }
 
 /// Header/footer bodies for one section. Each body is optional plain text;
-/// `None` means "no explicit body" — inheritance/link-previous resolution is
-/// a consumer concern and is not computed by the engine. The `different_*`
-/// flags mirror the NYC-Tron `HeaderFooterSettings` contract: they gate
-/// whether the first/even bodies apply, exactly as the inspector exposes.
+/// `None` means "no explicit body" — `renderPage {use_sections}` (R3)
+/// draws the selected slot verbatim and does NOT resolve
+/// inheritance/link-previous (a consumer concern, not computed by the
+/// engine). The `different_*` flags gate which stored body applies —
+/// `different_first` on the section's first owned page,
+/// `different_odd_even` on even physical page indices — exactly as the
+/// inspector exposes.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct HeaderFooter {
@@ -118,6 +124,66 @@ pub struct HeaderFooter {
     pub number_start: Option<u32>,
     pub number_format: NumberFormat,
     pub link_previous: bool,
+}
+
+/// Format a 1-based page number for `HeaderFooter.number_format`
+/// (renderPage R3). `decimal` is the plain integer; `roman` is lowercase
+/// roman numerals (`iv`); `letters` is the spreadsheet-style sequence
+/// (`a`..`z`, `aa`, `ab`, …). Deterministic; `n == 0` renders `"0"` for
+/// decimal and empty-adjacent fallbacks never occur since callers pass
+/// ≥1.
+pub fn format_page_number(n: u64, format: NumberFormat) -> String {
+    match format {
+        NumberFormat::Decimal => n.to_string(),
+        NumberFormat::Roman => roman_numeral(n),
+        NumberFormat::Letters => letters_numeral(n),
+    }
+}
+
+/// Lowercase roman numerals for `n >= 1` (subtractives iv/ix/xl/xc/cd/cm).
+fn roman_numeral(n: u64) -> String {
+    if n == 0 {
+        return "0".to_string();
+    }
+    const TABLE: [(u64, &str); 13] = [
+        (1000, "m"),
+        (900, "cm"),
+        (500, "d"),
+        (400, "cd"),
+        (100, "c"),
+        (90, "xc"),
+        (50, "l"),
+        (40, "xl"),
+        (10, "x"),
+        (9, "ix"),
+        (5, "v"),
+        (4, "iv"),
+        (1, "i"),
+    ];
+    let mut n = n;
+    let mut out = String::new();
+    for (value, sym) in TABLE {
+        while n >= value {
+            out.push_str(sym);
+            n -= value;
+        }
+    }
+    out
+}
+
+/// Spreadsheet-style letters for `n >= 1`: 1→"a", 26→"z", 27→"aa".
+fn letters_numeral(n: u64) -> String {
+    if n == 0 {
+        return "0".to_string();
+    }
+    let mut n = n;
+    let mut out = Vec::new();
+    while n > 0 {
+        n -= 1;
+        out.push((b'a' + (n % 26) as u8) as char);
+        n /= 26;
+    }
+    out.iter().rev().collect()
 }
 
 impl Default for HeaderFooter {
@@ -1248,5 +1314,24 @@ mod tests {
         assert!(e.apply(cmd("insertSection", json!({"at":4}))).is_err());
         assert!(e.apply(cmd("insertSection", json!({"at":0}))).is_err());
         assert_eq!(e.snapshot().unwrap(), before);
+    }
+
+    /// `format_page_number` (renderPage R3): decimal passthrough,
+    /// lowercase roman with subtractives, spreadsheet-style letters.
+    #[test]
+    fn page_number_formats() {
+        assert_eq!(format_page_number(1, NumberFormat::Decimal), "1");
+        assert_eq!(format_page_number(42, NumberFormat::Decimal), "42");
+        assert_eq!(format_page_number(4, NumberFormat::Roman), "iv");
+        assert_eq!(format_page_number(9, NumberFormat::Roman), "ix");
+        assert_eq!(format_page_number(40, NumberFormat::Roman), "xl");
+        assert_eq!(format_page_number(90, NumberFormat::Roman), "xc");
+        assert_eq!(format_page_number(1994, NumberFormat::Roman), "mcmxciv");
+        assert_eq!(format_page_number(1, NumberFormat::Letters), "a");
+        assert_eq!(format_page_number(26, NumberFormat::Letters), "z");
+        assert_eq!(format_page_number(27, NumberFormat::Letters), "aa");
+        assert_eq!(format_page_number(52, NumberFormat::Letters), "az");
+        assert_eq!(format_page_number(53, NumberFormat::Letters), "ba");
+        assert_eq!(format_page_number(0, NumberFormat::Decimal), "0");
     }
 }

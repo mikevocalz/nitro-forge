@@ -13,10 +13,12 @@
 //! rescans. Entries go stale exactly like a Word field's cached result —
 //! editing a heading's text does not rewrite stored titles, and
 //! `listToc` is the always-live read that never goes stale. Page numbers
-//! are NOT modeled: Quill has no pagination engine (`layout` is a
-//! read-only greedy-wrap estimate), so entries carry `{level, title,
-//! block}` where `block` is the heading's top-level block index — hosts
-//! map that to page/offset geometry themselves.
+//! are deliberately NOT in the stored cache: entries carry `{level, title,
+//! block}` where `block` is the heading's top-level block index, and
+//! `layout`'s `toc_pages` output (R3) resolves each entry's `block`
+//! through the real pagination to the printed page number at read time —
+//! so the cache stays geometry-free and can never go stale on page
+//! breaks.
 //!
 //! Entry anchors are block indices, not `{block,offset}` marks: a TOC
 //! entry identifies a whole heading block. Every block-count-changing op
@@ -63,7 +65,8 @@ pub const TOC_TITLE_MAX: usize = 8192;
 
 /// One cached TOC entry: `level` is the heading level (1..=3), `title` the
 /// heading's plain text at last scan, and `block` the heading's top-level
-/// block index (live-remapped by edits; hosts derive page/offset geometry).
+/// block index (live-remapped by edits; page numbers come from
+/// `layout`'s `toc_pages`, not the cache).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TocEntry {
@@ -99,7 +102,7 @@ fn heading_level(kind: BlockKind) -> Option<u8> {
 /// Live deterministic scan: every top-level heading block whose level is
 /// in `from..=to`, in document order. This is what `listToc` always
 /// reports and what `refreshToc` stores — the two can never disagree.
-fn scan_entries(blocks: &[Block], from_level: u8, to_level: u8) -> Vec<TocEntry> {
+pub(crate) fn scan_entries(blocks: &[Block], from_level: u8, to_level: u8) -> Vec<TocEntry> {
     blocks
         .iter()
         .enumerate()

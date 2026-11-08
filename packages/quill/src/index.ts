@@ -129,9 +129,44 @@ export interface LayoutLine {
   block: number;
   start: number;
   end: number;
+  /** Column index within the page's text area — only emitted by
+   * `layout(..., useSections)` when the owning section sets
+   * `page_setup.columns > 1`; always 0 otherwise. */
+  column?: number;
 }
+/** One layout page. Uniform `layout` emits only `lines`; the
+ * `use_sections` form additionally reports the page's own section
+ * `page_setup` geometry (`index`, `section`, `width`/`height` in
+ * points, printed `number`, and `first_in_section`). */
 export interface LayoutPage {
   lines: LayoutLine[];
+  index?: number;
+  section?: number;
+  width?: number;
+  height?: number;
+  number?: number;
+  first_in_section?: boolean;
+}
+/** One live TOC entry resolved to its printed page number (`layout`
+ * `toc_pages`, R3): `block` is the heading's block index, `page` the
+ * 1-based printed number of the page its first line landed on. */
+export interface TocPageEntry {
+  level: number;
+  title: string;
+  block: number;
+  page: number;
+}
+/** Per-`kind:"toc"`-field page-number resolution, in block order. */
+export interface TocFieldPages {
+  field: number;
+  entries: TocPageEntry[];
+}
+export interface LayoutResult {
+  pages: LayoutPage[];
+  /** Live heading scan per toc field with real page numbers — present
+   * on every `layout` result (empty array when the document has no
+   * toc fields). */
+  toc_pages: TocFieldPages[];
 }
 /** `renderPage` result: raw RGBA8 (`width*height*4` bytes) as `pixels_b64`
  * on JSON transports; binary-capable hosts may receive the same bytes on
@@ -143,16 +178,26 @@ export interface RenderPageResult {
   format: "raw";
   size: number;
   pixels_b64?: string;
+  /** `use_sections` renders only: owning section index and the page's
+   * printed number (honors `number_start`/section restarts). */
+  section?: number;
+  number?: number;
 }
 export interface RenderPageOptions {
-  /** Page width in points (same units `layout` uses). */
-  pageWidth: number;
+  /** Page width in points (same units `layout` uses). Ignored when
+   * `useSections` is set — the page's own section `page_setup` wins. */
+  pageWidth?: number;
   fontSize: number;
   pageHeight?: number;
   /** Registered family — required; there is no glyph-less fallback. */
   font: string;
   /** Zero-based page index into the `layout` pagination. */
   page: number;
+  /** R3: paginate through the document's section `page_setup` instead
+   * of `pageWidth`/`pageHeight` (both ignored — each page's own
+   * section supplies its size, margins, columns, and header/footer
+   * bands). `page` still indexes the resulting page sequence. */
+  useSections?: boolean;
   /** Defaults to 96; px = pt * dpi/72. */
   dpi?: number;
   /** `#RRGGBB` or `#RRGGBBAA`; default opaque black. */
@@ -492,7 +537,8 @@ export type PageNumberFormat = "decimal" | "roman" | "letters";
  * Page setup in points, mirroring the NYC-Tron `PageSetupPanel` contract.
  * Bounds: width/height 36..14400, margins and column gap non-negative,
  * columns 1..32, and margins plus gaps must leave a positive text area.
- * Stored only — no layout/pagination consumes it yet.
+ * Consumed by `layout`/`renderPage` when `useSections` is set (R3);
+ * the uniform explicit-geometry path ignores it.
  */
 export interface PageSetup {
   width: number;
@@ -512,8 +558,13 @@ export type PageSetupPatch = Partial<PageSetup>;
  * Header/footer bodies for one section, mirroring the NYC-Tron
  * `HeaderFooterSettings` contract. Bodies are optional plain text (at most
  * 8192 characters each); null clears. `different_first`/`different_odd_even`
- * gate whether the first/even bodies apply. Inheritance/link-previous
- * resolution is left to consumers.
+ * gate whether the first/even bodies apply. `renderPage` with
+ * `useSections` draws them: header text bottom-aligns to the top margin,
+ * footer top-aligns to the bottom margin, and `page_numbers` appends the
+ * formatted printed number (decimal/roman/letters, honoring
+ * `number_start` and section restarts) on the header band's last line.
+ * `link_previous` inheritance is NOT resolved by the engine — the
+ * selected slot is authoritative and a `null` body draws nothing.
  */
 export interface HeaderFooter {
   header?: string;
@@ -1289,12 +1340,33 @@ export class QuillDocument {
    * and line heights use the face's real `hhea`/`OS/2` metrics. See
    * docs/completion/reports/P-font-glyph-backend-decision.md and
    * P-quill-renderpage-r2.md.
+   *
+   * `useSections` (R3) paginates through the document's section
+   * `page_setup` instead of `pageWidth`/`pageHeight` (both ignored):
+   * each page reports its own `section`/`width`/`height`/`number`,
+   * section-start breaks (continuous/next/even/odd) apply, multi-column
+   * sections emit per-line `column` indexes, and `toc_pages` resolves
+   * every toc field's live heading scan to printed page numbers.
    */
-  layout(pageWidth: number, fontSize: number, pageHeight?: number, font?: string) {
-    return this.call<{ pages: LayoutPage[] }>(OPS.layout, {
-      page_width: pageWidth,
+  layout(
+    pageWidth: number | undefined,
+    fontSize: number,
+    pageHeight?: number,
+    font?: string,
+    useSections?: boolean,
+  ) {
+    return this.call<LayoutResult>(OPS.layout, {
       font_size: fontSize,
-      ...(pageHeight === undefined ? {} : { page_height: pageHeight }),
+      ...(useSections
+        ? { use_sections: true }
+        : {
+            ...(pageWidth === undefined
+              ? {}
+              : { page_width: pageWidth }),
+            ...(pageHeight === undefined
+              ? {}
+              : { page_height: pageHeight }),
+          }),
       ...(font === undefined ? {} : { font }),
     });
   }
@@ -1315,14 +1387,30 @@ export class QuillDocument {
    * use real `hhea`/`OS/2` metrics where the face exposes them. Bounds:
    * ≤4096 px per side and ≤32 MiB RGBA; `maxDim` optionally tightens the
    * per-side cap. Remaining honest scope: text glyphs only — no images,
-   * decorations, headers/footers, per-run colors/underline/strike, or
-   * synthetic styles (see the decision doc's deferral list).
+   * decorations, per-run colors/underline/strike, or synthetic styles
+   * (see the decision doc's deferral list).
+   *
+   * `useSections` (R3) switches both pagination and pixel geometry to
+   * the document's section `page_setup`: page size, margins, columns,
+   * section-start breaks (continuous/next/even/odd), and the section's
+   * header/footer bands — header and footer text render through the
+   * same shaping/raster path as body text, and `page_numbers` draws the
+   * formatted printed number. `layout`/`renderPage` share the sectioned
+   * pagination, so pixels still agree with the reported spans.
    */
   renderPage(options: RenderPageOptions) {
     return this.call<RenderPageResult>(OPS.renderPage, {
-      page_width: options.pageWidth,
+      ...(options.useSections
+        ? { use_sections: true }
+        : {
+            ...(options.pageWidth === undefined
+              ? {}
+              : { page_width: options.pageWidth }),
+            ...(options.pageHeight === undefined
+              ? {}
+              : { page_height: options.pageHeight }),
+          }),
       font_size: options.fontSize,
-      ...(options.pageHeight === undefined ? {} : { page_height: options.pageHeight }),
       font: options.font,
       page: options.page,
       ...(options.dpi === undefined ? {} : { dpi: options.dpi }),

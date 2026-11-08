@@ -49,7 +49,8 @@
 
 use crate::fonts::PositionedGlyph;
 use crate::runs::{resolve_block_runs, BlockRuns, FontPlan};
-use crate::Block;
+use crate::sections::{format_page_number, HeaderFooter, Section};
+use crate::{block_line_spans, Block, BlockKind, Inline, Style, SectionPage};
 use ignition_core::{EngineError, TaskContext};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use tiny_skia::{Color, FillRule, Paint, Pixmap, Transform};
@@ -180,60 +181,21 @@ pub fn render_page_rgba(
             block_runs[bi] = Some(resolve_block_runs(&blocks[bi], font_size, plan));
         }
         let br = block_runs[bi].as_ref().expect("resolved above");
-        let n = br.byte_offsets.len();
         let line_height_px = br.line_height(start, end) * scale;
         // Baseline = line top + the line's max run ascender (real
         // metrics, or the em-box estimate — `runs.rs`).
         let baseline_y = y_px + br.line_ascent(start, end) * scale;
-        if start < end && start < n {
-            // The same `span ∩ run` pieces `layout_pages` shaped for its
-            // final measurement pass — drawing them in order keeps pen
-            // positions identical to the measured advances.
-            let pieces = br.span_pieces(&[(start, end)]);
-            let mut pen_x = 0.0f64;
-            let mut since_checkpoint = 0usize;
-            for (ri, s, e) in pieces {
-                let run = &br.runs[ri];
-                let byte_s = br.byte_offsets[s];
-                let byte_e = if e == n { br.text.len() } else { br.byte_offsets[e] };
-                let seg = &br.text[byte_s..byte_e];
-                let font = run.measure.skrifa_font();
-                let ppem = (run.size_pt * scale) as f32;
-                let unit = ppem as f64 / run.measure.units_per_em(); // font units → px
-                // Same shaping gate `layout` applies per block: over-budget
-                // blocks draw with the unshaped advances layout measured.
-                let glyphs = if br.may_shape {
-                    run.measure
-                        .shape_line_glyphs(seg)
-                        .unwrap_or_else(|| run.measure.unshaped_line_glyphs(seg))
-                } else {
-                    run.measure.unshaped_line_glyphs(seg)
-                };
-                for g in &glyphs {
-                    let PositionedGlyph {
-                        glyph_id,
-                        x_advance,
-                        x_offset,
-                        y_offset,
-                    } = *g;
-                    let dx = pen_x + x_offset * unit;
-                    let dy = baseline_y - y_offset * unit;
-                    if let Some(path) = glyph_path(font, glyph_id, ppem) {
-                        // Font coords are y-up; flip into pixmap y-down space.
-                        let ts = Transform::from_row(1.0, 0.0, 0.0, -1.0, dx as f32, dy as f32);
-                        pixmap.fill_path(&path, &paint, FillRule::Winding, ts, None);
-                    }
-                    pen_x += x_advance * unit;
-                    since_checkpoint += 1;
-                    if since_checkpoint >= GLYPH_CHECKPOINT_STRIDE {
-                        since_checkpoint = 0;
-                        if let Some(c) = ctx {
-                            c.checkpoint()?;
-                        }
-                    }
-                }
-            }
-        }
+        draw_line_runs(
+            &mut pixmap,
+            &paint,
+            br,
+            start,
+            end,
+            0.0,
+            baseline_y,
+            scale,
+            ctx,
+        )?;
         // Every emitted span occupies its line height, drawn or not —
         // `layout` counts (0,0) empty spans the same way.
         y_px += line_height_px;
@@ -243,23 +205,99 @@ pub fn render_page_rgba(
         c.checkpoint()?;
     }
 
-    // Unpremultiply manually instead of `Pixmap::take_demultiplied`:
-    // premultiplied storage zeroes the RGB channels of fully transparent
-    // pixels, so a `#RRGGBB00` background would come back as (0,0,0,0)
-    // and lose its hidden color. Straight-alpha output keeps the
-    // background's RGB under alpha 0 — the same hidden-RGB honesty
-    // `readRasterAsset` gives stored straight-alpha input. Fully
-    // transparent output pixels can only exist where the background
-    // itself is fully transparent and no glyph coverage landed (any
-    // drawn contribution with alpha > 0 raises the pixel's alpha), so
-    // the background RGB is the right hidden color for every one of
-    // them.
+    Ok(pixmap_straight_alpha(&pixmap, background))
+}
+
+/// Draw one `(start,end)` char span of `br`'s text as its `span ∩ run`
+/// pieces — the same segmentation `layout_pages` shaped for its final
+/// measurement pass — starting at pen position `origin_x_px` with the
+/// baseline at `baseline_y_px` (both pixels). Shared by
+/// [`render_page_rgba`] (origin 0, running `y_px`) and
+/// [`render_page_rgba_sectioned`] (margin/column origins).
+fn draw_line_runs(
+    pixmap: &mut Pixmap,
+    paint: &Paint,
+    br: &BlockRuns,
+    start: usize,
+    end: usize,
+    origin_x_px: f64,
+    baseline_y_px: f64,
+    scale: f64,
+    ctx: Option<&TaskContext>,
+) -> Result<(), EngineError> {
+    let n = br.byte_offsets.len();
+    if start >= end || start >= n {
+        return Ok(());
+    }
+    // The same `span ∩ run` pieces `layout_pages` shaped for its
+    // final measurement pass — drawing them in order keeps pen
+    // positions identical to the measured advances.
+    let pieces = br.span_pieces(&[(start, end)]);
+    let mut pen_x = origin_x_px;
+    let mut since_checkpoint = 0usize;
+    for (ri, s, e) in pieces {
+        let run = &br.runs[ri];
+        let byte_s = br.byte_offsets[s];
+        let byte_e = if e == n { br.text.len() } else { br.byte_offsets[e] };
+        let seg = &br.text[byte_s..byte_e];
+        let font = run.measure.skrifa_font();
+        let ppem = (run.size_pt * scale) as f32;
+        let unit = ppem as f64 / run.measure.units_per_em(); // font units → px
+        // Same shaping gate `layout` applies per block: over-budget
+        // blocks draw with the unshaped advances layout measured.
+        let glyphs = if br.may_shape {
+            run.measure
+                .shape_line_glyphs(seg)
+                .unwrap_or_else(|| run.measure.unshaped_line_glyphs(seg))
+        } else {
+            run.measure.unshaped_line_glyphs(seg)
+        };
+        for g in &glyphs {
+            let PositionedGlyph {
+                glyph_id,
+                x_advance,
+                x_offset,
+                y_offset,
+            } = *g;
+            let dx = pen_x + x_offset * unit;
+            let dy = baseline_y_px - y_offset * unit;
+            if let Some(path) = glyph_path(font, glyph_id, ppem) {
+                // Font coords are y-up; flip into pixmap y-down space.
+                let ts = Transform::from_row(1.0, 0.0, 0.0, -1.0, dx as f32, dy as f32);
+                pixmap.fill_path(&path, paint, FillRule::Winding, ts, None);
+            }
+            pen_x += x_advance * unit;
+            since_checkpoint += 1;
+            if since_checkpoint >= GLYPH_CHECKPOINT_STRIDE {
+                since_checkpoint = 0;
+                if let Some(c) = ctx {
+                    c.checkpoint()?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Straight-alpha RGBA8 (`w*h*4`, row-major, top-left origin) out of a
+/// premultiplied tiny-skia pixmap. Unpremultiplies manually instead of
+/// `Pixmap::take_demultiplied`: premultiplied storage zeroes the RGB
+/// channels of fully transparent pixels, so a `#RRGGBB00` background
+/// would come back as (0,0,0,0) and lose its hidden color.
+/// Straight-alpha output keeps the background's RGB under alpha 0 —
+/// the same hidden-RGB honesty `readRasterAsset` gives stored
+/// straight-alpha input. Fully transparent output pixels can only
+/// exist where the background itself is fully transparent and no glyph
+/// coverage landed (any drawn contribution with alpha > 0 raises the
+/// pixel's alpha), so the background RGB is the right hidden color for
+/// every one of them.
+fn pixmap_straight_alpha(pixmap: &Pixmap, background: Color) -> Vec<u8> {
     let bg = [
         (background.red() * 255.0).round() as u8,
         (background.green() * 255.0).round() as u8,
         (background.blue() * 255.0).round() as u8,
     ];
-    let mut out = Vec::with_capacity(width_px as usize * height_px as usize * 4);
+    let mut out = Vec::with_capacity(pixmap.width() as usize * pixmap.height() as usize * 4);
     for px in pixmap.pixels() {
         let c = px.demultiply();
         if c.alpha() == 0 {
@@ -268,7 +306,272 @@ pub fn render_page_rgba(
             out.extend_from_slice(&[c.red(), c.green(), c.blue(), c.alpha()]);
         }
     }
-    Ok(out)
+    out
+}
+
+/// A plain-text block for header/footer bodies: one `para` block with a
+/// single unstyled inline. `resolve_block_runs` then treats it exactly
+/// like any other block (base face, `font_size`, real line metrics).
+fn hf_text_block(text: &str) -> Block {
+    Block {
+        kind: BlockKind::Para,
+        list: None,
+        style_id: None,
+        inlines: vec![Inline {
+            text: text.to_string(),
+            style: Style::default(),
+        }],
+        table: None,
+        toc: None,
+        bibliography: None,
+        format: None,
+    }
+}
+
+/// Pick the header (or footer) body for one page under the section's
+/// `HeaderFooter` flags. Priority: `different_first` on the section's
+/// first OWNED page, then `different_odd_even` on even physical page
+/// indices (`index % 2 == 1` — index 0 is printed page 1, i.e. odd).
+/// The selected slot is authoritative: a `None` body draws nothing —
+/// there is no link-previous inheritance (`link_previous` is a consumer
+/// concern, per the section model docs).
+fn hf_body<'a>(
+    hf: &'a HeaderFooter,
+    first_in_section: bool,
+    even_index: bool,
+    header: bool,
+) -> Option<&'a str> {
+    let pick = |first: &'a Option<String>, even: &'a Option<String>, normal: &'a Option<String>| {
+        if first_in_section && hf.different_first {
+            first.as_deref()
+        } else if even_index && hf.different_odd_even {
+            even.as_deref()
+        } else {
+            normal.as_deref()
+        }
+    };
+    if header {
+        pick(&hf.first_header, &hf.even_header, &hf.header)
+    } else {
+        pick(&hf.first_footer, &hf.even_footer, &hf.footer)
+    }
+}
+
+/// Draw one header/footer band (R3): the plain-text body wrapped at the
+/// full text width (`page.width - margin_left - margin_right`, columns
+/// ignored), plus — header band only — the formatted page number
+/// right-aligned on the band's last line when `page_numbers` is set.
+/// Header blocks bottom-align to `margin_top` (just above the text
+/// area); footer blocks top-align at `height - margin_bottom` (just
+/// below it). Bodies taller than their margin overflow toward the page
+/// center — deterministic, never rejected.
+#[allow(clippy::too_many_arguments)]
+fn draw_hf_band(
+    pixmap: &mut Pixmap,
+    paint: &Paint,
+    plan: &FontPlan,
+    font_size: f64,
+    page: &SectionPage,
+    hf: &HeaderFooter,
+    body: Option<&str>,
+    is_header: bool,
+    scale: f64,
+    ctx: Option<&TaskContext>,
+) -> Result<(), EngineError> {
+    let text_w = page.width - page.margin_left - page.margin_right;
+    if text_w <= 0.0 {
+        return Ok(());
+    }
+    let mut advance_cache: std::collections::HashMap<(usize, char), f64> =
+        std::collections::HashMap::new();
+
+    // Body lines: (char span, height pt) via the SAME wrap/measure
+    // routine blocks use — HF text gets real shaping/metrics too.
+    let mut lines: Vec<(usize, usize, f64)> = Vec::new();
+    let mut body_br: Option<BlockRuns> = None;
+    if let Some(text) = body {
+        if !text.is_empty() {
+            let blk = hf_text_block(text);
+            let br = resolve_block_runs(&blk, font_size, plan);
+            let (spans, heights) =
+                block_line_spans(&blk, text_w, font_size, Some(plan), &mut advance_cache);
+            for (i, &(s, e)) in spans.iter().enumerate() {
+                lines.push((s, e, heights[i]));
+            }
+            body_br = Some(br);
+        }
+    }
+    // ^ heights come from block_line_spans; spans index into br.text.
+
+    // Page number (header band only): its own single-line block,
+    // measured for right-alignment.
+    let number_str = if is_header && hf.page_numbers {
+        Some(format_page_number(page.number, hf.number_format))
+    } else {
+        None
+    };
+    let mut num_br: Option<BlockRuns> = None;
+    let mut num_w_pt = 0.0f64;
+    let mut num_h_pt = 0.0f64;
+    if let Some(ns) = &number_str {
+        let blk = hf_text_block(ns);
+        let br = resolve_block_runs(&blk, font_size, plan);
+        let n = br.byte_offsets.len();
+        num_h_pt = br.line_height(0, n);
+        // Width of the unwrapped number: shaped advances when allowed
+        // (same gate as everywhere), unshaped fallback otherwise.
+        let advances = if br.may_shape {
+            br.shaped_advances(&br.initial_pieces())
+        } else {
+            None
+        }
+        .unwrap_or_else(|| br.unshaped_advances(&mut advance_cache));
+        num_w_pt = advances.iter().sum();
+        num_br = Some(br);
+    }
+
+    let body_h_pt: f64 = lines.iter().map(|&(_, _, h)| h).sum();
+    let total_h_pt = body_h_pt + num_h_pt;
+    // Band placement: header bottom-aligns to the top margin's inner
+    // edge; footer top-aligns at the bottom margin's outer edge.
+    let y_start_pt = if is_header {
+        (page.margin_top - total_h_pt).max(0.0)
+    } else {
+        page.height - page.margin_bottom
+    };
+
+    let mut y_pt = y_start_pt;
+    let mut hf_lines = 0usize;
+    if let Some(br) = &body_br {
+        for &(s, e, h) in &lines {
+            if hf_lines % CHECKPOINT_STRIDE == 0 {
+                if let Some(c) = ctx {
+                    c.checkpoint()?;
+                }
+            }
+            hf_lines += 1;
+            let baseline_y_px = (y_pt + br.line_ascent(s, e)) * scale;
+            draw_line_runs(
+                pixmap,
+                paint,
+                br,
+                s,
+                e,
+                page.margin_left * scale,
+                baseline_y_px,
+                scale,
+                ctx,
+            )?;
+            y_pt += h;
+        }
+    }
+    if let Some(br) = &num_br {
+        let n = br.byte_offsets.len();
+        let baseline_y_px = (y_pt + br.line_ascent(0, n)) * scale;
+        // Right-align within the text area: right edge is
+        // `width - margin_right` in points.
+        let right_edge_px = (page.width - page.margin_right) * scale;
+        let x_px = (right_edge_px - num_w_pt * scale).max(page.margin_left * scale);
+        draw_line_runs(pixmap, paint, br, 0, n, x_px, baseline_y_px, scale, ctx)?;
+    }
+    Ok(())
+}
+
+/// `renderPage {use_sections:true}` rasterizer (R3): the same RGBA8
+/// contract as [`render_page_rgba`], but `page` carries its owning
+/// section's `PageSetup` geometry — body lines draw inside the margin
+/// box, column-major (`column` indexes `column_width`/`column_gap`
+/// bands), and the section's header/footer bodies plus optional page
+/// number draw in the margin bands. Read-only and deterministic like
+/// the uniform path.
+#[allow(clippy::too_many_arguments)]
+pub fn render_page_rgba_sectioned(
+    plan: &FontPlan,
+    font_size: f64,
+    blocks: &[Block],
+    sections: &[Section],
+    page: &SectionPage,
+    width_px: u32,
+    height_px: u32,
+    dpi: f64,
+    color: Color,
+    background: Color,
+    ctx: Option<&TaskContext>,
+) -> Result<Vec<u8>, EngineError> {
+    let scale = dpi / 72.0;
+    let mut pixmap = Pixmap::new(width_px, height_px)
+        .ok_or_else(|| EngineError::internal("renderPage pixmap allocation failed"))?;
+    pixmap.fill(background);
+
+    let mut block_runs: Vec<Option<BlockRuns>> = (0..blocks.len()).map(|_| None).collect();
+    let paint = Paint {
+        shader: tiny_skia::Shader::SolidColor(color),
+        anti_alias: true,
+        ..Default::default()
+    };
+
+    // Body lines: column-major order, per-column running y cursor
+    // (points) starting at the top margin.
+    let mut col_y = vec![page.margin_top; page.columns];
+    for (line_index, line) in page.lines.iter().enumerate() {
+        if line_index % CHECKPOINT_STRIDE == 0 {
+            if let Some(c) = ctx {
+                c.checkpoint()?;
+            }
+        }
+        let bi = line.block;
+        if bi >= blocks.len() || line.column >= page.columns {
+            continue;
+        }
+        if block_runs[bi].is_none() {
+            block_runs[bi] = Some(resolve_block_runs(&blocks[bi], font_size, plan));
+        }
+        let br = block_runs[bi].as_ref().expect("resolved above");
+        let col = line.column;
+        let line_height_pt = br.line_height(line.start, line.end);
+        let baseline_y_px = (col_y[col] + br.line_ascent(line.start, line.end)) * scale;
+        let x_px =
+            (page.margin_left + col as f64 * (page.column_width + page.column_gap)) * scale;
+        draw_line_runs(
+            &mut pixmap,
+            &paint,
+            br,
+            line.start,
+            line.end,
+            x_px,
+            baseline_y_px,
+            scale,
+            ctx,
+        )?;
+        col_y[col] += line_height_pt;
+    }
+
+    // Header/footer bands (R3): body selection honors
+    // different_first/different_odd_even on physical page-index parity.
+    if let Some(section) = sections.get(page.section) {
+        let hf = &section.header_footer;
+        let even_index = page.index % 2 == 1;
+        let header = hf_body(hf, page.first_in_section, even_index, true);
+        let footer = hf_body(hf, page.first_in_section, even_index, false);
+        // The header band also carries the page number when
+        // `page_numbers` is set, so it draws even with no header body;
+        // the footer band only ever shows its body text.
+        if header.is_some() || hf.page_numbers {
+            draw_hf_band(
+                &mut pixmap, &paint, plan, font_size, page, hf, header, true, scale, ctx,
+            )?;
+        }
+        if footer.is_some() {
+            draw_hf_band(
+                &mut pixmap, &paint, plan, font_size, page, hf, footer, false, scale, ctx,
+            )?;
+        }
+    }
+
+    if let Some(c) = ctx {
+        c.checkpoint()?;
+    }
+    Ok(pixmap_straight_alpha(&pixmap, background))
 }
 
 #[cfg(test)]
