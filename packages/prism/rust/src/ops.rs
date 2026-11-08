@@ -22,6 +22,7 @@ use crate::model::{
 use crate::raster;
 use crate::render::{self, Scene};
 use crate::select::{self, Combine, Region};
+use crate::stroke;
 use crate::vector;
 use crate::{PrismEngine, RenderTask, UndoEntry, MAX_PIXELS, CHECKPOINT_EVERY_PX};
 
@@ -430,6 +431,12 @@ impl PrismEngine {
             "floodFill" => self.op_flood_fill(p, ctx),
             "crop" => self.op_crop(p, ctx),
             "samplePixels" => self.op_sample_pixels(p, ctx),
+            "modelStroke" => self.op_model_stroke(p, ctx),
+            "addBrush" => self.op_add_brush(p),
+            "setBrush" => self.op_set_brush(p),
+            "removeBrush" => self.op_remove_brush(p),
+            "listBrushes" => self.op_list_brushes(),
+            "paintStroke" => self.op_paint_stroke(p, ctx),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
     }
@@ -2192,4 +2199,251 @@ impl PrismEngine {
         }
         Ok(filled)
     }
+
+    // -- brush / stroke ops (P06, per P-prism-brush-ink-decision) -----------
+
+    /// `modelStroke {samples, params?, predict?}` — run the stroke-modeler
+    /// pipeline and return modeled (+ optional lookahead) points. Pure,
+    /// read-only, eventless.
+    fn op_model_stroke(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let samples = stroke::parse_samples(p.get("samples"))?;
+        let params = stroke::parse_params(p.get("params"))?;
+        let predict = stroke::parse_predict(p.get("predict"))?;
+        let (segments, predicted) = stroke::model_stroke(&samples, &params, predict, ctx)?;
+        let modeled: Vec<Value> = segments
+            .iter()
+            .flatten()
+            .map(stroke::ModeledPoint::to_json)
+            .collect();
+        let predicted_json: Vec<Value> =
+            predicted.iter().map(stroke::ModeledPoint::to_json).collect();
+        Ok(CommandResult {
+            output: None,
+            events: Vec::new(),
+            data: json!({ "modeled": modeled, "predicted": predicted_json }),
+        })
+    }
+
+    /// `addBrush {name?, size?, opacity?, flow?, spacing?, hardness?,
+    /// color?, dynamics?, taper?}` — flat brush fields; missing fields take
+    /// preset defaults. <= [`stroke::MAX_BRUSHES`] per document.
+    fn op_add_brush(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        if self.brushes.len() >= stroke::MAX_BRUSHES {
+            return Err(EngineError::validation(format!(
+                "document already has the maximum of {} brushes",
+                stroke::MAX_BRUSHES
+            )));
+        }
+        let patch = stroke::parse_brush_patch(Some(p))?;
+        // Validate the patch fully before touching history or the id
+        // counter — a rejected brush must leave the document untouched.
+        stroke::brush_from_patch(0, patch.clone(), "Brush".to_string())?;
+        self.record();
+        let id = self.alloc_id();
+        let brush = stroke::brush_from_patch(id, patch, format!("Brush {id}"))?;
+        self.brushes.push(brush);
+        Ok(CommandResult::data(json!({ "brush_id": id })))
+    }
+
+    /// `setBrush {id, ...patch}` — partial merge; identical result records
+    /// nothing (`changed:false`, no undo, no event).
+    fn op_set_brush(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let id = Self::req_u64(p, "id")?;
+        let idx = self
+            .brushes
+            .iter()
+            .position(|b| b.id == id)
+            .ok_or_else(|| EngineError::not_found(format!("brush {id} not found")))?;
+        let patch = stroke::parse_brush_patch(Some(p))?;
+        let next = stroke::brush_apply_patch(&self.brushes[idx], patch)?;
+        if next == self.brushes[idx] {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "changed": false }),
+            });
+        }
+        self.record();
+        self.brushes[idx] = next;
+        Ok(CommandResult::data(json!({ "ok": true, "changed": true })))
+    }
+
+    /// `removeBrush {id}`.
+    fn op_remove_brush(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let id = Self::req_u64(p, "id")?;
+        let idx = self
+            .brushes
+            .iter()
+            .position(|b| b.id == id)
+            .ok_or_else(|| EngineError::not_found(format!("brush {id} not found")))?;
+        self.record();
+        self.brushes.remove(idx);
+        ok()
+    }
+
+    /// `listBrushes {}` — the document brush table. Read-only.
+    fn op_list_brushes(&self) -> Result<CommandResult, EngineError> {
+        let brushes = serde_json::to_value(&self.brushes)
+            .map_err(|e| EngineError::internal(e.to_string()))?;
+        Ok(CommandResult {
+            output: None,
+            events: Vec::new(),
+            data: json!({ "brushes": brushes }),
+        })
+    }
+
+    /// `paintStroke {id, brush_id?|brush?, samples, params?, commit?}` —
+    /// model the samples, resolve dabs through the brush, and stamp them
+    /// src-over onto a raster layer. One undo entry (pixel region) per
+    /// committed stroke; `commit:false` is a read-only dry run returning the
+    /// dab count and bounds. Exactly one of `brush_id`/`brush` is required.
+    fn op_paint_stroke(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let idx = self.raster_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
+        let has_id = p.get("brush_id").is_some_and(|v| !v.is_null());
+        let has_inline = p.get("brush").is_some_and(|v| !v.is_null());
+        if has_id == has_inline {
+            return Err(EngineError::invalid(
+                "paintStroke needs exactly one of 'brush_id' or 'brush'",
+            ));
+        }
+        let brush = if has_id {
+            let bid = Self::req_u64(p, "brush_id")?;
+            self.brushes
+                .iter()
+                .find(|b| b.id == bid)
+                .cloned()
+                .ok_or_else(|| EngineError::not_found(format!("brush {bid} not found")))?
+        } else {
+            let patch = stroke::parse_brush_patch(p.get("brush"))?;
+            stroke::brush_from_patch(0, patch, "brush".to_string())?
+        };
+        let samples = stroke::parse_samples(p.get("samples"))?;
+        let params = stroke::parse_params(p.get("params"))?;
+        let commit = match p.get("commit") {
+            None | Some(Value::Null) => true,
+            Some(Value::Bool(b)) => *b,
+            Some(_) => return Err(EngineError::invalid("field 'commit' must be a boolean")),
+        };
+
+        let (segments, _) = stroke::model_stroke(&samples, &params, None, ctx)?;
+        let dabs = stroke::generate_dabs(&segments, &brush)?;
+        let dab_count = dabs.len();
+        let Some((bx0, by0, bx1, by1)) = stroke::dabs_bounds(&dabs) else {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": 0 }),
+            });
+        };
+        // Clip the dab bounds to the canvas, same integer-rect semantics as
+        // drawPixels.
+        let x0 = (bx0.floor() as i64).max(0);
+        let y0 = (by0.floor() as i64).max(0);
+        let x1 = (bx1.ceil() as i64).min(self.width as i64);
+        let y1 = (by1.ceil() as i64).min(self.height as i64);
+        if x1 <= x0 || y1 <= y0 {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count }),
+            });
+        }
+        let (cx, cy) = (x0 as u32, y0 as u32);
+        let (cw, ch) = ((x1 - x0) as u32, (y1 - y0) as u32);
+        if !commit {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({
+                    "dabs": dab_count,
+                    "bounds": { "x": cx, "y": cy, "w": cw, "h": ch },
+                }),
+            });
+        }
+
+        let canvas_w = self.width as usize;
+        let canvas_h = self.height as usize;
+        let buf = self
+            .raster_ref(idx)
+            .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+        let prev = raster::read_region(
+            buf,
+            canvas_w,
+            cx as usize,
+            cy as usize,
+            cw as usize,
+            ch as usize,
+        );
+        let mut task = RenderTask::new(ctx, 1);
+        if ctx.is_some() {
+            // Cancellable path: stamp into a scratch copy of the region,
+            // checkpointing per dab pixel batch, then commit once.
+            let mut work = prev.clone();
+            stroke::stamp_dabs(
+                &mut work,
+                cw as usize,
+                ch as usize,
+                cx as usize,
+                cy as usize,
+                &dabs,
+                brush.color,
+                &mut task,
+            )?;
+            task.checkpoint()?;
+            self.journal.record(UndoEntry::Pixels {
+                layer_id: self.layers[idx].id,
+                x: cx,
+                y: cy,
+                w: cw,
+                h: ch,
+                prev,
+            });
+            let buf = self
+                .raster_mut(idx)
+                .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+            raster::write_region(
+                buf,
+                canvas_w,
+                cx as usize,
+                cy as usize,
+                cw as usize,
+                ch as usize,
+                &work,
+            );
+            return Ok(CommandResult::data(json!({ "ok": true, "dabs": dab_count })));
+        }
+
+        self.journal.record(UndoEntry::Pixels {
+            layer_id: self.layers[idx].id,
+            x: cx,
+            y: cy,
+            w: cw,
+            h: ch,
+            prev,
+        });
+        let buf = self
+            .raster_mut(idx)
+            .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+        stroke::stamp_dabs(
+            buf,
+            canvas_w,
+            canvas_h,
+            0,
+            0,
+            &dabs,
+            brush.color,
+            &mut task,
+        )?;
+        Ok(CommandResult::data(json!({ "ok": true, "dabs": dab_count })))
+    }
 }
+

@@ -6,9 +6,10 @@ import {
 } from "@nitro-forge/ignition";
 import type { Rgba } from "./rgba";
 import type {
-  AlignEdge, AlignTarget, Artboard, BlendMode, BooleanOp, FillRule, LayerBounds, LayerTransform, NodeKind,
-  Paint, PaintOrder, PathNode, PixelPreview, SampleSource, SelectionMode, SelectionShape, SelectionState,
-  Stroke, Subpath,
+  AlignEdge, AlignTarget, Artboard, BlendMode, BooleanOp, Brush, BrushPatch, FillRule, LayerBounds, LayerTransform,
+  ModeledStroke, NodeKind, Paint, PaintOrder, PaintStrokeOptions, PaintStrokePreview, PaintStrokeResult,
+  PathNode, PixelPreview, SampleSource, SelectionMode, SelectionShape, SelectionState, Stroke, StrokeModelParams,
+  StrokePredict, StrokeSample, Subpath,
 } from "./canvas-types";
 
 export type { Rgba } from "./rgba";
@@ -91,6 +92,12 @@ export const OPS = {
   swapColors: "swapColors",
   clearRecentColors: "clearRecentColors",
   getColors: "getColors",
+  modelStroke: "modelStroke",
+  addBrush: "addBrush",
+  setBrush: "setBrush",
+  removeBrush: "removeBrush",
+  listBrushes: "listBrushes",
+  paintStroke: "paintStroke",
 } as const;
 
 /** Document palette returned by `getColors` and included in `describe`. */
@@ -436,6 +443,53 @@ export class PrismDocument {
   }
   rasterizeLayer(id: number) {
     return this.call(OPS.rasterizeLayer, { id });
+  }
+
+  // -- brush / stroke (P06) ---------------------------------------------------
+  /**
+   * Run the engine's stroke modeler over raw stylus samples: wobble
+   * smoothing → damped-spring position model → stylus-state interpolation,
+   * plus optional velocity lookahead. Pure and read-only — nothing is
+   * recorded or emitted. `t` is seconds, `x`/`y` canvas pixels; at most
+   * 4096 samples per call. Deterministic: identical input gives identical
+   * output on every target.
+   */
+  modelStroke(samples: StrokeSample[], options: { params?: StrokeModelParams; predict?: StrokePredict | boolean } = {}) {
+    return this.call<ModeledStroke>(OPS.modelStroke, {
+      samples,
+      ...(options.params ? { params: options.params } : {}),
+      ...(options.predict !== undefined ? { predict: options.predict } : {}),
+    });
+  }
+  /** Add a brush preset (≤64 per document). Missing fields take defaults. */
+  addBrush(brush: BrushPatch) {
+    return this.call<{ brush_id: number }>(OPS.addBrush, brush);
+  }
+  /** Partial brush update; identical values record nothing (`changed:false`). */
+  setBrush(id: number, patch: BrushPatch) {
+    return this.call<{ ok: true; changed: boolean }>(OPS.setBrush, { id, ...patch });
+  }
+  removeBrush(id: number) {
+    return this.call(OPS.removeBrush, { id });
+  }
+  /** The document brush table. Read-only. */
+  listBrushes() {
+    return this.call<{ brushes: Brush[] }>(OPS.listBrushes, {});
+  }
+  /**
+   * Commit a brush stroke to a raster layer: samples are modeled, resolved
+   * through the brush (dynamics/taper) into dabs and stamped src-over.
+   * One undo step per stroke. `commit:false` is a read-only dry run
+   * returning the dab count and bounds.
+   */
+  paintStroke(options: PaintStrokeOptions) {
+    const { brush_id, brush, commit, ...rest } = options;
+    return this.call<PaintStrokeResult | PaintStrokePreview>(OPS.paintStroke, {
+      ...rest,
+      ...(brush_id !== undefined ? { brush_id } : {}),
+      ...(brush !== undefined ? { brush } : {}),
+      ...(commit !== undefined ? { commit } : {}),
+    });
   }
 
   // -- region fill (B-30) -----------------------------------------------------------

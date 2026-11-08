@@ -13,6 +13,7 @@ mod ops;
 mod raster;
 mod render;
 mod select;
+mod stroke;
 mod vector;
 #[cfg(test)]
 mod tests_v2;
@@ -28,6 +29,7 @@ use serde_json::{json, Value};
 use model::{Artboard, Content, DocWire, Layer, Shape, ShapeKind};
 use colors::DocColors;
 use raster::Filter;
+use stroke::Brush;
 
 /// Journal depth per ENGINE_OPS.md ("capacity 64").
 const JOURNAL_CAPACITY: usize = 64;
@@ -110,6 +112,7 @@ struct DocState {
     selection: Option<Arc<Vec<u8>>>,
     selected: Vec<u64>,
     colors: DocColors,
+    brushes: Vec<Brush>,
 }
 
 /// Undo entries, recorded before mutation (ENGINE_OPS.md, prism "Undo"):
@@ -141,6 +144,8 @@ pub struct PrismEngine {
     /// Object selection (layer ids), in selection order.
     selected: Vec<u64>,
     colors: DocColors,
+    /// Document-level brush presets (≤ stroke::MAX_BRUSHES).
+    brushes: Vec<Brush>,
     journal: Journal<UndoEntry>,
 }
 
@@ -157,6 +162,7 @@ impl PrismEngine {
             selection: None,
             selected: Vec::new(),
             colors: DocColors::default(),
+            brushes: Vec::new(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
@@ -173,6 +179,7 @@ impl PrismEngine {
             selection: self.selection.clone(),
             selected: self.selected.clone(),
             colors: self.colors.clone(),
+            brushes: self.brushes.clone(),
         }
     }
 
@@ -185,6 +192,7 @@ impl PrismEngine {
         self.selection = s.selection;
         self.selected = s.selected;
         self.colors = s.colors;
+        self.brushes = s.brushes;
     }
 
     /// Canvas buffer length (`w*h*4`), 0 on overflow — callers guard.
@@ -200,6 +208,7 @@ impl PrismEngine {
         // Snapshots could carry a stale next_id; skip in-use ids defensively.
         while self.layers.iter().any(|l| l.id == self.next_id)
             || self.artboards.iter().any(|a| a.id == self.next_id)
+            || self.brushes.iter().any(|b| b.id == self.next_id)
         {
             self.next_id = self.next_id.saturating_add(1);
         }
@@ -257,6 +266,7 @@ impl PrismEngine {
             selected: self.selected.clone(),
             selection_b64: self.selection.as_ref().map(|s| b64::encode(s)),
             colors: self.colors.clone(),
+            brushes: self.brushes.clone(),
         }
     }
 
@@ -1184,6 +1194,16 @@ impl Engine for PrismEngine {
             .into_iter()
             .filter(|id| layers.iter().any(|l| l.id == *id))
             .collect();
+        // Brushes are additive state (absent in older snapshots → empty).
+        // Enforce the same caps and per-brush validation as the ops.
+        if wire.brushes.len() > stroke::MAX_BRUSHES {
+            return Err(EngineError::serialization("too many brushes in snapshot"));
+        }
+        for b in &wire.brushes {
+            b.validate()
+                .map_err(|_| EngineError::serialization("invalid brush in snapshot"))?;
+        }
+        let brushes = wire.brushes;
         self.width = wire.width;
         self.height = wire.height;
         self.next_id = wire.next_id;
@@ -1192,6 +1212,7 @@ impl Engine for PrismEngine {
         self.selection = selection;
         self.selected = selected;
         self.colors = wire.colors.normalized();
+        self.brushes = brushes;
         // Undo entries refer to pre-restore state; the document is replaced.
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
