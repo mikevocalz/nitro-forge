@@ -46,7 +46,7 @@ use std::collections::{HashMap, HashSet};
 
 /// Maximum `/Parent` chain hops when resolving inheritable attributes or
 /// checking annotation links (matches lopdf's page-tree depth limit).
-const MAX_TREE_DEPTH: usize = 256;
+pub(super) const MAX_TREE_DEPTH: usize = 256;
 
 /// Ordered page object ids; position `i` is the 0-based page index.
 fn ordered_pages(doc: &Document) -> Vec<ObjectId> {
@@ -79,7 +79,7 @@ fn page_index(raw: u64, len: usize, field: &str) -> Result<usize, EngineError> {
 /// Walk the `/Parent` chain from `start` (the node itself included) and
 /// return the first value stored under `key`. Bounded and cycle-safe;
 /// returns `None` when no ancestor defines the key.
-fn inherited<'a>(doc: &'a Document, start: ObjectId, key: &[u8]) -> Option<&'a Object> {
+pub(super) fn inherited<'a>(doc: &'a Document, start: ObjectId, key: &[u8]) -> Option<&'a Object> {
     let mut seen = HashSet::new();
     let mut current = Some(start);
     for _ in 0..MAX_TREE_DEPTH {
@@ -129,7 +129,7 @@ fn materialize_inherited(doc: &mut Document, page_id: ObjectId) -> Result<(), En
 
 /// Collect every object id referenced inside `object` (arrays, dictionaries
 /// and stream dictionaries; references themselves are not followed here).
-fn collect_refs(object: &Object, out: &mut Vec<ObjectId>) {
+pub(super) fn collect_refs(object: &Object, out: &mut Vec<ObjectId>) {
     match object {
         Object::Reference(id) => out.push(*id),
         Object::Array(items) => {
