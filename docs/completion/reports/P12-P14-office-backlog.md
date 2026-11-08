@@ -38,9 +38,12 @@ No slice below is marked complete; this is a work list, not acceptance.
 8. Footnotes/citations + TOC field + mail merge (bounded rows).
 9. Indent/tab stops + alignment on Style.
 
-External-blocked (not engine slices): licensed fonts/font metrics, native
-IME/caret/selection/bidi bridge, speech/dictation, `renderPage` pixels,
-text frames/wrap layout, layout spreads/masters.
+External-blocked (not engine slices): licensed fonts/font metrics (engine
+side landed 2026-11-08 on `codex/w5-quill-font` — session registry +
+unhinted advance metrics per `P-font-glyph-backend-decision.md`; shaping,
+per-run resolution, rasterization and font licensing policy remain open),
+native IME/caret/selection/bidi bridge, speech/dictation, `renderPage`
+pixels, text frames/wrap layout, layout spreads/masters.
 
 ## P13 — Tally slice order
 

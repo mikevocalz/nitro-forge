@@ -86,6 +86,9 @@ export const OPS = {
   unmergeTableCells: "unmergeTableCells",
   blocks: "blocks",
   layout: "layout",
+  registerFont: "registerFont",
+  removeFont: "removeFont",
+  listFonts: "listFonts",
   exportDocx: "exportDocx",
   importDocx: "importDocx",
 } as const;
@@ -1248,13 +1251,60 @@ export class QuillDocument {
    * same per-block serialization `text` reports — for a table block
    * that is the cell-grid serialization above; no cell geometry is
    * modeled.
+   *
+   * Without `font`, widths are the legacy 0.5em estimate. With `font`
+   * naming a family admitted via `registerFont`, lines wrap on real
+   * unhinted advance widths from that face (no shaping/kerning — see
+   * docs/completion/reports/P-font-glyph-backend-decision.md).
    */
-  layout(pageWidth: number, fontSize: number, pageHeight?: number) {
+  layout(pageWidth: number, fontSize: number, pageHeight?: number, font?: string) {
     return this.call<{ pages: LayoutPage[] }>(OPS.layout, {
       page_width: pageWidth,
       font_size: fontSize,
       ...(pageHeight === undefined ? {} : { page_height: pageHeight }),
+      ...(font === undefined ? {} : { font }),
     });
+  }
+
+  /**
+   * Admit one font face into the engine session's font registry
+   * (`registerFont`). `bytes` are the raw font file (TTF/OTF/TTC face);
+   * `faceIndex` selects inside a collection (default 0). The registry is
+   * session state — it is not part of the document snapshot and is not
+   * covered by undo. Bounds: ≤16 MiB per face, ≤64 faces, ≤256 MiB total.
+   * Re-registering the same family+bytes+face is an idempotent no-op.
+   */
+  registerFont(family: string, bytes: Uint8Array, faceIndex = 0) {
+    return this.call<{
+      family: string;
+      sha256: string;
+      face_index: number;
+      units_per_em: number;
+      num_glyphs: number;
+      registered: boolean;
+    }>(OPS.registerFont, {
+      family,
+      ...(faceIndex === 0 ? {} : { face_index: faceIndex }),
+      bytes_b64: bytesToBase64(bytes),
+    });
+  }
+
+  /** Drop every registered face sharing a content sha256 (from `registerFont`/`listFonts`). */
+  removeFont(sha256: string) {
+    return this.call<{ removed: number }>(OPS.removeFont, { sha256 });
+  }
+
+  /** Read-only census of the session font registry. */
+  listFonts() {
+    return this.call<{
+      fonts: {
+        family: string;
+        sha256: string;
+        face_index: number;
+        units_per_em: number;
+        num_glyphs: number;
+      }[];
+    }>(OPS.listFonts, {});
   }
   async exportDocx() {
     const r = await this.call<{ bytes_b64: string }>(OPS.exportDocx);

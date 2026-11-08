@@ -12,3 +12,11 @@ serde_json = { workspace = true }
 zip = { version = "2", default-features = false, features = ["deflate"] }
 quick-xml = "0.37"
 unicode-normalization = "=0.1.25"
+# Font metrics backend (P-font-glyph-backend-decision, option c/a):
+# skrifa/read-fonts parse host-supplied font bytes for deterministic
+# advance metrics. `default-features = false` pins OUT autohint_shaping
+# and every other non-std feature so two builds never disagree on
+# metrics (decision doc open point 6). harfrust shaping is deferred —
+# see fonts.rs module docs.
+skrifa = { version = "0.49", default-features = false, features = ["std"] }
+sha2 = "0.10"

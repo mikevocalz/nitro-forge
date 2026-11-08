@@ -435,6 +435,7 @@ impl QuillEngine {
             footnotes: self.footnotes.clone(),
             citations: self.citations.clone(),
             sources: self.sources.clone(),
+            fonts: self.fonts.clone(),
             journal: Journal::new(1),
         };
 
