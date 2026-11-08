@@ -2847,7 +2847,7 @@ fn handoff_covers_instances_variables_and_prototype_state() {
     );
     let d = handoff(&mut e);
     // Instance node reports its spec; expanded clone ids appear only in
-    // measurements (synthetic >= 2^53-1), never in stored `nodes`.
+    // measurements (synthetic >= 2^53), never in stored `nodes`.
     let inst_entry = d["nodes"]
         .as_array()
         .unwrap()
@@ -2864,4 +2864,78 @@ fn handoff_covers_instances_variables_and_prototype_state() {
     // exportSlice on the component subtree includes the expanded render.
     let r = export(&mut e, comp, None);
     assert!(r.data["manifest"]["nodes_total"].as_u64().unwrap() >= 2);
+}
+#[test]
+fn export_slice_clips_oversized_members_and_culls_out_of_slice_boxes() {
+    let mut e = DesignEngine::new();
+    // Small slice; members use local coords relative to the frame origin.
+    let frame = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"name":"Slice","x":100,"y":100,"width":8,"height":8,"fill":[200,100,50,255]}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    // Huge rect covering the whole slice: at scale 4 its translated/scaled
+    // w/h = 12e6 exceed Prism's 1e7 coordinate bound. It must be clamped to
+    // the canvas intersection — pixel-identical — not rejected.
+    shape(&mut e, frame, -50., -50., 3_000_000., 3_000_000., [0, 255, 0, 255]);
+    // Member fully outside the slice is culled before reaching Prism.
+    shape(&mut e, frame, 900_000., 0., 10., 10., [255, 0, 0, 255]);
+    let r = export(&mut e, frame, Some(4.0));
+    assert_eq!(r.data["slice"]["width"], json!(32));
+    let bytes = ignition_core::base64_decode(r.data["pixels_b64"].as_str().unwrap()).unwrap();
+    assert_eq!(bytes.len(), 32 * 32 * 4);
+    // The covering rect paints every pixel over the frame fill.
+    assert!(
+        bytes.chunks_exact(4).all(|p| p == [0, 255, 0, 255]),
+        "clamped oversized rect must cover the whole slice canvas"
+    );
+    // A canvas-covering oversized ellipse has no exact Prism shape either,
+    // but full coverage makes a canvas rect pixel-identical.
+    let frame2 = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"name":"Slice2","x":200,"y":200,"width":8,"height":8}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    call(
+        &mut e,
+        "addShape",
+        json!({"parent":frame2,"kind":"ellipse","x":-999_999.,"y":-999_999.,"width":3_000_000.,"height":3_000_000.,"fill":[0,0,255,255]}),
+    );
+    let r2 = export(&mut e, frame2, Some(4.0));
+    let bytes2 = ignition_core::base64_decode(r2.data["pixels_b64"].as_str().unwrap()).unwrap();
+    assert!(
+        bytes2.chunks_exact(4).all(|p| p == [0, 0, 255, 255]),
+        "canvas-covering oversized ellipse must rasterize as a full canvas rect"
+    );
+    // A partially visible oversized ellipse cannot be represented exactly
+    // inside Prism's coordinate bound and must reject honestly.
+    let frame3 = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"name":"Slice3","x":300,"y":300,"width":8,"height":8}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    // Wide flat ellipse: scaled w = 12e6 overflows, and its vertical band
+    // covers only the bottom half of the slice canvas.
+    call(
+        &mut e,
+        "addShape",
+        json!({"parent":frame3,"kind":"ellipse","x":-999_999.,"y":4.,"width":3_000_000.,"height":200.,"fill":[255,0,0,255]}),
+    );
+    let err = e
+        .apply(Command::new("exportSlice", json!({"node": frame3, "scale": 4.0})))
+        .unwrap_err();
+    assert!(
+        err.message.contains("coordinate budget"),
+        "unexpected error: {}",
+        err.message
+    );
 }

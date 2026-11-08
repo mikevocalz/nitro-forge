@@ -75,6 +75,35 @@ fn text_field<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
         .and_then(Value::as_str)
         .ok_or_else(|| bad("expected string field"))
 }
+/// Prism `Shape::validate` coordinate bound (`MAX_COORD` in prism's model,
+/// not re-exported). `export_slice` clamps or substitutes member geometry
+/// that would exceed it after translation and scaling.
+const SLICE_SHAPE_MAX_COORD: f64 = 1.0e7;
+/// Whether an ellipse with translated/scaled bounds `(x,y,w,h)` covers every
+/// canvas pixel center. The covered region is convex, so containing the four
+/// extreme pixel centers `(0.5,0.5)`…`(w-0.5,h-0.5)` contains the whole
+/// pixel-center grid — matching Prism's per-pixel-center sampling.
+fn ellipse_covers_canvas(x: f64, y: f64, w: f64, h: f64, cw: f64, ch: f64) -> bool {
+    let rx = w / 2.;
+    let ry = h / 2.;
+    if !(rx > 0. && ry > 0.) {
+        return false;
+    }
+    let cx = x + rx;
+    let cy = y + ry;
+    [
+        (0.5, 0.5),
+        (cw - 0.5, 0.5),
+        (0.5, ch - 0.5),
+        (cw - 0.5, ch - 0.5),
+    ]
+    .iter()
+    .all(|&(px, py)| {
+        let dx = (px - cx) / rx;
+        let dy = (py - cy) / ry;
+        dx * dx + dy * dy <= 1.
+    })
+}
 /// Smallest unused `prefix-N` symbol id; the collection caps bound the scan.
 fn generated_id(prefix: &str, taken: &dyn Fn(&str) -> bool) -> Result<String, EngineError> {
     for i in 1..=8192u64 {
@@ -289,6 +318,18 @@ impl DesignEngine {
             if !b.visible {
                 continue;
             }
+            // Translate+scale into slice pixel space, then cull against the
+            // canvas before Prism ever sees the box: a member that cannot
+            // cover a canvas pixel is skipped, which both avoids rasterizing
+            // invisible work and keeps out-of-slice geometry away from
+            // Prism's coordinate bound.
+            let sx = (b.x - origin.0) * scale;
+            let sy = (b.y - origin.1) * scale;
+            let sw = b.width * scale;
+            let sh = b.height * scale;
+            if sx + sw <= 0. || sy + sh <= 0. || sx >= width_px || sy >= height_px {
+                continue;
+            }
             // Same shape mapping as renderFrame: text nodes draw their
             // fill background only; `renderable:false` is manifest data.
             let kind = if b.kind == Kind::Ellipse {
@@ -296,7 +337,44 @@ impl DesignEngine {
             } else {
                 "rect"
             };
-            prism.apply(Command::new("addShape",json!({"shape":{"kind":kind,"x":(b.x-origin.0)*scale,"y":(b.y-origin.1)*scale,"w":b.width*scale,"h":b.height*scale,"fill":b.fill}})))?;
+            // Prism `Shape::validate` rejects |coord| > MAX_COORD (1e7).
+            // Design eval coordinates reach ±1e7 and `scale` multiplies
+            // extents by up to 4, so a member intersecting the slice can
+            // still overflow. In-bounds shapes pass through untouched. A
+            // rect that overflows is clamped to its canvas intersection —
+            // pixel-identical because the raster only samples canvas
+            // pixels. An ellipse's coverage depends on its whole bounding
+            // box, so the only exact substitution is a canvas-covering one
+            // (emitted as a canvas rect); a partially visible oversized
+            // ellipse has no exact Prism representation and rejects honestly
+            // rather than rasterizing wrong pixels.
+            let in_bounds = [sx, sy, sw, sh]
+                .iter()
+                .all(|v| v.is_finite() && v.abs() <= SLICE_SHAPE_MAX_COORD);
+            let shape = if in_bounds {
+                json!({"kind":kind,"x":sx,"y":sy,"w":sw,"h":sh,"fill":b.fill})
+            } else {
+                match kind {
+                    "rect" => {
+                        let x0 = sx.max(0.);
+                        let y0 = sy.max(0.);
+                        let x1 = (sx + sw).min(width_px);
+                        let y1 = (sy + sh).min(height_px);
+                        json!({"kind":"rect","x":x0,"y":y0,"w":x1-x0,"h":y1-y0,"fill":b.fill})
+                    }
+                    "ellipse"
+                        if ellipse_covers_canvas(sx, sy, sw, sh, width_px, height_px) =>
+                    {
+                        json!({"kind":"rect","x":0.,"y":0.,"w":width_px,"h":height_px,"fill":b.fill})
+                    }
+                    _ => {
+                        return Err(bad(
+                            "export slice member exceeds the raster coordinate budget",
+                        ))
+                    }
+                }
+            };
+            prism.apply(Command::new("addShape", json!({"shape": shape})))?;
         }
         if let Some(c) = ctx {
             c.checkpoint()?;
@@ -343,7 +421,7 @@ impl DesignEngine {
                 "notes": [
                     "raw RGBA8 pixels only; no PNG/SVG/vector encoder exists",
                     "per-slice output format and presets are host-side",
-                    "node x/y are document units relative to the slice origin; synthetic expansion ids >= 2^53-1 are read-only provenance",
+                    "node x/y are document units relative to the slice origin; synthetic expansion ids >= 2^53 are read-only provenance",
                 ],
             },
         }))
@@ -1701,26 +1779,34 @@ impl Engine for DesignEngine {
         Ok(())
     }
     fn undo(&mut self) -> Result<bool, EngineError> {
-        let revision = self.next_revision()?;
-        if let Some(prior) = self.journal.pop_undo() {
-            let current = std::mem::replace(&mut self.state, prior);
-            self.journal.push_redo(current);
-            self.state_revision = revision;
-            Ok(true)
-        } else {
-            Ok(false)
+        // Check the journal before spending a revision: an empty undo stack
+        // is `Ok(false)`, not a revision-budget error.
+        if self.journal.undo_len() == 0 {
+            return Ok(false);
         }
+        let revision = self.next_revision()?;
+        let prior = self
+            .journal
+            .pop_undo()
+            .ok_or_else(|| bad("undo journal underflow"))?;
+        let current = std::mem::replace(&mut self.state, prior);
+        self.journal.push_redo(current);
+        self.state_revision = revision;
+        Ok(true)
     }
     fn redo(&mut self) -> Result<bool, EngineError> {
-        let revision = self.next_revision()?;
-        if let Some(next) = self.journal.pop_redo() {
-            let current = std::mem::replace(&mut self.state, next);
-            self.journal.push_undo(current);
-            self.state_revision = revision;
-            Ok(true)
-        } else {
-            Ok(false)
+        if self.journal.redo_len() == 0 {
+            return Ok(false);
         }
+        let revision = self.next_revision()?;
+        let next = self
+            .journal
+            .pop_redo()
+            .ok_or_else(|| bad("redo journal underflow"))?;
+        let current = std::mem::replace(&mut self.state, next);
+        self.journal.push_undo(current);
+        self.state_revision = revision;
+        Ok(true)
     }
 }
 #[cfg(test)]

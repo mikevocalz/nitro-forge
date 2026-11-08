@@ -173,7 +173,7 @@ export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'f
 export type NewNode=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'>>;
 export interface NewTextNode extends NewNode{content:string;style?:FontStylePatch}
 /** `id` is a real node id for stored nodes, or a synthetic expansion id
- * `>= 2^53-1` for instance clones. Synthetic ids are read-only provenance
+ * `>= 2^53` for instance clones. Synthetic ids are read-only provenance
  * handles: they exceed JS safe-integer precision, are never persisted, and
  * every op rejects them as unknown nodes — do not feed them back into ops. */
 export interface EvaluatedBox extends NodeGeometry{id:number;kind:NodeKind;fill:[number,number,number,number];visible:boolean;renderable:boolean}
@@ -188,7 +188,7 @@ export interface TextStyleInfo{content:string;content_bytes:number;content_trunc
  * document units relative to the slice origin for export manifests,
  * absolute canvas units for describeHandoff), effective visibility and
  * renderability, plus presence-gated feature fields. `id`/`parent` may be
- * synthetic expansion ids `>= 2^53-1` inside export manifests — read-only
+ * synthetic expansion ids `>= 2^53` inside export manifests — read-only
  * provenance, never op-addressable. */
 export interface HandoffNodeInfo{id:number;parent:number|null;depth:number;kind:NodeKind;name:string;x:number;y:number;width:number;height:number;fill:[number,number,number,number];visible:boolean;renderable:boolean;sizing?:SizingSettings;layout?:FrameLayout|null;text?:TextStyleInfo;constraints?:NodeConstraints;instance?:{component:number;variant:string|null;overrides:number};variants?:number}
 /** Prototype screen projected into the handoff payload with its live node

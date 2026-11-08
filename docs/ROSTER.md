@@ -1755,12 +1755,32 @@ to the 1,048,576-pixel design output budget. Honest deferrals documented in
 no asset store, export formats/presets/multi-slice batching host-side,
 presence transport-only. No schema or snapshot change.
 
-Local evidence: `cargo test -p design-engine` 49 passed (4 new tests:
+Local evidence: `cargo test -p design-engine` 50 passed (5 new tests:
 handoff determinism/bounds/eventlessness/revision tags, revision advance
 across mutation/batch/undo/redo/restore, slice RGBA+manifest/subtree scope/
 scale/binary sidecar, atomic rejections and pixel budget, component+
-instance+variable coverage), `cargo build -p nf-cli` clean,
+instance+variable coverage, oversized-member clipping/culling),
+`cargo build -p nf-cli` clean,
 `pnpm --filter @nitro-forge/design test` 16 passed across 12 files (1 new
 nf-cli live test, 1 new payload-contract test), `pnpm --filter
 @nitro-forge/design typecheck` clean. UI wiring, native acceptance and full
 P16 completion are not implied.
+
+Review fixes on `codex/w1-design-handoff` (same branch): `exportSlice` now
+translates/scales member boxes into slice pixels and culls boxes that cannot
+cover a canvas pixel before they reach Prism; intersecting rect members
+whose scaled bounds exceed Prism's 1e7 coordinate bound are clamped to their
+canvas intersection (pixel-identical), canvas-covering oversized ellipses
+rasterize as an equivalent canvas rect, and partially visible oversized
+ellipses reject honestly with a coordinate-budget error instead of failing
+inside Prism validation. `docs/ENGINE_OPS.md` now documents that in-batch
+`describeHandoff`/`exportSlice` reads report per-step speculative
+`state_revision` values (the batch still commits as a single +1), that
+`describeHandoff` accepts and ignores its payload like `evaluateLayout`,
+and corrects synthetic expansion ids to `>= 2^53` (first clone is
+`SAFE_ID + 1`). `undo`/`redo` check the journal before spending a revision
+so an empty stack returns `Ok(false)` even at revision exhaustion.
+Evidence rerun after fixes: `cargo test -p design-engine` 50 passed,
+`cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/design test`
+16 passed across 12 files, `pnpm --filter @nitro-forge/design typecheck`
+clean.
