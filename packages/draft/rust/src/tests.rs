@@ -1596,3 +1596,348 @@ fn layer_snapshots_wrapper_defaults_and_hostile_restore() {
     reopened.restore(&still_wrapped).unwrap();
     assert_eq!(reopened.snapshot().unwrap(), still_wrapped);
 }
+fn square(e: &mut DraftEngine, size: f64, layer: u64) -> Vec<u64> {
+    let a = point(e, 0., 0.);
+    let b = point(e, size, 0.);
+    let c = point(e, size, size);
+    let d = point(e, 0., size);
+    let mut edges = Vec::new();
+    for (p, q) in [(a, b), (b, c), (c, d), (d, a)] {
+        edges.push(
+            apply(
+                e,
+                "addSegment",
+                json!({"a":p,"b":q,"layer":layer}),
+            )
+            .data["segment_id"]
+                .as_u64()
+                .unwrap(),
+        );
+    }
+    edges
+}
+fn hatch(e: &mut DraftEngine, payload: Value) -> u64 {
+    apply(e, "addHatch", payload).data["hatch_id"].as_u64().unwrap()
+}
+fn pixels(e: &mut DraftEngine, w: u32, h: u32) -> Vec<u8> {
+    let data = apply(
+        e,
+        "renderFrame",
+        json!({"width":w,"height":h,"origin_x":0,"origin_y":0,"scale":1}),
+    )
+    .data;
+    base64_decode(data["pixels_b64"].as_str().unwrap())
+}
+fn px(rgba: &[u8], w: u32, x: u32, y: u32) -> [u8; 4] {
+    let i = ((y * w + x) * 4) as usize;
+    [rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]]
+}
+#[test]
+fn hatches_solid_fill_and_line_patterns_render_real_clipped_pixels() {
+    let mut e = DraftEngine::new();
+    let edges = square(&mut e, 4., 0);
+    // Solid fill via traced boundary ids: the interior pixel is exactly the
+    // hatch color and nothing paints outside the loop.
+    let solid = hatch(
+        &mut e,
+        json!({"boundary_ids":edges,"pattern":"solid","color":[255,0,0,255]}),
+    );
+    let rgba = pixels(&mut e, 6, 6);
+    assert_eq!(px(&rgba, 6, 2, 2), [255, 0, 0, 255]);
+    // Outside the 4x4 square but inside the 6x6 viewport stays transparent.
+    assert_eq!(px(&rgba, 6, 5, 5)[3], 0);
+    // Line pattern: real clipped strokes, sparse enough that the center is
+    // not a solid fill and pixels differ from the solid render.
+    apply(
+        &mut e,
+        "updateHatch",
+        json!({"id":solid,"pattern":"ansi31","scale":1.,"width":0.5}),
+    );
+    let lines = pixels(&mut e, 5, 5);
+    assert_ne!(lines, rgba);
+    assert!(lines.iter().any(|v| *v != 0));
+    // Crosshatch and horizontal are distinct admitted builtins.
+    for pattern in ["crosshatch", "horizontal"] {
+        apply(&mut e, "updateHatch", json!({"id":solid,"pattern":pattern}));
+        assert!(pixels(&mut e, 5, 5).iter().any(|v| *v != 0));
+    }
+    // A circle boundary resolves through the same tracer.
+    let center = point(&mut e, 8., 2.);
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":2.}))
+        .data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let disc = hatch(
+        &mut e,
+        json!({"boundary_ids":[circle],"pattern":"solid","color":[0,0,255,255]}),
+    );
+    let rgba = pixels(&mut e, 12, 5);
+    // Viewport is 12x5 world units at scale 1: pixel (8,2) is the disc center.
+    assert_eq!(px(&rgba, 12, 8, 2), [0, 0, 255, 255]);
+    // Explicit point loops are admitted directly; rotation/scale/width are
+    // bounded style fields.
+    let tri = hatch(
+        &mut e,
+        json!({"loops":[[[20.,0.],[23.,0.],[21.5,2.]]],"pattern":"ansi31","angle":30.,"scale":0.5,"width":0.25,"color":[0,255,0,255]}),
+    );
+    assert!(state(&e).hatches[&tri].loops[0].len() == 3);
+    // Equal writes are read-only; undo/redo restores each step.
+    let before = e.snapshot().unwrap();
+    let noop = apply(
+        &mut e,
+        "updateHatch",
+        json!({"id":tri,"name":"Hatch"}),
+    );
+    assert!(noop.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    apply(&mut e, "removeHatch", json!({"id":disc}));
+    assert!(e.undo().unwrap());
+    assert!(state(&e).hatches.contains_key(&disc));
+    assert!(e.redo().unwrap());
+    assert!(!state(&e).hatches.contains_key(&disc));
+}
+#[test]
+fn hatch_line_patterns_pair_coincident_crossings() {
+    let mut e = DraftEngine::new();
+    // Regression: a boundary vertex lying exactly on a pattern line
+    // contributes two coincident crossings. The square plus the triangle
+    // whose apex (5,12) sits on the horizontal y=12 line yields hits
+    // [0,5,5,10]; the coincident pair must survive pairing so both halves
+    // of the [0,10] span draw (deduping used to drop the second half).
+    let loops = vec![
+        vec![[0., 0.], [10., 0.], [10., 13.], [0., 13.]],
+        vec![[4., 14.], [6., 14.], [5., 12.]],
+    ];
+    let segs = crate::hatch::line_segments(&loops, (1., 0.), (0., 1.), 12.).unwrap();
+    assert_eq!(segs.len(), 2);
+    let us: Vec<(f64, f64)> = segs
+        .iter()
+        .map(|(a, b)| (a[0].min(b[0]), a[0].max(b[0])))
+        .collect();
+    for (got, want) in us.iter().zip([(0., 5.), (5., 10.)]) {
+        assert!(
+            (got.0 - want.0).abs() < 1e-6 && (got.1 - want.1).abs() < 1e-6,
+            "interval {got:?} != {want:?}"
+        );
+    }
+    hatch(
+        &mut e,
+        json!({"loops":[[[0.,0.],[10.,0.],[10.,13.],[0.,13.]],[[4.,14.],[6.,14.],[5.,12.]]],"pattern":"horizontal","scale":1.,"width":2.,"color":[255,0,0,255]}),
+    );
+    let rgba = pixels(&mut e, 11, 15);
+    // Real pixels along the full clipped span, including past the apex.
+    assert_eq!(px(&rgba, 11, 2, 12), [255, 0, 0, 255]);
+    assert_eq!(px(&rgba, 11, 8, 12), [255, 0, 0, 255]);
+    // Above the triangle and beside the pattern lines stays transparent.
+    assert_eq!(px(&rgba, 11, 5, 14)[3], 0);
+}
+#[test]
+fn hatch_line_patterns_shared_edges_and_even_odd_holes() {
+    // Two squares sharing the full edge x=4: coincident crossings on the
+    // shared edge must not collapse, so coverage runs continuously [0,8].
+    let mut e = DraftEngine::new();
+    hatch(
+        &mut e,
+        json!({"loops":[[[0.,0.],[4.,0.],[4.,4.],[0.,4.]],[[4.,0.],[8.,0.],[8.,4.],[4.,4.]]],"pattern":"horizontal","scale":0.5,"width":1.5,"color":[0,255,0,255]}),
+    );
+    let rgba = pixels(&mut e, 9, 5);
+    for x in [1, 4, 7] {
+        assert_eq!(px(&rgba, 9, x, 1), [0, 255, 0, 255], "x={x}");
+    }
+    // Nested loops form an even-odd hole: interior pattern lines paint
+    // [0,4] and [8,12] but leave (4,8) empty.
+    let mut e = DraftEngine::new();
+    hatch(
+        &mut e,
+        json!({"loops":[[[0.,0.],[12.,0.],[12.,12.],[0.,12.]],[[4.,4.],[8.,4.],[8.,8.],[4.,8.]]],"pattern":"horizontal","scale":0.5,"width":3.,"color":[0,0,255,255]}),
+    );
+    let rgba = pixels(&mut e, 13, 13);
+    assert_eq!(px(&rgba, 13, 2, 6), [0, 0, 255, 255]);
+    assert_eq!(px(&rgba, 13, 10, 6), [0, 0, 255, 255]);
+    assert_eq!(px(&rgba, 13, 6, 6)[3], 0);
+    assert_eq!(px(&rgba, 13, 6, 5)[3], 0);
+}
+#[test]
+fn hatch_boundary_tracing_is_validated_and_hatches_are_not_associative() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 0.);
+    let c = point(&mut e, 3., 3.);
+    let d = point(&mut e, 0., 3.);
+    let open = segment(&mut e, a, b);
+    let _tail = segment(&mut e, b, c);
+    let before = e.snapshot().unwrap();
+    // Open chains, unknown ids, point ids and duplicates all reject atomically.
+    for ids in [
+        json!([open, _tail]),
+        json!([open, 9999]),
+        json!([open, a]),
+        json!([open, open]),
+        json!([]),
+    ] {
+        assert!(e
+            .apply(Command::new("addHatch", json!({"boundary_ids":ids})))
+            .is_err());
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Close the square; boundary tracing succeeds in any id order.
+    let e1 = segment(&mut e, c, d);
+    let e2 = segment(&mut e, d, a);
+    let ids = vec![e2, open, e1, _tail];
+    let h = hatch(&mut e, json!({"boundary_ids":ids,"pattern":"solid"}));
+    let loops = state(&e).hatches[&h].loops.clone();
+    assert_eq!(loops.len(), 1);
+    assert!(loops[0].len() >= 4);
+    // Non-associative: moving a boundary entity later does not move the hatch.
+    apply(&mut e, "updatePoint", json!({"id":a,"x":9.}));
+    assert_eq!(state(&e).hatches[&h].loops, loops);
+    // Explicit loops must be closed polygons with real area.
+    for loops in [
+        json!([]),
+        json!([[[0.,0.],[1.,0.]]]),
+        json!([[[0.,0.],[1.,0.],[2.,0.]]]),
+        json!([[[0.,0.],[1.,1.],[2.,2.],[3.,3.]]]),
+    ] {
+        assert!(e
+            .apply(Command::new("addHatch", json!({"loops":loops})))
+            .is_err());
+    }
+    // Both boundary sources at once, or neither, reject.
+    assert!(e
+        .apply(Command::new(
+            "addHatch",
+            json!({"loops":[[[0.,0.],[1.,0.],[0.,1.]]],"boundary_ids":[open]})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new("addHatch", json!({"pattern":"solid"})))
+        .is_err());
+    // `tolerance` only applies to boundary_ids tracing, never explicit loops.
+    assert!(e
+        .apply(Command::new(
+            "addHatch",
+            json!({"loops":[[[0.,0.],[4.,0.],[0.,4.]]],"tolerance":0.5})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "updateHatch",
+            json!({"id":h,"loops":[[[0.,0.],[4.,0.],[0.,4.]]],"tolerance":0.5})
+        ))
+        .is_err());
+    // Style bounds and unknown patterns reject through full validation.
+    for patch in [
+        json!({"pattern":"bogus"}),
+        json!({"scale":0.}),
+        json!({"scale":2000.}),
+        json!({"angle":400000.}),
+        json!({"width":0.}),
+        json!({"color":[0,0,0]}),
+        json!({"layer":4242}),
+    ] {
+        let mut payload = json!({"loops":[[[0.,0.],[4.,0.],[0.,4.]]],"pattern":"solid"});
+        for (k, v) in patch.as_object().unwrap() {
+            payload[k] = v.clone();
+        }
+        assert!(e.apply(Command::new("addHatch", payload)).is_err());
+    }
+}
+#[test]
+fn hatch_layers_locks_layer_removal_and_matching_reader_restore() {
+    let mut e = DraftEngine::new();
+    let hidden = layer(&mut e, "HatchLayer");
+    apply(&mut e, "updateLayer", json!({"id":hidden,"visible":false}));
+    let edges = square(&mut e, 4., 0);
+    let on_hidden = hatch(
+        &mut e,
+        json!({"boundary_ids":edges,"pattern":"solid","color":[255,0,0,255],"layer":hidden}),
+    );
+    // Hidden layer: entity strokes draw, the fill does not.
+    let rgba = pixels(&mut e, 5, 5);
+    assert_ne!(px(&rgba, 5, 2, 2), [255, 0, 0, 255]);
+    assert!(rgba.iter().any(|v| *v != 0));
+    apply(&mut e, "updateLayer", json!({"id":hidden,"visible":true}));
+    assert_eq!(px(&pixels(&mut e, 5, 5), 5, 2, 2), [255, 0, 0, 255]);
+    // Locked layer rejects hatch edits/removal until unlocked.
+    apply(&mut e, "updateLayer", json!({"id":hidden,"locked":true}));
+    let before = e.snapshot().unwrap();
+    for (op, p) in [
+        ("updateHatch", json!({"id":on_hidden,"name":"x"})),
+        ("updateHatch", json!({"id":on_hidden,"visible":false})),
+        ("removeHatch", json!({"id":on_hidden})),
+    ] {
+        assert!(e.apply(Command::new(op, p)).is_err(), "{op} must reject");
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+    apply(&mut e, "updateLayer", json!({"id":hidden,"locked":false}));
+    // removeLayer refuses while a hatch references the layer.
+    assert!(e
+        .apply(Command::new("removeLayer", json!({"id":hidden})))
+        .is_err());
+    // Entity lock semantics mirror other entities.
+    let free = hatch(&mut e, json!({"boundary_ids":edges,"pattern":"solid"}));
+    apply(&mut e, "updateHatch", json!({"id":free,"locked":true}));
+    assert!(e
+        .apply(Command::new("updateHatch", json!({"id":free,"name":"x"})))
+        .is_err());
+    assert!(e
+        .apply(Command::new("removeHatch", json!({"id":free})))
+        .is_err());
+    apply(&mut e, "updateHatch", json!({"id":free,"locked":false}));
+    // Any hatch forces the strict schema2 wrapper; bare extended state and
+    // hostile hatch fields fail closed on restore.
+    let wrapped = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&wrapped).unwrap();
+    let value: Value = serde_json::from_slice(payload).unwrap();
+    assert_eq!(value["kind"], "draft");
+    assert_eq!(value["schema"], 2);
+    assert!(value["document"]["hatches"][free.to_string()]["loops"].is_array());
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&wrapped).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), wrapped);
+    let before = reopened.snapshot().unwrap();
+    let mut cases: Vec<Value> = Vec::new();
+    let mut bare = value["document"].clone();
+    cases.push(bare.clone());
+    bare["hatches"][free.to_string()]["pattern"] = json!("bogus");
+    cases.push(json!({"kind":"draft","schema":2,"document":bare}));
+    let mut dangling = value.clone();
+    dangling["document"]["hatches"][free.to_string()]["layer"] = json!(4242);
+    cases.push(dangling);
+    let mut bad_loop = value.clone();
+    bad_loop["document"]["hatches"][free.to_string()]["loops"] = json!([[[0.,0.],[1.,0.]]]);
+    cases.push(bad_loop);
+    // Hostile style/coordinate bounds on hatch fields fail closed too.
+    for (key, bad_value) in [
+        ("angle", json!(400000.)),
+        ("scale", json!(2000.)),
+        ("width", json!(0.)),
+        ("name", json!("x".repeat(600))),
+    ] {
+        let mut bad_field = value.clone();
+        bad_field["document"]["hatches"][free.to_string()][key] = bad_value;
+        cases.push(bad_field);
+    }
+    let mut bad_coord = value.clone();
+    bad_coord["document"]["hatches"][free.to_string()]["loops"] =
+        json!([[[0.,0.],[2e6,0.],[0.,1.]]]);
+    cases.push(bad_coord);
+    let mut unknown_field = value.clone();
+    unknown_field["document"]["hatches"][free.to_string()]["extra"] = json!(1);
+    cases.push(unknown_field);
+    for invalid in cases {
+        assert!(reopened
+            .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+            .is_err());
+        assert_eq!(reopened.snapshot().unwrap(), before);
+    }
+    // Undo across the whole hatch lifecycle and describe exposes the map.
+    apply(&mut e, "removeHatch", json!({"id":free}));
+    assert!(!state(&e).hatches.contains_key(&free));
+    assert!(e.undo().unwrap());
+    assert!(state(&e).hatches.contains_key(&free));
+    let described = apply(&mut e, "describe", json!({})).data;
+    assert_eq!(described["hatches"][free.to_string()]["pattern"], "solid");
+    let evaluated = apply(&mut e, "evaluate", json!({})).data;
+    assert!(evaluated["hatches"][free.to_string()]["loops"].is_array());
+}

@@ -7,8 +7,13 @@ export interface DraftCircle extends Omit<DraftSegment,'a'|'b'>{center:number;ra
 export interface DraftArc extends DraftCircle{start_deg:number;sweep_deg:number}
 export type ConstraintDefinition={kind:'fixed';point:number;x:number;y:number}|{kind:'coincident';a:number;b:number}|{kind:'horizontal'|'vertical';segment:number}|{kind:'distance_x'|'distance_y';a:number;b:number;value:number};
 export interface DraftConstraint{id:number;enabled:boolean;definition:ConstraintDefinition}
+/** Explicit world-space boundary loops (outer + holes via even-odd), resolved once at write time; not entity references. Line-pattern segment endpoints clip to the boundary while stroke width may extend width/2 past it. */
+export type DraftHatchLoops=Array<Array<[number,number]>>;
+/** Built-in patterns only: `solid` fills; `ansi31`/`crosshatch`/`horizontal` are bounded line families. */
+export type DraftHatchPattern='solid'|'ansi31'|'crosshatch'|'horizontal';
+export interface DraftHatch{id:number;name:string;pattern:DraftHatchPattern;color:[number,number,number,number];angle:number;scale:number;width:number;visible:boolean;locked:boolean;layer?:number;loops:DraftHatchLoops}
 export interface SnapSettings{grid:boolean;spacing:number;origin_x:number;origin_y:number;endpoint:boolean;midpoint:boolean;projection:boolean;intersection:boolean;ortho:boolean;polar:boolean;polar_increment:number;center:boolean;nearest_circle:boolean;tangent:boolean}
-export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>}
+export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>;hatches?:Record<string,DraftHatch>}
 export interface SolveReport{scope:'point_coordinates';status:'solved'|'underconstrained'|'inconsistent';rank:number;dof:number;residual:number;unsatisfied_constraints:number[];unsatisfied_locked_points:number[];applied:boolean}
 export interface SnapResult{kind:'grid'|'endpoint'|'midpoint'|'projection'|'intersection'|'ortho'|'polar'|'center'|'nearest_circle'|'tangent';x:number;y:number;distance:number;sources:number[];angle_degrees?:number}
 export interface DraftSnapQuery{candidate:SnapResult|null;source_revision:number}
@@ -41,8 +46,12 @@ export class DraftDocument{
  /** Layer 0 is implicit and reserved; named layers carry visibility/lock for their entities. */
  addLayer(name:string,options:Partial<Pick<DraftLayer,'color'|'visible'|'locked'>>={}){return this.document.apply<{layer_id:number}>('addLayer',{name,...options});}
  updateLayer(id:number,patch:Partial<Omit<DraftLayer,'id'>>){return this.document.apply<{ok:boolean}>('updateLayer',{...patch,id});}
- /** Rejects while any segment/circle/arc still references the layer. */
+ /** Rejects while any segment/circle/arc/hatch still references the layer. */
  removeLayer(id:number){return this.document.apply<{ok:boolean}>('removeLayer',{id});}
+ /** Exactly one boundary source: explicit `loops` or `boundary_ids` (closed segment/circle/arc loops, traced once; `tolerance` applies only to `boundary_ids`; later entity edits do not move the hatch). Hatches composite beneath entity strokes and paint among themselves in id order. */
+ addHatch(options:{loops:DraftHatchLoops}|{boundary_ids:number[]},patch:Partial<Pick<DraftHatch,'name'|'pattern'|'color'|'angle'|'scale'|'width'|'visible'|'locked'|'layer'>>&{tolerance?:number}={}){return this.document.apply<{hatch_id:number}>('addHatch',{...patch,...options});}
+ updateHatch(id:number,patch:Partial<Omit<DraftHatch,'id'|'loops'>>&{loops?:DraftHatchLoops|{boundary_ids:number[];tolerance?:number}}){const{loops,...rest}=patch;const boundary=loops&&'boundary_ids' in loops?{boundary_ids:loops.boundary_ids,...(loops.tolerance!==undefined?{tolerance:loops.tolerance}:{})}:loops!==undefined?{loops}:{};return this.document.apply<{ok:boolean}>('updateHatch',{...rest,...boundary,id});}
+ removeHatch(id:number){return this.document.apply<{ok:boolean}>('removeHatch',{id});}
  setSnapSettings(patch:Partial<SnapSettings>){return this.document.apply<{ok:boolean}>('setSnapSettings',patch);}
  /** Tolerance is world units; the host converts any screen tolerance with its actual viewport. */
  querySnap(x:number,y:number,tolerance:number,anchor?:{x:number;y:number}){return this.document.apply<DraftSnapQuery>('querySnap',{x,y,tolerance,...(anchor?{anchor}:{})});}
@@ -55,7 +64,7 @@ export class DraftDocument{
  solve(tolerance=1e-7){return this.document.apply<SolveReport>('solve',{tolerance});}
  /** Read-only deterministic closed-loop tracing; tolerance is world units (default 1e-6). */
  findProfiles(tolerance?:number){return this.document.apply<DraftProfiles>('findProfiles',tolerance===undefined?{}:{tolerance});}
- evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'order'>&{source_revision:number}>('evaluate',{});}
+ evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'hatches'|'order'>&{source_revision:number}>('evaluate',{});}
  renderFrame(viewport:DraftViewport){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',viewport);}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}
 }

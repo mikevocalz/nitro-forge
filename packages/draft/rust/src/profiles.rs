@@ -158,11 +158,19 @@ fn edge_bounds(e: &Edge) -> (f64, f64, f64, f64) {
     b
 }
 
-fn build(s: &State) -> Result<Vec<Edge>, EngineError> {
+/// `only` restricts tracing to an explicit entity-id set (hatch boundaries)
+/// and ignores visibility flags, since the caller references entities
+/// directly; `None` is the `findProfiles` behavior (visible entities only).
+fn build(s: &State, only: Option<&std::collections::BTreeSet<u64>>) -> Result<Vec<Edge>, EngineError> {
     let mut edges = Vec::new();
     for (ord, id) in s.order.iter().enumerate() {
+        if let Some(set) = only {
+            if !set.contains(id) {
+                continue;
+            }
+        }
         if let Some(seg) = s.segments.get(id) {
-            if !seg.visible || !s.layer_visible(seg.layer) {
+            if only.is_none() && (!seg.visible || !s.layer_visible(seg.layer)) {
                 continue;
             }
             let a = s.point(seg.a)?;
@@ -178,7 +186,7 @@ fn build(s: &State) -> Result<Vec<Edge>, EngineError> {
                 open: true,
             });
         } else if let Some(c) = s.circles.get(id) {
-            if !c.visible || !s.layer_visible(c.layer) {
+            if only.is_none() && (!c.visible || !s.layer_visible(c.layer)) {
                 continue;
             }
             let p = s.point(c.center)?;
@@ -200,7 +208,7 @@ fn build(s: &State) -> Result<Vec<Edge>, EngineError> {
                 open: false,
             });
         } else if let Some(a) = s.arcs.get(id) {
-            if !a.visible || !s.layer_visible(a.layer) {
+            if only.is_none() && (!a.visible || !s.layer_visible(a.layer)) {
                 continue;
             }
             let p = s.point(a.center)?;
@@ -372,15 +380,7 @@ fn loop_from_path(path: &[(usize, u8)], edges: &[Edge]) -> Loop {
     l
 }
 
-fn closed_loop(ei: usize, edges: &[Edge]) -> Loop {
-    loop_from_path(&[(ei, 0)], edges)
-}
-
-pub fn find(s: &State, tolerance: f64) -> Result<Value, EngineError> {
-    if !tolerance.is_finite() || tolerance <= 0. || tolerance > LIMIT {
-        return Err(bad("findProfiles tolerance outside world budget"));
-    }
-    let edges = build(s)?;
+fn endpoints(edges: &[Edge]) -> Vec<EndPt> {
     let mut pts = Vec::new();
     for (i, e) in edges.iter().enumerate() {
         if !e.open {
@@ -396,6 +396,19 @@ pub fn find(s: &State, tolerance: f64) -> Result<Value, EngineError> {
             });
         }
     }
+    pts
+}
+
+fn closed_loop(ei: usize, edges: &[Edge]) -> Loop {
+    loop_from_path(&[(ei, 0)], edges)
+}
+
+pub fn find(s: &State, tolerance: f64) -> Result<Value, EngineError> {
+    if !tolerance.is_finite() || tolerance <= 0. || tolerance > LIMIT {
+        return Err(bad("findProfiles tolerance outside world budget"));
+    }
+    let edges = build(s, None)?;
+    let pts = endpoints(&edges);
     let mut visited = vec![false; edges.len()];
     let mut loops: Vec<Loop> = Vec::new();
     let mut traced = 0usize;
@@ -519,4 +532,121 @@ pub fn find(s: &State, tolerance: f64) -> Result<Value, EngineError> {
     }
     keyed.sort_by_key(|&(key, _)| key);
     Ok(Value::Array(keyed.into_iter().map(|(_, p)| p).collect()))
+}
+
+fn push_pt(poly: &mut Vec<XY>, p: XY) {
+    if let Some(last) = poly.last() {
+        if (last.0 - p.0).hypot(last.1 - p.1) <= 1e-9 {
+            return;
+        }
+    }
+    poly.push(p);
+}
+
+/// Sample one traversed edge into `poly`; arcs/circles use <=15 degree steps
+/// so sampled fills stay faithful (unlike the <=90 degree display nodes).
+fn sample_edge(e: &Edge, entered: u8, poly: &mut Vec<XY>) {
+    match e.kind {
+        Kind::Segment { a, b } => {
+            let (p, q) = if entered == 0 { (a, b) } else { (b, a) };
+            push_pt(poly, p);
+            push_pt(poly, q);
+        }
+        Kind::Arc { g } | Kind::Closed { g } => {
+            let pieces = (g.sweep.abs() / 15.).ceil().max(1.) as usize;
+            let closed = g.closed || g.sweep.abs() == 360.;
+            let count = if closed { pieces } else { pieces + 1 };
+            for i in 0..count {
+                let u = if closed {
+                    i as f64 / pieces as f64
+                } else {
+                    i as f64 / (count - 1) as f64
+                };
+                let angle = if entered == 0 {
+                    g.start + g.sweep * u
+                } else {
+                    g.start + g.sweep * (1. - u)
+                };
+                push_pt(poly, g.point(angle));
+            }
+        }
+    }
+}
+
+fn sample_path(path: &[(usize, u8)], edges: &[Edge]) -> Vec<XY> {
+    let mut poly = Vec::new();
+    for &(ei, entered) in path {
+        sample_edge(&edges[ei], entered, &mut poly);
+    }
+    poly
+}
+
+/// Resolve an explicit segment/circle/arc id set into sampled closed
+/// boundary polygons for hatches. Every id must exist as a drawable entity
+/// and the whole set must partition into closed loops; open chains, unknown
+/// ids, duplicates and zero-area results reject. Visibility and layer flags
+/// are ignored because the ids are direct references resolved once at write
+/// time — later entity edits never move the hatch (associative hatches are
+/// deferred to a later slice).
+pub fn boundary(s: &State, ids: &[u64], tolerance: f64) -> Result<Vec<Vec<XY>>, EngineError> {
+    if !tolerance.is_finite() || tolerance <= 0. || tolerance > LIMIT {
+        return Err(bad("hatch boundary tolerance outside world budget"));
+    }
+    if ids.is_empty() || ids.len() > 128 {
+        return Err(bad("hatch boundary id budget exceeded"));
+    }
+    let set: std::collections::BTreeSet<u64> = ids.iter().copied().collect();
+    if set.len() != ids.len() {
+        return Err(bad("duplicate hatch boundary id"));
+    }
+    for id in &set {
+        if !s.segments.contains_key(id)
+            && !s.circles.contains_key(id)
+            && !s.arcs.contains_key(id)
+        {
+            return Err(bad(
+                "hatch boundary requires existing segment, circle or arc ids",
+            ));
+        }
+    }
+    let edges = build(s, Some(&set))?;
+    let pts = endpoints(&edges);
+    let mut visited = vec![false; edges.len()];
+    let mut loops: Vec<Vec<XY>> = Vec::new();
+    let mut traced = 0usize;
+    for i in 0..edges.len() {
+        if edges[i].open {
+            continue;
+        }
+        visited[i] = true;
+        traced += 1;
+        loops.push(sample_path(&[(i, 0)], &edges));
+    }
+    for i in 0..edges.len() {
+        if visited[i] || !edges[i].open {
+            continue;
+        }
+        let Some(path) = trace(i, &edges, &pts, tolerance) else {
+            continue;
+        };
+        let l = loop_from_path(&path, &edges);
+        if l.a2.abs() <= MIN_AREA2 {
+            continue;
+        }
+        if traced + path.len() > MAX_TRACED {
+            return Err(bad("hatch boundary traced-entity budget exceeded"));
+        }
+        traced += path.len();
+        for &(ei, _) in &path {
+            visited[ei] = true;
+        }
+        loops.push(sample_path(&path, &edges));
+    }
+    if visited.iter().any(|v| !*v) {
+        return Err(bad("hatch boundary ids do not form closed loops"));
+    }
+    if loops.len() > crate::model::MAX_HATCH_LOOPS {
+        return Err(bad("hatch boundary loop budget exceeded"));
+    }
+    Ok(loops)
 }

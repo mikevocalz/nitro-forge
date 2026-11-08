@@ -18,6 +18,7 @@ fn requires_matching_reader(state: &State) -> bool {
     !state.circles.is_empty()
         || !state.arcs.is_empty()
         || !state.layers.is_empty()
+        || !state.hatches.is_empty()
         || state.segments.values().any(|s| s.layer != 0)
         || state.circles.values().any(|c| c.layer != 0)
         || state.arcs.values().any(|a| a.layer != 0)
@@ -47,6 +48,30 @@ fn fields(p: &Value, allowed: &[&str]) -> Result<(), EngineError> {
         return Err(bad("unsupported payload field"));
     }
     Ok(())
+}
+/// Resolve a hatch boundary payload: exactly one of explicit `loops`
+/// (world-space point polygons) or `boundary_ids` (segment/circle/arc ids
+/// traced once into sampled loops; optional `tolerance` in world units).
+fn hatch_loops(s: &State, p: &Value) -> Result<Vec<Vec<[f64; 2]>>, EngineError> {
+    match (p.get("loops").is_some(), p.get("boundary_ids").is_some()) {
+        (true, true) | (false, false) => {
+            Err(bad("hatch requires exactly one of loops or boundary_ids"))
+        }
+        (true, false) => {
+            if p.get("tolerance").is_some() {
+                return Err(bad("tolerance requires boundary_ids"));
+            }
+            Ok(serde_json::from_value(p["loops"].clone())?)
+        }
+        (false, true) => {
+            let ids: Vec<u64> = serde_json::from_value(p["boundary_ids"].clone())?;
+            let tolerance = optional(p, "tolerance", profiles::DEFAULT_TOLERANCE)?;
+            Ok(profiles::boundary(s, &ids, tolerance)?
+                .into_iter()
+                .map(|poly| poly.into_iter().map(|(x, y)| [x, y]).collect())
+                .collect())
+        }
+    }
 }
 fn patch<T: Serialize + DeserializeOwned>(
     current: &T,
@@ -210,7 +235,7 @@ impl Engine for DraftEngine {
             "describe" => {
                 fields(p, &[])?;
                 let mut value = serde_json::to_value(&*self.state)?;
-                for key in ["circles", "arcs"] {
+                for key in ["circles", "arcs", "hatches"] {
                     if value.get(key).is_none() {
                         value[key] = json!({})
                     }
@@ -228,7 +253,7 @@ impl Engine for DraftEngine {
             "evaluate" => {
                 fields(p, &[])?;
                 return Ok(CommandResult::read_only(
-                    json!({"points":self.state.points,"segments":self.state.segments,"circles":self.state.circles,"arcs":self.state.arcs,"order":self.state.order,"source_revision":self.revision}),
+                    json!({"points":self.state.points,"segments":self.state.segments,"circles":self.state.circles,"arcs":self.state.arcs,"hatches":self.state.hatches,"order":self.state.order,"source_revision":self.revision}),
                 ));
             }
             "querySnap" => {
@@ -652,11 +677,107 @@ impl Engine for DraftEngine {
                 }
                 let referenced = next.segments.values().any(|s| s.layer == id)
                     || next.circles.values().any(|c| c.layer == id)
-                    || next.arcs.values().any(|a| a.layer == id);
+                    || next.arcs.values().any(|a| a.layer == id)
+                    || next.hatches.values().any(|h| h.layer == id);
                 if referenced {
                     return Err(bad("layer still contains entities"));
                 }
                 next.layers.remove(&id);
+            }
+            "addHatch" => {
+                fields(
+                    p,
+                    &[
+                        "name", "pattern", "color", "angle", "scale", "width", "visible",
+                        "locked", "layer", "loops", "boundary_ids", "tolerance",
+                    ],
+                )?;
+                let loops = hatch_loops(&next, p)?;
+                let id = next.allocate()?;
+                next.hatches.insert(
+                    id,
+                    Arc::new(Hatch {
+                        id,
+                        name: optional(p, "name", "Hatch".into())?,
+                        pattern: optional(p, "pattern", "ansi31".into())?,
+                        color: optional(p, "color", [0, 0, 0, 255])?,
+                        angle: optional(p, "angle", 0.)?,
+                        scale: optional(p, "scale", 1.)?,
+                        width: optional(p, "width", 1.)?,
+                        visible: optional(p, "visible", true)?,
+                        locked: optional(p, "locked", false)?,
+                        layer: optional(p, "layer", 0)?,
+                        loops,
+                    }),
+                );
+                data = json!({"hatch_id":id});
+            }
+            "updateHatch" => {
+                let id = get(p, "id")?;
+                let hatch = next
+                    .hatches
+                    .get(&id)
+                    .ok_or_else(|| bad("unknown hatch"))?;
+                fields(
+                    p,
+                    &[
+                        "id", "name", "pattern", "color", "angle", "scale", "width", "visible",
+                        "locked", "layer", "loops", "boundary_ids", "tolerance",
+                    ],
+                )?;
+                if next.layer_locked(hatch.layer)
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| k.as_str() != "id")
+                {
+                    return Err(bad("hatch is on a locked layer"));
+                }
+                if hatch.locked
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| !["id", "locked"].contains(&k.as_str()))
+                {
+                    return Err(bad("hatch is locked"));
+                }
+                let mut owned = p.clone();
+                if owned.get("boundary_ids").is_some() {
+                    if owned.get("loops").is_some() {
+                        return Err(bad("provide loops or boundary_ids, not both"));
+                    }
+                    let resolved = hatch_loops(&next, &owned)?;
+                    let obj = owned.as_object_mut().unwrap();
+                    obj.remove("boundary_ids");
+                    obj.remove("tolerance");
+                    obj.insert("loops".to_string(), serde_json::to_value(resolved)?);
+                } else if owned.get("tolerance").is_some() {
+                    return Err(bad("tolerance requires boundary_ids"));
+                }
+                let hatch = patch(
+                    &**hatch,
+                    &owned,
+                    &[
+                        "id", "name", "pattern", "color", "angle", "scale", "width", "visible",
+                        "locked", "layer", "loops",
+                    ],
+                )?;
+                next.hatches.insert(id, Arc::new(hatch));
+            }
+            "removeHatch" => {
+                fields(p, &["id"])?;
+                let id = get(p, "id")?;
+                let hatch = next
+                    .hatches
+                    .get(&id)
+                    .ok_or_else(|| bad("unknown hatch"))?;
+                if hatch.locked {
+                    return Err(bad("hatch is locked"));
+                }
+                if next.layer_locked(hatch.layer) {
+                    return Err(bad("hatch is on a locked layer"));
+                }
+                next.hatches.remove(&id);
             }
             "setSnapSettings" => {
                 next.snaps = patch(

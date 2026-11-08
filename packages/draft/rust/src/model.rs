@@ -84,6 +84,39 @@ pub struct Layer {
     pub locked: bool,
 }
 pub const MAX_LAYERS: usize = 128;
+/// Built-in hatch patterns. `solid` fills; the line patterns are bounded
+/// families of parallel world-space strokes rotated by `angle` and spaced by
+/// `3.0 * scale` world units (`ansi31` = 45°, `crosshatch` = 45°+135°,
+/// `horizontal` = 0°). Custom patterns are not admitted.
+pub const HATCH_PATTERNS: &[&str] = &["solid", "ansi31", "crosshatch", "horizontal"];
+pub const MAX_HATCHES: usize = 64;
+pub const MAX_HATCH_LOOPS: usize = 8;
+/// Per-loop and per-hatch sampled boundary vertex budgets.
+pub const MAX_LOOP_VERTICES: usize = 2048;
+pub const MAX_HATCH_VERTICES: usize = 4096;
+/// A hatch fills explicit world-space boundary loops; it never references
+/// points or entities, so later geometry edits cannot move it (associative
+/// hatches are deferred). `loops` are sampled polygons in world units,
+/// outermost first is not required — `fill_rule:"evenodd"` gives holes.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Hatch {
+    pub id: u64,
+    pub name: String,
+    pub pattern: String,
+    pub color: [u8; 4],
+    /// Pattern rotation in degrees, added to each built-in family angle.
+    pub angle: f64,
+    /// Pitch multiplier on the built-in 3.0 world-unit base spacing.
+    pub scale: f64,
+    /// Line-pattern stroke width in world units; unused by `solid`.
+    pub width: f64,
+    pub visible: bool,
+    pub locked: bool,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub layer: u64,
+    pub loops: Vec<Vec<[f64; 2]>>,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Definition {
@@ -166,6 +199,8 @@ pub struct State {
     pub snaps: SnapSettings,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub layers: BTreeMap<u64, Arc<Layer>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub hatches: BTreeMap<u64, Arc<Hatch>>,
 }
 impl Default for State {
     fn default() -> Self {
@@ -182,6 +217,7 @@ impl Default for State {
             constraints: BTreeMap::new(),
             snaps: SnapSettings::default(),
             layers: BTreeMap::new(),
+            hatches: BTreeMap::new(),
         }
     }
 }
@@ -283,6 +319,7 @@ impl State {
             || self.arcs.len() > 64
             || self.constraints.len() > 128
             || self.layers.len() > MAX_LAYERS
+            || self.hatches.len() > MAX_HATCHES
         {
             return Err(bad("invalid draft header or count budget"));
         }
@@ -406,6 +443,51 @@ impl State {
                     return Err(bad("signed distance outside budget"))
                 }
                 _ => {}
+            }
+        }
+        for (&id, h) in &self.hatches {
+            if id != h.id
+                || id == 0
+                || id >= self.next_id
+                || !ids.insert(id)
+                || h.name.len() > 512
+                || !(h.layer == 0 || self.layers.contains_key(&h.layer))
+                || !HATCH_PATTERNS.contains(&h.pattern.as_str())
+                || !h.angle.is_finite()
+                || h.angle.abs() > 360000.
+                || !h.scale.is_finite()
+                || !(1e-3..=1e3).contains(&h.scale)
+                || !h.width.is_finite()
+                || !(1e-6..=1000.).contains(&h.width)
+                || h.loops.is_empty()
+                || h.loops.len() > MAX_HATCH_LOOPS
+            {
+                return Err(bad("invalid hatch identity, style, pattern or budget"));
+            }
+            let mut vertices = 0usize;
+            for boundary in &h.loops {
+                if boundary.len() < 3
+                    || boundary.len() > MAX_LOOP_VERTICES
+                    || !boundary.iter().all(|p| coord(p[0]) && coord(p[1]))
+                {
+                    return Err(bad("invalid hatch boundary loop"));
+                }
+                vertices += boundary.len();
+                if vertices > MAX_HATCH_VERTICES {
+                    return Err(bad("hatch boundary vertex budget exceeded"));
+                }
+                // Shoelace double-area relative to the first vertex so large
+                // world coordinates do not lose the area to cancellation.
+                let (x0, y0) = (boundary[0][0], boundary[0][1]);
+                let mut a2 = 0.;
+                for i in 0..boundary.len() {
+                    let p = boundary[i];
+                    let q = boundary[(i + 1) % boundary.len()];
+                    a2 += (p[0] - x0) * (q[1] - y0) - (q[0] - x0) * (p[1] - y0);
+                }
+                if a2.abs() <= 1e-12 {
+                    return Err(bad("hatch boundary loop has zero area"));
+                }
             }
         }
         let s = &self.snaps;

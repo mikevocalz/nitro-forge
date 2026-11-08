@@ -1555,3 +1555,35 @@ undo/redo, removal revival and cross-sheet structural remap),
 (same-sheet contract kept), duplicate-sheet qualifier retargeting, and
 any UI wiring — no native/device acceptance or full P13+ completion is
 implied.
+
+## Draft hatches slice A4 (2026-11-07)
+
+Draft gains bounded hatches (`addHatch`/`updateHatch`/`removeHatch`, at most64)
+with explicit world-space boundary loops, built-in patterns only (`solid`,
+`ansi31` 45-degree lines, `crosshatch` 45+135 degrees, `horizontal` 0 degrees;
+base pitch 3.0 world units times `scale` 1e-3..1e3, `angle` rotation within
++-360000 degrees, line `width` 1e-6..1000 world units, at most8 loops and4096
+sampled vertices per hatch) and the same visible/locked/layer semantics as
+entities. Boundaries come from explicit `loops` point polygons or
+`boundary_ids`: segment/circle/arc ids traced once through the findProfiles
+machinery (visibility ignored, every id must partition into closed nonzero-area
+loops) into sampled polygons stored on the hatch, so hatches are deliberately
+NOT associative — later entity edits never move them (deferred). Prism exposes
+no vector path-clip op (`addMask` is a canvas-space alpha buffer, `setClipped`
+clips a whole layer to the composite below), so `solid` renders as a real Prism
+`fill` with `fill_rule:"evenodd"` over the stored loops and line patterns are
+clipped analytically in draft — even-odd interval pairing of each pattern line
+against every boundary edge, emitted as bounded stroked subpaths (512 lines per
+family, 4096 segments per hatch; exceeding rejects the render honestly). Hatches
+composite under entity strokes, respect hidden/locked layers, block `removeLayer`
+while referenced, join undo/redo and force the existing strict
+`{kind:"draft",schema:2}` wrapper; hostile restores reject unknown patterns,
+dangling layers, degenerate loops and unwrapped extended state. `describe` and
+`evaluate` expose the `hatches` map.
+
+Local evidence: `cargo test -p draft-engine` 33 passed (5 hatch tests),
+`cargo build -p nf-cli` clean, `pnpm install` clean,
+`pnpm --filter @nitro-forge/draft test` 10 passed across 4 files (1 new nf-cli
+hatch e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. Associative
+hatches, custom patterns, gradients and PNG fills remain deferred; UI adoption,
+native acceptance and full P17 completion are not implied.
