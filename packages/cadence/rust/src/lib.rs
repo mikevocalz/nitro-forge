@@ -989,6 +989,17 @@ impl Engine for CadenceEngine {
             .max()
             .unwrap_or(0);
         doc.next_id = doc.next_id.max(max_id.saturating_add(1));
+        // Clip gain_db feeds 10^(db/20) in the mix path; an unbounded
+        // restored value would produce non-finite PCM.
+        for t in &doc.tracks {
+            for c in &t.clips {
+                if !(c.gain_db.is_finite()
+                    && (MIN_CLIP_GAIN_DB..=MAX_CLIP_GAIN_DB).contains(&c.gain_db))
+                {
+                    return Err(EngineError::validation("invalid clip gain_db"));
+                }
+            }
+        }
         // Commit only after the payload fully decoded; document is a new
         // session state, so undo history is reset.
         self.doc = doc;
