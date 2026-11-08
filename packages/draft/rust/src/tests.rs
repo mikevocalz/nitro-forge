@@ -1941,3 +1941,462 @@ fn hatch_layers_locks_layer_removal_and_matching_reader_restore() {
     let evaluated = apply(&mut e, "evaluate", json!({})).data;
     assert!(evaluated["hatches"][free.to_string()]["loops"].is_array());
 }
+fn dimension(e: &mut DraftEngine, payload: Value) -> u64 {
+    apply(e, "addDimension", payload).data["dimension_id"]
+        .as_u64()
+        .unwrap()
+}
+fn evaluate(e: &mut DraftEngine) -> Value {
+    apply(e, "evaluate", json!({})).data
+}
+#[test]
+fn dimensions_measure_linked_geometry_and_recompute_associatively() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 4., 0.);
+    let c = point(&mut e, 4., 3.);
+    let linear = dimension(
+        &mut e,
+        json!({"kind":"linear","points":[a,b],"axis":"x","color":[255,0,0,255]}),
+    );
+    let mut ev = evaluate(&mut e);
+    let d = &ev["dimensions"][linear.to_string()];
+    assert_eq!(d["status"], "linked");
+    assert_eq!(d["measured"]["value"], 4.);
+    assert!(d["measured"]["lines"].as_array().unwrap().len() >= 3);
+    // Associative: moving a referenced point recomputes the measurement.
+    apply(&mut e, "updatePoint", json!({"id":b,"x":7.}));
+    ev = evaluate(&mut e);
+    assert_eq!(ev["dimensions"][linear.to_string()]["measured"]["value"], 7.);
+    // Aligned measures the direct distance; angular the unsigned vertex angle.
+    let aligned = dimension(&mut e, json!({"kind":"aligned","points":[a,c]}));
+    ev = evaluate(&mut e);
+    let got = ev["dimensions"][aligned.to_string()]["measured"]["value"]
+        .as_f64()
+        .unwrap();
+    assert!((got - 4f64.hypot(3.)).abs() < 1e-9);
+    let angular = dimension(
+        &mut e,
+        json!({"kind":"angular","points":[a,b,c]}),
+    );
+    ev = evaluate(&mut e);
+    let got = ev["dimensions"][angular.to_string()]["measured"]["value"]
+        .as_f64()
+        .unwrap();
+    // Vertex a=(0,0); rays to b=(7,0) and c=(4,3): angle between them.
+    let want = (28f64 / 35.).acos().to_degrees();
+    assert!((got - want).abs() < 1e-9);
+    // Radial/diameter measure circle and arc entities.
+    let center = point(&mut e, 20., 0.);
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":3.}))
+        .data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let arc = apply(
+        &mut e,
+        "addArc",
+        json!({"center":center,"radius":3.,"start_deg":90.,"sweep_deg":90.}),
+    )
+    .data["arc_id"]
+    .as_u64()
+    .unwrap();
+    let radial = dimension(&mut e, json!({"kind":"radial","entity":circle}));
+    let diameter = dimension(&mut e, json!({"kind":"diameter","entity":arc}));
+    ev = evaluate(&mut e);
+    assert_eq!(ev["dimensions"][radial.to_string()]["measured"]["value"], 3.);
+    assert_eq!(ev["dimensions"][diameter.to_string()]["measured"]["value"], 6.);
+    // Real stroked pixels: only dimensions exist, no segments.
+    let rgba = pixels(&mut e, 24, 4);
+    assert!(rgba.iter().any(|v| *v != 0));
+    // Describe exposes the authored map; evaluate adds status/measured.
+    let described = apply(&mut e, "describe", json!({})).data;
+    assert_eq!(described["dimensions"][linear.to_string()]["kind"], "linear");
+    assert!(described["dimensions"][linear.to_string()].get("status").is_none());
+}
+#[test]
+fn dimension_orphans_on_delete_relinks_and_keeps_style_edits() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 5., 0.);
+    let dim = dimension(
+        &mut e,
+        json!({"kind":"linear","points":[a,b],"axis":"y","name":"Width"}),
+    );
+    // Deleting a referenced point orphans the dimension instead of
+    // rejecting: measured geometry clears, references stay authored.
+    apply(&mut e, "removePoint", json!({"id":a}));
+    let ev = evaluate(&mut e);
+    let d = &ev["dimensions"][dim.to_string()];
+    assert_eq!(d["status"], "orphaned");
+    assert!(d["measured"].is_null());
+    assert_eq!(d["points"], json!([a, b]));
+    // Orphaned dimensions render nothing.
+    assert!(pixels(&mut e, 6, 2).iter().all(|v| *v == 0));
+    // Style-only edits on an orphan stay allowed; reference edits must resolve.
+    apply(&mut e, "updateDimension", json!({"id":dim,"name":"Renamed","visible":false}));
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new(
+            "updateDimension",
+            json!({"id":dim,"points":[a,b]})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Re-linking to live points restores measurement.
+    let c = point(&mut e, 1., 1.);
+    let dpt = point(&mut e, 1., 6.);
+    apply(&mut e, "updateDimension", json!({"id":dim,"points":[c,dpt],"visible":true}));
+    let ev = evaluate(&mut e);
+    let d = &ev["dimensions"][dim.to_string()];
+    assert_eq!(d["status"], "linked");
+    assert_eq!(d["measured"]["value"], 5.);
+    // Entity deletion orphans radial/diameter references the same way.
+    let center = point(&mut e, 20., 0.);
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":2.}))
+        .data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let radial = dimension(&mut e, json!({"kind":"radial","entity":circle}));
+    apply(&mut e, "removeCircle", json!({"id":circle}));
+    let ev = evaluate(&mut e);
+    assert_eq!(ev["dimensions"][radial.to_string()]["status"], "orphaned");
+    // Undo/redo across the whole lifecycle.
+    assert!(e.undo().unwrap());
+    assert!(evaluate(&mut e)["dimensions"][radial.to_string()]["status"] == "linked");
+    assert!(e.redo().unwrap());
+    assert_eq!(evaluate(&mut e)["dimensions"][radial.to_string()]["status"], "orphaned");
+}
+#[test]
+fn dimension_validation_is_atomic_and_bounds_enforced() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 1., 0.);
+    let seg = segment(&mut e, a, b);
+    let before = e.snapshot().unwrap();
+    for payload in [
+        // Unknown kind, missing/extra references, wrong axis pairing.
+        json!({"kind":"bogus","points":[a,b]}),
+        json!({"kind":"linear","points":[a]}),
+        json!({"kind":"linear","points":[a,b]}),
+        json!({"kind":"linear","points":[a,b],"axis":"z"}),
+        json!({"kind":"aligned","points":[a,b],"axis":"x"}),
+        json!({"kind":"angular","points":[a,b]}),
+        json!({"kind":"angular","points":[a,a,b]}),
+        json!({"kind":"radial"}),
+        json!({"kind":"radial","entity":seg}),
+        json!({"kind":"linear","points":[a,b],"axis":"x","entity":1}),
+        json!({"kind":"linear","points":[a,9999],"axis":"x"}),
+        json!({"kind":"linear","points":[a,seg],"axis":"x"}),
+        json!({"kind":"radial","entity":9999}),
+        json!({"kind":"linear","points":[a,b],"axis":"x","width":0.}),
+        json!({"kind":"linear","points":[a,b],"axis":"x","layer":4242}),
+        json!({"kind":"linear","points":[a,b],"axis":"x","bogus":1}),
+    ] {
+        assert!(
+            e.apply(Command::new("addDimension", payload)).is_err(),
+            "payload must reject"
+        );
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Count budget: 64 dimensions maximum.
+    let mut ids = Vec::new();
+    for _ in 0..64 {
+        ids.push(dimension(
+            &mut e,
+            json!({"kind":"linear","points":[a,b],"axis":"x"}),
+        ));
+    }
+    assert!(e
+        .apply(Command::new(
+            "addDimension",
+            json!({"kind":"linear","points":[a,b],"axis":"x"})
+        ))
+        .is_err());
+    // Kind/shape changes through updateDimension revalidate atomically.
+    let first = ids[0];
+    assert!(e
+        .apply(Command::new(
+            "updateDimension",
+            json!({"id":first,"kind":"radial"})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "updateDimension",
+            json!({"id":first,"axis":null,"kind":"aligned"})
+        ))
+        .is_ok());
+    assert_eq!(state(&e).dimensions[&first].kind, model::DimKind::Aligned);
+}
+#[test]
+fn dimension_layers_locks_removal_and_matching_reader_restore() {
+    let mut e = DraftEngine::new();
+    let lay = layer(&mut e, "Dims");
+    apply(&mut e, "updateLayer", json!({"id":lay,"visible":false}));
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 0.);
+    let _seg = apply(
+        &mut e,
+        "addSegment",
+        json!({"a":a,"b":b,"layer":lay}),
+    )
+    .data["segment_id"]
+        .as_u64()
+        .unwrap();
+    let dim = dimension(
+        &mut e,
+        json!({"kind":"linear","points":[a,b],"axis":"x","layer":lay,"color":[0,0,255,255]}),
+    );
+    // Hidden layer: dimension strokes do not render.
+    assert!(pixels(&mut e, 4, 1).iter().all(|v| *v == 0));
+    apply(&mut e, "updateLayer", json!({"id":lay,"visible":true}));
+    assert!(pixels(&mut e, 4, 1).iter().any(|v| *v != 0));
+    // Locked layer rejects dimension edits/removal until unlocked.
+    apply(&mut e, "updateLayer", json!({"id":lay,"locked":true}));
+    let before = e.snapshot().unwrap();
+    for (op, p) in [
+        ("updateDimension", json!({"id":dim,"name":"x"})),
+        ("removeDimension", json!({"id":dim})),
+    ] {
+        assert!(e.apply(Command::new(op, p)).is_err(), "{op} must reject");
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+    apply(&mut e, "updateLayer", json!({"id":lay,"locked":false}));
+    // removeLayer refuses while a dimension references the layer.
+    assert!(e
+        .apply(Command::new("removeLayer", json!({"id":lay})))
+        .is_err());
+    // Entity lock semantics mirror hatches/entities.
+    let free = dimension(&mut e, json!({"kind":"aligned","points":[a,b]}));
+    apply(&mut e, "updateDimension", json!({"id":free,"locked":true}));
+    assert!(e
+        .apply(Command::new("updateDimension", json!({"id":free,"name":"x"})))
+        .is_err());
+    assert!(e
+        .apply(Command::new("removeDimension", json!({"id":free})))
+        .is_err());
+    apply(&mut e, "updateDimension", json!({"id":free,"locked":false}));
+    apply(&mut e, "removeDimension", json!({"id":free}));
+    assert!(e.undo().unwrap());
+    assert!(state(&e).dimensions.contains_key(&free));
+    // Any dimension forces the strict schema2 wrapper; hostile restores of
+    // every new field family fail closed.
+    let wrapped = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&wrapped).unwrap();
+    let value: Value = serde_json::from_slice(payload).unwrap();
+    assert_eq!(value["kind"], "draft");
+    assert_eq!(value["schema"], 2);
+    assert_eq!(value["document"]["dimensions"][dim.to_string()]["kind"], "linear");
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&wrapped).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), wrapped);
+    let before = reopened.snapshot().unwrap();
+    let mut cases: Vec<Value> = Vec::new();
+    cases.push(value["document"].clone()); // unwrapped extended state
+    // A dimension point id that exists only as a segment is malformed even
+    // though absent point ids are legal orphans.
+    let seg_id = state(&e).segments.keys().next().copied().unwrap();
+    let mut wrong_kind_ref = value.clone();
+    wrong_kind_ref["document"]["dimensions"][dim.to_string()]["points"] =
+        json!([a, seg_id]);
+    cases.push(wrong_kind_ref);
+    let mut bad_kind = value.clone();
+    bad_kind["document"]["dimensions"][dim.to_string()]["kind"] = json!("bogus");
+    cases.push(bad_kind);
+    let mut bad_axis = value.clone();
+    bad_axis["document"]["dimensions"][dim.to_string()]["axis"] = json!("z");
+    cases.push(bad_axis);
+    let mut dangling_layer = value.clone();
+    dangling_layer["document"]["dimensions"][dim.to_string()]["layer"] = json!(4242);
+    cases.push(dangling_layer);
+    let mut unknown_field = value.clone();
+    unknown_field["document"]["dimensions"][dim.to_string()]["extra"] = json!(1);
+    cases.push(unknown_field);
+    let mut orphan_point_ref_wrong_type = value.clone();
+    orphan_point_ref_wrong_type["document"]["dimensions"][dim.to_string()]["points"] =
+        json!([999999, seg_id]);
+    cases.push(orphan_point_ref_wrong_type);
+    for invalid in cases {
+        assert!(reopened
+            .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+            .is_err());
+        assert_eq!(reopened.snapshot().unwrap(), before);
+    }
+    // A legal orphan (absent point id) restores fine and reports orphaned.
+    let mut orphan = value.clone();
+    orphan["document"]["dimensions"][dim.to_string()]["points"] = json!([a, 424242]);
+    let bytes = encode_envelope(&serde_json::to_vec(&orphan).unwrap());
+    reopened.restore(&bytes).unwrap();
+    let ev = apply(&mut reopened, "evaluate", json!({})).data;
+    assert_eq!(ev["dimensions"][dim.to_string()]["status"], "orphaned");
+}
+#[test]
+fn dimension_arrow_overshoot_at_world_budget_boundary_omits_legs() {
+    let mut e = DraftEngine::new();
+    // Points authored exactly on the ±1e6 world budget: the derived
+    // dimension/extension lines stay in bounds, but schematic arrowhead
+    // legs would overshoot past it. Overshooting legs are omitted rather
+    // than failing the whole measurement.
+    let a = point(&mut e, 0., 1e6);
+    let b = point(&mut e, 4., 1e6);
+    let linear = dimension(
+        &mut e,
+        json!({"kind":"linear","points":[a,b],"axis":"x"}),
+    );
+    let aligned = dimension(&mut e, json!({"kind":"aligned","points":[a,b]}));
+    let ev = evaluate(&mut e);
+    for id in [linear, aligned] {
+        let m = &ev["dimensions"][id.to_string()]["measured"];
+        assert_eq!(m["value"], 4.);
+        let lines = m["lines"].as_array().unwrap();
+        // The three authored-derived strokes survive; at least one
+        // arrowhead leg per tip pointed back inside the budget.
+        assert!(lines.len() >= 3 && lines.len() < 7);
+        for line in lines {
+            for p in line.as_array().unwrap() {
+                for c in p.as_array().unwrap() {
+                    assert!(c.as_f64().unwrap().abs() <= 1e6);
+                }
+            }
+        }
+    }
+    // renderFrame projects the same boundary geometry without error.
+    let framed = apply(
+        &mut e,
+        "renderFrame",
+        json!({"width":8,"height":4,"origin_x":0,"origin_y":0,"scale":1e-6}),
+    );
+    assert!(framed.data["pixels_b64"].is_string());
+    // Radial/diameter on a boundary-fitting circle still measure and draw.
+    let center = point(&mut e, 0., 999999.);
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":1.}))
+        .data["circle_id"]
+        .as_u64()
+        .unwrap();
+    let arc = apply(
+        &mut e,
+        "addArc",
+        json!({"center":center,"radius":1.,"start_deg":90.,"sweep_deg":90.}),
+    )
+    .data["arc_id"]
+    .as_u64()
+    .unwrap();
+    let radial = dimension(&mut e, json!({"kind":"radial","entity":circle}));
+    let diameter = dimension(&mut e, json!({"kind":"diameter","entity":arc}));
+    let ev = evaluate(&mut e);
+    assert_eq!(ev["dimensions"][radial.to_string()]["measured"]["value"], 1.);
+    assert_eq!(ev["dimensions"][diameter.to_string()]["measured"]["value"], 2.);
+    assert!(apply(
+        &mut e,
+        "renderFrame",
+        json!({"width":8,"height":4,"origin_x":0,"origin_y":0,"scale":1e-6}),
+    )
+    .data["pixels_b64"]
+    .is_string());
+}
+#[test]
+fn dimension_angular_arc_overshoot_omits_arc_but_keeps_rays() {
+    let mut e = DraftEngine::new();
+    // Vertex near the +X budget edge with rays to both ±Y budget corners:
+    // the quarter-span arc (r ≈ 250000) bulges past x = 1e6 mid-sweep, so
+    // the whole arc polyline and both arc arrowheads are dropped while
+    // the authored rays still measure and draw.
+    let v = point(&mut e, 999999., 0.);
+    let a = point(&mut e, 1e6, 1e6);
+    let b = point(&mut e, 1e6, -1e6);
+    let dim = dimension(
+        &mut e,
+        json!({"kind":"angular","points":[v,a,b]}),
+    );
+    let ev = evaluate(&mut e);
+    let m = &ev["dimensions"][dim.to_string()]["measured"];
+    let got = m["value"].as_f64().unwrap();
+    assert!((got - 180.).abs() < 1e-3);
+    let lines = m["lines"].as_array().unwrap();
+    // Only the two authored rays survive: no arc segments and no arc
+    // arrowheads (a lone arrow tip would be disconnected).
+    assert_eq!(lines.len(), 2);
+    for line in lines {
+        for p in line.as_array().unwrap() {
+            for c in p.as_array().unwrap() {
+                assert!(c.as_f64().unwrap().abs() <= 1e6);
+            }
+        }
+    }
+    // renderFrame projects the same boundary geometry without error.
+    let framed = apply(
+        &mut e,
+        "renderFrame",
+        json!({"width":8,"height":4,"origin_x":0,"origin_y":0,"scale":1e-6}),
+    );
+    assert!(framed.data["pixels_b64"].is_string());
+}
+#[test]
+fn dimension_angular_arc_starts_at_arc_start_not_vertex() {
+    let mut e = DraftEngine::new();
+    // 90 degree angle at the origin: r = 1, arc runs (1,0) to (0,1).
+    let v = point(&mut e, 0., 0.);
+    let a = point(&mut e, 4., 0.);
+    let b = point(&mut e, 0., 4.);
+    let dim = dimension(
+        &mut e,
+        json!({"kind":"angular","points":[v,a,b]}),
+    );
+    let ev = evaluate(&mut e);
+    let m = &ev["dimensions"][dim.to_string()]["measured"];
+    assert_eq!(m["value"], 90.);
+    let lines = m["lines"].as_array().unwrap();
+    // Exactly the two rays touch the vertex; the arc polyline begins at
+    // the arc start (1,0), never with a spurious vertex-to-sample stroke.
+    let touches_vertex = lines
+        .iter()
+        .filter(|line| {
+            line.as_array().unwrap().iter().any(|p| {
+                let xy = p.as_array().unwrap();
+                xy[0].as_f64().unwrap() == 0. && xy[1].as_f64().unwrap() == 0.
+            })
+        })
+        .count();
+    assert_eq!(touches_vertex, 2);
+    let arc_start_drawn = lines.iter().any(|line| {
+        let pts = line.as_array().unwrap();
+        pts.iter().any(|p| {
+            let xy = p.as_array().unwrap();
+            (xy[0].as_f64().unwrap() - 1.).abs() < 1e-9
+                && xy[1].as_f64().unwrap().abs() < 1e-9
+        })
+    });
+    assert!(arc_start_drawn);
+}
+#[test]
+fn dimension_degenerate_angle_and_hidden_dimension_render_honestly() {
+    let mut e = DraftEngine::new();
+    let v = point(&mut e, 0., 0.);
+    let a = point(&mut e, 4., 0.);
+    let b = point(&mut e, 0., 0.); // coincident coordinates, distinct id
+    let dim = dimension(
+        &mut e,
+        json!({"kind":"angular","points":[v,a,b],"visible":true}),
+    );
+    // Undefined angle reports value:null rather than a fabricated number.
+    let ev = evaluate(&mut e);
+    let m = &ev["dimensions"][dim.to_string()]["measured"];
+    assert!(m["value"].is_null());
+    // Hiding the dimension removes its pixels while geometry stays authored.
+    apply(&mut e, "updateDimension", json!({"id":dim,"visible":false}));
+    assert!(pixels(&mut e, 5, 2).iter().all(|v| *v == 0));
+    apply(&mut e, "updateDimension", json!({"id":dim,"visible":true}));
+    assert!(pixels(&mut e, 5, 2).iter().any(|v| *v != 0));
+    // updateDimension kind/points/entity/axis changes are full replacements.
+    let b2 = point(&mut e, 0., 4.);
+    apply(
+        &mut e,
+        "updateDimension",
+        json!({"id":dim,"points":[v,a,b2]}),
+    );
+    let ev = evaluate(&mut e);
+    let got = ev["dimensions"][dim.to_string()]["measured"]["value"]
+        .as_f64()
+        .unwrap();
+    assert!((got - 90.).abs() < 1e-9);
+}
