@@ -7,7 +7,7 @@ export interface DraftCircle extends Omit<DraftSegment,'a'|'b'>{center:number;ra
 export interface DraftArc extends DraftCircle{start_deg:number;sweep_deg:number}
 export type ConstraintDefinition={kind:'fixed';point:number;x:number;y:number}|{kind:'coincident';a:number;b:number}|{kind:'horizontal'|'vertical';segment:number}|{kind:'distance_x'|'distance_y';a:number;b:number;value:number};
 export interface DraftConstraint{id:number;enabled:boolean;definition:ConstraintDefinition}
-/** Explicit world-space boundary loops (outer + holes via even-odd), resolved once at write time; not entity references. */
+/** Explicit world-space boundary loops (outer + holes via even-odd), resolved once at write time; not entity references. Line-pattern segment endpoints clip to the boundary while stroke width may extend width/2 past it. */
 export type DraftHatchLoops=Array<Array<[number,number]>>;
 /** Built-in patterns only: `solid` fills; `ansi31`/`crosshatch`/`horizontal` are bounded line families. */
 export type DraftHatchPattern='solid'|'ansi31'|'crosshatch'|'horizontal';
@@ -48,7 +48,7 @@ export class DraftDocument{
  updateLayer(id:number,patch:Partial<Omit<DraftLayer,'id'>>){return this.document.apply<{ok:boolean}>('updateLayer',{...patch,id});}
  /** Rejects while any segment/circle/arc/hatch still references the layer. */
  removeLayer(id:number){return this.document.apply<{ok:boolean}>('removeLayer',{id});}
- /** Exactly one boundary source: explicit `loops` or `boundary_ids` (closed segment/circle/arc loops, traced once; later entity edits do not move the hatch). */
+ /** Exactly one boundary source: explicit `loops` or `boundary_ids` (closed segment/circle/arc loops, traced once; `tolerance` applies only to `boundary_ids`; later entity edits do not move the hatch). Hatches composite beneath entity strokes and paint among themselves in id order. */
  addHatch(options:{loops:DraftHatchLoops}|{boundary_ids:number[]},patch:Partial<Pick<DraftHatch,'name'|'pattern'|'color'|'angle'|'scale'|'width'|'visible'|'locked'|'layer'>>&{tolerance?:number}={}){return this.document.apply<{hatch_id:number}>('addHatch',{...patch,...options});}
  updateHatch(id:number,patch:Partial<Omit<DraftHatch,'id'|'loops'>>&{loops?:DraftHatchLoops|{boundary_ids:number[];tolerance?:number}}){const{loops,...rest}=patch;const boundary=loops&&'boundary_ids' in loops?{boundary_ids:loops.boundary_ids,...(loops.tolerance!==undefined?{tolerance:loops.tolerance}:{})}:loops!==undefined?{loops}:{};return this.document.apply<{ok:boolean}>('updateHatch',{...rest,...boundary,id});}
  removeHatch(id:number){return this.document.apply<{ok:boolean}>('removeHatch',{id});}

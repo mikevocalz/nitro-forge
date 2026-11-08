@@ -1487,7 +1487,7 @@ while referenced, join undo/redo and force the existing strict
 dangling layers, degenerate loops and unwrapped extended state. `describe` and
 `evaluate` expose the `hatches` map.
 
-Local evidence: `cargo test -p draft-engine` 31 passed (3 new hatch tests),
+Local evidence: `cargo test -p draft-engine` 33 passed (5 hatch tests),
 `cargo build -p nf-cli` clean, `pnpm install` clean,
 `pnpm --filter @nitro-forge/draft test` 10 passed across 4 files (1 new nf-cli
 hatch e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. Associative

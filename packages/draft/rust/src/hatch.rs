@@ -5,7 +5,8 @@
 //! `fill_rule:"evenodd"` over the stored boundary loops, and built-in line
 //! patterns are generated as world-space strokes whose segments are clipped
 //! to the loops analytically (even-odd interval pairing along each pattern
-//! line). Nothing is drawn outside the boundary and no clip is faked.
+//! line). Segment endpoints are clipped to the boundary; stroke width may
+//! extend `width/2` perpendicular past it, and no clip is faked.
 use crate::model::*;
 use ignition_core::{EngineError, TaskContext};
 use serde_json::{json, Value};
@@ -49,12 +50,17 @@ fn node(p: [f64; 2]) -> Value {
 /// stored boundary loop. `dir`/`nrm` are orthonormal; `c` is the line's
 /// normal coordinate. Intersections are collected per polygon edge with the
 /// half-open crossing rule, sorted and paired into interior intervals.
-fn line_segments(
+/// Coincident crossings are kept: a boundary vertex touched by the line can
+/// legitimately contribute two hits at the same parameter that must pair
+/// into a zero-length interval, so hits are never deduplicated. An odd hit
+/// count means a degenerate boundary left an unpaired crossing; that rejects
+/// the render rather than silently dropping the remainder.
+pub(crate) fn line_segments(
     loops: &[Vec<[f64; 2]>],
     dir: (f64, f64),
     nrm: (f64, f64),
     c: f64,
-) -> Vec<([f64; 2], [f64; 2])> {
+) -> Result<Vec<([f64; 2], [f64; 2])>, EngineError> {
     let mut hits: Vec<f64> = Vec::new();
     for boundary in loops {
         for i in 0..boundary.len() {
@@ -73,7 +79,9 @@ fn line_segments(
         }
     }
     hits.sort_by(|a, b| a.total_cmp(b));
-    hits.dedup_by(|a, b| (*a - *b).abs() <= PARAM_EPS * (1. + a.abs().max(b.abs())));
+    if hits.len() % 2 != 0 {
+        return Err(bad("hatch pattern line has an unpaired boundary crossing"));
+    }
     let mut out = Vec::new();
     for pair in hits.chunks_exact(2) {
         let (u0, u1) = (pair[0], pair[1]);
@@ -83,7 +91,7 @@ fn line_segments(
         let point = |u: f64| [dir.0 * u + nrm.0 * c, dir.1 * u + nrm.1 * c];
         out.push((point(u0), point(u1)));
     }
-    out
+    Ok(out)
 }
 
 fn hatch_paths(
@@ -171,7 +179,7 @@ fn hatch_paths(
             let mut subpaths: Vec<Value> = Vec::new();
             let mut c = cmin - pitch;
             while c <= cmax + pitch {
-                for (a, b) in line_segments(&hatch.loops, dir, nrm, c) {
+                for (a, b) in line_segments(&hatch.loops, dir, nrm, c)? {
                     segments += 1;
                     if segments > MAX_SEGMENTS {
                         return Err(bad("hatch pattern segment budget exceeded"));

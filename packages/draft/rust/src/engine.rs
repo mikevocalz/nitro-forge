@@ -57,7 +57,12 @@ fn hatch_loops(s: &State, p: &Value) -> Result<Vec<Vec<[f64; 2]>>, EngineError> 
         (true, true) | (false, false) => {
             Err(bad("hatch requires exactly one of loops or boundary_ids"))
         }
-        (true, false) => Ok(serde_json::from_value(p["loops"].clone())?),
+        (true, false) => {
+            if p.get("tolerance").is_some() {
+                return Err(bad("tolerance requires boundary_ids"));
+            }
+            Ok(serde_json::from_value(p["loops"].clone())?)
+        }
         (false, true) => {
             let ids: Vec<u64> = serde_json::from_value(p["boundary_ids"].clone())?;
             let tolerance = optional(p, "tolerance", profiles::DEFAULT_TOLERANCE)?;

@@ -12,6 +12,8 @@ it('drives real hatch CRUD, clipped pattern pixels, layer semantics and snapshot
   // Open chains and unknown ids reject before any state change.
   await expect(doc.addHatch({boundary_ids:[edges[0]!,edges[1]!]},{pattern:'solid'})).rejects.toThrow();
   await expect(doc.addHatch({boundary_ids:[edges[0]!,9999]},{pattern:'solid'})).rejects.toThrow();
+  // tolerance applies only to boundary_ids tracing, never explicit loops.
+  await expect(doc.addHatch({loops:[[[0,0],[1,0],[0,1]]]},{tolerance:0.5})).rejects.toThrow();
   const solid=(await doc.addHatch({boundary_ids:edges},{pattern:'solid',color:[255,0,0,255]})).data.hatch_id;
   const px=async()=>{const r=await doc!.renderFrame({width:6,height:6,origin_x:0,origin_y:0,scale:1});return Buffer.from(r.data.pixels_b64!,'base64');};
   const filled=await px();
