@@ -20,6 +20,8 @@ export const OPS = {
   renameLayout: "renameLayout",
   removeLayout: "removeLayout",
   setSlideLayout: "setSlideLayout",
+  setObjectPlaceholder: "setObjectPlaceholder",
+  slideLayout: "slideLayout",
   addPlaceholder: "addPlaceholder",
   updatePlaceholder: "updatePlaceholder",
   removePlaceholder: "removePlaceholder",
@@ -92,19 +94,24 @@ export interface PitchTextStyle {
 /** Stable boundary; follows start_slide_id on reorder. Removing that slide removes this boundary. */
 export interface PitchSection { id: number; label: string; start_slide_id: number }
 /**
- * Slide master/layout/placeholder definitions (P14 slice 8a). DATA ONLY:
- * the engine stores and validates these definitions plus the slide→layout
- * binding (`layout_id` on each slide in `describe`); it does NOT render
- * master content onto slides or resolve placeholders — apply/bind is a
- * later slice. Masters and layouts are flat deck-level collections; a
- * layout references its master via `master_id`.
+ * Slide master/layout/placeholder definitions and apply/bind (P14 slices
+ * 8a + apply/bind). The engine stores and validates these definitions,
+ * the slide→layout binding (`layout_id` on each slide in `describe`) and
+ * the object→placeholder content binding (`placeholder_id` on objects,
+ * set via `setObjectPlaceholder`). "Apply" is DERIVED resolution, not
+ * materialization: masters carry no object payloads, so `slideLayout`
+ * resolves the slide → layout → master → deck-theme chain into effective
+ * chrome at read time. Masters and layouts are flat deck-level
+ * collections; a layout references its master via `master_id`.
  *
  * Bounds enforced by the engine: at most 64 masters, 256 layouts and 64
  * placeholders per layout; names/labels non-blank <=128 UTF-8 bytes;
  * placeholder x/y finite within ±1,000,000 and w/h finite >0 <=1,000,000.
  * Ids share the document id space. `removeMaster` cascade-removes its
- * layouts; `removeLayout`/`removeMaster` clear slide `layout_id` bindings
- * without touching slide content.
+ * layouts; `removeLayout`/`removeMaster`/layout rebinds clear slide
+ * `layout_id` bindings and object `placeholder_id` tags without touching
+ * slide object content. Snapshots carrying object placeholder bindings
+ * use the `{kind:"pitch",schema:8}` wrapper.
  */
 export type PitchPlaceholderKind =
   | "title"
@@ -169,10 +176,12 @@ export type PitchThemeColorSlot =
 /** Deck theme font slots — the OOXML major/minor latin typefaces. */
 export type PitchThemeFontSlot = "major_latin" | "minor_latin";
 /**
- * Named deck theme (P14 slice 9). DATA ONLY: the engine stores and
- * validates the slot maps plus the deck→theme binding; it does NOT resolve
- * theme colors/fonts onto objects, masters, layouts or placeholders —
- * hosts own any application. This covers the NYC-Tron
+ * Named deck theme (P14 slice 9). The engine stores and validates the
+ * slot maps plus the deck→theme binding; `slideLayout` reports the bound
+ * theme so placeholders flagged `inherit_theme` resolve against it —
+ * the engine itself maps no theme slots onto object styles (hosts own
+ * slot→style application), and there are no object-level theme
+ * references yet. This covers the NYC-Tron
  * `ThemeAndTemplateGallery` `kind:"theme"` presets; `kind:"template"`
  * bundles (theme + master/layout set) are deferred — see docs/ENGINE_OPS.md.
  * Bounds: at most 32 themes, names/font families non-blank <=128 UTF-8
@@ -523,7 +532,32 @@ export interface PitchSceneObject {
   chart?: PitchChartSpec;
   table?: PitchTableSpec;
   morph_name?: string;
+  /** Bound placeholder region id on the slide's bound layout (apply/bind); absent when untagged. */
+  placeholder_id?: number;
   frame?: AnimatedObject;
+}
+
+/**
+ * `slideLayout` result: the slide's DERIVED layout resolution (P14
+ * apply/bind). `layout`/`master`/`theme` are the stored definitions
+ * (null when unbound); `background` is the EFFECTIVE slide background —
+ * the slide's own color when set, else the master's. Each entry of
+ * `placeholders` is the stored `PitchPlaceholder` plus `objects`: the
+ * z-ordered ids of the slide objects bound to that region via
+ * `setObjectPlaceholder`. `inherit_theme` placeholders resolve against
+ * `theme` (the deck-bound theme); the engine maps no theme slots onto
+ * object styles — hosts own slot→style application.
+ */
+export interface PitchSlideLayoutResolution {
+  slide: number;
+  layout_id: number | null;
+  layout: PitchLayout | null;
+  master_id: number | null;
+  master: PitchMaster | null;
+  theme_id: number | null;
+  theme: PitchTheme | null;
+  background: Rgba | null;
+  placeholders: (PitchPlaceholder & { objects: number[] })[];
 }
 
 /** Serialized `Anim` entry in a scene's `animations` program. */
@@ -626,9 +660,31 @@ export class PitchDocument {
   removeLayout(id: number) {
     return this.call<{ ok: boolean }>(OPS.removeLayout, { id });
   }
-  /** Bind a slide to an existing layout; `null` clears the binding. Data only — no master content is applied. */
+  /** Bind a slide to an existing layout; `null` clears the binding and every object placeholder tag on the slide. Resolution is derived via `slideLayout` — no master content is materialized. */
   setSlideLayout(slide: number, layout: number | null) {
     return this.call<{ ok: boolean }>(OPS.setSlideLayout, { slide, layout });
+  }
+  /**
+   * Bind an object as the stored content of a placeholder on the slide's
+   * CURRENT bound layout; `null` clears the tag. The placeholder id must
+   * belong to that layout (placeholder ids are deck-unique); connector
+   * objects reject. Rebinding the slide's layout, removing the
+   * placeholder/layout/master, or clearing the binding clears the tag.
+   * Equal re-tags are eventless no-ops. One undo entry.
+   */
+  setObjectPlaceholder(slide: number, object: number, placeholder: number | null) {
+    return this.call<{ ok: boolean }>(OPS.setObjectPlaceholder, { slide, object, placeholder });
+  }
+  /**
+   * Read-only DERIVED layout resolution for one slide: bound layout,
+   * its master, the deck theme, the effective background
+   * (slide color ?? master background) and each layout placeholder with
+   * the z-ordered ids of objects bound to it. Unbound slides resolve to
+   * null layout/master/placeholders; the deck theme is reported
+   * regardless. No journal entry, no events, no state change.
+   */
+  slideLayout(slide: number) {
+    return this.call<PitchSlideLayoutResolution>(OPS.slideLayout, { slide });
   }
   /** Add a typed placeholder region to a layout; returns the assigned `placeholder_id`. */
   addPlaceholder(layout: number, placeholder: PitchPlaceholderInput) {

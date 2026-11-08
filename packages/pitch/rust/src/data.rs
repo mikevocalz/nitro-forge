@@ -480,6 +480,7 @@ fn blank_obj(id: u64, kind: ObjKind, x: f64, y: f64, w: f64, h: f64) -> Obj {
         chart: None,
         table: None,
         morph_name: None,
+        placeholder_id: None,
         src: None,
     }
 }
@@ -1048,7 +1049,7 @@ mod tests {
             let (_, payload) = decode_envelope(&good).unwrap();
             serde_json::from_slice(payload).unwrap()
         };
-        wrapped["schema"] = json!(8);
+        wrapped["schema"] = json!(9);
         assert!(e
             .restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
             .is_err());

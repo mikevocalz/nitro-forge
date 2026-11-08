@@ -1,12 +1,13 @@
 //! Deck themes: named color/font slot bundles (P14 slice 9).
 //!
-//! DATA ONLY — HONESTY BOUNDARY: the engine stores and validates named
-//! deck themes plus the deck→theme binding (`PitchState.deck_theme`). It
-//! does NOT resolve theme slots onto objects, masters, layouts or
-//! placeholders, and it performs no color/font substitution — hosts read
-//! `describe` output as data and own any application. Placeholder
-//! `inherit_theme` flags (masters.rs) and master/layout backgrounds stay
-//! independent stored data; nothing in this module rewrites them.
+//! BINDING + DERIVED APPLICATION — HONESTY BOUNDARY: the engine stores and
+//! validates named deck themes plus the deck→theme binding
+//! (`PitchState.deck_theme`) and reports the bound theme through the
+//! `slideLayout` read (masters.rs) so `inherit_theme` placeholders
+//! resolve against it. It does NOT map theme slots onto
+//! objects/masters/layouts/placeholders itself — hosts own slot→style
+//! application — and it performs no color/font substitution. Master
+//! `background` stays independent stored data; nothing rewrites it.
 //!
 //! Model (bounded, mirrors the pinned NYC-Tron
 //! `ThemeAndTemplateGallery` contract): the gallery's `kind:"theme"`
@@ -16,10 +17,15 @@
 //! roles (`dk1|lt1|dk2|lt2|accent1..accent6|hlink|fol_hlink`); font slots
 //! are the OOXML major/minor latin typefaces (`major_latin|minor_latin`).
 //! Slots are sparse: an absent slot means "no theme value stored", never
-//! an implicit default. NYC-Tron `kind:"template"` presets (a bundled
-//! theme + master/layout set) are DEFERRED — masters/layouts/placeholders
-//! are separate validated collections and the apply/bind slice does not
-//! exist yet, so a template bundle has no honest semantics to store; see
+//! an implicit default. Theme APPLICATION is derived, not stored: the
+//! `slideLayout` read (masters.rs) reports the deck-bound theme so
+//! placeholders flagged `inherit_theme` resolve against it; the engine
+//! maps no theme slots onto object/master/layout styles itself — hosts
+//! own slot→style application and there are no object-level theme
+//! references. NYC-Tron `kind:"template"` presets (a bundled
+//! theme + master/layout set) are DEFERRED — masters/layouts/placeholders/
+//! themes are separate validated collections and no template-bundle op
+//! exists, so a template bundle has no honest semantics to store; see
 //! docs/ENGINE_OPS.md.
 //!
 //! Identities: theme ids share the document `next_id` space (same as
