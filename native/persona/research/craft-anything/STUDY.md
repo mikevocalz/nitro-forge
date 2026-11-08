@@ -132,3 +132,65 @@ physical Vision Pro / Galaxy XR hardware or approved reference footage.
 Public documentation, page captures and published screenshots are sufficient
 for lifecycle semantics, not for a pixel or spatial fidelity claim about
 either product's in-device UI.
+
+## Likeness APK structure analysis (2026-11-07)
+
+Source: APKMirror bundle `com.google.android.apps.vr.doppel.apk`
+(Likeness beta 2026.10.18, versionCode 2273, arm64-v8a, minSdk 32,
+targetSdk 37), SHA-256
+`b267100f065caaa5c63beb83b1ec8fffe1b1fdf7acf48b69593cc48e7d107f79`.
+Craft Anything 0.5.0 android toolset (`android_package_show`,
+`android_components_list`, `android_classes_find`, deep mode) verified the
+v2/v3 signature against a Google Inc. Android certificate
+(SHA-256 `84468b91530edb3765de0bb71d2658f7f74921563a5d7cfc3697ddf31db84e27`,
+valid). This is the genuine signed app, not a repack.
+
+The bundle is an APKM split set (~1.5 GB extracted). Module names reveal the
+pipeline:
+
+- `split_doppel_mediapipe.apk` + 313 MB arm64 config: MediaPipe face/landmark
+  stack (`libdoppel_mediapipe_jni.so`, facemesh/facedetector `.tflite`,
+  `face_model_468/479/6_blazeface.xnft`, region maps, shaders).
+- `split_data_process_assets.apk`: `dense599_gnome_itw.tflite`,
+  `gnome_hair_predictor`, `hair_landmarks`, `face_light`, `hdrnet`,
+  `selfie_multiclass`, `realvatar_gnome_hand/face/upper_body` `.pb` models.
+- Encrypted neural modules, one split each: `source_encoder`,
+  `base_uv_encoder`, `face_uv_encoder`, `oral_uv_encoder`,
+  `wrinkle_uv_encoder`, `wrinkle_weight_predictor`, `feature_decoder` (+DSP).
+- `base.apk`: `realvatar_*` runtime configs, `face_blendshape`,
+  `face_scan.binarypb`, `effect_realvatar_mirror_bundle.js`,
+  `doppel_realvatar_runtime*.binarypb`, Three.js r134 bundle.
+
+DEX classes confirm the architecture: package
+`com.google.android.apps.realvatarcreator` with `DataVersionManagerV1-V4`,
+`FileDownloader`, `ConditionTracker`; wire protos
+`com.google.vr.avatars.realvatars.proto.wire.AvatarSyncPayload` and
+`com.google.vr.doppel.common.metadata.RealvatarInfoProto`
+(`CaptureInfo`, `CaptureResult.FeedbackEntry`, `DeviceInfo.FormFactor`);
+perception protos `GNomeParametersProto`, `GNomeFaceParametersProto`,
+`GNomePoseProto`, `GNomeModelSpecProto`, `RealvatarGNomeTrackingProto`,
+`GnomeInputLandmarksProto`; and capture-guidance protos
+`GuidanceProto`/`GuidanceFeedbackProto`/`FeedbackType`,
+`HeadPoseStatus`, `LightingStatus`, `PhonePoseStatus`, `GlassesStatus`,
+`RequirementsStatus`, `ActionProto`.
+
+Manifest activities map the phone flow:
+`WelcomeActivity → IntroductionActivity → SignInActivity →
+ConsentActivity → InstructionsActivity → DataCaptureActivity →
+CaptureReviewActivity → DataProcessActivity → TestDriveActivity`, plus
+`ManagementActivity`, `LikenessSettingsActivity`, `PrivacyActivity`,
+`CloudSyncAcknowledgementActivity`, `RealvatarBackgroundService` and
+`AvatarCreationService`.
+
+Interpretation for our pipeline: Google's Likeness is a RealVatar/GNOME
+morphable-model avatar, not a Gaussian-splat representation. Capture on the
+phone feeds MediaPipe landmarks plus the encrypted UV encoders and feature
+decoder to produce morphable-model parameters (GNome* protos), with the
+avatar synced to the headset through `AvatarSyncPayload`/
+`CloudSyncAcknowledgementActivity`. The guided-capture quality contract is
+described by proto messages (lighting/head-pose/phone-pose/glasses/
+requirements status + guidance feedback), matching the lifecycle our
+`capture_session` models. We cannot reuse Google's encrypted encoder
+weights, morphable model data or sync protocol; this analysis defines the
+observable contract (stages, statuses, acknowledgement) our native
+implementation should mirror, not the proprietary internals.
