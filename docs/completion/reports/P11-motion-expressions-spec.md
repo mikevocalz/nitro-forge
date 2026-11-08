@@ -108,14 +108,16 @@ contract; there is no clock and no host call anywhere in evaluation.
   bounds one eval far below the 10k-step ceiling; the runtime step counter
   is a defensive guard that, on exceed, resolves the property to 0.0 and
   records nothing (see Failure semantics). Documented worst case: ≤128
-  layers × 13 properties × 512 nodes ≈ 852k node visits per frame — bounded
+  layers × 12 properties × 512 nodes ≈ 786k node visits per frame — bounded
   but real; hosts should treat heavy expression documents as CPU cost.
 
 ## Bounds and validation
 
 - `source`: ≤4096 UTF-8 bytes, must parse, AST ≤512 nodes (counted at
   parse), ≤64 function-call nodes (subset of AST cap, keeps deep call
-  nesting bounded).
+  nesting bounded), parser nesting ≤128 `expr()` levels (parens, ternary
+  branches and call arguments each count one; parens emit no AST node, so
+  this cap — not the node budget — bounds parser stack use).
 - Result values: finite f64 required at each op; NaN/±inf **propagates**
   through arithmetic (IEEE) and is sanitized only at the property
   boundary: non-finite result → `0.0`; finite result → clamped into the

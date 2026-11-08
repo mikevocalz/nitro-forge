@@ -1443,6 +1443,59 @@ nf-cli transform3d case), `pnpm --filter @nitro-forge/motion typecheck`
 clean. 3D rasterization, camera, lights, depth ordering and full P11
 completion are not implied.
 
+## P11 Motion slice D bounded expressions source checkpoint (2026-11-08)
+
+Motion layers gain an optional `expressions` list — at most one
+`{property,source}` per layer, covering all 12 scalar curve properties —
+set via the new `setExpression` op (`source` string ≤4096 UTF-8 bytes or
+explicit `null` to clear; absent rejects). Sources are stored as text and
+re-parsed at op time and on `restore` through a hand-rolled
+recursive-descent parser: arithmetic/comparison/ternary/`&&`/`||`/`!` over
+f64, the whitelisted pure functions `abs floor ceil round trunc sign sqrt
+cbrt exp ln log10 sin cos tan asin acos atan atan2 pow hypot min max
+clamp lerp mod smoothstep`, the time constants `time`/`frame`/`fps`/
+`duration` (composition-local, same mapping as curve eval) and property
+references `this.<prop>`/`layer(<id>).<prop>` limited to the same
+composition. `random`/noise are excluded — evaluation is a pure function
+of document state plus explicit time with no clock, I/O or host calls.
+Caps: ≤512 AST nodes, ≤64 call nodes, 10,000 defensive eval steps per cell
+resolution (exceed → NaN → 0.0). Ownership is mutually exclusive and
+last-write-wins with atomic clear: `setExpression` deletes the property's
+curve, `setPropertyKeys` deletes its expression, `setMotionPath` null
+clears `path_progress` expressions and `setLayer3D` null clears
+`rx`/`ry`/`z` expressions — one journal entry each, undo/redo atomic.
+`validate` re-checks parse/caps/kind gates/mutual exclusion/same-comp
+refs and whole-document `(layer,property)` dependency acyclicity
+(including self-references) on every mutation and hostile restore;
+structural ops that would strand a `layer()` ref (`removeLayer` of a
+referenced layer, cross-composition `reparentLayer`, `removeComposition`)
+reject atomically, and `duplicateComposition` rewrites `layer(<id>)`
+arguments to the copy's fresh identities. Resolution order per property is
+expression → curve → base, memoized per evaluation so references see
+resolved values order-independently and seek-safely; NaN/±inf propagates
+through IEEE arithmetic and sanitizes only at the property boundary
+(non-finite → 0.0, finite → `Property::bounds` clamp). `describe` returns
+sources verbatim; `evaluate`/`renderFrame` clear `expressions` in output
+like `curves` with resolved values in the same fields. Snapshot schema
+stays 2 via additive serde defaults — expression-free layers serialize
+byte-identically. TS gains `MotionExpression`, `expressions?` on
+`MotionLayer` and `setExpression`. Deferred per spec: host-side scripting,
+non-scalar outputs, per-effect/emitter/matte binding, cross-composition
+reads, seeded noise, expression UI.
+
+Local evidence: `cargo test -p motion-engine` 84 passed (13 new covering
+the parse/bounds rejection matrix, mutual-exclusion atomic clear both
+directions, self/two-property/two-layer cycle rejection, time/frame/fps/
+duration at root and nested-comp-scaled times, 30 whitelisted-function
+spot checks plus `this`/`layer()` resolution, non-finite→0 and bound
+clamping, seek determinism, undo/redo atomicity, equal-write eventless,
+kind gates, structural clears, hostile-restore rejection matrix,
+cross-comp ref rejection, duplicate remap and referenced-layer removal),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/motion test` 10 passed across 9 files (1 new
+nf-cli expression case), `pnpm --filter @nitro-forge/motion typecheck`
+clean. UI, cross-comp reads and full P11 completion are not implied.
+
 ## Draft layers slice A1 (2026-11-07)
 
 Draft gains bounded named layers (`addLayer`/`updateLayer`/`removeLayer`,
