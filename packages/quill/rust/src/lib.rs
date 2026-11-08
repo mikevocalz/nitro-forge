@@ -1302,7 +1302,10 @@ impl QuillEngine {
     ) -> Result<(), EngineError> {
         let mut next = self.blocks.clone();
         next.splice(index..index + count, inserted.iter().cloned());
-        lists::validate(&next)
+        lists::validate(&next)?;
+        // Splices preserve kind/payload pairs by construction, but the
+        // candidate still goes through the same toc gate restore uses.
+        validate_toc(&next)
     }
     fn op_insert_text(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let at = parse_pos(field(p, "at")?)?;
@@ -1564,6 +1567,10 @@ impl QuillEngine {
             staged.op_insert_text(&payload)?;
         }
         lists::validate(&staged.blocks)?;
+        // Defense-in-depth: the staged candidate goes through the same
+        // table/toc gates restore uses, matching replaceText.
+        validate_tables(&staged.blocks)?;
+        validate_toc(&staged.blocks)?;
         let data = json!({"deleted_text":deleted});
         if staged.blocks == self.blocks && staged.revisions == self.revisions {
             return Ok(Self::read_only(data));
@@ -2189,9 +2196,10 @@ impl QuillEngine {
 
         lists::validate(&staged.blocks)?;
         // In-cell edits only rewrite existing cell-paragraph inlines, but
-        // the staged candidate still goes through the same table gate
+        // the staged candidate still goes through the same table/toc gates
         // restore uses, matching every other cell mutation.
         validate_tables(&staged.blocks)?;
+        validate_toc(&staged.blocks)?;
         // `replaced` counts applied edits: the eventless no-change path
         // (replacement identical to every match) applied nothing.
         if staged.blocks == self.blocks {
@@ -2926,6 +2934,12 @@ impl Engine for QuillEngine {
             Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
             None => ignition_core::execute_batch(staged, batch)?,
         };
+        // Every step validated its own candidate, but the committed block
+        // list still goes through the same gates restore applies before it
+        // can replace live state.
+        lists::validate(&staged.blocks)?;
+        validate_tables(&staged.blocks)?;
+        validate_toc(&staged.blocks)?;
         if result
             .events
             .iter()

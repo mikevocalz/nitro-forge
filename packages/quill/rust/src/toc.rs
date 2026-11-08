@@ -32,6 +32,10 @@
 //! blocks (`insertText`/`splitBlock`/`mergeBlock`/`deleteRange`-from/
 //! `setBlockStyle`). `setBlockKind` may convert a toc block to any other
 //! kind, dropping the payload — the field becomes a normal paragraph.
+//! List ops that rewrite `kind`/`list` over a range (`setListKind`,
+//! `setListFormat`, `shiftListLevel`) reject ranges covering a toc block:
+//! `op_lists` runs `validate_toc` on the merged candidate, the same gate
+//! `validate_tables` already applied.
 //! `text`/`findText`/`layout` treat it as an empty block; entry titles are
 //! field data, not block text, so they are unreachable by `Pos` (same
 //! precedent as comment bodies and footnote bodies). `exportDocx` rejects
@@ -53,6 +57,9 @@ pub const TOC_LEVEL_MIN: u8 = 1;
 pub const TOC_LEVEL_MAX: u8 = 3;
 /// Bound on TOC field blocks per document (mirrors the table budget style).
 pub const TOC_FIELDS_MAX: usize = 64;
+/// Cached entry titles are plain heading text; cap matches the
+/// comment/footnote body bound.
+pub const TOC_TITLE_MAX: usize = 8192;
 
 /// One cached TOC entry: `level` is the heading level (1..=3), `title` the
 /// heading's plain text at last scan, and `block` the heading's top-level
@@ -185,6 +192,11 @@ pub fn validate_toc(blocks: &[Block]) -> Result<(), EngineError> {
                 }
                 let mut prev = None;
                 for e in &t.entries {
+                    if e.title.chars().count() > TOC_TITLE_MAX {
+                        return Err(EngineError::validation(format!(
+                            "toc entry title must be at most {TOC_TITLE_MAX} characters"
+                        )));
+                    }
                     if !(t.from_level..=t.to_level).contains(&e.level) {
                         return Err(EngineError::validation(
                             "toc entry level outside the field's range",
