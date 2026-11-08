@@ -3168,7 +3168,10 @@ impl QuillEngine {
     /// the remainder of the column it starts in before flowing onto
     /// fresh pages of its own geometry (the rest of the shared page's
     /// columns stay empty — documented approximation; Word would
-    /// continue into them).
+    /// continue into them). A block straddling a continuous-section
+    /// break keeps the wrap width computed for the shared tail even
+    /// after `advance()` opens the new section's own page — narrower
+    /// lines than the column allows, cosmetic and deterministic.
     ///
     /// Line breaking/measurement is the identical `block_line_spans`
     /// routine `layout_pages` uses, so spans and pixels still agree;
