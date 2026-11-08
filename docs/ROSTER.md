@@ -8,7 +8,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Check | Result | Command |
 |---|---|---|
 | ignition-core contract tests | 5 pass | `cargo test -p ignition-core` |
-| prism-engine unit tests | 129 pass | `cargo test -p prism-engine` |
+| prism-engine unit tests | 131 pass | `cargo test -p prism-engine` |
 | tally-engine unit + formula tests | 27 pass | `cargo test -p tally-engine` |
 | cadence-engine tests (incl. real PCM render) | 21 pass | `cargo test -p cadence-engine` |
 | splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch) | 44 pass | `cargo test -p splice-engine` |
@@ -39,7 +39,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Ignition contracts | Architect (main session) | ARCHITECTURE.md, ignition-core, protocol, envelope, journal, registry | ✅ verified |
 | C FFI | Platform eng (main session) | nf-sys | ✅ verified (1 test) |
 | TS host/DX | API eng (main session) | EngineHost/NitroHost/CliHost/DocumentHandle, 7 typed APIs | ✅ verified via e2e |
-| Prism engine | Graphics eng (subagent 3ba36e7a) | layers, pixels, filters, flatten; 2026-11-05 W2 ops slice: `modifySelection` smooth, `crop` (intersection semantics), `samplePixels` (composite eyedropper) | ✅ 129 tests |
+| Prism engine | Graphics eng (subagent 3ba36e7a) | layers, pixels, filters, flatten; 2026-11-05 W2 ops slice: `modifySelection` smooth, `crop` (intersection semantics; transformed rasters reject), `samplePixels` (composite eyedropper, premultiplied average) | ✅ 131 tests |
 | Tally engine | Spreadsheet eng (subagent ddf87203) | formula parser/evaluator | ✅ 27 tests |
 | Cadence engine | Audio/DSP eng (subagent 75836ea5) | MIDI clips, transport, PCM render | ✅ 21 tests |
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch | ✅ 44 tests |

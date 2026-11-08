@@ -169,7 +169,11 @@ export class PrismDocument {
    * outward to whole pixels and intersected with the canvas — partial and
    * off-canvas crops keep the overlap; a rect that misses is rejected.
    * Content coordinates, masks, selection and artboards are rebased so the
-   * rendered image is preserved. One undo step.
+   * rendered image is preserved for untransformed content. Raster layers
+   * only support pure
+   * translation/identity scale (including through group ancestors): any
+   * rotation, skew, or non-unit scale rejects the crop with Validation.
+   * One undo step.
    */
   crop(rect: { x: number; y: number; w: number; h: number }) {
     return this.call(OPS.crop, rect);

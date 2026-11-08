@@ -23,9 +23,13 @@ use crate::raster;
 use crate::render::{self, Scene};
 use crate::select::{self, Combine, Region};
 use crate::vector;
-use crate::{PrismEngine, RenderTask, UndoEntry, MAX_PIXELS};
+use crate::{PrismEngine, RenderTask, UndoEntry, MAX_PIXELS, CHECKPOINT_EVERY_PX};
 
 const MAX_RADIUS: f64 = 250.0;
+
+/// Linear-part tolerance for the `crop` raster-transform check: affine
+/// coefficients within this of the identity count as untransformed.
+const CROP_RASTER_LINEAR_EPS: f64 = 1e-9;
 
 /// Crop/pad a `w*h` alpha buffer, top-left aligned.
 pub(crate) fn resize_alpha(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usize) -> Vec<u8> {
@@ -40,6 +44,7 @@ pub(crate) fn resize_alpha(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usiz
 }
 
 /// Crop a `sw*sh` alpha buffer to `(dx, dy, dw, dh)`, zero outside.
+/// Checkpoints every `CHECKPOINT_EVERY_PX` rows when `task` has a context.
 pub(crate) fn crop_alpha(
     buf: &[u8],
     sw: usize,
@@ -48,9 +53,11 @@ pub(crate) fn crop_alpha(
     dy: i64,
     dw: usize,
     dh: usize,
-) -> Vec<u8> {
+    task: &mut RenderTask,
+) -> Result<Vec<u8>, EngineError> {
     let mut out = vec![0u8; dw.saturating_mul(dh)];
     for r in 0..dh as i64 {
+        task.tick(r as usize, CHECKPOINT_EVERY_PX, r as f32 / dh.max(1) as f32)?;
         let sy = dy + r;
         if sy < 0 || sy >= sh as i64 {
             continue;
@@ -66,7 +73,7 @@ pub(crate) fn crop_alpha(
             }
         }
     }
-    out
+    Ok(out)
 }
 
 /// Translate the coordinate fields of a gradient paint; solids are untouched.
@@ -1791,15 +1798,21 @@ impl PrismEngine {
     /// the canvas; a rect that misses it is `OutOfBounds`, and cropping to
     /// the full canvas is a read-only no-op.
     ///
-    /// Content stored in layer coordinates (raster buffers, shape bounds,
-    /// path nodes, gradient geometry) is shifted by `-s`, where `s` is the
-    /// canvas delta pulled back through each layer's effective transform —
-    /// so the rendered image is preserved exactly while transforms
-    /// themselves stay untouched. Masks and the pixel selection live in
-    /// canvas space and are cropped at the pixel offset; artboards shift by
-    /// the canvas delta and may leave the canvas. One undo entry. Like
-    /// `resize`, this is a document-level op: locked layers are not
-    /// consulted.
+    /// Content stored in layer coordinates (shape bounds, path nodes,
+    /// gradient geometry) is shifted by `-s`, where `s` is the canvas delta
+    /// pulled back through each layer's effective transform — so the
+    /// rendered image is preserved exactly while transforms themselves stay
+    /// untouched. Raster layers resample through a texel grid pinned to the
+    /// buffer's own extent, which only matches the rendered image when the
+    /// layer's effective affine (own transform composed with group
+    /// ancestors) has an identity linear part: translation and
+    /// identity-scale rasters crop pixel-exactly, while any rotation, skew,
+    /// or non-unit scale would silently drop texels — those layers reject
+    /// the whole crop with `Validation` before anything mutates. Masks and
+    /// the pixel selection live in canvas space and are cropped at the
+    /// pixel offset; artboards shift by the canvas delta and may leave the
+    /// canvas. One undo entry. Like `resize`, this is a document-level op:
+    /// locked layers are not consulted.
     fn op_crop(
         &mut self,
         p: &Value,
@@ -1849,6 +1862,23 @@ impl PrismEngine {
             if !sx.is_finite() || !sy.is_finite() {
                 return Err(EngineError::validation(format!(
                     "layer {} content shift is not representable",
+                    l.id
+                )));
+            }
+            // The raster resample below pins its texel grid to the buffer's
+            // own [0,w)×[0,h) extent; that equals the rendered window only
+            // when the effective affine's linear part is the identity. A
+            // scaled, rotated, or skewed raster (including via a group
+            // ancestor) would lose texels, so reject the whole crop here —
+            // still in phase 1, before the journal or any state changes.
+            if matches!(l.content, Content::Raster(_))
+                && ((e.a - 1.0).abs() > CROP_RASTER_LINEAR_EPS
+                    || e.b.abs() > CROP_RASTER_LINEAR_EPS
+                    || e.c.abs() > CROP_RASTER_LINEAR_EPS
+                    || (e.d - 1.0).abs() > CROP_RASTER_LINEAR_EPS)
+            {
+                return Err(EngineError::validation(format!(
+                    "crop does not support transformed raster layers (layer {} has rotation, skew, or non-unit scale)",
                     l.id
                 )));
             }
@@ -1910,7 +1940,10 @@ impl PrismEngine {
                 _ => {}
             }
             if let Some(m) = &l.mask {
-                masks.push((i, crop_alpha(&m.alpha, sw, sh, ix0, iy0, dw, dh)));
+                masks.push((
+                    i,
+                    crop_alpha(&m.alpha, sw, sh, ix0, iy0, dw, dh, &mut task)?,
+                ));
             }
         }
         task.step_done();
@@ -1925,7 +1958,7 @@ impl PrismEngine {
         let selection = match &self.selection {
             None => None,
             Some(s) => {
-                let c = crop_alpha(s, sw, sh, ix0, iy0, dw, dh);
+                let c = crop_alpha(s, sw, sh, ix0, iy0, dw, dh, &mut task)?;
                 (!select::is_empty(&c)).then_some(c)
             }
         };
@@ -1980,8 +2013,9 @@ impl PrismEngine {
     /// `samplePixels {x,y,radius?}` — composite RGBA at a document-space
     /// point, read through the real render pipeline (transforms, blend
     /// modes, masks, groups). `radius` (0..=250, default 0) box-averages a
-    /// square region around the point. Points outside the canvas sample as
-    /// transparent. Read-only: no undo entry, no events.
+    /// square region around the point in premultiplied alpha, so
+    /// translucent composites keep their color. Points outside the canvas
+    /// sample as transparent. Read-only: no undo entry, no events.
     fn op_sample_pixels(
         &self,
         p: &Value,
@@ -2006,19 +2040,29 @@ impl PrismEngine {
         let mut task = RenderTask::new(ctx, self.layers.len() as u64 + 1);
         let flat = self.scene().flatten_ctx(&mut task)?;
         task.step_done();
+        // Average in premultiplied space: accumulate rgb*a and a
+        // separately, then un-premultiply by the summed alpha. Averaging
+        // straight-alpha channels independently would darken translucent
+        // composites toward transparent black.
         let mut acc = [0f64; 4];
         let mut n = 0f64;
         for py in y0..y1 {
             for px in x0..x1 {
                 let o = ((py as usize) * w + px as usize) * 4;
-                for c in 0..4 {
-                    acc[c] += flat[o + c] as f64;
+                let a = flat[o + 3] as f64 / 255.0;
+                for c in 0..3 {
+                    acc[c] += flat[o + c] as f64 * a;
                 }
+                acc[3] += a;
                 n += 1.0;
             }
         }
-        let channel = |c: usize| (acc[c] / n).round().clamp(0.0, 255.0) as u8;
-        read(json!({ "r": channel(0), "g": channel(1), "b": channel(2), "a": channel(3) }))
+        if acc[3] <= 1e-12 {
+            return transparent();
+        }
+        let channel = |c: usize| (acc[c] / acc[3]).round().clamp(0.0, 255.0) as u8;
+        let alpha = (acc[3] / n * 255.0).round().clamp(0.0, 255.0) as u8;
+        read(json!({ "r": channel(0), "g": channel(1), "b": channel(2), "a": alpha }))
     }
 
     // -- region fill ---------------------------------------------------------
