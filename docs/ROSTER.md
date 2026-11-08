@@ -1489,7 +1489,41 @@ rejection and nested-comp projection, plus 3 projection unit tests),
 `pnpm --filter @nitro-forge/motion test` 9 passed across 8 files (1 new
 nf-cli transform3d case), `pnpm --filter @nitro-forge/motion typecheck`
 clean. 3D rasterization, camera, lights, depth ordering and full P11
-completion are not implied.
+completion are not implied. (The render no-op claim above was true at this
+checkpoint; the G2/G3 checkpoint below supersedes it — `renderFrame` now
+projects 3D layers and honors light rigs.)
+
+## P11 Motion slices G2/G3a 3D rasterization + lighting source checkpoint (2026-11-08)
+
+Per `P11-motion-g23-decisions.md`: G2 Option A CPU affine rasterization and
+G3a Lambertian+ambient lighting. `transform3d` layers now render: content
+stages through the shared rasterize path (shape/effects/particles/nested
+comp all supported), resamples through the evaluated projected affine —
+shear-capable, deterministic nearest-neighbor, `TaskContext` checkpoints —
+and uploads once as an identity raster so transform/opacity/blend/clip/
+matte compositing is unchanged. `renderFrame`, `renderQueueFrame` and
+nested-comp renders share the path. Each composition gains an additive
+`lights` rig (≤8 directional/ambient lights) set via `setLights`; shading
+applies only to `transform3d` layers (constant normal
+`RotY(ry)·RotX(rx)·Z`, RGB multiply after effects before compositing, alpha
+untouched). Snapshot schema stays 2 via serde defaults; `describe`
+materializes `lights` (`[]` when unset). Deferred per the decision record:
+perspective/camera/FOV, depth sorting, z occlusion (`z` render-inert),
+specular, normal maps, point falloff, shadows; nearest-neighbor aliasing
+and edge-on collapse are documented behavior.
+
+Local evidence: `cargo test -p motion-engine` 126 passed (new
+`render3d_tests` covering hand-verified rx/ry/shear/rotation-composed
+pixels, byte-identical unlit path, effects/mattes/nested-comp composition,
+particles/media 3D acceptance, light validation/atomicity/undo/snapshot,
+Lambert+ambient shading and unlit-layer invariance, plus queue parity via
+the shared renderer), `cargo build -p nf-cli` clean,
+`pnpm install --prefer-offline` clean, `pnpm --filter @nitro-forge/motion
+test` 15 passed across 13 files (updated nf-cli transform3d case now
+asserts real projection; new nf-cli lights case covers ambient/directional
+shading, comp-scoped rigs and snapshot round-trip), `pnpm --filter
+@nitro-forge/motion typecheck` clean. Perspective projection, camera,
+depth sorting, specular/shadows and full P11 completion are not implied.
 
 ## P11 Motion slice D bounded expressions source checkpoint (2026-11-08)
 

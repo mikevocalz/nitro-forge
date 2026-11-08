@@ -1,7 +1,8 @@
 //! Bounded layer 3D transform model (slice G1): storage, scalar-curve
-//! evaluation and an honest orthographic read-back projection. There is no
-//! 3D rasterizer — `renderFrame` ignores `transform3d` entirely until slice
-//! G2 lands true projection rendering.
+//! evaluation and an honest orthographic read-back projection. Since slice
+//! G2, `renderFrame` consumes `transform3d` through the CPU affine
+//! resample in `projection.rs` (orthographic only — no camera,
+//! perspective, depth sort or shadows).
 //!
 //! `Transform3D` is the minimal After-Effects-like orientation/depth subset:
 //! `rx`/`ry` are X/Y euler rotations in degrees and `z` is depth along the

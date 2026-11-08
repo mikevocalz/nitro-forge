@@ -106,7 +106,7 @@ fn set_eval_curves_and_projected_transform() {
 }
 
 #[test]
-fn render_ignores_3d_and_snapshot_round_trips() {
+fn render_applies_3d_projection_and_snapshot_round_trips() {
     let mut e = MotionEngine::new();
     call(&mut e, "new", json!({"width":4,"height":4,"duration_s":1}));
     let id = shape_layer(&mut e);
@@ -124,9 +124,13 @@ fn render_ignores_3d_and_snapshot_round_trips() {
             {"time":1,"value":500,"interpolation":"linear","in_handle":null,"out_handle":null}
         ]}),
     );
-    // Documented G1 behavior: nonzero rx/ry/z change nothing in the raster.
-    assert_eq!(frame(&mut e, 0.), before);
-    assert_eq!(frame(&mut e, 1.), frame(&mut e, 0.));
+    // G2: nonzero rx/ry now project the layer through the orthographic
+    // affine, so the frame differs from the flat 2D baseline; `z` stays
+    // inert under orthographic projection, so frames differing only in z
+    // are identical.
+    let projected = frame(&mut e, 0.);
+    assert_ne!(projected, before);
+    assert_eq!(frame(&mut e, 1.), projected);
     // Snapshot round-trip preserves the 3D state byte-identically.
     let snap = e.snapshot().unwrap();
     let mut reopened = MotionEngine::new();
