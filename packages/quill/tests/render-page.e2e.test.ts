@@ -66,14 +66,14 @@ describe("quill renderPage (real Rust via nf-cli)", () => {
       "alpha beta gamma delta epsilon zeta eta theta iota kappa",
     );
     await doc.registerFont("NFTestMono", FONT_BYTES);
-    const layout = await doc.layout(120, 12, 40, "NFTestMono");
+    const layout = await doc.layout(120, 12, 30, "NFTestMono");
     const pages = layout.data.pages.length;
     expect(pages).toBeGreaterThan(1);
     for (let page = 0; page < pages; page++) {
       const r = await doc.renderPage({
         pageWidth: 120,
         fontSize: 12,
-        pageHeight: 40,
+        pageHeight: 30,
         font: "NFTestMono",
         page,
       });
@@ -86,7 +86,7 @@ describe("quill renderPage (real Rust via nf-cli)", () => {
       doc.renderPage({
         pageWidth: 120,
         fontSize: 12,
-        pageHeight: 40,
+        pageHeight: 30,
         font: "NFTestMono",
         page: pages,
       }),
@@ -105,5 +105,47 @@ describe("quill renderPage (real Rust via nf-cli)", () => {
     await expect(
       doc.renderPage({ pageWidth: 200, fontSize: 12, pageHeight: 100, font: "", page: 0 }),
     ).rejects.toThrow();
+  });
+
+  it("resolves per-run font_size and falls back for unregistered families (R2)", async () => {
+    const opts = {
+      pageWidth: 200,
+      fontSize: 12,
+      pageHeight: 100,
+      font: "NFTestMono",
+      page: 0,
+    } as const;
+    const open = async () => {
+      const d = await QuillDocument.open(host);
+      await d.insertText({ block: 0, offset: 0 }, "WW");
+      await d.registerFont("NFTestMono", FONT_BYTES);
+      return d;
+    };
+
+    const plain = await (await open()).renderPage(opts);
+
+    // Unregistered run family → base-face fallback → identical pixels.
+    const dFallback = await open();
+    await dFallback.applyStyle(
+      { block: 0, offset: 0 },
+      { block: 0, offset: 2 },
+      { font_family: "NotRegistered" },
+    );
+    const fallback = await dFallback.renderPage(opts);
+    expect(fallback.data.pixels_b64).toBe(plain.data.pixels_b64);
+
+    // A 24pt run draws differently from uniform 12pt, deterministically.
+    const dStyled = await open();
+    await dStyled.applyStyle(
+      { block: 0, offset: 1 },
+      { block: 0, offset: 2 },
+      { font_size: 24 },
+    );
+    const styled = await dStyled.renderPage(opts);
+    expect(styled.data.pixels_b64).not.toBe(plain.data.pixels_b64);
+    const styled2 = await dStyled.renderPage(opts);
+    expect(styled2.data.pixels_b64).toBe(styled.data.pixels_b64);
+    await dFallback.close();
+    await dStyled.close();
   });
 });
