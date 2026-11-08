@@ -238,13 +238,22 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
             for row in 0..criteria_range.h {
                 for col in 0..criteria_range.w {
                     spend(&mut self.conditional_work, 1)?;
-                    let value =
-                        self.eval_cell(&fmt_addr(criteria_range.c + col, criteria_range.r + row));
+                    // COUNTIF/SUMIF ranges are same-sheet by contract, so
+                    // the cells live on `current` — the sheet whose
+                    // formula is evaluating, which may differ from `home`
+                    // when a cross-sheet reference pulled this formula in.
+                    let value = self.eval_at(
+                        self.current,
+                        &fmt_addr(criteria_range.c + col, criteria_range.r + row),
+                    );
                     if criteria.matches(value, &mut self.conditional_work)? {
                         if !sum {
                             result += 1.0;
                         } else {
-                            match self.eval_cell(&fmt_addr(sum_range.c + col, sum_range.r + row)) {
+                            match self.eval_at(
+                                self.current,
+                                &fmt_addr(sum_range.c + col, sum_range.r + row),
+                            ) {
                                 Value::Num(n) => {
                                     result += n;
                                     if !result.is_finite() {

@@ -319,7 +319,7 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `importTsv` | `{text,sheet?,at?}` | `{changed,rows}` | same as `importCsv` with tab separator |
 | `exportCsv` | `{sheet?,range?}` | `{text,rows,cols}` | computed values as CSV text; silent read |
 | `exportTsv` | `{sheet?,range?}` | `{text,rows,cols}` | same as `exportCsv` with tab separator |
-| `evaluate` | `{formula}` | `{value}` | ad-hoc formula against active sheet, no write |
+| `evaluate` | `{formula}` | `{value}` | ad-hoc formula; bare refs/names resolve on the active sheet, `Sheet!` qualifiers reach other sheets; no write |
 | `workbook` | `{}` | `{sheets:[{name,cell_count,tone,is_protected}],active}` | read-only |
 
 Formula language (recursive-descent parser, case-insensitive fns):
@@ -329,7 +329,40 @@ functions `SUM AVERAGE MIN MAX COUNT COUNTA COUNTIF SUMIF IF(cond,a,b) ROUND(x,n
 defined names (see name rules). Error values: `#DIV/0! #VALUE! #REF! #NAME? #NUM! #CYCLE!` — cycles detected via
 evaluation-time visited set. Evaluation memoizes per-request.
 
-Undo: per-cell previous `{addr, prev_raw}` (or removal); range edits group changed cells into one entry. No-op range edits emit no event and preserve redo. Fill reads all source cells before writing. Formula strings, names, whitespace and scientific notation remain unchanged; a reference shifted past row 1,048,576 or column XFD becomes `#REF!`, and a range with either endpoint off the sheet becomes a single `#REF!`. Lexically invalid source formulas reject the entire fill without mutation. Series inference lives in `fillSeries` (numeric literals only; no date serials — `formula.rs` has no date helpers); cross-sheet references are not supported.
+Cross-sheet references (slice 14): a cell or range may be qualified by a
+sheet name — `Sheet1!A1`, `'Q1 Data'!B2`, `Data!A1:B2` — where the
+qualifier is either a bare word (any `[A-Za-z0-9_$.]`-shaped name the
+tokenizer accepts, including ref-shaped names like `Sheet1`) or a
+single-quoted name with `''` escaping a literal quote. The qualifier
+resolves against **current sheet names, case-insensitively** at
+evaluation time; a name matching no sheet evaluates to `#REF!` (removed
+sheets included). Exactly one qualifier is allowed per reference —
+`S!A1:T!B2`, `Sheet1:Sheet3!A1` (3D ranges) and `Sheet!name` are not in
+the grammar and parse as `#NAME?`; a bare `'Name'` not followed by `!`
+is likewise `#NAME?`. Inside a stored formula, bare refs, ranges and
+defined names always resolve on the sheet holding the formula — a
+formula reached through `Other!A1` still sees `Other`'s own bare refs —
+while `evaluate` treats the active sheet as home. Cross-sheet
+dependency chains share the request's memo, the 500-deep evaluation cap
+and the 1,000,000 conditional-work allowance; a cycle spanning sheets
+(e.g. `S1!A1 = S2!B1`, `S2!B1 = S1!A1`) reports `#CYCLE!`.
+
+Sheet-name semantics: `renameSheet` rewrites every stored `Old!`
+qualifier across the workbook in the same undo entry (Excel behavior —
+formulas keep working; the new qualifier is re-rendered bare or
+single-quoted as needed, and qualifiers that cannot lex are left
+verbatim). `removeSheet` does **not** rewrite formula text — stored
+`Removed!` qualifiers simply stop resolving and evaluate to `#REF!`
+until a sheet with that name exists again (re-adding the name revives
+the references). Structural edits (`insertRows`/`deleteRows`/
+`insertCols`/`deleteCols`) remap qualified references exactly like bare
+ones: on the edited sheet, unqualified and self-qualified refs remap
+while other-sheet qualifiers are copied verbatim, and formulas stored
+on *other* sheets get their `EditedSheet!`-qualified refs remapped by
+the same band. A qualified reference killed by a structural edit
+collapses the whole `Sheet!ref` form to `#REF!`.
+
+Undo: per-cell previous `{addr, prev_raw}` (or removal); range edits group changed cells into one entry. No-op range edits emit no event and preserve redo. Fill reads all source cells before writing. Formula strings, names, whitespace and scientific notation remain unchanged; a reference shifted past row 1,048,576 or column XFD becomes `#REF!`, and a range with either endpoint off the sheet becomes a single `#REF!`. Lexically invalid source formulas reject the entire fill without mutation. Series inference lives in `fillSeries` (numeric literals only; no date serials — `formula.rs` has no date helpers); `Sheet!`-qualified references shift their addresses exactly like bare ones (the qualifier text is preserved) and collapse the whole `Sheet!ref` form to `#REF!` when shifted off the sheet.
 
 `fillSeries` rules: `source` must be a single row or a single column of numeric literals (raws that parse as a finite `f64`; formulas, text, booleans and empty cells reject the op). A 1x1 source picks its axis from the target's one-dimensional extension and requires an explicit `step`. `step` is an optional finite JSON number; without it the step is `(last - first) / (count - 1)` along the axis, so inference needs at least two source cells. The first source cell anchors the series: `value(i) = first + step * (i - i_first)` with `i` the column index for a row source or the row index for a column source. The target must contain the source and may not widen perpendicular to the axis; it may extend in either direction along the axis. Target cells inside the source are skipped; every other target cell receives a numeric literal (never a formula), and a non-finite result rejects the whole op. Same bounds and 16,384-cell caps as `fillRange`; one undo entry, eventless when nothing changes.
 
@@ -354,8 +387,9 @@ uses raw values, so formats cannot affect formulas, aggregates or errors.
 
 Name rules: names are **workbook-scoped** entries, each bound to exactly one
 sheet by durable sheet id — the Excel "workbook name with optional sheet
-scope" collapsed to the only scope this engine resolves, since formulas have
-no cross-sheet references. `refers_to` accepts `"A1"` or `"A1:B2"` (endpoints
+scope" collapsed to the only scope a bare identifier can resolve to:
+`Sheet!name` is not in the formula grammar (cross-sheet qualifiers cover
+cell/range addresses only). `refers_to` accepts `"A1"` or `"A1:B2"` (endpoints
 in either order, `$` markers allowed); it is stored canonicalized, single-cell
 targets keep the bare `"A1"` form, and whole-row/column refs or formula
 targets are not supported. `name` must match `[A-Za-z_][A-Za-z0-9_]*` — the
@@ -375,7 +409,8 @@ behaves like a cell ref, a multi-cell target like a range (aggregates and
 `&`/scalar contexts follow the usual range rules), lookup is
 case-insensitive, and `COUNTIF`/`SUMIF` accept a name in place of their
 range argument. A name bound to a different sheet evaluates to `#NAME?`
-(same limitation as cross-sheet cell refs); resolution is live, so
+(names have no cross-sheet form — `Sheet!A1` qualifies addresses, never
+identifiers); resolution is live, so
 `updateName`/`removeName` change or break dependent formulas immediately.
 `removeSheet` cascade-drops names bound to the removed sheet (recorded in the
 same undo entry, so undo/redo restore them — re-admission re-checks the
@@ -828,6 +863,16 @@ The remap is Excel-like and covers **every coordinate-bound structure**:
   ranges fully covered become `#REF!`. `$` absolute markers are preserved
   syntactically (they lock copy/fill semantics, not structural edits);
   literals, function names, defined names and whitespace are untouched.
+  Sheet qualifiers follow the reference: unqualified refs and refs
+  qualified with the edited sheet's current name remap, refs qualified
+  with any other sheet name are copied verbatim — and the mirror pass
+  applies `EditedSheet!`-qualified refs inside formulas stored on
+  *other* sheets, so `Data!A1` follows a band edit on `Data` wherever it
+  appears. A reference killed by the band collapses the whole
+  `Sheet!ref` form to `#REF!`. `duplicateSheet` copies formula text
+  verbatim — a `Source!` qualifier inside the copy keeps pointing at the
+  original sheet rather than retargeting to the duplicate (Excel
+  retargets; documented subset).
 - `names[].refers_to`, `validations[].range`,
   `conditional_formats[].range`, `filters[].range`, `charts[].range` +
   `charts[].series[].range`, `sparklines[].target`/`data`,
@@ -924,11 +969,11 @@ expect typed fidelity. These ops carry
 no durable state — they are pure cell reads/writes, so snapshots need no
 schema bump (XLSX import stays deferred on dependency admission).
 
-Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. `saveSheetView` rejects on its target sheet (payload `sheet`, default active), `setSheetView` rejects on the view's bound sheet (or the resolved sheet for `view:null`) and `removeSheetView` rejects on the stored view's sheet; `listSheetViews` stays allowed. `addComment` rejects on its target sheet (payload `sheet`, default active) and `updateComment`/`removeComment`/`resolveComment`/`reopenComment` reject on the stored comment's sheet; `listComments` stays allowed. `insertPivot` rejects on its output sheet (payload `sheet`, default active) and `updatePivot`/`removePivot` reject on the stored pivot's output sheet — the source sheet is a read reference and does not gate; `listPivots`/`describePivot` stay allowed. `insertTable` rejects on its bound sheet (payload `sheet`, default active) and `updateTable`/`removeTable` reject on the stored table's bound sheet; `listTables`/`describeTable` stay allowed. `importCsv`/`importTsv` reject when their target sheet (payload `sheet`, default active) is protected; `exportCsv`/`exportTsv` are ungated reads. The structural ops (`insertRows`/`deleteRows`/`insertCols`/`deleteCols`) and merge ops (`mergeCells`/`unmergeCells`) reject when their target sheet is protected; `listMergedCells` stays allowed. Undo/redo and restore are explicit document/history actions and remain allowed. Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` rejects while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. `saveSheetView` rejects on its target sheet (payload `sheet`, default active), `setSheetView` rejects on the view's bound sheet (or the resolved sheet for `view:null`) and `removeSheetView` rejects on the stored view's sheet; `listSheetViews` stays allowed. `addComment` rejects on its target sheet (payload `sheet`, default active) and `updateComment`/`removeComment`/`resolveComment`/`reopenComment` reject on the stored comment's sheet; `listComments` stays allowed. `insertPivot` rejects on its output sheet (payload `sheet`, default active) and `updatePivot`/`removePivot` reject on the stored pivot's output sheet — the source sheet is a read reference and does not gate; `listPivots`/`describePivot` stay allowed. `insertTable` rejects on its bound sheet (payload `sheet`, default active) and `updateTable`/`removeTable` reject on the stored table's bound sheet; `listTables`/`describeTable` stay allowed. `importCsv`/`importTsv` reject when their target sheet (payload `sheet`, default active) is protected; `exportCsv`/`exportTsv` are ungated reads. The structural ops (`insertRows`/`deleteRows`/`insertCols`/`deleteCols`) and merge ops (`mergeCells`/`unmergeCells`) reject when their target sheet is protected; `listMergedCells` stays allowed. Undo/redo and restore are explicit document/history actions and remain allowed. `renameSheet` and the structural band ops may mechanically rewrite `Sheet!` formula qualifiers workbook-wide as part of the gated op itself — that qualifier maintenance does not require each touched sheet to be unprotected (the same way `removeSheet` cascade-drops bound metadata). Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 
-Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteria[,sum_range])` require direct same-sheet cell/rectangular references (≤16384 cells). SUMIF ranges must have identical dimensions; mismatches return #VALUE! rather than adopting Excel's resized range behavior. Numeric criteria (numbers or strings with optional =/<>/</<=/>/>= prefix) compare evaluated numbers only, without text/Boolean coercion. Text =/<> criteria support * (sequence), ? (one original Unicode scalar), and ~ escaping * ? ~; other tildes are literal. Matching is ASCII-case-insensitive, non-ASCII exact, with no locale/casefold/normalization claim. Non-numeric relational text criteria return #VALUE!. Boolean criteria match evaluated Booleans only. Empty or empty-text criteria match empty cells and empty evaluated strings; * alone matches text, not empty cells. Comparisons do not cross value types.
+Conditional aggregate subset: `COUNTIF(range,criteria)` and `SUMIF(range,criteria[,sum_range])` require direct same-sheet cell/rectangular references (≤16384 cells); `Sheet!`-qualified range arguments are rejected `#VALUE!` — the range operand stays unqualified even when it names the formula's own sheet. SUMIF ranges must have identical dimensions; mismatches return #VALUE! rather than adopting Excel's resized range behavior. Numeric criteria (numbers or strings with optional =/<>/</<=/>/>= prefix) compare evaluated numbers only, without text/Boolean coercion. Text =/<> criteria support * (sequence), ? (one original Unicode scalar), and ~ escaping * ? ~; other tildes are literal. Matching is ASCII-case-insensitive, non-ASCII exact, with no locale/casefold/normalization claim. Non-numeric relational text criteria return #VALUE!. Boolean criteria match evaluated Booleans only. Empty or empty-text criteria match empty cells and empty evaluated strings; * alone matches text, not empty cells. Comparisons do not cross value types.
 
 Criteria expressions/cell references are evaluated normally; criteria range errors/cycles propagate. SUMIF evaluates sum cells only for matches, ignores matched nonnumeric values and propagates matched errors; nonfinite accumulated sums return #NUM!. Existing per-request memoization/depth/cycle rules remain intact. Each conditional rectangle is capped at16384 cells, criteria at255 Unicode scalars and matched text at4096 UTF-8 bytes (#VALUE! for string limits). A shared per-Evaluator allowance of1000000 conditional scan/string/DP steps returns #NUM! on exhaustion; matcher allocation work is charged before bounded DP buffers, and `Evaluator::match_value` (used by `evaluateConditionalFormats`) charges one flat unit per candidate rule-cell evaluation up front so every comparison path — numeric, boolean, empty-criteria, wildcard and type-mismatch — counts against the same allowance. These are explicit Tally semantics, not full Excel compatibility.
 
