@@ -950,6 +950,7 @@ impl QuillEngine {
         self.remap_revisions_insert_block(index);
         self.remap_footnotes_insert_block(index);
         self.remap_citations_insert_block(index);
+        self.remap_toc_insert_block(index);
         // Scan after the splice + remaps so citation anchors are final;
         // the new field's own entries need no remap (source ids only).
         let entries = scan_bibliography(&self.citations, &self.sources, sort);
@@ -1421,6 +1422,31 @@ mod tests {
         );
         let listed = citations(&mut e);
         assert_eq!(listed["citations"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn insert_bibliography_remaps_toc_field_entries() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "Alpha");
+        apply(&mut e, "setBlockKind", json!({"block":0,"kind":"h1"}));
+        apply(&mut e, "insertToc", json!({"index":1}));
+        // Cached toc entry targets the heading at block 0.
+        let d = apply(&mut e, "describe", json!({})).data;
+        assert_eq!(d["blocks"][1]["toc"]["entries"][0]["block"], 0);
+        // Inserting a bibliography field before the heading must shift
+        // the toc field's cached entry like insertBlock/insertToc do.
+        apply(&mut e, "insertBibliography", json!({"index":0}));
+        let d = apply(&mut e, "describe", json!({})).data;
+        let toc = d["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|b| b["kind"] == "toc")
+            .unwrap();
+        assert_eq!(toc["toc"]["entries"][0]["block"], 1);
+        // The live scan agrees with the remapped cache.
+        let live = apply(&mut e, "listToc", json!({})).data;
+        assert_eq!(live["entries"][0]["block"], 1);
     }
 
     #[test]

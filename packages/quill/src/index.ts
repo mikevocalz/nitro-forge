@@ -892,9 +892,17 @@ export class QuillDocument {
    */
   updateSource(
     id: string,
-    changes: Partial<Omit<CitationSource, "id">> & {
+    changes: {
       author?: string;
       title?: string;
+      year?: string | null;
+      container?: string | null;
+      volume?: string | null;
+      issue?: string | null;
+      pages?: string | null;
+      doi?: string | null;
+      url?: string | null;
+      note?: string | null;
     },
   ) {
     return this.call<{ ok: boolean; id: string }>(OPS.updateSource, {
