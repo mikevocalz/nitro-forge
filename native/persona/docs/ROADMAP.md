@@ -20,7 +20,7 @@ independent rendering choice, not a reproduction of their internals.
 | 3 | Phone capture adapter | Done (typecheck) — VisionCamera v5 outputs, worklet frame processing, zero-copy WebGPU preview |
 | 4 | Quality gates | Partial — lighting (luma), face coverage, head yaw/roll, device stability measured; pitch, glasses, phone-to-face pose pending |
 | 5 | Transfer transport | Partial — `transfer.ts` upload + manifest done; headset receiver not built |
-| 6 | Reconstruction / fitting | **Not started** — needs our own model path |
+| 6 | Reconstruction / fitting | **In progress** — GNM Head V3 (Apache-2.0) landmark fitter works in synthetic selftest; needs landmark extractor mapping + multi-frame fit + renderer export |
 | 7 | Review/save UI | Done (wired, unreachable until phase 6 calls `generated()`) |
 | 8 | Live presence / tracking | Partial — OpenXR adapters + performance core exist; not bound to capture output |
 | 9 | Headset apps (Vision Pro / Galaxy XR) | Not started |
@@ -39,19 +39,20 @@ independent rendering choice, not a reproduction of their internals.
   replaces the accelerometer-stability proxy with real geometry.
 - Effort: medium; platform-specific, needs device testing.
 
-### C. Reconstruction backend — the critical path
-Options (pick one, evaluate honestly):
-1. **Parametric head model fit** (FLAME-style / open morphable model) — closest
-   to the reference approach; needs an open model + fitting code (e.g. map
-   landmarks → shape/expression params → render mesh). Most faithful, most work.
-2. **InstantGaussianAvatar / splat-from-video** — fits our existing rigged
-   Gaussian renderer; research candidates already listed in README. Faster to
-   prototype, less faithful likeness.
-3. **Hybrid**: landmarks → parametric face mesh for identity + splat capture
-   for hair/shoulders detail.
-- Output must be a real fitted asset consumed by `generated()`; no
-  timer-generated or placeholder avatars.
-- Effort: large. This is the milestone that makes the experience real.
+### C. Reconstruction backend — IN PROGRESS
+Decision (2026-11-08): use **GNM Head V3** — Google's own open parametric
+head model ([google/GNM](https://github.com/google/GNM), Apache-2.0), the
+same model family as the reference Likeness pipeline (RealVatar/GNOME).
+This is the public release, not the app's encrypted modules.
+
+- `native/persona/tools/gnm_fit.py`: exact linear landmark Jacobian
+  (68 sparse landmarks, 636 identity+expression coeffs) + alternating
+  ridge-regularized solve and weak-perspective affine pose. Selftest PASS
+  (px 0.17, vertex RMSE 0.0023). Exports OBJ mesh + params JSON.
+- Model: 17,821 verts, rigged (joints/LBS), 253 identity + 383 expression
+  dims, skin/eyes/teeth/tongue components, UDIM textures.
+- Remaining: MediaPipe 478→68 landmark mapping, multi-frame joint identity
+  fit, per-step expression fit, rigged export, renderer integration.
 
 ### D. Phone→headset receiver + processing host
 - Headset-side (or companion-app) receiver for `uploadCaptureBundle`,
