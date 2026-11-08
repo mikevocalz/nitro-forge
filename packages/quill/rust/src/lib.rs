@@ -2980,41 +2980,84 @@ impl QuillEngine {
                 }
                 Some(m) => {
                     let chars: Vec<char> = text.chars().collect();
+                    let n = chars.len();
                     let scale = eff / m.units_per_em();
-                    // Shaped path: one harfrust pass over the whole block
-                    // text (GSUB+GPOS: kerning, ligatures, complex-script
-                    // reordering), with each glyph's x_advance folded back
-                    // onto its cluster's first char so the greedy wrap
-                    // keeps contiguous char spans. Shaped output is not
-                    // prefix-additive under reordering/ligatures, so the
-                    // prefix is reconstructed per char rather than queried
-                    // per candidate line. `None` (shape error/panic) falls
-                    // back to the slice-1 unshaped per-char advances.
-                    let byte_offsets: Vec<usize> =
-                        text.char_indices().map(|(i, _)| i).collect();
-                    let shaped = m.shape_char_advances(&text, &byte_offsets);
-                    let mut prefix = Vec::with_capacity(chars.len() + 1);
-                    prefix.push(0.0f64);
-                    let mut acc = 0.0f64;
-                    match shaped {
+                    let byte_offsets: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
+                    // Per-char advances in font units → cumulative point
+                    // prefix. Shaped output is not prefix-additive under
+                    // reordering/ligatures, so the prefix is rebuilt per
+                    // char rather than queried per candidate line.
+                    let prefix_of = |advances: &[f64]| {
+                        let mut prefix = Vec::with_capacity(n + 1);
+                        prefix.push(0.0f64);
+                        let mut acc = 0.0f64;
+                        for &units in advances {
+                            acc += units * scale;
+                            prefix.push(acc);
+                        }
+                        prefix
+                    };
+                    let unshaped = |cache: &mut std::collections::HashMap<char, f64>| {
+                        chars
+                            .iter()
+                            .map(|&c| *cache.entry(c).or_insert_with(|| m.advance_units(c)))
+                            .collect::<Vec<f64>>()
+                    };
+                    // Initial measurement: one whole-block harfrust pass
+                    // (GSUB+GPOS context across the entire block), then
+                    // bounded per-line re-shaping so a wrapped line's
+                    // kern/ligature context never sees the next line's
+                    // text. Each pass re-shapes every span independently
+                    // (spans partition the text → one pass shapes exactly
+                    // n chars) and re-wraps; wrap output equal to the
+                    // previous pass's spans means converged, since the
+                    // final lines were then measured in exactly the
+                    // context those spans imply. `None` anywhere — over
+                    // the block budget, shape error, or panic — falls
+                    // back to the slice-1 unshaped per-char path.
+                    let initial = if n > 0 && n <= fonts::MAX_SHAPED_CHARS_PER_BLOCK {
+                        m.shape_char_advances(&text, &byte_offsets)
+                    } else {
+                        None
+                    };
+                    match initial {
                         Some(advances) => {
-                            debug_assert_eq!(advances.len(), chars.len());
-                            for &units in &advances {
-                                acc += units * scale;
-                                prefix.push(acc);
+                            let mut spans =
+                                wrap_block_measured(&chars, &prefix_of(&advances), page_width);
+                            for _ in 0..fonts::MAX_LINE_SHAPE_PASSES {
+                                let Some(line_advances) =
+                                    m.shape_span_char_advances(&text, &byte_offsets, &spans)
+                                else {
+                                    // Mid-iteration shape failure: the
+                                    // block falls back to the unshaped
+                                    // path wholesale, not a half-shaped
+                                    // mix.
+                                    let advances = unshaped(&mut advance_cache);
+                                    spans = wrap_block_measured(
+                                        &chars,
+                                        &prefix_of(&advances),
+                                        page_width,
+                                    );
+                                    break;
+                                };
+                                let new_spans = wrap_block_measured(
+                                    &chars,
+                                    &prefix_of(&line_advances),
+                                    page_width,
+                                );
+                                let converged = new_spans == spans;
+                                spans = new_spans;
+                                if converged {
+                                    break;
+                                }
                             }
+                            spans
                         }
                         None => {
-                            for &c in &chars {
-                                let units = *advance_cache
-                                    .entry(c)
-                                    .or_insert_with(|| m.advance_units(c));
-                                acc += units * scale;
-                                prefix.push(acc);
-                            }
+                            let advances = unshaped(&mut advance_cache);
+                            wrap_block_measured(&chars, &prefix_of(&advances), page_width)
                         }
                     }
-                    wrap_block_measured(&chars, &prefix, page_width)
                 }
             };
             let block_height = spans.len() as f64 * line_height;
@@ -4866,9 +4909,12 @@ mod tests {
     fn layout_font_paginates_and_covers_headings_and_tables() {
         let mut e = engine();
         register_test_font(&mut e);
-        // h1 'W's are wider still (eff = 14pt → shaped advances
-        // 9.8/9.8/9.8/14pt after the W+W kern). Three fit a 30pt line
-        // (29.4pt), four do not (43.4pt).
+        // h1 'W's are wider still (eff = 14pt). Whole-block shaping gives
+        // per-char advances 9.8/9.8/9.8/14pt, but per-line re-shaping
+        // measures each final line alone: "WW" = 9.8+14 = 23.8pt and
+        // "WWW" = 33.6pt > 30, so the break lands (0,2),(2,4) — the old
+        // (0,3) split only fit because the third W's advance was kerned
+        // against the fourth W on the next line.
         insert(&mut e, 0, 0, "WWWW");
         apply(&mut e, "setBlockKind", json!({"block": 0, "kind": "h1"}));
         let r = apply(
@@ -4876,10 +4922,10 @@ mod tests {
             "layout",
             json!({"page_width": 30.0, "font_size": 10.0, "font": "NFTestMono"}),
         );
-        // h1 shaped WWW = 29.4pt ≤ 30 → same 2-line split, now (0,3),(3,4).
         let lines = r.data["pages"][0]["lines"].as_array().unwrap();
         assert_eq!(lines.len(), 2);
-        assert_eq!(lines[0]["end"], 3);
+        assert_eq!(lines[0]["end"], 2);
+        assert_eq!(lines[1]["start"], 2);
 
         // Table block: serialized cell text measures with the same face;
         // unmapped control chars (\n, \t) take the .notdef advance.
@@ -4993,6 +5039,80 @@ mod tests {
             json!({"page_width": 8.0, "font_size": 10.0, "page_height": 1000.0}),
         );
         assert_eq!(stub.data["pages"][0]["lines"].as_array().unwrap().len(), 2);
+    }
+
+    /// Per-line re-shaping: a kern pair straddling a wrap boundary must
+    /// not kern — each final line is measured in its own shaping context.
+    /// "WWW" whole-block shapes to 7/7/10pt (the third W kerned against a
+    /// successor that lands on the next line), which would fit "WW"+"W"
+    /// on a 15pt line; shaped per line every "W" is a lone 10pt glyph and
+    /// no two fit together.
+    #[test]
+    fn layout_fontreshapes_each_wrapped_line() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "WWW");
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 15.0, "font_size": 10.0, "page_height": 1000.0, "font": "NFTestMono"}),
+        );
+        let spans: Vec<(u64, u64)> = r.data["pages"][0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|l| (l["start"].as_u64().unwrap(), l["end"].as_u64().unwrap()))
+            .collect();
+        // Whole-block context alone would give [(0,2),(2,3)]; converged
+        // per-line shaping gives three single-W lines.
+        assert_eq!(spans, vec![(0, 1), (1, 2), (2, 3)]);
+        // Deterministic across calls.
+        let r2 = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 15.0, "font_size": 10.0, "page_height": 1000.0, "font": "NFTestMono"}),
+        );
+        assert_eq!(r2.data, r.data);
+    }
+
+    /// `shape_span_char_advances` folds each span's shaping onto its own
+    /// chars and rejects malformed span sets.
+    #[test]
+    fn span_shaping_is_per_line_and_validates_spans() {
+        use fonts::FaceMeasure;
+        let mut reg = fonts::FontRegistry::default();
+        reg.register("NFTestMono", 0, test_font_bytes().to_vec())
+            .unwrap();
+        let face = reg.find("NFTestMono").unwrap();
+        let m = FaceMeasure::open(face).unwrap();
+        let text = "WWW";
+        let offs: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
+        // "WW" kerns internally (700+1000); the trailing lone "W" is a
+        // full 1000 — the break-adjacent kern is gone.
+        let adv = m
+            .shape_span_char_advances(text, &offs, &[(0, 2), (2, 3)])
+            .unwrap();
+        assert_eq!(adv, vec![700.0, 1000.0, 1000.0]);
+        // A different partition measures differently — proving context
+        // really is per span, not whole-block.
+        let adv2 = m
+            .shape_span_char_advances(text, &offs, &[(0, 1), (1, 3)])
+            .unwrap();
+        assert_eq!(adv2, vec![1000.0, 700.0, 1000.0]);
+        // Malformed spans (gap, overlap, out of range, empty) → None.
+        assert!(m
+            .shape_span_char_advances(text, &offs, &[(0, 1), (2, 3)])
+            .is_none());
+        assert!(m
+            .shape_span_char_advances(text, &offs, &[(0, 2), (1, 3)])
+            .is_none());
+        assert!(m.shape_span_char_advances(text, &offs, &[(0, 4)]).is_none());
+        assert!(m
+            .shape_span_char_advances(text, &offs, &[(0, 0), (0, 3)])
+            .is_none());
+        assert!(m
+            .shape_span_char_advances(text, &offs, &[(0, 3), (3, 3)])
+            .is_none());
     }
 
     // -- DOCX round-trip -----------------------------------------------------

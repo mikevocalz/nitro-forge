@@ -42,23 +42,26 @@ is unchanged (`{pages:[{lines:[{block,start,end}]}]}`).
   totals (GSUB), complex-script reordering where it changes which glyphs
   exist (advances are summed per char span, so bidi totals are correct
   even though glyph order is discarded).
-- **Not exact**: no per-line re-shaping — wrap decisions use whole-block
-  shaping context, so a kern/ligature can be influenced by characters
-  that land on the next line; every wrapped line's last char may carry a
-  break-adjacent delta (a systematic per-line bias bounded by the font's
-  own positioning values, not capped at one advance). A multi-char
+- **Not exact**: no per-line re-shaping *in this slice* — wrap decisions
+  used whole-block shaping context, so a kern/ligature could be
+  influenced by characters that landed on the next line. **Superseded**:
+  the deferred fix landed in `P-font-per-line-shaping.md`
+  (`codex/w8-quill-perline`), which re-shapes each wrapped line
+  independently in bounded passes. A multi-char
   cluster's advance is attributed wholly to its first char, so a
   hard-break inside a cluster misestimates by under one glyph advance.
-  Both are documented in `fonts.rs` and `docs/ENGINE_OPS.md`.
-- **Cost note (review follow-up)**: shaping is ~50-100x the slice-1
-  per-char advance cost and paragraph text has no length cap (only table
-  cells do, `CELL_TEXT_MAX=8192`) — `layout {font}` on a hostile huge
-  document is a hang-class slowdown that predates this slice in kind but
-  not magnitude. A paragraph-length bound is deferred to a follow-up.
+- **Cost note (review follow-up — resolved)**: shaping is ~50-100x the
+  slice-1 per-char advance cost and paragraph text has no length cap
+  (only table cells do, `CELL_TEXT_MAX=8192`) — `layout {font}` on a
+  hostile huge document is a hang-class slowdown that predates this
+  slice in kind but not magnitude. Resolved in
+  `P-font-per-line-shaping.md`: `MAX_SHAPED_CHARS_PER_BLOCK` = 131072
+  chars routes larger blocks to the unshaped path.
 - **Not done**: glyph positions/extents, per-line shaped output, mark
   positioning effects on width (offsets ignored), per-inline
   family/size resolution, fallback chains, rasterization, TOC page
-  numbers, `renderPage`.
+  numbers, `renderPage`. (Per-line shaped output landed in
+  `P-font-per-line-shaping.md`.)
 
 ## Verification
 

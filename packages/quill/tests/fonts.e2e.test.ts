@@ -84,6 +84,24 @@ describe("quill font registry + measured layout (real Rust via nf-cli)", () => {
     await doc.close();
   });
 
+  it("layout re-shapes each wrapped line so kern context stops at breaks", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.registerFont("NFTestMono", FONT_BYTES);
+    await doc.insertText({ block: 0, offset: 0 }, "WWW");
+
+    // Whole-block shaping gives "WWW" per-char advances 7/7/10pt, which
+    // would fit "WW"+"W" on a 15pt line. Per-line re-shaping measures
+    // each wrapped line alone: every "W" is a lone 10pt glyph and no two
+    // fit together → three single-char lines.
+    const r = await doc.layout(15, 10, 1000, "NFTestMono");
+    const lines = r.data.pages[0]!.lines;
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toMatchObject({ block: 0, start: 0, end: 1 });
+    expect(lines[1]).toMatchObject({ block: 0, start: 1, end: 2 });
+    expect(lines[2]).toMatchObject({ block: 0, start: 2, end: 3 });
+    await doc.close();
+  });
+
   it("rejects unknown font families and hostile bytes without mutating", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "text");

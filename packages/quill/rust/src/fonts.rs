@@ -22,17 +22,23 @@
 //!   text through `harfrust` 0.15 (the HarfBuzz port the decision doc
 //!   selected; MIT, MSRV 1.85, `default-features = false` + `"std"` so the
 //!   optional `icu` tables stay out and harfrust's pinned builtin UCD is
-//!   used — deterministic, no system state). One `shape` call per block
-//!   covers the full default feature set: GSUB (`liga`, `clig`, required
+//!   used — deterministic, no system state). Each `shape` call covers the
+//!   full default feature set: GSUB (`liga`, `clig`, required
 //!   features, complex-script shapers) and GPOS (`kern`, mark/cursive
 //!   attachment — only the horizontal *advance* survives into layout;
 //!   offsets are ignored). Shaped glyphs carry UTF-8-byte cluster values,
 //!   which `shape_char_advances` folds back onto char indices so the
 //!   existing greedy word wrap keeps its contiguous `{start,end}` char
-//!   spans. What shaping does NOT give us: per-line re-shaping (a wrapped
-//!   line is measured with whole-block shaping context, so kern/ligature
-//!   decisions see text that will actually start on the next line) and
-//!   any glyph positions — `layout` still returns spans only. Shaping
+//!   spans. The initial whole-block shape seeds the wrap; then up to
+//!   `MAX_LINE_SHAPE_PASSES` bounded passes re-shape each wrapped line
+//!   independently (`shape_span_char_advances`) and re-wrap until the
+//!   spans converge, so a final line's kern/ligature context never sees
+//!   the next line's text. What shaping still does NOT give us: any
+//!   glyph positions — `layout` still returns spans only — and exact
+//!   per-line context when the pass budget exhausts before convergence
+//!   (the last wrap then used the previous pass's line spans for
+//!   measurement; bounded, deterministic, documented). Blocks over
+//!   `MAX_SHAPED_CHARS_PER_BLOCK` chars skip shaping entirely. Shaping
 //!   failure or panic falls back to the unshaped per-char path for that
 //!   block (same values slice 1 produced).
 //! - **Not rendered**: no glyph outlines are drawn; rasterization stays
@@ -65,6 +71,24 @@ pub const MAX_FONT_FACE_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_FONT_FACES: usize = 64;
 /// Decision doc budget: total admitted font bytes per session.
 pub const MAX_FONT_TOTAL_BYTES: usize = 256 * 1024 * 1024;
+
+/// Per-block char budget for the shaped `layout {font}` path. Paragraph
+/// text has no length cap and shaping costs ~50-100x the unshaped
+/// per-char advance path (see `P-font-shaping-slice.md`), so a block
+/// beyond this many chars takes the unshaped `advance_units` path for
+/// that call rather than risking a hang-class slowdown on hostile huge
+/// text. 128K chars is far above any realistic paragraph while keeping
+/// worst-case shaped work per `layout` call bounded.
+pub const MAX_SHAPED_CHARS_PER_BLOCK: usize = 131_072;
+
+/// Bounded per-line re-shaping passes after the initial whole-block
+/// shape. Each pass re-shapes every wrapped line independently (spans
+/// partition the block, so one pass shapes exactly the block's char
+/// count) and re-wraps; wrap output identical to the previous pass's
+/// spans means converged — the final lines were then measured in
+/// exactly the context those spans imply. Total shaping work per block
+/// is bounded at `(1 + MAX_LINE_SHAPE_PASSES) * chars` shaped chars.
+pub const MAX_LINE_SHAPE_PASSES: usize = 4;
 
 /// One admitted font face: host-claimed family plus engine-verified
 /// identity (sha256 of the exact bytes, face index inside a collection)
@@ -331,6 +355,84 @@ impl FaceMeasure {
             // `byte_offsets[0] == 0 <= byte`, so `i >= 1`; clamp anyway.
             let idx = i.saturating_sub(1).min(char_count - 1);
             out[idx] += f64::from(pos.x_advance);
+        }
+        Some(out)
+    }
+
+    /// Per-line shaping pass for `layout {font}`: shape each
+    /// `(start,end)` char span of `text` independently so kern/ligature
+    /// context never crosses a wrap boundary.
+    ///
+    /// `byte_offsets` and the span indexing are exactly as in
+    /// [`FaceMeasure::shape_char_advances`]; `spans` must tile
+    /// `0..byte_offsets.len()` contiguously (the greedy wrap's output
+    /// does). The returned vec has one entry per char of the whole
+    /// text — entry `i` comes from the shaping of the span containing
+    /// char `i`. Each line re-guesses segment properties, so a line's
+    /// direction/script context is its own; one `ShaperFont` and one
+    /// `Buffer` serve all spans.
+    ///
+    /// Returns `None` on any shape failure/panic or malformed spans so
+    /// the caller falls back to the unshaped path — same contract as
+    /// [`FaceMeasure::shape_char_advances`].
+    pub fn shape_span_char_advances(
+        &self,
+        text: &str,
+        byte_offsets: &[usize],
+        spans: &[(usize, usize)],
+    ) -> Option<Vec<f64>> {
+        let n = byte_offsets.len();
+        let mut out = vec![0.0f64; n];
+        if n == 0 {
+            return Some(out);
+        }
+        // Spans must partition 0..n exactly; anything else is a caller
+        // bug and takes the fallback path rather than a partial measure.
+        let mut covered = 0usize;
+        for &(s, e) in spans {
+            if s != covered || e <= s || e > n {
+                return None;
+            }
+            covered = e;
+        }
+        if covered != n {
+            return None;
+        }
+
+        let mut buffer = harfrust::Buffer::new();
+        let shaped = catch_unwind(AssertUnwindSafe(|| {
+            let shaper = harfrust::ShaperFont::new(&self.font);
+            for &(s, e) in spans {
+                let byte_s = byte_offsets[s];
+                let byte_e = if e == n { text.len() } else { byte_offsets[e] };
+                let line = &text[byte_s..byte_e];
+                // Cluster values are UTF-8 byte offsets into `line`.
+                let rel: Vec<usize> = byte_offsets[s..e].iter().map(|&o| o - byte_s).collect();
+                buffer.clear();
+                buffer.push_str(line);
+                buffer.guess_segment_properties();
+                if !harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::new()).is_ok()
+                    || !buffer.allocation_successful()
+                {
+                    return false;
+                }
+                let infos = buffer.glyph_infos();
+                let positions = buffer.glyph_positions();
+                if infos.len() != positions.len() {
+                    return false;
+                }
+                for (info, pos) in infos.iter().zip(positions.iter()) {
+                    let byte = info.cluster as usize;
+                    let i = rel.partition_point(|&o| o <= byte);
+                    // `rel[0] == 0 <= byte`, so `i >= 1`; clamp anyway.
+                    let idx = i.saturating_sub(1).min(e - s - 1);
+                    out[s + idx] += f64::from(pos.x_advance);
+                }
+            }
+            true
+        }));
+        if !shaped.unwrap_or(false) {
+            return None;
         }
         Some(out)
     }
