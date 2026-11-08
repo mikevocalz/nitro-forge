@@ -1775,3 +1775,62 @@ nf-cli live test, 1 new payload-contract test),
 with layout remap, per-reply editing/deletion, mentions, notifications,
 presence transport and UI wiring remain deferred; no full P16 completion
 is implied.
+
+## P16 design handoff + export contract slice F checkpoint (2026-11-08)
+
+`describeHandoff` and `exportSlice` land the L-12 dev-handoff storage scope
+and the L-15 screen/frame membership scope as pure deterministic reads —
+eventless, ungated, non-mutating, no journal entries. `describeHandoff`
+projects evaluated layout measurements (same variables→expansion→layout
+pipeline as `evaluateLayout`, capped at 8192 boxes with a `truncated` flag),
+stored-node structure in DFS order, bounded typography (content preview
+≤256 UTF-8 bytes plus exact byte length/truncation flag), prototype screen
+membership with evaluated boxes, an always-empty `assets` list (no image or
+asset nodes are admitted), and ≤512 deterministic per-node structural
+hints — "code hints" describing stored state, not generated code. A new
+engine-side `state_revision` u64 (the draft `source_revision` precedent)
+advances on every committed state change — mutations, batch commits,
+`restore`, `undo`, `redo` — is never serialized into snapshots (hostile
+restores cannot choose it), does not advance on net-unchanged ops, and is
+exposed on both reads as a host staleness hint. `exportSlice {node,scale?}`
+requires a stored frame/component node (every registered prototype screen
+qualifies), renders its expanded subtree through the same Prism flatten
+path as `renderFrame` translated to the slice's evaluated origin, and
+returns raw RGBA8 (`pixels_b64`/binary sidecar duality) plus a JSON
+manifest of slice-relative node entries capped at 4096 with
+`nodes_total`/`nodes_truncated` — the raster is never truncated. Optional
+`scale` is bounded to 0.25..=4 (default 1) with the scaled pixel count held
+to the 1,048,576-pixel design output budget. Honest deferrals documented in
+`docs/ENGINE_OPS.md`: no PNG/SVG/vector encoder, no real code generation,
+no asset store, export formats/presets/multi-slice batching host-side,
+presence transport-only. No schema or snapshot change.
+
+Local evidence: `cargo test -p design-engine` 50 passed (5 new tests:
+handoff determinism/bounds/eventlessness/revision tags, revision advance
+across mutation/batch/undo/redo/restore, slice RGBA+manifest/subtree scope/
+scale/binary sidecar, atomic rejections and pixel budget, component+
+instance+variable coverage, oversized-member clipping/culling),
+`cargo build -p nf-cli` clean,
+`pnpm --filter @nitro-forge/design test` 16 passed across 12 files (1 new
+nf-cli live test, 1 new payload-contract test), `pnpm --filter
+@nitro-forge/design typecheck` clean. UI wiring, native acceptance and full
+P16 completion are not implied.
+
+Review fixes on `codex/w1-design-handoff` (same branch): `exportSlice` now
+translates/scales member boxes into slice pixels and culls boxes that cannot
+cover a canvas pixel before they reach Prism; intersecting rect members
+whose scaled bounds exceed Prism's 1e7 coordinate bound are clamped to their
+canvas intersection (pixel-identical), canvas-covering oversized ellipses
+rasterize as an equivalent canvas rect, and partially visible oversized
+ellipses reject honestly with a coordinate-budget error instead of failing
+inside Prism validation. `docs/ENGINE_OPS.md` now documents that in-batch
+`describeHandoff`/`exportSlice` reads report per-step speculative
+`state_revision` values (the batch still commits as a single +1), that
+`describeHandoff` accepts and ignores its payload like `evaluateLayout`,
+and corrects synthetic expansion ids to `>= 2^53` (first clone is
+`SAFE_ID + 1`). `undo`/`redo` check the journal before spending a revision
+so an empty stack returns `Ok(false)` even at revision exhaustion.
+Evidence rerun after fixes: `cargo test -p design-engine` 50 passed,
+`cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/design test`
+16 passed across 12 files, `pnpm --filter @nitro-forge/design typecheck`
+clean.

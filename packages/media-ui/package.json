@@ -15,6 +15,10 @@
     "./math": {
       "types": "./src/timebase.ts",
       "default": "./src/timebase.ts"
+    },
+    "./video": {
+      "types": "./src/video/index.ts",
+      "default": "./src/video/index.ts"
     }
   },
   "scripts": {
@@ -22,16 +26,25 @@
     "test": "vitest run tests"
   },
   "dependencies": {
-    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz"
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
+    "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz"
   },
   "peerDependencies": {
     "@expo/ui": "^58.0.0",
     "expo": "^58.0.0",
     "react": ">=19.0.0",
-    "react-native": ">=0.88.0"
+    "react-native": ">=0.88.0",
+    "zustand": "^5.0.16",
+    "react-native-video": "7.0.0-beta.12-nitrov1-experimental.1"
   },
   "devDependencies": {
     "vitest": "^3.2.7",
-    "@types/react": "^19.2.0"
+    "@types/react": "^19.2.0",
+    "react-native-video": "file:../../tooling/react-native-video-v1/experimental-build-v1.tgz"
+  },
+  "peerDependenciesMeta": {
+    "react-native-video": {
+      "optional": true
+    }
   }
 }

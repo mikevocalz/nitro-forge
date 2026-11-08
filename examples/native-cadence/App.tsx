@@ -283,17 +283,18 @@ export default function App() {
                   {" / "}{String(state.panPreview ?? actual.pan)}
                 </Text> : null}
           </View>
-          <View accessibilityRole="radiogroup" accessibilityLabel="Knob renderer"
-            style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            <Action label="SwiftUI / Compose knob" selected={state.renderer === "native"}
-              onPress={() => store.setState({ renderer: "native" })}/>
-            <Action label="React Native knob" selected={state.renderer === "react-native"}
-              onPress={() => store.setState({ renderer: "react-native" })}/>
-            <Action label="Precision scrubbers" selected={state.renderer === "precision"}
-              onPress={() => store.setState({ renderer: "precision" })}/>
-            <Action label="Gain / Pan pad" selected={state.renderer === "xy"}
-              onPress={() => store.setState({ renderer: "xy" })}/>
-          </View>
+          <SegmentedControl unstyled aria-label="Instrument renderer" value={state.renderer}
+            disabled={state.pending} options={[
+              { value: "native", label: "SwiftUI / Compose knob" },
+              { value: "react-native", label: "React Native knob" },
+              { value: "precision", label: "Precision scrubbers" },
+              { value: "xy", label: "Gain / Pan pad" },
+            ]} labelStyle={{ color: colors.text }} style={{ gap: 10 }}
+            segmentStyle={({ selected }) => ({ minHeight: 48, paddingHorizontal: 14,
+              borderWidth: 1, borderRadius: 9, borderColor: selected ? colors.accent : colors.border,
+              backgroundColor: colors.surface })}
+            onChange={renderer => store.setState({ renderer })}/>
+
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             <Action label="Reconnect native engine" disabled={state.pending} onPress={() =>
               store.setState(s => ({ attempt: s.attempt + 1 }))}/>

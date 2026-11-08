@@ -2,6 +2,7 @@
 //! Fixed-size design hierarchy/layout. Prism owns actual rasterization.
 mod components;
 mod constraints;
+mod handoff;
 mod layout;
 mod model;
 mod prototype;
@@ -74,6 +75,35 @@ fn text_field<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
         .and_then(Value::as_str)
         .ok_or_else(|| bad("expected string field"))
 }
+/// Prism `Shape::validate` coordinate bound (`MAX_COORD` in prism's model,
+/// not re-exported). `export_slice` clamps or substitutes member geometry
+/// that would exceed it after translation and scaling.
+const SLICE_SHAPE_MAX_COORD: f64 = 1.0e7;
+/// Whether an ellipse with translated/scaled bounds `(x,y,w,h)` covers every
+/// canvas pixel center. The covered region is convex, so containing the four
+/// extreme pixel centers `(0.5,0.5)`…`(w-0.5,h-0.5)` contains the whole
+/// pixel-center grid — matching Prism's per-pixel-center sampling.
+fn ellipse_covers_canvas(x: f64, y: f64, w: f64, h: f64, cw: f64, ch: f64) -> bool {
+    let rx = w / 2.;
+    let ry = h / 2.;
+    if !(rx > 0. && ry > 0.) {
+        return false;
+    }
+    let cx = x + rx;
+    let cy = y + ry;
+    [
+        (0.5, 0.5),
+        (cw - 0.5, 0.5),
+        (0.5, ch - 0.5),
+        (cw - 0.5, ch - 0.5),
+    ]
+    .iter()
+    .all(|&(px, py)| {
+        let dx = (px - cx) / rx;
+        let dy = (py - cy) / ry;
+        dx * dx + dy * dy <= 1.
+    })
+}
 /// Smallest unused `prefix-N` symbol id; the collection caps bound the scan.
 fn generated_id(prefix: &str, taken: &dyn Fn(&str) -> bool) -> Result<String, EngineError> {
     for i in 1..=8192u64 {
@@ -87,6 +117,12 @@ fn generated_id(prefix: &str, taken: &dyn Fn(&str) -> bool) -> Result<String, En
 pub struct DesignEngine {
     state: Arc<State>,
     journal: Journal<Arc<State>>,
+    /// Monotonic mutation counter exposed as `state_revision` on the
+    /// handoff reads (draft's `source_revision` precedent). Engine-side
+    /// only: snapshots never serialize it, `restore` simply advances it,
+    /// and undo/redo advance it like any other state change. It is a
+    /// staleness hint for hosts, not a security boundary.
+    state_revision: u64,
 }
 impl Default for DesignEngine {
     fn default() -> Self {
@@ -98,7 +134,14 @@ impl DesignEngine {
         Self {
             state: Arc::new(State::default()),
             journal: Journal::new(16),
+            state_revision: 0,
         }
+    }
+    fn next_revision(&self) -> Result<u64, EngineError> {
+        self.state_revision
+            .checked_add(1)
+            .filter(|v| *v <= SAFE_ID)
+            .ok_or_else(|| bad("state revision budget exhausted"))
     }
     fn read_axis_sizing(&self, p: &Value) -> Result<CommandResult, EngineError> {
         let node_id = id(p, "id")?;
@@ -196,6 +239,194 @@ impl DesignEngine {
             .with_bytes(cmd, "pixels_b64", pixels),
         )
     }
+    /// `exportSlice {node, scale?}` — read-only RGBA8 raster plus JSON
+    /// manifest for one frame/component subtree (slice F). `node` must be
+    /// a stored `frame`/`component`; prototype screens are exactly that
+    /// node set, so screen membership is covered without a separate id
+    /// space. Renders through the same variables→expansion→layout→Prism
+    /// flatten pipeline as `renderFrame`, translated to the slice's
+    /// evaluated origin and multiplied by the optional bounded `scale`
+    /// (default 1, [0.25,4]). Pixel output is capped at the design output
+    /// budget `MAX_SLICE_PIXELS` (1_048_576). No PNG/SVG encoder exists:
+    /// bytes are raw RGBA via the `pixels_b64`/binary sidecar duality, and
+    /// per-slice format/presets stay host-side.
+    fn export_slice(
+        &self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let p = &cmd.payload;
+        if p
+            .as_object()
+            .is_none_or(|o| o.keys().any(|k| !["node", "scale"].contains(&k.as_str())))
+        {
+            return Err(bad("expected slice object with node/scale fields"));
+        }
+        let node_id = id(p, "node")?;
+        let node = self
+            .state
+            .nodes
+            .get(&node_id)
+            .ok_or_else(|| bad("unknown node"))?;
+        if !matches!(node.kind, Kind::Frame | Kind::Component) {
+            return Err(bad("export slice requires a frame or component node"));
+        }
+        let scale = match p.get("scale") {
+            Some(Value::Null) | None => 1.,
+            Some(v) => v
+                .as_f64()
+                .ok_or_else(|| bad("scale must be numeric"))?,
+        };
+        if !scale.is_finite()
+            || !(handoff::MIN_SLICE_SCALE..=handoff::MAX_SLICE_SCALE).contains(&scale)
+        {
+            return Err(bad("scale must be finite within 0.25..=4"));
+        }
+        let effective = variables::effective(&self.state);
+        let expanded = components::expand(&effective)?;
+        let boxes = layout::evaluate(&expanded)?;
+        let target = boxes
+            .iter()
+            .find(|b| b.id == node_id)
+            .ok_or_else(|| bad("slice node has no evaluated box"))?;
+        let origin = (target.x, target.y);
+        let width_f = target.width * scale;
+        let height_f = target.height * scale;
+        let width_px = width_f.ceil();
+        let height_px = height_f.ceil();
+        if !width_px.is_finite()
+            || !height_px.is_finite()
+            || width_px < 1.
+            || height_px < 1.
+            || width_px > u32::MAX as f64
+            || height_px > u32::MAX as f64
+            || (width_px * height_px) > handoff::MAX_SLICE_PIXELS as f64
+        {
+            return Err(bad("export slice exceeds the pixel output budget"));
+        }
+        let members = handoff::subtree_members(&expanded, node_id)?;
+        let info = handoff::subtree_info(&expanded, node_id);
+        let slice_boxes: Vec<&layout::BoxNode> = boxes
+            .iter()
+            .filter(|b| members.contains(&b.id))
+            .collect();
+        let mut prism = prism_engine::PrismEngine::new(width_px as u32, height_px as u32);
+        for b in &slice_boxes {
+            if let Some(c) = ctx {
+                c.checkpoint()?;
+            }
+            if !b.visible {
+                continue;
+            }
+            // Translate+scale into slice pixel space, then cull against the
+            // canvas before Prism ever sees the box: a member that cannot
+            // cover a canvas pixel is skipped, which both avoids rasterizing
+            // invisible work and keeps out-of-slice geometry away from
+            // Prism's coordinate bound.
+            let sx = (b.x - origin.0) * scale;
+            let sy = (b.y - origin.1) * scale;
+            let sw = b.width * scale;
+            let sh = b.height * scale;
+            if sx + sw <= 0. || sy + sh <= 0. || sx >= width_px || sy >= height_px {
+                continue;
+            }
+            // Same shape mapping as renderFrame: text nodes draw their
+            // fill background only; `renderable:false` is manifest data.
+            let kind = if b.kind == Kind::Ellipse {
+                "ellipse"
+            } else {
+                "rect"
+            };
+            // Prism `Shape::validate` rejects |coord| > MAX_COORD (1e7).
+            // Design eval coordinates reach ±1e7 and `scale` multiplies
+            // extents by up to 4, so a member intersecting the slice can
+            // still overflow. In-bounds shapes pass through untouched. A
+            // rect that overflows is clamped to its canvas intersection —
+            // pixel-identical because the raster only samples canvas
+            // pixels. An ellipse's coverage depends on its whole bounding
+            // box, so the only exact substitution is a canvas-covering one
+            // (emitted as a canvas rect); a partially visible oversized
+            // ellipse has no exact Prism representation and rejects honestly
+            // rather than rasterizing wrong pixels.
+            let in_bounds = [sx, sy, sw, sh]
+                .iter()
+                .all(|v| v.is_finite() && v.abs() <= SLICE_SHAPE_MAX_COORD);
+            let shape = if in_bounds {
+                json!({"kind":kind,"x":sx,"y":sy,"w":sw,"h":sh,"fill":b.fill})
+            } else {
+                match kind {
+                    "rect" => {
+                        let x0 = sx.max(0.);
+                        let y0 = sy.max(0.);
+                        let x1 = (sx + sw).min(width_px);
+                        let y1 = (sy + sh).min(height_px);
+                        json!({"kind":"rect","x":x0,"y":y0,"w":x1-x0,"h":y1-y0,"fill":b.fill})
+                    }
+                    "ellipse"
+                        if ellipse_covers_canvas(sx, sy, sw, sh, width_px, height_px) =>
+                    {
+                        json!({"kind":"rect","x":0.,"y":0.,"w":width_px,"h":height_px,"fill":b.fill})
+                    }
+                    _ => {
+                        return Err(bad(
+                            "export slice member exceeds the raster coordinate budget",
+                        ))
+                    }
+                }
+            };
+            prism.apply(Command::new("addShape", json!({"shape": shape})))?;
+        }
+        if let Some(c) = ctx {
+            c.checkpoint()?;
+        }
+        let pixels = prism
+            .apply(Command::new("flatten", json!({})).with_binary(None))?
+            .output
+            .ok_or_else(|| bad("Prism did not return RGBA"))?;
+        if let Some(c) = ctx {
+            c.checkpoint()?;
+        }
+        let (manifest_nodes, nodes_total, nodes_truncated) = handoff::manifest_nodes(
+            &expanded,
+            &slice_boxes,
+            &info,
+            origin,
+        );
+        Ok(CommandResult::read_only(json!({
+            "slice": {
+                "node": node_id,
+                "name": node.name,
+                "kind": node.kind,
+                "state_revision": self.state_revision,
+                "box": {"x": target.x, "y": target.y, "width": target.width, "height": target.height},
+                "origin": {"x": origin.0, "y": origin.1},
+                "scale": scale,
+                "width": width_px as u32,
+                "height": height_px as u32,
+                "format": "rgba8",
+            },
+            "manifest": {
+                "node": node_id,
+                "name": node.name,
+                "kind": node.kind,
+                "state_revision": self.state_revision,
+                "pixel_format": "rgba8",
+                "origin": {"x": origin.0, "y": origin.1},
+                "scale": scale,
+                "width": width_px as u32,
+                "height": height_px as u32,
+                "nodes_total": nodes_total,
+                "nodes_truncated": nodes_truncated,
+                "nodes": manifest_nodes,
+                "notes": [
+                    "raw RGBA8 pixels only; no PNG/SVG/vector encoder exists",
+                    "per-slice output format and presets are host-side",
+                    "node x/y are document units relative to the slice origin; synthetic expansion ids >= 2^53 are read-only provenance",
+                ],
+            },
+        }))
+        .with_bytes(cmd, "pixels_b64", pixels))
+    }
 }
 impl Engine for DesignEngine {
     fn kind(&self) -> EngineKind {
@@ -252,12 +483,21 @@ impl Engine for DesignEngine {
                     &self.state, p,
                 )?))
             }
+<<<<<<< HEAD
             "listComments" => {
                 return Ok(CommandResult::read_only(json!({
                     "threads": &self.state.comments.threads
                 })))
+=======
+            "describeHandoff" => {
+                return Ok(CommandResult::read_only(handoff::describe(
+                    &self.state,
+                    self.state_revision,
+                )?))
+>>>>>>> codex/w1-design-handoff
             }
             "renderFrame" => return self.render(&cmd, None),
+            "exportSlice" => return self.export_slice(&cmd, None),
             _ => {}
         }
         if cmd.op == "readAxisSizing" {
@@ -1521,8 +1761,10 @@ impl Engine for DesignEngine {
         if next == *self.state {
             return Ok(CommandResult::read_only(data));
         }
+        let revision = self.next_revision()?;
         self.journal.record(self.state.clone());
         self.state = Arc::new(next);
+        self.state_revision = revision;
         Ok(CommandResult::data(data))
     }
     fn apply_batch(
@@ -1534,14 +1776,17 @@ impl Engine for DesignEngine {
         let staged = Self {
             state: self.state.clone(),
             journal: Journal::new(1),
+            state_revision: self.state_revision,
         };
         let (staged, mut result) = match ctx {
             Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
             None => ignition_core::execute_batch(staged, batch)?,
         };
         if self.state != staged.state {
+            let revision = self.next_revision()?;
             self.journal.record(self.state.clone());
             self.state = staged.state;
+            self.state_revision = revision;
         } else {
             result.events.clear();
         }
@@ -1556,11 +1801,15 @@ impl Engine for DesignEngine {
             return self.apply_batch(cmd, Some(ctx));
         }
         ctx.checkpoint()?;
-        let result = if cmd.op == "renderFrame" {
+        let result = if matches!(cmd.op.as_str(), "renderFrame" | "exportSlice") {
             if cmd.v != 1 || cmd.input.is_some() {
                 return Err(bad("invalid render command"));
             }
-            self.render(&cmd, Some(ctx))?
+            if cmd.op == "renderFrame" {
+                self.render(&cmd, Some(ctx))?
+            } else {
+                self.export_slice(&cmd, Some(ctx))?
+            }
         } else {
             self.apply(cmd)?
         };
@@ -1612,27 +1861,43 @@ impl Engine for DesignEngine {
         };
         validate(&next)?;
         layout::evaluate(&next)?;
+        // Restore advances the revision like any other state change; the
+        // counter is engine-side so a hostile snapshot cannot choose it.
+        let revision = self.next_revision()?;
         self.state = Arc::new(next);
         self.journal = Journal::new(16);
+        self.state_revision = revision;
         Ok(())
     }
     fn undo(&mut self) -> Result<bool, EngineError> {
-        if let Some(prior) = self.journal.pop_undo() {
-            let current = std::mem::replace(&mut self.state, prior);
-            self.journal.push_redo(current);
-            Ok(true)
-        } else {
-            Ok(false)
+        // Check the journal before spending a revision: an empty undo stack
+        // is `Ok(false)`, not a revision-budget error.
+        if self.journal.undo_len() == 0 {
+            return Ok(false);
         }
+        let revision = self.next_revision()?;
+        let prior = self
+            .journal
+            .pop_undo()
+            .ok_or_else(|| bad("undo journal underflow"))?;
+        let current = std::mem::replace(&mut self.state, prior);
+        self.journal.push_redo(current);
+        self.state_revision = revision;
+        Ok(true)
     }
     fn redo(&mut self) -> Result<bool, EngineError> {
-        if let Some(next) = self.journal.pop_redo() {
-            let current = std::mem::replace(&mut self.state, next);
-            self.journal.push_undo(current);
-            Ok(true)
-        } else {
-            Ok(false)
+        if self.journal.redo_len() == 0 {
+            return Ok(false);
         }
+        let revision = self.next_revision()?;
+        let next = self
+            .journal
+            .pop_redo()
+            .ok_or_else(|| bad("redo journal underflow"))?;
+        let current = std::mem::replace(&mut self.state, next);
+        self.journal.push_undo(current);
+        self.state_revision = revision;
+        Ok(true)
     }
 }
 #[cfg(test)]

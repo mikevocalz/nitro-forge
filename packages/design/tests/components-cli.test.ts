@@ -19,7 +19,7 @@ it('runs components and instances through the real nf-cli engine: expansion, ove
   expect(stored.instance!.overrides ?? []).toEqual([]);
   expect(stored.children).toEqual([]);
   // evaluateLayout expands deterministically: instance box plus a synthetic
-  // child clone (id >= 2^53-1) at the component child's local offset.
+  // child clone (id >= 2^53) at the component child's local offset.
   const boxes=(await doc.evaluateLayout()).data.boxes;
   const synth=boxes.find(b=>b.id>Number.MAX_SAFE_INTEGER)!;
   expect(synth).toMatchObject({x:6,y:1,width:2,height:2});

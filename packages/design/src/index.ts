@@ -54,6 +54,8 @@ export const OPS={
  listComments:'listComments',
  evaluateLayout:'evaluateLayout',
  renderFrame:'renderFrame',
+ describeHandoff:'describeHandoff',
+ exportSlice:'exportSlice',
 } as const;
 export type SizeMode='fixed'|'hug'|'fill';
 export type Axis='x'|'y';
@@ -193,13 +195,56 @@ export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'f
 export type NewNode=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'>>;
 export interface NewTextNode extends NewNode{content:string;style?:FontStylePatch}
 /** `id` is a real node id for stored nodes, or a synthetic expansion id
- * `>= 2^53-1` for instance clones. Synthetic ids are read-only provenance
+ * `>= 2^53` for instance clones. Synthetic ids are read-only provenance
  * handles: they exceed JS safe-integer precision, are never persisted, and
  * every op rejects them as unknown nodes — do not feed them back into ops. */
 export interface EvaluatedBox extends NodeGeometry{id:number;kind:NodeKind;fill:[number,number,number,number];visible:boolean;renderable:boolean}
 export interface ComponentDescription{id:number;name:string;variants:{name:string;properties:NodeOverride[]}[]}
 export interface InstanceDescription{id:number;name:string;component:number|null;variant:string|null;overrides:NodeOverride[];unavailable_reason?:string}
 export interface ComponentsDescription{expansion:{max_depth:number;max_nodes:number;persisted:boolean};components:ComponentDescription[];instances:InstanceDescription[]}
+/** Bounded text projection inside handoff/export payloads: font fields in
+ * full, `content` truncated at a UTF-8 boundary (256 bytes) with the exact
+ * `content_bytes` length and `content_truncated` flag alongside. */
+export interface TextStyleInfo{content:string;content_bytes:number;content_truncated:boolean;font_family:string;font_size:number;font_weight:number;font_style:TextFontStyle}
+/** One node's handoff/manifest entry: evaluated geometry (`x`/`y` are
+ * document units relative to the slice origin for export manifests,
+ * absolute canvas units for describeHandoff), effective visibility and
+ * renderability, plus presence-gated feature fields. `id`/`parent` may be
+ * synthetic expansion ids `>= 2^53` inside export manifests — read-only
+ * provenance, never op-addressable. */
+export interface HandoffNodeInfo{id:number;parent:number|null;depth:number;kind:NodeKind;name:string;x:number;y:number;width:number;height:number;fill:[number,number,number,number];visible:boolean;renderable:boolean;sizing?:SizingSettings;layout?:FrameLayout|null;text?:TextStyleInfo;constraints?:NodeConstraints;instance?:{component:number;variant:string|null;overrides:number};variants?:number}
+/** Prototype screen projected into the handoff payload with its live node
+ * name/kind/entry flag and evaluated box when one exists. */
+export interface HandoffScreenInfo{node:number;name:string;kind:NodeKind;entry:boolean;box?:NodeGeometry}
+/** Deterministic structural hint per node — a "code hint" describing
+ * stored state (kind, size, fill, font, layout), never generated source.
+ * Every snippet carries the document `state_revision` it was computed
+ * from so hosts can detect staleness. */
+export interface HandoffSnippet{node:number;state_revision:number;hint:string}
+/** `describeHandoff` (slice F, NYC-Tron L-12 storage scope): bounded
+ * projection for dev handoff — spacing via evaluated layout measurements,
+ * typography, assets (always empty: no image/asset nodes are admitted),
+ * prototype screen membership and deterministic per-node hints tagged
+ * with `state_revision`. Pure read: eventless, ungated, non-mutating.
+ * Caps: measurements ≤8192 boxes (`measurements.truncated` beyond),
+ * snippets ≤512 (`snippets_truncated` beyond); nodes/typography are
+ * bounded by the stored-node budget. `deferred` lists honest gaps — no
+ * PNG/SVG/vector encoder, no real code generation, no asset store. */
+export interface HandoffDescription{state_revision:number;title:string;canvas:{node:number;width:number;height:number};units:'document';screens:HandoffScreenInfo[];nodes:HandoffNodeInfo[];measurements:{total:number;truncated:boolean;boxes:EvaluatedBox[]};typography:{node:number;name:string;box:NodeGeometry;text:TextStyleInfo}[];assets:never[];snippets:HandoffSnippet[];snippets_total:number;snippets_truncated:boolean;deferred:string[]}
+/** `exportSlice` request: `node` must be a stored frame/component (every
+ * registered prototype screen qualifies); `scale` is an optional bounded
+ * multiplier in [0.25,4] defaulting to 1 — the engine must pick a pixel
+ * size, while output format/presets stay host-side. */
+export interface ExportSliceOptions{scale?:number}
+/** Slice identity block: evaluated source box, pixel dimensions after
+ * scale, and the raw RGBA8 format tag (no encoder exists). */
+export interface ExportSliceInfo{node:number;name:string;kind:NodeKind;state_revision:number;box:NodeGeometry;origin:{x:number;y:number};scale:number;width:number;height:number;format:'rgba8'}
+/** JSON manifest accompanying the RGBA pixels: per-node entries relative
+ * to the slice origin (document units), capped at 4096 nodes with
+ * `nodes_total`/`nodes_truncated` reporting the rest. The raster itself
+ * is never truncated. */
+export interface ExportManifest{node:number;name:string;kind:NodeKind;state_revision:number;pixel_format:'rgba8';origin:{x:number;y:number};scale:number;width:number;height:number;nodes_total:number;nodes_truncated:boolean;nodes:HandoffNodeInfo[];notes:string[]}
+export interface ExportSliceResult{slice:ExportSliceInfo;manifest:ExportManifest;pixels_b64?:string}
 /** Bounded fixed/hug/fill layout and real Prism RGBA plus variables/modes.
  * Text nodes are layout boxes only (renderable:false, fill background draws,
  * no glyphs); bindings resolve at read/render time and never bake into nodes.
@@ -368,5 +413,18 @@ export class DesignDocument{
  listComments(){return this.document.apply<{threads:CommentThread[]}>(OPS.listComments,{});}
  evaluateLayout(){return this.document.apply<{boxes:EvaluatedBox[]}>(OPS.evaluateLayout,{});}
  renderFrame(){return this.document.apply<{width:number;height:number;pixels_b64?:string}>(OPS.renderFrame,{});}
+ /** Read-only dev-handoff projection (L-12 storage scope): evaluated
+  * measurements, typography, screen membership, deterministic structural
+  * hints and the monotonic `state_revision`. Silent — no events, no
+  * journal entry, snapshot bytes unchanged. */
+ describeHandoff(){return this.document.apply<HandoffDescription>(OPS.describeHandoff,{});}
+ /** Read-only RGBA8 raster plus JSON manifest for one frame/component
+  * subtree — screen/frame membership scope (L-15). `node` must be a
+  * stored frame or component; `scale` ∈ [0.25,4] defaults to 1 and the
+  * scaled pixel count must stay within the 1,048,576-pixel output budget.
+  * Returns `pixels_b64` on JSON transports (raw RGBA on the binary
+  * sidecar for binary-capable hosts); there is no PNG/SVG encoder —
+  * per-slice format and presets are host-side. Silent and non-mutating. */
+ exportSlice(node:number,options:ExportSliceOptions={}){return this.document.apply<ExportSliceResult>(OPS.exportSlice,{node,...(options.scale===undefined?{}:{scale:options.scale})});}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}
 }
