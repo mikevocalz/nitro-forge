@@ -1,0 +1,69 @@
+   Compiling splice-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/packages/splice/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.85s
+     Running unittests src/lib.rs (target/debug/deps/splice_engine-4685ec9f0971e53b)
+
+running 55 tests
+test tests::events_emitted ... ok
+test tests::clip_mix_defaults_are_legacy_bytes ... ok
+test annotations::tests::loop_range ... ok
+test annotations::tests::markers_stay_put_through_ripples ... ok
+test tests::duration_and_timeline_and_render_plan ... ok
+test tests::huge_positions_are_out_of_bounds ... ok
+test annotations::tests::markers_add_update_remove_sorted ... ok
+test tests::ids_monotonic_across_ops ... ok
+test tests::add_clip_validates_and_appends ... ok
+test tests::batch_is_all_or_nothing_and_one_undo_step ... ok
+test tests::new_defaults ... ok
+test tests::move_clip_overlap ... ok
+test tests::read_only_ops_record_no_undo ... ok
+test tests::clip_mix_survives_structural_ops ... ok
+test tests::restore_rejects_an_inconsistent_timeline ... ok
+test tests::restore_rejects_garbage ... ok
+test tests::clip_mix_undo_snapshot_and_hostile_restore ... ok
+test tests::roll_back_to_the_first_media_frame_is_accepted ... ok
+test tests::set_speed ... ok
+test tests::source_lifecycle ... ok
+test tests::set_clip_mix_patch_bounds_and_noop ... ok
+test tests::snapshot_restore_describe_equality ... ok
+test tests::snapshot_carries_flags_markers_transitions_and_loop ... ok
+test tests::speed_keys_footprint_and_split ... ok
+test tests::speed_keys_add_clip_batch_and_transition ... ok
+test tests::speed_keys_trim_move_ripple ... ok
+test tests::task_batch_op_is_cancellable_and_reports_progress ... ok
+test tests::track_lifecycle ... ok
+test tests::unchanged_batch_records_nothing ... ok
+test tests::speed_keys_roll_slip_slide_ripple_trim ... ok
+test tests::unknown_op_and_bad_version ... ok
+test tests::undo_redo_chain ... ok
+test tests::trim_clip ... ok
+test tests::speed_keys_set_replace_clear_and_bounds ... ok
+test tests::split_clip ... ok
+test tests::restore_rejects_broken_snapshot_fields ... ok
+test timeline_edits::tests::insert_pushes_later_clips_and_splits_the_straddler ... ok
+test timeline_edits::tests::ripple_delete_all_tracks_refuses_to_overlap_and_skips_locked ... ok
+test timeline_edits::tests::overwrite_trims_splits_and_removes ... ok
+test timeline_edits::tests::move_across_tracks_checks_kind_and_lock ... ok
+test timeline_edits::tests::ripple_delete_closes_the_gap_in_one_undo_step ... ok
+test timeline_edits::tests::roll_moves_only_the_cut ... ok
+test track_ops::tests::rename_and_move_track ... ok
+test timeline_edits::tests::slip_changes_media_not_position ... ok
+test track_ops::tests::locked_track_refuses_clip_edits_and_removal ... ok
+test track_ops::tests::unchanged_flags_record_nothing ... ok
+test timeline_edits::tests::slide_carries_touching_neighbours ... ok
+test track_ops::tests::flags_follow_track_kind_and_are_one_undo_step ... ok
+test transitions::tests::audio_takes_cross_fade_only ... ok
+test timeline_edits::tests::ripple_trim_tail_and_head ... ok
+test transitions::tests::edits_that_break_a_cut_drop_its_transition_in_the_same_undo_step ... ok
+test transitions::tests::set_and_remove ... ok
+test track_ops::tests::render_plan_marks_hidden_muted_and_solo_tracks ... ok
+test transitions::tests::add_validates_kind_adjacency_and_handles ... ok
+test tests::speed_keys_undo_redo_snapshot_hostile_restore ... ok
+
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests splice_engine
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

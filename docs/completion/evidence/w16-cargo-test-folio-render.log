@@ -1,0 +1,53 @@
+   Compiling num-traits v0.2.19
+   Compiling zune-core v0.5.3
+   Compiling pxfm v0.1.30
+   Compiling piston-float v1.0.1
+   Compiling byteorder v1.5.0
+   Compiling pdfium-render v0.9.5
+   Compiling byteorder-lite v0.1.0
+   Compiling bytemuck v1.25.2
+   Compiling either v1.19.0
+   Compiling libloading v0.9.0
+   Compiling once_cell v1.21.4
+   Compiling vecmath v1.0.0
+   Compiling utf16string v0.2.0
+   Compiling itertools v0.15.0
+   Compiling maybe-owned v0.3.4
+   Compiling zune-jpeg v0.5.15
+   Compiling bytes v1.12.1
+   Compiling chrono v0.4.45
+   Compiling moxcms v0.8.1
+   Compiling image v0.25.10
+   Compiling folio-render v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/rust/folio-render)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 11.41s
+     Running unittests src/lib.rs (target/debug/deps/folio_render-0a1c1ef71fc4895d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/folio_render-c95f29df1fb9c2c4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/service.rs (target/debug/deps/service-359ba3c1d4482699)
+
+running 7 tests
+test bounds_and_errors_fail_closed ... ok
+test open_reports_pages_and_is_not_encrypted ... ok
+test page_info_reports_size_rotation_links ... ok
+test session_cap_is_enforced ... ok
+test search_finds_hits_with_page_and_bbox ... ok
+test text_page_returns_positioned_runs ... ok
+test render_page_png_and_raw_produce_real_pixels ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests folio_render
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,73 @@
+   Compiling draft-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/packages/draft/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.32s
+     Running unittests src/lib.rs (target/debug/deps/draft_engine-a56ec413c0581367)
+
+running 59 tests
+test tests::circular_analytic_intersections_tangents_and_directed_arcs ... ok
+test tests::circular_query_returns_actual_center_nearest_tangent_and_intersection_sources ... ok
+test tests::anchor_guides_use_real_axes_allowed_rays_and_world_tolerance ... ok
+test tests::actual_prism_rgba_degenerate_segments_and_projection_bounds ... ok
+test tests::all_admitted_linear_kinds_rank_dof_and_atomic_solved_geometry ... ok
+test tests::batch_revision_reads_reject_atomically_and_snapshots_validate_references ... ok
+test tests::dimension_angular_arc_overshoot_omits_arc_but_keeps_rays ... ok
+test tests::command_line_creates_actual_geometry_and_one_history_entry ... ok
+test tests::dimension_angular_arc_starts_at_arc_start_not_vertex ... ok
+test tests::circular_entities_locks_order_history_and_corrupt_restore_are_atomic ... ok
+test tests::circular_commands_pixels_snap_defaults_and_projection_limits ... ok
+test tests::dimension_degenerate_angle_and_hidden_dimension_render_honestly ... ok
+test tests::block_snapshots_wrapper_roundtrip_and_hostile_restore ... ok
+test tests::dimension_arrow_overshoot_at_world_budget_boundary_omits_legs ... ok
+test tests::blocks_instances_render_snaps_transform_and_single_undo ... ok
+test tests::endpoint_source_ties_and_collinear_intersection_absence_are_explicit ... ok
+test tests::dimension_orphans_on_delete_relinks_and_keeps_style_edits ... ok
+test tests::dimension_layers_locks_removal_and_matching_reader_restore ... ok
+test tests::command_grammar_layers_hatches_dimensions_and_deletes ... ok
+test tests::hatch_line_patterns_pair_coincident_crossings ... ok
+test tests::dimensions_measure_linked_geometry_and_recompute_associatively ... ok
+test tests::extended_snapshots_require_matching_readers_without_changing_legacy_or_envelope ... ok
+test tests::hatch_line_patterns_shared_edges_and_even_odd_holes ... ok
+test tests::hidden_layers_exclude_snaps_render_and_profiles ... ok
+test tests::inconsistent_rows_locked_coordinates_and_world_limits_never_publish_false_solution ... ok
+test tests::hatch_boundary_tracing_is_validated_and_hatches_are_not_associative ... ok
+test tests::legacy_snapshot_defaults_and_locked_curve_solver_scope_are_explicit ... ok
+test tests::locked_layers_reject_edits_until_unlocked_and_assignment_is_allowed ... ok
+test tests::nonlinear_apply_long_cancel_and_batch_solve ... ok
+test tests::nonlinear_converged_but_out_of_bounds_reports_unconverged_not_error ... ok
+test tests::nonlinear_distance_radius_and_report_merge_move_real_geometry ... ok
+test tests::hatches_solid_fill_and_line_patterns_render_real_clipped_pixels ... ok
+test tests::layers_crud_reserved_names_defaults_and_history_are_atomic ... ok
+test tests::nonlinear_unconverged_keeps_geometry_and_reports_honestly ... ok
+test tests::nonlinear_snapshot_wrapper_roundtrip_and_bare_restore_rejection ... ok
+test tests::layer_snapshots_wrapper_defaults_and_hostile_restore ... ok
+test tests::nonlinear_locks_reference_guards_and_snapshot_wrapper ... ok
+test tests::nonlinear_angle_concentric_and_tangent_kinds_converge ... ok
+test tests::nonlinear_unconverged_publishes_nothing_including_linear_stage ... ok
+test tests::nonlinear_segment_kinds_solve_orientation_length_and_midpoint ... ok
+test tests::hatch_layers_locks_layer_removal_and_matching_reader_restore ... ok
+test tests::profiles_chord_closes_tolerance_gap_at_large_coordinates ... ok
+test tests::paper_space_sheets_viewports_crud_validation_locks_and_history ... ok
+test tests::oversized_restore_and_cancelled_reads_preserve_document ... ok
+test tests::profiles_near_coincident_single_segment_emits_no_phantom ... ok
+test tests::profiles_negative_sweep_arc_closes_through_chord ... ok
+test tests::profiles_hidden_entities_are_excluded ... ok
+test tests::paper_space_snapshots_wrapper_roundtrip_and_hostile_restore ... ok
+test tests::profiles_junction_and_folded_loop_are_deterministic ... ok
+test tests::profiles_trace_rectangle_circle_arc_chain_and_open_chain ... ok
+test tests::snaps_are_real_finite_candidates_with_deterministic_ties ... ok
+test tests::command_snap_keeps_batch_revision_guard_and_failed_line_staging_is_atomic ... ok
+test tests::profiles_nest_deterministic_order_and_batch_guard ... ok
+test tests::resource_noop_history_and_exact_segment_locks_are_enforced ... ok
+test tests::dimension_validation_is_atomic_and_bounds_enforced ... ok
+test tests::nested_blocks_compose_transforms_and_cycles_depth_budgets_reject ... ok
+test tests::sheet_viewport_renders_model_space_y_up_like_cad ... ok
+test tests::nonlinear_work_budget_reports_unconverged_not_op_error ... ok
+test tests::sheet_render_composites_clipped_model_space_with_real_pixels ... ok
+
+test result: ok. 59 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+   Doc-tests draft_engine
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
