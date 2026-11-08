@@ -1,0 +1,36 @@
+    Blocking waiting for file lock on build directory
+   Compiling nf-color v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w20-nf-color/rust/nf-color)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 34.15s
+     Running unittests src/lib.rs (target/debug/deps/nf_color-d43fce3bffce0612)
+
+running 21 tests
+test tests::builtin_profiles_info ... ok
+test tests::hostile_profiles_rejected ... ok
+test tests::f32_transform_matches_u8 ... ok
+test tests::gray_transforms ... ok
+test tests::buffer_validation ... ok
+test tests::gamut_flags_out_of_gamut_rec2020_to_srgb ... ok
+test tests::gamut_in_gamut_is_clean ... ok
+test tests::srgb_to_srgb_near_identity ... ok
+test tests::transform_is_deterministic ... ok
+test tests::nonconforming_profiles_tolerated ... ok
+test tests::wide_gamut_dst_actually_differs ... ok
+test tests::gamut_counts_stable_across_intents ... ok
+test tests::fixture_profiles_parse ... ok
+test tests::unsupported_layouts_rejected ... ok
+test tests::srgb_to_builtins_all_intents ... ok
+test tests::transform_perf_sanity ... ok
+test tests::soft_proof_cmyk_chain ... ok
+test tests::cmyk_roundtrip ... ok
+test tests::soft_proof_rgb_chain_and_f32 ... ok
+test tests::spac_class_profile_supported_but_intent_limited ... ok
+test tests::mutated_profiles_never_panic ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+   Doc-tests nf_color
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

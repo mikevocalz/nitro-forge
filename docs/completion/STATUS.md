@@ -147,3 +147,26 @@ non-undo state). The Nitro kind boundary already carried tags 7–10; no spec
 regeneration or Rust changes were needed. Dedicated editing surfaces, native/
 device acceptance and any P10–P19 phase promotion remain open; see the ROSTER
 section of the same name for exact commands and results.
+
+## nf-color ICC provider first slice (2026-11-08, `codex/w20-nf-color`)
+
+The P07 ICC color-management decision is now executed as a host-side provider
+crate `rust/nf-color` (workspace member, same non-engine contract class as
+`nf-raw`/`folio-render`: no Journal, no snapshot, no document I/O). It wraps
+moxcms `=0.8.1` — the exact version already in `Cargo.lock` via image 0.25 —
+with the `extended_range` feature enabled for gamut measurement. v1 scope per
+the decision record: bounded ICC parsing (`MAX_PROFILE_BYTES` 8 MiB plus
+moxcms CLUT/TRC caps; hostile/mutated-profile rejection tested), built-in
+sRGB/Display-P3/Rec.2020/AdobeRGB/ProPhoto profiles, RGB/RGBA/CMYK/Gray buffer
+transforms under all four rendering intents, chained soft-proof
+(doc → proof → display), and gamut measurement by f32 out-of-range detection
+plus a round-trip delta cross-check (approximation of `cmsFLAGS_GAMUTCHECK`;
+method and thresholds are part of the `GamutReport` contract). Real ICC
+fixtures are vendored under `tests/fixtures/` with per-file provenance in
+`rust/nf-color/THIRD_PARTY_NOTICES.md`. Verified on this dev host:
+`cargo test -p nf-color` 21 pass, `cargo build --workspace` clean; evidence
+log `docs/completion/evidence/w20-cargo-test-nf-color.log`. NOT done: no
+JSON-lines host protocol, no WASM/bundle-size measurement, no ICC-aware PNG
+encode, no spot/ink model; engine crates untouched and `prism-engine` keeps
+`rgba8-straight-sRGB` as its working space. No phase or platform acceptance
+is promoted.
