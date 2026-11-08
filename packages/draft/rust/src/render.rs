@@ -11,7 +11,7 @@
 use crate::{circular, model::*};
 use ignition_core::{Command, CommandResult, Engine, EngineError, TaskContext};
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FramePayload {
@@ -30,7 +30,52 @@ const CHROME_MM: f64 = 0.25;
 fn chrome_px(ppm: f64) -> u32 {
     ((CHROME_MM * ppm).round() as u32).max(1)
 }
-/// Rasterize the full model scene (hatches, entities, dimensions) into a
+/// Project one analytic curve into a stroked Prism path. Every node,
+/// relative handle and absolute control point is checked against Prism's
+/// public limits before the path JSON is built — the same honesty rule the
+/// inline entity pass applies. Shared by authored curves and materialized
+/// block-instance curves (slice A9).
+fn curve_path(
+    geometry: &circular::Geometry,
+    color: [u8; 4],
+    width: f64,
+    origin_x: f64,
+    origin_y: f64,
+    scale: f64,
+) -> Result<Value, EngineError> {
+    let width = width * scale;
+    if !width.is_finite() || width <= 0. || width > 1e7 {
+        return Err(bad("projected circular stroke exceeds Prism limit"));
+    }
+    let mut nodes = geometry.nodes();
+    for node in &mut nodes {
+        node.x = (node.x - origin_x) * scale;
+        node.y = (node.y - origin_y) * scale;
+        if ![node.x, node.y]
+            .iter()
+            .all(|v| v.is_finite() && v.abs() <= 1e7)
+        {
+            return Err(bad("projected circular coordinate exceeds Prism limit"));
+        }
+        for handle in [&mut node.incoming, &mut node.outgoing] {
+            if let Some(handle) = handle {
+                handle[0] *= scale;
+                handle[1] *= scale;
+                if ![handle[0], handle[1], node.x + handle[0], node.y + handle[1]]
+                    .iter()
+                    .all(|v| v.is_finite() && v.abs() <= 1e7)
+                {
+                    return Err(bad("projected circular handle exceeds Prism limit"));
+                }
+            }
+        }
+    }
+    Ok(
+        json!({"path":{"subpaths":[{"closed":geometry.closed,"nodes":nodes}]},"stroke":{"paint":{"type":"solid","color":color},"width":width,"cap":"butt"}}),
+    )
+}
+/// Rasterize the full model scene (hatches, entities, block instances,
+/// dimensions) into a
 /// `width`x`height` straight-RGBA buffer through an ephemeral Prism scene.
 /// `(origin_x,origin_y,scale)` is the world→pixel transform shared by every
 /// path builder; projected-coordinate checks reject unsupported extents
@@ -51,7 +96,9 @@ fn rasterize(
             ctx.checkpoint()?
         }
         if let Some(seg) = s.segments.get(id) {
-            if !seg.visible || !s.layer_visible(seg.layer) {
+            // Block members are definition geometry (slice A9): they draw
+            // only through transformed inserts below, never directly.
+            if seg.block != 0 || !seg.visible || !s.layer_visible(seg.layer) {
                 continue;
             }
             let a = s.point(seg.a)?;
@@ -89,44 +136,48 @@ fn rasterize(
                     .ok_or_else(|| bad("ordered circular entity missing"))?;
                 (a.color, a.width)
             };
-            let width = width * scale;
-            if !width.is_finite() || width <= 0. || width > 1e7 {
-                return Err(bad("projected circular stroke exceeds Prism limit"));
+            paths.push(curve_path(
+                geometry, color, width, origin_x, origin_y, scale,
+            )?);
+        }
+    }
+    // Block instances (slice A9): materialized world-space primitives drawn
+    // after the ordered entity pass and before dimension annotations.
+    for v in crate::blocks::expand(s)? {
+        if let Some(ctx) = ctx {
+            ctx.checkpoint()?
+        }
+        if let Some((a, b)) = v.segment {
+            let (x1, y1, x2, y2, width) = (
+                (a.0 - origin_x) * scale,
+                (a.1 - origin_y) * scale,
+                (b.0 - origin_x) * scale,
+                (b.1 - origin_y) * scale,
+                v.width * scale,
+            );
+            if ![x1, y1, x2, y2, width]
+                .iter()
+                .all(|v| v.is_finite() && v.abs() <= 1e7)
+                || width <= 0.
+            {
+                return Err(bad(
+                    "projected block geometry exceeds Prism public coordinate/stroke limits",
+                ));
             }
-            let mut nodes = geometry.nodes();
-            for node in &mut nodes {
-                node.x = (node.x - origin_x) * scale;
-                node.y = (node.y - origin_y) * scale;
-                if ![node.x, node.y]
-                    .iter()
-                    .all(|v| v.is_finite() && v.abs() <= 1e7)
-                {
-                    return Err(bad("projected circular coordinate exceeds Prism limit"));
-                }
-                for handle in [&mut node.incoming, &mut node.outgoing] {
-                    if let Some(handle) = handle {
-                        handle[0] *= scale;
-                        handle[1] *= scale;
-                        if ![handle[0], handle[1], node.x + handle[0], node.y + handle[1]]
-                            .iter()
-                            .all(|v| v.is_finite() && v.abs() <= 1e7)
-                        {
-                            return Err(bad("projected circular handle exceeds Prism limit"));
-                        }
-                    }
-                }
+            if x1 == x2 && y1 == y2 {
+                continue;
             }
-            paths.push(json!({"path":{"subpaths":[{"closed":geometry.closed,"nodes":nodes}]},"stroke":{"paint":{"type":"solid","color":color},"width":width,"cap":"butt"}}));
+            paths.push(json!({"path":{"subpaths":[{"closed":false,"nodes":[{"x":x1,"y":y1},{"x":x2,"y":y2}]}]},"stroke":{"paint":{"type":"solid","color":v.color},"width":width,"cap":"butt"}}));
+        } else if let Some(geometry) = &v.curve {
+            paths.push(curve_path(
+                geometry, v.color, v.width, origin_x, origin_y, scale,
+            )?);
         }
     }
     // Dimension annotations composite above entity strokes; orphaned or
     // hidden dimensions emit nothing (see dimensions::render).
     paths.extend(crate::dimensions::render(
-        s,
-        origin_x,
-        origin_y,
-        scale,
-        ctx,
+        s, origin_x, origin_y, scale, ctx,
     )?);
     // Validate the entire projected scene before constructing Prism/output allocations.
     let mut prism = prism_engine::PrismEngine::new(width, height);
@@ -146,7 +197,16 @@ fn rasterize(
 }
 /// Source-over composite of a straight-RGBA sprite onto `dst` at integer
 /// offset `(dx,dy)`; pixels outside `dst` are clipped by the canvas bounds.
-fn composite_over(dst: &mut [u8], dw: u32, dh: u32, src: &[u8], sw: u32, sh: u32, dx: u32, dy: u32) {
+fn composite_over(
+    dst: &mut [u8],
+    dw: u32,
+    dh: u32,
+    src: &[u8],
+    sw: u32,
+    sh: u32,
+    dx: u32,
+    dy: u32,
+) {
     let (sw, sh) = (sw as usize, sh as usize);
     let (dw, dh) = (dw as usize, dh as usize);
     for y in 0..sh {
@@ -171,11 +231,10 @@ fn composite_over(dst: &mut [u8], dw: u32, dh: u32, src: &[u8], sw: u32, sh: u32
                 continue;
             }
             for c in 0..3 {
-                dst[di + c] = ((f64::from(src[si + c]) * sa
-                    + f64::from(dst[di + c]) * da * (1. - sa))
-                    / oa)
-                    .round()
-                    .clamp(0., 255.) as u8;
+                dst[di + c] =
+                    ((f64::from(src[si + c]) * sa + f64::from(dst[di + c]) * da * (1. - sa)) / oa)
+                        .round()
+                        .clamp(0., 255.) as u8;
             }
             dst[di + 3] = (oa * 255.).round().clamp(0., 255.) as u8;
         }
@@ -196,8 +255,7 @@ fn fill_rect(buf: &mut [u8], w: u32, h: u32, x0: u32, y0: u32, x1: u32, y1: u32,
                 continue;
             }
             for c in 0..3 {
-                buf[i + c] = ((f64::from(color[c]) * sa
-                    + f64::from(buf[i + c]) * da * (1. - sa))
+                buf[i + c] = ((f64::from(color[c]) * sa + f64::from(buf[i + c]) * da * (1. - sa))
                     / oa)
                     .round()
                     .clamp(0., 255.) as u8;
@@ -240,12 +298,7 @@ fn sheet_pixels(
     let ppm = dpi / 25.4;
     let px = |mm: f64| (mm * ppm).round();
     let (width, height) = (px(sheet.width), px(sheet.height));
-    if width < 1.
-        || height < 1.
-        || width > 4096.
-        || height > 4096.
-        || width * height > 1_048_576.
-    {
+    if width < 1. || height < 1. || width > 4096. || height > 4096. || width * height > 1_048_576. {
         return Err(bad("sheet pixel dimensions exceed render budget"));
     }
     let (width, height) = (width as u32, height as u32);
@@ -317,10 +370,7 @@ fn sheet_pixels(
         }
         // The border must hug the composited sprite exactly: both edges are
         // the rounded sprite origin plus its rounded pixel extent.
-        let (bx, by) = (
-            vx0.round().max(0.) as u32,
-            vy0.round().max(0.) as u32,
-        );
+        let (bx, by) = (vx0.round().max(0.) as u32, vy0.round().max(0.) as u32);
         composite_over(&mut buf, width, height, &pixels, vw, vh, bx, by);
         stroke_rect(
             &mut buf,
@@ -343,9 +393,7 @@ pub fn render(
 ) -> Result<CommandResult, EngineError> {
     let payload: FramePayload = serde_json::from_value(cmd.payload.clone())?;
     if let Some(sheet_id) = payload.sheet_id {
-        if payload
-            .width
-            .is_some()
+        if payload.width.is_some()
             || payload.height.is_some()
             || payload.origin_x.is_some()
             || payload.origin_y.is_some()
@@ -374,7 +422,11 @@ pub fn render(
         payload.scale,
     ) {
         (Some(w), Some(h), Some(x), Some(y), Some(sc)) => (w, h, x, y, sc),
-        _ => return Err(bad("world viewport requires width,height,origin_x,origin_y,scale")),
+        _ => {
+            return Err(bad(
+                "world viewport requires width,height,origin_x,origin_y,scale",
+            ))
+        }
     };
     if payload.dpi.is_some() {
         return Err(bad("dpi requires sheet_id"));

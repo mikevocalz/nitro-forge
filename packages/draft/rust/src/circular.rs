@@ -212,10 +212,12 @@ impl Geometry {
 }
 pub fn geometries(s: &State) -> Vec<Geometry> {
     let mut out = Vec::new();
+    // Block members (slice A9) are definition geometry: they never draw or
+    // snap directly — only transformed insert instances do (see `blocks`).
     for c in s
         .circles
         .values()
-        .filter(|c| c.visible && s.layer_visible(c.layer))
+        .filter(|c| c.visible && c.block == 0 && s.layer_visible(c.layer))
     {
         let p = &s.points[&c.center];
         out.push(Geometry {
@@ -230,7 +232,7 @@ pub fn geometries(s: &State) -> Vec<Geometry> {
     for a in s
         .arcs
         .values()
-        .filter(|a| a.visible && s.layer_visible(a.layer))
+        .filter(|a| a.visible && a.block == 0 && s.layer_visible(a.layer))
     {
         let p = &s.points[&a.center];
         out.push(Geometry {

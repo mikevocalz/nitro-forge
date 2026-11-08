@@ -28,6 +28,8 @@ export const DRAFT_COMMAND_COMPLETIONS=[
  {id:'dim-linear',label:'DIM LINEAR a b x|y',replacement:'DIM LINEAR '},{id:'dim-aligned',label:'DIM ALIGNED a b',replacement:'DIM ALIGNED '},
  {id:'dim-angular',label:'DIM ANGULAR vertex first second',replacement:'DIM ANGULAR '},{id:'dim-radial',label:'DIM RADIAL entity',replacement:'DIM RADIAL '},
  {id:'dim-diameter',label:'DIM DIAMETER entity',replacement:'DIM DIAMETER '},{id:'delete-dimension',label:'DELETE DIMENSION id',replacement:'DELETE DIMENSION '},
+ {id:'block-new',label:'BLOCK NEW name',replacement:'BLOCK NEW '},{id:'block-delete',label:'BLOCK DELETE id',replacement:'BLOCK DELETE '},
+ {id:'insert',label:'INSERT blockId x y [scale] [rotationDeg]',replacement:'INSERT '},{id:'delete-insert',label:'DELETE INSERT id',replacement:'DELETE INSERT '},
 ] as const;
 /** Errors reject so the canonical editor retains its draft; no simulated geometry or optimistic history. */
 export function bindDraftingCommandLine(document:Pick<DraftDocument,'executeCommand'>,host:DraftCommandHost):DraftCommandBinding{

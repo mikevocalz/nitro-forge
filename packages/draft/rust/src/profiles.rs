@@ -104,9 +104,10 @@ fn segment_moments(p0: XY, p1: XY) -> (f64, f64, f64) {
 /// the entered-end direction; reversing a path negates every line integral.
 fn moments(e: &Edge, entered: u8) -> (f64, f64, f64) {
     match e.kind {
-        Kind::Segment { a, b } => {
-            segment_moments(if entered == 0 { a } else { b }, if entered == 0 { b } else { a })
-        }
+        Kind::Segment { a, b } => segment_moments(
+            if entered == 0 { a } else { b },
+            if entered == 0 { b } else { a },
+        ),
         Kind::Arc { g } | Kind::Closed { g } => {
             let (a2, x2, y2) = curve_moments(&g);
             if entered == 1 {
@@ -161,7 +162,10 @@ fn edge_bounds(e: &Edge) -> (f64, f64, f64, f64) {
 /// `only` restricts tracing to an explicit entity-id set (hatch boundaries)
 /// and ignores visibility flags, since the caller references entities
 /// directly; `None` is the `findProfiles` behavior (visible entities only).
-fn build(s: &State, only: Option<&std::collections::BTreeSet<u64>>) -> Result<Vec<Edge>, EngineError> {
+fn build(
+    s: &State,
+    only: Option<&std::collections::BTreeSet<u64>>,
+) -> Result<Vec<Edge>, EngineError> {
     let mut edges = Vec::new();
     for (ord, id) in s.order.iter().enumerate() {
         if let Some(set) = only {
@@ -170,7 +174,9 @@ fn build(s: &State, only: Option<&std::collections::BTreeSet<u64>>) -> Result<Ve
             }
         }
         if let Some(seg) = s.segments.get(id) {
-            if only.is_none() && (!seg.visible || !s.layer_visible(seg.layer)) {
+            // Block members are definition geometry (slice A9): findProfiles
+            // never traces them; explicit hatch `boundary_ids` still resolve.
+            if only.is_none() && (!seg.visible || !s.layer_visible(seg.layer) || seg.block != 0) {
                 continue;
             }
             let a = s.point(seg.a)?;
@@ -186,7 +192,7 @@ fn build(s: &State, only: Option<&std::collections::BTreeSet<u64>>) -> Result<Ve
                 open: true,
             });
         } else if let Some(c) = s.circles.get(id) {
-            if only.is_none() && (!c.visible || !s.layer_visible(c.layer)) {
+            if only.is_none() && (!c.visible || !s.layer_visible(c.layer) || c.block != 0) {
                 continue;
             }
             let p = s.point(c.center)?;
@@ -208,7 +214,7 @@ fn build(s: &State, only: Option<&std::collections::BTreeSet<u64>>) -> Result<Ve
                 open: false,
             });
         } else if let Some(a) = s.arcs.get(id) {
-            if only.is_none() && (!a.visible || !s.layer_visible(a.layer)) {
+            if only.is_none() && (!a.visible || !s.layer_visible(a.layer) || a.block != 0) {
                 continue;
             }
             let p = s.point(a.center)?;
@@ -600,10 +606,7 @@ pub fn boundary(s: &State, ids: &[u64], tolerance: f64) -> Result<Vec<Vec<XY>>, 
         return Err(bad("duplicate hatch boundary id"));
     }
     for id in &set {
-        if !s.segments.contains_key(id)
-            && !s.circles.contains_key(id)
-            && !s.arcs.contains_key(id)
-        {
+        if !s.segments.contains_key(id) && !s.circles.contains_key(id) && !s.arcs.contains_key(id) {
             return Err(bad(
                 "hatch boundary requires existing segment, circle or arc ids",
             ));
