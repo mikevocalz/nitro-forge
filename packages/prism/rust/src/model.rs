@@ -537,6 +537,10 @@ pub struct DocWire {
     /// Absent in snapshots written before document colors existed.
     #[serde(default)]
     pub colors: crate::colors::DocColors,
+    /// Document-level brush presets; absent in snapshots written before the
+    /// brush ops existed (restores as empty).
+    #[serde(default)]
+    pub brushes: Vec<crate::stroke::Brush>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

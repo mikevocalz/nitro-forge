@@ -1328,3 +1328,279 @@ fn duplicate_layer_locked_and_rejects() {
     rejects(&mut e, "duplicateLayer", json!({"id": l, "name": 5}), ErrorCode::InvalidCommand);
     rejects(&mut e, "duplicateLayer", json!({}), ErrorCode::InvalidCommand);
 }
+
+// -- brush / stroke ops (P06) -------------------------------------------------
+
+fn stroke_samples(n: usize, x0: f64, y: f64, dx: f64) -> Value {
+    json!(
+        (0..n)
+            .map(|i| json!({"t": i as f64 * 0.01, "x": x0 + i as f64 * dx, "y": y}))
+            .collect::<Vec<_>>()
+    )
+}
+
+#[test]
+fn brush_crud_undo_and_snapshot() {
+    let mut e = eng(8, 8);
+    let out = one_step(&mut e, "addBrush", json!({"name": "Ink", "size": 12.0, "color": [10, 20, 30, 255]}));
+    let bid = out["brush_id"].as_u64().unwrap();
+    let listed = run(&mut e, "listBrushes", json!({}));
+    assert_eq!(listed["brushes"].as_array().unwrap().len(), 1);
+    assert_eq!(listed["brushes"][0]["size"], 12.0);
+    // describe carries the brush table.
+    assert_eq!(describe(&mut e)["brushes"].as_array().unwrap().len(), 1);
+    // Identical setBrush is a no-op: no undo, no event.
+    let depth = e.journal.undo_len();
+    let r = e.apply(Command::new("setBrush", json!({"id": bid, "size": 12.0}))).unwrap();
+    assert_eq!(r.data["changed"], false);
+    assert!(r.events.is_empty());
+    assert_eq!(e.journal.undo_len(), depth);
+    one_step(&mut e, "setBrush", json!({"id": bid, "size": 30.0, "taper": {"start": 0.1, "end": 0.1}}));
+    // Snapshot round-trip keeps brushes.
+    let snap = e.snapshot().unwrap();
+    let mut e2 = eng(1, 1);
+    e2.restore(&snap).unwrap();
+    assert_eq!(describe(&mut e2)["brushes"].as_array().unwrap().len(), 1);
+    assert_eq!(describe(&mut e2)["brushes"][0]["size"], 30.0);
+    // removeBrush + undo restores it.
+    one_step(&mut e, "removeBrush", json!({"id": bid}));
+    rejects(&mut e, "removeBrush", json!({"id": bid}), ErrorCode::NotFound);
+    rejects(&mut e, "setBrush", json!({"id": 4242, "size": 5.0}), ErrorCode::NotFound);
+    rejects(&mut e, "addBrush", json!({"size": -1.0}), ErrorCode::Validation);
+    rejects(&mut e, "addBrush", json!({"taper": {"start": 0.7, "end": 0.7}}), ErrorCode::Validation);
+}
+
+#[test]
+fn brush_cap_enforced() {
+    let mut e = eng(4, 4);
+    for i in 0..64 {
+        run(&mut e, "addBrush", json!({"name": format!("b{i}")}));
+    }
+    rejects(&mut e, "addBrush", json!({}), ErrorCode::Validation);
+}
+
+#[test]
+fn model_stroke_is_read_only_and_deterministic() {
+    let mut e = eng(8, 8);
+    let depth = e.journal.undo_len();
+    let p = json!({"samples": stroke_samples(12, 1.0, 4.0, 0.5), "predict": {"steps": 4}});
+    let r1 = e.apply(Command::new("modelStroke", p.clone())).unwrap();
+    let r2 = e.apply(Command::new("modelStroke", p)).unwrap();
+    assert_eq!(r1.data, r2.data);
+    let modeled = r1.data["modeled"].as_array().unwrap();
+    assert!(modeled.len() > 12, "upsampling expected: {}", modeled.len());
+    assert_eq!(r1.data["predicted"].as_array().unwrap().len(), 4);
+    assert!(modeled.iter().all(|m| m["segment"] == 0));
+    // Read-only: no undo entry, no events, describe unchanged.
+    assert!(r1.events.is_empty());
+    assert_eq!(e.journal.undo_len(), depth);
+    rejects(&mut e, "modelStroke", json!({"samples": []}), ErrorCode::Validation);
+    rejects(
+        &mut e,
+        "modelStroke",
+        json!({"samples": (0..4097).map(|i| json!({"t": i as f64 * 0.001, "x": i as f64, "y": 0.0})).collect::<Vec<_>>()}),
+        ErrorCode::Validation,
+    );
+    rejects(
+        &mut e,
+        "modelStroke",
+        json!({"samples": [{"t": 0.02, "x": 1.0, "y": 1.0}, {"t": 0.01, "x": 2.0, "y": 1.0}]}),
+        ErrorCode::Validation,
+    );
+}
+
+#[test]
+fn paint_stroke_commits_and_undoes() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let bid = run(&mut e, "addBrush", json!({"size": 8.0, "color": [200, 10, 10, 255], "spacing": 0.5}))["brush_id"]
+        .as_u64()
+        .unwrap();
+    let samples = stroke_samples(10, 2.0, 8.0, 1.0);
+    // Dry run: reports dabs, changes nothing.
+    let dry = run(&mut e, "paintStroke", json!({"id": l, "brush_id": bid, "samples": samples.clone(), "commit": false}));
+    assert!(dry["dabs"].as_u64().unwrap() > 0);
+    assert_eq!(flat(&mut e)[3], 0, "dry run must not paint");
+    let depth = e.journal.undo_len();
+    let out = one_step(
+        &mut e,
+        "paintStroke",
+        json!({"id": l, "brush_id": bid, "samples": samples.clone()}),
+    );
+    assert!(out["dabs"].as_u64().unwrap() > 0);
+    // Painted pixels exist near the stroke line.
+    let buf = flat(&mut e);
+    let mut painted = 0;
+    for y in 0..16usize {
+        for x in 0..16usize {
+            if px(&buf, 16, x, y)[3] > 0 {
+                painted += 1;
+            }
+        }
+    }
+    assert!(painted > 10, "expected painted coverage, got {painted}");
+    // Sample near the middle of the stroke.
+    let mid = run(&mut e, "samplePixels", json!({"x": 6.5, "y": 8.5}));
+    assert!(mid["a"].as_u64().unwrap() > 0);
+    assert_eq!(e.journal.undo_len(), depth + 1);
+}
+
+#[test]
+fn paint_stroke_inline_brush_and_rejections() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let samples = stroke_samples(4, 1.0, 2.0, 1.0);
+    // Inline brush works without any stored brush.
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 255, 255]}, "samples": samples.clone()}));
+    let buf = flat(&mut e);
+    assert!(px(&buf, 16, 2, 2)[2] > 0);
+    // A shape layer on top rejects strokes.
+    let s = id(&run(&mut e, "addShape", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "fill": [0,0,0,255]}})));
+    // Rejections.
+    rejects(&mut e, "paintStroke", json!({"id": l, "samples": samples.clone()}), ErrorCode::InvalidCommand);
+    rejects(
+        &mut e,
+        "paintStroke",
+        json!({"id": l, "brush_id": 1, "brush": {"size": 4.0}, "samples": samples.clone()}),
+        ErrorCode::InvalidCommand,
+    );
+    rejects(&mut e, "paintStroke", json!({"id": l, "brush_id": 999, "samples": samples.clone()}), ErrorCode::NotFound);
+    rejects(&mut e, "paintStroke", json!({"id": s, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+    rejects(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": []}), ErrorCode::Validation);
+    rejects(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": samples.clone(), "commit": "yes"}), ErrorCode::InvalidCommand);
+    // Locked layer rejects.
+    run(&mut e, "setLayerLocked", json!({"id": l, "locked": true}));
+    rejects(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+}
+
+#[test]
+fn paint_stroke_taper_and_dynamics_change_output() {
+    let mut e = eng(32, 32);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // Same stroke, plain vs tapered brush → different painted pixel counts.
+    let samples = stroke_samples(20, 2.0, 16.0, 1.4);
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 10.0, "color": [0,0,0,255], "spacing": 0.4}, "samples": samples.clone()}));
+    let plain = flat(&mut e);
+    let count = |b: &[u8]| b.chunks_exact(4).filter(|c| c[3] > 0).count();
+    let n_plain = count(&plain);
+    // Undo, then paint with taper.
+    e.undo().unwrap();
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 10.0, "color": [0,0,0,255], "spacing": 0.4, "taper": {"start": 0.3, "end": 0.3}}, "samples": samples}));
+    let tapered = flat(&mut e);
+    let n_tapered = count(&tapered);
+    assert!(n_tapered < n_plain, "taper should reduce coverage: {n_tapered} vs {n_plain}");
+}
+
+#[test]
+fn paint_stroke_maps_canvas_samples_into_transformed_layer() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // local → canvas: x' = 2x + 8, y' = 2y. A canvas stroke at (10, 8)
+    // lands on local texel (1, 4); stamping it untransformed would write
+    // local (10, 8) → canvas (28, 16), fully off-canvas.
+    run(&mut e, "setLayerTransform", json!({"id": l, "transform": {"tx": 8, "sx": 2, "sy": 2}}));
+    let samples = stroke_samples(5, 9.0, 8.0, 0.5);
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 4.0, "color": [0, 0, 255, 255], "spacing": 0.5}, "samples": samples}));
+    let f = flat(&mut e);
+    assert!(px(&f, 16, 10, 8)[3] > 0, "stroke must render at its canvas position");
+    assert_eq!(px(&f, 16, 10, 8)[2], 255, "blue channel dominates");
+    // The layer buffer holds the dab in local coordinates.
+    let d = describe(&mut e);
+    let raw = b64::decode(layer(&d, l)["content"]["pixels_b64"].as_str().unwrap()).unwrap();
+    assert!(px(&raw, 16, 1, 4)[3] > 0, "local texel (1,4) carries the stroke");
+    // Undo restores the empty layer through the local-space pixel region.
+    assert!(e.undo().unwrap());
+    assert!(flat(&mut e).iter().all(|&v| v == 0));
+}
+
+#[test]
+fn paint_stroke_is_gated_by_pixel_selection() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "setLayerTransform", json!({"id": l, "transform": {"tx": 4}}));
+    // Canvas selection x < 10; canvas stroke x 8..12 at y 8 → local 4..8.
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 10, "h": 16}}));
+    let samples = stroke_samples(5, 8.0, 8.0, 1.0);
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 255, 255], "spacing": 0.5}, "samples": samples}));
+    let f = flat(&mut e);
+    assert!(px(&f, 16, 8, 8)[3] > 0, "inside the selection paints");
+    assert!(px(&f, 16, 9, 8)[3] > 0);
+    assert_eq!(px(&f, 16, 11, 8)[3], 0, "outside the selection stays untouched");
+    assert_eq!(px(&f, 16, 12, 8)[3], 0);
+}
+
+#[test]
+fn paint_stroke_transparent_stroke_is_eventless() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let samples = stroke_samples(4, 1.0, 2.0, 1.0);
+    for brush in [
+        json!({"size": 6.0, "color": [0, 0, 255, 0]}),   // transparent color
+        json!({"size": 6.0, "color": [0, 0, 255, 255], "opacity": 0.0}), // zero alpha
+    ] {
+        let before = flat(&mut e);
+        let depth = e.journal.undo_len();
+        let r = e.apply(Command::new("paintStroke", json!({"id": l, "brush": brush, "samples": samples.clone()}))).unwrap();
+        assert!(r.events.is_empty(), "transparent stroke must not emit document:changed");
+        assert!(r.data["dabs"].as_u64().unwrap() > 0);
+        assert_eq!(e.journal.undo_len(), depth, "no undo entry for a no-op stroke");
+        assert_eq!(flat(&mut e), before);
+    }
+}
+
+#[test]
+fn paint_stroke_rejects_over_budget_pixel_work() {
+    let mut e = eng(1024, 1024);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // A stroke snaking inside the canvas with smoothing off: ~300 legs of
+    // ~800 px request → the spring modeler still cuts corners, leaving
+    // ~30k px of modeled arc. At spacing 0.01·4096 ≈ 41 px that is ~700+
+    // dabs, each a 4096px brush covering the whole 1024×1024 canvas after
+    // clipping → >700M stamp visits, over the 2^28 budget. Only dabs
+    // intersecting the destination count, so the path must stay on the
+    // canvas. Rejected before any mutation.
+    let samples = Value::Array(
+        (0..300)
+            .map(|i| {
+                json!({
+                    "t": i as f64 * 0.02,
+                    "x": i as f64 * 0.1,
+                    "y": if i % 2 == 0 { 100.0 } else { 900.0 },
+                })
+            })
+            .collect(),
+    );
+    let before = describe(&mut e);
+    let depth = e.journal.undo_len();
+    let err = e.apply(Command::new("paintStroke", json!({
+        "id": l,
+        "brush": {"size": 4096.0, "spacing": 0.01, "color": [0, 0, 0, 255]},
+        "params": {"smoothing": false, "drag_constant": 8.0},
+        "samples": samples,
+    }))).expect_err("over-budget stroke must fail");
+    assert_eq!(err.code, ErrorCode::Validation);
+    assert_eq!(describe(&mut e), before);
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn snapshot_rejects_duplicate_or_colliding_brush_ids() {
+    let mut e = eng(4, 4);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "addBrush", json!({"name": "a"}));
+    run(&mut e, "addBrush", json!({"name": "b"}));
+    let snap = e.snapshot().unwrap();
+    let mut r = eng(1, 1);
+    // Duplicate brush ids.
+    let mut wire: Value = serde_json::from_slice(ignition_core::decode_envelope(&snap).unwrap().1).unwrap();
+    wire["brushes"][1]["id"] = wire["brushes"][0]["id"].clone();
+    let bad = ignition_core::encode_envelope(&serde_json::to_vec(&wire).unwrap());
+    assert_eq!(r.restore(&bad).unwrap_err().code, ErrorCode::Serialization);
+    // Brush id colliding with a layer id (shared id space).
+    let mut wire: Value = serde_json::from_slice(ignition_core::decode_envelope(&snap).unwrap().1).unwrap();
+    wire["brushes"][0]["id"] = json!(l);
+    let bad = ignition_core::encode_envelope(&serde_json::to_vec(&wire).unwrap());
+    assert_eq!(r.restore(&bad).unwrap_err().code, ErrorCode::Serialization);
+    // The untouched snapshot still restores.
+    r.restore(&snap).unwrap();
+}

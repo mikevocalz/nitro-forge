@@ -134,14 +134,78 @@ visibility and lock stay allowed.
 | `rasterizeLayer` | `{id}` | `{ok}` | bakes content and transform into raster; descendants removed; mask, opacity, blend kept |
 | `floodFill` | `{id,x,y,color,tolerance?,contiguous?,sample?}` | `{ok,filled}` | raster target; canvas region and pixel selection are bilinearly pulled back through layer/ancestor transforms; each local texel blends once; filled counts local texels; empty local coverage records nothing |
 
+### Brush and stroke (P06)
+
+The document gains a `brushes` table (≤ 64 presets, shared id counter with
+layers/artboards, serialized in snapshots and `describe`). A brush is
+`{id,name,size,opacity,flow,spacing,hardness,color,dynamics?,taper?}`:
+`size` is the dab diameter in px (0.1..=4096, default 20), `opacity`/`flow`
+are 0..=1 alpha multipliers (defaults 1), `spacing` is the dab spacing as a
+fraction of `size` (0..=1, default 0.25; 0 places a dab at every modeled
+point), `hardness` is the full-coverage fraction of the dab radius
+(0..=1, default 0.8), `color` is RGBA u8, `dynamics` maps normalized
+pressure/velocity/tilt to size/opacity/flow multipliers
+(`{size_pressure,size_velocity,size_tilt,opacity_pressure,opacity_velocity,flow_pressure,flow_velocity}`,
+each −1..=1, 0 disables; velocity saturates at 10 brush diameters/second,
+tilt normalizes over 0..=π/2 rad) and `taper` `{start,end}` ramps the dab
+envelope 0→1 over the first arc-length fraction and 1→0 over the last
+(`start+end` ≤ 1).
+
+Stroke samples are `{t,x,y,pressure?,tilt?,orientation?,contact?}`: `t` in
+**seconds**, `x`/`y` canvas px, `tilt`/`orientation` in radians (wrapped
+into `[0, 2π)` at parse — any finite non-negative value is accepted, so a
+hostile `1e15` cannot hang the angle interpolation),
+`contact:false` lifts the pen and splits the stroke into segments. The
+modeler (a spec-level reimplementation of the google/ink
+ink-stroke-modeler behavior — no code copied, no dependency) runs
+speed-adaptive wobble smoothing → a damped-spring position model with
+end-of-stroke convergence → stylus-state interpolation back onto the raw
+polyline. `modelStroke` params: `smoothing` (default true),
+`smoothing_timeout` (s, default 0.04), `smoothing_speed_floor`/`_ceiling`
+(px/s, defaults 2/30), `min_output_rate` (Hz, default 240),
+`spring_mass_constant` (default 11/32400), `drag_constant` (per-second
+ratio, default 72), `end_of_stroke_stopping_distance` (px, default 0.01),
+`end_of_stroke_max_iterations` (default 20). `predict` is `false`/absent,
+`true` (defaults), or `{steps:1..=64 (default 8), interval? (s, default
+1/min_output_rate)}` of velocity lookahead. Budgets: ≤ 4096 samples per
+op, ≤ 32768 modeled points per stroke, ≤ 262144 dabs per stroke, ≤ 2^28
+dab-stamp pixel visits per `paintStroke` (every pixel inside a dab's
+clipped bounding box counts once per dab, so overlapping dabs multiply;
+checked before any mutation → `Validation`), deterministic across
+targets.
+
+| op | payload | data | notes |
+|---|---|---|---|
+| `modelStroke` | `{samples, params?, predict?}` | `{modeled:[{t,x,y,pressure,tilt,orientation,segment,speed}], predicted:[…]}` | pure, read-only, no journal/event; pressure/tilt/orientation are `null` when unobserved |
+| `addBrush` | `{name?,size?,opacity?,flow?,spacing?,hardness?,color?,dynamics?,taper?}` | `{brush_id}` | flat fields; missing take defaults; name defaults `"Brush {id}"`; ≤64 brushes; fully validated before the id is allocated so rejections are atomic |
+| `setBrush` | `{id,…patch}` | `{ok,changed}` | partial merge; identical result → `changed:false`, no undo/event |
+| `removeBrush` | `{id}` | `{ok}` | NotFound if absent |
+| `listBrushes` | `{}` | `{brushes:[…]}` | read-only |
+| `paintStroke` | `{id, brush_id?|brush?, samples, params?, commit?}` | `{ok,dabs}` or dry-run `{dabs,bounds?}` | raster layer only, unlocked; exactly one of `brush_id`/`brush` (inline brush = addBrush fields without `id`). Samples are canvas-space: dab centers are mapped through the layer's complete transform (own + ancestors) into layer-local texels and radii scaled by its mean scale — under non-uniform scale a dab is approximated by a circle of `radius/mean_scale`. The pixel selection gates each stamped pixel via canvas→local coverage pullback, same as `floodFill`. Models samples, resolves dynamics+taper into dabs (≤262144), stamps circular anti-aliased coverage src-over within the ≤2^28 stamp-pixel budget. One pixel-region undo entry per committed stroke; `commit:false` is read-only and records nothing; empty, fully off-canvas, or fully transparent strokes return eventless with no journal entry. Dry-run `bounds` is canvas-space and absent when there are no dabs or they land off-canvas |
+
+Deferred from the P06 scope (see
+`docs/completion/reports/P-prism-brush-ink-decision.md`): erase modes
+(eraser/mask/alpha-lock brushes), timelapse stroke encoding, live in-progress
+host preview wiring, hardware stylus prediction/palm rejection (Android
+MotionEvent, PencilKit, Windows Ink), Muse surface input, and production UI
+brush panels — the engine ops exist; UI consumption is separate work.
+
 Rendering: path fills are 4×4 supersampled scanlines; strokes are
 anti-aliased with miter/round/bevel joins, butt/round/square caps and dashes
 (widths scale by the transform's mean scale). Boolean coverage combines per
 pixel (max, a·(1-b), min, xor). Normal-mode compositing keeps the original
 `src-over` arithmetic, so existing documents render byte-identically.
 
-Brush engine ops (B-15, B-16, B-29, B-33) are not here: they wait on the
-google/ink source admission (#46).
+Brush engine ops (B-15, B-16, B-29, B-33) landed after the google/ink
+source admission (#46) — see the brush/stroke section above for payloads
+and the deferred erase/timelapse/UI scope.
+
+Snapshots written by this version carry the `brushes` table. Older
+engines ignore unknown snapshot fields, so restoring such a snapshot on
+a pre-brush engine **silently drops every brush** (layers, pixels and
+selection survive); the brush table is document metadata, not geometry.
+Restoring on this engine enforces brush count/field validation and
+rejects duplicate brush ids or ids colliding with layer/artboard ids.
 
 ## tally-engine — `TallyEngine::new()`
 
