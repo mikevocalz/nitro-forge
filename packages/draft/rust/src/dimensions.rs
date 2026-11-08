@@ -185,10 +185,15 @@ fn measure_kind(s: &State, d: &Dimension) -> Result<Measured, EngineError> {
                     // arc arrowheads together — disconnected arrow tips
                     // would be worse — while the authored rays still draw.
                     let mut arc = Vec::with_capacity(n);
-                    let mut in_budget = coord(start.0) && coord(start.1);
+                    let mut in_budget =
+                        coord(start.0) && coord(start.1) && coord(end.0) && coord(end.1);
                     let mut prev = start;
                     for i in 1..=n {
-                        let angle = (ta + sweep * i as f64 / n as f64).to_radians();
+                        // Normalized t makes the final sample bit-identical
+                        // to `end`, so the arrow tip is covered by the same
+                        // budget check as every other vertex.
+                        let t = i as f64 / n as f64;
+                        let angle = (ta + sweep * t).to_radians();
                         let p = (
                             v.0 + r * angle.cos(),
                             v.1 + r * angle.sin(),
