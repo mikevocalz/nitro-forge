@@ -2066,3 +2066,34 @@ Paper space (A7): `sheets` maps safe shared-space ids to `{name,width,height,mar
 Blocks (A9): `blocks` maps safe shared-space ids to `{name,base_x,base_y}` (at most32; names 1..512 bytes unique across blocks, no reserved name) and `inserts` maps ids to `{block,parent?,name,x,y,scale,rotation_deg,visible,locked,layer?}` (at most32). A block is only a name plus a definition-space base point: membership lives on the members — segments/circles/arcs carry `block` (serde default/skip 0) and inserts carry `parent` — so definitions never hold member lists that can dangle, and `removeBlock` rejects while any entity `block`, insert target `block` or insert `parent` still references it. Block members are definition geometry, not model-space entities: they stay in `points`/`order`, remain editable and solver-visible through their shared points, but they do NOT draw in `renderFrame`, produce no snap candidates and are excluded from `findProfiles` tracing (explicit hatch `boundary_ids` may still reference them, resolved once like any entity). `findProfiles` does not trace through instances either — instance profiles are deferred. An insert places its target block's base point at `(x,y)` with uniform positive `scale` (1e-6..1e3; negative/mirror scale deferred) and `rotation_deg` (±360000) as a similarity transform `world = pos + scale*R(rotation)*(local - base)`; `x`,`y` are world coordinates when `parent` is 0 (model space) and the containing definition's local coordinates otherwise. Member entities keep their own `visible`/`layer`/style inside every instance and each insert level honors its own `visible`/`layer`, so hidden subtrees emit nothing; stroke `width` scales by the accumulated instance scale and arc `start_deg` rotates by the accumulated angle while `sweep_deg` is preserved (uniform positive scale keeps orientation). Inserts carry `layer` like entities: locked-layer inserts reject every field except `id`, locked inserts reject all except `id`/`locked`, and `removeLayer` counts insert layer references. Nesting is real but bounded: inserts may themselves be block members (`parent != 0`), transforms compose as similarities, `check_graph` rejects cyclic block graphs and chains deeper than `MAX_BLOCK_DEPTH` 8 at validation time on every mutation and hostile restore, and `expand` materializes at most `MAX_EXPANDED_PRIMITIVES` 1024 leaf primitives per read — validation runs the identical expansion so writes that would exceed the budget reject atomically rather than failing reads later. Render draws instances after the ordered entity pass and before dimension annotations; snap candidates cover transformed endpoints/midpoints/projections/intersections/centers/nearest_circle/tangents with `sources` = sorted [root insert id, member entity id] (intersections merge all participating sources). Dimensions and constraints carry no block membership of their own, so a dimension whose `points`/`entity` references resolve to block members measures the stored definition-space geometry directly — never instance-transformed coordinates — which is deterministic and honest rather than silently double-transforming; per-instance dimension placement stays deferred with the rest. Deferred honestly: block attributes, dynamic blocks, xrefs, non-uniform scale, negative/mirror scale, explode/edit-in-place, anonymous/unnamed blocks, `findProfiles` through instances and dimension/hatch/constraint block membership.
 
 Matching-reader safety: when any circle/arc exists, center/nearest_circle/tangent is enabled, any layer map entry or nonzero entity `layer` exists, any hatch exists, any dimension exists, any sheet/viewport exists, any block/insert exists, or any enabled/disabled constraint carries a slice-A5 nonlinear kind, snapshot JSON is `{kind:"draft",schema:2,document:<validated internal schema1 state>}` inside unchanged NFD1 framing. Legacy root required fields (units/points/etc.) are absent, so old readers fail rather than discard new geometry/settings. New readers accept strict Draft/schema2 wrappers or unchanged legacy state, reject unknown wrapper fields/kind/schema and reject unwrapped extended state. Empty circular maps plus false new flags retain the original legacy serialization. Describe/evaluate are current-source API state, not this persistence wrapper; native/checkpoint ordinals and global envelopes remain unchanged.
+
+## folio-render service — host-side, NOT an Engine
+
+`rust/folio-render` is a sibling read-only PDF service (pdfium via
+`pdfium-render` runtime bindings), admitted by
+`docs/completion/reports/P15-folio-render-admission.md`. It is not an
+`Engine`: no `EngineKind`, no `Command`/`Journal`, no `NFD1` snapshot, no
+mutations. It speaks the same stdin/stdout JSON-lines frame shape as
+`nf-cli` (`{"id","handle","op","payload"}` → `{"id","ok","data"|"error"}`,
+errors are `EngineError`). Document bytes cross by value (`bytes_b64`,
+≤ 64 MiB); every op is read-only. Bounds are fail-closed: ≤ 4096 pages,
+render ≤ 4096 px/side and ≤ 32 MiB decoded RGBA, query ≤ 4096 chars,
+≤ 100 000 text items, ≤ 1024 hits/links per call. All coordinates are
+finite PDF points, origin bottom-left. Platform status: macOS arm64 dev
+host RUN; all other targets NOT-RUN (see `rust/folio-render/README.md`).
+
+| Op | Payload | Returns |
+|---|---|---|
+| `open` | `{bytes_b64, password?}` | `{handle, pages, page_sizes:[{width,height}], encrypted}` |
+| `close` | `{}` (handle-scoped) | `{closed}` |
+| `renderPage` | `{page, scale?|dpi?, format?:"png"\|"raw", max_dim?}` | png: `{format,width,height,bytes_b64}`; raw: `{format,width,height,stride,bytes_b64}` (RGBA8) |
+| `textPage` | `{page}` | `{items:[{text, bbox:[x,y,w,h], font?, size?}]}` — segment-level runs; font/size from the run's first char |
+| `search` | `{query, pages?:[int]}` | `{hits:[{page, bbox, context}], truncated}` — case-insensitive substring over pdfium text search |
+| `pageInfo` | `{page}` | `{size:{width,height}, rotate, links:[{rect, uri?|dest?{page}}]}` |
+| `describe` | `{}` | service name/backend/version/bounds |
+
+`scale` (default 1.0 = 72 dpi) or `dpi` sets the render factor; the
+service additionally clamps to `max_dim` (default/hard cap 4096) and the
+32 MiB decoded budget. `search.pages` absent = every page in order.
+Encrypted documents open only with the correct `password`
+(`encrypted:true` reports the security-handler revision != unprotected).

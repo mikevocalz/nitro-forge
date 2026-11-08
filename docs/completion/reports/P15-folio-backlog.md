@@ -119,3 +119,15 @@ Define `folio-render` op surface (`renderPage`, `textPage`, `search`)
 in a sibling doc once pdfium-render is admitted — the real P15 unblock
 for K-01–05, K-14 text half, K-16 overlay, K-17 preview, K-18 follow,
 K-21.
+
+**Checkpoint 2026-11-12 (`codex/w5-folio-r`):** the service now exists.
+`rust/folio-render` implements `open`/`renderPage`/`textPage`/`search`/
+`pageInfo`/`close`/`describe` over pdfium (runtime-bound
+`libpdfium.dylib`, chromium/8138), the op contract is written into
+`docs/ENGINE_OPS.md` §folio-render service, and the TS adapter
+`@nitro-forge/folio/render` (`FolioRenderService`) plus
+`tests/render.e2e.test.ts` ship. `FOLIO_DEFERRED_OPS` no longer lists
+`renderPage`/`textPositions`. Verified on macOS arm64 only (6 Rust
+tests + 5 vitest e2e against real pdfium); every other platform remains
+NOT-RUN — K-01–05/K-14-text/K-16/K-17-preview/K-18/K-21 stay blocked on
+per-platform pdfium delivery and host wiring, not on the service design.

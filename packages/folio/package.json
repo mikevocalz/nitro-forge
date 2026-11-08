@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./office-cluster": "./src/office-cluster.ts",
+    "./render": "./src/render.ts",
     "./transfer": "./src/transfer.ts"
   },
   "scripts": {
