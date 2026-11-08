@@ -6,25 +6,26 @@ import type { AnnotSubtype, FolioDocument, FolioCommentMetadata, FolioCommentEnt
  * PDFReadAloudTransport). No React and no `@nyc-tron/*` import: plain data
  * and callbacks named after the NYC-Tron props.
  *
- * Folio has no page render op. Anything that needs pixels or glyph positions
- * (drawing a search hit or an annotation on the page, following the reading
- * position on screen) is deferred on `renderPage` / `textPositions` below;
- * the list, toolbar, thread and transport parts work from text and
- * annotation data alone.
+ * Folio has no page render op in the engine itself. Page pixels and glyph
+ * positions come from the sibling `folio-render` host service
+ * (`./render`, pdfium backend — macOS arm64 dev-host verified, see
+ * rust/folio-render/README.md); the list, toolbar, thread and transport
+ * parts still work from text and annotation data alone.
  */
 
 /**
  * Engine operations the PDF controls can express but Folio does not have.
  * Each is a DEFER: the matching NYC-Tron prop is left out or the tool is not
  * listed.
+ *
+ * `renderPage`/`textPositions` (K-04/K-06/K-18) were lifted 2026-11-12:
+ * the `folio-render` service (`src/render.ts`) now serves page pixels and
+ * positioned text runs. They are service ops, not engine `OPS`, so hosts
+ * must run the `folio-render` binary (and supply a pdfium library) to feed
+ * those props — until a host wires it, the props stay unpopulated.
  */
 /** The engine supports setAnnotationContents; the pinned comments control has no edit callback. */
-export const FOLIO_DEFERRED_OPS = {
-  /** K-04/K-06/K-18: page pixels for highlighting hits, placing marks and following the reader. */
-  renderPage: "K-04",
-  /** K-04 hit rectangles: `pageText` is lossy and carries no glyph positions. */
-  textPositions: "K-04",
-} as const;
+export const FOLIO_DEFERRED_OPS = {} as const;
 export type FolioDeferredOp = keyof typeof FOLIO_DEFERRED_OPS;
 
 export type FolioOfficeDocument = Pick<FolioDocument,

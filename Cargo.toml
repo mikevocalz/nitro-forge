@@ -5,6 +5,7 @@ members = [
     "rust/nf-cli",
     "rust/nf-sys",
     "rust/nf-raw",
+    "rust/folio-render",
     "packages/*/rust",
 ]
 
