@@ -18,8 +18,9 @@ No slice below is marked complete; this is a work list, not acceptance.
   introduce it first. New Tally mutating ops must also be added to
   `check_protection` in `packages/tally/rust/src/protection.rs`.
 - Tally formula language currently admits only `COUNTIF SUMIF SUM AVERAGE
-  MIN MAX COUNT COUNTA IF ROUND ABS CONCAT TRUE FALSE`; cross-sheet refs
-  unsupported.
+  MIN MAX COUNT COUNTA IF ROUND ABS CONCAT TRUE FALSE`; ~~cross-sheet refs
+  unsupported~~ — slice 14 landed `Sheet!A1`/`'Name'!A1:B2` qualifiers
+  (single qualifier only; 3D ranges and `Sheet!name` remain unsupported).
 
 ## P12 — Quill slice order
 
@@ -61,6 +62,13 @@ text frames/wrap layout, layout spreads/masters.
 12. Table objects (Excel Tables).
 13. Merged cells + row/column insert/delete (reuse `shift_references`).
 14. Cross-sheet formula references — late, risky evaluator change.
+    **Done (slice 14):** `Sheet!ref`/`'Quoted Name'!ref[:ref]` qualifiers
+    resolved by current sheet name (case-insensitive); `renameSheet`
+    rewrites stored qualifiers workbook-wide in one undo entry;
+    `removeSheet` leaves qualifiers at `#REF!`; cycles/memo/work bounds
+    are keyed by `(sheet, addr)`; structural band edits remap qualified
+    refs on the edited sheet and mirror `Edited!` refs on other sheets.
+    Deferred: 3D ranges, `Sheet!name`, qualified defined names.
 
 ## P14 — Pitch slice order
 

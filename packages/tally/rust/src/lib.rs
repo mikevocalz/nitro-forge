@@ -55,8 +55,12 @@
 //! * Sheet parameters (`renameSheet`/`removeSheet`/`setActive`) accept a sheet
 //!   name (case-insensitive) or a 0-based index.
 //! * Sheet names are unique case-insensitively (Excel behavior).
-//! * Formulas evaluate against the **active sheet only** — there are no
-//!   cross-sheet references.
+//! * Formulas evaluate against the whole workbook: bare references and
+//!   defined names resolve on the formula's own sheet, while
+//!   `Sheet!A1`/`'Sheet Name'!A1:B2` qualifiers (resolved by current sheet
+//!   name, case-insensitive) reach any sheet — see `formula` for the
+//!   grammar, rename/removal/cycle semantics. 3D sheet ranges are not
+//!   supported.
 //! * Read ops (`describe`, `getCell`, `getRange`, `evaluate`, `workbook`)
 //!   record no undo entries and emit no events; mutating ops emit
 //!   `document:changed`.
@@ -367,7 +371,6 @@ enum UndoEntry {
         dropped_pivots: Vec<PivotSpec>,
         dropped_tables: Vec<TableSpec>,
     },
-    RenameSheet { sheet_id: u64, prev_name: String },
     SetActive { prev: usize },
     /// `new` replaced the whole document.
     Reset { prev: Workbook },
@@ -492,14 +495,22 @@ impl TallyEngine {
     }
 
     /// Fresh per-request evaluator over one sheet, with workbook
-    /// named-range resolution enabled when `names` is nonempty.
+    /// named-range resolution enabled when `names` is nonempty. The whole
+    /// workbook is visible so `Sheet!` cross-sheet references resolve;
+    /// `index` is both the home sheet and its position in the book.
     fn evaluator_for(&self, index: usize) -> Evaluator<'_, Sheet> {
-        let sheet = &self.doc.sheets[index];
-        if self.doc.names.is_empty() {
-            Evaluator::new(sheet)
+        let book: Vec<(Option<&str>, u64, &Sheet)> = self
+            .doc
+            .sheets
+            .iter()
+            .map(|s| (Some(s.name.as_str()), s.id, s))
+            .collect();
+        let names = if self.doc.names.is_empty() {
+            None
         } else {
-            Evaluator::with_names(sheet, sheet.id, name_ops::name_table(&self.doc.names))
-        }
+            Some(name_ops::name_table(&self.doc.names))
+        };
+        Evaluator::with_book(book, index, names)
     }
 
     /// Fresh per-request evaluator over the active sheet.
@@ -729,13 +740,33 @@ impl TallyEngine {
                 "sheet name '{to}' already exists"
             )));
         }
-        let sheet_id = self.doc.sheets[idx].id;
         let prev_name = self.doc.sheets[idx].name.clone();
-        self.journal.record(UndoEntry::RenameSheet {
-            sheet_id,
-            prev_name,
+        // Sheet references in formulas are name-bound (`Sheet!A1`), so a
+        // rename must rewrite every stored qualifier across the workbook —
+        // the Excel behavior — or all cross-sheet references would strand
+        // at `#REF!`. Qualifiers that fail to lex are left alone (they
+        // evaluate to `#REF!`/`#NAME?` either way). One whole-document
+        // undo entry covers the rename and every rewritten cell.
+        let mut rewrites: Vec<(usize, String, String)> = Vec::new();
+        for (si, s) in self.doc.sheets.iter().enumerate() {
+            for (addr, cell) in &s.cells {
+                if !cell.raw.starts_with('=') {
+                    continue;
+                }
+                if let Ok(raw) = formula::rename_sheet_refs(&cell.raw, &prev_name, to) {
+                    if raw != cell.raw {
+                        rewrites.push((si, addr.clone(), raw));
+                    }
+                }
+            }
+        }
+        self.journal.record(UndoEntry::Reset {
+            prev: self.doc.clone(),
         });
         self.doc.sheets[idx].name = to.to_string();
+        for (si, addr, raw) in rewrites {
+            self.doc.sheets[si].cells.insert(addr, Cell { raw });
+        }
         Ok(Self::changed(json!({ "ok": true })))
     }
 
@@ -1264,21 +1295,6 @@ impl TallyEngine {
                 }
                 UndoEntry::AddSheet { sheet_id }
             }
-            UndoEntry::RenameSheet {
-                sheet_id,
-                prev_name,
-            } => match self.sheet_by_id_mut(sheet_id) {
-                Some(s) => {
-                    let cur = mem::replace(&mut s.name, prev_name);
-                    UndoEntry::RenameSheet {
-                        sheet_id,
-                        prev_name: cur,
-                    }
-                }
-                None => UndoEntry::SetActive {
-                    prev: self.doc.active,
-                },
-            },
             UndoEntry::SetActive { prev } => {
                 let cur = self.doc.active;
                 self.doc.active = prev.min(self.doc.sheets.len() - 1);
@@ -3412,5 +3428,195 @@ mod tests {
             .restore(&encode_envelope(&serde_json::to_vec(&doc).unwrap()))
             .unwrap_err();
         assert_eq!(err.code, ErrorCode::Serialization);
+    }
+
+    // -- cross-sheet formula references -----------------------------------------
+
+    /// Two-sheet fixture: Sheet1 (active, index 0) and "Data" (index 1)
+    /// with A1=5, B2=10 on Data.
+    fn two_sheets() -> TallyEngine {
+        let mut e = TallyEngine::new();
+        data(&mut e, "addSheet", json!({"name":"Data"}));
+        data(&mut e, "setActive", json!({"sheet":"Data"}));
+        data(&mut e, "setCell", json!({"addr":"A1","value":"5"}));
+        data(&mut e, "setCell", json!({"addr":"B2","value":"10"}));
+        data(&mut e, "setActive", json!({"sheet":"Sheet1"}));
+        e
+    }
+
+    #[test]
+    fn cross_sheet_refs_evaluate_and_quote() {
+        let mut e = two_sheets();
+        data(&mut e, "setCell", json!({"addr":"C1","value":"=Data!A1*2+Data!B2"}));
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!(20.0));
+        // Case-insensitive qualifier, quoted form, ranges, ad-hoc evaluate.
+        data(&mut e, "setCell", json!({"addr":"C2","value":"=data!A1+'Data'!B2"}));
+        assert_eq!(get_cell(&mut e, "C2")["computed"], json!(15.0));
+        assert_eq!(
+            data(&mut e, "evaluate", json!({"formula":"=SUM(Data!A1:B2)"}))["value"],
+            json!(15.0)
+        );
+        // Self-qualified reference on the home sheet.
+        data(&mut e, "setCell", json!({"addr":"D1","value":"=Sheet1!C1+1"}));
+        assert_eq!(get_cell(&mut e, "D1")["computed"], json!(21.0));
+        // A formula stored on Data sees its own bare refs through Sheet1!'s eyes.
+        data(&mut e, "setActive", json!({"sheet":"Data"}));
+        data(&mut e, "setCell", json!({"addr":"C3","value":"=A1+B2"}));
+        // COUNTIF's same-sheet range must resolve on Data, not Sheet1.
+        data(&mut e, "setCell", json!({"addr":"C4","value":"=COUNTIF(A1:B2,\">4\")"}));
+        data(&mut e, "setActive", json!({"sheet":"Sheet1"}));
+        assert_eq!(
+            data(&mut e, "evaluate", json!({"formula":"=Data!C3*2"}))["value"],
+            json!(30.0)
+        );
+        assert_eq!(
+            data(&mut e, "evaluate", json!({"formula":"=Data!C4"}))["value"],
+            json!(2.0)
+        );
+    }
+
+    #[test]
+    fn cross_sheet_missing_and_hostile_refs() {
+        let mut e = two_sheets();
+        for (formula, want) in [
+            ("=Nope!A1", "#REF!"),
+            ("='Nope'!A1", "#REF!"),
+            ("=Data!A0", "#REF!"),
+            ("=Data!XFE1", "#REF!"),
+            ("=Data!A1:Data!B2", "#NAME?"), // second qualifier unsupported
+            ("=Sheet1:Data!A1", "#NAME?"),  // 3D ranges unsupported
+            ("='Data'", "#NAME?"),
+            ("=Data!", "#NAME?"),
+        ] {
+            assert_eq!(
+                data(&mut e, "evaluate", json!({"formula":formula}))["value"],
+                json!(want),
+                "{formula}"
+            );
+        }
+        // Stored hostile formulas evaluate the same way, never panic.
+        data(&mut e, "setCell", json!({"addr":"E1","value":"=Nope!A1"}));
+        assert_eq!(get_cell(&mut e, "E1")["computed"], json!("#REF!"));
+        data(&mut e, "setCell", json!({"addr":"E2","value":"='unclosed"}));
+        assert_eq!(get_cell(&mut e, "E2")["computed"], json!("#NAME?"));
+    }
+
+    #[test]
+    fn cross_sheet_cycles_and_depth_bounds() {
+        let mut e = TallyEngine::new();
+        data(&mut e, "addSheet", json!({"name":"S2"}));
+        data(&mut e, "setActive", json!({"sheet":"S2"}));
+        data(&mut e, "setCell", json!({"addr":"B1","value":"=Sheet1!A1"}));
+        data(&mut e, "setActive", json!({"sheet":"Sheet1"}));
+        data(&mut e, "setCell", json!({"addr":"A1","value":"=S2!B1"}));
+        assert_eq!(get_cell(&mut e, "A1")["computed"], json!("#CYCLE!"));
+        // Long acyclic cross-sheet chain stays under the depth cap.
+        let mut e2 = TallyEngine::new();
+        for i in 1..=8 {
+            data(&mut e2, "addSheet", json!({"name":format!("T{i}")}));
+        }
+        // T1!A1 = 1; Ti!A1 = T(i-1)!A1 + 1 for i = 2..=8
+        data(&mut e2, "setActive", json!({"sheet":"T1"}));
+        data(&mut e2, "setCell", json!({"addr":"A1","value":"1"}));
+        for i in 2..=8u64 {
+            data(&mut e2, "setActive", json!({"sheet":format!("T{i}")}));
+            data(
+                &mut e2,
+                "setCell",
+                json!({"addr":"A1","value":format!("=T{}!A1+1", i - 1)}),
+            );
+        }
+        assert_eq!(
+            data(&mut e2, "evaluate", json!({"formula":"=T8!A1"}))["value"],
+            json!(8.0)
+        );
+    }
+
+    #[test]
+    fn rename_sheet_rewrites_cross_sheet_refs() {
+        let mut e = two_sheets();
+        data(&mut e, "setCell", json!({"addr":"C1","value":"=Data!A1*2"}));
+        data(&mut e, "setCell", json!({"addr":"C2","value":"='Data'!B2+Sheet1!C1"}));
+        let before = e.snapshot().unwrap();
+        data(&mut e, "renameSheet", json!({"sheet":"Data","to":"Metrics"}));
+        // Qualifiers rewritten on every sheet, quoted form used when needed.
+        assert_eq!(get_cell(&mut e, "C1")["raw"], json!("=Metrics!A1*2"));
+        assert_eq!(
+            get_cell(&mut e, "C2")["raw"],
+            json!("=Metrics!B2+Sheet1!C1")
+        );
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!(10.0));
+        assert_eq!(get_cell(&mut e, "C2")["computed"], json!(20.0));
+        // Undo restores name AND formula text; redo re-applies both.
+        assert!(e.undo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), before);
+        assert_eq!(get_cell(&mut e, "C1")["raw"], json!("=Data!A1*2"));
+        assert!(e.redo().unwrap());
+        assert_eq!(get_cell(&mut e, "C1")["raw"], json!("=Metrics!A1*2"));
+        // Rename to a name that needs quoting.
+        data(&mut e, "renameSheet", json!({"sheet":"Metrics","to":"Q1 Data"}));
+        assert_eq!(
+            get_cell(&mut e, "C1")["raw"],
+            json!("='Q1 Data'!A1*2")
+        );
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!(10.0));
+        // Snapshot round-trip keeps rewritten formulas working.
+        let saved = e.snapshot().unwrap();
+        let mut reopened = TallyEngine::new();
+        reopened.restore(&saved).unwrap();
+        assert_eq!(
+            data(&mut reopened, "evaluate", json!({"formula":"='Q1 Data'!A1"}))["value"],
+            json!(5.0)
+        );
+    }
+
+    #[test]
+    fn remove_sheet_leaves_refs_at_ref_error() {
+        let mut e = two_sheets();
+        data(&mut e, "setCell", json!({"addr":"C1","value":"=Data!A1+1"}));
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!(6.0));
+        data(&mut e, "removeSheet", json!({"sheet":"Data"}));
+        // Stored text keeps the qualifier; evaluation reports #REF!.
+        assert_eq!(get_cell(&mut e, "C1")["raw"], json!("=Data!A1+1"));
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!("#REF!"));
+        // Undo restores the sheet and the reference works again.
+        assert!(e.undo().unwrap());
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!(6.0));
+        // Re-adding a sheet with the same name revives the reference.
+        assert!(e.redo().unwrap());
+        data(&mut e, "addSheet", json!({"name":"Data"}));
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!(1.0)); // Data!A1 now empty → 0+1
+    }
+
+    #[test]
+    fn structural_edits_remap_qualified_refs_on_all_sheets() {
+        let mut e = two_sheets();
+        data(&mut e, "setCell", json!({"addr":"A1","value":"1"}));
+        data(&mut e, "setCell", json!({"addr":"C1","value":"=Data!A1+A1"}));
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!(6.0)); // 5 + 1
+        // Insert a row at the top of Data: the qualified ref follows the
+        // moved cell (Data!A1 → Data!A2, still 5) while Sheet1's bare A1
+        // ref is untouched — the value is unchanged, the text is not.
+        data(&mut e, "insertRows", json!({"sheet":"Data","from":1,"to":1}));
+        assert_eq!(get_cell(&mut e, "C1")["raw"], json!("=Data!A2+A1"));
+        assert_eq!(get_cell(&mut e, "C1")["computed"], json!(6.0));
+        // A structural edit on Sheet1 moves its own bare + self-qualified
+        // refs but leaves the Data-qualified ref alone.
+        data(&mut e, "setCell", json!({"addr":"F1","value":"=Sheet1!C1+Data!A2"}));
+        data(&mut e, "insertRows", json!({"sheet":"Sheet1","from":1,"to":1}));
+        assert_eq!(
+            get_cell(&mut e, "F2")["raw"],
+            json!("=Sheet1!C2+Data!A2")
+        );
+        // C1's own formula moved to C2 with its bare ref remapped too.
+        assert_eq!(
+            get_cell(&mut e, "C2")["raw"],
+            json!("=Data!A2+A2")
+        );
+        assert_eq!(get_cell(&mut e, "C2")["computed"], json!(6.0)); // 5 + 1
+        // Undo restores everything.
+        assert!(e.undo().unwrap());
+        assert!(e.undo().unwrap());
+        assert_eq!(get_cell(&mut e, "C1")["raw"], json!("=Data!A2+A1"));
     }
 }

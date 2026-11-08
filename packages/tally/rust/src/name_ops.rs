@@ -3,8 +3,10 @@
 //! Model decision (documented in `docs/ENGINE_OPS.md`): names are
 //! **workbook-scoped entries**, each bound to exactly one sheet by durable
 //! sheet id — the NYC-Tron/Excel "workbook name with optional sheet scope"
-//! collapsed to the only scope this engine can resolve, since formulas have
-//! no cross-sheet references. `refers_to` is a canonical same-sheet
+//! collapsed to the only scope a bare identifier can resolve to: names
+//! resolve only inside formulas on their bound sheet. `Sheet!name` does
+//! not exist in the grammar — cross-sheet references qualify cell/range
+//! addresses, not names. `refers_to` is a canonical same-sheet
 //! rectangle `"A1"` or `"A1:B2"` (normalized, `$` markers dropped, endpoints
 //! ordered). Names do not support whole-row/column refs or formula targets.
 //!
@@ -20,9 +22,11 @@
 //! whole workbook.
 //!
 //! Formula integration: the evaluator resolves a bare identifier to its
-//! target when the formula's sheet matches the name's sheet; names bound to
-//! other sheets evaluate to `#NAME?` (same limitation as cross-sheet cell
-//! refs). `COUNTIF`/`SUMIF` accept a name in place of their range argument.
+//! target when the formula's sheet matches the name's sheet — including
+//! formulas reached through `Sheet!` cross-sheet references, which keep
+//! resolving names on their own sheet; names bound to other sheets
+//! evaluate to `#NAME?`. `COUNTIF`/`SUMIF` accept a name in place of
+//! their range argument.
 //!
 //! Protection: names are workbook metadata but each is bound to a sheet, so
 //! `check_protection` treats define/update/remove like edits to that sheet

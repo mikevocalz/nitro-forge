@@ -1512,3 +1512,46 @@ test), `pnpm --filter @nitro-forge/design typecheck` clean. Overlay stack
 semantics, drag hit-testing, reusable styles, comments, presence transport,
 native/JSI rebuild and UI wiring remain deferred; no full P16 completion is
 implied.
+
+## Tally cross-sheet formula references source checkpoint (2026-11-07)
+
+Tally gains workbook-wide `Sheet!` formula references (backlog item 14,
+slice 14 — the last P13 item): `Sheet1!A1`, `'Q1 Data'!B2` and
+`Data!A1:B2` qualifiers (bare word or single-quoted with `''` escaping,
+resolved by **current sheet name, case-insensitive**) reach any sheet.
+One `Evaluator` now carries the whole book — `(name, id, cells)` per
+sheet — so memoization, the 500-deep evaluation cap, cycle detection
+and the 1,000,000 conditional-work allowance are all keyed/shared
+across sheets (`visiting`/`memo` keys are `(sheet index, address)`);
+bare refs, ranges and defined names inside a reached formula resolve
+on the sheet holding that formula (`current`), never the request's
+home sheet — `COUNTIF`/`SUMIF` range scans included (they previously
+would have read the home sheet's cells). `evaluate` treats the active
+sheet as home.
+
+Semantics: `renameSheet` rewrites every stored `Old!` qualifier
+workbook-wide in the same whole-document undo entry (Excel behavior;
+new names re-render bare or quoted as needed), `removeSheet` leaves
+qualifiers in place so they evaluate `#REF!` until a same-named sheet
+exists again, and structural band edits remap qualified refs like bare
+ones — unqualified + self-qualified on the edited sheet, a mirror pass
+for `Edited!` refs stored on other sheets, other qualifiers verbatim;
+a reference killed by a band collapses the whole `Sheet!ref` to
+`#REF!`. 3D ranges (`Sheet1:Sheet3!A1`), `Sheet!name` and
+second-endpoint qualifiers (`S!A1:T!B2`) are not in the grammar and
+parse `#NAME?`; `duplicateSheet` copies formula text verbatim so
+self-name qualifiers keep pointing at the source sheet (documented
+subset). No schema bump — formulas are strings; legacy snapshots and
+single-sheet workbooks evaluate identically. `index.ts` gained doc
+comments only (no API surface change). Local evidence:
+`cargo test -p tally-engine` 212 passed (11 new: formula unit tests
+for qualifiers/quoting/cycles/remap/rename plus lib integration tests
+for evaluation, hostile strings, cycles, depth chains, rename
+undo/redo, removal revival and cross-sheet structural remap),
+`cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/tally test`
+85 Vitest passed across 22 files (1 new live nf-cli cross-sheet file,
+6 cases), `pnpm --filter @nitro-forge/tally typecheck` clean. Deferred:
+3D ranges, qualified names, COUNTIF/SUMIF over qualified ranges
+(same-sheet contract kept), duplicate-sheet qualifier retargeting, and
+any UI wiring — no native/device acceptance or full P13+ completion is
+implied.

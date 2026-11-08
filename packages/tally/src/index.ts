@@ -655,9 +655,20 @@ export class TallyDocument {
   addSheet(name?: string) {
     return this.call<{ sheet: string }>(OPS.addSheet, { name });
   }
+  /**
+   * Rename a sheet (name or index). Formulas qualify other sheets by
+   * name (`Sheet!A1`, `'Q1 Data'!B2`), so the engine rewrites every
+   * stored `Old!` qualifier workbook-wide in the same undo entry —
+   * cross-sheet references keep working, matching Excel.
+   */
   renameSheet(sheet: string | number, to: string) {
     return this.call(OPS.renameSheet, { sheet, to });
   }
+  /**
+   * Remove a sheet (must keep ≥1). Stored `Removed!` formula
+   * qualifiers are not rewritten — they stop resolving and evaluate to
+   * `#REF!` until a sheet with that name exists again.
+   */
   removeSheet(sheet: string | number) {
     return this.call(OPS.removeSheet, { sheet });
   }
@@ -1059,7 +1070,10 @@ export class TallyDocument {
    * (deleted refs become `#REF!`, partially-covered ranges shrink),
    * named ranges, validations, conditional formats, filters, charts,
    * sparklines, sheet views' captured filter specs, comment anchors,
-   * pivot source ranges and merged regions. Entries fully inside a
+   * pivot source ranges and merged regions. `Sheet!`-qualified formula
+   * references remap like bare ones: refs naming the edited sheet follow
+   * the band wherever they are stored, other sheets' qualifiers stay
+   * verbatim. Entries fully inside a
    * deleted band are dropped (a pivot also drops when a column delete
    * shrinks its source range below a referenced field).
    * Bounds: `from`/`to` are 1-based inclusive within the sheet caps
@@ -1290,6 +1304,12 @@ export class TallyDocument {
   exportTsv(options?: { sheet?: string | number; range?: { from: string; to: string } }) {
     return this.exportDelimited("tsv", options);
   }
+  /**
+   * Ad-hoc formula evaluation. Bare refs/names resolve on the active
+   * sheet; `Sheet!A1` / `'Sheet Name'!A1:B2` qualifiers (resolved by
+   * current name, case-insensitive) reach any sheet. 3D ranges
+   * (`Sheet1:Sheet3!A1`) and `Sheet!name` are not supported.
+   */
   evaluate(formula: string) {
     return this.call<{ value: CellValue }>(OPS.evaluate, { formula });
   }

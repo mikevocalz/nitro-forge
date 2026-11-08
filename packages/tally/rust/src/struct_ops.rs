@@ -166,14 +166,22 @@ pub(super) fn merge_anchor(sheet: &Sheet, c: u32, r: u32) -> Option<String> {
 }
 
 /// Apply `band` to every coordinate-bound structure in `doc`. Only
-/// entries bound to the edited sheet id remap; other sheets are
-/// untouched (formulas have no cross-sheet references). Deletes may
+/// entries bound to the edited sheet id remap; other sheets' structures
+/// are untouched. Formulas follow the same rule through their qualifiers:
+/// unqualified refs and `EditedSheet!`-qualified refs remap, refs naming
+/// any other sheet are copied verbatim — and the mirror pass rewrites
+/// `EditedSheet!` refs stored on *other* sheets' formulas. Deletes may
 /// drop in-band entries; inserts never legitimately drop anything, so
 /// an insert that would push a stored coordinate past the sheet edge
 /// fails with `out_of_bounds` instead of losing the entry — callers
 /// stage on a clone, so the error leaves the live document untouched.
 fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) -> Result<(), EngineError> {
     let sheet_id = doc.sheets[sheet_idx].id;
+    // The edited sheet's current name scopes formula-reference remapping:
+    // `Name!`-qualified refs on *other* sheets that point here follow the
+    // same band edit, while unqualified refs there belong to their own
+    // sheet and stay put.
+    let sheet_name = doc.sheets[sheet_idx].name.clone();
     // Per-sheet geometry first: cell contents (with formula-reference
     // rewriting), formats and merge regions all key off addresses.
     {
@@ -209,6 +217,7 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) -> Result<(), En
                     band.start,
                     band.count,
                     band.deleting,
+                    &sheet_name,
                 )
                 .unwrap_or(cell.raw)
             } else {
@@ -268,6 +277,31 @@ fn remap_band(doc: &mut Workbook, sheet_idx: usize, band: Band) -> Result<(), En
                     r1: coords.3,
                 });
             }
+        }
+    }
+    // Cross-sheet formula references: a formula on any *other* sheet that
+    // names the edited sheet (`Edited!A1`) follows the same band edit —
+    // Excel rewrites those references too. Unqualified refs on those
+    // sheets belong to their own sheet and are untouched, as are refs
+    // qualified with any third sheet's name.
+    for (si, other) in doc.sheets.iter_mut().enumerate() {
+        if si == sheet_idx {
+            continue;
+        }
+        for cell in other.cells.values_mut() {
+            if !cell.raw.starts_with('=') {
+                continue;
+            }
+            let raw = formula::remap_qualified_references(
+                &cell.raw,
+                band.axis,
+                band.start,
+                band.count,
+                band.deleting,
+                &sheet_name,
+            )
+            .unwrap_or_else(|_| cell.raw.clone());
+            cell.raw = raw;
         }
     }
     // Workbook-level tables bound to the edited sheet id. Each entry's
