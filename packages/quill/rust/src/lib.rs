@@ -28,7 +28,9 @@ use toc::{validate_toc, TocField};
 mod revisions;
 use revisions::{validate_revisions, Revision, RevisionKind, TrackChanges};
 mod sections;
-use sections::{default_sections, is_default_sections, validate_sections, Section};
+use sections::{
+    default_sections, is_default_sections, validate_sections, Section, SectionStart,
+};
 mod tables;
 use tables::{validate_tables, Table};
 mod format;
@@ -1123,6 +1125,44 @@ fn parse_render_color(value: &str, name: &str) -> Result<tiny_skia::Color, Engin
         ((v >> 24) as u8, (v >> 16) as u8, (v >> 8) as u8, v as u8)
     };
     Ok(tiny_skia::Color::from_rgba8(r, g, b, a))
+}
+
+/// `renderPage` pixel-dimension resolution shared by the uniform and
+/// sectioned paths (R3): `px = pt * dpi/72`, the ≤4096px/side and
+/// ≤32MiB RGBA hard bounds, and the optional `max_dim` per-side cap
+/// (reject, never downscale).
+fn render_pixel_dims(
+    width_pt: f64,
+    height_pt: f64,
+    dpi: f64,
+    max_dim: Option<f64>,
+) -> Result<(u32, u32), EngineError> {
+    let scale = dpi / 72.0;
+    let width_px = (width_pt * scale).round();
+    let height_px = (height_pt * scale).round();
+    if !(width_px >= 1.0 && height_px >= 1.0)
+        || width_px > glyphs::MAX_RENDER_DIM_PX as f64
+        || height_px > glyphs::MAX_RENDER_DIM_PX as f64
+    {
+        return Err(EngineError::validation(
+            "renderPage page exceeds the 4096px-per-side bound; lower dpi or page size",
+        ));
+    }
+    if let Some(max) = max_dim {
+        if width_px > max || height_px > max {
+            return Err(EngineError::validation(format!(
+                "renderPage page exceeds max_dim {max}px"
+            )));
+        }
+    }
+    let width_px = width_px as u32;
+    let height_px = height_px as u32;
+    if u64::from(width_px) * u64::from(height_px) > glyphs::MAX_RENDER_PIXELS {
+        return Err(EngineError::validation(
+            "renderPage page exceeds the 32MiB RGBA output bound",
+        ));
+    }
+    Ok((width_px, height_px))
 }
 
 fn validate_font_size(value: f64) -> Result<(), EngineError> {
@@ -2943,20 +2983,18 @@ impl QuillEngine {
     }
 
     fn op_layout(&self, p: &Value) -> Result<CommandResult, EngineError> {
-        let page_width = as_f64(field(p, "page_width")?, "page_width")?;
-        let font_size = as_f64(field(p, "font_size")?, "font_size")?;
-        let page_height = match p.get("page_height") {
-            Some(v) => as_f64(v, "page_height")?,
-            None => page_width * A_SERIES_RATIO,
+        // `use_sections` (R3) switches pagination to the document's
+        // section `page_setup` geometry; `page_width`/`page_height`
+        // become optional and are ignored in that mode.
+        let use_sections = match p.get("use_sections") {
+            None | Some(Value::Null) => false,
+            Some(v) => v
+                .as_bool()
+                .ok_or_else(|| EngineError::validation("'use_sections' must be a bool"))?,
         };
-        if page_width <= 0.0 || !page_width.is_finite() {
-            return Err(EngineError::validation("page_width must be positive"));
-        }
+        let font_size = as_f64(field(p, "font_size")?, "font_size")?;
         if font_size <= 0.0 || !font_size.is_finite() {
             return Err(EngineError::validation("font_size must be positive"));
-        }
-        if page_height <= 0.0 || !page_height.is_finite() {
-            return Err(EngineError::validation("page_height must be positive"));
         }
 
         // Optional real-font measurement: `font` names a family admitted via
@@ -2981,7 +3019,72 @@ impl QuillEngine {
                 })
             }
         };
+
+        if use_sections {
+            let pages = self.layout_pages_sectioned(font_size, plan.as_ref());
+            // block → first-page index, for `toc_pages`.
+            let mut block_page = vec![None; self.blocks.len()];
+            for (pi, pg) in pages.iter().enumerate() {
+                for l in &pg.lines {
+                    let slot = &mut block_page[l.block];
+                    if slot.is_none() {
+                        *slot = Some(pi);
+                    }
+                }
+            }
+            let numbers: Vec<u64> = pages.iter().map(|pg| pg.number).collect();
+            let toc_pages = self.toc_pages_value(&block_page, &numbers);
+            let pages: Vec<Value> = pages
+                .iter()
+                .map(|pg| {
+                    json!({
+                        "index": pg.index,
+                        "section": pg.section,
+                        "width": pg.width,
+                        "height": pg.height,
+                        "number": pg.number,
+                        "first_in_section": pg.first_in_section,
+                        "lines": pg.lines.iter()
+                            .map(|l| json!({
+                                "block": l.block, "start": l.start, "end": l.end,
+                                "column": l.column,
+                            }))
+                            .collect::<Vec<_>>(),
+                    })
+                })
+                .collect();
+            return Ok(Self::read_only(json!({
+                "pages": pages,
+                "toc_pages": toc_pages,
+            })));
+        }
+
+        let page_width = as_f64(field(p, "page_width")?, "page_width")?;
+        let page_height = match p.get("page_height") {
+            Some(v) => as_f64(v, "page_height")?,
+            None => page_width * A_SERIES_RATIO,
+        };
+        if page_width <= 0.0 || !page_width.is_finite() {
+            return Err(EngineError::validation("page_width must be positive"));
+        }
+        if page_height <= 0.0 || !page_height.is_finite() {
+            return Err(EngineError::validation("page_height must be positive"));
+        }
+
         let pages = self.layout_pages(page_width, font_size, page_height, plan.as_ref());
+        // block → first-page index for `toc_pages`; uniform pages number
+        // sequentially from 1.
+        let mut block_page = vec![None; self.blocks.len()];
+        for (pi, lines) in pages.iter().enumerate() {
+            for &(bi, _, _) in lines {
+                let slot = &mut block_page[bi];
+                if slot.is_none() {
+                    *slot = Some(pi);
+                }
+            }
+        }
+        let numbers: Vec<u64> = (1..=pages.len() as u64).collect();
+        let toc_pages = self.toc_pages_value(&block_page, &numbers);
         let pages: Vec<Value> = pages
             .into_iter()
             .map(|lines| {
@@ -2993,7 +3096,10 @@ impl QuillEngine {
                 })
             })
             .collect();
-        Ok(Self::read_only(json!({ "pages": pages })))
+        Ok(Self::read_only(json!({
+            "pages": pages,
+            "toc_pages": toc_pages,
+        })))
     }
 
     /// Shared pagination for `layout` and `renderPage` (P-quill-renderpage-
@@ -3024,115 +3130,8 @@ impl QuillEngine {
         let mut remaining = page_height;
 
         for (bi, b) in self.blocks.iter().enumerate() {
-            // Per-line heights in points, parallel to `spans`.
-            let (spans, line_heights): (Vec<(usize, usize)>, Vec<f64>) = match plan {
-                None => {
-                    let eff = font_size * b.kind.font_mult();
-                    let line_height = eff * LINE_SPACING;
-                    let advance = eff * GLYPH_EM;
-                    let max_chars = (page_width / advance).floor() as usize;
-                    let spans = wrap_block(&block_content_text(b), max_chars.max(1));
-                    let heights = vec![line_height; spans.len()];
-                    (spans, heights)
-                }
-                Some(plan) => {
-                    // R2: resolve the block's inline runs once — advances,
-                    // shaping pieces and line metrics all come from the
-                    // same resolution `renderPage` redraws.
-                    let br = runs::resolve_block_runs(b, font_size, plan);
-                    let chars: Vec<char> = br.text.chars().collect();
-                    let n = chars.len();
-                    let spans = {
-                        // Per-char advances in POINTS → cumulative prefix.
-                        // Shaped output is not prefix-additive under
-                        // reordering/ligatures, so the prefix is rebuilt
-                        // per char rather than queried per candidate line.
-                        let prefix_of = |advances: &[f64]| {
-                            let mut prefix = Vec::with_capacity(n + 1);
-                            prefix.push(0.0f64);
-                            let mut acc = 0.0f64;
-                            for &pt in advances {
-                                acc += pt;
-                                prefix.push(acc);
-                            }
-                            prefix
-                        };
-                        let unshaped =
-                            |cache: &mut std::collections::HashMap<(usize, char), f64>| {
-                                br.unshaped_advances(cache)
-                            };
-                        // Initial measurement: one harfrust pass per
-                        // resolved run (GSUB+GPOS context within each
-                        // run's own text — never across a style boundary),
-                        // then bounded per-line re-shaping so a wrapped
-                        // line's kern/ligature context never sees the next
-                        // line's text. Each pass shapes every
-                        // `span ∩ run` piece independently and re-wraps;
-                        // wrap output equal to the previous pass's spans
-                        // means converged. `None` anywhere — over the
-                        // block budget, shape error, or panic — falls back
-                        // to the unshaped per-char path.
-                        // `renderPage` applies the identical gate
-                        // (`BlockRuns::may_shape`) so drawn advances always
-                        // match the spans measured here.
-                        let initial = if br.may_shape {
-                            br.shaped_advances(&br.initial_pieces())
-                        } else {
-                            None
-                        };
-                        match initial {
-                            Some(advances) => {
-                                let mut spans = wrap_block_measured(
-                                    &chars,
-                                    &prefix_of(&advances),
-                                    page_width,
-                                );
-                                for _ in 0..fonts::MAX_LINE_SHAPE_PASSES {
-                                    let Some(line_advances) =
-                                        br.shaped_advances(&br.span_pieces(&spans))
-                                    else {
-                                        // Mid-iteration shape failure:
-                                        // the block falls back to the
-                                        // unshaped path wholesale, not a
-                                        // half-shaped mix.
-                                        let advances = unshaped(&mut advance_cache);
-                                        spans = wrap_block_measured(
-                                            &chars,
-                                            &prefix_of(&advances),
-                                            page_width,
-                                        );
-                                        break;
-                                    };
-                                    let new_spans = wrap_block_measured(
-                                        &chars,
-                                        &prefix_of(&line_advances),
-                                        page_width,
-                                    );
-                                    let converged = new_spans == spans;
-                                    spans = new_spans;
-                                    if converged {
-                                        break;
-                                    }
-                                }
-                                spans
-                            }
-                            None => {
-                                let advances = unshaped(&mut advance_cache);
-                                wrap_block_measured(&chars, &prefix_of(&advances), page_width)
-                            }
-                        }
-                    };
-                    // Per-line heights: max run line height over each
-                    // span (empty spans take the block default). The same
-                    // `BlockRuns::line_height` `renderPage` uses, so page
-                    // breaks and pixel baselines agree.
-                    let heights: Vec<f64> = spans
-                        .iter()
-                        .map(|&(s, e)| br.line_height(s, e))
-                        .collect();
-                    (spans, heights)
-                }
-            };
+            let (spans, line_heights) =
+                block_line_spans(b, page_width, font_size, plan, &mut advance_cache);
             let block_height: f64 = line_heights.iter().sum();
 
             // A block that doesn't fit the remaining page height starts on a
@@ -3155,6 +3154,202 @@ impl QuillEngine {
             pages.push(cur_lines);
         }
         pages
+    }
+
+    /// Sectioned pagination for `layout {use_sections}`/`renderPage
+    /// {use_sections}` (renderPage decision R3). Each section's blocks
+    /// wrap at that section's column width and flow through its own
+    /// `PageSetup` geometry: margins define the text area,
+    /// `columns`/`column_gap` split it into column-major bands, and
+    /// `start` controls page breaks — `next-page` always breaks,
+    /// `even-page`/`odd-page` pad blank pages (owned by the previous
+    /// section) until the physical page index has the required parity
+    /// (index 0 = printed page 1 = odd), and `continuous` shares only
+    /// the remainder of the column it starts in before flowing onto
+    /// fresh pages of its own geometry (the rest of the shared page's
+    /// columns stay empty — documented approximation; Word would
+    /// continue into them). A block straddling a continuous-section
+    /// break keeps the wrap width computed for the shared tail even
+    /// after `advance()` opens the new section's own page — narrower
+    /// lines than the column allows, cosmetic and deterministic.
+    ///
+    /// Line breaking/measurement is the identical `block_line_spans`
+    /// routine `layout_pages` uses, so spans and pixels still agree;
+    /// only the wrap width and the page/column budgets differ. Printed
+    /// page `number`s are assigned in a post-pass: a section's
+    /// `number_start` restarts its count, otherwise numbering continues
+    /// from the previous section's page total (first section defaults
+    /// to 1). Parity for `even-page`/`odd-page` starts and for
+    /// `different_odd_even` headers uses the physical `index`, NOT the
+    /// printed `number` — `number_start` does not shift parity
+    /// (documented approximation vs Word's printed-number parity).
+    fn layout_pages_sectioned(
+        &self,
+        font_size: f64,
+        plan: Option<&runs::FontPlan>,
+    ) -> Vec<SectionPage> {
+        let mut flow = SectionFlow::new(&self.sections);
+        let mut advance_cache: std::collections::HashMap<(usize, char), f64> =
+            std::collections::HashMap::new();
+        // Column wrap width per section (points).
+        let col_widths: Vec<f64> = self
+            .sections
+            .iter()
+            .map(|s| {
+                let p = &s.page;
+                let text_w = p.width - p.margin_left - p.margin_right;
+                (text_w - (p.columns as f64 - 1.0) * p.column_gap) / p.columns as f64
+            })
+            .collect();
+        // Owning section index per block.
+        let sec_of: Vec<usize> = (0..self.blocks.len())
+            .map(|bi| self.sections.partition_point(|s| s.block <= bi) - 1)
+            .collect();
+
+        for (bi, b) in self.blocks.iter().enumerate() {
+            let si = sec_of[bi];
+            if si != flow.flow_si {
+                match self.sections[si].page.start {
+                    SectionStart::Continuous => {
+                        // No forced break: keep filling the current
+                        // column's remainder under the OLD page's
+                        // geometry; wrap width switches to the new
+                        // section immediately.
+                        flow.flow_si = si;
+                    }
+                    SectionStart::NextPage => {
+                        flow.finalize_cur();
+                        flow.begin_page(si);
+                        flow.flow_si = si;
+                    }
+                    SectionStart::EvenPage | SectionStart::OddPage => {
+                        flow.finalize_cur();
+                        // Physical index parity: index 0 is printed
+                        // page 1 (odd), so even-page starts need an
+                        // odd index and odd-page starts an even one.
+                        let required = match self.sections[si].page.start {
+                            SectionStart::EvenPage => 1usize,
+                            _ => 0usize,
+                        };
+                        while flow.pages.len() % 2 != required {
+                            flow.push_parity_blank();
+                        }
+                        flow.begin_page(si);
+                        flow.flow_si = si;
+                    }
+                }
+            }
+            if flow.cur.is_none() {
+                flow.begin_page(flow.flow_si);
+            }
+            // A `continuous` section sharing another section's page tail
+            // still draws inside the HOST page's column band
+            // (`SectionPage.column_width` in glyphs.rs), so its wrap
+            // width is clamped to that band — a wider new-section
+            // measure would overflow the text area.
+            let wrap_w = col_widths[flow.flow_si]
+                .min(flow.cur.as_ref().map_or(f64::MAX, |p| p.column_width));
+            let (spans, line_heights) = block_line_spans(
+                b,
+                wrap_w,
+                font_size,
+                plan,
+                &mut advance_cache,
+            );
+            let block_height: f64 = line_heights.iter().sum();
+            // A block that can't fit the current column's remainder
+            // starts in the next column (or page) — the column-grain
+            // analogue of `layout_pages`' page-grain rule.
+            if flow.col_lines > 0 && block_height > flow.col_rem[flow.cur_col] {
+                flow.advance();
+            }
+            for (i, &(s, e)) in spans.iter().enumerate() {
+                let line_height = line_heights[i];
+                if flow.col_lines > 0 && line_height > flow.col_rem[flow.cur_col] {
+                    flow.advance();
+                }
+                let cur = flow.cur.as_mut().expect("page open");
+                cur.lines.push(SectionLine {
+                    block: bi,
+                    start: s,
+                    end: e,
+                    column: flow.cur_col,
+                });
+                flow.col_rem[flow.cur_col] -= line_height;
+                flow.col_lines += 1;
+            }
+        }
+        flow.finalize_cur();
+
+        // Printed page numbers: per-section page counts, then bases —
+        // `number_start` restarts a section's count, otherwise numbering
+        // continues from the previous section's total.
+        let nsec = self.sections.len();
+        let mut count = vec![0u64; nsec];
+        for pg in &flow.pages {
+            count[pg.section] += 1;
+        }
+        let mut base = vec![0u64; nsec];
+        for si in 0..nsec {
+            // `number_start` is honored only by a section that actually
+            // owns pages: a `continuous` section whose content all fit
+            // in the previous section's column tail owns zero pages, so
+            // its restart is inert and numbering continues past it
+            // (Word does not restart on an empty continuous section).
+            let start = self.sections[si]
+                .header_footer
+                .number_start
+                .filter(|_| count[si] > 0);
+            base[si] = match start {
+                Some(start) => u64::from(start),
+                None => {
+                    if si == 0 {
+                        1
+                    } else {
+                        base[si - 1] + count[si - 1]
+                    }
+                }
+            };
+        }
+        let mut seen = vec![0u64; nsec];
+        for pg in &mut flow.pages {
+            pg.number = base[pg.section] + seen[pg.section];
+            seen[pg.section] += 1;
+        }
+        flow.pages
+    }
+
+    /// `toc_pages` payload for `layout` (R3): one entry per `kind:"toc"`
+    /// field, each carrying the LIVE heading scan (same detection as
+    /// `listToc`, honoring the field's level range) with every entry's
+    /// `block` resolved to the 1-based printed page number of the page
+    /// its first line landed on. `block_page[i]` is the page index of
+    /// block `i`'s first emitted line; `numbers[i]` its printed number.
+    /// Entries whose block never emitted a line are omitted (unreachable
+    /// — every block emits ≥1 line — kept defensive).
+    fn toc_pages_value(&self, block_page: &[Option<usize>], numbers: &[u64]) -> Value {
+        let mut out = Vec::new();
+        for (bi, b) in self.blocks.iter().enumerate() {
+            if b.kind != BlockKind::Toc {
+                continue;
+            }
+            let Some(t) = &b.toc else { continue };
+            let entries: Vec<Value> =
+                toc::scan_entries(&self.blocks, t.from_level, t.to_level)
+                    .into_iter()
+                    .filter_map(|e| {
+                        let pi = block_page.get(e.block).copied().flatten()?;
+                        Some(json!({
+                            "level": e.level,
+                            "title": e.title,
+                            "block": e.block,
+                            "page": numbers[pi],
+                        }))
+                    })
+                    .collect();
+            out.push(json!({ "field": bi, "entries": entries }));
+        }
+        Value::Array(out)
     }
 
     /// `renderPage {page_width,font_size,page_height?,font,page,dpi?,
@@ -3181,21 +3376,40 @@ impl QuillEngine {
         ctx: Option<&TaskContext>,
     ) -> Result<CommandResult, EngineError> {
         let p = &cmd.payload;
-        let page_width = as_f64(field(p, "page_width")?, "page_width")?;
-        let font_size = as_f64(field(p, "font_size")?, "font_size")?;
-        let page_height = match p.get("page_height") {
-            Some(v) => as_f64(v, "page_height")?,
-            None => page_width * A_SERIES_RATIO,
+        // `use_sections` (R3): paginate/render through the document's
+        // section `page_setup` geometry; `page_width`/`page_height` are
+        // then optional and ignored (each page's own section supplies
+        // its size).
+        let use_sections = match p.get("use_sections") {
+            None | Some(Value::Null) => false,
+            Some(v) => v
+                .as_bool()
+                .ok_or_else(|| EngineError::validation("'use_sections' must be a bool"))?,
         };
-        if page_width <= 0.0 || !page_width.is_finite() {
-            return Err(EngineError::validation("page_width must be positive"));
-        }
+        let font_size = as_f64(field(p, "font_size")?, "font_size")?;
         if font_size <= 0.0 || !font_size.is_finite() {
             return Err(EngineError::validation("font_size must be positive"));
         }
-        if page_height <= 0.0 || !page_height.is_finite() {
-            return Err(EngineError::validation("page_height must be positive"));
-        }
+        let (page_width, page_height) = if use_sections {
+            // Accepted for caller convenience but ignored — section
+            // page_setup is authoritative.
+            let _ = p.get("page_width");
+            let _ = p.get("page_height");
+            (0.0, 0.0)
+        } else {
+            let page_width = as_f64(field(p, "page_width")?, "page_width")?;
+            let page_height = match p.get("page_height") {
+                Some(v) => as_f64(v, "page_height")?,
+                None => page_width * A_SERIES_RATIO,
+            };
+            if page_width <= 0.0 || !page_width.is_finite() {
+                return Err(EngineError::validation("page_width must be positive"));
+            }
+            if page_height <= 0.0 || !page_height.is_finite() {
+                return Err(EngineError::validation("page_height must be positive"));
+            }
+            (page_width, page_height)
+        };
         let page = as_usize(field(p, "page")?, "page")?;
         let dpi = match p.get("dpi") {
             None | Some(Value::Null) => 96.0,
@@ -3238,6 +3452,43 @@ impl QuillEngine {
             base_face: face.clone(),
         };
 
+        if use_sections {
+            let pages = self.layout_pages_sectioned(font_size, Some(&plan));
+            let Some(pg) = pages.get(page) else {
+                return Err(EngineError::out_of_bounds(format!(
+                    "page {page} out of range ({})",
+                    pages.len()
+                )));
+            };
+            let (width_px, height_px) =
+                render_pixel_dims(pg.width, pg.height, dpi, max_dim)?;
+            let pixels = glyphs::render_page_rgba_sectioned(
+                &plan,
+                font_size,
+                &self.blocks,
+                &self.sections,
+                pg,
+                width_px,
+                height_px,
+                dpi,
+                color,
+                background,
+                ctx,
+            )?;
+            return Ok(
+                Self::read_only(json!({
+                    "page": page,
+                    "section": pg.section,
+                    "number": pg.number,
+                    "width": width_px,
+                    "height": height_px,
+                    "format": "raw",
+                    "size": pixels.len(),
+                }))
+                .with_bytes(cmd, "pixels_b64", pixels),
+            );
+        }
+
         let pages = self.layout_pages(page_width, font_size, page_height, Some(&plan));
         let Some(lines) = pages.get(page) else {
             return Err(EngineError::out_of_bounds(format!(
@@ -3246,31 +3497,7 @@ impl QuillEngine {
             )));
         };
 
-        let scale = dpi / 72.0;
-        let width_px = (page_width * scale).round();
-        let height_px = (page_height * scale).round();
-        if !(width_px >= 1.0 && height_px >= 1.0)
-            || width_px > glyphs::MAX_RENDER_DIM_PX as f64
-            || height_px > glyphs::MAX_RENDER_DIM_PX as f64
-        {
-            return Err(EngineError::validation(
-                "renderPage page exceeds the 4096px-per-side bound; lower dpi or page size",
-            ));
-        }
-        if let Some(max) = max_dim {
-            if width_px > max || height_px > max {
-                return Err(EngineError::validation(format!(
-                    "renderPage page exceeds max_dim {max}px"
-                )));
-            }
-        }
-        let width_px = width_px as u32;
-        let height_px = height_px as u32;
-        if u64::from(width_px) * u64::from(height_px) > glyphs::MAX_RENDER_PIXELS {
-            return Err(EngineError::validation(
-                "renderPage page exceeds the 32MiB RGBA output bound",
-            ));
-        }
+        let (width_px, height_px) = render_pixel_dims(page_width, page_height, dpi, max_dim)?;
 
         let pixels = glyphs::render_page_rgba(
             &plan,
@@ -4038,6 +4265,293 @@ impl Engine for QuillEngine {
 /// Greedy word wrap over `text` with `max` chars per line. Returns (start,end)
 /// char spans covering the whole text; an empty text yields a single (0,0)
 /// line. Words longer than `max` are hard-broken.
+/// One emitted line in sectioned pagination (`layout {use_sections}` /
+/// `renderPage {use_sections}`, R3): the same `(block,start,end)` char
+/// span `layout` reports plus the `column` it was placed in (0 for
+/// single-column sections).
+pub(crate) struct SectionLine {
+    pub block: usize,
+    pub start: usize,
+    pub end: usize,
+    pub column: usize,
+}
+
+/// One page of sectioned pagination: the owning section's `PageSetup`
+/// geometry (points) plus its emitted lines in column-major order
+/// (column index is non-decreasing within a page). `number` is the
+/// 1-based printed page number after `number_start` resolution;
+/// `index` is the 0-based physical page position (parity for
+/// even/odd section starts and headers is computed on THIS, not on
+/// `number` — documented approximation vs Word's printed-number
+/// parity).
+pub(crate) struct SectionPage {
+    pub index: usize,
+    pub section: usize,
+    /// First page OWNED by this section (created under its geometry).
+    /// A `continuous` section may share the tail of the previous
+    /// section's page; that shared page keeps the previous section's
+    /// header/footer and does not count as this section's first page.
+    pub first_in_section: bool,
+    pub width: f64,
+    pub height: f64,
+    pub margin_top: f64,
+    pub margin_bottom: f64,
+    pub margin_left: f64,
+    pub margin_right: f64,
+    pub columns: usize,
+    pub column_gap: f64,
+    /// `(width - margin_left - margin_right - (columns-1)*column_gap) / columns`.
+    pub column_width: f64,
+    /// `height - margin_top - margin_bottom` — the per-column line budget.
+    pub col_height: f64,
+    pub number: u64,
+    pub lines: Vec<SectionLine>,
+}
+
+/// Builder state for [`QuillEngine::layout_pages_sectioned`] (R3): the
+/// finalized pages plus the one open page being filled column-major.
+/// `flow_si` is the section governing the wrap width and the next page
+/// break; it can differ from `cur.section` while a `continuous`
+/// section shares the tail of the previous section's page.
+struct SectionFlow<'a> {
+    pages: Vec<SectionPage>,
+    cur: Option<SectionPage>,
+    /// Remaining line budget (points) per column of `cur`.
+    col_rem: Vec<f64>,
+    cur_col: usize,
+    /// Lines placed in the current column (0 = column is empty).
+    col_lines: usize,
+    flow_si: usize,
+    /// Sections that already own a page (for `first_in_section`).
+    owned: Vec<bool>,
+    sections: &'a [Section],
+}
+
+impl<'a> SectionFlow<'a> {
+    fn new(sections: &'a [Section]) -> Self {
+        Self {
+            pages: Vec::new(),
+            cur: None,
+            col_rem: Vec::new(),
+            cur_col: 0,
+            col_lines: 0,
+            flow_si: 0,
+            owned: vec![false; sections.len()],
+            sections,
+        }
+    }
+
+    /// Open a fresh page owned by section `si` with its `PageSetup`
+    /// geometry; `first_in_section` is true on the section's first
+    /// OWNED page.
+    fn begin_page(&mut self, si: usize) {
+        let first = !self.owned[si];
+        self.owned[si] = true;
+        let setup = &self.sections[si].page;
+        let text_w = setup.width - setup.margin_left - setup.margin_right;
+        let column_width =
+            (text_w - (setup.columns as f64 - 1.0) * setup.column_gap) / setup.columns as f64;
+        let col_height = setup.height - setup.margin_top - setup.margin_bottom;
+        let p = SectionPage {
+            index: self.pages.len(),
+            section: si,
+            first_in_section: first,
+            width: setup.width,
+            height: setup.height,
+            margin_top: setup.margin_top,
+            margin_bottom: setup.margin_bottom,
+            margin_left: setup.margin_left,
+            margin_right: setup.margin_right,
+            columns: setup.columns as usize,
+            column_gap: setup.column_gap,
+            column_width,
+            col_height,
+            number: 0,
+            lines: Vec::new(),
+        };
+        self.col_rem = vec![col_height; p.columns];
+        self.cur_col = 0;
+        self.col_lines = 0;
+        self.cur = Some(p);
+    }
+
+    /// Close the open page into `pages` (empty pages are dropped — a
+    /// begun page always receives lines before the next transition, so
+    /// this is defensive only; parity blanks bypass `cur` entirely).
+    fn finalize_cur(&mut self) {
+        if let Some(mut p) = self.cur.take() {
+            if !p.lines.is_empty() {
+                p.index = self.pages.len();
+                self.pages.push(p);
+            }
+        }
+    }
+
+    /// Push a blank parity page owned by the previous section — the
+    /// padding `even-page`/`odd-page` starts insert so the new section
+    /// lands on the required physical page parity.
+    fn push_parity_blank(&mut self) {
+        let Some(prev) = self.pages.last() else {
+            return;
+        };
+        self.pages.push(SectionPage {
+            index: self.pages.len(),
+            section: prev.section,
+            first_in_section: false,
+            width: prev.width,
+            height: prev.height,
+            margin_top: prev.margin_top,
+            margin_bottom: prev.margin_bottom,
+            margin_left: prev.margin_left,
+            margin_right: prev.margin_right,
+            columns: prev.columns,
+            column_gap: prev.column_gap,
+            column_width: prev.column_width,
+            col_height: prev.col_height,
+            number: 0,
+            lines: Vec::new(),
+        });
+    }
+
+    /// Move to the next column, or — at the last column or while a
+    /// `continuous` section shares another section's page — close the
+    /// page and open a fresh one owned by `flow_si`.
+    fn advance(&mut self) {
+        let same_flow = self.cur.as_ref().is_some_and(|p| p.section == self.flow_si);
+        if same_flow && self.cur_col + 1 < self.cur.as_ref().map_or(0, |p| p.columns) {
+            self.cur_col += 1;
+            self.col_lines = 0;
+            return;
+        }
+        self.finalize_cur();
+        self.begin_page(self.flow_si);
+    }
+}
+
+/// Wrap one block into `(start,end)` char spans plus per-line heights in
+/// points, at text width `max_width`. Shared by `layout_pages` (uniform
+/// pages), `layout_pages_sectioned` (per-section column widths), and the
+/// header/footer text wrapping in `glyphs.rs` — so every consumer
+/// measures identically. `plan`/`font_size`/`advance_cache` have the same
+/// meaning as in [`QuillEngine::layout_pages`].
+pub(crate) fn block_line_spans(
+    b: &Block,
+    max_width: f64,
+    font_size: f64,
+    plan: Option<&runs::FontPlan>,
+    advance_cache: &mut std::collections::HashMap<(usize, char), f64>,
+) -> (Vec<(usize, usize)>, Vec<f64>) {
+    // Per-line heights in points, parallel to `spans`.
+    match plan {
+        None => {
+            let eff = font_size * b.kind.font_mult();
+            let line_height = eff * LINE_SPACING;
+            let advance = eff * GLYPH_EM;
+            let max_chars = (max_width / advance).floor() as usize;
+            let spans = wrap_block(&block_content_text(b), max_chars.max(1));
+            let heights = vec![line_height; spans.len()];
+            (spans, heights)
+        }
+        Some(plan) => {
+            // R2: resolve the block's inline runs once — advances,
+            // shaping pieces and line metrics all come from the
+            // same resolution `renderPage` redraws.
+            let br = runs::resolve_block_runs(b, font_size, plan);
+            let chars: Vec<char> = br.text.chars().collect();
+            let n = chars.len();
+            let spans = {
+                // Per-char advances in POINTS → cumulative prefix.
+                // Shaped output is not prefix-additive under
+                // reordering/ligatures, so the prefix is rebuilt
+                // per char rather than queried per candidate line.
+                let prefix_of = |advances: &[f64]| {
+                    let mut prefix = Vec::with_capacity(n + 1);
+                    prefix.push(0.0f64);
+                    let mut acc = 0.0f64;
+                    for &pt in advances {
+                        acc += pt;
+                        prefix.push(acc);
+                    }
+                    prefix
+                };
+                let unshaped =
+                    |cache: &mut std::collections::HashMap<(usize, char), f64>| {
+                        br.unshaped_advances(cache)
+                    };
+                // Initial measurement: one harfrust pass per
+                // resolved run (GSUB+GPOS context within each
+                // run's own text — never across a style boundary),
+                // then bounded per-line re-shaping so a wrapped
+                // line's kern/ligature context never sees the next
+                // line's text. Each pass shapes every
+                // `span ∩ run` piece independently and re-wraps;
+                // wrap output equal to the previous pass's spans
+                // means converged. `None` anywhere — over the
+                // block budget, shape error, or panic — falls back
+                // to the unshaped per-char path.
+                // `renderPage` applies the identical gate
+                // (`BlockRuns::may_shape`) so drawn advances always
+                // match the spans measured here.
+                let initial = if br.may_shape {
+                    br.shaped_advances(&br.initial_pieces())
+                } else {
+                    None
+                };
+                match initial {
+                    Some(advances) => {
+                        let mut spans = wrap_block_measured(
+                            &chars,
+                            &prefix_of(&advances),
+                            max_width,
+                        );
+                        for _ in 0..fonts::MAX_LINE_SHAPE_PASSES {
+                            let Some(line_advances) =
+                                br.shaped_advances(&br.span_pieces(&spans))
+                            else {
+                                // Mid-iteration shape failure:
+                                // the block falls back to the
+                                // unshaped path wholesale, not a
+                                // half-shaped mix.
+                                let advances = unshaped(advance_cache);
+                                spans = wrap_block_measured(
+                                    &chars,
+                                    &prefix_of(&advances),
+                                    max_width,
+                                );
+                                break;
+                            };
+                            let new_spans = wrap_block_measured(
+                                &chars,
+                                &prefix_of(&line_advances),
+                                max_width,
+                            );
+                            let converged = new_spans == spans;
+                            spans = new_spans;
+                            if converged {
+                                break;
+                            }
+                        }
+                        spans
+                    }
+                    None => {
+                        let advances = unshaped(advance_cache);
+                        wrap_block_measured(&chars, &prefix_of(&advances), max_width)
+                    }
+                }
+            };
+            // Per-line heights: max run line height over each
+            // span (empty spans take the block default). The same
+            // `BlockRuns::line_height` `renderPage` uses, so page
+            // breaks and pixel baselines agree.
+            let heights: Vec<f64> = spans
+                .iter()
+                .map(|&(s, e)| br.line_height(s, e))
+                .collect();
+            (spans, heights)
+        }
+    }
+}
+
 fn wrap_block(text: &str, max: usize) -> Vec<(usize, usize)> {
     let chars: Vec<char> = text.chars().collect();
     let n = chars.len();
@@ -7561,6 +8075,548 @@ mod tests {
         );
         let styled2 = render_page(&mut e3, payload());
         assert_eq!(styled2.data["pixels_b64"], styled.data["pixels_b64"]);
+    }
+
+    // -- renderPage/layout R3: sections page_setup, headers/footers, TOC --
+
+    /// `layout {use_sections}` binds each section's `page_setup`: page
+    /// size comes from `PageSetup` (page_width/page_height ignored),
+    /// text wraps at the margin-box width, and lines carry `column`.
+    #[test]
+    fn layout_use_sections_binds_page_setup() {
+        let mut e = engine();
+        // 36 chars, no spaces: estimate path (no font) → advance 5pt,
+        // so text width 160pt wraps at 32 chars.
+        insert(&mut e, 0, 0, "abcdefghijklmnopqrstuvwxyz0123456789");
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 100.0,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 20.0, "margin_right": 20.0,
+            }),
+        );
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({"font_size": 10.0, "use_sections": true, "page_width": 9999.0}),
+        );
+        let pages = r.data["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 1);
+        let p0 = &pages[0];
+        assert_eq!(p0["section"], 0);
+        assert_eq!(p0["width"], 200.0);
+        assert_eq!(p0["height"], 100.0);
+        assert_eq!(p0["number"], 1);
+        assert_eq!(p0["first_in_section"], true);
+        let lines = p0["lines"].as_array().unwrap();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0]["start"], 0);
+        assert_eq!(lines[0]["end"], 32, "wrap at margin-box width 160pt");
+        assert_eq!(lines[0]["column"], 0);
+        assert_eq!(lines[1]["start"], 32);
+        assert_eq!(lines[1]["end"], 36);
+        // `toc_pages` is always present (empty without toc fields).
+        assert_eq!(r.data["toc_pages"].as_array().unwrap().len(), 0);
+        // Same call without the ignored page_width is identical.
+        let r2 = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        assert_eq!(r2.data["pages"], r.data["pages"]);
+    }
+
+    /// Multi-column sections fill column-major: lines carry their column
+    /// index and overflow flows to the next column, then next page.
+    #[test]
+    fn layout_use_sections_columns_flow_column_major() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, &"x".repeat(200));
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 100.0,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+                "columns": 2, "column_gap": 20.0,
+            }),
+        );
+        // text_w=180, col_w=(180-20)/2=80 → 16 chars/line; col_height=80
+        // → 5 lines (14pt) per column. 200 chars → 13 lines.
+        let r = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        let pages = r.data["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 2);
+        let cols0: Vec<u64> = pages[0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|l| l["column"].as_u64().unwrap())
+            .collect();
+        assert_eq!(cols0, vec![0, 0, 0, 0, 0, 1, 1, 1, 1, 1]);
+        let cols1: Vec<u64> = pages[1]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|l| l["column"].as_u64().unwrap())
+            .collect();
+        assert_eq!(cols1, vec![0, 0, 0]);
+        assert_eq!(pages[1]["number"], 2);
+    }
+
+    /// A `next-page` section start forces a break and the new section's
+    /// own page geometry applies from its first page.
+    #[test]
+    fn layout_use_sections_next_page_start_and_geometry() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, &"x".repeat(100));
+        insert(&mut e, 0, 100, "\nsecond");
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 100.0,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            }),
+        );
+        apply(
+            &mut e,
+            "insertSection",
+            json!({"at": 1, "page_setup": {"width": 100.0, "height": 50.0, "start": "next-page"}}),
+        );
+        let r = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        let pages = r.data["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 2);
+        assert_eq!(pages[0]["section"], 0);
+        assert_eq!(pages[0]["width"], 200.0);
+        assert_eq!(pages[1]["section"], 1);
+        assert_eq!(pages[1]["width"], 100.0);
+        assert_eq!(pages[1]["height"], 50.0);
+        assert_eq!(pages[1]["number"], 2);
+        assert_eq!(pages[1]["first_in_section"], true);
+        // block1's only line is on section 1's page.
+        let last = pages[1]["lines"].as_array().unwrap().last().unwrap().clone();
+        assert_eq!(last["block"], 1);
+    }
+
+    /// `even-page` starts pad a blank page (owned by the previous
+    /// section) until the physical index parity matches, and printed
+    /// numbers count the padding.
+    #[test]
+    fn layout_use_sections_even_page_pads_blank() {
+        let mut e = engine();
+        // 72 x's → 2 lines at 36 chars/line → exactly 2 section-0 pages
+        // (col_height 20 → 1 line/page).
+        insert(&mut e, 0, 0, &"x".repeat(72));
+        insert(&mut e, 0, 72, "\nsecond");
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 40.0,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            }),
+        );
+        apply(
+            &mut e,
+            "insertSection",
+            json!({"at": 1, "page_setup": {"width": 100.0, "start": "even-page"}}),
+        );
+        let r = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        let pages = r.data["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 4);
+        assert_eq!(pages[0]["section"], 0);
+        assert_eq!(pages[1]["section"], 0);
+        // Index 2 must be odd for an even-page start → one blank pad.
+        assert_eq!(pages[2]["section"], 0);
+        assert_eq!(pages[2]["lines"].as_array().unwrap().len(), 0);
+        assert_eq!(pages[2]["number"], 3);
+        assert_eq!(pages[3]["section"], 1);
+        assert_eq!(pages[3]["width"], 100.0);
+        // Section 0 owns 3 pages (incl. the pad) → section 1 starts at 4.
+        assert_eq!(pages[3]["number"], 4);
+    }
+
+    /// `continuous` shares only the remainder of the current column,
+    /// then flows onto fresh pages of the new section's geometry.
+    #[test]
+    fn layout_use_sections_continuous_shares_column_tail() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, &"x".repeat(100));
+        insert(&mut e, 0, 100, "\nsecond\nthird");
+        // block2 "third" is short; give it bulk via a third insert? Use
+        // replaceRange-free approach: block1 "second", block2 "third".
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 100.0,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            }),
+        );
+        apply(
+            &mut e,
+            "insertSection",
+            json!({"at": 1, "page_setup": {"width": 100.0, "height": 50.0, "start": "continuous"}}),
+        );
+        let r = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        let pages = r.data["pages"].as_array().unwrap();
+        // block0: 3 lines (36 chars/line at 180pt text width) on page 0.
+        // block1 "second" + block2 "third" are section 1 (col_width 80 →
+        // 16 chars/line, 1 line each): they share page 0's column
+        // remainder (80 - 3*14 = 38pt → 2 lines fit).
+        assert_eq!(pages.len(), 1);
+        assert_eq!(pages[0]["section"], 0);
+        assert_eq!(pages[0]["width"], 200.0);
+        let blocks: Vec<u64> = pages[0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|l| l["block"].as_u64().unwrap())
+            .collect();
+        assert_eq!(blocks, vec![0, 0, 0, 1, 2]);
+        // Now make section 1 content overflow the shared tail: a long
+        // block3 in section 1 must start a fresh section-1 page.
+        insert(&mut e, 2, 5, &format!("\n{}", "y".repeat(200)));
+        let r2 = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        let pages2 = r2.data["pages"].as_array().unwrap();
+        assert!(pages2.len() > 1);
+        assert_eq!(pages2[0]["section"], 0);
+        assert_eq!(pages2[1]["section"], 1);
+        assert_eq!(pages2[1]["width"], 100.0);
+        assert_eq!(pages2[1]["height"], 50.0);
+    }
+
+    /// `number_start` on a section owning ZERO pages — a `continuous`
+    /// section whose content all fit in the previous section's column
+    /// tail — is inert: it must not leak into the next section's
+    /// printed numbers (Word does not restart on an empty section).
+    #[test]
+    fn layout_use_sections_empty_section_number_start_is_inert() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "aaaa");
+        apply(&mut e, "insertBlock", json!({"index": 1}));
+        insert(&mut e, 1, 0, "b");
+        apply(&mut e, "insertBlock", json!({"index": 2}));
+        insert(&mut e, 2, 0, "cccc");
+        let ps = |start: &str| {
+            json!({
+                "width": 200.0, "height": 60.0, "start": start,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            })
+        };
+        apply(&mut e, "setPageSetup", json!({"section": 0, "width": 200.0, "height": 60.0,
+            "margin_top": 10.0, "margin_bottom": 10.0,
+            "margin_left": 10.0, "margin_right": 10.0}));
+        apply(&mut e, "insertSection", json!({"at": 1, "page_setup": ps("continuous")}));
+        apply(&mut e, "insertSection", json!({"at": 2, "page_setup": ps("next-page")}));
+        apply(&mut e, "setHeaderFooter", json!({"section": 1, "number_start": 1}));
+        let r = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        let pages = r.data["pages"].as_array().unwrap();
+        // Page 0 is owned by section 0 and carries section 1's "b" in
+        // its shared tail; section 1 owns no pages. Page 1 is section 2.
+        assert_eq!(pages.len(), 2);
+        assert_eq!(pages[0]["section"], 0);
+        assert_eq!(pages[0]["number"], 1);
+        assert_eq!(pages[1]["section"], 2);
+        // Section 1's number_start:1 is inert → section 2 continues
+        // section 0's count: printed number 2, not 1.
+        assert_eq!(pages[1]["number"], 2);
+    }
+
+    /// A `continuous` section sharing another section's page tail draws
+    /// inside the HOST page's column band, so its wrap width clamps to
+    /// the host column width — a wider new-section measure would push
+    /// ink past the text area's right edge.
+    #[test]
+    fn layout_use_sections_continuous_wrap_clamps_to_host_column() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "seed");
+        apply(&mut e, "insertBlock", json!({"index": 1}));
+        insert(&mut e, 1, 0, &"y".repeat(40));
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 200.0,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            }),
+        );
+        // Section 1's own column measure is 380pt (76 chars at the 5pt
+        // estimate advance), but it shares section 0's page tail whose
+        // column band is 180pt (36 chars).
+        apply(
+            &mut e,
+            "insertSection",
+            json!({"at": 1, "page_setup": {
+                "width": 400.0, "height": 200.0, "start": "continuous",
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            }}),
+        );
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({"font_size": 10.0, "use_sections": true}),
+        );
+        let pages = r.data["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 1);
+        assert_eq!(pages[0]["section"], 0);
+        let b1: Vec<&Value> = pages[0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|l| l["block"].as_u64() == Some(1))
+            .collect();
+        // 40 chars wrapped at the host band's 36-char measure → 2
+        // lines; unclamped it would fit on one 76-char line.
+        assert_eq!(b1.len(), 2);
+        for l in b1 {
+            let len = l["end"].as_u64().unwrap() - l["start"].as_u64().unwrap();
+            assert!(len <= 36, "shared-tail line {len} chars exceeds host band");
+        }
+    }
+
+    /// Footer bands bottom-align to the page's bottom edge (Word's
+    /// footer placement): a footer taller than the bottom margin
+    /// overflows upward toward the page center instead of clipping at
+    /// the bottom edge.
+    #[test]
+    fn render_page_use_sections_footer_bottom_aligns() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "body");
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 100.0,
+                "margin_top": 30.0, "margin_bottom": 10.0,
+                "margin_left": 40.0, "margin_right": 40.0,
+            }),
+        );
+        // ~60 chars wraps to several footer lines ≈ 50pt tall > the 10pt
+        // bottom margin: bottom-aligned, the band reaches the page's
+        // bottom edge — ink must appear in the bottom rows of the
+        // pixmap, not stop at the margin's inner edge.
+        apply(
+            &mut e,
+            "setHeaderFooter",
+            json!({"section": 0, "footer": "F".repeat(60)}),
+        );
+        let r = render_page(
+            &mut e,
+            json!({"font_size": 12.0, "font": "NFTestMono", "page": 0, "use_sections": true}),
+        );
+        // 200x100pt at 96dpi → 267x133px.
+        assert_eq!(r.data["width"], 267);
+        assert_eq!(r.data["height"], 133);
+        let px = base64_decode(r.data["pixels_b64"].as_str().unwrap()).unwrap();
+        let ink_in_band = |y0: usize, y1: usize| {
+            (y0..y1).any(|y| {
+                (0..267usize).any(|x| {
+                    let i = (y * 267 + x) * 4;
+                    px[i] < 200
+                })
+            })
+        };
+        // Bottom-aligned: the band's bottom edge is the page bottom, so
+        // a footer taller than the 10pt bottom margin overflows upward
+        // — ink appears well above the margin's inner edge (90pt ≈
+        // 120px, where the old top-aligned band started) AND reaches
+        // the bottom rows.
+        assert!(
+            ink_in_band(100, 118),
+            "tall footer should overflow upward into the bottom margin"
+        );
+        assert!(ink_in_band(125, 133), "footer should reach the page bottom");
+    }
+
+    /// `toc_pages` resolves live TOC entries to printed page numbers —
+    /// honoring `number_start`/`number_format` section numbering.
+    #[test]
+    fn layout_toc_pages_report_printed_numbers() {
+        let mut e = engine();
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 40.0,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            }),
+        );
+        insert(&mut e, 0, 0, "Alpha");
+        apply(&mut e, "setBlockKind", json!({"block": 0, "kind": "h1"}));
+        insert(&mut e, 0, 5, "\nbody\nBeta");
+        // New blocks inherit the left block's h1 — demote "body".
+        apply(&mut e, "setBlockKind", json!({"block": 1, "kind": "para"}));
+        apply(&mut e, "setBlockKind", json!({"block": 2, "kind": "h2"}));
+        apply(&mut e, "insertToc", json!({"index": 3}));
+        // col_height = 20 → 1 line/page → 4 pages, numbers 1..4.
+        let r = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        assert_eq!(r.data["pages"].as_array().unwrap().len(), 4);
+        let toc = &r.data["toc_pages"][0];
+        assert_eq!(toc["field"], 3);
+        let entries = toc["entries"].as_array().unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0]["title"], "Alpha");
+        assert_eq!(entries[0]["page"], 1);
+        assert_eq!(entries[1]["title"], "Beta");
+        assert_eq!(entries[1]["page"], 3);
+        // `number_start` restarts the printed count (roman is a render
+        // concern; the page NUMBER stays numeric here).
+        apply(
+            &mut e,
+            "setHeaderFooter",
+            json!({"section": 0, "page_numbers": true, "number_start": 5, "number_format": "roman"}),
+        );
+        let r2 = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        let entries2 = r2.data["toc_pages"][0]["entries"].as_array().unwrap();
+        assert_eq!(entries2[0]["page"], 5);
+        assert_eq!(entries2[1]["page"], 7);
+        // Uniform layout reports sequential page numbers too.
+        let r3 = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 500.0, "font_size": 10.0, "page_height": 20.0}),
+        );
+        let entries3 = r3.data["toc_pages"][0]["entries"].as_array().unwrap();
+        assert_eq!(entries3[0]["page"], 1);
+        assert_eq!(entries3[1]["page"], 3);
+    }
+
+    /// `renderPage {use_sections}` sizes pixels from the page's own
+    /// section `PageSetup` and draws header/footer bands + page number.
+    #[test]
+    fn render_page_use_sections_draws_geometry_and_bands() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "Hello World");
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 100.0,
+                "margin_top": 30.0, "margin_bottom": 30.0,
+                "margin_left": 40.0, "margin_right": 40.0,
+            }),
+        );
+        apply(
+            &mut e,
+            "setHeaderFooter",
+            json!({"section": 0, "header": "HDR", "footer": "FTR", "page_numbers": true}),
+        );
+        let payload = json!({
+            "font_size": 12.0, "font": "NFTestMono", "page": 0, "use_sections": true,
+        });
+        let r = render_page(&mut e, payload.clone());
+        // 200pt x 100pt at 96dpi → 267x133 px, from PageSetup not params.
+        assert_eq!(r.data["width"], 267);
+        assert_eq!(r.data["height"], 133);
+        assert_eq!(r.data["section"], 0);
+        assert_eq!(r.data["number"], 1);
+        assert!(r.events.is_empty(), "renderPage is read-only");
+        let b64 = r.data["pixels_b64"].as_str().unwrap().to_string();
+        let r2 = render_page(&mut e, payload);
+        assert_eq!(r2.data["pixels_b64"].as_str().unwrap(), b64);
+
+        // Header/footer/page-number ink differs from a bare render of
+        // the same document without header_footer.
+        let mut bare = engine();
+        register_test_font(&mut bare);
+        insert(&mut bare, 0, 0, "Hello World");
+        apply(
+            &mut bare,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 100.0,
+                "margin_top": 30.0, "margin_bottom": 30.0,
+                "margin_left": 40.0, "margin_right": 40.0,
+            }),
+        );
+        let rb = render_page(
+            &mut bare,
+            json!({"font_size": 12.0, "font": "NFTestMono", "page": 0, "use_sections": true}),
+        );
+        assert_ne!(rb.data["pixels_b64"].as_str().unwrap(), b64);
+
+        // Ink exists in the top margin band (header + page number) and
+        // the bottom band (footer): bands are margin_top/bottom = 30pt
+        // → 40px at 96dpi.
+        let px = base64_decode(&b64).unwrap();
+        let ink_in_band = |y0: usize, y1: usize| {
+            (y0..y1).any(|y| {
+                (0..267usize).any(|x| {
+                    let i = (y * 267 + x) * 4;
+                    px[i] < 200
+                })
+            })
+        };
+        assert!(ink_in_band(0, 39), "header band should carry ink");
+        assert!(ink_in_band(93, 133), "footer band should carry ink");
+        // Body text starts below the 30pt top margin (40px) — the band
+        // check above already proves separation from the bare render.
+    }
+
+    /// `use_sections` validation and bounds on both ops.
+    #[test]
+    fn use_sections_validates_and_bounds() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "text");
+        // Non-bool rejects on both ops.
+        assert_eq!(
+            err(&mut e, "layout", json!({"font_size": 10.0, "use_sections": "yes"})).code,
+            ErrorCode::Validation
+        );
+        assert_eq!(
+            err(
+                &mut e,
+                "renderPage",
+                json!({"font_size": 12.0, "font": "NFTestMono", "page": 0, "use_sections": 1})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        // Page index out of range reports the sectioned page count.
+        assert_eq!(
+            err(
+                &mut e,
+                "renderPage",
+                json!({"font_size": 12.0, "font": "NFTestMono", "page": 99, "use_sections": true})
+            )
+            .code,
+            ErrorCode::OutOfBounds
+        );
+        // `font` is still required in sections mode.
+        assert_eq!(
+            err(
+                &mut e,
+                "renderPage",
+                json!({"font_size": 12.0, "page": 0, "use_sections": true})
+            )
+            .code,
+            ErrorCode::InvalidCommand
+        );
+        // A section page over the pixel bound still rejects.
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({"section": 0, "width": 5000.0, "height": 100.0,
+                   "margin_top": 10.0, "margin_bottom": 10.0,
+                   "margin_left": 10.0, "margin_right": 10.0}),
+        );
+        assert!(err(
+            &mut e,
+            "renderPage",
+            json!({"font_size": 12.0, "font": "NFTestMono", "page": 0, "use_sections": true})
+        )
+        .message
+        .contains("4096"));
     }
 }
 
