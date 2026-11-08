@@ -168,6 +168,23 @@ describe("prism canvas/layers ops e2e (real Rust via nf-cli)", () => {
     await doc.close();
   });
 
+  it("duplicates a layer and a whole group subtree", async () => {
+    const doc = await PrismDocument.open(host, 8, 8);
+    const a = (await doc.addShape({ kind: "rect", x: 0, y: 0, w: 4, h: 4, fill: RED })).data.layer_id;
+    const b = (await doc.addShape({ kind: "ellipse", x: 2, y: 2, w: 4, h: 4, fill: BLUE })).data.layer_id;
+    const g = (await doc.groupLayers([a, b], "art")).data.layer_id;
+    const dg = (await doc.duplicateLayer(g)).data.layer_id;
+    const desc = await describeDoc(doc);
+    const kids = desc.layers.filter((x: any) => x.parent === dg);
+    expect(kids).toHaveLength(2);
+    expect(desc.layers.find((x: any) => x.id === dg).name).toBe("art copy");
+    expect(desc.layers.find((x: any) => x.id === dg).parent).toBeNull();
+    // One undo removes the whole copied subtree.
+    expect(await doc.undo()).toBe(true);
+    expect((await describeDoc(doc)).layers).toHaveLength(3);
+    await doc.close();
+  });
+
   it("round-trips the new state through save and reopen", async () => {
     const doc = await PrismDocument.open(host, 6, 6);
     const a = (await doc.addShape({ kind: "ellipse", x: 0, y: 0, w: 6, h: 6, fill: RED })).data.layer_id;

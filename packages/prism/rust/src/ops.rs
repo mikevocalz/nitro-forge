@@ -393,6 +393,7 @@ impl PrismEngine {
             "getSelection" => self.op_get_selection(),
             "groupLayers" => self.op_group_layers(p),
             "ungroupLayer" => self.op_ungroup_layer(p),
+            "duplicateLayer" => self.op_duplicate_layer(p),
             "setLayerParent" => self.op_set_layer_parent(p),
             "setLayerLocked" => self.op_set_layer_locked(p),
             "setLayerBlend" => self.op_set_layer_blend(p),
@@ -1033,6 +1034,53 @@ impl PrismEngine {
             }
         }
         ok()
+    }
+
+    /// `duplicateLayer {id,name?}` — deep copy of the layer and, for groups
+    /// and booleans, its whole subtree. Every copied member gets a fresh id
+    /// and parent links are remapped; the copy keeps the source's position
+    /// rules (stack order, transform, mask, blend, lock, clipping) and sits
+    /// directly above the source among its siblings. `name` renames only the
+    /// copied root; the default is `"<name> copy"`. Object selection is left
+    /// untouched. Duplication does not edit the source, so a locked layer may
+    /// be duplicated (the copy stays locked). One undo entry.
+    fn op_duplicate_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.layer_index(Self::req_id(p)?)?;
+        let name = Self::opt_name(p)?;
+        let root_id = self.layers[idx].id;
+        let subtree = self.subtree_ids(root_id);
+        // Vec order is the stack order inside every parent, so copying the
+        // members in their existing order preserves all internal stacking.
+        let members: Vec<Layer> = self
+            .layers
+            .iter()
+            .filter(|l| subtree.contains(&l.id))
+            .cloned()
+            .collect();
+        self.record();
+        let mut remap = std::collections::HashMap::with_capacity(members.len());
+        for m in &members {
+            remap.insert(m.id, self.alloc_id());
+        }
+        let new_root = remap[&root_id];
+        let mut copies: Vec<Layer> = members
+            .into_iter()
+            .map(|mut l| {
+                let old = l.id;
+                l.id = remap[&old];
+                l.parent = l.parent.map(|pid| remap.get(&pid).copied().unwrap_or(pid));
+                if old == root_id {
+                    let n = name.clone().unwrap_or_else(|| format!("{} copy", l.name));
+                    l.name = n;
+                }
+                l
+            })
+            .collect();
+        let at = idx + 1;
+        for (k, l) in copies.drain(..).enumerate() {
+            self.layers.insert(at + k, l);
+        }
+        Ok(CommandResult::data(json!({ "layer_id": new_root })))
     }
 
     fn op_set_layer_locked(&mut self, p: &Value) -> Result<CommandResult, EngineError> {

@@ -1237,3 +1237,94 @@ fn sample_pixels_radius_averages_in_premultiplied_alpha() {
         .data;
     assert_eq!(d, json!({"r": 255, "g": 0, "b": 0, "a": 128}));
 }
+
+// -- duplicateLayer ------------------------------------------------------------
+
+#[test]
+fn duplicate_layer_copies_content_and_sits_above() {
+    let mut e = eng(4, 1);
+    let l = id(&run(&mut e, "addRasterLayer", json!({"name": "ink"})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let copy = id(&one_step(&mut e, "duplicateLayer", json!({"id": l})));
+    assert_ne!(copy, l);
+    let d = describe(&mut e);
+    let src = layer(&d, l);
+    let dup = layer(&d, copy);
+    assert_eq!(dup["name"], "ink copy");
+    assert_eq!(dup["content"], src["content"], "raster payload is copied");
+    assert_eq!(dup["parent"], Value::Null);
+    // The copy is directly above the source among top-level layers.
+    let ids: Vec<u64> = d["layers"].as_array().unwrap().iter().map(|x| x["id"].as_u64().unwrap()).collect();
+    assert_eq!(ids, vec![l, copy]);
+    // Both paint the same pixels; the top copy wins with identical output.
+    assert_eq!(px(&flat(&mut e), 4, 0, 0), RED);
+    // A custom name applies to the copy only.
+    let named = id(&one_step(&mut e, "duplicateLayer", json!({"id": l, "name": "clone"})));
+    assert_eq!(layer(&describe(&mut e), named)["name"], "clone");
+    assert_eq!(layer(&describe(&mut e), copy)["name"], "ink copy");
+}
+
+#[test]
+fn duplicate_layer_inside_group_keeps_parent() {
+    let mut e = eng(6, 6);
+    let a = rect(&mut e, 0.0, 0.0, 2.0, 2.0, RED);
+    let b = rect(&mut e, 3.0, 3.0, 2.0, 2.0, BLUE);
+    let g = id(&run(&mut e, "groupLayers", json!({"ids": [a, b], "name": "pair"})));
+    let copy = id(&one_step(&mut e, "duplicateLayer", json!({"id": a})));
+    let d = describe(&mut e);
+    assert_eq!(layer(&d, copy)["parent"], g, "copy stays in the same group");
+    let src_name = layer(&d, a)["name"].as_str().unwrap().to_string();
+    assert_eq!(layer(&d, copy)["name"], format!("{src_name} copy"));
+    assert_eq!(bounds(&mut e, copy), bounds(&mut e, a));
+}
+
+#[test]
+fn duplicate_group_copies_the_whole_subtree() {
+    let mut e = eng(10, 10);
+    let a = rect(&mut e, 0.0, 0.0, 3.0, 3.0, RED);
+    let b = rect(&mut e, 2.0, 2.0, 3.0, 3.0, BLUE);
+    let g = id(&run(&mut e, "groupLayers", json!({"ids": [a, b], "name": "pair"})));
+    run(&mut e, "setLayerOpacity", json!({"id": g, "opacity": 0.5}));
+    let before = flat(&mut e);
+    let dg = id(&one_step(&mut e, "duplicateLayer", json!({"id": g})));
+    assert_eq!(describe(&mut e)["layers"].as_array().unwrap().len(), 6);
+    let d = describe(&mut e);
+    let dup_group = layer(&d, dg);
+    assert_eq!(dup_group["name"], "pair copy");
+    assert_eq!(dup_group["opacity"], 0.5);
+    assert_eq!(dup_group["content"]["type"], "group");
+    // Two fresh children parented to the copied group, names preserved.
+    let kids: Vec<&Value> = d["layers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|l| l["parent"] == dg)
+        .collect();
+    assert_eq!(kids.len(), 2);
+    assert!(kids.iter().all(|k| k["id"].as_u64().unwrap() != a && k["id"].as_u64().unwrap() != b));
+    assert_eq!(kids[0]["name"], layer(&d, a)["name"]);
+    assert_eq!(kids[1]["name"], layer(&d, b)["name"]);
+    // The 50%-opacity group now paints twice, so the composite darkens;
+    // hiding the copy restores the original image exactly.
+    run(&mut e, "setLayerVisible", json!({"id": dg, "visible": false}));
+    assert_eq!(flat(&mut e), before);
+    run(&mut e, "setLayerVisible", json!({"id": dg, "visible": true}));
+    // The copied subtree is independent: editing a copy leaves the source alone.
+    let kid = kids[0]["id"].as_u64().unwrap();
+    run(&mut e, "setLayerTransform", json!({"id": kid, "transform": {"tx": 4, "ty": 0}}));
+    assert_eq!(bounds(&mut e, a), (0.0, 0.0, 3.0, 3.0));
+    assert_ne!(flat(&mut e), before);
+}
+
+#[test]
+fn duplicate_layer_locked_and_rejects() {
+    let mut e = eng(4, 4);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    one_step(&mut e, "setLayerLocked", json!({"id": l, "locked": true}));
+    // Duplication does not edit the locked source; the copy stays locked.
+    let copy = id(&one_step(&mut e, "duplicateLayer", json!({"id": l})));
+    assert_eq!(layer(&describe(&mut e), copy)["locked"], true);
+    rejects(&mut e, "duplicateLayer", json!({"id": 999}), ErrorCode::NotFound);
+    rejects(&mut e, "duplicateLayer", json!({"id": l, "name": 5}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "duplicateLayer", json!({}), ErrorCode::InvalidCommand);
+}
