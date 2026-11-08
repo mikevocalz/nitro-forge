@@ -47,6 +47,11 @@ export const OPS={
  removePrototypeInteraction:'removePrototypeInteraction',
  prototypeGraph:'prototypeGraph',
  resolvePrototypeEvent:'resolvePrototypeEvent',
+ defineCommentThread:'defineCommentThread',
+ addCommentReply:'addCommentReply',
+ setCommentResolved:'setCommentResolved',
+ removeCommentThread:'removeCommentThread',
+ listComments:'listComments',
  evaluateLayout:'evaluateLayout',
  renderFrame:'renderFrame',
 } as const;
@@ -149,6 +154,23 @@ export interface PrototypeGraph{screens:PrototypeScreenInfo[];hotspots:Prototype
  * `delay_ms`/`duration_ms` are returned for the host to schedule. */
 export interface PrototypeEventResolution{matched:true;interaction:PrototypeInteractionInfo;transition:{id:string;kind:TransitionKind;easing:TransitionEasing;direction?:SlideDirection;duration_ms:number}|null;delay_ms:number;scheduled_by:'host'}
 export type PrototypeEventQuery={hotspot?:string;screen?:number;trigger?:PrototypeTrigger};
+/** Comment pin anchor (slice G, NYC-Tron L-14 `CommentPins` contract): a
+ * point in document units. Pins are canvas positions, not node
+ * attachments — layout changes do not move them and node deletion cannot
+ * orphan them. Hosts convert between viewport and document space. */
+export interface CommentAnchor{x:number;y:number}
+/** One comment body: a thread's opening entry or a reply. `author` and
+ * `time_label` are optional host-supplied display strings; the engine keeps
+ * no clock, so `time_label` is stored verbatim ("already formatted by the
+ * app" per the NYC-Tron panel contract). */
+export interface CommentEntry{id:string;body:string;author?:string;time_label?:string}
+/** A comment thread pinned at a document-space point. `resolved` is the
+ * durable open/resolved flag; replies are append-only. At most 1024
+ * threads, 1024 replies per thread, 64KiB per body. */
+export interface CommentThread{id:string;anchor:CommentAnchor;body:string;author?:string;time_label?:string;resolved?:boolean;replies?:CommentEntry[]}
+/** Durable comment catalog; omitted from state/snapshots when empty. Any
+ * thread triggers the schema:2 snapshot wrapper. */
+export interface CommentCatalog{threads?:CommentThread[]}
 /** Update patches: every field optional, explicit `null` clears the
  * optional members (hotspot/screen XOR, target, transition, duration_ms,
  * value on interactions; direction on transitions). */
@@ -161,12 +183,12 @@ export interface CompositionSettings{title:string;width:number;height:number}
 /** describe/evaluateLayout expose the internal schema:1 state; the schema:2
  * wrapper `{kind:'design',schema:2,document}` exists only inside snapshot
  * bytes and only when schema-2 features (text nodes, node constraints,
- * variables/modes/bindings)
+ * variables/modes/bindings, prototype catalog, comments)
  * are present. The collections are omitted entirely when empty. */
 /** Durable prototype catalog stored on the internal state; omitted when
  * empty. Any content triggers the schema:2 snapshot wrapper. */
 export interface PrototypeCatalog{screens?:PrototypeScreen[];hotspots?:PrototypeHotspot[];interactions?:PrototypeInteraction[];transitions?:PrototypeTransition[]}
-export interface DesignState{kind:'design';schema:1;title:string;next_id:number;nodes:Record<string,DesignNode>;variables?:Record<string,DesignVariable>;modes?:DesignMode[];active_mode?:string;bindings?:VariableBinding[];prototype?:PrototypeCatalog}
+export interface DesignState{kind:'design';schema:1;title:string;next_id:number;nodes:Record<string,DesignNode>;variables?:Record<string,DesignVariable>;modes?:DesignMode[];active_mode?:string;bindings?:VariableBinding[];prototype?:PrototypeCatalog;comments?:CommentCatalog}
 export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'|'locked'>> & {text?:TextStylePatch};
 export type NewNode=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'>>;
 export interface NewTextNode extends NewNode{content:string;style?:FontStylePatch}
@@ -328,6 +350,22 @@ export class DesignDocument{
   * (interaction `duration_ms` override applied) and `delay_ms` for the
   * host to schedule; `scheduled_by` is always `"host"`. Silent. */
  resolvePrototypeEvent(query:PrototypeEventQuery){return this.document.apply<PrototypeEventResolution|null>(OPS.resolvePrototypeEvent,query);}
+ /** Creates a comment thread pinned at a document-space point (the L-14
+  * pin contract: hosts map viewport x/y to document units). `id` is
+  * optional (`comment-N` assigned); `author`/`time_label` are optional
+  * display strings stored verbatim. At most 1024 threads. Returns the id. */
+ defineCommentThread(thread:{id?:string;anchor:CommentAnchor;body:string;author?:string;time_label?:string}){const {id,...rest}=thread;return this.document.apply<{id:string}>(OPS.defineCommentThread,{...rest,...(id===undefined?{}:{id})});}
+ /** Appends a reply to an existing thread (`reply-N` id assigned per
+  * thread, returned). Replies are append-only: no per-reply edit or
+  * delete. At most 1024 replies per thread, 64KiB per body. */
+ addCommentReply(thread:string,reply:{body:string;author?:string;time_label?:string}){return this.document.apply<{id:string}>(OPS.addCommentReply,{thread,...reply});}
+ /** Sets the durable resolved flag; equal writes are silent no-ops. */
+ setCommentResolved(id:string,resolved:boolean){return this.document.apply<{ok:boolean}>(OPS.setCommentResolved,{id,resolved});}
+ /** Removes the thread and all its replies in one journal entry. */
+ removeCommentThread(id:string){return this.document.apply<{ok:boolean}>(OPS.removeCommentThread,{id});}
+ /** Read-only thread list for the CommentsThreadPanel contract; silent.
+  * The engine stores no `page` — hosts map the single canvas to page 0. */
+ listComments(){return this.document.apply<{threads:CommentThread[]}>(OPS.listComments,{});}
  evaluateLayout(){return this.document.apply<{boxes:EvaluatedBox[]}>(OPS.evaluateLayout,{});}
  renderFrame(){return this.document.apply<{width:number;height:number;pixels_b64?:string}>(OPS.renderFrame,{});}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}

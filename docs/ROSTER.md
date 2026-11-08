@@ -1725,3 +1725,53 @@ nf-cli` clean, `pnpm --filter @nitro-forge/draft test` 12 passed across 5
 files (1 new nf-cli grammar e2e), `pnpm --filter @nitro-forge/draft
 typecheck` clean. UI adoption, native acceptance and full P17 completion are
 not implied.
+
+## P16 design comment threads/pins slice G checkpoint (2026-11-08)
+
+Design gains engine-owned comment threads as durable document state under
+`comments:{threads}` — the P16 slice-G backlog item and the L-14
+`CommentPins`/`CommentsThreadPanel` contract (read from the NYC-Tron
+`codex/complete-all-components` source; the installed alpha.4 pin still
+lacks `forge/design`). A thread is `{id,anchor:{x,y},body,author?,
+time_label?,resolved?,replies?}`: the anchor is a document-space point in
+document units — the engine mapping of the contract's viewport pin
+coordinates, which the host converts — matching the L-14 `{threadId,x,y}`
+pin shape. Pins are deliberately canvas positions, not node attachments:
+the contract carries no node/frame anchor, so layout changes never move a
+pin and `removeNode`/`reparentNode` need no cascade or remap (documented
+choice; node-following pins would need quill-style `{block,offset}` remap
+machinery and stay deferred). `author`/`time_label` are optional
+host-supplied display strings stored verbatim — the engine keeps no clock
+and no authorship identity. Replies are append-only `CommentEntry`
+records (`reply-N` ids unique per thread, ≤1024 per thread); there is no
+per-reply edit or delete, matching the panel's action surface
+(reply/resolve/delete only).
+
+New ops: `defineCommentThread` (`id` optional → `comment-N`, ≤1024
+threads), `addCommentReply` (→ `{id}`), `setCommentResolved` (durable
+flag, equal writes silent), `removeCommentThread` (thread + replies in one
+journal entry), and the `listComments` read (silent, returns stored
+threads; the engine stores no `page` — hosts map the single canvas to the
+panel's page 0, and `resolved:false`/empty fields are omitted on the wire).
+Bounds mirror the panel roster guard: ≤1024 threads, ≤1024 replies per
+thread, body ≤64KiB UTF-8 admitting only `\n`/`\t` control chars, ids ≤256
+bytes, author/time_label ≤256 bytes, anchor finite within ±1e6 document
+units; whole-document `validate_comments` enforces all of it on mutation
+and hostile restore. Snapshot schema stays 2 via the presence-triggered
+wrapper: any thread emits `{kind:"design",schema:2,document}` and
+unwrapped state carrying `comments` rejects on restore; removing the last
+thread returns snapshots to bare schema:1. Presence stays out —
+collaboration-server transport only per the P16 placement decision; no
+real-time collaboration, notifications or mentions are implemented.
+
+Local evidence: `cargo test -p design-engine` 47 passed (3 new comment
+tests covering CRUD/reply/resolve/list, journaled undo/redo, silent
+reads, schema:1↔2 wrapper transitions, atomic rejection, the 1024-thread
+cap and hostile restore of duplicate ids, out-of-bounds anchors and
+oversized bodies), `cargo build -p nf-cli` clean,
+`pnpm --filter @nitro-forge/design test` 16 passed across 12 files (1 new
+nf-cli live test, 1 new payload-contract test),
+`pnpm --filter @nitro-forge/design typecheck` clean. Node-anchored pins
+with layout remap, per-reply editing/deletion, mentions, notifications,
+presence transport and UI wiring remain deferred; no full P16 completion
+is implied.

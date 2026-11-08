@@ -43,6 +43,16 @@ pub const MAX_TRANSITIONS: usize = 256;
 pub const MAX_DELAY_MS: u64 = 86_400_000;
 /// Transition duration cap in milliseconds (InteractionTriggerEditor max).
 pub const MAX_TRANSITION_MS: u64 = 600_000;
+/// Comment catalog bounds (slice G), matching the NYC-Tron
+/// `CommentsThreadPanel` roster guard: ≤1024 threads, ≤1024 replies per
+/// thread, body ≤64KiB per entry.
+pub const MAX_COMMENT_THREADS: usize = 1024;
+pub const MAX_COMMENT_REPLIES: usize = 1024;
+pub const MAX_COMMENT_BODY_BYTES: usize = 64 * 1024;
+/// UTF-8 byte cap for comment thread/reply ids (panel allows ≤256).
+pub const MAX_COMMENT_ID_BYTES: usize = 256;
+/// UTF-8 byte cap for optional author and time-label display strings.
+pub const MAX_COMMENT_META_BYTES: usize = 256;
 /// Normalized hotspot geometry admits a tiny float epsilon so 0.1+0.9-style
 /// authored regions that land on the boundary are not rejected.
 pub const HOTSPOT_EPSILON: f64 = 1e-9;
@@ -586,6 +596,63 @@ impl PrototypeState {
             && self.transitions.is_empty()
     }
 }
+/// Comment pin anchor (slice G, NYC-Tron L-14 `CommentPins` contract): a
+/// point in document units. Pins are canvas positions, not node
+/// attachments — layout changes do not move them and node deletion cannot
+/// orphan them, so no remap machinery exists. Hosts convert between
+/// viewport and document space; the engine stores document space only.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CommentAnchor {
+    pub x: f64,
+    pub y: f64,
+}
+/// One comment body: a thread's opening entry or a reply. `author` and
+/// `time_label` are optional host-supplied display strings — the engine is
+/// I/O-free and keeps no clock, so `time_label` is stored verbatim (the
+/// NYC-Tron panel contract calls it "already formatted by the app").
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CommentEntry {
+    pub id: String,
+    pub body: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub time_label: Option<String>,
+}
+/// A comment thread pinned at a document-space point. `resolved` is the
+/// durable open/resolved flag the panel's filter reads; replies are
+/// append-only (no per-reply edit/delete in the contract).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CommentThread {
+    pub id: String,
+    pub anchor: CommentAnchor,
+    pub body: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub time_label: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub resolved: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub replies: Vec<CommentEntry>,
+}
+/// The whole comment catalog. Empty state is omitted from snapshots so
+/// schema:1-only documents stay byte-identical; any thread triggers the
+/// schema:2 wrapper via `requires_wrapper`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CommentCatalog {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub threads: Vec<CommentThread>,
+}
+impl CommentCatalog {
+    pub fn is_empty(&self) -> bool {
+        self.threads.is_empty()
+    }
+}
 pub(crate) fn valid_symbol_id(s: &str) -> bool {
     !s.is_empty() && s.len() <= MAX_SYMBOL_ID_BYTES && !s.chars().any(char::is_control)
 }
@@ -682,6 +749,11 @@ pub struct State {
     /// omitted so schema:1-only documents stay byte-identical.
     #[serde(default, skip_serializing_if = "PrototypeState::is_empty")]
     pub prototype: PrototypeState,
+    /// Comment threads/pins (slice G). Presence triggers the schema:2
+    /// snapshot wrapper; empty state is omitted so schema:1-only documents
+    /// stay byte-identical.
+    #[serde(default, skip_serializing_if = "CommentCatalog::is_empty")]
+    pub comments: CommentCatalog,
 }
 impl Default for State {
     fn default() -> Self {
@@ -696,6 +768,7 @@ impl Default for State {
             active_mode: None,
             bindings: vec![],
             prototype: PrototypeState::default(),
+            comments: CommentCatalog::default(),
         }
     }
 }
@@ -748,6 +821,7 @@ pub fn requires_wrapper(s: &State) -> bool {
         || s.active_mode.is_some()
         || !s.bindings.is_empty()
         || !s.prototype.is_empty()
+        || !s.comments.is_empty()
 }
 /// Whole-document variable/mode/binding validation. Alias chains are checked
 /// per stored (variable, mode) entry with a shared hop budget and a memo of
@@ -1048,6 +1122,82 @@ fn validate_prototype(s: &State) -> Result<(), EngineError> {
                 if i.target.is_some() || i.value.is_some() {
                     return Err(bad("back/close-overlay interactions carry no target or value"));
                 }
+            }
+        }
+    }
+    Ok(())
+}
+/// Comment body rule shared by thread bodies and reply bodies: non-empty,
+/// ≤64KiB UTF-8, and only `\n`/`\t` control characters admitted (same rule
+/// as text-node content).
+fn valid_comment_body(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= MAX_COMMENT_BODY_BYTES
+        && s.chars().all(|c| c == '\n' || c == '\t' || !c.is_control())
+}
+/// Optional display strings (author, time label): bounded, no control
+/// characters. Empty strings are admitted — the panel treats them as
+/// absent.
+fn valid_comment_meta(s: &str) -> bool {
+    s.len() <= MAX_COMMENT_META_BYTES && !s.chars().any(char::is_control)
+}
+/// Comment catalog validation (slice G). Runs inside whole-document
+/// `validate`, so hostile restores face the same identity, anchor, body
+/// and reply rules as mutations. Threads pin to document-space points —
+/// there is no node reference to dangle, and layout changes never move a
+/// pin.
+fn validate_comments(s: &State) -> Result<(), EngineError> {
+    let c = &s.comments;
+    if c.threads.len() > MAX_COMMENT_THREADS {
+        return Err(bad("comment thread budget exceeded"));
+    }
+    let mut thread_ids = BTreeSet::new();
+    for t in &c.threads {
+        if t.id.is_empty()
+            || t.id.len() > MAX_COMMENT_ID_BYTES
+            || t.id.chars().any(char::is_control)
+            || !thread_ids.insert(t.id.as_str())
+        {
+            return Err(bad("invalid or duplicate comment thread id"));
+        }
+        if !t.anchor.x.is_finite()
+            || !t.anchor.y.is_finite()
+            || t.anchor.x.abs() > 1e6
+            || t.anchor.y.abs() > 1e6
+        {
+            return Err(bad("comment anchor exceeds bounds"));
+        }
+        if !valid_comment_body(&t.body) {
+            return Err(bad("comment body exceeds bounds"));
+        }
+        if t.author.as_deref().is_some_and(|a| !valid_comment_meta(a))
+            || t.time_label
+                .as_deref()
+                .is_some_and(|l| !valid_comment_meta(l))
+        {
+            return Err(bad("comment author or time label exceeds bounds"));
+        }
+        if t.replies.len() > MAX_COMMENT_REPLIES {
+            return Err(bad("comment reply budget exceeded"));
+        }
+        let mut reply_ids = BTreeSet::new();
+        for r in &t.replies {
+            if r.id.is_empty()
+                || r.id.len() > MAX_COMMENT_ID_BYTES
+                || r.id.chars().any(char::is_control)
+                || !reply_ids.insert(r.id.as_str())
+            {
+                return Err(bad("invalid or duplicate comment reply id"));
+            }
+            if !valid_comment_body(&r.body) {
+                return Err(bad("comment reply body exceeds bounds"));
+            }
+            if r.author.as_deref().is_some_and(|a| !valid_comment_meta(a))
+                || r.time_label
+                    .as_deref()
+                    .is_some_and(|l| !valid_comment_meta(l))
+            {
+                return Err(bad("comment author or time label exceeds bounds"));
             }
         }
     }
@@ -1409,6 +1559,7 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
     }
     validate_variables(s)?;
     validate_prototype(s)?;
+    validate_comments(s)?;
     if serde_json::to_vec(s)?.len() > MAX_BYTES {
         return Err(bad("design encoded state exceeds 8 MiB"));
     }

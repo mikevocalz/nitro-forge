@@ -252,6 +252,11 @@ impl Engine for DesignEngine {
                     &self.state, p,
                 )?))
             }
+            "listComments" => {
+                return Ok(CommandResult::read_only(json!({
+                    "threads": &self.state.comments.threads
+                })))
+            }
             "renderFrame" => return self.render(&cmd, None),
             _ => {}
         }
@@ -1423,6 +1428,90 @@ impl Engine for DesignEngine {
                     .retain(|i| i.id != interaction_id);
                 if next.prototype.interactions.len() == before {
                     return Err(bad("unknown interaction"));
+                }
+            }
+            // --- Comment threads/pins (slice G). Mutations are journaled
+            // like every other op; `listComments` above stays eventless.
+            // Pins anchor to document-space points, so node removal needs
+            // no cascade and layout changes never move a pin. ---
+            "defineCommentThread" => {
+                fields(p, &["id", "anchor", "body", "author", "time_label"])?;
+                if next.comments.threads.len() >= MAX_COMMENT_THREADS {
+                    return Err(bad("comment thread budget exceeded"));
+                }
+                let anchor: CommentAnchor = serde_json::from_value(
+                    p.get("anchor")
+                        .cloned()
+                        .ok_or_else(|| bad("comment anchor required"))?,
+                )?;
+                let thread_id = match p.get("id") {
+                    Some(Value::Null) | None => generated_id("comment", &|c| {
+                        next.comments.threads.iter().any(|t| t.id == c)
+                    })?,
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("comment id must be a string"))?
+                        .to_string(),
+                };
+                if next.comments.threads.iter().any(|t| t.id == thread_id) {
+                    return Err(bad("comment thread already exists"));
+                }
+                next.comments.threads.push(CommentThread {
+                    id: thread_id.clone(),
+                    anchor,
+                    body: text_field(p, "body")?.into(),
+                    author: opt_str(p, "author")?.map(str::to_string),
+                    time_label: opt_str(p, "time_label")?.map(str::to_string),
+                    resolved: false,
+                    replies: vec![],
+                });
+                data = json!({"id": thread_id});
+            }
+            "addCommentReply" => {
+                fields(p, &["thread", "body", "author", "time_label"])?;
+                let thread_id = text_field(p, "thread")?;
+                let pos = next
+                    .comments
+                    .threads
+                    .iter()
+                    .position(|t| t.id == thread_id)
+                    .ok_or_else(|| bad("unknown comment thread"))?;
+                if next.comments.threads[pos].replies.len() >= MAX_COMMENT_REPLIES {
+                    return Err(bad("comment reply budget exceeded"));
+                }
+                let entry_id = generated_id("reply", &|c| {
+                    next.comments.threads[pos].replies.iter().any(|r| r.id == c)
+                })?;
+                next.comments.threads[pos].replies.push(CommentEntry {
+                    id: entry_id.clone(),
+                    body: text_field(p, "body")?.into(),
+                    author: opt_str(p, "author")?.map(str::to_string),
+                    time_label: opt_str(p, "time_label")?.map(str::to_string),
+                });
+                data = json!({"id": entry_id});
+            }
+            "setCommentResolved" => {
+                fields(p, &["id", "resolved"])?;
+                let thread_id = text_field(p, "id")?;
+                let resolved = p
+                    .get("resolved")
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| bad("resolved must be a boolean"))?;
+                let t = next
+                    .comments
+                    .threads
+                    .iter_mut()
+                    .find(|t| t.id == thread_id)
+                    .ok_or_else(|| bad("unknown comment thread"))?;
+                t.resolved = resolved;
+            }
+            "removeCommentThread" => {
+                fields(p, &["id"])?;
+                let thread_id = text_field(p, "id")?;
+                let before = next.comments.threads.len();
+                next.comments.threads.retain(|t| t.id != thread_id);
+                if next.comments.threads.len() == before {
+                    return Err(bad("unknown comment thread"));
                 }
             }
             _ => return Err(EngineError::unsupported("unsupported design operation")),
