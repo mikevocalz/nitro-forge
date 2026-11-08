@@ -719,3 +719,41 @@ fn removing_a_referenced_layer_rejects() {
     // this-refs don't block removal of the *referencing* layer.
     assert!(try_call(&mut e, "removeLayer", json!({"id":a})).is_ok());
 }
+
+#[test]
+fn deep_nesting_rejects_without_aborting() {
+    // Regression: parens produced no AST node, so ~2k nested parens fit the
+    // 4096-byte source cap and overflowed the parser stack (SIGABRT in the
+    // nf-cli host). expr() now counts nesting depth (MAX_DEPTH = 128);
+    // over-cap input returns Err through setExpression and restore alike.
+    let mut e = MotionEngine::new();
+    call(&mut e, "new", json!({"width":4,"height":4,"duration_s":2}));
+    let a = shape_layer(&mut e);
+    // Just under the cap parses and evaluates.
+    let under = format!("{}1{}", "(".repeat(128), ")".repeat(128));
+    set_expr(&mut e, a, "tx", &under);
+    assert_eq!(eval_prop(&mut e, 0.0, a, "tx"), 1.0);
+    // One level over the cap rejects cleanly at op time.
+    let over = format!("{}1{}", "(".repeat(129), ")".repeat(129));
+    assert!(try_call(
+        &mut e,
+        "setExpression",
+        json!({"layer":a,"property":"ty","source":over})
+    )
+    .is_err());
+    // The ~1000-paren payload that previously aborted the host process.
+    let hostile = format!("{}1{}", "(".repeat(1000), ")".repeat(1000));
+    assert!(expressions::parse(&hostile).is_err());
+    // Deep unary prefix runs parse iteratively: 500 Neg nodes fit the AST
+    // cap, 600 exceed it — both bounded, neither touches the stack.
+    assert!(expressions::parse(&format!("{}1", "-".repeat(500))).is_ok());
+    assert!(expressions::parse(&format!("{}1", "-".repeat(600))).is_err());
+    // Hostile restore path: inject the over-cap source, restore must reject
+    // atomically and preserve prior state.
+    let good = e.snapshot().unwrap();
+    let mut wire = serde_json::to_value(&*e.state).unwrap();
+    wire["layers"][0]["expressions"][0]["source"] = json!(hostile);
+    let bytes = encode_envelope(&serde_json::to_vec(&wire).unwrap());
+    assert!(e.restore(&bytes).is_err());
+    assert_eq!(e.snapshot().unwrap(), good);
+}

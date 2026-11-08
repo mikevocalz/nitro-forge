@@ -24,6 +24,13 @@ pub const MAX_SOURCE_BYTES: usize = 4096;
 pub const MAX_NODES: usize = 512;
 /// Function-call node cap (a subset of the AST cap).
 pub const MAX_CALLS: usize = 64;
+/// Parser recursion-depth cap. Every nested-expression context —
+/// parenthesized groups, ternary branches and call arguments — funnels
+/// through `Parser::expr`, which counts one level per re-entry. Parens
+/// produce no AST node, so without this cap ~2k nested parens fit the
+/// 4096-byte source limit and overflow the stack; 128 levels keeps parser
+/// recursion (~9 grammar frames per level) far below any thread stack.
+pub const MAX_DEPTH: usize = 128;
 /// Defensive per-cell evaluation step ceiling; exceeding it resolves the
 /// property to 0.0 via NaN propagation at the property boundary.
 pub const MAX_EVAL_STEPS: u32 = 10_000;
@@ -500,6 +507,7 @@ pub fn parse(source: &str) -> Result<Ast, &'static str> {
         pos: 0,
         nodes: 0,
         calls: 0,
+        depth: 0,
         refs: Vec::new(),
     };
     let root = p.ternary()?;
@@ -514,6 +522,7 @@ struct Parser<'a> {
     pos: usize,
     nodes: usize,
     calls: usize,
+    depth: usize,
     refs: Vec<(Option<u64>, Property)>,
 }
 impl<'a> Parser<'a> {
@@ -555,7 +564,17 @@ impl<'a> Parser<'a> {
         }
     }
     fn expr(&mut self) -> Result<Node, &'static str> {
-        self.ternary()
+        // Single funnel for nested-expression recursion (parens, ternary
+        // branches, call arguments): count depth so hostile nesting returns
+        // Err instead of growing the stack without bound.
+        self.depth += 1;
+        if self.depth > MAX_DEPTH {
+            self.depth -= 1;
+            return Err("expression nesting exceeds 128 levels");
+        }
+        let node = self.ternary();
+        self.depth -= 1;
+        node
     }
     fn ternary(&mut self) -> Result<Node, &'static str> {
         let cond = self.logic()?;
@@ -636,17 +655,29 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
     fn unary(&mut self) -> Result<Node, &'static str> {
-        if self.eat_op("-") {
-            let v = self.unary()?;
-            self.bump_node()?;
-            return Ok(Node::Neg(Box::new(v)));
+        // Prefix `-`/`!` runs are collected iteratively: `-`-heavy sources
+        // fit the byte cap many times over, so recursion here would also be
+        // stack-unbounded. Each op still costs one AST node via bump_node.
+        let mut ops = Vec::new();
+        loop {
+            if self.eat_op("-") {
+                ops.push(false);
+            } else if self.eat_op("!") {
+                ops.push(true);
+            } else {
+                break;
+            }
         }
-        if self.eat_op("!") {
-            let v = self.unary()?;
+        let mut node = self.postfix()?;
+        for &is_not in ops.iter().rev() {
             self.bump_node()?;
-            return Ok(Node::Not(Box::new(v)));
+            node = if is_not {
+                Node::Not(Box::new(node))
+            } else {
+                Node::Neg(Box::new(node))
+            };
         }
-        self.postfix()
+        Ok(node)
     }
     fn postfix(&mut self) -> Result<Node, &'static str> {
         let node = self.primary()?;
