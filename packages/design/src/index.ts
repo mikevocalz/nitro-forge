@@ -165,7 +165,7 @@ export interface CompositionSettings{title:string;width:number;height:number}
  * are present. The collections are omitted entirely when empty. */
 /** Durable prototype catalog stored on the internal state; omitted when
  * empty. Any content triggers the schema:2 snapshot wrapper. */
-export interface PrototypeCatalog{screens:PrototypeScreen[];hotspots:PrototypeHotspot[];interactions:PrototypeInteraction[];transitions:PrototypeTransition[]}
+export interface PrototypeCatalog{screens?:PrototypeScreen[];hotspots?:PrototypeHotspot[];interactions?:PrototypeInteraction[];transitions?:PrototypeTransition[]}
 export interface DesignState{kind:'design';schema:1;title:string;next_id:number;nodes:Record<string,DesignNode>;variables?:Record<string,DesignVariable>;modes?:DesignMode[];active_mode?:string;bindings?:VariableBinding[];prototype?:PrototypeCatalog}
 export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'|'locked'>> & {text?:TextStylePatch};
 export type NewNode=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'>>;
