@@ -350,6 +350,8 @@ dependencies = [
 name = "folio-engine"
 version = "0.1.0"
 dependencies = [
+ "crc32fast",
+ "flate2",
  "ignition-core",
  "lopdf",
  "md-5",
