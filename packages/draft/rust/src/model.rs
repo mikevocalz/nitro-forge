@@ -294,6 +294,7 @@ impl State {
                 || id >= self.next_id
                 || !ids.insert(id)
                 || l.name.is_empty()
+                || l.name == "0"
                 || l.name.len() > 512
                 || !layer_names.insert(l.name.as_str())
             {
