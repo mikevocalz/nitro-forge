@@ -2390,3 +2390,53 @@ round-trip + hostile restore, batch/new/import/redo),
 nf-cli citations e2e), `pnpm --filter @nitro-forge/quill typecheck`
 clean. No native/device acceptance or full P12–P14 completion is
 implied.
+
+## Tally XLSX import/export slice (2026-11-08, branch codex/w5-tally-x)
+
+Tally gains real `.xlsx` workbook transfer (P12-P14 backlog item 10, the
+XLSX half — `zip`/`quick-xml` admitted at the versions quill already uses
+for .docx). New ops: `importXlsx` (`{bytes_b64}` or the binary sidecar —
+the op is listed in `binary_input_ops`, mirroring `importDocx`) and
+`exportXlsx` (`{}` → archive bytes via `with_bytes`). `exportXlsx` writes
+every sheet in order: formulas become `<f>` elements with the computed
+value cached in `<v>` (never trusted — recomputed on open), literals are
+typed by the same `scalar_from_raw` classification evaluation uses,
+booleans/errors/formula-string-results map to `t="b"|"e"|"str"`, stored
+formats generate a bounded `styles.xml` (bold/italic → fonts, `fill` →
+solid fills, `border` → borders; `number_format` is host-interpreted and
+untranslated), and merges emit `<mergeCells>`. Excel sheet-name rules are
+enforced (1–31 chars, none of `[]:*?/\`, no edge apostrophes) — invalid
+names reject rather than silently rename. `importXlsx` replaces the whole
+workbook like `importDocx` replaces the document: every `<sheet>` resolves
+through workbook rels to its worksheet part, shared strings (rich-text
+runs, phonetic `<rPh>` excluded) feed `t="s"`, `activeTab` picks the
+active sheet, `<mergeCells>` lands after the restore merge invariants,
+and admitted cell types are numbers, shared/inline/`str` strings,
+booleans (→ `TRUE`/`FALSE` raw, the same literal model `setCell` bools
+have) and the six engine error literals (`t="e"` → `=#…!` so the computed
+value keeps its error type; `#N/A` and friends reject). `t="shared"|
+"array"|"dataTable"` formulas, `t="d"` dates and unknown `t` values reject
+`unsupported`; cells without `r` take positional cursors. Everything else
+in the package — styles.xml on import, defined names, validations,
+charts, images, comments, pivots, tables, protection, hidden state,
+widths/heights, cached values — is ignored (documented loss, CSV
+precedent); string cells that look numeric or `=`-prefixed compute as
+number/formula exactly like `importCsv` fields. Hostile bounds: ≤4096
+entries, ≤128 MiB per part (central-directory size checked and `take()`
+enforced while streaming), 256 MiB total uncompressed, 1,048,576 shared
+strings / imported cells, 1024 sheets; all validation completes before the
+single `Reset` undo entry commits, and any protected sheet rejects up
+front like `new`. No snapshot-schema change — imported state is ordinary
+engine state (merges emit the existing schema:8 wrapper). Pivot
+materialization (item 11 second half) remains deferred.
+
+Local evidence: `cargo test -p tally-engine` 219 passed 0 failed (7 new
+xlsx tests: fixture import replace/undo, sharedStrings + positional
+cells, export→import round-trip with styles.xml inspection, invalid-name
+export rejection, hostile/malformed atomic rejection, protection,
+binary-sidecar + b64 mutex), `cargo build -p nf-cli` clean,
+`pnpm install --prefer-offline` clean, `pnpm --filter @nitro-forge/tally
+test` 89 passed across 23 files (4 new nf-cli xlsx e2e incl. a
+hand-built two-sheet fixture and runImport/runExport coverage),
+`pnpm --filter @nitro-forge/tally typecheck` clean. No native/device
+acceptance or full P13 completion is implied.

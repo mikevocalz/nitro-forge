@@ -58,6 +58,13 @@ text frames/wrap layout, layout spreads/masters.
    host-persisted; lifts `TALLY_DEFERRED_OPS.setSheetView`).
 9. Comments (`addComment`/`resolveComment`/`listComments`).
 10. CSV/TSV import-export ops now; XLSX blocked on dependency admission.
+    **Done (XLSX half, branch codex/w5-tally-x):** `importXlsx`/
+    `exportXlsx` landed on the admitted `zip`+`quick-xml` versions quill
+    already uses — whole-workbook replace on import (sheets, values,
+    formulas, merges, `activeTab`; styles/defined-names/etc ignored,
+    documented), full-workbook archive on export (formulas + cached
+    values, bold/italic/fill/border → styles.xml, merges; `number_format`
+    untranslated). Pivot materialization (item 11 second half) remains.
 11. Pivot tables — split spec-storage/create from update/refresh.
 12. Table objects (Excel Tables).
 13. Merged cells + row/column insert/delete (reuse `shift_references`).

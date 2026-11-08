@@ -281,7 +281,8 @@ impl TallyEngine {
                         .iter()
                         .any(|s| s.id == t.sheet && s.is_protected)
                 }),
-            "new" => self.doc.sheets.iter().any(|s| s.is_protected),
+            // `importXlsx` replaces the whole workbook like `new`.
+            "new" | "importXlsx" => self.doc.sheets.iter().any(|s| s.is_protected),
             _ => false,
         };
         if protected {
