@@ -1023,7 +1023,8 @@ tracks: [Track], metronome: {enabled, volume 0..=1} }`. `Track = { id, name,
 kind:"midi"|"audio"|"bus", volume 0..=1, pan -1..=1, muted, solo, clips: [Clip],
 output: bus id|null, sends: [{bus, level 0..=1}], inserts: [Insert],
 group: string|null, solo_safe, automation: {gain: Lane, pan: Lane} }`.
-`Clip = { id, start_ticks, length_ticks, notes: [Note] }` (midi tracks only;
+`Clip = { id, start_ticks, length_ticks, gain_db -60..=12 (default 0), muted
+(default false), notes: [Note] }` (midi tracks only;
 audio track clips have no notes — `addNote` → Validation; buses hold no clips).
 `Note = { pitch 0..127, velocity 0..127, start_ticks, length_ticks, channel 0..15 }` (clip-relative).
 `Insert = { id, bypassed, kind:"gain"|"eq"|"compressor", params }`; gain
@@ -1035,7 +1036,8 @@ release_ms 5..2000, makeup_db 0..24}`. ≤8 inserts per track.
 gain values 0..=1, pan -1..=1. Fields added after the first release default on
 restore, so older snapshots load unchanged.
 
-Signal flow: source track notes → inserts → fader+pan (or read-mode automation,
+Signal flow: source track notes (each clip's `gain_db`/`muted` applied to its
+notes first) → inserts → fader+pan (or read-mode automation,
 linear between points, held at the ends) → its `output` (bus or master), plus
 post-fader sends. Buses sum inputs → inserts → fader + balance (pan on a bus
 attenuates the far side only) → master. Buses feed the master only. Audibility:
@@ -1062,6 +1064,9 @@ passes `include_metronome: true`.
 | `removeClip` | `{id}` | `{ok}` | |
 | `moveClip` | `{id,start_ticks}` | `{ok}` | reject overlap |
 | `resizeClip` | `{id,length_ticks}` | `{ok}` | notes outside trimmed |
+| `splitClip` | `{id,at_ticks}` | `{left_id,right_id}` | `at_ticks` absolute, strictly inside the clip span; left keeps the id, right gets a new id and copies `gain_db`/`muted`; notes are clip-relative and a note spanning the cut is divided into two notes at the boundary (same pitch/velocity/channel) |
+| `setClipGain` | `{id,gain_db}` | `{ok}` | -60..=12 dB; scales every note the clip contributes, before track inserts/fader; honored by render, meter, loudness, spectrogram, renderStems |
+| `setClipMute` | `{id,muted}` | `{ok}` | muted clip contributes silence to the mix |
 | `addNote` | `{clip,pitch,velocity?,start_ticks,length_ticks}` | `{index}` | pitch 0..127; bounds-checked vs clip length |
 | `removeNote` | `{clip,index}` | `{ok}` | |
 | `moveNote` | `{clip,index,start_ticks,pitch?}` | `{ok}` | note keeps its index; omitted pitch is unchanged; start+length past clip end → OutOfBounds; pitch 0..127 |
@@ -1069,6 +1074,7 @@ passes `include_metronome: true`.
 | `setVelocity` | `{clip,index,velocity}` | `{ok}` | 0..127 integer |
 | `project` | `{}` | meta: tempo, sig, track/clip/note counts, length_ticks | read-only |
 | `render` | `{from_ticks,to_ticks,sample_rate,include_metronome?}` | `{samples_b64,frames,channels:2}` | f32le stereo mixdown per the signal flow above; ≤10 min at 48 kHz |
+| `renderStems` | `{from_ticks,to_ticks,sample_rate}` | `{stems_b64,frames,channels:2,stems:[{id}]}` | read-only; same bounds as `render`. `stems_b64` is every track's and bus's post-fader stereo output concatenated in document order (same f32le convention as `samples_b64`); each stem is `frames` frames long, so stem i occupies bytes `[i*frames*8,(i+1)*frames*8)`. The metronome only mixes into the master, so it never appears in a stem |
 | `addTrack` kind `bus` | `{name?,kind:"bus"}` | `{track_id}` | default name `Bus N` |
 | `removeTrack` (bus) | `{id}` | `{ok}` | tracks routed or sending to it fall back to the master in the same step |
 | `setTrackOutput` | `{id,output}` | `{ok}` | `output` bus id or `null` (master); buses and missing ids rejected |
@@ -1097,6 +1103,7 @@ passes `include_metronome: true`.
 | `meter` | `{from_ticks,to_ticks,sample_rate,window_ms?=50,include_metronome?}` | `{window_frames,window_seconds,tracks:[{id,peak[],rms[],max_peak,clipped}],master}` | read-only; post-fader per track/bus; sample_rate 8000..192000; ≤4096 windows |
 | `loudness` | same range | `{integrated_lufs,momentary_max_lufs,short_term_max_lufs,sample_peak_dbfs,momentary_lufs[],step_seconds}` | read-only BS.1770 K-weighted, gated; `null` = silent/too short |
 | `spectrogram` | range + `{fft_size?=2048,hop?,bands?=64}` | `{bands_hz,hop_seconds,frames}` | read-only; Hann STFT of mono master, log bands, dB floored -120; ≤2048 frames |
+| `detectBeats` | range + `{fft_size?=1024,hop?=fft_size/2}` | `{onsets_seconds,estimated_bpm,hop_seconds}` | read-only; spectral-flux onsets on the mono master (local maxima above mean+σ, ≥80 ms apart, ≤8192 onsets, ≤16384 STFT frames); `estimated_bpm` is the novelty autocorrelation peak in 60..=240 BPM, `null` under four onsets |
 
 Ticks→seconds: `ticks / (ppq * bpm / 60)`. Undo: prior field values / removed entities.
 

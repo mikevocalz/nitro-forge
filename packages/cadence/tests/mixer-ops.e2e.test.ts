@@ -182,6 +182,55 @@ describe("mixer ops against the real Rust Cadence engine", () => {
     }
   });
 
+  it("renders per-track stems through the real engine", async () => {
+    const { doc, track, bus } = await setup();
+    try {
+      await doc.setTrackOutput(track, bus);
+      await doc.setTrackGain(bus, 0.5);
+      const r = await doc.renderStems(240, 720, 8000);
+      expect(r.frames).toBe(2000);
+      expect(r.stems.map(s => s.id)).toEqual([track, bus]);
+      const peak = (s: Float32Array) => s.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+      // Track stem is post-fader; bus stem carries it at the bus's half gain.
+      expect(peak(r.stems[0]!.samples)).toBeCloseTo(Math.SQRT1_2, 1);
+      expect(peak(r.stems[1]!.samples)).toBeCloseTo(Math.SQRT1_2 * 0.5, 1);
+      // The master render still works alongside; stems are read-only.
+      const master = await doc.render(240, 720, 8000);
+      expect(master.samples.some(v => v !== 0)).toBe(true);
+      await rejectsWith(doc.handle.apply(OPS.renderStems, { from_ticks: 720, to_ticks: 240, sample_rate: 8000 }), "validation");
+    } finally {
+      await doc.close();
+    }
+  });
+
+  it("detects beats on the metronome click", async () => {
+    const doc = await CadenceDocument.open(host, 120);
+    try {
+      await doc.setMetronome(true, 1);
+      // Eight beats at 120 BPM: 8 * 960 ticks = 7680 ticks = 4 s.
+      const r = (await doc.detectBeats({ fromTicks: 0, toTicks: 7680, sampleRate: 8000, includeMetronome: true })).data;
+      expect(r.onsets_seconds.length).toBeGreaterThanOrEqual(4);
+      for (let i = 1; i < r.onsets_seconds.length; i++) {
+        // Onset times are STFT-frame quantized (64 ms hops at 8 kHz).
+        const gap = r.onsets_seconds[i]! - r.onsets_seconds[i - 1]!;
+        expect(gap).toBeGreaterThan(0.35);
+        expect(gap).toBeLessThan(0.65);
+      }
+      expect(r.estimated_bpm).not.toBeNull();
+      expect(r.estimated_bpm!).toBeGreaterThan(80);
+      expect(r.estimated_bpm!).toBeLessThan(160);
+      const silent = (await doc.detectBeats({ fromTicks: 0, toTicks: 7680, sampleRate: 8000 })).data;
+      expect(silent.onsets_seconds).toHaveLength(0);
+      expect(silent.estimated_bpm).toBeNull();
+      await rejectsWith(
+        doc.detectBeats({ fromTicks: 0, toTicks: 7680, sampleRate: 8000 }, { fftSize: 1000 }),
+        "validation",
+      );
+    } finally {
+      await doc.close();
+    }
+  });
+
   it("measures loudness and a spectrogram", async () => {
     const { doc } = await setup();
     try {

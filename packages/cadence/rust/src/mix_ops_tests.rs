@@ -452,6 +452,139 @@ fn notes_carry_a_midi_channel() {
     rejects(&mut e, "setNoteChannel", json!({"clip": c, "index": 5, "channel": 1}), ErrorCode::OutOfBounds);
 }
 
+// ---- clip split / gain / mute ------------------------------------------------------
+
+#[test]
+fn split_clip_cuts_notes_at_the_boundary() {
+    let mut e = CadenceEngine::new();
+    let (_, c) = tone_track(&mut e);
+    ok(&mut e, "addNote", json!({"clip": c, "pitch": 60, "start_ticks": 240, "length_ticks": 480}));
+    ok(&mut e, "addNote", json!({"clip": c, "pitch": 62, "start_ticks": 480, "length_ticks": 240}));
+    ok(&mut e, "addNote", json!({"clip": c, "pitch": 64, "start_ticks": 720, "length_ticks": 240}));
+    ok(&mut e, "setClipGain", json!({"id": c, "gain_db": -6.0}));
+    let before = describe(&mut e);
+    let r = ok(&mut e, "splitClip", json!({"id": c, "at_ticks": 480}));
+    let right = r["right_id"].as_u64().unwrap();
+    assert_eq!(r["left_id"], c);
+    let clips = describe(&mut e)["tracks"][0]["clips"].clone();
+    let arr = clips.as_array().unwrap();
+    assert_eq!(arr.len(), 2);
+    assert_eq!(arr[0]["id"], c);
+    assert_eq!(arr[0]["start_ticks"], 0);
+    assert_eq!(arr[0]["length_ticks"], 480);
+    assert_eq!(arr[0]["gain_db"], -6.0, "gain copies to the split");
+    // tone_track's A4 runs the whole clip, so it is cut in two as well; the
+    // left half keeps [0,480) of it plus the left piece of the 240..720 note.
+    assert_eq!(
+        arr[0]["notes"],
+        json!([
+            {"pitch": 69, "velocity": 127, "start_ticks": 0, "length_ticks": 480, "channel": 0},
+            {"pitch": 60, "velocity": 100, "start_ticks": 240, "length_ticks": 240, "channel": 0},
+        ])
+    );
+    assert_eq!(arr[1]["id"], right);
+    assert_eq!(arr[1]["start_ticks"], 480);
+    assert_eq!(arr[1]["length_ticks"], 480);
+    assert_eq!(arr[1]["gain_db"], -6.0);
+    // Right halves of both spanning notes start at 0; later notes shift by 480.
+    assert_eq!(
+        arr[1]["notes"],
+        json!([
+            {"pitch": 69, "velocity": 127, "start_ticks": 0, "length_ticks": 480, "channel": 0},
+            {"pitch": 60, "velocity": 100, "start_ticks": 0, "length_ticks": 240, "channel": 0},
+            {"pitch": 62, "velocity": 100, "start_ticks": 0, "length_ticks": 240, "channel": 0},
+            {"pitch": 64, "velocity": 100, "start_ticks": 240, "length_ticks": 240, "channel": 0},
+        ])
+    );
+    // One undo step restores the whole clip.
+    assert!(e.undo().unwrap());
+    assert_eq!(describe(&mut e), before);
+    // Splitting again at the same boundary point of the right clip works.
+    let r2 = ok(&mut e, "splitClip", json!({"id": c, "at_ticks": 480}));
+    ok(&mut e, "splitClip", json!({"id": r2["right_id"], "at_ticks": 720}));
+    assert_eq!(describe(&mut e)["tracks"][0]["clips"].as_array().unwrap().len(), 3);
+    for bad in [json!({"id": c, "at_ticks": 0}), json!({"id": c, "at_ticks": 960}), json!({"id": c, "at_ticks": 2000})] {
+        rejects(&mut e, "splitClip", bad, ErrorCode::Validation);
+    }
+    rejects(&mut e, "splitClip", json!({"id": 4242, "at_ticks": 480}), ErrorCode::NotFound);
+    rejects(&mut e, "splitClip", json!({"id": c}), ErrorCode::InvalidCommand);
+}
+
+#[test]
+fn split_clip_on_an_audio_clip_and_empty_clip() {
+    let mut e = CadenceEngine::new();
+    let t = ok(&mut e, "addTrack", json!({"kind": "audio"}))["track_id"].as_u64().unwrap();
+    let c = ok(&mut e, "addClip", json!({"track": t, "start_ticks": 100, "length_ticks": 400}))["clip_id"]
+        .as_u64()
+        .unwrap();
+    let r = ok(&mut e, "splitClip", json!({"id": c, "at_ticks": 300}));
+    let clips = describe(&mut e)["tracks"][0]["clips"].clone();
+    assert_eq!(clips[0]["start_ticks"], 100);
+    assert_eq!(clips[0]["length_ticks"], 200);
+    assert_eq!(clips[1]["start_ticks"], 300);
+    assert_eq!(clips[1]["length_ticks"], 200);
+    assert_eq!(clips[1]["id"], r["right_id"]);
+    // An empty clip still splits; a clip cannot split at its own edges.
+    let m = ok(&mut e, "addTrack", json!({}))["track_id"].as_u64().unwrap();
+    let e1 = ok(&mut e, "addClip", json!({"track": m, "start_ticks": 0, "length_ticks": 100}))["clip_id"]
+        .as_u64()
+        .unwrap();
+    ok(&mut e, "splitClip", json!({"id": e1, "at_ticks": 50}));
+    rejects(&mut e, "splitClip", json!({"id": e1, "at_ticks": 100}), ErrorCode::Validation);
+}
+
+#[test]
+fn clip_gain_and_mute_reach_the_render_and_meter() {
+    let mut e = CadenceEngine::new();
+    let (_, c) = tone_track(&mut e);
+    let (l, _) = peaks(&mut e);
+    assert!((l - CENTRE).abs() < 0.02, "unity {l}");
+    ok(&mut e, "setClipGain", json!({"id": c, "gain_db": -6.0206}));
+    let (l, _) = peaks(&mut e);
+    assert!((l - CENTRE * 0.5).abs() < 0.02, "-6 dB clip {l}");
+    ok(&mut e, "setClipMute", json!({"id": c, "muted": true}));
+    assert_eq!(peaks(&mut e), (0.0, 0.0), "muted clip is silent");
+    // The meter sees the same silence.
+    let m = ok(&mut e, "meter", json!({"from_ticks": 240, "to_ticks": 720, "sample_rate": 8000}));
+    assert_eq!(m["tracks"][0]["max_peak"], 0.0);
+    // One undo each; gain survives a mute toggle.
+    ok(&mut e, "setClipMute", json!({"id": c, "muted": false}));
+    let (l, _) = peaks(&mut e);
+    assert!((l - CENTRE * 0.5).abs() < 0.02, "unmuted keeps gain {l}");
+    // Three undo steps: unmute, mute, gain — back to the untouched clip.
+    assert!(e.undo().unwrap());
+    assert!(e.undo().unwrap());
+    assert!(e.undo().unwrap());
+    let (l, _) = peaks(&mut e);
+    assert!((l - CENTRE).abs() < 0.02, "undo restores unity {l}");
+    for (bad, code) in [
+        (json!({"id": c, "gain_db": 13}), ErrorCode::Validation),
+        (json!({"id": c, "gain_db": -61}), ErrorCode::Validation),
+        (json!({"id": c, "gain_db": "loud"}), ErrorCode::InvalidCommand),
+        (json!({"id": 999, "gain_db": 0}), ErrorCode::NotFound),
+        (json!({"id": c}), ErrorCode::InvalidCommand),
+    ] {
+        rejects(&mut e, "setClipGain", bad, code);
+    }
+    rejects(&mut e, "setClipMute", json!({"id": c}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "setClipMute", json!({"id": 999, "muted": true}), ErrorCode::NotFound);
+}
+
+#[test]
+fn clip_gain_defaults_on_pre_field_snapshots() {
+    let old = json!({
+        "tempo_bpm": 120.0, "time_sig": [4, 4], "ppq": 960, "playhead_ticks": 0, "next_id": 3,
+        "tracks": [{"id": 1, "name": "Keys", "kind": "midi", "volume": 1.0, "pan": 0.0, "muted": false, "solo": false,
+            "clips": [{"id": 2, "start_ticks": 0, "length_ticks": 960,
+                "notes": [{"pitch": 60, "velocity": 100, "start_ticks": 0, "length_ticks": 240}]}]}]
+    });
+    let mut e = CadenceEngine::new();
+    e.restore(&encode_envelope(&serde_json::to_vec(&old).unwrap())).unwrap();
+    let clip = describe(&mut e)["tracks"][0]["clips"][0].clone();
+    assert_eq!(clip["gain_db"], 0.0);
+    assert_eq!(clip["muted"], false);
+}
+
 // ---- metronome ------------------------------------------------------------------
 
 #[test]
@@ -515,6 +648,53 @@ fn loudness_and_spectrogram_ops() {
     rejects(&mut e, "spectrogram", json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 48000, "bands": 4}), ErrorCode::Validation);
 }
 
+#[test]
+fn detect_beats_finds_the_metronome_pulse() {
+    let mut e = CadenceEngine::new();
+    ok(&mut e, "setMetronome", json!({"enabled": true, "volume": 1.0}));
+    let depth = undo_depth(&mut e);
+    // Eight beats at 120 BPM in the 4 s range; the click sitting on the
+    // first STFT frame edge can be missed, so assert the pulse, not a count.
+    let r = ok(
+        &mut e,
+        "detectBeats",
+        json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "include_metronome": true}),
+    );
+    let onsets = r["onsets_seconds"].as_array().unwrap();
+    assert!(onsets.len() >= 4, "{r}");
+    let times: Vec<f64> = onsets.iter().map(|v| v.as_f64().unwrap()).collect();
+    for w in times.windows(2) {
+        assert!((w[1] - w[0] - 0.5).abs() < 0.15, "beat spacing {times:?}");
+    }
+    let bpm = r["estimated_bpm"].as_f64().unwrap();
+    assert!((80.0..=160.0).contains(&bpm), "bpm {bpm}");
+    // Without the metronome requested the mix is silent: no onsets, no bpm.
+    let silent = ok(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000}));
+    assert_eq!(silent["onsets_seconds"].as_array().unwrap().len(), 0);
+    assert!(silent["estimated_bpm"].is_null());
+    assert_eq!(undo_depth(&mut e), depth, "read-only op recorded undo");
+    rejects(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 100}), ErrorCode::Validation);
+    rejects(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "fft_size": 1000}), ErrorCode::Validation);
+    rejects(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "hop": 0}), ErrorCode::Validation);
+    // hop 1 over ~2.6 s at 8 kHz exceeds the frame cap before any FFT runs.
+    rejects(
+        &mut e,
+        "detectBeats",
+        json!({"from_ticks": 0, "to_ticks": 5000, "sample_rate": 8000, "fft_size": 256, "hop": 1}),
+        ErrorCode::Validation,
+    );
+}
+
+#[test]
+fn detect_beats_on_a_steady_tone_has_no_pulse() {
+    let mut e = CadenceEngine::new();
+    tone_track(&mut e);
+    let r = ok(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 8000}));
+    // One attack transient at most; below the four-onset floor for bpm.
+    assert!(r["onsets_seconds"].as_array().unwrap().len() <= 1, "{r}");
+    assert!(r["estimated_bpm"].is_null());
+}
+
 // ---- compatibility -------------------------------------------------------------------
 
 #[test]
@@ -533,6 +713,56 @@ fn snapshots_from_before_the_mixer_fields_restore() {
     assert_eq!(d["tracks"][0]["inserts"], json!([]));
     assert_eq!(d["tracks"][0]["automation"]["gain"]["mode"], "off");
     assert_eq!(d["tracks"][0]["clips"][0]["notes"][0]["channel"], 0);
+}
+
+// ---- renderStems -----------------------------------------------------------------
+
+#[test]
+fn render_stems_returns_one_post_fader_stem_per_track_and_bus() {
+    let mut e = CadenceEngine::new();
+    let (a, _) = tone_track(&mut e);
+    let (b, _) = tone_track(&mut e);
+    ok(&mut e, "setMuted", json!({"id": b, "muted": true}));
+    let bus = bus(&mut e);
+    ok(&mut e, "setTrackOutput", json!({"id": a, "output": bus}));
+    ok(&mut e, "setTrackGain", json!({"id": bus, "volume": 0.5}));
+    let depth = undo_depth(&mut e);
+    let r = ok(&mut e, "renderStems", json!({"from_ticks": 240, "to_ticks": 720, "sample_rate": 8000}));
+    assert_eq!(r["frames"], 2000);
+    assert_eq!(r["channels"], 2);
+    // Document order: track a, track b, bus.
+    assert_eq!(r["stems"], json!([{"id": a}, {"id": b}, {"id": bus}]));
+    let bytes = b64(r["stems_b64"].as_str().unwrap());
+    assert_eq!(bytes.len(), 3 * 2000 * 8, "three stereo f32 stems");
+    let f: Vec<f32> = bytes.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
+    let peak = |stem: usize| -> f64 {
+        let base = stem * 2000 * 2;
+        (0..2000).fold(0f64, |m, i| m.max(f[base + i * 2].abs() as f64).max(f[base + i * 2 + 1].abs() as f64))
+    };
+    // Track a sounds through its own stem; muted b is silent; the bus stem
+    // carries a's signal at the bus fader.
+    assert!((peak(0) - CENTRE).abs() < 0.02, "stem a {}", peak(0));
+    assert_eq!(peak(1), 0.0, "muted stem b");
+    assert!((peak(2) - CENTRE * 0.5).abs() < 0.02, "bus stem {}", peak(2));
+    // Read-only: no undo entries, no events recorded by `ok`.
+    assert_eq!(undo_depth(&mut e), depth);
+    rejects(&mut e, "renderStems", json!({"from_ticks": 720, "to_ticks": 240, "sample_rate": 8000}), ErrorCode::Validation);
+    rejects(&mut e, "renderStems", json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 0}), ErrorCode::Validation);
+}
+
+#[test]
+fn task_render_stems_matches_sync_output() {
+    use ignition_core::{base64_decode, TaskContext};
+    let mut e = CadenceEngine::new();
+    tone_track(&mut e);
+    let payload = json!({"from_ticks":0,"to_ticks":960,"sample_rate":48000});
+    let before = e.snapshot().unwrap();
+    let legacy = e.apply(Command::new("renderStems",payload.clone())).unwrap();
+    let context = TaskContext::new();
+    let task = e.apply_long(Command::new("renderStems",payload).with_binary(None), &context).unwrap();
+    assert_eq!(task.output.unwrap(), base64_decode(legacy.data["stems_b64"].as_str().unwrap()).unwrap());
+    assert_eq!(context.progress(),1.0);
+    assert_eq!(e.snapshot().unwrap(),before);
 }
 
 #[test]
