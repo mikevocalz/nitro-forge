@@ -28,6 +28,12 @@ into this repository):
 CDDL-1.0 requires that the license text accompany distribution of the
 licensed code; downstream distributors of binaries containing `libraw_r.a`
 should include `LICENSE.CDDL` (and `COPYRIGHT`) from the pinned source tree.
+Per `docs/completion/reports/P10-raw-product-admission.md`, this crate is
+the admitted product RAW decode provider for photo-engine; every shipped
+binary that links `libraw_r.a` must reproduce these notices and satisfy the
+CDDL source-availability obligation (covered source or written offer) before
+release — see that record's THIRD_PARTY_NOTICES section for the full
+obligation list.
 
 ### What this crate adds
 
