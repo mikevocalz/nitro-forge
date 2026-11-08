@@ -268,37 +268,45 @@ export interface PaintStrokePreview {
  * - `"pixel"` (default): destination-out erase of a raster layer's pixels.
  * - `"mask"`: destination-out erase of the layer's canvas-space mask alpha
  *   (the layer must already have a mask; works on any layer kind).
- * The vector eraser mode is not implemented — see docs/ENGINE_OPS.md.
+ * - `"vector"`: object eraser — removes whole shape/path layers whose
+ *   painted geometry intersects the brush footprint (never cuts geometry;
+ *   see docs/ENGINE_OPS.md).
  */
-export type EraseMode = "pixel" | "mask";
+export type EraseMode = "pixel" | "mask" | "vector";
 
 /** `eraseStroke` options — same brush/sample contract as
  * {@linkcode PaintStrokeOptions} plus `mode`. Exactly one of
  * `brush_id`/`brush` is required. */
 export interface EraseStrokeOptions {
-  /** Target layer id (raster layer for `pixel`, any masked layer for `mask`). */
-  id: number;
+  /** Target layer id — required for `"pixel"`/`"mask"`. For `"vector"` it is
+   * an optional scope root: absent erases across the whole document,
+   * present limits candidates to that layer's subtree. */
+  id?: number;
   mode?: EraseMode;
   /** Stored brush id, or an inline brush spec (fields as {@link BrushPatch}). */
   brush_id?: number;
   brush?: BrushPatch;
   samples: StrokeSample[];
   params?: StrokeModelParams;
-  /** false = dry run: returns `{dabs, bounds, mode}` without mutating (default true). */
+  /** false = dry run: returns `{dabs, bounds, mode, removed?}` without mutating (default true). */
   commit?: boolean;
 }
 
-/** Result of a committed `eraseStroke`. */
+/** Result of a committed `eraseStroke`. `removed` is present only for
+ * `mode:"vector"` — the layer ids the stroke erased, in document order. */
 export interface EraseStrokeResult {
   ok: true;
   dabs: number;
   mode: EraseMode;
+  removed?: number[];
 }
 
 /** Result of `eraseStroke` with `commit:false`. `bounds` is absent when the
- * stroke produces no dabs or lands fully off-canvas. */
+ * stroke produces no dabs or lands fully off-canvas. `removed` (vector mode
+ * only) lists the layer ids the stroke would erase. */
 export interface EraseStrokePreview {
   dabs: number;
   mode: EraseMode;
   bounds?: { x: number; y: number; w: number; h: number };
+  removed?: number[];
 }

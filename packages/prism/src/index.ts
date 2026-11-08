@@ -523,8 +523,10 @@ export class PrismDocument {
    * `mode:"pixel"` (default) erases a raster layer's pixels through the
    * layer's complete transform (same canvas→local mapping and selection
    * pullback as `paintStroke`); `mode:"mask"` erases the layer's
-   * canvas-space mask alpha and requires an existing mask. The vector
-   * eraser mode is deferred — see docs/ENGINE_OPS.md.
+   * canvas-space mask alpha and requires an existing mask; `mode:"vector"`
+   * is an object eraser that removes whole shape/path layers intersecting
+   * the brush footprint (`id` optional = scope root, absent = document).
+   * See docs/ENGINE_OPS.md for exact semantics.
    *
    * One undo step per committed stroke; `commit:false` is a read-only dry
    * run returning `{dabs, bounds, mode}`. Strokes that change nothing
