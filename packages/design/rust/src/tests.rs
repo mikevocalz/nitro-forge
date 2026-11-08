@@ -2558,3 +2558,216 @@ fn prototype_transition_lifecycle_cascades_and_hostile_restore() {
         .is_err());
     assert_eq!(e2.snapshot().unwrap(), bytes);
 }
+// --- Comment threads/pins (slice G) ---
+fn comment_thread(e: &mut DesignEngine, id: &str, x: f64, y: f64) {
+    call(
+        e,
+        "defineCommentThread",
+        json!({"id":id,"anchor":{"x":x,"y":y},"body":"Please widen this","author":"Ada","time_label":"2 hours ago"}),
+    );
+}
+#[test]
+fn comments_crud_resolve_reply_list_and_undo_are_eventless_reads() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    // Schema:1-only documents stay byte-identical with no comment state.
+    let bare = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&bare).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert!(outer.get("document").is_none());
+    assert!(outer.get("comments").is_none());
+    // defineCommentThread assigns comment-N ids when id is omitted.
+    let auto = call(
+        &mut e,
+        "defineCommentThread",
+        json!({"anchor":{"x":1.5,"y":2.5},"body":"Auto id"}),
+    );
+    assert_eq!(auto.data["id"], "comment-1");
+    comment_thread(&mut e, "c-1", 3., 4.);
+    // Replies get per-thread reply-N ids and return them.
+    let reply = call(
+        &mut e,
+        "addCommentReply",
+        json!({"thread":"c-1","body":"Done","author":"Bo"}),
+    );
+    assert_eq!(reply.data["id"], "reply-1");
+    call(
+        &mut e,
+        "addCommentReply",
+        json!({"thread":"c-1","body":"Thanks"}),
+    );
+    // listComments is a silent read: same snapshot before and after.
+    let before = e.snapshot().unwrap();
+    let listed = call(&mut e, "listComments", json!({}));
+    assert!(listed.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let threads = listed.data["threads"].as_array().unwrap();
+    assert_eq!(threads.len(), 2);
+    assert_eq!(threads[1]["id"], "c-1");
+    assert_eq!(threads[1]["anchor"], json!({"x":3.0,"y":4.0}));
+    assert_eq!(threads[1]["author"], "Ada");
+    assert_eq!(threads[1]["replies"].as_array().unwrap().len(), 2);
+    // `resolved:false` is omitted on the wire (serde skip); absent means open.
+    assert_ne!(threads[1]["resolved"], json!(true));
+    // Resolve is journaled; equal writes stay silent.
+    let resolved = call(
+        &mut e,
+        "setCommentResolved",
+        json!({"id":"c-1","resolved":true}),
+    );
+    assert!(!resolved.events.is_empty());
+    let snap = e.snapshot().unwrap();
+    let noop = call(
+        &mut e,
+        "setCommentResolved",
+        json!({"id":"c-1","resolved":true}),
+    );
+    assert!(noop.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), snap);
+    // Undo restores open state; redo re-resolves; thread removal cascades
+    // replies inside the same journal entry.
+    assert!(e.undo().unwrap());
+    let threads = call(&mut e, "listComments", json!({})).data;
+    assert_ne!(threads["threads"][1]["resolved"], json!(true));
+    assert!(e.redo().unwrap());
+    assert!(e.undo().unwrap());
+    assert!(e.undo().unwrap());
+    call(&mut e, "removeCommentThread", json!({"id":"c-1"}));
+    let threads = call(&mut e, "listComments", json!({})).data;
+    assert_eq!(threads["threads"].as_array().unwrap().len(), 1);
+    assert!(e
+        .apply(Command::new("removeCommentThread", json!({"id":"c-1"})))
+        .is_err());
+}
+#[test]
+fn comments_validate_atomically_and_bounds_hold() {
+    let mut e = DesignEngine::new();
+    let snap = e.snapshot().unwrap();
+    // Unknown fields, bad anchors and oversized bodies reject atomically.
+    assert!(e
+        .apply(Command::new(
+            "defineCommentThread",
+            json!({"anchor":{"x":0.,"y":0.},"body":"x","bogus":1}),
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "defineCommentThread",
+            json!({"anchor":{"x":2e6,"y":0.},"body":"x"}),
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "defineCommentThread",
+            json!({"anchor":{"x":0.,"y":0.},"body":""}),
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "defineCommentThread",
+            json!({"anchor":{"x":0.,"y":0.},"body":"bad\u{7}char"}),
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "addCommentReply",
+            json!({"thread":"nope","body":"x"}),
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), snap);
+    // Duplicate ids and over-long ids reject.
+    comment_thread(&mut e, "c-1", 0., 0.);
+    assert!(e
+        .apply(Command::new(
+            "defineCommentThread",
+            json!({"id":"c-1","anchor":{"x":0.,"y":0.},"body":"dup"}),
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "defineCommentThread",
+            json!({"id":"x".repeat(300),"anchor":{"x":0.,"y":0.},"body":"long"}),
+        ))
+        .is_err());
+    // Thread cap: fill to 1024 then the next define rejects.
+    for i in 2..=1024 {
+        comment_thread(&mut e, &format!("cap-{i}"), 0., 0.);
+    }
+    assert!(e
+        .apply(Command::new(
+            "defineCommentThread",
+            json!({"anchor":{"x":0.,"y":0.},"body":"over"}),
+        ))
+        .is_err());
+}
+#[test]
+fn comments_snapshot_wrapper_round_trip_and_hostile_restore() {
+    let mut e = DesignEngine::new();
+    comment_thread(&mut e, "c-1", 12.5, -3.);
+    call(
+        &mut e,
+        "addCommentReply",
+        json!({"thread":"c-1","body":"reply","time_label":"now"}),
+    );
+    call(
+        &mut e,
+        "setCommentResolved",
+        json!({"id":"c-1","resolved":true}),
+    );
+    let bytes = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&bytes).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(outer["kind"], "design");
+    assert_eq!(outer["schema"], 2);
+    assert_eq!(
+        outer["document"]["comments"]["threads"][0]["resolved"],
+        true
+    );
+    // Byte-identical reopen.
+    let mut e2 = DesignEngine::new();
+    e2.restore(&bytes).unwrap();
+    assert_eq!(e2.snapshot().unwrap(), bytes);
+    let threads = call(&mut e2, "listComments", json!({})).data;
+    assert_eq!(
+        threads["threads"][0]["replies"].as_array().unwrap().len(),
+        1
+    );
+    // Removing the last thread returns snapshots to bare schema:1.
+    e2.apply(Command::new("removeCommentThread", json!({"id":"c-1"})))
+        .unwrap();
+    let bare = e2.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&bare).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert!(outer.get("document").is_none());
+    assert!(outer.get("comments").is_none());
+    // Hostile restore: unwrapped state carrying comments rejects.
+    let doc = serde_json::to_vec(&e.state).unwrap();
+    assert!(DesignEngine::new().restore(&encode_envelope(&doc)).is_err());
+    // Hostile restore: duplicate thread ids reject.
+    let mut tampered: Value = outer_doc_with_comments(&e);
+    let t = tampered["document"]["comments"]["threads"]
+        .as_array_mut()
+        .unwrap();
+    t.push(t[0].clone());
+    assert!(e2
+        .restore(&encode_envelope(&serde_json::to_vec(&tampered).unwrap()))
+        .is_err());
+    // Hostile restore: out-of-bounds anchor rejects.
+    let mut tampered = outer_doc_with_comments(&e);
+    tampered["document"]["comments"]["threads"][0]["anchor"]["x"] = json!(2e6);
+    assert!(e2
+        .restore(&encode_envelope(&serde_json::to_vec(&tampered).unwrap()))
+        .is_err());
+    // Hostile restore: oversized body rejects.
+    let mut tampered = outer_doc_with_comments(&e);
+    tampered["document"]["comments"]["threads"][0]["body"] = json!("x".repeat(70 * 1024));
+    assert!(e2
+        .restore(&encode_envelope(&serde_json::to_vec(&tampered).unwrap()))
+        .is_err());
+    assert_eq!(e2.snapshot().unwrap(), bare);
+}
+fn outer_doc_with_comments(e: &DesignEngine) -> Value {
+    let bytes = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&bytes).unwrap();
+    serde_json::from_slice(&raw).unwrap()
+}
