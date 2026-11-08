@@ -331,9 +331,9 @@ evaluation-time visited set. Evaluation memoizes per-request.
 
 Cross-sheet references (slice 14): a cell or range may be qualified by a
 sheet name — `Sheet1!A1`, `'Q1 Data'!B2`, `Data!A1:B2` — where the
-qualifier is either a bare word (any `[A-Za-z0-9_$.]`-shaped name the
-tokenizer accepts, including ref-shaped names like `Sheet1`) or a
-single-quoted name with `''` escaping a literal quote. The qualifier
+qualifier is either a bare word matching `[A-Za-z0-9_$]+` (ref-shaped
+names like `Sheet1` work; names containing `.` or other punctuation must
+be quoted) or a single-quoted name with `''` escaping a literal quote. The qualifier
 resolves against **current sheet names, case-insensitively** at
 evaluation time; a name matching no sheet evaluates to `#REF!` (removed
 sheets included). Exactly one qualifier is allowed per reference —
