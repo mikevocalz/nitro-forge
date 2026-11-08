@@ -143,3 +143,32 @@ test('deviceStablePassed accepts a steady phone and rejects jitter/stale', () =>
   const stale = steadyAccel();
   assert.equal(deviceStablePassed(stale, NOW + 60_000), false);
 });
+
+import { buildTransferManifest } from '../persona-capture/transfer.ts';
+
+test('buildTransferManifest produces a sealed companion-phone bundle', () => {
+  const m = buildTransferManifest(
+    7,
+    [
+      { stepId: 'front', filePath: '/tmp/cap/front.jpg' },
+      { stepId: 'turn_left', filePath: '/tmp/cap/left.png' },
+    ],
+    { warmth: 0.2, brightness: 0.1, touchUp: true, backgroundFill: 'solid:#334' },
+    new Date('2026-11-07T00:00:00Z'),
+  );
+  assert.equal(m.version, 1);
+  assert.equal(m.epoch, 7);
+  assert.equal(m.source, 'companion_phone');
+  assert.deepEqual(m.steps, ['front', 'turn_left']);
+  assert.deepEqual(m.samples, [
+    { stepId: 'front', fileName: 'front.jpg' },
+    { stepId: 'turn_left', fileName: 'left.png' },
+  ]);
+  assert.equal(m.appearance?.warmth, 0.2);
+  assert.equal(m.createdAt, '2026-11-07T00:00:00.000Z');
+});
+
+test('buildTransferManifest omits appearance when not provided', () => {
+  const m = buildTransferManifest(1, [{ stepId: 'front', filePath: 'a.jpg' }]);
+  assert.equal('appearance' in m, false);
+});

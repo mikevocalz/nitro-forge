@@ -176,5 +176,10 @@ Device stability is gated by an accelerometer window (steady magnitude,
 fail-closed on missing/stale/jittery signal) as an honest proxy for phone
 pose — phone-to-face geometry still needs ARCore/ARKit. Glasses/occlusion
 and head pitch remain unmeasured until a landmark evaluator lands. Panel
-actions use the canonical NYC-Tron Button. Generation/fitting, phone-headset
+actions use the canonical NYC-Tron Button. `persona-capture/transfer.ts`
+implements the companion-phone transport half: it packages the sealed
+samples plus a manifest and POSTs them to a host-supplied endpoint, mapping
+a 2xx response to the transfer acknowledgement that unblocks
+`transferAcknowledged()`. No proprietary sync protocol is implied; the
+headset receiver and generation host remain separate concerns. Generation/fitting, phone-headset
 transport and persistence are still host-owned and not implemented.
