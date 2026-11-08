@@ -41,9 +41,16 @@
 //!   `MAX_SHAPED_CHARS_PER_BLOCK` chars skip shaping entirely. Shaping
 //!   failure or panic falls back to the unshaped per-char path for that
 //!   block (same values slice 1 produced).
-//! - **Not rendered**: no glyph outlines are drawn; rasterization stays
-//!   host-side (or a later skrifa-outline → Prism slice). `layout` returns
-//!   the same `{pages:[{lines:[{block,start,end}]}]}` spans as before.
+//! - **Rendered (R1)**: `renderPage` draws glyph outlines in-engine —
+//!   [`FaceMeasure::shape_line_glyphs`] and
+//!   [`FaceMeasure::unshaped_line_glyphs`] feed the skrifa-outline →
+//!   tiny-skia rasterizer in `glyphs.rs`, under the SAME
+//!   `MAX_SHAPED_CHARS_PER_BLOCK` gate ([`shaping_budget_allows`]) so the
+//!   advances render draws always match the spans `layout` measured.
+//!   Still NOT modeled (R2+): per-run family/size/style resolution,
+//!   real ascent/descent/line-gap metrics, hinting, synthetic
+//!   bold/italic, bitmap/color strikes, vertical text, images — see
+//!   `glyphs.rs` module docs and `docs/ENGINE_OPS.md` `renderPage`.
 //!
 //! Session discipline: the registry is engine-session state, NOT document
 //! state. It is excluded from `snapshot`/`restore`, from the undo journal,
@@ -80,6 +87,16 @@ pub const MAX_FONT_TOTAL_BYTES: usize = 256 * 1024 * 1024;
 /// text. 128K chars is far above any realistic paragraph while keeping
 /// worst-case shaped work per `layout` call bounded.
 pub const MAX_SHAPED_CHARS_PER_BLOCK: usize = 131_072;
+
+/// The shaping budget gate shared by `layout {font}` and `renderPage`:
+/// a block of `1..=MAX_SHAPED_CHARS_PER_BLOCK` chars may be shaped;
+/// empty or over-budget blocks take the unshaped `cmap`+`hmtx` path.
+/// `renderPage` MUST apply the identical gate — drawing a line with
+/// shaped advances that `layout` never used would misplace every glyph
+/// after the first kern/ligature.
+pub(crate) fn shaping_budget_allows(char_count: usize) -> bool {
+    char_count > 0 && char_count <= MAX_SHAPED_CHARS_PER_BLOCK
+}
 
 /// Bounded per-line re-shaping passes after the initial whole-block
 /// shape. Each pass re-shapes every wrapped line independently (spans
@@ -251,6 +268,18 @@ impl FontRegistry {
         }
         removed
     }
+}
+
+/// One positioned glyph for `renderPage` (R1): glyph id plus pen offsets,
+/// all in *font units* (unscaled). `x_advance`/`x_offset`/`y_offset` come
+/// straight from the `harfrust` `GlyphPosition`; the unshaped fallback
+/// reports zero offsets.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PositionedGlyph {
+    pub glyph_id: u32,
+    pub x_advance: f64,
+    pub x_offset: f64,
+    pub y_offset: f64,
 }
 
 /// A parsed face for a batch of measurements. `skrifa::Font` clones share
@@ -435,6 +464,76 @@ impl FaceMeasure {
             return None;
         }
         Some(out)
+    }
+
+    /// The parsed font, for outline access by the `renderPage` rasterizer
+    /// (`glyphs.rs`). Same `Arc`-backed blob the metrics path uses.
+    pub(crate) fn skrifa_font(&self) -> &skrifa::Font {
+        &self.font
+    }
+
+    /// Shape ONE emitted layout line and keep the positioned glyph run —
+    /// the `renderPage` counterpart of [`FaceMeasure::shape_char_advances`].
+    /// `text` is the line's exact substring (cluster values are UTF-8 byte
+    /// offsets into it, but render never needs them back). Same shaping
+    /// call, same `catch_unwind` guard, same `None`-on-failure contract:
+    /// callers fall back to [`FaceMeasure::unshaped_line_glyphs`].
+    ///
+    /// Glyph order is the buffer's output order; `x_advance`/`x_offset`/
+    /// `y_offset` are kept verbatim in font units. `y_advance` is dropped
+    /// (horizontal text) exactly as the advance-folding path drops it.
+    pub fn shape_line_glyphs(&self, text: &str) -> Option<Vec<PositionedGlyph>> {
+        let mut buffer = harfrust::Buffer::new();
+        let shaped = catch_unwind(AssertUnwindSafe(|| {
+            buffer.push_str(text);
+            buffer.guess_segment_properties();
+            let shaper = harfrust::ShaperFont::new(&self.font);
+            harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::new()).is_ok()
+                && buffer.allocation_successful()
+        }));
+        if !shaped.unwrap_or(false) {
+            return None;
+        }
+        let infos = buffer.glyph_infos();
+        let positions = buffer.glyph_positions();
+        if infos.len() != positions.len() {
+            return None;
+        }
+        Some(
+            infos
+                .iter()
+                .zip(positions.iter())
+                .map(|(info, pos)| PositionedGlyph {
+                    glyph_id: info.glyph_id,
+                    x_advance: f64::from(pos.x_advance),
+                    x_offset: f64::from(pos.x_offset),
+                    y_offset: f64::from(pos.y_offset),
+                })
+                .collect(),
+        )
+    }
+
+    /// Unshaped per-character glyph run for the `renderPage` fallback when
+    /// [`FaceMeasure::shape_line_glyphs`] fails: `cmap` → glyph id,
+    /// `hmtx` → advance, zero offsets — the same metrics
+    /// [`FaceMeasure::advance_units`] reports, kept as glyphs so the line
+    /// still draws (the `.notdef` glyph for unmapped chars, matching the
+    /// metrics path's fallback).
+    pub fn unshaped_line_glyphs(&self, text: &str) -> Vec<PositionedGlyph> {
+        let charmap = self.font.charmap();
+        text.chars()
+            .map(|c| {
+                let glyph = charmap
+                    .map_unicode(c)
+                    .unwrap_or_else(|| skrifa::raw::types::GlyphId::new(0));
+                PositionedGlyph {
+                    glyph_id: glyph.to_u32(),
+                    x_advance: self.font.glyph_metrics().h_advance(glyph) as f64,
+                    x_offset: 0.0,
+                    y_offset: 0.0,
+                }
+            })
+            .collect()
     }
 }
 

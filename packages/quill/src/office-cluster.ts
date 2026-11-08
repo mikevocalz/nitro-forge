@@ -18,8 +18,8 @@ export {deriveQuillListMarkers} from './list-markers';
  * have. Each is a DEFER: the matching NYC-Tron prop is left out.
  */
 export const QUILL_DEFERRED_OPS = {
-  /** H-15 page thumbnails: `layout` gives line spans, not pixels. */
-  renderPage: "H-15",
+  // H-15 `renderPage` lifted for R1 (engine op + TS adapter shipped);
+  // full NavigationOutline thumbnail composition remains R3 scope.
 } as const;
 export type QuillDeferredOp = keyof typeof QUILL_DEFERRED_OPS;
 

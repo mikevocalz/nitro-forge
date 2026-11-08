@@ -43,12 +43,29 @@ LIGA = "f_i"
 glyphs.append(LIGA)
 metrics[LIGA] = (600, 0)
 
+# Simple deterministic outlines for the renderPage rasterization tests:
+# every glyph except space is a filled box (0,0)-(600,700) in font units.
+# Outlines do not affect metrics or shaping — only `glyf`/`loca` change.
+def _box_glyph():
+    pen = TTGlyphPen(None)
+    pen.moveTo((0, 0))
+    pen.lineTo((600, 0))
+    pen.lineTo((600, 700))
+    pen.lineTo((0, 700))
+    pen.closePath()
+    return pen.glyph()
+
+
+_BOX = _box_glyph()
+_OUTLINES = {
+    name: (_BOX if name != "u0020" else TTGlyphPen(None).glyph())
+    for name in glyphs
+}
+
 fb = FontBuilder(UPM, isTTF=True)
 fb.setupGlyphOrder(glyphs)
 fb.setupCharacterMap(cmap)
-fb.setupGlyf(
-    {name: TTGlyphPen(None).glyph() for name in glyphs}
-)
+fb.setupGlyf(_OUTLINES)
 fb.setupHorizontalMetrics(metrics)
 fb.setupHorizontalHeader(ascent=800, descent=-200)
 fb.setupOS2()
@@ -57,6 +74,12 @@ fb.setupPost()
 fb.setupMaxp()
 
 font = fb.font
+# FontBuilder stamps head.created/modified with the wall clock, which
+# would make every regeneration produce different bytes. Pin both to a
+# fixed value so the fixture is byte-reproducible: 2020-01-01T00:00:00Z
+# as seconds since the 1904 Mac epoch (fontTools' 0x7C259DC0 offset).
+font["head"].created = 3660676800
+font["head"].modified = 3660676800
 addOpenTypeFeaturesFromString(
     font,
     """

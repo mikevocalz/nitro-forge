@@ -86,6 +86,7 @@ export const OPS = {
   unmergeTableCells: "unmergeTableCells",
   blocks: "blocks",
   layout: "layout",
+  renderPage: "renderPage",
   registerFont: "registerFont",
   removeFont: "removeFont",
   listFonts: "listFonts",
@@ -131,6 +132,35 @@ export interface LayoutLine {
 }
 export interface LayoutPage {
   lines: LayoutLine[];
+}
+/** `renderPage` result: raw RGBA8 (`width*height*4` bytes) as `pixels_b64`
+ * on JSON transports; binary-capable hosts may receive the same bytes on
+ * the command sidecar instead. R1 scope: text glyphs on pages only. */
+export interface RenderPageResult {
+  page: number;
+  width: number;
+  height: number;
+  format: "raw";
+  size: number;
+  pixels_b64?: string;
+}
+export interface RenderPageOptions {
+  /** Page width in points (same units `layout` uses). */
+  pageWidth: number;
+  fontSize: number;
+  pageHeight?: number;
+  /** Registered family — required; there is no glyph-less fallback. */
+  font: string;
+  /** Zero-based page index into the `layout` pagination. */
+  page: number;
+  /** Defaults to 96; px = pt * dpi/72. */
+  dpi?: number;
+  /** `#RRGGBB` or `#RRGGBBAA`; default opaque black. */
+  color?: string;
+  /** `#RRGGBB` or `#RRGGBBAA`; default opaque white. */
+  background?: string;
+  /** Optional per-side pixel cap; render rejects rather than downscaling. */
+  maxDim?: number;
 }
 export interface FindMatch {
   from: Pos;
@@ -1263,6 +1293,35 @@ export class QuillDocument {
       font_size: fontSize,
       ...(pageHeight === undefined ? {} : { page_height: pageHeight }),
       ...(font === undefined ? {} : { font }),
+    });
+  }
+
+  /**
+   * Render one paginated page to raw RGBA8 pixels (`renderPage`, R1 of
+   * `docs/completion/reports/P-quill-renderpage-decision.md`). Re-runs
+   * the exact `layout` pagination, then shapes each emitted line
+   * independently and fills glyph outlines — so pixels agree with the
+   * `{block,start,end}` spans `layout` reports. Read-only: no journal
+   * entry, no `document:changed`.
+   *
+   * `font` is required (no estimate fallback — there are no glyphs to
+   * draw without a registered face). Bounds: ≤4096 px per side and
+   * ≤32 MiB RGBA; `maxDim` optionally tightens the per-side cap.
+   * R1 scope honestly: text glyphs only — no images, decorations,
+   * headers/footers, per-run styles, or real line metrics (see the
+   * decision doc's deferral list).
+   */
+  renderPage(options: RenderPageOptions) {
+    return this.call<RenderPageResult>(OPS.renderPage, {
+      page_width: options.pageWidth,
+      font_size: options.fontSize,
+      ...(options.pageHeight === undefined ? {} : { page_height: options.pageHeight }),
+      font: options.font,
+      page: options.page,
+      ...(options.dpi === undefined ? {} : { dpi: options.dpi }),
+      ...(options.color === undefined ? {} : { color: options.color }),
+      ...(options.background === undefined ? {} : { background: options.background }),
+      ...(options.maxDim === undefined ? {} : { max_dim: options.maxDim }),
     });
   }
 

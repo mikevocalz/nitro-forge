@@ -26,3 +26,10 @@ skrifa = { version = "0.49", default-features = false, features = ["std"] }
 # tables (deterministic, no system state). No `tracing`/`libm` features.
 harfrust = { version = "0.15", default-features = false, features = ["std"] }
 sha2 = "0.10"
+# Glyph rasterization for `renderPage` (P-quill-renderpage-decision, R1):
+# tiny-skia fills the paths skrifa outline pens emit. Pinned exactly at
+# 0.12.0 (BSD-3-Clause, published 2026-02-02) with `default-features =
+# false` + `std`: this excludes the optional `png` dep (no PNG output in
+# v1) and the `simd` feature so one scalar code path serves every
+# target — the same pinning discipline as skrifa/harfrust.
+tiny-skia = { version = "=0.12.0", default-features = false, features = ["std"] }
