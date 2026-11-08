@@ -183,7 +183,7 @@ export interface CompositionSettings{title:string;width:number;height:number}
 /** describe/evaluateLayout expose the internal schema:1 state; the schema:2
  * wrapper `{kind:'design',schema:2,document}` exists only inside snapshot
  * bytes and only when schema-2 features (text nodes, node constraints,
- * variables/modes/bindings)
+ * variables/modes/bindings, prototype catalog, comments)
  * are present. The collections are omitted entirely when empty. */
 /** Durable prototype catalog stored on the internal state; omitted when
  * empty. Any content triggers the schema:2 snapshot wrapper. */
