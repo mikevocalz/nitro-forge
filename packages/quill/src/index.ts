@@ -49,6 +49,9 @@ export const OPS = {
   updateToc: "updateToc",
   refreshToc: "refreshToc",
   listToc: "listToc",
+  listMergeFields: "listMergeFields",
+  previewMerge: "previewMerge",
+  runMerge: "runMerge",
   setTrackChanges: "setTrackChanges",
   listRevisions: "listRevisions",
   acceptRevision: "acceptRevision",
@@ -316,6 +319,46 @@ export interface TocField {
 export interface TocListing {
   entries: TocEntry[];
   count: number;
+}
+/**
+ * One merge field found by `listMergeFields`/`previewMerge`: the trimmed
+ * `{{name}}` token name and how many times it occurs in the document.
+ * Fields are plain text tokens — there is no stored field collection.
+ */
+export interface MergeFieldInfo {
+  name: string;
+  occurrences: number;
+}
+/** `listMergeFields` result: fields in first-appearance order plus the total token count. */
+export interface MergeFieldScan {
+  fields: MergeFieldInfo[];
+  occurrences: number;
+}
+/**
+ * One data-source row for mail merge: a map of merge-field name to
+ * single-line string value (at most 8192 chars, no newlines; at most
+ * 256 fields). Keys must already be canonical field names — the engine
+ * matches them exactly and case-sensitively.
+ */
+export type MergeRecord = Record<string, string>;
+/** `previewMerge` result for one record: merged document text plus undefined field names. */
+export interface MergePreview {
+  /** Index of the record in the request's `records` array. */
+  index: number;
+  /** The whole document's `text`-op serialization with fields substituted. */
+  text: string;
+  /** Document field names this record does not define (they merge as ""). */
+  missing: string[];
+}
+/** `previewMerge` result: per-record previews plus the document field census. */
+export interface MergePreviewResult extends MergeFieldScan {
+  results: MergePreview[];
+}
+/** `runMerge` result: substituted token count plus field names merged as "". */
+export interface MergeRunResult {
+  ok: boolean;
+  replaced: number;
+  missing: string[];
 }
 /** Optional per-edit attribution overriding the tracking default author. */
 export interface RevisionAttribution {
@@ -779,6 +822,45 @@ export class QuillDocument {
   listToc(block?: number) {
     return this.call<TocListing>(OPS.listToc, {
       ...(block === undefined ? {} : { block }),
+    });
+  }
+  /**
+   * Read-only live scan for `{{name}}` mail-merge field tokens in block
+   * text (table cell text included). Fields are plain text — the token
+   * grammar is `{{name}}` with the inner text trimmed; names are 1–64
+   * chars without braces or control characters, matched exactly and
+   * case-sensitively. Results are in first-appearance document order.
+   */
+  listMergeFields() {
+    return this.call<MergeFieldScan>(OPS.listMergeFields);
+  }
+  /**
+   * Read-only mail-merge preview: merge each record over the whole
+   * document (the `text`-op serialization, tables included) without
+   * touching the document. `records` are data-source rows — objects
+   * mapping field names to single-line string values; the engine does
+   * no I/O, so hosts parse CSV/DB sources themselves. At most 1024
+   * records, 256 fields per record, 8192 chars per value. Fields a
+   * record does not define merge as "" and are listed in `missing`;
+   * record keys matching no document field are ignored.
+   */
+  previewMerge(records: MergeRecord[]) {
+    return this.call<MergePreviewResult>(OPS.previewMerge, { records });
+  }
+  /**
+   * Merge one record into the document: every `{{name}}` token in the
+   * optional `from..to` range (default whole document; table cells are
+   * covered under the same range rules as `findText`/`replaceText`) is
+   * replaced by the record's value as one undo step. Replacement text
+   * inherits the token's first-scalar style. Missing fields merge as ""
+   * and are reported; merge is single-pass — substituted values are
+   * never rescanned. No tokens in range is eventless.
+   */
+  runMerge(record: MergeRecord, range: { from?: Pos; to?: Pos } = {}) {
+    return this.call<MergeRunResult>(OPS.runMerge, {
+      record,
+      ...(range.from === undefined ? {} : { from: range.from }),
+      ...(range.to === undefined ? {} : { to: range.to }),
     });
   }
   /**

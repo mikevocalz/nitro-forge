@@ -21,7 +21,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
 | folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments, structural redaction, PDF compare, page images, encryption reconciliation) | 144 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
-| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, footnotes/endnotes, TOC fields, tables incl. cell merge/unmerge and in-cell find/replace, paragraph format) | 208 pass | `cargo test -p quill-engine` |
+| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, footnotes/endnotes, TOC fields, tables incl. cell merge/unmerge and in-cell find/replace, paragraph format, mail merge) | 217 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI + dispatch tests (incl. folio binary-input gate) | 28 pass | `cargo test -p nf-sys` |
 | Package e2e suites (vitest → nf-cli → real Rust) | 4×8 = 32 pass | `pnpm -r test` |
 | Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
@@ -54,7 +54,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch; 2026-11-07: keyframed speed (`speed_keys`, `setSpeedKeys`, integral footprint through all structural ops); 2026-11-08: per-clip mix (`gain_db` -60..=12, `pan` -1..=1, `setClipMix`, renderPlan exposure — storage/plan metadata only, no mixer) | ✅ 55 tests |
 | Folio engine | PDF eng (subagent bdd8014e; slice E codex/w1-folio-redact; slice F codex/w1-folio-f) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption (encrypt/decrypt + `open {password}`; all mutating and string-decoding ops reject ciphertext docs), outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment), structural redaction (redactRect: annots + contained image XObjects + PieceInfo/XMP//Info scrub, honest retained reporting, text/vector explicitly not removed), structural PDF compare (comparePdf: page/annot/field/outline/attachment/signature projections, lossy text hint), page images (insertPageImage: jpeg DCTDecode passthrough, real PNG decode gray/RGB alpha-discarded with local five-filter unfiltering, raw 8-bpc samples; appended content stream, inherited /Resources cloned) | ✅ 149 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
-| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + track-changes revisions (`setTrackChanges` + ins/del records with per-op author/time, accept/reject single+all, schema:3 keys, no DOCX interop) + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) + footnotes/endnotes (`addFootnote`/`updateFootnote`/`removeFootnote`/`listFootnotes`, Pos-anchored right-gravity marks remapped through every position-moving op, per-kind document-order numbering, plain-text bodies ≤8192 chars, ≤1024 notes, schema:3 `footnotes` key, no DOCX interop) + TOC fields (`insertToc`/`updateToc`/`refreshToc`/`listToc`, `kind:"toc"` block with `{from_level,to_level,entries}` cache over h1/h2/h3 kinds, live `listToc` scan, block-index entry anchors remapped/dropped on edits, no page numbers, no schema bump, no DOCX interop; mail merge and citations deferred) + paragraph alignment/indents/tab stops (`setParagraphFormat` patch + `properties.paragraph` on paragraph styles, storage-only, schema:4) | ✅ 208 tests |
+| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + track-changes revisions (`setTrackChanges` + ins/del records with per-op author/time, accept/reject single+all, schema:3 keys, no DOCX interop) + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) + footnotes/endnotes (`addFootnote`/`updateFootnote`/`removeFootnote`/`listFootnotes`, Pos-anchored right-gravity marks remapped through every position-moving op, per-kind document-order numbering, plain-text bodies ≤8192 chars, ≤1024 notes, schema:3 `footnotes` key, no DOCX interop) + TOC fields (`insertToc`/`updateToc`/`refreshToc`/`listToc`, `kind:"toc"` block with `{from_level,to_level,entries}` cache over h1/h2/h3 kinds, live `listToc` scan, block-index entry anchors remapped/dropped on edits, no page numbers, no schema bump, no DOCX interop; citations deferred) + paragraph alignment/indents/tab stops (`setParagraphFormat` patch + `properties.paragraph` on paragraph styles, storage-only, schema:4) + mail merge (`listMergeFields`/`previewMerge`/`runMerge`: `{{name}}` text tokens scanned live — no field collection or schema change — records in op payloads, read-only multi-record preview plus one-undo `runMerge` fill over optional Pos ranges incl. table cells, missing fields merge as "" and report, no CSV/source parsing or DOCX interop) | ✅ 217 tests |
 | Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |
 | Example app | RN eng (main session) | Expo screens + useDocument hook | ⚠️ source + typecheck only |
 | Design/UX | — | — | ❌ not staffed this session |
@@ -2151,3 +2151,45 @@ render, comp-removal guard, undo/redo/snapshot/hostile-restore, all bounds,
 nf-cli queue cases), `pnpm --filter @nitro-forge/motion typecheck` clean.
 Encoded export, render-queue UI, native target runs and full P11
 completion are not implied.
+
+## P12 Quill mail merge checkpoint (2026-11-08, `codex/w6-quill-mailmerge`)
+
+Quill gains mail merge, completing the P12 slice-8 triad after
+footnotes/endnotes and TOC fields. Model decision — fields are plain
+text, not stored state: a merge field is the literal token `{{name}}`
+inside block inline text (the Word MERGEFIELD-as-field-code model), so
+there is no field collection and **no snapshot/schema change** —
+`listMergeFields` is a live scan like `listToc`, fields move/split/delete
+with ordinary text edits for free, and tokens may span inline-run
+boundaries inside one block but never block/cell-paragraph/table-
+serialization boundaries. Grammar: `{{` + first `}}`, inner trimmed,
+name 1..=64 chars without braces or control characters (interior
+spaces allowed); invalid or unterminated spans are literal text.
+`previewMerge {records}` is the read-only multi-record text preview
+(≤1024 records of `{field:value}` objects — values single-line ≤8192
+chars, ≤256 fields per record, canonical trimmed keys; the engine is
+I/O-free so hosts parse CSV/DB sources and pass rows in), reporting
+`{index,text,missing}` per record over the `text`-op serialization plus
+the shared field census. `runMerge {record,from?,to?}` is the mutating
+single-record fill: optional `Pos` range (default whole document,
+`findText`/`replaceText` per-block clipping and table coverage rules),
+staged-clone substitution with first-scalar style inheritance and
+in-cell rewriting, per-block `(start,end,repl_len)` re-anchoring of
+bookmarks/comments/revisions/footnotes, staged `lists`/`tables`/`toc`
+validation, and one whole-document undo entry — zero tokens or a
+verbatim reproduction is eventless. Missing fields merge as `""` and
+report in `missing`; unused record keys are ignored; merge is
+single-pass (values never rescanned). Deferred honestly: CSV/DB source
+parsing/persistence, conditional fields, multi-paragraph or styled
+values, per-record output documents (hosts open one handle per record),
+and DOCX `w:fldSimple`/`MERGEFIELD` interop.
+
+Local evidence: `cargo test -p quill-engine` 217 passed (9 new merge
+tests covering token grammar edge cases, census order/counts,
+preview text/missing/validation, runMerge substitution/undo/redo,
+ranges and eventless paths, style inheritance and anchor remapping,
+table-cell coverage, multi-block preview), `cargo build -p nf-cli`
+clean, `pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/quill test` 49 passed across 8 files (5 new nf-cli
+mail-merge cases), `pnpm --filter @nitro-forge/quill typecheck`
+clean. No native/device acceptance or full P12 completion is implied.

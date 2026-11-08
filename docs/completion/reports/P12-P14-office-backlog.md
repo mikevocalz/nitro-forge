@@ -153,3 +153,33 @@ op, undo/redo/batch, schema:3 round-trip, stray-key and hostile-restore
 rejection), `cargo build -p nf-cli` clean, `pnpm --filter
 @nitro-forge/quill test` and `typecheck` (see commit for counts). No
 native/device acceptance implied.
+
+Mail-merge checkpoint (codex/w6-quill-mailmerge): the last deferred half
+of item 8 landed as text-token fields plus payload records — the honest
+subset for an I/O-free engine. A merge field is the literal `{{name}}`
+token in block inline text (Word MERGEFIELD-as-field-code model): no
+field collection, no snapshot state, no schema bump; `listMergeFields`
+is a live scan like `listToc`. Grammar: `{{` + first `}}`, inner
+trimmed, name 1..=64 chars without braces/control chars (interior
+spaces ok); invalid spans are literal. `previewMerge {records}` (≤1024
+records, `{field:value}` objects, single-line values ≤8192 chars, ≤256
+fields/record) is read-only and returns per-record merged `text`-op
+serialization plus `missing` fields; `runMerge {record,from?,to?}` is
+the mutating single-record fill — optional Pos range with
+`findText`/`replaceText` coverage rules (table cells included), staged
+clone, first-scalar style inheritance, per-span-length anchor remapping
+through bookmarks/comments/revisions/footnotes, staged validation, one
+undo entry, eventless on zero tokens. Missing fields merge as `""` and
+report; unused record keys ignored; single-pass (values never
+rescanned). Deferred honestly: CSV/DB/data-source parsing and
+persistence (records travel in payloads only), conditional fields,
+multi-paragraph/styled values, per-record output documents (hosts open
+one handle per record), DOCX `w:fldSimple`/`MERGEFIELD` interop, and
+citations/bibliography (unchanged — still no citation semantics
+distinct from footnotes).
+
+Local evidence: `cargo test -p quill-engine` 217 passed (9 new merge
+tests), `cargo build -p nf-cli` clean, `pnpm install --prefer-offline`
+clean, `pnpm --filter @nitro-forge/quill test` 49 passed across 8 files
+(5 new nf-cli mail-merge cases), `pnpm --filter @nitro-forge/quill
+typecheck` clean. No native/device acceptance implied.
