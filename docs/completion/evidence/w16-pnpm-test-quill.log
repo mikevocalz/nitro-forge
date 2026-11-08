@@ -1,0 +1,37 @@
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/packages/quill[39m
+
+ [32m✓[39m tests/nyc-tron-consumer.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/office-cluster.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m tests/list-markers.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m tests/transfer.e2e.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 733[2mms[22m[39m
+   [32m✓[39m quill DOCX transfer (real Rust via nf-cli) [2m(1)[22m
+     [33m[2m✓[22m[39m exports a .docx that imports back with the same text[33m 728[2mms[22m[39m
+ [32m✓[39m tests/office-cluster.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 903[2mms[22m[39m
+   [32m✓[39m real Rust Quill engine behind the NYC-Tron document controls [2m(2)[22m
+     [33m[2m✓[22m[39m ribbon toggles, color and paragraph style round-trip through the engine[33m 889[2mms[22m[39m
+ [32m✓[39m tests/mail-merge.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 906[2mms[22m[39m
+   [32m✓[39m quill mail merge (real Rust via nf-cli) [2m(5)[22m
+     [33m[2m✓[22m[39m lists fields in first-appearance order with occurrence counts[33m 883[2mms[22m[39m
+ [32m✓[39m tests/paragraph-format.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 909[2mms[22m[39m
+   [32m✓[39m quill paragraph format (real Rust via nf-cli) [2m(6)[22m
+     [33m[2m✓[22m[39m sets, patches, clears and reads alignment/indents/tab stops[33m 885[2mms[22m[39m
+ [32m✓[39m tests/fonts.e2e.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 923[2mms[22m[39m
+   [32m✓[39m quill font registry + measured layout (real Rust via nf-cli) [2m(7)[22m
+     [33m[2m✓[22m[39m registers a font, reports identity, and dedups[33m 892[2mms[22m[39m
+ [32m✓[39m tests/e2e.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 948[2mms[22m[39m
+   [32m✓[39m quill engine e2e (real Rust via nf-cli) [2m(18)[22m
+     [33m[2m✓[22m[39m edits text, styles ranges, splits blocks[33m 887[2mms[22m[39m
+ [32m✓[39m tests/render-page-sections.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 964[2mms[22m[39m
+   [32m✓[39m quill renderPage/layout useSections (real Rust via nf-cli) [2m(4)[22m
+     [33m[2m✓[22m[39m layout binds section page_setup geometry and reports toc_pages[33m 894[2mms[22m[39m
+ [32m✓[39m tests/render-page.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1006[2mms[22m[39m
+   [32m✓[39m quill renderPage (real Rust via nf-cli) [2m(3)[22m
+     [33m[2m✓[22m[39m renders a page to non-empty deterministic RGBA[33m 923[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+[2m      Tests [22m [1m[32m64 passed[39m[22m[90m (64)[39m
+[2m   Start at [22m 18:03:32
+[2m   Duration [22m 1.46s[2m (tests 87%, transform 10%, import 3%, worker 1%)[22m
+

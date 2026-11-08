@@ -1,0 +1,30 @@
+   Compiling ignition-core v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/rust/ignition-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.65s
+     Running unittests src/lib.rs (target/debug/deps/ignition_core-0cd3e874112ae4c9)
+
+running 16 tests
+test journal::tests::capacity_evicts_oldest ... ok
+test journal::tests::new_entry_clears_redo ... ok
+test envelope::tests::rejects_garbage ... ok
+test envelope::tests::round_trip ... ok
+test command::tests::bytes_input_takes_exactly_one_source ... ok
+test command::tests::sidecar_never_serializes ... ok
+test batch::tests::cancel_before_first_step_rejects_without_running_anything ... ok
+test command::tests::with_bytes_routes_by_request ... ok
+test batch::tests::no_ctx_keeps_steps_on_apply ... ok
+test batch::tests::cancel_mid_batch_aborts_remaining_steps ... ok
+test batch::tests::ctx_runs_every_step_through_apply_long_with_scoped_progress ... ok
+test session::tests::open_close_cycle ... ok
+test task::tests::cancel_is_shared_and_idempotent ... ok
+test task::tests::nested_scoped_windows_compose ... ok
+test task::tests::progress_is_clamped_and_monotonic ... ok
+test task::tests::scoped_progress_maps_into_window_and_stays_monotonic ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ignition_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
