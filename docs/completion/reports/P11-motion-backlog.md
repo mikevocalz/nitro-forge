@@ -92,8 +92,10 @@ parallel) → G2/G3 → H-transport → J2.
 P03 decoder transport contract (H pixels), encoder provider (J2),
 expression/node specs (D, I — write spec first), GPU/true-perspective 3D
 raster decision (G2 landed CPU-affine Option A; camera/perspective/depth
-remain open), font provider (text layers — keep rejected), shadows and
-specular/normal maps (G3 deferrals).
+decided 2026-11-15 by `P11-motion-camera-decision.md` — keep 2.5D now,
+bounded in-engine homography+depth slice "G2b" only on product demand,
+Track B scene-render for anything beyond flat quads), font provider (text
+layers — keep rejected), shadows and specular/normal maps (G3 deferrals).
 
 ## Doc gaps
 
