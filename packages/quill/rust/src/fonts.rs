@@ -18,12 +18,23 @@
 //!   no autohinting (`skrifa` is pinned `default-features = false` +
 //!   `"std"`, which excludes `autohint_shaping` — decision doc open point
 //!   6).
-//! - **Not shaped**: no `harfrust` pass — no kerning, ligatures, mark
-//!   attachment, or bidi reordering. Shaped glyph output is not
-//!   prefix-additive under reordering/ligatures, so the per-line prefix
-//!   widths greedy wrap needs stay honest only for unshaped advances.
-//!   `harfrust` admission is deferred to the shaping slice; the decision
-//!   doc's shaping-scope question (point 3) is moot until then.
+//! - **Shaped (this slice)**: `layout {font}` runs each block's serialized
+//!   text through `harfrust` 0.15 (the HarfBuzz port the decision doc
+//!   selected; MIT, MSRV 1.85, `default-features = false` + `"std"` so the
+//!   optional `icu` tables stay out and harfrust's pinned builtin UCD is
+//!   used — deterministic, no system state). One `shape` call per block
+//!   covers the full default feature set: GSUB (`liga`, `clig`, required
+//!   features, complex-script shapers) and GPOS (`kern`, mark/cursive
+//!   attachment — only the horizontal *advance* survives into layout;
+//!   offsets are ignored). Shaped glyphs carry UTF-8-byte cluster values,
+//!   which `shape_char_advances` folds back onto char indices so the
+//!   existing greedy word wrap keeps its contiguous `{start,end}` char
+//!   spans. What shaping does NOT give us: per-line re-shaping (a wrapped
+//!   line is measured with whole-block shaping context, so kern/ligature
+//!   decisions see text that will actually start on the next line) and
+//!   any glyph positions — `layout` still returns spans only. Shaping
+//!   failure or panic falls back to the unshaped per-char path for that
+//!   block (same values slice 1 produced).
 //! - **Not rendered**: no glyph outlines are drawn; rasterization stays
 //!   host-side (or a later skrifa-outline → Prism slice). `layout` returns
 //!   the same `{pages:[{lines:[{block,start,end}]}]}` spans as before.
@@ -251,6 +262,66 @@ impl FaceMeasure {
             .map_unicode(c)
             .unwrap_or_else(|| skrifa::raw::types::GlyphId::new(0));
         self.font.glyph_metrics().h_advance(glyph) as f64
+    }
+
+    /// Shape `text` with `harfrust` and fold the resulting glyph advances
+    /// back onto char indices.
+    ///
+    /// `byte_offsets[i]` must be the UTF-8 byte offset of char `i` in
+    /// `text` (from `str::char_indices`), `byte_offsets.len() ==
+    /// text.chars().count()`; the returned vec has one entry per char.
+    /// Entry `i` is the sum of `x_advance` (in *font units*, unscaled) of
+    /// every shaped glyph whose cluster starts inside char `i` — for a
+    /// multi-char cluster (ligature, grapheme) the whole glyph advance
+    /// lands on the cluster's first char. Glyph order is irrelevant here:
+    /// the sum is per char span, so bidi reordering does not change the
+    /// totals. `x_offset`/`y_offset`/`y_advance` are ignored — `layout`
+    /// consumes horizontal advances only.
+    ///
+    /// Returns `None` when shaping fails or panics so the caller can fall
+    /// back to [`FaceMeasure::advance_units`]; admitted fonts are
+    /// fuzz-tested upstream but the engine treats any panic as a
+    /// validation-shaped failure, never a session crash. The shaped
+    /// result is deterministic for fixed font bytes: harfrust is a pure
+    /// Rust port with pinned builtin Unicode tables (`icu` feature off).
+    pub fn shape_char_advances(
+        &self,
+        text: &str,
+        byte_offsets: &[usize],
+    ) -> Option<Vec<f64>> {
+        let char_count = byte_offsets.len();
+        let mut buffer = harfrust::Buffer::new();
+        buffer.push_str(text);
+        buffer.guess_segment_properties();
+        let shaper = harfrust::ShaperFont::new(&self.font);
+        let shaped = catch_unwind(AssertUnwindSafe(|| {
+            harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::new())
+        }));
+        // Outer `Result` is the `catch_unwind` guard, inner the shape call.
+        shaped.ok()?.ok()?;
+
+        let infos = buffer.glyph_infos();
+        let positions = buffer.glyph_positions();
+        if infos.len() != positions.len() {
+            return None;
+        }
+        let mut out = vec![0.0f64; char_count];
+        if char_count == 0 {
+            return Some(out);
+        }
+        for (info, pos) in infos.iter().zip(positions.iter()) {
+            let byte = info.cluster as usize;
+            // Clusters are UTF-8 byte offsets of the cluster's first
+            // char, so `byte` lands on a char boundary in practice; the
+            // `partition_point` form also attributes a hypothetical
+            // off-boundary cluster to the char containing it rather than
+            // dropping the advance.
+            let i = byte_offsets.partition_point(|&o| o <= byte);
+            // `byte_offsets[0] == 0 <= byte`, so `i >= 1`; clamp anyway.
+            let idx = i.saturating_sub(1).min(char_count - 1);
+            out[idx] += f64::from(pos.x_advance);
+        }
+        Some(out)
     }
 }
 

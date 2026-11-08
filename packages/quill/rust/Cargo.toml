@@ -16,7 +16,13 @@ unicode-normalization = "=0.1.25"
 # skrifa/read-fonts parse host-supplied font bytes for deterministic
 # advance metrics. `default-features = false` pins OUT autohint_shaping
 # and every other non-std feature so two builds never disagree on
-# metrics (decision doc open point 6). harfrust shaping is deferred —
-# see fonts.rs module docs.
+# metrics (decision doc open point 6).
 skrifa = { version = "0.49", default-features = false, features = ["std"] }
+# Shaping backend for `layout {font}` (second slice of the same decision):
+# harfrust 0.15 is the HarfBuzz port the decision doc selected — MIT,
+# MSRV 1.85, pure Rust on read-fonts 0.46 (the same version skrifa 0.49
+# pins, so types unify). `default-features = false` + `std` keeps the
+# optional `icu` feature out; shaping then uses harfrust's own Unicode
+# tables (deterministic, no system state). No `tracing`/`libm` features.
+harfrust = { version = "0.15", default-features = false, features = ["std"] }
 sha2 = "0.10"
