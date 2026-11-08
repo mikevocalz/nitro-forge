@@ -249,8 +249,7 @@ impl FaceMeasure {
         let charmap = self.font.charmap();
         let glyph = charmap
             .map_unicode(c)
-            .or_else(|| charmap.map_unicode('\u{0}'))
-            .unwrap_or_default();
+            .unwrap_or_else(|| skrifa::raw::types::GlyphId::new(0));
         self.font.glyph_metrics().h_advance(glyph) as f64
     }
 }
