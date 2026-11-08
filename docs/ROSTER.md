@@ -24,7 +24,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, footnotes/endnotes, TOC fields, citations/bibliography, tables incl. cell merge/unmerge and in-cell find/replace, paragraph format, mail merge, session font registry + harfrust-shaped measured layout incl. per-line re-shaping + renderPage RGBA rasterization) | 245 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI + dispatch tests (incl. folio binary-input gate) | 28 pass | `cargo test -p nf-sys` |
 | Package e2e suites (vitest → nf-cli → real Rust) | 4×8 = 32 pass | `pnpm -r test` |
-| Console workflow demo (all 11 products, create→edit→save→reopen→undo) | 26/26 checks | `pnpm --filter @nitro-forge/console demo` (or `test`) |
+| Console workflow demo (all 11 products, create→edit→save→reopen→undo) | 28/28 checks | `pnpm --filter @nitro-forge/console demo` (or `test`) |
 | Typecheck: ignition + 7 product packages + apps/console + apps/example | clean | `pnpm -r exec tsc --noEmit` |
 | Post-review full workspace retest | 184 Rust + 32 vitest pass | `cargo test --workspace && pnpm -r test` |
 | Folio slice E (redactRect + comparePdf, 2026-11-07 `codex/w1-folio-redact`; review fixes `codex/w1-folio-e`) | 133 folio Rust tests + 35 folio vitest pass; nf-cli build + folio typecheck clean | `cargo test -p folio-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/folio test`, `pnpm --filter @nitro-forge/folio typecheck` |
@@ -2587,7 +2587,7 @@ in the two existing consuming apps without new UI frameworks:
   catalog remains `releaseVerified: false` everywhere.
 
 Local evidence: `cargo build -p nf-cli` clean, `pnpm install
---prefer-offline` clean, `pnpm --filter @nitro-forge/console demo` 26/26
+--prefer-offline` clean, `pnpm --filter @nitro-forge/console demo` 28/28
 checks pass, `pnpm --filter @nitro-forge/studio-preview test:integration`
 passes all 11 engines plus essay/DOCX/Prism raster checks,
 `pnpm --filter @nitro-forge/{studio-layout,studio-workspace,example,studio-preview} typecheck`

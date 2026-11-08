@@ -136,7 +136,7 @@ The four newer engines are now exercised by real consuming apps, closing the
 activation gap noted in earlier checkpoints. `apps/console` demos all 11
 engines end-to-end through nf-cli (photo catalog/develop preview, motion
 composition evaluate/render, design layout, draft profiles — each with
-undo/redo and snapshot reopen; 26/26 checks, failures now exit non-zero).
+undo/redo and snapshot reopen; 28/28 checks, failures now exit non-zero).
 `STUDIOS` gains `photo`/`motion`/`design`/`draft` with app manifests, workspace
 icons, read-only `ForgeDocumentStage` projections and shared `EditorConfig`s
 in `apps/example` (also consumed by `apps/studio-preview`), matching the
