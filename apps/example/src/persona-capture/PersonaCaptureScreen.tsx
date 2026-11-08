@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PixelRatio, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PixelRatio, StyleSheet, Text, View } from 'react-native';
 import {
   Canvas,
   useCanvasRef,
@@ -16,6 +16,8 @@ import {
   usePhotoOutput,
 } from 'react-native-vision-camera';
 import { runOnJS } from 'react-native-worklets';
+import { Accelerometer } from 'expo-sensors';
+import { Button as TronButton } from '@nyc-tron/ui/components/Button';
 import { PersonaCapture } from '@nitro-forge/persona-native/capture';
 import { CAPTURE_SOURCE, CAPTURE_STEPS, CAPTURE_STEP_IDS, CAPTURE_STEP_SKIPPABLE } from './steps';
 import {
@@ -24,6 +26,10 @@ import {
   type FaceDetection,
   type LumaStats,
 } from './quality';
+import {
+  deviceStablePassed,
+  type AccelSample,
+} from './device-stability';
 
 /**
  * Phone-hosted guided persona capture.
@@ -111,6 +117,7 @@ export function PersonaCaptureScreen() {
   const busyRef = useRef(false);
   const frameCounter = useRef({ n: 0 });
   const faceRef = useRef<FaceDetection | null>(null);
+  const accelRef = useRef<AccelSample[]>([]);
 
   const devices = useCameraDevices();
   const cameraDevice = useMemo(
@@ -122,6 +129,23 @@ export function PersonaCaptureScreen() {
     targetResolution: { width: 1280, height: 720 },
     qualityPrioritization: 'quality',
   });
+
+  // Accelerometer window for the device-stability gate. Only subscribed
+  // when the sensor exists; absence omits the gate rather than failing it.
+  useEffect(() => {
+    let sub: { remove: () => void } | null = null;
+    try {
+      Accelerometer.setUpdateInterval(100);
+      sub = Accelerometer.addListener(({ x, y, z }) => {
+        const samples = accelRef.current;
+        samples.push({ x, y, z, at: Date.now() });
+        if (samples.length > 30) samples.splice(0, samples.length - 30);
+      });
+    } catch {
+      sub = null;
+    }
+    return () => sub?.remove();
+  }, []);
 
   // Platform-native face detection (bounding box + yaw/roll). Runs on the
   // JS thread; the latest snapshot is read by the quality gate on pass.
@@ -220,6 +244,12 @@ export function PersonaCaptureScreen() {
       if (capture.stage() !== 'capture') return;
       const stats: LumaStats = { mean, darkRatio, samples };
       const verdict = qualityForCapture(stats, faceRef.current, Date.now());
+      // Device-stability gate: only evaluated when the accelerometer is
+      // actually streaming; a missing sensor omits the gate (unmeasured).
+      if (accelRef.current.length > 0) {
+        verdict.gateNames.push('device_pose');
+        verdict.gatePassed.push(deviceStablePassed(accelRef.current, Date.now()));
+      }
       if (!verdict.gatePassed.every(Boolean)) return;
       const step = CAPTURE_STEPS[completed];
       if (!step) return;
@@ -410,15 +440,25 @@ export function PersonaCaptureScreen() {
               {completed + 1}/{CAPTURE_STEPS.length} — {currentStep.prompt}
             </Text>
             {currentStep.skippable ? (
-              <TouchableOpacity style={styles.button} onPress={onSkip}>
-                <Text style={styles.buttonText}>Skip this expression</Text>
-              </TouchableOpacity>
+              <TronButton
+                title="Skip this expression"
+                variant="secondary"
+                unstyled
+                style={styles.button}
+                labelClassName="text-white font-semibold"
+                onPress={onSkip}
+              />
             ) : null}
           </>
         ) : coverageDone ? (
-          <TouchableOpacity style={styles.button} onPress={onGenerate}>
-            <Text style={styles.buttonText}>Generate persona</Text>
-          </TouchableOpacity>
+          <TronButton
+            title="Generate persona"
+            variant="primary"
+            unstyled
+            style={styles.button}
+            labelClassName="text-white font-semibold"
+            onPress={onGenerate}
+          />
         ) : null}
         {stage === 'processing' ? (
           <Text style={styles.hint}>

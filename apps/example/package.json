@@ -54,6 +54,7 @@
     "expo-image": "58.0.18",
     "expo-linking": "58.0.16",
     "expo-router": "58.0.30",
+    "expo-sensors": "~58.0.4",
     "expo-status-bar": "58.0.4",
     "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0",
     "react": "19.3.1",

@@ -172,6 +172,9 @@ periodic Y-plane luma statistics feeding `qualityForFrame` gates, and
 face coverage and head yaw/roll via VisionCamera's platform-native
 `CameraObjectOutput` face detection (`useObjectOutput({types:['face']})`);
 a missing or stale detection omits those gates rather than passing them.
-Device pose, glasses/occlusion and head pitch remain unmeasured until a
-pose/landmark evaluator lands. Generation/fitting, phone-headset
+Device stability is gated by an accelerometer window (steady magnitude,
+fail-closed on missing/stale/jittery signal) as an honest proxy for phone
+pose — phone-to-face geometry still needs ARCore/ARKit. Glasses/occlusion
+and head pitch remain unmeasured until a landmark evaluator lands. Panel
+actions use the canonical NYC-Tron Button. Generation/fitting, phone-headset
 transport and persistence are still host-owned and not implemented.

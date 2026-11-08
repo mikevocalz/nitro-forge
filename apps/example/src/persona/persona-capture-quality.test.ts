@@ -117,3 +117,29 @@ test('qualityForCapture includes face gates only when detection exists', () => {
   assert.deepEqual(withDet.gatePassed, [true, true, true]);
   assert.deepEqual(lit.gatePassed, noDet.gatePassed);
 });
+
+import { accelStats, deviceStablePassed, ACCEL_MIN_SAMPLES } from '../persona-capture/device-stability.ts';
+
+function steadyAccel(n = 12, jitter = 0.02): { x: number; y: number; z: number; at: number }[] {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push({ x: 0.05 * Math.sin(i), y: -9.8 + jitter * Math.sin(i * 3), z: jitter * Math.cos(i), at: NOW + i * 100 });
+  }
+  return out;
+}
+
+test('accelStats computes magnitude mean and stddev', () => {
+  const s = accelStats(steadyAccel());
+  assert.ok(s.samples >= ACCEL_MIN_SAMPLES);
+  assert.ok(Math.abs(s.mean - 9.8) < 0.5);
+  assert.ok(s.stddev >= 0 && s.stddev < 0.6);
+});
+
+test('deviceStablePassed accepts a steady phone and rejects jitter/stale', () => {
+  assert.equal(deviceStablePassed(steadyAccel(), NOW + 1100), true);
+  const jittery = steadyAccel(12, 2.5);
+  assert.equal(deviceStablePassed(jittery, NOW + 1100), false);
+  assert.equal(deviceStablePassed(steadyAccel(3), NOW + 1100), false);
+  const stale = steadyAccel();
+  assert.equal(deviceStablePassed(stale, NOW + 60_000), false);
+});
