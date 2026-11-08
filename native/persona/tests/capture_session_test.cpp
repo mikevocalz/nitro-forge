@@ -1,5 +1,6 @@
 #include "nitroforge/capture_session.hpp"
 #include <cassert>
+#include <cmath>
 using namespace nitroforge::persona;
 int main() {
   CaptureSession session({{"front",false},{"smile",true}});
@@ -68,4 +69,51 @@ int main() {
   assert(mFront);
   media.generate();
   assert(media.stage() == CaptureStage::processing);
+
+  // Structured quality gates: measured failures record which gate failed.
+  CaptureSession gated({{"front",false},{"smile",true}});
+  auto g1 = gated.start(true);
+  CaptureQuality dim{{{QualityGate::lighting,false},{QualityGate::head_pose,true}}};
+  bool dimOk = gated.observe(g1,"front","dark-frame",dim);
+  assert(!dimOk && gated.observations().empty());
+  const CaptureRejection* rej = gated.lastRejection();
+  assert(rej && rej->step=="front" && rej->quality.failedGate());
+  assert(*rej->quality.failedGate()==QualityGate::lighting);
+  CaptureQuality empty{};
+  assert(!gated.observe(g1,"front","no-gates",empty)); // unevaluated gates cannot pass
+  CaptureQuality good{{{QualityGate::lighting,true},{QualityGate::head_pose,true},
+                       {QualityGate::device_pose,true},{QualityGate::glasses,false},
+                       {QualityGate::face_coverage,true}}};
+  bool goodOk = gated.observe(g1,"front","bright-frame",good);
+  assert(!goodOk && *gated.lastRejection()->quality.failedGate()==QualityGate::glasses);
+  CaptureQuality pass{{{QualityGate::lighting,true},{QualityGate::head_pose,true},
+                       {QualityGate::face_coverage,true}}};
+  bool passOk = gated.observe(g1,"front","good-frame",pass);
+  bool gSmile = gated.skip(g1,"smile");
+  assert(passOk && gSmile && gated.lastRejection()==nullptr);
+  auto gjob = gated.generate();
+  bool gGen = gated.generated(gjob,"gated-avatar",true);
+  assert(gGen);
+
+  // Appearance edits: review-only, clamped, reset per candidate, kept on save.
+  CaptureAppearance look{0.4f, 1.5f, true, "solid:#334455"};
+  gated.setAppearance(look);
+  assert(gated.appearance().warmth==0.4f && gated.appearance().brightness==1.f);
+  gated.save();
+  assert(gated.savedAsset()=="gated-avatar" && gated.appearance().touchUp);
+  bool earlyEdit = false;
+  try { gated.setAppearance({}); } catch (const std::logic_error&) { earlyEdit = true; }
+  assert(earlyEdit); // stage is ready, not review
+  CaptureAppearance nan{NAN, 0.f, false, {}};
+  CaptureSession app({{"front",false}});
+  auto a1 = app.start(true); app.observe(a1,"front","f",true);
+  auto ajob = app.generate();
+  bool aGen = app.generated(ajob,"a1",true);
+  assert(aGen);
+  bool badEdit = false;
+  try { app.setAppearance(nan); } catch (const std::invalid_argument&) { badEdit = true; }
+  assert(badEdit);
+  app.save();
+  app.start(true); // recapture resets the accepted look
+  assert(app.appearance().warmth==0.f && app.appearance().brightness==0.f);
 }

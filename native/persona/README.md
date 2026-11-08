@@ -141,9 +141,13 @@ PICO, GNM retargeting assets and renderer binding are not yet verified.
 
 ## Capture experience
 
-`capture_session.hpp` implements guided capture lifecycle with host quality
-acceptance, accessible optional-step skipping, explicit generated-asset review,
-retry, cancellation and protection against stale asynchronous results. It keeps
+`capture_session.hpp` implements guided capture lifecycle with typed
+per-gate quality verdicts (`CaptureQuality`/`QualityGate` mirroring the
+reference app's lighting, pose, glasses and coverage statuses, with
+`lastRejection()` feedback), accessible optional-step skipping, explicit
+generated-asset review with clamped appearance edits (warmth, brightness,
+touch-up, background fill), retry, cancellation and protection against stale
+asynchronous results. It keeps
 the previous saved avatar until a new reviewed candidate is accepted. Capture
 source is explicit: local device, companion phone or supplied media. A
 companion-phone session seals its samples into a `handoff` stage and requires

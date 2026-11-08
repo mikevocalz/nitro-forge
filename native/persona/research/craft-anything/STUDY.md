@@ -118,16 +118,23 @@ native OpenXR-controlled asset. Public SDK capabilities define integration.
 
 `capture_session.hpp` now implements native prepare/capture/process/review/save,
 quality gates, optional skips, cancellation, generation retry, stale-result
-rejection and companion-phone transfer acknowledgement. Its tests also verify
-recapture preserves the accepted avatar and that a sealed phone bundle rejects
-late samples until acknowledged.
+rejection and companion-phone transfer acknowledgement. Quality evaluation is
+typed: `CaptureQuality` reports measured verdicts per `QualityGate`
+(lighting, head pose, device pose, glasses, face coverage) mirroring the
+reference app's guidance statuses, and rejections expose the failed gate via
+`lastRejection()` for guide feedback. Review-stage `CaptureAppearance`
+records the observed warmth/brightness/touch-up/background-fill edits,
+clamped and reset per candidate; only review-stage parameters can be saved.
+Its tests also verify recapture preserves the accepted avatar and that a
+sealed phone bundle rejects late samples until acknowledged.
 This is UI-independent C++ usable without React Native; the existing Nitro v1
 bridge does not yet expose this capture controller.
 
-Still needed: real quality evaluator/camera adapter, fitted assets, GNM training
-or fitting path, phone/headset transport and account sync, rendered native
-guide and preview,
-appearance editing, persistence deletion, GPU animation and headset testing.
+Still needed: real quality evaluator/camera adapter producing `CaptureQuality`
+verdicts, fitted assets, GNM training or fitting path, phone/headset transport
+and account sync, rendered native guide and preview, persistence deletion,
+GPU animation and headset testing. Appearance parameters are recorded by the
+session but the host still owns rendering them into the asset.
 The native state machine does not by itself reproduce either full experience.
 
 Visual verification now covers the reference documentation pages (rendered at
