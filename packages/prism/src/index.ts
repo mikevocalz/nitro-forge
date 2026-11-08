@@ -8,6 +8,7 @@ import type { Rgba } from "./rgba";
 import type {
   AlignEdge, AlignTarget, Artboard, BlendMode, BooleanOp, Brush, BrushPatch, FillRule, LayerBounds, LayerTransform,
   ModeledStroke, NodeKind, Paint, PaintOrder, PaintStrokeOptions, PaintStrokePreview, PaintStrokeResult,
+  EraseMode, EraseStrokeOptions, EraseStrokePreview, EraseStrokeResult,
   PathNode, PixelPreview, SampleSource, SelectionMode, SelectionShape, SelectionState, Stroke, StrokeModelParams,
   StrokePredict, StrokeSample, Subpath,
 } from "./canvas-types";
@@ -98,6 +99,7 @@ export const OPS = {
   removeBrush: "removeBrush",
   listBrushes: "listBrushes",
   paintStroke: "paintStroke",
+  eraseStroke: "eraseStroke",
 } as const;
 
 /** Document palette returned by `getColors` and included in `describe`. */
@@ -485,6 +487,34 @@ export class PrismDocument {
   paintStroke(options: PaintStrokeOptions) {
     const { brush_id, brush, commit, ...rest } = options;
     return this.call<PaintStrokeResult | PaintStrokePreview>(OPS.paintStroke, {
+      ...rest,
+      ...(brush_id !== undefined ? { brush_id } : {}),
+      ...(brush !== undefined ? { brush } : {}),
+      ...(commit !== undefined ? { commit } : {}),
+    });
+  }
+
+  /**
+   * Eraser counterpart of {@linkcode paintStroke}: models the same samples
+   * into dabs through the brush, then composites destination-out instead of
+   * src-over — covered pixels lose alpha proportional to dab coverage,
+   * `brush.opacity`/`flow`/dynamics/taper, the brush color's alpha, and the
+   * pixel selection.
+   *
+   * `mode:"pixel"` (default) erases a raster layer's pixels through the
+   * layer's complete transform (same canvas→local mapping and selection
+   * pullback as `paintStroke`); `mode:"mask"` erases the layer's
+   * canvas-space mask alpha and requires an existing mask. The vector
+   * eraser mode is deferred — see docs/ENGINE_OPS.md.
+   *
+   * One undo step per committed stroke; `commit:false` is a read-only dry
+   * run returning `{dabs, bounds, mode}`. Strokes that change nothing
+   * (empty target, fully transparent brush, off-canvas, or a provably
+   * unchanged erase) return eventless with no journal entry.
+   */
+  eraseStroke(options: EraseStrokeOptions) {
+    const { brush_id, brush, commit, ...rest } = options;
+    return this.call<EraseStrokeResult | EraseStrokePreview>(OPS.eraseStroke, {
       ...rest,
       ...(brush_id !== undefined ? { brush_id } : {}),
       ...(brush !== undefined ? { brush } : {}),

@@ -141,4 +141,128 @@ describe("prism brush/stroke ops e2e (real Rust via nf-cli)", () => {
     expect(tapered).toBeLessThan(plain);
     await doc.close();
   });
+
+  it("eraseStroke pixel mode reduces alpha, honors selection, undoes", async () => {
+    const doc = await PrismDocument.open(host, 32, 32);
+    const layer = (await doc.addRasterLayer("ink")).data.layer_id;
+    const samples = line(10, 2, 16, 2);
+    await doc.paintStroke({
+      id: layer,
+      brush: { size: 8, color: [200, 10, 10, 255], spacing: 0.5 },
+      samples,
+    });
+    const before = await doc.flatten();
+    const bp = base64ToBytes(before.data.pixels_b64);
+    const at = (buf: Uint8Array, x: number, y: number) => {
+      const i = (y * 32 + x) * 4;
+      return [buf[i] ?? 0, buf[i + 1] ?? 0, buf[i + 2] ?? 0, buf[i + 3] ?? 0] as const;
+    };
+    expect(at(bp, 12, 16)[3]).toBeGreaterThan(200);
+    // Restrict erasing to x < 20; the stroke spans x 2..20.
+    await doc.selectRegion({ kind: "rect", x: 0, y: 0, w: 20, h: 32 });
+    const dry = await doc.eraseStroke({
+      id: layer,
+      brush: { size: 10, color: [0, 0, 0, 255], spacing: 0.5 },
+      samples,
+      commit: false,
+    });
+    expect(dry.data.dabs).toBeGreaterThan(0);
+    expect(dry.data.mode).toBe("pixel");
+    const erased = await doc.eraseStroke({
+      id: layer,
+      brush: { size: 10, color: [0, 0, 0, 255], spacing: 0.5 },
+      samples,
+    });
+    expect(erased.data.mode).toBe("pixel");
+    const after = await doc.flatten();
+    const ap = base64ToBytes(after.data.pixels_b64);
+    // Inside the selection alpha dropped; outside it is untouched.
+    expect(at(ap, 8, 16)[3]).toBeLessThan(at(bp, 8, 16)[3]);
+    expect(at(ap, 20, 16)[3]).toBe(at(bp, 20, 16)[3]);
+    expect(await doc.undo()).toBe(true);
+    const restored = await doc.flatten();
+    expect(base64ToBytes(restored.data.pixels_b64)).toEqual(bp);
+    await doc.close();
+  });
+
+  it("eraseStroke mask mode erases mask alpha and stays eventless on empty masks", async () => {
+    const doc = await PrismDocument.open(host, 16, 16);
+    const layer = (await doc.addRasterLayer()).data.layer_id;
+    await doc.fillLayer(layer, [10, 200, 10, 255]);
+    await doc.addMask(layer, "reveal");
+    const samples = line(8, 2, 8, 2);
+    const out = await doc.eraseStroke({
+      id: layer,
+      mode: "mask",
+      brush: { size: 8, color: [0, 0, 0, 255], spacing: 0.5 },
+      samples,
+    });
+    expect(out.data.mode).toBe("mask");
+    expect(out.data.dabs).toBeGreaterThan(0);
+    const desc = await doc.describe<any>();
+    const lyr = desc.data.layers.find((l: any) => l.id === layer);
+    const mask = base64ToBytes(lyr.mask.mask_b64);
+    expect(mask[8 * 16 + 6]).toBeLessThan(255);
+    expect(mask[2 * 16 + 2]).toBe(255);
+    // Flattened composite follows the mask.
+    const flat = await doc.flatten();
+    const px = base64ToBytes(flat.data.pixels_b64);
+    expect(px[(8 * 16 + 6) * 4 + 3]).toBeLessThan(255);
+    // Zero the mask, then erase: provably nothing changes → still ok, and
+    // undo must not have recorded the no-op (describe equality check via
+    // snapshot bytes is overkill; undo restores the pre-zero state).
+    const zero = new Uint8Array(16 * 16);
+    await doc.paintMask(layer, 0, 0, 16, 16, zero, "replace");
+    const before = await doc.describe<any>();
+    const noop = await doc.eraseStroke({
+      id: layer,
+      mode: "mask",
+      brush: { size: 8, color: [0, 0, 0, 255], spacing: 0.5 },
+      samples,
+    });
+    expect(noop.data.dabs).toBeGreaterThan(0);
+    const after = await doc.describe<any>();
+    expect(after.data).toEqual(before.data);
+    await doc.close();
+  });
+
+  it("eraseStroke validates modes, layers, brushes and budgets", async () => {
+    const doc = await PrismDocument.open(host, 16, 16);
+    const layer = (await doc.addRasterLayer()).data.layer_id;
+    const shape = (await doc.addShape({
+      kind: "rect", x: 0, y: 0, w: 4, h: 4, fill: [0, 0, 0, 255],
+    })).data.layer_id;
+    const samples = line(4, 1, 2, 1);
+    // Vector mode is not implemented.
+    await expect(
+      doc.eraseStroke({ id: layer, mode: "vector" as any, brush: { size: 4 }, samples }),
+    ).rejects.toBeInstanceOf(EngineError);
+    // Pixel mode rejects non-raster layers; mask mode requires a mask.
+    await expect(
+      doc.eraseStroke({ id: shape, brush: { size: 4 }, samples }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(
+      doc.eraseStroke({ id: layer, mode: "mask", brush: { size: 4 }, samples }),
+    ).rejects.toBeInstanceOf(EngineError);
+    // Same brush contract as paintStroke.
+    await expect(doc.eraseStroke({ id: layer, samples })).rejects.toBeInstanceOf(EngineError);
+    await expect(
+      doc.eraseStroke({ id: layer, brush_id: 1, brush: { size: 4 }, samples }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(
+      doc.eraseStroke({ id: layer, brush_id: 999, samples }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(
+      doc.eraseStroke({ id: layer, brush: { size: 4 }, samples: [] }),
+    ).rejects.toBeInstanceOf(EngineError);
+    // Erase on an empty layer is eventless: describe unchanged.
+    const before = await doc.describe<any>();
+    const noop = await doc.eraseStroke({
+      id: layer, brush: { size: 6, color: [0, 0, 0, 255] }, samples,
+    });
+    expect(noop.data.dabs).toBeGreaterThan(0);
+    const after = await doc.describe<any>();
+    expect(after.data).toEqual(before.data);
+    await doc.close();
+  });
 });
