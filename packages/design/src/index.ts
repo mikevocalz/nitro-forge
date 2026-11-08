@@ -324,11 +324,18 @@ export class DesignDocument{
   * outside the parent/sibling scope reject with reasons; converting the
   * parent to flow layout, reparenting under one, or removing a `relative_to`
   * target rejects while constraints would be stranded. Constraints are
-  * durable state only: evaluateLayout does not solve them. */
+  * durable state solved automatically at evaluate time: evaluateLayout (and
+  * renderFrame/exportSlice/describeHandoff) pin anchored edges flush to the
+  * reference box, report unsatisfied nodes, and keep unconstrained geometry
+  * for them. */
  setConstraints(id:number,constraints:NodeConstraints|null){return this.document.apply<{ok:boolean}>(OPS.setConstraints,{id,constraints});}
  /** Read-only constraint state plus accepted/rejected anchor sets and the
   * live solve summary (`solve.status`, per-node `enforced`/`satisfied`);
-  * silent. `solve.status` is `unavailable` while layout evaluation fails. */
+  * silent. `solve.status` is `unavailable` while layout evaluation fails.
+  * The solve runs on the unexpanded stored state, so a per-node
+  * `satisfied:true` can still coincide with an evaluateLayout failure on
+  * the expanded state (e.g. synthetic instance clones going out of
+  * bounds). */
  readConstraints(id?:number){return this.document.apply<ConstraintsDescription>(OPS.readConstraints,id===undefined?{}:{id});}
  /** Converts an existing frame subtree into a reusable component
   * definition. Optional `variants` are named override bundles selectable

@@ -332,7 +332,9 @@ pub fn detach(s: &State, inst_id: u64) -> Result<State, EngineError> {
         }
         if let Some(c) = &mut clone.constraints {
             if let Some(r) = c.relative_to {
-                if r >= SAFE_ID {
+                // Synthetic ids are strictly > SAFE_ID (real ids reach at
+                // most SAFE_ID), so only those remap through `id_map`.
+                if r > SAFE_ID {
                     c.relative_to = Some(*id_map.get(&r).ok_or_else(|| {
                         bad("constraint target outside detached subtree")
                     })?);

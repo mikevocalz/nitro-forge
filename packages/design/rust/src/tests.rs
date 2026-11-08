@@ -1868,6 +1868,105 @@ fn constraints_solve_anchors_bounds_aspect_siblings_and_cycles() {
     let b = find(&e, inner);
     assert_eq!((b.x, b.y), (13., 13.));
 }
+#[test]
+fn solved_constraints_out_of_bounds_report_unsatisfied_not_failure() {
+    // A satisfied solve can still land outside the ±1e7 renderer bound
+    // `place` enforces: variable bindings reach geometry authored bounds
+    // cannot. The solver must report the node unsatisfied and keep baseline
+    // geometry rather than failing the whole layout read.
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":20}));
+    mode(&mut e, "m", "M");
+    var(&mut e, "far", "Far", "number");
+    call(&mut e, "setVariableValue", json!({"id":"far","mode":"m","value":val("number",json!(9_999_990.))}));
+    call(&mut e, "setActiveMode", json!({"id":"m"}));
+    let frame = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"x":0,"y":0,"width":20,"height":20}),
+    )
+    .data["node_id"]
+    .as_u64()
+    .unwrap();
+    let child = shape(&mut e, frame, 0., 0., 1., 1., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":child,"constraints":{"horizontal":"right","vertical":"top"}}),
+    );
+    // Sanity: in bounds before the binding moves the reference frame.
+    let result = call(&mut e, "evaluateLayout", json!({}));
+    assert_eq!(result.data["constraints"]["status"], "solved");
+    call(
+        &mut e,
+        "bindVariable",
+        json!({"node_id":frame,"path":"x","variable_id":"far"}),
+    );
+    // The frame's own box stays in bounds (x = 9,999,990 <= 1e7), but the
+    // right-anchored child's solved x = 9,999,990 + 20 - 1 exceeds 1e7.
+    let result = call(&mut e, "evaluateLayout", json!({}));
+    assert_eq!(result.data["constraints"]["status"], "partial");
+    assert!(result.data["constraints"]["unsatisfied"]
+        .as_array()
+        .unwrap()
+        .contains(&json!(child)));
+    // Baseline geometry is kept: frame.x + authored child x.
+    let b = result.data["boxes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|b| b["id"] == child)
+        .unwrap();
+    assert_eq!(
+        (b["x"].as_f64().unwrap(), b["width"].as_f64().unwrap()),
+        (9_999_990., 1.)
+    );
+}
+#[test]
+fn instance_expansion_solved_out_of_bounds_reports_unsatisfied() {
+    // Same bound through expansion: a right-anchored clone under a huge
+    // instance solves past 1e7 even though every authored box is in bounds.
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":20}));
+    let comp = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"x":0,"y":0,"width":10,"height":10}),
+    )
+    .data["node_id"]
+    .as_u64()
+    .unwrap();
+    let child = shape(&mut e, comp, 0., 0., 1., 1., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":child,"constraints":{"horizontal":"right","vertical":"top"}}),
+    );
+    call(&mut e, "createComponent", json!({"id":comp}));
+    // Instance box itself passes place() (x = 1e6, w = 1e7); the clone's
+    // solved x = 1e6 + 1e7 - 1 = 10,999,999 exceeds the bound.
+    call(
+        &mut e,
+        "createInstance",
+        json!({"component":comp,"parent":1,"x":1_000_000,"y":0,"width":10_000_000,"height":10}),
+    );
+    let result = call(&mut e, "evaluateLayout", json!({}));
+    assert_eq!(result.data["constraints"]["status"], "partial");
+    let unsat = result.data["constraints"]["unsatisfied"]
+        .as_array()
+        .unwrap();
+    assert_eq!(unsat.len(), 1);
+    assert!(unsat[0].as_u64().unwrap() > SAFE_ID);
+    // The synthetic clone keeps baseline geometry: instance.x + authored x.
+    let synth = result.data["boxes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|b| b["id"].as_u64().unwrap() > SAFE_ID)
+        .unwrap();
+    assert_eq!(synth["x"].as_f64().unwrap(), 1_000_000.);
+    assert_eq!(synth["width"].as_f64().unwrap(), 1.);
+}
 fn make_component(e: &mut DesignEngine, child_fill: [u8; 4]) -> (u64, u64) {
     let frame = call(
         e,

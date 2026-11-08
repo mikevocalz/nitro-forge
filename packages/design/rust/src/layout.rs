@@ -189,7 +189,14 @@ fn solve_pending_box(p: &Pending, r: &Rect) -> Option<(Rect, bool)> {
     }
     let x = axis_pos(p.edge_x, r.x, r.w, w);
     let y = axis_pos(p.edge_y, r.y, r.h, h);
-    if ![x, y, w, h].iter().all(|v| v.is_finite()) {
+    // A solved box must land inside the same bounds `place` enforces on
+    // every emitted node (finite, |v| <= 1e7, positive extents — w/h are
+    // already positive here). Out-of-bounds results report unsatisfied and
+    // keep baseline geometry instead of failing the whole layout read.
+    if ![x, y, w, h]
+        .iter()
+        .all(|v| v.is_finite() && v.abs() <= 1e7)
+    {
         return None;
     }
     let mut satisfied = axis_residual(p.edge_x, r.x, r.w, x, w) <= SOLVE_TOL
@@ -214,6 +221,8 @@ struct ScopeSolver<'a> {
 impl ScopeSolver<'_> {
     /// Depth-first solve honoring `dep` edges; `cyclic` members keep their
     /// baseline box so dependents resolve against stable geometry.
+    /// Recursion depth is bounded by the sibling count (itself bounded by
+    /// the document node budget), so no explicit cap is needed.
     fn run(&mut self, u: usize) {
         if self.done[u] {
             return;

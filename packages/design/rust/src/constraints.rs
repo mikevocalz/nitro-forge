@@ -77,7 +77,7 @@ pub fn describe(
         ],
         "notes": [
             "anchors pin flush to the reference edge/midpoint/span (no inset margins exist in the contract); unsatisfied nodes (cycles, bound/aspect conflicts) keep their unconstrained box and are listed in solve.unsatisfied",
-            "x/y variable bindings resolve into the evaluated geometry constraints then override on anchored axes",
+            "x/y variable bindings set the baseline geometry first; constraints then override on the axes they anchor",
         ],
         "nodes": nodes,
     }))
