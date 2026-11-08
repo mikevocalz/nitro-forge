@@ -51,12 +51,14 @@
 
 mod annotation_edit;
 mod attachments;
+mod compare;
 mod forms;
 mod ink_link;
 mod markup;
 mod comments;
 mod outlines;
 mod page_ops;
+mod redact;
 mod signatures;
 
 use ignition_core::{
@@ -582,7 +584,7 @@ impl Engine for FolioEngine {
     }
 
     fn binary_input_ops(&self) -> &'static [&'static str] {
-        &["open", "addFileAttachment"]
+        &["open", "addFileAttachment", "comparePdf"]
     }
 
     /// `save` checks for cancellation before serializing and again before
@@ -615,6 +617,9 @@ impl Engine for FolioEngine {
         // input through `Command::bytes_input`, which needs `&mut cmd`.
         if cmd.op == "addFileAttachment" {
             return self.op_add_file_attachment(&mut cmd);
+        }
+        if cmd.op == "comparePdf" {
+            return self.op_compare_pdf(&mut cmd);
         }
         let p = &cmd.payload;
         match cmd.op.as_str() {
@@ -854,6 +859,10 @@ impl Engine for FolioEngine {
             "addBookmark" => self.op_add_bookmark(p),
             "removeBookmark" => self.op_remove_bookmark(p),
             "fillFormField" => self.op_fill_form_field(p),
+            "redactRect" => self.op_redact_rect(p),
+            "comparePdf" => Err(EngineError::unsupported(
+                "comparePdf is dispatched before payload binding",
+            )),
             "addFileAttachment" => Err(EngineError::unsupported(
                 "addFileAttachment is dispatched before payload binding",
             )),

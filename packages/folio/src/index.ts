@@ -37,6 +37,8 @@ export const OPS = {
   listAttachments: "listAttachments",
   getAttachment: "getAttachment",
   addFileAttachment: "addFileAttachment",
+  redactRect: "redactRect",
+  comparePdf: "comparePdf",
   encrypt: "encrypt",
   decrypt: "decrypt",
   save: "save",
@@ -164,6 +166,151 @@ export interface FolioAttachmentInfo {
   name: string;
   size: number | null;
   description: string | null;
+}
+
+/**
+ * Why an image XObject intersecting the redaction rect was retained, keyed
+ * by PDF object number (string). `not_drawn` = resource entry exists but
+ * no reachable `Do` places it; `extends_outside_rect` = at least one
+ * placement is not fully contained; `drawn_inside_form` = placed through
+ * a form XObject (nested resources are never rewritten); `shared_content_stream`
+ * = the `Do` lives in a content stream shared with another page;
+ * `analysis_incomplete` = the bounded content scan could not prove every
+ * placement (budget/depth/cycle cap hit).
+ */
+export type FolioRedactRetainedReason =
+  | "not_drawn"
+  | "extends_outside_rect"
+  | "drawn_inside_form"
+  | "shared_content_stream"
+  | "analysis_incomplete";
+
+/**
+ * Honest report from `redactRect`. `removed`/`retained` counts and id
+ * lists are exact for what the engine provably deleted; every list is
+ * capped (with `*_truncated` flags) — totals in the counts are NOT
+ * capped. `image_draws_removed` counts images whose `Do` operations were
+ * stripped while the object stayed reachable through a shared resource
+ * chain. `metadata` maps scrubbed metadata kinds to removal counts.
+ * `content_note` is the honesty contract: text and vector content under
+ * the rect is NEVER removed (no glyph positions in lopdf) and remains
+ * byte-identical — hosts must verify redaction visually.
+ */
+export interface FolioRedactReport {
+  ok: boolean;
+  removed: {
+    annotations: number;
+    annotation_ids: number[];
+    annotation_ids_truncated: boolean;
+    images: number;
+    image_ids: number[];
+    image_ids_truncated: boolean;
+    image_draws_removed: number;
+    image_draw_ids: number[];
+    image_draw_ids_truncated: boolean;
+    metadata: Record<string, number>;
+  };
+  retained: {
+    annotations: number;
+    annotation_ids: number[];
+    annotation_ids_truncated: boolean;
+    images: number;
+    image_reasons: Record<string, FolioRedactRetainedReason | string>;
+    image_reasons_truncated: boolean;
+    inline_images: number;
+  };
+  content_note: string;
+}
+
+/** Per-page structural difference entry from `comparePdf`. */
+export interface FolioComparePageChange {
+  index: number;
+  fields: ("mediabox" | "rotate" | "annotations" | "has_contents")[];
+}
+
+/**
+ * One annotation in a `comparePdf` multiset diff. `rect` is
+ * `[x, y, w, h]` derived from the PDF `/Rect`; `contents_md5` hashes the
+ * decoded `/Contents` (raw text is never compared or returned).
+ * `unreadable: true` marks entries whose dictionary could not be
+ * resolved — they still participate in the diff.
+ */
+export interface FolioCompareAnnotEntry {
+  page: number;
+  subtype?: string | null;
+  rect?: [number, number, number, number] | null;
+  contents_md5?: string | null;
+  unreadable?: boolean;
+}
+
+/** Form-field diff entry: the `listFormFields` projection minus `annot`. */
+export type FolioCompareField = Omit<FolioFormField, "annot">;
+
+/** Outline diff entry: the `listOutlines` node minus `id`. */
+export interface FolioCompareOutlineItem {
+  title: string;
+  page: number | null;
+  dest?: string | unknown[];
+  children: FolioCompareOutlineItem[];
+}
+
+/** Signature diff entry: the `listSignatures` row minus `annot`. */
+export type FolioCompareSignature = Omit<FolioSignature, "annot">;
+
+/**
+ * Structural diff of this document against another PDF, from
+ * `comparePdf`. `structural_identical` compares only the modeled
+ * projections (page geometry/rotation/annotation multiset/contents
+ * presence, form fields, outlines, attachments, signature fields) — it
+ * is NOT byte or semantic equality; unmodeled PDF features are outside
+ * the diff, and `text.differing_pages` is a lossy hint that does not
+ * affect `structural_identical`. Every `*_added`/`*_removed` list is
+ * capped at 256 entries with `*_total` counts and `*_truncated`-style
+ * honesty via the totals; page index lists carry `*_total` too.
+ */
+export interface FolioCompareResult {
+  pages: { current: number; other: number };
+  structural_identical: boolean;
+  differences: {
+    only_in_current: number[];
+    only_in_current_total: number;
+    only_in_current_truncated: boolean;
+    only_in_other: number[];
+    only_in_other_total: number;
+    only_in_other_truncated: boolean;
+    page_changes: FolioComparePageChange[];
+    page_changes_total: number;
+    page_changes_truncated: boolean;
+    annotations_added: FolioCompareAnnotEntry[];
+    annotations_added_total: number;
+    annotations_removed: FolioCompareAnnotEntry[];
+    annotations_removed_total: number;
+    form_fields_added: FolioCompareField[];
+    form_fields_added_total: number;
+    form_fields_removed: FolioCompareField[];
+    form_fields_removed_total: number;
+    outlines_added: FolioCompareOutlineItem[];
+    outlines_added_total: number;
+    outlines_removed: FolioCompareOutlineItem[];
+    outlines_removed_total: number;
+    attachments_added: FolioAttachmentInfo[];
+    attachments_added_total: number;
+    attachments_removed: FolioAttachmentInfo[];
+    attachments_removed_total: number;
+    signatures_added: FolioCompareSignature[];
+    signatures_added_total: number;
+    signatures_removed: FolioCompareSignature[];
+    signatures_removed_total: number;
+  };
+  text: {
+    differing_pages: number[];
+    differing_pages_total: number;
+    differing_pages_truncated: boolean;
+    unknown_pages: number[];
+    unknown_pages_total: number;
+    unknown_pages_truncated: boolean;
+    note: string;
+  };
 }
 
 /** One row of `listPageInfo`; `mediabox` is `[x1, y1, x2, y2]` PDF user space or null. */
@@ -473,6 +620,48 @@ export class FolioDocument {
       ...(options.description === undefined ? {} : { description: options.description }),
       ...(options.page === undefined ? {} : { page: options.page }),
       ...(options.rect === undefined ? {} : { rect: options.rect }),
+    });
+  }
+  /**
+   * Structural redaction of `rect` (`[x, y, w, h]`, PDF user space,
+   * bottom-left origin) on 0-based `page`. Removes annotations whose
+   * `/Rect` intersects the region (including comment reply/pop-up
+   * cascades) and image XObjects every placement of which is fully
+   * contained; partially overlapping images, form-nested images, images
+   * on shared content streams and shared resource chains are RETAINED
+   * and reported with reasons in `FolioRedactReport`. Also scrubs
+   * `/PieceInfo`, XMP `/Metadata` streams and the trailer `/Info`
+   * dictionary document-wide.
+   *
+   * HONESTY CONTRACT — read before relying on this for compliance:
+   * text and vector content under the rect is NEVER removed. lopdf has
+   * no glyph-position API, so `Tj`/`TJ` strings and path painting cannot
+   * be located; they remain byte-identical. This op is structural
+   * cleanup, not a provable redaction — render and verify visually
+   * (the deferred pdfium service) or reject the workflow. Undo
+   * restores the exact pre-redaction document, so redacted content is
+   * recoverable in-engine; treat this as non-security-boundary editing.
+   * Rejects on encrypted documents (decrypt first) and on hostile
+   * input exceeding the engine's work caps.
+   */
+  redactRect(page: number, rect: Rect) {
+    return this.call<FolioRedactReport>(OPS.redactRect, { page, rect });
+  }
+  /**
+   * Structural comparison of this document against another PDF's bytes.
+   * Read-only and eventless; the other document is parsed but never
+   * installed. Diffs page count/geometry/rotation/annotation multisets/
+   * content presence, form fields, outlines, attachments and signature
+   * fields — see `FolioCompareResult` for exactly what is and is not
+   * compared. Text comparison reuses the lossy `pageText` extraction
+   * and is reported separately as `text.differing_pages` (a hint, not
+   * proof, and it does NOT affect `structural_identical`). Both
+   * documents must be unencrypted. Rejects inputs over the engine's
+   * work caps (10 000 pages, 100 000 annotations/objects).
+   */
+  comparePdf(otherPdf: Uint8Array) {
+    return this.call<FolioCompareResult>(OPS.comparePdf, {
+      bytes_b64: bytesToBase64(otherPdf),
     });
   }
   /** Encrypt the document in place (V4/R4, AES-128). One undo entry; saved bytes stay encrypted. */

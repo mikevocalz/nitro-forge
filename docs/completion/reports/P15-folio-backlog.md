@@ -52,12 +52,22 @@ lift `FOLIO_DEFERRED_OPS` entries where applicable.
 - **Slice D:** F-7 `listSignatures` read (ByteRange/SubFilter/signer);
   F-8 `addFileAttachment` (EmbeddedFile stream + Filespec + name tree +
   PushPin annot; ≤25 MB b64).
-- **Slice E (large):** F-9 structural redaction — delete intersecting
-  annots, remove fully-contained image XObjects, `scrubMetadata`
-  (/PieceInfo, XMP, /Info); return `{removed, retained}` — text/vector
-  under rect NOT provable without glyph positions; F-12 `comparePdf`
-  structural diff (page/annot/field/outline level; lossy text compare
-  documented).
+- **Slice E (large) — IMPLEMENTED 2026-11-07 on
+  `codex/w1-folio-redact`:** F-9 `redactRect {page,rect}` deletes
+  intersecting annotations (comment reply/pop-up cascades included),
+  removes image XObjects provably fully contained at every reachable
+  placement, strips contained-image `Do` ops on private content streams,
+  and scrubs `/PieceInfo`/XMP `/Metadata`/trailer `/Info` document-wide.
+  Returns honest `{removed, retained}` with per-image retention reasons
+  (`extends_outside_rect`, `drawn_inside_form`, `shared_content_stream`,
+  `not_drawn`, `analysis_incomplete`). Text/vector under the rect is
+  still NOT provable without glyph positions — `content_note` in the
+  payload and ENGINE_OPS say so; glyph-level redaction stays blocked on
+  the host `folio-render` service. F-12 `comparePdf {bytes_b64|binary}`
+  diffs page/annotation/form-field/outline/attachment/signature
+  structure between the current doc and another PDF; `structural_identical`
+  covers only those projections and `text.differing_pages` is a lossy
+  `pageText` hint that does not affect it.
 - **Slice F:** F-10 encryption reconciliation (`open` password path,
   real `encrypted` reporting, snapshot semantics for encrypted docs) +
   F-11 `insertPageImage` (JPEG DCTDecode passthrough / PNG FlateDecode;
