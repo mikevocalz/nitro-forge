@@ -961,32 +961,42 @@ fn validate(s: &State) -> Result<(), EngineError> {
             }
         }
     }
-    fn expr_acyclic(
-        node: (u64, Property),
-        edges: &BTreeMap<(u64, Property), Vec<(u64, Property)>>,
-        visiting: &mut BTreeSet<(u64, Property)>,
-        done: &mut BTreeSet<(u64, Property)>,
-    ) -> Result<(), EngineError> {
-        if done.contains(&node) {
-            return Ok(());
+    // Iterative DFS over the `(layer, property)` dependency graph. The
+    // longest reference chain scales with document content (up to the
+    // layer budget times the property count), so recursion here would
+    // grow the call stack on hostile restores; an explicit stack keeps
+    // the check heap-bounded instead. `visiting` is the on-path gray set
+    // — re-reaching a node still on the path is a cycle — and `done` is
+    // the fully-explored black memo shared across start nodes. Frames
+    // are `(node, exiting)`: first visits push the exit marker, then
+    // every not-yet-done dependency.
+    let mut visiting = BTreeSet::new();
+    let mut done = BTreeSet::new();
+    for &start in expr_edges.keys().chain(expr_cells.iter()) {
+        if done.contains(&start) {
+            continue;
         }
-        if !visiting.insert(node) {
-            return Err(bad("cyclic expression dependency"));
-        }
-        if let Some(next) = edges.get(&node) {
-            for &dep in next {
-                expr_acyclic(dep, edges, visiting, done)?;
+        let mut stack: Vec<((u64, Property), bool)> = vec![(start, false)];
+        while let Some((node, exiting)) = stack.pop() {
+            if exiting {
+                visiting.remove(&node);
+                done.insert(node);
+                continue;
             }
-        }
-        visiting.remove(&node);
-        done.insert(node);
-        Ok(())
-    }
-    {
-        let mut visiting = BTreeSet::new();
-        let mut done = BTreeSet::new();
-        for &node in expr_edges.keys().chain(expr_cells.iter()) {
-            expr_acyclic(node, &expr_edges, &mut visiting, &mut done)?;
+            if done.contains(&node) {
+                continue;
+            }
+            if !visiting.insert(node) {
+                return Err(bad("cyclic expression dependency"));
+            }
+            stack.push((node, true));
+            if let Some(next) = expr_edges.get(&node) {
+                for &dep in next {
+                    if !done.contains(&dep) {
+                        stack.push((dep, false));
+                    }
+                }
+            }
         }
     }
     // Pass 2b: matte chains are acyclic and bounded so render recursion
@@ -1186,6 +1196,17 @@ impl<'a> ExprResolver<'a> {
             busy: vec![[false; 12]; layers.len()],
         }
     }
+    /// Resolve one `(layer, property)` cell. Two-phase iterative walk over
+    /// the expression dependency graph: phase 1 collects the transitive
+    /// expression cells in dependencies-first (post-order) sequence on an
+    /// explicit stack — resolving curve/base cells inline — and phase 2
+    /// evaluates the collected cells in that order. Recursion depth
+    /// therefore never scales with the reference-chain length: the old
+    /// recursive `resolve` → `eval_node` → `resolve_ref` cycle nested one
+    /// AST-depth frame set per `layer()` hop, so a long chain multiplied
+    /// onto the stack even though each piece was individually bounded.
+    /// `busy` remains the defensive cycle backstop — `validate` already
+    /// proves the graph acyclic, so it is unreachable on admitted state.
     fn resolve(&mut self, index: usize, property: Property) -> Result<f64, EngineError> {
         let slot = property.index();
         if self.done[index][slot] {
@@ -1194,21 +1215,103 @@ impl<'a> ExprResolver<'a> {
         if self.busy[index][slot] {
             return Ok(0.);
         }
-        self.busy[index][slot] = true;
-        let layer = &self.layers[index];
-        let value = if let Some(expr) = layer.expressions.iter().find(|e| e.property == property)
-        {
-            match expressions::parse(&expr.source) {
-                Ok(ast) => {
+        type Cell = (usize, Property);
+        let mut order: Vec<Cell> = Vec::new();
+        let mut emitted: BTreeSet<Cell> = BTreeSet::new();
+        let mut onpath: BTreeSet<Cell> = BTreeSet::new();
+        // Frames are `(cell, exiting)`: first visits mark `onpath`, push
+        // the exit marker, then every not-yet-resolved dependency; exit
+        // frames append the cell to `order` after its deps.
+        let mut stack: Vec<(Cell, bool)> = vec![((index, property), false)];
+        while let Some((cell, exiting)) = stack.pop() {
+            let (ci, cp) = cell;
+            if exiting {
+                onpath.remove(&cell);
+                emitted.insert(cell);
+                order.push(cell);
+                continue;
+            }
+            let cslot = cp.index();
+            if self.done[ci][cslot] || emitted.contains(&cell) || onpath.contains(&cell) {
+                continue;
+            }
+            let has_expr = self.layers[ci]
+                .expressions
+                .iter()
+                .any(|e| e.property == cp);
+            if !has_expr {
+                // Curve/base cells never reference other cells, so they
+                // resolve inline with no ordering constraints. A failure
+                // on the requested cell propagates; on a referenced cell
+                // it resolves to 0.0 exactly like `resolve_ref` did.
+                match self.resolve_non_expr(ci, cp) {
+                    Ok(value) => {
+                        self.done[ci][cslot] = true;
+                        self.values[ci][cslot] = value;
+                    }
+                    Err(e) => {
+                        if (ci, cp) == (index, property) {
+                            return Err(e);
+                        }
+                        self.done[ci][cslot] = true;
+                        self.values[ci][cslot] = 0.;
+                    }
+                }
+                continue;
+            }
+            onpath.insert(cell);
+            stack.push((cell, true));
+            // Push every referenced cell. Expression deps land earlier in
+            // `order` through post-order; non-expression deps resolve
+            // inline when their own frame pops. `this` references resolve
+            // to the owner cell itself, which `onpath` already holds.
+            let layer = &self.layers[ci];
+            if let Some(expr) = layer.expressions.iter().find(|e| e.property == cp) {
+                if let Ok(ast) = expressions::parse(&expr.source) {
+                    let owner = layer.id;
+                    for &(oid, prop) in ast.references() {
+                        let dep_index = match oid {
+                            None => self.by_id.get(&owner).copied(),
+                            Some(id) => self.by_id.get(&id).copied(),
+                        };
+                        if let Some(di) = dep_index {
+                            let dep = (di, prop);
+                            if !self.done[di][prop.index()]
+                                && !emitted.contains(&dep)
+                                && !onpath.contains(&dep)
+                            {
+                                stack.push((dep, false));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Phase 2: evaluate expression cells dependencies-first. Every
+        // expression dep is already `done` when its referrers run; `this`/
+        // self edges and defensive cycle paths resolve to 0.0 through
+        // `cell_value`/`busy` exactly like the old recursive guard.
+        for &(ci, cp) in &order {
+            let cslot = cp.index();
+            let layer = &self.layers[ci];
+            let parsed = layer
+                .expressions
+                .iter()
+                .find(|e| e.property == cp)
+                .and_then(|e| expressions::parse(&e.source).ok());
+            let value = match parsed {
+                Some(ast) => {
+                    self.busy[ci][cslot] = true;
                     let env = self.env;
                     let owner = layer.id;
                     let raw = ast.eval(&env, owner, &mut |id, prop| {
-                        self.resolve_ref(id, prop)
+                        self.cell_value(id, prop)
                     });
+                    self.busy[ci][cslot] = false;
                     // Property boundary: non-finite (including the defensive
                     // step-cap NaN) resolves to 0.0; finite clamps into the
                     // property's existing bounds. Evaluation never fails.
-                    let (lo, hi) = property.bounds();
+                    let (lo, hi) = cp.bounds();
                     if raw.is_finite() {
                         raw.clamp(lo, hi)
                     } else {
@@ -1216,9 +1319,19 @@ impl<'a> ExprResolver<'a> {
                     }
                 }
                 // Unreachable on validated state; defensive 0.0.
-                Err(_) => 0.,
-            }
-        } else if let Some(curve) = layer.curves.iter().find(|c| c.property == property) {
+                None => 0.,
+            };
+            self.done[ci][cslot] = true;
+            self.values[ci][cslot] = value;
+        }
+        Ok(self.values[index][slot])
+    }
+    /// Curve/base resolution for a `(layer, property)` cell with no
+    /// expression — the non-recursive tail of `resolve`. Resolution order
+    /// is expression → curve → base, matching the documented precedence.
+    fn resolve_non_expr(&mut self, index: usize, property: Property) -> Result<f64, EngineError> {
+        let layer = &self.layers[index];
+        if let Some(curve) = layer.curves.iter().find(|c| c.property == property) {
             let (min, max) = property.bounds();
             evaluate(
                 &curve.keys,
@@ -1228,21 +1341,44 @@ impl<'a> ExprResolver<'a> {
                 min,
                 max,
             )
-            .map_err(bad)?
+            .map_err(bad)
         } else {
-            property.read(layer)
-        };
-        self.busy[index][slot] = false;
-        self.done[index][slot] = true;
-        self.values[index][slot] = value;
-        Ok(value)
+            Ok(property.read(layer))
+        }
     }
-    /// `layer(<id>).<prop>` target: ids are validated same-comp, so a miss
-    /// is defensive-only and resolves to 0.0.
-    fn resolve_ref(&mut self, id: u64, property: Property) -> f64 {
-        match self.by_id.get(&id) {
-            Some(&index) => self.resolve(index, property).unwrap_or(0.),
-            None => 0.,
+    /// Referenced-cell read used by `Ast::eval`: `layer(<id>).<prop>` and
+    /// `this.<prop>` targets. Memoized cells return their stored value;
+    /// curve/base cells resolve inline; unknown ids and expression cells
+    /// that were not ordered ahead of the evaluating cell (only reachable
+    /// through a cycle `validate` already rejects) resolve to 0.0 —
+    /// evaluation never fails.
+    fn cell_value(&mut self, id: u64, property: Property) -> f64 {
+        let Some(&index) = self.by_id.get(&id) else {
+            return 0.;
+        };
+        let slot = property.index();
+        if self.done[index][slot] {
+            return self.values[index][slot];
+        }
+        if self.busy[index][slot] {
+            return 0.;
+        }
+        if self.layers[index]
+            .expressions
+            .iter()
+            .any(|e| e.property == property)
+        {
+            // Expression dep out of order: defensive cycle path,
+            // unreachable on validated state.
+            return 0.;
+        }
+        match self.resolve_non_expr(index, property) {
+            Ok(value) => {
+                self.done[index][slot] = true;
+                self.values[index][slot] = value;
+                value
+            }
+            Err(_) => 0.,
         }
     }
 }

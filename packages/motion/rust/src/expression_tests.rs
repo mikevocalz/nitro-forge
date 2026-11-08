@@ -757,3 +757,57 @@ fn deep_nesting_rejects_without_aborting() {
     assert!(e.restore(&bytes).is_err());
     assert_eq!(e.snapshot().unwrap(), good);
 }
+
+#[test]
+fn long_dependency_chain_evaluates_without_recursion() {
+    // Regression: `expr_acyclic` and `ExprResolver::resolve` used to
+    // recurse over the (layer, property) expression dependency graph, so
+    // depth scaled with the longest reference chain — up to the layer
+    // budget (128) times the property count (12), far past any fixed
+    // recursion cap on a hostile restore. Both walks are now iterative;
+    // a ~960-cell chain must restore and evaluate cleanly, propagating
+    // its base value end to end.
+    let mut e = MotionEngine::new();
+    call(&mut e, "new", json!({"width":4,"height":4,"duration_s":2}));
+    const N: usize = 120;
+    let mut ids = Vec::new();
+    for _ in 0..N {
+        ids.push(shape_layer(&mut e));
+    }
+    // Chain eight expression cells per layer so the dependency depth is
+    // ~8*N = 960: each layer's tx reads the previous layer's opacity and
+    // ty..opacity each read this.<previous property>.
+    let props = [
+        "tx", "ty", "sx", "sy", "rotation", "ox", "oy", "opacity",
+    ];
+    let mut wire = serde_json::to_value(&*e.state).unwrap();
+    for (i, layer) in wire["layers"].as_array_mut().unwrap().iter_mut().enumerate() {
+        let exprs: Vec<Value> = props
+            .iter()
+            .enumerate()
+            .map(|(j, prop)| {
+                let source = if j == 0 {
+                    if i == 0 {
+                        "0.25".to_string()
+                    } else {
+                        format!("layer({}).opacity", ids[i - 1])
+                    }
+                } else {
+                    format!("this.{}", props[j - 1])
+                };
+                json!({"property":prop,"source":source})
+            })
+            .collect();
+        layer["expressions"] = json!(exprs);
+    }
+    // Restore runs the acyclicity check over all ~960 cells at once.
+    let bytes = encode_envelope(&serde_json::to_vec(&wire).unwrap());
+    e.restore(&bytes).unwrap();
+    // Every hop carries 0.25 to the last layer's opacity.
+    assert!(
+        (eval_prop(&mut e, 0., *ids.last().unwrap(), "opacity") - 0.25).abs() < 1e-9,
+        "chain value did not propagate"
+    );
+    // The render path resolves through the same iterative walker.
+    let _ = frame(&mut e, 0.);
+}
