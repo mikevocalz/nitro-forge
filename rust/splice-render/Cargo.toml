@@ -1,0 +1,19 @@
+[package]
+name = "splice-render"
+description = "Host-side deterministic timeline compositor/audio mixer for Splice (renderPlan + decoded RGBA8/PCM in, composited RGBA8 + mixed f32 PCM out). NOT an Engine: no Journal, no snapshot format, no mutations."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "splice_render"
+path = "src/lib.rs"
+
+[[bin]]
+name = "splice-render"
+path = "src/main.rs"
+
+[dependencies]
+ignition-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
