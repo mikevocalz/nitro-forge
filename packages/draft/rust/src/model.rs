@@ -280,6 +280,63 @@ pub enum Definition {
     Vertical { segment: u64 },
     DistanceX { a: u64, b: u64, value: f64 },
     DistanceY { a: u64, b: u64, value: f64 },
+    /// Slice A5 kinds: admitted and validated like the linear kinds but
+    /// solved by the bounded Gauss-Newton/LM pass in `constraints::solve_nonlinear`,
+    /// never by the Gaussian-elimination linear stage.
+    /// Unsigned Euclidean distance between two points; `value` is non-negative.
+    Distance { a: u64, b: u64, value: f64 },
+    /// Unsigned angle in degrees (0,180) at `vertex` between rays to `first`
+    /// and `second`; both mirror orientations satisfy it.
+    Angle {
+        vertex: u64,
+        first: u64,
+        second: u64,
+        degrees: f64,
+    },
+    /// Two distinct segments perpendicular (`cos` of the direction angle = 0).
+    Perpendicular { a: u64, b: u64 },
+    /// Two distinct segments parallel or antiparallel (`sin` = 0).
+    Parallel { a: u64, b: u64 },
+    /// Two distinct segments of equal length (world-unit residual).
+    Equal { a: u64, b: u64 },
+    /// Circle/arc radius equals `value` (world units, 1e-6..1e6).
+    Radius { entity: u64, value: f64 },
+    /// Two circles/arcs share their center point (each carries its own center
+    /// point id; equivalent to `coincident` on the centers but entity-typed).
+    Concentric { a: u64, b: u64 },
+    /// A point coincides with the midpoint of a segment.
+    Midpoint { point: u64, segment: u64 },
+    /// Tangency between two entities: a segment and a circle/arc, or two
+    /// circles/arcs. Arcs participate through their carrier circle (arc-aware
+    /// tangent points are deferred). `internal` selects internal vs external
+    /// circle-circle tangency and is admitted only when both participants are
+    /// circles/arcs; segment tangency uses closest-point-on-segment distance
+    /// to the carrier circle equal to its radius.
+    Tangent {
+        a: u64,
+        b: u64,
+        #[serde(default, skip_serializing_if = "is_false")]
+        internal: bool,
+    },
+}
+impl Definition {
+    /// True for slice-A5 kinds solved by the bounded nonlinear pass; the
+    /// Gaussian-elimination stage skips them and `solve` reports them through
+    /// the `nonlinear` sub-report.
+    pub fn nonlinear(&self) -> bool {
+        matches!(
+            self,
+            Definition::Distance { .. }
+                | Definition::Angle { .. }
+                | Definition::Perpendicular { .. }
+                | Definition::Parallel { .. }
+                | Definition::Equal { .. }
+                | Definition::Radius { .. }
+                | Definition::Concentric { .. }
+                | Definition::Midpoint { .. }
+                | Definition::Tangent { .. }
+        )
+    }
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -443,15 +500,77 @@ impl State {
                 .values()
                 .any(|s| (s.locked || self.layer_locked(s.layer)) && (s.a == id || s.b == id))
     }
+    /// Center point id and radius of a circle or arc entity; arcs contribute
+    /// their carrier circle (center + radius) to constraint math.
+    pub fn curve(&self, id: u64) -> Result<(u64, f64), EngineError> {
+        if let Some(c) = self.circles.get(&id) {
+            Ok((c.center, c.radius))
+        } else if let Some(a) = self.arcs.get(&id) {
+            Ok((a.center, a.radius))
+        } else {
+            Err(bad("unknown circle or arc"))
+        }
+    }
+    /// True when `id` names a circle or arc entity (constraint participants
+    /// resolve segment-vs-curve by collection membership; ids are unique
+    /// across every collection).
+    pub fn is_curve(&self, id: u64) -> bool {
+        self.circles.contains_key(&id) || self.arcs.contains_key(&id)
+    }
+    /// Radius of a circle/arc is solver-fixed when the entity or its layer is
+    /// locked, mirroring `point_fixed` for coordinates.
+    pub fn curve_radius_fixed(&self, id: u64) -> bool {
+        if let Some(c) = self.circles.get(&id) {
+            c.locked || self.layer_locked(c.layer)
+        } else if let Some(a) = self.arcs.get(&id) {
+            a.locked || self.layer_locked(a.layer)
+        } else {
+            true
+        }
+    }
     pub fn definition_points(&self, d: &Definition) -> Result<Vec<u64>, EngineError> {
         Ok(match *d {
             Definition::Fixed { point, .. } => vec![point],
             Definition::Coincident { a, b }
             | Definition::DistanceX { a, b, .. }
-            | Definition::DistanceY { a, b, .. } => vec![a, b],
+            | Definition::DistanceY { a, b, .. }
+            | Definition::Distance { a, b, .. } => vec![a, b],
             Definition::Horizontal { segment } | Definition::Vertical { segment } => {
                 let s = self.segment(segment)?;
                 vec![s.a, s.b]
+            }
+            Definition::Perpendicular { a, b }
+            | Definition::Parallel { a, b }
+            | Definition::Equal { a, b } => {
+                let (sa, sb) = (self.segment(a)?, self.segment(b)?);
+                vec![sa.a, sa.b, sb.a, sb.b]
+            }
+            Definition::Concentric { a, b } => {
+                vec![self.curve(a)?.0, self.curve(b)?.0]
+            }
+            Definition::Angle {
+                vertex,
+                first,
+                second,
+                ..
+            } => vec![vertex, first, second],
+            Definition::Radius { entity, .. } => vec![self.curve(entity)?.0],
+            Definition::Midpoint { point, segment } => {
+                let s = self.segment(segment)?;
+                vec![point, s.a, s.b]
+            }
+            Definition::Tangent { a, b, .. } => {
+                let mut points = Vec::with_capacity(4);
+                for id in [a, b] {
+                    if self.segments.contains_key(&id) {
+                        let s = self.segment(id)?;
+                        points.push(s.a);
+                        points.push(s.b);
+                    } else {
+                        points.push(self.curve(id)?.0);
+                    }
+                }
+                points
             }
         })
     }
@@ -616,6 +735,76 @@ impl State {
                     if !value.is_finite() || value.abs() > 2. * LIMIT =>
                 {
                     return Err(bad("signed distance outside budget"))
+                }
+                Definition::Distance { a, b, value } => {
+                    if a == b {
+                        return Err(bad("constraint requires distinct points"));
+                    }
+                    if !value.is_finite() || !(0. ..=2. * LIMIT).contains(&value) {
+                        return Err(bad("distance outside budget"));
+                    }
+                }
+                Definition::Angle {
+                    vertex,
+                    first,
+                    second,
+                    degrees,
+                } => {
+                    if vertex == first || vertex == second || first == second {
+                        return Err(bad("constraint requires distinct points"));
+                    }
+                    if !degrees.is_finite() || !(1e-9..180.).contains(&degrees) {
+                        return Err(bad("angle outside admitted range"));
+                    }
+                }
+                Definition::Perpendicular { a, b }
+                | Definition::Parallel { a, b }
+                | Definition::Equal { a, b }
+                | Definition::Concentric { a, b } => {
+                    if a == b {
+                        return Err(bad("constraint requires distinct references"));
+                    }
+                    match c.definition {
+                        Definition::Concentric { .. } => {
+                            self.curve(a)?;
+                            self.curve(b)?;
+                        }
+                        _ => {
+                            self.segment(a)?;
+                            self.segment(b)?;
+                        }
+                    }
+                }
+                Definition::Radius { entity, value } => {
+                    self.curve(entity)?;
+                    if !value.is_finite() || !(1e-6..=LIMIT).contains(&value) {
+                        return Err(bad("constraint radius outside budget"));
+                    }
+                }
+                Definition::Midpoint { segment, .. } => {
+                    self.segment(segment)?;
+                }
+                Definition::Tangent { a, b, internal } => {
+                    if a == b {
+                        return Err(bad("constraint requires distinct references"));
+                    }
+                    let participants = [a, b].map(|id| {
+                        if self.segments.contains_key(&id) {
+                            Ok(false)
+                        } else if self.is_curve(id) {
+                            Ok(true)
+                        } else {
+                            Err(bad("tangent participant is not a segment or circle/arc"))
+                        }
+                    });
+                    let [pa, pb] = participants;
+                    let (pa, pb) = (pa?, pb?);
+                    if !pa && !pb {
+                        return Err(bad("tangent requires a circular entity"));
+                    }
+                    if internal && !(pa && pb) {
+                        return Err(bad("internal tangent requires two circular entities"));
+                    }
                 }
                 _ => {}
             }

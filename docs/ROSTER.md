@@ -1921,6 +1921,65 @@ subtrees, locks, grammar routing, wrapper roundtrip and hostile restores),
 nf-cli blocks e2e), `pnpm --filter @nitro-forge/draft typecheck` clean.
 UI adoption, native acceptance and full P17 completion are not implied.
 
+## Draft nonlinear constraints slice A5 (2026-11-07)
+
+Draft's `solve` op gains the bounded nonlinear constraint stage from the
+Track-A backlog, completing the last Draft Track-A slice. Nine new
+`Definition` kinds are admitted and atomically validated like the linear
+kinds: `distance` (unsigned point-to-point), `angle` (unsigned vertex
+angle in degrees), `perpendicular`/`parallel`/`equal` (segment pairs),
+`radius` (circle/arc), `concentric` (two curves), `midpoint`
+(point-on-segment-midpoint) and `tangent` (segment-curve or
+curve-curve, `internal` for internal circle tangency; arcs participate
+through their carrier circle). The Gaussian-elimination linear stage is
+untouched and still runs first; the new pass is a deterministic
+Levenberg-Marquardt/Gauss-Newton iteration over free point coordinates
+and curve radii — central-difference Jacobian with noise-floor
+truncation, dense normal equations, Marquardt damping with an
+absolute-scaled floor, per-component trust region and positive-radius
+enforcement. Hard budgets bound every run: 48 outer iterations, 8 damping
+retries, 256 variables (64 points × 2 coordinates + up to 128 curve
+radii), 512 residual rows and 33554432 shared work
+operations; no randomness and no wall-clock dependence. `solve` runs on
+`apply_long`, so batch routing and `TaskContext` cancellation/progress
+reach the iteration loop. Only a fully converged result whose point
+coordinates and circle/arc radius+extent also land inside the
+world/entity bounds publishes point/radius updates (one journal entry,
+one `document:changed`); a no-op solve stays eventless, and
+`unconverged`/singular/cancelled/over-budget/out-of-bounds outcomes
+publish nothing — geometry, history and redo are untouched exactly like
+an inconsistent linear solve, and the solve is atomic across both stages
+so a failed nonlinear outcome does not commit the linear stage's point
+updates either. The report merges
+both stages: top-level `status` gains `unconverged` plus a `nonlinear`
+sub-report `{status,iterations,residual,unsatisfied_constraints}`;
+`rank`/`dof`/`scope` keep describing the linear matrix. Nonlinear
+constraint presence (enabled or not) triggers the existing strict
+`{kind:"draft",schema:2}` snapshot wrapper so old readers fail closed;
+inner state stays schema:1 and legacy-only documents serialize
+byte-identically. `ConstraintDefinition`/`SolveReport` in
+`@nitro-forge/draft` expose the new kinds and report shape.
+Deferred and documented: expression/driving-dimension fields (v1 admits
+typed kinds only), arc-aware tangent points, oriented/supplementary
+angle semantics, ellipse/spline entities, redundant-constraint
+certification, constraint priorities/groups, and any claim of
+general-CAD solving.
+
+Local evidence: `cargo test -p draft-engine` 59 passed (10 new nonlinear
+tests covering every admitted kind, real geometry movement, merged
+report shape, locked/fixed participants, atomic rejection,
+contradictory-system unconverged publication safety including the
+mixed linear+nonlinear atomicity regression, converged-but-out-of-bounds
+radius reporting `unconverged` instead of a publish error, work-budget
+exhaustion reporting `unconverged` rather than an op error, apply_long
+cancellation and in-batch solve, undo/redo, snapshot roundtrip and
+hostile restore), `cargo build -p nf-cli` clean,
+`pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/draft test` 17 passed across 8 files (1 new nf-cli
+nonlinear-constraints e2e file, 3 tests), `pnpm --filter
+@nitro-forge/draft typecheck` clean. UI adoption, native acceptance and
+full P17 completion are not implied.
+
 ## P16 design comment threads/pins slice G checkpoint (2026-11-08)
 
 Design gains engine-owned comment threads as durable document state under

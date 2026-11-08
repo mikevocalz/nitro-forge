@@ -30,6 +30,12 @@ fn requires_matching_reader(state: &State) -> bool {
         || state.snaps.center
         || state.snaps.nearest_circle
         || state.snaps.tangent
+        // Slice-A5 nonlinear constraint kinds are new persisted semantics;
+        // linear kinds stay legacy schema1.
+        || state
+            .constraints
+            .values()
+            .any(|c| c.definition.nonlinear())
 }
 
 fn get<T: DeserializeOwned>(p: &Value, key: &str) -> Result<T, EngineError> {
@@ -77,6 +83,18 @@ fn hatch_loops(s: &State, p: &Value) -> Result<Vec<Vec<[f64; 2]>>, EngineError> 
                 .collect())
         }
     }
+}
+/// True when any constraint references circle/arc `id`: `radius` and
+/// `concentric` name curve entities directly; `tangent` mentions both
+/// participants and `id` being a curve makes the mention a curve reference
+/// (ids are unique across collections, so a segment participant can never
+/// collide).
+fn curve_referenced(s: &State, id: u64) -> bool {
+    s.constraints.values().any(|c| match c.definition {
+        Definition::Radius { entity, .. } => entity == id,
+        Definition::Concentric { a, b } | Definition::Tangent { a, b, .. } => a == id || b == id,
+        _ => false,
+    })
 }
 fn patch<T: Serialize + DeserializeOwned>(
     current: &T,
@@ -208,6 +226,147 @@ impl DraftEngine {
             }
         }
     }
+    /// `solve` op: the linear Gaussian stage runs first and is untouched;
+    /// when any enabled slice-A5 nonlinear constraint exists, the bounded
+    /// LM pass then refines the post-linear geometry against ALL enabled
+    /// constraints (linear kinds contribute exact rows). The solve is
+    /// atomic: unless the nonlinear pass fully converges AND every converged
+    /// point/radius update lands inside world/entity bounds, NOTHING
+    /// publishes — not even the linear stage's point updates — matching the
+    /// documented all-or-nothing contract. `ctx` is `Some` only on the
+    /// `apply_long` path so cancellation reaches the iteration loop.
+    fn solve_apply(
+        &mut self,
+        p: &Value,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        fields(p, &["tolerance"])?;
+        let tolerance = optional(p, "tolerance", 1e-7)?;
+        let mut next = (*self.state).clone();
+        let solved = constraints::solve(&next, tolerance)?;
+        if solved.report.status == "inconsistent" {
+            return Ok(CommandResult::read_only(serde_json::to_value(
+                solved.report,
+            )?));
+        }
+        for (id, x, y) in solved.points {
+            if next.point_fixed(id) {
+                continue;
+            }
+            if !coord(x) || !coord(y) {
+                return Err(bad("solved coordinates exceed world budget"));
+            }
+            let point = Arc::make_mut(
+                next.points
+                    .get_mut(&id)
+                    .ok_or_else(|| bad("solver lost point identity"))?,
+            );
+            point.x = x;
+            point.y = y;
+        }
+        let mut report = serde_json::to_value(&solved.report)?;
+        if next
+            .constraints
+            .values()
+            .any(|c| c.enabled && c.definition.nonlinear())
+        {
+            let mut nl = constraints::solve_nonlinear(&next, tolerance, ctx)?;
+            if nl.report.status == "solved" {
+                // Pre-validate the converged updates against the same bounds
+                // `State::validate` enforces (world coords, radius
+                // 1e-6..=1e6, center ± radius inside ±1e6) BEFORE they can
+                // reach publish: an out-of-bounds iterate reports
+                // `unconverged` and publishes nothing rather than surfacing
+                // as a validation error that would also discard the linear
+                // stage's valid results. Point coordinates are checked first
+                // so radius extents are measured against the moved centers.
+                let mut in_bounds = true;
+                for (id, x, y) in &nl.points {
+                    if next.point_fixed(*id) {
+                        continue;
+                    }
+                    if !coord(*x) || !coord(*y) {
+                        in_bounds = false;
+                        break;
+                    }
+                    let point = Arc::make_mut(
+                        next.points
+                            .get_mut(id)
+                            .ok_or_else(|| bad("solver lost point identity"))?,
+                    );
+                    point.x = *x;
+                    point.y = *y;
+                }
+                if in_bounds {
+                    for (id, radius) in &nl.radii {
+                        let (center, _) = next
+                            .curve(*id)
+                            .map_err(|_| bad("solver lost curve identity"))?;
+                        let p = next
+                            .points
+                            .get(&center)
+                            .ok_or_else(|| bad("solver lost curve identity"))?;
+                        let (cx, cy) = (p.x, p.y);
+                        let r = *radius;
+                        if !r.is_finite()
+                            || !(1e-6..=LIMIT).contains(&r)
+                            || ![cx - r, cx + r, cy - r, cy + r]
+                                .iter()
+                                .all(|v| coord(*v))
+                        {
+                            in_bounds = false;
+                            break;
+                        }
+                    }
+                }
+                if in_bounds {
+                    for (id, radius) in &nl.radii {
+                        if let Some(c) = next.circles.get_mut(id) {
+                            Arc::make_mut(c).radius = *radius;
+                        } else if let Some(a) = next.arcs.get_mut(id) {
+                            Arc::make_mut(a).radius = *radius;
+                        } else {
+                            return Err(bad("solver lost curve identity"));
+                        }
+                    }
+                } else {
+                    nl.report.status = "unconverged";
+                }
+            }
+            // Merge the nonlinear stage into the shared report: the top-level
+            // status/residual/unsatisfied fields cover both stages while
+            // rank/dof/scope keep describing the linear coordinate matrix.
+            if nl.report.status == "unconverged" {
+                report["status"] = json!("unconverged");
+            }
+            let mut unsat: Vec<u64> = report["unsatisfied_constraints"]
+                .as_array()
+                .map(|a| a.iter().filter_map(|v| v.as_u64()).collect())
+                .unwrap_or_default();
+            unsat.extend(nl.report.unsatisfied_constraints.iter().copied());
+            unsat.sort_unstable();
+            unsat.dedup();
+            report["unsatisfied_constraints"] = json!(unsat);
+            let linear_residual = report["residual"].as_f64().unwrap_or(0.);
+            report["residual"] = json!(linear_residual.max(nl.report.residual));
+            report["nonlinear"] = json!({
+                "status": nl.report.status,
+                "iterations": nl.report.iterations,
+                "residual": nl.report.residual,
+                "unsatisfied_constraints": nl.report.unsatisfied_constraints,
+            });
+            if nl.report.status != "solved" {
+                // Atomic solve: an unconverged/singular/cancelled-adjacent or
+                // out-of-bounds nonlinear outcome publishes nothing — not
+                // even the linear stage's point updates already staged in
+                // `next`. The report still describes both stages honestly.
+                report["applied"] = json!(false);
+                return Ok(CommandResult::read_only(report));
+            }
+        }
+        report["applied"] = json!(next != *self.state);
+        self.publish(next, report)
+    }
 }
 impl Engine for DraftEngine {
     fn kind(&self) -> EngineKind {
@@ -231,6 +390,11 @@ impl Engine for DraftEngine {
             ));
         }
         let p = &cmd.payload;
+        // `solve` owns its clone/publish so `apply_long` can pass a task
+        // context into the nonlinear pass without a second dispatch layer.
+        if cmd.op == "solve" {
+            return self.solve_apply(p, None);
+        }
         match cmd.op.as_str() {
             "executeCommand" => {
                 fields(p, &["command"])?;
@@ -444,7 +608,14 @@ impl Engine for DraftEngine {
                 if next.layer_locked(segment.layer) {
                     return Err(bad("segment is on a locked layer"));
                 }
-                if next.constraints.values().any(|c|matches!(c.definition,Definition::Horizontal{segment}|Definition::Vertical{segment}if segment==id)){return Err(bad("segment is referenced by a constraint"))}
+                if next.constraints.values().any(|c|match c.definition{
+                    Definition::Horizontal{segment}|Definition::Vertical{segment}if segment==id=>true,
+                    Definition::Perpendicular{a,b}|Definition::Parallel{a,b}|Definition::Equal{a,b}if a==id||b==id=>true,
+                    Definition::Midpoint{segment:s,..}if s==id=>true,
+                    // `id` is a segment here, so any tangent mention is a
+                    // segment participant (ids are unique across collections).
+                    Definition::Tangent{a,b,..}if a==id||b==id=>true,
+                    _=>false}){return Err(bad("segment is referenced by a constraint"))}
                 next.segments.remove(&id);
                 next.order.retain(|v| *v != id);
             }
@@ -646,6 +817,9 @@ impl Engine for DraftEngine {
                     if next.layer_locked(c.layer) {
                         return Err(bad("circle is on a locked layer"));
                     }
+                    if curve_referenced(&next, id) {
+                        return Err(bad("circle is referenced by a constraint"));
+                    }
                     next.circles.remove(&id);
                 } else {
                     let a = next.arcs.get(&id).ok_or_else(|| bad("unknown arc"))?;
@@ -654,6 +828,9 @@ impl Engine for DraftEngine {
                     }
                     if next.layer_locked(a.layer) {
                         return Err(bad("arc is on a locked layer"));
+                    }
+                    if curve_referenced(&next, id) {
+                        return Err(bad("arc is referenced by a constraint"));
                     }
                     next.arcs.remove(&id);
                 }
@@ -1311,32 +1488,6 @@ impl Engine for DraftEngine {
                     return Err(bad("unknown constraint"));
                 }
             }
-            "solve" => {
-                fields(p, &["tolerance"])?;
-                let mut solved = constraints::solve(&next, optional(p, "tolerance", 1e-7)?)?;
-                if solved.report.status == "inconsistent" {
-                    return Ok(CommandResult::read_only(serde_json::to_value(
-                        solved.report,
-                    )?));
-                }
-                for (id, x, y) in solved.points {
-                    if next.point_fixed(id) {
-                        continue;
-                    }
-                    if !coord(x) || !coord(y) {
-                        return Err(bad("solved coordinates exceed world budget"));
-                    }
-                    let point = Arc::make_mut(
-                        next.points
-                            .get_mut(&id)
-                            .ok_or_else(|| bad("solver lost point identity"))?,
-                    );
-                    point.x = x;
-                    point.y = y;
-                }
-                solved.report.applied = next != *self.state;
-                data = serde_json::to_value(solved.report)?;
-            }
             _ => return Err(EngineError::unsupported("unknown draft operation")),
         }
         self.publish(next, data)
@@ -1381,6 +1532,11 @@ impl Engine for DraftEngine {
                 return Err(bad("invalid render command"));
             }
             render::render(&self.state, &cmd, Some(ctx))?
+        } else if cmd.op == "solve" {
+            if cmd.v != 1 || cmd.input.is_some() {
+                return Err(bad("unsupported command version or binary input"));
+            }
+            self.solve_apply(&cmd.payload, Some(ctx))?
         } else {
             self.apply(cmd)?
         };
