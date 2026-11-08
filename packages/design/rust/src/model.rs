@@ -32,6 +32,20 @@ pub const MAX_OVERRIDES: usize = 256;
 /// Upper magnitude admitted for C2 constraint extent bounds (min/max
 /// width/height), matching the node geometry size bound.
 pub const MAX_CONSTRAINT_EXTENT: f64 = 1e7;
+/// Prototype catalog bounds, mirroring the NYC-Tron forge/design control
+/// contracts: screens ≤512 (PrototypeConnectionTool frame cap), hotspots
+/// and interactions ≤4096, transitions ≤256.
+pub const MAX_SCREENS: usize = 512;
+pub const MAX_HOTSPOTS: usize = 4096;
+pub const MAX_INTERACTIONS: usize = 4096;
+pub const MAX_TRANSITIONS: usize = 256;
+/// Trigger delay cap in milliseconds (InteractionTriggerEditor max).
+pub const MAX_DELAY_MS: u64 = 86_400_000;
+/// Transition duration cap in milliseconds (InteractionTriggerEditor max).
+pub const MAX_TRANSITION_MS: u64 = 600_000;
+/// Normalized hotspot geometry admits a tiny float epsilon so 0.1+0.9-style
+/// authored regions that land on the boundary are not rejected.
+pub const HOTSPOT_EPSILON: f64 = 1e-9;
 /// Shared hop budget for whole-document alias validation; exceeding it
 /// rejects the candidate so hostile snapshots cannot force unbounded walks.
 pub const MAX_ALIAS_HOPS: usize = 1_000_000;
@@ -419,6 +433,159 @@ pub struct Binding {
     pub path: BindPath,
     pub variable_id: String,
 }
+/// NYC-Tron `PrototypeInteraction.trigger` set (InteractionTriggerEditor).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PrototypeTrigger {
+    Tap,
+    Press,
+    Hover,
+    Drag,
+    Timer,
+}
+/// NYC-Tron `PrototypeInteraction.action` set.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PrototypeAction {
+    Navigate,
+    Overlay,
+    Back,
+    CloseOverlay,
+    SetVariable,
+}
+/// Bounded transition kinds the host runtime can schedule. `Slide`
+/// requires `direction`; the other kinds ignore it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TransitionKind {
+    Instant,
+    Dissolve,
+    Slide,
+    SmartAnimate,
+}
+/// Bounded easing set; the host maps these onto its animation clock —
+/// the engine stores the choice only and never runs a clock.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TransitionEasing {
+    #[default]
+    Linear,
+    EaseIn,
+    EaseOut,
+    EaseInOut,
+}
+/// Slide direction for `TransitionKind::Slide`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SlideDirection {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+/// What an interaction acts on. `navigate`/`overlay` target a registered
+/// screen node; `set-variable` targets a design variable; `back` and
+/// `close-overlay` carry no target. Serialized `{"kind":"screen","node":N}`
+/// / `{"kind":"variable","id":"..."}` — a typed engine mapping of the
+/// NYC-Tron string `destinationId` contract.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum PrototypeTarget {
+    Screen { node: u64 },
+    Variable { id: String },
+}
+/// A screen is a durable reference to a `Frame` or `Component` node plus
+/// the FlowOverview `entry` flag. The label is derived live from the node
+/// name at read time, so renames propagate without rewriting the catalog.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PrototypeScreen {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub entry: bool,
+}
+/// A trigger region normalized to 0..=1 inside its screen's box
+/// (PrototypeHotspot/PrototypeFrameTarget contract geometry). `x`,`y` are
+/// the region origin, `width`/`height` the extents; the region must stay
+/// inside the unit square.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PrototypeHotspot {
+    pub id: String,
+    pub screen: u64,
+    pub label: String,
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+/// A named transition preset: bounded kind/easing/direction plus a default
+/// duration. Interactions reference one by id and may override its
+/// duration with their own `duration_ms`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PrototypeTransition {
+    pub id: String,
+    pub label: String,
+    pub kind: TransitionKind,
+    #[serde(default)]
+    pub easing: TransitionEasing,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction: Option<SlideDirection>,
+    #[serde(default)]
+    pub duration_ms: u64,
+}
+/// NYC-Tron `PrototypeInteraction` as durable document state, attached to
+/// exactly one of `hotspot` (a hotspot id) or `screen` (a registered screen
+/// node — screen-level triggers such as timers need no region). `delay_ms`
+/// is the trigger delay the host schedules; `duration_ms` optionally
+/// overrides the referenced transition's duration. `value` is an engine
+/// extension carrying the literal a `set-variable` action writes; it must
+/// be a non-alias literal matching the target variable's type.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PrototypeInteraction {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hotspot: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screen: Option<u64>,
+    pub trigger: PrototypeTrigger,
+    #[serde(default)]
+    pub delay_ms: u64,
+    pub action: PrototypeAction,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<PrototypeTarget>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transition: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<VarValue>,
+}
+/// The whole prototype catalog. Empty collections are omitted from
+/// snapshots so schema:1-only documents stay byte-identical; any content
+/// triggers the schema:2 wrapper via `requires_wrapper`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PrototypeState {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub screens: Vec<PrototypeScreen>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hotspots: Vec<PrototypeHotspot>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interactions: Vec<PrototypeInteraction>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub transitions: Vec<PrototypeTransition>,
+}
+impl PrototypeState {
+    pub fn is_empty(&self) -> bool {
+        self.screens.is_empty()
+            && self.hotspots.is_empty()
+            && self.interactions.is_empty()
+            && self.transitions.is_empty()
+    }
+}
 pub(crate) fn valid_symbol_id(s: &str) -> bool {
     !s.is_empty() && s.len() <= MAX_SYMBOL_ID_BYTES && !s.chars().any(char::is_control)
 }
@@ -510,6 +677,11 @@ pub struct State {
     pub active_mode: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bindings: Vec<Binding>,
+    /// Prototype catalog (screens/hotspots/interactions/transitions).
+    /// Presence triggers the schema:2 snapshot wrapper; empty state is
+    /// omitted so schema:1-only documents stay byte-identical.
+    #[serde(default, skip_serializing_if = "PrototypeState::is_empty")]
+    pub prototype: PrototypeState,
 }
 impl Default for State {
     fn default() -> Self {
@@ -523,6 +695,7 @@ impl Default for State {
             modes: vec![],
             active_mode: None,
             bindings: vec![],
+            prototype: PrototypeState::default(),
         }
     }
 }
@@ -574,6 +747,7 @@ pub fn requires_wrapper(s: &State) -> bool {
         || !s.modes.is_empty()
         || s.active_mode.is_some()
         || !s.bindings.is_empty()
+        || !s.prototype.is_empty()
 }
 /// Whole-document variable/mode/binding validation. Alias chains are checked
 /// per stored (variable, mode) entry with a shared hop budget and a memo of
@@ -722,6 +896,159 @@ pub fn validate_variables(s: &State) -> Result<(), EngineError> {
         };
         if !applicable {
             return Err(bad("binding path is not applicable to this node"));
+        }
+    }
+    Ok(())
+}
+/// Prototype catalog validation (slice E). Runs inside whole-document
+/// `validate`, so hostile restores face the same referential and bound
+/// rules as mutations. Screens must name existing Frame/Component nodes;
+/// hotspots stay inside the unit square of a registered screen;
+/// interactions attach to exactly one hotspot or screen and their target
+/// must match the action (`navigate`/`overlay` → registered screen,
+/// `set-variable` → existing variable with a type-matching literal value,
+/// `back`/`close-overlay` → no target); transitions are a bounded
+/// kind/easing/direction set with slide requiring a direction.
+fn validate_prototype(s: &State) -> Result<(), EngineError> {
+    let p = &s.prototype;
+    if p.screens.len() > MAX_SCREENS
+        || p.hotspots.len() > MAX_HOTSPOTS
+        || p.interactions.len() > MAX_INTERACTIONS
+        || p.transitions.len() > MAX_TRANSITIONS
+    {
+        return Err(bad("prototype catalog budget exceeded"));
+    }
+    let mut screen_nodes = BTreeSet::new();
+    for sc in &p.screens {
+        let n = s
+            .nodes
+            .get(&sc.node)
+            .ok_or_else(|| bad("prototype screen references unknown node"))?;
+        if !matches!(n.kind, Kind::Frame | Kind::Component) {
+            return Err(bad("prototype screen must be a frame or component"));
+        }
+        if !screen_nodes.insert(sc.node) {
+            return Err(bad("duplicate prototype screen"));
+        }
+    }
+    let mut hotspot_ids = BTreeSet::new();
+    for h in &p.hotspots {
+        if !valid_symbol_id(&h.id)
+            || !valid_symbol_name(&h.label)
+            || !hotspot_ids.insert(h.id.as_str())
+        {
+            return Err(bad("invalid or duplicate prototype hotspot"));
+        }
+        if !screen_nodes.contains(&h.screen) {
+            return Err(bad("hotspot references unknown prototype screen"));
+        }
+        let inside = |v: f64| v.is_finite() && (0.0..=1.0).contains(&v);
+        if !inside(h.x)
+            || !inside(h.y)
+            || !h.width.is_finite()
+            || !h.height.is_finite()
+            || h.width <= 0.
+            || h.height <= 0.
+            || h.width > 1.
+            || h.height > 1.
+            || h.x + h.width > 1. + HOTSPOT_EPSILON
+            || h.y + h.height > 1. + HOTSPOT_EPSILON
+        {
+            return Err(bad("hotspot geometry must stay inside the unit square"));
+        }
+    }
+    let mut transition_ids = BTreeSet::new();
+    for t in &p.transitions {
+        if !valid_symbol_id(&t.id)
+            || !valid_symbol_name(&t.label)
+            || !transition_ids.insert(t.id.as_str())
+        {
+            return Err(bad("invalid or duplicate prototype transition"));
+        }
+        if t.duration_ms > MAX_TRANSITION_MS {
+            return Err(bad("transition duration exceeds bound"));
+        }
+        match (t.kind, t.direction) {
+            (TransitionKind::Slide, None) => {
+                return Err(bad("slide transition requires a direction"));
+            }
+            (TransitionKind::Slide, Some(_)) => {}
+            (_, Some(_)) => {
+                return Err(bad("direction is only valid on slide transitions"));
+            }
+            _ => {}
+        }
+    }
+    let mut interaction_ids = BTreeSet::new();
+    for i in &p.interactions {
+        if !valid_symbol_id(&i.id) || !interaction_ids.insert(i.id.as_str()) {
+            return Err(bad("invalid or duplicate prototype interaction"));
+        }
+        // Exactly one attachment: a hotspot region or a screen-level trigger.
+        match (&i.hotspot, i.screen) {
+            (Some(h), None) if hotspot_ids.contains(h.as_str()) => {}
+            (None, Some(n)) if screen_nodes.contains(&n) => {}
+            (None, None) | (Some(_), Some(_)) => {
+                return Err(bad("interaction requires exactly one hotspot or screen"));
+            }
+            _ => return Err(bad("interaction references unknown hotspot or screen")),
+        }
+        if i.delay_ms > MAX_DELAY_MS
+            || i.duration_ms.is_some_and(|d| d > MAX_TRANSITION_MS)
+        {
+            return Err(bad("interaction timing exceeds bound"));
+        }
+        if let Some(tid) = &i.transition {
+            if !valid_symbol_id(tid) || !transition_ids.contains(tid.as_str()) {
+                return Err(bad("interaction references unknown transition"));
+            }
+        }
+        match i.action {
+            PrototypeAction::Navigate | PrototypeAction::Overlay => {
+                match &i.target {
+                    Some(PrototypeTarget::Screen { node }) if screen_nodes.contains(node) => {}
+                    _ => {
+                        return Err(bad(
+                            "navigate/overlay interactions require a screen target",
+                        ));
+                    }
+                }
+                if i.value.is_some() {
+                    return Err(bad("only set-variable interactions carry a value"));
+                }
+            }
+            PrototypeAction::SetVariable => {
+                let Some(PrototypeTarget::Variable { id }) = &i.target else {
+                    return Err(bad("set-variable interactions require a variable target"));
+                };
+                let v = s
+                    .variables
+                    .get(id)
+                    .ok_or_else(|| bad("set-variable target does not exist"))?;
+                if let Some(value) = &i.value {
+                    // Literal-only: an alias has no meaning as a runtime
+                    // assignment payload, and the literal must match the
+                    // variable's declared type and scalar bounds.
+                    let ok = match (value, v.var_type) {
+                        (VarValue::Number { value }, VarType::Number) => valid_number(*value),
+                        (VarValue::String { value }, VarType::String) => {
+                            value.len() <= MAX_STRING_VALUE_BYTES
+                        }
+                        (VarValue::Boolean { .. }, VarType::Boolean) => true,
+                        _ => false,
+                    };
+                    if !ok {
+                        return Err(bad(
+                            "set-variable value must be a literal matching the variable type",
+                        ));
+                    }
+                }
+            }
+            PrototypeAction::Back | PrototypeAction::CloseOverlay => {
+                if i.target.is_some() || i.value.is_some() {
+                    return Err(bad("back/close-overlay interactions carry no target or value"));
+                }
+            }
         }
     }
     Ok(())
@@ -1081,6 +1408,7 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
         }
     }
     validate_variables(s)?;
+    validate_prototype(s)?;
     if serde_json::to_vec(s)?.len() > MAX_BYTES {
         return Err(bad("design encoded state exceeds 8 MiB"));
     }

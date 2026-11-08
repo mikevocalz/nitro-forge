@@ -2216,3 +2216,345 @@ fn override_and_variant_budgets_reject() {
         .is_err());
     assert_eq!(e.snapshot().unwrap(), wrapped);
 }
+// --- Prototype catalog (slice E) ---
+fn screen(e: &mut DesignEngine) -> u64 {
+    call(
+        e,
+        "addFrame",
+        json!({"parent":1,"name":"Screen A","width":100,"height":100}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap()
+}
+fn proto_screen(e: &mut DesignEngine, node: u64, entry: bool) {
+    call(
+        e,
+        "definePrototypeScreen",
+        json!({"node":node,"entry":entry}),
+    );
+}
+fn proto_hotspot(e: &mut DesignEngine, screen_node: u64, id: &str) {
+    call(
+        e,
+        "definePrototypeHotspot",
+        json!({"id":id,"screen":screen_node,"label":"Go","x":0.1,"y":0.1,"width":0.5,"height":0.5}),
+    );
+}
+fn proto_transition(e: &mut DesignEngine, id: &str, kind: &str, duration: u64) {
+    call(
+        e,
+        "definePrototypeTransition",
+        json!({"id":id,"label":id,"kind":kind,"easing":"ease-in-out","duration_ms":duration}),
+    );
+}
+#[test]
+fn prototype_crud_graph_and_resolve_are_deterministic_and_eventless() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    let a = screen(&mut e);
+    let b = screen(&mut e);
+    proto_screen(&mut e, a, true);
+    proto_screen(&mut e, b, false);
+    proto_hotspot(&mut e, a, "hot-1");
+    proto_transition(&mut e, "tr-1", "dissolve", 250);
+    call(
+        &mut e,
+        "definePrototypeInteraction",
+        json!({"id":"ix-1","hotspot":"hot-1","trigger":"tap","action":"navigate","target":{"kind":"screen","node":b},"transition":"tr-1","delay_ms":0}),
+    );
+    // Screen-level timer interaction with no transition and a duration override.
+    call(
+        &mut e,
+        "definePrototypeInteraction",
+        json!({"id":"ix-2","screen":b,"trigger":"timer","delay_ms":500,"action":"back"}),
+    );
+    let before = e.snapshot().unwrap();
+    // Reads are eventless and leave snapshot bytes identical.
+    let g = call(&mut e, "prototypeGraph", json!({}));
+    assert!(g.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    let graph = &g.data;
+    assert_eq!(graph["screens"].as_array().unwrap().len(), 2);
+    assert_eq!(graph["screens"][0]["entry"], true);
+    assert_eq!(graph["hotspots"][0]["id"], "hot-1");
+    assert_eq!(graph["interactions"].as_array().unwrap().len(), 2);
+    assert_eq!(graph["transitions"][0]["kind"], "dissolve");
+    // links derive from navigate interactions in catalog order.
+    assert_eq!(graph["links"].as_array().unwrap().len(), 1);
+    assert_eq!(graph["links"][0]["source"], a);
+    assert_eq!(graph["links"][0]["target"], b);
+    // resolvePrototypeEvent: hotspot + trigger resolves the interaction and
+    // its transition; repeated calls return identical payloads.
+    let r1 = call(
+        &mut e,
+        "resolvePrototypeEvent",
+        json!({"hotspot":"hot-1","trigger":"tap"}),
+    );
+    assert!(r1.events.is_empty());
+    let r2 = call(
+        &mut e,
+        "resolvePrototypeEvent",
+        json!({"hotspot":"hot-1","trigger":"tap"}),
+    );
+    assert_eq!(r1.data, r2.data);
+    assert_eq!(r1.data["matched"], true);
+    assert_eq!(r1.data["interaction"]["id"], "ix-1");
+    assert_eq!(r1.data["transition"]["id"], "tr-1");
+    assert_eq!(r1.data["transition"]["duration_ms"], 250);
+    assert_eq!(r1.data["scheduled_by"], "host");
+    // No match returns JSON null; wrong trigger on the same hotspot too.
+    let none = call(
+        &mut e,
+        "resolvePrototypeEvent",
+        json!({"hotspot":"hot-1","trigger":"hover"}),
+    );
+    assert_eq!(none.data, Value::Null);
+    // Screen scope reaches screen-level and hotspot interactions; trigger
+    // filter picks the timer on screen b.
+    let timer = call(
+        &mut e,
+        "resolvePrototypeEvent",
+        json!({"screen":b,"trigger":"timer"}),
+    );
+    assert_eq!(timer.data["interaction"]["id"], "ix-2");
+    assert_eq!(timer.data["transition"], Value::Null);
+    assert_eq!(timer.data["delay_ms"], 500);
+    // Event descriptor validation: unknown fields and missing scope reject.
+    assert!(e
+        .apply(Command::new(
+            "resolvePrototypeEvent",
+            json!({"hotspot":"hot-1","bogus":1})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new("resolvePrototypeEvent", json!({})))
+        .is_err());
+    // Undo restores the pre-define state; redo reapplies.
+    assert!(e.undo().unwrap());
+    assert_eq!(e.state.prototype.interactions.len(), 1);
+    assert!(e.redo().unwrap());
+    assert_eq!(e.state.prototype.interactions.len(), 2);
+}
+#[test]
+fn prototype_validation_bounds_targets_and_atomic_rejection() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    let a = screen(&mut e);
+    proto_screen(&mut e, a, false);
+    let before = e.snapshot().unwrap();
+    // Hotspot geometry must stay inside the unit square.
+    for (x, y, w, h) in [
+        (1.1, 0., 0.5, 0.5),
+        (0., 0., 0., 0.5),
+        (0.6, 0., 0.5, 0.5),
+        (0., -0.1, 0.5, 0.5),
+    ] {
+        assert!(e
+            .apply(Command::new(
+                "definePrototypeHotspot",
+                json!({"id":"bad","screen":a,"label":"x","x":x,"y":y,"width":w,"height":h})
+            ))
+            .is_err());
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Interaction attachment is exactly-one hotspot XOR screen.
+    proto_hotspot(&mut e, a, "hot-1");
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i1","trigger":"tap","action":"back"})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i2","hotspot":"hot-1","screen":a,"trigger":"tap","action":"back"})
+        ))
+        .is_err());
+    // Action/target pairing: navigate needs a registered screen target.
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i3","hotspot":"hot-1","trigger":"tap","action":"navigate"})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i4","hotspot":"hot-1","trigger":"tap","action":"back","target":{"kind":"screen","node":a}})
+        ))
+        .is_err());
+    // Timing bounds.
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i5","hotspot":"hot-1","trigger":"tap","action":"back","delay_ms":MAX_DELAY_MS+1})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i6","hotspot":"hot-1","trigger":"tap","action":"back","duration_ms":MAX_TRANSITION_MS+1})
+        ))
+        .is_err());
+    // Slide transitions require a direction; other kinds reject one.
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeTransition",
+            json!({"id":"ts","label":"s","kind":"slide","duration_ms":100})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeTransition",
+            json!({"id":"td","label":"d","kind":"dissolve","direction":"left","duration_ms":100})
+        ))
+        .is_err());
+    // Unknown references reject.
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeHotspot",
+            json!({"id":"h2","screen":999,"label":"x","x":0.,"y":0.,"width":0.5,"height":0.5})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i7","hotspot":"missing","trigger":"tap","action":"back"})
+        ))
+        .is_err());
+    // set-variable needs an existing variable and a type-matching literal.
+    call(&mut e, "defineVariable", json!({"id":"flag","name":"Flag","type":"boolean"}));
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i8","hotspot":"hot-1","trigger":"tap","action":"set-variable","target":{"kind":"variable","id":"flag"},"value":{"kind":"number","value":3}})
+        ))
+        .is_err());
+    call(
+        &mut e,
+        "definePrototypeInteraction",
+        json!({"id":"i8","hotspot":"hot-1","trigger":"tap","action":"set-variable","target":{"kind":"variable","id":"flag"},"value":{"kind":"boolean","value":true}}),
+    );
+    // Duplicate ids reject; state is unchanged by every rejection above.
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeHotspot",
+            json!({"id":"hot-1","screen":a,"label":"dup","x":0.,"y":0.,"width":0.5,"height":0.5})
+        ))
+        .is_err());
+    // Unknown transition references reject too.
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeInteraction",
+            json!({"id":"i9","hotspot":"hot-1","trigger":"hover","action":"navigate","target":{"kind":"screen","node":a},"transition":"tr-x"})
+        ))
+        .is_err());
+    assert_eq!(e.state.prototype.interactions.len(), 1);
+}
+#[test]
+fn prototype_transition_lifecycle_cascades_and_hostile_restore() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":10,"height":10}));
+    let a = screen(&mut e);
+    let b = screen(&mut e);
+    proto_screen(&mut e, a, true);
+    proto_screen(&mut e, b, false);
+    proto_hotspot(&mut e, a, "hot-1");
+    call(
+        &mut e,
+        "definePrototypeTransition",
+        json!({"id":"tr-1","label":"slide","kind":"slide","direction":"left","easing":"ease-in-out","duration_ms":300}),
+    );
+    // A slide transition without a direction cannot even be defined.
+    assert!(e
+        .apply(Command::new(
+            "definePrototypeTransition",
+            json!({"id":"tr-bad","label":"bad","kind":"slide","duration_ms":100})
+        ))
+        .is_err());
+    call(
+        &mut e,
+        "definePrototypeInteraction",
+        json!({"id":"ix-1","hotspot":"hot-1","trigger":"tap","action":"navigate","target":{"kind":"screen","node":b},"transition":"tr-1","duration_ms":100}),
+    );
+    // Referenced transition cannot be removed.
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("removePrototypeTransition", json!({"id":"tr-1"})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // resolve applies the interaction duration override over the preset.
+    let r = call(
+        &mut e,
+        "resolvePrototypeEvent",
+        json!({"hotspot":"hot-1","trigger":"tap"}),
+    );
+    assert_eq!(r.data["transition"]["kind"], "slide");
+    assert_eq!(r.data["transition"]["direction"], "left");
+    assert_eq!(r.data["transition"]["duration_ms"], 100);
+    // Removing the interaction frees the transition.
+    call(&mut e, "removePrototypeInteraction", json!({"id":"ix-1"}));
+    call(&mut e, "removePrototypeTransition", json!({"id":"tr-1"}));
+    assert!(e.state.prototype.transitions.is_empty());
+    // Removing a screen cascades its hotspots and interactions.
+    proto_hotspot(&mut e, a, "hot-2");
+    call(
+        &mut e,
+        "definePrototypeInteraction",
+        json!({"id":"ix-2","hotspot":"hot-2","trigger":"tap","action":"navigate","target":{"kind":"screen","node":b}}),
+    );
+    call(&mut e, "removePrototypeScreen", json!({"node":a}));
+    assert!(e.state.prototype.screens.iter().all(|s| s.node != a));
+    assert!(e.state.prototype.hotspots.iter().all(|h| h.screen != a));
+    assert!(e.state.prototype.interactions.is_empty());
+    // removeNode on a screen node prunes the catalog the same way (b is
+    // still a registered screen from above).
+    proto_hotspot(&mut e, b, "hot-3");
+    call(
+        &mut e,
+        "definePrototypeInteraction",
+        json!({"id":"ix-3","hotspot":"hot-3","trigger":"tap","action":"navigate","target":{"kind":"screen","node":b}}),
+    );
+    call(&mut e, "removeNode", json!({"id":b}));
+    assert!(e.state.prototype.is_empty());
+    // Snapshot round-trips through the schema:2 wrapper byte-identically.
+    let a2 = screen(&mut e);
+    proto_screen(&mut e, a2, true);
+    proto_hotspot(&mut e, a2, "hot-9");
+    call(
+        &mut e,
+        "definePrototypeTransition",
+        json!({"id":"tr-9","label":"fade","kind":"dissolve","duration_ms":200}),
+    );
+    call(
+        &mut e,
+        "definePrototypeInteraction",
+        json!({"id":"ix-9","hotspot":"hot-9","trigger":"tap","action":"back","transition":"tr-9"}),
+    );
+    let bytes = e.snapshot().unwrap();
+    let (_, raw) = decode_envelope(&bytes).unwrap();
+    let outer: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(outer["kind"], "design");
+    assert_eq!(outer["schema"], 2);
+    assert!(outer["document"]["prototype"]["interactions"].is_array());
+    let mut e2 = DesignEngine::new();
+    e2.restore(&bytes).unwrap();
+    assert_eq!(e2.snapshot().unwrap(), bytes);
+    let g = call(&mut e2, "prototypeGraph", json!({}));
+    assert_eq!(g.data["interactions"][0]["id"], "ix-9");
+    // Hostile restore: unwrapped state carrying prototype state rejects.
+    let doc = serde_json::to_vec(&e2.state).unwrap();
+    assert!(DesignEngine::new().restore(&encode_envelope(&doc)).is_err());
+    // Hostile restore: interaction targeting a missing screen rejects.
+    let mut tampered: Value = outer.clone();
+    tampered["document"]["prototype"]["interactions"][0]["target"] =
+        json!({"kind":"screen","node":424242});
+    // back action with a target is itself invalid; use navigate instead.
+    tampered["document"]["prototype"]["interactions"][0]["action"] = json!("navigate");
+    assert!(e2
+        .restore(&encode_envelope(&serde_json::to_vec(&tampered).unwrap()))
+        .is_err());
+    assert_eq!(e2.snapshot().unwrap(), bytes);
+}

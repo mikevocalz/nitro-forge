@@ -1461,3 +1461,53 @@ Local evidence: `cargo test -p draft-engine` 28 passed (4 new layer tests),
 `pnpm --filter @nitro-forge/draft test` 9 passed across 3 files (1 new nf-cli
 layer e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. UI adoption,
 native acceptance and full P17 completion are not implied.
+
+## P16 design prototype catalog slice E checkpoint (2026-11-08)
+
+Design gains the NYC-Tron L-08..L-11 prototype contracts as durable document
+state under `prototype:{screens,hotspots,interactions,transitions}` (the
+installed alpha.4 pin still lacks `forge/design`; contracts were read from
+the NYC-Tron `codex/complete-all-components` source). Screens (≤512)
+reference `frame`/`component` nodes with an `entry` flag; hotspots (≤4096)
+are trigger regions normalized to 0..=1 inside the unit square of a
+registered screen; interactions (≤4096) attach to exactly one hotspot or
+screen and carry the `PrototypeInteraction` trigger/action/target/delay/
+duration fields plus a bounded transition preset reference (≤256 presets,
+kind `instant|dissolve|slide|smart-animate`, easing
+`linear|ease-in|ease-out|ease-in-out`, slide direction, duration ≤600000ms,
+trigger delay ≤86400000ms); `target` is a typed `{kind:"screen",node}` /
+`{kind:"variable",id}` mapping of the contract's string `destinationId`,
+and `value` is an engine extension carrying the set-variable literal
+(aliases rejected, type must match). New ops: `definePrototypeScreen`,
+`updatePrototypeScreen`, `removePrototypeScreen`, `definePrototypeHotspot`,
+`updatePrototypeHotspot`, `removePrototypeHotspot`,
+`definePrototypeTransition`, `updatePrototypeTransition`,
+`removePrototypeTransition`, `definePrototypeInteraction`,
+`updatePrototypeInteraction`, `removePrototypeInteraction`, plus the
+`prototypeGraph` and `resolvePrototypeEvent` reads. `resolvePrototypeEvent`
+is a pure deterministic function — `{hotspot?|screen?,trigger?}` in,
+first catalog-order match or JSON `null` out, with the resolved transition
+(`duration_ms` override applied) and `delay_ms`; `prototypeGraph` projects
+screens/hotspots/interactions/transitions plus derived FlowOverview `links`.
+The engine stores no playback status/progress and no clock — scheduling is
+`scheduled_by:"host"` — so it never fakes animation. Validation is
+whole-document on mutation and hostile restore (unknown/dangling
+references, bad geometry, timing bounds, slide-direction rules, action/
+target pairing all reject atomically); screen/hotspot/node/variable
+removals cascade or reject so no dangling reference survives, and
+`removePrototypeTransition` rejects while referenced. Snapshot schema
+stays 2 via the presence-triggered wrapper: any non-empty prototype
+collection emits `{kind:"design",schema:2,document}` and unwrapped state
+carrying `prototype` rejects on restore. Presence stays out — server
+transport only per the P16 placement decision.
+
+Local evidence: `cargo test -p design-engine` 44 passed (3 new prototype
+tests covering CRUD/graph/resolve determinism and eventless reads,
+validation bounds/targets/atomic rejection, transition lifecycle,
+cascades, schema:2 wrapper round-trip and hostile restore),
+`cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/design test` 14
+passed across 10 files (1 new nf-cli live test, 1 new payload-contract
+test), `pnpm --filter @nitro-forge/design typecheck` clean. Overlay stack
+semantics, drag hit-testing, reusable styles, comments, presence transport,
+native/JSI rebuild and UI wiring remain deferred; no full P16 completion is
+implied.
