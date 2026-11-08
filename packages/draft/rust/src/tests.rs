@@ -2295,6 +2295,80 @@ fn dimension_arrow_overshoot_at_world_budget_boundary_omits_legs() {
     .is_string());
 }
 #[test]
+fn dimension_angular_arc_overshoot_omits_arc_but_keeps_rays() {
+    let mut e = DraftEngine::new();
+    // Vertex near the +X budget edge with rays to both ±Y budget corners:
+    // the quarter-span arc (r ≈ 250000) bulges past x = 1e6 mid-sweep, so
+    // the whole arc polyline and both arc arrowheads are dropped while
+    // the authored rays still measure and draw.
+    let v = point(&mut e, 999999., 0.);
+    let a = point(&mut e, 1e6, 1e6);
+    let b = point(&mut e, 1e6, -1e6);
+    let dim = dimension(
+        &mut e,
+        json!({"kind":"angular","points":[v,a,b]}),
+    );
+    let ev = evaluate(&mut e);
+    let m = &ev["dimensions"][dim.to_string()]["measured"];
+    let got = m["value"].as_f64().unwrap();
+    assert!((got - 180.).abs() < 1e-3);
+    let lines = m["lines"].as_array().unwrap();
+    // Only the two authored rays survive: no arc segments and no arc
+    // arrowheads (a lone arrow tip would be disconnected).
+    assert_eq!(lines.len(), 2);
+    for line in lines {
+        for p in line.as_array().unwrap() {
+            for c in p.as_array().unwrap() {
+                assert!(c.as_f64().unwrap().abs() <= 1e6);
+            }
+        }
+    }
+    // renderFrame projects the same boundary geometry without error.
+    let framed = apply(
+        &mut e,
+        "renderFrame",
+        json!({"width":8,"height":4,"origin_x":0,"origin_y":0,"scale":1e-6}),
+    );
+    assert!(framed.data["pixels_b64"].is_string());
+}
+#[test]
+fn dimension_angular_arc_starts_at_arc_start_not_vertex() {
+    let mut e = DraftEngine::new();
+    // 90 degree angle at the origin: r = 1, arc runs (1,0) to (0,1).
+    let v = point(&mut e, 0., 0.);
+    let a = point(&mut e, 4., 0.);
+    let b = point(&mut e, 0., 4.);
+    let dim = dimension(
+        &mut e,
+        json!({"kind":"angular","points":[v,a,b]}),
+    );
+    let ev = evaluate(&mut e);
+    let m = &ev["dimensions"][dim.to_string()]["measured"];
+    assert_eq!(m["value"], 90.);
+    let lines = m["lines"].as_array().unwrap();
+    // Exactly the two rays touch the vertex; the arc polyline begins at
+    // the arc start (1,0), never with a spurious vertex-to-sample stroke.
+    let touches_vertex = lines
+        .iter()
+        .filter(|line| {
+            line.as_array().unwrap().iter().any(|p| {
+                let xy = p.as_array().unwrap();
+                xy[0].as_f64().unwrap() == 0. && xy[1].as_f64().unwrap() == 0.
+            })
+        })
+        .count();
+    assert_eq!(touches_vertex, 2);
+    let arc_start_drawn = lines.iter().any(|line| {
+        let pts = line.as_array().unwrap();
+        pts.iter().any(|p| {
+            let xy = p.as_array().unwrap();
+            (xy[0].as_f64().unwrap() - 1.).abs() < 1e-9
+                && xy[1].as_f64().unwrap().abs() < 1e-9
+        })
+    });
+    assert!(arc_start_drawn);
+}
+#[test]
 fn dimension_degenerate_angle_and_hidden_dimension_render_honestly() {
     let mut e = DraftEngine::new();
     let v = point(&mut e, 0., 0.);

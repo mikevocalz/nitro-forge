@@ -168,23 +168,6 @@ fn measure_kind(s: &State, d: &Dimension) -> Result<Measured, EngineError> {
                     let r = 0.25 * la.min(lb);
                     let n = ((sweep.abs() / ARC_SEGMENT_DEGREES).ceil() as usize)
                         .clamp(1, 24);
-                    let mut prev = v;
-                    for i in 1..=n {
-                        let angle = (ta + sweep * i as f64 / n as f64).to_radians();
-                        let p = (
-                            v.0 + r * angle.cos(),
-                            v.1 + r * angle.sin(),
-                        );
-                        push(&mut lines, prev, p);
-                        prev = p;
-                    }
-                    // Arrowheads on the arc ends point along the arc's
-                    // travel direction back into the swept span.
-                    let sign = sweep.signum();
-                    let tangent = |deg: f64| {
-                        let r = deg.to_radians();
-                        (-r.sin(), r.cos())
-                    };
                     let start_angle = ta.to_radians();
                     let start = (
                         v.0 + r * start_angle.cos(),
@@ -195,19 +178,50 @@ fn measure_kind(s: &State, d: &Dimension) -> Result<Measured, EngineError> {
                         v.0 + r * end_angle.cos(),
                         v.1 + r * end_angle.sin(),
                     );
-                    let (ta_u, tb_u) = (tangent(ta), tangent(tb));
-                    arrows(
-                        &mut lines,
-                        start,
-                        (sign * ta_u.0, sign * ta_u.1),
-                        r * sweep.abs().to_radians(),
-                    );
-                    arrows(
-                        &mut lines,
-                        end,
-                        (-sign * tb_u.0, -sign * tb_u.1),
-                        r * sweep.abs().to_radians(),
-                    );
+                    // The arc is schematic overshoot like arrowhead legs:
+                    // sample it provisionally and emit the polyline only
+                    // when every vertex stays inside the ±1e6 world budget.
+                    // A single overshooting vertex drops the arc AND both
+                    // arc arrowheads together — disconnected arrow tips
+                    // would be worse — while the authored rays still draw.
+                    let mut arc = Vec::with_capacity(n);
+                    let mut in_budget = coord(start.0) && coord(start.1);
+                    let mut prev = start;
+                    for i in 1..=n {
+                        let angle = (ta + sweep * i as f64 / n as f64).to_radians();
+                        let p = (
+                            v.0 + r * angle.cos(),
+                            v.1 + r * angle.sin(),
+                        );
+                        if !(coord(p.0) && coord(p.1)) {
+                            in_budget = false;
+                        }
+                        push(&mut arc, prev, p);
+                        prev = p;
+                    }
+                    if in_budget {
+                        lines.append(&mut arc);
+                        // Arrowheads on the arc ends point along the arc's
+                        // travel direction back into the swept span.
+                        let sign = sweep.signum();
+                        let tangent = |deg: f64| {
+                            let r = deg.to_radians();
+                            (-r.sin(), r.cos())
+                        };
+                        let (ta_u, tb_u) = (tangent(ta), tangent(tb));
+                        arrows(
+                            &mut lines,
+                            start,
+                            (sign * ta_u.0, sign * ta_u.1),
+                            r * sweep.abs().to_radians(),
+                        );
+                        arrows(
+                            &mut lines,
+                            end,
+                            (-sign * tb_u.0, -sign * tb_u.1),
+                            r * sweep.abs().to_radians(),
+                        );
+                    }
                 }
             }
         }
