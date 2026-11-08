@@ -362,8 +362,9 @@ fn hf_body<'a>(
 /// ignored), plus — header band only — the formatted page number
 /// right-aligned on the band's last line when `page_numbers` is set.
 /// Header blocks bottom-align to `margin_top` (just above the text
-/// area); footer blocks top-align at `height - margin_bottom` (just
-/// below it). Bodies taller than their margin overflow toward the page
+/// area); footer blocks bottom-align to the page's bottom edge (Word's
+/// footer placement — tall footers overflow upward toward the page
+/// center). Bodies taller than their margin overflow toward the page
 /// center — deterministic, never rejected.
 #[allow(clippy::too_many_arguments)]
 fn draw_hf_band(
@@ -432,12 +433,15 @@ fn draw_hf_band(
 
     let body_h_pt: f64 = lines.iter().map(|&(_, _, h)| h).sum();
     let total_h_pt = body_h_pt + num_h_pt;
-    // Band placement: header bottom-aligns to the top margin's inner
-    // edge; footer top-aligns at the bottom margin's outer edge.
+    // Band placement: the header bottom-aligns to the top margin's
+    // inner edge; the footer bottom-aligns to the PAGE's bottom edge
+    // (Word bottom-aligns footers), so a footer taller than the bottom
+    // margin overflows upward toward the page center instead of
+    // clipping at the page edge.
     let y_start_pt = if is_header {
         (page.margin_top - total_h_pt).max(0.0)
     } else {
-        page.height - page.margin_bottom
+        (page.height - total_h_pt).max(0.0)
     };
 
     let mut y_pt = y_start_pt;

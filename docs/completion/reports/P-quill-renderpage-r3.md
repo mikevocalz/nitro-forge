@@ -5,7 +5,7 @@
 main `5f8b8f4`). R3 scope per the decision: document geometry and
 pagination semantics driven by the persisted sections model —
 `page_setup` binding in `layout`/`renderPage`, headers/footers, and TOC
-page numbers. Verified: `cargo test -p quill-engine` (268 pass),
+page numbers. Verified: `cargo test -p quill-engine` (271 pass),
 `cargo build -p nf-cli`, `pnpm install --prefer-offline`,
 `pnpm --filter @nitro-forge/quill test` (64 pass),
 `pnpm --filter @nitro-forge/quill typecheck` — all clean. **No new
@@ -23,8 +23,9 @@ header/footer state already ride the schema:3 wrapper.
   `use_sections` rejects as `Validation`; `renderPage` still requires
   `font` and applies the same 4096px/32MiB bounds per section page.
 - **Sectioned pagination** (`SectionFlow`/`SectionPage` in `lib.rs`).
-  Each `Section.page_setup` supplies page `width`/`height` (orientation
-  is already folded into stored width/height at `setPageSetup` time),
+  Each `Section.page_setup` supplies page `width`/`height` (`orientation`
+  is decorative metadata today — `setPageSetup` stores it but nothing
+  swaps width/height, so stored width/height are used as-is),
   margins define the text area, and `columns`/`column_gap` split it
   column-major (`column_width = (text_w − (n−1)·gap)/n`,
   `col_height = height − margin_top − margin_bottom`). `SectionStart`
@@ -32,15 +33,21 @@ header/footer state already ride the schema:3 wrapper.
   blank pages owned by the previous section until the physical page
   index has the required parity (index 0 = printed page 1 = odd);
   `continuous` keeps filling the current column's remainder under the
-  OLD page's geometry while the wrap width switches to the new
-  section immediately, then flows onto fresh pages of the new
-  section's geometry on overflow. Section boundaries come from the
+  OLD page's geometry; the wrap width switches to the new section
+  immediately but is CLAMPED to the host page's column width, since
+  glyphs draw inside the host column band — a wider new-section
+  measure would overflow the text area. On overflow it flows onto
+  fresh pages of the new section's geometry. Section boundaries come from the
   same live `Section.block` anchors every other op maintains.
 - **Printed page numbers.** After pagination, per-section page counts
   produce `number` values: a section's `header_footer.number_start`
   restarts its count, otherwise numbering continues from the previous
-  section's total (section 0 defaults to 1). Blank parity pads count
-  toward their owner section's total. `toc_pages` and `renderPage`'s
+  section's total (section 0 defaults to 1). `number_start` is honored
+  only by a section owning ≥1 page — a `continuous` section whose
+  content all fit in the previous section's tail owns zero pages, so
+  its restart is inert and numbering continues past it (Word does not
+  restart on an empty section). Blank parity pads count toward their
+  owner section's total. `toc_pages` and `renderPage`'s
   `number` field report these numbers; `page_numbers` only gates
   *drawing* the number in the header band. Parity for
   even/odd starts and even/odd header variants is computed on the
@@ -71,7 +78,9 @@ header/footer state already ride the schema:3 wrapper.
   real `hhea`/`OS/2` metrics, identical shaping budget gate) and wrapped
   at the full text width via the shared `block_line_spans`. Header
   bodies bottom-align to the top margin's inner edge; footer bodies
-  top-align at `height − margin_bottom`. Variant selection honors
+  bottom-align to the page's bottom edge (Word's footer placement —
+  a footer taller than the bottom margin overflows upward toward the
+  page center instead of clipping at the page edge). Variant selection honors
   `different_first` (on `first_in_section`) and `different_odd_even`
   (physical index parity); a `null` selected body draws nothing —
   `link_previous` is NOT resolved (the section model documents it as
@@ -96,9 +105,11 @@ header/footer state already ride the schema:3 wrapper.
 ## Design decisions taken
 
 1. **Opt-in flag, not a behavior change.** `use_sections` defaults
-   off; the uniform explicit-geometry path is byte-identical to R2.
-   This keeps every existing caller and test untouched while letting
-   hosts migrate deliberately.
+   off; on the uniform path pagination and rendered pixels are
+   identical to R2 — the only envelope delta is the additive
+   `toc_pages` key, present on every `layout` result. This keeps every
+   existing caller and test untouched while letting hosts migrate
+   deliberately.
 2. **`number_start` lives in `HeaderFooter`** (existing schema), so
    sectioned numbering reads it unconditionally — `toc_pages`/`number`
    reflect restarts even when `page_numbers` is false (the flag only
@@ -147,6 +158,9 @@ header/footer state already ride the schema:3 wrapper.
   `layout_use_sections_next_page_start_and_geometry`,
   `layout_use_sections_even_page_pads_blank` (parity pad + numbering),
   `layout_use_sections_continuous_shares_column_tail`,
+  `layout_use_sections_empty_section_number_start_is_inert`,
+  `layout_use_sections_continuous_wrap_clamps_to_host_column`,
+  `render_page_use_sections_footer_bottom_aligns`,
   `layout_toc_pages_report_printed_numbers` (incl. `number_start` and
   uniform path), `render_page_use_sections_draws_geometry_and_bands`
   (pixel dims from PageSetup, header/footer ink bands, determinism,

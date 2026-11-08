@@ -527,7 +527,11 @@ export interface RevisionAttribution {
   /** Unix seconds; bounded to year 9999. */
   time?: number;
 }
-/** Paper orientation stored per section. */
+/**
+ * Paper orientation stored per section. Currently decorative metadata:
+ * `layout`/`renderPage` use `width`/`height` as stored and do not swap
+ * them for landscape.
+ */
 export type SectionOrientation = "portrait" | "landscape";
 /** How a section begins relative to the previous one. */
 export type SectionStartKind = "continuous" | "next-page" | "even-page" | "odd-page";
@@ -560,7 +564,9 @@ export type PageSetupPatch = Partial<PageSetup>;
  * 8192 characters each); null clears. `different_first`/`different_odd_even`
  * gate whether the first/even bodies apply. `renderPage` with
  * `useSections` draws them: header text bottom-aligns to the top margin,
- * footer top-aligns to the bottom margin, and `page_numbers` appends the
+ * footer text bottom-aligns to the page's bottom edge (Word's footer
+ * placement — tall footers overflow upward toward the page center), and
+ * `page_numbers` appends the
  * formatted printed number (decimal/roman/letters, honoring
  * `number_start` and section restarts) on the header band's last line.
  * `link_previous` inheritance is NOT resolved by the engine — the
@@ -800,8 +806,9 @@ export class QuillDocument {
   /**
    * Start a new section at block `at` (1..block count, not already a section
    * start). The new section copies the page setup and header/footer of the
-   * section owning `at`; `page_setup`/`header_footer` partial patches
-   * override the copy. Boundaries track block edits like bookmarks do.
+   * section owning `at` — except `start`, which defaults to `"next-page"`
+   * (Word's new-section default); `page_setup`/`header_footer` partial
+   * patches override the copy. Boundaries track block edits like bookmarks do.
    */
   insertSection(
     at: number,

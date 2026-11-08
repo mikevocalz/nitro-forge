@@ -3239,9 +3239,16 @@ impl QuillEngine {
             if flow.cur.is_none() {
                 flow.begin_page(flow.flow_si);
             }
+            // A `continuous` section sharing another section's page tail
+            // still draws inside the HOST page's column band
+            // (`SectionPage.column_width` in glyphs.rs), so its wrap
+            // width is clamped to that band — a wider new-section
+            // measure would overflow the text area.
+            let wrap_w = col_widths[flow.flow_si]
+                .min(flow.cur.as_ref().map_or(f64::MAX, |p| p.column_width));
             let (spans, line_heights) = block_line_spans(
                 b,
-                col_widths[flow.flow_si],
+                wrap_w,
                 font_size,
                 plan,
                 &mut advance_cache,
@@ -3281,7 +3288,16 @@ impl QuillEngine {
         }
         let mut base = vec![0u64; nsec];
         for si in 0..nsec {
-            base[si] = match self.sections[si].header_footer.number_start {
+            // `number_start` is honored only by a section that actually
+            // owns pages: a `continuous` section whose content all fit
+            // in the previous section's column tail owns zero pages, so
+            // its restart is inert and numbering continues past it
+            // (Word does not restart on an empty continuous section).
+            let start = self.sections[si]
+                .header_footer
+                .number_start
+                .filter(|_| count[si] > 0);
+            base[si] = match start {
                 Some(start) => u64::from(start),
                 None => {
                     if si == 0 {
@@ -8267,6 +8283,153 @@ mod tests {
         assert_eq!(pages2[1]["section"], 1);
         assert_eq!(pages2[1]["width"], 100.0);
         assert_eq!(pages2[1]["height"], 50.0);
+    }
+
+    /// `number_start` on a section owning ZERO pages — a `continuous`
+    /// section whose content all fit in the previous section's column
+    /// tail — is inert: it must not leak into the next section's
+    /// printed numbers (Word does not restart on an empty section).
+    #[test]
+    fn layout_use_sections_empty_section_number_start_is_inert() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "aaaa");
+        apply(&mut e, "insertBlock", json!({"index": 1}));
+        insert(&mut e, 1, 0, "b");
+        apply(&mut e, "insertBlock", json!({"index": 2}));
+        insert(&mut e, 2, 0, "cccc");
+        let ps = |start: &str| {
+            json!({
+                "width": 200.0, "height": 60.0, "start": start,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            })
+        };
+        apply(&mut e, "setPageSetup", json!({"section": 0, "width": 200.0, "height": 60.0,
+            "margin_top": 10.0, "margin_bottom": 10.0,
+            "margin_left": 10.0, "margin_right": 10.0}));
+        apply(&mut e, "insertSection", json!({"at": 1, "page_setup": ps("continuous")}));
+        apply(&mut e, "insertSection", json!({"at": 2, "page_setup": ps("next-page")}));
+        apply(&mut e, "setHeaderFooter", json!({"section": 1, "number_start": 1}));
+        let r = apply(&mut e, "layout", json!({"font_size": 10.0, "use_sections": true}));
+        let pages = r.data["pages"].as_array().unwrap();
+        // Page 0 is owned by section 0 and carries section 1's "b" in
+        // its shared tail; section 1 owns no pages. Page 1 is section 2.
+        assert_eq!(pages.len(), 2);
+        assert_eq!(pages[0]["section"], 0);
+        assert_eq!(pages[0]["number"], 1);
+        assert_eq!(pages[1]["section"], 2);
+        // Section 1's number_start:1 is inert → section 2 continues
+        // section 0's count: printed number 2, not 1.
+        assert_eq!(pages[1]["number"], 2);
+    }
+
+    /// A `continuous` section sharing another section's page tail draws
+    /// inside the HOST page's column band, so its wrap width clamps to
+    /// the host column width — a wider new-section measure would push
+    /// ink past the text area's right edge.
+    #[test]
+    fn layout_use_sections_continuous_wrap_clamps_to_host_column() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "seed");
+        apply(&mut e, "insertBlock", json!({"index": 1}));
+        insert(&mut e, 1, 0, &"y".repeat(40));
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 200.0,
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            }),
+        );
+        // Section 1's own column measure is 380pt (76 chars at the 5pt
+        // estimate advance), but it shares section 0's page tail whose
+        // column band is 180pt (36 chars).
+        apply(
+            &mut e,
+            "insertSection",
+            json!({"at": 1, "page_setup": {
+                "width": 400.0, "height": 200.0, "start": "continuous",
+                "margin_top": 10.0, "margin_bottom": 10.0,
+                "margin_left": 10.0, "margin_right": 10.0,
+            }}),
+        );
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({"font_size": 10.0, "use_sections": true}),
+        );
+        let pages = r.data["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 1);
+        assert_eq!(pages[0]["section"], 0);
+        let b1: Vec<&Value> = pages[0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|l| l["block"].as_u64() == Some(1))
+            .collect();
+        // 40 chars wrapped at the host band's 36-char measure → 2
+        // lines; unclamped it would fit on one 76-char line.
+        assert_eq!(b1.len(), 2);
+        for l in b1 {
+            let len = l["end"].as_u64().unwrap() - l["start"].as_u64().unwrap();
+            assert!(len <= 36, "shared-tail line {len} chars exceeds host band");
+        }
+    }
+
+    /// Footer bands bottom-align to the page's bottom edge (Word's
+    /// footer placement): a footer taller than the bottom margin
+    /// overflows upward toward the page center instead of clipping at
+    /// the bottom edge.
+    #[test]
+    fn render_page_use_sections_footer_bottom_aligns() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "body");
+        apply(
+            &mut e,
+            "setPageSetup",
+            json!({
+                "section": 0, "width": 200.0, "height": 100.0,
+                "margin_top": 30.0, "margin_bottom": 10.0,
+                "margin_left": 40.0, "margin_right": 40.0,
+            }),
+        );
+        // ~60 chars wraps to several footer lines ≈ 50pt tall > the 10pt
+        // bottom margin: bottom-aligned, the band reaches the page's
+        // bottom edge — ink must appear in the bottom rows of the
+        // pixmap, not stop at the margin's inner edge.
+        apply(
+            &mut e,
+            "setHeaderFooter",
+            json!({"section": 0, "footer": "F".repeat(60)}),
+        );
+        let r = render_page(
+            &mut e,
+            json!({"font_size": 12.0, "font": "NFTestMono", "page": 0, "use_sections": true}),
+        );
+        // 200x100pt at 96dpi → 267x133px.
+        assert_eq!(r.data["width"], 267);
+        assert_eq!(r.data["height"], 133);
+        let px = base64_decode(r.data["pixels_b64"].as_str().unwrap()).unwrap();
+        let ink_in_band = |y0: usize, y1: usize| {
+            (y0..y1).any(|y| {
+                (0..267usize).any(|x| {
+                    let i = (y * 267 + x) * 4;
+                    px[i] < 200
+                })
+            })
+        };
+        // Bottom-aligned: the band's bottom edge is the page bottom, so
+        // a footer taller than the 10pt bottom margin overflows upward
+        // — ink appears well above the margin's inner edge (90pt ≈
+        // 120px, where the old top-aligned band started) AND reaches
+        // the bottom rows.
+        assert!(
+            ink_in_band(100, 118),
+            "tall footer should overflow upward into the bottom margin"
+        );
+        assert!(ink_in_band(125, 133), "footer should reach the page bottom");
     }
 
     /// `toc_pages` resolves live TOC entries to printed page numbers —

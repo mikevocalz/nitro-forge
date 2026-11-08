@@ -601,9 +601,10 @@ impl QuillEngine {
     /// `insertSection {at, page_setup?, header_footer?}` — `at` is the block
     /// index where the new section starts (1..blocks.len(), not already a
     /// section start). The new section copies the page setup and
-    /// header/footer of the section that owns `at`, then applies the
-    /// optional partial patches, so a bare insert behaves like Word's
-    /// "link to previous".
+    /// header/footer of the section that owns `at` — except `start`,
+    /// which defaults to `next-page` (Word's new-section default) —
+    /// then applies the optional partial patches, so a bare insert
+    /// behaves like Word's "link to previous".
     pub(super) fn op_insert_section(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let at = as_usize(field(p, "at")?, "at")?;
         if at == 0 {
@@ -642,6 +643,10 @@ impl QuillEngine {
             .expect("first section starts at block 0");
         let mut section = self.sections[owner].clone();
         section.block = at;
+        // Word's default for a new section break is next-page; the
+        // owner's `start` describes the owner's own break, not this
+        // one. An explicit `page_setup.start` patch still wins.
+        section.page.start = SectionStart::NextPage;
         if let Some(patch) = &page_patch {
             patch.apply(&mut section.page);
         }
