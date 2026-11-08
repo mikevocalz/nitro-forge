@@ -24,7 +24,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, footnotes/endnotes, TOC fields, citations/bibliography, tables incl. cell merge/unmerge and in-cell find/replace, paragraph format, mail merge, session font registry + harfrust-shaped measured layout incl. per-line re-shaping + renderPage RGBA rasterization) | 245 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI + dispatch tests (incl. folio binary-input gate) | 28 pass | `cargo test -p nf-sys` |
 | Package e2e suites (vitest → nf-cli → real Rust) | 4×8 = 32 pass | `pnpm -r test` |
-| Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
+| Console workflow demo (all 11 products, create→edit→save→reopen→undo) | 26/26 checks | `pnpm --filter @nitro-forge/console demo` (or `test`) |
 | Typecheck: ignition + 7 product packages + apps/console + apps/example | clean | `pnpm -r exec tsc --noEmit` |
 | Post-review full workspace retest | 184 Rust + 32 vitest pass | `cargo test --workspace && pnpm -r test` |
 | Folio slice E (redactRect + comparePdf, 2026-11-07 `codex/w1-folio-redact`; review fixes `codex/w1-folio-e`) | 133 folio Rust tests + 35 folio vitest pass; nf-cli build + folio typecheck clean | `cargo test -p folio-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/folio test`, `pnpm --filter @nitro-forge/folio typecheck` |
@@ -2555,3 +2555,43 @@ dropping text, and the `t="e"` rejection names the unsupported literal
 and its blast radius. `cargo test -p tally-engine` 225 passed (6 new
 regression tests), `cargo build -p nf-cli` clean, `pnpm --filter
 @nitro-forge/tally test`/`typecheck` clean.
+
+## Consuming-app adoption for photo/motion/design/draft (2026-11-07, branch codex/w14-consumers)
+
+The four newer engines were registered in Rust, nf-cli, the Nitro kind
+boundary (`ENGINE_KINDS`, `ForgeEngineKind` union, generated
+`ForgeEngineKind.hpp` tags 7–10, `HybridForgeFactory.cpp`) and their typed
+TS facades, but no default product exercised them. This slice adopts them
+in the two existing consuming apps without new UI frameworks:
+
+- `apps/console` now demos all 11 engines end-to-end through the real
+  nf-cli transport: photo (addOriginal → setRating → createVersion →
+  setDevelop → processPreview pixel check → undo/redo → snapshot reopen),
+  motion (shape layer → tx keys → evaluate midpoint → renderFrame →
+  undo/redo → reopen), design (frame/shape/text → evaluateLayout →
+  undo/redo → reopen) and draft (4-point square → findProfiles area →
+  renderFrame → undo/redo → reopen). `ok()` failures now exit non-zero;
+  `pnpm --filter @nitro-forge/console test` runs the same verification.
+- `STUDIOS` in `@nitro-forge/studio-layout` gains `photo`, `motion`,
+  `design`, `draft`; `APP_MANIFESTS`, `ForgeWorkspace` app icons and
+  `ForgeDocumentStage` projections cover them, and
+  `apps/example/src/editors.tsx` (shared by `apps/studio-preview`) adds
+  typed `EditorConfig`s — the same generic rows/actions/history pattern
+  folio and pitch already use. No dedicated canvas surfaces were invented;
+  the stage shows honest read-only projections of live engine state.
+- `apps/studio-preview/verify-bridge.mjs` now drives all 11 kinds through
+  the `/api/engine` HTTP host (mutation → undo/redo → NFD1
+  snapshot/reopen). Draft's `describe.source_revision` is a monotonic
+  counter, not undo state, and is normalized out of the comparison.
+- `ForgeStudio` in `instrument-system.ts` includes the four new ids; the
+  catalog remains `releaseVerified: false` everywhere.
+
+Local evidence: `cargo build -p nf-cli` clean, `pnpm install
+--prefer-offline` clean, `pnpm --filter @nitro-forge/console demo` 26/26
+checks pass, `pnpm --filter @nitro-forge/studio-preview test:integration`
+passes all 11 engines plus essay/DOCX/Prism raster checks,
+`pnpm --filter @nitro-forge/{studio-layout,studio-workspace,example,studio-preview} typecheck`
+clean, `pnpm --filter @nitro-forge/studio-workspace test` 148 pass,
+`pnpm --filter @nitro-forge/studio-layout test` 13 pass, console
+`tsc --noEmit` clean. Dedicated editing surfaces for the four engines,
+native/device acceptance and any P10–P19 phase promotion remain open.

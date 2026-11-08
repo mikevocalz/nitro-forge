@@ -14,7 +14,7 @@ import {
   type ForgeTimebase,
 } from './instrument-system.ts';
 
-const studios: ForgeStudio[] = ['prism', 'cadence', 'splice', 'quill', 'tally', 'pitch', 'folio', 'board'];
+const studios: ForgeStudio[] = ['prism', 'cadence', 'splice', 'quill', 'tally', 'pitch', 'folio', 'photo', 'motion', 'design', 'draft', 'board'];
 
 test('every instrument has a unique identity and accountable release status', () => {
   assert.equal(new Set(forgeInstrumentBlueprints.map(x => x.id)).size, forgeInstrumentBlueprints.length);

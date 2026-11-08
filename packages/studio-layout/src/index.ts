@@ -1,5 +1,5 @@
 /** Pure dock-layout operations: the editable document and undo history remain in Ignition. */
-export const STUDIOS = ["prism", "cadence", "splice", "folio", "pitch", "tally", "quill"] as const;
+export const STUDIOS = ["prism", "cadence", "splice", "folio", "pitch", "tally", "quill", "photo", "motion", "design", "draft"] as const;
 export type Studio = typeof STUDIOS[number];
 export const DOCKS = ["left", "right", "bottom"] as const;
 export type Dock = typeof DOCKS[number];

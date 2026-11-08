@@ -65,6 +65,49 @@ export function ForgeDocumentStage({ studioId, state, theme = 'dark' }: { studio
         {!tracks.length && <Text style={[caption, { paddingVertical: 48 }]}>No tracks yet. Add a track in Commands.</Text>}
       </View>
     </>;
+  } else if (studioId === 'photo') {
+    const originals = Object.values(record(doc.originals)) as Data[];
+    const versions = Object.values(record(doc.versions)) as Data[];
+    content = <>{heading('Photo catalog', `${originals.length} originals · ${versions.length} versions · live engine state`)}
+      {originals.map(original => <View key={String(original.id)} style={{ marginBottom: 14 }}>{paper(<>
+        <Text style={{ fontSize: 15, color: '#354638' }}>{`${original.camera_make ?? 'Camera'} ${original.camera_model ?? ''}`.trim()}</Text>
+        <Text style={{ color: '#66735f', fontSize: 13, marginTop: 6 }}>{`Rating ${original.rating ?? 0} · ${original.labels?.length ?? 0} labels · ${original.byte_length ?? '?'} bytes`}</Text>
+        <Text style={{ color: '#66735f', fontSize: 12, marginTop: 4 }}>{`${versions.filter(v => v.original_id === original.id).length} versions`}</Text>
+      </>)}
+      </View>)}
+      {!originals.length && <Text style={[caption, { paddingVertical: 24 }]}>No originals yet. Add one in Commands.</Text>}
+      <Text style={caption}>Catalog projection. Original bytes stay host-owned; previews run through the develop pipeline.</Text>
+    </>;
+  } else if (studioId === 'motion') {
+    const layers = array(doc.layers);
+    const rate = record(doc.frame_rate);
+    content = <>{heading(doc.title ?? 'Composition', `${doc.width ?? '?'} × ${doc.height ?? '?'} · ${doc.duration_s ?? '?'}s · ${rate.num ?? '?'}/${rate.den ?? '?'} fps · ${layers.length} layers`)}
+      {layers.map(layer => <View key={layer.id} style={{ marginBottom: 10, backgroundColor: '#222829', borderWidth: 1, borderColor: '#39423f', borderRadius: 4, padding: 10 }}>
+        <Text style={{ color: '#eef0e9', fontSize: 13 }}>{`${layer.name ?? `Layer ${layer.id}`} · ${layer.kind}`}</Text>
+        <Text style={caption}>{`opacity ${layer.opacity ?? 1}${layer.visible === false ? ' · hidden' : ''} · ${array(layer.curves).length} animated properties`}</Text>
+      </View>)}
+      {!layers.length && <Text style={[caption, { paddingVertical: 24 }]}>No layers yet. Add a shape layer in Commands.</Text>}
+      <Text style={caption}>Composition projection. Raster frames render through the engine's bounded RGBA path.</Text>
+    </>;
+  } else if (studioId === 'design') {
+    const nodes = Object.values(record(doc.nodes)) as Data[];
+    const root = record(record(doc.nodes)['1']);
+    content = <>{heading(doc.title ?? 'Untitled design', `${nodes.length} nodes${root.width ? ` · ${root.width} × ${root.height}` : ''}`)}
+      {nodes.filter(node => node.id !== 1).slice(0, 24).map(node => <View key={String(node.id)} style={{ marginBottom: 8, backgroundColor: '#f7f5ed', borderRadius: 3, padding: 10 }}>
+        <Text style={{ color: '#283329', fontSize: 13 }}>{`${node.name ?? `Node ${node.id}`} · ${node.kind}`}</Text>
+        <Text style={{ color: '#66735f', fontSize: 12, marginTop: 2 }}>{`${Math.round(node.width ?? 0)} × ${Math.round(node.height ?? 0)}`}</Text>
+      </View>)}
+      <Text style={caption}>Document projection. evaluateLayout resolves fixed/hug/fill sizing live.</Text>
+    </>;
+  } else if (studioId === 'draft') {
+    const count = (key: string) => Object.keys(record(doc[key])).length;
+    content = <>{heading('CAD drawing', `${doc.units ?? 'mm'} units · ${count('points')} points · ${count('segments')} segments · ${count('circles')} circles · ${count('arcs')} arcs`)}
+      <View style={{ backgroundColor: '#f7f5ed', borderRadius: 3, padding: 18 }}>
+        <Text style={{ color: '#283329', fontSize: 14 }}>{`${count('hatches') ?? 0} hatches · ${count('dimensions') ?? 0} dimensions · ${count('constraints') ?? 0} constraints`}</Text>
+        <Text style={{ color: '#66735f', fontSize: 12, marginTop: 8 }}>World-space geometry with a bounded linear/nonlinear solver and snap engine.</Text>
+      </View>
+      <Text style={caption}>Document projection. renderFrame rasterizes model or paper space on demand.</Text>
+    </>;
   } else {
     content = <>{heading('PDF overview', `${doc.pages ?? 0} pages · semantic document projection`)}
       {array(doc.page_details).map((page, i) => <View key={i} style={{ marginBottom: 18 }}>{paper(<><Text style={{ fontSize: 28, color: '#354638', marginBottom: 12 }}>{String(i + 1).padStart(2, '0')}</Text><Text style={{ color: '#66735f', fontSize: 13 }}>Rotation {page.rotate ?? 0}°</Text><Text style={{ color: '#66735f', fontSize: 13, marginTop: 8 }}>{`${array(page.annots).length} annotations · page metadata`}</Text></>)}</View>)}

@@ -129,3 +129,21 @@ The P15 PDF backend decision is now executed as a documented admission in [P15-f
 ## folio-render first implementation slice (2026-11-12, `codex/w5-folio-r`)
 
 The admitted `folio-render` host service is implemented in `rust/folio-render` (workspace member): pdfium via `pdfium-render` 0.9.5 (`pdfium_8125` bindings feature) runtime-bound to a never-committed `libpdfium.dylib`, JSON-lines ops `open`/`renderPage`/`textPage`/`search`/`pageInfo`/`close`/`describe` over engine save bytes, fail-closed bounds per the admission record, and the `folio-render` binary plus `@nitro-forge/folio/render` TS adapter (`FolioRenderService`). `FOLIO_DEFERRED_OPS` no longer lists `renderPage`/`textPositions`; the op contract is recorded in `docs/ENGINE_OPS.md` §folio-render service. Verified on this macOS arm64 host: 6 Rust tests against the real chromium/8138 dylib and 5 vitest e2e driving `FolioDocument.savePdf` bytes through the binary (44 folio vitest total; folio-engine unchanged at 149). iOS/Android/Linux/Windows/WASM remain NOT-RUN; the pdfium binary is resolved via `FOLIO_PDFIUM_LIBRARY`/`FOLIO_PDFIUM_DIR`/`rust/folio-render/lib/` with tarball+ dylib SHA-256 recorded in `rust/folio-render/README.md`. No phase or platform acceptance is promoted.
+
+## Consuming-app adoption for photo/motion/design/draft (2026-11-07, `codex/w14-consumers`)
+
+The four newer engines are now exercised by real consuming apps, closing the
+activation gap noted in earlier checkpoints. `apps/console` demos all 11
+engines end-to-end through nf-cli (photo catalog/develop preview, motion
+composition evaluate/render, design layout, draft profiles — each with
+undo/redo and snapshot reopen; 26/26 checks, failures now exit non-zero).
+`STUDIOS` gains `photo`/`motion`/`design`/`draft` with app manifests, workspace
+icons, read-only `ForgeDocumentStage` projections and shared `EditorConfig`s
+in `apps/example` (also consumed by `apps/studio-preview`), matching the
+existing generic folio/pitch adoption pattern — no new UI framework or
+dedicated canvas surfaces were added. The studio-preview `/api/engine` bridge
+verification now covers all 11 kinds (draft `source_revision` normalized as
+non-undo state). The Nitro kind boundary already carried tags 7–10; no spec
+regeneration or Rust changes were needed. Dedicated editing surfaces, native/
+device acceptance and any P10–P19 phase promotion remain open; see the ROSTER
+section of the same name for exact commands and results.
