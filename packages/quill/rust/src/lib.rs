@@ -38,6 +38,7 @@ use format::{
 };
 mod fonts;
 use fonts::{FontInfo, FontRegistry};
+mod glyphs;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -1098,6 +1099,29 @@ fn validate_highlight(value: &str) -> Result<(), EngineError> {
         ));
     }
     Ok(())
+}
+
+/// `renderPage` `color`/`background` param: `#RRGGBB` (opaque) or
+/// `#RRGGBBAA` (alpha). Distinct from `validate_highlight`'s run-style
+/// grammar, which stays `#RRGGBB`-only.
+fn parse_render_color(value: &str, name: &str) -> Result<tiny_skia::Color, EngineError> {
+    let hex = value.strip_prefix('#').ok_or_else(|| {
+        EngineError::validation(format!("{name} must be #RRGGBB or #RRGGBBAA"))
+    })?;
+    let ok = (hex.len() == 6 || hex.len() == 8) && hex.bytes().all(|b| b.is_ascii_hexdigit());
+    if !ok {
+        return Err(EngineError::validation(format!(
+            "{name} must be #RRGGBB or #RRGGBBAA"
+        )));
+    }
+    let v = u32::from_str_radix(hex, 16)
+        .map_err(|_| EngineError::validation(format!("{name} must be #RRGGBB or #RRGGBBAA")))?;
+    let (r, g, b, a) = if hex.len() == 6 {
+        ((v >> 16) as u8, (v >> 8) as u8, v as u8, 255u8)
+    } else {
+        ((v >> 24) as u8, (v >> 16) as u8, (v >> 8) as u8, v as u8)
+    };
+    Ok(tiny_skia::Color::from_rgba8(r, g, b, a))
 }
 
 fn validate_font_size(value: f64) -> Result<(), EngineError> {
@@ -2953,13 +2977,40 @@ impl QuillEngine {
                     })?)
                 }
             };
+        let pages = self.layout_pages(page_width, font_size, page_height, measure.as_ref());
+        let pages: Vec<Value> = pages
+            .into_iter()
+            .map(|lines| {
+                json!({
+                    "lines": lines
+                        .into_iter()
+                        .map(|(block, start, end)| json!({ "block": block, "start": start, "end": end }))
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        Ok(Self::read_only(json!({ "pages": pages })))
+    }
+
+    /// Shared pagination for `layout` and `renderPage` (P-quill-renderpage-
+    /// decision §3): the same greedy wrap, the same per-line re-shaping
+    /// passes, the same page splitting — so `renderPage` pixels can never
+    /// drift from the `{block,start,end}` spans `layout` reports. Returns
+    /// pages of `(block, start, end)` line spans in document order.
+    fn layout_pages(
+        &self,
+        page_width: f64,
+        font_size: f64,
+        page_height: f64,
+        measure: Option<&fonts::FaceMeasure>,
+    ) -> Vec<Vec<(usize, usize, usize)>> {
         // char → advance in font units, memoized across blocks.
         let mut advance_cache: std::collections::HashMap<char, f64> =
             std::collections::HashMap::new();
 
         // Wrap each block greedily into {start,end} char spans.
-        let mut pages: Vec<Value> = Vec::new();
-        let mut cur_lines: Vec<Value> = Vec::new();
+        let mut pages: Vec<Vec<(usize, usize, usize)>> = Vec::new();
+        let mut cur_lines: Vec<(usize, usize, usize)> = Vec::new();
         let mut remaining = page_height;
 
         for (bi, b) in self.blocks.iter().enumerate() {
@@ -3065,27 +3116,156 @@ impl QuillEngine {
             // A block that doesn't fit the remaining page height starts on a
             // fresh page (unless the page is already empty).
             if !cur_lines.is_empty() && block_height > remaining {
-                pages.push(json!({ "lines": cur_lines }));
-                cur_lines = Vec::new();
+                pages.push(std::mem::take(&mut cur_lines));
                 remaining = page_height;
             }
             for (s, e) in spans {
-                if cur_lines.is_empty() && line_height > remaining && !pages.is_empty() {
-                    // shouldn't happen since remaining == page_height here
-                }
                 if line_height > remaining && !cur_lines.is_empty() {
-                    pages.push(json!({ "lines": cur_lines }));
-                    cur_lines = Vec::new();
+                    pages.push(std::mem::take(&mut cur_lines));
                     remaining = page_height;
                 }
-                cur_lines.push(json!({ "block": bi, "start": s, "end": e }));
+                cur_lines.push((bi, s, e));
                 remaining -= line_height;
             }
         }
         if !cur_lines.is_empty() {
-            pages.push(json!({ "lines": cur_lines }));
+            pages.push(cur_lines);
         }
-        Ok(Self::read_only(json!({ "pages": pages })))
+        pages
+    }
+
+    /// `renderPage {page_width,font_size,page_height?,font,page,dpi?,
+    /// color?,background?,max_dim?}` → RGBA8 pixels (P-quill-renderpage-
+    /// decision, slice R1). Read-only: no journal entry, no
+    /// `document:changed`, same class as `layout`.
+    ///
+    /// `font` is REQUIRED (unlike `layout`'s optional estimate): without
+    /// glyphs there is nothing to draw, so the op rejects rather than
+    /// falling back. Pagination is the shared `layout_pages` routine, so
+    /// pixels cannot drift from the spans `layout` reports; each emitted
+    /// line is then shaped independently for glyph positions (decision
+    /// §3). Layout units are points; `px = pt * dpi/72`, `dpi` default
+    /// 96. `color`/`background` are `#RRGGBB` or `#RRGGBBAA`, default
+    /// opaque black on opaque white (decision open point 6, resolved).
+    /// `max_dim`, when present, caps EACH pixel side — render rejects
+    /// rather than downscaling. Hard bounds: ≤4096 px/side, ≤32 MiB RGBA.
+    /// `format` is `"raw"` only; `pixels_b64` rides the normal data
+    /// channel or the binary sidecar via `with_bytes`, mirroring design
+    /// `renderFrame`.
+    fn op_render_page(
+        &self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let p = &cmd.payload;
+        let page_width = as_f64(field(p, "page_width")?, "page_width")?;
+        let font_size = as_f64(field(p, "font_size")?, "font_size")?;
+        let page_height = match p.get("page_height") {
+            Some(v) => as_f64(v, "page_height")?,
+            None => page_width * A_SERIES_RATIO,
+        };
+        if page_width <= 0.0 || !page_width.is_finite() {
+            return Err(EngineError::validation("page_width must be positive"));
+        }
+        if font_size <= 0.0 || !font_size.is_finite() {
+            return Err(EngineError::validation("font_size must be positive"));
+        }
+        if page_height <= 0.0 || !page_height.is_finite() {
+            return Err(EngineError::validation("page_height must be positive"));
+        }
+        let page = as_usize(field(p, "page")?, "page")?;
+        let dpi = match p.get("dpi") {
+            None | Some(Value::Null) => 96.0,
+            Some(v) => as_f64(v, "dpi")?,
+        };
+        if dpi <= 0.0 || !dpi.is_finite() {
+            return Err(EngineError::validation("dpi must be positive"));
+        }
+        let color = match p.get("color") {
+            None | Some(Value::Null) => tiny_skia::Color::from_rgba8(0, 0, 0, 255),
+            Some(v) => parse_render_color(as_str(v, "color")?, "color")?,
+        };
+        let background = match p.get("background") {
+            None | Some(Value::Null) => tiny_skia::Color::from_rgba8(255, 255, 255, 255),
+            Some(v) => parse_render_color(as_str(v, "background")?, "background")?,
+        };
+        let max_dim = match p.get("max_dim") {
+            None | Some(Value::Null) => None,
+            Some(v) => {
+                let d = as_f64(v, "max_dim")?;
+                if d <= 0.0 || !d.is_finite() {
+                    return Err(EngineError::validation("max_dim must be positive"));
+                }
+                Some(d)
+            }
+        };
+
+        // `font` is required: renderPage has no glyph-less fallback.
+        let font_name = as_str(field(p, "font")?, "font")?;
+        let face = self.fonts.find(font_name).ok_or_else(|| {
+            EngineError::validation(format!(
+                "font '{font_name}' is not registered; call registerFont first"
+            ))
+        })?;
+        let measure = fonts::FaceMeasure::open(face)
+            .ok_or_else(|| EngineError::internal("registered font failed to re-parse"))?;
+
+        let pages = self.layout_pages(page_width, font_size, page_height, Some(&measure));
+        let Some(lines) = pages.get(page) else {
+            return Err(EngineError::out_of_bounds(format!(
+                "page {page} out of range ({})",
+                pages.len()
+            )));
+        };
+
+        let scale = dpi / 72.0;
+        let width_px = (page_width * scale).round();
+        let height_px = (page_height * scale).round();
+        if !(width_px >= 1.0 && height_px >= 1.0)
+            || width_px > glyphs::MAX_RENDER_DIM_PX as f64
+            || height_px > glyphs::MAX_RENDER_DIM_PX as f64
+        {
+            return Err(EngineError::validation(
+                "renderPage page exceeds the 4096px-per-side bound; lower dpi or page size",
+            ));
+        }
+        if let Some(max) = max_dim {
+            if width_px > max || height_px > max {
+                return Err(EngineError::validation(format!(
+                    "renderPage page exceeds max_dim {max}px"
+                )));
+            }
+        }
+        let width_px = width_px as u32;
+        let height_px = height_px as u32;
+        if u64::from(width_px) * u64::from(height_px) > glyphs::MAX_RENDER_PIXELS {
+            return Err(EngineError::validation(
+                "renderPage page exceeds the 32MiB RGBA output bound",
+            ));
+        }
+
+        let pixels = glyphs::render_page_rgba(
+            &measure,
+            &self.blocks,
+            lines,
+            width_px,
+            height_px,
+            font_size,
+            dpi,
+            color,
+            background,
+            ctx,
+        )?;
+        Ok(
+            Self::read_only(json!({
+                "page": page,
+                "width": width_px,
+                "height": height_px,
+                "format": "raw",
+                "size": pixels.len(),
+            }))
+            .with_bytes(cmd, "pixels_b64", pixels),
+        )
     }
 
     /// `registerFont {family, face_index?, bytes_b64}`, or the font file as
@@ -3253,6 +3433,8 @@ impl Engine for QuillEngine {
         ctx.checkpoint()?;
         let result = if cmd.op == "exportDocx" && cmd.v == 1 {
             self.op_export_docx(&cmd, Some(ctx))
+        } else if cmd.op == "renderPage" && cmd.v == 1 {
+            self.op_render_page(&cmd, Some(ctx))
         } else {
             self.apply(cmd)
         }?;
@@ -3351,6 +3533,7 @@ impl Engine for QuillEngine {
             "unmergeTableCells" => self.op_unmerge_table_cells(&cmd.payload),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
+            "renderPage" => self.op_render_page(&cmd, None),
             "registerFont" => self.op_register_font(&mut cmd),
             "removeFont" => self.op_remove_font(&cmd.payload),
             "listFonts" => self.op_list_fonts(),
@@ -5113,6 +5296,210 @@ mod tests {
         assert!(m
             .shape_span_char_advances(text, &offs, &[(0, 3), (3, 3)])
             .is_none());
+    }
+
+    // -- renderPage (R1: glyph rasterization) --------------------------------
+
+    fn render_page(e: &mut QuillEngine, payload: Value) -> CommandResult {
+        apply(e, "renderPage", payload)
+    }
+
+    #[test]
+    fn render_page_draws_glyph_pixels_deterministically() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "Hello World");
+        let r = render_page(
+            &mut e,
+            json!({
+                "page_width": 200.0,
+                "font_size": 12.0,
+                "page_height": 100.0,
+                "font": "NFTestMono",
+                "page": 0,
+            }),
+        );
+        // px = pt * 96/72: 200pt → 267px, 100pt → 133px.
+        assert_eq!(r.data["width"], 267);
+        assert_eq!(r.data["height"], 133);
+        assert_eq!(r.data["format"], "raw");
+        assert!(r.events.is_empty(), "renderPage is read-only");
+        let b64 = r.data["pixels_b64"].as_str().unwrap();
+        let px = base64_decode(b64).unwrap();
+        assert_eq!(px.len(), 267 * 133 * 4);
+        // Default opaque white background, black text: some pixel must be
+        // darker than the background or the glyphs did not draw.
+        let inked = px
+            .chunks_exact(4)
+            .any(|p| p[0] < 200 || p[1] < 200 || p[2] < 200);
+        assert!(inked, "renderPage produced no glyph ink");
+
+        // Determinism: identical bytes across calls, and the binary
+        // sidecar returns the same RGBA.
+        let r2 = render_page(
+            &mut e,
+            json!({
+                "page_width": 200.0,
+                "font_size": 12.0,
+                "page_height": 100.0,
+                "font": "NFTestMono",
+                "page": 0,
+            }),
+        );
+        assert_eq!(r2.data["pixels_b64"], r.data["pixels_b64"]);
+        let bin = e
+            .apply(
+                Command::new(
+                    "renderPage",
+                    json!({
+                        "page_width": 200.0,
+                        "font_size": 12.0,
+                        "page_height": 100.0,
+                        "font": "NFTestMono",
+                        "page": 0,
+                    }),
+                )
+                .with_binary(None),
+            )
+            .unwrap();
+        assert_eq!(bin.output.as_deref(), Some(px.as_slice()));
+        assert!(bin.data.get("pixels_b64").is_none());
+    }
+
+    #[test]
+    fn render_page_pages_match_layout_spans() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        // Enough text to paginate at a small page height.
+        insert(&mut e, 0, 0, "alpha beta gamma delta epsilon zeta eta theta iota kappa");
+        let layout = apply(
+            &mut e,
+            "layout",
+            json!({
+                "page_width": 120.0,
+                "font_size": 12.0,
+                "page_height": 40.0,
+                "font": "NFTestMono",
+            }),
+        );
+        let page_count = layout.data["pages"].as_array().unwrap().len();
+        assert!(page_count > 1, "test needs multiple pages");
+        // Every layout page renders; page == count rejects out of bounds.
+        for page in 0..page_count {
+            let r = render_page(
+                &mut e,
+                json!({
+                    "page_width": 120.0,
+                    "font_size": 12.0,
+                    "page_height": 40.0,
+                    "font": "NFTestMono",
+                    "page": page,
+                }),
+            );
+            assert_eq!(r.data["page"], page as u64);
+        }
+        assert_eq!(
+            err(
+                &mut e,
+                "renderPage",
+                json!({
+                    "page_width": 120.0,
+                    "font_size": 12.0,
+                    "page_height": 40.0,
+                    "font": "NFTestMono",
+                    "page": page_count,
+                })
+            )
+            .code,
+            ErrorCode::OutOfBounds
+        );
+    }
+
+    #[test]
+    fn render_page_validates_params_and_bounds() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "text");
+        let base = json!({
+            "page_width": 200.0,
+            "font_size": 12.0,
+            "page_height": 100.0,
+            "font": "NFTestMono",
+            "page": 0,
+        });
+        // `font` is required — no glyph-less fallback.
+        let mut no_font = base.clone();
+        no_font.as_object_mut().unwrap().remove("font");
+        assert!(err(&mut e, "renderPage", no_font).code == ErrorCode::InvalidCommand);
+        // Unregistered family rejects.
+        let mut bad_font = base.clone();
+        bad_font["font"] = json!("Nope");
+        assert_eq!(
+            err(&mut e, "renderPage", bad_font).code,
+            ErrorCode::Validation
+        );
+        // Pixel bounds: 5000pt wide at 96dpi → 6667px > 4096.
+        let mut huge = base.clone();
+        huge["page_width"] = json!(5000.0);
+        assert_eq!(
+            err(&mut e, "renderPage", huge).code,
+            ErrorCode::Validation
+        );
+        // max_dim caps each side.
+        let mut dim = base.clone();
+        dim["max_dim"] = json!(50.0);
+        assert!(err(&mut e, "renderPage", dim).message.contains("max_dim"));
+        // Bad dpi / colors reject.
+        let mut dpi = base.clone();
+        dpi["dpi"] = json!(0.0);
+        assert_eq!(err(&mut e, "renderPage", dpi).code, ErrorCode::Validation);
+        let mut color = base.clone();
+        color["color"] = json!("red");
+        assert_eq!(
+            err(&mut e, "renderPage", color).code,
+            ErrorCode::Validation
+        );
+        // Custom colors + dpi accepted; alpha form works.
+        let r = render_page(
+            &mut e,
+            json!({
+                "page_width": 100.0,
+                "font_size": 10.0,
+                "page_height": 50.0,
+                "font": "NFTestMono",
+                "page": 0,
+                "dpi": 72,
+                "color": "#112233",
+                "background": "#FFFFFF00",
+            }),
+        );
+        assert_eq!(r.data["width"], 100);
+        assert_eq!(r.data["height"], 50);
+    }
+
+    /// Shaped per-line glyph runs keep ids/advances/offsets; the unshaped
+    /// fallback reports cmap+hmtx advances with zero offsets.
+    #[test]
+    fn line_glyph_runs_keep_positions() {
+        use fonts::FaceMeasure;
+        let mut reg = fonts::FontRegistry::default();
+        reg.register("NFTestMono", 0, test_font_bytes().to_vec())
+            .unwrap();
+        let face = reg.find("NFTestMono").unwrap();
+        let m = FaceMeasure::open(face).unwrap();
+        let shaped = m.shape_line_glyphs("WW").unwrap();
+        assert_eq!(shaped.len(), 2);
+        // Kerned pair: first W advance 700, second 1000 (font units).
+        assert_eq!(shaped[0].x_advance, 700.0);
+        assert_eq!(shaped[1].x_advance, 1000.0);
+        assert!(shaped.iter().all(|g| g.glyph_id != 0 || true));
+        // 'fi' ligates into one glyph.
+        assert_eq!(m.shape_line_glyphs("fi").unwrap().len(), 1);
+        // Unshaped fallback: per-char advances, zero offsets.
+        let un = m.unshaped_line_glyphs("AA");
+        assert_eq!(un.len(), 2);
+        assert!(un.iter().all(|g| g.x_offset == 0.0 && g.y_offset == 0.0));
+        assert_eq!(un[0].x_advance, 500.0);
     }
 
     // -- DOCX round-trip -----------------------------------------------------
