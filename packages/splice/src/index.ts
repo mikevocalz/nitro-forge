@@ -19,6 +19,7 @@ export const OPS = {
   splitClip: "splitClip",
   setSpeed: "setSpeed",
   setSpeedKeys: "setSpeedKeys",
+  setClipMix: "setClipMix",
   duration: "duration",
   timeline: "timeline",
   renderPlan: "renderPlan",
@@ -83,6 +84,15 @@ export interface TrackFlags {
 export interface SpeedKey {
   t_s: number;
   speed: number;
+}
+/** Clip gain bounds in dB (`gain_db`), matching cadence's clip convention. 0 dB is unity. */
+export const CLIP_GAIN_DB_RANGE = { min: -60, max: 12 } as const;
+/** Stereo pan bounds: -1 hard left, 0 center, 1 hard right. */
+export const CLIP_PAN_RANGE = { min: -1, max: 1 } as const;
+/** Per-clip mix fields `setClipMix` patches. At least one must be present. */
+export interface ClipMix {
+  gain_db?: number;
+  pan?: number;
 }
 /** Every clip-editing op may report transitions it dropped because the edit broke their cut. */
 export interface ClipEditResult {
@@ -187,6 +197,16 @@ export class SpliceDocument {
    */
   setSpeedKeys(id: number, keys: SpeedKey[]) {
     return this.call<{ ok: true; changed?: boolean } & ClipEditResult>(OPS.setSpeedKeys, { id, keys });
+  }
+  /**
+   * Per-clip mix metadata: `gain_db` in -60..=12 (0 = unity, cadence's clip
+   * convention) and `pan` in -1..=1 (0 = center). Partial patch — omitted
+   * fields keep their value. Storage and `renderPlan` metadata only: Splice
+   * has no decoder or mixer, so nothing applies the mix yet. `changed:
+   * false` and no undo entry when the write matches.
+   */
+  setClipMix(id: number, mix: ClipMix) {
+    return this.call<{ ok: true; changed?: boolean }>(OPS.setClipMix, { id, ...mix });
   }
 
   // ---- track headers ------------------------------------------------------

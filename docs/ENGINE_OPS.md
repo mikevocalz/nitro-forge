@@ -1158,7 +1158,7 @@ Ticks→seconds: `ticks / (ppq * bpm / 60)`. Undo: prior field values / removed 
 
 State `{ fps, next_id, sources: {id: {name, duration_s}}, tracks: [Track], markers: [Marker], loop_range? }`,
 `Track = { id, kind:"video"|"audio"|"overlay", name?, locked, hidden, muted, solo, clips: [Clip], transitions: [Transition] }`,
-`Clip = { id, source_id, timeline_start_s, in_s, out_s, speed, speed_keys? }`,
+`Clip = { id, source_id, timeline_start_s, in_s, out_s, speed, speed_keys?, gain_db?, pan? }`,
 `SpeedKey = { t_s, speed }`,
 `Transition = { id, left_id, right_id, kind, duration_s }`,
 `Marker = { id, time_s, duration_s, name, note? }`, `loop_range = { in_s, out_s }`.
@@ -1192,6 +1192,28 @@ speed": it replaces any keys (flattening the clip) rather than scaling the
 curve. `setSpeedKeys` is a full replace; `keys: []` returns to constant
 speed; an identical write is an eventless no-op like the track-flag ops.
 
+**Per-clip mix (`gain_db`, `pan`).** `gain_db` is clip gain in dB within
+`-60..=12` (0 dB = unity — the same field name, range and convention
+cadence clips use); `pan` is stereo position within `-1..=1` (0 = center,
+-1 hard left, 1 hard right — cadence's track `pan` convention). Both are
+serde-optional and skipped at the neutral value, so clips that never took a
+mix write serialize byte-identically to before; there is no schema/wrapper
+bump (Splice snapshots carry no schema — the same fail-closed argument as
+`speed_keys`: older readers reject nothing new because the fields are
+inert metadata, and `restore` validates both ranges so hostile snapshots
+with out-of-range or non-finite values fail). `setClipMix` is a partial
+patch (`{id, gain_db?, pan?}`, at least one field); an identical write is
+an eventless read-only result like the track-flag and `setSpeedKeys`
+no-ops, and a real write records one undo entry and emits
+`document:changed` only — mix never changes the timeline footprint, so no
+`timeline:changed` and no transition pruning. Every structural op carries
+the fields: `splitClip` and the insert/overwrite straddle splits copy them
+to both halves, and move/trim/ripple/roll/slip/slide leave them untouched
+on the clips they edit. `renderPlan` clip refs always carry `gain_db` and
+`pan` so a future mixer can consume them. **Honesty:** no decoder or mixer
+exists — these are storage and plan metadata exactly like track
+`muted`/`track_active`; nothing in Splice applies gain or pan to audio.
+
 Locked tracks refuse every clip and transition edit (and `removeTrack`) with
 `Validation` ("track N is locked"); ripples with `scope:"all"` leave them in
 place. Header ops (`setTrackFlags`, `renameTrack`, `moveTrack`) still work on a
@@ -1214,6 +1236,7 @@ locked track.
 | `splitClip` | `{id,at_s}` | `{left_id,right_id}` | `at_s` timeline time strictly inside clip; right half keeps speed and takes over a transition on the clip's tail |
 | `setSpeed` | `{id,speed}` | `{ok,changed?}` | 0.1..=10; flattens any `speed_keys` to constant speed; adjusts timeline footprint; reject overlap; identical write is eventless |
 | `setSpeedKeys` | `{id,keys:[{t_s,speed}]}` | `{ok,changed?}` | full replace of the media-time speed curve (unsorted input accepted, stored sorted); `keys:[]` restores constant `speed`; footprint = ∫dt/speed; reject overlap; identical write is eventless |
+| `setClipMix` | `{id,gain_db?,pan?}` | `{ok,changed?}` | per-clip mix metadata: `gain_db` -60..=12 dB (0 = unity), `pan` -1..=1 (0 = center); at least one field; partial patch; identical write is eventless; `document:changed` only — no timeline change; storage/plan metadata, no mixing happens |
 | `rippleDelete` | `{id,scope?}` | `{ok}` | removes the clip and shifts clips starting at or after its end left by its length |
 | `rippleTrim` | `{id,edge:"head"\|"tail",delta_s,scope?}` | `{ok}` | `delta_s` moves that edge (positive = later); head keeps the clip's start and moves `in_s`; later clips shift by the change in length |
 | `rollEdit` | `{left,right,delta_s}` | `{ok}` | clips must touch on one track; moves the cut only |
@@ -1230,7 +1253,7 @@ locked track.
 | `batch` | `{ops:[{op,payload?}]}` | `{results:[data…]}` | 1..=256 ops, not `new` or `batch`; all apply or none; one undo entry; error message prefixed `ops[i] <op>:` |
 | `duration` | `{}` | `{seconds}` | max clip end across tracks |
 | `timeline` | `{}` | full structure | read-only |
-| `renderPlan` | `{}` | `{tracks:[[clip refs in time order]], transitions:[[…per track]]}` | clip refs carry `track_active` (video/overlay: not hidden; audio: soloed if any track is soloed, else not muted), `speed`, `speed_keys` and the resolved `timeline_end_s` footprint; transitions carry `kind, left_clip_id, right_clip_id, cut_s, start_s, end_s, duration_s` |
+| `renderPlan` | `{}` | `{tracks:[[clip refs in time order]], transitions:[[…per track]]}` | clip refs carry `track_active` (video/overlay: not hidden; audio: soloed if any track is soloed, else not muted), `speed`, `speed_keys`, the per-clip mix `gain_db`/`pan`, and the resolved `timeline_end_s` footprint; transitions carry `kind, left_clip_id, right_clip_id, cut_s, start_s, end_s, duration_s` |
 
 `mode` (`addClip`, `moveClip`): `reject` (default) refuses an overlap;
 `insert` splits a clip straddling `start_s` and pushes clips at or after it

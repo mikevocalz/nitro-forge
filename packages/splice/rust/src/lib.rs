@@ -35,6 +35,13 @@ const MAX_BATCH_OPS: usize = 256;
 const DEFAULT_FPS: f64 = 30.0;
 const MIN_SPEED: f64 = 0.1;
 const MAX_SPEED: f64 = 10.0;
+/// Clip gain bounds in dB — the same range cadence clips use (`gain_db`).
+const MIN_CLIP_GAIN_DB: f64 = -60.0;
+const MAX_CLIP_GAIN_DB: f64 = 12.0;
+/// Stereo pan bounds: -1 = hard left, 0 = center, 1 = hard right (cadence's
+/// track `pan` convention).
+const MIN_PAN: f64 = -1.0;
+const MAX_PAN: f64 = 1.0;
 /// Most speed keys one clip may carry.
 const MAX_SPEED_KEYS: usize = 256;
 /// Tolerance for float comparisons on timeline boundaries.
@@ -121,6 +128,25 @@ pub struct Clip {
     /// documents serialize byte-identically to before).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub speed_keys: Vec<SpeedKey>,
+    /// Clip gain in dB, `MIN_CLIP_GAIN_DB..=MAX_CLIP_GAIN_DB`; 0 dB is unity —
+    /// the same convention cadence clips use. Mix metadata only: Splice has
+    /// no decoder or mixer, so nothing applies it yet; `renderPlan` exposes it
+    /// for a future mixer the way `muted`/`track_active` already are. Skipped
+    /// at the neutral 0 dB so default clips keep their legacy bytes.
+    #[serde(default, skip_serializing_if = "is_neutral_gain_db")]
+    pub gain_db: f64,
+    /// Stereo pan, `MIN_PAN..=MAX_PAN`; 0 is center. Same storage-only note
+    /// as `gain_db`.
+    #[serde(default, skip_serializing_if = "is_neutral_pan")]
+    pub pan: f64,
+}
+
+fn is_neutral_gain_db(v: &f64) -> bool {
+    *v == 0.0
+}
+
+fn is_neutral_pan(v: &f64) -> bool {
+    *v == 0.0
 }
 
 impl Clip {
@@ -410,6 +436,10 @@ impl Doc {
             } else {
                 right_keys
             },
+            // Mix fields are per-clip metadata, not media geometry: both
+            // halves inherit them (same as cadence's splitClip copying gain).
+            gain_db: clip.gain_db,
+            pan: clip.pan,
         };
         clip.out_s = split_media;
         clip.speed_keys = if clip.speed_keys.is_empty() {
@@ -444,6 +474,8 @@ impl Doc {
                 }
                 check_speed(c.speed)?;
                 check_speed_keys(c)?;
+                check_gain_db(c.gain_db)?;
+                check_pan(c.pan)?;
                 check_span(c.in_s, c.out_s, self.source_of(c)?)?;
                 if c.timeline_end() > MAX_TIME_S {
                     return Err(EngineError::out_of_bounds(format!(
@@ -681,6 +713,24 @@ fn check_speed_keys(c: &Clip) -> Result<(), EngineError> {
         }
         prev = k.t_s;
         check_speed(k.speed)?;
+    }
+    Ok(())
+}
+
+fn check_gain_db(gain_db: f64) -> Result<(), EngineError> {
+    if !(gain_db.is_finite() && (MIN_CLIP_GAIN_DB..=MAX_CLIP_GAIN_DB).contains(&gain_db)) {
+        return Err(EngineError::validation(format!(
+            "gain_db must be in {MIN_CLIP_GAIN_DB}..={MAX_CLIP_GAIN_DB}"
+        )));
+    }
+    Ok(())
+}
+
+fn check_pan(pan: f64) -> Result<(), EngineError> {
+    if !(pan.is_finite() && (MIN_PAN..=MAX_PAN).contains(&pan)) {
+        return Err(EngineError::validation(format!(
+            "pan must be in {MIN_PAN}..={MAX_PAN}"
+        )));
     }
     Ok(())
 }
@@ -937,6 +987,8 @@ impl SpliceEngine {
                     out_s,
                     speed,
                     speed_keys,
+                    gain_db: 0.0,
+                    pan: 0.0,
                 };
                 let created = timeline_edits::place(
                     &mut next,
@@ -1087,6 +1139,37 @@ impl SpliceEngine {
                 self.doc.tracks[ti].clips[ci].speed_keys = keys;
                 Ok(Self::changed(json!({ "ok": true }), true))
             }
+            "setClipMix" => {
+                let id = req_u64(p, "id")?;
+                let gain_db = opt_f64(p, "gain_db")?;
+                let pan = opt_f64(p, "pan")?;
+                if gain_db.is_none() && pan.is_none() {
+                    return Err(EngineError::invalid(
+                        "setClipMix requires at least one of 'gain_db', 'pan'",
+                    ));
+                }
+                if let Some(g) = gain_db {
+                    check_gain_db(g)?;
+                }
+                if let Some(v) = pan {
+                    check_pan(v)?;
+                }
+                let (ti, ci) = self.doc.require_clip(id)?;
+                self.doc.require_unlocked(ti)?;
+                let clip = &self.doc.tracks[ti].clips[ci];
+                let new_gain = gain_db.unwrap_or(clip.gain_db);
+                let new_pan = pan.unwrap_or(clip.pan);
+                if new_gain == clip.gain_db && new_pan == clip.pan {
+                    return Ok(Self::read_only(json!({ "ok": true, "changed": false })));
+                }
+                self.record();
+                let clip = &mut self.doc.tracks[ti].clips[ci];
+                clip.gain_db = new_gain;
+                clip.pan = new_pan;
+                // Mix metadata only: the timeline footprint is unchanged, so
+                // this is a document change, not a timeline change.
+                Ok(Self::changed(json!({ "ok": true }), false))
+            }
 
             // ---- queries ---------------------------------------------------
             "duration" => {
@@ -1126,6 +1209,10 @@ impl SpliceEngine {
                                         // Keyframed speed curve (media-time
                                         // keys); empty = constant `speed`.
                                         "speed_keys": c.speed_keys,
+                                        // Per-clip mix metadata for a future
+                                        // mixer; 0 dB / center pan are unity.
+                                        "gain_db": c.gain_db,
+                                        "pan": c.pan,
                                     })
                                 })
                                 .collect(),
@@ -2405,6 +2492,254 @@ mod tests {
             json!({"left": l2, "right": r2, "kind": "cross_dissolve", "duration_s": 1.0}),
         )
         .unwrap();
+    }
+
+    // ---- per-clip mix (gain_db / pan) --------------------------------------
+
+    #[test]
+    fn clip_mix_defaults_are_legacy_bytes() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0}),
+        )
+        .unwrap();
+        // Neutral mix fields are skipped entirely: the clip serializes
+        // exactly as it did before the fields existed.
+        let clip = clip_json(&mut e, 0, 0);
+        assert!(clip.get("gain_db").is_none());
+        assert!(clip.get("pan").is_none());
+        let snap = e.snapshot().unwrap();
+        let payload = decode_envelope(&snap).unwrap().1;
+        let raw = String::from_utf8(payload.to_vec()).unwrap();
+        assert!(!raw.contains("gain_db") && !raw.contains("\"pan\""), "{raw}");
+    }
+
+    #[test]
+    fn set_clip_mix_patch_bounds_and_noop() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        let before = describe(&e);
+        for bad in [
+            json!({"id": c}),                                  // nothing to set
+            json!({"id": c, "gain_db": "loud"}),               // wrong type
+            json!({"id": c, "gain_db": 13.0}),                 // above +12 dB
+            json!({"id": c, "gain_db": -61.0}),                // below -60 dB
+            json!({"id": c, "gain_db": 1e300}),                // not finite-range
+            json!({"id": c, "pan": 1.5}),
+            json!({"id": c, "pan": -1.5}),
+            json!({"id": 999, "gain_db": 0.0}),
+        ] {
+            expect_err(&mut e, "setClipMix", bad);
+            assert_eq!(describe(&e), before);
+        }
+        // Partial patch: gain only, then pan only; the other field keeps its
+        // value (and its serde-skipped neutral state).
+        apply(&mut e, "setClipMix", json!({"id": c, "gain_db": -6.0})).unwrap();
+        let clip = clip_json(&mut e, 0, 0);
+        assert_eq!(clip["gain_db"], -6.0);
+        assert!(clip.get("pan").is_none());
+        apply(&mut e, "setClipMix", json!({"id": c, "pan": 0.5})).unwrap();
+        let clip = clip_json(&mut e, 0, 0);
+        assert_eq!(clip["gain_db"], -6.0);
+        assert_eq!(clip["pan"], 0.5);
+        // renderPlan exposes both for a future mixer.
+        let plan = apply(&mut e, "renderPlan", json!({})).unwrap();
+        let pc = &plan["tracks"][0][0];
+        assert_eq!(pc["gain_db"], -6.0);
+        assert_eq!(pc["pan"], 0.5);
+        // Identical write is an eventless read-only result recording no undo.
+        let r = apply_full(
+            &mut e,
+            "setClipMix",
+            json!({"id": c, "gain_db": -6.0, "pan": 0.5}),
+        )
+        .unwrap();
+        assert!(r.events.is_empty());
+        assert_eq!(r.data["changed"], false);
+        // One undo reverts the whole mix (the two setClipMix ops are two
+        // entries; the second undo reaches the first).
+        assert!(e.undo().unwrap());
+        let clip = clip_json(&mut e, 0, 0);
+        assert_eq!(clip["gain_db"], -6.0);
+        assert!(clip.get("pan").is_none());
+        assert!(e.undo().unwrap());
+        assert!(clip_json(&mut e, 0, 0).get("gain_db").is_none());
+        assert!(e.undo().unwrap()); // addClip
+        assert!(e.undo().unwrap()); // addTrack
+        assert!(e.undo().unwrap()); // addSource
+        assert!(!e.undo().unwrap());
+    }
+
+    #[test]
+    fn clip_mix_survives_structural_ops() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 8.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "setClipMix",
+            json!({"id": c, "gain_db": -3.0, "pan": -1.0}),
+        )
+        .unwrap();
+        // splitClip: both halves inherit the mix.
+        apply(&mut e, "splitClip", json!({"id": c, "at_s": 4.0})).unwrap();
+        for i in 0..2 {
+            let clip = clip_json(&mut e, 0, i);
+            assert_eq!(clip["gain_db"], -3.0, "half {i}");
+            assert_eq!(clip["pan"], -1.0, "half {i}");
+        }
+        // insert placement splitting a straddling clip keeps mix on both
+        // pieces (split_at is shared).
+        let other = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0, "start_s": 20.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "setClipMix",
+            json!({"id": other, "gain_db": 6.0, "pan": 1.0}),
+        )
+        .unwrap();
+        // Default mode rejects the overlap; overwrite splits the straddling
+        // clip and both surviving halves keep the mix.
+        let before = describe(&e);
+        expect_err(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 2.0, "start_s": 21.0}),
+        );
+        assert_eq!(describe(&e), before);
+        apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 2.0,
+                   "start_s": 21.0, "mode": "overwrite"}),
+        )
+        .unwrap();
+        // other (20..24) was split at 21 and 23: three pieces — head 20..21,
+        // tail 23..24 — both must carry gain 6 / pan 1.
+        let clips = apply(&mut e, "timeline", json!({})).unwrap()["tracks"][0]["clips"]
+            .as_array()
+            .unwrap()
+            .clone();
+        let pieces: Vec<&Value> = clips
+            .iter()
+            .filter(|c| c["gain_db"] == 6.0)
+            .collect();
+        assert_eq!(pieces.len(), 2, "{clips:?}");
+        for p in &pieces {
+            assert_eq!(p["pan"], 1.0);
+        }
+        // moveClip / trimClip / rippleDelete keep mix on surviving clips.
+        // The moved head lands at 30 s, last in time order.
+        let head = pieces[0]["id"].as_u64().unwrap();
+        apply(&mut e, "moveClip", json!({"id": head, "start_s": 30.0})).unwrap();
+        let n = apply(&mut e, "timeline", json!({})).unwrap()["tracks"][0]["clips"]
+            .as_array()
+            .unwrap()
+            .len();
+        assert_eq!(clip_json(&mut e, 0, n - 1)["gain_db"], 6.0);
+        apply(&mut e, "trimClip", json!({"id": head, "out_s": 0.5})).unwrap();
+        assert_eq!(clip_json(&mut e, 0, n - 1)["gain_db"], 6.0);
+        apply(&mut e, "rippleDelete", json!({"id": head})).unwrap();
+        // The remaining piece still carries its mix.
+        let clips = apply(&mut e, "timeline", json!({})).unwrap()["tracks"][0]["clips"]
+            .as_array()
+            .unwrap()
+            .clone();
+        let tail = clips.iter().find(|c| c["pan"] == 1.0).unwrap();
+        assert_eq!(tail["gain_db"], 6.0);
+    }
+
+    #[test]
+    fn clip_mix_undo_snapshot_and_hostile_restore() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        apply(&mut e, "setClipMix", json!({"id": c, "gain_db": -12.0, "pan": 1.0})).unwrap();
+        // Snapshot round-trip preserves the mix.
+        let snap = e.snapshot().unwrap();
+        let mut e2 = eng();
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&e2), describe(&e));
+        // Hostile restores: out-of-range mix values are rejected and the live
+        // document is untouched.
+        let good = describe(&e);
+        let breakers: Vec<(&str, Value)> = vec![
+            ("gain_db above range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["gain_db"] = json!(12.5);
+                d
+            }),
+            ("gain_db below range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["gain_db"] = json!(-60.5);
+                d
+            }),
+            ("gain_db non-numeric", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["gain_db"] = json!("loud");
+                d
+            }),
+            ("pan above range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["pan"] = json!(1.0001);
+                d
+            }),
+            ("pan below range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["pan"] = json!(-2.0);
+                d
+            }),
+        ];
+        for (what, doc) in breakers {
+            let bytes = encode_envelope(&serde_json::to_vec(&doc).unwrap());
+            assert!(e.restore(&bytes).is_err(), "{what} was accepted");
+            assert_eq!(describe(&e), good, "{what}");
+        }
+        // Boundary values restore fine; a legacy clip without the fields
+        // restores to neutral mix.
+        let mut edge = good.clone();
+        edge["tracks"][0]["clips"][0]["gain_db"] = json!(12.0);
+        edge["tracks"][0]["clips"][0]["pan"] = json!(-1.0);
+        e.restore(&encode_envelope(&serde_json::to_vec(&edge).unwrap())).unwrap();
+        let mut legacy = good.clone();
+        let clip = legacy["tracks"][0]["clips"][0].as_object_mut().unwrap();
+        clip.remove("gain_db");
+        clip.remove("pan");
+        e.restore(&encode_envelope(&serde_json::to_vec(&legacy).unwrap()))
+            .unwrap();
+        assert!(clip_json(&mut e, 0, 0).get("gain_db").is_none());
+        assert!(clip_json(&mut e, 0, 0).get("pan").is_none());
     }
 
     #[test]
