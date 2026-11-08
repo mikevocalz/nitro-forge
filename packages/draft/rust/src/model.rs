@@ -168,6 +168,54 @@ pub struct Dimension {
     #[serde(default, skip_serializing_if = "is_zero")]
     pub layer: u64,
 }
+pub const MAX_SHEETS: usize = 32;
+pub const MAX_VIEWPORTS: usize = 64;
+/// Paper-space sheet: a named page setup in fixed millimetres regardless of
+/// the document `units` metadata (no unit conversion is implied anywhere in
+/// draft). `width`/`height` are the physical sheet size; the four margins are
+/// the printable-area insets measured inward from each edge. Sheet
+/// coordinates have their origin at the paper's bottom-left corner with +y
+/// up, in millimetres. There is no orientation field: portrait/landscape is
+/// derived from `width` vs `height`, and `updateSheet` may swap them.
+/// Title blocks, north arrows and other paper-space furniture are deferred.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Sheet {
+    pub id: u64,
+    pub name: String,
+    pub width: f64,
+    pub height: f64,
+    pub margin_top: f64,
+    pub margin_right: f64,
+    pub margin_bottom: f64,
+    pub margin_left: f64,
+}
+/// Paper-space viewport: a rectangle in sheet millimetres (`x`,`y` is its
+/// bottom-left corner, +y up) showing a window of model space. `center_x`/
+/// `center_y` is the world point drawn at the viewport's center and `scale`
+/// is paper millimetres per world unit (an AutoCAD-style viewport scale
+/// denominator inverse: 0.02 shows 50 world units per paper mm). The model
+/// window is clipped honestly by rendering into an offscreen scene exactly
+/// the viewport's pixel size — Prism has no vector path-clip, so the clip is
+/// the raster boundary, not a faked vector mask. Viewports are paper-space
+/// objects: they carry no layer, reference model geometry only implicitly
+/// through the shared world state, and there are no paper-space entities.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ViewportEntity {
+    pub id: u64,
+    pub sheet: u64,
+    pub name: String,
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+    pub center_x: f64,
+    pub center_y: f64,
+    pub scale: f64,
+    pub visible: bool,
+    pub locked: bool,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Definition {
@@ -254,6 +302,10 @@ pub struct State {
     pub hatches: BTreeMap<u64, Arc<Hatch>>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub dimensions: BTreeMap<u64, Arc<Dimension>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub sheets: BTreeMap<u64, Arc<Sheet>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub viewports: BTreeMap<u64, Arc<ViewportEntity>>,
 }
 impl Default for State {
     fn default() -> Self {
@@ -272,6 +324,8 @@ impl Default for State {
             layers: BTreeMap::new(),
             hatches: BTreeMap::new(),
             dimensions: BTreeMap::new(),
+            sheets: BTreeMap::new(),
+            viewports: BTreeMap::new(),
         }
     }
 }
@@ -385,11 +439,14 @@ impl State {
             || self.layers.len() > MAX_LAYERS
             || self.hatches.len() > MAX_HATCHES
             || self.dimensions.len() > MAX_DIMENSIONS
+            || self.sheets.len() > MAX_SHEETS
+            || self.viewports.len() > MAX_VIEWPORTS
         {
             return Err(bad("invalid draft header or count budget"));
         }
         let mut ids = BTreeSet::new();
         let mut layer_names = BTreeSet::new();
+        let mut sheet_names = BTreeSet::new();
         for (&id, l) in &self.layers {
             if id != l.id
                 || id == 0
@@ -589,7 +646,9 @@ impl State {
                         || self.layers.contains_key(&p)
                         || self.hatches.contains_key(&p)
                         || self.constraints.contains_key(&p)
-                        || self.dimensions.contains_key(&p))
+                        || self.dimensions.contains_key(&p)
+                        || self.sheets.contains_key(&p)
+                        || self.viewports.contains_key(&p))
                 {
                     return Err(bad("dimension point reference has wrong identity kind"));
                 }
@@ -602,9 +661,70 @@ impl State {
                     || self.layers.contains_key(&d.entity)
                     || self.hatches.contains_key(&d.entity)
                     || self.constraints.contains_key(&d.entity)
-                    || self.dimensions.contains_key(&d.entity))
+                    || self.dimensions.contains_key(&d.entity)
+                    || self.sheets.contains_key(&d.entity)
+                    || self.viewports.contains_key(&d.entity))
             {
                 return Err(bad("dimension entity reference has wrong identity kind"));
+            }
+        }
+        for (&id, sh) in &self.sheets {
+            if id != sh.id
+                || id == 0
+                || id >= self.next_id
+                || !ids.insert(id)
+                || sh.name.is_empty()
+                || sh.name.len() > 512
+                || !sheet_names.insert(sh.name.as_str())
+                || !sh.width.is_finite()
+                || !(50.0..=2000.0).contains(&sh.width)
+                || !sh.height.is_finite()
+                || !(50.0..=2000.0).contains(&sh.height)
+            {
+                return Err(bad("invalid sheet identity, name or paper size"));
+            }
+            let margins = [
+                sh.margin_top,
+                sh.margin_right,
+                sh.margin_bottom,
+                sh.margin_left,
+            ];
+            if !margins
+                .iter()
+                .all(|m| m.is_finite() && *m >= 0.)
+                || sh.margin_top + sh.margin_bottom >= sh.height
+                || sh.margin_left + sh.margin_right >= sh.width
+            {
+                return Err(bad("invalid sheet margins"));
+            }
+        }
+        for (&id, vp) in &self.viewports {
+            if id != vp.id
+                || id == 0
+                || id >= self.next_id
+                || !ids.insert(id)
+                || vp.name.len() > 512
+                || !self.sheets.contains_key(&vp.sheet)
+            {
+                return Err(bad("invalid viewport identity, name or sheet reference"));
+            }
+            let sheet = &self.sheets[&vp.sheet];
+            if !vp.x.is_finite()
+                || !vp.y.is_finite()
+                || !vp.width.is_finite()
+                || !vp.height.is_finite()
+                || vp.width <= 0.
+                || vp.height <= 0.
+                || vp.x < 0.
+                || vp.y < 0.
+                || vp.x + vp.width > sheet.width
+                || vp.y + vp.height > sheet.height
+                || !coord(vp.center_x)
+                || !coord(vp.center_y)
+                || !vp.scale.is_finite()
+                || !(1e-6..=1e3).contains(&vp.scale)
+            {
+                return Err(bad("viewport rectangle, view or scale outside bounds"));
             }
         }
         let s = &self.snaps;
