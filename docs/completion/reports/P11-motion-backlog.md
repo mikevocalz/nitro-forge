@@ -52,11 +52,21 @@ artboards. Media decode is host-side only; no encoder exists in Forge.
   ≤64 emitters; sprites = shapes or existing assets.
 - **G1 — 3D schema/eval**: `Transform3D`, `Camera`, `Light[]`; ops for
   each; `evaluate` returns projected 2D transform; honest limitation
-  documented until G2.
-- **G2 — true projection rendering**: needs design note + check of Prism
-  quad/path warp capability first; may admit only affine-preserving cases.
-- **G3 — lighting**: CPU lambert/ambient on layer buffers (needs slice C
-  path); shadows explicitly deferred.
+  documented until G2. **Implemented 2026-11-08** (transform3d +
+  `setLayer3D`, projected_transform eval; Camera deferred — meaningless
+  under orthographic projection). See ROSTER slice-G1 checkpoint.
+- **G2 — true projection rendering**: **Implemented 2026-11-08** per
+  `P11-motion-g23-decisions.md` Option A — CPU affine rasterization:
+  `transform3d` layers stage through the shared rasterize path, resample
+  through the evaluated projected affine (shear-capable, nearest-neighbor,
+  checkpointed/bounded), upload as identity raster; `renderFrame`,
+  `renderQueueFrame` and nested comps share it. Perspective/camera/FOV,
+  depth sorting and z occlusion remain deferred (`z` render-inert).
+- **G3 — lighting**: **Implemented 2026-11-08** (G3a) per
+  `P11-motion-g23-decisions.md` — per-composition `lights` rig (≤8
+  directional/ambient) via `setLights`, Lambertian diffuse + ambient on
+  `transform3d` layer buffers after effects, before compositing. Specular,
+  normal maps, point falloff and shadows remain deferred.
 - **H — media/footage layers**: engine stores `media{source_id,in_point}`
   refs only. Frame transport decision needed: recommend per-call packed
   `{layer_id,rgba}` sidecars over per-frame assets. Schema/ops unblocked;
@@ -80,8 +90,10 @@ parallel) → G2/G3 → H-transport → J2.
 ## Blockers
 
 P03 decoder transport contract (H pixels), encoder provider (J2),
-expression/node specs (D, I — write spec first), GPU/3D raster decision
-(G2/G3), font provider (text layers — keep rejected), shadows (G3 defer).
+expression/node specs (D, I — write spec first), GPU/true-perspective 3D
+raster decision (G2 landed CPU-affine Option A; camera/perspective/depth
+remain open), font provider (text layers — keep rejected), shadows and
+specular/normal maps (G3 deferrals).
 
 ## Doc gaps
 

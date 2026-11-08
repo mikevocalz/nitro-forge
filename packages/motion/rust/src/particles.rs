@@ -321,7 +321,12 @@ fn rand01(seed: u64, index: u64, channel: u64) -> f64 {
 /// absent maps the containing canvas rect through the inverse affine and
 /// takes the axis-aligned bounds of the four mapped corners (a superset
 /// under rotation — deterministic and conservative).
-fn spawn_local(e: &ParticleEmitter, affine: &Affine, cw: f64, ch: f64) -> (f64, f64, f64, f64) {
+pub(crate) fn spawn_local(
+    e: &ParticleEmitter,
+    affine: &Affine,
+    cw: f64,
+    ch: f64,
+) -> (f64, f64, f64, f64) {
     if let Some(r) = e.spawn {
         return (r.x, r.y, r.w, r.h);
     }

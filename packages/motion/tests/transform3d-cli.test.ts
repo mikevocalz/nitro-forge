@@ -34,10 +34,13 @@ it('drives 3D transforms, curves and projection eval through the TS facade and n
   await doc.setLayer3D(layer,{rx:45,ry:45,z:-9000});
   const deep=(await doc.evaluate(1)).data.layers.find(l=>l.id===layer)!;
   expect(deep.projected_transform).toEqual(p);
-  // Documented G1 render no-op: nonzero rx/ry/z change no pixels — the
-  // frame with full 3D state is byte-identical to the 2D baseline.
-  expect(await flat(0)).toEqual(baseline);
-  expect(await flat(1)).toEqual(baseline);
+  // G2: nonzero rx/ry now project the layer — frames differ from the 2D
+  // baseline and from each other, while z stays inert (orthographic depth
+  // has no screen effect) so frames differing only in z are identical.
+  const tilted=await flat(0);
+  expect(tilted.equals(baseline)).toBe(false);
+  await doc.setLayer3D(layer,{rx:45,ry:45,z:-9000});
+  expect(await flat(1)).not.toEqual(tilted);
   // Clearing removes transform3d and the rx curve atomically.
   await doc.setLayer3D(layer,null);
   const cleared=(await doc.describe()).data.layers.find(l=>l.id===layer)!;

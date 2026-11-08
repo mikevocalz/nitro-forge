@@ -4,15 +4,18 @@ mod curve;
 mod effects;
 mod expressions;
 mod graph;
+mod lights;
 mod media;
 mod particles;
 mod path;
+mod projection;
 mod transform3d;
 use assets::RasterAsset;
 use curve::{evaluate, Key};
 use effects::{apply_effects, LayerEffect};
 use expressions::{Env as ExprEnv, PropertyExpr};
 use graph::{Binding, Graph, GraphNode};
+use lights::Light;
 use media::LayerMedia;
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -379,9 +382,11 @@ struct Layer {
     path_progress: f64,
     /// Optional 3D orientation/depth (slice G1): `rx`/`ry` euler degrees and
     /// `z` view depth; `rotation` remains the Z roll. Presence marks the
-    /// layer 3D-enabled and is required by `rx`/`ry`/`z` curves. Storage and
-    /// evaluation only — `renderFrame` ignores it until G2 projection
-    /// rendering. Additive serde default keeps schema at 2.
+    /// layer 3D-enabled and is required by `rx`/`ry`/`z` curves. Since G2,
+    /// `renderFrame` projects the layer's content through the evaluated
+    /// orthographic affine (`z` inert — no camera/perspective/depth sort);
+    /// since G3a the composition's `lights` rig shades it. Additive serde
+    /// default keeps schema at 2.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     transform3d: Option<Transform3D>,
     /// Bounded scalar expressions (slice D): at most one per property,
@@ -417,6 +422,10 @@ struct Composition {
     duration_s: f64,
     frame_rate: Rate,
     layers: Vec<Arc<Layer>>,
+    /// This composition's light rig (slice G3a); nested comp renders light
+    /// their own layers with their own rig, independent of the parent.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    lights: Vec<Light>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -457,6 +466,11 @@ struct State {
     /// schema at 2; graph-free documents serialize byte-identically.
     #[serde(default, skip_serializing_if = "Graph::is_default")]
     graph: Graph,
+    /// Root-composition light rig (slice G3a): at most 8 directional/
+    /// ambient lights shading `transform3d`-enabled layers. Additive serde
+    /// default keeps schema at 2; empty rigs serialize identically.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    lights: Vec<Light>,
     /// Durable render queue (slice J1), ordered bottom-to-top like layers;
     /// done/cancelled jobs stay listed until `removeRenderJob`. Additive
     /// serde default keeps schema at 2; empty queues serialize identically
@@ -484,6 +498,7 @@ impl Default for State {
             assets: BTreeMap::new(),
             next_asset_id: 1,
             graph: Graph::default(),
+            lights: vec![],
             render_queue: vec![],
             next_job_id: 1,
         }
@@ -610,8 +625,9 @@ fn decompose(m: &Affine) -> Option<Transform> {
 }
 /// Serialize evaluated layers for the `evaluate` op, adding the read-only
 /// `projected_transform` orthographic affine to layers carrying a
-/// `transform3d`. The field is compute-on-read only — it is never stored,
-/// never part of `describe`/snapshots, and never affects `renderFrame`.
+/// `transform3d`. The field is compute-on-read only — it is never stored
+/// and never part of `describe`/snapshots; `renderFrame` consumes the same
+/// affine through the G2 resample path.
 fn evaluated_json(layers: &[Layer]) -> Result<Vec<Value>, EngineError> {
     layers
         .iter()
@@ -657,6 +673,9 @@ struct CompView<'a> {
     /// Rational frame rate as f64 (`num/den`); expression `fps`/`frame`.
     fps: f64,
     layers: &'a [Arc<Layer>],
+    /// This composition's light rig (slice G3a); only `transform3d` layers
+    /// consume it during render.
+    lights: &'a [Light],
 }
 fn rate_fps(rate: &Rate) -> f64 {
     f64::from(rate.num) / f64::from(rate.den)
@@ -670,6 +689,7 @@ impl State {
                 duration_s: self.duration_s,
                 fps: rate_fps(&self.frame_rate),
                 layers: &self.layers,
+                lights: &self.lights,
             }),
             Some(id) => {
                 let c = self
@@ -682,6 +702,7 @@ impl State {
                     duration_s: c.duration_s,
                     fps: rate_fps(&c.frame_rate),
                     layers: &c.layers,
+                    lights: &c.lights,
                 })
             }
         }
@@ -741,9 +762,16 @@ fn validate(s: &State) -> Result<(), EngineError> {
             || !valid_dims(comp.width, comp.height)
             || !valid_duration(comp.duration_s)
             || !valid_rate(&comp.frame_rate)
+            || comp.lights.len() > lights::MAX_LIGHTS
+            || comp.lights.iter().any(|l| !l.valid())
         {
             return Err(bad("invalid composition identity or budget"));
         }
+    }
+    // Root-composition light rig (slice G3a): same ≤8/valid bounds as
+    // nested compositions, re-checked on hostile restore.
+    if s.lights.len() > lights::MAX_LIGHTS || s.lights.iter().any(|l| !l.valid()) {
+        return Err(bad("invalid light rig"));
     }
     if s.assets.len() > assets::MAX_ASSETS || s.next_asset_id == 0 || s.next_asset_id > SAFE_ID {
         return Err(bad("invalid raster asset counter/count"));
@@ -856,18 +884,19 @@ fn validate(s: &State) -> Result<(), EngineError> {
     // Pass 2: per-layer content, transform, curves and parent references.
     for &(key, width, height, duration_s, layers) in &views {
         let members = &comp_members[&key];
-        // Asset-backed layers, layers with a non-empty effect stack and
-        // particle layers all materialize a canvas-sized raster upload in
-        // the ephemeral Prism scene at render (see `stage_effects` and the
-        // particles arm of `stage_content`), so they share one logical
-        // canvas-storage budget; a layer that is several of these counts
-        // once.
+        // Asset-backed layers, layers with a non-empty effect stack,
+        // particle layers and 3D-enabled layers all materialize a
+        // canvas-sized raster upload in the ephemeral Prism scene at render
+        // (see `stage_effects`, `stage_3d` and the particles arm of
+        // `stage_content`), so they share one logical canvas-storage
+        // budget; a layer that is several of these counts once.
         let canvas_rasters = layers
             .iter()
             .filter(|l| {
                 l.asset_id.is_some()
                     || !l.effects.is_empty()
                     || l.kind == Some(LayerKind::Particles)
+                    || l.transform3d.is_some()
             })
             .count();
         if canvas_rasters > assets::MAX_RASTER_LAYERS
@@ -1857,8 +1886,13 @@ impl MotionEngine {
         if let Some(c) = ctx {
             c.checkpoint()?
         }
-        let layer = if l.effects.is_empty() {
-            self.stage_content(prism, view, l, by_id, time, ctx, depth, graph)?
+        let layer = if l.transform3d.is_some() {
+            // G2: a general projected affine (shear included) cannot pass
+            // through Prism's TRS transform, so 3D layers always take the
+            // rasterize-resample-upload path — with or without effects.
+            self.stage_3d(prism, view, l, by_id, time, ctx, depth, graph)?
+        } else if l.effects.is_empty() {
+            self.stage_content(prism, view, l, by_id, time, ctx, depth, graph, false)?
         } else {
             self.stage_effects(prism, view, l, by_id, time, ctx, depth, graph)?
         };
@@ -1916,6 +1950,10 @@ impl MotionEngine {
     /// evaluated transform — including `parent_id` inheritance — into
     /// `prism`, and return the Prism layer id. Opacity, visibility, blend,
     /// clipping and matte are composite-stage concerns handled by the caller.
+    /// `local_space` stages the content with the identity transform in
+    /// layer-local coordinates (the G2 resample applies the full projected
+    /// affine afterwards); `false` applies the evaluated transform —
+    /// including `parent_id` inheritance — as before.
     #[allow(clippy::too_many_arguments)]
     fn stage_content(
         &self,
@@ -1927,12 +1965,17 @@ impl MotionEngine {
         ctx: Option<&TaskContext>,
         depth: usize,
         graph: Option<&GraphEval>,
+        local_space: bool,
     ) -> Result<u64, EngineError> {
         // Particles bake the effective affine (own transform plus parent
         // chain, shear included — no decompose needed) into per-particle
         // canvas positions and sprite scale, so the uploaded raster pins
-        // the identity transform below.
-        let transform = if l.kind == Some(LayerKind::Particles) {
+        // the identity transform below. In `local_space` (G2 staging) the
+        // affine is identity instead and the layer's projected affine is
+        // applied by the resample; the emitter's default spawn rect is
+        // pre-resolved through that affine's inverse so spawn semantics
+        // match the 2D path.
+        let transform = if local_space || l.kind == Some(LayerKind::Particles) {
             Transform::default()
         } else if l.parent_id.is_some() {
             decompose(&effective_affine(l, by_id)?)
@@ -1986,6 +2029,7 @@ impl MotionEngine {
                     duration_s: comp.duration_s,
                     fps: rate_fps(&comp.frame_rate),
                     layers: &comp.layers,
+                    lights: &comp.lights,
                 };
                 let pixels = self.render_comp(
                     &child_view,
@@ -2012,9 +2056,34 @@ impl MotionEngine {
                 // Deterministic per-frame raster: particle positions are a
                 // pure function of (seed, spec, time) — no sim state — so
                 // seeking backward or forward recomputes identical output.
-                let affine = effective_affine(l, by_id)?;
+                // In `local_space` (G2 staging) the affine is identity and
+                // the projected affine is applied by the resample instead;
+                // the emitter clone resolves the default spawn rect through
+                // that affine's inverse so spawn coverage is unchanged.
+                let identity = Affine {
+                    a: 1.,
+                    b: 0.,
+                    c: 0.,
+                    d: 1.,
+                    e: 0.,
+                    f: 0.,
+                };
+                let (affine, emitter) = if local_space {
+                    let m = projection::effective_projected(l, by_id)?;
+                    let emitter = l.emitter.as_ref().map(|e| {
+                        projection::emitter_in_local_space(
+                            e,
+                            &m,
+                            f64::from(view.width),
+                            f64::from(view.height),
+                        )
+                    });
+                    (identity, emitter)
+                } else {
+                    (effective_affine(l, by_id)?, l.emitter.clone())
+                };
                 let pixels = particles::render(
-                    l.emitter.as_ref(),
+                    emitter.as_ref(),
                     &self.state.assets,
                     &affine,
                     view.width,
@@ -2099,7 +2168,7 @@ impl MotionEngine {
         graph: Option<&GraphEval>,
     ) -> Result<u64, EngineError> {
         let mut offscreen = prism_engine::PrismEngine::new(view.width, view.height);
-        self.stage_content(&mut offscreen, view, l, by_id, time, ctx, depth, graph)?;
+        self.stage_content(&mut offscreen, view, l, by_id, time, ctx, depth, graph, false)?;
         if let Some(c) = ctx {
             c.checkpoint()?
         }
@@ -2130,6 +2199,100 @@ impl MotionEngine {
         )?;
         // The transform is already baked into the pixels; pin the raster to
         // the identity transform/origin the composite tail expects.
+        prism.apply(Command::new(
+            "setTransformOrigin",
+            json!({"id":layer,"ox":0,"oy":0}),
+        ))?;
+        prism.apply(Command::new(
+            "setLayerTransform",
+            json!({"id":layer,"transform":Transform::default()}),
+        ))?;
+        Ok(layer)
+    }
+    /// G2+G3a path for `transform3d`-enabled layers: render the layer's
+    /// content subtree into an ephemeral canvas-sized Prism scene in
+    /// layer-local coordinates (identity transform — the same stage
+    /// `stage_effects` rasterizes at, minus the 2D transform), flatten to
+    /// straight RGBA, resample through the evaluated projected affine
+    /// (own `projected_transform` composed through transform parents,
+    /// shear included — Prism's TRS transform cannot express it), run the
+    /// effect stack, then apply the composition light rig's uniform
+    /// lambert+ambient multiply from the layer's evaluated normal. The
+    /// result uploads into the parent scene as a canvas-space raster at
+    /// identity transform, so opacity, blend, clipping, mattes and
+    /// visibility composite exactly as for every other rasterized kind.
+    /// Ordering note: the 3D resample is geometry (pre-effects, per the
+    /// G2/G3 decision record) and lighting is the last pixel op before
+    /// the composite stage. `z` stays inert (orthographic depth has no
+    /// screen effect); no camera, perspective, depth sort, specular,
+    /// normal maps or shadows exist — all deferred per the decision doc.
+    #[allow(clippy::too_many_arguments)]
+    fn stage_3d(
+        &self,
+        prism: &mut prism_engine::PrismEngine,
+        view: &CompView,
+        l: &Layer,
+        by_id: &BTreeMap<u64, &Layer>,
+        time: f64,
+        ctx: Option<&TaskContext>,
+        depth: usize,
+        graph: Option<&GraphEval>,
+    ) -> Result<u64, EngineError> {
+        let m = projection::effective_projected(l, by_id)?;
+        let mut offscreen = prism_engine::PrismEngine::new(view.width, view.height);
+        self.stage_content(&mut offscreen, view, l, by_id, time, ctx, depth, graph, true)?;
+        if let Some(c) = ctx {
+            c.checkpoint()?
+        }
+        let src = offscreen
+            .apply(Command::new("flatten", json!({})).with_binary(None))?
+            .output
+            .ok_or_else(|| bad("Prism did not return RGBA"))?;
+        let mut pixels = projection::resample(
+            &src,
+            view.width as usize,
+            view.height as usize,
+            &m,
+            ctx,
+        )?;
+        apply_effects(
+            &mut pixels,
+            view.width as usize,
+            view.height as usize,
+            &l.effects,
+            ctx,
+        )?;
+        if !view.lights.is_empty() {
+            // `l` is the evaluated layer: transform3d carries resolved
+            // rx/ry (curves/expressions/graph bindings already applied).
+            let t3 = l.transform3d.unwrap_or_default();
+            let normal = lights::layer_normal(t3.rx, t3.ry);
+            lights::apply(
+                &mut pixels,
+                view.width as usize,
+                view.height as usize,
+                view.lights,
+                normal,
+                ctx,
+            )?;
+        }
+        let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
+        let layer = added
+            .data["layer_id"]
+            .as_u64()
+            .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
+        prism.apply(
+            Command::new(
+                "drawPixels",
+                json!({
+                    "id":layer,"x":0,"y":0,
+                    "w":view.width,"h":view.height,
+                }),
+            )
+            .with_binary(Some(pixels)),
+        )?;
+        // The projected transform is baked into the pixels; pin the raster
+        // to the identity transform/origin the composite tail expects.
         prism.apply(Command::new(
             "setTransformOrigin",
             json!({"id":layer,"ox":0,"oy":0}),
@@ -2307,13 +2470,14 @@ impl MotionEngine {
         let total = job.to_frame - job.from_frame + 1;
         let done = job.frames_done + 1;
         let frame = job.from_frame + job.frames_done;
-        let (width, height, duration_s, layers, rate) = match job.comp_id {
+        let (width, height, duration_s, layers, rate, lights) = match job.comp_id {
             None => (
                 self.state.width,
                 self.state.height,
                 self.state.duration_s,
                 self.state.layers.as_slice(),
                 &self.state.frame_rate,
+                self.state.lights.as_slice(),
             ),
             Some(cid) => {
                 let comp = self
@@ -2327,6 +2491,7 @@ impl MotionEngine {
                     comp.duration_s,
                     comp.layers.as_slice(),
                     &comp.frame_rate,
+                    comp.lights.as_slice(),
                 )
             }
         };
@@ -2339,6 +2504,7 @@ impl MotionEngine {
             duration_s,
             fps: rate_fps(rate),
             layers,
+            lights,
         };
         // Graph eval is built at the render's root-relative time: a root job
         // passes its local time directly; a comp job renders standalone, so
@@ -2494,6 +2660,20 @@ impl Engine for MotionEngine {
                 value["render_queue"] = json!([]);
             }
             value["next_job_id"] = json!(self.state.next_job_id);
+            if value.get("lights").is_none() {
+                value["lights"] = json!([]);
+            }
+            // Nested compositions materialize their rigs the same way.
+            if let Some(comps) = value
+                .get_mut("compositions")
+                .and_then(Value::as_object_mut)
+            {
+                for comp in comps.values_mut() {
+                    if comp.get("lights").is_none() {
+                        comp["lights"] = json!([]);
+                    }
+                }
+            }
             return Ok(CommandResult::read_only(value));
         }
         if cmd.op == "evaluate" {
@@ -2613,6 +2793,7 @@ impl Engine for MotionEngine {
                         duration_s,
                         frame_rate: next.frame_rate.clone(),
                         layers: vec![],
+                        lights: vec![],
                     },
                 );
                 data = json!({"comp_id":id});
@@ -2711,6 +2892,7 @@ impl Engine for MotionEngine {
                         duration_s: src.duration_s,
                         frame_rate: src.frame_rate.clone(),
                         layers,
+                        lights: src.lights.clone(),
                     },
                 );
                 data = json!({"comp_id":new_id});
@@ -3030,6 +3212,32 @@ impl Engine for MotionEngine {
                         .retain(|b| b.layer != layer_id || !b.property.is_3d());
                 }
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
+            "setLights" => {
+                // Full replacement of one composition's light rig (slice
+                // G3a): `lights` is an array of typed light objects (at
+                // most 8) or null/absent to clear; `comp` selects the
+                // composition (omitted/0 = root). Lights are composition
+                // state, not layer state, so no layer lock applies — the
+                // same precedent as `setComposition`/`setGraph`.
+                let into = State::comp_arg(p, "comp")?;
+                let rig = match p.get("lights") {
+                    None | Some(Value::Null) => Vec::new(),
+                    Some(v) => serde_json::from_value::<Vec<Light>>(v.clone())
+                        .map_err(|_| bad("invalid lights"))?,
+                };
+                if rig.len() > lights::MAX_LIGHTS || rig.iter().any(|l| !l.valid()) {
+                    return Err(bad("invalid light rig"));
+                }
+                match into {
+                    None => next.lights = rig,
+                    Some(cid) => {
+                        next.compositions
+                            .get_mut(&cid)
+                            .ok_or_else(|| bad("unknown composition"))?
+                            .lights = rig;
+                    }
+                }
             }
             "setLayerMedia" => {
                 let layer_id = id(p, "layer")?;
@@ -4008,6 +4216,8 @@ mod path_tests;
 mod queue_tests;
 #[cfg(test)]
 mod raster_tests;
+#[cfg(test)]
+mod render3d_tests;
 #[cfg(test)]
 mod transform3d_tests;
 #[cfg(test)]
