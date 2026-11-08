@@ -2574,6 +2574,8 @@ fn paper_space_sheets_viewports_crud_validation_locks_and_history() {
         ("addViewport", json!({"sheet":a,"x":90.,"y":0.,"width":20.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.})),
         ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":0.})),
         ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1e9})),
+        ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.,"name":""})),
+        ("updateViewport", json!({"id":vp,"name":""})),
         ("updateSheet", json!({"id":a,"width":10.})),
         ("updateSheet", json!({"id":9999,"name":"X"})),
         ("updateSheet", json!({"id":a,"name":"Detail"})),
@@ -2744,4 +2746,48 @@ fn paper_space_snapshots_wrapper_roundtrip_and_hostile_restore() {
         );
         assert_eq!(reopened.snapshot().unwrap(), before);
     }
+}
+#[test]
+fn sheet_viewport_renders_model_space_y_up_like_cad() {
+    let mut e = DraftEngine::new();
+    let a = sheet(&mut e, "Sheet");
+    // 80x30 mm viewport at sheet (10,10); scale 4 mm/world unit shows
+    // world x in [-10,10], y in [-3.75,3.75] about center (0,0).
+    apply(
+        &mut e,
+        "addViewport",
+        json!({"sheet":a,"x":10.,"y":10.,"width":80.,"height":30.,"center_x":0.,"center_y":0.,"scale":4.}),
+    );
+    // Asymmetric marker: a horizontal segment at world y=+3 (near the top of
+    // the model window). CAD semantics: model +y must rise toward sheet +y,
+    // i.e. land on the upper half of the viewport on paper.
+    let p = point(&mut e, -8., 3.);
+    let q = point(&mut e, 8., 3.);
+    apply(
+        &mut e,
+        "addSegment",
+        json!({"a":p,"b":q,"color":[0,0,0,255],"width":0.2}),
+    );
+    let r = apply(&mut e, "renderFrame", sheet_frame(a)).data;
+    let rgba = base64_decode(r["pixels_b64"].as_str().unwrap());
+    let w = r["width"].as_u64().unwrap() as usize;
+    assert_eq!(w, 378);
+    // Viewport pixel band: x 38..340, y 38..151 on the 378x189 sheet.
+    let dark_rows = |y0: usize, y1: usize| {
+        (y0..y1)
+            .flat_map(|y| (38..340).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                let i = (y * w + x) * 4;
+                rgba[i] < 128 && rgba[i + 1] < 128 && rgba[i + 2] < 128
+            })
+            .count()
+    };
+    // Correct orientation puts the marker near row ~49 (upper band); a
+    // mirrored viewport would put it near row ~140 (lower band).
+    let upper = dark_rows(42, 62);
+    let lower = dark_rows(125, 145);
+    assert!(
+        upper > 100 && upper > lower * 4,
+        "model +y must render toward sheet +y: upper={upper} lower={lower}"
+    );
 }

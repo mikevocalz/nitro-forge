@@ -703,6 +703,7 @@ impl State {
                 || id == 0
                 || id >= self.next_id
                 || !ids.insert(id)
+                || vp.name.is_empty()
                 || vp.name.len() > 512
                 || !self.sheets.contains_key(&vp.sheet)
             {

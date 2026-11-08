@@ -300,25 +300,36 @@ fn sheet_pixels(
         }
         let origin_x = vp.center_x - (vw as f64 / 2.) / k;
         let origin_y = vp.center_y - (vh as f64 / 2.) / k;
-        let pixels = rasterize(s, vw, vh, origin_x, origin_y, k, ctx)?;
-        composite_over(
-            &mut buf,
-            width,
-            height,
-            &pixels,
-            vw,
-            vh,
+        let raster = rasterize(s, vw, vh, origin_x, origin_y, k, ctx)?;
+        // CAD orientation: a paper-space viewport is a window into model
+        // space, so model +y must rise toward sheet +y (up on paper, the
+        // AutoCAD identity-rotation convention). The shared world→pixel
+        // transform maps +y to increasing row indices (+y down, matching
+        // the world-form frame), so reverse the sprite rows before
+        // compositing: sprite row 0 then shows the largest world y and
+        // lands on the viewport's top edge on the sheet.
+        let stride = vw as usize * 4;
+        let mut pixels = vec![0u8; raster.len()];
+        for row in 0..vh as usize {
+            let src = row * stride;
+            let dst = (vh as usize - 1 - row) * stride;
+            pixels[dst..dst + stride].copy_from_slice(&raster[src..src + stride]);
+        }
+        // The border must hug the composited sprite exactly: both edges are
+        // the rounded sprite origin plus its rounded pixel extent.
+        let (bx, by) = (
             vx0.round().max(0.) as u32,
             vy0.round().max(0.) as u32,
         );
+        composite_over(&mut buf, width, height, &pixels, vw, vh, bx, by);
         stroke_rect(
             &mut buf,
             width,
             height,
-            vx0.round().max(0.) as u32,
-            vy0.round().max(0.) as u32,
-            (vx0 + vp.width * ppm).round().max(0.) as u32,
-            (vy0 + vp.height * ppm).round().max(0.) as u32,
+            bx,
+            by,
+            bx + vw,
+            by + vh,
             chrome,
             [0, 0, 0, 255],
         );
