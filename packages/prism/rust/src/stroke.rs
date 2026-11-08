@@ -1573,6 +1573,187 @@ pub fn stamp_dabs(
     Ok(())
 }
 
+// -- stage 7: eraser stamping -------------------------------------------------
+//
+// Erasers reuse the dab model and the same clipped-bbox pixel-work accounting
+// as [`stamp_dabs`], but composite destination-out instead of src-over: each
+// covered pixel's alpha is multiplied by `1 - erase`, where
+// `erase = coverage * dab.alpha * color_alpha * selection` (all factors in
+// 0..=1). Color channels are left untouched — for straight-alpha pixels that
+// is exactly the W3C destination-out composite (premultiplied color scales
+// with alpha, so the straight color is unchanged). Pixels that are already
+// transparent cannot change, which is what makes fully-erased regions
+// eventless no-ops.
+
+/// Shared dab loop for both erase targets. Visits exactly the pixels
+/// [`stamp_dabs`] would examine (same clipped bboxes, same circle/hardness
+/// coverage, same selection gate), calls `apply(pixel, erase)` for each
+/// covered pixel, and returns how many pixels `apply` actually changed.
+/// Checkpoints every [`CHECKPOINT_EVERY_PX`] *examined* pixels, identical to
+/// `stamp_dabs`. Callers must enforce [`MAX_STROKE_PIXELS`] via
+/// [`stamp_pixel_work`] first.
+fn erase_dabs_inner(
+    dst: &mut [u8],
+    px_size: usize,
+    dst_w: usize,
+    dst_h: usize,
+    dst_ox: usize,
+    dst_oy: usize,
+    dabs: &[Dab],
+    color_alpha: f64,
+    selection: Option<&[u8]>,
+    sel_stride: usize,
+    task: &mut RenderTask,
+    mut apply: impl FnMut(&mut [u8], f64) -> bool,
+) -> Result<usize, EngineError> {
+    let mut changed = 0usize;
+    let mut done_px = 0usize;
+    let total_dabs = dabs.len().max(1) as f32;
+    for (di, dab) in dabs.iter().enumerate() {
+        let x0 = ((dab.x - dab.radius).floor() as i64).max(dst_ox as i64);
+        let y0 = ((dab.y - dab.radius).floor() as i64).max(dst_oy as i64);
+        let x1 = ((dab.x + dab.radius).ceil() as i64).min((dst_ox + dst_w) as i64);
+        let y1 = ((dab.y + dab.radius).ceil() as i64).min((dst_oy + dst_h) as i64);
+        if x1 <= x0 || y1 <= y0 || dab.alpha <= 0.0 {
+            task.progress(di as f32 / total_dabs);
+            continue;
+        }
+        let r2 = dab.radius * dab.radius;
+        let denom = (dab.radius - dab.inner).max(1e-9);
+        for py in y0..y1 {
+            let cy = py as f64 + 0.5;
+            for px in x0..x1 {
+                done_px += 1;
+                task.tick(done_px, CHECKPOINT_EVERY_PX, di as f32 / total_dabs)?;
+                let cx = px as f64 + 0.5;
+                let d2 = (cx - dab.x) * (cx - dab.x) + (cy - dab.y) * (cy - dab.y);
+                if d2 > r2 {
+                    continue;
+                }
+                let d = d2.sqrt();
+                let coverage = if dab.hardness >= 1.0 || dab.inner >= dab.radius {
+                    1.0
+                } else if d <= dab.inner {
+                    1.0
+                } else {
+                    ((dab.radius - d) / denom).clamp(0.0, 1.0)
+                };
+                if coverage <= 0.0 {
+                    continue;
+                }
+                let erase = match selection {
+                    Some(sel) => {
+                        let si = py as usize * sel_stride + px as usize;
+                        coverage
+                            * dab.alpha
+                            * color_alpha
+                            * sel.get(si).copied().unwrap_or(0) as f64
+                            / 255.0
+                    }
+                    None => coverage * dab.alpha * color_alpha,
+                };
+                if erase <= 0.0 {
+                    continue;
+                }
+                let lx = (px as usize) - dst_ox;
+                let ly = (py as usize) - dst_oy;
+                if lx >= dst_w || ly >= dst_h {
+                    continue;
+                }
+                let o = (ly * dst_w + lx) * px_size;
+                if o + px_size <= dst.len() && apply(&mut dst[o..o + px_size], erase) {
+                    changed += 1;
+                }
+            }
+        }
+        task.progress(di as f32 / total_dabs);
+    }
+    Ok(changed)
+}
+
+/// Pixel eraser: destination-out erase of a straight-alpha RGBA buffer
+/// (same layout/coordinate conventions as [`stamp_dabs`]). `color_alpha` is
+/// the brush color's alpha normalized to 0..=1 and multiplies the erase
+/// strength exactly like `paintStroke` treats it as paint strength. Returns
+/// the number of pixels whose alpha changed — 0 means the stroke was a
+/// true no-op and callers should stay eventless.
+pub fn erase_dabs_rgba(
+    dst: &mut [u8],
+    dst_w: usize,
+    dst_h: usize,
+    dst_ox: usize,
+    dst_oy: usize,
+    dabs: &[Dab],
+    color_alpha: f64,
+    selection: Option<&[u8]>,
+    sel_stride: usize,
+    task: &mut RenderTask,
+) -> Result<usize, EngineError> {
+    erase_dabs_inner(
+        dst,
+        4,
+        dst_w,
+        dst_h,
+        dst_ox,
+        dst_oy,
+        dabs,
+        color_alpha,
+        selection,
+        sel_stride,
+        task,
+        |px, erase| {
+            let e = erase.clamp(0.0, 1.0);
+            let na = (px[3] as f64 * (1.0 - e)).round().clamp(0.0, 255.0) as u8;
+            if na != px[3] {
+                px[3] = na;
+                true
+            } else {
+                false
+            }
+        },
+    )
+}
+
+/// Mask eraser: destination-out erase of a single-channel alpha buffer
+/// (`w*h` bytes, same indexing as a layer mask — canvas space). Returns the
+/// number of mask bytes that changed.
+pub fn erase_dabs_alpha(
+    dst: &mut [u8],
+    dst_w: usize,
+    dst_h: usize,
+    dst_ox: usize,
+    dst_oy: usize,
+    dabs: &[Dab],
+    color_alpha: f64,
+    selection: Option<&[u8]>,
+    sel_stride: usize,
+    task: &mut RenderTask,
+) -> Result<usize, EngineError> {
+    erase_dabs_inner(
+        dst,
+        1,
+        dst_w,
+        dst_h,
+        dst_ox,
+        dst_oy,
+        dabs,
+        color_alpha,
+        selection,
+        sel_stride,
+        task,
+        |px, erase| {
+            let e = erase.clamp(0.0, 1.0);
+            let na = (px[0] as f64 * (1.0 - e)).round().clamp(0.0, 255.0) as u8;
+            if na != px[0] {
+                px[0] = na;
+                true
+            } else {
+                false
+            }
+        },
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

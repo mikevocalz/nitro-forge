@@ -182,13 +182,17 @@ targets.
 | `removeBrush` | `{id}` | `{ok}` | NotFound if absent |
 | `listBrushes` | `{}` | `{brushes:[…]}` | read-only |
 | `paintStroke` | `{id, brush_id?|brush?, samples, params?, commit?}` | `{ok,dabs}` or dry-run `{dabs,bounds?}` | raster layer only, unlocked; exactly one of `brush_id`/`brush` (inline brush = addBrush fields without `id`). Samples are canvas-space: dab centers are mapped through the layer's complete transform (own + ancestors) into layer-local texels and radii scaled by its mean scale — under non-uniform scale a dab is approximated by a circle of `radius/mean_scale`. The pixel selection gates each stamped pixel via canvas→local coverage pullback, same as `floodFill`. Models samples, resolves dynamics+taper into dabs (≤262144), stamps circular anti-aliased coverage src-over within the ≤2^28 stamp-pixel budget. One pixel-region undo entry per committed stroke; `commit:false` is read-only and records nothing; empty, fully off-canvas, or fully transparent strokes return eventless with no journal entry. Dry-run `bounds` is canvas-space and absent when there are no dabs or they land off-canvas |
+| `eraseStroke` | `{id, mode?, brush_id?|brush?, samples, params?, commit?}` | `{ok,dabs,mode}` or dry-run `{dabs,bounds?,mode}` | eraser counterpart of `paintStroke`; same brush/sample/`commit` contract, dab pipeline, ≤2^28 stamp-pixel budget and eventless dry-run/transparent exits (shared `prepare_stroke_dabs`). `mode` is `"pixel"` (default) or `"mask"`. **pixel**: raster layer only, unlocked; identical canvas→local transform mapping and selection pullback as `paintStroke`, but composites destination-out — each covered pixel's alpha is multiplied by `1 − coverage·dab.alpha·(color.a/255)·selection`, RGB channels unchanged (exactly the straight-alpha dst-out composite). **mask**: any unlocked layer that already has a mask; the mask is canvas-space alpha so dabs are used untransformed and the pixel selection gates directly (no pullback, same convention as `paintMask`); erase reduces mask alpha by the same factor. One undo entry per committed stroke (pixel-region for pixel mode, document snapshot for mask mode, same as `paintMask`). A committed stroke that provably changes nothing — fully transparent stamp region (pixel) or zero changed mask bytes — returns eventless with no journal entry; the cancellable path additionally compares the erased region and stays eventless when identical |
 
 Deferred from the P06 scope (see
-`docs/completion/reports/P-prism-brush-ink-decision.md`): erase modes
-(eraser/mask/alpha-lock brushes), timelapse stroke encoding, live in-progress
+`docs/completion/reports/P-prism-brush-ink-decision.md`): the **vector**
+eraser mode (`eraseStroke mode:"vector"` is rejected with `Validation` —
+cutting path/shape geometry by a brush footprint needs a path-boolean
+subtract the engine does not have; hosts can rasterize first and use pixel
+mode), alpha-lock brushes, timelapse stroke encoding, live in-progress
 host preview wiring, hardware stylus prediction/palm rejection (Android
 MotionEvent, PencilKit, Windows Ink), Muse surface input, and production UI
-brush panels — the engine ops exist; UI consumption is separate work.
+eraser panels — the engine ops exist; UI consumption is separate work.
 
 Rendering: path fills are 4×4 supersampled scanlines; strokes are
 anti-aliased with miter/round/bevel joins, butt/round/square caps and dashes
@@ -197,8 +201,10 @@ pixel (max, a·(1-b), min, xor). Normal-mode compositing keeps the original
 `src-over` arithmetic, so existing documents render byte-identically.
 
 Brush engine ops (B-15, B-16, B-29, B-33) landed after the google/ink
-source admission (#46) — see the brush/stroke section above for payloads
-and the deferred erase/timelapse/UI scope.
+source admission (#46); the B-18 eraser engine side (`eraseStroke` pixel +
+mask modes; vector deferred) landed on `codex/w7-prism-erase` — see the
+brush/stroke section above for payloads and the deferred vector-eraser /
+timelapse/UI scope.
 
 Snapshots written by this version carry the `brushes` table. Older
 engines ignore unknown snapshot fields, so restoring such a snapshot on
