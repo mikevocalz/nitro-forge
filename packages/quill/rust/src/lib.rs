@@ -36,6 +36,8 @@ use format::{
     style_has_paragraph_props, style_paragraph_patch, validate_format, ParagraphFormat,
     ParagraphFormatPatch,
 };
+mod fonts;
+use fonts::{FontInfo, FontRegistry};
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -760,7 +762,9 @@ struct StyleDef {
 
 fn validate_style_token(value: &str, what: &str) -> Result<(), EngineError> {
     if value.trim().is_empty() {
-        return Err(EngineError::validation(format!("style {what} must not be blank")));
+        return Err(EngineError::validation(format!(
+            "style {what} must not be blank"
+        )));
     }
     if value.chars().count() > STYLE_NAME_MAX {
         return Err(EngineError::validation(format!(
@@ -935,7 +939,13 @@ fn scalar_eq(a: char, b: char, ignore_case: bool) -> bool {
 
 /// Non-overlapping matches of `q` inside `hay[s..e]`; returns (start,end)
 /// scalar offsets, `end` exclusive.
-fn find_in_chars(hay: &[char], s: usize, e: usize, q: &[char], ignore_case: bool) -> Vec<(usize, usize)> {
+fn find_in_chars(
+    hay: &[char],
+    s: usize,
+    e: usize,
+    q: &[char],
+    ignore_case: bool,
+) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     if q.is_empty() || e.saturating_sub(s) < q.len() {
         return out;
@@ -977,7 +987,12 @@ struct TextMatch {
 fn find_matches(blocks: &[Block], q: &FindQuery) -> Vec<TextMatch> {
     let mut out = Vec::new();
     let ignore_case = !q.case_sensitive;
-    for (bi, b) in blocks.iter().enumerate().take(q.to.block + 1).skip(q.from.block) {
+    for (bi, b) in blocks
+        .iter()
+        .enumerate()
+        .take(q.to.block + 1)
+        .skip(q.from.block)
+    {
         if let Some(table) = &b.table {
             // A table block's only valid Pos is {bi,0}, so there is no
             // intra-table clipping: the cell grid is searched whole when
@@ -993,9 +1008,7 @@ fn find_matches(blocks: &[Block], q: &FindQuery) -> Vec<TextMatch> {
                     let cell = &table.cells[r * table.cols + c];
                     for (cbi, cb) in cell.blocks.iter().enumerate() {
                         let hay: Vec<char> = block_text(cb).chars().collect();
-                        for (ms, me) in
-                            find_in_chars(&hay, 0, hay.len(), &q.chars, ignore_case)
-                        {
+                        for (ms, me) in find_in_chars(&hay, 0, hay.len(), &q.chars, ignore_case) {
                             out.push(TextMatch {
                                 block: bi,
                                 cell: Some((r, c, cbi)),
@@ -1246,6 +1259,11 @@ pub struct QuillEngine {
     /// Bibliography source records; bibliography field entries are caches
     /// scanned from these plus `citations`.
     sources: Vec<CitationSource>,
+    /// Session font table (`registerFont`/`removeFont`/`listFonts` and the
+    /// `layout` `font` parameter). Deliberately NOT document state: bytes
+    /// never enter snapshots, the journal, or `new`/`restore` — see
+    /// `fonts.rs` module docs and the decision record.
+    fonts: FontRegistry,
     journal: Journal<UndoEntry>,
 }
 
@@ -1262,6 +1280,7 @@ impl QuillEngine {
             footnotes: Vec::new(),
             citations: Vec::new(),
             sources: Vec::new(),
+            fonts: FontRegistry::default(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
@@ -1298,9 +1317,7 @@ impl QuillEngine {
         let citations = before
             .citations
             .map(|before| (before, self.citations.clone()));
-        let sources = before
-            .sources
-            .map(|before| (before, self.sources.clone()));
+        let sources = before.sources.map(|before| (before, self.sources.clone()));
         self.journal.record(UndoEntry {
             index,
             removed,
@@ -1670,6 +1687,7 @@ impl QuillEngine {
             footnotes: self.footnotes.clone(),
             citations: self.citations.clone(),
             sources: self.sources.clone(),
+            fonts: self.fonts.clone(),
             journal: Journal::new(1),
         };
         let mut deleted = String::new();
@@ -1862,14 +1880,10 @@ impl QuillEngine {
         let at = parse_pos(field(p, "at")?)?;
         self.check_pos(at)?;
         if self.blocks[at.block].kind == BlockKind::Table {
-            return Err(EngineError::validation(
-                "cannot split a table block",
-            ));
+            return Err(EngineError::validation("cannot split a table block"));
         }
         if self.blocks[at.block].kind == BlockKind::Toc {
-            return Err(EngineError::validation(
-                "cannot split a toc field block",
-            ));
+            return Err(EngineError::validation("cannot split a toc field block"));
         }
         if self.blocks[at.block].kind == BlockKind::Bibliography {
             return Err(EngineError::validation(
@@ -1961,9 +1975,7 @@ impl QuillEngine {
         if self.blocks[index - 1].kind == BlockKind::Toc
             || self.blocks[index].kind == BlockKind::Toc
         {
-            return Err(EngineError::validation(
-                "cannot merge a toc field block",
-            ));
+            return Err(EngineError::validation("cannot merge a toc field block"));
         }
         if self.blocks[index - 1].kind == BlockKind::Bibliography
             || self.blocks[index].kind == BlockKind::Bibliography
@@ -2187,6 +2199,7 @@ impl QuillEngine {
             footnotes: self.footnotes.clone(),
             citations: self.citations.clone(),
             sources: self.sources.clone(),
+            fonts: self.fonts.clone(),
             journal: Journal::new(1),
         };
         // Group consecutive matches by block (find_matches is block-ordered),
@@ -2230,7 +2243,10 @@ impl QuillEngine {
                 continue;
             };
             let table_block = &mut staged.blocks[m.block];
-            let table = table_block.table.as_mut().expect("cell match implies a table block");
+            let table = table_block
+                .table
+                .as_mut()
+                .expect("cell match implies a table block");
             let cols = table.cols;
             let b = &mut table.cells[row * cols + col].blocks[cbi];
             // Same style inheritance as top-level: the first matched
@@ -2289,12 +2305,10 @@ impl QuillEngine {
                 }
                 for c in staged.comments.iter_mut() {
                     if c.from.block == bi {
-                        c.from.offset =
-                            remap_comment_offset(c.from.offset, &span, repl_len, true);
+                        c.from.offset = remap_comment_offset(c.from.offset, &span, repl_len, true);
                     }
                     if c.to.block == bi {
-                        c.to.offset =
-                            remap_comment_offset(c.to.offset, &span, repl_len, false);
+                        c.to.offset = remap_comment_offset(c.to.offset, &span, repl_len, false);
                     }
                 }
                 i = j;
@@ -2322,12 +2336,10 @@ impl QuillEngine {
                         RevisionKind::Del => (false, false),
                     };
                     if r.from.block == bi {
-                        r.from.offset =
-                            remap_comment_offset(r.from.offset, &span, repl_len, fl);
+                        r.from.offset = remap_comment_offset(r.from.offset, &span, repl_len, fl);
                     }
                     if r.to.block == bi {
-                        r.to.offset =
-                            remap_comment_offset(r.to.offset, &span, repl_len, tl);
+                        r.to.offset = remap_comment_offset(r.to.offset, &span, repl_len, tl);
                     }
                 }
                 i = j;
@@ -2348,12 +2360,7 @@ impl QuillEngine {
                     span.push((top[j].start, top[j].end));
                     j += 1;
                 }
-                Self::remap_footnotes_replace_block(
-                    &mut staged.footnotes,
-                    bi,
-                    &span,
-                    repl_len,
-                );
+                Self::remap_footnotes_replace_block(&mut staged.footnotes, bi, &span, repl_len);
                 i = j;
             }
         }
@@ -2371,12 +2378,7 @@ impl QuillEngine {
                     span.push((top[j].start, top[j].end));
                     j += 1;
                 }
-                Self::remap_citations_replace_block(
-                    &mut staged.citations,
-                    bi,
-                    &span,
-                    repl_len,
-                );
+                Self::remap_citations_replace_block(&mut staged.citations, bi, &span, repl_len);
                 i = j;
             }
         }
@@ -2471,7 +2473,9 @@ impl QuillEngine {
         let before = self.bookmarks.clone();
         let removed = self.bookmarks.remove(index);
         self.record_undo(0, Vec::new(), Vec::new(), Collections::bookmarks(before));
-        Ok(CommandResult::data(json!({ "ok": true, "name": removed.name })))
+        Ok(CommandResult::data(
+            json!({ "ok": true, "name": removed.name }),
+        ))
     }
 
     /// `listBookmarks` — read-only; sorted by document position then name.
@@ -2650,12 +2654,7 @@ impl QuillEngine {
             kind,
             properties,
         });
-        self.record_undo(
-            0,
-            Vec::new(),
-            Vec::new(),
-            Collections::styles(before),
-        );
+        self.record_undo(0, Vec::new(), Vec::new(), Collections::styles(before));
         Ok(CommandResult::data(json!({ "ok": true, "id": id })))
     }
 
@@ -2676,8 +2675,7 @@ impl QuillEngine {
         }
         if let Some(v) = p.get("properties") {
             StylePatch::parse(v)?;
-            if self.styles[index].kind == NamedStyleKind::Character
-                && style_has_paragraph_props(v)
+            if self.styles[index].kind == NamedStyleKind::Character && style_has_paragraph_props(v)
             {
                 return Err(EngineError::validation(
                     "character styles cannot carry paragraph properties",
@@ -2694,12 +2692,7 @@ impl QuillEngine {
         }
         let before = self.styles.clone();
         self.styles[index] = updated;
-        self.record_undo(
-            0,
-            Vec::new(),
-            Vec::new(),
-            Collections::styles(before),
-        );
+        self.record_undo(0, Vec::new(), Vec::new(), Collections::styles(before));
         Ok(CommandResult::data(json!({ "ok": true, "id": id })))
     }
 
@@ -2898,9 +2891,7 @@ impl QuillEngine {
             ));
         }
         if old.kind == BlockKind::Toc {
-            return Err(EngineError::validation(
-                "cannot format a toc field block",
-            ));
+            return Err(EngineError::validation("cannot format a toc field block"));
         }
         if old.kind == BlockKind::Bibliography {
             return Err(EngineError::validation(
@@ -2943,6 +2934,29 @@ impl QuillEngine {
             return Err(EngineError::validation("page_height must be positive"));
         }
 
+        // Optional real-font measurement: `font` names a family admitted via
+        // `registerFont`. Absent or null keeps the legacy 0.5em estimate
+        // byte-identically. One face measures the whole call — per-run
+        // family/size resolution is deferred (fonts.rs module docs).
+        let measure =
+            match p.get("font") {
+                None | Some(Value::Null) => None,
+                Some(v) => {
+                    let name = as_str(v, "font")?;
+                    let face = self.fonts.find(name).ok_or_else(|| {
+                        EngineError::validation(format!(
+                            "font '{name}' is not registered; call registerFont first"
+                        ))
+                    })?;
+                    Some(fonts::FaceMeasure::open(face).ok_or_else(|| {
+                        EngineError::internal("registered font failed to re-parse")
+                    })?)
+                }
+            };
+        // char → advance in font units, memoized across blocks.
+        let mut advance_cache: std::collections::HashMap<char, f64> =
+            std::collections::HashMap::new();
+
         // Wrap each block greedily into {start,end} char spans.
         let mut pages: Vec<Value> = Vec::new();
         let mut cur_lines: Vec<Value> = Vec::new();
@@ -2950,9 +2964,6 @@ impl QuillEngine {
 
         for (bi, b) in self.blocks.iter().enumerate() {
             let eff = font_size * b.kind.font_mult();
-            let advance = eff * GLYPH_EM;
-            let max_chars = (page_width / advance).floor() as usize;
-            let max_chars = max_chars.max(1);
             let line_height = eff * LINE_SPACING;
 
             // Cell paragraphs wrap with the same greedy approximation as
@@ -2960,7 +2971,27 @@ impl QuillEngine {
             // `block_content_text` serialization (for a table, the
             // `tables::table_text` cell grid — `layout` models no cell
             // geometry).
-            let spans = wrap_block(&block_content_text(b), max_chars);
+            let text = block_content_text(b);
+            let spans = match &measure {
+                None => {
+                    let advance = eff * GLYPH_EM;
+                    let max_chars = (page_width / advance).floor() as usize;
+                    wrap_block(&text, max_chars.max(1))
+                }
+                Some(m) => {
+                    let chars: Vec<char> = text.chars().collect();
+                    let scale = eff / m.units_per_em();
+                    let mut prefix = Vec::with_capacity(chars.len() + 1);
+                    prefix.push(0.0f64);
+                    let mut acc = 0.0f64;
+                    for &c in &chars {
+                        let units = *advance_cache.entry(c).or_insert_with(|| m.advance_units(c));
+                        acc += units * scale;
+                        prefix.push(acc);
+                    }
+                    wrap_block_measured(&chars, &prefix, page_width)
+                }
+            };
             let block_height = spans.len() as f64 * line_height;
 
             // A block that doesn't fit the remaining page height starts on a
@@ -2987,6 +3018,69 @@ impl QuillEngine {
             pages.push(json!({ "lines": cur_lines }));
         }
         Ok(Self::read_only(json!({ "pages": pages })))
+    }
+
+    /// `registerFont {family, face_index?, bytes_b64}`, or the font file as
+    /// binary input. Admits one font face into the session registry that
+    /// `layout {font}` measures with (P-font-glyph-backend-decision). The
+    /// registry is session state, not document state: no journal entry, no
+    /// snapshot bytes, `new`/`restore`/`undo` do not touch it — see
+    /// `fonts.rs`. Re-registering an identical
+    /// `(family, sha256, face_index)` is an idempotent read-only no-op.
+    fn op_register_font(&mut self, cmd: &mut Command) -> Result<CommandResult, EngineError> {
+        let family = as_str(field(&cmd.payload, "family")?, "family")?.to_owned();
+        let face_index = match cmd.payload.get("face_index") {
+            None | Some(Value::Null) => 0u32,
+            Some(v) => {
+                let n = as_usize(v, "face_index")?;
+                u32::try_from(n)
+                    .map_err(|_| EngineError::validation("face_index must fit in u32"))?
+            }
+        };
+        let bytes = cmd.bytes_input("bytes_b64", base64_decode)?;
+        let info: FontInfo = self.fonts.register(&family, face_index, bytes)?;
+        let data = serde_json::to_value(&info)?;
+        if info.registered {
+            Ok(CommandResult::data(data))
+        } else {
+            Ok(Self::read_only(data))
+        }
+    }
+
+    /// `removeFont {sha256}` — drops every face registered from those
+    /// bytes (all families/face indices sharing the content hash).
+    fn op_remove_font(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let sha = as_str(field(p, "sha256")?, "sha256")?;
+        if sha.len() != 64 || !sha.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(EngineError::validation(
+                "sha256 must be 64 hexadecimal characters",
+            ));
+        }
+        let removed = self.fonts.remove(sha);
+        if removed > 0 {
+            Ok(CommandResult::data(json!({ "removed": removed })))
+        } else {
+            Ok(Self::read_only(json!({ "removed": 0 })))
+        }
+    }
+
+    /// `listFonts` — read-only census of the session registry.
+    fn op_list_fonts(&self) -> Result<CommandResult, EngineError> {
+        let fonts: Vec<Value> = self
+            .fonts
+            .faces()
+            .iter()
+            .map(|f| {
+                json!({
+                    "family": f.family,
+                    "sha256": f.sha256,
+                    "face_index": f.face_index,
+                    "units_per_em": f.units_per_em,
+                    "num_glyphs": f.num_glyphs,
+                })
+            })
+            .collect();
+        Ok(Self::read_only(json!({ "fonts": fonts })))
     }
 
     /// `exportDocx {}` → `.docx` bytes as `bytes_b64`, or as binary output.
@@ -3075,7 +3169,7 @@ impl Engine for QuillEngine {
     }
 
     fn binary_input_ops(&self) -> &'static [&'static str] {
-        &["importDocx"]
+        &["importDocx", "registerFont"]
     }
 
     /// `exportDocx` checks for cancellation between building and returning
@@ -3189,6 +3283,9 @@ impl Engine for QuillEngine {
             "unmergeTableCells" => self.op_unmerge_table_cells(&cmd.payload),
             "blocks" => self.op_blocks(),
             "layout" => self.op_layout(&cmd.payload),
+            "registerFont" => self.op_register_font(&mut cmd),
+            "removeFont" => self.op_remove_font(&cmd.payload),
+            "listFonts" => self.op_list_fonts(),
             "exportDocx" => self.op_export_docx(&cmd, None),
             "importDocx" => self.op_import_docx(&mut cmd),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
@@ -3221,6 +3318,7 @@ impl Engine for QuillEngine {
             footnotes: self.footnotes.clone(),
             citations: self.citations.clone(),
             sources: self.sources.clone(),
+            fonts: self.fonts.clone(),
             journal: Journal::new(1),
         };
         let (staged, result) = match ctx {
@@ -3250,6 +3348,9 @@ impl Engine for QuillEngine {
             self.footnotes = staged.footnotes;
             self.citations = staged.citations;
             self.sources = staged.sources;
+            // Font ops inside a batch commit with the rest of the staged
+            // session state; they carry no undo entry (session state).
+            self.fonts = staged.fonts;
             self.record_undo(
                 0,
                 removed,
@@ -3370,7 +3471,18 @@ impl Engine for QuillEngine {
         });
         // 0 = unwrapped legacy payload; otherwise the wrapper's schema.
         let mut schema_level = 0u32;
-        let (state_blocks, bookmarks, comments, styles, sections, revisions, tracking, footnotes, citations, sources): (
+        let (
+            state_blocks,
+            bookmarks,
+            comments,
+            styles,
+            sections,
+            revisions,
+            tracking,
+            footnotes,
+            citations,
+            sources,
+        ): (
             Vec<Block>,
             Vec<Bookmark>,
             Vec<Comment>,
@@ -3427,9 +3539,7 @@ impl Engine for QuillEngine {
                     let doc: Schema3DocState = serde_json::from_value(wrapper.document)?;
                     // Absent `sections` means the single default section;
                     // an explicit list (even empty) is validated strictly.
-                    let sections = doc
-                        .sections
-                        .unwrap_or_else(default_sections);
+                    let sections = doc.sections.unwrap_or_else(default_sections);
                     (
                         doc.blocks,
                         doc.bookmarks,
@@ -3695,6 +3805,72 @@ fn wrap_block(text: &str, max: usize) -> Vec<(usize, usize)> {
         if last_end == pos {
             // First word alone overflows — hard-break at `max` chars.
             let e = (pos + max).min(n);
+            lines.push((pos, e));
+            pos = e;
+        } else {
+            lines.push((pos, last_end));
+            pos = last_end;
+        }
+    }
+    lines
+}
+
+/// `wrap_block` on real advance widths. `chars`/`prefix` describe the same
+/// text: `prefix[i]` is the summed advance (points) of the first `i`
+/// chars, so `prefix[b] - prefix[a]` is the width of chars `a..b`.
+/// Greedy word wrap with identical span semantics — `' '` is the only
+/// separator, overlong words hard-break, spans stay contiguous — except
+/// the fit test is `width <= max_width` instead of a char count. A single
+/// char wider than `max_width` still occupies its own line so the walk
+/// always progresses.
+fn wrap_block_measured(chars: &[char], prefix: &[f64], max_width: f64) -> Vec<(usize, usize)> {
+    let n = chars.len();
+    debug_assert_eq!(prefix.len(), n + 1);
+    if n == 0 {
+        return vec![(0, 0)];
+    }
+    let width = |a: usize, b: usize| prefix[b] - prefix[a];
+    let mut lines = Vec::new();
+    let mut pos = 0usize;
+    while pos < n {
+        let mut last_end = pos; // end (exclusive) of last word that fits
+        let mut scan = pos;
+        while scan < n {
+            let mut k = scan;
+            while k < n && chars[k] == ' ' {
+                k += 1;
+            }
+            let spaces = k - scan;
+            if k == n {
+                // only trailing spaces left — consume if they fit
+                if width(pos, n) <= max_width {
+                    last_end = n;
+                }
+                break;
+            }
+            let mut wend = k;
+            while wend < n && chars[wend] != ' ' {
+                wend += 1;
+            }
+            if width(pos, wend) <= max_width {
+                last_end = wend;
+                scan = wend;
+            } else {
+                // Word doesn't fit: absorb the separator spaces into this
+                // line if they fit so the next line starts at the word.
+                if spaces > 0 && width(pos, k) <= max_width {
+                    last_end = k;
+                }
+                break;
+            }
+        }
+        if last_end == pos {
+            // First word alone overflows — hard-break at the widest
+            // prefix that fits, always at least one char.
+            let mut e = pos + 1;
+            while e < n && width(pos, e + 1) <= max_width {
+                e += 1;
+            }
             lines.push((pos, e));
             pos = e;
         } else {
@@ -4331,6 +4507,391 @@ mod tests {
         );
     }
 
+    // -- fonts (session registry + measured layout) -------------------------
+
+    /// Deterministic test face (tests/fixtures/nftestmono.ttf, generated —
+    /// no third-party font bytes): upem 1000; advances in font units are
+    /// space=250, 'i'=200, 'W'=1000, 'm'=800, digits=600, other printable
+    /// ASCII=500, .notdef=500.
+    fn test_font_bytes() -> &'static [u8] {
+        include_bytes!("../tests/fixtures/nftestmono.ttf")
+    }
+
+    fn register_test_font(e: &mut QuillEngine) -> CommandResult {
+        apply(
+            e,
+            "registerFont",
+            json!({
+                "family": "NFTestMono",
+                "bytes_b64": base64_encode(test_font_bytes()),
+            }),
+        )
+    }
+
+    #[test]
+    fn register_font_reports_identity_and_dedups() {
+        let mut e = engine();
+        let r = register_test_font(&mut e);
+        assert_eq!(r.data["registered"], true);
+        assert_eq!(r.data["family"], "NFTestMono");
+        assert_eq!(r.data["face_index"], 0);
+        assert_eq!(r.data["units_per_em"], 1000);
+        assert_eq!(r.data["num_glyphs"], 96);
+        assert_eq!(r.data["sha256"].as_str().unwrap().len(), 64);
+        assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
+
+        // Identical triple → idempotent no-op, no event.
+        let r2 = e
+            .apply(cmd(
+                "registerFont",
+                json!({
+                    "family": "NFTestMono",
+                    "bytes_b64": base64_encode(test_font_bytes()),
+                }),
+            ))
+            .unwrap();
+        assert_eq!(r2.data["registered"], false);
+        assert!(r2.events.is_empty());
+
+        let lf = apply(&mut e, "listFonts", json!({}));
+        let fonts = lf.data["fonts"].as_array().unwrap();
+        assert_eq!(fonts.len(), 1);
+        assert_eq!(fonts[0]["family"], "NFTestMono");
+        assert_eq!(fonts[0]["units_per_em"], 1000);
+    }
+
+    #[test]
+    fn register_font_validates_payload_and_bytes() {
+        let mut e = engine();
+        // Missing family / bad family.
+        assert_eq!(
+            err(
+                &mut e,
+                "registerFont",
+                json!({"bytes_b64": base64_encode(test_font_bytes())})
+            )
+            .code,
+            ErrorCode::InvalidCommand
+        );
+        assert_eq!(
+            err(
+                &mut e,
+                "registerFont",
+                json!({"family": "  ", "bytes_b64": base64_encode(test_font_bytes())})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        // Empty and garbage bytes.
+        assert!(err(
+            &mut e,
+            "registerFont",
+            json!({"family": "X", "bytes_b64": ""})
+        )
+        .message
+        .contains("empty"));
+        assert!(err(
+            &mut e,
+            "registerFont",
+            json!({"family": "X", "bytes_b64": base64_encode(b"this is not a font")})
+        )
+        .message
+        .contains("not a recognized font"));
+        // Truncated real font fails closed.
+        assert!(
+            err(
+                &mut e,
+                "registerFont",
+                json!({"family": "X", "bytes_b64": base64_encode(&test_font_bytes()[..64])})
+            )
+            .code
+                == ErrorCode::Validation
+        );
+        // face_index past the single face in the file.
+        assert!(err(
+            &mut e,
+            "registerFont",
+            json!({"family": "X", "face_index": 1, "bytes_b64": base64_encode(test_font_bytes())})
+        )
+        .code
+            == ErrorCode::Validation);
+        // Oversized face rejects before parsing.
+        let big = vec![0u8; fonts::MAX_FONT_FACE_BYTES + 1];
+        assert!(err(
+            &mut e,
+            "registerFont",
+            json!({"family": "X", "bytes_b64": base64_encode(&big)})
+        )
+        .message
+        .contains("byte limit"));
+        // Nothing registered along the way.
+        let lf = apply(&mut e, "listFonts", json!({}));
+        assert_eq!(lf.data["fonts"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn register_font_swallows_hostile_parse_panics_as_validation() {
+        // Bit-flipped variants of a real font must error or register —
+        // never panic (a panic would fail this test outright).
+        for offset in [0usize, 4, 12, 100, 500, 2000] {
+            let mut e = engine();
+            let mut bytes = test_font_bytes().to_vec();
+            if offset < bytes.len() {
+                bytes[offset] ^= 0xFF;
+            }
+            let _ = e.apply(cmd(
+                "registerFont",
+                json!({"family": format!("F{offset}"), "bytes_b64": base64_encode(&bytes)}),
+            ));
+        }
+        // Registry face cap: 64 distinct families over the same bytes.
+        let mut e = engine();
+        for i in 0..fonts::MAX_FONT_FACES {
+            apply(
+                &mut e,
+                "registerFont",
+                json!({"family": format!("F{i}"), "bytes_b64": base64_encode(test_font_bytes())}),
+            );
+        }
+        assert_eq!(
+            err(
+                &mut e,
+                "registerFont",
+                json!({"family": "Overflow", "bytes_b64": base64_encode(test_font_bytes())})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+    }
+
+    #[test]
+    fn remove_font_drops_all_faces_for_hash() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        // Same bytes under a second family → two faces, one hash.
+        apply(
+            &mut e,
+            "registerFont",
+            json!({"family": "Alias", "bytes_b64": base64_encode(test_font_bytes())}),
+        );
+        assert_eq!(
+            apply(&mut e, "listFonts", json!({})).data["fonts"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        let sha = apply(&mut e, "listFonts", json!({})).data["fonts"][0]["sha256"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let r = apply(&mut e, "removeFont", json!({"sha256": sha}));
+        assert_eq!(r.data["removed"], 2);
+        assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
+        // Removing again is a read-only no-op; bad hashes reject.
+        assert_eq!(
+            apply(&mut e, "removeFont", json!({"sha256": sha})).data["removed"],
+            0
+        );
+        assert_eq!(
+            err(&mut e, "removeFont", json!({"sha256": "zz"})).code,
+            ErrorCode::Validation
+        );
+    }
+
+    #[test]
+    fn fonts_are_session_state_not_document_state() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "doc text");
+        let snap = e.snapshot().unwrap();
+
+        // Snapshot → restore into a fresh engine: no fonts carry over.
+        let mut e2 = engine();
+        e2.restore(&snap).unwrap();
+        assert_eq!(
+            apply(&mut e2, "listFonts", json!({})).data["fonts"]
+                .as_array()
+                .unwrap()
+                .len(),
+            0
+        );
+        // And the restored doc rejects the font name (registry is empty).
+        assert_eq!(
+            err(
+                &mut e2,
+                "layout",
+                json!({"page_width": 100.0, "font_size": 10.0, "font": "NFTestMono"})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+
+        // Undo does not touch the registry either: undoing the text edit
+        // leaves the font registered.
+        let mut e3 = engine();
+        insert(&mut e3, 0, 0, "x");
+        register_test_font(&mut e3);
+        assert!(e3.undo().unwrap());
+        assert_eq!(
+            apply(&mut e3, "listFonts", json!({})).data["fonts"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn layout_with_font_uses_real_advances() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        // 'W' = 1000 units → 10pt at font_size 10 (upem 1000).
+        // Stub mode would give every char 5pt; real metrics give W 10pt.
+        insert(&mut e, 0, 0, "WWWW");
+        let measured = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 25.0, "font_size": 10.0, "font": "NFTestMono"}),
+        );
+        let lines = measured.data["pages"][0]["lines"].as_array().unwrap();
+        assert_eq!(lines.len(), 2, "two W's (20pt) fit, three (30pt) do not");
+        assert_eq!(lines[0]["end"], 2);
+        assert_eq!(lines[1]["start"], 2);
+        assert_eq!(lines[1]["end"], 4);
+
+        // Same call without `font` keeps the 0.5em estimate: 4 chars × 5pt
+        // = 20pt ≤ 25 → a single line.
+        let stub = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 25.0, "font_size": 10.0}),
+        );
+        assert_eq!(stub.data["pages"][0]["lines"].as_array().unwrap().len(), 1);
+        // Explicit null font is the same estimate.
+        let nul = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 25.0, "font_size": 10.0, "font": null}),
+        );
+        assert_eq!(nul.data["pages"][0]["lines"].as_array().unwrap().len(), 1);
+        // Unknown family and non-string font reject without touching state.
+        assert_eq!(
+            err(
+                &mut e,
+                "layout",
+                json!({"page_width": 25.0, "font_size": 10.0, "font": "Nope"})
+            )
+            .code,
+            ErrorCode::Validation
+        );
+        assert_eq!(
+            err(
+                &mut e,
+                "layout",
+                json!({"page_width": 25.0, "font_size": 10.0, "font": 5})
+            )
+            .code,
+            ErrorCode::InvalidCommand
+        );
+    }
+
+    #[test]
+    fn layout_font_word_wrap_and_hard_break() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        // A=5pt, space=2.5pt at font_size 10. "A A A" = 20pt total.
+        insert(&mut e, 0, 0, "A A A");
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 12.0, "font_size": 10.0, "page_height": 1000.0, "font": "NFTestMono"}),
+        );
+        let lines = r.data["pages"][0]["lines"].as_array().unwrap();
+        // "A A" would be 12.5pt > 12 → each line holds "A " (7.5pt) and the
+        // next word starts the next line: spans (0,2),(2,4),(4,5).
+        let spans: Vec<(u64, u64)> = lines
+            .iter()
+            .map(|l| (l["start"].as_u64().unwrap(), l["end"].as_u64().unwrap()))
+            .collect();
+        assert_eq!(spans, vec![(0, 2), (2, 4), (4, 5)]);
+
+        // A single over-wide word hard-breaks at the widest fitting prefix.
+        let mut e2 = engine();
+        register_test_font(&mut e2);
+        insert(&mut e2, 0, 0, "WWWW");
+        let r = apply(
+            &mut e2,
+            "layout",
+            json!({"page_width": 5.0, "font_size": 10.0, "page_height": 1000.0, "font": "NFTestMono"}),
+        );
+        let lines = r.data["pages"][0]["lines"].as_array().unwrap();
+        // Each W is 10pt > 5pt: every char still gets its own line.
+        assert_eq!(lines.len(), 4);
+        for (i, l) in lines.iter().enumerate() {
+            assert_eq!(l["start"].as_u64().unwrap(), i as u64);
+            assert_eq!(l["end"].as_u64().unwrap(), i as u64 + 1);
+        }
+    }
+
+    #[test]
+    fn layout_font_paginates_and_covers_headings_and_tables() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        // h1 'W's are wider still (eff = 14pt → W = 14pt).
+        insert(&mut e, 0, 0, "WWWW");
+        apply(&mut e, "setBlockKind", json!({"block": 0, "kind": "h1"}));
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 30.0, "font_size": 10.0, "font": "NFTestMono"}),
+        );
+        // h1 W = 14pt → two per line (28pt), same 2-line split as para at 25.
+        let lines = r.data["pages"][0]["lines"].as_array().unwrap();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0]["end"], 2);
+
+        // Table block: serialized cell text measures with the same face;
+        // unmapped control chars (\n, \t) take the .notdef advance.
+        apply(
+            &mut e,
+            "insertTable",
+            json!({"index": 1, "rows": 1, "cols": 1}),
+        );
+        apply(
+            &mut e,
+            "setCellText",
+            json!({"block": 1, "row": 0, "col": 0, "text": "AA"}),
+        );
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 100.0, "font_size": 10.0, "font": "NFTestMono"}),
+        );
+        assert!(r.data["pages"].is_array());
+    }
+
+    #[test]
+    fn font_advance_units_match_fixture_metrics() {
+        use fonts::FaceMeasure;
+        let mut reg = fonts::FontRegistry::default();
+        reg.register("NFTestMono", 0, test_font_bytes().to_vec())
+            .unwrap();
+        let face = reg.find("NFTestMono").unwrap();
+        let m = FaceMeasure::open(face).unwrap();
+        assert_eq!(m.units_per_em(), 1000.0);
+        assert_eq!(m.advance_units('A'), 500.0);
+        assert_eq!(m.advance_units('W'), 1000.0);
+        assert_eq!(m.advance_units('i'), 200.0);
+        assert_eq!(m.advance_units(' '), 250.0);
+        assert_eq!(m.advance_units('1'), 600.0);
+        // Outside the fixture's ASCII cmap → .notdef advance (500).
+        assert_eq!(m.advance_units('\u{20AC}'), 500.0);
+        // Control chars likewise fall back to .notdef.
+        assert_eq!(m.advance_units('\n'), 500.0);
+        assert_eq!(m.advance_units('\t'), 500.0);
+    }
+
     // -- DOCX round-trip -----------------------------------------------------
 
     #[test]
@@ -4880,7 +5441,12 @@ mod tests {
         assert_eq!(r.data["matches"][0]["from"]["offset"], 4);
         // non-bool flag rejects as payload validation, like sibling ops
         assert_eq!(
-            err(&mut e, "findText", json!({"query": "x", "case_sensitive": "yes"})).code,
+            err(
+                &mut e,
+                "findText",
+                json!({"query": "x", "case_sensitive": "yes"})
+            )
+            .code,
             ErrorCode::Validation
         );
     }
@@ -5384,20 +5950,44 @@ mod tests {
         );
         assert_eq!(text(&mut e), "ACCC\nDDD");
         // edge-from keeps its position; past-from clamps to the deletion start
-        assert_eq!(bookmark_at(&mut e, "edge-from")["pos"], json!({"block": 0, "offset": 1}));
-        assert_eq!(bookmark_at(&mut e, "past-from")["pos"], json!({"block": 0, "offset": 1}));
+        assert_eq!(
+            bookmark_at(&mut e, "edge-from")["pos"],
+            json!({"block": 0, "offset": 1})
+        );
+        assert_eq!(
+            bookmark_at(&mut e, "past-from")["pos"],
+            json!({"block": 0, "offset": 1})
+        );
         // interior block bookmark is removed entirely
         assert!(bookmark_at(&mut e, "inside").is_null());
         // marks in the last deleted block clamp to / shift from the merge point
-        assert_eq!(bookmark_at(&mut e, "edge-to")["pos"], json!({"block": 0, "offset": 1}));
-        assert_eq!(bookmark_at(&mut e, "past-to")["pos"], json!({"block": 0, "offset": 4}));
+        assert_eq!(
+            bookmark_at(&mut e, "edge-to")["pos"],
+            json!({"block": 0, "offset": 1})
+        );
+        assert_eq!(
+            bookmark_at(&mut e, "past-to")["pos"],
+            json!({"block": 0, "offset": 4})
+        );
         // later blocks shift down by the removed span
-        assert_eq!(bookmark_at(&mut e, "after")["pos"], json!({"block": 1, "offset": 1}));
+        assert_eq!(
+            bookmark_at(&mut e, "after")["pos"],
+            json!({"block": 1, "offset": 1})
+        );
         // undo restores every bookmark at its original position
         assert!(e.undo().unwrap());
-        assert_eq!(bookmark_at(&mut e, "inside")["pos"], json!({"block": 1, "offset": 2}));
-        assert_eq!(bookmark_at(&mut e, "past-to")["pos"], json!({"block": 2, "offset": 3}));
-        assert_eq!(bookmark_at(&mut e, "after")["pos"], json!({"block": 3, "offset": 1}));
+        assert_eq!(
+            bookmark_at(&mut e, "inside")["pos"],
+            json!({"block": 1, "offset": 2})
+        );
+        assert_eq!(
+            bookmark_at(&mut e, "past-to")["pos"],
+            json!({"block": 2, "offset": 3})
+        );
+        assert_eq!(
+            bookmark_at(&mut e, "after")["pos"],
+            json!({"block": 3, "offset": 1})
+        );
         assert!(e.redo().unwrap());
         assert!(bookmark_at(&mut e, "inside").is_null());
     }
@@ -5406,12 +5996,7 @@ mod tests {
     fn bookmarks_track_replace_range_and_replace_text() {
         let mut e = engine();
         insert(&mut e, 0, 0, "foo bar foo");
-        for (name, offset) in [
-            ("before", 0usize),
-            ("early", 1),
-            ("mid", 5),
-            ("after", 8),
-        ] {
+        for (name, offset) in [("before", 0usize), ("early", 1), ("mid", 5), ("after", 8)] {
             apply(
                 &mut e,
                 "addBookmark",
@@ -5502,7 +6087,10 @@ mod tests {
         assert!(e.redo().unwrap());
         assert_eq!(bookmark_at(&mut e, "x")["pos"]["offset"], 1);
         assert!(e.redo().unwrap());
-        assert!(bookmark_at(&mut e, "x").is_null(), "redo of remove drops it");
+        assert!(
+            bookmark_at(&mut e, "x").is_null(),
+            "redo of remove drops it"
+        );
         // `new` clears bookmarks but undo restores them
         apply(
             &mut e,
@@ -5525,24 +6113,28 @@ mod tests {
             json!({"name": "here", "pos": {"block": 1, "offset": 3}}),
         );
         let snap = e.snapshot().unwrap();
-        let payload: Value =
-            serde_json::from_slice(&decode_envelope(&snap).unwrap().1).unwrap();
+        let payload: Value = serde_json::from_slice(&decode_envelope(&snap).unwrap().1).unwrap();
         assert_eq!(payload["kind"], "quill");
         assert_eq!(payload["schema"], 3);
         assert!(payload.get("blocks").is_none(), "no root blocks field");
 
         let mut e2 = engine();
         e2.restore(&snap).unwrap();
-        assert_eq!(bookmark_at(&mut e2, "here")["pos"], json!({"block": 1, "offset": 3}));
+        assert_eq!(
+            bookmark_at(&mut e2, "here")["pos"],
+            json!({"block": 1, "offset": 3})
+        );
         // edits after restore keep tracking
         insert(&mut e2, 1, 0, "XX");
         assert_eq!(bookmark_at(&mut e2, "here")["pos"]["offset"], 5);
 
         // legacy bare payload restores with no bookmarks
         let legacy = encode_envelope(
-            serde_json::to_vec(&json!({"blocks":[{"kind":"para","inlines":[{"text":"old","style":{}}]}]}))
-                .unwrap()
-                .as_slice(),
+            serde_json::to_vec(
+                &json!({"blocks":[{"kind":"para","inlines":[{"text":"old","style":{}}]}]}),
+            )
+            .unwrap()
+            .as_slice(),
         );
         let mut e3 = engine();
         e3.restore(&legacy).unwrap();
@@ -5577,9 +6169,7 @@ mod tests {
                 .as_slice(),
             )
         };
-        let one_block = || {
-            json!([{"kind":"para","inlines":[{"text":"x","style":{}}]}])
-        };
+        let one_block = || json!([{"kind":"para","inlines":[{"text":"x","style":{}}]}]);
         // schema:4 and wrong kind reject
         assert!(e.restore(&wrap(4, json!({"blocks": one_block()}))).is_err());
         let wrong_kind = encode_envelope(
@@ -5647,10 +6237,7 @@ mod tests {
                 ]}),
             ))
             .unwrap();
-        assert!(r
-            .events
-            .iter()
-            .any(|ev| ev.kind == "document:changed"));
+        assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
         assert_eq!(bookmark_at(&mut e, "b")["pos"]["offset"], 2);
         assert!(e.undo().unwrap());
         assert!(bookmark_at(&mut e, "b").is_null());
@@ -5662,7 +6249,11 @@ mod tests {
             json!({"name": "b", "pos": {"block": 0, "offset": 0}}),
         );
         let bytes = docx::export_docx(&e.blocks).unwrap();
-        apply(&mut e, "importDocx", json!({"bytes_b64": base64_encode(&bytes)}));
+        apply(
+            &mut e,
+            "importDocx",
+            json!({"bytes_b64": base64_encode(&bytes)}),
+        );
         assert_eq!(bookmarks(&mut e).as_array().unwrap().len(), 0);
         assert!(e.undo().unwrap());
         assert_eq!(bookmark_at(&mut e, "b")["pos"]["offset"], 0);
@@ -5727,13 +6318,15 @@ mod tests {
             .code,
             ErrorCode::Validation
         );
-        assert!(err(
-            &mut e,
-            "defineStyle",
-            json!({"id": "s", "name": "x", "kind": "section", "properties": {}}),
-        )
-        .code
-            == ErrorCode::Validation);
+        assert!(
+            err(
+                &mut e,
+                "defineStyle",
+                json!({"id": "s", "name": "x", "kind": "section", "properties": {}}),
+            )
+            .code
+                == ErrorCode::Validation
+        );
         assert!(err(
             &mut e,
             "defineStyle",
@@ -5741,17 +6334,17 @@ mod tests {
         )
         .code
             == ErrorCode::Validation);
-        assert!(err(
-            &mut e,
-            "defineStyle",
-            json!({"id": " ", "name": "x", "kind": "character", "properties": {}}),
-        )
-        .code
-            == ErrorCode::Validation);
-        assert!(err(&mut e, "updateStyle", json!({"id": "ghost"})).code
-            == ErrorCode::Validation);
-        assert!(err(&mut e, "removeStyle", json!({"id": "ghost"})).code
-            == ErrorCode::Validation);
+        assert!(
+            err(
+                &mut e,
+                "defineStyle",
+                json!({"id": " ", "name": "x", "kind": "character", "properties": {}}),
+            )
+            .code
+                == ErrorCode::Validation
+        );
+        assert!(err(&mut e, "updateStyle", json!({"id": "ghost"})).code == ErrorCode::Validation);
+        assert!(err(&mut e, "removeStyle", json!({"id": "ghost"})).code == ErrorCode::Validation);
 
         // undo chain: remove → update → define ×2 all replay
         apply(&mut e, "removeStyle", json!({"id": "emph"}));
@@ -5789,10 +6382,7 @@ mod tests {
             "applyNamedStyle",
             json!({"style_id": "emph", "from": {"block":0,"offset":1}, "to": {"block":0,"offset":5}}),
         );
-        assert!(r
-            .events
-            .iter()
-            .any(|ev| ev.kind == "document:changed"));
+        assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
         let d = describe(&mut e);
         let inls = d["blocks"][0]["inlines"].as_array().unwrap();
         // runs split at the pre-existing italic boundary: a|b|cd|e|f
@@ -5879,31 +6469,41 @@ mod tests {
 
         // character style id rejects on setBlockStyle; unknown id rejects
         let before = e.snapshot().unwrap();
-        assert!(err(
-            &mut e,
-            "setBlockStyle",
-            json!({"block": 0, "style_id": "emph"}),
-        )
-        .code
-            == ErrorCode::Validation);
-        assert!(err(
-            &mut e,
-            "setBlockStyle",
-            json!({"block": 0, "style_id": "ghost"}),
-        )
-        .code
-            == ErrorCode::Validation);
-        assert!(err(
-            &mut e,
-            "setBlockStyle",
-            json!({"block": 9, "style_id": "title"}),
-        )
-        .code
-            == ErrorCode::OutOfBounds);
+        assert!(
+            err(
+                &mut e,
+                "setBlockStyle",
+                json!({"block": 0, "style_id": "emph"}),
+            )
+            .code
+                == ErrorCode::Validation
+        );
+        assert!(
+            err(
+                &mut e,
+                "setBlockStyle",
+                json!({"block": 0, "style_id": "ghost"}),
+            )
+            .code
+                == ErrorCode::Validation
+        );
+        assert!(
+            err(
+                &mut e,
+                "setBlockStyle",
+                json!({"block": 9, "style_id": "title"}),
+            )
+            .code
+                == ErrorCode::OutOfBounds
+        );
         assert_eq!(e.snapshot().unwrap(), before);
 
         // split inherits the paragraph reference on both halves; merge keeps head
-        apply(&mut e, "splitBlock", json!({"at": {"block": 0, "offset": 2}}));
+        apply(
+            &mut e,
+            "splitBlock",
+            json!({"at": {"block": 0, "offset": 2}}),
+        );
         assert_eq!(block_style_id(&mut e, 0), "title");
         assert_eq!(block_style_id(&mut e, 1), "title");
         apply(&mut e, "mergeBlock", json!({"index": 1}));
@@ -5916,7 +6516,10 @@ mod tests {
         assert_eq!(block_style_id(&mut e, 0), "title");
         assert!(e.undo().unwrap()); // setBlockStyle undone
         assert!(block_style_id(&mut e, 0).is_null());
-        assert_eq!(describe(&mut e)["blocks"][0]["inlines"][0]["style"]["bold"], false);
+        assert_eq!(
+            describe(&mut e)["blocks"][0]["inlines"][0]["style"]["bold"],
+            false
+        );
         assert!(e.redo().unwrap());
         assert_eq!(block_style_id(&mut e, 0), "title");
 
@@ -5927,7 +6530,10 @@ mod tests {
             json!({"block": 0, "style_id": null}),
         );
         assert!(block_style_id(&mut e, 0).is_null());
-        assert_eq!(describe(&mut e)["blocks"][0]["inlines"][0]["style"]["bold"], true);
+        assert_eq!(
+            describe(&mut e)["blocks"][0]["inlines"][0]["style"]["bold"],
+            true
+        );
 
         // removeStyle clears dangling block references atomically
         apply(
@@ -5971,7 +6577,10 @@ mod tests {
         re.restore(&bytes).unwrap();
         assert_eq!(styles(&mut re).as_array().unwrap().len(), 2);
         assert_eq!(block_style_id(&mut re, 0), "title");
-        assert_eq!(describe(&mut re)["blocks"][0]["inlines"][0]["style"]["italic"], true);
+        assert_eq!(
+            describe(&mut re)["blocks"][0]["inlines"][0]["style"]["italic"],
+            true
+        );
         // describe/blocks round-trip: snapshot of restored equals original
         assert_eq!(re.snapshot().unwrap(), bytes);
 
@@ -5998,12 +6607,9 @@ mod tests {
                 .as_slice(),
             )
         };
-        let one_block = || {
-            json!([{"kind":"para","inlines":[{"text":"x","style":{}}]}])
-        };
-        let good_style = || {
-            json!({"id":"s1","name":"S","kind":"character","properties":{"bold":true}})
-        };
+        let one_block = || json!([{"kind":"para","inlines":[{"text":"x","style":{}}]}]);
+        let good_style =
+            || json!({"id":"s1","name":"S","kind":"character","properties":{"bold":true}});
         // schema:2 carrying styles rejects rather than dropping them
         assert!(e
             .restore(&wrap(
@@ -6022,9 +6628,8 @@ mod tests {
         );
         assert!(e.restore(&stray).is_err());
         // schema:3 hostile style documents reject and leave state untouched
-        let styled_block = || {
-            json!([{"kind":"para","style_id":"s1","inlines":[{"text":"x","style":{}}]}])
-        };
+        let styled_block =
+            || json!([{"kind":"para","style_id":"s1","inlines":[{"text":"x","style":{}}]}]);
         for document in [
             // duplicate ids
             json!({"blocks": one_block(), "bookmarks": [], "styles": [good_style(), good_style()]}),
@@ -6080,16 +6685,19 @@ mod tests {
                 ]}),
             ))
             .unwrap();
-        assert!(r
-            .events
-            .iter()
-            .any(|ev| ev.kind == "document:changed"));
+        assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
         assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
-        assert_eq!(describe(&mut e)["blocks"][0]["inlines"][0]["style"]["italic"], true);
+        assert_eq!(
+            describe(&mut e)["blocks"][0]["inlines"][0]["style"]["italic"],
+            true
+        );
         // one undo entry restores both the definition and the inline style
         assert!(e.undo().unwrap());
         assert_eq!(styles(&mut e).as_array().unwrap().len(), 0);
-        assert_eq!(describe(&mut e)["blocks"][0]["inlines"][0]["style"]["italic"], false);
+        assert_eq!(
+            describe(&mut e)["blocks"][0]["inlines"][0]["style"]["italic"],
+            false
+        );
         assert!(e.redo().unwrap());
         assert_eq!(styles(&mut e).as_array().unwrap().len(), 1);
 
@@ -6101,7 +6709,11 @@ mod tests {
             json!({"block": 0, "style_id": "para"}),
         );
         let bytes = docx::export_docx(&e.blocks).unwrap();
-        apply(&mut e, "importDocx", json!({"bytes_b64": base64_encode(&bytes)}));
+        apply(
+            &mut e,
+            "importDocx",
+            json!({"bytes_b64": base64_encode(&bytes)}),
+        );
         assert_eq!(styles(&mut e).as_array().unwrap().len(), 0);
         assert!(block_style_id(&mut e, 0).is_null());
         assert!(e.undo().unwrap());
