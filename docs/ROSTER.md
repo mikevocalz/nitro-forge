@@ -1975,3 +1975,43 @@ semantics, hostile-restore matrix and graph-free byte-identity),
 nf-cli graph case), `pnpm --filter @nitro-forge/motion typecheck` clean.
 No pixel compositing, multi-type nodes, expression↔graph cross-references
 or node UI is claimed; full P11 completion is not implied.
+
+## P11 Motion slice H media/footage references (schema only) source checkpoint (2026-11-08)
+
+Motion layers gain `kind:"media"` carrying an optional `media`
+`{source_id,in_point}` reference — durable model and ops only, **no
+pixels**. `source_id` is an opaque host-owned reference (non-empty, <=512
+UTF-8 bytes, no control characters) the engine stores and round-trips
+without lookup or decode; `in_point` is stored source seconds
+(0..=604800, default 0) that nothing consumes yet. Real frame transport
+is blocked on the P03 decoder contract; the backlog's per-call
+`{layer_id,rgba}` sidecar transport remains the recommended design.
+`addMediaLayer` creates the kind (media spec optional, the
+`addParticlesLayer` precedent) and `setLayerMedia` attaches/replaces/clears
+the spec (null clears to an empty media layer); `updateLayer` cannot patch
+`media`. Media layers compose like every other kind minus content —
+transform/opacity/curves/blend/clipping/mattes/transform-parents/effects
+and nested compositions all apply — while `source_id`s are not raster
+assets (`removeRasterAsset` neither sees nor protects them).
+**Render behavior is honest transparency:** `renderFrame` stages a 1x1
+fully transparent raster per media layer so it keeps its stack slot
+(clipping runs, matte-source masks, sibling compositing) while
+contributing zero pixels at every `time_s`; effects cannot invent alpha
+and no checkerboard/placeholder/duration-derived frame selection is
+faked. `in_point` does not affect `evaluate` or `renderFrame`. Snapshot
+schema stays 2 via additive serde defaults; old readers fail closed
+(`media` is unknown under `Layer`'s `deny_unknown_fields`, `kind:"media"`
+fails the strict `LayerKind` enum) — the same accepted cost as prior
+slices.
+
+Local evidence: `cargo test -p motion-engine` 76 passed (5 new covering
+add/set/clear round-trip, byte-transparent render with sibling compositing
+and effect non-invention, parent/blend/curve/matte-source/nested-comp
+composition, source_id/in_point/unknown-field bounds, kind exclusivity,
+locked rejection, five hostile-restore mutations, undo/redo, equal-write
+eventless and snapshot schema:2 round-trip), `cargo build -p nf-cli`
+clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/motion test` 10 passed across 9 files (1 new
+nf-cli media case), `pnpm --filter @nitro-forge/motion typecheck` clean.
+Footage decode, frame transport, speed/trim/remap, media UI and full P11
+completion are not implied.

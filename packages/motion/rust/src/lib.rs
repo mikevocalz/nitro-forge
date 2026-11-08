@@ -4,6 +4,7 @@ mod curve;
 mod effects;
 mod expressions;
 mod graph;
+mod media;
 mod particles;
 mod path;
 mod transform3d;
@@ -12,6 +13,7 @@ use curve::{evaluate, Key};
 use effects::{apply_effects, LayerEffect};
 use expressions::{Env as ExprEnv, PropertyExpr};
 use graph::{Binding, Graph, GraphNode};
+use media::LayerMedia;
 use particles::{ParticleEmitter, ParticleSprite};
 use path::MotionPath;
 use transform3d::Transform3D;
@@ -263,6 +265,11 @@ enum LayerKind {
     /// Deterministic particle emitter layer (slice F); content is the
     /// optional `emitter` spec, rasterized per frame with no sim state.
     Particles,
+    /// Media/footage layer (slice H-schema); content is the optional
+    /// `media` `{source_id,in_point}` reference. Storage only — no pixels
+    /// exist in-engine (P03 transport blocked), so render composites the
+    /// layer as fully transparent.
+    Media,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -337,6 +344,14 @@ struct Layer {
     /// schema at 2; expression-free layers serialize identically.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     expressions: Vec<PropertyExpr>,
+    /// Opaque media reference (slice H-schema), present only on
+    /// `kind:"media"` layers; `None` is an empty media layer. `source_id`
+    /// is a host-owned reference the engine never resolves and `in_point`
+    /// is stored source time — neither produces pixels until the P03
+    /// transport contract lands, so media layers render transparent.
+    /// Additive serde default keeps schema at 2.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    media: Option<LayerMedia>,
     transform: Transform,
     opacity: f64,
     curves: Vec<Curve>,
@@ -798,6 +813,16 @@ fn validate(s: &State) -> Result<(), EngineError> {
                     .filter(|v| *v <= particles::MAX_COMP_SPRITES)
                     .ok_or_else(|| bad("particle sprite budget exceeded"))?;
             }
+            // A media spec is content for `kind:"media"` layers only and
+            // re-checks its bounds on hostile restore.
+            if let Some(media) = &l.media {
+                if l.kind != Some(LayerKind::Media) {
+                    return Err(bad("media reference requires a media layer"));
+                }
+                if !media.valid() {
+                    return Err(bad("invalid media reference"));
+                }
+            }
             if let Some(mpath) = &l.path {
                 mpath.validate().map_err(|_| bad("invalid motion path"))?;
             } else if l.path_progress != 0.
@@ -853,13 +878,17 @@ fn validate(s: &State) -> Result<(), EngineError> {
                         ));
                     }
                 }
-                // A particles layer's only content is its optional emitter;
-                // shape/asset/comp payloads on it (or an emitter on another
-                // kind) fall through to the catch-all rejection.
+                // A particles layer's only content is its optional emitter
+                // and a media layer's only content is its optional media
+                // reference; shape/asset/comp payloads on them (or an
+                // emitter/media spec on another kind — the spec checks
+                // above already reject that) fall through to the
+                // catch-all rejection.
                 (Some(LayerKind::Particles), None, None, None) => {}
+                (Some(LayerKind::Media), None, None, None) => {}
                 _ => {
                     return Err(bad(
-                        "layer kind must match exactly one shape, raster asset or composition",
+                        "layer kind must match exactly one shape, raster asset, composition or particles/media content",
                     ))
                 }
             }
@@ -1906,6 +1935,31 @@ impl MotionEngine {
                 )?;
                 added
             }
+            Some(LayerKind::Media) => {
+                // Slice H-schema: media layers store `{source_id,in_point}`
+                // references only — no pixels exist in-engine because real
+                // frame transport is blocked on the P03 decoder contract.
+                // Stage a 1x1 fully transparent raster so the layer keeps
+                // its stack slot (transform/opacity/blend/clipping/matte
+                // and matte-source masks all compose honestly against
+                // transparent pixels) without faking footage. Effects run
+                // through `stage_effects` on that transparent flatten and
+                // cannot produce visible output (fill scales alpha by the
+                // source alpha, which stays 0).
+                let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
+                let id = added
+                    .data["layer_id"]
+                    .as_u64()
+                    .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
+                prism.apply(
+                    Command::new(
+                        "drawPixels",
+                        json!({"id":id,"x":0,"y":0,"w":1,"h":1}),
+                    )
+                    .with_binary(Some(vec![0, 0, 0, 0])),
+                )?;
+                added
+            }
             None => return Err(bad("layer kind missing")),
         };
         let layer = result
@@ -2484,6 +2538,7 @@ impl Engine for MotionEngine {
                     path_progress: 0.,
                     transform3d: None,
                     emitter: None,
+                    media: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     expressions: vec![],
@@ -2755,6 +2810,35 @@ impl Engine for MotionEngine {
                 }
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
+            "setLayerMedia" => {
+                let layer_id = id(p, "layer")?;
+                // `media:null` (or absent) clears the reference, leaving an
+                // empty media layer; otherwise a full `{source_id,in_point}`
+                // spec. Requires a `kind:"media"` layer.
+                let media = match p.get("media") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => {
+                        let m: LayerMedia = serde_json::from_value(v.clone())
+                            .map_err(|_| bad("invalid media reference"))?;
+                        if !m.valid() {
+                            return Err(bad("invalid media reference"));
+                        }
+                        Some(m)
+                    }
+                };
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                if arc.kind != Some(LayerKind::Media) {
+                    return Err(bad("media reference requires a media layer"));
+                }
+                let mut nl = (*arc).clone();
+                nl.media = media;
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
             "setExpression" => {
                 let layer_id = id(p, "layer")?;
                 let property: Property = serde_json::from_value(
@@ -2909,6 +2993,7 @@ impl Engine for MotionEngine {
                     path_progress: 0.,
                     transform3d: None,
                     emitter: None,
+                    media: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     expressions: vec![],
@@ -2947,6 +3032,7 @@ impl Engine for MotionEngine {
                     path_progress: 0.,
                     transform3d: None,
                     emitter: None,
+                    media: None,
                     transform: Transform::default(),
                     opacity: 1.,
                     expressions: vec![],
@@ -2981,6 +3067,56 @@ impl Engine for MotionEngine {
                     path_progress: 0.,
                     transform3d: None,
                     emitter: None,
+                    media: None,
+                    transform: Transform::default(),
+                    opacity: 1.,
+                    expressions: vec![],
+                    curves: vec![],
+                }));
+                data = json!({"layer_id":layer});
+            }
+            "addMediaLayer" => {
+                // `media` is optional (the addParticlesLayer precedent): an
+                // absent/null spec leaves an empty media layer until
+                // `setLayerMedia` attaches one.
+                let media = match p.get("media") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => {
+                        let m: LayerMedia = serde_json::from_value(v.clone())
+                            .map_err(|_| bad("invalid media reference"))?;
+                        if !m.valid() {
+                            return Err(bad("invalid media reference"));
+                        }
+                        Some(m)
+                    }
+                };
+                let into = State::comp_arg(p, "comp")?;
+                let layer = next.next_layer_id;
+                next.next_layer_id = layer
+                    .checked_add(1)
+                    .ok_or_else(|| bad("layer identity exhausted"))?;
+                let name = opt_string(p, "name", "Media")?;
+                let layers = comp_layers_mut(&mut next, into)
+                    .ok_or_else(|| bad("unknown composition"))?;
+                layers.push(Arc::new(Layer {
+                    id: layer,
+                    name,
+                    visible: true,
+                    locked: false,
+                    kind: Some(LayerKind::Media),
+                    shape: None,
+                    asset_id: None,
+                    comp_id: None,
+                    parent_id: None,
+                    blend: None,
+                    clipped: false,
+                    matte: None,
+                    effects: vec![],
+                    path: None,
+                    path_progress: 0.,
+                    transform3d: None,
+                    emitter: None,
+                    media,
                     transform: Transform::default(),
                     opacity: 1.,
                     expressions: vec![],
@@ -3545,6 +3681,8 @@ mod comp_tests;
 mod path_tests;
 #[cfg(test)]
 mod particles_tests;
+#[cfg(test)]
+mod media_tests;
 #[cfg(test)]
 mod transform3d_tests;
 #[cfg(test)]

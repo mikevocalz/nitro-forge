@@ -13,7 +13,7 @@ export interface Transform3D{rx:number;ry:number;z:number}
 /** Read-only `evaluate` output on layers carrying `transform3d`: the orthographic projection (view axis = layer-local Z, depth dropped) of the evaluated local transform as a 2x3 affine, `x'=a*x+c*y+e`, `y'=b*x+d*y+f`. May carry shear the 2D `Transform` fields cannot express; `z` does not affect it and parent composition stays local-only. Never stored, never in `describe`/snapshots, never affects `renderFrame`. */
 export interface ProjectedTransform2D{a:number;b:number;c:number;d:number;e:number;f:number}
 export interface Shape{kind:'rect'|'ellipse';x:number;y:number;w:number;h:number;fill:[number,number,number,number]}
-export type LayerKind='shape'|'raster'|'comp'|'particles';
+export type LayerKind='shape'|'raster'|'comp'|'particles'|'media';
 /** The 13 W3C Compositing Level 1 blend modes Prism implements; `null`/`"normal"` is the default source-over. */
 export type MotionBlendMode='normal'|'multiply'|'screen'|'overlay'|'darken'|'lighten'|'color-dodge'|'color-burn'|'hard-light'|'soft-light'|'difference'|'exclusion'|'add';
 /** Track-matte modes: alpha/luma read the matte source's rendered subtree; inverted modes complement the derived mask. */
@@ -52,9 +52,11 @@ export interface MotionGraphBinding{layer:number;property:MotionProperty;node:nu
 export interface MotionGraph{nodes:MotionGraphNode[];bindings:MotionGraphBinding[];next_node_id:number}
 /** setGraph input: full replacement of nodes and bindings; `null` clears. Node ids are client-chosen positive safe integers (describe exposes `next_node_id`); the engine advances the counter past the largest id. */
 export interface MotionGraphInput{nodes?:MotionGraphNode[];bindings?:MotionGraphBinding[]}
-interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[];path?:MotionPath;path_progress?:number;emitter?:MotionEmitter;transform3d?:Transform3D;expressions?:MotionExpression[];projected_transform?:ProjectedTransform2D}
-/** Exactly one real content source; no placeholder shape for raster or comp layers. `comp` is the composition id a comp layer instantiates (0 is never a valid target). Particles layers carry only the optional `emitter` spec. */
-export type MotionLayer=MotionLayerCommon&({shape:Shape;asset_id?:never;comp_id?:never;emitter?:never}|{asset_id:number;shape?:never;comp_id?:never;emitter?:never}|{comp_id:number;shape?:never;asset_id?:never;emitter?:never}|{emitter?:MotionEmitter;shape?:never;asset_id?:never;comp_id?:never});
+export interface MotionLayerMedia{source_id:string;in_point?:number}
+interface MotionLayerCommon{id:number;name:string;visible:boolean;locked:boolean;kind:LayerKind;transform:Transform;opacity:number;curves:{property:MotionProperty;keys:MotionKey[]}[];parent_id?:number;blend?:MotionBlendMode;clipped?:boolean;matte?:MotionMatte;effects?:MotionEffect[];path?:MotionPath;path_progress?:number;emitter?:MotionEmitter;transform3d?:Transform3D;expressions?:MotionExpression[];media?:MotionLayerMedia;projected_transform?:ProjectedTransform2D}
+/** Exactly one real content source; no placeholder shape for raster or comp layers. `comp` is the composition id a comp layer instantiates (0 is never a valid target). Particles layers carry only the optional `emitter` spec; media layers carry only the optional `media` reference (storage only, renders transparent). */
+export type MotionLayer=MotionLayerCommon&({shape:Shape;asset_id?:never;comp_id?:never;emitter?:never;media?:never}|{asset_id:number;shape?:never;comp_id?:never;emitter?:never;media?:never}|{comp_id:number;shape?:never;asset_id?:never;emitter?:never;media?:never}|{emitter?:MotionEmitter;shape?:never;asset_id?:never;comp_id?:never;media?:never}|{media?:MotionLayerMedia;shape?:never;asset_id?:never;comp_id?:never;emitter?:never});
+
 export const MOTION_RASTER_FORMAT='rgba8-straight-srgb' as const;
 export interface MotionRasterAsset{readonly id:number;readonly width:number;readonly height:number;readonly format:typeof MOTION_RASTER_FORMAT;readonly pixels_b64:string}
 export interface CompositionSettings{title:string;width:number;height:number;duration_s:number;frame_rate:{num:number;den:number}}
@@ -107,6 +109,10 @@ export class MotionDocument{
  setMotionPath(layer:number,path:MotionPath|null){return this.document.apply<{ok:boolean}>('setMotionPath',{layer,path});}
  /** Attach/replace/clear the layer's 3D transform; null clears `transform3d` and any `rx`/`ry`/`z` curves atomically. Absent fields default to 0 (identity). `rx`/`ry`/`z` are also `MotionProperty` curve names once transform3d is set. Storage/eval only — renderFrame ignores 3D until G2; `evaluate` adds `projected_transform` (orthographic 2x3 affine) to 3D layers. */
  setLayer3D(layer:number,transform3d:Transform3D|null){return this.document.apply<{ok:boolean}>('setLayer3D',{layer,transform3d});}
+ /** Create a media/footage layer referencing an opaque host `source_id` (slice H-schema). `media` may be omitted/null for an empty media layer until `setLayerMedia` attaches a spec; `comp` optionally targets a nested composition. Storage only — the engine never resolves `source_id` and the layer renders fully transparent until the P03 transport contract lands. */
+ addMediaLayer(media:MotionLayerMedia|null,name?:string,comp?:number){return this.document.apply<{layer_id:number}>('addMediaLayer',{...(media===null?{}:{media}),...(name===undefined?{}:{name}),...(comp===undefined?{}:{comp})});}
+ /** Attach/replace/clear the media layer's `{source_id,in_point}` reference; null clears to an empty media layer. Requires a `media` kind layer; full-spec replace, validated engine-side. */
+ setLayerMedia(layer:number,media:MotionLayerMedia|null){return this.document.apply<{ok:boolean}>('setLayerMedia',{layer,media});}
  updateLayer(id:number,patch:Partial<Pick<MotionLayer,'name'|'visible'|'locked'|'opacity'|'shape'|'asset_id'>>&{transform?:Partial<Transform>}){return this.document.apply<{ok:boolean}>('updateLayer',{...patch,id});}
  removeLayer(id:number){return this.document.apply<{ok:boolean}>('removeLayer',{id});}
  setLayerOrder(order:readonly number[]){return this.document.apply<{ok:boolean}>('setLayerOrder',{order});}
