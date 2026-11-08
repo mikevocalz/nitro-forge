@@ -801,6 +801,7 @@ impl PrismEngine {
             "grow" => select::grow(&cur, w, h, radius, &mut task)?,
             "shrink" => select::grow(&cur, w, h, -radius, &mut task)?,
             "feather" => select::feather(&cur, w, h, radius, &mut task)?,
+            "smooth" => select::smooth(&cur, w, h, radius, &mut task)?,
             other => return Err(EngineError::validation(format!("unknown selection op '{other}'"))),
         };
         self.record();

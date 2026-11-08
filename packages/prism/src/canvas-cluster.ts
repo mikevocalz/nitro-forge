@@ -82,7 +82,7 @@ export class PrismCanvasAdapter {
     onInvertSelection: ()=>this.commit(this.doc.invertSelection()),
     onMagicWand: (request:{x:number;y:number;tolerance:number;contiguous:boolean;sample:'composite'|{readonly layer:CanvasId};mode:SelectionMode})=>
       this.commit(this.doc.magicWand({...request,sample:request.sample==='composite'?'composite':{layer:id(request.sample.layer)}})),
-    onModifySelection: (request:{op:'grow'|'shrink'|'feather';radius:number})=>this.commit(this.doc.modifySelection(request.op,request.radius)),
+    onModifySelection: (request:{op:'grow'|'shrink'|'feather'|'smooth';radius:number})=>this.commit(this.doc.modifySelection(request.op,request.radius)),
   };}
 
   masks(){return {

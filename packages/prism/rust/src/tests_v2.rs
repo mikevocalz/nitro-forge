@@ -259,6 +259,24 @@ fn magic_wand_and_modify_selection() {
     rejects(&mut e, "magicWand", json!({"x": 1, "y": 1, "tolerance": 300}), ErrorCode::Validation);
 }
 
+#[test]
+fn modify_selection_smooth_rounds_and_thresholds() {
+    let mut e = eng(10, 10);
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 2, "y": 2, "w": 6, "h": 6}}));
+    one_step(&mut e, "modifySelection", json!({"op": "smooth", "radius": 3}));
+    let m = selection_mask(&mut e).unwrap();
+    assert!(m.iter().all(|&v| v == 0 || v == 255), "smooth output is binary");
+    assert_eq!(m[5 * 10 + 5], 255, "interior survives");
+    assert_eq!(m[2 * 10 + 2], 0, "corner rounds away");
+    assert_eq!(m[2 * 10 + 5], 255, "edge midpoint survives");
+    // radius 0 is a no-op mask but still one undo step, like grow 0.
+    let before = describe(&mut e);
+    run(&mut e, "modifySelection", json!({"op": "smooth", "radius": 0}));
+    assert_eq!(describe(&mut e), before);
+    rejects(&mut e, "modifySelection", json!({"op": "smooth", "radius": 999}), ErrorCode::Validation);
+    rejects(&mut e, "modifySelection", json!({"op": "refine", "radius": 1}), ErrorCode::Validation);
+}
+
 // -- groups, lock, blend, clipping -------------------------------------------
 
 #[test]

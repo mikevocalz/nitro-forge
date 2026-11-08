@@ -274,7 +274,7 @@ export class PrismDocument {
   magicWand(options: { x: number; y: number; tolerance?: number; contiguous?: boolean; sample?: SampleSource; mode?: SelectionMode }) {
     return this.call(OPS.magicWand, options);
   }
-  modifySelection(op: "grow" | "shrink" | "feather", radius: number) {
+  modifySelection(op: "grow" | "shrink" | "feather" | "smooth", radius: number) {
     return this.call(OPS.modifySelection, { op, radius });
   }
   getSelection() {
