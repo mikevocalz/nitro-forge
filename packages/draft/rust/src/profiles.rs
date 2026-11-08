@@ -162,7 +162,7 @@ fn build(s: &State) -> Result<Vec<Edge>, EngineError> {
     let mut edges = Vec::new();
     for (ord, id) in s.order.iter().enumerate() {
         if let Some(seg) = s.segments.get(id) {
-            if !seg.visible {
+            if !seg.visible || !s.layer_visible(seg.layer) {
                 continue;
             }
             let a = s.point(seg.a)?;
@@ -178,7 +178,7 @@ fn build(s: &State) -> Result<Vec<Edge>, EngineError> {
                 open: true,
             });
         } else if let Some(c) = s.circles.get(id) {
-            if !c.visible {
+            if !c.visible || !s.layer_visible(c.layer) {
                 continue;
             }
             let p = s.point(c.center)?;
@@ -200,7 +200,7 @@ fn build(s: &State) -> Result<Vec<Edge>, EngineError> {
                 open: false,
             });
         } else if let Some(a) = s.arcs.get(id) {
-            if !a.visible {
+            if !a.visible || !s.layer_visible(a.layer) {
                 continue;
             }
             let p = s.point(a.center)?;

@@ -1429,3 +1429,31 @@ rejection and nested-comp projection, plus 3 projection unit tests),
 nf-cli transform3d case), `pnpm --filter @nitro-forge/motion typecheck`
 clean. 3D rasterization, camera, lights, depth ordering and full P11
 completion are not implied.
+
+## Draft layers slice A1 (2026-11-07)
+
+Draft gains bounded named layers (`addLayer`/`updateLayer`/`removeLayer`,
+at most128, unique 1..512-byte names, optional RGBA color, `visible`/`locked`).
+Layer id 0 is implicit and reserved: never serialized in `layers`, always the
+entity default, and cannot be added, renamed, removed, hidden or locked.
+Segments/circles/arcs carry an optional `layer` field (serde default 0, skipped
+when 0), so layer-0 documents keep byte-identical legacy schema1 snapshots;
+any nonempty layer map or nonzero entity layer forces the existing strict
+`{kind:"draft",schema:2}` wrapper, and hostile restores reject dangling layer
+references, reserved id 0, duplicate/empty names and unwrapped extended state.
+Entities on invisible layers are excluded from `renderFrame`, all segment and
+circular snap modes and `findProfiles` exactly like `visible:false` (authored
+points still snap as endpoints; points have no layer). Entities on locked
+layers reject update/remove ops and any point edit touching their endpoints or
+center, and cannot be moved off the layer, while assigning entities onto a
+locked layer stays allowed; the linear solver treats their coordinates as
+fixed. `removeLayer` rejects layer 0, unknown ids and nonempty layers rather
+than silently reassigning entities. There is no active/current layer; hosts
+pass `layer` per entity op. `executeCommand` grammar, hatches, dimensions,
+nonlinear solving, paper space and blocks remain unimplemented later slices.
+
+Local evidence: `cargo test -p draft-engine` 28 passed (4 new layer tests),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/draft test` 9 passed across 3 files (1 new nf-cli
+layer e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. UI adoption,
+native acceptance and full P17 completion are not implied.

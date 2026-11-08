@@ -1316,3 +1316,283 @@ fn profiles_junction_and_folded_loop_are_deterministic() {
     assert!((profiles[0]["area"].as_f64().unwrap() - 16.).abs() < 1e-9);
     assert_eq!(find_profiles(&mut f, json!({}))["profiles"], json!(profiles));
 }
+
+fn layer(e: &mut DraftEngine, name: &str) -> u64 {
+    apply(e, "addLayer", json!({"name":name})).data["layer_id"]
+        .as_u64()
+        .unwrap()
+}
+fn base64_decode(text: &str) -> Vec<u8> {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = Vec::new();
+    let mut acc = 0u32;
+    let mut bits = 0;
+    for &b in text.as_bytes() {
+        if b == b'=' {
+            break;
+        }
+        let v = T.iter().position(|&t| t == b).unwrap() as u32;
+        acc = (acc << 6) | v;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+        }
+    }
+    out
+}
+#[test]
+fn layers_crud_reserved_names_defaults_and_history_are_atomic() {
+    let mut e = DraftEngine::new();
+    let walls = layer(&mut e, "Walls");
+    assert!(e
+        .apply(Command::new("addLayer", json!({"name":"Walls"})))
+        .is_err());
+    assert!(e
+        .apply(Command::new("addLayer", json!({"name":"0"})))
+        .is_err());
+    assert!(e
+        .apply(Command::new("addLayer", json!({"name":""})))
+        .is_err());
+    let notes = layer(&mut e, "Notes");
+    apply(
+        &mut e,
+        "updateLayer",
+        json!({"id":walls,"color":[255,0,0,255],"visible":false,"locked":true}),
+    );
+    let described = apply(&mut e, "describe", json!({})).data;
+    assert_eq!(described["layers"][walls.to_string()]["name"], "Walls");
+    assert_eq!(described["layers"][walls.to_string()]["visible"], false);
+    // Equal writes preserve events and redo like every other draft op.
+    let before = e.snapshot().unwrap();
+    let noop = apply(
+        &mut e,
+        "updateLayer",
+        json!({"id":walls,"color":[255,0,0,255],"visible":false,"locked":true}),
+    );
+    assert!(noop.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Reserved/unknown layer 0 and unknown ids reject without mutation.
+    for op in ["updateLayer", "removeLayer"] {
+        assert!(e.apply(Command::new(op, json!({"id":0}))).is_err());
+        assert!(e.apply(Command::new(op, json!({"id":999}))).is_err());
+    }
+    // Entities default to implicit layer 0; nonzero layers serialize explicitly.
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 0.);
+    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":notes}))
+        .data["segment_id"]
+        .as_u64()
+        .unwrap();
+    let described = apply(&mut e, "describe", json!({})).data;
+    assert_eq!(described["segments"][seg.to_string()]["layer"], notes);
+    let plain = apply(&mut e, "addSegment", json!({"a":a,"b":b})).data["segment_id"]
+        .as_u64()
+        .unwrap();
+    let described = apply(&mut e, "describe", json!({})).data;
+    assert!(described["segments"][plain.to_string()].get("layer").is_none());
+    // Nonempty layers reject removal; empty ones remove and undo/redo cleanly.
+    assert!(e
+        .apply(Command::new("removeLayer", json!({"id":notes})))
+        .is_err());
+    apply(&mut e, "removeSegment", json!({"id":seg}));
+    apply(&mut e, "removeLayer", json!({"id":notes}));
+    let snapshot = e.snapshot().unwrap();
+    assert!(state(&e).layers.get(&notes).is_none());
+    assert!(e.undo().unwrap());
+    assert_eq!(state(&e).layers[&notes].name, "Notes");
+    assert!(e.redo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), snapshot);
+    // Rename keeps uniqueness against peers and the reserved implicit name.
+    let other = layer(&mut e, "Other");
+    assert!(e
+        .apply(Command::new("updateLayer", json!({"id":walls,"name":"Other"})))
+        .is_err());
+    assert!(e
+        .apply(Command::new("updateLayer", json!({"id":walls,"name":"0"})))
+        .is_err());
+    apply(&mut e, "updateLayer", json!({"id":walls,"name":"Walls2"}));
+    assert_eq!(state(&e).layers[&walls].name, "Walls2");
+    assert!(state(&e).layers.contains_key(&other));
+}
+#[test]
+fn hidden_layers_exclude_snaps_render_and_profiles() {
+    let mut e = DraftEngine::new();
+    let hidden = layer(&mut e, "Hidden");
+    apply(&mut e, "updateLayer", json!({"id":hidden,"visible":false}));
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 0.);
+    let c = point(&mut e, 0., 3.);
+    let d = point(&mut e, 3., 3.);
+    let mut edges = Vec::new();
+    for (p, q) in [(a, b), (b, d), (d, c), (c, a)] {
+        edges.push(
+            apply(&mut e, "addSegment", json!({"a":p,"b":q,"layer":hidden})).data["segment_id"]
+                .as_u64()
+                .unwrap(),
+        );
+    }
+    // Midpoint/projection snaps and closed profiles ignore hidden-layer geometry.
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"grid":false,"endpoint":false,"projection":true,"intersection":false,"midpoint":true}),
+    );
+    assert!(apply(&mut e, "querySnap", json!({"x":1.5,"y":0.1,"tolerance":0.2})).data["candidate"].is_null());
+    assert_eq!(
+        find_profiles(&mut e, json!({}))["profiles"]
+            .as_array()
+            .unwrap()
+            .len(),
+        0
+    );
+    // Render emits no stroke for the hidden rectangle.
+    let pixels = apply(&mut e, "renderFrame", viewport()).data;
+    let rgba = base64_decode(pixels["pixels_b64"].as_str().unwrap());
+    assert!(rgba.iter().all(|v| *v == 0));
+    // Restoring visibility returns real candidates, pixels and the profile.
+    apply(&mut e, "updateLayer", json!({"id":hidden,"visible":true}));
+    let snap = apply(&mut e, "querySnap", json!({"x":1.5,"y":0.1,"tolerance":0.2})).data;
+    assert_eq!(snap["candidate"]["kind"], "midpoint");
+    assert_eq!(snap["candidate"]["sources"], json!([edges[0]]));
+    let pixels = apply(&mut e, "renderFrame", viewport()).data;
+    let rgba = base64_decode(pixels["pixels_b64"].as_str().unwrap());
+    assert!(rgba.iter().any(|v| *v != 0));
+    let profiles = find_profiles(&mut e, json!({}));
+    assert_eq!(profiles["profiles"].as_array().unwrap().len(), 1);
+    assert!((profiles["profiles"][0]["area"].as_f64().unwrap() - 9.).abs() < 1e-9);
+    // A hidden-layer circle loses center/nearest snaps like any hidden entity.
+    let center = point(&mut e, 1.5, 1.5);
+    apply(
+        &mut e,
+        "addCircle",
+        json!({"center":center,"radius":1,"layer":hidden}),
+    );
+    apply(&mut e, "updateLayer", json!({"id":hidden,"visible":false}));
+    apply(
+        &mut e,
+        "setSnapSettings",
+        json!({"midpoint":false,"projection":false,"center":true,"nearest_circle":true}),
+    );
+    let snap = apply(&mut e, "querySnap", json!({"x":1.6,"y":1.5,"tolerance":0.5})).data;
+    assert!(snap["candidate"].is_null());
+}
+#[test]
+fn locked_layers_reject_edits_until_unlocked_and_assignment_is_allowed() {
+    let mut e = DraftEngine::new();
+    let locked = layer(&mut e, "Locked");
+    apply(&mut e, "updateLayer", json!({"id":locked,"locked":true}));
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 0.);
+    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":locked}))
+        .data["segment_id"]
+        .as_u64()
+        .unwrap();
+    let before = e.snapshot().unwrap();
+    for (op, p) in [
+        ("updateSegment", json!({"id":seg,"name":"renamed"})),
+        ("updateSegment", json!({"id":seg,"layer":0})),
+        ("removeSegment", json!({"id":seg})),
+        ("updatePoint", json!({"id":a,"x":9.})),
+        ("removePoint", json!({"id":a})),
+    ] {
+        assert!(e.apply(Command::new(op, p)).is_err(), "{op} must reject");
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+    // New entities may be assigned to a locked layer, then share its lock.
+    let c = point(&mut e, 0., 3.);
+    let d = point(&mut e, 3., 3.);
+    let other = apply(&mut e, "addSegment", json!({"a":c,"b":d,"layer":locked}))
+        .data["segment_id"]
+        .as_u64()
+        .unwrap();
+    assert!(e
+        .apply(Command::new("updateSegment", json!({"id":other,"visible":false})))
+        .is_err());
+    // Unlocking the layer restores edits; re-locking rejects them again.
+    apply(&mut e, "updateLayer", json!({"id":locked,"locked":false}));
+    apply(&mut e, "updateSegment", json!({"id":seg,"name":"renamed"}));
+    apply(&mut e, "updateLayer", json!({"id":locked,"locked":true}));
+    assert!(e
+        .apply(Command::new("updateSegment", json!({"id":seg,"name":"again"})))
+        .is_err());
+    apply(&mut e, "updateLayer", json!({"id":locked,"locked":false}));
+    apply(&mut e, "updateSegment", json!({"id":seg,"name":"final"}));
+    assert_eq!(state(&e).segments[&seg].name, "final");
+    // Unknown layer assignment fails closed through full state validation.
+    assert!(e
+        .apply(Command::new("addSegment", json!({"a":a,"b":b,"layer":4242})))
+        .is_err());
+    assert!(e
+        .apply(Command::new("updateSegment", json!({"id":other,"layer":4242})))
+        .is_err());
+}
+#[test]
+fn layer_snapshots_wrapper_defaults_and_hostile_restore() {
+    let mut e = DraftEngine::new();
+    // Layer-0-only documents keep the exact legacy bare serialization.
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 0.);
+    apply(&mut e, "addSegment", json!({"a":a,"b":b}));
+    let legacy = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&legacy).unwrap();
+    let value: Value = serde_json::from_slice(payload).unwrap();
+    assert!(value.get("layers").is_none());
+    assert!(value["segments"]["3"].get("layer").is_none());
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&legacy).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), legacy);
+    assert!(state(&reopened).layers.is_empty());
+    // Any real layer usage requires the strict schema2 wrapper.
+    let walls = layer(&mut e, "Walls");
+    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":walls}))
+        .data["segment_id"]
+        .as_u64()
+        .unwrap();
+    let extended = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&extended).unwrap();
+    let wrapped: Value = serde_json::from_slice(payload).unwrap();
+    assert_eq!(wrapped["kind"], "draft");
+    assert_eq!(wrapped["schema"], 2);
+    assert_eq!(wrapped["document"]["layers"][walls.to_string()]["name"], "Walls");
+    reopened.restore(&extended).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), extended);
+    assert_eq!(state(&reopened).segments[&seg].layer, walls);
+    let before = reopened.snapshot().unwrap();
+    // Hostile restores: dangling entity layer refs, reserved id 0, duplicate
+    // names, unwrapped extended state and malformed layer fields all reject.
+    let mut cases: Vec<Value> = Vec::new();
+    let mut dangling = wrapped.clone();
+    dangling["document"]["segments"][seg.to_string()]["layer"] = json!(4242);
+    cases.push(dangling);
+    let mut reserved = wrapped.clone();
+    reserved["document"]["layers"]["0"] = json!({"id":0,"name":"Zero","color":null,"visible":true,"locked":false});
+    cases.push(reserved);
+    let mut duplicate = wrapped.clone();
+    duplicate["document"]["layers"]["77"] = json!({"id":77,"name":"Walls","color":null,"visible":true,"locked":false});
+    cases.push(duplicate);
+    cases.push(wrapped["document"].clone());
+    let mut bad_field = wrapped.clone();
+    bad_field["document"]["segments"][seg.to_string()]["layer"] = json!("Walls");
+    cases.push(bad_field);
+    let mut empty_name = wrapped.clone();
+    empty_name["document"]["layers"][walls.to_string()]["name"] = json!("");
+    cases.push(empty_name);
+    for invalid in cases {
+        assert!(
+            reopened
+                .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+                .is_err()
+        );
+        assert_eq!(reopened.snapshot().unwrap(), before);
+    }
+    // Removing the last nonzero-layer entity still keeps the layer map, so the
+    // wrapper requirement follows the map, not entity usage.
+    apply(&mut e, "removeSegment", json!({"id":seg}));
+    let still_wrapped = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&still_wrapped).unwrap();
+    let value: Value = serde_json::from_slice(payload).unwrap();
+    assert_eq!(value["schema"], 2);
+    reopened.restore(&still_wrapped).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), still_wrapped);
+}

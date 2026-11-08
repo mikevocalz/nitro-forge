@@ -116,7 +116,7 @@ pub fn query(
             });
         }
     }
-    for seg in s.segments.values().filter(|s| s.visible) {
+    for seg in s.segments.values().filter(|seg| seg.visible && s.layer_visible(seg.layer)) {
         let a = s.point(seg.a)?;
         let b = s.point(seg.b)?;
         if settings.midpoint {
@@ -146,7 +146,7 @@ pub fn query(
         }
     }
     if settings.intersection {
-        let segments: Vec<_> = s.segments.values().filter(|s| s.visible).collect();
+        let segments: Vec<_> = s.segments.values().filter(|seg| seg.visible && s.layer_visible(seg.layer)).collect();
         for (i, a) in segments.iter().enumerate() {
             for b in &segments[i + 1..] {
                 let (p, q, r, t) = (s.point(a.a)?, s.point(a.b)?, s.point(b.a)?, s.point(b.b)?);
@@ -208,7 +208,7 @@ pub fn query(
     }
     if settings.intersection {
         for curve in &curved {
-            for segment in s.segments.values().filter(|seg| seg.visible) {
+            for segment in s.segments.values().filter(|seg| seg.visible && s.layer_visible(seg.layer)) {
                 let a = s.point(segment.a)?;
                 let b = s.point(segment.b)?;
                 for point in curve.segment_hits((a.x, a.y), (b.x, b.y)) {

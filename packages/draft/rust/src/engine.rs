@@ -17,6 +17,10 @@ struct ExtendedSnapshot<T> {
 fn requires_matching_reader(state: &State) -> bool {
     !state.circles.is_empty()
         || !state.arcs.is_empty()
+        || !state.layers.is_empty()
+        || state.segments.values().any(|s| s.layer != 0)
+        || state.circles.values().any(|c| c.layer != 0)
+        || state.arcs.values().any(|a| a.layer != 0)
         || state.snaps.center
         || state.snaps.nearest_circle
         || state.snaps.tangent
@@ -285,7 +289,7 @@ impl Engine for DraftEngine {
                         .keys()
                         .any(|k| !["id", "locked"].contains(&k.as_str()))
                 {
-                    return Err(bad("point is locked or belongs to a locked segment"));
+                    return Err(bad("point is locked or belongs to a locked entity or layer"));
                 }
                 let point = patch(point, p, &["id", "x", "y", "locked"])?;
                 next.points.insert(id, Arc::new(point));
@@ -311,7 +315,9 @@ impl Engine for DraftEngine {
             "addSegment" => {
                 fields(
                     p,
-                    &["a", "b", "name", "color", "width", "visible", "locked"],
+                    &[
+                        "a", "b", "name", "color", "width", "visible", "locked", "layer",
+                    ],
                 )?;
                 let id = next.allocate()?;
                 next.segments.insert(
@@ -325,6 +331,7 @@ impl Engine for DraftEngine {
                         width: optional(p, "width", 1.)?,
                         visible: optional(p, "visible", true)?,
                         locked: optional(p, "locked", false)?,
+                        layer: optional(p, "layer", 0)?,
                     }),
                 );
                 next.order.push(id);
@@ -336,9 +343,17 @@ impl Engine for DraftEngine {
                 fields(
                     p,
                     &[
-                        "id", "a", "b", "name", "color", "width", "visible", "locked",
+                        "id", "a", "b", "name", "color", "width", "visible", "locked", "layer",
                     ],
                 )?;
+                if next.layer_locked(segment.layer)
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| k.as_str() != "id")
+                {
+                    return Err(bad("segment is on a locked layer"));
+                }
                 if segment.locked
                     && p.as_object()
                         .unwrap()
@@ -351,7 +366,7 @@ impl Engine for DraftEngine {
                     segment,
                     p,
                     &[
-                        "id", "a", "b", "name", "color", "width", "visible", "locked",
+                        "id", "a", "b", "name", "color", "width", "visible", "locked", "layer",
                     ],
                 )?;
                 next.segments.insert(id, Arc::new(segment));
@@ -359,8 +374,12 @@ impl Engine for DraftEngine {
             "removeSegment" => {
                 fields(p, &["id"])?;
                 let id = get(p, "id")?;
-                if next.segment(id)?.locked {
+                let segment = next.segment(id)?;
+                if segment.locked {
                     return Err(bad("segment is locked"));
+                }
+                if next.layer_locked(segment.layer) {
+                    return Err(bad("segment is on a locked layer"));
                 }
                 if next.constraints.values().any(|c|matches!(c.definition,Definition::Horizontal{segment}|Definition::Vertical{segment}if segment==id)){return Err(bad("segment is referenced by a constraint"))}
                 next.segments.remove(&id);
@@ -392,7 +411,7 @@ impl Engine for DraftEngine {
                 fields(
                     p,
                     &[
-                        "center", "radius", "name", "color", "width", "visible", "locked",
+                        "center", "radius", "name", "color", "width", "visible", "locked", "layer",
                     ],
                 )?;
                 let id = next.allocate()?;
@@ -407,6 +426,7 @@ impl Engine for DraftEngine {
                         width: optional(p, "width", 1.)?,
                         visible: optional(p, "visible", true)?,
                         locked: optional(p, "locked", false)?,
+                        layer: optional(p, "layer", 0)?,
                     }),
                 );
                 next.order.push(id);
@@ -425,6 +445,7 @@ impl Engine for DraftEngine {
                         "width",
                         "visible",
                         "locked",
+                        "layer",
                     ],
                 )?;
                 let id = next.allocate()?;
@@ -441,6 +462,7 @@ impl Engine for DraftEngine {
                         width: optional(p, "width", 1.)?,
                         visible: optional(p, "visible", true)?,
                         locked: optional(p, "locked", false)?,
+                        layer: optional(p, "layer", 0)?,
                     }),
                 );
                 next.order.push(id);
@@ -453,8 +475,17 @@ impl Engine for DraftEngine {
                     p,
                     &[
                         "id", "center", "radius", "name", "color", "width", "visible", "locked",
+                        "layer",
                     ],
                 )?;
+                if next.layer_locked(c.layer)
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| k.as_str() != "id")
+                {
+                    return Err(bad("circle is on a locked layer"));
+                }
                 if c.locked
                     && p.as_object()
                         .unwrap()
@@ -468,6 +499,7 @@ impl Engine for DraftEngine {
                     p,
                     &[
                         "id", "center", "radius", "name", "color", "width", "visible", "locked",
+                        "layer",
                     ],
                 )?;
                 next.circles.insert(id, Arc::new(c));
@@ -488,8 +520,17 @@ impl Engine for DraftEngine {
                         "width",
                         "visible",
                         "locked",
+                        "layer",
                     ],
                 )?;
+                if next.layer_locked(a.layer)
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| k.as_str() != "id")
+                {
+                    return Err(bad("arc is on a locked layer"));
+                }
                 if a.locked
                     && p.as_object()
                         .unwrap()
@@ -512,6 +553,7 @@ impl Engine for DraftEngine {
                         "width",
                         "visible",
                         "locked",
+                        "layer",
                     ],
                 )?;
                 next.arcs.insert(id, Arc::new(a));
@@ -520,22 +562,101 @@ impl Engine for DraftEngine {
                 fields(p, &["id"])?;
                 let id = get(p, "id")?;
                 if cmd.op == "removeCircle" {
-                    if next
+                    let c = next
                         .circles
                         .get(&id)
-                        .ok_or_else(|| bad("unknown circle"))?
-                        .locked
-                    {
+                        .ok_or_else(|| bad("unknown circle"))?;
+                    if c.locked {
                         return Err(bad("circle is locked"));
+                    }
+                    if next.layer_locked(c.layer) {
+                        return Err(bad("circle is on a locked layer"));
                     }
                     next.circles.remove(&id);
                 } else {
-                    if next.arcs.get(&id).ok_or_else(|| bad("unknown arc"))?.locked {
+                    let a = next.arcs.get(&id).ok_or_else(|| bad("unknown arc"))?;
+                    if a.locked {
                         return Err(bad("arc is locked"));
+                    }
+                    if next.layer_locked(a.layer) {
+                        return Err(bad("arc is on a locked layer"));
                     }
                     next.arcs.remove(&id);
                 }
                 next.order.retain(|v| *v != id);
+            }
+            "addLayer" => {
+                fields(p, &["name", "color", "visible", "locked"])?;
+                let name: String = get(p, "name")?;
+                if name.is_empty()
+                    || name.len() > 512
+                    || name == "0"
+                    || next.layers.values().any(|l| l.name == name)
+                {
+                    return Err(bad("invalid or duplicate layer name"));
+                }
+                let id = next.allocate()?;
+                next.layers.insert(
+                    id,
+                    Arc::new(Layer {
+                        id,
+                        name,
+                        color: optional(p, "color", None)?,
+                        visible: optional(p, "visible", true)?,
+                        locked: optional(p, "locked", false)?,
+                    }),
+                );
+                data = json!({"layer_id":id});
+            }
+            "updateLayer" => {
+                fields(p, &["id", "name", "color", "visible", "locked"])?;
+                let id = get(p, "id")?;
+                if id == 0 {
+                    return Err(bad("default layer 0 is reserved"));
+                }
+                if !next.layers.contains_key(&id) {
+                    return Err(bad("unknown layer"));
+                }
+                if let Some(name) = p.get("name") {
+                    let name: String = serde_json::from_value(name.clone())?;
+                    if name.is_empty()
+                        || name.len() > 512
+                        || name == "0"
+                        || next
+                            .layers
+                            .values()
+                            .any(|l| l.id != id && l.name == name)
+                    {
+                        return Err(bad("invalid or duplicate layer name"));
+                    }
+                }
+                let layer = next
+                    .layers
+                    .get(&id)
+                    .ok_or_else(|| bad("unknown layer"))?;
+                let layer = patch(
+                    &**layer,
+                    p,
+                    &["id", "name", "color", "visible", "locked"],
+                )?;
+                next.layers.insert(id, Arc::new(layer));
+            }
+            "removeLayer" => {
+                fields(p, &["id"])?;
+                let id = get(p, "id")?;
+                if id == 0 {
+                    return Err(bad("default layer 0 cannot be removed"));
+                }
+                if !next.layers.contains_key(&id) {
+                    return Err(bad("unknown layer"));
+                }
+                let referenced = next.segments.values().any(|s| s.layer == id)
+                    || next.circles.values().any(|c| c.layer == id)
+                    || next.arcs.values().any(|a| a.layer == id);
+                if referenced {
+                    return Err(bad("layer still contains entities"));
+                }
+                next.layers.remove(&id);
             }
             "setSnapSettings" => {
                 next.snaps = patch(
