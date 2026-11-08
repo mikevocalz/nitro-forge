@@ -19,20 +19,38 @@
 //!   depends on Adobe APP14 markers the engine does not interpret.
 //! - `png`: real decode to raw samples — 8-bit, non-interlaced, color
 //!   types 0 (gray), 2 (RGB), 4 (gray+alpha), 6 (RGBA). Palette (type 3),
-//!   16-bit, interlaced and truncated/corrupt PNGs reject. Alpha is
-//!   DISCARDED (samples become gray/RGB) — there is no alpha channel in
-//!   the admitted output contract. IDAT is zlib-inflated under a hard
-//!   byte bound and rows are unfiltered with lopdf's PNG predictor.
+//!   16-bit, interlaced and truncated/corrupt PNGs reject. IHDR
+//!   compression/filter bytes must be 0 per spec. Alpha — including any
+//!   `tRNS` transparency chunk, which is parsed-over but never applied —
+//!   is DISCARDED (samples become gray/RGB); there is no alpha channel
+//!   in the admitted output contract. IDAT is zlib-inflated under a hard
+//!   byte bound and rows are unfiltered locally (`unfilter_png`):
+//!   lopdf 0.36's PNG Avg predictor is buggy, so the five filter types
+//!   are implemented and unit-tested here rather than delegated.
 //! - `raw`: the bytes ARE the interleaved samples — 8 bits/component,
 //!   `/DeviceRGB` (3 B/px) or `/DeviceGray` (1 B/px), length must equal
 //!   `width*height*channels` exactly. `width`/`height` are required.
 //!
 //! Non-JPEG image streams are FlateDecode-compressed when that is
 //! smaller (lopdf `Stream::compress` rule). All limits are enforced
-//! before any mutation: ≤64 MiB encoded input, ≤25 MP, ≤200 MiB of PNG
-//! scanline data.
+//! before any mutation: ≤64 MiB encoded input, ≤25 MP (checked at IHDR
+//! parse for PNG, before any pixel decode), ≤200 MiB of PNG scanline
+//! data.
+//!
+//! `/Contents` handling: absent or `null` means "no content"; a single
+//! stream (direct or via one level of reference — including a reference
+//! to an ARRAY of stream references, which is dereferenced so the new
+//! stream appends flat rather than nesting an array inside an array);
+//! anything else rejects Unsupported. `/Parent` chains deeper than
+//! `MAX_RESOURCE_DEPTH` reject rather than silently dropping inherited
+//! resources.
+//!
+//! JPEG honesty note: validation stops at the first SOF frame header —
+//! scan data is never inspected, so a header-only JPEG (SOF then EOI,
+//! no SOS/entropy) embeds verbatim and may not render in viewers. That
+//! is the documented contract: bytes pass through untouched, dims come
+//! from the header.
 use super::*;
-use lopdf::filters::png::decode_frame;
 use lopdf::Dictionary;
 use std::collections::BTreeSet;
 use std::io::Read as _;
@@ -185,7 +203,6 @@ struct PngImage {
 
 fn png_spec(bytes: &[u8]) -> Result<ImageSpec, EngineError> {
     let img = png_decode(bytes)?;
-    check_pixels(img.width, img.height)?;
     Ok(ImageSpec {
         width: img.width,
         height: img.height,
@@ -198,6 +215,92 @@ fn png_spec(bytes: &[u8]) -> Result<ImageSpec, EngineError> {
         content: img.samples,
         dct: false,
     })
+}
+
+/// PNG Paeth predictor (RFC 2083 §6.6); distance ties resolve `a`, then `b`.
+fn paeth_predict(a: u8, b: u8, c: u8) -> u8 {
+    let (a, b, c) = (i32::from(a), i32::from(b), i32::from(c));
+    let p = a + b - c;
+    let (pa, pb, pc) = ((p - a).abs(), (p - b).abs(), (p - c).abs());
+    if pa <= pb && pa <= pc {
+        a as u8
+    } else if pb <= pc {
+        b as u8
+    } else {
+        c as u8
+    }
+}
+
+/// Unfilter one PNG scanline in place (RFC 2083 §6.3). `previous` is the
+/// already-reconstructed row above (all zeros on the first row);
+/// `bpp` is bytes per complete pixel. `row` holds the filtered bytes on
+/// entry and the reconstructed samples on return — `left`/`up_left`
+/// reads therefore see reconstructed values, per spec.
+fn unfilter_row(filter: u8, bpp: usize, previous: &[u8], row: &mut [u8]) -> Result<(), EngineError> {
+    match filter {
+        0 => {}
+        1 => {
+            for i in bpp..row.len() {
+                row[i] = row[i].wrapping_add(row[i - bpp]);
+            }
+        }
+        2 => {
+            for i in 0..row.len() {
+                row[i] = row[i].wrapping_add(previous[i]);
+            }
+        }
+        3 => {
+            for i in 0..row.len() {
+                let left = if i >= bpp { row[i - bpp] } else { 0 };
+                // floor((left + up) / 2) — NOT left + floor(up/2).
+                row[i] = row[i]
+                    .wrapping_add(((u16::from(left) + u16::from(previous[i])) / 2) as u8);
+            }
+        }
+        4 => {
+            for i in 0..row.len() {
+                let left = if i >= bpp { row[i - bpp] } else { 0 };
+                let up_left = if i >= bpp { previous[i - bpp] } else { 0 };
+                row[i] = row[i].wrapping_add(paeth_predict(left, previous[i], up_left));
+            }
+        }
+        other => {
+            return Err(invalid_image(format!(
+                "png row filter type {other} is not supported"
+            )))
+        }
+    }
+    Ok(())
+}
+
+/// Unfilter a full PNG image's scanlines: `raw` is `height` rows of
+/// `1 + channels*width` bytes (filter byte + filtered samples), already
+/// length-verified by the caller. Returns `height*channels*width`
+/// reconstructed sample bytes.
+///
+/// This replaces lopdf 0.36's `filters::png::decode_frame`, whose Avg
+/// arm computes `left + floor(up/2)` instead of `floor((left+up)/2)`
+/// and would silently corrupt real-world PNGs that use filter 3.
+fn unfilter_png(
+    raw: &[u8],
+    channels: usize,
+    width: u64,
+    height: u64,
+) -> Result<Vec<u8>, EngineError> {
+    let row_len = channels * width as usize;
+    let mut previous = vec![0u8; row_len];
+    let mut decoded = Vec::with_capacity(raw.len() - height as usize);
+    let mut pos = 0usize;
+    for _ in 0..height {
+        let filter = raw[pos];
+        pos += 1;
+        let mut row = raw[pos..pos + row_len].to_vec();
+        pos += row_len;
+        unfilter_row(filter, channels, &previous, &mut row)?;
+        decoded.extend_from_slice(&row);
+        std::mem::swap(&mut previous, &mut row);
+    }
+    Ok(decoded)
 }
 
 fn png_decode(bytes: &[u8]) -> Result<PngImage, EngineError> {
@@ -240,6 +343,16 @@ fn png_decode(bytes: &[u8]) -> Result<PngImage, EngineError> {
                 }
                 let width = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as u64;
                 let height = u32::from_be_bytes([data[4], data[5], data[6], data[7]]) as u64;
+                // IHDR bytes 10/11 (compression method, filter method)
+                // are spec-fixed at 0.
+                if data[10] != 0 || data[11] != 0 {
+                    return Err(invalid_image(
+                        "png IHDR compression/filter method must be 0",
+                    ));
+                }
+                // Reject oversized dimensions at IHDR parse — before any
+                // IDAT inflation or pixel decode.
+                check_pixels(width, height)?;
                 ihdr = Some((
                     width,
                     height,
@@ -321,8 +434,7 @@ fn png_decode(bytes: &[u8]) -> Result<PngImage, EngineError> {
             "png IDAT does not inflate to the expected scanline size",
         ));
     }
-    let unfiltered = decode_frame(&raw, png_channels, width as usize)
-        .map_err(|e| invalid_image(format!("png row decode failed: {e}")))?;
+    let unfiltered = unfilter_png(&raw, png_channels, width, height)?;
     // Strip the alpha channel where present.
     let (channels, samples) = match color_type {
         4 => (
@@ -406,7 +518,11 @@ fn page_resources(doc: &Document, page_id: ObjectId) -> Result<Dictionary, Engin
     let mut current = Some(page_id);
     let mut seen = BTreeSet::new();
     for _ in 0..MAX_RESOURCE_DEPTH {
-        let Some(id) = current else { break };
+        let Some(id) = current else {
+            // Chain terminated (missing/non-reference /Parent) with no
+            // /Resources found — the page owns none to inherit.
+            return Ok(Dictionary::new());
+        };
         if !seen.insert(id) {
             return Err(EngineError::unsupported(
                 "insertPageImage: /Parent chain contains a cycle",
@@ -421,7 +537,11 @@ fn page_resources(doc: &Document, page_id: ObjectId) -> Result<Dictionary, Engin
         }
         current = dict.get(b"Parent").ok().and_then(|o| o.as_reference().ok());
     }
-    Ok(Dictionary::new())
+    // Depth bound hit with the chain still open: refuse rather than
+    // silently shadow resources inherited from deeper ancestors.
+    Err(EngineError::unsupported(
+        "insertPageImage: /Parent chain exceeds the resource-inheritance depth limit",
+    ))
 }
 
 /// What the page's `/Contents` currently is, resolved before journaling
@@ -438,20 +558,72 @@ enum ContentsPlan {
     DirectStream(Stream),
 }
 
+/// Validate that every `/Contents` array item resolves to a stream,
+/// then clone the items for the append plan.
+fn contents_array_plan(doc: &Document, items: &[Object]) -> Result<ContentsPlan, EngineError> {
+    for item in items {
+        let is_stream = match item {
+            Object::Reference(id) => matches!(doc.get_object(*id).map_err(ser_err)?, Object::Stream(_)),
+            Object::Stream(_) => true,
+            _ => false,
+        };
+        if !is_stream {
+            return Err(EngineError::unsupported(
+                "insertPageImage: page /Contents array contains a non-stream item",
+            ));
+        }
+    }
+    Ok(ContentsPlan::Array(items.to_vec()))
+}
+
 fn contents_plan(doc: &Document, page_id: ObjectId) -> Result<ContentsPlan, EngineError> {
     let page = doc
         .get_object(page_id)
         .and_then(Object::as_dict)
         .map_err(ser_err)?;
-    match page.get(b"Contents") {
-        Err(_) => Ok(ContentsPlan::Missing),
-        Ok(Object::Reference(id)) => Ok(ContentsPlan::Single(*id)),
-        Ok(Object::Array(items)) => Ok(ContentsPlan::Array(items.clone())),
-        Ok(Object::Stream(s)) => Ok(ContentsPlan::DirectStream(s.clone())),
-        Ok(_) => Err(EngineError::unsupported(
+    // Absent key and explicit `null` both mean "no page content".
+    let contents = match page.get(b"Contents") {
+        Err(_) | Ok(Object::Null) => return Ok(ContentsPlan::Missing),
+        Ok(o) => o,
+    };
+    match contents {
+        Object::Reference(id) => match doc.get_object(*id).map_err(ser_err)? {
+            Object::Stream(_) => Ok(ContentsPlan::Single(*id)),
+            // /Contents may be an indirect reference to an ARRAY of
+            // stream references — dereference so the new stream appends
+            // flat instead of nesting an array inside an array.
+            Object::Array(items) => contents_array_plan(doc, items),
+            _ => Err(EngineError::unsupported(
+                "insertPageImage: page /Contents reference does not resolve to a stream or array of streams",
+            )),
+        },
+        Object::Array(items) => contents_array_plan(doc, items),
+        Object::Stream(s) => Ok(ContentsPlan::DirectStream(s.clone())),
+        _ => Err(EngineError::unsupported(
             "insertPageImage: page /Contents is not a stream or array of streams",
         )),
     }
+}
+
+/// Bound on XObject-name candidates tried before rejecting — a page
+/// pre-seeded with every `X{n}` name in range fails cleanly (Validation)
+/// instead of hanging in a collision loop.
+const MAX_XOBJECT_NAME_PROBES: u32 = 1024;
+
+/// Pick the `/XObject` resource name for the new image: `X{n}` for the
+/// smallest `n` not already present in `xobjects`. Independent of object
+/// ids so the choice happens before journaling; bounded so a hostile
+/// document cannot force an unbounded probe.
+fn pick_xobject_name(xobjects: &Dictionary) -> Result<String, EngineError> {
+    for n in 0..MAX_XOBJECT_NAME_PROBES {
+        let candidate = format!("X{n}");
+        if !xobjects.has(candidate.as_bytes()) {
+            return Ok(candidate);
+        }
+    }
+    Err(invalid_image(format!(
+        "no free /XObject resource name within {MAX_XOBJECT_NAME_PROBES} candidates"
+    )))
 }
 
 impl FolioEngine {
@@ -469,12 +641,15 @@ impl FolioEngine {
                 "image input exceeds the {MAX_IMAGE_BYTES} byte cap"
             )));
         }
+        // Encrypted-document rejection runs before page resolution so a
+        // bad page index on a ciphertext doc reports Unsupported, not
+        // OutOfBounds — the encryption gate is the consistent first error.
+        reject_encrypted(&self.doc, "image insertion")?;
         let p = &cmd.payload;
         let page = req_u64(p, "page")?;
         let page_id = self.page_id(page)?;
         let rect = req_rect(p)?;
         let format = req_str(p, "format")?;
-        reject_encrypted(&self.doc, "image insertion")?;
         let spec = match format {
             "jpeg" => jpeg_spec(&image_bytes)?,
             "png" => png_spec(&image_bytes)?,
@@ -501,6 +676,10 @@ impl FolioEngine {
             Ok(o) => dict_clone(&self.doc, o)?,
             Err(_) => Dictionary::new(),
         };
+        // The XObject name is `X{n}` for the smallest free n — chosen
+        // here, before journaling, so a saturated namespace rejects
+        // cleanly instead of looping after the image object exists.
+        let name = pick_xobject_name(&xobjects)?;
         let plan = contents_plan(&self.doc, page_id)?;
 
         // ---- build the two new streams (local, infallible-ish) ---------
@@ -527,12 +706,6 @@ impl FolioEngine {
         self.journal.record(self.doc.clone());
 
         let img_id = self.doc.add_object(Object::Stream(img_stream));
-        let mut name = format!("X{}", img_id.0);
-        let mut suffix = 0u8;
-        while xobjects.has(name.as_bytes()) {
-            suffix += 1;
-            name = format!("X{}{}", img_id.0, (b'a' + suffix.min(25)) as char);
-        }
         xobjects.set(name.as_bytes().to_vec(), Object::Reference(img_id));
         resources.set("XObject", Object::Dictionary(xobjects));
 
@@ -1088,6 +1261,350 @@ mod tests {
                    "color_space":"DeviceRGB","image_b64":b64_encode(&[0u8,0,0])}),
         );
         assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
+        // The encryption gate runs before page resolution: a bad page
+        // index still reports Unsupported, not OutOfBounds.
+        let err = apply_err(
+            &mut e,
+            "insertPageImage",
+            json!({"page":99,"rect":[0,0,10,10],"format":"raw","width":1,"height":1,
+                   "color_space":"DeviceRGB","image_b64":b64_encode(&[0u8,0,0])}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
         assert_eq!(apply(&mut e, "info", json!({}))["encrypted"], true);
+    }
+
+    /// Replace the page's `/Resources`→`/XObject` dictionary with `names`
+    /// mapped to null objects — only the keys matter for name collision.
+    fn seed_xobject_names(e: &mut FolioEngine, names: &[String]) {
+        let page_id = e.page_id(0).unwrap();
+        let mut xobj = Dictionary::new();
+        for n in names {
+            xobj.set(n.as_bytes().to_vec(), Object::Null);
+        }
+        let mut res = e
+            .doc
+            .get_object(page_id)
+            .unwrap()
+            .as_dict()
+            .unwrap()
+            .get(b"Resources")
+            .unwrap()
+            .as_dict()
+            .unwrap()
+            .clone();
+        res.set("XObject", Object::Dictionary(xobj));
+        e.doc
+            .get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Resources", Object::Dictionary(res));
+    }
+
+    #[test]
+    fn xobject_name_collisions_are_bounded() {
+        let px = [0u8, 0, 0];
+        let payload = |e: &mut FolioEngine| {
+            apply(
+                e,
+                "insertPageImage",
+                json!({"page":0,"rect":[0,0,10,10],"format":"raw","width":1,"height":1,
+                       "color_space":"DeviceRGB","image_b64":b64_encode(&px)}),
+            )
+        };
+
+        // Partial collision: X0/X1/X5 taken → smallest free name wins.
+        let mut e = new_doc();
+        seed_xobject_names(&mut e, &["X0".into(), "X1".into(), "X5".into()]);
+        let d = payload(&mut e);
+        assert_eq!(d["name"], "X2");
+        let bytes = saved_pdf(&mut e);
+        let doc = Document::load_mem(&bytes).unwrap();
+        let content = doc
+            .get_page_content(*doc.get_pages().get(&1).unwrap())
+            .unwrap();
+        assert!(String::from_utf8_lossy(&content).contains("/X2 Do"));
+
+        // Hostile: every candidate name X0..X1023 pre-seeded → the op
+        // rejects cleanly (Validation) instead of hanging or panicking.
+        let mut e2 = new_doc();
+        let all: Vec<String> = (0..MAX_XOBJECT_NAME_PROBES).map(|n| format!("X{n}")).collect();
+        seed_xobject_names(&mut e2, &all);
+        let before = e2.serialize_doc().unwrap();
+        let undo_len = e2.journal.undo_len();
+        let err = apply_err(
+            &mut e2,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"raw","width":1,"height":1,
+                   "color_space":"DeviceRGB","image_b64":b64_encode(&px)}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+        assert_eq!(e2.serialize_doc().unwrap(), before);
+        assert_eq!(e2.journal.undo_len(), undo_len);
+    }
+
+    /// Test-side PNG row encoder: filtered bytes for `filter` given the
+    /// ORIGINAL row and the previous ORIGINAL row (all spec predictors).
+    fn png_filter_row(filter: u8, bpp: usize, prev: &[u8], cur: &[u8]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(cur.len());
+        for (i, &x) in cur.iter().enumerate() {
+            let left = if i >= bpp { cur[i - bpp] } else { 0 };
+            let up = prev[i];
+            let up_left = if i >= bpp { prev[i - bpp] } else { 0 };
+            let pred = match filter {
+                0 => 0,
+                1 => left,
+                2 => up,
+                3 => ((u16::from(left) + u16::from(up)) / 2) as u8,
+                4 => paeth_predict(left, up, up_left),
+                _ => unreachable!(),
+            };
+            out.push(x.wrapping_sub(pred));
+        }
+        out
+    }
+
+    /// Build scanline bytes (filter byte + filtered row) for a list of
+    /// (filter, original row) pairs.
+    fn png_scanlines(bpp: usize, rows: &[(u8, &[u8])]) -> Vec<u8> {
+        let mut scan = Vec::new();
+        let mut prev = vec![0u8; rows[0].1.len()];
+        for &(filter, row) in rows {
+            scan.push(filter);
+            scan.extend(png_filter_row(filter, bpp, &prev, row));
+            prev = row.to_vec();
+        }
+        scan
+    }
+
+    #[test]
+    fn png_all_five_filter_types_decode_known_pixels() {
+        // 3x5 gray exercising every filter type. The Avg row uses large
+        // left/up values so a `left + floor(up/2)` bug (lopdf 0.36) would
+        // decode visibly wrong pixels; Paeth exercises real neighbors.
+        let rows: [(u8, [u8; 3]); 5] = [
+            (0, [10, 20, 30]),
+            (1, [200, 100, 50]),
+            (2, [15, 25, 35]),
+            (3, [250, 240, 230]),
+            (4, [7, 8, 9]),
+        ];
+        let row_refs: Vec<(u8, &[u8])> = rows.iter().map(|(f, r)| (*f, r.as_slice())).collect();
+        let png = make_png(3, 5, 8, 0, 0, &png_scanlines(1, &row_refs));
+        let mut e = new_doc();
+        let d = apply(
+            &mut e,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"png","image_b64":b64_encode(&png)}),
+        );
+        assert_eq!(d["width"], 3);
+        assert_eq!(d["height"], 5);
+        assert_eq!(d["color_space"], "DeviceGray");
+        let bytes = saved_pdf(&mut e);
+        let doc = Document::load_mem(&bytes).unwrap();
+        let (_, samples) = page_image_stream(&doc);
+        let expected: Vec<u8> = rows.iter().flat_map(|(_, r)| r.iter().copied()).collect();
+        assert_eq!(samples, expected);
+
+        // 2x2 RGB (bpp=3): Sub then Paeth across pixel boundaries.
+        let rgb_rows: [(u8, [u8; 6]); 2] = [
+            (1, [255, 0, 0, 0, 255, 0]),
+            (4, [10, 20, 30, 40, 50, 60]),
+        ];
+        let rgb_refs: Vec<(u8, &[u8])> = rgb_rows.iter().map(|(f, r)| (*f, r.as_slice())).collect();
+        let png = make_png(2, 2, 8, 2, 0, &png_scanlines(3, &rgb_refs));
+        let mut e2 = new_doc();
+        apply(
+            &mut e2,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"png","image_b64":b64_encode(&png)}),
+        );
+        let bytes = saved_pdf(&mut e2);
+        let doc = Document::load_mem(&bytes).unwrap();
+        let (_, samples) = page_image_stream(&doc);
+        let expected: Vec<u8> = rgb_rows.iter().flat_map(|(_, r)| r.iter().copied()).collect();
+        assert_eq!(samples, expected);
+
+        // Filter type 9 is not a PNG filter — clean Validation error.
+        let bad = make_png(1, 1, 8, 0, 0, &[9, 42]);
+        let err = apply_err(
+            &mut e2,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"png","image_b64":b64_encode(&bad)}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+    }
+
+    #[test]
+    fn png_ihdr_validates_method_bytes_and_pixel_cap_early() {
+        let mut e = new_doc();
+        // IHDR compression byte = 1 (spec requires 0) — rejected at parse.
+        let mut ihdr = Vec::new();
+        ihdr.extend_from_slice(&1u32.to_be_bytes());
+        ihdr.extend_from_slice(&1u32.to_be_bytes());
+        ihdr.extend_from_slice(&[8, 0, 1, 0, 0]);
+        let mut png = PNG_SIGNATURE.to_vec();
+        png.extend_from_slice(&png_chunk(b"IHDR", &ihdr));
+        png.extend_from_slice(&png_chunk(b"IEND", &[]));
+        let err = apply_err(
+            &mut e,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"png","image_b64":b64_encode(&png)}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+
+        // 30000x30000 exceeds the 25 MP cap — rejected at IHDR parse,
+        // before any IDAT chunk even exists.
+        let mut ihdr = Vec::new();
+        ihdr.extend_from_slice(&30000u32.to_be_bytes());
+        ihdr.extend_from_slice(&30000u32.to_be_bytes());
+        ihdr.extend_from_slice(&[8, 0, 0, 0, 0]);
+        let mut png = PNG_SIGNATURE.to_vec();
+        png.extend_from_slice(&png_chunk(b"IHDR", &ihdr));
+        let err = apply_err(
+            &mut e,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"png","image_b64":b64_encode(&png)}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+    }
+
+    #[test]
+    fn contents_reference_variants_are_dereferenced() {
+        let px = [9u8, 9, 9];
+        let insert = |e: &mut FolioEngine| {
+            apply(
+                e,
+                "insertPageImage",
+                json!({"page":0,"rect":[0,0,10,10],"format":"raw","width":1,"height":1,
+                       "color_space":"DeviceRGB","image_b64":b64_encode(&px)}),
+            )
+        };
+        let page_contents = |e: &FolioEngine| {
+            let page_id = e.page_id(0).unwrap();
+            e.doc
+                .get_object(page_id)
+                .unwrap()
+                .as_dict()
+                .unwrap()
+                .get(b"Contents")
+                .unwrap()
+                .clone()
+        };
+
+        // /Contents = reference → array of stream references: the new
+        // stream appends flat (no nested array).
+        let mut e = new_doc();
+        let page_id = e.page_id(0).unwrap();
+        let s1 = e.doc.add_object(Object::Stream(Stream::new(
+            dictionary! {},
+            b"q Q".to_vec(),
+        )));
+        let arr_id = e
+            .doc
+            .add_object(Object::Array(vec![Object::Reference(s1)]));
+        e.doc
+            .get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Contents", Object::Reference(arr_id));
+        insert(&mut e);
+        let items = page_contents(&e).as_array().unwrap().clone();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].as_reference().unwrap(), s1);
+
+        // /Contents = reference → non-stream object → Unsupported,
+        // document untouched.
+        let mut e2 = new_doc();
+        let page_id2 = e2.page_id(0).unwrap();
+        let num_id = e2.doc.add_object(Object::Integer(7));
+        e2.doc
+            .get_object_mut(page_id2)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Contents", Object::Reference(num_id));
+        let before = e2.serialize_doc().unwrap();
+        let err = apply_err(
+            &mut e2,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"raw","width":1,"height":1,
+                   "color_space":"DeviceRGB","image_b64":b64_encode(&px)}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
+        assert_eq!(e2.serialize_doc().unwrap(), before);
+
+        // /Contents array containing a non-stream item → Unsupported.
+        let mut e3 = new_doc();
+        let page_id3 = e3.page_id(0).unwrap();
+        let bad_streamless = e3.doc.add_object(Object::Integer(3));
+        e3.doc
+            .get_object_mut(page_id3)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set(
+                "Contents",
+                Object::Array(vec![Object::Reference(bad_streamless)]),
+            );
+        let err = apply_err(
+            &mut e3,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"raw","width":1,"height":1,
+                   "color_space":"DeviceRGB","image_b64":b64_encode(&px)}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
+
+        // /Contents = null → treated as absent → single new stream ref.
+        let mut e4 = new_doc();
+        let page_id4 = e4.page_id(0).unwrap();
+        e4.doc
+            .get_object_mut(page_id4)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Contents", Object::Null);
+        insert(&mut e4);
+        assert!(page_contents(&e4).as_reference().is_ok());
+    }
+
+    #[test]
+    fn resource_parent_chain_depth_limit_rejects() {
+        let mut e = new_doc();
+        let page_id = e.page_id(0).unwrap();
+        // The page's own /Resources would end the walk immediately —
+        // remove it so inheritance actually reaches the /Parent chain.
+        e.doc
+            .get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .remove(b"Resources");
+        // Re-point /Parent at a 70-node chain of plain dicts — deeper
+        // than MAX_RESOURCE_DEPTH (64), none carrying /Resources.
+        let mut next: Option<ObjectId> = None;
+        for _ in 0..70 {
+            let mut d = dictionary! {};
+            if let Some(p) = next {
+                d.set("Parent", Object::Reference(p));
+            }
+            next = Some(e.doc.add_object(Object::Dictionary(d)));
+        }
+        e.doc
+            .get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Parent", Object::Reference(next.unwrap()));
+        let before = e.serialize_doc().unwrap();
+        let err = apply_err(
+            &mut e,
+            "insertPageImage",
+            json!({"page":0,"rect":[0,0,10,10],"format":"raw","width":1,"height":1,
+                   "color_space":"DeviceRGB","image_b64":b64_encode(&[0u8,0,0])}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
+        assert_eq!(e.serialize_doc().unwrap(), before);
     }
 }
