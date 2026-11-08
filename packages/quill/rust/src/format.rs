@@ -304,6 +304,12 @@ impl ParagraphFormatPatch {
 /// Full validation of a stored `ParagraphFormat` on restore: scalar bounds
 /// and tab-stop rules. Enum fields are already typed by serde.
 pub fn validate_format(f: &ParagraphFormat) -> Result<(), EngineError> {
+    // Ops canonicalize all-empty formats (and empty tab lists) back to
+    // `None`; a stored degenerate value can only come from a crafted
+    // snapshot, so reject it rather than admit a state the engine never emits.
+    if f.is_empty() || f.tabs.as_ref().is_some_and(|t| t.is_empty()) {
+        return Err(validation("empty paragraph format"));
+    }
     if let Some(v) = f.indent_left {
         if v > INDENT_MAX_TWIPS as u32 {
             return Err(validation(format!(

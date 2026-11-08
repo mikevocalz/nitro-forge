@@ -599,7 +599,8 @@ export class QuillDocument {
    * only: no layout consumes the values yet.
    */
   setParagraphFormat(block: number, patch: ParagraphFormatPatch) {
-    return this.call(OPS.setParagraphFormat, { block, ...patch });
+    const { block: _ignored, ...rest } = patch as ParagraphFormatPatch & { block?: number };
+    return this.call(OPS.setParagraphFormat, { block, ...rest });
   }
   /**
    * Insert a `rows`x`cols` table (each cell starts with one empty
