@@ -220,6 +220,11 @@ pub(super) fn validate(state: &PitchState) -> Result<(), EngineError> {
                 // slide's bound layout; placeholder ids are deck-unique.
                 for object in &slide.objects {
                     if let Some(placeholder_id) = object.placeholder_id {
+                        if object.kind == ObjKind::Connector {
+                            return Err(EngineError::validation(
+                                "connector objects cannot carry a placeholder binding",
+                            ));
+                        }
                         if !layout.placeholders.iter().any(|p| p.id == placeholder_id) {
                             return Err(EngineError::validation(
                                 "object references a placeholder outside the slide's layout",
@@ -1243,6 +1248,18 @@ mod tests {
             "setObjectPlaceholder",
             json!({"slide":s,"object":obj,"placeholder":ph}),
         );
+        // A real connector (valid spec, zeroed geometry) — the op layer
+        // rejects tagging it, so only a hostile restore can produce this.
+        let conn = id_of(
+            &call(
+                &mut e,
+                "addConnector",
+                json!({"slide":s,
+                       "from":{"type":"free","x":0,"y":0},
+                       "to":{"type":"free","x":10,"y":10}}),
+            ),
+            "object_id",
+        );
         let good = e.snapshot().unwrap();
 
         let mut doc = serde_json::to_value(&e.state).unwrap();
@@ -1262,6 +1279,19 @@ mod tests {
             ("unknown placeholder tag", {
                 let mut d = doc.clone();
                 d["slides"][0]["objects"][0]["placeholder_id"] = json!(424242);
+                d
+            }),
+            // A genuine connector carrying a valid placeholder tag — every
+            // other invariant holds, so only the kind guard can reject it.
+            ("connector tag", {
+                let mut d = doc.clone();
+                let pos = d["slides"][0]["objects"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .position(|o| o["id"] == json!(conn))
+                    .unwrap();
+                d["slides"][0]["objects"][pos]["placeholder_id"] = json!(ph);
                 d
             }),
         ];
