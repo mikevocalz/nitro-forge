@@ -407,25 +407,7 @@ impl QuillEngine {
         };
         // Validate positions against the live block list (table blocks
         // only accept offset 0, same as every Pos consumer).
-        for pos in [from, to] {
-            let Some(b) = self.blocks.get(pos.block) else {
-                return Err(EngineError::out_of_bounds(format!(
-                    "block {} out of range ({} blocks)",
-                    pos.block,
-                    self.blocks.len()
-                )));
-            };
-            let len = block_len(b);
-            if pos.offset > len {
-                return Err(EngineError::out_of_bounds(format!(
-                    "offset {} out of range (block {} has {} chars)",
-                    pos.offset, pos.block, len
-                )));
-            }
-        }
-        if !from.le(to) {
-            return Err(EngineError::validation("range end precedes range start"));
-        }
+        self.check_range(from, to)?;
         let matches = merge_matches(&self.blocks, from, to);
         if matches.is_empty() {
             return Ok(Self::read_only(json!({
