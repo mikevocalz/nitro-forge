@@ -13,7 +13,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | cadence-engine tests (incl. real PCM render) | 21 pass | `cargo test -p cadence-engine` |
 | splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch) | 44 pass | `cargo test -p splice-engine` |
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
-| folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments, structural redaction, PDF compare) | 128 pass | `cargo test -p folio-engine` |
+| folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments, structural redaction, PDF compare) | 133 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
 | quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, tables incl. cell merge/unmerge and in-cell find/replace) | 154 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI + dispatch tests (incl. folio binary-input gate) | 28 pass | `cargo test -p nf-sys` |
@@ -21,7 +21,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
 | Typecheck: ignition + 7 product packages + apps/console + apps/example | clean | `pnpm -r exec tsc --noEmit` |
 | Post-review full workspace retest | 184 Rust + 32 vitest pass | `cargo test --workspace && pnpm -r test` |
-| Folio slice E (redactRect + comparePdf, 2026-11-07 `codex/w1-folio-redact`) | 128 folio Rust tests + 35 folio vitest pass; nf-cli build + folio typecheck clean | `cargo test -p folio-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/folio test`, `pnpm --filter @nitro-forge/folio typecheck` |
+| Folio slice E (redactRect + comparePdf, 2026-11-07 `codex/w1-folio-redact`; review fixes `codex/w1-folio-e`) | 133 folio Rust tests + 35 folio vitest pass; nf-cli build + folio typecheck clean | `cargo test -p folio-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/folio test`, `pnpm --filter @nitro-forge/folio typecheck` |
 
 ## Transport status
 
@@ -44,7 +44,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Tally engine | Spreadsheet eng (subagent ddf87203) | formula parser/evaluator | ✅ 27 tests |
 | Cadence engine | Audio/DSP eng (subagent 75836ea5) | MIDI clips, transport, PCM render | ✅ 21 tests |
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch | ✅ 44 tests |
-| Folio engine | PDF eng (subagent bdd8014e; slice E codex/w1-folio-redact) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption, outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment), structural redaction (redactRect: annots + contained image XObjects + PieceInfo/XMP//Info scrub, honest retained reporting, text/vector explicitly not removed), structural PDF compare (comparePdf: page/annot/field/outline/attachment/signature projections, lossy text hint) | ✅ 128 tests |
+| Folio engine | PDF eng (subagent bdd8014e; slice E codex/w1-folio-redact) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption, outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment), structural redaction (redactRect: annots + contained image XObjects + PieceInfo/XMP//Info scrub, honest retained reporting, text/vector explicitly not removed), structural PDF compare (comparePdf: page/annot/field/outline/attachment/signature projections, lossy text hint) | ✅ 133 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
 | Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) | ✅ 154 tests |
 | Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |

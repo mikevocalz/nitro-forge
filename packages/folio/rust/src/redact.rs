@@ -12,7 +12,10 @@
 //!   to delete. Removal fails closed: if anything outside the page's
 //!   `/Annots` still references a removed annotation (a form field's
 //!   `/AcroForm` entry, another page, an orphan `/Popup` chain), the whole
-//!   op rejects rather than leaving dangling references.
+//!   op rejects rather than leaving dangling references. A `/Annots`
+//!   array object shared with another page rejects whenever slots would
+//!   be dropped — inline annotation dicts have no object id, so the
+//!   per-entry reference scan alone cannot see the cross-page damage.
 //! - **Image XObjects** whose EVERY placement on the page is fully
 //!   contained in `rect`. Placement is proven from the content stream:
 //!   `q`/`Q`/`cm` graphics-state tracking resolves each `/ImN Do` through
@@ -22,17 +25,23 @@
 //!   page-content `Do` ops inside `rect`; any placement that extends
 //!   outside the rect (partial overlap included), any placement inside a
 //!   form XObject (form streams may be shared and are never rewritten),
-//!   any placement in a content stream shared with another page, or an
-//!   image that is never drawn all retain the image. Removal deletes the
-//!   `Do` operations (the stream is re-encoded unfiltered) and the
-//!   `/XObject` resource entry — but only when the resource chain is
-//!   provably exclusive to this page; otherwise the draws are still
-//!   removed while the object stays reachable, reported separately as
-//!   `image_draws_removed`. Text operators and vector path-painting ops
-//!   are NEVER touched.
+//!   any placement in a content stream shared with another page or
+//!   referenced outside its owning page's `/Contents` chain, any
+//!   placement in a stream containing inline images (`BI`…`ID`…`EI` —
+//!   lopdf's `Content::decode`/`encode` round-trip corrupts them, so
+//!   such streams are never re-encoded), or an image that is never
+//!   drawn all retain the image. Removal deletes the `Do` operations
+//!   (the stream is re-encoded unfiltered) and the `/XObject` resource
+//!   entry — but only when the resource chain is provably exclusive to
+//!   this page; otherwise the draws are still removed while the object
+//!   stays reachable, reported separately as `image_draws_removed`.
+//!   Text operators and vector path-painting ops are NEVER touched.
 //! - **Document metadata**: `/PieceInfo` and `/Metadata` (XMP) on every
 //!   page and the catalog, and the trailer `/Info` dictionary reference.
-//!   Scrubbing is document-wide, not page-scoped.
+//!   Scrubbing is document-wide, not page-scoped, and covers ONLY those
+//!   standard locations — XMP or other metadata carried under
+//!   non-standard keys (form XObjects, `/OCProperties`, custom
+//!   dictionaries) is out of scope and survives.
 //!
 //! What is NOT removed — the honesty contract:
 //!
@@ -356,6 +365,27 @@ fn plan_annotation_removal(
             }
         }
     }
+    // A second page resolving to the SAME indirect /Annots array object
+    // would lose the dropped slots too — and for inline (non-indirect)
+    // annotation dicts the per-entry reference scan above sees nothing.
+    // Reject whenever this page's array object is shared and any slot
+    // would actually be rewritten.
+    if !remove_slots.is_empty() {
+        if let AnnotsLoc::Ref(array_id) = annots_loc(doc, page_id)? {
+            for (_, other) in doc.get_pages() {
+                if other == page_id {
+                    continue;
+                }
+                if let AnnotsLoc::Ref(other_array) = annots_loc(doc, other)? {
+                    if other_array == array_id {
+                        return Err(EngineError::unsupported(
+                            "annotation /Annots array is shared with another page",
+                        ));
+                    }
+                }
+            }
+        }
+    }
     let mut removed_ids: Vec<ObjectId> = remove_ids.iter().copied().collect();
     removed_ids.sort();
     retained_ids.retain(|id| !remove_ids.contains(id));
@@ -475,9 +505,15 @@ struct Placement {
 struct ScanState {
     budget: usize,
     complete: bool,
+    /// Forms on the current recursion path only — inserted before
+    /// descending and removed after return, so a form `Do`'d twice in a
+    /// DAG (shared header/footer) re-analyzes while true cycles still
+    /// fail closed.
     forms_visited: HashSet<ObjectId>,
     forms_count: usize,
-    /// Inline (non-indirect) image XObjects seen — count only, never ids.
+    /// Inline images encountered — `BI`…`ID`…`EI` ops plus inline stream
+    /// XObjects passed to `Do`. Count only; inline images are never
+    /// removed or rewritten.
     inline_images: usize,
 }
 
@@ -569,10 +605,15 @@ fn handle_do(
             let inner_ctm = ctm.mul(form_matrix);
             let data = stream.get_plain_content().map_err(ser_err)?;
             let ops = decode_ops(&data)?;
-            walk_ops(
+            let result = walk_ops(
                 doc, &ops, inner_ctm, rect, locked_streams, xobj_id, &inner_xobjs, out, state,
                 depth + 1,
-            )
+            );
+            // Path-scoped cycle detection: the form leaves the visited
+            // set when this branch returns, so sibling `Do`s of the
+            // same form (a DAG, not a cycle) are analyzed again.
+            state.forms_visited.remove(&xobj_id);
+            result
         }
         _ => Ok(()),
     }
@@ -633,6 +674,14 @@ fn walk_ops(
                     ctm = ctm.mul(m);
                 }
             }
+            "BI" => {
+                // Inline image (BI…ID…EI). lopdf decodes it to a
+                // Stream operand and `Content::encode` cannot write it
+                // back as inline syntax — counted for honest reporting;
+                // streams containing it are marked untouchable by the
+                // caller before any strip is planned.
+                state.inline_images += 1;
+            }
             "Do" => {
                 let Some(name) = op.operands.first().and_then(|o| o.as_name().ok()) else {
                     continue;
@@ -654,19 +703,109 @@ fn walk_ops(
     Ok(())
 }
 
-/// Content stream ids used by more than one page — their bytes cannot be
-/// rewritten without affecting the other page.
-fn shared_content_streams(doc: &Document) -> HashSet<ObjectId> {
-    let mut counts: HashMap<ObjectId, usize> = HashMap::new();
-    for (_, pid) in doc.get_pages() {
-        for sid in doc.get_page_contents(pid) {
-            *counts.entry(sid).or_default() += 1;
+/// Object ids a page's `/Contents` value dereferences through before
+/// reaching the content streams — indirect arrays and intermediate
+/// objects. Mirrors `Document::get_page_contents`'s walk (which stops
+/// at streams, missing objects, and inline arrays).
+fn contents_chain_ids(doc: &Document, page_id: ObjectId) -> Vec<ObjectId> {
+    let mut out = Vec::new();
+    let Ok(page) = doc.get_dictionary(page_id) else {
+        return out;
+    };
+    let mut contents = page.get(b"Contents").ok().cloned();
+    for _ in 0..page_ops::MAX_TREE_DEPTH {
+        let Some(obj) = contents else { break };
+        match obj {
+            Object::Reference(id) => match doc.objects.get(&id) {
+                None | Some(Object::Stream(_)) => break,
+                Some(o) => {
+                    out.push(id);
+                    contents = Some(o.clone());
+                }
+            },
+            _ => break,
         }
     }
-    counts
-        .into_iter()
-        .filter(|(_, n)| *n > 1)
-        .map(|(id, _)| id)
+    out
+}
+
+/// Does `page`'s dictionary reference `sid` anywhere outside the
+/// `/Contents` key? A page legitimately reaches its content streams only
+/// through `/Contents`; a second reference (e.g. `/PieceInfo`, a custom
+/// key) means rewriting the stream could corrupt that consumer too.
+fn page_refs_stream_outside_contents(doc: &Document, page_id: ObjectId, sid: ObjectId) -> bool {
+    let Ok(dict) = doc.get_object(page_id).and_then(Object::as_dict) else {
+        return true;
+    };
+    dict.iter().any(|(key, value)| {
+        key.as_slice() != b"Contents" && {
+            let mut refs = Vec::new();
+            page_ops::collect_refs(value, &mut refs);
+            refs.contains(&sid)
+        }
+    })
+}
+
+/// Content stream ids whose bytes must NOT be rewritten. A stream is
+/// rewritable only when it is used as `/Contents` by exactly one page
+/// AND every object referencing it sits on that page's `/Contents`
+/// chain (the page dict itself or an indirect contents array /
+/// intermediate object). Any other referrer — another page, a form
+/// XObject, an arbitrary dictionary — makes the stream shared: its
+/// bytes are observed by consumers this op cannot enumerate, so image
+/// draws inside it are retained rather than stripped.
+fn locked_content_streams(doc: &Document) -> HashSet<ObjectId> {
+    let pages = doc.get_pages();
+    // stream id → pages listing it in /Contents.
+    let mut users: HashMap<ObjectId, HashSet<ObjectId>> = HashMap::new();
+    // stream id → object ids allowed to reference it directly.
+    let mut legit: HashMap<ObjectId, HashSet<ObjectId>> = HashMap::new();
+    let mut all: HashSet<ObjectId> = HashSet::new();
+    for (_, pid) in &pages {
+        let sids = doc.get_page_contents(*pid);
+        let containers = contents_chain_ids(doc, *pid);
+        for sid in sids {
+            all.insert(sid);
+            users.entry(sid).or_default().insert(*pid);
+            legit.entry(sid).or_default().insert(*pid);
+            for c in &containers {
+                let direct = doc.objects.get(c).is_some_and(|o| {
+                    let mut refs = Vec::new();
+                    page_ops::collect_refs(o, &mut refs);
+                    refs.contains(&sid)
+                });
+                if direct {
+                    legit.entry(sid).or_default().insert(*c);
+                }
+            }
+        }
+    }
+    if all.is_empty() {
+        return HashSet::new();
+    }
+    let referrers = object_referrers(doc, &all.iter().copied().collect());
+    if referrers.is_empty() {
+        // The 200k-object scan cap (or a genuinely unreferenced set):
+        // fail closed — nothing is provably private.
+        return all;
+    }
+    all.into_iter()
+        .filter(|sid| {
+            let single_user = users.get(sid).is_some_and(|u| u.len() == 1);
+            if !single_user {
+                return true;
+            }
+            let page = *users.get(sid).and_then(|u| u.iter().next()).unwrap();
+            if page_refs_stream_outside_contents(doc, page, *sid) {
+                return true;
+            }
+            // Locked unless every referrer is a legitimate /Contents
+            // chain object; a missing referrer entry fails closed too.
+            referrers.get(sid).map_or(true, |rs| {
+                rs.iter()
+                    .any(|r| !legit.get(sid).is_some_and(|l| l.contains(r)))
+            })
+        })
         .collect()
 }
 
@@ -682,7 +821,9 @@ struct ImagePlan {
     retained: BTreeMap<ObjectId, &'static str>,
     /// Holder paths for `removed_ids` (needed by the mutation phase).
     holders: HashMap<ObjectId, Vec<HolderPath>>,
-    /// Inline image XObjects encountered (count only).
+    /// Inline images encountered during the content scan — `BI`…`EI`
+    /// ops plus inline stream XObjects passed to `Do` (count only;
+    /// reported as `retained.inline_images`).
     inline_images: usize,
     /// Set when content analysis could not prove every placement.
     analysis_incomplete: bool,
@@ -745,7 +886,12 @@ fn analyze_images(
     // discovers them for honest retained reporting.
     // Content scan: placements per image id.
     let xobjs = xobj_map(xo_dict);
-    let locked = shared_content_streams(doc);
+    let locked = locked_content_streams(doc);
+    // Page content streams containing inline images (a `BI` op or any
+    // Stream operand — both decode to forms `Content::encode` cannot
+    // write back as inline syntax). Such streams are never re-encoded,
+    // so image draws inside them are retained, not stripped.
+    let mut bi_streams: HashSet<ObjectId> = HashSet::new();
     let mut placements: HashMap<ObjectId, Vec<Placement>> = HashMap::new();
     let mut state = ScanState {
         budget: MAX_CONTENT_OPS,
@@ -773,6 +919,11 @@ fn analyze_images(
                 break;
             }
         };
+        if ops.iter().any(|op| {
+            op.operator == "BI" || op.operands.iter().any(|o| matches!(o, Object::Stream(_)))
+        }) {
+            bi_streams.insert(sid);
+        }
         if walk_ops(
             doc, &ops, IDENTITY, rect, &locked, sid, &xobjs, &mut placements, &mut state, 0,
         )
@@ -809,6 +960,8 @@ fn analyze_images(
             Some("drawn_inside_form")
         } else if ps.iter().any(|p| p.locked) {
             Some("shared_content_stream")
+        } else if ps.iter().any(|p| bi_streams.contains(&p.stream)) {
+            Some("inline_images_in_stream")
         } else {
             None
         };
@@ -1686,5 +1839,271 @@ mod tests {
         let b64 = saved_b64(&mut e);
         let reloaded = Document::load_mem(&b64_decode(&b64).unwrap()).unwrap();
         assert!(reloaded.trailer.get(b"Info").is_err());
+    }
+
+    // -- review-finding regressions --------------------------------------------
+
+    /// Page whose single content stream holds BOTH a contained XObject
+    /// image `Do` and a `BI`…`ID`…`EI` inline image. lopdf's
+    /// `Content::decode` turns the inline image into a `BI` op with a
+    /// `Stream` operand that `Content::encode` cannot write back as
+    /// inline syntax — so the stream must be untouchable: the image draw
+    /// is retained with an honest reason and the saved bytes still
+    /// decode to the same operations.
+    #[test]
+    fn redact_rect_stream_with_inline_image_is_untouchable() {
+        let mut doc = build_blank_doc(1);
+        let page_id = *doc.get_pages().values().next().unwrap();
+        let im = add_image(&mut doc);
+        let xo_id = doc.add_object(Object::Dictionary(dictionary! {
+            "Im" => im,
+        }));
+        let content = Stream::new(
+            dictionary! {},
+            b"q 100 0 0 100 50 50 cm /Im Do Q\nq 100 0 0 100 60 60 cm BI /W 1 /H 1 /CS /DeviceGray /BPC 8\nID\nz\nEI\nQ".to_vec(),
+        );
+        let cid = doc.add_object(Object::Stream(content));
+        doc.get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Contents", Object::Reference(cid));
+        doc.get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Resources", dictionary! { "XObject" => xo_id });
+        let mut e = FolioEngine::new();
+        e.doc = doc;
+        let d = apply(
+            &mut e,
+            "redactRect",
+            json!({"page":0,"rect":[40,40,180,180]}),
+        );
+        // The contained image would normally be stripped, but its stream
+        // carries an inline image: retained, nothing rewritten.
+        assert_eq!(d["removed"]["images"], 0);
+        assert_eq!(d["removed"]["image_draws_removed"], 0);
+        assert_eq!(d["retained"]["images"], 1);
+        assert_eq!(
+            d["retained"]["image_reasons"][im.0.to_string()],
+            "inline_images_in_stream"
+        );
+        assert_eq!(d["retained"]["inline_images"], 1);
+        // Save → load → re-decode: the BI op and the Do both survive,
+        // proving the stream was never re-encoded through lopdf's
+        // lossy inline-image path.
+        let b64 = saved_b64(&mut e);
+        let reloaded = Document::load_mem(&b64_decode(&b64).unwrap()).unwrap();
+        let data = stream_plain(&reloaded, cid).unwrap();
+        let ops = decode_ops(&data).unwrap();
+        assert!(ops.iter().any(|o| o.operator == "BI"));
+        assert_eq!(
+            ops.iter().filter(|o| o.operator == "Do").count(),
+            1,
+            "the /Im Do must survive: {ops:?}"
+        );
+        assert!(e.doc.objects.contains_key(&im));
+    }
+
+    /// A form XObject `Do`'d twice is a DAG revisit, not a cycle: both
+    /// placements must be analyzed (the image reports
+    /// `drawn_inside_form`, not `analysis_incomplete`).
+    #[test]
+    fn redact_rect_form_xobject_reused_twice_is_not_a_cycle() {
+        let mut doc = build_blank_doc(1);
+        let page_id = *doc.get_pages().values().next().unwrap();
+        let im = add_image(&mut doc);
+        let form_id = doc.add_object(Object::Stream(Stream::new(
+            dictionary! {
+                "Type" => "XObject",
+                "Subtype" => "Form",
+                "BBox" => vec![Object::Integer(0), Object::Integer(0), Object::Integer(612), Object::Integer(792)],
+                "Resources" => dictionary! { "XObject" => dictionary! { "Im" => im } },
+            },
+            b"q 100 0 0 100 50 50 cm /Im Do Q".to_vec(),
+        )));
+        let xo_id = doc.add_object(Object::Dictionary(dictionary! {
+            "Fm" => form_id,
+        }));
+        let cid = doc.add_object(Object::Stream(Stream::new(
+            dictionary! {},
+            b"/Fm Do /Fm Do".to_vec(),
+        )));
+        doc.get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Contents", Object::Reference(cid));
+        doc.get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Resources", dictionary! { "XObject" => xo_id });
+        let mut e = FolioEngine::new();
+        e.doc = doc;
+        let d = apply(
+            &mut e,
+            "redactRect",
+            json!({"page":0,"rect":[0,0,612,792]}),
+        );
+        assert_eq!(d["removed"]["images"], 0);
+        assert_eq!(
+            d["retained"]["image_reasons"][im.0.to_string()],
+            "drawn_inside_form"
+        );
+        assert!(e.doc.objects.contains_key(&im));
+    }
+
+    /// A true form cycle still fails closed: placements cannot be
+    /// proven, so every candidate image reports `analysis_incomplete`.
+    #[test]
+    fn redact_rect_cyclic_form_xobject_fails_closed() {
+        let mut doc = build_blank_doc(1);
+        let page_id = *doc.get_pages().values().next().unwrap();
+        let im = add_image(&mut doc);
+        // Form draws the image AND re-invokes itself. `Fm` starts as a
+        // placeholder and is patched to the form's own id below.
+        let form_id = doc.add_object(Object::Stream(Stream::new(
+            dictionary! {
+                "Type" => "XObject",
+                "Subtype" => "Form",
+                "BBox" => vec![Object::Integer(0), Object::Integer(0), Object::Integer(612), Object::Integer(792)],
+                "Resources" => dictionary! {
+                    "XObject" => dictionary! { "Im" => im, "Fm" => im },
+                },
+            },
+            b"q 100 0 0 100 50 50 cm /Im Do Q /Fm Do".to_vec(),
+        )));
+        // Patch the self-reference now that the id is known.
+        if let Object::Stream(s) = doc.objects.get_mut(&form_id).unwrap() {
+            s.dict
+                .get_mut(b"Resources")
+                .unwrap()
+                .as_dict_mut()
+                .unwrap()
+                .get_mut(b"XObject")
+                .unwrap()
+                .as_dict_mut()
+                .unwrap()
+                .set("Fm", Object::Reference(form_id));
+        }
+        // The image is also a page-level candidate so the
+        // analysis_incomplete report has an id to attach the reason to.
+        let xo_id = doc.add_object(Object::Dictionary(dictionary! {
+            "Fm" => form_id,
+            "Im" => im,
+        }));
+        let cid = doc.add_object(Object::Stream(Stream::new(
+            dictionary! {},
+            b"/Fm Do".to_vec(),
+        )));
+        doc.get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Contents", Object::Reference(cid));
+        doc.get_object_mut(page_id)
+            .unwrap()
+            .as_dict_mut()
+            .unwrap()
+            .set("Resources", dictionary! { "XObject" => xo_id });
+        let mut e = FolioEngine::new();
+        e.doc = doc;
+        let d = apply(
+            &mut e,
+            "redactRect",
+            json!({"page":0,"rect":[0,0,612,792]}),
+        );
+        assert_eq!(d["removed"]["images"], 0);
+        assert_eq!(
+            d["retained"]["image_reasons"][im.0.to_string()],
+            "analysis_incomplete"
+        );
+        assert!(e.doc.objects.contains_key(&im));
+    }
+
+    /// A page content stream referenced by anything outside the owning
+    /// page's `/Contents` chain (here: a form XObject's dictionary) is
+    /// shared — its bytes cannot be rewritten, so contained image draws
+    /// inside it are retained as `shared_content_stream`.
+    #[test]
+    fn redact_rect_content_stream_referenced_by_form_is_locked() {
+        let (mut e, im_in, _im_out, _im_part) = image_engine();
+        let page = e.page_id(0).unwrap();
+        let cid = e.doc.get_page_contents(page)[0];
+        // A form XObject whose dictionary also names the content stream.
+        e.doc.add_object(Object::Stream(Stream::new(
+            dictionary! {
+                "Type" => "XObject",
+                "Subtype" => "Form",
+                "BBox" => vec![Object::Integer(0), Object::Integer(0), Object::Integer(612), Object::Integer(792)],
+                "Ref" => cid,
+            },
+            Vec::new(),
+        )));
+        let d = apply(
+            &mut e,
+            "redactRect",
+            json!({"page":0,"rect":[40,40,180,180]}),
+        );
+        assert_eq!(d["removed"]["images"], 0);
+        assert_eq!(d["removed"]["image_draws_removed"], 0);
+        assert_eq!(
+            d["retained"]["image_reasons"][im_in.0.to_string()],
+            "shared_content_stream"
+        );
+        // Stream bytes untouched: all three Do ops still decode.
+        let data = stream_plain(&e.doc, cid).unwrap();
+        let ops = decode_ops(&data).unwrap();
+        assert_eq!(ops.iter().filter(|o| o.operator == "Do").count(), 3);
+        assert!(e.doc.objects.contains_key(&im_in));
+    }
+
+    /// Two pages sharing ONE indirect `/Annots` array that contains
+    /// INLINE annotation dicts: dropping slots for this page would
+    /// silently remove them for the other. The op must reject
+    /// Unsupported before mutating; a non-intersecting rect still
+    /// no-ops cleanly.
+    #[test]
+    fn redact_rect_shared_annots_array_with_inline_dicts_rejects() {
+        let mut doc = build_blank_doc(2);
+        let pages: Vec<ObjectId> = doc.get_pages().into_values().collect();
+        let annots_id = doc.add_object(Object::Array(vec![Object::Dictionary(
+            dictionary! {
+                "Type" => "Annot",
+                "Subtype" => "Text",
+                "Rect" => vec![
+                    Object::Integer(10), Object::Integer(10),
+                    Object::Integer(60), Object::Integer(60),
+                ],
+                "Contents" => lopdf::text_string("shared inline"),
+            },
+        )]));
+        for pid in &pages {
+            doc.get_object_mut(*pid)
+                .unwrap()
+                .as_dict_mut()
+                .unwrap()
+                .set("Annots", Object::Reference(annots_id));
+        }
+        let mut e = FolioEngine::new();
+        e.doc = doc;
+        let before = e.snapshot().unwrap();
+        let err = apply_err(
+            &mut e,
+            "redactRect",
+            json!({"page":0,"rect":[0,0,200,200]}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Nothing intersects → eventless no-op, shared array untouched.
+        let d = apply(
+            &mut e,
+            "redactRect",
+            json!({"page":0,"rect":[300,300,50,50]}),
+        );
+        assert_eq!(d["removed"]["annotations"], 0);
+        assert!(e.doc.objects.contains_key(&annots_id));
     }
 }

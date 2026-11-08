@@ -18,6 +18,17 @@
 //!   trees, optional content, output intents, page labels, embedded
 //!   files' bytes beyond name/size/description, signature cryptographic
 //!   validity) are outside the diff.
+//! - The annotation multiset signature is deliberately narrow: `/Subtype`
+//!   + `/Rect` + MD5 of decoded `/Contents` only. `/T` author, `/C`
+//!   color, `/F` flags, `/QuadPoints`, `/IRT` reply links, `/Popup`,
+//!   `/M` dates and every other key are ignored — two annotations
+//!   differing only in those report as identical.
+//! - Signature-field diffs reuse `listSignatures`, whose `/ByteRange`
+//!   integers are raw file-position offsets. Byte ranges depend on
+//!   serialization layout, so two semantically identical signed PDFs
+//!   saved differently can diff conservatively (a false difference is
+//!   possible; a missed one is not claimed either way — the offsets are
+//!   compared verbatim, never verified against file bytes).
 //! - Text comparison is inherently **lossy**: it reuses `pageText`'s
 //!   literal-string extraction, which ignores font encodings, positioning
 //!   and marked-content ordering. `text.differing_pages` is a hint, not

@@ -183,6 +183,7 @@ export type FolioRedactRetainedReason =
   | "extends_outside_rect"
   | "drawn_inside_form"
   | "shared_content_stream"
+  | "inline_images_in_stream"
   | "analysis_incomplete";
 
 /**
@@ -191,10 +192,19 @@ export type FolioRedactRetainedReason =
  * capped (with `*_truncated` flags) — totals in the counts are NOT
  * capped. `image_draws_removed` counts images whose `Do` operations were
  * stripped while the object stayed reachable through a shared resource
- * chain. `metadata` maps scrubbed metadata kinds to removal counts.
- * `content_note` is the honesty contract: text and vector content under
- * the rect is NEVER removed (no glyph positions in lopdf) and remains
- * byte-identical — hosts must verify redaction visually.
+ * chain. `metadata` maps scrubbed metadata kinds to removal counts —
+ * coverage is standard locations only (`/PieceInfo` and XMP `/Metadata`
+ * on every page and the catalog, trailer `/Info`); XMP under
+ * non-standard keys survives. `retained.inline_images` counts inline
+ * `BI`…`EI` images plus inline stream XObjects seen during the scan;
+ * content streams containing them are never re-encoded, so image draws
+ * inside them are retained as `inline_images_in_stream`. Widget /
+ * form-field annotations intersecting the rect reject the whole op as
+ * Unsupported (intentional — a partial field removal would corrupt the
+ * `/AcroForm` graph). `content_note` is the honesty contract: text and
+ * vector content under the rect is NEVER removed (no glyph positions in
+ * lopdf) and remains byte-identical — hosts must verify redaction
+ * visually.
  */
 export interface FolioRedactReport {
   ok: boolean;
@@ -231,9 +241,11 @@ export interface FolioComparePageChange {
 /**
  * One annotation in a `comparePdf` multiset diff. `rect` is
  * `[x, y, w, h]` derived from the PDF `/Rect`; `contents_md5` hashes the
- * decoded `/Contents` (raw text is never compared or returned).
- * `unreadable: true` marks entries whose dictionary could not be
- * resolved — they still participate in the diff.
+ * decoded `/Contents` (raw text is never compared or returned). The
+ * signature is deliberately narrow — subtype + rect + contents hash
+ * only; author, color, flags, QuadPoints, IRT links and every other
+ * annotation key are ignored. `unreadable: true` marks entries whose
+ * dictionary could not be resolved — they still participate in the diff.
  */
 export interface FolioCompareAnnotEntry {
   page: number;
@@ -264,9 +276,12 @@ export type FolioCompareSignature = Omit<FolioSignature, "annot">;
  * presence, form fields, outlines, attachments, signature fields) — it
  * is NOT byte or semantic equality; unmodeled PDF features are outside
  * the diff, and `text.differing_pages` is a lossy hint that does not
- * affect `structural_identical`. Every `*_added`/`*_removed` list is
- * capped at 256 entries with `*_total` counts and `*_truncated`-style
- * honesty via the totals; page index lists carry `*_total` too.
+ * affect `structural_identical`. Signature rows compare `/ByteRange`
+ * offsets verbatim — they are file-position dependent, so identical
+ * content serialized differently can produce conservative false diffs.
+ * Every `*_added`/`*_removed` list is capped at 256 entries with
+ * `*_total` counts and `*_truncated`-style honesty via the totals; page
+ * index lists carry `*_total` too.
  */
 export interface FolioCompareResult {
   pages: { current: number; other: number };
