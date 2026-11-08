@@ -6,7 +6,7 @@
 //! timing and hands both to `renderPlan`; drawing a dissolve or a wipe is the
 //! compositor's job, and Splice has no compositor.
 
-use crate::{opt_f64, opt_str, req_f64, req_u64, Doc, Track, EPS};
+use crate::{opt_f64, opt_str, req_f64, req_u64, span_len, Doc, Track, EPS};
 use ignition_core::EngineError;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -101,8 +101,28 @@ pub(crate) fn check(
     let left_src = doc.source_of(left)?;
     let after = left_src.duration_s - left.out_s;
     let before = right.in_s;
-    if half * left.speed > after + EPS || half * right.speed > before + EPS {
-        let max = 2.0 * (after / left.speed).min(before / right.speed);
+    // Handle check: `half` timeline seconds on each side of the cut must fit
+    // in the media beyond the spans — `after` source-seconds past the left
+    // out-point and `before` source-seconds ahead of the right in-point. With
+    // speed keys the media a timeline second costs varies, so each handle is
+    // measured as the timeline time its media span covers under that clip's
+    // curve; constant clips keep the exact `half * speed` comparison.
+    let keyed = !left.speed_keys.is_empty() || !right.speed_keys.is_empty();
+    let (left_cover, right_cover) = if keyed {
+        (
+            span_len(&left.speed_keys, left.speed, left.out_s, left.out_s + after),
+            span_len(&right.speed_keys, right.speed, right.in_s - before, right.in_s),
+        )
+    } else {
+        (after / left.speed, before / right.speed)
+    };
+    let fits = if keyed {
+        half <= left_cover + EPS && half <= right_cover + EPS
+    } else {
+        half * left.speed <= after + EPS && half * right.speed <= before + EPS
+    };
+    if !fits {
+        let max = 2.0 * left_cover.min(right_cover);
         return Err(EngineError::validation(format!(
             "not enough media beyond the cut for {:.3} s; at most {:.3} s fits",
             tr.duration_s,

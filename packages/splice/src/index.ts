@@ -18,6 +18,7 @@ export const OPS = {
   trimClip: "trimClip",
   splitClip: "splitClip",
   setSpeed: "setSpeed",
+  setSpeedKeys: "setSpeedKeys",
   duration: "duration",
   timeline: "timeline",
   renderPlan: "renderPlan",
@@ -72,6 +73,17 @@ export interface TrackFlags {
   muted?: boolean;
   solo?: boolean;
 }
+/**
+ * One keyframed speed sample, in source-relative media seconds (`t_s`, the
+ * same domain as `in_s`/`out_s`). Speed is media seconds per timeline second,
+ * interpolated linearly between keys and held at the end values outside the
+ * keyed range; keys outside the clip's media span are inert until a trim
+ * reveals them. At most 256 keys per clip; `t_s` must be unique.
+ */
+export interface SpeedKey {
+  t_s: number;
+  speed: number;
+}
 /** Every clip-editing op may report transitions it dropped because the edit broke their cut. */
 export interface ClipEditResult {
   ok?: true;
@@ -123,6 +135,7 @@ export class SpliceDocument {
     in_s: number;
     out_s: number;
     speed?: number;
+    speed_keys?: SpeedKey[];
     start_s?: number;
     mode?: PlacementMode;
     scope?: RippleScope;
@@ -160,8 +173,20 @@ export class SpliceDocument {
       at_s: atS,
     });
   }
+  /**
+   * Constant speed. Replaces any speed keys (the clip flattens to `speed`).
+   * `changed: false` and no undo entry when speed and keys already match.
+   */
   setSpeed(id: number, speed: number) {
-    return this.call<ClipEditResult>(OPS.setSpeed, { id, speed });
+    return this.call<{ ok: true; changed?: boolean } & ClipEditResult>(OPS.setSpeed, { id, speed });
+  }
+  /**
+   * Replace the clip's whole speed-key curve. Keys are media-time samples;
+   * an empty array returns the clip to constant `speed`. `changed: false`
+   * and no undo entry when the curve already matches.
+   */
+  setSpeedKeys(id: number, keys: SpeedKey[]) {
+    return this.call<{ ok: true; changed?: boolean } & ClipEditResult>(OPS.setSpeedKeys, { id, keys });
   }
 
   // ---- track headers ------------------------------------------------------

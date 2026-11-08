@@ -1111,11 +1111,39 @@ Ticks→seconds: `ticks / (ppq * bpm / 60)`. Undo: prior field values / removed 
 
 State `{ fps, next_id, sources: {id: {name, duration_s}}, tracks: [Track], markers: [Marker], loop_range? }`,
 `Track = { id, kind:"video"|"audio"|"overlay", name?, locked, hidden, muted, solo, clips: [Clip], transitions: [Transition] }`,
-`Clip = { id, source_id, timeline_start_s, in_s, out_s, speed }`,
+`Clip = { id, source_id, timeline_start_s, in_s, out_s, speed, speed_keys? }`,
+`SpeedKey = { t_s, speed }`,
 `Transition = { id, left_id, right_id, kind, duration_s }`,
 `Marker = { id, time_s, duration_s, name, note? }`, `loop_range = { in_s, out_s }`.
-Clip's timeline length = `(out_s - in_s) / speed`. Overlay tracks hold source
-clips composited above the video tracks; track order is stack order.
+Clip's timeline length = `(out_s - in_s) / speed` for a constant clip, and the
+integral of `dt / speed(t)` over `[in_s, out_s]` when `speed_keys` is present
+(see below). Overlay tracks hold source clips composited above the video
+tracks; track order is stack order.
+
+**Keyframed speed (`speed_keys`).** `speed_keys` is a sorted list of
+`{t_s, speed}` samples in SOURCE-relative media seconds (the `in_s`/`out_s`
+domain): `speed` is media seconds consumed per timeline second at media time
+`t_s`. Speed interpolates linearly between neighbouring keys and holds the
+end key's value outside the keyed range; keys outside `[in_s, out_s]` are
+inert until a trim reveals them. An empty/absent list means constant `speed`
+— the only shape pre-keyframe snapshots carry, and constant-speed documents
+serialize byte-identically to before (the field is skipped when empty).
+Because the curve is media-anchored, the footprint is the exact closed-form
+integral per linear segment, not a numeric approximation. Bounds: ≤256 keys
+per clip, `t_s` unique and within `0..=1e7`, every `speed` within the
+`setSpeed` range `0.1..=10`. `renderPlan` clip refs carry `speed_keys`
+(always present, `[]` for constant clips) so hosts can honor the curve.
+Every structural op accounts for the integral: `trimClip`, `splitClip`
+(the media point at a timeline time inverts the integral; both halves keep
+their side of the curve plus a shared boundary key), `moveClip`,
+`addClip`/`moveClip` insert+overwrite placement, `rippleDelete`,
+`rippleTrim`, `rollEdit`, `slideClip` and transition handle checks all use
+it. `slipClip` on a keyed clip is accepted only when the shifted media
+window preserves the footprint exactly, otherwise Validation — a slip that
+silently re-timed the clip would be wrong. `setSpeed` means "constant
+speed": it replaces any keys (flattening the clip) rather than scaling the
+curve. `setSpeedKeys` is a full replace; `keys: []` returns to constant
+speed; an identical write is an eventless no-op like the track-flag ops.
 
 Locked tracks refuse every clip and transition edit (and `removeTrack`) with
 `Validation` ("track N is locked"); ripples with `scope:"all"` leave them in
@@ -1132,12 +1160,13 @@ locked track.
 | `setTrackFlags` | `{id,locked?,hidden?,muted?,solo?}` | `{ok,changed}` | at least one flag; `hidden` on video/overlay only, `muted`/`solo` on audio only; `changed:false` records no undo and emits nothing |
 | `renameTrack` | `{id,name}` | `{ok,changed}` | trimmed, 1..=120 chars |
 | `moveTrack` | `{id,index}` | `{ok,changed}` | `index` < track count (OutOfBounds) |
-| `addClip` | `{track,source,in_s,out_s,speed?,start_s?,mode?,scope?}` | `{clip_id,created}` | `start_s` defaults to end of track; `in<out≤source.duration`; `mode` below |
+| `addClip` | `{track,source,in_s,out_s,speed?,speed_keys?,start_s?,mode?,scope?}` | `{clip_id,created}` | `start_s` defaults to end of track; `in<out≤source.duration`; `speed_keys` same shape/bounds as `setSpeedKeys`; `mode` below |
 | `removeClip` | `{id}` | `{ok}` | |
 | `moveClip` | `{id,start_s,track?,mode?,scope?}` | `{ok,created}` | `track` moves across tracks of the same media class (audio↔audio, video↔overlay) |
 | `trimClip` | `{id,in_s?,out_s?}` | `{ok}` | bounds vs source, in<out, reject overlap |
 | `splitClip` | `{id,at_s}` | `{left_id,right_id}` | `at_s` timeline time strictly inside clip; right half keeps speed and takes over a transition on the clip's tail |
-| `setSpeed` | `{id,speed}` | `{ok}` | 0.1..=10; adjusts timeline footprint; reject overlap |
+| `setSpeed` | `{id,speed}` | `{ok,changed?}` | 0.1..=10; flattens any `speed_keys` to constant speed; adjusts timeline footprint; reject overlap; identical write is eventless |
+| `setSpeedKeys` | `{id,keys:[{t_s,speed}]}` | `{ok,changed?}` | full replace of the media-time speed curve (unsorted input accepted, stored sorted); `keys:[]` restores constant `speed`; footprint = ∫dt/speed; reject overlap; identical write is eventless |
 | `rippleDelete` | `{id,scope?}` | `{ok}` | removes the clip and shifts clips starting at or after its end left by its length |
 | `rippleTrim` | `{id,edge:"head"\|"tail",delta_s,scope?}` | `{ok}` | `delta_s` moves that edge (positive = later); head keeps the clip's start and moves `in_s`; later clips shift by the change in length |
 | `rollEdit` | `{left,right,delta_s}` | `{ok}` | clips must touch on one track; moves the cut only |
@@ -1154,7 +1183,7 @@ locked track.
 | `batch` | `{ops:[{op,payload?}]}` | `{results:[data…]}` | 1..=256 ops, not `new` or `batch`; all apply or none; one undo entry; error message prefixed `ops[i] <op>:` |
 | `duration` | `{}` | `{seconds}` | max clip end across tracks |
 | `timeline` | `{}` | full structure | read-only |
-| `renderPlan` | `{}` | `{tracks:[[clip refs in time order]], transitions:[[…per track]]}` | clip refs carry `track_active` (video/overlay: not hidden; audio: soloed if any track is soloed, else not muted); transitions carry `kind, left_clip_id, right_clip_id, cut_s, start_s, end_s, duration_s` |
+| `renderPlan` | `{}` | `{tracks:[[clip refs in time order]], transitions:[[…per track]]}` | clip refs carry `track_active` (video/overlay: not hidden; audio: soloed if any track is soloed, else not muted), `speed`, `speed_keys` and the resolved `timeline_end_s` footprint; transitions carry `kind, left_clip_id, right_clip_id, cut_s, start_s, end_s, duration_s` |
 
 `mode` (`addClip`, `moveClip`): `reject` (default) refuses an overlap;
 `insert` splits a clip straddling `start_s` and pushes clips at or after it
