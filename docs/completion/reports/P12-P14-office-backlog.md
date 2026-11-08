@@ -120,6 +120,33 @@ model; bounded-row merge is a separate contract), citations/bibliography
 footnote vs endnote placement only), rich/multi-paragraph note bodies, and
 DOCX `w:footnoteReference`/`w:endnoteReference`/`footnotes.xml` interop.
 
+TOC checkpoint (codex/w6-quill-toc): the TOC field landed as the second
+half of slice 8. A `kind:"toc"` block carries `TocField
+{from_level,to_level,entries}` — an inclusive 1..=3 heading-level range
+over the `h1`/`h2`/`h3` block kinds plus a cached `TocEntry
+{level,title,block}` list scanned from heading blocks (named styles carry
+no outline level; text is never matched). Ops: `insertToc` (populates
+entries at insert), `updateToc` (re-range + rescan), `refreshToc`
+(regenerate cache — the Word "update field" gesture), `listToc`
+(always-live deterministic scan, `{block?}` honors a field's range).
+Entries are a Word-style field cache: heading text edits leave titles
+stale until refresh; `entry.block` indices remap through every
+block-count op and entries on deleted heading blocks drop (never clamp —
+a wrong-block title would be dishonest). No page numbers: Quill has no
+pagination engine, so entries carry block indices and hosts derive
+geometry. Guards mirror table blocks (`insertText`/`splitBlock`/
+`mergeBlock`/`deleteRange`-from/`setBlockStyle` reject; covering
+`deleteRange` deletes the field; `setBlockKind` converts and drops the
+payload). Snapshot: **no schema bump** — `kind:"toc"` fails pre-feature
+readers closed via the `BlockKind` enum (the `"table"` precedent) and the
+payload is a serde-optional `Block` field; `validate_toc` enforces the
+kind⇔payload invariant, hygiene, level bounds, ≤64 fields, and
+strictly-increasing in-range entry blocks on restore. `exportDocx`
+rejects toc-containing documents. Deferred honestly: page numbers and
+entry numbering/indent (no pagination/style model), DOCX field
+(`w:fldSimple`/`TOC`) interop, toc fields in table cells, outline-level
+named styles, mail merge, citations/bibliography (unchanged).
+
 Local evidence: `cargo test -p quill-engine` 184 passed (9 new footnote
 tests covering ops, per-kind numbering, remap through every position-moving
 op, undo/redo/batch, schema:3 round-trip, stray-key and hostile-restore

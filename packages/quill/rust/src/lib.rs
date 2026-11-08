@@ -17,6 +17,8 @@ mod comments;
 use comments::{validate_comments, Comment};
 mod footnotes;
 use footnotes::{validate_footnotes, Footnote};
+mod toc;
+use toc::{validate_toc, TocField};
 mod revisions;
 use revisions::{validate_revisions, Revision, RevisionKind, TrackChanges};
 mod sections;
@@ -64,6 +66,15 @@ pub enum BlockKind {
     /// why tables need no snapshot schema bump.
     #[serde(rename = "table")]
     Table,
+    /// A table-of-contents field block: `inlines` stays empty and
+    /// `Block::toc` carries `{from_level,to_level,entries}`. Deliberately
+    /// absent from `BlockKind::parse`, so `setBlockKind`/`insertBlock`
+    /// cannot create toc fields — only `insertToc` does (and
+    /// `setBlockKind` can convert one back to a text kind, dropping the
+    /// payload). Same fail-closed serde-variant precedent as `"table"`:
+    /// pre-toc readers reject the unknown variant, so no schema bump.
+    #[serde(rename = "toc")]
+    Toc,
 }
 
 impl BlockKind {
@@ -136,6 +147,11 @@ pub struct Block {
     /// Cell blocks are reachable only through table ops, never through `Pos`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub table: Option<Table>,
+    /// TOC field payload, present exactly when `kind == BlockKind::Toc`
+    /// (enforced by `toc::validate_toc` on restore and by op guards).
+    /// Entries are a cached scan snapshot — `listToc` is the live read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub toc: Option<TocField>,
 }
 
 impl Block {
@@ -146,6 +162,7 @@ impl Block {
             style_id: None,
             inlines: Vec::new(),
             table: None,
+            toc: None,
         }
     }
 }
@@ -1285,7 +1302,10 @@ impl QuillEngine {
     ) -> Result<(), EngineError> {
         let mut next = self.blocks.clone();
         next.splice(index..index + count, inserted.iter().cloned());
-        lists::validate(&next)
+        lists::validate(&next)?;
+        // Splices preserve kind/payload pairs by construction, but the
+        // candidate still goes through the same toc gate restore uses.
+        validate_toc(&next)
     }
     fn op_insert_text(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let at = parse_pos(field(p, "at")?)?;
@@ -1294,6 +1314,11 @@ impl QuillEngine {
         if self.blocks[at.block].kind == BlockKind::Table {
             return Err(EngineError::validation(
                 "cannot insert text into a table block; use setCellText",
+            ));
+        }
+        if self.blocks[at.block].kind == BlockKind::Toc {
+            return Err(EngineError::validation(
+                "cannot insert text into a toc field block",
             ));
         }
         if text.is_empty() {
@@ -1318,6 +1343,7 @@ impl QuillEngine {
                     style_id: old.style_id.clone(),
                     inlines: normalize_inlines(std::mem::take(&mut head)),
                     table: None,
+                    toc: None,
                 });
             }
             if !seg.is_empty() {
@@ -1334,6 +1360,7 @@ impl QuillEngine {
             style_id: old.style_id.clone(),
             inlines: normalize_inlines(head),
             table: None,
+            toc: None,
         });
 
         let inserted = out.clone();
@@ -1349,6 +1376,7 @@ impl QuillEngine {
         self.remap_sections_insert_text(at, &text);
         self.remap_revisions_insert_text(at, &text);
         self.remap_footnotes_insert_text(at, &text);
+        self.remap_toc_insert_text(at, &text);
         // The inserted range ends after the final segment: with `\n`s the
         // last segment lands in block `at.block + added` at `last_len`,
         // otherwise the insert is `plain` chars past `at`.
@@ -1392,9 +1420,17 @@ impl QuillEngine {
         // into a table-kind block with no payload; cell content is only
         // reachable through table ops. Ranges that merely cover a table
         // (start on a normal block) delete it like any covered block.
+        // A toc field block rejects as a range start for the same reason —
+        // merging survivors into a toc-kind block would put text on a
+        // payload block; covering ranges still delete the field.
         if self.blocks[from.block].kind == BlockKind::Table {
             return Err(EngineError::validation(
                 "cannot deleteRange from a table block; use deleteTable",
+            ));
+        }
+        if self.blocks[from.block].kind == BlockKind::Toc {
+            return Err(EngineError::validation(
+                "cannot deleteRange from a toc field block",
             ));
         }
         let attr = self.revision_attr(p)?;
@@ -1415,6 +1451,7 @@ impl QuillEngine {
                 style_id: b.style_id.clone(),
                 inlines: normalize_inlines(inlines),
                 table: b.table.clone(),
+                toc: b.toc.clone(),
             }];
         } else {
             let first = &self.blocks[from.block];
@@ -1439,6 +1476,7 @@ impl QuillEngine {
                 style_id: first.style_id.clone(),
                 inlines: normalize_inlines(inlines),
                 table: first.table.clone(),
+                toc: first.toc.clone(),
             }];
         }
 
@@ -1454,6 +1492,7 @@ impl QuillEngine {
         self.remap_sections_delete(from, to);
         self.remap_revisions_delete(from, to);
         self.remap_footnotes_delete(from, to);
+        self.remap_toc_delete(from, to);
         // The deletion collapses to its start; the deleted plain text is
         // stored on the record so `rejectRevision` can restore it.
         let point = Pos {
@@ -1528,6 +1567,10 @@ impl QuillEngine {
             staged.op_insert_text(&payload)?;
         }
         lists::validate(&staged.blocks)?;
+        // Defense-in-depth: the staged candidate goes through the same
+        // table/toc gates restore uses, matching replaceText.
+        validate_tables(&staged.blocks)?;
+        validate_toc(&staged.blocks)?;
         let data = json!({"deleted_text":deleted});
         if staged.blocks == self.blocks && staged.revisions == self.revisions {
             return Ok(Self::read_only(data));
@@ -1584,6 +1627,7 @@ impl QuillEngine {
                 style_id: b.style_id.clone(),
                 inlines: normalize_inlines(inlines),
                 table: b.table.clone(),
+                toc: b.toc.clone(),
             });
         }
         (removed, new_span)
@@ -1623,6 +1667,9 @@ impl QuillEngine {
         let old = b.clone();
         let mut new = old.clone();
         new.kind = kind;
+        // Leaving `toc` drops the field payload (kind⇔payload invariant);
+        // entering is impossible — `parse` never yields `BlockKind::Toc`.
+        new.toc = None;
         if kind != BlockKind::List {
             new.list = None;
         }
@@ -1659,6 +1706,7 @@ impl QuillEngine {
         self.remap_sections_insert_block(index);
         self.remap_revisions_insert_block(index);
         self.remap_footnotes_insert_block(index);
+        self.remap_toc_insert_block(index);
         self.record_undo(
             0,
             old,
@@ -1682,6 +1730,11 @@ impl QuillEngine {
                 "cannot split a table block",
             ));
         }
+        if self.blocks[at.block].kind == BlockKind::Toc {
+            return Err(EngineError::validation(
+                "cannot split a toc field block",
+            ));
+        }
         let old = self.blocks[at.block].clone();
         let (head, tail) = split_inlines(&old.inlines, at.offset);
         let new_span = vec![
@@ -1691,6 +1744,7 @@ impl QuillEngine {
                 style_id: old.style_id.clone(),
                 inlines: normalize_inlines(head),
                 table: old.table.clone(),
+                toc: old.toc.clone(),
             },
             Block {
                 kind: old.kind,
@@ -1698,6 +1752,7 @@ impl QuillEngine {
                 style_id: old.style_id.clone(),
                 inlines: normalize_inlines(tail),
                 table: old.table.clone(),
+                toc: old.toc.clone(),
             },
         ];
         self.validate_list_splice(at.block, 1, &new_span)?;
@@ -1713,6 +1768,7 @@ impl QuillEngine {
         self.remap_sections_split(at);
         self.remap_revisions_split(at);
         self.remap_footnotes_split(at);
+        self.remap_toc_split(at);
         self.record_undo(
             at.block,
             vec![old],
@@ -1750,6 +1806,16 @@ impl QuillEngine {
                 "cannot merge a table block; use deleteTable",
             ));
         }
+        // A toc field cannot merge: the survivor would either keep toc
+        // kind with text inlines (payload invariant) or silently drop the
+        // field. Convert via setBlockKind or delete via a covering range.
+        if self.blocks[index - 1].kind == BlockKind::Toc
+            || self.blocks[index].kind == BlockKind::Toc
+        {
+            return Err(EngineError::validation(
+                "cannot merge a toc field block",
+            ));
+        }
         let removed: Vec<Block> = self.blocks[index - 1..=index].to_vec();
         let head_len = block_len(&self.blocks[index - 1]);
         let bookmarks_before = self.bookmarks.clone();
@@ -1765,6 +1831,7 @@ impl QuillEngine {
             style_id: self.blocks[index - 1].style_id.clone(),
             inlines: normalize_inlines(inlines),
             table: self.blocks[index - 1].table.clone(),
+            toc: self.blocks[index - 1].toc.clone(),
         }];
         self.blocks
             .splice(index - 1..=index, merged.iter().cloned());
@@ -1773,6 +1840,7 @@ impl QuillEngine {
         self.remap_sections_merge(index);
         self.remap_revisions_merge(index, head_len);
         self.remap_footnotes_merge(index, head_len);
+        self.remap_toc_merge(index);
         self.record_undo(
             index - 1,
             removed,
@@ -2128,9 +2196,10 @@ impl QuillEngine {
 
         lists::validate(&staged.blocks)?;
         // In-cell edits only rewrite existing cell-paragraph inlines, but
-        // the staged candidate still goes through the same table gate
+        // the staged candidate still goes through the same table/toc gates
         // restore uses, matching every other cell mutation.
         validate_tables(&staged.blocks)?;
+        validate_toc(&staged.blocks)?;
         // `replaced` counts applied edits: the eventless no-change path
         // (replacement identical to every match) applied nothing.
         if staged.blocks == self.blocks {
@@ -2547,6 +2616,11 @@ impl QuillEngine {
                 "cannot apply a block style to a table block",
             ));
         }
+        if old.kind == BlockKind::Toc {
+            return Err(EngineError::validation(
+                "cannot apply a block style to a toc field block",
+            ));
+        }
         let patch = match &style_id {
             Some(id) => {
                 let def = self
@@ -2658,9 +2732,13 @@ impl QuillEngine {
         cmd: &Command,
         ctx: Option<&TaskContext>,
     ) -> Result<CommandResult, EngineError> {
-        if self.blocks.iter().any(|b| b.kind == BlockKind::Table) {
+        if self
+            .blocks
+            .iter()
+            .any(|b| b.kind == BlockKind::Table || b.kind == BlockKind::Toc)
+        {
             return Err(EngineError::validation(
-                "DOCX export does not support tables yet",
+                "DOCX export does not support tables or toc fields yet",
             ));
         }
         let bytes = docx::export_docx(&self.blocks)?;
@@ -2797,6 +2875,10 @@ impl Engine for QuillEngine {
             "updateFootnote" => self.op_update_footnote(&cmd.payload),
             "removeFootnote" => self.op_remove_footnote(&cmd.payload),
             "listFootnotes" => self.op_list_footnotes(),
+            "insertToc" => self.op_insert_toc(&cmd.payload),
+            "updateToc" => self.op_update_toc(&cmd.payload),
+            "refreshToc" => self.op_refresh_toc(&cmd.payload),
+            "listToc" => self.op_list_toc(&cmd.payload),
             "setTrackChanges" => self.op_set_track_changes(&cmd.payload),
             "listRevisions" => self.op_list_revisions(),
             "acceptRevision" => self.op_revision_decision(&cmd.payload, true),
@@ -2852,6 +2934,12 @@ impl Engine for QuillEngine {
             Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
             None => ignition_core::execute_batch(staged, batch)?,
         };
+        // Every step validated its own candidate, but the committed block
+        // list still goes through the same gates restore applies before it
+        // can replace live state.
+        lists::validate(&staged.blocks)?;
+        validate_tables(&staged.blocks)?;
+        validate_toc(&staged.blocks)?;
         if result
             .events
             .iter()
@@ -3042,6 +3130,7 @@ impl Engine for QuillEngine {
         };
         lists::validate(&state_blocks)?;
         validate_tables(&state_blocks)?;
+        validate_toc(&state_blocks)?;
         for block in all_blocks(&state_blocks) {
             for inline in &block.inlines {
                 if let Some(highlight) = &inline.style.highlight {

@@ -45,6 +45,10 @@ export const OPS = {
   updateFootnote: "updateFootnote",
   removeFootnote: "removeFootnote",
   listFootnotes: "listFootnotes",
+  insertToc: "insertToc",
+  updateToc: "updateToc",
+  refreshToc: "refreshToc",
+  listToc: "listToc",
   setTrackChanges: "setTrackChanges",
   listRevisions: "listRevisions",
   acceptRevision: "acceptRevision",
@@ -230,6 +234,36 @@ export interface Footnote {
   /** 1-based number within its kind, in document order. */
   number: number;
   body: string;
+}
+/**
+ * One cached table-of-contents entry. `level` is the heading level
+ * (1=h1, 2=h2, 3=h3 — the engine's heading block kinds; named styles are
+ * not heading signals), `title` the heading's plain text at last scan,
+ * and `block` the heading's top-level block index (live-remapped by
+ * edits). Quill has no pagination engine, so entries carry no page
+ * numbers — hosts map `block` to page/offset geometry themselves.
+ */
+export interface TocEntry {
+  level: number;
+  title: string;
+  block: number;
+}
+/**
+ * A `kind:"toc"` field block's payload as reported by `blocks`/`describe`.
+ * `from_level`/`to_level` are the inclusive heading-level range (1..=3);
+ * `entries` is a cached scan snapshot — it goes stale on heading text
+ * edits exactly like a Word field's cached result, and `listToc` is the
+ * always-live read. Regenerate with `refreshToc`/`updateToc`.
+ */
+export interface TocField {
+  from_level: number;
+  to_level: number;
+  entries: TocEntry[];
+}
+/** `listToc` result: live entries in document order plus the count. */
+export interface TocListing {
+  entries: TocEntry[];
+  count: number;
 }
 /** Optional per-edit attribution overriding the tracking default author. */
 export interface RevisionAttribution {
@@ -650,6 +684,50 @@ export class QuillDocument {
    */
   listFootnotes() {
     return this.call<{ footnotes: Footnote[] }>(OPS.listFootnotes);
+  }
+  /**
+   * Insert a `kind:"toc"` field block at `index` (0..=block count) and
+   * populate its entries from a live heading scan. `from_level`/`to_level`
+   * are inclusive heading levels 1..=3 (h1/h2/h3 block kinds); both
+   * default to the full 1..=3 range. At most 64 fields per document.
+   * Anchor remapping matches `insertBlock` for every collection.
+   */
+  insertToc(index: number, levels: { from_level?: number; to_level?: number } = {}) {
+    return this.call<{ ok: boolean; block_index: number }>(OPS.insertToc, {
+      index,
+      ...(levels.from_level === undefined ? {} : { from_level: levels.from_level }),
+      ...(levels.to_level === undefined ? {} : { to_level: levels.to_level }),
+    });
+  }
+  /**
+   * Repoint a toc field's level range (absent fields keep their values)
+   * and rescan its entries in one step — a reconfigured field never shows
+   * entries outside its new range. No effective change is eventless.
+   */
+  updateToc(block: number, levels: { from_level?: number; to_level?: number }) {
+    return this.call<{ ok: boolean; block: number }>(OPS.updateToc, {
+      block,
+      ...levels,
+    });
+  }
+  /**
+   * Regenerate a toc field's cached entries from the live document (the
+   * Word "update field" gesture). Entries whose heading blocks were
+   * deleted drop; identical result is eventless.
+   */
+  refreshToc(block: number) {
+    return this.call<{ ok: boolean; block: number }>(OPS.refreshToc, { block });
+  }
+  /**
+   * Read-only live scan — always current, never a cached copy. With
+   * `block` naming a toc field the scan honors that field's level range;
+   * without it all headings levels 1..=3 are reported. Entries carry
+   * `{level,title,block}`; page numbers are a host concern.
+   */
+  listToc(block?: number) {
+    return this.call<TocListing>(OPS.listToc, {
+      ...(block === undefined ? {} : { block }),
+    });
   }
   /**
    * Enable/disable track changes. While enabled, `insertText`,
