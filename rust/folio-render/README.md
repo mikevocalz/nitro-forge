@@ -14,9 +14,14 @@ feature-gated hedge for a later slice (WASM/pure-Rust fallback).
 
 Admission record: `docs/completion/reports/P15-folio-render-admission.md`.
 Op contract: same record §5. Bounds are fail-closed and enforced in
-`src/lib.rs`: input ≤ 64 MiB, ≤ 4096 pages, render ≤ 4096 px/side and
-≤ 32 MiB decoded RGBA, query ≤ 4096 chars, ≤ 100k text items, ≤ 1024
-search hits/links per call.
+`src/lib.rs`: input ≤ 64 MiB, ≤ 4096 pages, ≤ 64 open sessions,
+protocol frame ≤ 96 MiB raw (rejected before JSON parse / base64
+decode), render ≤ 4096 px/side and ≤ 32 MiB decoded RGBA, query ≤
+4096 chars, ≤ 100k text items, ≤ 1024 search hits/links per call.
+All emitted coordinates are finite; `pageInfo` reports
+`links_truncated` when the link cap is hit. Note: `nf-cli`'s
+`run_stdio` still accepts unbounded line lengths — folio-render is
+stricter on purpose.
 
 ## pdfium library location (never committed)
 

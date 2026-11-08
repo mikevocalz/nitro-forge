@@ -14,7 +14,8 @@
 //! it is deliberately not implemented here.
 //!
 //! Bounds (fail-closed, mirroring the admission record §5):
-//! input PDF ≤ 64 MiB, page count ≤ 4096, render ≤ 4096 px per side and
+//! input PDF ≤ 64 MiB, page count ≤ 4096, ≤ 64 open sessions,
+//! protocol frame ≤ 96 MiB, render ≤ 4096 px per side and
 //! ≤ 32 MiB decoded RGBA, query ≤ 4096 chars, all emitted coordinates
 //! finite. Cancellation is per-request only: the JSON-lines host
 //! processes one frame at a time, so a host that stops reading gets a
@@ -26,6 +27,7 @@ use ignition_core::{base64_decode, base64_encode, EngineError, FrameRequest, Fra
 use pdfium_render::prelude::*;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::io::BufRead;
 
 // ---- Bounds (P15-folio-render-admission.md §5) ----
 
@@ -45,6 +47,17 @@ pub const MAX_TEXT_ITEMS: usize = 100_000;
 pub const MAX_SEARCH_HITS: usize = 1024;
 /// Maximum links reported by one `pageInfo` call.
 pub const MAX_PAGE_LINKS: usize = 1024;
+/// Maximum simultaneously open document sessions. Each session pins its
+/// source bytes (≤ 64 MiB) plus pdfium document structures, so the cap
+/// bounds worst-case resident memory.
+pub const MAX_SESSIONS: usize = 64;
+/// Maximum accepted JSON-lines frame size, in bytes. Sized so a
+/// maximum-size `open` always fits: 64 MiB binary → ~85.4 MiB base64
+/// plus JSON overhead. Enforced on the raw line *before* serde parsing
+/// and base64 decoding so hostile frames cannot force a large decode
+/// allocation. (`nf-cli`'s `run_stdio` shares the unbounded-line
+/// exposure; this service is stricter.)
+pub const MAX_FRAME_BYTES: usize = 96 * 1024 * 1024; // 96 MiB
 /// Default render scale when neither `scale` nor `dpi` is given (72 dpi = 1.0).
 pub const DEFAULT_SCALE: f32 = 1.0;
 /// Hard ceiling on caller-requested render scale.
@@ -117,6 +130,11 @@ impl RenderService {
         }
         if bytes.len() < 5 || !bytes.starts_with(b"%PDF-") {
             return Err(invalid("input is not a PDF (missing %PDF- header)"));
+        }
+        if self.sessions.len() >= MAX_SESSIONS {
+            return Err(out_of_bounds(format!(
+                "open session limit reached ({MAX_SESSIONS}); close a session first"
+            )));
         }
         let pdfium = pdfium::pdfium().map_err(map_unavailable)?;
         let doc = pdfium
@@ -316,9 +334,19 @@ impl RenderService {
                 )));
             }
             let b = seg.bounds();
+            let bbox = [
+                b.left().value,
+                b.bottom().value,
+                b.width().value,
+                b.height().value,
+            ];
+            // Never emit non-finite coordinates (they serialize as null).
+            if bbox.iter().any(|v| !v.is_finite()) {
+                continue;
+            }
             let mut item = json!({
                 "text": seg.text(),
-                "bbox": [b.left().value, b.bottom().value, b.width().value, b.height().value],
+                "bbox": bbox,
             });
             // Font/size come from the segment's first character; pdfium
             // merges same-line same-font runs into one segment, so the
@@ -326,7 +354,10 @@ impl RenderService {
             if let Ok(chars) = seg.chars() {
                 if let Ok(first) = chars.first() {
                     item["font"] = json!(first.font_name());
-                    item["size"] = json!(first.scaled_font_size().value);
+                    let size = first.scaled_font_size().value;
+                    if size.is_finite() {
+                        item["size"] = json!(size);
+                    }
                 }
             }
             items.push(item);
@@ -353,6 +384,16 @@ impl RenderService {
         let pages: Vec<PdfPageIndex> = match payload.get("pages") {
             None | Some(Value::Null) => (0..doc.page_count as PdfPageIndex).collect(),
             Some(Value::Array(list)) => {
+                // Bound the array before `with_capacity` so a hostile
+                // frame cannot force a huge allocation. MAX_PAGES is a
+                // generous ceiling: a legitimate caller never needs more
+                // page indices than the document can contain.
+                if list.len() > MAX_PAGES {
+                    return Err(out_of_bounds(format!(
+                        "search pages array has {} entries; limit is {MAX_PAGES}",
+                        list.len()
+                    )));
+                }
                 let mut out = Vec::with_capacity(list.len());
                 for v in list {
                     let p = v
@@ -405,9 +446,14 @@ impl RenderService {
                     context.push_str(&seg.text());
                 }
                 let Some([x0, y0, x1, y1]) = bbox else { continue };
+                let hit_bbox = [x0, y0, x1 - x0, y1 - y0];
+                // Never emit non-finite coordinates (they serialize as null).
+                if hit_bbox.iter().any(|v| !v.is_finite()) {
+                    continue;
+                }
                 hits.push(json!({
                     "page": index,
-                    "bbox": [x0, y0, x1 - x0, y1 - y0],
+                    "bbox": hit_bbox,
                     "context": context,
                 }));
             }
@@ -427,20 +473,29 @@ impl RenderService {
             PdfPageRenderRotation::Degrees270 => 270,
         };
         let size = page.page_size();
+        let (w_pt, h_pt) = (size.width().value, size.height().value);
+        if !w_pt.is_finite() || !h_pt.is_finite() {
+            return Err(internal("page has non-finite size"));
+        }
         let mut links = Vec::new();
+        let mut links_truncated = false;
         for link in page.links().iter() {
             if links.len() >= MAX_PAGE_LINKS {
+                links_truncated = true;
                 break;
             }
             let Ok(rect) = link.rect() else { continue };
-            let mut entry = json!({
-                "rect": [
-                    rect.left().value,
-                    rect.bottom().value,
-                    rect.width().value,
-                    rect.height().value,
-                ],
-            });
+            let r = [
+                rect.left().value,
+                rect.bottom().value,
+                rect.width().value,
+                rect.height().value,
+            ];
+            // Never emit non-finite coordinates (they serialize as null).
+            if r.iter().any(|v| !v.is_finite()) {
+                continue;
+            }
+            let mut entry = json!({ "rect": r });
             if let Some(action) = link.action() {
                 if let Some(uri) = action.as_uri_action() {
                     if let Ok(u) = uri.uri() {
@@ -458,9 +513,10 @@ impl RenderService {
             links.push(entry);
         }
         Ok(json!({
-            "size": { "width": size.width().value, "height": size.height().value },
+            "size": { "width": w_pt, "height": h_pt },
             "rotate": rotate,
             "links": links,
+            "links_truncated": links_truncated,
         }))
     }
 
@@ -485,6 +541,8 @@ impl RenderService {
                     "max_render_dim": MAX_RENDER_DIM,
                     "max_render_bytes": MAX_RENDER_BYTES,
                     "max_query_chars": MAX_QUERY_CHARS,
+                    "max_sessions": MAX_SESSIONS,
+                    "max_frame_bytes": MAX_FRAME_BYTES,
                 },
             })),
             other => Err(invalid(format!("unknown folio-render op '{other}'"))),
@@ -546,47 +604,118 @@ fn encode_png_rgba(rgba: &[u8], width: u32, height: u32) -> Result<Vec<u8>, Stri
     Ok(out.into_inner())
 }
 
+/// Best-effort `id` recovery from a frame rejected before JSON parsing,
+/// so the caller can correlate the error. Mirrors `ignition-core`'s
+/// `extract_frame_id` in `protocol.rs`.
+fn extract_frame_id(line: &str) -> Option<u64> {
+    let pos = line.find("\"id\"")?;
+    let rest = line[pos + 4..].trim_start().strip_prefix(':')?.trim_start();
+    let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+    digits.parse().ok()
+}
+
+/// Read one `\n`-terminated line, keeping at most `max` bytes of it.
+///
+/// Returns `(bytes, truncated)`. `bytes` is empty with `truncated == false`
+/// only at clean EOF; a final unterminated line is still returned, matching
+/// `BufRead::lines` semantics. Overlong lines are drained through their
+/// newline so framing stays intact; `bytes` then holds the first `max`
+/// bytes (for id recovery / diagnostics) and `truncated` is `true`.
+fn read_frame_line<R: BufRead>(
+    reader: &mut R,
+    max: usize,
+) -> std::io::Result<(Vec<u8>, bool)> {
+    let mut buf = Vec::new();
+    let mut truncated = false;
+    loop {
+        let chunk = reader.fill_buf()?;
+        if chunk.is_empty() {
+            break; // EOF
+        }
+        let nl = chunk.iter().position(|&b| b == b'\n');
+        let end = nl.map(|i| i + 1).unwrap_or(chunk.len());
+        if !truncated {
+            let room = max.saturating_sub(buf.len());
+            if end <= room {
+                buf.extend_from_slice(&chunk[..end]);
+            } else {
+                buf.extend_from_slice(&chunk[..room]);
+                truncated = true;
+            }
+        }
+        reader.consume(end);
+        if nl.is_some() {
+            break;
+        }
+    }
+    Ok((buf, truncated))
+}
+
 /// Run the JSON-lines protocol on stdin/stdout until EOF — same wire
 /// shape as `nf-cli` (`{"id","handle","op","payload"}` →
 /// `{"id","ok","data"|"error"}`). One frame at a time; pdfium work is
-/// synchronous on this thread.
+/// synchronous on this thread. Frames are capped at [`MAX_FRAME_BYTES`]
+/// raw bytes before parsing; a panic closes the session that was active,
+/// matching `nf-cli`'s `protocol.rs` behavior.
 pub fn run_stdio(service: &mut RenderService) -> std::io::Result<()> {
-    use std::io::{BufRead, Write};
+    use std::io::Write;
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
-    for line in stdin.lock().lines() {
-        let line = line?;
-        if line.trim().is_empty() {
+    let mut reader = stdin.lock();
+    loop {
+        let (line_bytes, truncated) = read_frame_line(&mut reader, MAX_FRAME_BYTES)?;
+        if line_bytes.is_empty() && !truncated {
+            break; // clean EOF
+        }
+        let line = String::from_utf8_lossy(&line_bytes);
+        if line.trim().is_empty() && !truncated {
             continue;
         }
-        let resp = match serde_json::from_str::<FrameRequest>(&line) {
-            Ok(req) => {
-                let id = req.id;
-                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    service.handle_frame(&req)
-                })) {
-                    Ok(r) => r,
-                    Err(_) => FrameResponse {
-                        id,
-                        ok: false,
-                        data: None,
-                        events: vec![],
-                        error: Some(EngineError {
-                            code: ignition_core::ErrorCode::Internal,
-                            message: "folio-render panicked; session closed".into(),
-                            recoverable: false,
-                        }),
-                    },
-                }
-            }
-            Err(e) => FrameResponse {
-                id: 0,
+        let resp = if truncated {
+            FrameResponse {
+                id: extract_frame_id(&line).unwrap_or(0),
                 ok: false,
                 data: None,
                 events: vec![],
-                error: Some(EngineError::serialization(e.to_string())),
-            },
+                error: Some(out_of_bounds(format!(
+                    "frame exceeds {MAX_FRAME_BYTES} bytes"
+                ))),
+            }
+        } else {
+            match serde_json::from_str::<FrameRequest>(&line) {
+                Ok(req) => {
+                    let id = req.id;
+                    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        service.handle_frame(&req)
+                    })) {
+                        Ok(r) => r,
+                        Err(_) => {
+                            // Session safety: drop the document session
+                            // that was active, same as nf-cli's protocol.
+                            service.close(req.handle);
+                            FrameResponse {
+                                id,
+                                ok: false,
+                                data: None,
+                                events: vec![],
+                                error: Some(EngineError {
+                                    code: ignition_core::ErrorCode::Internal,
+                                    message: "folio-render panicked; session closed".into(),
+                                    recoverable: false,
+                                }),
+                            }
+                        }
+                    }
+                }
+                Err(e) => FrameResponse {
+                    id: extract_frame_id(&line).unwrap_or(0),
+                    ok: false,
+                    data: None,
+                    events: vec![],
+                    error: Some(EngineError::serialization(e.to_string())),
+                },
+            }
         };
         writeln!(out, "{}", serde_json::to_string(&resp).unwrap())?;
         out.flush()?;

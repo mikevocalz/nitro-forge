@@ -274,3 +274,38 @@ fn bounds_and_errors_fail_closed() {
         ErrorCode::NotFound
     );
 }
+
+#[test]
+fn session_cap_is_enforced() {
+    if !pdfium_available() {
+        return;
+    }
+    let mut svc = RenderService::new();
+    let b64 = base64_encode(&minimal_pdf("Session cap"));
+    let mut handles = Vec::new();
+    for i in 0..folio_render::MAX_SESSIONS {
+        let data = call(
+            &mut svc,
+            i as u64 + 1,
+            0,
+            "open",
+            json!({ "bytes_b64": b64 }),
+        );
+        handles.push(data["handle"].as_u64().unwrap());
+    }
+    // The next open exceeds MAX_SESSIONS and fails closed.
+    let res = svc.handle_frame(&FrameRequest {
+        id: 999,
+        handle: 0,
+        op: "open".into(),
+        payload: json!({ "bytes_b64": b64 }),
+    });
+    assert!(!res.ok);
+    assert_eq!(res.error.unwrap().code, ErrorCode::OutOfBounds);
+    // Existing sessions remain usable; closing frees a slot.
+    let info = call(&mut svc, 1000, handles[0], "pageInfo", json!({ "page": 0 }));
+    assert_eq!(info["size"]["width"], 612.0);
+    call(&mut svc, 1001, handles[0], "close", json!({}));
+    let again = call(&mut svc, 1002, 0, "open", json!({ "bytes_b64": b64 }));
+    assert!(again["handle"].as_u64().unwrap() > 0);
+}

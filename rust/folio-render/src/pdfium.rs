@@ -52,32 +52,47 @@ pub const ENV_LIBRARY_DIR: &str = "FOLIO_PDFIUM_DIR";
 ///    process working directory — same spot for repo-root invocations.
 /// 5. The platform library name alone, resolved through the OS loader
 ///    search path (dlopen semantics).
-pub fn resolve_pdfium_library_path() -> Option<PathBuf> {
+///
+/// Returns `Err` when `FOLIO_PDFIUM_LIBRARY` or `FOLIO_PDFIUM_DIR` is
+/// explicitly set but does not resolve to a file — a typo'd override
+/// must fail loudly rather than silently fall through to another
+/// candidate (which could load an unintended library).
+pub fn resolve_pdfium_library_path() -> Result<PathBuf, PdfiumUnavailable> {
     if let Ok(path) = std::env::var(ENV_LIBRARY_PATH) {
         let p = PathBuf::from(path);
-        if p.is_file() {
-            return Some(p);
-        }
+        return if p.is_file() {
+            Ok(p)
+        } else {
+            Err(PdfiumUnavailable(format!(
+                "{ENV_LIBRARY_PATH} is set but {} is not a file",
+                p.display()
+            )))
+        };
     }
     let name = Pdfium::pdfium_platform_library_name();
     if let Ok(dir) = std::env::var(ENV_LIBRARY_DIR) {
         let p = PathBuf::from(dir).join(&name);
-        if p.is_file() {
-            return Some(p);
-        }
+        return if p.is_file() {
+            Ok(p)
+        } else {
+            Err(PdfiumUnavailable(format!(
+                "{ENV_LIBRARY_DIR} is set but {} does not exist",
+                p.display()
+            )))
+        };
     }
     let manifest_local = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("lib")
         .join(&name);
     if manifest_local.is_file() {
-        return Some(manifest_local);
+        return Ok(manifest_local);
     }
     let cwd_local = Path::new("rust/folio-render/lib").join(&name);
     if cwd_local.is_file() {
-        return Some(cwd_local);
+        return Ok(cwd_local);
     }
     // Fall through to loader search: pass the bare file name.
-    Some(PathBuf::from(&name))
+    Ok(PathBuf::from(&name))
 }
 
 /// Returns the shared [`Pdfium`] instance, initializing it on first use.
@@ -85,8 +100,7 @@ pub fn pdfium() -> Result<&'static Pdfium, PdfiumUnavailable> {
     if let Some(p) = PDFIUM.get() {
         return Ok(p);
     }
-    let path = resolve_pdfium_library_path()
-        .ok_or_else(|| PdfiumUnavailable("no candidate library path".into()))?;
+    let path = resolve_pdfium_library_path()?;
     let bindings = Pdfium::bind_to_library(&path)
         .map_err(|e| PdfiumUnavailable(format!("{}: {e}", path.display())))?;
     let pdfium = Pdfium::new(bindings);
