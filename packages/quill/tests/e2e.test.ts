@@ -483,4 +483,37 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     ).rejects.toBeInstanceOf(EngineError);
     await doc.close();
   });
+
+  it("track changes records, lists, accepts and rejects revisions", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "hello world");
+    await doc.setTrackChanges(true, "Ada");
+    await doc.insertText({ block: 0, offset: 11 }, "!", { time: 1700000000 });
+    await doc.deleteRange({ block: 0, offset: 0 }, { block: 0, offset: 6 });
+    const listed = (await doc.listRevisions()).data.revisions;
+    expect(listed).toHaveLength(2);
+    const ins = listed.find((r) => r.kind === "ins")!;
+    const del = listed.find((r) => r.kind === "del")!;
+    expect(ins.author).toBe("Ada");
+    expect(ins.time).toBe(1700000000);
+    // The later deleteRange re-maps the insertion anchor left by 6.
+    expect(ins.to).toEqual({ block: 0, offset: 6 });
+    expect(del.text).toBe("hello ");
+    expect((await doc.text()).data.text).toBe("world!");
+
+    // Snapshot round-trip keeps revisions and the tracking setting.
+    const snap = await doc.save();
+    const re = await QuillDocument.openSnapshot(host, snap);
+    expect((await re.listRevisions()).data.revisions).toHaveLength(2);
+
+    // Reject the deletion restores its plain text; accept the insertion
+    // deletes the marked "!".
+    await re.rejectRevision(del.id);
+    expect((await re.text()).data.text).toBe("hello world!");
+    await re.acceptRevision(ins.id);
+    expect((await re.text()).data.text).toBe("hello world");
+    expect((await re.listRevisions()).data.revisions).toHaveLength(0);
+    await re.close();
+    await doc.close();
+  });
 });

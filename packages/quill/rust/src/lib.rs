@@ -15,6 +15,8 @@ use lists::ListItem;
 mod change_case;
 mod comments;
 use comments::{validate_comments, Comment};
+mod revisions;
+use revisions::{validate_revisions, Revision, RevisionKind, TrackChanges};
 mod sections;
 use sections::{default_sections, is_default_sections, validate_sections, Section};
 mod tables;
@@ -181,6 +183,13 @@ struct Schema3DocSnapshotRef<'a> {
     sections: &'a [Section],
     #[serde(skip_serializing_if = "<[Comment]>::is_empty")]
     comments: &'a [Comment],
+    /// Omitted when empty for the same reason as `comments`; `revisions`
+    /// and `tracking` ride the schema:3 `deny_unknown_fields` document, so
+    /// schema:3-era readers fail closed on either key — no schema bump.
+    #[serde(skip_serializing_if = "<[Revision]>::is_empty")]
+    revisions: &'a [Revision],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tracking: &'a Option<TrackChanges>,
 }
 
 #[derive(Serialize)]
@@ -214,6 +223,12 @@ struct Schema3DocState {
     // that understand it (schema:3-era readers fail closed on it).
     #[serde(default)]
     comments: Vec<Comment>,
+    // `revisions`/`tracking` are optional for the same reason: absent
+    // means no tracked changes and tracking disabled.
+    #[serde(default)]
+    revisions: Vec<Revision>,
+    #[serde(default)]
+    tracking: Option<TrackChanges>,
 }
 
 #[derive(Serialize)]
@@ -267,6 +282,13 @@ struct UndoEntry {
     /// `(before, after)` comment lists for ops that can move anchors or
     /// edit comments; `None` leaves the live comment list untouched.
     comments: Option<(Vec<Comment>, Vec<Comment>)>,
+    /// `(before, after)` revision lists for ops that can move anchors,
+    /// record revisions, or resolve them; `None` leaves the live revision
+    /// list untouched.
+    revisions: Option<(Vec<Revision>, Vec<Revision>)>,
+    /// `(before, after)` track-changes settings for `setTrackChanges`;
+    /// `None` leaves the live setting untouched.
+    tracking: Option<(Option<TrackChanges>, Option<TrackChanges>)>,
 }
 
 /// Before-images for the document-level collections an op can move or
@@ -277,20 +299,26 @@ struct Collections {
     comments: Option<Vec<Comment>>,
     styles: Option<Vec<StyleDef>>,
     sections: Option<Vec<Section>>,
+    revisions: Option<Vec<Revision>>,
+    /// Before-image of the track-changes setting (`None` inside means
+    /// tracking was disabled); outer `None` leaves it untouched.
+    tracking: Option<Option<TrackChanges>>,
 }
 
 impl Collections {
-    /// Bookmark, comment, and section lists move together through every
-    /// block-count-changing or position-moving op.
+    /// Bookmark, comment, section, and revision lists move together
+    /// through every block-count-changing or position-moving op.
     fn anchors(
         bookmarks: Vec<Bookmark>,
         comments: Vec<Comment>,
         sections: Vec<Section>,
+        revisions: Vec<Revision>,
     ) -> Self {
         Self {
             bookmarks: Some(bookmarks),
             comments: Some(comments),
             sections: Some(sections),
+            revisions: Some(revisions),
             ..Default::default()
         }
     }
@@ -328,12 +356,16 @@ impl Collections {
         comments: Vec<Comment>,
         styles: Vec<StyleDef>,
         sections: Vec<Section>,
+        revisions: Vec<Revision>,
+        tracking: Option<TrackChanges>,
     ) -> Self {
         Self {
             bookmarks: Some(bookmarks),
             comments: Some(comments),
             styles: Some(styles),
             sections: Some(sections),
+            revisions: Some(revisions),
+            tracking: Some(tracking),
         }
     }
 }
@@ -1084,6 +1116,10 @@ pub struct QuillEngine {
     comments: Vec<Comment>,
     styles: Vec<StyleDef>,
     sections: Vec<Section>,
+    revisions: Vec<Revision>,
+    /// `Some` while track changes is enabled; carries the default author
+    /// stamped on auto-recorded revisions.
+    tracking: Option<TrackChanges>,
     journal: Journal<UndoEntry>,
 }
 
@@ -1095,6 +1131,8 @@ impl QuillEngine {
             comments: Vec::new(),
             styles: Vec::new(),
             sections: default_sections(),
+            revisions: Vec::new(),
+            tracking: None,
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
@@ -1119,6 +1157,12 @@ impl QuillEngine {
         let sections = before
             .sections
             .map(|before| (before, self.sections.clone()));
+        let revisions = before
+            .revisions
+            .map(|before| (before, self.revisions.clone()));
+        let tracking = before
+            .tracking
+            .map(|before| (before, self.tracking.clone()));
         self.journal.record(UndoEntry {
             index,
             removed,
@@ -1127,6 +1171,8 @@ impl QuillEngine {
             comments,
             styles,
             sections,
+            revisions,
+            tracking,
         });
     }
 
@@ -1173,11 +1219,20 @@ impl QuillEngine {
         let comments_before = std::mem::take(&mut self.comments);
         let styles_before = std::mem::take(&mut self.styles);
         let sections_before = std::mem::replace(&mut self.sections, default_sections());
+        let revisions_before = std::mem::take(&mut self.revisions);
+        let tracking_before = std::mem::take(&mut self.tracking);
         self.record_undo(
             0,
             old,
             self.blocks.clone(),
-            Collections::all(bookmarks_before, comments_before, styles_before, sections_before),
+            Collections::all(
+                bookmarks_before,
+                comments_before,
+                styles_before,
+                sections_before,
+                revisions_before,
+                tracking_before,
+            ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
     }
@@ -1210,6 +1265,9 @@ impl QuillEngine {
         if text.is_empty() {
             return Ok(CommandResult::data(json!({ "ok": true })));
         }
+        // Validate revision attribution before mutating so a bad `author`/
+        // `time` rejects the whole op.
+        let attr = self.revision_attr(p)?;
 
         let old = self.blocks[at.block].clone();
         let (mut head, tail) = split_inlines(&old.inlines, at.offset);
@@ -1249,15 +1307,39 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         self.blocks.splice(at.block..at.block + 1, out);
         self.remap_bookmarks_insert_text(at, &text);
         self.remap_comments_insert_text(at, &text);
         self.remap_sections_insert_text(at, &text);
+        self.remap_revisions_insert_text(at, &text);
+        // The inserted range ends after the final segment: with `\n`s the
+        // last segment lands in block `at.block + added` at `last_len`,
+        // otherwise the insert is `plain` chars past `at`.
+        let added = text.bytes().filter(|&b| b == b'\n').count();
+        let last_len = text.rsplit('\n').next().map_or(0, |s| s.chars().count());
+        let to = if added == 0 {
+            Pos {
+                block: at.block,
+                offset: at.offset + text.chars().count(),
+            }
+        } else {
+            Pos {
+                block: at.block + added,
+                offset: last_len,
+            }
+        };
+        self.track_revision(RevisionKind::Ins, at, to, None, &attr);
         self.record_undo(
             at.block,
             vec![old],
             inserted,
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
     }
@@ -1278,6 +1360,7 @@ impl QuillEngine {
                 "cannot deleteRange from a table block; use deleteTable",
             ));
         }
+        let attr = self.revision_attr(p)?;
 
         let removed: Vec<Block> = self.blocks[from.block..=to.block].to_vec();
         let deleted_text;
@@ -1325,16 +1408,36 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         self.blocks
             .splice(from.block..=to.block, new_span.iter().cloned());
         self.remap_bookmarks_delete(from, to);
         self.remap_comments_delete(from, to);
         self.remap_sections_delete(from, to);
+        self.remap_revisions_delete(from, to);
+        // The deletion collapses to its start; the deleted plain text is
+        // stored on the record so `rejectRevision` can restore it.
+        let point = Pos {
+            block: from.block,
+            offset: from.offset,
+        };
+        self.track_revision(
+            RevisionKind::Del,
+            point,
+            point,
+            Some(deleted_text.clone()),
+            &attr,
+        );
         self.record_undo(
             from.block,
             removed,
             new_span,
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         Ok(CommandResult::data(json!({ "deleted_text": deleted_text })))
     }
@@ -1346,15 +1449,21 @@ impl QuillEngine {
         let to = parse_pos(field(p, "to")?)?;
         let text = as_str(field(p, "text")?, "text")?.to_owned();
         self.check_range(from, to)?;
+        // Attribution is validated up front; the staged ops re-validate it
+        // through their own payloads before mutating the stage.
+        let _attr = self.revision_attr(p)?;
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
             comments: self.comments.clone(),
             styles: self.styles.clone(),
             sections: self.sections.clone(),
+            revisions: self.revisions.clone(),
+            tracking: self.tracking.clone(),
             journal: Journal::new(1),
         };
         let mut deleted = String::new();
@@ -1365,24 +1474,37 @@ impl QuillEngine {
                 .into();
         }
         if !text.is_empty() {
-            staged.op_insert_text(
-                &json!({"at":{"block":from.block,"offset":from.offset},"text":text}),
-            )?;
+            // Forward author/time so the staged insert records the same
+            // attribution the delete did.
+            let mut payload = json!({"at":{"block":from.block,"offset":from.offset},"text":text});
+            if let Some(v) = p.get("author") {
+                payload["author"] = v.clone();
+            }
+            if let Some(v) = p.get("time") {
+                payload["time"] = v.clone();
+            }
+            staged.op_insert_text(&payload)?;
         }
         lists::validate(&staged.blocks)?;
         let data = json!({"deleted_text":deleted});
-        if staged.blocks == self.blocks {
+        if staged.blocks == self.blocks && staged.revisions == self.revisions {
             return Ok(Self::read_only(data));
         }
         self.bookmarks = staged.bookmarks;
         self.comments = staged.comments;
         self.styles = staged.styles;
         self.sections = staged.sections;
+        self.revisions = staged.revisions;
         self.record_undo(
             0,
             self.blocks.clone(),
             staged.blocks.clone(),
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         self.blocks = staged.blocks;
         Ok(CommandResult::data(data))
@@ -1482,6 +1604,7 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         let mut next = old.clone();
         next.insert(index, Block::empty(kind));
         lists::validate(&next)?;
@@ -1489,11 +1612,17 @@ impl QuillEngine {
         self.remap_bookmarks_insert_block(index);
         self.remap_comments_insert_block(index);
         self.remap_sections_insert_block(index);
+        self.remap_revisions_insert_block(index);
         self.record_undo(
             0,
             old,
             self.blocks.clone(),
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         Ok(CommandResult::data(json!({ "block_index": index })))
     }
@@ -1528,16 +1657,23 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         self.blocks
             .splice(at.block..at.block + 1, new_span.iter().cloned());
         self.remap_bookmarks_split(at);
         self.remap_comments_split(at);
         self.remap_sections_split(at);
+        self.remap_revisions_split(at);
         self.record_undo(
             at.block,
             vec![old],
             new_span,
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         Ok(CommandResult::data(
             json!({ "new_block_index": at.block + 1 }),
@@ -1569,6 +1705,7 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         let mut inlines = self.blocks[index - 1].inlines.clone();
         inlines.extend(self.blocks[index].inlines.iter().cloned());
         let merged = vec![Block {
@@ -1583,11 +1720,17 @@ impl QuillEngine {
         self.remap_bookmarks_merge(index, head_len);
         self.remap_comments_merge(index, head_len);
         self.remap_sections_merge(index);
+        self.remap_revisions_merge(index, head_len);
         self.record_undo(
             index - 1,
             removed,
             merged,
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
     }
@@ -1748,12 +1891,15 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
             comments: self.comments.clone(),
             styles: self.styles.clone(),
             sections: self.sections.clone(),
+            revisions: self.revisions.clone(),
+            tracking: self.tracking.clone(),
             journal: Journal::new(1),
         };
         // Group consecutive matches by block (find_matches is block-ordered),
@@ -1868,6 +2014,39 @@ impl QuillEngine {
             }
         }
 
+        // Revision anchors re-anchor through the same per-block match
+        // spans with the same gravity rules as everywhere else: `ins`
+        // keeps comment gravity (`from` left, `to` right); collapsed `del`
+        // points keep right gravity.
+        if !staged.revisions.is_empty() {
+            let repl_len = replacement.chars().count();
+            let mut i = 0;
+            while i < top.len() {
+                let bi = top[i].block;
+                let mut j = i;
+                let mut span: Vec<(usize, usize)> = Vec::new();
+                while j < top.len() && top[j].block == bi {
+                    span.push((top[j].start, top[j].end));
+                    j += 1;
+                }
+                for r in staged.revisions.iter_mut() {
+                    let (fl, tl) = match r.kind {
+                        RevisionKind::Ins => (true, false),
+                        RevisionKind::Del => (false, false),
+                    };
+                    if r.from.block == bi {
+                        r.from.offset =
+                            remap_comment_offset(r.from.offset, &span, repl_len, fl);
+                    }
+                    if r.to.block == bi {
+                        r.to.offset =
+                            remap_comment_offset(r.to.offset, &span, repl_len, tl);
+                    }
+                }
+                i = j;
+            }
+        }
+
         lists::validate(&staged.blocks)?;
         // In-cell edits only rewrite existing cell-paragraph inlines, but
         // the staged candidate still goes through the same table gate
@@ -1882,11 +2061,17 @@ impl QuillEngine {
         self.bookmarks = staged.bookmarks;
         self.comments = staged.comments;
         self.sections = staged.sections;
+        self.revisions = staged.revisions;
         self.record_undo(
             0,
             self.blocks.clone(),
             staged.blocks.clone(),
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         self.blocks = staged.blocks;
         Ok(CommandResult::data(json!({ "replaced": replaced })))
@@ -2419,11 +2604,22 @@ impl QuillEngine {
         // DOCX sectPr import is deferred; an imported document gets the
         // single default section.
         let sections_before = std::mem::replace(&mut self.sections, default_sections());
+        // Revision tracking does not survive a wholesale DOCX replace:
+        // imported documents start untracked with no pending revisions.
+        let revisions_before = std::mem::take(&mut self.revisions);
+        let tracking_before = std::mem::take(&mut self.tracking);
         self.record_undo(
             0,
             old,
             self.blocks.clone(),
-            Collections::all(bookmarks_before, comments_before, styles_before, sections_before),
+            Collections::all(
+                bookmarks_before,
+                comments_before,
+                styles_before,
+                sections_before,
+                revisions_before,
+                tracking_before,
+            ),
         );
         Ok(CommandResult::data(serde_json::to_value(SnapshotRef {
             blocks: &self.blocks,
@@ -2512,6 +2708,12 @@ impl Engine for QuillEngine {
             "resolveComment" => self.op_resolve_comment(&cmd.payload),
             "reopenComment" => self.op_reopen_comment(&cmd.payload),
             "listComments" => self.op_list_comments(),
+            "setTrackChanges" => self.op_set_track_changes(&cmd.payload),
+            "listRevisions" => self.op_list_revisions(),
+            "acceptRevision" => self.op_revision_decision(&cmd.payload, true),
+            "rejectRevision" => self.op_revision_decision(&cmd.payload, false),
+            "acceptAllRevisions" => self.op_revision_decision_all(&cmd.payload, true),
+            "rejectAllRevisions" => self.op_revision_decision_all(&cmd.payload, false),
             "applyNamedStyle" => self.op_apply_named_style(&cmd.payload),
             "setBlockStyle" => self.op_set_block_style(&cmd.payload),
             "insertTable" => self.op_insert_table(&cmd.payload),
@@ -2543,12 +2745,16 @@ impl Engine for QuillEngine {
         let comments_before = self.comments.clone();
         let styles_before = self.styles.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
+        let tracking_before = self.tracking.clone();
         let staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
             comments: self.comments.clone(),
             styles: self.styles.clone(),
             sections: self.sections.clone(),
+            revisions: self.revisions.clone(),
+            tracking: self.tracking.clone(),
             journal: Journal::new(1),
         };
         let (staged, result) = match ctx {
@@ -2566,11 +2772,20 @@ impl Engine for QuillEngine {
             self.comments = staged.comments;
             self.styles = staged.styles;
             self.sections = staged.sections;
+            self.revisions = staged.revisions;
+            self.tracking = staged.tracking;
             self.record_undo(
                 0,
                 removed,
                 inserted,
-                Collections::all(bookmarks_before, comments_before, styles_before, sections_before),
+                Collections::all(
+                    bookmarks_before,
+                    comments_before,
+                    styles_before,
+                    sections_before,
+                    revisions_before,
+                    tracking_before,
+                ),
             );
             self.blocks = staged.blocks;
         }
@@ -2583,16 +2798,20 @@ impl Engine for QuillEngine {
         };
         // Legacy readers ignore unknown Block fields. Removing root blocks makes
         // them reject numbered metadata instead of silently losing it.
-        // Bookmarks, comments, named styles, and sections require the
-        // schema:3 wrapper so pre-feature readers fail closed on
-        // `schema != 2`/`!= 3` rather than silently dropping them (the
-        // schema:3 document is `deny_unknown_fields`, so a `comments` key
-        // also fails schema:3-era readers closed — no schema:4 bump).
-        // `styles`/`sections`/`comments` are omitted from the document when
-        // empty/default, keeping earlier schema:3 payloads byte-identical.
+        // Bookmarks, comments, named styles, sections, revisions, and the
+        // track-changes setting require the schema:3 wrapper so pre-feature
+        // readers fail closed on `schema != 2`/`!= 3` rather than silently
+        // dropping them (the schema:3 document is `deny_unknown_fields`, so
+        // `comments`/`revisions`/`tracking` keys also fail schema:3-era
+        // readers closed — no schema:4 bump).
+        // `styles`/`sections`/`comments`/`revisions`/`tracking` are omitted
+        // from the document when empty/default, keeping earlier schema:3
+        // payloads byte-identical.
         let needs_v3 = !self.bookmarks.is_empty()
             || !self.comments.is_empty()
             || !self.styles.is_empty()
+            || !self.revisions.is_empty()
+            || self.tracking.is_some()
             || !is_default_sections(&self.sections)
             || self.blocks.iter().any(|b| b.style_id.is_some());
         let payload = if needs_v3 {
@@ -2605,6 +2824,8 @@ impl Engine for QuillEngine {
                     styles: &self.styles,
                     sections: &self.sections,
                     comments: &self.comments,
+                    revisions: &self.revisions,
+                    tracking: &self.tracking,
                 },
             })?
         } else if self.blocks.iter().any(|block| block.list.is_some()) {
@@ -2627,12 +2848,14 @@ impl Engine for QuillEngine {
                 .iter()
                 .any(|key| object.contains_key(*key))
         });
-        let (state_blocks, bookmarks, comments, styles, sections): (
+        let (state_blocks, bookmarks, comments, styles, sections, revisions, tracking): (
             Vec<Block>,
             Vec<Bookmark>,
             Vec<Comment>,
             Vec<StyleDef>,
             Vec<Section>,
+            Vec<Revision>,
+            Option<TrackChanges>,
         ) = if wrapped {
             let wrapper: WrappedDocState = serde_json::from_value(value)?;
             if wrapper.kind != "quill" {
@@ -2650,6 +2873,8 @@ impl Engine for QuillEngine {
                             || o.contains_key("comments")
                             || o.contains_key("styles")
                             || o.contains_key("sections")
+                            || o.contains_key("revisions")
+                            || o.contains_key("tracking")
                     }) {
                         return Err(EngineError::unsupported(
                             "unsupported Quill snapshot kind/schema",
@@ -2662,6 +2887,8 @@ impl Engine for QuillEngine {
                         Vec::new(),
                         Vec::new(),
                         default_sections(),
+                        Vec::new(),
+                        None,
                     )
                 }
                 3 => {
@@ -2671,7 +2898,15 @@ impl Engine for QuillEngine {
                     let sections = doc
                         .sections
                         .unwrap_or_else(default_sections);
-                    (doc.blocks, doc.bookmarks, doc.comments, doc.styles, sections)
+                    (
+                        doc.blocks,
+                        doc.bookmarks,
+                        doc.comments,
+                        doc.styles,
+                        sections,
+                        doc.revisions,
+                        doc.tracking,
+                    )
                 }
                 _ => {
                     return Err(EngineError::unsupported(
@@ -2685,13 +2920,23 @@ impl Engine for QuillEngine {
                     || o.contains_key("comments")
                     || o.contains_key("styles")
                     || o.contains_key("sections")
+                    || o.contains_key("revisions")
+                    || o.contains_key("tracking")
             }) {
                 return Err(EngineError::unsupported(
                     "unsupported Quill snapshot kind/schema",
                 ));
             }
             let doc: DocState = serde_json::from_value(value)?;
-            (doc.blocks, Vec::new(), Vec::new(), Vec::new(), default_sections())
+            (
+                doc.blocks,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                default_sections(),
+                Vec::new(),
+                None,
+            )
         };
         lists::validate(&state_blocks)?;
         validate_tables(&state_blocks)?;
@@ -2716,11 +2961,19 @@ impl Engine for QuillEngine {
         validate_comments(&comments, &blocks)?;
         validate_styles(&styles, &blocks)?;
         validate_sections(&sections, &blocks)?;
+        validate_revisions(&revisions, &blocks)?;
+        if let Some(t) = &tracking {
+            if let Some(author) = &t.author {
+                comments::validate_comment_author(author)?;
+            }
+        }
         self.blocks = blocks;
         self.bookmarks = bookmarks;
         self.comments = comments;
         self.styles = styles;
         self.sections = sections;
+        self.revisions = revisions;
+        self.tracking = tracking;
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
     }
@@ -2748,6 +3001,14 @@ impl Engine for QuillEngine {
         if let Some(before) = sections {
             self.sections = before;
         }
+        let revisions = entry.revisions.as_ref().map(|(before, _)| before.clone());
+        if let Some(before) = revisions {
+            self.revisions = before;
+        }
+        let tracking = entry.tracking.as_ref().map(|(before, _)| before.clone());
+        if let Some(before) = tracking {
+            self.tracking = before;
+        }
         self.journal.push_redo(entry);
         Ok(true)
     }
@@ -2774,6 +3035,14 @@ impl Engine for QuillEngine {
         let sections = entry.sections.as_ref().map(|(_, after)| after.clone());
         if let Some(after) = sections {
             self.sections = after;
+        }
+        let revisions = entry.revisions.as_ref().map(|(_, after)| after.clone());
+        if let Some(after) = revisions {
+            self.revisions = after;
+        }
+        let tracking = entry.tracking.as_ref().map(|(_, after)| after.clone());
+        if let Some(after) = tracking {
+            self.tracking = after;
         }
         self.journal.push_undo(entry);
         Ok(true)
