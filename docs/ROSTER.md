@@ -21,7 +21,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
 | folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments, structural redaction, PDF compare, page images, encryption reconciliation) | 144 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
-| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, footnotes/endnotes, TOC fields, tables incl. cell merge/unmerge and in-cell find/replace) | 194 pass | `cargo test -p quill-engine` |
+| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, footnotes/endnotes, TOC fields, tables incl. cell merge/unmerge and in-cell find/replace, paragraph format) | 208 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI + dispatch tests (incl. folio binary-input gate) | 28 pass | `cargo test -p nf-sys` |
 | Package e2e suites (vitest → nf-cli → real Rust) | 4×8 = 32 pass | `pnpm -r test` |
 | Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
@@ -54,7 +54,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch; 2026-11-07: keyframed speed (`speed_keys`, `setSpeedKeys`, integral footprint through all structural ops); 2026-11-08: per-clip mix (`gain_db` -60..=12, `pan` -1..=1, `setClipMix`, renderPlan exposure — storage/plan metadata only, no mixer) | ✅ 55 tests |
 | Folio engine | PDF eng (subagent bdd8014e; slice E codex/w1-folio-redact; slice F codex/w1-folio-f) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption (encrypt/decrypt + `open {password}`; all mutating and string-decoding ops reject ciphertext docs), outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment), structural redaction (redactRect: annots + contained image XObjects + PieceInfo/XMP//Info scrub, honest retained reporting, text/vector explicitly not removed), structural PDF compare (comparePdf: page/annot/field/outline/attachment/signature projections, lossy text hint), page images (insertPageImage: jpeg DCTDecode passthrough, real PNG decode gray/RGB alpha-discarded with local five-filter unfiltering, raw 8-bpc samples; appended content stream, inherited /Resources cloned) | ✅ 149 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
-| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + track-changes revisions (`setTrackChanges` + ins/del records with per-op author/time, accept/reject single+all, schema:3 keys, no DOCX interop) + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) + footnotes/endnotes (`addFootnote`/`updateFootnote`/`removeFootnote`/`listFootnotes`, Pos-anchored right-gravity marks remapped through every position-moving op, per-kind document-order numbering, plain-text bodies ≤8192 chars, ≤1024 notes, schema:3 `footnotes` key, no DOCX interop) + TOC fields (`insertToc`/`updateToc`/`refreshToc`/`listToc`, `kind:"toc"` block with `{from_level,to_level,entries}` cache over h1/h2/h3 kinds, live `listToc` scan, block-index entry anchors remapped/dropped on edits, no page numbers, no schema bump, no DOCX interop; mail merge and citations deferred) | ✅ 194 tests |
+| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + track-changes revisions (`setTrackChanges` + ins/del records with per-op author/time, accept/reject single+all, schema:3 keys, no DOCX interop) + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) + footnotes/endnotes (`addFootnote`/`updateFootnote`/`removeFootnote`/`listFootnotes`, Pos-anchored right-gravity marks remapped through every position-moving op, per-kind document-order numbering, plain-text bodies ≤8192 chars, ≤1024 notes, schema:3 `footnotes` key, no DOCX interop) + TOC fields (`insertToc`/`updateToc`/`refreshToc`/`listToc`, `kind:"toc"` block with `{from_level,to_level,entries}` cache over h1/h2/h3 kinds, live `listToc` scan, block-index entry anchors remapped/dropped on edits, no page numbers, no schema bump, no DOCX interop; mail merge and citations deferred) + paragraph alignment/indents/tab stops (`setParagraphFormat` patch + `properties.paragraph` on paragraph styles, storage-only, schema:4) | ✅ 208 tests |
 | Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |
 | Example app | RN eng (main session) | Expo screens + useDocument hook | ⚠️ source + typecheck only |
 | Design/UX | — | — | ❌ not staffed this session |
@@ -1359,6 +1359,54 @@ replace with undo/redo/eventless/snapshot round-trip, merge-covered cells,
 35 passed across 6 files (1 new nf-cli in-cell find/replace case),
 `pnpm --filter @nitro-forge/quill typecheck` clean. No native/device acceptance
 or full P12 completion is implied.
+
+## P12 Quill slice 9 paragraph format checkpoint (2026-11-07)
+
+Quill gains paragraph alignment, indents, and tab stops (P12 slice 9) as
+storage-only block formatting — the DOCX `w:jc`/`w:ind`/`w:tabs` subset
+with no layout consumer. New op `setParagraphFormat {block,alignment?,
+indent_left?,indent_right?,indent_first?,tabs?}` is a partial patch on the
+new serde-optional `Block.format` (`ParagraphFormat`): present keys set,
+`null` clears, absent untouched, `tabs` replaces the ≤64 strictly
+increasing `{position,alignment,leader?}` stop list, and an all-empty
+result canonicalizes `format` away. Alignment is `left`/`center`/`right`/
+`justify`; indents and tab positions are twips (left/right 0..=31680,
+`indent_first` ±31680 where negative is hanging); tab alignment
+`left`/`center`/`right`/`decimal`, leader `dot`/`hyphen`/`underscore`/
+`heavy`. Format rides the block through splits (both halves), merges
+(head wins), `deleteRange`, `changeCase`, `replaceRange` and block-splice
+undo for free. `"paragraph"`-kind named styles carry the same grammar
+under `properties.paragraph` (character kinds reject the key);
+`setBlockStyle` merges it onto `Block.format` with the same
+present-wins/absent-untouched snapshot semantics as the inline stamp, and
+`updateStyle`/`removeStyle` never propagate. Table blocks and cell
+paragraphs reject `format` (`validate_tables`), so cell-paragraph
+formatting stays deferred until cell-qualified addressing exists.
+
+Schema: **bump to schema:4** — `Block` has no `deny_unknown_fields`, so a
+`format` field would be silently dropped by schema≤3 readers (the same
+reason `list` needed schema:2). Any snapshot carrying `Block.format` or a
+non-null `properties.paragraph` emits `{kind:"quill",schema:4,document:
+<identical schema:3 shape>}`; schema≤3/legacy payloads carrying v4
+features reject rather than silently accepting them, `ParagraphFormat`/
+`TabStop` are `deny_unknown_fields` with bounded re-validation on restore,
+and documents without format features keep emitting schema≤3
+byte-identically. Deferred honestly: any layout/render consumption
+(alignment/indent/tab-stop effects on `layout`/`text`), DOCX
+`w:jc`/`w:ind`/`w:tabs`/`styles.xml` paragraph-format import/export, cell
+formatting, `bar` tab stops and `start`/`end`/`distribute` alignments,
+multi-block format ops beyond `__batch`, and live style updates.
+
+Local evidence: `cargo test -p quill-engine` 167 passed (13 new covering
+set/patch/clear, eventless equal writes, bounds and table-block atomic
+rejects, undo/redo, split/merge carry rules, schema:4 emission and
+round-trip, hostile restore incl. schema:3-relabeled and cell/table
+format smuggling, named-style precedence and character-kind rejection,
+batch/`replaceRange`/`changeCase` preservation), `cargo build -p nf-cli`
+clean, `pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/quill test` 41 passed across 7 files (6 new nf-cli
+paragraph-format cases), `pnpm --filter @nitro-forge/quill typecheck`
+clean. No native/device acceptance or full P12 completion is implied.
 
 ## P11 Motion slice F deterministic particles source checkpoint (2026-11-08)
 

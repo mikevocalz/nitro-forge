@@ -57,6 +57,7 @@ export const OPS = {
   rejectAllRevisions: "rejectAllRevisions",
   applyNamedStyle: "applyNamedStyle",
   setBlockStyle: "setBlockStyle",
+  setParagraphFormat: "setParagraphFormat",
   insertTable: "insertTable",
   deleteTable: "deleteTable",
   setCellText: "setCellText",
@@ -146,15 +147,66 @@ export interface Bookmark {
 /** Named style kind: paragraph styles mark blocks, character styles format ranges. */
 export type NamedStyleKind = "paragraph" | "character";
 /**
+ * Paragraph alignment — the DOCX `w:jc` subset.
+ */
+export type ParagraphAlignment = "left" | "center" | "right" | "justify";
+/** Tab-stop alignment — the DOCX `w:tabs` subset minus `bar`. */
+export type TabAlignment = "left" | "center" | "right" | "decimal";
+/** Tab leader; absent means no leader (DOCX `none`). */
+export type TabLeader = "dot" | "hyphen" | "underscore" | "heavy";
+/**
+ * One tab stop. `position` is in twips from the left margin
+ * (0..=31680); stops in a list must be strictly increasing, at most 64.
+ */
+export interface TabStop {
+  position: number;
+  alignment: TabAlignment;
+  leader?: TabLeader;
+}
+/**
+ * Stored paragraph formatting on a block (`describe`/`blocks` payloads).
+ * All fields optional; units are twips. `indent_first` is a first-line
+ * indent when positive and a hanging indent when negative
+ * (-31680..=31680). Storage-only — no layout consumes these yet.
+ */
+export interface ParagraphFormat {
+  alignment?: ParagraphAlignment;
+  /** Left indent, twips 0..=31680. */
+  indent_left?: number;
+  /** Right indent, twips 0..=31680. */
+  indent_right?: number;
+  /** First-line (positive) or hanging (negative) indent, twips ±31680. */
+  indent_first?: number;
+  /** Tab stops, strictly increasing positions, at most 64. */
+  tabs?: TabStop[];
+}
+/**
+ * Partial paragraph-format update: present keys set, `null` clears,
+ * absent keys are untouched. `tabs: []` or `tabs: null` clears the stop
+ * list. Shared by `setParagraphFormat` and a style's `properties.paragraph`.
+ */
+export type ParagraphFormatPatch = {
+  [K in keyof ParagraphFormat]?: ParagraphFormat[K] | null;
+};
+/**
+ * `Style` plus the paragraph-format patch grammar. `paragraph` is only
+ * valid on `"paragraph"`-kind styles; `setBlockStyle` copies it onto the
+ * block's stored format with the same snapshot semantics as inline props.
+ */
+export type NamedStyleProperties = Style & {
+  paragraph?: ParagraphFormatPatch | null;
+};
+/**
  * Durable named style definition. `properties` uses the same grammar as
- * `applyStyle`'s `style` payload. Styles are snapshot bundles: applying one
- * copies its properties at that moment and never live-updates afterwards.
+ * `applyStyle`'s `style` payload, plus `paragraph` on paragraph-kind
+ * styles. Styles are snapshot bundles: applying one copies its properties
+ * at that moment and never live-updates afterwards.
  */
 export interface NamedStyle {
   id: string;
   name: string;
   kind: NamedStyleKind;
-  properties: Style;
+  properties: NamedStyleProperties;
 }
 export interface FindOptions {
   from?: Pos;
@@ -588,11 +640,11 @@ export class QuillDocument {
    * Define a durable named style. Ids are unique, 1–64 non-blank
    * non-control characters; at most 256 definitions.
    */
-  defineStyle(def: { id: string; name: string; kind: NamedStyleKind; properties: Style }) {
+  defineStyle(def: { id: string; name: string; kind: NamedStyleKind; properties: NamedStyleProperties }) {
     return this.call<{ ok: boolean; id: string }>(OPS.defineStyle, def);
   }
   /** Replace `name`/`properties` on an existing style; never propagates. */
-  updateStyle(id: string, changes: { name?: string; properties?: Style }) {
+  updateStyle(id: string, changes: { name?: string; properties?: NamedStyleProperties }) {
     return this.call<{ ok: boolean; id: string }>(OPS.updateStyle, { id, ...changes });
   }
   /**
@@ -790,6 +842,18 @@ export class QuillDocument {
    */
   setBlockStyle(block: number, styleId: string | null) {
     return this.call(OPS.setBlockStyle, { block, style_id: styleId });
+  }
+  /**
+   * Patch one block's paragraph format (alignment, indents, tab stops —
+   * P12 slice 9). Present keys set, `null` clears, absent keys untouched;
+   * pass every field as `null` (or `tabs: []`) to clear all formatting.
+   * Indents/tab positions are twips; `indent_first` negative means
+   * hanging. Rejects table blocks; equal values are eventless. Storage-
+   * only: no layout consumes the values yet.
+   */
+  setParagraphFormat(block: number, patch: ParagraphFormatPatch) {
+    const { block: _ignored, ...rest } = patch as ParagraphFormatPatch & { block?: number };
+    return this.call(OPS.setParagraphFormat, { block, ...rest });
   }
   /**
    * Insert a `rows`x`cols` table (each cell starts with one empty

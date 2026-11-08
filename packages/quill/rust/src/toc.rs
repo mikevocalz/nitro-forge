@@ -144,7 +144,7 @@ fn parse_range(p: &Value, current: Option<&TocField>) -> Result<(u8, u8), Engine
 
 /// Full TOC validation for restore and staged candidates: the
 /// `kind:"toc"` ⇔ payload invariant, field-block hygiene (empty inlines,
-/// no list/style_id/table), level-range bounds, the field-count budget,
+/// no list/style_id/table/format), level-range bounds, the field-count budget,
 /// and every cached entry (level inside the field's range, in-bounds
 /// strictly-increasing `block` — the shape the engine itself produces).
 /// Runs before live state is replaced.
@@ -175,6 +175,11 @@ pub fn validate_toc(blocks: &[Block]) -> Result<(), EngineError> {
                 if b.table.is_some() {
                     return Err(EngineError::validation(
                         "toc blocks cannot carry a table payload",
+                    ));
+                }
+                if b.format.is_some() {
+                    return Err(EngineError::validation(
+                        "toc blocks cannot carry a paragraph format",
                     ));
                 }
                 if !(TOC_LEVEL_MIN..=TOC_LEVEL_MAX).contains(&t.from_level)
@@ -281,6 +286,7 @@ impl QuillEngine {
                 inlines: Vec::new(),
                 table: None,
                 toc: Some(field),
+                format: None,
             },
         );
         lists::validate(&next)?;

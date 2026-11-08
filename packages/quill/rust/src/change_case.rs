@@ -173,6 +173,7 @@ impl QuillEngine {
                 // field payloads (also no case-able text).
                 table: block.table.clone(),
                 toc: block.toc.clone(),
+                format: block.format.clone(),
             });
         }
         if !changed {
@@ -270,6 +271,7 @@ mod tests {
             style_id: None,
             table: None,
             toc: None,
+            format: None,
             inlines: vec![
                 run("a", Style::default()),
                 run("ß", style.clone()),
@@ -338,6 +340,7 @@ mod tests {
                 style_id: None,
                 table: None,
                 toc: None,
+                format: None,
                 inlines: vec![run("abß", Style::default())],
             },
             Block {
@@ -346,6 +349,7 @@ mod tests {
                 style_id: None,
                 table: None,
                 toc: None,
+                format: None,
                 inlines: vec![run("éz", Style::default())],
             },
         ];
