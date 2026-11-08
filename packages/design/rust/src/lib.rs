@@ -4,6 +4,7 @@ mod components;
 mod constraints;
 mod layout;
 mod model;
+mod prototype;
 mod sizing;
 mod variables;
 use ignition_core::{
@@ -18,6 +19,28 @@ fn id(p: &Value, key: &str) -> Result<u64, EngineError> {
     p.get(key)
         .and_then(Value::as_u64)
         .ok_or_else(|| bad("expected integer node identity"))
+}
+fn num(p: &Value, key: &str) -> Result<f64, EngineError> {
+    p.get(key)
+        .and_then(Value::as_f64)
+        .ok_or_else(|| bad("expected numeric field"))
+}
+fn opt_u64(p: &Value, key: &str) -> Result<Option<u64>, EngineError> {
+    p.get(key)
+        .map(|v| {
+            v.as_u64()
+                .ok_or_else(|| bad("expected integer field"))
+        })
+        .transpose()
+}
+fn opt_str<'a>(p: &'a Value, key: &str) -> Result<Option<&'a str>, EngineError> {
+    match p.get(key) {
+        Some(Value::Null) | None => Ok(None),
+        Some(v) => v
+            .as_str()
+            .map(Some)
+            .ok_or_else(|| bad("expected string field")),
+    }
 }
 fn merge<T: Serialize + DeserializeOwned>(
     current: &T,
@@ -216,6 +239,16 @@ impl Engine for DesignEngine {
             }
             "readConstraints" => {
                 return Ok(CommandResult::read_only(constraints::describe(
+                    &self.state, p,
+                )?))
+            }
+            "prototypeGraph" => {
+                return Ok(CommandResult::read_only(prototype::graph(
+                    &self.state,
+                )))
+            }
+            "resolvePrototypeEvent" => {
+                return Ok(CommandResult::read_only(prototype::resolve(
                     &self.state, p,
                 )?))
             }
@@ -575,6 +608,9 @@ impl Engine for DesignEngine {
                     next.nodes.remove(&id);
                 }
                 next.bindings.retain(|b| next.nodes.contains_key(&b.node_id));
+                // Prototype screens/hotspots/interactions referencing the
+                // removed subtree are pruned like bindings; undo restores.
+                prototype::prune(&mut next);
             }
             "defineMode" => {
                 fields(p, &["id", "name"])?;
@@ -684,6 +720,14 @@ impl Engine for DesignEngine {
                     return Err(bad("unknown variable"));
                 }
                 next.bindings.retain(|b| b.variable_id != variable_id);
+                // set-variable interactions targeting the removed variable
+                // are dropped like bindings; undo restores them.
+                next.prototype.interactions.retain(|i| {
+                    !matches!(
+                        &i.target,
+                        Some(PrototypeTarget::Variable { id }) if id.as_str() == variable_id
+                    )
+                });
             }
             "setActiveMode" => {
                 fields(p, &["id"])?;
@@ -932,6 +976,454 @@ impl Engine for DesignEngine {
                 let node_id = id(p, "id")?;
                 next.editable(node_id, false)?;
                 next = components::detach(&next, node_id)?;
+            }
+            // --- Prototype catalog (slice E). Mutations are journaled like
+            // every other op; the two reads above stay eventless. ---
+            "definePrototypeScreen" => {
+                fields(p, &["node", "entry"])?;
+                let node_id = id(p, "node")?;
+                let entry = p
+                    .get("entry")
+                    .map(|v| {
+                        v.as_bool()
+                            .ok_or_else(|| bad("entry must be a boolean"))
+                    })
+                    .transpose()?
+                    .unwrap_or(false);
+                if next
+                    .prototype
+                    .screens
+                    .iter()
+                    .any(|s| s.node == node_id)
+                {
+                    return Err(bad("prototype screen already exists"));
+                }
+                next.prototype.screens.push(PrototypeScreen { node: node_id, entry });
+            }
+            "updatePrototypeScreen" => {
+                fields(p, &["node", "entry"])?;
+                let node_id = id(p, "node")?;
+                let entry = p
+                    .get("entry")
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| bad("entry must be a boolean"))?;
+                let sc = next
+                    .prototype
+                    .screens
+                    .iter_mut()
+                    .find(|s| s.node == node_id)
+                    .ok_or_else(|| bad("unknown prototype screen"))?;
+                sc.entry = entry;
+            }
+            "removePrototypeScreen" => {
+                fields(p, &["node"])?;
+                let node_id = id(p, "node")?;
+                let before = next.prototype.screens.len();
+                next.prototype.screens.retain(|s| s.node != node_id);
+                if next.prototype.screens.len() == before {
+                    return Err(bad("unknown prototype screen"));
+                }
+                // Cascade like removeNode: hotspots on the screen, every
+                // interaction attached to them or naming the screen (as
+                // attachment or screen target) are removed with it.
+                let doomed: std::collections::BTreeSet<String> = next
+                    .prototype
+                    .hotspots
+                    .iter()
+                    .filter(|h| h.screen == node_id)
+                    .map(|h| h.id.clone())
+                    .collect();
+                next.prototype.hotspots.retain(|h| h.screen != node_id);
+                next.prototype.interactions.retain(|i| {
+                    !(i.screen == Some(node_id)
+                        || i.hotspot.as_ref().is_some_and(|h| doomed.contains(h))
+                        || matches!(&i.target, Some(PrototypeTarget::Screen { node }) if *node == node_id))
+                });
+            }
+            "definePrototypeHotspot" => {
+                fields(
+                    p,
+                    &["id", "screen", "label", "x", "y", "width", "height"],
+                )?;
+                let hotspot_id = match p.get("id") {
+                    Some(Value::Null) | None => generated_id("hotspot", &|c| {
+                        next.prototype.hotspots.iter().any(|h| h.id == c)
+                    })?,
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("hotspot id must be a string"))?
+                        .to_string(),
+                };
+                if next
+                    .prototype
+                    .hotspots
+                    .iter()
+                    .any(|h| h.id == hotspot_id)
+                {
+                    return Err(bad("hotspot already exists"));
+                }
+                let hotspot = PrototypeHotspot {
+                    id: hotspot_id.clone(),
+                    screen: id(p, "screen")?,
+                    label: text_field(p, "label")?.into(),
+                    x: num(p, "x")?,
+                    y: num(p, "y")?,
+                    width: num(p, "width")?,
+                    height: num(p, "height")?,
+                };
+                next.prototype.hotspots.push(hotspot);
+                data = json!({"id": hotspot_id});
+            }
+            "updatePrototypeHotspot" => {
+                fields(
+                    p,
+                    &["id", "screen", "label", "x", "y", "width", "height"],
+                )?;
+                let hotspot_id = text_field(p, "id")?;
+                let h = next
+                    .prototype
+                    .hotspots
+                    .iter_mut()
+                    .find(|h| h.id == hotspot_id)
+                    .ok_or_else(|| bad("unknown hotspot"))?;
+                if let Some(v) = p.get("screen") {
+                    h.screen = v
+                        .as_u64()
+                        .ok_or_else(|| bad("screen must be a node id"))?;
+                }
+                if let Some(v) = p.get("label") {
+                    h.label = v
+                        .as_str()
+                        .ok_or_else(|| bad("label must be a string"))?
+                        .into();
+                }
+                for (key, slot) in [
+                    ("x", &mut h.x),
+                    ("y", &mut h.y),
+                    ("width", &mut h.width),
+                    ("height", &mut h.height),
+                ] {
+                    if let Some(v) = p.get(key) {
+                        *slot = v
+                            .as_f64()
+                            .ok_or_else(|| bad("hotspot geometry must be numeric"))?;
+                    }
+                }
+            }
+            "removePrototypeHotspot" => {
+                fields(p, &["id"])?;
+                let hotspot_id = text_field(p, "id")?;
+                let before = next.prototype.hotspots.len();
+                next.prototype.hotspots.retain(|h| h.id != hotspot_id);
+                if next.prototype.hotspots.len() == before {
+                    return Err(bad("unknown hotspot"));
+                }
+                next.prototype
+                    .interactions
+                    .retain(|i| i.hotspot.as_deref() != Some(hotspot_id));
+            }
+            "definePrototypeTransition" => {
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "label",
+                        "kind",
+                        "easing",
+                        "direction",
+                        "duration_ms",
+                    ],
+                )?;
+                let transition_id = match p.get("id") {
+                    Some(Value::Null) | None => generated_id("transition", &|c| {
+                        next.prototype
+                            .transitions
+                            .iter()
+                            .any(|t| t.id == c)
+                    })?,
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("transition id must be a string"))?
+                        .to_string(),
+                };
+                if next
+                    .prototype
+                    .transitions
+                    .iter()
+                    .any(|t| t.id == transition_id)
+                {
+                    return Err(bad("transition already exists"));
+                }
+                let kind: TransitionKind = serde_json::from_value(
+                    p.get("kind")
+                        .cloned()
+                        .ok_or_else(|| bad("transition kind required"))?,
+                )?;
+                let easing = match p.get("easing") {
+                    Some(Value::Null) | None => TransitionEasing::default(),
+                    Some(v) => serde_json::from_value(v.clone())?,
+                };
+                let direction = match p.get("direction") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(serde_json::from_value(v.clone())?),
+                };
+                let duration_ms = opt_u64(p, "duration_ms")?.unwrap_or(0);
+                let label = match opt_str(p, "label")? {
+                    Some(l) => l.to_string(),
+                    None => transition_id.clone(),
+                };
+                next.prototype.transitions.push(PrototypeTransition {
+                    id: transition_id.clone(),
+                    label,
+                    kind,
+                    easing,
+                    direction,
+                    duration_ms,
+                });
+                data = json!({"id": transition_id});
+            }
+            "updatePrototypeTransition" => {
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "label",
+                        "kind",
+                        "easing",
+                        "direction",
+                        "duration_ms",
+                    ],
+                )?;
+                let transition_id = text_field(p, "id")?;
+                let t = next
+                    .prototype
+                    .transitions
+                    .iter_mut()
+                    .find(|t| t.id == transition_id)
+                    .ok_or_else(|| bad("unknown transition"))?;
+                if let Some(v) = p.get("label") {
+                    t.label = v
+                        .as_str()
+                        .ok_or_else(|| bad("label must be a string"))?
+                        .into();
+                }
+                if let Some(v) = p.get("kind") {
+                    t.kind = serde_json::from_value(v.clone())?;
+                }
+                if let Some(v) = p.get("easing") {
+                    t.easing = serde_json::from_value(v.clone())?;
+                }
+                if p
+                    .as_object()
+                    .is_some_and(|o| o.contains_key("direction"))
+                {
+                    t.direction = match p.get("direction") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(serde_json::from_value(v.clone())?),
+                    };
+                }
+                if let Some(v) = p.get("duration_ms") {
+                    t.duration_ms = v
+                        .as_u64()
+                        .ok_or_else(|| bad("duration_ms must be an integer"))?;
+                }
+                // A non-slide kind cannot keep a direction; normalize
+                // before whole-document validation sees the candidate.
+                if t.kind != TransitionKind::Slide {
+                    t.direction = None;
+                }
+            }
+            "removePrototypeTransition" => {
+                fields(p, &["id"])?;
+                let transition_id = text_field(p, "id")?;
+                if next
+                    .prototype
+                    .interactions
+                    .iter()
+                    .any(|i| i.transition.as_deref() == Some(transition_id))
+                {
+                    return Err(bad("transition is referenced by an interaction"));
+                }
+                let before = next.prototype.transitions.len();
+                next.prototype
+                    .transitions
+                    .retain(|t| t.id != transition_id);
+                if next.prototype.transitions.len() == before {
+                    return Err(bad("unknown transition"));
+                }
+            }
+            "definePrototypeInteraction" => {
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "hotspot",
+                        "screen",
+                        "trigger",
+                        "delay_ms",
+                        "action",
+                        "target",
+                        "transition",
+                        "duration_ms",
+                        "value",
+                    ],
+                )?;
+                let interaction_id = match p.get("id") {
+                    Some(Value::Null) | None => generated_id("interaction", &|c| {
+                        next.prototype
+                            .interactions
+                            .iter()
+                            .any(|i| i.id == c)
+                    })?,
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("interaction id must be a string"))?
+                        .to_string(),
+                };
+                if next
+                    .prototype
+                    .interactions
+                    .iter()
+                    .any(|i| i.id == interaction_id)
+                {
+                    return Err(bad("interaction already exists"));
+                }
+                let hotspot = match p.get("hotspot") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(
+                        v.as_str()
+                            .ok_or_else(|| bad("hotspot must be a string id"))?
+                            .to_string(),
+                    ),
+                };
+                let screen = match p.get("screen") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(
+                        v.as_u64()
+                            .ok_or_else(|| bad("screen must be a node id"))?,
+                    ),
+                };
+                let target = match p.get("target") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(serde_json::from_value(v.clone())?),
+                };
+                let value = match p.get("value") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(serde_json::from_value(v.clone())?),
+                };
+                next.prototype.interactions.push(PrototypeInteraction {
+                    id: interaction_id.clone(),
+                    hotspot,
+                    screen,
+                    trigger: serde_json::from_value(
+                        p.get("trigger")
+                            .cloned()
+                            .ok_or_else(|| bad("interaction trigger required"))?,
+                    )?,
+                    delay_ms: opt_u64(p, "delay_ms")?.unwrap_or(0),
+                    action: serde_json::from_value(
+                        p.get("action")
+                            .cloned()
+                            .ok_or_else(|| bad("interaction action required"))?,
+                    )?,
+                    target,
+                    transition: opt_str(p, "transition")?.map(str::to_string),
+                    duration_ms: opt_u64(p, "duration_ms")?,
+                    value,
+                });
+                data = json!({"id": interaction_id});
+            }
+            "updatePrototypeInteraction" => {
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "hotspot",
+                        "screen",
+                        "trigger",
+                        "delay_ms",
+                        "action",
+                        "target",
+                        "transition",
+                        "duration_ms",
+                        "value",
+                    ],
+                )?;
+                let interaction_id = text_field(p, "id")?;
+                let i = next
+                    .prototype
+                    .interactions
+                    .iter_mut()
+                    .find(|i| i.id == interaction_id)
+                    .ok_or_else(|| bad("unknown interaction"))?;
+                let object = p
+                    .as_object()
+                    .ok_or_else(|| bad("expected patch object"))?;
+                if object.contains_key("hotspot") {
+                    i.hotspot = match p.get("hotspot") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(
+                            v.as_str()
+                                .ok_or_else(|| bad("hotspot must be a string id"))?
+                                .to_string(),
+                        ),
+                    };
+                }
+                if object.contains_key("screen") {
+                    i.screen = match p.get("screen") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(
+                            v.as_u64()
+                                .ok_or_else(|| bad("screen must be a node id"))?,
+                        ),
+                    };
+                }
+                if let Some(v) = p.get("trigger") {
+                    i.trigger = serde_json::from_value(v.clone())?;
+                }
+                if let Some(v) = p.get("delay_ms") {
+                    i.delay_ms = v
+                        .as_u64()
+                        .ok_or_else(|| bad("delay_ms must be an integer"))?;
+                }
+                if let Some(v) = p.get("action") {
+                    i.action = serde_json::from_value(v.clone())?;
+                }
+                if object.contains_key("target") {
+                    i.target = match p.get("target") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(serde_json::from_value(v.clone())?),
+                    };
+                }
+                if object.contains_key("transition") {
+                    i.transition = opt_str(p, "transition")?.map(str::to_string);
+                }
+                if object.contains_key("duration_ms") {
+                    i.duration_ms = match p.get("duration_ms") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(
+                            v.as_u64()
+                                .ok_or_else(|| bad("duration_ms must be an integer"))?,
+                        ),
+                    };
+                }
+                if object.contains_key("value") {
+                    i.value = match p.get("value") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(serde_json::from_value(v.clone())?),
+                    };
+                }
+            }
+            "removePrototypeInteraction" => {
+                fields(p, &["id"])?;
+                let interaction_id = text_field(p, "id")?;
+                let before = next.prototype.interactions.len();
+                next.prototype
+                    .interactions
+                    .retain(|i| i.id != interaction_id);
+                if next.prototype.interactions.len() == before {
+                    return Err(bad("unknown interaction"));
+                }
             }
             _ => return Err(EngineError::unsupported("unsupported design operation")),
         }

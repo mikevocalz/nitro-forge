@@ -33,6 +33,20 @@ export const OPS={
  updateInstance:'updateInstance',
  detachInstance:'detachInstance',
  describeComponents:'describeComponents',
+ definePrototypeScreen:'definePrototypeScreen',
+ updatePrototypeScreen:'updatePrototypeScreen',
+ removePrototypeScreen:'removePrototypeScreen',
+ definePrototypeHotspot:'definePrototypeHotspot',
+ updatePrototypeHotspot:'updatePrototypeHotspot',
+ removePrototypeHotspot:'removePrototypeHotspot',
+ definePrototypeTransition:'definePrototypeTransition',
+ updatePrototypeTransition:'updatePrototypeTransition',
+ removePrototypeTransition:'removePrototypeTransition',
+ definePrototypeInteraction:'definePrototypeInteraction',
+ updatePrototypeInteraction:'updatePrototypeInteraction',
+ removePrototypeInteraction:'removePrototypeInteraction',
+ prototypeGraph:'prototypeGraph',
+ resolvePrototypeEvent:'resolvePrototypeEvent',
  evaluateLayout:'evaluateLayout',
  renderFrame:'renderFrame',
 } as const;
@@ -94,6 +108,52 @@ export type VerticalAnchor='top'|'bottom'|'center'|'stretch'|'scale';
 export interface NodeConstraints{horizontal:HorizontalAnchor;vertical:VerticalAnchor;min_width?:number;max_width?:number;min_height?:number;max_height?:number;aspect_locked?:boolean;relative_to?:number}
 export interface ConstraintNodeInfo{node_id:number;constraints:NodeConstraints;enforced:boolean}
 export interface ConstraintsDescription{solving:'storage-only';accepted:{horizontal:HorizontalAnchor[];vertical:VerticalAnchor[];relative_to:('parent'|'sibling')[];extent_bounds:string};rejected:string[];nodes:ConstraintNodeInfo[]}
+/** NYC-Tron `PrototypeInteraction.trigger` set (InteractionTriggerEditor). */
+export type PrototypeTrigger='tap'|'press'|'hover'|'drag'|'timer';
+/** NYC-Tron `PrototypeInteraction.action` set. */
+export type PrototypeAction='navigate'|'overlay'|'back'|'close-overlay'|'set-variable';
+/** Bounded transition kinds; `slide` requires `direction`. */
+export type TransitionKind='instant'|'dissolve'|'slide'|'smart-animate';
+export type TransitionEasing='linear'|'ease-in'|'ease-out'|'ease-in-out';
+export type SlideDirection='left'|'right'|'up'|'down';
+/** What an interaction acts on: a registered screen node for
+ * navigate/overlay, a design variable for set-variable; back/close-overlay
+ * carry no target. Engine serialization is `{kind:'screen',node}` /
+ * `{kind:'variable',id}` — the typed mapping of the NYC-Tron string
+ * `destinationId` contract. */
+export type PrototypeTarget={kind:'screen';node:number}|{kind:'variable';id:string};
+/** A screen catalog entry: a durable reference to a frame/component node
+ * plus the FlowOverview entry flag. The label is derived live from the
+ * node name at read time. */
+export interface PrototypeScreen{node:number;entry?:boolean}
+/** A trigger region normalized to 0..=1 inside its screen's box; the
+ * region must stay inside the unit square. */
+export interface PrototypeHotspot{id:string;screen:number;label:string;x:number;y:number;width:number;height:number}
+export interface PrototypeTransition{id:string;label:string;kind:TransitionKind;easing?:TransitionEasing;direction?:SlideDirection;duration_ms?:number}
+/** NYC-Tron `PrototypeInteraction` as durable state, attached to exactly
+ * one of `hotspot` (id) or `screen` (node). `delay_ms` (≤86400000) is the
+ * trigger delay the host schedules; `duration_ms` (≤600000) optionally
+ * overrides the referenced transition's duration. `value` is an engine
+ * extension: the literal a set-variable action writes, matching the target
+ * variable's type (aliases are rejected). */
+export interface PrototypeInteraction{id:string;hotspot?:string;screen?:number;trigger:PrototypeTrigger;delay_ms?:number;action:PrototypeAction;target?:PrototypeTarget;transition?:string;duration_ms?:number;value?:VariableValue}
+export interface PrototypeScreenInfo{node:number;name:string;kind:NodeKind;entry:boolean;x:number;y:number;width:number;height:number}
+export interface PrototypeHotspotInfo extends PrototypeHotspot{}
+export interface PrototypeTransitionInfo{id:string;label:string;kind:TransitionKind;easing:TransitionEasing;direction?:SlideDirection;duration_ms:number}
+export interface PrototypeInteractionInfo{id:string;hotspot?:string;screen?:number;trigger:PrototypeTrigger;delay_ms:number;action:PrototypeAction;target?:PrototypeTarget;transition?:string;duration_ms?:number;value?:VariableValue}
+/** FlowOverview edge derived from navigate/overlay interactions. */
+export interface PrototypeLink{id:string;source:number;target:number;label:PrototypeAction}
+export interface PrototypeGraph{screens:PrototypeScreenInfo[];hotspots:PrototypeHotspotInfo[];interactions:PrototypeInteractionInfo[];transitions:PrototypeTransitionInfo[];links:PrototypeLink[];runtime:{clock:string;playback:string;note:string}}
+/** Deterministic resolution of one event descriptor. `null` data means no
+ * interaction matched. The engine stores no playback state and no clock:
+ * `delay_ms`/`duration_ms` are returned for the host to schedule. */
+export interface PrototypeEventResolution{matched:true;interaction:PrototypeInteractionInfo;transition:{id:string;kind:TransitionKind;easing:TransitionEasing;direction?:SlideDirection;duration_ms:number}|null;delay_ms:number;scheduled_by:'host'}
+export type PrototypeEventQuery={hotspot?:string;screen?:number;trigger?:PrototypeTrigger};
+/** Update patches: every field optional, explicit `null` clears the
+ * optional members (hotspot/screen XOR, target, transition, duration_ms,
+ * value on interactions; direction on transitions). */
+export type PrototypeTransitionPatch=Partial<Omit<PrototypeTransition,'id'|'direction'>>&{direction?:SlideDirection|null};
+export type PrototypeInteractionPatch={[K in keyof Omit<PrototypeInteraction,'id'>]?:Omit<PrototypeInteraction,'id'>[K]|null};
 export interface FrameLayout{direction:'row'|'column';wrap?:boolean;gap:number;padding_top:number;padding_right:number;padding_bottom:number;padding_left:number;align:'start'|'center'|'end'|'stretch';justify:'start'|'center'|'end'|'space-between'}
 export interface NodeGeometry{x:number;y:number;width:number;height:number}
 export interface DesignNode extends NodeGeometry{id:number;kind:NodeKind;name:string;fill:[number,number,number,number];visible:boolean;locked:boolean;children:number[];layout:FrameLayout|null;sizing?:SizingSettings;text?:TextStyle;constraints?:NodeConstraints;variants?:ComponentVariant[];instance?:InstanceSpec}
@@ -103,7 +163,10 @@ export interface CompositionSettings{title:string;width:number;height:number}
  * bytes and only when schema-2 features (text nodes, node constraints,
  * variables/modes/bindings)
  * are present. The collections are omitted entirely when empty. */
-export interface DesignState{kind:'design';schema:1;title:string;next_id:number;nodes:Record<string,DesignNode>;variables?:Record<string,DesignVariable>;modes?:DesignMode[];active_mode?:string;bindings?:VariableBinding[]}
+/** Durable prototype catalog stored on the internal state; omitted when
+ * empty. Any content triggers the schema:2 snapshot wrapper. */
+export interface PrototypeCatalog{screens:PrototypeScreen[];hotspots:PrototypeHotspot[];interactions:PrototypeInteraction[];transitions:PrototypeTransition[]}
+export interface DesignState{kind:'design';schema:1;title:string;next_id:number;nodes:Record<string,DesignNode>;variables?:Record<string,DesignVariable>;modes?:DesignMode[];active_mode?:string;bindings?:VariableBinding[];prototype?:PrototypeCatalog}
 export type NodePatch=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'|'locked'>> & {text?:TextStylePatch};
 export type NewNode=Partial<Pick<DesignNode,'name'|'x'|'y'|'width'|'height'|'fill'|'visible'>>;
 export interface NewTextNode extends NewNode{content:string;style?:FontStylePatch}
@@ -123,7 +186,11 @@ export interface ComponentsDescription{expansion:{max_depth:number;max_nodes:num
  * and instances exist: instances expand deterministically at read/render
  * time only (never persisted expanded) under depth/node caps, with a bounded
  * override surface and named variant bundles. Instance sizing stays fixed.
- * No prototype runtime, images, clipping, groups or layers. */
+ * The prototype catalog (slice E) stores screens/hotspots/interactions/
+ * transitions as durable document state; `prototypeGraph` and
+ * `resolvePrototypeEvent` are pure deterministic reads — the engine owns no
+ * clock and never fakes animation playback (status/progress/delay
+ * scheduling are host-owned). No images, clipping, groups or layers. */
 export class DesignDocument{
  private constructor(private readonly document:DocumentHandle){}
  static async open(host:EngineHost,settings:Partial<CompositionSettings>={}){return new DesignDocument(await DocumentHandle.openInitialized(host,'design',doc=>doc.apply(OPS.new,settings)));}
@@ -206,6 +273,61 @@ export class DesignDocument{
   * contracts, plus expansion bounds. Instances report `unavailable_reason`
   * when the document currently exceeds a read expansion bound. */
  describeComponents(){return this.document.apply<ComponentsDescription>(OPS.describeComponents,{});}
+ /** Registers a frame/component node as a prototype screen; `entry` marks
+  * the FlowOverview entry point. Duplicate nodes reject; use
+  * updatePrototypeScreen to change the flag. Removing a screen cascades:
+  * its hotspots, attached interactions and interactions targeting it are
+  * deleted (undo restores). At most 512 screens. */
+ definePrototypeScreen(node:number,options:{entry?:boolean}={}){return this.document.apply<{ok:boolean}>(OPS.definePrototypeScreen,{node,...options});}
+ updatePrototypeScreen(node:number,entry:boolean){return this.document.apply<{ok:boolean}>(OPS.updatePrototypeScreen,{node,entry});}
+ removePrototypeScreen(node:number){return this.document.apply<{ok:boolean}>(OPS.removePrototypeScreen,{node});}
+ /** Creates a normalized (0..=1, inside the unit square) trigger region on
+  * a registered screen. `id` is optional (`hotspot-N` assigned); at most
+  * 4096 hotspots. Returns the id. */
+ definePrototypeHotspot(hotspot:Omit<PrototypeHotspot,'id'>&{id?:string}){const {id,...rest}=hotspot;return this.document.apply<{id:string}>(OPS.definePrototypeHotspot,{...rest,...(id===undefined?{}:{id})});}
+ /** Partial patch; absent fields unchanged. `screen` may retarget to
+  * another registered screen. */
+ updatePrototypeHotspot(id:string,patch:Partial<Omit<PrototypeHotspot,'id'|'screen'>>&{screen?:number}){return this.document.apply<{ok:boolean}>(OPS.updatePrototypeHotspot,{id,...patch});}
+ /** Removes the hotspot and every interaction attached to it. */
+ removePrototypeHotspot(id:string){return this.document.apply<{ok:boolean}>(OPS.removePrototypeHotspot,{id});}
+ /** Creates a named transition preset. `kind:'slide'` requires
+  * `direction`; other kinds reject one (updatePrototypeTransition clears
+  * it automatically on kind change). `duration_ms` ≤600000. `id` optional
+  * (`transition-N`); `label` defaults to the id. At most 256 transitions. */
+ definePrototypeTransition(transition:Omit<PrototypeTransition,'id'>&{id?:string}){const {id,...rest}=transition;return this.document.apply<{id:string}>(OPS.definePrototypeTransition,{...rest,...(id===undefined?{}:{id})});}
+ /** Partial patch; `direction:null` clears, and a non-slide `kind`
+  * normalizes `direction` away before validation. */
+ updatePrototypeTransition(id:string,patch:PrototypeTransitionPatch){return this.document.apply<{ok:boolean}>(OPS.updatePrototypeTransition,{id,...patch});}
+ /** Removes the preset; rejects while any interaction references it. */
+ removePrototypeTransition(id:string){return this.document.apply<{ok:boolean}>(OPS.removePrototypeTransition,{id});}
+ /** Creates a PrototypeInteraction attached to exactly one of `hotspot`
+  * (id) or `screen` (node). `delay_ms` ≤86400000 is the host-scheduled
+  * trigger delay; `duration_ms` ≤600000 overrides the referenced
+  * transition's duration. Action/target pairing is enforced:
+  * navigate/overlay need a screen target, set-variable a variable target
+  * (optional type-matching literal `value`; aliases reject), back and
+  * close-overlay carry neither. `id` optional (`interaction-N`); at most
+  * 4096 interactions. Returns the id. */
+ definePrototypeInteraction(interaction:Omit<PrototypeInteraction,'id'>&{id?:string}){const {id,...rest}=interaction;return this.document.apply<{id:string}>(OPS.definePrototypeInteraction,{...rest,...(id===undefined?{}:{id})});}
+ /** Partial patch; explicit `null` clears hotspot/screen/target/
+  * transition/duration_ms/value. The exactly-one attachment rule is
+  * re-validated, so clearing one side of a both-set pair is required
+  * before the other can be set. */
+ updatePrototypeInteraction(id:string,patch:PrototypeInteractionPatch){return this.document.apply<{ok:boolean}>(OPS.updatePrototypeInteraction,{id,...patch});}
+ removePrototypeInteraction(id:string){return this.document.apply<{ok:boolean}>(OPS.removePrototypeInteraction,{id});}
+ /** Read-only catalog projection for the L-08..L-11 contracts: screens
+  * (with live node names/kinds/entry flags and authored boxes), hotspots,
+  * interactions, transitions and derived navigate/overlay `links`.
+  * Silent. */
+ prototypeGraph(){return this.document.apply<PrototypeGraph>(OPS.prototypeGraph,{});}
+ /** Pure deterministic event resolution — no clock, no playback state.
+  * `{hotspot}` matches that region's interactions; `{screen}` matches
+  * screen-level interactions plus the screen's hotspot interactions;
+  * `trigger` filters when present. First catalog-order match wins; data is
+  * `null` when nothing matches. The result carries the resolved transition
+  * (interaction `duration_ms` override applied) and `delay_ms` for the
+  * host to schedule; `scheduled_by` is always `"host"`. Silent. */
+ resolvePrototypeEvent(query:PrototypeEventQuery){return this.document.apply<PrototypeEventResolution|null>(OPS.resolvePrototypeEvent,query);}
  evaluateLayout(){return this.document.apply<{boxes:EvaluatedBox[]}>(OPS.evaluateLayout,{});}
  renderFrame(){return this.document.apply<{width:number;height:number;pixels_b64?:string}>(OPS.renderFrame,{});}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}
