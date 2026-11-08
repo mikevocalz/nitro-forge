@@ -1418,8 +1418,8 @@ adjacent slides by their stored `morph_name` tags and interpolates between
 them. The engine stores the kind and the tags as DATA ONLY — it performs
 no morph evaluation, interpolation or rendering (same honesty boundary as
 the other transition kinds).
-`Obj = { id, kind:"text"|"rect"|"image"|"roundedRect"|"ellipse"|"triangle"|"diamond"|"line"|"arrow"|"star"|"connector"|"media", x,y,w,h, rotation_deg,
-text?{content,font_size,color,bold,italic}, fill?[u8;4], stroke?:{width,color:[u8;4]}, connector?:ConnectorSpec, media?:MediaSpec, morph_name?:string, placeholder_id?:number, src?:string }`.
+`Obj = { id, kind:"text"|"rect"|"image"|"roundedRect"|"ellipse"|"triangle"|"diamond"|"line"|"arrow"|"star"|"connector"|"media"|"chart"|"table", x,y,w,h, rotation_deg,
+text?{content,font_size,color,bold,italic}, fill?[u8;4], stroke?:{width,color:[u8;4]}, connector?:ConnectorSpec, media?:MediaSpec, chart?:ChartSpec, table?:TableSpec, morph_name?:string, placeholder_id?:number, src?:string }`.
 `morph_name` is an optional bounded non-blank tag (<=128 UTF-8 bytes),
 unique per slide, that hosts use to pair objects across adjacent slides
 during a `"morph"` transition; it is stored data only — the engine never
