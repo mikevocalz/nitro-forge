@@ -11,8 +11,8 @@ output actually exists; anything not executed is marked NOT RUN.
 | prism-engine unit tests | 55 pass | `cargo test -p prism-engine` |
 | tally-engine unit + formula tests | 27 pass | `cargo test -p tally-engine` |
 | cadence-engine tests (incl. real PCM render) | 21 pass | `cargo test -p cadence-engine` |
-| splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch) | 44 pass | `cargo test -p splice-engine` |
-| splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
+| splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch, keyframed speed) | 51 pass | `cargo test -p splice-engine` |
+| splice vitest via nf-cli + unit (timeline ops, cluster, transfer, keyframed speed) | 34 pass (incl. 7 speed-keys e2e + 1 view unit) | `pnpm --filter @nitro-forge/splice test` |
 | folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments) | 112 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
 | quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, tables incl. cell merge/unmerge and in-cell find/replace) | 154 pass | `cargo test -p quill-engine` |
@@ -42,7 +42,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Prism engine | Graphics eng (subagent 3ba36e7a) | layers, pixels, filters, flatten | ✅ 55 tests |
 | Tally engine | Spreadsheet eng (subagent ddf87203) | formula parser/evaluator | ✅ 27 tests |
 | Cadence engine | Audio/DSP eng (subagent 75836ea5) | MIDI clips, transport, PCM render | ✅ 21 tests |
-| Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch | ✅ 44 tests |
+| Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch; 2026-11-07: keyframed speed (`speed_keys`, `setSpeedKeys`, integral footprint through all structural ops) | ✅ 51 tests |
 | Folio engine | PDF eng (subagent bdd8014e) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption, outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment) | ✅ 112 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
 | Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) | ✅ 154 tests |

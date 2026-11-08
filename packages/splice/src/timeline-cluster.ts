@@ -1,4 +1,4 @@
-import type { BatchableOp, RippleScope, SpliceDocument, TrackKind, TransitionKind } from "./index";
+import type { BatchableOp, RippleScope, SpeedKey, SpliceDocument, TrackKind, TransitionKind } from "./index";
 
 /**
  * Engine side of NYC-Tron's timeline controls (Forge roster section D). Like
@@ -29,6 +29,13 @@ export interface TimelineClipView {
   readonly speed: number;
   readonly sourceDuration: number;
   readonly label: string;
+  /**
+   * Keyframed speed curve, present only when the clip has `speed_keys`.
+   * `tFrame` is MEDIA time in frames (source seconds × rate), not timeline
+   * frames; `speed` is media seconds per timeline second. The engine owns
+   * the curve — this is read-only data for a ramp editor (D-32/G-13).
+   */
+  readonly speedKeys?: readonly { readonly tFrame: number; readonly speed: number }[];
 }
 
 /** A track as NYC-Tron `TimelineTrack` takes it, with the header flags. */
@@ -154,8 +161,12 @@ export const SPLICE_DEFERRED = {
   effectTracks: ["D-31"],
   /** D-43: no sticker asset source, and nothing composites stickers. */
   stickerTracks: ["D-43"],
-  /** D-32: Splice speed is constant per clip; keyframed speed is not built. */
-  speedKeyframes: ["D-32"],
+  /**
+   * D-32/G-13: the engine now stores and evaluates keyframed speed
+   * (`setSpeedKeys`, `speed_keys` on clips and `renderPlan`), but no NYC-Tron
+   * ramp-curve editor is wired to it yet — the control stays deferred.
+   */
+  speedKeyframes: ["D-32", "G-13"],
 } as const;
 
 interface RawClip {
@@ -165,6 +176,7 @@ interface RawClip {
   in_s: number;
   out_s: number;
   speed: number;
+  speed_keys?: SpeedKey[];
 }
 interface RawTimeline {
   sources: Record<string, { name: string; duration_s: number }>;
@@ -189,6 +201,57 @@ const fpsOf = (rate: FrameRate) => {
 };
 /** Whole frame at `seconds`, rounding away float error from the engine's seconds. */
 const frameAt = (seconds: number, fps: number) => Math.round(seconds * fps);
+
+/**
+ * Playback speed at media time `t` (source seconds): linear between sorted
+ * `speed_keys`, held at the end values outside the keyed range. Mirrors
+ * `splice-engine`'s `speed_at`; empty keys mean constant `speed`.
+ */
+function speedAtMediaS(keys: readonly SpeedKey[], speed: number, t: number): number {
+  if (keys.length === 0) return speed;
+  if (t <= keys[0]!.t_s) return keys[0]!.speed;
+  if (t >= keys[keys.length - 1]!.t_s) return keys[keys.length - 1]!.speed;
+  let lo = 0;
+  let hi = keys.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (keys[mid]!.t_s <= t) lo = mid + 1;
+    else hi = mid;
+  }
+  const a = keys[lo - 1]!;
+  const b = keys[lo]!;
+  return a.speed + ((b.speed - a.speed) * (t - a.t_s)) / (b.t_s - a.t_s);
+}
+
+/**
+ * Timeline seconds the media interval `[a, b]` occupies: ∫ dt / speed(t).
+ * Piecewise-linear speed integrates in closed form per segment — the same
+ * formula `splice-engine`'s `span_len` uses, so view durations match the
+ * engine's `duration`/`renderPlan` exactly.
+ */
+function mediaSpanTimelineS(keys: readonly SpeedKey[], speed: number, a: number, b: number): number {
+  if (keys.length === 0) return (b - a) / speed;
+  const knots: [number, number][] = [[a, speedAtMediaS(keys, speed, a)]];
+  for (const k of keys) if (k.t_s > a && k.t_s < b) knots.push([k.t_s, k.speed]);
+  knots.push([b, speedAtMediaS(keys, speed, b)]);
+  let total = 0;
+  for (let i = 0; i + 1 < knots.length; i++) {
+    const [t0, s0] = knots[i]!;
+    const [t1, s1] = knots[i + 1]!;
+    const h = t1 - t0;
+    if (h <= 0) continue;
+    total +=
+      Math.abs(s1 - s0) <= Number.EPSILON * Math.max(s0, s1)
+        ? h / s0
+        : (h * Math.log1p((s1 - s0) / s0)) / (s1 - s0);
+  }
+  return total;
+}
+
+/** A clip's timeline footprint in seconds under its speed curve. */
+function clipFootprintS(c: RawClip): number {
+  return mediaSpanTimelineS(c.speed_keys ?? [], c.speed, c.in_s, c.out_s);
+}
 const TRACK_PREFIX: Record<TrackKind, string> = { video: "V", audio: "A", overlay: "O" };
 const engineId = (id: string) => {
   const n = Number(id);
@@ -207,7 +270,7 @@ export function timelineView(raw: RawTimeline, rate: FrameRate): SpliceTimelineV
       .sort((a, b) => a.timeline_start_s - b.timeline_start_s)
       .map((c): TimelineClipView => {
         const src = raw.sources[String(c.source_id)];
-        endS = Math.max(endS, c.timeline_start_s + (c.out_s - c.in_s) / c.speed);
+        endS = Math.max(endS, c.timeline_start_s + clipFootprintS(c));
         return {
           id: String(c.id),
           startFrame: frameAt(c.timeline_start_s, fps),
@@ -216,6 +279,14 @@ export function timelineView(raw: RawTimeline, rate: FrameRate): SpliceTimelineV
           speed: c.speed,
           sourceDuration: (src?.duration_s ?? c.out_s) * fps,
           label: src?.name ?? `Clip ${c.id}`,
+          ...(c.speed_keys?.length
+            ? {
+                speedKeys: c.speed_keys.map((k) => ({
+                  tFrame: frameAt(k.t_s, fps),
+                  speed: k.speed,
+                })),
+              }
+            : {}),
         };
       });
     return {
