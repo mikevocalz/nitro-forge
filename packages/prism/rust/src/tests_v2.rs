@@ -1115,3 +1115,71 @@ fn crop_preserves_rotated_and_grouped_content() {
     assert!((bb.0 - 5.0).abs() < 1e-9 && (bb.1 - 5.0).abs() < 1e-9);
     assert_eq!(flat(&mut e).len(), 8 * 8 * 4);
 }
+
+// -- pixel sampling ---------------------------------------------------------------
+
+#[test]
+fn sample_pixels_reads_the_composite() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    rect(&mut e, 2.0, 2.0, 4.0, 4.0, BLUE);
+    let depth = e.journal.undo_len();
+
+    let res = e
+        .apply(Command::new("samplePixels", json!({"x": 3, "y": 3})))
+        .unwrap();
+    assert!(res.events.is_empty(), "samplePixels is read-only");
+    assert_eq!(res.data, json!({"r": 0, "g": 0, "b": 255, "a": 255}));
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 0, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 255, "g": 0, "b": 0, "a": 255})
+    );
+    // Outside the canvas samples transparent, not an error.
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 40, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 0, "g": 0, "b": 0, "a": 0})
+    );
+    assert_eq!(e.journal.undo_len(), depth, "sampling records no undo");
+    // A masked layer samples through the mask.
+    run(&mut e, "addMask", json!({"id": r}));
+    run(&mut e, "paintMask", json!({"id": r, "x": 0, "y": 0, "w": 8, "h": 8, "data_b64": b64::encode(&[0u8; 64])}));
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 0, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 0, "g": 0, "b": 0, "a": 0}),
+        "fully masked composite is transparent"
+    );
+    assert_eq!(e.journal.undo_len(), depth + 2, "only the mask ops recorded undo");
+    rejects(&mut e, "samplePixels", json!({"y": 0}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "samplePixels", json!({"x": "a", "y": 0}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "samplePixels", json!({"x": 0, "y": 0, "radius": 999}), ErrorCode::Validation);
+}
+
+#[test]
+fn sample_pixels_radius_box_averages() {
+    let mut e = eng(4, 1);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // Left two pixels red, right two blue.
+    let mut data = Vec::new();
+    for _ in 0..2 {
+        data.extend_from_slice(&RED);
+    }
+    for _ in 0..2 {
+        data.extend_from_slice(&BLUE);
+    }
+    run(&mut e, "drawPixels", json!({"id": l, "x": 0, "y": 0, "w": 4, "h": 1, "data_b64": b64::encode(&data)}));
+    // radius 1 at (1.5, 0.5) covers pixels x=0,1,2 → red,red,blue average.
+    let d = e
+        .apply(Command::new("samplePixels", json!({"x": 1.5, "y": 0.5, "radius": 1})))
+        .unwrap()
+        .data;
+    assert_eq!(d["r"].as_u64().unwrap(), 170);
+    assert_eq!(d["b"].as_u64().unwrap(), 85);
+    assert_eq!(d["a"].as_u64().unwrap(), 255);
+}

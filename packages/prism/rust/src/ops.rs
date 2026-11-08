@@ -421,6 +421,7 @@ impl PrismEngine {
             "rasterizeLayer" => self.op_rasterize_layer(p, ctx),
             "floodFill" => self.op_flood_fill(p, ctx),
             "crop" => self.op_crop(p, ctx),
+            "samplePixels" => self.op_sample_pixels(p, ctx),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
     }
@@ -1972,6 +1973,52 @@ impl PrismEngine {
         self.artboards = artboards;
         self.selection = selection.map(Arc::new);
         Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    // -- pixel sampling ---------------------------------------------------------
+
+    /// `samplePixels {x,y,radius?}` — composite RGBA at a document-space
+    /// point, read through the real render pipeline (transforms, blend
+    /// modes, masks, groups). `radius` (0..=250, default 0) box-averages a
+    /// square region around the point. Points outside the canvas sample as
+    /// transparent. Read-only: no undo entry, no events.
+    fn op_sample_pixels(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let transparent = || read(json!({ "r": 0, "g": 0, "b": 0, "a": 0 }));
+        let x = req_coord(p, "x")?;
+        let y = req_coord(p, "y")?;
+        let radius = req_radius(p, "radius", 0.0)?;
+        let (w, h) = (self.width as usize, self.height as usize);
+        if w == 0 || h == 0 {
+            return transparent();
+        }
+        // Pixels touched by the closed box [x±r]×[y±r], clipped to canvas.
+        let x0 = ((x - radius).floor() as i64).max(0);
+        let y0 = ((y - radius).floor() as i64).max(0);
+        let x1 = (((x + radius).floor() as i64) + 1).min(w as i64);
+        let y1 = (((y + radius).floor() as i64) + 1).min(h as i64);
+        if x1 <= x0 || y1 <= y0 {
+            return transparent();
+        }
+        let mut task = RenderTask::new(ctx, self.layers.len() as u64 + 1);
+        let flat = self.scene().flatten_ctx(&mut task)?;
+        task.step_done();
+        let mut acc = [0f64; 4];
+        let mut n = 0f64;
+        for py in y0..y1 {
+            for px in x0..x1 {
+                let o = ((py as usize) * w + px as usize) * 4;
+                for c in 0..4 {
+                    acc[c] += flat[o + c] as f64;
+                }
+                n += 1.0;
+            }
+        }
+        let channel = |c: usize| (acc[c] / n).round().clamp(0.0, 255.0) as u8;
+        read(json!({ "r": channel(0), "g": channel(1), "b": channel(2), "a": channel(3) }))
     }
 
     // -- region fill ---------------------------------------------------------

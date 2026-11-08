@@ -102,6 +102,15 @@ export class PrismCanvasAdapter {
     loadThumbnail:async(layerId:string,max:number)=>raster((await this.doc.layerThumbnail(id(layerId),max)).data),
   };}
 
+  /** Document-level ops: offset crop and eyedropper sampling. */
+  document(){
+    return {
+      onCrop:(r:{x:number;y:number;w:number;h:number})=>this.commit(this.doc.crop(r)),
+      /** Read-only composite sample; does not commit. */
+      sample:(x:number,y:number,radius=0)=>this.doc.samplePixels(x,y,radius),
+    };
+  }
+
   artboards(){return {
     onAddArtboard:(r:{name?:string;x:number;y:number;w:number;h:number})=>this.commit(this.doc.addArtboard(r,r.name)),
     onUpdateArtboard:(r:{id:string;name?:string;x?:number;y?:number;w?:number;h?:number})=>{

@@ -57,6 +57,7 @@ export const OPS = {
   setClipped: "setClipped",
   layerThumbnail: "layerThumbnail",
   renderRegion: "renderRegion",
+  samplePixels: "samplePixels",
   addMask: "addMask",
   removeMask: "removeMask",
   setMaskEnabled: "setMaskEnabled",
@@ -318,6 +319,18 @@ export class PrismDocument {
   }
   renderRegion(x: number, y: number, w: number, h: number, max: number) {
     return this.call<PixelPreview>(OPS.renderRegion, { x, y, w, h, max });
+  }
+  /**
+   * Composite RGBA at a document-space point through the real render
+   * pipeline (transforms, blend modes, masks). `radius` box-averages a
+   * square region; points outside the canvas sample transparent.
+   * Read-only.
+   */
+  samplePixels(x: number, y: number, radius = 0) {
+    return this.call<{ r: number; g: number; b: number; a: number }>(
+      OPS.samplePixels,
+      { x, y, radius },
+    );
   }
 
   // -- masks (B-12) -------------------------------------------------------------

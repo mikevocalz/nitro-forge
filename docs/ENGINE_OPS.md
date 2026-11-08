@@ -49,6 +49,7 @@ State `{ width, height, next_id, layers: [Layer], colors: {foreground, backgroun
 |---|---|---|---|
 | `new` | `{width,height}` | `{ok}` | blank document |
 | `resize` | `{width,height}` | `{ok}` | raster layers crop/pad with transparent |
+| `crop` | `{x,y,w,h}` | `{ok}` | offset crop with intersection semantics: the rect is rounded outward to whole pixels, intersected with the canvas (miss → OutOfBounds, full-canvas → read-only no-op); raster layers resample through their effective transform inverse, shape/path/gradient coordinates shift by the content-space delta `-inv_linear(E)·d`, masks and the pixel selection crop at the pixel offset, artboards shift by the canvas delta (may leave the canvas); one undo entry |
 | `addRasterLayer` | `{name?}` | `{layer_id}` | transparent, top of stack |
 | `addShape` | `{shape, name?}` | `{layer_id}` | |
 | `setShapeFill` | `{id,color:[r,g,b,a]}` | `{ok}` | shape only; preserves geometry/ID, one undo step; NotFound if absent, Validation for non-shape content/channels >255, InvalidCommand for malformed RGBA (including negative/non-integer channels) |
@@ -102,7 +103,7 @@ visibility and lock stay allowed.
 | `selectRegion` | `{shape,mode?,feather?}` | `{ok}` | `shape` rect/ellipse `{x,y,w,h}` or polygon `{points}` (≥3); mode replace/add/subtract/intersect; feather 0..=250 |
 | `selectAll` / `deselect` / `invertSelection` | `{}` | `{ok}` | deselecting nothing records nothing |
 | `magicWand` | `{x,y,tolerance?,contiguous?,sample?,mode?}` | `{ok}` | tolerance 0..=255 (default 32) on max channel difference; `sample` `"composite"` (default) or `{layer}` |
-| `modifySelection` | `{op,radius}` | `{ok}` | grow/shrink (exact distance transform, hard edge) or feather; needs a selection |
+| `modifySelection` | `{op,radius}` | `{ok}` | grow/shrink (exact distance transform, hard edge), feather, or smooth (blur the mask then threshold at 50% → hard-edged smoothed edge); needs a selection |
 | `getSelection` | `{}` | `{empty}` or `{bounds,mask_b64,width,height}` | read-only |
 | `groupLayers` | `{ids,name?}` | `{layer_id}` | siblings only; group sits above the topmost member |
 | `ungroupLayer` | `{id}` | `{ok}` | group or boolean; group transform baked into children (rejects if that would skew), group opacity multiplied in; a masked group is rejected |
@@ -110,6 +111,7 @@ visibility and lock stay allowed.
 | `setLayerLocked` / `setLayerBlend` / `setClipped` | `{id,locked}` / `{id,blend}` / `{id,clipped}` | `{ok}` | 13 W3C blend modes; a clipped layer clips to the nearest unclipped sibling below |
 | `layerThumbnail` | `{id,max}` | `{width,height,pixels_b64}` | canvas extent, area-averaged to fit `max` (1..=1024); read-only |
 | `renderRegion` | `{x,y,w,h,max}` | `{width,height,pixels_b64}` | composite crop, transparent outside the canvas; read-only |
+| `samplePixels` | `{x,y,radius?}` | `{r,g,b,a}` | composite RGBA at a document-space point through the real render pipeline (transforms, blend modes, masks honored); `radius` 0..=250 (default 0) box-averages the square region `[x±r]×[y±r]`; points outside the canvas sample transparent; read-only |
 | `addMask` | `{id,fill?}` | `{ok}` | reveal (default), hide, or selection |
 | `removeMask` | `{id,apply?}` | `{ok}` | `apply` bakes into raster alpha (raster only) |
 | `setMaskEnabled` / `invertMask` | `{id,enabled}` / `{id}` | `{ok}` | |
