@@ -7,6 +7,7 @@ members = [
     "rust/nf-raw",
     "rust/nf-color",
     "rust/folio-render",
+    "rust/splice-render",
     "packages/*/rust",
 ]
 
