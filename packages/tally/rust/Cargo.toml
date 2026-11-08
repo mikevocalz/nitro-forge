@@ -9,3 +9,6 @@ license.workspace = true
 ignition-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+# XLSX is a ZIP+XML package; the same admitted versions quill uses for .docx.
+zip = { version = "2", default-features = false, features = ["deflate"] }
+quick-xml = "0.37"

@@ -2,6 +2,8 @@ import {
   DocumentHandle,
   type CommandResult,
   type EngineHost,
+  base64ToBytes,
+  bytesToBase64,
 } from "@nitro-forge/ignition";
 
 /** Op names — single source of truth, mirrors docs/ENGINE_OPS.md § tally. */
@@ -80,6 +82,8 @@ export const OPS = {
   importTsv: "importTsv",
   exportCsv: "exportCsv",
   exportTsv: "exportTsv",
+  importXlsx: "importXlsx",
+  exportXlsx: "exportXlsx",
   evaluate: "evaluate",
   workbook: "workbook",
 } as const;
@@ -1303,6 +1307,31 @@ export class TallyDocument {
   }
   exportTsv(options?: { sheet?: string | number; range?: { from: string; to: string } }) {
     return this.exportDelimited("tsv", options);
+  }
+  /**
+   * Replace the whole workbook with a `.xlsx` archive's contents (see
+   * docs/ENGINE_OPS.md § tally for the admitted subset). Every sheet's
+   * name, cell values, formulas, merges and `activeTab` carry over; all
+   * other workbook-level state (names, validations, charts, …) starts
+   * empty. Atomic — malformed/hostile archives reject without mutation;
+   * one undo entry restores the previous workbook. Rejects when any sheet
+   * is protected.
+   */
+  importXlsx(bytes: Uint8Array) {
+    return this.doc.apply<{ ok: boolean; sheets: number; cells: number; merges: number }>(
+      OPS.importXlsx,
+      { bytes_b64: bytesToBase64(bytes) },
+    );
+  }
+  /**
+   * Export the whole workbook as `.xlsx` bytes (all sheets, values +
+   * formulas with cached results, bold/italic/fill/border formats,
+   * merges). Sheet names must satisfy Excel's rules; `number_format` is
+   * not translated. Read-only.
+   */
+  async exportXlsx(): Promise<Uint8Array> {
+    const r = await this.doc.apply<{ size: number; sheets: number; bytes_b64: string }>(OPS.exportXlsx, {});
+    return base64ToBytes(r.data.bytes_b64);
   }
   /**
    * Ad-hoc formula evaluation. Bare refs/names resolve on the active

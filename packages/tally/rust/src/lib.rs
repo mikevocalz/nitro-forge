@@ -87,6 +87,7 @@ mod protection;
 mod sparkline_ops;
 mod validation_ops;
 mod view_ops;
+mod xlsx;
 
 use chart_ops::ChartSpec;
 use comment_ops::Comment;
@@ -1313,7 +1314,13 @@ impl Engine for TallyEngine {
         EngineKind::Tally
     }
 
-    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+    /// `importXlsx` accepts the `.xlsx` archive as a binary sidecar
+    /// (`Command.input`) in addition to the `bytes_b64` payload field.
+    fn binary_input_ops(&self) -> &'static [&'static str] {
+        &["importXlsx"]
+    }
+
+    fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
             return self.apply_batch(cmd, None);
         }
@@ -1323,8 +1330,13 @@ impl Engine for TallyEngine {
                 cmd.v
             )));
         }
+        self.check_protection(&cmd.op, &cmd.payload)?;
+        // `importXlsx` needs `&mut cmd` for the binary sidecar, so it runs
+        // before the shared payload borrow below.
+        if cmd.op == "importXlsx" {
+            return self.op_import_xlsx(&mut cmd);
+        }
         let p = &cmd.payload;
-        self.check_protection(&cmd.op, p)?;
         match cmd.op.as_str() {
             "new" => self.op_new(),
             "describe" => self.op_describe(),
@@ -1400,6 +1412,7 @@ impl Engine for TallyEngine {
             "importTsv" => self.op_import_delimited(p, b'\t'),
             "exportCsv" => self.op_export_delimited(p, b','),
             "exportTsv" => self.op_export_delimited(p, b'\t'),
+            "exportXlsx" => self.op_export_xlsx(&cmd),
             "evaluate" => self.op_evaluate(p),
             "workbook" => self.op_workbook(),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
@@ -2287,6 +2300,60 @@ impl Engine for TallyEngine {
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Minimal base64 (ignition_core::protocol is crate-private) — same codec as
+// quill/folio.
+// ---------------------------------------------------------------------------
+
+const B64_ALPHABET: &[u8; 64] =
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+#[cfg(test)]
+fn base64_encode(bytes: &[u8]) -> String {
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        out.push(B64_ALPHABET[(n >> 18) as usize & 63] as char);
+        out.push(B64_ALPHABET[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 {
+            B64_ALPHABET[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            B64_ALPHABET[n as usize & 63] as char
+        } else {
+            '='
+        });
+    }
+    out
+}
+
+fn base64_decode(s: &str) -> Result<Vec<u8>, EngineError> {
+    let mut table = [255u8; 256];
+    for (i, &c) in B64_ALPHABET.iter().enumerate() {
+        table[c as usize] = i as u8;
+    }
+    let s = s.trim_end_matches('=');
+    let mut out = Vec::with_capacity(s.len() * 3 / 4);
+    let mut acc = 0u32;
+    let mut bits = 0u32;
+    for &c in s.as_bytes() {
+        let v = table[c as usize];
+        if v == 255 {
+            return Err(EngineError::serialization("invalid base64 in bytes_b64"));
+        }
+        acc = (acc << 6) | v as u32;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+        }
+    }
+    Ok(out)
 }
 
 // ---------------------------------------------------------------------------

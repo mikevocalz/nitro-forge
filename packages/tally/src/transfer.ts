@@ -6,7 +6,7 @@
  * the banded path still serves sheets larger than one op's cap.
  */
 import { NFD_EXPORT, NFD_IMPORT, type ExportFormat, type ImportFormat } from "@nitro-forge/ignition/transfer";
-import type { DocumentHandle } from "@nitro-forge/ignition";
+import { base64ToBytes, bytesToBase64, type DocumentHandle } from "@nitro-forge/ignition";
 import { OPS } from "./index";
 
 const MAX_CELLS = 16_384;
@@ -103,5 +103,36 @@ function delimitedImport(id: string, label: string, extension: string, mime: str
 export const TALLY_CSV_IMPORT = delimitedImport("csv", "CSV (active sheet at A1)", "csv", "text/csv", "importCsv");
 export const TALLY_TSV_IMPORT = delimitedImport("tsv", "TSV (active sheet at A1)", "tsv", "text/tab-separated-values", "importTsv");
 
-export const TALLY_EXPORT_FORMATS: readonly ExportFormat[] = [TALLY_CSV_EXPORT, NFD_EXPORT];
-export const TALLY_IMPORT_FORMATS: readonly ImportFormat[] = [TALLY_CSV_IMPORT, TALLY_TSV_IMPORT, NFD_IMPORT];
+/**
+ * `.xlsx` workbook transfer (slice 10): `exportXlsx` returns the whole
+ * workbook's archive bytes; `importXlsx` replaces the whole workbook —
+ * see docs/ENGINE_OPS.md § tally for the admitted subset (values,
+ * formulas, merges, bold/italic/fill/border formats on export; styles,
+ * defined names and other parts ignored on import).
+ */
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+export const TALLY_XLSX_EXPORT: ExportFormat = {
+  id: "xlsx",
+  label: "Excel workbook",
+  extension: "xlsx",
+  mime: XLSX_MIME,
+  metadataFields: [],
+  async run(doc) {
+    return base64ToBytes((await doc.apply<{ bytes_b64: string }>(OPS.exportXlsx, {})).data.bytes_b64);
+  },
+};
+
+export const TALLY_XLSX_IMPORT: ImportFormat = {
+  id: "xlsx",
+  label: "Excel workbook (replaces workbook)",
+  extension: "xlsx",
+  mime: XLSX_MIME,
+  metadataFields: [],
+  async run(doc, bytes) {
+    await doc.apply(OPS.importXlsx, { bytes_b64: bytesToBase64(bytes) });
+  },
+};
+
+export const TALLY_EXPORT_FORMATS: readonly ExportFormat[] = [TALLY_CSV_EXPORT, TALLY_XLSX_EXPORT, NFD_EXPORT];
+export const TALLY_IMPORT_FORMATS: readonly ImportFormat[] = [TALLY_CSV_IMPORT, TALLY_TSV_IMPORT, TALLY_XLSX_IMPORT, NFD_IMPORT];
