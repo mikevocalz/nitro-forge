@@ -423,6 +423,7 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
@@ -432,6 +433,8 @@ impl QuillEngine {
             revisions: self.revisions.clone(),
             tracking: self.tracking.clone(),
             footnotes: self.footnotes.clone(),
+            citations: self.citations.clone(),
+            sources: self.sources.clone(),
             journal: Journal::new(1),
         };
 
@@ -497,6 +500,7 @@ impl QuillEngine {
             || !staged.comments.is_empty()
             || !staged.revisions.is_empty()
             || !staged.footnotes.is_empty()
+            || !staged.citations.is_empty()
         {
             let mut i = 0;
             while i < top.len() {
@@ -535,6 +539,11 @@ impl QuillEngine {
                         f.at.offset = remap_offset_through_spans(f.at.offset, &span, false);
                     }
                 }
+                for c in staged.citations.iter_mut() {
+                    if c.at.block == bi {
+                        c.at.offset = remap_offset_through_spans(c.at.offset, &span, false);
+                    }
+                }
                 i = j;
             }
         }
@@ -542,6 +551,7 @@ impl QuillEngine {
         lists::validate(&staged.blocks)?;
         validate_tables(&staged.blocks)?;
         validate_toc(&staged.blocks)?;
+        validate_bibliography(&staged.blocks)?;
         // Eventless when every substitution reproduced the token text
         // verbatim (a record value equal to its own `{{name}}` literal).
         if staged.blocks == self.blocks {
@@ -557,6 +567,8 @@ impl QuillEngine {
         self.sections = staged.sections;
         self.revisions = staged.revisions;
         self.footnotes = staged.footnotes;
+        self.citations = staged.citations;
+        self.sources = staged.sources;
         self.record_undo(
             0,
             self.blocks.clone(),
@@ -567,6 +579,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         self.blocks = staged.blocks;

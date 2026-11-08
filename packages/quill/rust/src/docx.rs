@@ -27,10 +27,12 @@ fn pstyle(kind: BlockKind) -> Option<&'static str> {
         BlockKind::H3 => Some("Heading3"),
         BlockKind::List => Some("ListParagraph"),
         BlockKind::Quote => Some("Quote"),
-        // `op_export_docx` rejects documents containing table blocks, so
-        // this arm is unreachable; it exists only for exhaustiveness.
+        // `op_export_docx` rejects documents containing table/field
+        // blocks, so these arms are unreachable; they exist only for
+        // exhaustiveness.
         BlockKind::Table => None,
         BlockKind::Toc => None,
+        BlockKind::Bibliography => None,
     }
 }
 
@@ -449,6 +451,7 @@ fn parse_document_with_numbering(
                         style_id: None,
                         table: None,
                         toc: None,
+                        bibliography: None,
                         format: None,
                         inlines: Vec::new(),
                     });
@@ -585,6 +588,7 @@ fn parse_document_with_numbering(
                             style_id: None,
                             table: None,
                             toc: None,
+                            bibliography: None,
                             format: None,
                             inlines: normalize_inlines(std::mem::take(&mut inlines)),
                         });
@@ -603,6 +607,7 @@ fn parse_document_with_numbering(
             style_id: None,
             table: None,
             toc: None,
+            bibliography: None,
             format: None,
             inlines: Vec::new(),
         });

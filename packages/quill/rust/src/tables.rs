@@ -441,6 +441,7 @@ impl QuillEngine {
             format: None,
             inlines: Vec::new(),
             toc: None,
+            bibliography: None,
         };
         let mut next = self.blocks.clone();
         next.insert(index, table);
@@ -452,11 +453,13 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         self.remap_bookmarks_insert_block(index);
         self.remap_comments_insert_block(index);
         self.remap_sections_insert_block(index);
         self.remap_revisions_insert_block(index);
         self.remap_footnotes_insert_block(index);
+        self.remap_citations_insert_block(index);
         self.remap_toc_insert_block(index);
         self.record_undo(
             0,
@@ -468,6 +471,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         Ok(CommandResult::data(json!({ "ok": true, "block_index": index })))
@@ -506,6 +510,7 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         // Remaps interpret stored (pre-delete) block indices.
         self.bookmarks.retain(|b| b.block != index);
         for bm in &mut self.bookmarks {
@@ -547,6 +552,16 @@ impl QuillEngine {
                 f.at.block -= 1;
             }
         }
+        // Citation anchors follow the same defensive shift — they can
+        // never sit on a table block either (ops and restore reject it).
+        for c in &mut self.citations {
+            if c.at.block == index {
+                c.at.block = clamp.block;
+                c.at.offset = clamp.offset;
+            } else if c.at.block > index {
+                c.at.block -= 1;
+            }
+        }
         // TOC field entries behave like the anchored collections: an entry
         // cached on the deleted block drops, later entries shift down.
         self.remap_toc_delete_block(index);
@@ -572,6 +587,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
@@ -1255,6 +1271,7 @@ mod tests {
                 merges: Vec::new(),
             }),
             toc: None,
+            bibliography: None,
             format: None,
             inlines: Vec::new(),
         }];
@@ -1634,6 +1651,7 @@ mod tests {
             style_id: style_id.map(str::to_string),
             table: Some(table()),
             toc: None,
+            bibliography: None,
             format: None,
             inlines,
         };
@@ -1793,6 +1811,7 @@ mod tests {
                 merges: Vec::new(),
             }),
             toc: None,
+            bibliography: None,
             format: None,
             inlines: Vec::new(),
         }];

@@ -88,8 +88,9 @@ fn anchor_of(p: Pos) -> CommentAnchor {
 }
 
 /// Field-level validation shared by ops and restore: id token, body bound,
-/// in-range anchor on a text-bearing (non-table, non-toc) block. `blocks`
-/// is the final block list. Table and toc blocks are rejected because
+/// in-range anchor on a text-bearing (non-table, non-toc, non-bibliography)
+/// block. `blocks` is the final block list. Table, toc, and bibliography
+/// blocks are rejected because
 /// their only valid `Pos` is offset 0 and no reference mark can live
 /// inside cell text or field data — both are `Pos`-unreachable (same rule
 /// `insertText` applies).
@@ -117,6 +118,12 @@ fn validate_footnote(f: &Footnote, blocks: &[Block]) -> Result<(), EngineError> 
     if b.kind == BlockKind::Toc {
         return Err(EngineError::validation(format!(
             "footnote '{}' anchor must not sit on a toc field block",
+            f.id
+        )));
+    }
+    if b.kind == BlockKind::Bibliography {
+        return Err(EngineError::validation(format!(
+            "footnote '{}' anchor must not sit on a bibliography field block",
             f.id
         )));
     }
@@ -184,8 +191,8 @@ impl QuillEngine {
     /// bookmarks). `kind` is `"footnote"` (default) or `"endnote"`; `body`
     /// is optional plain text ≤8192 chars (empty allowed); `id` is an
     /// optional unique token — absent, the engine assigns the smallest
-    /// unused `fn-N`. At most 1024 notes. Anchors on table or toc field
-    /// blocks reject.
+    /// unused `fn-N`. At most 1024 notes. Anchors on table, toc field, or
+    /// bibliography field blocks reject.
     pub(super) fn op_add_footnote(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let at = bookmark_pos(p)?;
         self.check_pos(at)?;
@@ -197,6 +204,11 @@ impl QuillEngine {
         if self.blocks[at.block].kind == BlockKind::Toc {
             return Err(EngineError::validation(
                 "cannot anchor a footnote on a toc field block",
+            ));
+        }
+        if self.blocks[at.block].kind == BlockKind::Bibliography {
+            return Err(EngineError::validation(
+                "cannot anchor a footnote on a bibliography field block",
             ));
         }
         let kind = match p.get("kind") {
@@ -552,6 +564,21 @@ mod tests {
                 json!({"at":{"block":1,"offset":0}})
             ))
             .is_err());
+    }
+
+    #[test]
+    fn bibliography_field_anchor_rejects() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "text");
+        apply(&mut e, "insertBibliography", json!({"index":1}));
+        let before = e.snapshot().unwrap();
+        assert!(e
+            .apply(Command::new(
+                "addFootnote",
+                json!({"at":{"block":1,"offset":0}})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
     }
 
     #[test]

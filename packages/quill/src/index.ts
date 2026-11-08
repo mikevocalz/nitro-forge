@@ -52,6 +52,18 @@ export const OPS = {
   listMergeFields: "listMergeFields",
   previewMerge: "previewMerge",
   runMerge: "runMerge",
+  addSource: "addSource",
+  updateSource: "updateSource",
+  removeSource: "removeSource",
+  listSources: "listSources",
+  addCitation: "addCitation",
+  updateCitation: "updateCitation",
+  removeCitation: "removeCitation",
+  listCitations: "listCitations",
+  insertBibliography: "insertBibliography",
+  updateBibliography: "updateBibliography",
+  refreshBibliography: "refreshBibliography",
+  listBibliography: "listBibliography",
   setTrackChanges: "setTrackChanges",
   listRevisions: "listRevisions",
   acceptRevision: "acceptRevision",
@@ -359,6 +371,76 @@ export interface MergeRunResult {
   ok: boolean;
   replaced: number;
   missing: string[];
+}
+/**
+ * One bibliography source record (P12 slice 8, citations part). `author`
+ * and `title` are required non-blank text (≤512 chars); every other field
+ * is optional raw-string metadata the engine never parses — no DOI/URL
+ * fetching, no CSL. `container` covers journal, publisher, or series.
+ * At most 1024 sources per document.
+ */
+export interface CitationSource {
+  id: string;
+  author: string;
+  title: string;
+  year?: string;
+  container?: string;
+  volume?: string;
+  issue?: string;
+  pages?: string;
+  doi?: string;
+  url?: string;
+  note?: string;
+}
+/** `listSources` entry: the stored source plus its citation count. */
+export interface SourceInfo extends CitationSource {
+  /** How many citations reference this source. */
+  cited: number;
+}
+/**
+ * An in-text citation: a reference mark anchored at `at` naming a
+ * `sources[].id`, plus an optional `locator` ("p. 42", ≤128 chars).
+ * The anchor is a right-gravity live position re-mapped by every
+ * position-moving op like footnote marks; a delete covering it clamps
+ * to the deletion start. `number` is resolved by `listCitations` in
+ * document order — the engine stores none. There is no rendered "[1]"
+ * mark in the block stream.
+ */
+export interface Citation {
+  id: string;
+  at: Pos;
+  source: string;
+  locator?: string;
+  /** 1-based number in document (anchor) order. */
+  number: number;
+}
+/** Bibliography entry ordering on a `kind:"bibliography"` field. */
+export type BibliographySort = "alpha" | "citation";
+/**
+ * One cached bibliography entry: `source` is the source id (unique per
+ * field) and `text` the deterministic formatted line the engine produced
+ * at last scan — `Author. Title. Year. Container, volume(issue), pages.
+ * doi:… url:… note.`
+ */
+export interface BibliographyEntry {
+  source: string;
+  text: string;
+}
+/**
+ * A `kind:"bibliography"` field block's payload as reported by
+ * `blocks`/`describe`. `entries` is a cached scan of the cited sources —
+ * it goes stale on source/citation edits exactly like a Word field's
+ * cached result, and `listBibliography` is the always-live read.
+ * Regenerate with `refreshBibliography`/`updateBibliography`.
+ */
+export interface BibliographyField {
+  sort: BibliographySort;
+  entries: BibliographyEntry[];
+}
+/** `listBibliography` result: live entries plus the count. */
+export interface BibliographyListing {
+  entries: BibliographyEntry[];
+  count: number;
 }
 /** Optional per-edit attribution overriding the tracking default author. */
 export interface RevisionAttribution {
@@ -861,6 +943,151 @@ export class QuillDocument {
       record,
       ...(range.from === undefined ? {} : { from: range.from }),
       ...(range.to === undefined ? {} : { to: range.to }),
+    });
+  }
+  /**
+   * Define a bibliography source. `author`/`title` are required; the
+   * optional metadata fields are raw strings ≤512 chars (never parsed —
+   * no DOI/URL fetching). `id` is an optional unique token — absent, the
+   * engine assigns the smallest unused `src-N`. At most 1024 sources.
+   */
+  addSource(source: {
+    author: string;
+    title: string;
+    year?: string;
+    container?: string;
+    volume?: string;
+    issue?: string;
+    pages?: string;
+    doi?: string;
+    url?: string;
+    note?: string;
+    id?: string;
+  }) {
+    return this.call<{ ok: boolean; id: string }>(OPS.addSource, source);
+  }
+  /**
+   * Patch a source's fields; absent keys keep their values, explicit
+   * null clears an optional field (author/title reject null). No
+   * effective change is eventless; cached bibliography entries are not
+   * rewritten — refresh the field.
+   */
+  updateSource(
+    id: string,
+    changes: {
+      author?: string;
+      title?: string;
+      year?: string | null;
+      container?: string | null;
+      volume?: string | null;
+      issue?: string | null;
+      pages?: string | null;
+      doi?: string | null;
+      url?: string | null;
+      note?: string | null;
+    },
+  ) {
+    return this.call<{ ok: boolean; id: string }>(OPS.updateSource, {
+      id,
+      ...changes,
+    });
+  }
+  /**
+   * Delete a source AND every citation that referenced it (one undo
+   * step) — the Word "delete source" cascade.
+   */
+  removeSource(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.removeSource, { id });
+  }
+  /** Read-only; sources sorted by id with citation counts. */
+  listSources() {
+    return this.call<{ sources: SourceInfo[] }>(OPS.listSources);
+  }
+  /**
+   * Anchor an in-text citation at `at` (`pos`/`anchor` payload aliases
+   * accepted) naming an existing source. `locator` is optional free text
+   * ≤128 chars; `id` is an optional unique token — absent, the engine
+   * assigns the smallest unused `cit-N`. Anchors on table/toc/
+   * bibliography field blocks reject; at most 2048 citations.
+   */
+  addCitation(citation: {
+    at: Pos;
+    source: string;
+    locator?: string;
+    id?: string;
+  }) {
+    return this.call<{ ok: boolean; id: string }>(OPS.addCitation, citation);
+  }
+  /**
+   * Re-point `source` to another existing source and/or patch `locator`
+   * (`null` clears). Absent fields keep their values; anchors are not
+   * re-pointable; no effective change is eventless.
+   */
+  updateCitation(
+    id: string,
+    changes: { source?: string; locator?: string | null },
+  ) {
+    return this.call<{ ok: boolean; id: string }>(OPS.updateCitation, {
+      id,
+      ...changes,
+    });
+  }
+  removeCitation(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.removeCitation, { id });
+  }
+  /**
+   * Read-only; sorted by anchor position then id, each entry carrying its
+   * resolved 1-based `number` in document order.
+   */
+  listCitations() {
+    return this.call<{ citations: Citation[] }>(OPS.listCitations);
+  }
+  /**
+   * Insert a `kind:"bibliography"` field block at `index` (0..=block
+   * count) and populate its cached entries from a live scan of the cited
+   * sources. `sort` is `"alpha"` (default, formatted-text order) or
+   * `"citation"` (first-citation document order). At most 64 fields.
+   */
+  insertBibliography(
+    index: number,
+    options: { sort?: BibliographySort } = {},
+  ) {
+    return this.call<{ ok: boolean; block_index: number }>(
+      OPS.insertBibliography,
+      {
+        index,
+        ...(options.sort === undefined ? {} : { sort: options.sort }),
+      },
+    );
+  }
+  /**
+   * Repoint a bibliography field's entry ordering (absent keeps it) and
+   * rescan its entries in one step. No effective change is eventless.
+   */
+  updateBibliography(block: number, options: { sort?: BibliographySort } = {}) {
+    return this.call<{ ok: boolean; block: number }>(OPS.updateBibliography, {
+      block,
+      ...(options.sort === undefined ? {} : { sort: options.sort }),
+    });
+  }
+  /**
+   * Regenerate a bibliography field's cached entries from the live
+   * citations/sources (the Word "update field" gesture). Identical
+   * result is eventless.
+   */
+  refreshBibliography(block: number) {
+    return this.call<{ ok: boolean; block: number }>(OPS.refreshBibliography, {
+      block,
+    });
+  }
+  /**
+   * Read-only live scan — always current, never the cache. With `block`
+   * naming a bibliography field the scan honors that field's `sort`;
+   * without it entries sort `"alpha"`. Only cited sources appear.
+   */
+  listBibliography(block?: number) {
+    return this.call<BibliographyListing>(OPS.listBibliography, {
+      ...(block === undefined ? {} : { block }),
     });
   }
   /**

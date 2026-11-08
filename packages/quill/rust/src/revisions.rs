@@ -396,6 +396,8 @@ impl QuillEngine {
             revisions: self.revisions.clone(),
             tracking: None,
             footnotes: self.footnotes.clone(),
+            citations: self.citations.clone(),
+            sources: self.sources.clone(),
             journal: Journal::new(1),
         }
     }
@@ -472,6 +474,8 @@ impl QuillEngine {
             sections: Some(self.sections.clone()),
             revisions: Some(revisions_before),
             footnotes: Some(self.footnotes.clone()),
+            citations: Some(self.citations.clone()),
+            sources: Some(self.sources.clone()),
             ..Default::default()
         };
         let removed = std::mem::replace(&mut self.blocks, stage.blocks.clone());
@@ -481,6 +485,8 @@ impl QuillEngine {
         self.sections = stage.sections.clone();
         self.revisions = stage.revisions.clone();
         self.footnotes = stage.footnotes.clone();
+        self.citations = stage.citations.clone();
+        self.sources = stage.sources.clone();
         self.record_undo(0, removed, self.blocks.clone(), before);
     }
 

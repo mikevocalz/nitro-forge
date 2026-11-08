@@ -388,6 +388,73 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("citations, sources, and bibliography fields persist via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "see the evidence");
+    const s1 = await doc.addSource({
+      author: "Ada Lovelace",
+      title: "Notes",
+      year: "1843",
+      container: "Journal",
+    });
+    expect(s1.data.id).toBe("src-1");
+    await doc.addSource({
+      id: "src-b",
+      author: "Grace Hopper",
+      title: "Compilers",
+      year: "1952",
+    });
+    const c1 = await doc.addCitation({
+      at: { block: 0, offset: 4 },
+      source: "src-1",
+      locator: "p. 12",
+    });
+    expect(c1.data.id).toBe("cit-1");
+    await doc.addCitation({ at: { block: 0, offset: 15 }, source: "src-b" });
+    let cites = (await doc.listCitations()).data.citations;
+    expect(cites.map((c) => c.id)).toEqual(["cit-1", "cit-2"]);
+    expect(cites[0]).toMatchObject({ number: 1, source: "src-1", locator: "p. 12" });
+    // Right-gravity anchor: text inserted at the mark lands before it.
+    await doc.insertText({ block: 0, offset: 4 }, "XX");
+    cites = (await doc.listCitations()).data.citations;
+    expect(cites[0]?.at).toEqual({ block: 0, offset: 6 });
+    // updateCitation re-points the source; locator null clears.
+    await doc.updateCitation("cit-1", { source: "src-b", locator: null });
+    cites = (await doc.listCitations()).data.citations;
+    expect(cites[0]).toMatchObject({ source: "src-b" });
+    expect(cites[0]?.locator).toBeUndefined();
+    // listSources reports stored fields plus cited counts.
+    const sources = (await doc.listSources()).data.sources;
+    expect(sources.find((s) => s.id === "src-1")?.cited).toBe(0);
+    expect(sources.find((s) => s.id === "src-b")?.cited).toBe(2);
+    // insertBibliography caches a live scan; listBibliography agrees.
+    const ins = await doc.insertBibliography(1);
+    expect(ins.data.block_index).toBe(1);
+    const blocks = await doc.blocks<any>();
+    expect(blocks.data.blocks[1].kind).toBe("bibliography");
+    // Only src-b is cited now → one alpha-sorted entry.
+    expect(blocks.data.blocks[1].bibliography.entries).toHaveLength(1);
+    expect(blocks.data.blocks[1].bibliography.entries[0].source).toBe("src-b");
+    const live = await doc.listBibliography();
+    expect(live.data.count).toBe(1);
+    expect(live.data.entries[0]?.text).toContain("Grace Hopper");
+    // removeSource cascades its citations in one undo step — both
+    // citations reference src-b, so both go.
+    await doc.removeSource("src-b");
+    expect((await doc.listCitations()).data.citations).toHaveLength(0);
+    expect((await doc.listSources()).data.sources).toHaveLength(1);
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.listCitations()).data.citations).toHaveLength(2);
+    // Snapshot keeps citations/sources in the schema:3 document and the
+    // bibliography payload inside blocks; restore round-trips.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.listCitations()).data.citations).toHaveLength(2);
+    expect((await re.listBibliography(1)).data.count).toBe(1);
+    await re.close();
+  });
+
   it("inserts tables, edits cell text, and keeps anchors stable", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "before\nafter");
