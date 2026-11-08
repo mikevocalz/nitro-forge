@@ -400,6 +400,7 @@ impl QuillEngine {
                 merges: Vec::new(),
             }),
             inlines: Vec::new(),
+            toc: None,
         };
         let mut next = self.blocks.clone();
         next.insert(index, table);
@@ -416,6 +417,7 @@ impl QuillEngine {
         self.remap_sections_insert_block(index);
         self.remap_revisions_insert_block(index);
         self.remap_footnotes_insert_block(index);
+        self.remap_toc_insert_block(index);
         self.record_undo(
             0,
             old,
@@ -505,6 +507,9 @@ impl QuillEngine {
                 f.at.block -= 1;
             }
         }
+        // TOC field entries behave like the anchored collections: an entry
+        // cached on the deleted block drops, later entries shift down.
+        self.remap_toc_delete_block(index);
         let mut kept = Vec::with_capacity(self.sections.len());
         for mut s in std::mem::take(&mut self.sections) {
             if s.block == index && index != 0 {
@@ -1209,6 +1214,7 @@ mod tests {
                 }],
                 merges: Vec::new(),
             }),
+            toc: None,
             inlines: Vec::new(),
         }];
         assert!(err(&mut one, "deleteTable", json!({"block": 0})).code == ErrorCode::Validation);
@@ -1586,6 +1592,7 @@ mod tests {
             list: None,
             style_id: style_id.map(str::to_string),
             table: Some(table()),
+            toc: None,
             inlines,
         };
         // Baseline: a clean table block validates.
@@ -1743,6 +1750,7 @@ mod tests {
                 cells,
                 merges: Vec::new(),
             }),
+            toc: None,
             inlines: Vec::new(),
         }];
         apply(&mut e, "insertTableRow", json!({"block":0,"row":60}));

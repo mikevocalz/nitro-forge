@@ -332,6 +332,62 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("toc fields scan headings, cache entries, and undo via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "Alpha");
+    await doc.setBlockKind(0, "h1");
+    await doc.insertBlock(1);
+    await doc.insertText({ block: 1, offset: 0 }, "Beta");
+    await doc.setBlockKind(1, "h2");
+    await doc.insertBlock(2);
+    await doc.insertText({ block: 2, offset: 0 }, "Gamma");
+    await doc.setBlockKind(2, "h3");
+    // Live scan sees all three heading kinds; paragraphs are not entries.
+    const live = await doc.listToc();
+    expect(live.data.entries).toEqual([
+      { level: 1, title: "Alpha", block: 0 },
+      { level: 2, title: "Beta", block: 1 },
+      { level: 3, title: "Gamma", block: 2 },
+    ]);
+    // insertToc appends a field whose cached entries honor its range.
+    const ins = await doc.insertToc(3, { from_level: 1, to_level: 2 });
+    expect(ins.data.block_index).toBe(3);
+    const blocks = await doc.blocks<any>();
+    expect(blocks.data.blocks[3].kind).toBe("toc");
+    expect(blocks.data.blocks[3].toc.entries).toHaveLength(2);
+    // listToc {block} honors the field range; bare listToc does not.
+    expect((await doc.listToc(3)).data.count).toBe(2);
+    expect((await doc.listToc()).data.count).toBe(3);
+    // Entries are a cache: editing a heading leaves the stored title
+    // stale until refreshToc regenerates it.
+    await doc.insertText({ block: 1, offset: 4 }, " Prime");
+    let field = (await doc.blocks<any>()).data.blocks[3].toc;
+    expect(field.entries[1].title).toBe("Beta");
+    await doc.refreshToc(3);
+    field = (await doc.blocks<any>()).data.blocks[3].toc;
+    expect(field.entries[1].title).toBe("Beta Prime");
+    // updateToc re-ranges and rescans in one step; identical is eventless.
+    await doc.updateToc(3, { to_level: 3 });
+    field = (await doc.blocks<any>()).data.blocks[3].toc;
+    expect(field.entries).toHaveLength(3);
+    // Snapshot keeps the toc payload inside blocks; restore round-trips.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    const reBlocks = await re.blocks<any>();
+    expect(reBlocks.data.blocks[3].kind).toBe("toc");
+    expect(reBlocks.data.blocks[3].toc.entries).toHaveLength(3);
+    // Inserting a block before the headings shifts cached entry indices.
+    await re.insertBlock(0);
+    const shifted = (await re.blocks<any>()).data.blocks[4].toc.entries;
+    expect(shifted[0].block).toBe(1);
+    // One undo removes the whole field.
+    expect(await re.undo()).toBe(true);
+    const undone = await re.blocks<any>();
+    expect(undone.data.blocks).toHaveLength(4);
+    await re.close();
+  });
+
   it("inserts tables, edits cell text, and keeps anchors stable", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "before\nafter");

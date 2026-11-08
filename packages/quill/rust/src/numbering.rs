@@ -617,6 +617,7 @@ mod tests {
             }),
             style_id: None,
             table: None,
+            toc: None,
             inlines: vec![],
         };
         let mut projection = project(std::slice::from_ref(&b)).unwrap();
@@ -682,6 +683,7 @@ mod tests {
             list: None,
             style_id: None,
             table: None,
+            toc: None,
             inlines: vec![],
         }])
         .unwrap();

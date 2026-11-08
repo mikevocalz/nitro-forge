@@ -30,6 +30,7 @@ fn pstyle(kind: BlockKind) -> Option<&'static str> {
         // `op_export_docx` rejects documents containing table blocks, so
         // this arm is unreachable; it exists only for exhaustiveness.
         BlockKind::Table => None,
+        BlockKind::Toc => None,
     }
 }
 
@@ -447,6 +448,7 @@ fn parse_document_with_numbering(
                         list: None,
                         style_id: None,
                         table: None,
+                        toc: None,
                         inlines: Vec::new(),
                     });
                 }
@@ -581,6 +583,7 @@ fn parse_document_with_numbering(
                             list,
                             style_id: None,
                             table: None,
+                            toc: None,
                             inlines: normalize_inlines(std::mem::take(&mut inlines)),
                         });
                     }
@@ -597,6 +600,7 @@ fn parse_document_with_numbering(
             list: None,
             style_id: None,
             table: None,
+            toc: None,
             inlines: Vec::new(),
         });
     }
