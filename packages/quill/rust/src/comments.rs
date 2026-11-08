@@ -67,7 +67,7 @@ pub struct Comment {
     pub resolved: bool,
 }
 
-fn validate_comment_author(author: &str) -> Result<(), EngineError> {
+pub(super) fn validate_comment_author(author: &str) -> Result<(), EngineError> {
     if author.trim().is_empty() {
         return Err(EngineError::validation("comment author must not be blank"));
     }
@@ -344,7 +344,7 @@ impl QuillEngine {
     /// Map one endpoint through an `insertText` at `at`. `added` is the
     /// newline count, `last_len` the final segment's scalar length, `plain`
     /// the scalar count when `added == 0`, and `left` selects gravity.
-    fn map_pos_insert(
+    pub(super) fn map_pos_insert(
         pos: Pos,
         at: Pos,
         added: usize,
@@ -412,7 +412,7 @@ impl QuillEngine {
     /// Map one endpoint through a `deleteRange` `from..to`. Endpoints inside
     /// the deleted span clamp to `from` (the comment collapses toward the
     /// deletion start) instead of dropping like a bookmark.
-    fn map_pos_delete(pos: Pos, from: Pos, to: Pos) -> Pos {
+    pub(super) fn map_pos_delete(pos: Pos, from: Pos, to: Pos) -> Pos {
         let span = to.block - from.block;
         if pos.block < from.block {
             return pos;
@@ -478,7 +478,7 @@ impl QuillEngine {
     }
 
     /// Map one endpoint through a `splitBlock` at `at`.
-    fn map_pos_split(pos: Pos, at: Pos, left: bool) -> Pos {
+    pub(super) fn map_pos_split(pos: Pos, at: Pos, left: bool) -> Pos {
         if pos.block == at.block {
             let moves = if left {
                 pos.offset > at.offset
@@ -516,7 +516,7 @@ impl QuillEngine {
     }
 
     /// `mergeBlock` at `index` (same mapping for both gravities).
-    fn map_pos_merge(pos: Pos, index: usize, head_len: usize) -> Pos {
+    pub(super) fn map_pos_merge(pos: Pos, index: usize, head_len: usize) -> Pos {
         if pos.block == index {
             Pos {
                 block: index - 1,

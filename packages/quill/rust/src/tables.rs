@@ -409,14 +409,21 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         self.remap_bookmarks_insert_block(index);
         self.remap_comments_insert_block(index);
         self.remap_sections_insert_block(index);
+        self.remap_revisions_insert_block(index);
         self.record_undo(
             0,
             old,
             self.blocks.clone(),
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         Ok(CommandResult::data(json!({ "ok": true, "block_index": index })))
     }
@@ -452,6 +459,7 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
+        let revisions_before = self.revisions.clone();
         // Remaps interpret stored (pre-delete) block indices.
         self.bookmarks.retain(|b| b.block != index);
         for bm in &mut self.bookmarks {
@@ -461,6 +469,19 @@ impl QuillEngine {
         }
         for c in &mut self.comments {
             for a in [&mut c.from, &mut c.to] {
+                if a.block == index {
+                    a.block = clamp.block;
+                    a.offset = clamp.offset;
+                } else if a.block > index {
+                    a.block -= 1;
+                }
+            }
+        }
+        // Revision anchors behave like comment endpoints: a mark on the
+        // deleted table block clamps to the deletion point, later anchors
+        // shift down one.
+        for r in &mut self.revisions {
+            for a in [&mut r.from, &mut r.to] {
                 if a.block == index {
                     a.block = clamp.block;
                     a.offset = clamp.offset;
@@ -485,7 +506,12 @@ impl QuillEngine {
             index,
             vec![old],
             Vec::new(),
-            Collections::anchors(bookmarks_before, comments_before, sections_before),
+            Collections::anchors(
+                bookmarks_before,
+                comments_before,
+                sections_before,
+                revisions_before,
+            ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
     }

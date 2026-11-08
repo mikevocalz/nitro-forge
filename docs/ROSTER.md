@@ -21,7 +21,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
 | folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments, structural redaction, PDF compare, page images, encryption reconciliation) | 144 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
-| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, tables incl. cell merge/unmerge and in-cell find/replace) | 154 pass | `cargo test -p quill-engine` |
+| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, tables incl. cell merge/unmerge and in-cell find/replace) | 175 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI + dispatch tests (incl. folio binary-input gate) | 28 pass | `cargo test -p nf-sys` |
 | Package e2e suites (vitest → nf-cli → real Rust) | 4×8 = 32 pass | `pnpm -r test` |
 | Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
@@ -54,7 +54,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch; 2026-11-07: keyframed speed (`speed_keys`, `setSpeedKeys`, integral footprint through all structural ops); 2026-11-08: per-clip mix (`gain_db` -60..=12, `pan` -1..=1, `setClipMix`, renderPlan exposure — storage/plan metadata only, no mixer) | ✅ 55 tests |
 | Folio engine | PDF eng (subagent bdd8014e; slice E codex/w1-folio-redact; slice F codex/w1-folio-f) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption (encrypt/decrypt + `open {password}`; all mutating and string-decoding ops reject ciphertext docs), outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment), structural redaction (redactRect: annots + contained image XObjects + PieceInfo/XMP//Info scrub, honest retained reporting, text/vector explicitly not removed), structural PDF compare (comparePdf: page/annot/field/outline/attachment/signature projections, lossy text hint), page images (insertPageImage: jpeg DCTDecode passthrough, real PNG decode gray/RGB alpha-discarded with local five-filter unfiltering, raw 8-bpc samples; appended content stream, inherited /Resources cloned) | ✅ 149 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
-| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) | ✅ 154 tests |
+| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + track-changes revisions (`setTrackChanges` + ins/del records with per-op author/time, accept/reject single+all, schema:3 keys, no DOCX interop) + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) | ✅ 175 tests |
 | Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |
 | Example app | RN eng (main session) | Expo screens + useDocument hook | ⚠️ source + typecheck only |
 | Design/UX | — | — | ❌ not staffed this session |
@@ -1595,3 +1595,44 @@ Local evidence: `cargo test -p draft-engine` 33 passed (5 hatch tests),
 hatch e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. Associative
 hatches, custom patterns, gradients and PNG fills remain deferred; UI adoption,
 native acceptance and full P17 completion are not implied.
+
+## P12 Quill revisions slice 6 checkpoint (2026-11-07)
+
+Quill gains track-changes revisions (P12 slice 6), the largest remaining
+quill item besides footnotes/TOC/mail-merge. Model decision: revision
+**records**, not inline `w:ins`/`w:del`-style markers — a `Revision`
+`{id,kind:"ins"|"del",from,to,author?,time?,text?}` anchors to live
+`{block,offset}` positions with comment-style gravity (`ins` from left/to
+right so typing at either boundary extends the marked range; `del`
+collapses both anchors to the deletion point, right gravity). `ins`
+records bracket text already in the block stream; `del` records store the
+deleted plain text (65536-char cap, `\n`-joined) so reject can restore it.
+`setTrackChanges {enabled,author?}` persists the setting plus default
+author inside the schema:3 `deny_unknown_fields` document alongside a
+`revisions` key — **no schema bump**, same precedent as comments/sections:
+schema:3-era readers fail closed on either key, absent keys restore as
+empty/disabled, and schema:2/legacy payloads carrying them reject.
+`insertText`/`deleteRange`/`replaceRange` auto-record while tracking is on
+(per-op `author`/`time` payload overrides; `time` is caller-supplied unix
+seconds, engine has no clock); `listRevisions` is eventless;
+`acceptRevision`/`rejectRevision`/`acceptAllRevisions`/`rejectAllRevisions`
+(with optional `kind` filter) stage decisions on a tracking-disabled clone
+and commit one whole-document undo entry — ins-accept keeps the marked
+text, ins-reject deletes the marked range, del-accept drops the record,
+del-reject re-inserts plain text via `insertText` (styles/kinds NOT
+restored, documented), and inapplicable or failed records stay pending
+in `*All` (a record drops only after its staged decision succeeds).
+Anchors remap through every position-moving path incl. `changeCase`,
+`replaceText`, `insertTable`/`deleteTable` (comment-style clamping);
+`importDocx`/`new` reset both. Restore strictly validates count (1024),
+unique ids, kind/text invariants, author caps, `time` bound and anchor
+bounds before replacing state. Deferred honestly: fmt-change revisions,
+cell-text revisions (Pos-unreachable), range-scoped accept, markup/"show
+changes" reads, and all DOCX `w:ins`/`w:del`/`w:revisionId` interop — these
+records must not be presented as Word revision ids.
+
+Local evidence: `cargo test -p quill-engine` 175 passed 0 failed
+(includes revision tracking/decision/restore/remap/bulk-filter/undo tests),
+`cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/quill test` 36
+passed across 6 files (1 new revisions e2e), `pnpm --filter @nitro-forge/quill
+typecheck` clean.

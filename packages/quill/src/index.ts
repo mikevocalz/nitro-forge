@@ -41,6 +41,12 @@ export const OPS = {
   resolveComment: "resolveComment",
   reopenComment: "reopenComment",
   listComments: "listComments",
+  setTrackChanges: "setTrackChanges",
+  listRevisions: "listRevisions",
+  acceptRevision: "acceptRevision",
+  rejectRevision: "rejectRevision",
+  acceptAllRevisions: "acceptAllRevisions",
+  rejectAllRevisions: "rejectAllRevisions",
   applyNamedStyle: "applyNamedStyle",
   setBlockStyle: "setBlockStyle",
   insertTable: "insertTable",
@@ -165,6 +171,45 @@ export interface DocComment {
   author: string | null;
   body: string;
   resolved: boolean;
+}
+/**
+ * Track-changes revision kind. `ins` brackets live inserted text;
+ * `del` records a deletion whose plain text is kept on the record.
+ */
+export type RevisionKind = "ins" | "del";
+/**
+ * One tracked change, anchored to live `{block,offset}` positions like
+ * comments/bookmarks (re-mapped by every position-moving op).
+ *
+ * - `ins`: `from..to` brackets the inserted range (`from` left-gravity,
+ *   `to` right-gravity). `acceptRevision` keeps the text and drops the
+ *   record; `rejectRevision` deletes the marked range.
+ * - `del`: `from == to` is the collapse point; `text` carries the deleted
+ *   plain text (`\n`-joined). `acceptRevision` drops the record;
+ *   `rejectRevision` re-inserts `text` there — plain text only, styles
+ *   and paragraph kinds are not restored.
+ *
+ * `author`/`time` are optional attribution; `time` is caller-supplied
+ * unix seconds (the engine has no clock). These are Quill revision
+ * records — NOT Word `w:ins`/`w:del`/`w:revisionId` semantics, and there
+ * is no DOCX interop for them.
+ */
+export interface Revision {
+  id: string;
+  kind: RevisionKind;
+  from: Pos;
+  to: Pos;
+  author: string | null;
+  time: number | null;
+  /** Present only on `del` records: the deleted plain text. */
+  text?: string;
+}
+/** Optional per-edit attribution overriding the tracking default author. */
+export interface RevisionAttribution {
+  /** String sets the revision author; null records no author. */
+  author?: string | null;
+  /** Unix seconds; bounded to year 9999. */
+  time?: number;
 }
 /** Paper orientation stored per section. */
 export type SectionOrientation = "portrait" | "landscape";
@@ -313,15 +358,31 @@ export class QuillDocument {
     return this.doc.apply<T>(op, payload);
   }
 
-  insertText(at: Pos, text: string) {
-    return this.call(OPS.insertText, { at, text });
+  insertText(at: Pos, text: string, revision?: RevisionAttribution) {
+    return this.call(OPS.insertText, {
+      at,
+      text,
+      ...(revision?.author === undefined ? {} : { author: revision.author }),
+      ...(revision?.time === undefined ? {} : { time: revision.time }),
+    });
   }
-  deleteRange(from: Pos, to: Pos) {
-    return this.call<{ deleted_text: string }>(OPS.deleteRange, { from, to });
+  deleteRange(from: Pos, to: Pos, revision?: RevisionAttribution) {
+    return this.call<{ deleted_text: string }>(OPS.deleteRange, {
+      from,
+      to,
+      ...(revision?.author === undefined ? {} : { author: revision.author }),
+      ...(revision?.time === undefined ? {} : { time: revision.time }),
+    });
   }
   /** Replace `from..to` with `text` as one command and one undo step. */
-  replaceRange(from: Pos, to: Pos, text: string) {
-    return this.call<{ deleted_text: string }>(OPS.replaceRange, { from, to, text });
+  replaceRange(from: Pos, to: Pos, text: string, revision?: RevisionAttribution) {
+    return this.call<{ deleted_text: string }>(OPS.replaceRange, {
+      from,
+      to,
+      text,
+      ...(revision?.author === undefined ? {} : { author: revision.author }),
+      ...(revision?.time === undefined ? {} : { time: revision.time }),
+    });
   }
   /** Unicode default casing; preserves run styles and returns the adjusted scalar selection. */
   changeCase(from: Pos, to: Pos, mode: TextCase) {
@@ -521,6 +582,52 @@ export class QuillDocument {
   /** Read-only; sorted by anchor position then id. */
   listComments() {
     return this.call<{ comments: DocComment[] }>(OPS.listComments);
+  }
+  /**
+   * Enable/disable track changes. While enabled, `insertText`,
+   * `deleteRange` and `replaceRange` record `ins`/`del` revisions stamped
+   * with `author` (the default; per-edit `RevisionAttribution` overrides).
+   * `author` is a patch: a string sets it, null clears it, absent keeps
+   * the current value. The setting persists in snapshots. Tracking caps
+   * drop silently: edits still apply with no revision recorded once 1024
+   * records exist or a deletion's plain text exceeds 65536 chars.
+   */
+  setTrackChanges(enabled: boolean, author?: string | null) {
+    return this.call<{ ok: boolean; enabled: boolean }>(OPS.setTrackChanges, {
+      enabled,
+      ...(author === undefined ? {} : { author }),
+    });
+  }
+  /** Read-only; pending revisions sorted by anchor position then id. */
+  listRevisions() {
+    return this.call<{ revisions: Revision[] }>(OPS.listRevisions);
+  }
+  /**
+   * Resolve one revision: `ins` accept keeps the marked text, `ins`
+   * reject deletes the marked range; `del` accept drops the record and
+   * `del` reject re-inserts the stored plain text — styles are not
+   * restored.
+   */
+  acceptRevision(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.acceptRevision, { id });
+  }
+  rejectRevision(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.rejectRevision, { id });
+  }
+  /**
+   * Resolve every pending revision in document order as one undo step.
+   * `kind` optionally filters to `"ins"` or `"del"`; a revision whose
+   * decision cannot apply is left pending. Returns the resolved count.
+   */
+  acceptAllRevisions(kind?: RevisionKind) {
+    return this.call<{ ok: boolean; applied: number }>(OPS.acceptAllRevisions, {
+      ...(kind === undefined ? {} : { kind }),
+    });
+  }
+  rejectAllRevisions(kind?: RevisionKind) {
+    return this.call<{ ok: boolean; applied: number }>(OPS.rejectAllRevisions, {
+      ...(kind === undefined ? {} : { kind }),
+    });
   }
   /**
    * Copy a `"character"` style's properties onto the inlines in `from..to`

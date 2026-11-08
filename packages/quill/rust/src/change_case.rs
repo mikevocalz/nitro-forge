@@ -178,6 +178,7 @@ impl QuillEngine {
         }
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
+        let revisions_before = self.revisions.clone();
         for (bi, map) in &offset_maps {
             for bm in self.bookmarks.iter_mut().filter(|b| b.block == *bi) {
                 bm.offset = map[bm.offset];
@@ -191,7 +192,10 @@ impl QuillEngine {
                 }
             }
         }
+        // `span` borrows `self.blocks`; end that borrow before the
+        // whole-engine remap call.
         let removed = span.to_vec();
+        self.remap_revisions_change_case(&offset_maps);
         self.record_undo(
             from.block,
             removed,
@@ -199,6 +203,7 @@ impl QuillEngine {
             Collections {
                 bookmarks: Some(bookmarks_before),
                 comments: Some(comments_before),
+                revisions: Some(revisions_before),
                 ..Default::default()
             },
         );
