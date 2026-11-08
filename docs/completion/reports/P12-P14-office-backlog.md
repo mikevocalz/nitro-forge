@@ -45,7 +45,8 @@ harfrust shaping feeding `layout {font}` wrap, per
 `P-font-glyph-backend-decision.md`; per-line re-shaping, glyph positions,
 rasterization, per-run resolution and font licensing policy remain open),
 native IME/caret/selection/bidi bridge, speech/dictation, `renderPage`
-pixels, text frames/wrap layout, layout spreads/masters.
+pixels (backend decided 2026-11-08 in `P-quill-renderpage-decision.md` —
+engine op + pure-Rust glyph rasterization, slices pending), text frames/wrap layout, layout spreads/masters.
 
 ## P13 — Tally slice order
 
