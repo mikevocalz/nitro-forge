@@ -236,10 +236,19 @@ pub fn solve(s: &State, tolerance: f64) -> Result<Solved, EngineError> {
 pub const MAX_NONLINEAR_ITERATIONS: usize = 48;
 /// Damping retries inside one iteration before the pass stalls.
 const LAMBDA_RETRIES: usize = 8;
+/// Solver-variable bound: at most 64 points × 2 coordinates plus up to 128
+/// curve radii (circles+arcs share the 128-entity cap). Exceeding it is a
+/// bounded `unconverged` outcome, never an op error.
+pub const MAX_NONLINEAR_VARS: usize = 256;
 /// Scalar work units (residual evals, Jacobian entries, normal-equation
 /// updates, elimination ops) one solve may consume before reporting
 /// `unconverged`.
+#[cfg(not(test))]
 const MAX_NONLINEAR_WORK: usize = 33_554_432;
+/// Unit tests use a smaller bound so budget exhaustion is reachable without
+/// a multi-second solve; production keeps the documented 33554432.
+#[cfg(test)]
+const MAX_NONLINEAR_WORK: usize = 1_000_000;
 /// Central-difference relative step for the numerical Jacobian.
 const FD_REL: f64 = 1e-6;
 
@@ -591,15 +600,22 @@ pub fn solve_nonlinear(
             radii: Vec::new(),
         });
     }
-    let mut work = 0usize;
-    let bump = |n: usize, work: &mut usize| -> Result<(), EngineError> {
-        *work += n;
-        if *work > MAX_NONLINEAR_WORK {
-            Err(bad("nonlinear solver work budget exceeded"))
-        } else {
-            Ok(())
-        }
-    };
+    if vars > MAX_NONLINEAR_VARS {
+        return Ok(NonlinearOutcome {
+            report: NonlinearReport {
+                status: "unconverged",
+                iterations: 0,
+                residual: initial_residual,
+                unsatisfied_constraints: initial_unsat,
+            },
+            points: Vec::new(),
+            radii: Vec::new(),
+        });
+    }
+    // Shared scalar work counter. Crossing MAX_NONLINEAR_WORK marks the pass
+    // exhausted; every site unwinds to the `unconverged` report below — a
+    // spent budget is a bounded outcome, not an op error.
+    let mut work = Work::default();
     let mut r = initial_r;
     let mut cost = 0.5 * r.iter().map(|v| v * v).sum::<f64>();
     let mut maxabs = initial_residual;
@@ -611,7 +627,10 @@ pub fn solve_nonlinear(
             ctx.checkpoint()?;
             ctx.set_progress(iterations as f32 / MAX_NONLINEAR_ITERATIONS as f32);
         }
-        bump(r.len() * 4, &mut work)?;
+        work.bump(r.len() * 4);
+        if work.exhausted {
+            break 'outer;
+        }
         // Central-difference Jacobian, stored as one column per variable.
         let mut cols: Vec<Vec<f64>> = Vec::with_capacity(vars);
         for j in 0..vars {
@@ -622,7 +641,10 @@ pub fn solve_nonlinear(
             xm[j] -= h;
             let (rp, _) = eval(&xp)?;
             let (rm, _) = eval(&xm)?;
-            bump(2 * rp.len() * 4, &mut work)?;
+            work.bump(2 * rp.len() * 4);
+            if work.exhausted {
+                break 'outer;
+            }
             let mut col: Vec<f64> = rp
                 .iter()
                 .zip(&rm)
@@ -649,10 +671,16 @@ pub fn solve_nonlinear(
         let mut a = vec![vec![0f64; vars]; vars];
         let mut g = vec![0f64; vars];
         for j in 0..vars {
-            bump(cols[j].len(), &mut work)?;
+            work.bump(cols[j].len());
+            if work.exhausted {
+                break 'outer;
+            }
             g[j] = cols[j].iter().zip(&r).map(|(u, v)| u * v).sum();
             for k in j..vars {
-                bump(cols[j].len(), &mut work)?;
+                work.bump(cols[j].len());
+                if work.exhausted {
+                    break 'outer;
+                }
                 let dot: f64 = cols[j].iter().zip(&cols[k]).map(|(u, v)| u * v).sum();
                 a[j][k] = dot;
                 a[k][j] = dot;
@@ -675,12 +703,12 @@ pub fn solve_nonlinear(
             let rhs: Vec<f64> = g.iter().map(|v| -v).collect();
             let delta = match solve_dense(&m, &rhs, vars, &mut work) {
                 Ok(d) => d,
-                Err(e) => {
+                Err(_) => {
                     // A spent work budget is a hard bound, not a damping
                     // failure; only genuine singularity retries with more
                     // damping.
-                    if work > MAX_NONLINEAR_WORK {
-                        return Err(e);
+                    if work.exhausted {
+                        break 'outer;
                     }
                     lambda *= 8.;
                     continue;
@@ -712,7 +740,10 @@ pub fn solve_nonlinear(
                 continue;
             }
             let (rn, _) = eval(&xn)?;
-            bump(rn.len() * 4, &mut work)?;
+            work.bump(rn.len() * 4);
+            if work.exhausted {
+                break 'outer;
+            }
             let costn = 0.5 * rn.iter().map(|v| v * v).sum::<f64>();
             if costn < cost {
                 x = xn;
@@ -782,13 +813,30 @@ pub fn solve_nonlinear(
     })
 }
 
+/// Shared scalar work counter for one nonlinear pass. Crossing
+/// `MAX_NONLINEAR_WORK` latches `exhausted`; callers unwind to the
+/// `unconverged` report rather than failing the op.
+#[derive(Default)]
+struct Work {
+    used: usize,
+    exhausted: bool,
+}
+impl Work {
+    fn bump(&mut self, n: usize) {
+        self.used = self.used.saturating_add(n);
+        if self.used > MAX_NONLINEAR_WORK {
+            self.exhausted = true;
+        }
+    }
+}
+
 /// Dense Gaussian elimination with partial pivoting for the small normal
 /// equations; `work` counts coefficient updates against the shared budget.
 fn solve_dense(
     a: &[Vec<f64>],
     rhs: &[f64],
     n: usize,
-    work: &mut usize,
+    work: &mut Work,
 ) -> Result<Vec<f64>, EngineError> {
     let mut m = a.to_vec();
     let mut b = rhs.to_vec();
@@ -808,8 +856,8 @@ fn solve_dense(
                 continue;
             }
             for j in col..n {
-                *work += 1;
-                if *work > MAX_NONLINEAR_WORK {
+                work.bump(1);
+                if work.exhausted {
                     return Err(bad("nonlinear solver work budget exceeded"));
                 }
                 m[i][j] -= f * m[col][j];

@@ -1938,14 +1938,19 @@ and curve radii — central-difference Jacobian with noise-floor
 truncation, dense normal equations, Marquardt damping with an
 absolute-scaled floor, per-component trust region and positive-radius
 enforcement. Hard budgets bound every run: 48 outer iterations, 8 damping
-retries, 128 variables, 512 residual rows and 33554432 shared work
+retries, 256 variables (64 points × 2 coordinates + up to 128 curve
+radii), 512 residual rows and 33554432 shared work
 operations; no randomness and no wall-clock dependence. `solve` runs on
 `apply_long`, so batch routing and `TaskContext` cancellation/progress
-reach the iteration loop. Only a fully converged result publishes
-point/radius updates (one journal entry, one `document:changed`); a
-no-op solve stays eventless, and `unconverged`/singular/cancelled/
-over-budget outcomes publish nothing — geometry, history and redo are
-untouched exactly like an inconsistent linear solve. The report merges
+reach the iteration loop. Only a fully converged result whose point
+coordinates and circle/arc radius+extent also land inside the
+world/entity bounds publishes point/radius updates (one journal entry,
+one `document:changed`); a no-op solve stays eventless, and
+`unconverged`/singular/cancelled/over-budget/out-of-bounds outcomes
+publish nothing — geometry, history and redo are untouched exactly like
+an inconsistent linear solve, and the solve is atomic across both stages
+so a failed nonlinear outcome does not commit the linear stage's point
+updates either. The report merges
 both stages: top-level `status` gains `unconverged` plus a `nonlinear`
 sub-report `{status,iterations,residual,unsatisfied_constraints}`;
 `rank`/`dof`/`scope` keep describing the linear matrix. Nonlinear
@@ -1960,9 +1965,15 @@ angle semantics, ellipse/spline entities, redundant-constraint
 certification, constraint priorities/groups, and any claim of
 general-CAD solving.
 
-Local evidence: `cargo test -p draft-engine` 56 passed (7 new nonlinear
+Local evidence: `cargo test -p draft-engine` 59 passed (10 new nonlinear
 tests covering every admitted kind, real geometry movement, merged
-report shape, locked/fixed participants, atomic rejection, contradictory-system unconverged publication safety, apply_long cancellation and in-batch solve, undo/redo, snapshot roundtrip and hostile restore), `cargo build -p nf-cli` clean,
+report shape, locked/fixed participants, atomic rejection,
+contradictory-system unconverged publication safety including the
+mixed linear+nonlinear atomicity regression, converged-but-out-of-bounds
+radius reporting `unconverged` instead of a publish error, work-budget
+exhaustion reporting `unconverged` rather than an op error, apply_long
+cancellation and in-batch solve, undo/redo, snapshot roundtrip and
+hostile restore), `cargo build -p nf-cli` clean,
 `pnpm install --prefer-offline` clean, `pnpm --filter
 @nitro-forge/draft test` 17 passed across 8 files (1 new nf-cli
 nonlinear-constraints e2e file, 3 tests), `pnpm --filter

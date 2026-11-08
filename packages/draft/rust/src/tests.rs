@@ -3497,3 +3497,79 @@ fn nonlinear_apply_long_cancel_and_batch_solve() {
     let s2 = state(&e2);
     assert!((dist(&s2, a2, b2) - 8.).abs() < 1e-6);
 }
+#[test]
+fn nonlinear_unconverged_publishes_nothing_including_linear_stage() {
+    // Mixed doc: a satisfiable linear constraint (distance_x would move b
+    // to x=5) plus conflicting nonlinear distances. The solve is atomic —
+    // an unconverged nonlinear pass publishes NOTHING, not even the linear
+    // stage's point updates.
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 1., 0.);
+    constraint(&mut e, json!({"kind":"distance_x","a":a,"b":b,"value":5}));
+    constraint(&mut e, json!({"kind":"distance","a":a,"b":b,"value":10}));
+    constraint(&mut e, json!({"kind":"distance","a":a,"b":b,"value":20}));
+    let before = e.snapshot().unwrap();
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["status"], "unconverged");
+    assert_eq!(report.data["applied"], false);
+    assert_eq!(report.data["nonlinear"]["status"], "unconverged");
+    assert!(report.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // No journal entry: undo reverts the last real mutation (the third
+    // addConstraint), leaving two constraints — a recorded solve would
+    // have kept all three.
+    assert!(e.undo().unwrap());
+    assert_eq!(state(&e).constraints.len(), 2);
+}
+#[test]
+fn nonlinear_converged_but_out_of_bounds_reports_unconverged_not_error() {
+    // Center near the +X world budget; a radius solve to 5 would push the
+    // circle extent past ±1e6. The converged iterate fails the pre-publish
+    // entity-bounds check, so the solve reports `unconverged` and publishes
+    // nothing instead of erroring inside publish->validate.
+    let mut e = DraftEngine::new();
+    let center = point(&mut e, 999_999., 0.);
+    let k = circle(&mut e, center, 1.);
+    constraint(&mut e, json!({"kind":"radius","entity":k,"value":5}));
+    let before = e.snapshot().unwrap();
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["status"], "unconverged");
+    assert_eq!(report.data["nonlinear"]["status"], "unconverged");
+    assert_eq!(report.data["applied"], false);
+    assert!(report.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // An in-bounds radius on the same geometry still solves and publishes.
+    let mut e2 = DraftEngine::new();
+    let c2 = point(&mut e2, 10., 10.);
+    let k2 = circle(&mut e2, c2, 1.);
+    constraint(&mut e2, json!({"kind":"radius","entity":k2,"value":4}));
+    let ok = apply(&mut e2, "solve", json!({}));
+    assert_eq!(ok.data["nonlinear"]["status"], "solved");
+    assert_eq!(ok.data["applied"], true);
+    assert!((state(&e2).circles[&k2].radius - 4.).abs() < 1e-6);
+}
+#[test]
+fn nonlinear_work_budget_reports_unconverged_not_op_error() {
+    // 64 points fully referenced by 128 distance constraints: 128 solver
+    // variables and 128 residual rows put a single iteration's normal
+    // equations over the (test-build) work budget, so the pass must unwind
+    // to an `unconverged` report — never an op error — and publish nothing.
+    let mut e = DraftEngine::new();
+    let ids: Vec<u64> = (0..64).map(|i| point(&mut e, i as f64, (i % 7) as f64)).collect();
+    for i in 0..128 {
+        let (a, b) = (ids[i % 64], ids[(i * 7 + 1) % 64]);
+        assert!(a != b);
+        constraint(
+            &mut e,
+            json!({"kind":"distance","a":a,"b":b,"value":1. + (i % 50) as f64}),
+        );
+    }
+    let before = e.snapshot().unwrap();
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["status"], "unconverged");
+    assert_eq!(report.data["applied"], false);
+    assert_eq!(report.data["nonlinear"]["status"], "unconverged");
+    assert!(report.events.is_empty());
+    assert_eq!(e.snapshot().unwrap(), before);
+}

@@ -46,9 +46,14 @@ solver** (largest; start with distance/perpendicular/tangent subset),
   Gaussian linear stage first, then a bounded deterministic
   Levenberg-Marquardt/Gauss-Newton pass (central-difference Jacobian,
   noise-floor truncation, Marquardt damping, trust region, 48
-  iterations/8 retries/128 vars/512 rows/33554432 work ops) that publishes
+  iterations/8 retries/256 vars (64 points x 2 coords + <=128 curve radii)/512 rows/33554432 work ops) that publishes
   point/radius updates only when fully converged — `unconverged`,
-  singular, cancelled or over-budget runs publish nothing. `solve`
+  singular, cancelled, over-budget or out-of-bounds runs publish
+  nothing, atomically across both solver stages (review fixes
+  2026-11-08: mixed linear+nonlinear docs no longer commit linear
+  partial results, work-budget exhaustion reports `unconverged`
+  instead of erroring, converged out-of-bounds radii report
+  `unconverged` instead of failing publish validation). `solve`
   reports a merged `nonlinear` sub-report; `apply_long` checkpoints reach
   the iteration loop. Nonlinear constraint presence triggers the existing
   strict schema:2 wrapper. Deferred: expression/driving-dimension fields

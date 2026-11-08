@@ -229,9 +229,12 @@ impl DraftEngine {
     /// `solve` op: the linear Gaussian stage runs first and is untouched;
     /// when any enabled slice-A5 nonlinear constraint exists, the bounded
     /// LM pass then refines the post-linear geometry against ALL enabled
-    /// constraints (linear kinds contribute exact rows) and only a fully
-    /// converged result publishes point/radius updates. `ctx` is `Some` only
-    /// on the `apply_long` path so cancellation reaches the iteration loop.
+    /// constraints (linear kinds contribute exact rows). The solve is
+    /// atomic: unless the nonlinear pass fully converges AND every converged
+    /// point/radius update lands inside world/entity bounds, NOTHING
+    /// publishes — not even the linear stage's point updates — matching the
+    /// documented all-or-nothing contract. `ctx` is `Some` only on the
+    /// `apply_long` path so cancellation reaches the iteration loop.
     fn solve_apply(
         &mut self,
         p: &Value,
@@ -267,14 +270,24 @@ impl DraftEngine {
             .values()
             .any(|c| c.enabled && c.definition.nonlinear())
         {
-            let nl = constraints::solve_nonlinear(&next, tolerance, ctx)?;
+            let mut nl = constraints::solve_nonlinear(&next, tolerance, ctx)?;
             if nl.report.status == "solved" {
+                // Pre-validate the converged updates against the same bounds
+                // `State::validate` enforces (world coords, radius
+                // 1e-6..=1e6, center ± radius inside ±1e6) BEFORE they can
+                // reach publish: an out-of-bounds iterate reports
+                // `unconverged` and publishes nothing rather than surfacing
+                // as a validation error that would also discard the linear
+                // stage's valid results. Point coordinates are checked first
+                // so radius extents are measured against the moved centers.
+                let mut in_bounds = true;
                 for (id, x, y) in &nl.points {
                     if next.point_fixed(*id) {
                         continue;
                     }
                     if !coord(*x) || !coord(*y) {
-                        return Err(bad("solved coordinates exceed world budget"));
+                        in_bounds = false;
+                        break;
                     }
                     let point = Arc::make_mut(
                         next.points
@@ -284,14 +297,40 @@ impl DraftEngine {
                     point.x = *x;
                     point.y = *y;
                 }
-                for (id, radius) in &nl.radii {
-                    if let Some(c) = next.circles.get_mut(id) {
-                        Arc::make_mut(c).radius = *radius;
-                    } else if let Some(a) = next.arcs.get_mut(id) {
-                        Arc::make_mut(a).radius = *radius;
-                    } else {
-                        return Err(bad("solver lost curve identity"));
+                if in_bounds {
+                    for (id, radius) in &nl.radii {
+                        let (center, _) = next
+                            .curve(*id)
+                            .map_err(|_| bad("solver lost curve identity"))?;
+                        let p = next
+                            .points
+                            .get(&center)
+                            .ok_or_else(|| bad("solver lost curve identity"))?;
+                        let (cx, cy) = (p.x, p.y);
+                        let r = *radius;
+                        if !r.is_finite()
+                            || !(1e-6..=LIMIT).contains(&r)
+                            || ![cx - r, cx + r, cy - r, cy + r]
+                                .iter()
+                                .all(|v| coord(*v))
+                        {
+                            in_bounds = false;
+                            break;
+                        }
                     }
+                }
+                if in_bounds {
+                    for (id, radius) in &nl.radii {
+                        if let Some(c) = next.circles.get_mut(id) {
+                            Arc::make_mut(c).radius = *radius;
+                        } else if let Some(a) = next.arcs.get_mut(id) {
+                            Arc::make_mut(a).radius = *radius;
+                        } else {
+                            return Err(bad("solver lost curve identity"));
+                        }
+                    }
+                } else {
+                    nl.report.status = "unconverged";
                 }
             }
             // Merge the nonlinear stage into the shared report: the top-level
@@ -316,6 +355,14 @@ impl DraftEngine {
                 "residual": nl.report.residual,
                 "unsatisfied_constraints": nl.report.unsatisfied_constraints,
             });
+            if nl.report.status != "solved" {
+                // Atomic solve: an unconverged/singular/cancelled-adjacent or
+                // out-of-bounds nonlinear outcome publishes nothing — not
+                // even the linear stage's point updates already staged in
+                // `next`. The report still describes both stages honestly.
+                report["applied"] = json!(false);
+                return Ok(CommandResult::read_only(report));
+            }
         }
         report["applied"] = json!(next != *self.state);
         self.publish(next, report)
