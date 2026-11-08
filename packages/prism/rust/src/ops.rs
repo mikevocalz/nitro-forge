@@ -2354,19 +2354,23 @@ impl PrismEngine {
             w: (x1 - x0) as u32,
             h: (y1 - y0) as u32,
         };
+        // A stroke that cannot put down a single semi-transparent dab —
+        // transparent brush color or zero alpha on every dab — changes no
+        // pixel on either the paint or the erase path, so the committed
+        // path treats it as eventless: no undo entry, no document:changed.
+        // The same predicate rides along on `Preview` so dry runs (notably
+        // `mode:"vector"`, whose `removed` must equal what a commit would
+        // erase) can mirror the gate instead of reporting phantom hits.
+        let transparent = brush.color[3] == 0 || canvas_dabs.iter().all(|d| d.alpha <= 0.0);
         if !commit {
             return Ok(PreparedStroke::Preview {
                 count: dab_count,
                 bounds,
                 dabs: canvas_dabs,
+                transparent,
             });
         }
-
-        // A stroke that cannot put down a single semi-transparent dab —
-        // transparent brush color or zero alpha on every dab — changes no
-        // pixel on either the paint or the erase path, so it is eventless:
-        // no undo entry, no document:changed.
-        if brush.color[3] == 0 || canvas_dabs.iter().all(|d| d.alpha <= 0.0) {
+        if transparent {
             return Ok(PreparedStroke::Empty { dabs: dab_count });
         }
         Ok(PreparedStroke::Ready {
@@ -2999,8 +3003,11 @@ impl PrismEngine {
     ///
     /// Committed strokes that hit nothing return eventless with
     /// `removed: []`; a hit on a locked entity rejects the whole op with
-    /// `Validation` before any mutation. One document undo entry per
-    /// committed stroke. Geometry testing is bounded by
+    /// `Validation` before any mutation. The dry run applies the same
+    /// gates in the same order — a fully transparent stroke previews
+    /// `removed: []` and a locked hit rejects with `Validation` — so
+    /// `removed` always equals what a commit would erase. One document
+    /// undo entry per committed stroke. Geometry testing is bounded by
     /// [`MAX_VECTOR_ERASE_TESTS`] primitive visits → `Validation`.
     fn erase_stroke_vector(
         &mut self,
@@ -3030,10 +3037,25 @@ impl PrismEngine {
                 count,
                 bounds,
                 dabs,
+                transparent,
             } => {
+                // Mirror the committed path's gates in the same order, so
+                // `removed` is always exactly what a commit would erase:
+                // a fully transparent stroke is eventless (Empty), and a
+                // locked hit rejects with `Validation` before any removal.
+                if transparent {
+                    return read(json!({
+                        "dabs": count,
+                        "mode": EraseMode::Vector.as_str(),
+                        "removed": [],
+                    }));
+                }
                 let footprint: Vec<stroke::Dab> =
                     dabs.iter().copied().filter(|d| d.alpha > 0.0).collect();
                 let hits = self.vector_erase_hits(&footprint, scope.as_ref(), ctx)?;
+                for &i in &hits {
+                    self.ensure_unlocked(i)?;
+                }
                 let removed: Vec<u64> = hits.iter().map(|&i| self.layers[i].id).collect();
                 read(json!({
                     "dabs": count,
@@ -3121,6 +3143,14 @@ impl PrismEngine {
         let task = RenderTask::new(ctx, cands.len().max(1) as u64);
         for (k, &i) in cands.iter().enumerate() {
             task.tick(k, 8, k as f32 / cands.len().max(1) as f32)?;
+            // Cheap conservative reject before flattening: skip entities
+            // whose control-point bounds cannot reach the footprint.
+            let Some(b) = self.vector_erase_bounds(i) else {
+                continue;
+            };
+            if b.2 < fx0 || b.0 > fx1 || b.3 < fy0 || b.1 > fy1 {
+                continue;
+            }
             let Some(g) = self.vector_erase_geom(i) else {
                 continue;
             };
@@ -3245,6 +3275,66 @@ impl PrismEngine {
             bounds: (x0 - pad, y0 - pad, x1 + pad, y1 + pad),
         })
     }
+
+    /// Conservative canvas-space AABB `(minx, miny, maxx, maxy)` of a
+    /// vector layer's painted geometry, computed without flattening so
+    /// `vector_erase_hits` can reject far-away entities cheaply. A shape's
+    /// bounds are its transformed rect — the ellipse's cubic arcs stay
+    /// inside it — and a path's bounds are the convex hull of its node
+    /// anchors and Bézier control points (a flattened curve never leaves
+    /// its control hull), padded by the stroke half-width. `None` for
+    /// non-vector content and for paths that define neither fill nor
+    /// stroke — the same set `vector_erase_geom` rejects.
+    fn vector_erase_bounds(&self, idx: usize) -> Option<(f64, f64, f64, f64)> {
+        let layer = &self.layers[idx];
+        let m = self.scene().effective_affine(layer);
+        let mut acc: Option<(f64, f64, f64, f64)> = None;
+        let mut extend = |p: (f64, f64)| {
+            acc = Some(match acc {
+                None => (p.0, p.1, p.0, p.1),
+                Some((x0, y0, x1, y1)) => {
+                    (x0.min(p.0), y0.min(p.1), x1.max(p.0), y1.max(p.1))
+                }
+            });
+        };
+        match &layer.content {
+            Content::Shape(s) => {
+                for (cx, cy) in [
+                    (s.x, s.y),
+                    (s.x + s.w, s.y),
+                    (s.x + s.w, s.y + s.h),
+                    (s.x, s.y + s.h),
+                ] {
+                    extend(m.apply(cx, cy));
+                }
+            }
+            Content::Path(p) => {
+                if p.fill.is_none() && p.stroke.is_none() {
+                    return None;
+                }
+                for sp in &p.subpaths {
+                    for n in &sp.nodes {
+                        extend(m.apply(n.x, n.y));
+                        if let Some(h) = n.in_handle {
+                            extend(m.apply(n.x + h[0], n.y + h[1]));
+                        }
+                        if let Some(h) = n.out_handle {
+                            extend(m.apply(n.x + h[0], n.y + h[1]));
+                        }
+                    }
+                }
+                let hw = p
+                    .stroke
+                    .as_ref()
+                    .map(|s| s.width * m.mean_scale() / 2.0)
+                    .unwrap_or(0.0)
+                    .max(0.0);
+                return acc.map(|(x0, y0, x1, y1)| (x0 - hw, y0 - hw, x1 + hw, y1 + hw));
+            }
+            _ => return None,
+        }
+        acc
+    }
 }
 
 /// Geometry-test budget for `eraseStroke mode:"vector"`: every dab×entity
@@ -3366,6 +3456,9 @@ enum PreparedStroke {
         count: usize,
         bounds: DabBounds,
         dabs: Vec<stroke::Dab>,
+        /// True when the committed path would take the `Empty` exit
+        /// (transparent brush color or zero alpha on every dab).
+        transparent: bool,
     },
     /// Committed stroke ready to stamp: canvas-space dabs, dab count, and
     /// the brush color (paint needs the full RGBA; erase uses `color[3]`

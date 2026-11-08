@@ -2016,3 +2016,56 @@ fn erase_stroke_vector_locked_and_bad_scope() {
     assert_eq!(r.data["removed"], json!([]));
     assert_eq!(e.journal.undo_len(), depth);
 }
+
+#[test]
+fn erase_stroke_vector_preview_matches_commit_gates() {
+    let mut e = eng(32, 32);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let samples = stroke_samples(8, 3.0, 6.0, 1.0);
+    // Transparent brush (color alpha 0): the commit is eventless, so the
+    // dry run must report the same empty `removed`, not the footprint's
+    // would-be hits.
+    let clear = json!({"size": 6.0, "color": [0, 0, 0, 0], "spacing": 0.5});
+    let dry = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": clear, "samples": samples.clone(), "commit": false}),
+    );
+    assert_eq!(dry["removed"], json!([]), "transparent dry run must not report hits");
+    let depth = e.journal.undo_len();
+    let out = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"mode": "vector", "brush": clear, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    assert!(out.events.is_empty(), "transparent commit stays eventless");
+    assert_eq!(out.data["removed"], json!([]));
+    assert_eq!(e.journal.undo_len(), depth);
+    assert!(layer(&describe(&mut e), a).is_object());
+    // Zero-alpha dabs (brush opacity 0, opaque color): same parity.
+    let ghost = json!({"size": 6.0, "color": [0, 0, 0, 255], "opacity": 0.0, "spacing": 0.5});
+    let dry = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": ghost, "samples": samples.clone(), "commit": false}),
+    );
+    assert_eq!(dry["removed"], json!([]));
+    // Locked hit entity: both dry run and commit reject with Validation —
+    // the preview never lists ids a commit would refuse to erase.
+    run(&mut e, "setLayerLocked", json!({"id": a, "locked": true}));
+    let solid = json!({"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": solid, "samples": samples.clone(), "commit": false}),
+        ErrorCode::Validation,
+    );
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": solid, "samples": samples}),
+        ErrorCode::Validation,
+    );
+    assert!(layer(&describe(&mut e), a).is_object(), "rejected erases keep the layer");
+}
