@@ -1962,7 +1962,7 @@ of referenced layers reject atomically, `reparentLayer` stays valid and
 `duplicateComposition` inherits bindings under fresh layer ids. TS gains
 `MotionGraph*` types, `graph?` on `MotionState` and `setGraph`.
 
-Local evidence: `cargo test -p motion-engine` 97 passed (10 new covering
+Local evidence: `cargo test -p motion-engine` 97 passed (11 new covering
 the kind/pin/param/edge/cap rejection matrix with snapshot-atomicity,
 write+hostile-restore cycle rejection, topo determinism under reordered
 insertion, pre-binding property reads incl. curve-fed and cross-binding
