@@ -12,8 +12,8 @@
 //! - `ins` revisions bracket text that is already in the block stream. The
 //!   marked range is a live position range: `from` is left-gravity and `to`
 //!   right-gravity (same rules as comment anchors), so typing at either
-//!   boundary extends the marked range. Accept deletes the current marked
-//!   range; reject keeps the text and drops the record.
+//!   boundary extends the marked range. Accept keeps the text and drops
+//!   the record; reject deletes the current marked range.
 //! - `del` revisions record a deletion that already happened. Both anchors
 //!   collapse to the deletion point (right-gravity, bookmark-like) and
 //!   `text` carries the deleted *plain* text (blocks joined by `\n`, the
@@ -400,9 +400,11 @@ impl QuillEngine {
     }
 
     /// Apply one accept (`accept == true`) or reject decision for revision
-    /// `id` on `stage`, removing the record. Returns `true` when a record
-    /// was resolved. Unknown ids are a no-op so `*All` variants can skip
-    /// records already consumed by earlier decisions in the same batch.
+    /// `id` on `stage`, removing the record only after its staged op
+    /// succeeds so a failed decision leaves the record pending. Returns
+    /// `true` when a record was resolved. Unknown ids are a no-op so
+    /// `*All` variants can skip records already consumed by earlier
+    /// decisions in the same batch.
     fn stage_revision_decision(
         stage: &mut Self,
         id: &str,
@@ -411,12 +413,18 @@ impl QuillEngine {
         let Some(index) = stage.revisions.iter().position(|r| r.id == id) else {
             return Ok(false);
         };
-        let rev = stage.revisions.remove(index);
+        // Clone before staging: the op below re-maps every revision anchor
+        // (including this record's, harmlessly) and must run while the
+        // record is still present — on error the record stays pending.
+        let rev = stage.revisions[index].clone();
         match (rev.kind, accept) {
-            // Accepting an insertion deletes the currently marked range.
+            // Accepting an insertion keeps the marked text: only the
+            // record is dropped.
+            (RevisionKind::Ins, true) => {}
+            // Rejecting an insertion deletes the currently marked range.
             // A collapsed range (its text was fully deleted meanwhile)
             // just drops the record.
-            (RevisionKind::Ins, true) => {
+            (RevisionKind::Ins, false) => {
                 let from = anchor_pos(&rev.from);
                 let to = anchor_pos(&rev.to);
                 if from != to {
@@ -440,8 +448,13 @@ impl QuillEngine {
                     }
                 }
             }
-            // ins+reject and del+accept only drop the record.
+            // Accepting a deletion only drops the record — the deletion
+            // stands.
             _ => {}
+        }
+        // The staged op may have re-mapped anchors; drop by id, not index.
+        if let Some(i) = stage.revisions.iter().position(|r| r.id == id) {
+            stage.revisions.remove(i);
         }
         Ok(true)
     }
@@ -783,7 +796,7 @@ mod tests {
     }
 
     #[test]
-    fn accept_revision_deletes_marked_insert() {
+    fn accept_revision_on_ins_keeps_marked_text() {
         let mut e = engine();
         insert(&mut e, 0, 0, "keep");
         track(&mut e, None);
@@ -795,6 +808,28 @@ mod tests {
         assert_eq!(text_of(&mut e), "keep DROP");
         let id = revisions(&mut e)[0]["id"].as_str().unwrap().to_string();
         apply(&mut e, "acceptRevision", json!({"id": id}));
+        // Accepting an insertion keeps the marked text and drops the record.
+        assert_eq!(text_of(&mut e), "keep DROP");
+        assert!(revisions(&mut e).is_empty());
+        // Undo restores the pending revision record.
+        e.undo().unwrap();
+        assert_eq!(text_of(&mut e), "keep DROP");
+        assert_eq!(revisions(&mut e).len(), 1);
+    }
+
+    #[test]
+    fn reject_revision_on_ins_deletes_marked_range() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "keep");
+        track(&mut e, None);
+        apply(
+            &mut e,
+            "insertText",
+            json!({"at":{"block":0,"offset":4},"text":" DROP"}),
+        );
+        let id = revisions(&mut e)[0]["id"].as_str().unwrap().to_string();
+        apply(&mut e, "rejectRevision", json!({"id": id}));
+        // Rejecting an insertion deletes the currently marked range.
         assert_eq!(text_of(&mut e), "keep");
         assert!(revisions(&mut e).is_empty());
         // Undo restores both the text and the pending revision.
@@ -816,17 +851,6 @@ mod tests {
         let id = revisions(&mut e)[0]["id"].as_str().unwrap().to_string();
         apply(&mut e, "acceptRevision", json!({"id": id}));
         assert_eq!(text_of(&mut e), "aef");
-        assert!(revisions(&mut e).is_empty());
-    }
-
-    #[test]
-    fn reject_revision_on_ins_keeps_text() {
-        let mut e = engine();
-        track(&mut e, None);
-        insert(&mut e, 0, 0, "new");
-        let id = revisions(&mut e)[0]["id"].as_str().unwrap().to_string();
-        apply(&mut e, "rejectRevision", json!({"id": id}));
-        assert_eq!(text_of(&mut e), "new");
         assert!(revisions(&mut e).is_empty());
     }
 
@@ -875,10 +899,10 @@ mod tests {
             .find(|r| r["kind"] == "ins" && r["from"] == json!({"block":0,"offset":0})
                 && r["to"] == json!({"block":0,"offset":4}))
             .expect("ac revision should span bXac");
-        // Accepting deletes everything currently marked ("bXac").
+        // Rejecting deletes everything currently marked ("bXac").
         let id = ac["id"].as_str().unwrap().to_string();
-        apply(&mut e, "acceptRevision", json!({"id": id}));
-        // "b" and "X" were inside the accepted range too.
+        apply(&mut e, "rejectRevision", json!({"id": id}));
+        // "b" and "X" were inside the rejected range too.
         assert_eq!(text_of(&mut e), "");
     }
 
@@ -935,21 +959,106 @@ mod tests {
             json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":2}}),
         );
         assert_eq!(revisions(&mut e).len(), 2);
-        // Reject only deletions: "se INS" remains ("ba" restored), the
+        // Reject only deletions: "ba" is restored ("base INS"), the
         // insertion stays pending.
         let r = apply(&mut e, "rejectAllRevisions", json!({"kind":"del"}));
         assert_eq!(r.data["applied"], 1);
         assert_eq!(text_of(&mut e), "base INS");
         assert_eq!(revisions(&mut e).len(), 1);
-        // Accept everything left.
+        // Accept everything left: ins accept keeps the marked " INS".
         let r = apply(&mut e, "acceptAllRevisions", json!({}));
         assert_eq!(r.data["applied"], 1);
-        assert_eq!(text_of(&mut e), "base");
+        assert_eq!(text_of(&mut e), "base INS");
         assert!(revisions(&mut e).is_empty());
         // Empty batch is eventless.
         let r = apply(&mut e, "acceptAllRevisions", json!({}));
         assert_eq!(r.data["applied"], 0);
         assert!(r.events.is_empty());
+    }
+
+    /// Conventional track-changes matrix for `*All`: accept keeps every
+    /// change (ins text stays, del stays deleted), reject reverts every
+    /// change (ins text removed, del text restored).
+    #[test]
+    fn accept_all_keeps_and_reject_all_reverts() {
+        // Shared setup: "base" + tracked " INS" + tracked delete of "ba"
+        // leaves "se INS" with one ins and one del pending.
+        let setup = |e: &mut QuillEngine| {
+            insert(e, 0, 0, "base");
+            track(e, None);
+            apply(
+                e,
+                "insertText",
+                json!({"at":{"block":0,"offset":4},"text":" INS"}),
+            );
+            apply(
+                e,
+                "deleteRange",
+                json!({"from":{"block":0,"offset":0},"to":{"block":0,"offset":2}}),
+            );
+            assert_eq!(text_of(e), "se INS");
+            assert_eq!(revisions(e).len(), 2);
+        };
+
+        let mut e = engine();
+        setup(&mut e);
+        // Accept all: the "ba" deletion stands and " INS" stays marked-in.
+        let r = apply(&mut e, "acceptAllRevisions", json!({}));
+        assert_eq!(r.data["applied"], 2);
+        assert_eq!(text_of(&mut e), "se INS");
+        assert!(revisions(&mut e).is_empty());
+
+        let mut e = engine();
+        setup(&mut e);
+        // Reject all: "ba" is restored and " INS" is deleted.
+        let r = apply(&mut e, "rejectAllRevisions", json!({}));
+        assert_eq!(r.data["applied"], 2);
+        assert_eq!(text_of(&mut e), "base");
+        assert!(revisions(&mut e).is_empty());
+    }
+
+    /// A `*All` batch must leave a revision pending when its staged
+    /// decision fails, even when a later decision in the same batch
+    /// succeeds and the stage commits.
+    #[test]
+    fn batch_leaves_failed_decision_pending() {
+        let mut e = engine();
+        // Crafted state: a `del` anchored on a table block cannot be
+        // rejected (`insertText` rejects table blocks), while an `ins`
+        // on the paragraph resolves fine.
+        let doc = json!({
+            "kind":"quill","schema":3,
+            "document":{
+                "blocks":[
+                    {"kind":"para","inlines":[{"text":"abc","style":{}}]},
+                    {"kind":"table","inlines":[],"table":{"rows":1,"cols":1,
+                        "cells":[{"blocks":[{"kind":"para","inlines":[{"text":"c","style":{}}]}]}]}}
+                ],
+                "bookmarks":[],
+                "revisions":[
+                    {"id":"r-ins","kind":"ins","from":{"block":0,"offset":1},"to":{"block":0,"offset":2}},
+                    {"id":"r-del","kind":"del","from":{"block":1,"offset":0},"to":{"block":1,"offset":0},"text":"x"}
+                ]
+            }
+        });
+        let bytes = ignition_core::encode_envelope(serde_json::to_vec(&doc).unwrap().as_slice());
+        e.restore(&bytes).unwrap();
+        assert_eq!(revisions(&mut e).len(), 2);
+
+        // rejectAll: ins reject deletes the marked "b"; del reject fails
+        // on the table block and stays pending.
+        let r = apply(&mut e, "rejectAllRevisions", json!({}));
+        assert_eq!(r.data["applied"], 1);
+        assert_eq!(text_of(&mut e), "ac\nc");
+        let revs = revisions(&mut e);
+        assert_eq!(revs.len(), 1);
+        assert_eq!(revs[0]["id"], "r-del");
+
+        // A single reject on the failing revision propagates the error
+        // atomically: state and pending records are untouched.
+        assert!(e.apply(cmd("rejectRevision", json!({"id":"r-del"}))).is_err());
+        assert_eq!(revisions(&mut e).len(), 1);
+        assert_eq!(text_of(&mut e), "ac\nc");
     }
 
     #[test]

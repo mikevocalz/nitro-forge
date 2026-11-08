@@ -182,8 +182,8 @@ export type RevisionKind = "ins" | "del";
  * comments/bookmarks (re-mapped by every position-moving op).
  *
  * - `ins`: `from..to` brackets the inserted range (`from` left-gravity,
- *   `to` right-gravity). `acceptRevision` deletes the marked range;
- *   `rejectRevision` keeps the text.
+ *   `to` right-gravity). `acceptRevision` keeps the text and drops the
+ *   record; `rejectRevision` deletes the marked range.
  * - `del`: `from == to` is the collapse point; `text` carries the deleted
  *   plain text (`\n`-joined). `acceptRevision` drops the record;
  *   `rejectRevision` re-inserts `text` there — plain text only, styles
@@ -588,7 +588,9 @@ export class QuillDocument {
    * `deleteRange` and `replaceRange` record `ins`/`del` revisions stamped
    * with `author` (the default; per-edit `RevisionAttribution` overrides).
    * `author` is a patch: a string sets it, null clears it, absent keeps
-   * the current value. The setting persists in snapshots.
+   * the current value. The setting persists in snapshots. Tracking caps
+   * drop silently: edits still apply with no revision recorded once 1024
+   * records exist or a deletion's plain text exceeds 65536 chars.
    */
   setTrackChanges(enabled: boolean, author?: string | null) {
     return this.call<{ ok: boolean; enabled: boolean }>(OPS.setTrackChanges, {
@@ -601,9 +603,10 @@ export class QuillDocument {
     return this.call<{ revisions: Revision[] }>(OPS.listRevisions);
   }
   /**
-   * Resolve one revision: `ins` accept deletes the marked range, `del`
-   * accept drops the record; rejects are the inverse (`del` reject
-   * re-inserts the stored plain text — styles are not restored).
+   * Resolve one revision: `ins` accept keeps the marked text, `ins`
+   * reject deletes the marked range; `del` accept drops the record and
+   * `del` reject re-inserts the stored plain text — styles are not
+   * restored.
    */
   acceptRevision(id: string) {
     return this.call<{ ok: boolean; id: string }>(OPS.acceptRevision, { id });

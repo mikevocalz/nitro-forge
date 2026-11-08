@@ -506,11 +506,11 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     const re = await QuillDocument.openSnapshot(host, snap);
     expect((await re.listRevisions()).data.revisions).toHaveLength(2);
 
-    // Reject the deletion restores its plain text; accept the insertion
-    // deletes the marked "!".
+    // Rejecting the deletion restores its plain text; rejecting the
+    // insertion deletes the marked "!".
     await re.rejectRevision(del.id);
     expect((await re.text()).data.text).toBe("hello world!");
-    await re.acceptRevision(ins.id);
+    await re.rejectRevision(ins.id);
     expect((await re.text()).data.text).toBe("hello world");
     expect((await re.listRevisions()).data.revisions).toHaveLength(0);
     await re.close();
