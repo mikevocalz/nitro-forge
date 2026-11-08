@@ -7,14 +7,20 @@
 #include <utility>
 #include <vector>
 namespace nitroforge::persona {
-enum class CaptureStage { prepare, capture, processing, review, ready, cancelled };
+enum class CaptureStage { prepare, capture, handoff, processing, review, ready, cancelled };
+// companion_phone mirrors the observed reference flow: capture runs on the
+// phone, the receiving host must acknowledge transfer before processing, and
+// no account/cloud sync is implied by that acknowledgement.
+enum class CaptureSource { local_device, companion_phone, supplied_media };
 struct CaptureStep { std::string id; bool skippable; };
 struct CaptureObservation { std::string step, sample; bool skipped; };
 // Native lifecycle only. A host supplies real camera/quality evaluation, model
 // generation and persistence. No progress timer or fabricated avatar is used.
 class CaptureSession final {
  public:
-  explicit CaptureSession(std::vector<CaptureStep> steps) : steps_(std::move(steps)) {
+  explicit CaptureSession(std::vector<CaptureStep> steps,
+                          CaptureSource source = CaptureSource::local_device)
+      : steps_(std::move(steps)), source_(source) {
     if (steps_.empty()) throw std::invalid_argument("capture needs steps");
     for (size_t i = 0; i < steps_.size(); ++i) {
       if (steps_[i].id.empty()) throw std::invalid_argument("empty capture step");
@@ -23,6 +29,7 @@ class CaptureSession final {
     }
   }
   CaptureStage stage() const { return stage_; }
+  CaptureSource source() const { return source_; }
   const std::string& savedAsset() const { return saved_; }
   const std::string& previewAsset() const { return candidate_; }
   const std::vector<CaptureObservation>& observations() const { return observations_; }
@@ -52,6 +59,15 @@ class CaptureSession final {
       throw std::logic_error("capture coverage incomplete");
     if (std::none_of(observations_.begin(), observations_.end(), [](const auto& o){return !o.skipped;}))
       throw std::logic_error("capture has no samples");
+    advanceEpoch();
+    stage_ = source_ == CaptureSource::companion_phone ? CaptureStage::handoff
+                                                     : CaptureStage::processing;
+    return epoch_;
+  }
+  // Companion-phone bundles wait in handoff until the receiving host
+  // acknowledges the transfer; the returned epoch is the processing job id.
+  uint64_t transferAcknowledged() {
+    if (stage_ != CaptureStage::handoff) throw std::logic_error("no pending transfer");
     advanceEpoch(); stage_ = CaptureStage::processing; return epoch_;
   }
   bool generated(uint64_t job, std::string asset, bool qualityAccepted) {
@@ -78,6 +94,7 @@ class CaptureSession final {
     ++epoch_;
   }
   std::vector<CaptureStep> steps_;
+  CaptureSource source_;
   std::vector<CaptureObservation> observations_;
   CaptureStage stage_ = CaptureStage::prepare;
   uint64_t epoch_ = 0;

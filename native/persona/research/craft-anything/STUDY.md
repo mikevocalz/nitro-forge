@@ -102,7 +102,12 @@ result. A headset camera or supplied image/video may still feed the same
 lifecycle, but phone capture is the flow to design for first. A
 companion-device handoff needs explicit transfer acknowledgement; account
 sync and a system-default avatar cannot be promised until platform-specific
-APIs are verified.
+APIs are verified. `capture_session.hpp` now models this: a
+`CaptureSource::companion_phone` session seals its observations into a
+`handoff` stage after coverage completes and only enters processing after
+`transferAcknowledged()` returns a fresh job epoch, mirroring the reference
+app's `CloudSyncAcknowledgementActivity`. Local-device and supplied-media
+sources proceed directly to processing.
 
 For visionOS, distinguish a system Persona virtual-camera presentation from
 our independently fitted 3D bust. Neither is proof of access to Apple's mesh
@@ -112,13 +117,16 @@ native OpenXR-controlled asset. Public SDK capabilities define integration.
 ## Implemented and remaining
 
 `capture_session.hpp` now implements native prepare/capture/process/review/save,
-quality gates, optional skips, cancellation, generation retry and stale-result
-rejection. Its tests also verify recapture preserves the accepted avatar.
+quality gates, optional skips, cancellation, generation retry, stale-result
+rejection and companion-phone transfer acknowledgement. Its tests also verify
+recapture preserves the accepted avatar and that a sealed phone bundle rejects
+late samples until acknowledged.
 This is UI-independent C++ usable without React Native; the existing Nitro v1
 bridge does not yet expose this capture controller.
 
 Still needed: real quality evaluator/camera adapter, fitted assets, GNM training
-or fitting path, phone/headset transfer, rendered native guide and preview,
+or fitting path, phone/headset transport and account sync, rendered native
+guide and preview,
 appearance editing, persistence deletion, GPU animation and headset testing.
 The native state machine does not by itself reproduce either full experience.
 

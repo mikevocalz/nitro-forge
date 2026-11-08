@@ -144,6 +144,10 @@ PICO, GNM retargeting assets and renderer binding are not yet verified.
 `capture_session.hpp` implements guided capture lifecycle with host quality
 acceptance, accessible optional-step skipping, explicit generated-asset review,
 retry, cancellation and protection against stale asynchronous results. It keeps
-the previous saved avatar until a new reviewed candidate is accepted. Camera
-capture, UI, fitting and persistence stay with explicit host adapters.
+the previous saved avatar until a new reviewed candidate is accepted. Capture
+source is explicit: local device, companion phone or supplied media. A
+companion-phone session seals its samples into a `handoff` stage and requires
+`transferAcknowledged()` before processing, mirroring the observed reference
+app's explicit phone-to-headset acknowledgement without implying account sync.
+Camera capture, UI, fitting and persistence stay with explicit host adapters.
 See [Craft Anything study and execution limitations](research/craft-anything/STUDY.md).
