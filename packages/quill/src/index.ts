@@ -1284,8 +1284,11 @@ export class QuillDocument {
    *
    * Without `font`, widths are the legacy 0.5em estimate. With `font`
    * naming a family admitted via `registerFont`, lines wrap on real
-   * unhinted advance widths from that face (no shaping/kerning — see
-   * docs/completion/reports/P-font-glyph-backend-decision.md).
+   * advances — R2 resolves each inline run's `font_family`/`font_size`
+   * against the registry (unregistered families fall back to `font`)
+   * and line heights use the face's real `hhea`/`OS/2` metrics. See
+   * docs/completion/reports/P-font-glyph-backend-decision.md and
+   * P-quill-renderpage-r2.md.
    */
   layout(pageWidth: number, fontSize: number, pageHeight?: number, font?: string) {
     return this.call<{ pages: LayoutPage[] }>(OPS.layout, {
@@ -1305,11 +1308,15 @@ export class QuillDocument {
    * entry, no `document:changed`.
    *
    * `font` is required (no estimate fallback — there are no glyphs to
-   * draw without a registered face). Bounds: ≤4096 px per side and
-   * ≤32 MiB RGBA; `maxDim` optionally tightens the per-side cap.
-   * R1 scope honestly: text glyphs only — no images, decorations,
-   * headers/footers, per-run styles, or real line metrics (see the
-   * decision doc's deferral list).
+   * draw without a registered face) and acts as the base face: R2
+   * resolves each inline run's `font_family`/`font_size` against the
+   * session registry (unregistered families fall back to `font`;
+   * explicit `font_size` is absolute points), and line heights/baselines
+   * use real `hhea`/`OS/2` metrics where the face exposes them. Bounds:
+   * ≤4096 px per side and ≤32 MiB RGBA; `maxDim` optionally tightens the
+   * per-side cap. Remaining honest scope: text glyphs only — no images,
+   * decorations, headers/footers, per-run colors/underline/strike, or
+   * synthetic styles (see the decision doc's deferral list).
    */
   renderPage(options: RenderPageOptions) {
     return this.call<RenderPageResult>(OPS.renderPage, {

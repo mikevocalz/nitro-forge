@@ -39,6 +39,7 @@ use format::{
 mod fonts;
 use fonts::{FontInfo, FontRegistry};
 mod glyphs;
+mod runs;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -2960,24 +2961,27 @@ impl QuillEngine {
 
         // Optional real-font measurement: `font` names a family admitted via
         // `registerFont`. Absent or null keeps the legacy 0.5em estimate
-        // byte-identically. One face measures the whole call — per-run
-        // family/size resolution is deferred (fonts.rs module docs).
-        let measure =
-            match p.get("font") {
-                None | Some(Value::Null) => None,
-                Some(v) => {
-                    let name = as_str(v, "font")?;
-                    let face = self.fonts.find(name).ok_or_else(|| {
-                        EngineError::validation(format!(
-                            "font '{name}' is not registered; call registerFont first"
-                        ))
-                    })?;
-                    Some(fonts::FaceMeasure::open(face).ok_or_else(|| {
-                        EngineError::internal("registered font failed to re-parse")
-                    })?)
-                }
-            };
-        let pages = self.layout_pages(page_width, font_size, page_height, measure.as_ref());
+        // byte-identically (and therefore keeps ignoring per-run styles —
+        // there is no face to resolve them against). With `font`, R2
+        // resolves each inline run's `font_family`/`font_size` against the
+        // session registry (`runs.rs`); unregistered families fall back to
+        // this base face.
+        let plan = match p.get("font") {
+            None | Some(Value::Null) => None,
+            Some(v) => {
+                let name = as_str(v, "font")?;
+                let face = self.fonts.find(name).ok_or_else(|| {
+                    EngineError::validation(format!(
+                        "font '{name}' is not registered; call registerFont first"
+                    ))
+                })?;
+                Some(runs::FontPlan {
+                    registry: &self.fonts,
+                    base_face: face.clone(),
+                })
+            }
+        };
+        let pages = self.layout_pages(page_width, font_size, page_height, plan.as_ref());
         let pages: Vec<Value> = pages
             .into_iter()
             .map(|lines| {
@@ -2997,15 +3001,21 @@ impl QuillEngine {
     /// passes, the same page splitting — so `renderPage` pixels can never
     /// drift from the `{block,start,end}` spans `layout` reports. Returns
     /// pages of `(block, start, end)` line spans in document order.
+    ///
+    /// `plan` is the session-font context (`runs::FontPlan`): `None`
+    /// keeps the legacy 0.5em estimate with uniform `LINE_SPACING` line
+    /// heights; `Some` resolves each block's runs (`runs::resolve_block_runs`)
+    /// so advances, line heights and baselines can differ per run, with
+    /// real `hhea`/`OS/2` line metrics where the face exposes them.
     fn layout_pages(
         &self,
         page_width: f64,
         font_size: f64,
         page_height: f64,
-        measure: Option<&fonts::FaceMeasure>,
+        plan: Option<&runs::FontPlan>,
     ) -> Vec<Vec<(usize, usize, usize)>> {
-        // char → advance in font units, memoized across blocks.
-        let mut advance_cache: std::collections::HashMap<char, f64> =
+        // (face ptr, char) → advance units, memoized across blocks.
+        let mut advance_cache: std::collections::HashMap<(usize, char), f64> =
             std::collections::HashMap::new();
 
         // Wrap each block greedily into {start,end} char spans.
@@ -3014,107 +3024,116 @@ impl QuillEngine {
         let mut remaining = page_height;
 
         for (bi, b) in self.blocks.iter().enumerate() {
-            let eff = font_size * b.kind.font_mult();
-            let line_height = eff * LINE_SPACING;
-
-            // Cell paragraphs wrap with the same greedy approximation as
-            // top-level blocks; line spans index the block's
-            // `block_content_text` serialization (for a table, the
-            // `tables::table_text` cell grid — `layout` models no cell
-            // geometry).
-            let text = block_content_text(b);
-            let spans = match &measure {
+            // Per-line heights in points, parallel to `spans`.
+            let (spans, line_heights): (Vec<(usize, usize)>, Vec<f64>) = match plan {
                 None => {
+                    let eff = font_size * b.kind.font_mult();
+                    let line_height = eff * LINE_SPACING;
                     let advance = eff * GLYPH_EM;
                     let max_chars = (page_width / advance).floor() as usize;
-                    wrap_block(&text, max_chars.max(1))
+                    let spans = wrap_block(&block_content_text(b), max_chars.max(1));
+                    let heights = vec![line_height; spans.len()];
+                    (spans, heights)
                 }
-                Some(m) => {
-                    let chars: Vec<char> = text.chars().collect();
+                Some(plan) => {
+                    // R2: resolve the block's inline runs once — advances,
+                    // shaping pieces and line metrics all come from the
+                    // same resolution `renderPage` redraws.
+                    let br = runs::resolve_block_runs(b, font_size, plan);
+                    let chars: Vec<char> = br.text.chars().collect();
                     let n = chars.len();
-                    let scale = eff / m.units_per_em();
-                    let byte_offsets: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
-                    // Per-char advances in font units → cumulative point
-                    // prefix. Shaped output is not prefix-additive under
-                    // reordering/ligatures, so the prefix is rebuilt per
-                    // char rather than queried per candidate line.
-                    let prefix_of = |advances: &[f64]| {
-                        let mut prefix = Vec::with_capacity(n + 1);
-                        prefix.push(0.0f64);
-                        let mut acc = 0.0f64;
-                        for &units in advances {
-                            acc += units * scale;
-                            prefix.push(acc);
-                        }
-                        prefix
-                    };
-                    let unshaped = |cache: &mut std::collections::HashMap<char, f64>| {
-                        chars
-                            .iter()
-                            .map(|&c| *cache.entry(c).or_insert_with(|| m.advance_units(c)))
-                            .collect::<Vec<f64>>()
-                    };
-                    // Initial measurement: one whole-block harfrust pass
-                    // (GSUB+GPOS context across the entire block), then
-                    // bounded per-line re-shaping so a wrapped line's
-                    // kern/ligature context never sees the next line's
-                    // text. Each pass re-shapes every span independently
-                    // (spans partition the text → one pass shapes exactly
-                    // n chars) and re-wraps; wrap output equal to the
-                    // previous pass's spans means converged, since the
-                    // final lines were then measured in exactly the
-                    // context those spans imply. `None` anywhere — over
-                    // the block budget, shape error, or panic — falls
-                    // back to the slice-1 unshaped per-char path.
-                    // `renderPage` applies the identical gate
-                    // (`fonts::shaping_budget_allows`) so drawn advances
-                    // always match the spans measured here.
-                    let initial = if fonts::shaping_budget_allows(n) {
-                        m.shape_char_advances(&text, &byte_offsets)
-                    } else {
-                        None
-                    };
-                    match initial {
-                        Some(advances) => {
-                            let mut spans =
-                                wrap_block_measured(&chars, &prefix_of(&advances), page_width);
-                            for _ in 0..fonts::MAX_LINE_SHAPE_PASSES {
-                                let Some(line_advances) =
-                                    m.shape_span_char_advances(&text, &byte_offsets, &spans)
-                                else {
-                                    // Mid-iteration shape failure: the
-                                    // block falls back to the unshaped
-                                    // path wholesale, not a half-shaped
-                                    // mix.
-                                    let advances = unshaped(&mut advance_cache);
-                                    spans = wrap_block_measured(
-                                        &chars,
-                                        &prefix_of(&advances),
-                                        page_width,
-                                    );
-                                    break;
-                                };
-                                let new_spans = wrap_block_measured(
+                    let spans = {
+                        // Per-char advances in POINTS → cumulative prefix.
+                        // Shaped output is not prefix-additive under
+                        // reordering/ligatures, so the prefix is rebuilt
+                        // per char rather than queried per candidate line.
+                        let prefix_of = |advances: &[f64]| {
+                            let mut prefix = Vec::with_capacity(n + 1);
+                            prefix.push(0.0f64);
+                            let mut acc = 0.0f64;
+                            for &pt in advances {
+                                acc += pt;
+                                prefix.push(acc);
+                            }
+                            prefix
+                        };
+                        let unshaped =
+                            |cache: &mut std::collections::HashMap<(usize, char), f64>| {
+                                br.unshaped_advances(cache)
+                            };
+                        // Initial measurement: one harfrust pass per
+                        // resolved run (GSUB+GPOS context within each
+                        // run's own text — never across a style boundary),
+                        // then bounded per-line re-shaping so a wrapped
+                        // line's kern/ligature context never sees the next
+                        // line's text. Each pass shapes every
+                        // `span ∩ run` piece independently and re-wraps;
+                        // wrap output equal to the previous pass's spans
+                        // means converged. `None` anywhere — over the
+                        // block budget, shape error, or panic — falls back
+                        // to the unshaped per-char path.
+                        // `renderPage` applies the identical gate
+                        // (`BlockRuns::may_shape`) so drawn advances always
+                        // match the spans measured here.
+                        let initial = if br.may_shape {
+                            br.shaped_advances(&br.initial_pieces())
+                        } else {
+                            None
+                        };
+                        match initial {
+                            Some(advances) => {
+                                let mut spans = wrap_block_measured(
                                     &chars,
-                                    &prefix_of(&line_advances),
+                                    &prefix_of(&advances),
                                     page_width,
                                 );
-                                let converged = new_spans == spans;
-                                spans = new_spans;
-                                if converged {
-                                    break;
+                                for _ in 0..fonts::MAX_LINE_SHAPE_PASSES {
+                                    let Some(line_advances) =
+                                        br.shaped_advances(&br.span_pieces(&spans))
+                                    else {
+                                        // Mid-iteration shape failure:
+                                        // the block falls back to the
+                                        // unshaped path wholesale, not a
+                                        // half-shaped mix.
+                                        let advances = unshaped(&mut advance_cache);
+                                        spans = wrap_block_measured(
+                                            &chars,
+                                            &prefix_of(&advances),
+                                            page_width,
+                                        );
+                                        break;
+                                    };
+                                    let new_spans = wrap_block_measured(
+                                        &chars,
+                                        &prefix_of(&line_advances),
+                                        page_width,
+                                    );
+                                    let converged = new_spans == spans;
+                                    spans = new_spans;
+                                    if converged {
+                                        break;
+                                    }
                                 }
+                                spans
                             }
-                            spans
+                            None => {
+                                let advances = unshaped(&mut advance_cache);
+                                wrap_block_measured(&chars, &prefix_of(&advances), page_width)
+                            }
                         }
-                        None => {
-                            let advances = unshaped(&mut advance_cache);
-                            wrap_block_measured(&chars, &prefix_of(&advances), page_width)
-                        }
-                    }
+                    };
+                    // Per-line heights: max run line height over each
+                    // span (empty spans take the block default). The same
+                    // `BlockRuns::line_height` `renderPage` uses, so page
+                    // breaks and pixel baselines agree.
+                    let heights: Vec<f64> = spans
+                        .iter()
+                        .map(|&(s, e)| br.line_height(s, e))
+                        .collect();
+                    (spans, heights)
                 }
             };
-            let block_height = spans.len() as f64 * line_height;
+            let block_height: f64 = line_heights.iter().sum();
 
             // A block that doesn't fit the remaining page height starts on a
             // fresh page (unless the page is already empty).
@@ -3122,7 +3141,8 @@ impl QuillEngine {
                 pages.push(std::mem::take(&mut cur_lines));
                 remaining = page_height;
             }
-            for (s, e) in spans {
+            for (i, (s, e)) in spans.into_iter().enumerate() {
+                let line_height = line_heights[i];
                 if line_height > remaining && !cur_lines.is_empty() {
                     pages.push(std::mem::take(&mut cur_lines));
                     remaining = page_height;
@@ -3203,17 +3223,22 @@ impl QuillEngine {
             }
         };
 
-        // `font` is required: renderPage has no glyph-less fallback.
+        // `font` is required: renderPage has no glyph-less fallback. It is
+        // the base face every run resolves against (R2: runs naming other
+        // registered families draw with those faces; unregistered names
+        // fall back here — `runs.rs`).
         let font_name = as_str(field(p, "font")?, "font")?;
         let face = self.fonts.find(font_name).ok_or_else(|| {
             EngineError::validation(format!(
                 "font '{font_name}' is not registered; call registerFont first"
             ))
         })?;
-        let measure = fonts::FaceMeasure::open(face)
-            .ok_or_else(|| EngineError::internal("registered font failed to re-parse"))?;
+        let plan = runs::FontPlan {
+            registry: &self.fonts,
+            base_face: face.clone(),
+        };
 
-        let pages = self.layout_pages(page_width, font_size, page_height, Some(&measure));
+        let pages = self.layout_pages(page_width, font_size, page_height, Some(&plan));
         let Some(lines) = pages.get(page) else {
             return Err(EngineError::out_of_bounds(format!(
                 "page {page} out of range ({})",
@@ -3248,12 +3273,12 @@ impl QuillEngine {
         }
 
         let pixels = glyphs::render_page_rgba(
-            &measure,
+            &plan,
+            font_size,
             &self.blocks,
             lines,
             width_px,
             height_px,
-            font_size,
             dpi,
             color,
             background,
@@ -5261,46 +5286,6 @@ mod tests {
         assert_eq!(r2.data, r.data);
     }
 
-    /// `shape_span_char_advances` folds each span's shaping onto its own
-    /// chars and rejects malformed span sets.
-    #[test]
-    fn span_shaping_is_per_line_and_validates_spans() {
-        use fonts::FaceMeasure;
-        let mut reg = fonts::FontRegistry::default();
-        reg.register("NFTestMono", 0, test_font_bytes().to_vec())
-            .unwrap();
-        let face = reg.find("NFTestMono").unwrap();
-        let m = FaceMeasure::open(face).unwrap();
-        let text = "WWW";
-        let offs: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
-        // "WW" kerns internally (700+1000); the trailing lone "W" is a
-        // full 1000 — the break-adjacent kern is gone.
-        let adv = m
-            .shape_span_char_advances(text, &offs, &[(0, 2), (2, 3)])
-            .unwrap();
-        assert_eq!(adv, vec![700.0, 1000.0, 1000.0]);
-        // A different partition measures differently — proving context
-        // really is per span, not whole-block.
-        let adv2 = m
-            .shape_span_char_advances(text, &offs, &[(0, 1), (1, 3)])
-            .unwrap();
-        assert_eq!(adv2, vec![1000.0, 700.0, 1000.0]);
-        // Malformed spans (gap, overlap, out of range, empty) → None.
-        assert!(m
-            .shape_span_char_advances(text, &offs, &[(0, 1), (2, 3)])
-            .is_none());
-        assert!(m
-            .shape_span_char_advances(text, &offs, &[(0, 2), (1, 3)])
-            .is_none());
-        assert!(m.shape_span_char_advances(text, &offs, &[(0, 4)]).is_none());
-        assert!(m
-            .shape_span_char_advances(text, &offs, &[(0, 0), (0, 3)])
-            .is_none());
-        assert!(m
-            .shape_span_char_advances(text, &offs, &[(0, 3), (3, 3)])
-            .is_none());
-    }
-
     // -- renderPage (R1: glyph rasterization) --------------------------------
 
     fn render_page(e: &mut QuillEngine, payload: Value) -> CommandResult {
@@ -5381,7 +5366,7 @@ mod tests {
             json!({
                 "page_width": 120.0,
                 "font_size": 12.0,
-                "page_height": 40.0,
+                "page_height": 30.0,
                 "font": "NFTestMono",
             }),
         );
@@ -5394,7 +5379,7 @@ mod tests {
                 json!({
                     "page_width": 120.0,
                     "font_size": 12.0,
-                    "page_height": 40.0,
+                    "page_height": 30.0,
                     "font": "NFTestMono",
                     "page": page,
                 }),
@@ -5408,7 +5393,7 @@ mod tests {
                 json!({
                     "page_width": 120.0,
                     "font_size": 12.0,
-                    "page_height": 40.0,
+                    "page_height": 30.0,
                     "font": "NFTestMono",
                     "page": page_count,
                 })
@@ -7400,4 +7385,182 @@ mod tests {
         assert_eq!(styles(&mut e).as_array().unwrap().len(), 2);
         assert_eq!(block_style_id(&mut e, 0), "para");
     }
+    // -- R2: real line metrics + per-run font/style resolution --------------
+
+    /// R2 real line metrics: the fixture's `hhea` line is (800,-200,0)
+    /// over upem 1000, so `layout {font}` now uses a 1.0em line height
+    /// (was the 1.4em `LINE_SPACING` estimate) and a 0.8em baseline.
+    /// At font_size 10 / page_height 25 exactly two 10pt lines fit per
+    /// page — five one-line blocks paginate 2/2/1, where the estimate
+    /// allowed only one 14pt line per page.
+    #[test]
+    fn layout_uses_real_font_line_metrics() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "hi\nhi\nhi\nhi\nhi");
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({
+                "page_width": 1000.0,
+                "font_size": 10.0,
+                "page_height": 25.0,
+                "font": "NFTestMono",
+            }),
+        );
+        let pages = r.data["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 3, "real metrics: 2+2+1 lines of 10pt");
+        assert_eq!(pages[0]["lines"].as_array().unwrap().len(), 2);
+        assert_eq!(pages[2]["lines"].as_array().unwrap().len(), 1);
+
+        // Contrast: the no-font estimate path keeps LINE_SPACING (14pt
+        // lines → one per 25pt page) byte-identically to R1.
+        let stub = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 1000.0, "font_size": 10.0, "page_height": 25.0}),
+        );
+        assert_eq!(stub.data["pages"].as_array().unwrap().len(), 5);
+    }
+
+    /// Per-run `font_size` is absolute points and splits shaping at the
+    /// run boundary: "W"@10pt + "W"@20pt measure 10+20=30pt > 25pt and
+    /// hard-break per char, where uniform 10pt "WW" kerns to 17pt and
+    /// fits one line.
+    #[test]
+    fn layout_resolves_per_run_font_size() {
+        let payload = || {
+            json!({
+                "page_width": 25.0,
+                "font_size": 10.0,
+                "page_height": 1000.0,
+                "font": "NFTestMono",
+            })
+        };
+        let spans_of = |e: &mut QuillEngine| -> Vec<(u64, u64)> {
+            apply(e, "layout", payload()).data["pages"][0]["lines"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|l| (l["start"].as_u64().unwrap(), l["end"].as_u64().unwrap()))
+                .collect()
+        };
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "WW");
+        assert_eq!(spans_of(&mut e), vec![(0, 2)], "uniform WW kerns to 17pt");
+
+        apply(
+            &mut e,
+            "applyStyle",
+            json!({
+                "from": {"block": 0, "offset": 1},
+                "to": {"block": 0, "offset": 2},
+                "style": {"font_size": 20.0},
+            }),
+        );
+        assert_eq!(
+            spans_of(&mut e),
+            vec![(0, 1), (1, 2)],
+            "per-run sizes measure independently and break the kern"
+        );
+    }
+
+    /// An unregistered run `font_family` falls back to the base `font`
+    /// face — read ops never fail on a missing host font (the R2
+    /// fallback policy documented in `runs.rs`).
+    #[test]
+    fn layout_unregistered_run_family_falls_back_to_base() {
+        let payload = || {
+            json!({
+                "page_width": 25.0,
+                "font_size": 10.0,
+                "page_height": 1000.0,
+                "font": "NFTestMono",
+            })
+        };
+        let spans_of = |e: &mut QuillEngine| -> Value {
+            apply(e, "layout", payload()).data["pages"].clone()
+        };
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "WW");
+        let plain = spans_of(&mut e);
+        apply(
+            &mut e,
+            "applyStyle",
+            json!({
+                "from": {"block": 0, "offset": 0},
+                "to": {"block": 0, "offset": 2},
+                "style": {"font_family": "NotRegistered"},
+            }),
+        );
+        assert_eq!(
+            spans_of(&mut e),
+            plain,
+            "missing family must measure identically to the base face"
+        );
+    }
+
+    /// `renderPage` draws per-run sizes and honors the family fallback:
+    /// a 24pt run produces different (deterministic) pixels, while an
+    /// unregistered family renders byte-identical to the unstyled doc.
+    #[test]
+    fn render_page_per_run_size_and_family_fallback() {
+        let payload = || {
+            json!({
+                "page_width": 200.0,
+                "font_size": 12.0,
+                "page_height": 100.0,
+                "font": "NFTestMono",
+                "page": 0,
+            })
+        };
+        let mut e = engine();
+        register_test_font(&mut e);
+        insert(&mut e, 0, 0, "WW");
+        let plain = render_page(&mut e, payload());
+        let plain_b64 = plain.data["pixels_b64"].as_str().unwrap().to_string();
+
+        let mut e2 = engine();
+        register_test_font(&mut e2);
+        insert(&mut e2, 0, 0, "WW");
+        apply(
+            &mut e2,
+            "applyStyle",
+            json!({
+                "from": {"block": 0, "offset": 0},
+                "to": {"block": 0, "offset": 2},
+                "style": {"font_family": "NotRegistered"},
+            }),
+        );
+        let fallback = render_page(&mut e2, payload());
+        assert_eq!(
+            fallback.data["pixels_b64"].as_str().unwrap(),
+            plain_b64,
+            "unregistered family must draw the base face"
+        );
+
+        let mut e3 = engine();
+        register_test_font(&mut e3);
+        insert(&mut e3, 0, 0, "WW");
+        apply(
+            &mut e3,
+            "applyStyle",
+            json!({
+                "from": {"block": 0, "offset": 1},
+                "to": {"block": 0, "offset": 2},
+                "style": {"font_size": 24.0},
+            }),
+        );
+        let styled = render_page(&mut e3, payload());
+        assert_ne!(
+            styled.data["pixels_b64"].as_str().unwrap(),
+            plain_b64,
+            "a 24pt run must draw differently from 12pt"
+        );
+        let styled2 = render_page(&mut e3, payload());
+        assert_eq!(styled2.data["pixels_b64"], styled.data["pixels_b64"]);
+    }
 }
+

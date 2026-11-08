@@ -31,7 +31,8 @@
 //!   existing greedy word wrap keeps its contiguous `{start,end}` char
 //!   spans. The initial whole-block shape seeds the wrap; then up to
 //!   `MAX_LINE_SHAPE_PASSES` bounded passes re-shape each wrapped line
-//!   independently (`shape_span_char_advances`) and re-wrap until the
+//!   independently (`runs::BlockRuns::shaped_advances`, per `span ∩ run`
+//!   piece since R2) and re-wrap until the
 //!   spans converge, so a final line's kern/ligature context never sees
 //!   the next line's text. What shaping still does NOT give us: any
 //!   glyph positions — `layout` still returns spans only — and exact
@@ -47,10 +48,17 @@
 //!   tiny-skia rasterizer in `glyphs.rs`, under the SAME
 //!   `MAX_SHAPED_CHARS_PER_BLOCK` gate ([`shaping_budget_allows`]) so the
 //!   advances render draws always match the spans `layout` measured.
-//!   Still NOT modeled (R2+): per-run family/size/style resolution,
-//!   real ascent/descent/line-gap metrics, hinting, synthetic
-//!   bold/italic, bitmap/color strikes, vertical text, images — see
-//!   `glyphs.rs` module docs and `docs/ENGINE_OPS.md` `renderPage`.
+//! - **Resolved (R2)**: [`FaceMeasure::line_box_units`] exposes real
+//!   `hhea`/`OS/2` ascent/descent/line-gap (read-fonts' FreeType-style
+//!   selection) and `runs.rs` resolves each inline run's
+//!   `font_family`/`font_size` against the session registry — real line
+//!   metrics and per-run faces/sizes now drive BOTH `layout` and
+//!   `renderPage` through the shared `layout_pages`/`BlockRuns` path.
+//!   Still NOT modeled (R2 remainder/R3+): per-run
+//!   `color`/`highlight`/`underline`/`strike`, synthetic bold/italic,
+//!   hinting, subpixel positioning, bitmap/color strikes, vertical text,
+//!   images — see `glyphs.rs`/`runs.rs` module docs and
+//!   `docs/ENGINE_OPS.md` `renderPage`.
 //!
 //! Session discipline: the registry is engine-session state, NOT document
 //! state. It is excluded from `snapshot`/`restore`, from the undo journal,
@@ -284,7 +292,10 @@ pub struct PositionedGlyph {
 
 /// A parsed face for a batch of measurements. `skrifa::Font` clones share
 /// the face's `Arc`'d blob, so opening is a refcount bump — but callers
-/// still open once per read op rather than per character.
+/// still open once per read op rather than per character. `Clone` is
+/// cheap for the same reason (R2's per-run resolution holds one per
+/// distinct resolved face).
+#[derive(Clone)]
 pub struct FaceMeasure {
     font: skrifa::Font,
     units_per_em: f64,
@@ -303,6 +314,27 @@ impl FaceMeasure {
 
     pub fn units_per_em(&self) -> f64 {
         self.units_per_em
+    }
+
+    /// Real horizontal line metrics in *font units* (unscaled):
+    /// `(ascent, descent, line_gap)` from read-fonts'
+    /// `Font::metrics().h_line()` — the FreeType-style selection
+    /// (OS/2 typo metrics when `USE_TYPO_METRICS` is set, else nonzero
+    /// `hhea`, else nonzero typo, else the OS/2 Windows clipping line
+    /// with zero gap). `descent` is negative, `line_gap` may be zero.
+    ///
+    /// `None` when the font exposes no usable line metrics (e.g. a bare
+    /// Type 1/CFF face without `hhea`/`OS/2`) — callers fall back to the
+    /// `LINE_SPACING` em-box estimate. R2: this is what replaces the
+    /// estimate in BOTH `layout` and `renderPage` line heights and
+    /// baselines (`runs.rs`).
+    pub fn line_box_units(&self) -> Option<(f64, f64, f64)> {
+        let line = self.font.metrics().h_line()?;
+        Some((
+            line.ascender.to_f64(),
+            line.descender.to_f64(),
+            line.line_gap.to_f64(),
+        ))
     }
 
     /// Advance width of `c` in *font units* (unscaled, unhinted):
@@ -384,84 +416,6 @@ impl FaceMeasure {
             // `byte_offsets[0] == 0 <= byte`, so `i >= 1`; clamp anyway.
             let idx = i.saturating_sub(1).min(char_count - 1);
             out[idx] += f64::from(pos.x_advance);
-        }
-        Some(out)
-    }
-
-    /// Per-line shaping pass for `layout {font}`: shape each
-    /// `(start,end)` char span of `text` independently so kern/ligature
-    /// context never crosses a wrap boundary.
-    ///
-    /// `byte_offsets` and the span indexing are exactly as in
-    /// [`FaceMeasure::shape_char_advances`]; `spans` must tile
-    /// `0..byte_offsets.len()` contiguously (the greedy wrap's output
-    /// does). The returned vec has one entry per char of the whole
-    /// text — entry `i` comes from the shaping of the span containing
-    /// char `i`. Each line re-guesses segment properties, so a line's
-    /// direction/script context is its own; one `ShaperFont` and one
-    /// `Buffer` serve all spans.
-    ///
-    /// Returns `None` on any shape failure/panic or malformed spans so
-    /// the caller falls back to the unshaped path — same contract as
-    /// [`FaceMeasure::shape_char_advances`].
-    pub fn shape_span_char_advances(
-        &self,
-        text: &str,
-        byte_offsets: &[usize],
-        spans: &[(usize, usize)],
-    ) -> Option<Vec<f64>> {
-        let n = byte_offsets.len();
-        let mut out = vec![0.0f64; n];
-        if n == 0 {
-            return Some(out);
-        }
-        // Spans must partition 0..n exactly; anything else is a caller
-        // bug and takes the fallback path rather than a partial measure.
-        let mut covered = 0usize;
-        for &(s, e) in spans {
-            if s != covered || e <= s || e > n {
-                return None;
-            }
-            covered = e;
-        }
-        if covered != n {
-            return None;
-        }
-
-        let mut buffer = harfrust::Buffer::new();
-        let shaped = catch_unwind(AssertUnwindSafe(|| {
-            let shaper = harfrust::ShaperFont::new(&self.font);
-            for &(s, e) in spans {
-                let byte_s = byte_offsets[s];
-                let byte_e = if e == n { text.len() } else { byte_offsets[e] };
-                let line = &text[byte_s..byte_e];
-                // Cluster values are UTF-8 byte offsets into `line`.
-                let rel: Vec<usize> = byte_offsets[s..e].iter().map(|&o| o - byte_s).collect();
-                buffer.clear();
-                buffer.push_str(line);
-                buffer.guess_segment_properties();
-                if !harfrust::shape(&shaper, &mut buffer, harfrust::ShapeOptions::new()).is_ok()
-                    || !buffer.allocation_successful()
-                {
-                    return false;
-                }
-                let infos = buffer.glyph_infos();
-                let positions = buffer.glyph_positions();
-                if infos.len() != positions.len() {
-                    return false;
-                }
-                for (info, pos) in infos.iter().zip(positions.iter()) {
-                    let byte = info.cluster as usize;
-                    let i = rel.partition_point(|&o| o <= byte);
-                    // `rel[0] == 0 <= byte`, so `i >= 1`; clamp anyway.
-                    let idx = i.saturating_sub(1).min(e - s - 1);
-                    out[s + idx] += f64::from(pos.x_advance);
-                }
-            }
-            true
-        }));
-        if !shaped.unwrap_or(false) {
-            return None;
         }
         Some(out)
     }

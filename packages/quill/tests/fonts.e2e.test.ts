@@ -119,6 +119,47 @@ describe("quill font registry + measured layout (real Rust via nf-cli)", () => {
     await doc.close();
   });
 
+  it("layout uses real hhea line metrics and per-run font_size (R2)", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.registerFont("NFTestMono", FONT_BYTES);
+    // Fixture hhea line = (800,-200,0)/upem1000 → 1.0em line height,
+    // 0.8em baseline (was the 1.4em LINE_SPACING estimate). Five one-line
+    // blocks at font_size 10 / page_height 25 paginate 2/2/1; the no-font
+    // estimate still allows only one 14pt line per page.
+    await doc.insertText({ block: 0, offset: 0 }, "hi\nhi\nhi\nhi\nhi");
+    const measured = await doc.layout(1000, 10, 25, "NFTestMono");
+    expect(measured.data.pages).toHaveLength(3);
+    expect(measured.data.pages[0]!.lines).toHaveLength(2);
+    const stub = await doc.layout(1000, 10, 25);
+    expect(stub.data.pages).toHaveLength(5);
+
+    // Per-run font_size is absolute points and splits shaping at the
+    // run boundary: "W"@10 + "W"@20 measure 30pt > 25pt and break per
+    // char; uniform 10pt "WW" kerns to 17pt and fits one line.
+    const doc2 = await QuillDocument.open(host);
+    await doc2.registerFont("NFTestMono", FONT_BYTES);
+    await doc2.insertText({ block: 0, offset: 0 }, "WW");
+    const uniform = await doc2.layout(25, 10, 1000, "NFTestMono");
+    expect(uniform.data.pages[0]!.lines).toHaveLength(1);
+    await doc2.applyStyle(
+      { block: 0, offset: 1 },
+      { block: 0, offset: 2 },
+      { font_size: 20 },
+    );
+    const styled = await doc2.layout(25, 10, 1000, "NFTestMono");
+    expect(styled.data.pages[0]!.lines).toHaveLength(2);
+    // An unregistered run family falls back to the base face silently.
+    await doc2.applyStyle(
+      { block: 0, offset: 0 },
+      { block: 0, offset: 2 },
+      { font_family: "NotRegistered" },
+    );
+    const fallback = await doc2.layout(25, 10, 1000, "NFTestMono");
+    expect(fallback.data.pages[0]!.lines).toHaveLength(2);
+    await doc2.close();
+    await doc.close();
+  });
+
   it("removeFont drops faces by content hash; fonts are session state", async () => {
     const doc = await QuillDocument.open(host);
     const reg = await doc.registerFont("NFTestMono", FONT_BYTES);

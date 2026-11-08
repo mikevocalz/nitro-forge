@@ -18,15 +18,17 @@
 //!    anti-aliased winding fills. Glyph y is flipped (font y-up → pixmap
 //!    y-down) by the draw transform; x advances accumulate in pixels.
 //!
-//! Honest R1 scope: horizontal text with shaped pen offsets. `y_advance`
-//! is dropped (horizontal text) exactly as the advance-folding path
-//! drops it. NOT modeled (per the decision doc's deferral list): real
-//! ascent/descent/line-gap metrics — the baseline is `line_top +
-//! font_size_px`, the em-box approximation `LINE_SPACING` already
-//! implies; R2 swaps real metrics into `layout` and `renderPage` together
-//! — plus per-run styles, synthetic bold/italic, hinting, subpixel
-//! positioning, bitmap/color strikes, vertical text, images,
-//! decorations, headers/footers and TOC page numbers (R2/R3).
+//! R2: each emitted line is drawn as its `span ∩ run` pieces from
+//! `runs::resolve_block_runs` — the same per-run face/size resolution
+//! `layout_pages` measured — at real `hhea`/`OS/2` line metrics where
+//! the face exposes them (`LINE_SPACING` em-box fallback otherwise), with
+//! the baseline at the line's max run ascender. `y_advance` is still
+//! dropped (horizontal text) exactly as the advance-folding path drops
+//! it. NOT modeled (per the decision doc's deferral list): per-run
+//! `color`/`highlight`/`underline`/`strike`, synthetic bold/italic,
+//! hinting, subpixel positioning, bitmap/color strikes, vertical text,
+//! images, decorations, headers/footers and TOC page numbers (R2
+//! remainder/R3).
 //!
 //! Safety budget: `layout`'s shaped path is gated by
 //! `fonts::MAX_SHAPED_CHARS_PER_BLOCK` — over-budget blocks are measured
@@ -45,8 +47,9 @@
 //! to the 131072-char block cap cannot be interrupted mid-shape, but the
 //! cap bounds that worst case.
 
-use crate::fonts::{self, FaceMeasure, PositionedGlyph};
-use crate::{block_content_text, Block};
+use crate::fonts::PositionedGlyph;
+use crate::runs::{resolve_block_runs, BlockRuns, FontPlan};
+use crate::Block;
 use ignition_core::{EngineError, TaskContext};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use tiny_skia::{Color, FillRule, Paint, Pixmap, Transform};
@@ -105,34 +108,6 @@ fn glyph_path(font: &skrifa::Font, glyph_id: u32, ppem: f32) -> Option<tiny_skia
     .flatten()
 }
 
-/// Per-block render context: the same serialized text `layout` measures
-/// (`block_content_text`), its char→byte offsets, and the block's
-/// effective font size in points (`font_size * kind.font_mult()`).
-struct BlockText {
-    text: String,
-    byte_offsets: Vec<usize>,
-    eff_pt: f64,
-    /// `fonts::shaping_budget_allows(char_count)` — when false every line
-    /// of this block renders through `unshaped_line_glyphs`, the same
-    /// advances `layout` measured (see module docs).
-    may_shape: bool,
-}
-
-/// Build the per-block render context: the serialized text `layout`
-/// measures, its char→byte offsets, the effective font size, and the
-/// shaping-budget decision (`fonts::shaping_budget_allows` — identical
-/// gate to `layout_pages`).
-fn block_render_text(b: &Block, font_size: f64) -> BlockText {
-    let text = block_content_text(b);
-    let byte_offsets: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
-    BlockText {
-        may_shape: fonts::shaping_budget_allows(byte_offsets.len()),
-        byte_offsets,
-        text,
-        eff_pt: font_size * b.kind.font_mult(),
-    }
-}
-
 /// Checkpoint cadence for `renderPage` row bands (decision doc: "row-band
 /// checkpoints"). One `TaskContext::checkpoint` per 32 emitted lines keeps
 /// cancellation responsive on long documents without measurable cost.
@@ -148,39 +123,39 @@ const GLYPH_CHECKPOINT_STRIDE: usize = 256;
 /// top-left origin). `lines` are the page's `(block, start, end)` char
 /// spans exactly as `layout` reports them; `blocks` is the document.
 ///
-/// Geometry: layout units are points; `px = pt * dpi/72`. Each line's
-/// glyphs are shaped independently at `eff_pt * dpi/72` ppem and drawn
-/// from the line's left edge; the baseline sits `font_size_px` below the
-/// line top (the em-box approximation `LINE_SPACING` already implies —
-/// see module docs). Glyph advances and offsets are font units scaled by
-/// `ppem / units_per_em`. `y_px` accumulates per-line heights in page
+/// Geometry: layout units are points; `px = pt * dpi/72`. R2: each
+/// block's inline runs are resolved through [`resolve_block_runs`] — the
+/// SAME resolution `layout_pages` measured — so every `span ∩ run`
+/// piece draws with its own face, size, real line height and baseline
+/// (`BlockRuns::line_height`/`line_ascent`: `hhea`/`OS/2` metrics where
+/// the face exposes them, the `LINE_SPACING` em-box estimate otherwise).
+/// Each piece is shaped independently at `size_pt * dpi/72` ppem and
+/// drawn from the line's running pen position; the baseline is the
+/// line's max run ascender. `y_px` accumulates per-line heights in page
 /// order; lines arrive in document order so a running cursor is exact.
 ///
 /// Read-only and deterministic: no journal, no events, no state.
 pub fn render_page_rgba(
-    measure: &FaceMeasure,
+    plan: &FontPlan,
+    font_size: f64,
     blocks: &[Block],
     lines: &[(usize, usize, usize)],
     width_px: u32,
     height_px: u32,
-    font_size: f64,
     dpi: f64,
     color: Color,
     background: Color,
     ctx: Option<&TaskContext>,
 ) -> Result<Vec<u8>, EngineError> {
     let scale = dpi / 72.0;
-    let upem = measure.units_per_em();
-    let font = measure.skrifa_font();
     let mut pixmap = Pixmap::new(width_px, height_px)
         .ok_or_else(|| EngineError::internal("renderPage pixmap allocation failed"))?;
     pixmap.fill(background);
 
-    // Per-block text + offsets, computed once per call.
-    let block_texts: Vec<BlockText> = blocks
-        .iter()
-        .map(|b| block_render_text(b, font_size))
-        .collect();
+    // Per-block run resolution, computed lazily on first reference —
+    // identical inputs to `layout_pages`' resolution (same blocks,
+    // font_size, registry, base face), so heights and advances agree.
+    let mut block_runs: Vec<Option<BlockRuns>> = (0..blocks.len()).map(|_| None).collect();
 
     let paint = Paint {
         shader: tiny_skia::Shader::SolidColor(color),
@@ -195,52 +170,66 @@ pub fn render_page_rgba(
                 c.checkpoint()?;
             }
         }
-        let Some(bt) = block_texts.get(bi) else {
+        if bi >= blocks.len() {
+            // `layout` never emits an out-of-range block index; skip
+            // defensively without advancing the cursor — there is no
+            // line height to account for.
             continue;
-        };
-        let line_height_px = bt.eff_pt * crate::LINE_SPACING * scale;
-        // Baseline = line top + one em in px (documented approximation).
-        let baseline_y = y_px + bt.eff_pt * scale;
-        let n = bt.byte_offsets.len();
+        }
+        if block_runs[bi].is_none() {
+            block_runs[bi] = Some(resolve_block_runs(&blocks[bi], font_size, plan));
+        }
+        let br = block_runs[bi].as_ref().expect("resolved above");
+        let n = br.byte_offsets.len();
+        let line_height_px = br.line_height(start, end) * scale;
+        // Baseline = line top + the line's max run ascender (real
+        // metrics, or the em-box estimate — `runs.rs`).
+        let baseline_y = y_px + br.line_ascent(start, end) * scale;
         if start < end && start < n {
-            let e = end.min(n);
-            let byte_s = bt.byte_offsets[start];
-            let byte_e = if e == n { bt.text.len() } else { bt.byte_offsets[e] };
-            let line_text = &bt.text[byte_s..byte_e];
-
-            let ppem = (bt.eff_pt * scale) as f32;
-            let unit = ppem as f64 / upem; // font units → px
-            // Same shaping gate `layout` applies per block: over-budget
-            // blocks draw with the unshaped advances layout measured.
-            let glyphs = if bt.may_shape {
-                measure
-                    .shape_line_glyphs(line_text)
-                    .unwrap_or_else(|| measure.unshaped_line_glyphs(line_text))
-            } else {
-                measure.unshaped_line_glyphs(line_text)
-            };
+            // The same `span ∩ run` pieces `layout_pages` shaped for its
+            // final measurement pass — drawing them in order keeps pen
+            // positions identical to the measured advances.
+            let pieces = br.span_pieces(&[(start, end)]);
             let mut pen_x = 0.0f64;
             let mut since_checkpoint = 0usize;
-            for g in &glyphs {
-                let PositionedGlyph {
-                    glyph_id,
-                    x_advance,
-                    x_offset,
-                    y_offset,
-                } = *g;
-                let dx = pen_x + x_offset * unit;
-                let dy = baseline_y - y_offset * unit;
-                if let Some(path) = glyph_path(font, glyph_id, ppem) {
-                    // Font coords are y-up; flip into pixmap y-down space.
-                    let ts = Transform::from_row(1.0, 0.0, 0.0, -1.0, dx as f32, dy as f32);
-                    pixmap.fill_path(&path, &paint, FillRule::Winding, ts, None);
-                }
-                pen_x += x_advance * unit;
-                since_checkpoint += 1;
-                if since_checkpoint >= GLYPH_CHECKPOINT_STRIDE {
-                    since_checkpoint = 0;
-                    if let Some(c) = ctx {
-                        c.checkpoint()?;
+            for (ri, s, e) in pieces {
+                let run = &br.runs[ri];
+                let byte_s = br.byte_offsets[s];
+                let byte_e = if e == n { br.text.len() } else { br.byte_offsets[e] };
+                let seg = &br.text[byte_s..byte_e];
+                let font = run.measure.skrifa_font();
+                let ppem = (run.size_pt * scale) as f32;
+                let unit = ppem as f64 / run.measure.units_per_em(); // font units → px
+                // Same shaping gate `layout` applies per block: over-budget
+                // blocks draw with the unshaped advances layout measured.
+                let glyphs = if br.may_shape {
+                    run.measure
+                        .shape_line_glyphs(seg)
+                        .unwrap_or_else(|| run.measure.unshaped_line_glyphs(seg))
+                } else {
+                    run.measure.unshaped_line_glyphs(seg)
+                };
+                for g in &glyphs {
+                    let PositionedGlyph {
+                        glyph_id,
+                        x_advance,
+                        x_offset,
+                        y_offset,
+                    } = *g;
+                    let dx = pen_x + x_offset * unit;
+                    let dy = baseline_y - y_offset * unit;
+                    if let Some(path) = glyph_path(font, glyph_id, ppem) {
+                        // Font coords are y-up; flip into pixmap y-down space.
+                        let ts = Transform::from_row(1.0, 0.0, 0.0, -1.0, dx as f32, dy as f32);
+                        pixmap.fill_path(&path, &paint, FillRule::Winding, ts, None);
+                    }
+                    pen_x += x_advance * unit;
+                    since_checkpoint += 1;
+                    if since_checkpoint >= GLYPH_CHECKPOINT_STRIDE {
+                        since_checkpoint = 0;
+                        if let Some(c) = ctx {
+                            c.checkpoint()?;
+                        }
                     }
                 }
             }
@@ -303,11 +292,18 @@ mod tests {
         }
     }
 
-    fn test_measure() -> FaceMeasure {
+    fn test_registry() -> crate::fonts::FontRegistry {
         let bytes = include_bytes!("../tests/fixtures/nftestmono.ttf");
         let mut reg = crate::fonts::FontRegistry::default();
         reg.register("NFTestMono", 0, bytes.to_vec()).unwrap();
-        FaceMeasure::open(reg.find("NFTestMono").unwrap()).unwrap()
+        reg
+    }
+
+    fn test_plan<'a>(reg: &'a crate::fonts::FontRegistry) -> FontPlan<'a> {
+        FontPlan {
+            registry: reg,
+            base_face: reg.find("NFTestMono").unwrap().clone(),
+        }
     }
 
     /// Rasterization sanity: the fixture's 'W' glyph produces a real
@@ -339,13 +335,15 @@ mod tests {
         assert!(!shaping_budget_allows(0));
         assert!(!shaping_budget_allows(CAP + 1));
 
-        let small = block_render_text(&para_block("hi"), 12.0);
+        let reg = test_registry();
+        let plan = test_plan(&reg);
+        let small = resolve_block_runs(&para_block("hi"), 12.0, &plan);
         assert!(small.may_shape);
-        let at_cap = block_render_text(&para_block(&"x".repeat(CAP)), 12.0);
+        let at_cap = resolve_block_runs(&para_block(&"x".repeat(CAP)), 12.0, &plan);
         assert!(at_cap.may_shape);
-        let over = block_render_text(&para_block(&"x".repeat(CAP + 1)), 12.0);
+        let over = resolve_block_runs(&para_block(&"x".repeat(CAP + 1)), 12.0, &plan);
         assert!(!over.may_shape);
-        let empty = block_render_text(&para_block(""), 12.0);
+        let empty = resolve_block_runs(&para_block(""), 12.0, &plan);
         assert!(!empty.may_shape);
     }
 
@@ -356,12 +354,16 @@ mod tests {
     /// the second glyph's ink column distinguishes the two paths.
     #[test]
     fn over_budget_block_draws_unshaped_advances() {
-        let m = test_measure();
+        let reg = test_registry();
+        let plan = test_plan(&reg);
         // "WW" + padding past the char budget → may_shape == false.
-        let huge_text = format!("WW{}", "i".repeat(fonts::MAX_SHAPED_CHARS_PER_BLOCK - 1));
+        let huge_text = format!(
+            "WW{}",
+            "i".repeat(crate::fonts::MAX_SHAPED_CHARS_PER_BLOCK - 1)
+        );
         assert_eq!(
             huge_text.chars().count(),
-            fonts::MAX_SHAPED_CHARS_PER_BLOCK + 1
+            crate::fonts::MAX_SHAPED_CHARS_PER_BLOCK + 1
         );
         let huge = vec![para_block(&huge_text)];
         let small = vec![para_block("WW")];
@@ -372,15 +374,16 @@ mod tests {
         );
         // Line span (0,2) covers exactly "WW" in both blocks.
         let huge_px = render_page_rgba(
-            &m, &huge, &[(0, 0, 2)], 40, 20, 12.0, 96.0, args.0, args.1, None,
+            &plan, 12.0, &huge, &[(0, 0, 2)], 40, 20, 96.0, args.0, args.1, None,
         )
         .unwrap();
         let small_px = render_page_rgba(
-            &m, &small, &[(0, 0, 2)], 40, 20, 12.0, 96.0, args.0, args.1, None,
+            &plan, 12.0, &small, &[(0, 0, 2)], 40, 20, 96.0, args.0, args.1, None,
         )
         .unwrap();
         assert_ne!(huge_px, small_px, "shaped and unshaped runs must differ");
-        // y=10 sits inside the glyph band (baseline 16px, box top ≈4.8px).
+        // y=10 sits inside the glyph band (R2 baseline = 0.8em ascent =
+        // 12.8px at ppem 16; box top ≈1.6px, bottom ≈12.8px).
         // x=14: shaped second W spans 11.2..20.8px (inked); unshaped
         // second W starts at 16px (background shows through).
         assert!(
@@ -401,17 +404,18 @@ mod tests {
     /// of returning pixels.
     #[test]
     fn render_cancels_at_line_checkpoint() {
-        let m = test_measure();
+        let reg = test_registry();
+        let plan = test_plan(&reg);
         let blocks = vec![para_block("hi")];
         let ctx = TaskContext::new();
         ctx.cancel();
         let err = render_page_rgba(
-            &m,
+            &plan,
+            12.0,
             &blocks,
             &[(0, 0, 2)],
             20,
             10,
-            12.0,
             96.0,
             Color::from_rgba8(0, 0, 0, 255),
             Color::from_rgba8(255, 255, 255, 255),
@@ -426,15 +430,16 @@ mod tests {
     /// instead of zeroing them through premultiplied unpremultiply.
     #[test]
     fn transparent_background_preserves_hidden_rgb() {
-        let m = test_measure();
+        let reg = test_registry();
+        let plan = test_plan(&reg);
         let blocks = vec![para_block("")];
         let px = render_page_rgba(
-            &m,
+            &plan,
+            12.0,
             &blocks,
             &[],
             4,
             3,
-            12.0,
             96.0,
             Color::from_rgba8(0, 0, 0, 255),
             Color::from_rgba8(0x12, 0x34, 0x56, 0),
