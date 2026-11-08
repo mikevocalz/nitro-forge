@@ -36,7 +36,7 @@ export type ForgeWorkspaceProps = {
 const panelNames: Record<string, string> = { outline: 'Document', properties: 'Properties', actions: 'Commands', history: 'History' };
 const panelIcons: Record<string, string> = { outline: 'file', properties: 'layers', actions: 'plus', history: 'undo' };
 const panelHeadings: Record<string, string> = { outline: 'Document structure', properties: 'Inspector', actions: 'Document commands', history: 'Edit history' };
-const appIcons: Record<Studio, string> = { quill: 'text', prism: 'brush', tally: 'table', pitch: 'slide', folio: 'pdf', splice: 'video', cadence: 'music' };
+const appIcons: Record<Studio, string> = { quill: 'text', prism: 'brush', tally: 'table', pitch: 'slide', folio: 'pdf', splice: 'video', cadence: 'music', photo: 'image', motion: 'play', design: 'color-wheel', draft: 'pencil' };
 
 /** Shared inner editor chrome. The host owns and supplies one stable engine document. */
 export function ForgeWorkspace(props: ForgeWorkspaceProps) {
