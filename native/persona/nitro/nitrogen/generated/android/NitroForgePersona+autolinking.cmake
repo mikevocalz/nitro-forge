@@ -13,7 +13,9 @@ target_include_directories(NitroForgePersona PRIVATE
 )
 target_sources(NitroForgePersona PRIVATE
   "${CMAKE_CURRENT_LIST_DIR}/NitroForgePersonaOnLoad.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/../android/c++/HybridPersonaCaptureSpecClass.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../android/c++/HybridPersonaPerformanceSpecClass.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/HybridPersonaCaptureSpec.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../shared/c++/HybridPersonaPerformanceSpec.cpp"
 )
 

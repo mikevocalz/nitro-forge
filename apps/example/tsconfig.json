@@ -1,1 +1,15 @@
-{"extends": "../../tsconfig.base.json", "compilerOptions": {"types": ["node"], "noEmit": true, "allowImportingTsExtensions": true}, "include": ["app", "src"]}
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "@webgpu/types"
+    ],
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "app",
+    "src"
+  ]
+}

@@ -7,12 +7,14 @@
 
 #include <NitroForgePersona/private/NitroForgePersonaOnLoad.hpp>
 #include <NitroModules/HybridClassRegistry.hpp>
+#include <NitroForgePersona/HybridPersonaCaptureSpec.hpp>
 #include <NitroForgePersona/HybridPersonaPerformanceSpec.hpp>
 
 namespace margelo::nitro::nitroforge::persona {
   void registerAllNatives() {
 
 
+    HybridClassRegistry::registerHybridClass("nitroforge.persona.PersonaCapture", HybridPersonaCaptureSpec::Class::get());
     HybridClassRegistry::registerHybridClass("nitroforge.persona.PersonaPerformance", HybridPersonaPerformanceSpec::Class::get());
   }
 }

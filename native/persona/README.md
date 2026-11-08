@@ -155,3 +155,20 @@ companion-phone session seals its samples into a `handoff` stage and requires
 app's explicit phone-to-headset acknowledgement without implying account sync.
 Camera capture, UI, fitting and persistence stay with explicit host adapters.
 See [Craft Anything study and execution limitations](research/craft-anything/STUDY.md).
+
+## Phone capture adapter (Nitro v1 + VisionCamera)
+
+`nitro/src/PersonaCapture.nitro.ts` exposes the session to JavaScript as a
+Nitro HybridObject (`@nitro-forge/persona-native/capture`), regenerated via
+Nitrogen (2/2 HybridObjects). `apps/example/src/persona-capture/` holds the
+phone-hosted adapter: VisionCamera v5 `useFrameOutput`/`usePhotoOutput`
+(outputs-based API, `pixelFormat 'yuv'`), a frame-processor worklet that does
+the zero-copy GPU preview (`getNativeBuffer()` -> `RNWebGPU
+.createVideoFrameFromNativeBuffer` -> `importExternalTexture` -> WGSL cover-fit
+pass, orientation/mirroring applied as UV metadata, never buffer rotation),
+periodic Y-plane luma statistics feeding `qualityForFrame` gates, and
+`runOnJS` handoff that calls `capturePhotoToFile` and hands the file path to
+`PersonaCapture.observe(...)`. Quality gates currently measure lighting only;
+head pose, device pose, glasses and face coverage remain unmeasured until a
+real landmark/pose evaluator lands. Generation/fitting, phone-headset
+transport and persistence are still host-owned and not implemented.

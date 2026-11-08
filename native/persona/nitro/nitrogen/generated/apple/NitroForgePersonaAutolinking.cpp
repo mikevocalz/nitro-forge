@@ -8,6 +8,7 @@
 #include <NitroForgePersona/NitroForgePersonaAutolinking.hpp>
 #include <NitroModules/HybridClassRegistry.hpp>
 
+#include <NitroForgePersona/HybridPersonaCaptureSpec.hpp>
 #include <NitroForgePersona/HybridPersonaPerformanceSpec.hpp>
 
 namespace margelo::nitro::nitroforge::persona {
@@ -15,6 +16,7 @@ namespace margelo::nitro::nitroforge::persona {
     using namespace margelo::nitro;
     using namespace margelo::nitro::nitroforge::persona;
 
+    HybridClassRegistry::registerHybridClass("nitroforge.persona.PersonaCapture", HybridPersonaCaptureSpec::Class::get());
     HybridClassRegistry::registerHybridClass("nitroforge.persona.PersonaPerformance", HybridPersonaPerformanceSpec::Class::get());
   }
 } // namespace margelo::nitro::nitroforge::persona
