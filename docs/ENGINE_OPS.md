@@ -262,7 +262,8 @@ the shared 16,384-cell cap), `body` required non-blank ≤8192 UTF-8 bytes,
 `author` optional ≤128 bytes without control characters, `resolved` a
 durable flag, at most 1024 comments per workbook. `PivotSpec = { id,
 sheet: sheet-id, name?, source: {sheet: sheet-id, range}, rows, columns,
-values, filters?, sort? }` is a durable workbook-level pivot-table spec:
+values, filters?, sort?, output? }` is a durable workbook-level
+pivot-table spec:
 `sheet` is the output sheet the pivot belongs to, `source.sheet`/`source.range`
 the data binding (canonical `"A1"`/`"A1:B2"` under the shared 16,384-cell
 cap), `rows`/`columns` ≤16 unique field indices each, `values` 1–16
@@ -270,6 +271,12 @@ cap), `rows`/`columns` ≤16 unique field indices each, `values` 1–16
 `{field, values}` entries (unique fields, 1–64 values of 1–512 bytes each)
 and `sort` an optional `{field, ascending}` — field indices are 0-based
 column offsets into the source range, at most 256 pivots per workbook.
+`output` is the optional materialization record `{anchor, rows, cols}`:
+`anchor` a canonical `"A1"` cell on the output sheet (spec inputs and
+patches set only the anchor; `output` accepts an `"A1"` string and `null`
+clears it, after which refresh anchors at `A1`), `rows`/`cols` the
+dimensions of the last materialized grid including the header row —
+`0`/`0` when nothing is materialized or the anchor was just retargeted.
 Because offsets are positional, a structural column insert/delete strictly
 inside the source range re-points every field index at/after the edit
 position (the spec survives unchanged unless a delete shrinks the range
@@ -288,11 +295,13 @@ table-name rule `[A-Za-z_][A-Za-z0-9_.]*` ≤128 bytes — deliberately
 *not* the stricter defined-name charset (`.` is legal in table names;
 the structured-reference reservation is deferred, see table rules
 below).
-Chart/sparkline specs, views, comments, pivot specs and table objects
+Chart/sparkline specs, views, comments and table objects
 are storage-only —
-the engine never evaluates chart/sparkline data, renders, computes pivot
-grids or writes pivot output cells, and writes no cells for tables or
-computes totals/banding; hosts read cells
+the engine never evaluates chart/sparkline data, renders or writes cells
+for them, and writes no cells for tables or computes totals/banding;
+pivot specs store only until `refreshPivot`/`refreshAllPivots`
+materialize their grids as ordinary cells (see pivot rules below).
+Hosts read cells
 and draw (see chart/sparkline/view/comment/pivot/table rules
 below). Validation rules on one sheet may not
 overlap; conditional and filter rules may. `CellFormat = { number_format?,
@@ -362,11 +371,13 @@ the sheet, and whose stored formats violate the attribute invariants above
 | `resolveComment` | `{id}` | `{comment}` | set `resolved:true`; already resolved eventless |
 | `reopenComment` | `{id}` | `{comment}` | set `resolved:false`; already open eventless |
 | `listComments` | `{sheet?,cell\|range?}` | `{comments:[{id,sheet,sheet_id,anchor,author?,body,resolved}]}` | read-only; `sheet` filters by bound sheet, `cell`/`range` narrow to containing/intersecting anchors on the resolved sheet |
-| `insertPivot` | `{sheet?,pivot:{name?,source:{sheet?,range:{from,to}},rows?,columns?,values,filters?,sort?}}` | `{pivot}` | append a pivot spec; see pivot rules below |
-| `updatePivot` | `{id,patch:{name?,source?,rows?,columns?,values?,filters?,sort?}}` | `{pivot}` | partial patch; `null` clears name/filters/sort; equal patch eventless |
+| `insertPivot` | `{sheet?,pivot:{name?,source:{sheet?,range:{from,to}},rows?,columns?,values,filters?,sort?,output?}}` | `{pivot}` | append a pivot spec; see pivot rules below |
+| `updatePivot` | `{id,patch:{name?,source?,rows?,columns?,values?,filters?,sort?,output?}}` | `{pivot}` | partial patch; `null` clears name/filters/sort/output; equal patch eventless |
 | `removePivot` | `{id}` | `{ok}` | `sheet` alongside `id` rejects |
-| `listPivots` | `{sheet?}` | `{pivots:[{id,sheet,sheet_id,name?,source:{sheet,sheet_id,range},rows?,columns?,values,filters?,sort?}]}` | read-only; `sheet` filters by output sheet |
+| `listPivots` | `{sheet?}` | `{pivots:[{id,sheet,sheet_id,name?,source:{sheet,sheet_id,range},rows?,columns?,values,filters?,sort?,output?}]}` | read-only; `sheet` filters by output sheet |
 | `describePivot` | `{id}` | `{pivot}` | read-only single spec; `not_found` on unknown id |
+| `refreshPivot` | `{id}` | `{changed}` | materialize one pivot's grid on its output sheet; identical refresh eventless |
+| `refreshAllPivots` | `{}` | `{changed,refreshed,skipped}` | materialize every pivot on unprotected output sheets; protected ones are skipped |
 | `insertTable` | `{sheet?,table:{name?,range:{from,to},show_headers?,show_totals?,banded_rows?,banded_columns?}}` | `{table}` | append a table object; see table rules below |
 | `updateTable` | `{id,patch:{name?,range?,show_headers?,show_totals?,banded_rows?,banded_columns?}}` | `{table}` | partial patch; unknown patch keys and `sheet` alongside `id` reject; equal patch eventless |
 | `removeTable` | `{id}` | `{ok}` | `sheet` alongside `id` rejects |
@@ -809,9 +820,10 @@ re-admits each only while it still satisfies the restore invariants;
 not retarget them. Bound-sheet protection guards apply like the other
 rule tables.
 
-Pivot rules (slice 11-A — spec storage/create/read/delete only): pivots
+Pivot rules (slices 11-A spec storage + 11-B materialization): pivots
 are **workbook-scoped** specs like charts — `PivotSpec = {id, sheet,
-name?, source, rows, columns, values, filters?, sort?}` at most 256 per
+name?, source, rows, columns, values, filters?, sort?, output?}` at most
+256 per
 workbook, each with a workbook-unique id. `sheet` is the durable id of
 the **output** sheet the pivot belongs to; `source = {sheet, range}`
 binds the data — a durable source-sheet id (payload `sheet` inside
@@ -837,17 +849,65 @@ before commit so a patch cannot leave out-of-range field indices, and
 an unchanged spec is eventless. `removePivot {id}` removes one
 (`sheet` alongside `id` rejects); `listPivots {sheet?}` filters by
 **output** sheet and `describePivot {id}` reads one spec — both
-silent. **Storage only**: the engine writes no cells and never
-computes, refreshes or materializes the pivot grid — update/refresh/
-compute ops are deferred to a later slice; hosts read source cells via
-`getRange`/`getCell` and render or compute host-side. Mutations record
+silent. Spec mutations still write no cells; materialization is
+explicit via `refreshPivot {id}` / `refreshAllPivots {}`.
+
+**Refresh semantics**: `refreshPivot` evaluates every cell of
+`source.range` on the source sheet (computed values, formulas
+included), keeps records passing every `filters` entry (a record passes
+when the display text of its value at the filter's field — the same
+canonical scalar text used for labels: strings verbatim, finite numbers
+via `fmt_num`, `TRUE`/`FALSE`, errors as their literal — equals one of
+the filter's 1–64 literals; filters AND together), stable-sorts the
+survivors by the computed value at `sort.field` using the `sortRange`
+class order (empty < number < text < boolean < error, errors last in
+both directions, `ascending:false` inverts within-class only), then
+writes the grid as ordinary cells on the output sheet. Layout: one
+header row at `output.anchor` (default `A1`), then one row per distinct
+row-group; the first `rows.len()` columns carry the row-group labels
+(one per row field, `""` for empty components), followed by
+`distinct-column-groups × values.len()` aggregate columns. Header cells
+read `"<col-group labels joined by ` / `> | <agg>:<field>"` (the label
+part is omitted when the pivot has no column fields; `field` is the
+0-based source offset, not a header name). Group order is
+first-occurrence after the optional sort; an empty `rows`/`columns`
+axis is a single empty group, and a pivot with no surviving records
+writes only its (empty) header footprint — i.e. it clears the previous
+output. Aggregations read computed values per group: `sum`/`avg`/`min`/
+`max` use finite numbers only (non-numeric cells, including errors, are
+ignored and never propagate), `count` counts non-empty cells, and a
+group with no numeric input writes `""` (clears the cell). Written text
+is stored verbatim like `setRange`/`importCsv` — a computed string
+beginning with `=` becomes a formula on next read. Bounds: source cells
+are already capped at 16,384 by the range rule; the output rect
+(header + row groups) × (label columns + column groups × value slots)
+must stay ≤16,384 cells and inside the sheet from the anchor, checked
+before any mutation (`out_of_bounds`, atomic); each source-cell
+evaluation charges one unit of the evaluator's shared work allowance.
+The spec's `output` records `{anchor, rows, cols}` — the anchor plus
+the last materialized footprint — so a refresh first clears exactly the
+previously written rect and then writes the new one; retargeting
+`output` via `updatePivot` resets the footprint to `0`/`0` and abandons
+the old cells (they are not cleared). Materialized cells are normal
+cells: structural edits, formats, merges and undo treat them like any
+other content, and the output anchor itself does not remap. Each refresh
+records one whole-document undo entry covering the cell writes and the
+footprint update; a refresh whose computed raws and footprint are
+unchanged is eventless (`{changed:0}`, no events, no journal entry).
+`refreshAllPivots {}` refreshes every pivot in spec order (later pivots
+win overlapping cells) under one undo entry, skipping — not erroring —
+pivots whose output sheet is protected; `refreshPivot` is gated by the
+output sheet's protection like the other pivot mutations, and
+`sheet` alongside `id` rejects. Mutations record
 one whole-document undo entry each; `removeSheet` cascade-drops pivots
 whose **output or source** sheet is removed into the same undo entry
 and undo re-admits each only while it still satisfies the restore
 invariants; `duplicateSheet`/`moveSheet`/`renameSheet` do not copy or
 retarget pivots. A pivot's `source.range` is coordinate-bound and
 remaps with structural row/column edits on the source sheet (see
-structural rules); the output sheet carries no stored coordinates.
+structural rules); `output.anchor` is a fixed top-left that does **not**
+remap — the materialized cells themselves are ordinary cells and do
+remap/drop like any content.
 Protection guards mutations by the output sheet like chart ops — the
 source sheet is a read reference and does not gate.
 
@@ -1105,7 +1165,7 @@ bypass the 256 MiB total. Snapshot compat is unchanged: an
 imported workbook is ordinary engine state (merges make it emit the
 existing schema:8 wrapper).
 
-Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` and `importXlsx` reject while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. `saveSheetView` rejects on its target sheet (payload `sheet`, default active), `setSheetView` rejects on the view's bound sheet (or the resolved sheet for `view:null`) and `removeSheetView` rejects on the stored view's sheet; `listSheetViews` stays allowed. `addComment` rejects on its target sheet (payload `sheet`, default active) and `updateComment`/`removeComment`/`resolveComment`/`reopenComment` reject on the stored comment's sheet; `listComments` stays allowed. `insertPivot` rejects on its output sheet (payload `sheet`, default active) and `updatePivot`/`removePivot` reject on the stored pivot's output sheet — the source sheet is a read reference and does not gate; `listPivots`/`describePivot` stay allowed. `insertTable` rejects on its bound sheet (payload `sheet`, default active) and `updateTable`/`removeTable` reject on the stored table's bound sheet; `listTables`/`describeTable` stay allowed. `importCsv`/`importTsv` reject when their target sheet (payload `sheet`, default active) is protected; `exportCsv`/`exportTsv` are ungated reads. The structural ops (`insertRows`/`deleteRows`/`insertCols`/`deleteCols`) and merge ops (`mergeCells`/`unmergeCells`) reject when their target sheet is protected; `listMergedCells` stays allowed. Undo/redo and restore are explicit document/history actions and remain allowed. `renameSheet` and the structural band ops may mechanically rewrite `Sheet!` formula qualifiers workbook-wide as part of the gated op itself — that qualifier maintenance does not require each touched sheet to be unprotected (the same way `removeSheet` cascade-drops bound metadata). Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
+Protected sheets reject cell/clear/range/fill/format edits and targeted rename/remove/duplicate/move/color commands before mutation (including same-value edits). `new` and `importXlsx` reject while any sheet is protected. Reads, activation, adding/editing other sheets and explicit unprotect remain allowed; unrelated structural edits can shift tab indices without changing protected sheet identity. Name mutations are guarded by the sheet each name is bound to: `defineName` rejects when its target sheet (payload `sheet`, default active) is protected, `updateName`/`removeName` reject when the name's current sheet — or, for `updateName`, an explicitly requested new target — is protected; `listNames`/`functionCatalog` stay allowed. Validation and conditional-format mutations follow the same bound-sheet rule: `setValidation`/`setConditionalFormat` reject when their target sheet (payload `sheet`, default active) is protected, `clearValidation`/`clearConditionalFormat` reject when the rule's sheet (by `id`) or the target sheet (by `range`) is protected; `validateCell`, `getConditionalFormats`, `evaluateConditionalFormats`, `getFilters` and `evaluateFilters` stay allowed. `sortRange` rejects when its target sheet (payload `sheet`, default active) is protected; `setFilter` rejects on its target sheet and `clearFilter` rejects on the rule's sheet (by `id`) or the target sheet (by `range`), same bound-sheet rule as the other rule tables. `insertChart`/`setSparkline` reject on their target sheet (payload `sheet`, default active), `updateChart`/`removeChart` reject on the chart's bound sheet and `clearSparkline` rejects on the spec's sheet (by `id`) or the target sheet (by `cell`/`range`); `listCharts`/`listSparklines` stay allowed. `saveSheetView` rejects on its target sheet (payload `sheet`, default active), `setSheetView` rejects on the view's bound sheet (or the resolved sheet for `view:null`) and `removeSheetView` rejects on the stored view's sheet; `listSheetViews` stays allowed. `addComment` rejects on its target sheet (payload `sheet`, default active) and `updateComment`/`removeComment`/`resolveComment`/`reopenComment` reject on the stored comment's sheet; `listComments` stays allowed. `insertPivot` rejects on its output sheet (payload `sheet`, default active) and `updatePivot`/`removePivot`/`refreshPivot` reject on the stored pivot's output sheet — the source sheet is a read reference and does not gate; `refreshAllPivots` skips protected-output pivots instead of rejecting; `listPivots`/`describePivot` stay allowed. `insertTable` rejects on its bound sheet (payload `sheet`, default active) and `updateTable`/`removeTable` reject on the stored table's bound sheet; `listTables`/`describeTable` stay allowed. `importCsv`/`importTsv` reject when their target sheet (payload `sheet`, default active) is protected; `exportCsv`/`exportTsv` are ungated reads. The structural ops (`insertRows`/`deleteRows`/`insertCols`/`deleteCols`) and merge ops (`mergeCells`/`unmergeCells`) reject when their target sheet is protected; `listMergedCells` stays allowed. Undo/redo and restore are explicit document/history actions and remain allowed. `renameSheet` and the structural band ops may mechanically rewrite `Sheet!` formula qualifiers workbook-wide as part of the gated op itself — that qualifier maintenance does not require each touched sheet to be unprotected (the same way `removeSheet` cascade-drops bound metadata). Batch commands enforce this policy per staged command and roll back the whole batch on failure. This is an editing guard, not encryption or authentication. Missing legacy protection defaults to false; invalid serialized boolean values reject restore atomically.
 
 Sheet creation/duplication reject exhausted ids before mutation; restore rejects ids for which the next id cannot be represented. Tab tones default to none when restoring older snapshots; unknown tones reject restore atomically. Sheet moves and color edits validate before mutation and support undo/redo via the workbook journal. Same-value requests return `{ok:true}` with no events and no undo entry, preserving redo history.
 

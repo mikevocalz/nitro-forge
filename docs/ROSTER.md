@@ -1314,6 +1314,55 @@ typecheck` clean. Deferred: pivot compute/refresh/materialization,
 header-name field resolution, pivot UI wiring — no native/device
 acceptance or full P12–P14 completion is implied.
 
+## Tally pivot refresh/materialization source checkpoint (2026-11-07)
+
+Slice 11-B lands the deferred pivot compute: `refreshPivot {id}` and
+`refreshAllPivots {}` materialize the pivot grid as ordinary cells on
+the spec's output sheet. `PivotSpec` gains an optional `output`
+`{anchor, rows, cols}` record — `anchor` a canonical `"A1"` cell
+(spec inputs and `updatePivot` patches set only the anchor; `null`
+clears it back to the `A1` refresh default), `rows`/`cols` the last
+materialized footprint including the header row (`0`/`0` when nothing
+is materialized or the anchor was just retargeted). No snapshot schema
+bump: `output` rides inside the existing schema:9 `pivots` table, and
+restore strictly validates it (canonical on-sheet anchor, symmetric
+nonzero dims, rect inside the sheet and the shared 16,384-cell cap) —
+snapshots carrying `output` still fail closed on pre-11-B engines via
+`deny_unknown_fields`.
+
+Refresh evaluates every `source.range` cell's computed value (one
+shared-allowance work unit per cell), keeps records passing every
+`filters` entry (display-text literal match, ANDed), stable-sorts
+survivors by `sort.field` with the `sortRange` class order, groups by
+the `rows`/`columns` field offsets in first-occurrence order and writes
+one header row (`"<col labels> | <agg>:<field>"`) plus one row per
+row-group: `rows.len()` label columns then column-groups × value-slot
+aggregates. `sum`/`avg`/`min`/`max` read finite numbers only, `count`
+counts non-empty cells, errors never propagate, empty groups write `""`.
+The output rect is capped at 16,384 cells and must fit the sheet from
+the anchor — `out_of_bounds` before any mutation. The recorded
+footprint lets a refresh clear exactly the previous grid; retargeting
+`output` abandons (does not clear) the old cells, and the anchor does
+not participate in structural remap while the written cells are normal
+cells that do. Each refresh is one whole-document undo entry covering
+cells + footprint; an identical refresh is eventless. `refreshPivot`
+is protection-gated by the output sheet and rejects `sheet` alongside
+`id`; `refreshAllPivots` skips protected-output pivots (reported in
+`skipped`) under one undo entry. TS mirror adds the two `OPS` entries,
+`PivotOutputInfo`, `output` on `PivotInput`/`PivotPatch`/`PivotInfo`
+and `refreshPivot`/`refreshAllPivots` methods. Local evidence: `cargo
+test -p tally-engine` 230 passed (5 new pivot_ops refresh tests
+covering layout/aggs/filters/sort, eventless refresh, undo/redo,
+anchor patch + bounds, refreshAll protection skip, snapshot roundtrip
+and hostile `output` restore), `cargo build -p nf-cli` clean, `pnpm
+install --prefer-offline` clean, `pnpm --filter @nitro-forge/tally
+test` 90 Vitest passed across 23 files (1 new refresh e2e case in the
+pivots file), `pnpm --filter @nitro-forge/tally typecheck` clean.
+Deferred: grand
+total rows/columns, header-name field resolution, refresh-on-edit
+automation, pivot UI wiring — no native/device acceptance or full
+P12–P14 completion is implied.
+
 ## Tally table objects source checkpoint (2026-11-07)
 
 Tally gains workbook-level table objects (backlog item 12, slice 12 —

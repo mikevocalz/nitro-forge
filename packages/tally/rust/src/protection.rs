@@ -249,7 +249,7 @@ impl TallyEngine {
                 };
                 self.doc.sheets[idx].is_protected
             }
-            "updatePivot" | "removePivot" => p
+            "updatePivot" | "removePivot" | "refreshPivot" => p
                 .get("id")
                 .and_then(Value::as_u64)
                 .and_then(|id| self.doc.pivots.iter().find(|pv| pv.id == id))

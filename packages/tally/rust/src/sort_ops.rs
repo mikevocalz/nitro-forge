@@ -74,7 +74,7 @@ pub const MAX_SORT_KEYS: usize = 16;
 /// comparisons never re-allocate, and every non-scalar (errors,
 /// non-finite numbers, lists) collapses to `Err`, which always sorts last
 /// in both directions.
-enum SortKeyVal {
+pub(super) enum SortKeyVal {
     Empty,
     Num(f64),
     Text(String),
@@ -82,7 +82,7 @@ enum SortKeyVal {
     Err,
 }
 
-fn sort_val(v: &formula::Value) -> SortKeyVal {
+pub(super) fn sort_val(v: &formula::Value) -> SortKeyVal {
     match v {
         formula::Value::Empty => SortKeyVal::Empty,
         formula::Value::Num(n) if n.is_finite() => SortKeyVal::Num(*n),
@@ -95,7 +95,7 @@ fn sort_val(v: &formula::Value) -> SortKeyVal {
 /// Rank of a computed value for sorting. Errors (and anything that cannot
 /// produce a scalar — non-finite numbers, lists) share the top rank so they
 /// always sort last regardless of direction.
-fn rank(v: &SortKeyVal) -> u8 {
+pub(super) fn rank(v: &SortKeyVal) -> u8 {
     match v {
         SortKeyVal::Empty => 0,
         SortKeyVal::Num(_) => 1,
@@ -107,7 +107,7 @@ fn rank(v: &SortKeyVal) -> u8 {
 
 /// In-class comparison for two same-rank, non-error values. Text is
 /// pre-lowercased, so this is a plain byte-order compare.
-fn cmp_in_class(a: &SortKeyVal, b: &SortKeyVal) -> Ordering {
+pub(super) fn cmp_in_class(a: &SortKeyVal, b: &SortKeyVal) -> Ordering {
     match (a, b) {
         (SortKeyVal::Num(x), SortKeyVal::Num(y)) => {
             x.partial_cmp(y).unwrap_or(Ordering::Equal)

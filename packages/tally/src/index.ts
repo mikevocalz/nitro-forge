@@ -63,6 +63,8 @@ export const OPS = {
   removePivot: "removePivot",
   listPivots: "listPivots",
   describePivot: "describePivot",
+  refreshPivot: "refreshPivot",
+  refreshAllPivots: "refreshAllPivots",
   insertTable: "insertTable",
   updateTable: "updateTable",
   removeTable: "removeTable",
@@ -474,10 +476,24 @@ export interface PivotSortInput {
 }
 
 /**
+ * Materialization anchor plus the last-written grid footprint. `anchor`
+ * is a canonical `"A1"` cell address on the output sheet; `rows`/`cols`
+ * are the dimensions of the grid the last refresh wrote (header row
+ * included), `0`/`0` when nothing is materialized. Spec inputs and
+ * patches only ever set the anchor — the engine manages the footprint.
+ */
+export interface PivotOutputInfo {
+  anchor: string;
+  rows: number;
+  cols: number;
+}
+
+/**
  * Input for `insertPivot`'s `pivot` field (id/sheet are engine-assigned).
  * `source.sheet` accepts a sheet name or index and defaults to the pivot's
- * output sheet. Storage only — the engine never computes or writes the
- * pivot grid; update/refresh/materialization are deferred.
+ * output sheet. `output` is the optional `"A1"` anchor the materialized
+ * grid's top-left cell occupies (default `A1` at refresh time). The
+ * engine writes no cells until `refreshPivot`/`refreshAllPivots`.
  */
 export interface PivotInput {
   /** 1–128 byte display name; omit for none. */
@@ -496,12 +512,16 @@ export interface PivotInput {
   /** ≤32 field filters with unique fields. */
   filters?: readonly PivotFilterInput[];
   sort?: PivotSortInput;
+  /** `"A1"` output anchor on the output sheet; omit for `A1`. */
+  output?: string;
 }
 
 /**
  * `updatePivot` patch: present keys set, explicit `null` clears
- * `name`/`filters`/`sort`; `source`/`rows`/`columns`/`values` cannot be
- * null. `source` is a partial `{sheet?, range?}` — at least one key.
+ * `name`/`filters`/`sort`/`output`; `source`/`rows`/`columns`/`values`
+ * cannot be null. `source` is a partial `{sheet?, range?}` — at least one
+ * key. `output` retargets the materialization anchor and resets the
+ * recorded footprint (the old grid's cells are no longer tracked).
  * An unchanged spec is eventless.
  */
 export interface PivotPatch {
@@ -512,13 +532,15 @@ export interface PivotPatch {
   values?: readonly PivotValueInput[];
   filters?: readonly PivotFilterInput[] | null;
   sort?: PivotSortInput | null;
+  /** `"A1"` output anchor; `null` clears back to the `A1` default. */
+  output?: string | null;
 }
 
 /**
  * Durable pivot-table spec bound to an output sheet, sourcing data from a
- * (possibly different) sheet's canonical range. Storage only — the engine
- * stores and returns the bounded spec; computing, refreshing and
- * materializing the pivot grid are deferred to a later slice.
+ * (possibly different) sheet's canonical range. `refreshPivot` /
+ * `refreshAllPivots` materialize the computed grid as ordinary cells at
+ * `output.anchor`; the spec itself still writes no cells on create/patch.
  */
 export interface PivotInfo {
   id: number;
@@ -540,6 +562,8 @@ export interface PivotInfo {
   values: PivotValueInput[];
   filters?: PivotFilterInput[];
   sort?: PivotSortInput;
+  /** Present once an `output` anchor was set or a refresh recorded one. */
+  output?: PivotOutputInfo;
 }
 
 /**
@@ -1144,8 +1168,9 @@ export class TallyDocument {
    * Store a pivot-table spec bound to `sheet` (name or index; default
    * active), sourcing `pivot.source.range` on `pivot.source.sheet`
    * (default the output sheet). Fields are 0-based column offsets into
-   * the source range. Storage only — the engine writes no cells;
-   * compute/refresh/materialization are deferred.
+   * the source range; `pivot.output` is the optional `"A1"` materialization
+   * anchor. Writes no cells — `refreshPivot`/`refreshAllPivots` compute
+   * and write the grid.
    */
   insertPivot(pivot: PivotInput, sheet?: string | number) {
     return this.call<{ pivot: PivotInfo }>(OPS.insertPivot, {
@@ -1162,13 +1187,14 @@ export class TallyDocument {
           ? {}
           : { filters: pivot.filters.map((f) => ({ field: f.field, values: [...f.values] })) }),
         ...(pivot.sort === undefined ? {} : { sort: pivot.sort }),
+        ...(pivot.output === undefined ? {} : { output: pivot.output }),
       },
       ...(sheet === undefined ? {} : { sheet }),
     });
   }
   /**
    * Partially update pivot `id`: present patch keys set, `null` clears
-   * `name`/`filters`/`sort`. An unchanged spec is eventless.
+   * `name`/`filters`/`sort`/`output`. An unchanged spec is eventless.
    */
   updatePivot(id: number, patch: PivotPatch) {
     const body: Record<string, unknown> = {};
@@ -1190,6 +1216,7 @@ export class TallyDocument {
         : patch.filters.map((f) => ({ field: f.field, values: [...f.values] }));
     }
     if (patch.sort !== undefined) body.sort = patch.sort;
+    if (patch.output !== undefined) body.output = patch.output;
     return this.call<{ pivot: PivotInfo }>(OPS.updatePivot, { id, patch: body });
   }
   removePivot(id: number) {
@@ -1204,6 +1231,30 @@ export class TallyDocument {
   /** Read-only single pivot spec by id. */
   describePivot(id: number) {
     return this.call<{ pivot: PivotInfo }>(OPS.describePivot, { id });
+  }
+  /**
+   * Materialize pivot `id`'s grid as ordinary cells on its output sheet,
+   * anchored at the spec's `output.anchor` (default `A1`). The refresh
+   * clears the previously materialized footprint, then writes the header
+   * row and one row per row-group; aggregations read computed source
+   * values. One undo entry covers cells + recorded footprint; an
+   * identical refresh is eventless (`changed: 0`). Gated by the output
+   * sheet's protection like the other pivot mutations.
+   */
+  refreshPivot(id: number) {
+    return this.call<{ changed: number }>(OPS.refreshPivot, { id });
+  }
+  /**
+   * Materialize every pivot whose output sheet is unprotected, in spec
+   * order (later pivots win overlapping cells). Pivots on protected
+   * output sheets are skipped and reported in `skipped`, not errors.
+   * One undo entry covers the whole batch; an all-no-op pass is eventless.
+   */
+  refreshAllPivots() {
+    return this.call<{ changed: number; refreshed: number; skipped: number[] }>(
+      OPS.refreshAllPivots,
+      {},
+    );
   }
   /**
    * Store a table object (Excel Table) bound to `sheet` (name or index;
