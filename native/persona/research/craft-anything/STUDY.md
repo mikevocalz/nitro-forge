@@ -31,6 +31,22 @@ Apple capture `ev_bc8453045b34f23c217777f5adec65bf288cfee4135e9d82e58467de67663d
 Google open `ev_21a209d0c56a6fe379b4942a6cdf2b2ab40610941835bfae2ec93f1c3dae7a21`,
 Google capture `ev_9b8c5720b51f56b432dac0eeaccabf81980669d3fd5e80503f6d7c4f2d13b888`.
 
+3. Craft Anything 0.5.0 macOS universal CLI (official release, SHA256 verified
+   against SHA256SUMS.txt), run in deep mode over the same MCP transport with
+   the browser toolset enabled. Targets were the phone side of the experience:
+   the Likeness (beta) Play Store listing
+   (`com.google.android.apps.vr.doppel`, captured at 390 px with page source)
+   and the compatible-devices help page. Deep mode also retained `page.html`,
+   from which the eight published app screenshots were downloaded at native
+   resolution (four portrait phone captures, four landscape headset views) and
+   text-extracted locally with macOS Vision OCR; OCR output is kept next to
+   the images under
+   `artifacts/craft-anything/persona-study/capture-playstore-phone/app-screenshots/`.
+   Evidence ids: Play Store open `ev_1787990f0000002d07c257fbf27be9da2d35b8a86b99948e3876822722773afc`,
+   capture `ev_9ab156c8b52274c2770afa67f3a63236df2f8f5f03471e0cde1df8040043808f`;
+   devices page open `ev_a51ef7b80388bc1c29f30cf9579e04ee7a78ef5cd6488f0f003fe655b4aa6c83`,
+   capture `ev_2e0b204f461dd8681b3aa072f10e0aab11a4e1128c87ab5b0a40ad6999701f94`.
+
 The captured material is the rendered public documentation, not the in-headset
 capture UI itself: these pages describe the flows in text and imagery but the
 actual guided-capture screens live on the devices. No pixel or spatial
@@ -52,9 +68,12 @@ Save/Recapture. Google describes companion-phone capture in the Likeness
 (beta) app on a compatible Android device while the headset is removed,
 generation on the phone, headset preview and management, with small edits
 (warmth, brightness, touch-up, background color fill) and synced deletion.
-Their device requirements and system defaults are properties of those
-products, not requirements or capabilities of our SDK. Captured page text
-confirms these flows verbatim; see the evidence ids above.
+The published app screenshots confirm the split: the phone owns onboarding,
+guided capture and expression prompts; the headset only previews, edits
+appearance/background and picks the avatar used in calls. Their device
+requirements and system defaults are properties of those products, not
+requirements or capabilities of our SDK. Captured page text and screenshot
+OCR confirm these flows; see the evidence ids above.
 
 These references establish observable product behavior, not either proprietary
 model, export format, splat representation or public access to private tracking.
@@ -76,10 +95,14 @@ accessibility. The bust stays in the native renderer with stereoscopic depth.
 No WebView or egui shell is added to the component. Craft Anything is a study
 and development tool, not a shipping dependency or a reconstruction model.
 
-Capture source is an adapter: a supported headset camera, companion phone or
-supplied image/video can feed the same lifecycle. A companion-device handoff
-needs explicit transfer acknowledgement; account sync and a system-default
-avatar cannot be promised until platform-specific APIs are verified.
+Capture source is an adapter, and the observed reference behavior makes the
+companion phone the primary capture host: guided capture, expression prompts
+and generation run on the phone while the headset previews and manages the
+result. A headset camera or supplied image/video may still feed the same
+lifecycle, but phone capture is the flow to design for first. A
+companion-device handoff needs explicit transfer acknowledgement; account
+sync and a system-default avatar cannot be promised until platform-specific
+APIs are verified.
 
 For visionOS, distinguish a system Persona virtual-camera presentation from
 our independently fitted 3D bust. Neither is proof of access to Apple's mesh
@@ -99,11 +122,13 @@ or fitting path, phone/headset transfer, rendered native guide and preview,
 appearance editing, persistence deletion, GPU animation and headset testing.
 The native state machine does not by itself reproduce either full experience.
 
-Visual verification of the reference documentation is now captured (rendered
-pages at three widths with text, outline and design tokens, plus the generated
-report). What remains uncaptured is the in-device experience itself: the
-headset-guided capture screens, generated avatar preview and live presence
-require physical Vision Pro / Galaxy XR hardware or approved reference
-footage. Public documentation and page captures are sufficient for lifecycle
-semantics, not for a pixel or spatial fidelity claim about either product's
-in-headset UI.
+Visual verification now covers the reference documentation pages (rendered at
+three widths with text, outline and design tokens), the Likeness Play Store
+listing at phone width with page source, the compatible-devices page, and the
+eight app screenshots Google publishes for the phone capture and headset
+preview flows. What remains uncaptured is the live experience itself: real
+guided-capture screens, generated avatar preview and live presence require
+physical Vision Pro / Galaxy XR hardware or approved reference footage.
+Public documentation, page captures and published screenshots are sufficient
+for lifecycle semantics, not for a pixel or spatial fidelity claim about
+either product's in-device UI.
