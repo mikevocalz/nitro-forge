@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nitro Forge Persona — b</title>
+<link href="https://fonts.googleapis.com/css2?family=General+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0E1620;--mut:#5C6B7A;--blue:#2563EB;--glass:rgba(255,255,255,.55);--line:rgba(14,22,32,.08)}
+*{margin:0;box-sizing:border-box}
+body{color:var(--ink);font-family:'General Sans',system-ui,sans-serif;background:#EDF1F6;min-height:100vh;
+ background:radial-gradient(90% 70% at 80% 0%, #FFFFFF 0%, transparent 55%),
+ radial-gradient(70% 60% at 10% 100%, #DCE6F2 0%, transparent 60%), #EDF1F6}
+.hero{min-height:100vh;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:40px;padding:90px 6vw;position:relative}
+.left{max-width:560px}
+.kicker{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--blue);margin-bottom:26px}
+h1{font-size:clamp(44px,5.6vw,84px);line-height:.98;letter-spacing:-.035em;font-weight:700}
+h1 em{font-style:normal;color:var(--blue)}
+.sub{margin-top:26px;font-size:17px;line-height:1.6;color:var(--mut);max-width:44ch}
+.actions{margin-top:34px;display:flex;gap:14px;flex-wrap:wrap}
+.primary{background:var(--ink);color:#fff;padding:15px 28px;border-radius:999px;font-weight:600;font-size:15px;border:0;cursor:pointer}
+.secondary{background:transparent;color:var(--ink);padding:15px 28px;border-radius:999px;font-weight:600;font-size:15px;border:1.5px solid var(--line);cursor:pointer}
+.right{position:relative;height:min(72vh,620px)}
+.panel{position:absolute;inset:0;border-radius:36px;background:linear-gradient(170deg,rgba(255,255,255,.85),rgba(255,255,255,.45));
+ border:1px solid rgba(255,255,255,.9);box-shadow:0 50px 100px -40px rgba(30,50,80,.35),inset 0 1px 0 #fff;backdrop-filter:blur(20px);overflow:hidden}
+.panel::before{content:"";position:absolute;inset:0;background:radial-gradient(70% 60% at 60% 30%, rgba(37,99,235,.14), transparent 70%)}
+.head{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:64%;filter:drop-shadow(0 30px 40px rgba(20,40,80,.25));animation:float 6s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(-50%,-53%)}}
+.chip{position:absolute;background:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.95);border-radius:18px;padding:12px 18px;font-size:12.5px;backdrop-filter:blur(12px);box-shadow:0 20px 40px -20px rgba(30,50,80,.3)}
+.chip b{display:block;font-size:15px;margin-bottom:2px}
+.c1{left:-4%;top:14%}.c2{right:-3%;bottom:16%}.c2 .ok{color:#0E9F6E}
+.meta{position:absolute;bottom:26px;left:6vw;right:6vw;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:70px}.right{height:52vh;order:-1}}
+</style></head><body>
+<section class="hero">
+<div class="left">
+ <div class="kicker">Nitro Forge · Persona SDK</div>
+ <h1>Your face,<br>live in<br><em>the headset.</em></h1>
+ <p class="sub">Guided phone capture scores lighting, pose and expression in real time. The result is a parametric persona — GNM-fitted, expression-driven, rendered on-device.</p>
+ <div class="actions"><button class="primary">Start guided capture</button><button class="secondary">See the pipeline</button></div>
+</div>
+<div class="right">
+ <div class="panel"></div>
+ <img class="head" src="../assets/head-glass.png" alt="Parametric head model">
+ <div class="chip c1"><b>Lighting</b>2,140 lux · pass</div>
+ <div class="chip c2"><b>Pose</b><span class="ok">yaw 3° · pass</span></div>
+</div>
+<div class="meta"><span>Capture → fit → transfer → render</span><span>GNM Head V3 · Apache-2.0</span></div>
+</section>
+</body></html>
