@@ -41,9 +41,16 @@
 //!   `MAX_SHAPED_CHARS_PER_BLOCK` chars skip shaping entirely. Shaping
 //!   failure or panic falls back to the unshaped per-char path for that
 //!   block (same values slice 1 produced).
-//! - **Not rendered**: no glyph outlines are drawn; rasterization stays
-//!   host-side (or a later skrifa-outline → Prism slice). `layout` returns
-//!   the same `{pages:[{lines:[{block,start,end}]}]}` spans as before.
+//! - **Rendered (R1)**: `renderPage` draws glyph outlines in-engine —
+//!   [`FaceMeasure::shape_line_glyphs`] and
+//!   [`FaceMeasure::unshaped_line_glyphs`] feed the skrifa-outline →
+//!   tiny-skia rasterizer in `glyphs.rs`, under the SAME
+//!   `MAX_SHAPED_CHARS_PER_BLOCK` gate ([`shaping_budget_allows`]) so the
+//!   advances render draws always match the spans `layout` measured.
+//!   Still NOT modeled (R2+): per-run family/size/style resolution,
+//!   real ascent/descent/line-gap metrics, hinting, synthetic
+//!   bold/italic, bitmap/color strikes, vertical text, images — see
+//!   `glyphs.rs` module docs and `docs/ENGINE_OPS.md` `renderPage`.
 //!
 //! Session discipline: the registry is engine-session state, NOT document
 //! state. It is excluded from `snapshot`/`restore`, from the undo journal,
@@ -80,6 +87,16 @@ pub const MAX_FONT_TOTAL_BYTES: usize = 256 * 1024 * 1024;
 /// text. 128K chars is far above any realistic paragraph while keeping
 /// worst-case shaped work per `layout` call bounded.
 pub const MAX_SHAPED_CHARS_PER_BLOCK: usize = 131_072;
+
+/// The shaping budget gate shared by `layout {font}` and `renderPage`:
+/// a block of `1..=MAX_SHAPED_CHARS_PER_BLOCK` chars may be shaped;
+/// empty or over-budget blocks take the unshaped `cmap`+`hmtx` path.
+/// `renderPage` MUST apply the identical gate — drawing a line with
+/// shaped advances that `layout` never used would misplace every glyph
+/// after the first kern/ligature.
+pub(crate) fn shaping_budget_allows(char_count: usize) -> bool {
+    char_count > 0 && char_count <= MAX_SHAPED_CHARS_PER_BLOCK
+}
 
 /// Bounded per-line re-shaping passes after the initial whole-block
 /// shape. Each pass re-shapes every wrapped line independently (spans

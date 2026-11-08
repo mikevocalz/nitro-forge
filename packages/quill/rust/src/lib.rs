@@ -3066,7 +3066,10 @@ impl QuillEngine {
                     // context those spans imply. `None` anywhere — over
                     // the block budget, shape error, or panic — falls
                     // back to the slice-1 unshaped per-char path.
-                    let initial = if n > 0 && n <= fonts::MAX_SHAPED_CHARS_PER_BLOCK {
+                    // `renderPage` applies the identical gate
+                    // (`fonts::shaping_budget_allows`) so drawn advances
+                    // always match the spans measured here.
+                    let initial = if fonts::shaping_budget_allows(n) {
                         m.shape_char_advances(&text, &byte_offsets)
                     } else {
                         None
@@ -5475,6 +5478,73 @@ mod tests {
         );
         assert_eq!(r.data["width"], 100);
         assert_eq!(r.data["height"], 50);
+    }
+
+    /// Over-budget blocks: `layout` measures them unshaped
+    /// (`MAX_SHAPED_CHARS_PER_BLOCK`) and `renderPage` must draw the same
+    /// unshaped advances — regression for the shaped-budget bypass. The
+    /// pixel-level proof lives in `glyphs::tests`; here the op must stay
+    /// correct and deterministic on hostile-huge text.
+    #[test]
+    fn render_page_over_budget_block_renders() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        let big = "W".repeat(fonts::MAX_SHAPED_CHARS_PER_BLOCK + 1);
+        insert(&mut e, 0, 0, &big);
+        let layout = apply(
+            &mut e,
+            "layout",
+            json!({
+                "page_width": 200.0,
+                "font_size": 12.0,
+                "page_height": 100.0,
+                "font": "NFTestMono",
+            }),
+        );
+        let page_count = layout.data["pages"].as_array().unwrap().len();
+        assert!(page_count > 1, "huge block should paginate");
+        let payload = json!({
+            "page_width": 200.0,
+            "font_size": 12.0,
+            "page_height": 100.0,
+            "font": "NFTestMono",
+            "page": 0,
+        });
+        let r = render_page(&mut e, payload.clone());
+        assert_eq!(r.data["page"], 0);
+        let px = base64_decode(r.data["pixels_b64"].as_str().unwrap()).unwrap();
+        assert!(
+            px.chunks_exact(4).any(|p| p[0] < 200),
+            "over-budget render produced no glyph ink"
+        );
+        let r2 = render_page(&mut e, payload);
+        assert_eq!(r2.data["pixels_b64"], r.data["pixels_b64"]);
+    }
+
+    /// `#RRGGBB00` output is fully transparent but keeps the background's
+    /// hidden RGB channels (straight-alpha honesty, `readRasterAsset`
+    /// precedent) rather than zeroing them via premultiplied unpremultiply.
+    #[test]
+    fn render_page_preserves_transparent_background_rgb() {
+        let mut e = engine();
+        register_test_font(&mut e);
+        let r = render_page(
+            &mut e,
+            json!({
+                "page_width": 20.0,
+                "font_size": 10.0,
+                "page_height": 10.0,
+                "font": "NFTestMono",
+                "page": 0,
+                "background": "#12345600",
+            }),
+        );
+        let px = base64_decode(r.data["pixels_b64"].as_str().unwrap()).unwrap();
+        // Empty first block → no glyph ink; every pixel is transparent
+        // with the background RGB preserved.
+        for p in px.chunks_exact(4) {
+            assert_eq!(p, &[0x12, 0x34, 0x56, 0]);
+        }
     }
 
     /// Shaped per-line glyph runs keep ids/advances/offsets; the unshaped

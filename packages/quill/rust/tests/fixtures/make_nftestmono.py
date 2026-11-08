@@ -74,6 +74,12 @@ fb.setupPost()
 fb.setupMaxp()
 
 font = fb.font
+# FontBuilder stamps head.created/modified with the wall clock, which
+# would make every regeneration produce different bytes. Pin both to a
+# fixed value so the fixture is byte-reproducible: 2020-01-01T00:00:00Z
+# as seconds since the 1904 Mac epoch (fontTools' 0x7C259DC0 offset).
+font["head"].created = 3660676800
+font["head"].modified = 3660676800
 addOpenTypeFeaturesFromString(
     font,
     """
