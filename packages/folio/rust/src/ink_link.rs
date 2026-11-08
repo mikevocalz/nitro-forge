@@ -174,6 +174,7 @@ impl FolioEngine {
     /// 0..=1 emits `/CA`. `/Rect` is the stroke bounding box padded by half
     /// the stroke width (minimum 1 pt).
     pub(super) fn op_add_ink(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        reject_encrypted(&self.doc, "ink annotation creation")?;
         let (page_id, loc) = self.annots_target(req_u64(p, "page")?)?;
         let paths_v = field(p, "paths")?
             .as_array()
@@ -327,6 +328,7 @@ impl FolioEngine {
     /// whitespace or control characters. `/BS /W 0` keeps the link border
     /// invisible; viewers still render the URI affordance.
     pub(super) fn op_add_link(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        reject_encrypted(&self.doc, "link annotation creation")?;
         let (page_id, loc) = self.annots_target(req_u64(p, "page")?)?;
         let rect = req_rect(p)?;
         let uri = req_str(p, "uri")?;

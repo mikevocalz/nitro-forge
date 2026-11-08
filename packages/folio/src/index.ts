@@ -39,6 +39,7 @@ export const OPS = {
   addFileAttachment: "addFileAttachment",
   redactRect: "redactRect",
   comparePdf: "comparePdf",
+  insertPageImage: "insertPageImage",
   encrypt: "encrypt",
   decrypt: "decrypt",
   save: "save",
@@ -61,6 +62,25 @@ export type InkPaths = readonly InkStroke[];
 export type FolioPermission =
   | "print" | "modify" | "copy" | "annotate" | "fill"
   | "accessibility" | "assemble" | "printHighQuality";
+/** Image input formats admitted by `insertPageImage` — see docs/ENGINE_OPS.md. */
+export type FolioImageFormat = "jpeg" | "png" | "raw";
+/**
+ * Image payload for `insertPageImage`. `jpeg`/`png` carry an encoded file
+ * (jpeg is embedded as DCTDecode passthrough — only the SOF header is
+ * read; png is decoded to samples: 8-bit, non-interlaced, gray/RGB with
+ * alpha discarded). `raw` carries unfiltered 8-bpc interleaved samples
+ * and requires `width`, `height` and `colorSpace`.
+ */
+export interface FolioPageImage {
+  format: FolioImageFormat;
+  data: Uint8Array;
+  /** `raw` only: pixel width. */
+  width?: number;
+  /** `raw` only: pixel height. */
+  height?: number;
+  /** `raw` only: sample layout — 3 bytes/px RGB or 1 byte/px gray. */
+  colorSpace?: "DeviceRGB" | "DeviceGray";
+}
 export interface FolioEncryptOptions {
   /** Required user password: non-empty, at most 127 UTF-8 bytes. */
   password: string;
@@ -348,13 +368,17 @@ export class FolioDocument {
     return new FolioDocument(doc);
   }
 
-  /** Open an existing PDF file's bytes. */
+  /** Open an existing PDF file's bytes. `password` is the user password — it decrypts during load when the document is encrypted (ignored otherwise; owner-only passwords still need the user password). */
   static async openPdf(
     host: EngineHost,
     pdfBytes: Uint8Array,
+    password?: string,
   ): Promise<FolioDocument> {
     const doc = await DocumentHandle.openInitialized(host, "folio",
-      (document) => document.apply(OPS.open, { bytes_b64: bytesToBase64(pdfBytes) }));
+      (document) => document.apply(OPS.open, {
+        bytes_b64: bytesToBase64(pdfBytes),
+        ...(password === undefined ? {} : { password }),
+      }));
     return new FolioDocument(doc);
   }
 
@@ -505,6 +529,35 @@ export class FolioDocument {
    */
   insertBlankPage(index: number) {
     return this.call<{ ok: boolean; page: number }>(OPS.insertBlankPage, { index });
+  }
+  /**
+   * Place an image on 0-based `page`, stretched to `rect` (`[x, y, w, h]`,
+   * PDF user space — no aspect preservation; the caller computes the
+   * rect). The engine appends a new content stream and never rewrites
+   * existing page content. `image.format` selects the honest contract:
+   * `"jpeg"` embeds the file verbatim as DCTDecode (8-bit gray/RGB only —
+   * the engine reads the SOF header, never decodes pixels);
+   * `"png"` decodes 8-bit non-interlaced gray/RGB(/alpha-discarded)
+   * samples; `"raw"` takes unfiltered 8-bpc samples and requires
+   * `width`/`height`/`colorSpace`. Rejects on encrypted documents.
+   */
+  insertPageImage(page: number, rect: Rect, image: FolioPageImage) {
+    return this.call<{
+      ok: boolean;
+      name: string;
+      width: number;
+      height: number;
+      color_space: string;
+      format: FolioImageFormat;
+    }>(OPS.insertPageImage, {
+      page,
+      rect,
+      format: image.format,
+      image_b64: bytesToBase64(image.data),
+      ...(image.width === undefined ? {} : { width: image.width }),
+      ...(image.height === undefined ? {} : { height: image.height }),
+      ...(image.colorSpace === undefined ? {} : { color_space: image.colorSpace }),
+    });
   }
   /** Per-page details: index, inherited-aware mediabox/rotate, annot count, content presence. */
   listPageInfo() {

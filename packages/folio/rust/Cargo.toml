@@ -12,3 +12,7 @@ serde_json = { workspace = true }
 rand = "0.9"
 lopdf = "0.36"
 md-5 = "0.10"
+# Already in the dependency tree via lopdf; used directly for bounded PNG
+# IDAT inflation and chunk CRC checks in `insertPageImage`.
+flate2 = "1"
+crc32fast = "1"

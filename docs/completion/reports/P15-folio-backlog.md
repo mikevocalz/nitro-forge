@@ -68,10 +68,21 @@ lift `FOLIO_DEFERRED_OPS` entries where applicable.
   structure between the current doc and another PDF; `structural_identical`
   covers only those projections and `text.differing_pages` is a lossy
   `pageText` hint that does not affect it.
-- **Slice F:** F-10 encryption reconciliation (`open` password path,
-  real `encrypted` reporting, snapshot semantics for encrypted docs) +
-  F-11 `insertPageImage` (JPEG DCTDecode passthrough / PNG FlateDecode;
-  camera capture stays host-side).
+- **Slice F — IMPLEMENTED 2026-11-11 on `codex/w1-folio-f`:** F-10
+  encryption reconciliation: `open` gained an optional user `password`
+  (same decrypt classification as `decrypt`, atomic on failure), and the
+  contract is now uniform — every mutating op plus `listAnnotations`/
+  `listCommentThreads` reject encrypted documents (previously the
+  annotation/comment/rotate ops could write plaintext strings into
+  ciphertext docs); snapshot semantics were already correct and are now
+  documented. F-11 `insertPageImage {page,rect,format,image_b64|binary}`
+  appends a `q cm /Do Q` content stream (never rewrites page content) and
+  clones the effective `/Resources` onto the page: `jpeg` = verbatim
+  DCTDecode passthrough (SOF-header dims only, 8-bit gray/RGB), `png` =
+  real decode (8-bit non-interlaced gray/RGB/GA/RGBA, alpha discarded,
+  palette/16-bit/interlaced reject), `raw` = unfiltered 8-bpc
+  DeviceRGB/DeviceGray samples. Caps: 64 MiB input, 25 MP, 200 MiB PNG
+  scanlines. Camera capture stays host-side.
 
 ## Known limitations (engine-side, lopdf 0.36)
 

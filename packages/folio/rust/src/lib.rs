@@ -30,10 +30,30 @@
 //!   truncates the effective key material to 32 bytes per PDF spec.
 //! - lopdf 0.36 limitation: `Document::decrypt` derives the file key from the
 //!   *user* password even when the supplied password only matches /O, so
-//!   `decrypt` rejects owner-only passwords with `unsupported` up front
-//!   (detected via `PasswordAlgorithm`) instead of failing mid-decrypt.
+//!   `decrypt` (and `open {password}`) rejects owner-only passwords with
+//!   `unsupported` up front (detected via `PasswordAlgorithm`) instead of
+//!   failing mid-decrypt.
 //! - `encrypt` needs a trailer `/ID` for key derivation; documents that lack
 //!   one get a random 16-byte ID before encrypting.
+//! - Encryption reconciliation (slice F): EVERY mutating op and every op
+//!   that decodes strings/streams rejects encrypted documents — objects or
+//!   strings added while ciphertext is live would save as plaintext inside
+//!   an encrypted file, and ciphertext strings decode to garbage. The only
+//!   exceptions are the document-lifecycle ops (`new`, `open`, `encrypt`,
+//!   `decrypt`) plus structural reads that never touch string/stream
+//!   contents (`pageCount`, `listPageInfo`, `save`, `info`, `describe`).
+//!   `open` accepts an optional user `password` that decrypts during load;
+//!   snapshots of encrypted documents serialize their ciphertext and
+//!   `restore` leaves the document encrypted until `decrypt`.
+//! - `insertPageImage` embeds an image XObject and appends a `q cm /Do Q`
+//!   content stream — it never rewrites existing content, so inline
+//!   `BI`…`EI` images and foreign stream quirks survive untouched. Three
+//!   honest input formats: `jpeg` (DCTDecode passthrough — the engine reads
+//!   only the SOF header for dimensions, never decodes pixels), `png`
+//!   (real decode: 8-bit non-interlaced gray/RGB/gray+alpha/RGBA;
+//!   palette, 16-bit and interlaced PNGs reject; alpha is discarded), and
+//!   `raw` (unfiltered 8-bpc DeviceRGB/DeviceGray samples). See
+//!   `page_image.rs` and ENGINE_OPS.md for the full contract.
 //! - Signature listing (`listSignatures`) reports signature-dictionary
 //!   contents only — `/ByteRange` is a shape check, never cryptographic
 //!   verification (see `signatures.rs`). File attachments
@@ -57,6 +77,7 @@ mod ink_link;
 mod markup;
 mod comments;
 mod outlines;
+mod page_image;
 mod page_ops;
 mod redact;
 mod signatures;
@@ -475,6 +496,46 @@ fn dec_err(d: lopdf::encryption::DecryptionError) -> EngineError {
     }
 }
 
+/// Shared decrypt path for the `decrypt` op and `open {password}`.
+/// Authenticates first so a wrong password is a typed Validation and an
+/// owner-only password is Unsupported (lopdf 0.36 cannot derive the file
+/// key from /O) — both before any mutation, keeping the op atomic.
+fn decrypt_doc(doc: &mut Document, password: &str) -> Result<(), EngineError> {
+    let algorithm = PasswordAlgorithm::try_from(&*doc).map_err(lopdf_err)?;
+    let sanitized = algorithm
+        .sanitize_password(password)
+        .map_err(dec_err)?;
+    if algorithm
+        .authenticate_user_password(doc, &sanitized)
+        .is_err()
+    {
+        return if algorithm
+            .authenticate_owner_password(doc, &sanitized)
+            .is_ok()
+        {
+            Err(EngineError::unsupported(
+                "password matches the owner password only; lopdf cannot derive the file key from an owner password, supply the user password",
+            ))
+        } else {
+            Err(EngineError::validation("incorrect password"))
+        };
+    }
+    doc.decrypt(password).map_err(lopdf_err)
+}
+
+/// Uniform encryption gate for content ops: on a ciphertext document,
+/// strings/streams written now would serialize as plaintext inside an
+/// encrypted file, and string reads return ciphertext. Structural reads
+/// that never touch string/stream contents stay allowed.
+fn reject_encrypted(doc: &Document, what: &str) -> Result<(), EngineError> {
+    if doc.is_encrypted() {
+        return Err(EngineError::unsupported(format!(
+            "{what} is not supported on encrypted documents; decrypt first"
+        )));
+    }
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // FolioEngine
 // ---------------------------------------------------------------------------
@@ -584,7 +645,7 @@ impl Engine for FolioEngine {
     }
 
     fn binary_input_ops(&self) -> &'static [&'static str] {
-        &["open", "addFileAttachment", "comparePdf"]
+        &["open", "addFileAttachment", "comparePdf", "insertPageImage"]
     }
 
     /// `save` checks for cancellation before serializing and again before
@@ -621,6 +682,9 @@ impl Engine for FolioEngine {
         if cmd.op == "comparePdf" {
             return self.op_compare_pdf(&mut cmd);
         }
+        if cmd.op == "insertPageImage" {
+            return self.op_insert_page_image(&mut cmd);
+        }
         let p = &cmd.payload;
         match cmd.op.as_str() {
             // --- mutating ----------------------------------------------------
@@ -641,10 +705,20 @@ impl Engine for FolioEngine {
                 Ok(CommandResult::data(json!({ "ok": true })))
             }
             "open" => {
+                // Optional user password unlocks during load; read before
+                // `bytes_input` takes `&mut cmd`.
+                let password = opt_password(p, "password")?;
                 let bytes = cmd.bytes_input("bytes_b64", b64_decode)?;
                 // lopdf auto-decrypts documents whose user or owner password is
-                // empty; anything still flagged here genuinely needs `decrypt`.
-                let doc = Document::load_mem(&bytes).map_err(lopdf_err)?;
+                // empty; anything still flagged here genuinely needs `decrypt`
+                // (or the `password` field, which runs the same path).
+                let mut doc = Document::load_mem(&bytes).map_err(lopdf_err)?;
+                if doc.is_encrypted() {
+                    if let Some(pw) = &password {
+                        // Failure leaves `self` untouched — `doc` is local.
+                        decrypt_doc(&mut doc, pw)?;
+                    }
+                }
                 let pages = doc.get_pages().len();
                 let encrypted = doc.is_encrypted();
                 self.journal.record(self.doc.clone());
@@ -692,37 +766,16 @@ impl Engine for FolioEngine {
                     return Err(EngineError::validation("document is not encrypted"));
                 }
                 let password = req_password(p, "password")?;
-                // lopdf 0.36's Document::decrypt authenticates owner-or-user but
-                // always derives the file key treating the input as the *user*
-                // password, so a password matching only /O authenticates and
-                // then fails mid-decrypt with a padding error. Classify the
-                // password up front for an honest, atomic result.
-                let algorithm = PasswordAlgorithm::try_from(&self.doc).map_err(lopdf_err)?;
-                let sanitized = algorithm
-                    .sanitize_password(&password)
-                    .map_err(dec_err)?;
-                if algorithm
-                    .authenticate_user_password(&self.doc, &sanitized)
-                    .is_err()
-                {
-                    return if algorithm
-                        .authenticate_owner_password(&self.doc, &sanitized)
-                        .is_ok()
-                    {
-                        Err(EngineError::unsupported(
-                            "password matches the owner password only; lopdf cannot derive the file key from an owner password, supply the user password",
-                        ))
-                    } else {
-                        Err(EngineError::validation("incorrect password"))
-                    };
-                }
+                // Authenticate before cloning/mutating so a wrong or
+                // owner-only password is a typed, atomic failure.
                 let mut doc = self.doc.clone();
-                doc.decrypt(&password).map_err(lopdf_err)?;
+                decrypt_doc(&mut doc, &password)?;
                 self.journal.record(self.doc.clone());
                 self.doc = doc;
                 Ok(CommandResult::data(json!({ "ok": true, "encrypted": false })))
             }
             "addAnnotation" => {
+                reject_encrypted(&self.doc, "annotation creation")?;
                 let page = req_u64(p, "page")?;
                 let page_id = self.page_id(page)?;
                 let rect = req_rect(p)?;
@@ -835,6 +888,7 @@ impl Engine for FolioEngine {
             "setAnnotationReview" => self.op_comment_reply(p, true),
             "listCommentThreads" => self.op_list_comment_threads(p),
             "rotatePage" => {
+                reject_encrypted(&self.doc, "page rotation")?;
                 let page = req_u64(p, "page")?;
                 let page_id = self.page_id(page)?;
                 let degrees = req_f64(p, "degrees")?;
@@ -863,6 +917,9 @@ impl Engine for FolioEngine {
             "comparePdf" => Err(EngineError::unsupported(
                 "comparePdf is dispatched before payload binding",
             )),
+            "insertPageImage" => Err(EngineError::unsupported(
+                "insertPageImage is dispatched before payload binding",
+            )),
             "addFileAttachment" => Err(EngineError::unsupported(
                 "addFileAttachment is dispatched before payload binding",
             )),
@@ -875,6 +932,7 @@ impl Engine for FolioEngine {
                 Ok(ro(json!({ "text": text })))
             }
             "listAnnotations" => {
+                reject_encrypted(&self.doc, "annotation listing")?;
                 let page = req_u64(p, "page")?;
                 let page_id = self.page_id(page)?;
                 let ids = annot_ids(&self.doc, page_id)?;
@@ -1524,5 +1582,120 @@ mod tests {
         apply(&mut e, "decrypt", json!({ "password": "pw" }));
         assert!(e.undo().unwrap()); // un-decrypt
         assert_eq!(apply(&mut e, "info", json!({}))["encrypted"], true);
+    }
+
+    // --- slice F: encryption reconciliation ---------------------------------
+
+    #[test]
+    fn open_password_unlocks_during_load() {
+        let mut e = new_doc(2);
+        apply(&mut e, "encrypt", json!({ "password": "open-pw" }));
+        let b64 = saved_b64(&mut e);
+
+        // password field decrypts inside `open` — one step, encrypted:false.
+        let mut e2 = FolioEngine::new();
+        let d = apply(&mut e2, "open", json!({ "bytes_b64": b64, "password": "open-pw" }));
+        assert_eq!(d["pages"], 2);
+        assert_eq!(d["encrypted"], false);
+        assert_eq!(apply(&mut e2, "info", json!({}))["encrypted"], false);
+
+        // Wrong password: typed Validation, `open` fails atomically — the
+        // engine keeps its previous document.
+        let mut e3 = FolioEngine::new();
+        apply(&mut e3, "new", json!({ "pages": 5 }));
+        let err = apply_err(
+            &mut e3,
+            "open",
+            json!({ "bytes_b64": b64, "password": "wrong" }),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+        assert_eq!(apply(&mut e3, "pageCount", json!({}))["pages"], 5);
+
+        // No password still reports encrypted:true (unchanged contract).
+        let mut e4 = FolioEngine::new();
+        let d = apply(&mut e4, "open", json!({ "bytes_b64": b64 }));
+        assert_eq!(d["encrypted"], true);
+
+        // Password on an unencrypted document is ignored.
+        let plain = saved_b64(&mut new_doc(1));
+        let mut e5 = FolioEngine::new();
+        let d = apply(&mut e5, "open", json!({ "bytes_b64": plain, "password": "anything" }));
+        assert_eq!(d["encrypted"], false);
+        assert_eq!(d["pages"], 1);
+
+        // Owner-only password through `open` hits the same Unsupported
+        // classification as `decrypt`.
+        let mut e6 = new_doc(1);
+        apply(
+            &mut e6,
+            "encrypt",
+            json!({ "password": "user-pw", "owner_password": "owner-pw" }),
+        );
+        let b64 = saved_b64(&mut e6);
+        let mut e7 = FolioEngine::new();
+        let err = apply_err(
+            &mut e7,
+            "open",
+            json!({ "bytes_b64": b64, "password": "owner-pw" }),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
+        // And the user password still opens it.
+        let mut e8 = FolioEngine::new();
+        let d = apply(&mut e8, "open", json!({ "bytes_b64": b64, "password": "user-pw" }));
+        assert_eq!(d["encrypted"], false);
+    }
+
+    #[test]
+    fn mutating_and_string_read_ops_reject_encrypted() {
+        let mut e = new_doc(1);
+        apply(
+            &mut e,
+            "addAnnotation",
+            json!({ "page": 0, "rect": [0, 0, 1, 1], "contents": "note" }),
+        );
+        apply(&mut e, "encrypt", json!({ "password": "pw" }));
+        let undo_len = e.journal.undo_len();
+
+        // Every mutating op and every string/stream-decoding read rejects.
+        let cases: Vec<(&str, Value)> = vec![
+            ("addAnnotation", json!({"page":0,"rect":[0,0,1,1],"contents":"x"})),
+            ("addInkAnnotation", json!({"page":0,"paths":[[[0,0],[1,1]]]})),
+            ("addLinkAnnotation", json!({"page":0,"rect":[0,0,1,1],"uri":"https://example.com"})),
+            ("setAnnotationContents", json!({"page":0,"id":1,"contents":"x"})),
+            ("removeAnnotation", json!({"page":0,"id":1})),
+            ("addAnnotationReply", json!({"page":0,"id":1,"contents":"r","author":"a","modified":"D:20240101000000Z"})),
+            ("setAnnotationReview", json!({"page":0,"id":1,"resolved":true,"author":"a","modified":"D:20240101000000Z"})),
+            ("rotatePage", json!({"page":0,"degrees":90})),
+            ("listAnnotations", json!({"page":0})),
+            ("listCommentThreads", json!({"page":0})),
+        ];
+        for (op, payload) in cases {
+            let err = apply_err(&mut e, op, payload);
+            assert_eq!(
+                err.code,
+                ignition_core::ErrorCode::Unsupported,
+                "{op} should reject encrypted docs"
+            );
+        }
+        // Structural/content ops gated in earlier slices still hold.
+        // (`movePage`/`deletePage` no-op paths stay eventless by design.)
+        for (op, payload) in [
+            ("duplicatePage", json!({"page":0})),
+            ("insertBlankPage", json!({"index":1})),
+            ("fillFormField", json!({"page":0,"field":"f","value":"v"})),
+            ("redactRect", json!({"page":0,"rect":[0,0,1,1]})),
+        ] {
+            let err = apply_err(&mut e, op, payload);
+            assert_eq!(err.code, ignition_core::ErrorCode::Unsupported, "{op}");
+        }
+        // Nothing recorded, nothing mutated.
+        assert_eq!(e.journal.undo_len(), undo_len);
+        assert_eq!(apply(&mut e, "info", json!({}))["encrypted"], true);
+
+        // Allowed ops still work on the ciphertext document.
+        assert!(apply(&mut e, "pageCount", json!({}))["pages"].is_number());
+        assert!(apply(&mut e, "listPageInfo", json!({}))["pages"].is_array());
+        assert!(apply(&mut e, "save", json!({}))["bytes_b64"].is_string());
+        assert!(apply(&mut e, "describe", json!({}))["encrypted"].is_boolean());
     }
 }
