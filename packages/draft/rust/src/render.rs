@@ -37,7 +37,7 @@ pub fn render(
             ctx.checkpoint()?
         }
         if let Some(seg) = s.segments.get(id) {
-            if !seg.visible {
+            if !seg.visible || !s.layer_visible(seg.layer) {
                 continue;
             }
             let a = s.point(seg.a)?;

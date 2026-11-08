@@ -212,7 +212,11 @@ impl Geometry {
 }
 pub fn geometries(s: &State) -> Vec<Geometry> {
     let mut out = Vec::new();
-    for c in s.circles.values().filter(|c| c.visible) {
+    for c in s
+        .circles
+        .values()
+        .filter(|c| c.visible && s.layer_visible(c.layer))
+    {
         let p = &s.points[&c.center];
         out.push(Geometry {
             id: c.id,
@@ -223,7 +227,11 @@ pub fn geometries(s: &State) -> Vec<Geometry> {
             closed: true,
         })
     }
-    for a in s.arcs.values().filter(|a| a.visible) {
+    for a in s
+        .arcs
+        .values()
+        .filter(|a| a.visible && s.layer_visible(a.layer))
+    {
         let p = &s.points[&a.center];
         out.push(Geometry {
             id: a.id,
