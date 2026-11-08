@@ -3258,3 +3258,242 @@ fn block_snapshots_wrapper_roundtrip_and_hostile_restore() {
     assert!(value.get("document").is_none());
     assert_eq!(value["kind"], "draft");
 }
+
+fn dist(s: &model::State, a: u64, b: u64) -> f64 {
+    let (pa, pb) = (s.point(a).unwrap(), s.point(b).unwrap());
+    (pa.x - pb.x).hypot(pa.y - pb.y)
+}
+#[test]
+fn nonlinear_distance_radius_and_report_merge_move_real_geometry() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 4.);
+    let center = point(&mut e, 20., 20.);
+    let circle = circle(&mut e, center, 2.);
+    constraint(&mut e, json!({"kind":"fixed","point":a,"x":0,"y":0}));
+    let dc = constraint(&mut e, json!({"kind":"distance","a":a,"b":b,"value":10}));
+    let rc = constraint(&mut e, json!({"kind":"radius","entity":circle,"value":5}));
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["status"], "underconstrained");
+    assert_eq!(report.data["nonlinear"]["status"], "solved");
+    assert_eq!(report.data["unsatisfied_constraints"], json!([]));
+    let s = state(&e);
+    assert!((dist(&s, a, b) - 10.).abs() < 1e-6);
+    assert!((s.circles[&circle].radius - 5.).abs() < 1e-6);
+    // The shared center point is referenced but has zero nonlinear gradient:
+    // it keeps its authored coordinates.
+    assert_eq!((s.point(center).unwrap().x, s.point(center).unwrap().y), (20., 20.));
+    assert!(report.events.len() == 1);
+    // A second solve re-reports the satisfied constraints (the LM pass is
+    // deterministic but not bit-idempotent at tolerance scale).
+    let noop = apply(&mut e, "solve", json!({}));
+    assert_eq!(noop.data["nonlinear"]["status"], "solved");
+    assert!((dist(&state(&e), a, b) - 10.).abs() < 1e-6);
+    let _ = (dc, rc);
+}
+#[test]
+fn nonlinear_segment_kinds_solve_orientation_length_and_midpoint() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 4., 0.);
+    let c = point(&mut e, 4., 1.);
+    let d = point(&mut e, 5., 2.);
+    let ab = segment(&mut e, a, b);
+    let cd = segment(&mut e, c, d);
+    constraint(&mut e, json!({"kind":"perpendicular","a":ab,"b":cd}));
+    constraint(&mut e, json!({"kind":"equal","a":ab,"b":cd}));
+    let m = point(&mut e, 9., 9.);
+    constraint(&mut e, json!({"kind":"midpoint","point":m,"segment":ab}));
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["nonlinear"]["status"], "solved");
+    let s = state(&e);
+    let (sa, sb) = (s.segment(ab).unwrap(), s.segment(cd).unwrap());
+    let (p_a, p_b) = (s.point(sa.a).unwrap(), s.point(sa.b).unwrap());
+    let (p_c, p_d) = (s.point(sb.a).unwrap(), s.point(sb.b).unwrap());
+    let (d1x, d1y) = (p_b.x - p_a.x, p_b.y - p_a.y);
+    let (d2x, d2y) = (p_d.x - p_c.x, p_d.y - p_c.y);
+    let (l1, l2) = (d1x.hypot(d1y), d2x.hypot(d2y));
+    assert!((d1x * d2x + d1y * d2y).abs() / (l1 * l2) < 1e-6);
+    assert!((l1 - l2).abs() < 1e-5);
+    let pm = s.point(m).unwrap();
+    assert!((pm.x - (p_a.x + p_b.x) * 0.5).abs() < 1e-6);
+    assert!((pm.y - (p_a.y + p_b.y) * 0.5).abs() < 1e-6);
+}
+#[test]
+fn nonlinear_angle_concentric_and_tangent_kinds_converge() {
+    let mut e = DraftEngine::new();
+    let v = point(&mut e, 0., 0.);
+    let f = point(&mut e, 2., 0.);
+    let spt = point(&mut e, 2., 2.);
+    constraint(&mut e, json!({"kind":"angle","vertex":v,"first":f,"second":spt,"degrees":90}));
+    let c1 = point(&mut e, 10., 10.);
+    let c2 = point(&mut e, 13., 11.);
+    let k1 = circle(&mut e, c1, 1.);
+    let k2 = circle(&mut e, c2, 2.);
+    constraint(&mut e, json!({"kind":"concentric","a":k1,"b":k2}));
+    // External circle-circle tangent on a separate pair: k2's center must
+    // end r2+r4 from k4's center (concentric pins k2 to k1's center).
+    let c4 = point(&mut e, 20., 20.);
+    let k4 = circle(&mut e, c4, 1.5);
+    constraint(&mut e, json!({"kind":"tangent","a":k2,"b":k4}));
+    let seg_a = point(&mut e, -6., 0.);
+    let seg_b = point(&mut e, -6., 3.);
+    let tangent_seg = segment(&mut e, seg_a, seg_b);
+    let k3c = point(&mut e, 0., 0.);
+    let k3 = circle(&mut e, k3c, 1.);
+    constraint(&mut e, json!({"kind":"tangent","a":tangent_seg,"b":k3}));
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["nonlinear"]["status"], "solved", "{}", report.data);
+    let s = state(&e);
+    // Angle at v between rays to f and spt is 90 degrees.
+    let (pv, pf, ps) = (s.point(v).unwrap(), s.point(f).unwrap(), s.point(spt).unwrap());
+    let (ux, uy) = (pf.x - pv.x, pf.y - pv.y);
+    let (wx, wy) = (ps.x - pv.x, ps.y - pv.y);
+    let ang = (ux * wy - uy * wx).abs().atan2(ux * wx + uy * wy);
+    assert!((ang - std::f64::consts::FRAC_PI_2).abs() < 1e-5);
+    // Concentric centers coincide.
+    assert!(dist(&s, c1, c2) < 1e-6);
+    // External tangent: k2/k4 center distance equals r2+r4.
+    let d = dist(&s, c2, c4);
+    let rr = s.circles[&k2].radius + s.circles[&k4].radius;
+    assert!((d - rr).abs() < 1e-5);
+    // Segment tangent: closest-point distance from k3 center to the segment
+    // equals its radius.
+    let sa = s.segment(tangent_seg).unwrap();
+    let (pa, pb) = (s.point(sa.a).unwrap(), s.point(sa.b).unwrap());
+    let (cx, cy) = {
+        let p = s.point(k3c).unwrap();
+        (p.x, p.y)
+    };
+    let (dx, dy) = (pb.x - pa.x, pb.y - pa.y);
+    let dd = dx * dx + dy * dy;
+    let t = (((cx - pa.x) * dx + (cy - pa.y) * dy) / dd).clamp(0., 1.);
+    let closest = ((cx - (pa.x + t * dx)).hypot(cy - (pa.y + t * dy)) - s.circles[&k3].radius).abs();
+    assert!(closest < 1e-5);
+}
+#[test]
+fn nonlinear_unconverged_keeps_geometry_and_reports_honestly() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 1., 0.);
+    constraint(&mut e, json!({"kind":"distance","a":a,"b":b,"value":10}));
+    constraint(&mut e, json!({"kind":"distance","a":a,"b":b,"value":20}));
+    let before = state(&e);
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["status"], "unconverged");
+    assert_eq!(report.data["nonlinear"]["status"], "unconverged");
+    assert_eq!(report.data["applied"], false);
+    let after = state(&e);
+    assert_eq!(after.point(a).unwrap().x, before.point(a).unwrap().x);
+    assert_eq!(after.point(b).unwrap().x, before.point(b).unwrap().x);
+    // Disabled nonlinear constraints never trigger the pass.
+    let mut e2 = DraftEngine::new();
+    let a2 = point(&mut e2, 0., 0.);
+    let b2 = point(&mut e2, 1., 0.);
+    apply(&mut e2, "addConstraint", json!({"enabled":false,"definition":{"kind":"distance","a":a2,"b":b2,"value":10}}));
+    let r2 = apply(&mut e2, "solve", json!({}));
+    assert!(r2.data.get("nonlinear").is_none());
+}
+#[test]
+fn nonlinear_locks_reference_guards_and_snapshot_wrapper() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 4.);
+    apply(&mut e, "updatePoint", json!({"id":a,"locked":true}));
+    constraint(&mut e, json!({"kind":"distance","a":a,"b":b,"value":10}));
+    let report = apply(&mut e, "solve", json!({}));
+    assert_eq!(report.data["nonlinear"]["status"], "solved");
+    let s = state(&e);
+    assert_eq!((s.point(a).unwrap().x, s.point(a).unwrap().y), (0., 0.));
+    assert!((dist(&s, a, b) - 10.).abs() < 1e-6);
+    // Referenced entities cannot be deleted while constraints name them.
+    let center = point(&mut e, 50., 50.);
+    let k = circle(&mut e, center, 1.);
+    constraint(&mut e, json!({"kind":"radius","entity":k,"value":2}));
+    assert!(e.apply(Command::new("removeCircle", json!({"id":k}))).is_err());
+    let c = point(&mut e, 60., 60.);
+    let d = point(&mut e, 61., 60.);
+    let cd = segment(&mut e, c, d);
+    let ef = segment(&mut e, c, d);
+    // parallel{cd,ef} is degenerate (same segment pair is fine: distinct ids)
+    // but references both segments, so neither can be removed.
+    constraint(&mut e, json!({"kind":"parallel","a":cd,"b":ef}));
+    assert!(e.apply(Command::new("removeSegment", json!({"id":cd}))).is_err());
+    assert!(e.apply(Command::new("removeSegment", json!({"id":ef}))).is_err());
+    // Points referenced through segment endpoints are protected too.
+    assert!(e.apply(Command::new("removePoint", json!({"id":c}))).is_err());
+}
+#[test]
+fn nonlinear_snapshot_wrapper_roundtrip_and_bare_restore_rejection() {
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 3., 4.);
+    constraint(&mut e, json!({"kind":"distance","a":a,"b":b,"value":10}));
+    let bytes = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&bytes).unwrap();
+    let wrapped: Value = serde_json::from_slice(payload).unwrap();
+    assert_eq!(wrapped["kind"], "draft");
+    assert_eq!(wrapped["schema"], 2);
+    assert!(wrapped.get("document").is_some());
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&bytes).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), bytes);
+    // A bare schema1 document carrying a nonlinear kind must fail closed.
+    let bare = serde_json::to_vec(&wrapped["document"]).unwrap();
+    let mut hostile = DraftEngine::new();
+    assert!(hostile.restore(&encode_envelope(&bare)).is_err());
+    // Validation rejects malformed nonlinear definitions atomically.
+    let mut e2 = DraftEngine::new();
+    let p1 = point(&mut e2, 0., 0.);
+    let p2 = point(&mut e2, 1., 0.);
+    for bad in [
+        json!({"kind":"distance","a":p1,"b":p1,"value":1}),
+        json!({"kind":"distance","a":p1,"b":p2,"value":-1}),
+        json!({"kind":"angle","vertex":p1,"first":p2,"second":p2,"degrees":90}),
+        json!({"kind":"angle","vertex":p1,"first":p2,"second":p1,"degrees":200}),
+        json!({"kind":"radius","entity":p1,"value":2}),
+        json!({"kind":"radius","entity":9999,"value":2}),
+        json!({"kind":"concentric","a":p1,"b":p2}),
+        json!({"kind":"tangent","a":p1,"b":p2}),
+    ] {
+        assert!(e2.apply(Command::new("addConstraint", json!({"definition":bad}))).is_err());
+    }
+    let _ = p1;
+    let _ = p2;
+}
+#[test]
+fn nonlinear_apply_long_cancel_and_batch_solve() {
+    use ignition_core::{ErrorCode, TaskContext};
+    let mut e = DraftEngine::new();
+    let a = point(&mut e, 0., 0.);
+    let b = point(&mut e, 1., 0.);
+    constraint(&mut e, json!({"kind":"distance","a":a,"b":b,"value":10}));
+    let before = e.snapshot().unwrap();
+    let ctx = TaskContext::new();
+    ctx.cancel();
+    let err = e
+        .apply_long(Command::new("solve", json!({})), &ctx)
+        .unwrap_err();
+    assert_eq!(err.code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before);
+    // A live context solves through the same path and reports progress.
+    let ctx2 = TaskContext::new();
+    let ok = e
+        .apply_long(Command::new("solve", json!({})), &ctx2)
+        .unwrap();
+    assert_eq!(ok.data["nonlinear"]["status"], "solved");
+    assert!(ctx2.progress() > 0.);
+    // Solve inside an atomic batch commits once with the nonlinear stage.
+    let mut e2 = DraftEngine::new();
+    let a2 = point(&mut e2, 0., 0.);
+    let b2 = point(&mut e2, 1., 0.);
+    apply(&mut e2, "addConstraint", json!({"definition":{"kind":"distance","a":a2,"b":b2,"value":8}}));
+    let batch = ignition_core::Command::new(
+        ignition_core::OP_BATCH,
+        json!({"commands":[{"op":"solve","payload":{}}]}),
+    );
+    let res = e2.apply(batch).unwrap();
+    assert_eq!(res.data["results"][0]["nonlinear"]["status"], "solved");
+    let s2 = state(&e2);
+    assert!((dist(&s2, a2, b2) - 8.).abs() < 1e-6);
+}

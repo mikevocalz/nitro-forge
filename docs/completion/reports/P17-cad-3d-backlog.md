@@ -41,7 +41,20 @@ solver** (largest; start with distance/perpendicular/tangent subset),
   tangent, equal, distance, angle, radius, concentric, midpoint-on);
   LM/Gauss-Newton with hard budgets + `apply_long` checkpoints; keep
   linear path untouched; typed kinds only in v1 (expression field
-  read-only).
+  read-only). **Implemented 2026-11-07** (worktree forge-w3-draft-a5): all
+  nine kinds admitted and atomically validated; `solve` keeps the
+  Gaussian linear stage first, then a bounded deterministic
+  Levenberg-Marquardt/Gauss-Newton pass (central-difference Jacobian,
+  noise-floor truncation, Marquardt damping, trust region, 48
+  iterations/8 retries/128 vars/512 rows/33554432 work ops) that publishes
+  point/radius updates only when fully converged — `unconverged`,
+  singular, cancelled or over-budget runs publish nothing. `solve`
+  reports a merged `nonlinear` sub-report; `apply_long` checkpoints reach
+  the iteration loop. Nonlinear constraint presence triggers the existing
+  strict schema:2 wrapper. Deferred: expression/driving-dimension fields
+  (read-only per v1), arc-aware tangent points, oriented/supplementary
+  angles, ellipse/spline entities, redundant-constraint certification,
+  priorities/groups. See ROSTER "Draft nonlinear constraints slice A5".
 - A7 paper space: `sheets`/`viewports` model + ops; `renderFrame{sheet_id}`;
   print is host-side (`printReady=false` until export exists).
   **Implemented 2026-11-07** (worktree forge-w3-draft-a7): sheets are named
