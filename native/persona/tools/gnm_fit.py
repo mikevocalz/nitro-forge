@@ -414,7 +414,8 @@ def fit_joint(
     This mirrors the capture protocol where several poses describe one
     identity.
 
-    Returns (identity_coeffs[253], poses, per-frame rmse_px).
+    Returns (identity_coeffs[253], expression_coeffs per frame[383],
+    poses, per-frame rmse_px).
     """
     n_frames = len(frames)
     if n_frames == 0:
@@ -473,7 +474,7 @@ def fit_joint(
             'lci,i->lc', j_ex, c_ex[f])
         pred = poses[f].project(l_frame)
         rmses.append(float(np.sqrt(np.mean(np.sum((pred - frames[f]) ** 2, axis=1)))))
-    return c_id, poses, rmses
+    return c_id, c_ex, poses, rmses
 
 
 def selftest_joint(gnm, basis: LandmarkBasis) -> int:
@@ -491,7 +492,7 @@ def selftest_joint(gnm, basis: LandmarkBasis) -> int:
             'lci,i->lc', basis.j_ex, true_ex[f])
         frames.append(poses_true[f].project(lm))
 
-    c_id, poses, rmses = fit_joint(basis, frames, iterations=15)
+    c_id, _c_ex, poses, rmses = fit_joint(basis, frames, iterations=15)
     id_err = float(np.sqrt(np.mean((c_id - true_id) ** 2)))
     print(f'joint selftest: id_rmse={id_err:.4f} frame_rmse={rmses}')
     ok = all(r < 5.0 for r in rmses) and id_err < 0.5

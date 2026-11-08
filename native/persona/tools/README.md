@@ -73,6 +73,16 @@ px_rmse=0.17, landmark_rmse=0.0026, vertex_rmse=0.0023 (model units).
   POST /capture (manifest + samples) → stored bundle + `{acknowledgement}`
   for `transferAcknowledged()`. Verified with a real multipart POST.
 
+## Photo -> persona
+
+`persona_fit_image.py` is the end-to-end offline path: photo(s) ->
+MediaPipe FaceLandmarker 478 -> `mp_to_gnm68` -> `gnm_fit` ->
+`persona_head.obj` + `persona_params.json`. Multiple images trigger the
+joint multi-frame fit (shared identity, per-frame expression+pose, all
+per-frame params exported). Verified on the synthetic GNM render
+(rmse 8.4px — flat-shaded render is a harder landmark target than a real
+photo; validate on real captures before trusting coefficients).
+
 ## Selftests
 
 ```bash
