@@ -175,4 +175,102 @@ describe("tally pivot specs (real Rust via nf-cli)", () => {
       await doc.close();
     }
   });
+
+  it("refreshPivot materializes the grid, refreshes on edit and undoes", async () => {
+    const doc = await TallyDocument.open(host);
+    try {
+      await doc.setRange("A1", [
+        ["east", "1", "10"],
+        ["west", "2", "20"],
+        ["east", "3", "30"],
+        ["west", "4", "40"],
+      ]);
+      await doc.addSheet("Out");
+      const created = await doc.insertPivot(
+        {
+          source: { sheet: "Sheet1", range: { from: "A1", to: "C4" } },
+          rows: [0],
+          values: [
+            { field: 1, agg: "sum" },
+            { field: 2, agg: "avg" },
+          ],
+        },
+        "Out",
+      );
+      const id = created.data.pivot.id;
+      // insertPivot still writes no cells. Grid reads go through
+      // exportCsv (read-only, sheet-targeted) so setActive never lands
+      // on the undo stack between a refresh and its undo/redo checks.
+      const grid = async (from: string, to: string) =>
+        (await doc.exportCsv({ sheet: "Out", range: { from, to } })).data.text;
+      expect((await doc.workbook()).data.sheets[1]?.cell_count).toBe(0);
+
+      const first = await doc.refreshPivot(id);
+      expect(first.data.changed).toBeGreaterThan(0);
+      expect(first.events).toHaveLength(1);
+      // Header row then one row per row-group (east before west).
+      expect(await grid("A1", "C3")).toBe(
+        ",sum:1,avg:2\r\neast,4,20\r\nwest,6,30\r\n",
+      );
+      const spec = (await doc.describePivot(id)).data.pivot;
+      expect(spec.output).toEqual({ anchor: "A1", rows: 3, cols: 3 });
+
+      // Identical refresh is eventless.
+      const noop = await doc.refreshPivot(id);
+      expect(noop.data.changed).toBe(0);
+      expect(noop.events).toEqual([]);
+
+      // Source edit + refresh recomputes. Source A1:C4 has no header row;
+      // renaming A2 (west→north) yields groups east, north, west.
+      await doc.setActive("Sheet1");
+      await doc.setCell("A2", "north");
+      const second = await doc.refreshPivot(id);
+      expect(second.data.changed).toBeGreaterThan(0);
+      expect(await grid("A1", "C4")).toBe(
+        ",sum:1,avg:2\r\neast,4,20\r\nnorth,2,20\r\nwest,4,40\r\n",
+      );
+
+      // One undo reverts the refresh (cells + recorded footprint); the
+      // journal restore also returns the active sheet to Sheet1.
+      expect(await doc.undo()).toBe(true);
+      expect(await grid("A1", "C3")).toBe(
+        ",sum:1,avg:2\r\neast,4,20\r\nwest,6,30\r\n",
+      );
+      expect((await doc.describePivot(id)).data.pivot.output).toEqual({
+        anchor: "A1",
+        rows: 3,
+        cols: 3,
+      });
+      expect(await doc.redo()).toBe(true);
+      expect(await grid("A1", "C4")).toBe(
+        ",sum:1,avg:2\r\neast,4,20\r\nnorth,2,20\r\nwest,4,40\r\n",
+      );
+
+      // refreshAllPivots recomputes every unprotected pivot in one op.
+      await doc.setCell("B4", "9"); // west is now only row 4: qty 9
+      const all = await doc.refreshAllPivots();
+      expect(all.data.refreshed).toBe(1);
+      expect(all.data.changed).toBeGreaterThan(0);
+      expect(all.events).toHaveLength(1);
+      expect(await grid("A1", "C4")).toBe(
+        ",sum:1,avg:2\r\neast,4,20\r\nnorth,2,20\r\nwest,9,40\r\n",
+      );
+
+      // Output anchor is settable and reported; retargeting resets the
+      // recorded footprint.
+      await doc.updatePivot(id, { output: "J10" });
+      const moved = (await doc.describePivot(id)).data.pivot;
+      expect(moved.output).toEqual({ anchor: "J10", rows: 0, cols: 0 });
+      await doc.refreshPivot(id);
+      expect(await grid("J10", "L13")).toBe(
+        ",sum:1,avg:2\r\neast,4,20\r\nnorth,2,20\r\nwest,9,40\r\n",
+      );
+      // The old A1-anchored grid is abandoned, not cleared.
+      expect(await grid("A1", "C4")).toBe(
+        ",sum:1,avg:2\r\neast,4,20\r\nnorth,2,20\r\nwest,9,40\r\n",
+      );
+    } finally {
+      await doc.close();
+    }
+  });
 });

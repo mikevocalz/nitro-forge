@@ -23,16 +23,27 @@
 //! `values` may repeat a field under different aggregations; each
 //! `filters` entry needs a unique field and 1–64 bounded values.
 //!
-//! **Storage only — no materialization**: `insertPivot` writes no cells.
-//! The engine stores and returns the bounded spec; computing the pivot
-//! grid, writing output cells, refresh-on-edit and update/refresh ops
-//! are deferred (a later slice). `describe`/`listPivots`/`describePivot`
-//! expose the stored spec; a host reads source cells through
-//! `getRange`/`getCell` and renders or computes host-side.
+//! **Materialization (slice B)**: `refreshPivot {id}` /
+//! `refreshAllPivots {}` compute the pivot grid from the *computed* source
+//! cells and write it as ordinary cells on the output sheet, anchored at
+//! `output.anchor` (default `"A1"`). Layout: one header row, then one row
+//! per distinct row-group; the first `rows.len()` columns carry the row
+//! group labels (one per row field), followed by `columns-groups ×
+//! values` aggregate columns. Group order is first-occurrence after the
+//! optional `sort` reorders source records; aggregations read computed
+//! values — only finite numbers feed `sum`/`avg`/`min`/`max`, `count`
+//! counts non-empty cells, errors never propagate. The spec's `output`
+//! records the anchor plus the last materialized `(rows, cols)` footprint
+//! so a refresh clears exactly the previous grid before writing the new
+//! one; an identical refresh stages zero cell writes and is eventless.
+//! Materialized cells are normal cells — structural edits, formats and
+//! undo treat them like any other content. `refreshAllPivots` skips
+//! pivots whose output sheet is protected; `refreshPivot` is gated by
+//! the output sheet like the other pivot mutations.
 //!
 //! `updatePivot {id, patch}` is a partial patch like `updateChart`:
-//! present keys set, explicit `null` clears `name`/`filters`/`sort`,
-//! `source`/`rows`/`columns`/`values` cannot be nulled, unknown patch
+//! present keys set, explicit `null` clears `name`/`filters`/`sort`/
+//! `output`, `source`/`rows`/`columns`/`values` cannot be nulled, unknown patch
 //! keys and a `sheet` field alongside `id` reject. An update that
 //! leaves the spec unchanged is eventless. `insertPivot` always creates
 //! (duplicate specs are allowed — pivots are objects, not keyed rules).
@@ -49,15 +60,17 @@
 //! participates in `remap_band` like charts/views — inserts shift and
 //! expand it, deletes shrink it, and a source range fully covered by a
 //! deleted band (or column-shrunk below a referenced field index)
-//! drops the pivot. The output sheet carries no coordinates, so edits
-//! there never touch the spec.
+//! drops the pivot. `output.anchor` is a fixed top-left that does not
+//! remap; the materialized cells themselves are ordinary cells and do.
 //!
 //! Protection: pivots are workbook metadata bound to an output sheet, so
 //! mutations are guarded by that sheet exactly like chart ops (see
 //! `protection.rs`); the source sheet is a read reference and does not
 //! gate. `listPivots`/`describePivot` are ungated reads.
 use super::range_ops::Rect;
+use super::sort_ops::{cmp_in_class, rank, sort_val, SortKeyVal};
 use super::*;
+use std::cmp::Ordering;
 
 /// Maximum pivot specs per workbook.
 pub const MAX_PIVOTS: usize = 256;
@@ -119,8 +132,23 @@ pub struct PivotSource {
     pub range: String,
 }
 
+/// Materialization anchor plus the last-written grid footprint.
+/// `anchor` is a canonical single-cell `"A1"` address on the output
+/// sheet; `rows`/`cols` are the dimensions of the grid the last
+/// `refreshPivot`/`refreshAllPivots` wrote (header row included), `0/0`
+/// when nothing is materialized. `rows`/`cols` are engine-managed — spec
+/// inputs and patches only ever set `anchor`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PivotOutput {
+    pub anchor: String,
+    pub rows: u32,
+    pub cols: u32,
+}
+
 /// One durable pivot spec: `id` a workbook-unique handle, `sheet` the
-/// output sheet id, `source` the data binding.
+/// output sheet id, `source` the data binding, `output` the optional
+/// materialization anchor/footprint.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PivotSpec {
@@ -138,6 +166,8 @@ pub struct PivotSpec {
     pub filters: Vec<PivotFilter>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sort: Option<PivotSort>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<PivotOutput>,
 }
 
 /// `insertPivot`'s `pivot` payload (id/sheet are engine-assigned).
@@ -158,6 +188,8 @@ struct PivotInput {
     filters: Option<Vec<PivotFilter>>,
     #[serde(default)]
     sort: Option<PivotSort>,
+    #[serde(default)]
+    output: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -179,6 +211,10 @@ struct PivotPatch {
     values: Option<Vec<PivotValue>>,
     filters: Option<Vec<PivotFilter>>,
     sort: Option<Option<PivotSort>>,
+    /// `Some(Some(anchor))` retargets the output anchor (footprint dims
+    /// reset to `0/0` — the old grid's cells are no longer tracked);
+    /// `Some(None)` clears `output` entirely.
+    output: Option<Option<String>>,
 }
 
 fn valid_name(name: &str) -> bool {
@@ -191,6 +227,37 @@ fn valid_filter_values(values: &[String]) -> bool {
         && values
             .iter()
             .all(|v| !v.is_empty() && v.len() <= MAX_PIVOT_FILTER_VALUE_LEN)
+}
+
+/// Parse a user-supplied `output` anchor (`"A1"`-style cell address,
+/// `$`/case tolerated) into its canonical stored form. `None` rejects.
+fn parse_output_anchor(v: &str) -> Option<String> {
+    let (c, r) = formula::parse_addr(v)?;
+    if !formula::on_sheet(c, r) {
+        return None;
+    }
+    Some(formula::fmt_addr(c, r))
+}
+
+/// Stored-`output` invariants for hostile restore and undo re-admission:
+/// canonical on-sheet anchor, footprint either `0/0` (never materialized)
+/// or a positive rectangle that fits the sheet and the shared cell cap.
+fn output_ok(o: &PivotOutput) -> bool {
+    let Some((c, r)) = formula::parse_addr(&o.anchor) else {
+        return false;
+    };
+    if !formula::on_sheet(c, r) || formula::fmt_addr(c, r) != o.anchor {
+        return false;
+    }
+    if (o.rows == 0) != (o.cols == 0) {
+        return false;
+    }
+    if o.rows == 0 {
+        return true;
+    }
+    u64::from(o.rows) * u64::from(o.cols) <= MAX_GET_RANGE_CELLS
+        && u64::from(c) + u64::from(o.cols) <= u64::from(formula::SHEET_MAX_COLUMNS)
+        && u64::from(r) + u64::from(o.rows) <= u64::from(formula::SHEET_MAX_ROWS)
 }
 
 /// Column count of a canonical source range; `None` when unparseable.
@@ -256,6 +323,7 @@ pub(super) fn stored_ok(p: &PivotSpec) -> bool {
     p.name.as_deref().is_none_or(valid_name)
         && range_ok(&p.source.range)
         && fields_ok(p)
+        && p.output.as_ref().is_none_or(output_ok)
 }
 
 /// Re-admission check for undo of `removeSheet`: a cascade-dropped pivot
@@ -283,6 +351,7 @@ fn build_spec(
     values: Vec<PivotValue>,
     filters: Vec<PivotFilter>,
     sort: Option<PivotSort>,
+    output: Option<PivotOutput>,
 ) -> Result<PivotSpec, EngineError> {
     if let Some(n) = &name {
         if !valid_name(n) {
@@ -329,6 +398,7 @@ fn build_spec(
         values,
         filters,
         sort,
+        output,
     };
     // Field indices are validated against the source width here so a bad
     // index rejects before any mutation; `fields_ok` re-checks the whole
@@ -359,6 +429,16 @@ fn parse_pivot_input(
     };
     let rect = Rect::read(&input.source.range)?;
     let range = name_ops::canonical_refers_to(rect.coords());
+    let output = match &input.output {
+        None => None,
+        Some(v) => Some(PivotOutput {
+            anchor: parse_output_anchor(v).ok_or_else(|| {
+                EngineError::validation("pivot output must be an on-sheet 'A1' address")
+            })?,
+            rows: 0,
+            cols: 0,
+        }),
+    };
     build_spec(
         sheet,
         input.name,
@@ -369,6 +449,7 @@ fn parse_pivot_input(
         input.values,
         input.filters.unwrap_or_default(),
         input.sort,
+        output,
     )
 }
 
@@ -383,7 +464,7 @@ fn parse_pivot_patch(e: &TallyEngine, v: &Value) -> Result<PivotPatch, EngineErr
     for key in obj.keys() {
         if !matches!(
             key.as_str(),
-            "name" | "source" | "rows" | "columns" | "values" | "filters" | "sort"
+            "name" | "source" | "rows" | "columns" | "values" | "filters" | "sort" | "output"
         ) {
             return Err(EngineError::invalid(format!(
                 "unknown pivot patch field '{key}'"
@@ -478,6 +559,23 @@ fn parse_pivot_patch(e: &TallyEngine, v: &Value) -> Result<PivotPatch, EngineErr
                 .map_err(|e| EngineError::invalid(format!("invalid pivot sort: {e}")))?,
         )),
     };
+    let output = match obj.get("output") {
+        None => None,
+        Some(Value::Null) => Some(None),
+        Some(Value::String(s)) => match parse_output_anchor(s) {
+            Some(anchor) => Some(Some(anchor)),
+            None => {
+                return Err(EngineError::validation(
+                    "pivot output must be an on-sheet 'A1' address or null",
+                ))
+            }
+        },
+        Some(_) => {
+            return Err(EngineError::invalid(
+                "pivot patch 'output' must be an 'A1' address string or null",
+            ))
+        }
+    };
     Ok(PivotPatch {
         name,
         source_sheet,
@@ -487,10 +585,531 @@ fn parse_pivot_patch(e: &TallyEngine, v: &Value) -> Result<PivotPatch, EngineErr
         values,
         filters,
         sort,
+        output,
     })
 }
 
+// ---------------------------------------------------------------------------
+// Materialization (refreshPivot / refreshAllPivots)
+// ---------------------------------------------------------------------------
+
+/// Display text of a computed scalar — group labels, filter matching and
+/// written cell raws all share this canonical form.
+fn display_text(v: &formula::Value) -> String {
+    match v {
+        formula::Value::Empty => String::new(),
+        formula::Value::Num(n) if n.is_finite() => formula::fmt_num(*n),
+        formula::Value::Num(_) => formula::ERR_NUM.to_string(),
+        formula::Value::Str(s) => s.clone(),
+        formula::Value::Bool(b) => {
+            if *b {
+                "TRUE".to_string()
+            } else {
+                "FALSE".to_string()
+            }
+        }
+        formula::Value::Err(e) => (*e).to_string(),
+        // `eval_cell` scalarizes ranges, so `List` cannot appear; map it
+        // defensively like every other non-scalar.
+        formula::Value::List(_) => formula::ERR_VALUE.to_string(),
+    }
+}
+
+/// Type-tagged grouping/filter key for a computed scalar: distinct value
+/// classes never collide (`Str("b1")` ≠ `Bool(true)`, `Num(1)` ≠ `Str("1")`).
+fn vkey(v: &formula::Value) -> String {
+    match v {
+        formula::Value::Empty => "e".to_string(),
+        formula::Value::Num(n) if n.is_finite() => {
+            // Normalize -0.0 so it groups with 0.0.
+            let n = if *n == 0.0 { 0.0 } else { *n };
+            format!("n{}", n.to_bits())
+        }
+        formula::Value::Num(_) => "r#NUM!".to_string(),
+        formula::Value::Str(s) => format!("s{s}"),
+        formula::Value::Bool(b) => {
+            if *b {
+                "b1".to_string()
+            } else {
+                "b0".to_string()
+            }
+        }
+        formula::Value::Err(e) => format!("r{e}"),
+        formula::Value::List(_) => "l".to_string(),
+    }
+}
+
+/// Per-(row-group, column-group, value-slot) aggregate state. Only finite
+/// `Num` values feed the numeric aggregations; `count` counts every
+/// non-empty scalar (errors included — they never propagate).
+struct PivotAcc {
+    nonempty: u64,
+    nums: u64,
+    sum: f64,
+    min: f64,
+    max: f64,
+}
+
+impl PivotAcc {
+    fn new() -> Self {
+        Self {
+            nonempty: 0,
+            nums: 0,
+            sum: 0.0,
+            min: f64::INFINITY,
+            max: f64::NEG_INFINITY,
+        }
+    }
+    fn add(&mut self, v: &formula::Value) {
+        match v {
+            formula::Value::Empty => {}
+            formula::Value::Num(n) if n.is_finite() => {
+                self.nonempty += 1;
+                self.nums += 1;
+                self.sum += n;
+                self.min = self.min.min(*n);
+                self.max = self.max.max(*n);
+            }
+            _ => self.nonempty += 1,
+        }
+    }
+    /// Raw text to store; `""` clears the cell. Non-finite results
+    /// (overflowed `sum`/`avg`) write empty rather than a non-numeric raw.
+    fn raw(&self, agg: PivotAgg) -> String {
+        let finite = |x: f64| x.is_finite().then(|| formula::fmt_num(x)).unwrap_or_default();
+        match agg {
+            PivotAgg::Count => formula::fmt_num(self.nonempty as f64),
+            PivotAgg::Sum => {
+                if self.nums > 0 {
+                    finite(self.sum)
+                } else {
+                    String::new()
+                }
+            }
+            PivotAgg::Avg => {
+                if self.nums > 0 {
+                    finite(self.sum / self.nums as f64)
+                } else {
+                    String::new()
+                }
+            }
+            PivotAgg::Min => {
+                if self.nums > 0 {
+                    finite(self.min)
+                } else {
+                    String::new()
+                }
+            }
+            PivotAgg::Max => {
+                if self.nums > 0 {
+                    finite(self.max)
+                } else {
+                    String::new()
+                }
+            }
+        }
+    }
+}
+
+/// A fully computed refresh: `want` is every cell of the new output rect
+/// (plus `""` clears for the previous footprint), `output` the spec's new
+/// recorded footprint.
+struct RefreshPlan {
+    want: std::collections::BTreeMap<String, String>,
+    output: PivotOutput,
+}
+
 impl TallyEngine {
+    /// Compute one pivot's output grid without mutating. Returns `None`
+    /// when the refresh would be a no-op (every wanted raw already stored
+    /// and the recorded footprint unchanged) — the eventless path.
+    /// All bounds are checked here, before any mutation: source cells are
+    /// capped by the shared 16,384-cell range bound, output cells by the
+    /// same cap, and group counts are derived from filtered records.
+    fn plan_refresh(&self, spec: &PivotSpec) -> Result<Option<RefreshPlan>, EngineError> {
+        let src_idx = self
+            .doc
+            .sheets
+            .iter()
+            .position(|s| s.id == spec.source.sheet)
+            .ok_or_else(|| EngineError::not_found("pivot source sheet is gone"))?;
+        let out_idx = self
+            .doc
+            .sheets
+            .iter()
+            .position(|s| s.id == spec.sheet)
+            .ok_or_else(|| EngineError::not_found("pivot output sheet is gone"))?;
+        let Some((c0, r0, c1, r1)) = spec_coords(&spec.source.range) else {
+            return Err(EngineError::validation("pivot source range is invalid"));
+        };
+        let width = (c1 - c0 + 1) as usize;
+        let height = (r1 - r0 + 1) as usize;
+        let anchor = spec
+            .output
+            .as_ref()
+            .map(|o| o.anchor.clone())
+            .unwrap_or_else(|| "A1".to_string());
+        // `output_ok`/insert-time validation guarantee a canonical
+        // on-sheet anchor; re-parse defensively anyway.
+        let Some((ac, ar)) = formula::parse_addr(&anchor).filter(|&(c, r)| formula::on_sheet(c, r))
+        else {
+            return Err(EngineError::validation("pivot output anchor is invalid"));
+        };
+        // Evaluate every source cell once, against the source sheet's own
+        // context (formulas resolve bare refs on their own sheet).
+        let mut ev = self.evaluator_for(src_idx);
+        let mut records: Vec<Vec<formula::Value>> = Vec::with_capacity(height);
+        for r in r0..=r1 {
+            let mut row = Vec::with_capacity(width);
+            for c in c0..=c1 {
+                if ev.charge_work(1).is_err() {
+                    return Err(EngineError::validation(
+                        "pivot evaluation exceeded the work allowance",
+                    ));
+                }
+                row.push(ev.eval_cell(&fmt_addr(c, r)));
+            }
+            records.push(row);
+        }
+        // Field filters: a record passes when every filter's display text
+        // is one of its accepted literals (AND across filters).
+        let mut kept: Vec<usize> = (0..records.len()).collect();
+        kept.retain(|&i| {
+            spec.filters.iter().all(|f| {
+                let text = display_text(&records[i][f.field as usize]);
+                f.values.iter().any(|v| v == &text)
+            })
+        });
+        // Optional sort: stable reorder of the kept records by the computed
+        // value at `sort.field`, using the sortRange class order (errors
+        // last in both directions). Group keys then appear in
+        // first-occurrence order.
+        if let Some(s) = &spec.sort {
+            let f = s.field as usize;
+            let keys: Vec<SortKeyVal> =
+                kept.iter().map(|&i| sort_val(&records[i][f])).collect();
+            let mut order: Vec<usize> = (0..kept.len()).collect();
+            let asc = s.ascending;
+            order.sort_by(|&a, &b| {
+                let ra = rank(&keys[a]);
+                let rb = rank(&keys[b]);
+                if ra != rb {
+                    return ra.cmp(&rb);
+                }
+                if ra == 4 {
+                    return Ordering::Equal; // both errors: stable tie
+                }
+                let ord = cmp_in_class(&keys[a], &keys[b]);
+                if asc {
+                    ord
+                } else {
+                    ord.reverse()
+                }
+            });
+            kept = order.iter().map(|&i| kept[i]).collect();
+        }
+        // Group kept records into distinct row/column key tuples, in
+        // first-occurrence order. An empty axis is a single empty group —
+        // but only when at least one record survives the filters.
+        let mut row_groups: Vec<Vec<formula::Value>> = Vec::new();
+        let mut row_map: std::collections::BTreeMap<Vec<String>, usize> =
+            std::collections::BTreeMap::new();
+        let mut col_groups: Vec<Vec<formula::Value>> = Vec::new();
+        let mut col_map: std::collections::BTreeMap<Vec<String>, usize> =
+            std::collections::BTreeMap::new();
+        let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(kept.len());
+        for &i in &kept {
+            let rec = &records[i];
+            let rkey: Vec<String> = spec
+                .rows
+                .iter()
+                .map(|&f| vkey(&rec[f as usize]))
+                .collect();
+            let ri = match row_map.get(&rkey) {
+                Some(&ri) => ri,
+                None => {
+                    let ri = row_groups.len();
+                    row_groups.push(
+                        spec.rows.iter().map(|&f| rec[f as usize].clone()).collect(),
+                    );
+                    row_map.insert(rkey, ri);
+                    ri
+                }
+            };
+            let ckey: Vec<String> = spec
+                .columns
+                .iter()
+                .map(|&f| vkey(&rec[f as usize]))
+                .collect();
+            let ci = match col_map.get(&ckey) {
+                Some(&ci) => ci,
+                None => {
+                    let ci = col_groups.len();
+                    col_groups.push(
+                        spec.columns
+                            .iter()
+                            .map(|&f| rec[f as usize].clone())
+                            .collect(),
+                    );
+                    col_map.insert(ckey, ci);
+                    ci
+                }
+            };
+            pairs.push((ri, ci));
+        }
+        let r_groups = row_groups.len();
+        let c_groups = col_groups.len();
+        let v_slots = spec.values.len();
+        let label_cols = spec.rows.len();
+        // Output rect: 1 header row + one row per row group; label columns
+        // plus column-groups × value slots. `cols_out == 0` means no
+        // records survived and there are no label columns — an empty
+        // grid that only clears the previous footprint.
+        let cols_out = label_cols + c_groups * v_slots;
+        let rows_out = 1 + r_groups;
+        if cols_out > 0 {
+            let cells_out = rows_out as u64 * cols_out as u64;
+            if cells_out > MAX_GET_RANGE_CELLS {
+                return Err(EngineError::out_of_bounds(format!(
+                    "pivot output {rows_out}x{cols_out} exceeds the {MAX_GET_RANGE_CELLS}-cell limit"
+                )));
+            }
+            if u64::from(ac) + cols_out as u64 > u64::from(formula::SHEET_MAX_COLUMNS)
+                || u64::from(ar) + rows_out as u64 > u64::from(formula::SHEET_MAX_ROWS)
+            {
+                return Err(EngineError::out_of_bounds(
+                    "pivot output anchor leaves no room for the grid on the sheet",
+                ));
+            }
+        }
+        // Stage every cell of the new rect plus "" clears for the previous
+        // footprint (when the anchor moved via patch, dims reset to 0/0 and
+        // the old cells are simply left alone — documented).
+        let mut want = std::collections::BTreeMap::new();
+        if let Some(o) = &spec.output {
+            if o.rows > 0 && o.cols > 0 {
+                if let Some((oc, orr)) = formula::parse_addr(&o.anchor) {
+                    for rr in orr..orr + o.rows {
+                        for cc in oc..oc + o.cols {
+                            want.insert(fmt_addr(cc, rr), String::new());
+                        }
+                    }
+                }
+            }
+        }
+        if cols_out > 0 {
+            let agg_name = |a: PivotAgg| match a {
+                PivotAgg::Sum => "sum",
+                PivotAgg::Count => "count",
+                PivotAgg::Avg => "avg",
+                PivotAgg::Min => "min",
+                PivotAgg::Max => "max",
+            };
+            // Header row: label columns stay empty (written "" so the
+            // pivot owns its whole rect); each value column gets
+            // "<col-group labels> | <agg>:<field>" (labels omitted when
+            // the pivot has no column fields).
+            for j in 0..label_cols {
+                want.insert(fmt_addr(ac + j as u32, ar), String::new());
+            }
+            for ci in 0..c_groups {
+                let colpart = if spec.columns.is_empty() {
+                    String::new()
+                } else {
+                    col_groups[ci]
+                        .iter()
+                        .map(display_text)
+                        .collect::<Vec<_>>()
+                        .join(" / ")
+                };
+                for (si, v) in spec.values.iter().enumerate() {
+                    let valpart = format!("{}:{}", agg_name(v.agg), v.field);
+                    let text = if colpart.is_empty() {
+                        valpart
+                    } else {
+                        format!("{colpart} | {valpart}")
+                    };
+                    want.insert(
+                        fmt_addr(ac + label_cols as u32 + (ci * v_slots + si) as u32, ar),
+                        text,
+                    );
+                }
+            }
+            // Data rows.
+            let mut stats: std::collections::BTreeMap<(usize, usize), Vec<PivotAcc>> =
+                std::collections::BTreeMap::new();
+            for (pos, &(ri, ci)) in pairs.iter().enumerate() {
+                let rec = &records[kept[pos]];
+                let entry = stats
+                    .entry((ri, ci))
+                    .or_insert_with(|| (0..v_slots).map(|_| PivotAcc::new()).collect());
+                for (si, v) in spec.values.iter().enumerate() {
+                    entry[si].add(&rec[v.field as usize]);
+                }
+            }
+            for ri in 0..r_groups {
+                let row = ar + 1 + ri as u32;
+                for (j, cell) in row_groups[ri].iter().enumerate() {
+                    want.insert(fmt_addr(ac + j as u32, row), display_text(cell));
+                }
+                for ci in 0..c_groups {
+                    let accs = stats.get(&(ri, ci));
+                    for (si, v) in spec.values.iter().enumerate() {
+                        let raw = accs
+                            .map(|a| a[si].raw(v.agg))
+                            .unwrap_or_default();
+                        want.insert(
+                            fmt_addr(
+                                ac + label_cols as u32 + (ci * v_slots + si) as u32,
+                                row,
+                            ),
+                            raw,
+                        );
+                    }
+                }
+            }
+        }
+        let new_output = PivotOutput {
+            anchor,
+            rows: if cols_out == 0 { 0 } else { rows_out as u32 },
+            cols: cols_out as u32,
+        };
+        // Eventless check: no wanted raw differs from the stored cells and
+        // the recorded footprint already matches.
+        let sheet = &self.doc.sheets[out_idx];
+        let differs = want.iter().any(|(addr, raw)| {
+            sheet
+                .cells
+                .get(addr)
+                .map(|c| c.raw.as_str())
+                .unwrap_or("")
+                != raw
+        });
+        if !differs && spec.output.as_ref() == Some(&new_output) {
+            return Ok(None);
+        }
+        Ok(Some(RefreshPlan {
+            want,
+            output: new_output,
+        }))
+    }
+
+    /// Apply a plan against the live document: diff `want` per cell,
+    /// write the differences, record the new footprint. Returns the number
+    /// of cells written. Caller records the undo entry.
+    fn apply_refresh_plan(&mut self, pos: usize, plan: &RefreshPlan) -> usize {
+        let sheet_id = self.doc.pivots[pos].sheet;
+        let writes: Vec<(String, String)> = match self
+            .doc
+            .sheets
+            .iter()
+            .position(|s| s.id == sheet_id)
+        {
+            Some(si) => {
+                let sheet = &self.doc.sheets[si];
+                plan.want
+                    .iter()
+                    .filter(|(addr, raw)| {
+                        sheet
+                            .cells
+                            .get(*addr)
+                            .map(|c| c.raw.as_str())
+                            .unwrap_or("")
+                            != raw.as_str()
+                    })
+                    .map(|(a, r)| (a.clone(), r.clone()))
+                    .collect()
+            }
+            None => Vec::new(),
+        };
+        let n = writes.len();
+        if let Some(si) = self.doc.sheets.iter().position(|s| s.id == sheet_id) {
+            let sheet = &mut self.doc.sheets[si];
+            for (addr, raw) in writes {
+                if raw.is_empty() {
+                    sheet.cells.remove(&addr);
+                } else {
+                    sheet.cells.insert(addr, Cell { raw });
+                }
+            }
+        }
+        self.doc.pivots[pos].output = Some(plan.output.clone());
+        n
+    }
+
+    /// `refreshPivot {id}` — materialize one pivot's grid on its output
+    /// sheet. `sheet` alongside `id` rejects like the sibling pivot ops.
+    /// One whole-document undo entry covers the cell writes and the spec's
+    /// recorded footprint; an identical refresh is eventless.
+    pub(super) fn op_refresh_pivot(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        if p.get("sheet").is_some_and(|v| !v.is_null()) {
+            return Err(EngineError::invalid(
+                "refreshPivot 'sheet' is not allowed alongside 'id'",
+            ));
+        }
+        let id = p
+            .get("id")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| EngineError::invalid("'id' must be a non-negative integer"))?;
+        let pos = self
+            .doc
+            .pivots
+            .iter()
+            .position(|pv| pv.id == id)
+            .ok_or_else(|| EngineError::not_found(format!("no pivot {id}")))?;
+        let spec = self.doc.pivots[pos].clone();
+        let Some(plan) = self.plan_refresh(&spec)? else {
+            return Ok(Self::readonly(json!({ "changed": 0 })));
+        };
+        self.journal.record(UndoEntry::Reset {
+            prev: self.doc.clone(),
+        });
+        let changed = self.apply_refresh_plan(pos, &plan);
+        Ok(Self::changed(json!({ "changed": changed })))
+    }
+
+    /// `refreshAllPivots {}` — materialize every pivot whose output sheet
+    /// is unprotected, in spec order (later pivots win overlapping cells).
+    /// One undo entry covers the whole batch; pivots on protected output
+    /// sheets are skipped and reported, not errors.
+    pub(super) fn op_refresh_all_pivots(&mut self, _p: &Value) -> Result<CommandResult, EngineError> {
+        let mut plans: Vec<(usize, RefreshPlan)> = Vec::new();
+        let mut skipped: Vec<u64> = Vec::new();
+        for (pos, pv) in self.doc.pivots.iter().enumerate() {
+            let protected = self
+                .doc
+                .sheets
+                .iter()
+                .any(|s| s.id == pv.sheet && s.is_protected);
+            if protected {
+                skipped.push(pv.id);
+                continue;
+            }
+            if let Some(plan) = self.plan_refresh(pv)? {
+                plans.push((pos, plan));
+            }
+        }
+        if plans.is_empty() {
+            return Ok(Self::readonly(json!({
+                "changed": 0,
+                "refreshed": 0,
+                "skipped": skipped,
+            })));
+        }
+        self.journal.record(UndoEntry::Reset {
+            prev: self.doc.clone(),
+        });
+        let mut changed = 0usize;
+        for (pos, plan) in &plans {
+            changed += self.apply_refresh_plan(*pos, plan);
+        }
+        Ok(Self::changed(json!({
+            "changed": changed,
+            "refreshed": plans.len(),
+            "skipped": skipped,
+        })))
+    }
+
     /// JSON view of one pivot with both bound sheets' *current* names
     /// resolved; optional fields appear only when set.
     fn pivot_json(&self, p: &PivotSpec) -> Result<Value, EngineError> {
@@ -525,14 +1144,17 @@ impl TallyEngine {
         if let Some(s) = &p.sort {
             out.insert("sort".to_string(), serde_json::to_value(s)?);
         }
+        if let Some(o) = &p.output {
+            out.insert("output".to_string(), serde_json::to_value(o)?);
+        }
         Ok(Value::Object(out))
     }
 
     /// `insertPivot {sheet?, pivot:{name?,source:{sheet?,range:{from,to}},
-    /// rows, columns, values, filters?, sort?}}` — store a pivot spec bound
-    /// to the resolved output sheet. Always appends with a fresh
-    /// workbook-unique id; duplicate specs are allowed. Writes no cells —
-    /// materialization/refresh are deferred.
+    /// rows, columns, values, filters?, sort?, output?}}` — store a pivot
+    /// spec bound to the resolved output sheet. Always appends with a
+    /// fresh workbook-unique id; duplicate specs are allowed. Writes no
+    /// cells — `refreshPivot`/`refreshAllPivots` materialize the grid.
     pub(super) fn op_insert_pivot(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.sheet_index(p)?;
         let sheet_id = self.doc.sheets[idx].id;
@@ -604,8 +1226,18 @@ impl TallyEngine {
         if let Some(s) = patch.sort {
             next.sort = s;
         }
+        if let Some(o) = patch.output {
+            // Retargeting the anchor drops the recorded footprint — the
+            // old grid's cells are no longer tracked for clearing.
+            next.output = o.map(|anchor| PivotOutput {
+                anchor,
+                rows: 0,
+                cols: 0,
+            });
+        }
         // Validate the merged spec before committing: name bound, caps,
-        // field indices inside the (possibly new) source width.
+        // field indices inside the (possibly new) source width, stored
+        // output footprint sane.
         if next.name.as_deref().is_some_and(|n| !valid_name(n))
             || next.values.is_empty()
             || next.values.len() > MAX_PIVOT_VALUES
@@ -617,6 +1249,7 @@ impl TallyEngine {
                 .iter()
                 .all(|f| valid_filter_values(&f.values))
             || !fields_ok(&next)
+            || !next.output.as_ref().is_none_or(output_ok)
         {
             return Err(EngineError::validation("invalid pivot spec"));
         }
@@ -1219,5 +1852,320 @@ mod tests {
         e.restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
             .unwrap();
         assert_eq!(pivots(&mut e).len(), 2);
+    }
+
+    // -- refresh / materialization -------------------------------------
+
+    fn refresh(e: &mut TallyEngine, id: u64) -> CommandResult {
+        apply(e, "refreshPivot", json!({"id": id}))
+    }
+    /// Stored raw of `addr` on the sheet named `sheet`, read through the
+    /// silent `describe` op (getCell only sees the active sheet and
+    /// setActive would pollute the undo journal these tests assert on).
+    fn raw_on(e: &mut TallyEngine, sheet: &str, addr: &str) -> String {
+        let d = data(e, "describe", json!({}));
+        d["sheets"]
+            .as_array()
+            .and_then(|sheets| {
+                sheets
+                    .iter()
+                    .find(|s| s["name"] == json!(sheet))
+                    .and_then(|s| s.get("cells"))
+                    .and_then(|cells| cells.get(addr))
+                    .and_then(|c| c.get("raw"))
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+            })
+            .unwrap_or_default()
+    }
+
+    /// Seed the classic region/qty/price table on Sheet1 (A1:C4, no
+    /// header row — every source row is a record).
+    fn seed_sales(e: &mut TallyEngine) {
+        data(
+            e,
+            "setRange",
+            json!({"from":"A1","values":[
+                ["east","1","10"],
+                ["west","2","20"],
+                ["east","3","30"],
+                ["west","4","40"]
+            ]}),
+        );
+    }
+
+    #[test]
+    fn refresh_writes_grouped_grid_and_is_eventless_when_identical() {
+        let mut e = TallyEngine::new();
+        seed_sales(&mut e);
+        data(&mut e, "addSheet", json!({"name":"Out"}));
+        insert_on(
+            &mut e,
+            "Out",
+            json!({
+                "source": {"sheet":"Sheet1","range":{"from":"A1","to":"C4"}},
+                "rows": [0],
+                "values": [{"field":1,"agg":"sum"},{"field":2,"agg":"avg"}]
+            }),
+        );
+        // insertPivot writes no cells; refresh materializes.
+        let r = refresh(&mut e, 1);
+        assert_eq!(r.data["changed"], json!(8)); // 3 header + 2×3 data cells? see below
+        assert_eq!(r.events.len(), 1);
+        // Layout: row1 header ("" | "sum:1" | "avg:2"), then east/west rows.
+        assert_eq!(raw_on(&mut e, "Out", "A1"), "");
+        assert_eq!(raw_on(&mut e, "Out", "B1"), "sum:1");
+        assert_eq!(raw_on(&mut e, "Out", "C1"), "avg:2");
+        assert_eq!(raw_on(&mut e, "Out", "A2"), "east");
+        assert_eq!(raw_on(&mut e, "Out", "B2"), "4"); // 1+3
+        assert_eq!(raw_on(&mut e, "Out", "C2"), "20"); // (10+30)/2
+        assert_eq!(raw_on(&mut e, "Out", "A3"), "west");
+        assert_eq!(raw_on(&mut e, "Out", "B3"), "6"); // 2+4
+        assert_eq!(raw_on(&mut e, "Out", "C3"), "30"); // (20+40)/2
+        // describePivot reports the recorded footprint.
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d["output"], json!({"anchor":"A1","rows":3,"cols":3}));
+        // Identical refresh: eventless, no journal entry — the next undo
+        // reverts the FIRST refresh directly (a phantom second entry
+        // would leave B2 = "4" after one undo).
+        let r2 = refresh(&mut e, 1);
+        assert_eq!(r2.data["changed"], json!(0));
+        assert!(r2.events.is_empty());
+        assert!(e.undo().unwrap());
+        assert_eq!(raw_on(&mut e, "Out", "B2"), "");
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert!(d.get("output").is_none());
+        assert!(e.redo().unwrap());
+        assert_eq!(raw_on(&mut e, "Out", "B2"), "4");
+    }
+
+    #[test]
+    fn refresh_honors_columns_filters_sort_and_all_aggs() {
+        let mut e = TallyEngine::new();
+        seed_sales(&mut e);
+        data(&mut e, "addSheet", json!({"name":"Out"}));
+        // Column field = field 2 (price bucket via parity? no — use field
+        // 0 region as column field) plus a filter and a sort.
+        insert_on(
+            &mut e,
+            "Out",
+            json!({
+                "source": {"sheet":"Sheet1","range":{"from":"A1","to":"C4"}},
+                "rows": [1],
+                "columns": [0],
+                "values": [
+                    {"field":1,"agg":"count"},
+                    {"field":2,"agg":"min"},
+                    {"field":2,"agg":"max"}
+                ],
+                "filters": [{"field":0,"values":["east","west"]}],
+                "sort": {"field":1,"ascending":true}
+            }),
+        );
+        refresh(&mut e, 1);
+        // rows = qty values {1,2,3,4} sorted asc; cols = regions
+        // {east,west} first-occurrence. Grid: 1 label col + 2 col-groups ×
+        // 3 slots = 7 cols; header + 4 data rows.
+        assert_eq!(raw_on(&mut e, "Out", "B1"), "east | count:1");
+        assert_eq!(raw_on(&mut e, "Out", "E1"), "west | count:1");
+        assert_eq!(raw_on(&mut e, "Out", "G1"), "west | max:2");
+        // qty=1 row: only east has qty 1 → east cells filled, west blank.
+        assert_eq!(raw_on(&mut e, "Out", "A2"), "1");
+        assert_eq!(raw_on(&mut e, "Out", "B2"), "1"); // count
+        assert_eq!(raw_on(&mut e, "Out", "C2"), "10"); // min price
+        assert_eq!(raw_on(&mut e, "Out", "D2"), "10"); // max price
+        assert_eq!(raw_on(&mut e, "Out", "E2"), ""); // no west qty-1 row
+        // qty=4 row: only west.
+        assert_eq!(raw_on(&mut e, "Out", "A5"), "4");
+        assert_eq!(raw_on(&mut e, "Out", "E5"), "1");
+        assert_eq!(raw_on(&mut e, "Out", "F5"), "40");
+        assert_eq!(raw_on(&mut e, "Out", "G5"), "40");
+        // A filter that excludes everything clears the footprint.
+        data(
+            &mut e,
+            "updatePivot",
+            json!({"id":1,"patch":{"filters":[{"field":0,"values":["north"]}]}}),
+        );
+        let r = refresh(&mut e, 1);
+        assert!(r.events.len() == 1);
+        assert_eq!(raw_on(&mut e, "Out", "B1"), "");
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d["output"], json!({"anchor":"A1","rows":1,"cols":1}));
+    }
+
+    #[test]
+    fn refresh_output_anchor_patch_and_bounds() {
+        let mut e = TallyEngine::new();
+        seed_sales(&mut e);
+        insert(
+            &mut e,
+            json!({
+                "output": "J10",
+                "source": {"range":{"from":"A1","to":"C4"}},
+                "rows": [],
+                "values": [{"field":1,"agg":"sum"}]
+            }),
+        );
+        refresh(&mut e, 1);
+        // No row/column fields: header "sum:1" at J10, one data row J11.
+        assert_eq!(raw_on(&mut e, "Sheet1", "J10"), "sum:1");
+        assert_eq!(raw_on(&mut e, "Sheet1", "J11"), "10"); // 1+2+3+4
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d["output"], json!({"anchor":"J10","rows":2,"cols":1}));
+        // Retarget the anchor: footprint resets, old cells stay put.
+        data(&mut e, "updatePivot", json!({"id":1,"patch":{"output":"N5"}}));
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d["output"], json!({"anchor":"N5","rows":0,"cols":0}));
+        refresh(&mut e, 1);
+        assert_eq!(raw_on(&mut e, "Sheet1", "N5"), "sum:1");
+        assert_eq!(raw_on(&mut e, "Sheet1", "N6"), "10");
+        assert_eq!(raw_on(&mut e, "Sheet1", "J10"), "sum:1"); // stale, documented
+        // Bad anchors reject at insert and patch time.
+        for bad in [json!(""), json!("A0"), json!("XFE1"), json!("1:2"), json!(5)] {
+            assert!(
+                e.apply(Command::new(
+                    "insertPivot",
+                    json!({"pivot": {"output": bad, "source":{"range":{"from":"A1","to":"C4"}},"values":[{"field":0,"agg":"sum"}]}})
+                ))
+                .is_err(),
+                "accepted output {bad}"
+            );
+        }
+        assert!(e
+            .apply(Command::new(
+                "updatePivot",
+                json!({"id":1,"patch":{"output":"ZZZ9"}})
+            ))
+            .is_err());
+        // Output grid that cannot fit at the anchor rejects atomically:
+        // anchor near the right edge with several value columns.
+        let mut e2 = TallyEngine::new();
+        seed_sales(&mut e2);
+        insert_on(
+            &mut e2,
+            "Sheet1",
+            json!({
+                "output": "XFC1",
+                "source": {"sheet":"Sheet1","range":{"from":"A1","to":"C4"}},
+                "rows": [0],
+                "columns": [0],
+                "values": [{"field":1,"agg":"sum"},{"field":2,"agg":"sum"}]
+            }),
+        );
+        // 2 regions × 2 slots + 1 label = 5 cols → XFC+4 = XFD+1 off-sheet.
+        assert_eq!(
+            apply_err(&mut e2, "refreshPivot", json!({"id":1})).code,
+            ErrorCode::OutOfBounds
+        );
+        assert_eq!(raw_on(&mut e2, "Sheet1", "XFC1"), "");
+        // Too many distinct groups: 200 distinct values on both axes with
+        // 16 value slots → cols = 1 + 200×16, rows = 201 → far over the
+        // 16,384-cell output cap → out_of_bounds before any mutation.
+        let mut e3 = TallyEngine::new();
+        let vals: Vec<String> = (0..200).map(|i| i.to_string()).collect();
+        data(
+            &mut e3,
+            "setRange",
+            json!({"from":"A1","values": vals.iter().map(|v| vec![v.clone()]).collect::<Vec<_>>()}),
+        );
+        insert_on(
+            &mut e3,
+            "Sheet1",
+            json!({
+                "source": {"range":{"from":"A1","to":"A200"}},
+                "rows": [0],
+                "columns": [0],
+                "values": (0..16).map(|_| json!({"field":0,"agg":"sum"})).collect::<Vec<_>>()
+            }),
+        );
+        assert_eq!(
+            apply_err(&mut e3, "refreshPivot", json!({"id":1})).code,
+            ErrorCode::OutOfBounds
+        );
+    }
+
+    #[test]
+    fn refresh_all_skips_protected_and_undoes_as_one_entry() {
+        let mut e = TallyEngine::new();
+        seed_sales(&mut e);
+        data(&mut e, "addSheet", json!({"name":"Out"}));
+        data(&mut e, "addSheet", json!({"name":"Locked"}));
+        insert_on(
+            &mut e,
+            "Out",
+            json!({"source":{"sheet":"Sheet1","range":{"from":"A1","to":"C4"}},
+                   "rows":[0],"values":[{"field":1,"agg":"sum"}]}),
+        );
+        insert_on(
+            &mut e,
+            "Locked",
+            json!({"source":{"sheet":"Sheet1","range":{"from":"A1","to":"C4"}},
+                   "values":[{"field":1,"agg":"count"}]}),
+        );
+        data(&mut e, "protectSheet", json!({"sheet":"Locked","protected":true}));
+        let r = apply(&mut e, "refreshAllPivots", json!({}));
+        assert_eq!(r.data["refreshed"], json!(1));
+        assert_eq!(r.data["skipped"], json!([2]));
+        assert_eq!(raw_on(&mut e, "Out", "B2"), "4");
+        // Locked pivot's sheet untouched.
+        assert_eq!(raw_on(&mut e, "Locked", "A1"), "");
+        // Single refreshPivot on the protected output sheet rejects.
+        assert_eq!(
+            apply_err(&mut e, "refreshPivot", json!({"id":2})).code,
+            ErrorCode::Validation
+        );
+        // One undo entry restores both the cells and both footprints.
+        assert!(e.undo().unwrap());
+        assert_eq!(raw_on(&mut e, "Out", "B2"), "");
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert!(d.get("output").is_none());
+        assert!(e.redo().unwrap());
+        assert_eq!(raw_on(&mut e, "Out", "B2"), "4");
+        // Second refreshAll is eventless.
+        let r2 = apply(&mut e, "refreshAllPivots", json!({}));
+        assert!(r2.events.is_empty());
+        assert_eq!(r2.data["refreshed"], json!(0));
+    }
+
+    #[test]
+    fn refresh_snapshot_roundtrip_and_restore_validation() {
+        let mut e = TallyEngine::new();
+        seed_sales(&mut e);
+        data(&mut e, "addSheet", json!({"name":"Out"}));
+        insert_on(
+            &mut e,
+            "Out",
+            json!({"output":"C3",
+                   "source":{"sheet":"Sheet1","range":{"from":"A1","to":"C4"}},
+                   "rows":[0],"values":[{"field":1,"agg":"sum"}]}),
+        );
+        refresh(&mut e, 1);
+        let snap = e.snapshot().unwrap();
+        let mut e2 = TallyEngine::new();
+        e2.restore(&snap).unwrap();
+        assert_eq!(raw_on(&mut e2, "Out", "C4"), "east");
+        assert_eq!(raw_on(&mut e2, "Out", "D4"), "4");
+        let d = data(&mut e2, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d["output"], json!({"anchor":"C3","rows":3,"cols":2}));
+        // Hostile output footprints reject on restore.
+        let doc = data(&mut e, "describe", json!({}));
+        let mut bad = doc.clone();
+        bad["pivots"][0]["output"]["anchor"] = json!("not-an-addr");
+        let wrapped = json!({"kind":"tally","schema":9,"document":bad});
+        assert!(e2
+            .restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
+            .is_err());
+        let mut bad2 = doc.clone();
+        bad2["pivots"][0]["output"]["rows"] = json!(0); // cols stays 2 → asymmetric
+        let wrapped = json!({"kind":"tally","schema":9,"document":bad2});
+        assert!(e2
+            .restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
+            .is_err());
+        let mut bad3 = doc.clone();
+        bad3["pivots"][0]["output"] = json!({"anchor":"A1","rows":99999,"cols":99999});
+        let wrapped = json!({"kind":"tally","schema":9,"document":bad3});
+        assert!(e2
+            .restore(&encode_envelope(&serde_json::to_vec(&wrapped).unwrap()))
+            .is_err());
     }
 }

@@ -1393,6 +1393,8 @@ impl Engine for TallyEngine {
             "removePivot" => self.op_remove_pivot(p),
             "listPivots" => self.op_list_pivots(p),
             "describePivot" => self.op_describe_pivot(p),
+            "refreshPivot" => self.op_refresh_pivot(p),
+            "refreshAllPivots" => self.op_refresh_all_pivots(p),
             "insertTable" => self.op_insert_table(p),
             "updateTable" => self.op_update_table(p),
             "removeTable" => self.op_remove_table(p),
