@@ -19,10 +19,10 @@ independent rendering choice, not a reproduction of their internals.
 | 2 | Nitro bridge (`PersonaCapture`) | Done — spec + C++ hybrid, Nitrogen 2/2 |
 | 3 | Phone capture adapter | Done (typecheck) — VisionCamera v5 outputs, worklet frame processing, zero-copy WebGPU preview |
 | 4 | Quality gates | Partial — lighting (luma), face coverage, head yaw/roll, device stability measured; pitch, glasses, phone-to-face pose pending |
-| 5 | Transfer transport | Partial — `transfer.ts` upload + manifest done; headset receiver not built |
-| 6 | Reconstruction / fitting | **In progress** — GNM Head V3 (Apache-2.0) landmark fitter works in synthetic selftest; needs landmark extractor mapping + multi-frame fit + renderer export |
+| 5 | Transfer transport | Done at tool level — `transfer.ts` upload + `transfer_server.py` receiver verified with real POST; platform transport (mDNS/Nearby) pending |
+| 6 | Reconstruction / fitting | **Mostly done (tool level)** — GNM V3 fitter + MediaPipe→68 mapping + joint multi-frame fit + pose/expression driver all selftest-verified; needs on-device extractor + renderer export |
 | 7 | Review/save UI | Done (wired, unreachable until phase 6 calls `generated()`) |
-| 8 | Live presence / tracking | Partial — OpenXR adapters + performance core exist; not bound to capture output |
+| 8 | Live presence / tracking | Partial — `gnm_drive.py` poses fitted personas from expression/joint inputs; PersonaPerformance→383-dim expression calibration + renderer binding pending |
 | 9 | Headset apps (Vision Pro / Galaxy XR) | Not started |
 | 10 | Device validation | Not run — needs physical phone + headset |
 

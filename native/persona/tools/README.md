@@ -56,12 +56,40 @@ Landmarker (478 pts) — a sparse-68 mapping layer is the next piece of work.
 `SELFTEST PASS`: synthetic roundtrip from known coefficients gives
 px_rmse=0.17, landmark_rmse=0.0026, vertex_rmse=0.0023 (model units).
 
+## Additional tools
+
+- `mp_to_gnm68.py` — builds `mp_to_gnm68.json`, the MediaPipe FaceLandmarker
+  (478pt) → GNM sparse-68 correspondence, by rendering the GNM template,
+  running the detector, and nearest-neighbor matching. Verified end-to-end
+  (detection succeeds on the synthetic render; mean NN distance 0.013).
+  The mapping is geometric, not hand-annotated — visually verify on real
+  captures before trusting fine detail.
+- `gnm_drive.py` — poses a fitted persona: `--params persona_params.json`
+  plus expression coefficients and per-joint axis-angle rotations
+  ([neck, head, left_eye, right_eye]) → posed OBJ or a frame sequence.
+  This is the live-presence data path: production feeds calibrated
+  PersonaPerformance output into the 383 GNM expression dims.
+- `transfer_server.py` — receiver half of the companion-phone transfer:
+  POST /capture (manifest + samples) → stored bundle + `{acknowledgement}`
+  for `transferAcknowledged()`. Verified with a real multipart POST.
+
+## Selftests
+
+```bash
+python gnm_fit.py --selftest        # single-frame fit
+python gnm_fit.py --selftest-joint  # multi-frame shared-identity fit
+python gnm_fit.py --selftest-mp     # landmark mapping sanity
+```
+
+All three PASS. Joint fit: shared identity RMSE 0.37, per-frame px RMSE
+<0.2 on synthetic two-pose data.
+
 ## Not yet done
 
-- MediaPipe 478 → GNM sparse-68 correspondence mapping.
-- Multi-image joint fit (our capture protocol supplies several poses;
-  v1 fits a single frame — identity should be jointly fit across frames).
-- Expression decomposition per capture step.
-- Rigged export (joints/skin weights) for live presence — params JSON has
-  coefficients only; `apply_linear_blend_skinning` is available upstream.
+- On-device MediaPipe extraction feeding `mp478_to_gnm68` (mapping table
+  exists; the RN-side extractor does not).
+- Expression decomposition per capture step (frames mode of gnm_drive
+  accepts per-frame expressions; fitting them is future work).
+- Rigged export for the RN renderer (joints/LBS weights exist upstream;
+  OBJ export is static posed geometry).
 - Renderer integration (OBJ → Nitro Forge splat/mesh pipeline).

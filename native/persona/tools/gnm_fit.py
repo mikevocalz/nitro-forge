@@ -333,6 +333,8 @@ def main() -> int:
     ap.add_argument('--input', type=Path)
     ap.add_argument('--output', type=Path, default=Path('persona_out'))
     ap.add_argument('--dump-basis', type=Path)
+    ap.add_argument('--selftest-joint', action='store_true')
+    ap.add_argument('--selftest-mp', action='store_true')
     args = ap.parse_args()
 
     gnm = load_gnm()
@@ -349,6 +351,10 @@ def main() -> int:
 
     if args.selftest:
         return selftest(gnm, basis)
+    if args.selftest_joint:
+        return selftest_joint(gnm, basis)
+    if args.selftest_mp:
+        return selftest_mp_mapping()
 
     if not args.input:
         ap.error('provide --input landmarks.json or --selftest')
@@ -362,6 +368,147 @@ def main() -> int:
     export_mesh(gnm, coeffs, pose, args.output)
     return 0
 
+
+
+
+# ---------------------------------------------------------------------------
+# MediaPipe correspondence + multi-frame joint fit
+# ---------------------------------------------------------------------------
+
+_MP_MAP_PATH = Path(__file__).parent / 'mp_to_gnm68.json'
+
+
+def load_mp_mapping(path: Path | None = None) -> list[int]:
+    """Return mp_index for each of the 68 GNM landmarks, in GNM order."""
+    data = json.loads((path or _MP_MAP_PATH).read_text())
+    corr = sorted(data['correspondences'], key=lambda c: c['gnm_index'])
+    if len(corr) != NUM_LANDMARKS:
+        raise ValueError('mp_to_gnm68.json does not contain 68 correspondences')
+    return [int(c['mp_index']) for c in corr]
+
+
+def mp478_to_gnm68(mp_points: np.ndarray, mapping: list[int] | None = None) -> np.ndarray:
+    """Reorder MediaPipe FaceLandmarker output (478,>=2) to GNM sparse-68.
+
+    `mp_points` may be normalized (x,y in 0..1) or pixel coordinates; the
+    caller is responsible for consistent intrinsics handling.
+    """
+    mp_points = np.asarray(mp_points, dtype=np.float64)
+    if mp_points.ndim != 2 or mp_points.shape[1] < 2:
+        raise ValueError('expected (N,>=2) landmark array')
+    idx = mapping or load_mp_mapping()
+    return mp_points[np.asarray(idx)][:, :2]
+
+
+def fit_joint(
+    basis: LandmarkBasis,
+    frames: list[np.ndarray],
+    iterations: int = 15,
+    regularization: float = 10.0,
+) -> tuple[np.ndarray, list[Pose], list[float]]:
+    """Joint multi-frame fit: one shared identity, per-frame expression+pose.
+
+    `frames` is a list of (68,2) landmark observations (e.g. front, left,
+    right, expression steps). Identity coefficients are shared across all
+    frames; each frame gets its own expression coefficients and affine pose.
+    This mirrors the capture protocol where several poses describe one
+    identity.
+
+    Returns (identity_coeffs[253], poses, per-frame rmse_px).
+    """
+    n_frames = len(frames)
+    if n_frames == 0:
+        raise ValueError('fit_joint requires at least one frame')
+
+    c_id = np.zeros(NUM_IDENTITY)
+    c_ex = [np.zeros(NUM_EXPRESSION) for _ in range(n_frames)]
+    poses = [Pose() for _ in range(n_frames)]
+
+    j_id = basis.j_id      # (68,3,253)
+    j_ex = basis.j_ex      # (68,3,383)
+
+    for _ in range(iterations):
+        # 1. Solve shared identity coefficients across all frames.
+        #    For frame f: proj(L) = A_f (l0 + J_id c_id + J_ex c_ex_f) + b_f
+        #    => residual linear in c_id with c_ex_f fixed.
+        rows, rhs = [], []
+        for f in range(n_frames):
+            a_lin = poses[f].linear
+            # landmark positions with current expr, minus expr contribution
+            expr_l = np.einsum('lci,i->lc', j_ex, c_ex[f])
+            l_base = basis.l0 + expr_l
+            design = np.einsum('pi,lij->lpj', a_lin, j_id)  # (68,2,253)
+            design = design.reshape(NUM_LANDMARKS * 2, NUM_IDENTITY)
+            base = poses[f].project(l_base).reshape(-1)
+            rows.append(design)
+            rhs.append(frames[f].reshape(-1) - base)
+        a_all = np.vstack(rows)
+        b_all = np.concatenate(rhs)
+        a_aug = np.vstack([a_all, regularization * np.eye(NUM_IDENTITY)])
+        b_aug = np.concatenate([b_all, np.zeros(NUM_IDENTITY)])
+        c_id, *_ = np.linalg.lstsq(a_aug, b_aug, rcond=None)
+
+        # 2. Per frame: solve expression coefficients given identity+pose.
+        for f in range(n_frames):
+            a_lin = poses[f].linear
+            design = np.einsum('pi,lij->lpj', a_lin, j_ex)
+            design = design.reshape(NUM_LANDMARKS * 2, NUM_EXPRESSION)
+            id_l = basis.l0 + np.einsum('lci,i->lc', j_id, c_id)
+            base = poses[f].project(id_l).reshape(-1)
+            rhs_f = frames[f].reshape(-1) - base
+            # Expression is lower-dimensional trust: stronger regularization.
+            reg_ex = regularization * 3.0
+            a_aug = np.vstack([design, reg_ex * np.eye(NUM_EXPRESSION)])
+            b_aug = np.concatenate([rhs_f, np.zeros(NUM_EXPRESSION)])
+            c_ex[f], *_ = np.linalg.lstsq(a_aug, b_aug, rcond=None)
+
+            # 3. Re-estimate this frame's pose.
+            l_frame = basis.l0 + np.einsum('lci,i->lc', j_id, c_id) + np.einsum(
+                'lci,i->lc', j_ex, c_ex[f])
+            poses[f] = estimate_pose(l_frame, frames[f])
+
+    rmses = []
+    for f in range(n_frames):
+        l_frame = basis.l0 + np.einsum('lci,i->lc', j_id, c_id) + np.einsum(
+            'lci,i->lc', j_ex, c_ex[f])
+        pred = poses[f].project(l_frame)
+        rmses.append(float(np.sqrt(np.mean(np.sum((pred - frames[f]) ** 2, axis=1)))))
+    return c_id, poses, rmses
+
+
+def selftest_joint(gnm, basis: LandmarkBasis) -> int:
+    """Two-frame joint fit: shared identity, different expressions/poses."""
+    rng = np.random.default_rng(11)
+    true_id = np.clip(rng.normal(0, 0.4, NUM_IDENTITY), -1.5, 1.5)
+    true_ex = [np.clip(rng.normal(0, 0.3, NUM_EXPRESSION), -1.0, 1.0) for _ in range(2)]
+    poses_true = [
+        Pose(affine=np.array([[140., 5., 0., 540.], [-4., 135., 0., 330.]])),
+        Pose(affine=np.array([[135., -12., 0., 555.], [10., 130., 0., 325.]])),
+    ]
+    frames = []
+    for f in range(2):
+        lm = basis.l0 + np.einsum('lci,i->lc', basis.j_id, true_id) + np.einsum(
+            'lci,i->lc', basis.j_ex, true_ex[f])
+        frames.append(poses_true[f].project(lm))
+
+    c_id, poses, rmses = fit_joint(basis, frames, iterations=15)
+    id_err = float(np.sqrt(np.mean((c_id - true_id) ** 2)))
+    print(f'joint selftest: id_rmse={id_err:.4f} frame_rmse={rmses}')
+    ok = all(r < 5.0 for r in rmses) and id_err < 0.5
+    print('JOINT SELFTEST', 'PASS' if ok else 'FAIL')
+    return 0 if ok else 1
+
+
+def selftest_mp_mapping() -> int:
+    """Verify the MediaPipe->GNM68 mapping shape and index range."""
+    idx = load_mp_mapping()
+    ok = len(idx) == NUM_LANDMARKS and min(idx) >= 0 and max(idx) < 478
+    uniq = len(set(idx))
+    print(f'mp mapping: {len(idx)} entries, {uniq} unique, range {min(idx)}..{max(idx)}')
+    # A fully degenerate mapping (all same index) would be a bug.
+    ok = ok and uniq > 50
+    print('MP MAP SELFTEST', 'PASS' if ok else 'FAIL')
+    return 0 if ok else 1
 
 if __name__ == '__main__':
     sys.exit(main())
