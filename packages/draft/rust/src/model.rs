@@ -117,6 +117,57 @@ pub struct Hatch {
     pub layer: u64,
     pub loops: Vec<Vec<[f64; 2]>>,
 }
+pub const MAX_DIMENSIONS: usize = 64;
+/// Dimension kinds admitted in slice A3. `linear` measures the axis-aligned
+/// distance between two points (`axis` selects x or y), `aligned` the direct
+/// distance, `angular` the unsigned angle at a vertex between two rays,
+/// `radial`/`diameter` the radius/diameter of a circle or arc entity.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DimKind {
+    Linear,
+    Aligned,
+    Angular,
+    Radial,
+    Diameter,
+}
+/// Measured axis for `linear` dimensions; absent for every other kind.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DimAxis {
+    X,
+    Y,
+}
+/// An associative dimension stores only authored references; measured
+/// geometry is derived per read in `dimensions::measure`, never persisted.
+/// References are weak: deleting a referenced point/entity orphans the
+/// dimension (status `orphaned`, no measured geometry) instead of rejecting
+/// the deletion, while writes require every reference to resolve. A
+/// reference id that still exists under the wrong kind is malformed and
+/// fails validation; an absent id is a legal orphan.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Dimension {
+    pub id: u64,
+    pub kind: DimKind,
+    /// Point ids: 2 for linear/aligned, 3 (vertex, first, second) for
+    /// angular, empty for radial/diameter which use `entity` instead.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub points: Vec<u64>,
+    /// Circle/arc id for radial/diameter; 0 (skipped) for point kinds.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub entity: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub axis: Option<DimAxis>,
+    pub name: String,
+    pub color: [u8; 4],
+    /// Stroke width in world units for the derived annotation strokes.
+    pub width: f64,
+    pub visible: bool,
+    pub locked: bool,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub layer: u64,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Definition {
@@ -201,6 +252,8 @@ pub struct State {
     pub layers: BTreeMap<u64, Arc<Layer>>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub hatches: BTreeMap<u64, Arc<Hatch>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub dimensions: BTreeMap<u64, Arc<Dimension>>,
 }
 impl Default for State {
     fn default() -> Self {
@@ -218,6 +271,7 @@ impl Default for State {
             snaps: SnapSettings::default(),
             layers: BTreeMap::new(),
             hatches: BTreeMap::new(),
+            dimensions: BTreeMap::new(),
         }
     }
 }
@@ -249,6 +303,16 @@ impl State {
     }
     pub fn layer_locked(&self, id: u64) -> bool {
         self.layers.get(&id).map_or(id != 0, |l| l.locked)
+    }
+    /// True when every authored dimension reference currently resolves:
+    /// point kinds need their point ids present, radial/diameter need a
+    /// circle or arc entity. Writes require this; later deletions may
+    /// legitimately break it and produce `orphaned` read status.
+    pub fn dimension_resolves(&self, d: &Dimension) -> bool {
+        d.points.iter().all(|p| self.points.contains_key(p))
+            && (d.entity == 0
+                || self.circles.contains_key(&d.entity)
+                || self.arcs.contains_key(&d.entity))
     }
     pub fn point_fixed(&self, id: u64) -> bool {
         self.circles
@@ -320,6 +384,7 @@ impl State {
             || self.constraints.len() > 128
             || self.layers.len() > MAX_LAYERS
             || self.hatches.len() > MAX_HATCHES
+            || self.dimensions.len() > MAX_DIMENSIONS
         {
             return Err(bad("invalid draft header or count budget"));
         }
@@ -488,6 +553,58 @@ impl State {
                 if a2.abs() <= 1e-12 {
                     return Err(bad("hatch boundary loop has zero area"));
                 }
+            }
+        }
+        for (&id, d) in &self.dimensions {
+            if id != d.id
+                || id == 0
+                || id >= self.next_id
+                || !ids.insert(id)
+                || d.name.len() > 512
+                || !(d.layer == 0 || self.layers.contains_key(&d.layer))
+                || !d.width.is_finite()
+                || !(1e-6..=1000.).contains(&d.width)
+            {
+                return Err(bad("invalid dimension identity, name, style or layer"));
+            }
+            let point_count = match d.kind {
+                DimKind::Linear | DimKind::Aligned => 2,
+                DimKind::Angular => 3,
+                DimKind::Radial | DimKind::Diameter => 0,
+            };
+            if d.points.len() != point_count
+                || d.points.iter().copied().collect::<BTreeSet<_>>().len() != d.points.len()
+                || matches!(d.kind, DimKind::Linear) != d.axis.is_some()
+                || (matches!(d.kind, DimKind::Radial | DimKind::Diameter) != (d.entity != 0))
+            {
+                return Err(bad("dimension kind/reference shape mismatch"));
+            }
+            // A reference may dangle (orphaned) but may never resolve to the
+            // wrong identity kind: ids are unique across every collection.
+            for &p in &d.points {
+                if !self.points.contains_key(&p)
+                    && (self.segments.contains_key(&p)
+                        || self.circles.contains_key(&p)
+                        || self.arcs.contains_key(&p)
+                        || self.layers.contains_key(&p)
+                        || self.hatches.contains_key(&p)
+                        || self.constraints.contains_key(&p)
+                        || self.dimensions.contains_key(&p))
+                {
+                    return Err(bad("dimension point reference has wrong identity kind"));
+                }
+            }
+            if d.entity != 0
+                && !self.circles.contains_key(&d.entity)
+                && !self.arcs.contains_key(&d.entity)
+                && (self.points.contains_key(&d.entity)
+                    || self.segments.contains_key(&d.entity)
+                    || self.layers.contains_key(&d.entity)
+                    || self.hatches.contains_key(&d.entity)
+                    || self.constraints.contains_key(&d.entity)
+                    || self.dimensions.contains_key(&d.entity))
+            {
+                return Err(bad("dimension entity reference has wrong identity kind"));
             }
         }
         let s = &self.snaps;

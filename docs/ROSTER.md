@@ -1587,3 +1587,41 @@ Local evidence: `cargo test -p draft-engine` 33 passed (5 hatch tests),
 hatch e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. Associative
 hatches, custom patterns, gradients and PNG fills remain deferred; UI adoption,
 native acceptance and full P17 completion are not implied.
+
+## Draft associative dimensions slice A3 (2026-11-07)
+
+Draft gains bounded associative dimensions (`addDimension`/`updateDimension`/
+`removeDimension`, at most64) with kinds `linear` (two point ids + required
+`axis:"x"|"y"`), `aligned` (two point ids), `angular` (vertex + two ray point
+ids, unsigned 0..180 degrees) and `radial`/`diameter` (circle/arc `entity` id).
+Dimensions store only authored references — measured geometry is re-derived on
+every `evaluate`/`renderFrame` in the new `dimensions` module, so moving
+referenced points or curve centers recomputes results; `evaluate` reports each
+dimension's `status` (`linked`/`orphaned`) plus `measured` (`value` in world
+units or degrees, `null` only for a degenerate angular anchor, and bounded
+world-space stroke lines: extension lines, dimension line, open chevron
+arrowheads, angle rays and a <=24-segment arc polyline). Writes require every
+reference to resolve, but point/circle/arc deletions deliberately do NOT
+reject on dimension references — the dimension becomes `orphaned` with
+`measured:null` and no rendered strokes while authored refs stay for
+re-linking (a documented divergence from constraint references, which block
+deletion); style-only updates on orphans stay allowed while any
+kind/points/entity/axis change must resolve again. References resolving to
+the wrong identity kind are malformed and fail validation; absent ids are
+legal orphans. Dimensions honor `visible`/layer visibility, reject edits on
+locked layers/entities, block `removeLayer` while referenced, join
+undo/redo, stay out of `order`/snaps/`findProfiles`/`point_fixed`/the solver,
+and force the existing strict `{kind:"draft",schema:2}` wrapper — no schema:3
+because the field is an additive serde default and `deny_unknown_fields`
+fails old readers closed (same argument as layers/hatches). There is no glyph
+backend, so numeric labels and filled arrowheads are deferred (same gate as
+Quill fonts); dimension strokes composite above entity strokes as real Prism
+paths within the same projection budgets.
+
+Local evidence: `cargo test -p draft-engine` 38 passed (5 new dimension
+tests), `cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/draft test` 11 passed across 5 files (1 new nf-cli
+dimension e2e), `pnpm --filter @nitro-forge/draft typecheck` clean. Dimension
+text, offsets, filled arrowheads, ordinate/projection kinds, dimension
+stylesheets and UI adoption remain deferred; native acceptance and full P17
+completion are not implied.

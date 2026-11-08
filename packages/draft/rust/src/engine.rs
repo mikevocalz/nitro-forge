@@ -1,4 +1,4 @@
-use crate::{commands, constraints, model::*, profiles, render, snaps};
+use crate::{commands, constraints, dimensions, model::*, profiles, render, snaps};
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
@@ -19,6 +19,7 @@ fn requires_matching_reader(state: &State) -> bool {
         || !state.arcs.is_empty()
         || !state.layers.is_empty()
         || !state.hatches.is_empty()
+        || !state.dimensions.is_empty()
         || state.segments.values().any(|s| s.layer != 0)
         || state.circles.values().any(|c| c.layer != 0)
         || state.arcs.values().any(|a| a.layer != 0)
@@ -235,7 +236,7 @@ impl Engine for DraftEngine {
             "describe" => {
                 fields(p, &[])?;
                 let mut value = serde_json::to_value(&*self.state)?;
-                for key in ["circles", "arcs", "hatches"] {
+                for key in ["circles", "arcs", "hatches", "dimensions"] {
                     if value.get(key).is_none() {
                         value[key] = json!({})
                     }
@@ -252,8 +253,24 @@ impl Engine for DraftEngine {
             }
             "evaluate" => {
                 fields(p, &[])?;
+                let mut evaluated = serde_json::Map::new();
+                for (id, d) in &self.state.dimensions {
+                    let mut value = serde_json::to_value(&**d)?;
+                    match dimensions::measure(&self.state, d)? {
+                        Some(m) => {
+                            value["status"] = json!("linked");
+                            value["measured"] =
+                                json!({"value":m.value,"lines":m.lines});
+                        }
+                        None => {
+                            value["status"] = json!("orphaned");
+                            value["measured"] = Value::Null;
+                        }
+                    }
+                    evaluated.insert(id.to_string(), value);
+                }
                 return Ok(CommandResult::read_only(
-                    json!({"points":self.state.points,"segments":self.state.segments,"circles":self.state.circles,"arcs":self.state.arcs,"hatches":self.state.hatches,"order":self.state.order,"source_revision":self.revision}),
+                    json!({"points":self.state.points,"segments":self.state.segments,"circles":self.state.circles,"arcs":self.state.arcs,"hatches":self.state.hatches,"dimensions":evaluated,"order":self.state.order,"source_revision":self.revision}),
                 ));
             }
             "querySnap" => {
@@ -678,7 +695,8 @@ impl Engine for DraftEngine {
                 let referenced = next.segments.values().any(|s| s.layer == id)
                     || next.circles.values().any(|c| c.layer == id)
                     || next.arcs.values().any(|a| a.layer == id)
-                    || next.hatches.values().any(|h| h.layer == id);
+                    || next.hatches.values().any(|h| h.layer == id)
+                    || next.dimensions.values().any(|d| d.layer == id);
                 if referenced {
                     return Err(bad("layer still contains entities"));
                 }
@@ -778,6 +796,97 @@ impl Engine for DraftEngine {
                     return Err(bad("hatch is on a locked layer"));
                 }
                 next.hatches.remove(&id);
+            }
+            "addDimension" => {
+                fields(
+                    p,
+                    &[
+                        "kind", "points", "entity", "axis", "name", "color", "width",
+                        "visible", "locked", "layer",
+                    ],
+                )?;
+                let id = next.allocate()?;
+                let dim = Dimension {
+                    id,
+                    kind: get(p, "kind")?,
+                    points: optional(p, "points", Vec::new())?,
+                    entity: optional(p, "entity", 0)?,
+                    axis: optional(p, "axis", None)?,
+                    name: optional(p, "name", "Dimension".into())?,
+                    color: optional(p, "color", [0, 0, 0, 255])?,
+                    width: optional(p, "width", 1.)?,
+                    visible: optional(p, "visible", true)?,
+                    locked: optional(p, "locked", false)?,
+                    layer: optional(p, "layer", 0)?,
+                };
+                if !next.dimension_resolves(&dim) {
+                    return Err(bad("dimension reference does not resolve"));
+                }
+                next.dimensions.insert(id, Arc::new(dim));
+                data = json!({"dimension_id":id});
+            }
+            "updateDimension" => {
+                let id = get(p, "id")?;
+                let dim = next
+                    .dimensions
+                    .get(&id)
+                    .ok_or_else(|| bad("unknown dimension"))?;
+                fields(
+                    p,
+                    &[
+                        "id", "kind", "points", "entity", "axis", "name", "color", "width",
+                        "visible", "locked", "layer",
+                    ],
+                )?;
+                if next.layer_locked(dim.layer)
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| k.as_str() != "id")
+                {
+                    return Err(bad("dimension is on a locked layer"));
+                }
+                if dim.locked
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| !["id", "locked"].contains(&k.as_str()))
+                {
+                    return Err(bad("dimension is locked"));
+                }
+                let dim = patch(
+                    &**dim,
+                    p,
+                    &[
+                        "id", "kind", "points", "entity", "axis", "name", "color", "width",
+                        "visible", "locked", "layer",
+                    ],
+                )?;
+                // Reference-bearing fields must resolve at write time, but
+                // style-only edits on an already-orphaned dimension stay
+                // allowed so hosts can restyle or hide it.
+                let relinks = ["kind", "points", "entity", "axis"]
+                    .iter()
+                    .any(|k| p.get(*k).is_some());
+                if relinks && !next.dimension_resolves(&dim) {
+                    return Err(bad("dimension reference does not resolve"));
+                }
+                next.dimensions.insert(id, Arc::new(dim));
+            }
+            "removeDimension" => {
+                fields(p, &["id"])?;
+                let id = get(p, "id")?;
+                let dim = next
+                    .dimensions
+                    .get(&id)
+                    .ok_or_else(|| bad("unknown dimension"))?;
+                if dim.locked {
+                    return Err(bad("dimension is locked"));
+                }
+                if next.layer_locked(dim.layer) {
+                    return Err(bad("dimension is on a locked layer"));
+                }
+                next.dimensions.remove(&id);
             }
             "setSnapSettings" => {
                 next.snaps = patch(

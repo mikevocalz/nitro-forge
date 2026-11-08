@@ -105,6 +105,15 @@ pub fn render(
             paths.push(json!({"path":{"subpaths":[{"closed":geometry.closed,"nodes":nodes}]},"stroke":{"paint":{"type":"solid","color":color},"width":width,"cap":"butt"}}));
         }
     }
+    // Dimension annotations composite above entity strokes; orphaned or
+    // hidden dimensions emit nothing (see dimensions::render).
+    paths.extend(crate::dimensions::render(
+        s,
+        view.origin_x,
+        view.origin_y,
+        view.scale,
+        ctx,
+    )?);
     // Validate the entire projected scene before constructing Prism/output allocations.
     let mut prism = prism_engine::PrismEngine::new(view.width, view.height);
     for path in paths {
