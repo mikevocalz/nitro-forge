@@ -52,7 +52,16 @@ solver** (largest; start with distance/perpendicular/tangent subset),
   "Draft paper space slice A7".
 - A8 command grammar: `LAYER`, `DIM`, `HATCH`, maybe `BLOCK`; update
   `DRAFT_COMMAND_COMPLETIONS`.
-- A9 blocks/instances: scope decision; transform-aware snaps moderate.
+- A9 blocks/instances: **implemented 2026-11-07** (worktree
+  forge-w3-draft-a9): named `blocks` (name + base point, membership via
+  entity `block`/insert `parent` fields) + `inserts` (uniform positive
+  scale, rotation, nesting to depth 8, cycle rejection, 1024-primitive
+  expansion cap enforced at validation). Members are definition geometry —
+  no direct render/snap/profile; instances materialize transformed
+  primitives for render and transform-aware snaps. Deferred: attributes,
+  dynamic blocks, xref, non-uniform/mirror scale, explode,
+  `findProfiles` through instances. See ROSTER "Draft blocks/instances
+  slice A9".
 
 ## Track B — 3D scene/materials/nodes (needs B0 decision first)
 

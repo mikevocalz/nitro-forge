@@ -1247,7 +1247,11 @@ fn profiles_hidden_entities_are_excluded() {
         1
     );
     // Hiding any one rectangle edge opens the chain: no profile.
-    apply(&mut e, "updateSegment", json!({"id":segs[2],"visible":false}));
+    apply(
+        &mut e,
+        "updateSegment",
+        json!({"id":segs[2],"visible":false}),
+    );
     assert_eq!(
         find_profiles(&mut e, json!({}))["profiles"]
             .as_array()
@@ -1255,7 +1259,11 @@ fn profiles_hidden_entities_are_excluded() {
             .len(),
         0
     );
-    apply(&mut e, "updateSegment", json!({"id":segs[2],"visible":true}));
+    apply(
+        &mut e,
+        "updateSegment",
+        json!({"id":segs[2],"visible":true}),
+    );
     // A hidden standalone circle never forms a loop either.
     let c = point(&mut e, 20., 20.);
     let circ = circle(&mut e, c, 2.);
@@ -1282,7 +1290,16 @@ fn profiles_junction_and_folded_loop_are_deterministic() {
     let s = point(&mut e, -2., 0.);
     let t = point(&mut e, -2., -2.);
     let u = point(&mut e, 0., -2.);
-    for (a, b) in [(j, p), (p, q), (q, r), (r, j), (j, s), (s, t), (t, u), (u, j)] {
+    for (a, b) in [
+        (j, p),
+        (p, q),
+        (q, r),
+        (r, j),
+        (j, s),
+        (s, t),
+        (t, u),
+        (u, j),
+    ] {
         segment(&mut e, a, b);
     }
     let first = find_profiles(&mut e, json!({}));
@@ -1314,7 +1331,10 @@ fn profiles_junction_and_folded_loop_are_deterministic() {
     let profiles = profiles.as_array().unwrap();
     assert_eq!(profiles.len(), 1);
     assert!((profiles[0]["area"].as_f64().unwrap() - 16.).abs() < 1e-9);
-    assert_eq!(find_profiles(&mut f, json!({}))["profiles"], json!(profiles));
+    assert_eq!(
+        find_profiles(&mut f, json!({}))["profiles"],
+        json!(profiles)
+    );
 }
 
 fn layer(e: &mut DraftEngine, name: &str) -> u64 {
@@ -1380,8 +1400,7 @@ fn layers_crud_reserved_names_defaults_and_history_are_atomic() {
     // Entities default to implicit layer 0; nonzero layers serialize explicitly.
     let a = point(&mut e, 0., 0.);
     let b = point(&mut e, 3., 0.);
-    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":notes}))
-        .data["segment_id"]
+    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":notes})).data["segment_id"]
         .as_u64()
         .unwrap();
     let described = apply(&mut e, "describe", json!({})).data;
@@ -1390,7 +1409,9 @@ fn layers_crud_reserved_names_defaults_and_history_are_atomic() {
         .as_u64()
         .unwrap();
     let described = apply(&mut e, "describe", json!({})).data;
-    assert!(described["segments"][plain.to_string()].get("layer").is_none());
+    assert!(described["segments"][plain.to_string()]
+        .get("layer")
+        .is_none());
     // Nonempty layers reject removal; empty ones remove and undo/redo cleanly.
     assert!(e
         .apply(Command::new("removeLayer", json!({"id":notes})))
@@ -1406,7 +1427,10 @@ fn layers_crud_reserved_names_defaults_and_history_are_atomic() {
     // Rename keeps uniqueness against peers and the reserved implicit name.
     let other = layer(&mut e, "Other");
     assert!(e
-        .apply(Command::new("updateLayer", json!({"id":walls,"name":"Other"})))
+        .apply(Command::new(
+            "updateLayer",
+            json!({"id":walls,"name":"Other"})
+        ))
         .is_err());
     assert!(e
         .apply(Command::new("updateLayer", json!({"id":walls,"name":"0"})))
@@ -1438,7 +1462,13 @@ fn hidden_layers_exclude_snaps_render_and_profiles() {
         "setSnapSettings",
         json!({"grid":false,"endpoint":false,"projection":true,"intersection":false,"midpoint":true}),
     );
-    assert!(apply(&mut e, "querySnap", json!({"x":1.5,"y":0.1,"tolerance":0.2})).data["candidate"].is_null());
+    assert!(apply(
+        &mut e,
+        "querySnap",
+        json!({"x":1.5,"y":0.1,"tolerance":0.2})
+    )
+    .data["candidate"]
+        .is_null());
     assert_eq!(
         find_profiles(&mut e, json!({}))["profiles"]
             .as_array()
@@ -1452,7 +1482,12 @@ fn hidden_layers_exclude_snaps_render_and_profiles() {
     assert!(rgba.iter().all(|v| *v == 0));
     // Restoring visibility returns real candidates, pixels and the profile.
     apply(&mut e, "updateLayer", json!({"id":hidden,"visible":true}));
-    let snap = apply(&mut e, "querySnap", json!({"x":1.5,"y":0.1,"tolerance":0.2})).data;
+    let snap = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":1.5,"y":0.1,"tolerance":0.2}),
+    )
+    .data;
     assert_eq!(snap["candidate"]["kind"], "midpoint");
     assert_eq!(snap["candidate"]["sources"], json!([edges[0]]));
     let pixels = apply(&mut e, "renderFrame", viewport()).data;
@@ -1474,7 +1509,12 @@ fn hidden_layers_exclude_snaps_render_and_profiles() {
         "setSnapSettings",
         json!({"midpoint":false,"projection":false,"center":true,"nearest_circle":true}),
     );
-    let snap = apply(&mut e, "querySnap", json!({"x":1.6,"y":1.5,"tolerance":0.5})).data;
+    let snap = apply(
+        &mut e,
+        "querySnap",
+        json!({"x":1.6,"y":1.5,"tolerance":0.5}),
+    )
+    .data;
     assert!(snap["candidate"].is_null());
 }
 #[test]
@@ -1484,8 +1524,7 @@ fn locked_layers_reject_edits_until_unlocked_and_assignment_is_allowed() {
     apply(&mut e, "updateLayer", json!({"id":locked,"locked":true}));
     let a = point(&mut e, 0., 0.);
     let b = point(&mut e, 3., 0.);
-    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":locked}))
-        .data["segment_id"]
+    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":locked})).data["segment_id"]
         .as_u64()
         .unwrap();
     let before = e.snapshot().unwrap();
@@ -1502,29 +1541,40 @@ fn locked_layers_reject_edits_until_unlocked_and_assignment_is_allowed() {
     // New entities may be assigned to a locked layer, then share its lock.
     let c = point(&mut e, 0., 3.);
     let d = point(&mut e, 3., 3.);
-    let other = apply(&mut e, "addSegment", json!({"a":c,"b":d,"layer":locked}))
-        .data["segment_id"]
+    let other = apply(&mut e, "addSegment", json!({"a":c,"b":d,"layer":locked})).data["segment_id"]
         .as_u64()
         .unwrap();
     assert!(e
-        .apply(Command::new("updateSegment", json!({"id":other,"visible":false})))
+        .apply(Command::new(
+            "updateSegment",
+            json!({"id":other,"visible":false})
+        ))
         .is_err());
     // Unlocking the layer restores edits; re-locking rejects them again.
     apply(&mut e, "updateLayer", json!({"id":locked,"locked":false}));
     apply(&mut e, "updateSegment", json!({"id":seg,"name":"renamed"}));
     apply(&mut e, "updateLayer", json!({"id":locked,"locked":true}));
     assert!(e
-        .apply(Command::new("updateSegment", json!({"id":seg,"name":"again"})))
+        .apply(Command::new(
+            "updateSegment",
+            json!({"id":seg,"name":"again"})
+        ))
         .is_err());
     apply(&mut e, "updateLayer", json!({"id":locked,"locked":false}));
     apply(&mut e, "updateSegment", json!({"id":seg,"name":"final"}));
     assert_eq!(state(&e).segments[&seg].name, "final");
     // Unknown layer assignment fails closed through full state validation.
     assert!(e
-        .apply(Command::new("addSegment", json!({"a":a,"b":b,"layer":4242})))
+        .apply(Command::new(
+            "addSegment",
+            json!({"a":a,"b":b,"layer":4242})
+        ))
         .is_err());
     assert!(e
-        .apply(Command::new("updateSegment", json!({"id":other,"layer":4242})))
+        .apply(Command::new(
+            "updateSegment",
+            json!({"id":other,"layer":4242})
+        ))
         .is_err());
 }
 #[test]
@@ -1545,8 +1595,7 @@ fn layer_snapshots_wrapper_defaults_and_hostile_restore() {
     assert!(state(&reopened).layers.is_empty());
     // Any real layer usage requires the strict schema2 wrapper.
     let walls = layer(&mut e, "Walls");
-    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":walls}))
-        .data["segment_id"]
+    let seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":walls})).data["segment_id"]
         .as_u64()
         .unwrap();
     let extended = e.snapshot().unwrap();
@@ -1554,7 +1603,10 @@ fn layer_snapshots_wrapper_defaults_and_hostile_restore() {
     let wrapped: Value = serde_json::from_slice(payload).unwrap();
     assert_eq!(wrapped["kind"], "draft");
     assert_eq!(wrapped["schema"], 2);
-    assert_eq!(wrapped["document"]["layers"][walls.to_string()]["name"], "Walls");
+    assert_eq!(
+        wrapped["document"]["layers"][walls.to_string()]["name"],
+        "Walls"
+    );
     reopened.restore(&extended).unwrap();
     assert_eq!(reopened.snapshot().unwrap(), extended);
     assert_eq!(state(&reopened).segments[&seg].layer, walls);
@@ -1566,10 +1618,12 @@ fn layer_snapshots_wrapper_defaults_and_hostile_restore() {
     dangling["document"]["segments"][seg.to_string()]["layer"] = json!(4242);
     cases.push(dangling);
     let mut reserved = wrapped.clone();
-    reserved["document"]["layers"]["0"] = json!({"id":0,"name":"Zero","color":null,"visible":true,"locked":false});
+    reserved["document"]["layers"]["0"] =
+        json!({"id":0,"name":"Zero","color":null,"visible":true,"locked":false});
     cases.push(reserved);
     let mut duplicate = wrapped.clone();
-    duplicate["document"]["layers"]["77"] = json!({"id":77,"name":"Walls","color":null,"visible":true,"locked":false});
+    duplicate["document"]["layers"]["77"] =
+        json!({"id":77,"name":"Walls","color":null,"visible":true,"locked":false});
     cases.push(duplicate);
     cases.push(wrapped["document"].clone());
     let mut bad_field = wrapped.clone();
@@ -1579,11 +1633,9 @@ fn layer_snapshots_wrapper_defaults_and_hostile_restore() {
     empty_name["document"]["layers"][walls.to_string()]["name"] = json!("");
     cases.push(empty_name);
     for invalid in cases {
-        assert!(
-            reopened
-                .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
-                .is_err()
-        );
+        assert!(reopened
+            .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+            .is_err());
         assert_eq!(reopened.snapshot().unwrap(), before);
     }
     // Removing the last nonzero-layer entity still keeps the layer map, so the
@@ -1604,12 +1656,7 @@ fn square(e: &mut DraftEngine, size: f64, layer: u64) -> Vec<u64> {
     let mut edges = Vec::new();
     for (p, q) in [(a, b), (b, c), (c, d), (d, a)] {
         edges.push(
-            apply(
-                e,
-                "addSegment",
-                json!({"a":p,"b":q,"layer":layer}),
-            )
-            .data["segment_id"]
+            apply(e, "addSegment", json!({"a":p,"b":q,"layer":layer})).data["segment_id"]
                 .as_u64()
                 .unwrap(),
         );
@@ -1617,7 +1664,9 @@ fn square(e: &mut DraftEngine, size: f64, layer: u64) -> Vec<u64> {
     edges
 }
 fn hatch(e: &mut DraftEngine, payload: Value) -> u64 {
-    apply(e, "addHatch", payload).data["hatch_id"].as_u64().unwrap()
+    apply(e, "addHatch", payload).data["hatch_id"]
+        .as_u64()
+        .unwrap()
 }
 fn pixels(e: &mut DraftEngine, w: u32, h: u32) -> Vec<u8> {
     let data = apply(
@@ -1663,8 +1712,7 @@ fn hatches_solid_fill_and_line_patterns_render_real_clipped_pixels() {
     }
     // A circle boundary resolves through the same tracer.
     let center = point(&mut e, 8., 2.);
-    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":2.}))
-        .data["circle_id"]
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":2.})).data["circle_id"]
         .as_u64()
         .unwrap();
     let disc = hatch(
@@ -1683,11 +1731,7 @@ fn hatches_solid_fill_and_line_patterns_render_real_clipped_pixels() {
     assert!(state(&e).hatches[&tri].loops[0].len() == 3);
     // Equal writes are read-only; undo/redo restores each step.
     let before = e.snapshot().unwrap();
-    let noop = apply(
-        &mut e,
-        "updateHatch",
-        json!({"id":tri,"name":"Hatch"}),
-    );
+    let noop = apply(&mut e, "updateHatch", json!({"id":tri,"name":"Hatch"}));
     assert!(noop.events.is_empty());
     assert_eq!(e.snapshot().unwrap(), before);
     apply(&mut e, "removeHatch", json!({"id":disc}));
@@ -1794,9 +1838,9 @@ fn hatch_boundary_tracing_is_validated_and_hatches_are_not_associative() {
     // Explicit loops must be closed polygons with real area.
     for loops in [
         json!([]),
-        json!([[[0.,0.],[1.,0.]]]),
-        json!([[[0.,0.],[1.,0.],[2.,0.]]]),
-        json!([[[0.,0.],[1.,1.],[2.,2.],[3.,3.]]]),
+        json!([[[0., 0.], [1., 0.]]]),
+        json!([[[0., 0.], [1., 0.], [2., 0.]]]),
+        json!([[[0., 0.], [1., 1.], [2., 2.], [3., 3.]]]),
     ] {
         assert!(e
             .apply(Command::new("addHatch", json!({"loops":loops})))
@@ -1905,7 +1949,7 @@ fn hatch_layers_locks_layer_removal_and_matching_reader_restore() {
     dangling["document"]["hatches"][free.to_string()]["layer"] = json!(4242);
     cases.push(dangling);
     let mut bad_loop = value.clone();
-    bad_loop["document"]["hatches"][free.to_string()]["loops"] = json!([[[0.,0.],[1.,0.]]]);
+    bad_loop["document"]["hatches"][free.to_string()]["loops"] = json!([[[0., 0.], [1., 0.]]]);
     cases.push(bad_loop);
     // Hostile style/coordinate bounds on hatch fields fail closed too.
     for (key, bad_value) in [
@@ -1920,7 +1964,7 @@ fn hatch_layers_locks_layer_removal_and_matching_reader_restore() {
     }
     let mut bad_coord = value.clone();
     bad_coord["document"]["hatches"][free.to_string()]["loops"] =
-        json!([[[0.,0.],[2e6,0.],[0.,1.]]]);
+        json!([[[0., 0.], [2e6, 0.], [0., 1.]]]);
     cases.push(bad_coord);
     let mut unknown_field = value.clone();
     unknown_field["document"]["hatches"][free.to_string()]["extra"] = json!(1);
@@ -1967,7 +2011,10 @@ fn dimensions_measure_linked_geometry_and_recompute_associatively() {
     // Associative: moving a referenced point recomputes the measurement.
     apply(&mut e, "updatePoint", json!({"id":b,"x":7.}));
     ev = evaluate(&mut e);
-    assert_eq!(ev["dimensions"][linear.to_string()]["measured"]["value"], 7.);
+    assert_eq!(
+        ev["dimensions"][linear.to_string()]["measured"]["value"],
+        7.
+    );
     // Aligned measures the direct distance; angular the unsigned vertex angle.
     let aligned = dimension(&mut e, json!({"kind":"aligned","points":[a,c]}));
     ev = evaluate(&mut e);
@@ -1975,10 +2022,7 @@ fn dimensions_measure_linked_geometry_and_recompute_associatively() {
         .as_f64()
         .unwrap();
     assert!((got - 4f64.hypot(3.)).abs() < 1e-9);
-    let angular = dimension(
-        &mut e,
-        json!({"kind":"angular","points":[a,b,c]}),
-    );
+    let angular = dimension(&mut e, json!({"kind":"angular","points":[a,b,c]}));
     ev = evaluate(&mut e);
     let got = ev["dimensions"][angular.to_string()]["measured"]["value"]
         .as_f64()
@@ -1988,8 +2032,7 @@ fn dimensions_measure_linked_geometry_and_recompute_associatively() {
     assert!((got - want).abs() < 1e-9);
     // Radial/diameter measure circle and arc entities.
     let center = point(&mut e, 20., 0.);
-    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":3.}))
-        .data["circle_id"]
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":3.})).data["circle_id"]
         .as_u64()
         .unwrap();
     let arc = apply(
@@ -1998,20 +2041,31 @@ fn dimensions_measure_linked_geometry_and_recompute_associatively() {
         json!({"center":center,"radius":3.,"start_deg":90.,"sweep_deg":90.}),
     )
     .data["arc_id"]
-    .as_u64()
-    .unwrap();
+        .as_u64()
+        .unwrap();
     let radial = dimension(&mut e, json!({"kind":"radial","entity":circle}));
     let diameter = dimension(&mut e, json!({"kind":"diameter","entity":arc}));
     ev = evaluate(&mut e);
-    assert_eq!(ev["dimensions"][radial.to_string()]["measured"]["value"], 3.);
-    assert_eq!(ev["dimensions"][diameter.to_string()]["measured"]["value"], 6.);
+    assert_eq!(
+        ev["dimensions"][radial.to_string()]["measured"]["value"],
+        3.
+    );
+    assert_eq!(
+        ev["dimensions"][diameter.to_string()]["measured"]["value"],
+        6.
+    );
     // Real stroked pixels: only dimensions exist, no segments.
     let rgba = pixels(&mut e, 24, 4);
     assert!(rgba.iter().any(|v| *v != 0));
     // Describe exposes the authored map; evaluate adds status/measured.
     let described = apply(&mut e, "describe", json!({})).data;
-    assert_eq!(described["dimensions"][linear.to_string()]["kind"], "linear");
-    assert!(described["dimensions"][linear.to_string()].get("status").is_none());
+    assert_eq!(
+        described["dimensions"][linear.to_string()]["kind"],
+        "linear"
+    );
+    assert!(described["dimensions"][linear.to_string()]
+        .get("status")
+        .is_none());
 }
 #[test]
 fn dimension_orphans_on_delete_relinks_and_keeps_style_edits() {
@@ -2033,7 +2087,11 @@ fn dimension_orphans_on_delete_relinks_and_keeps_style_edits() {
     // Orphaned dimensions render nothing.
     assert!(pixels(&mut e, 6, 2).iter().all(|v| *v == 0));
     // Style-only edits on an orphan stay allowed; reference edits must resolve.
-    apply(&mut e, "updateDimension", json!({"id":dim,"name":"Renamed","visible":false}));
+    apply(
+        &mut e,
+        "updateDimension",
+        json!({"id":dim,"name":"Renamed","visible":false}),
+    );
     let before = e.snapshot().unwrap();
     assert!(e
         .apply(Command::new(
@@ -2045,15 +2103,18 @@ fn dimension_orphans_on_delete_relinks_and_keeps_style_edits() {
     // Re-linking to live points restores measurement.
     let c = point(&mut e, 1., 1.);
     let dpt = point(&mut e, 1., 6.);
-    apply(&mut e, "updateDimension", json!({"id":dim,"points":[c,dpt],"visible":true}));
+    apply(
+        &mut e,
+        "updateDimension",
+        json!({"id":dim,"points":[c,dpt],"visible":true}),
+    );
     let ev = evaluate(&mut e);
     let d = &ev["dimensions"][dim.to_string()];
     assert_eq!(d["status"], "linked");
     assert_eq!(d["measured"]["value"], 5.);
     // Entity deletion orphans radial/diameter references the same way.
     let center = point(&mut e, 20., 0.);
-    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":2.}))
-        .data["circle_id"]
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":2.})).data["circle_id"]
         .as_u64()
         .unwrap();
     let radial = dimension(&mut e, json!({"kind":"radial","entity":circle}));
@@ -2064,7 +2125,10 @@ fn dimension_orphans_on_delete_relinks_and_keeps_style_edits() {
     assert!(e.undo().unwrap());
     assert!(evaluate(&mut e)["dimensions"][radial.to_string()]["status"] == "linked");
     assert!(e.redo().unwrap());
-    assert_eq!(evaluate(&mut e)["dimensions"][radial.to_string()]["status"], "orphaned");
+    assert_eq!(
+        evaluate(&mut e)["dimensions"][radial.to_string()]["status"],
+        "orphaned"
+    );
 }
 #[test]
 fn dimension_validation_is_atomic_and_bounds_enforced() {
@@ -2135,12 +2199,7 @@ fn dimension_layers_locks_removal_and_matching_reader_restore() {
     apply(&mut e, "updateLayer", json!({"id":lay,"visible":false}));
     let a = point(&mut e, 0., 0.);
     let b = point(&mut e, 3., 0.);
-    let _seg = apply(
-        &mut e,
-        "addSegment",
-        json!({"a":a,"b":b,"layer":lay}),
-    )
-    .data["segment_id"]
+    let _seg = apply(&mut e, "addSegment", json!({"a":a,"b":b,"layer":lay})).data["segment_id"]
         .as_u64()
         .unwrap();
     let dim = dimension(
@@ -2170,7 +2229,10 @@ fn dimension_layers_locks_removal_and_matching_reader_restore() {
     let free = dimension(&mut e, json!({"kind":"aligned","points":[a,b]}));
     apply(&mut e, "updateDimension", json!({"id":free,"locked":true}));
     assert!(e
-        .apply(Command::new("updateDimension", json!({"id":free,"name":"x"})))
+        .apply(Command::new(
+            "updateDimension",
+            json!({"id":free,"name":"x"})
+        ))
         .is_err());
     assert!(e
         .apply(Command::new("removeDimension", json!({"id":free})))
@@ -2186,19 +2248,21 @@ fn dimension_layers_locks_removal_and_matching_reader_restore() {
     let value: Value = serde_json::from_slice(payload).unwrap();
     assert_eq!(value["kind"], "draft");
     assert_eq!(value["schema"], 2);
-    assert_eq!(value["document"]["dimensions"][dim.to_string()]["kind"], "linear");
+    assert_eq!(
+        value["document"]["dimensions"][dim.to_string()]["kind"],
+        "linear"
+    );
     let mut reopened = DraftEngine::new();
     reopened.restore(&wrapped).unwrap();
     assert_eq!(reopened.snapshot().unwrap(), wrapped);
     let before = reopened.snapshot().unwrap();
     let mut cases: Vec<Value> = Vec::new();
     cases.push(value["document"].clone()); // unwrapped extended state
-    // A dimension point id that exists only as a segment is malformed even
-    // though absent point ids are legal orphans.
+                                           // A dimension point id that exists only as a segment is malformed even
+                                           // though absent point ids are legal orphans.
     let seg_id = state(&e).segments.keys().next().copied().unwrap();
     let mut wrong_kind_ref = value.clone();
-    wrong_kind_ref["document"]["dimensions"][dim.to_string()]["points"] =
-        json!([a, seg_id]);
+    wrong_kind_ref["document"]["dimensions"][dim.to_string()]["points"] = json!([a, seg_id]);
     cases.push(wrong_kind_ref);
     let mut bad_kind = value.clone();
     bad_kind["document"]["dimensions"][dim.to_string()]["kind"] = json!("bogus");
@@ -2239,10 +2303,7 @@ fn dimension_arrow_overshoot_at_world_budget_boundary_omits_legs() {
     // than failing the whole measurement.
     let a = point(&mut e, 0., 1e6);
     let b = point(&mut e, 4., 1e6);
-    let linear = dimension(
-        &mut e,
-        json!({"kind":"linear","points":[a,b],"axis":"x"}),
-    );
+    let linear = dimension(&mut e, json!({"kind":"linear","points":[a,b],"axis":"x"}));
     let aligned = dimension(&mut e, json!({"kind":"aligned","points":[a,b]}));
     let ev = evaluate(&mut e);
     for id in [linear, aligned] {
@@ -2269,8 +2330,7 @@ fn dimension_arrow_overshoot_at_world_budget_boundary_omits_legs() {
     assert!(framed.data["pixels_b64"].is_string());
     // Radial/diameter on a boundary-fitting circle still measure and draw.
     let center = point(&mut e, 0., 999999.);
-    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":1.}))
-        .data["circle_id"]
+    let circle = apply(&mut e, "addCircle", json!({"center":center,"radius":1.})).data["circle_id"]
         .as_u64()
         .unwrap();
     let arc = apply(
@@ -2279,20 +2339,26 @@ fn dimension_arrow_overshoot_at_world_budget_boundary_omits_legs() {
         json!({"center":center,"radius":1.,"start_deg":90.,"sweep_deg":90.}),
     )
     .data["arc_id"]
-    .as_u64()
-    .unwrap();
+        .as_u64()
+        .unwrap();
     let radial = dimension(&mut e, json!({"kind":"radial","entity":circle}));
     let diameter = dimension(&mut e, json!({"kind":"diameter","entity":arc}));
     let ev = evaluate(&mut e);
-    assert_eq!(ev["dimensions"][radial.to_string()]["measured"]["value"], 1.);
-    assert_eq!(ev["dimensions"][diameter.to_string()]["measured"]["value"], 2.);
+    assert_eq!(
+        ev["dimensions"][radial.to_string()]["measured"]["value"],
+        1.
+    );
+    assert_eq!(
+        ev["dimensions"][diameter.to_string()]["measured"]["value"],
+        2.
+    );
     assert!(apply(
         &mut e,
         "renderFrame",
         json!({"width":8,"height":4,"origin_x":0,"origin_y":0,"scale":1e-6}),
     )
     .data["pixels_b64"]
-    .is_string());
+        .is_string());
 }
 #[test]
 fn dimension_angular_arc_overshoot_omits_arc_but_keeps_rays() {
@@ -2304,10 +2370,7 @@ fn dimension_angular_arc_overshoot_omits_arc_but_keeps_rays() {
     let v = point(&mut e, 999999., 0.);
     let a = point(&mut e, 1e6, 1e6);
     let b = point(&mut e, 1e6, -1e6);
-    let dim = dimension(
-        &mut e,
-        json!({"kind":"angular","points":[v,a,b]}),
-    );
+    let dim = dimension(&mut e, json!({"kind":"angular","points":[v,a,b]}));
     let ev = evaluate(&mut e);
     let m = &ev["dimensions"][dim.to_string()]["measured"];
     let got = m["value"].as_f64().unwrap();
@@ -2338,10 +2401,7 @@ fn dimension_angular_arc_starts_at_arc_start_not_vertex() {
     let v = point(&mut e, 0., 0.);
     let a = point(&mut e, 4., 0.);
     let b = point(&mut e, 0., 4.);
-    let dim = dimension(
-        &mut e,
-        json!({"kind":"angular","points":[v,a,b]}),
-    );
+    let dim = dimension(&mut e, json!({"kind":"angular","points":[v,a,b]}));
     let ev = evaluate(&mut e);
     let m = &ev["dimensions"][dim.to_string()]["measured"];
     assert_eq!(m["value"], 90.);
@@ -2362,8 +2422,7 @@ fn dimension_angular_arc_starts_at_arc_start_not_vertex() {
         let pts = line.as_array().unwrap();
         pts.iter().any(|p| {
             let xy = p.as_array().unwrap();
-            (xy[0].as_f64().unwrap() - 1.).abs() < 1e-9
-                && xy[1].as_f64().unwrap().abs() < 1e-9
+            (xy[0].as_f64().unwrap() - 1.).abs() < 1e-9 && xy[1].as_f64().unwrap().abs() < 1e-9
         })
     });
     assert!(arc_start_drawn);
@@ -2403,9 +2462,8 @@ fn dimension_degenerate_angle_and_hidden_dimension_render_honestly() {
 #[test]
 fn command_grammar_layers_hatches_dimensions_and_deletes() {
     let mut e = DraftEngine::new();
-    let cmd = |e: &mut DraftEngine, text: &str| {
-        apply(e, "executeCommand", json!({"command":text})).data
-    };
+    let cmd =
+        |e: &mut DraftEngine, text: &str| apply(e, "executeCommand", json!({"command":text})).data;
     // LAYER lifecycle routes through the same layer ops, one undo each.
     let lay = cmd(&mut e, "layer new Walls")["result"]["layer_id"]
         .as_u64()
@@ -2455,16 +2513,13 @@ fn command_grammar_layers_hatches_dimensions_and_deletes() {
     let a = p(&mut e, 0., 0.);
     let b = p(&mut e, 4., 0.);
     let c = p(&mut e, 4., 3.);
-    let linear = cmd(&mut e, &format!("DIM LINEAR {a} {b} x"))["result"]
-        ["dimension_id"]
+    let linear = cmd(&mut e, &format!("DIM LINEAR {a} {b} x"))["result"]["dimension_id"]
         .as_u64()
         .unwrap();
-    let aligned = cmd(&mut e, &format!("dim aligned {a} {c}"))["result"]
-        ["dimension_id"]
+    let aligned = cmd(&mut e, &format!("dim aligned {a} {c}"))["result"]["dimension_id"]
         .as_u64()
         .unwrap();
-    let angular = cmd(&mut e, &format!("DIM ANGULAR {a} {b} {c}"))["result"]
-        ["dimension_id"]
+    let angular = cmd(&mut e, &format!("DIM ANGULAR {a} {b} {c}"))["result"]["dimension_id"]
         .as_u64()
         .unwrap();
     let circle = cmd(&mut e, "CIRCLE 20 0 2")["result"]["entity"]["circle_id"]
@@ -2473,12 +2528,10 @@ fn command_grammar_layers_hatches_dimensions_and_deletes() {
     let arc = cmd(&mut e, "ARC 20 0 2 0 90")["result"]["entity"]["arc_id"]
         .as_u64()
         .unwrap();
-    let radial = cmd(&mut e, &format!("DIM RADIAL {circle}"))["result"]
-        ["dimension_id"]
+    let radial = cmd(&mut e, &format!("DIM RADIAL {circle}"))["result"]["dimension_id"]
         .as_u64()
         .unwrap();
-    let diameter = cmd(&mut e, &format!("DIM DIAMETER {arc}"))["result"]
-        ["dimension_id"]
+    let diameter = cmd(&mut e, &format!("DIM DIAMETER {arc}"))["result"]["dimension_id"]
         .as_u64()
         .unwrap();
     let ev = apply(&mut e, "evaluate", json!({})).data;
@@ -2567,14 +2620,38 @@ fn paper_space_sheets_viewports_crud_validation_locks_and_history() {
         ("addSheet", json!({"name":"A3","width":100.,"height":50.})),
         ("addSheet", json!({"name":"","width":100.,"height":50.})),
         ("addSheet", json!({"name":"Tiny","width":10.,"height":50.})),
-        ("addSheet", json!({"name":"BadMargin","width":100.,"height":50.,"margin_top":30.,"margin_bottom":30.})),
-        ("addSheet", json!({"name":"BadMargin2","width":100.,"height":50.,"margin_left":-1.})),
-        ("addViewport", json!({"sheet":9999,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.})),
-        ("addViewport", json!({"sheet":a,"x":-1.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.})),
-        ("addViewport", json!({"sheet":a,"x":90.,"y":0.,"width":20.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.})),
-        ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":0.})),
-        ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1e9})),
-        ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.,"name":""})),
+        (
+            "addSheet",
+            json!({"name":"BadMargin","width":100.,"height":50.,"margin_top":30.,"margin_bottom":30.}),
+        ),
+        (
+            "addSheet",
+            json!({"name":"BadMargin2","width":100.,"height":50.,"margin_left":-1.}),
+        ),
+        (
+            "addViewport",
+            json!({"sheet":9999,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.}),
+        ),
+        (
+            "addViewport",
+            json!({"sheet":a,"x":-1.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.}),
+        ),
+        (
+            "addViewport",
+            json!({"sheet":a,"x":90.,"y":0.,"width":20.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.}),
+        ),
+        (
+            "addViewport",
+            json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":0.}),
+        ),
+        (
+            "addViewport",
+            json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1e9}),
+        ),
+        (
+            "addViewport",
+            json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.,"name":""}),
+        ),
         ("updateViewport", json!({"id":vp,"name":""})),
         ("updateSheet", json!({"id":a,"width":10.})),
         ("updateSheet", json!({"id":9999,"name":"X"})),
@@ -2592,7 +2669,11 @@ fn paper_space_sheets_viewports_crud_validation_locks_and_history() {
         .apply(Command::new("updateSheet", json!({"id":a,"width":30.})))
         .is_err());
     // Patch updates: rename, resize within viewport bounds stay legal.
-    apply(&mut e, "updateSheet", json!({"id":a,"name":"Site","margin_left":5.}));
+    apply(
+        &mut e,
+        "updateSheet",
+        json!({"id":a,"name":"Site","margin_left":5.}),
+    );
     assert_eq!(state(&e).sheets[&a].name, "Site");
     assert_eq!(state(&e).sheets[&a].margin_left, 5.);
     // Locked viewport rejects edits and removal until unlocked.
@@ -2630,7 +2711,11 @@ fn sheet_render_composites_clipped_model_space_with_real_pixels() {
     // the in-window portion may appear, clipped by the offscreen raster.
     let p = point(&mut e, 0., 0.);
     let q = point(&mut e, 100., 0.);
-    apply(&mut e, "addSegment", json!({"a":p,"b":q,"color":[0,0,0,255],"width":0.5}));
+    apply(
+        &mut e,
+        "addSegment",
+        json!({"a":p,"b":q,"color":[0,0,0,255],"width":0.5}),
+    );
     let r = apply(&mut e, "renderFrame", sheet_frame(a)).data;
     assert_eq!(r["width"], 378);
     assert_eq!(r["height"], 189);
@@ -2710,7 +2795,10 @@ fn paper_space_snapshots_wrapper_roundtrip_and_hostile_restore() {
     assert_eq!(wrapped["kind"], "draft");
     assert_eq!(wrapped["schema"], 2);
     assert_eq!(wrapped["document"]["sheets"][a.to_string()]["name"], "A3");
-    assert_eq!(wrapped["document"]["viewports"][vp.to_string()]["scale"], 4.);
+    assert_eq!(
+        wrapped["document"]["viewports"][vp.to_string()]["scale"],
+        4.
+    );
     reopened.restore(&extended).unwrap();
     assert_eq!(reopened.snapshot().unwrap(), extended);
     assert_eq!(state(&reopened).viewports[&vp].sheet, a);
@@ -2722,8 +2810,7 @@ fn paper_space_snapshots_wrapper_roundtrip_and_hostile_restore() {
     dangling["document"]["viewports"][vp.to_string()]["sheet"] = json!(4242);
     cases.push(dangling);
     let mut dup = wrapped.clone();
-    dup["document"]["sheets"]["77"] =
-        json!({"id":77,"name":"A3","width":100.,"height":50.,"margin_top":10.,"margin_right":10.,"margin_bottom":10.,"margin_left":10.});
+    dup["document"]["sheets"]["77"] = json!({"id":77,"name":"A3","width":100.,"height":50.,"margin_top":10.,"margin_right":10.,"margin_bottom":10.,"margin_left":10.});
     cases.push(dup);
     let mut outside = wrapped.clone();
     outside["document"]["viewports"][vp.to_string()]["x"] = json!(95.);
@@ -2739,11 +2826,9 @@ fn paper_space_snapshots_wrapper_roundtrip_and_hostile_restore() {
     bad_field["document"]["viewports"][vp.to_string()]["rotation"] = json!(30.);
     cases.push(bad_field);
     for invalid in cases {
-        assert!(
-            reopened
-                .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
-                .is_err()
-        );
+        assert!(reopened
+            .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+            .is_err());
         assert_eq!(reopened.snapshot().unwrap(), before);
     }
 }
@@ -2790,4 +2875,386 @@ fn sheet_viewport_renders_model_space_y_up_like_cad() {
         upper > 100 && upper > lower * 4,
         "model +y must render toward sheet +y: upper={upper} lower={lower}"
     );
+}
+fn block(e: &mut DraftEngine, name: &str) -> u64 {
+    apply(e, "addBlock", json!({"name":name})).data["block_id"]
+        .as_u64()
+        .unwrap()
+}
+fn insert(e: &mut DraftEngine, block: u64, x: f64, y: f64) -> u64 {
+    apply(e, "addInsert", json!({"block":block,"x":x,"y":y})).data["insert_id"]
+        .as_u64()
+        .unwrap()
+}
+fn snap(e: &mut DraftEngine, x: f64, y: f64, tolerance: f64) -> Value {
+    apply(e, "querySnap", json!({"x":x,"y":y,"tolerance":tolerance})).data["candidate"].clone()
+}
+#[test]
+fn blocks_instances_render_snaps_transform_and_single_undo() {
+    let mut e = DraftEngine::new();
+    // Definition "part": base (0,0), one segment (0,0)-(4,0) and one circle
+    // centered (2,1) r1. Members are created directly into the block.
+    let b = block(&mut e, "part");
+    let p1 = point(&mut e, 0., 0.);
+    let p2 = point(&mut e, 4., 0.);
+    let pc = point(&mut e, 2., 1.);
+    let seg = apply(
+        &mut e,
+        "addSegment",
+        json!({"a":p1,"b":p2,"block":b,"color":[9,9,9,255],"width":0.5}),
+    )
+    .data["segment_id"]
+        .as_u64()
+        .unwrap();
+    let circ = apply(
+        &mut e,
+        "addCircle",
+        json!({"center":pc,"radius":1.,"block":b}),
+    )
+    .data["circle_id"]
+        .as_u64()
+        .unwrap();
+    // Members are definition geometry: nothing draws or snaps at origin.
+    let blank = pixels(&mut e, 8, 8);
+    assert!(blank.iter().all(|v| *v == 0));
+    assert!(snap(&mut e, 2., 0., 0.5).is_null());
+    // Insert at (10,20) scale 2: segment -> (10,20)-(18,20), circle ->
+    // center (14,22) r2.
+    let i1 = apply(
+        &mut e,
+        "addInsert",
+        json!({"block":b,"x":10.,"y":20.,"scale":2.}),
+    )
+    .data["insert_id"]
+        .as_u64()
+        .unwrap();
+    let c = snap(&mut e, 18.3, 20.3, 0.5);
+    assert_eq!(c["kind"], "endpoint");
+    assert_eq!(c["x"], 18.);
+    assert_eq!(c["y"], 20.);
+    let mut sources = c["sources"].as_array().unwrap().clone();
+    sources.sort_by_key(|v| v.as_u64().unwrap());
+    assert_eq!(
+        Value::Array(sources),
+        json!([i1.min(seg), i1.max(seg)]),
+        "virtual endpoint sources are [insert, member] sorted"
+    );
+    // Rotated insert: local (4,0) under 90deg -> (0,4) at origin insert.
+    // One undo removes the whole insert atomically.
+    let before_rot = e.snapshot().unwrap();
+    apply(
+        &mut e,
+        "addInsert",
+        json!({"block":b,"x":0.,"y":0.,"rotation_deg":90.}),
+    );
+    let c = snap(&mut e, 0.3, 4.3, 0.5);
+    assert_eq!(c["kind"], "endpoint");
+    let (sx, sy) = (c["x"].as_f64().unwrap(), c["y"].as_f64().unwrap());
+    assert!((sx - 0.).abs() < 1e-9 && (sy - 4.).abs() < 1e-9);
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), before_rot);
+    assert!(snap(&mut e, 0.3, 4.3, 0.5).is_null());
+    // Real pixels: the scaled instance draws near (18,20); origin stays empty.
+    let rgba = pixels(&mut e, 24, 26);
+    let mut dark = 0usize;
+    for y in 18..23 {
+        for x in 8..20 {
+            let p = px(&rgba, 24, x, y);
+            if p[0] < 200 && p[3] > 0 {
+                dark += 1;
+            }
+        }
+    }
+    assert!(dark > 0, "scaled block instance must render real pixels");
+    assert!(
+        px(&rgba, 24, 2, 0)[3] == 0,
+        "definition geometry must not draw"
+    );
+    // evaluate/describe expose the new collections; members keep block refs.
+    let ev = apply(&mut e, "evaluate", json!({})).data;
+    assert!(ev["blocks"][b.to_string()]["name"] == "part");
+    assert!(ev["inserts"][i1.to_string()]["scale"] == 2.);
+    let d = apply(&mut e, "describe", json!({})).data;
+    assert_eq!(d["segments"][seg.to_string()]["block"], b);
+    // Members remain in the definition after the insert undo.
+    let s = state(&e);
+    assert!(s.inserts.len() == 1);
+    assert_eq!(s.segments[&seg].block, b);
+    // Command grammar routes BLOCK/INSERT through the same ops.
+    let cmd =
+        |e: &mut DraftEngine, text: &str| apply(e, "executeCommand", json!({"command":text})).data;
+    let gb = cmd(&mut e, "BLOCK NEW gadget")["result"]["block_id"]
+        .as_u64()
+        .unwrap();
+    cmd(&mut e, &format!("INSERT {gb} 30 30"));
+    let gi = state(&mut e)
+        .inserts
+        .values()
+        .find(|i| i.block == gb)
+        .unwrap()
+        .id;
+    cmd(&mut e, &format!("DELETE INSERT {gi}"));
+    cmd(&mut e, &format!("DELETE BLOCK {gb}"));
+    assert!(!state(&e).blocks.contains_key(&gb));
+    // Unknown/cyclic/deep guards and locks.
+    let before = e.snapshot().unwrap();
+    for (op, payload) in [
+        ("addInsert", json!({"block":9999,"x":0.,"y":0.})),
+        ("addInsert", json!({"block":b,"parent":9999,"x":0.,"y":0.})),
+        ("addInsert", json!({"block":b,"x":0.,"y":0.,"scale":0.})),
+        ("addInsert", json!({"block":b,"x":0.,"y":0.,"scale":-2.})),
+        (
+            "addInsert",
+            json!({"block":b,"x":0.,"y":0.,"rotation_deg":400000.}),
+        ),
+        ("addBlock", json!({"name":"part"})),
+        ("addBlock", json!({"name":""})),
+        ("updateBlock", json!({"id":9999,"name":"x"})),
+        ("removeBlock", json!({"id":b})),
+        ("removeInsert", json!({"id":9999})),
+        ("updateInsert", json!({"id":9999,"x":1.})),
+        ("addSegment", json!({"a":p1,"b":p2,"block":9999})),
+    ] {
+        assert!(
+            e.apply(Command::new(op, payload)).is_err(),
+            "{op} must reject"
+        );
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert!(state(&e).blocks.contains_key(&b));
+    assert_eq!(state(&e).segments[&seg].block, b);
+    // Locked insert rejects edits/removal until unlocked.
+    apply(&mut e, "updateInsert", json!({"id":i1,"locked":true}));
+    assert!(e
+        .apply(Command::new("updateInsert", json!({"id":i1,"scale":3.})))
+        .is_err());
+    assert!(e
+        .apply(Command::new("removeInsert", json!({"id":i1})))
+        .is_err());
+    apply(&mut e, "updateInsert", json!({"id":i1,"locked":false}));
+    // Moving a member out of the block restores direct rendering/snapping.
+    apply(&mut e, "updateSegment", json!({"id":seg,"block":0}));
+    assert_eq!(snap(&mut e, 2., 0., 0.5)["x"], 2.);
+    // Block removal still rejects while the circle remains a member.
+    assert!(e
+        .apply(Command::new("removeBlock", json!({"id":b})))
+        .is_err());
+    apply(&mut e, "updateCircle", json!({"id":circ,"block":0}));
+    apply(&mut e, "removeInsert", json!({"id":i1}));
+    apply(&mut e, "removeBlock", json!({"id":b}));
+    assert!(!state(&e).blocks.contains_key(&b));
+}
+#[test]
+fn nested_blocks_compose_transforms_and_cycles_depth_budgets_reject() {
+    let mut e = DraftEngine::new();
+    // inner: segment (0,0)-(1,0); outer contains an insert of inner at
+    // local (5,0); root insert of outer at (100,100) -> world (105,100)-(106,100).
+    let inner = block(&mut e, "inner");
+    let a = point(&mut e, 0., 0.);
+    let bpt = point(&mut e, 1., 0.);
+    let iseg = apply(&mut e, "addSegment", json!({"a":a,"b":bpt,"block":inner})).data["segment_id"]
+        .as_u64()
+        .unwrap();
+    let outer = block(&mut e, "outer");
+    let nested = apply(
+        &mut e,
+        "addInsert",
+        json!({"block":inner,"parent":outer,"x":5.,"y":0.}),
+    )
+    .data["insert_id"]
+        .as_u64()
+        .unwrap();
+    // The nested insert alone draws nothing (it is definition geometry).
+    assert!(pixels(&mut e, 8, 8).iter().all(|v| *v == 0));
+    let root = apply(
+        &mut e,
+        "addInsert",
+        json!({"block":outer,"x":100.,"y":100.}),
+    )
+    .data["insert_id"]
+        .as_u64()
+        .unwrap();
+    let c = snap(&mut e, 106.3, 100.3, 0.5);
+    assert_eq!(c["kind"], "endpoint");
+    assert_eq!(
+        (c["x"].as_f64().unwrap(), c["y"].as_f64().unwrap()),
+        (106., 100.)
+    );
+    let sources = c["sources"].as_array().unwrap();
+    assert!(sources.contains(&json!(root)) && sources.contains(&json!(iseg)));
+    // Rotation composes through nesting: inner insert rotated 90 inside a
+    // rotated outer lands at a computed world point.
+    apply(
+        &mut e,
+        "updateInsert",
+        json!({"id":nested,"rotation_deg":90.,"x":0.,"y":5.}),
+    );
+    // inner local (1,0) -> nested: rot90*s1 -> (0,1); +pos(0,5) in outer
+    // space -> (0,6); outer identity at (100,100) -> world (100,106).
+    let c = snap(&mut e, 100.2, 106.3, 0.5);
+    assert_eq!(
+        (c["x"].as_f64().unwrap(), c["y"].as_f64().unwrap()),
+        (100., 106.)
+    );
+    // Self-cycle rejects atomically at write time.
+    assert!(e
+        .apply(Command::new(
+            "addInsert",
+            json!({"block":inner,"parent":inner,"x":0.,"y":0.})
+        ))
+        .is_err());
+    let b2 = block(&mut e, "b2");
+    apply(
+        &mut e,
+        "addInsert",
+        json!({"block":b2,"parent":inner,"x":0.,"y":0.}),
+    );
+    // Two-block cycle and re-parenting into a cycle also reject.
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new(
+            "addInsert",
+            json!({"block":inner,"parent":b2,"x":0.,"y":0.})
+        ))
+        .is_err());
+    assert!(e
+        .apply(Command::new(
+            "updateInsert",
+            json!({"id":nested,"parent":inner})
+        ))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Depth budget: a chain of 9 nested blocks exceeds MAX_BLOCK_DEPTH 8.
+    let mut ids = Vec::new();
+    for i in 0..9 {
+        ids.push(block(&mut e, &format!("chain{i}")));
+    }
+    for i in 0..8 {
+        let r = e.apply(Command::new(
+            "addInsert",
+            json!({"block":ids[i+1],"parent":ids[i],"x":0.,"y":0.}),
+        ));
+        if i < 7 {
+            assert!(r.is_ok(), "depth {} must still be admitted", i + 2);
+        } else {
+            assert!(r.is_err(), "depth 9 must reject");
+        }
+    }
+    // Expansion budget: 33 member segments x 32 inserts exceeds 1024
+    // primitives; the insert that crosses the budget rejects atomically.
+    let mut e2 = DraftEngine::new();
+    let big = block(&mut e2, "big");
+    let p = point(&mut e2, 0., 0.);
+    let q = point(&mut e2, 1., 0.);
+    for _ in 0..33 {
+        apply(&mut e2, "addSegment", json!({"a":p,"b":q,"block":big}));
+    }
+    for n in 0..31 {
+        assert!(
+            e2.apply(Command::new(
+                "addInsert",
+                json!({"block":big,"x":0.,"y":0.})
+            ))
+            .is_ok(),
+            "insert {n} within expansion budget"
+        );
+    }
+    assert!(e2
+        .apply(Command::new(
+            "addInsert",
+            json!({"block":big,"x":0.,"y":0.})
+        ))
+        .is_err());
+    // Hidden inserts and hidden member layers emit nothing.
+    let mut e3 = DraftEngine::new();
+    let hb = block(&mut e3, "h");
+    let hp1 = point(&mut e3, 0., 0.);
+    let hp2 = point(&mut e3, 4., 0.);
+    apply(&mut e3, "addSegment", json!({"a":hp1,"b":hp2,"block":hb}));
+    let hi = insert(&mut e3, hb, 10., 10.);
+    apply(&mut e3, "updateInsert", json!({"id":hi,"visible":false}));
+    assert!(pixels(&mut e3, 16, 16).iter().all(|v| *v == 0));
+    apply(&mut e3, "updateInsert", json!({"id":hi,"visible":true}));
+    let lay = apply(&mut e3, "addLayer", json!({"name":"H","visible":false})).data["layer_id"]
+        .as_u64()
+        .unwrap();
+    apply(&mut e3, "updateInsert", json!({"id":hi,"layer":lay}));
+    assert!(pixels(&mut e3, 16, 16).iter().all(|v| *v == 0));
+}
+#[test]
+fn block_snapshots_wrapper_roundtrip_and_hostile_restore() {
+    let mut e = DraftEngine::new();
+    let legacy = e.snapshot().unwrap();
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&legacy).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), legacy);
+    let b = block(&mut e, "widget");
+    let p1 = point(&mut e, 0., 0.);
+    let p2 = point(&mut e, 4., 0.);
+    apply(&mut e, "addSegment", json!({"a":p1,"b":p2,"block":b}));
+    let i = insert(&mut e, b, 10., 10.);
+    let extended = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&extended).unwrap();
+    let wrapped: Value = serde_json::from_slice(payload).unwrap();
+    assert_eq!(wrapped["kind"], "draft");
+    assert_eq!(wrapped["schema"], 2);
+    assert_eq!(
+        wrapped["document"]["blocks"][b.to_string()]["name"],
+        "widget"
+    );
+    assert_eq!(wrapped["document"]["inserts"][i.to_string()]["block"], b);
+    reopened.restore(&extended).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), extended);
+    let before = reopened.snapshot().unwrap();
+    let mut cases: Vec<Value> = Vec::new();
+    // Unwrapped extended state, dangling block/parent refs, bad transform,
+    // wrong-kind member block and a hand-built cyclic insert graph reject.
+    cases.push(wrapped["document"].clone());
+    let mut dangling = wrapped.clone();
+    dangling["document"]["inserts"][i.to_string()]["block"] = json!(4242);
+    cases.push(dangling);
+    let mut bad_parent = wrapped.clone();
+    bad_parent["document"]["inserts"][i.to_string()]["parent"] = json!(4242);
+    cases.push(bad_parent);
+    let mut bad_scale = wrapped.clone();
+    bad_scale["document"]["inserts"][i.to_string()]["scale"] = json!(0.);
+    cases.push(bad_scale);
+    let mut bad_member = wrapped.clone();
+    bad_member["document"]["segments"]["3"]["block"] = json!(4242);
+    cases.push(bad_member);
+    let mut cyclic = wrapped.clone();
+    cyclic["document"]["blocks"]["50"] = json!({"id":50,"name":"c1","base_x":0.,"base_y":0.});
+    cyclic["document"]["blocks"]["51"] = json!({"id":51,"name":"c2","base_x":0.,"base_y":0.});
+    cyclic["document"]["inserts"]["60"] = json!({"id":60,"block":51,"parent":50,"name":"x","x":0.,"y":0.,"scale":1.,"rotation_deg":0.,"visible":true,"locked":false});
+    cyclic["document"]["inserts"]["61"] = json!({"id":61,"block":50,"parent":51,"name":"x","x":0.,"y":0.,"scale":1.,"rotation_deg":0.,"visible":true,"locked":false});
+    cyclic["document"]["next_id"] = json!(70);
+    cases.push(cyclic);
+    let mut unknown_field = wrapped.clone();
+    unknown_field["document"]["inserts"][i.to_string()]["explode"] = json!(true);
+    cases.push(unknown_field);
+    for invalid in cases {
+        assert!(reopened
+            .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+            .is_err());
+        assert_eq!(reopened.snapshot().unwrap(), before);
+    }
+    // Removing the last block/insert returns snapshots to bare schema:1 form.
+    apply(&mut e, "removeInsert", json!({"id":i}));
+    // Circle/segment member still references the block: removal must fail.
+    assert!(e
+        .apply(Command::new("removeBlock", json!({"id":b})))
+        .is_err());
+    let seg_id = state(&e)
+        .segments
+        .values()
+        .find(|s| s.block == b)
+        .unwrap()
+        .id;
+    apply(&mut e, "updateSegment", json!({"id":seg_id,"block":0}));
+    apply(&mut e, "removeBlock", json!({"id":b}));
+    let bare = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&bare).unwrap();
+    let value: Value = serde_json::from_slice(payload).unwrap();
+    assert!(value.get("document").is_none());
+    assert_eq!(value["kind"], "draft");
 }

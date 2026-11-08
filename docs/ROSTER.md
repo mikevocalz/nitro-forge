@@ -1824,6 +1824,55 @@ test` 13 passed across 6 files (1 new nf-cli paper-space e2e),
 `pnpm --filter @nitro-forge/draft typecheck` clean. UI adoption, native
 acceptance and full P17 completion are not implied.
 
+## Draft blocks/instances slice A9 (2026-11-07)
+
+Draft gains bounded named block definitions and block-reference inserts per
+the Track-A backlog scope decision. `blocks` (at most32) are `{name,
+base_x,base_y}` definitions — names unique, base is the definition-space
+insertion origin; membership lives on members (`block` on
+segments/circles/arcs, `parent` on inserts), never on the block, so no
+member list can dangle and `removeBlock` rejects while referenced (entity
+membership, insert target or insert parent). `inserts` (at most32) carry
+`{block,parent?,x,y,scale,rotation_deg,visible,locked,layer?}`: the target
+block's base point lands at `(x,y)` under a uniform positive similarity
+transform (`scale` 1e-6..1e3, `rotation_deg` ±360000); `parent != 0` nests
+the insert inside another definition's local space and transforms compose
+as similarities. Block members are definition geometry: they keep their
+points/order/editability and solver visibility but never draw, snap or
+trace `findProfiles` directly — only materialized instances do, honoring
+each member's and each insert level's `visible`/`layer`/style (stroke width
+scales by accumulated scale, arc start rotates, sweep preserved). Ops
+`addBlock`/`updateBlock`/`removeBlock`/`addInsert`/`updateInsert`/
+`removeInsert` follow the layer/viewport patterns: atomic apply, single
+journal entries, locked/locked-layer rejection, `removeLayer` counts insert
+layers. Nesting is bounded honestly: `check_graph` rejects cyclic block
+graphs and chains deeper than 8 at validation on every mutation and hostile
+restore; `expand` materializes at most1024 leaf primitives and validation
+runs the identical expansion so over-budget writes reject atomically.
+Snaps cover transformed endpoints/midpoints/projections/intersections/
+centers/nearest_circle/tangents with sources = sorted [root insert, member
+entity]; `renderFrame` draws instances after the ordered entity pass before
+dimensions. The command grammar gains `BLOCK NEW name`, `BLOCK DELETE id`,
+`INSERT blockId x y [scale] [rotationDeg]` and `DELETE BLOCK|INSERT id`;
+membership/base/rename stay on typed ops. Deferred and documented: block
+attributes, dynamic blocks, xrefs, non-uniform/negative scale, explode,
+`findProfiles` through instances, dimension/hatch/constraint membership,
+text glyphs. Snapshot compat stays presence-triggered: any block/insert
+forces the existing strict `{kind:"draft",schema:2}` wrapper; inner state
+stays schema:1 and legacy bare snapshots restore byte-identically.
+`describe`/`evaluate` expose the new maps; `DraftDocument` gains
+`addBlock`/`updateBlock`/`removeBlock`/`addInsert`/`updateInsert`/
+`removeInsert` and entity ops accept `block`.
+
+Local evidence: `cargo test -p draft-engine` 49 passed (3 new block tests
+covering transforms/snaps/real pixels/single-undo, nested composition,
+self+two-block cycles, depth-9 and expansion-budget rejection, hidden
+subtrees, locks, grammar routing, wrapper roundtrip and hostile restores),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/draft test` 14 passed across 7 files (1 new
+nf-cli blocks e2e), `pnpm --filter @nitro-forge/draft typecheck` clean.
+UI adoption, native acceptance and full P17 completion are not implied.
+
 ## P16 design comment threads/pins slice G checkpoint (2026-11-08)
 
 Design gains engine-owned comment threads as durable document state under

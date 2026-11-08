@@ -34,6 +34,12 @@ pub struct Segment {
     pub locked: bool,
     #[serde(default, skip_serializing_if = "is_zero")]
     pub layer: u64,
+    /// Containing block definition id (slice A9); 0 keeps the entity in
+    /// model space. Block members are definition geometry: they stay in
+    /// `points`/`order` and remain editable/solvable, but they do not draw,
+    /// snap or trace profiles directly — only block inserts do, transformed.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub block: u64,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -48,6 +54,8 @@ pub struct Circle {
     pub locked: bool,
     #[serde(default, skip_serializing_if = "is_zero")]
     pub layer: u64,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub block: u64,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -64,6 +72,8 @@ pub struct ArcEntity {
     pub locked: bool,
     #[serde(default, skip_serializing_if = "is_zero")]
     pub layer: u64,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub block: u64,
 }
 fn is_false(value: &bool) -> bool {
     !*value
@@ -216,6 +226,51 @@ pub struct ViewportEntity {
     pub visible: bool,
     pub locked: bool,
 }
+pub const MAX_BLOCKS: usize = 32;
+pub const MAX_INSERTS: usize = 32;
+/// Nesting and expansion budgets for block instances (see `blocks` module).
+pub const MAX_BLOCK_DEPTH: usize = 8;
+pub const MAX_EXPANDED_PRIMITIVES: usize = 1024;
+/// Named block definition (slice A9): `base_x`/`base_y` is the
+/// definition-space insertion origin — every insert of this block places
+/// that point at its own `(x,y)` before scale/rotation. Membership is not
+/// stored on the block: segments/circles/arcs carry `block` and inserts
+/// carry `parent`, so a definition has no member list that can dangle.
+/// Blocks have no lock (sheet precedent); attributes, dynamic blocks,
+/// xrefs, non-uniform scale, mirroring and exploded edits are deferred.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Block {
+    pub id: u64,
+    pub name: String,
+    pub base_x: f64,
+    pub base_y: f64,
+}
+/// Block-reference entity: instantiates `block` (required, must exist) with
+/// its base point at `(x,y)`, uniform `scale` (1e-6..1e3, positive only —
+/// negative/mirror scale is deferred) and `rotation_deg` (±360000). `parent`
+/// is the containing block id for nested definitions; 0 places the insert in
+/// model space, where `(x,y)` is world coordinates. Inside a parent block the
+/// same fields are expressed in that definition's local space. Nested chains
+/// deeper than MAX_BLOCK_DEPTH or cyclic block graphs reject at validation.
+/// Hatches/dimensions/constraints cannot be block members in this slice.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InsertEntity {
+    pub id: u64,
+    pub block: u64,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub parent: u64,
+    pub name: String,
+    pub x: f64,
+    pub y: f64,
+    pub scale: f64,
+    pub rotation_deg: f64,
+    pub visible: bool,
+    pub locked: bool,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub layer: u64,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Definition {
@@ -306,6 +361,10 @@ pub struct State {
     pub sheets: BTreeMap<u64, Arc<Sheet>>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub viewports: BTreeMap<u64, Arc<ViewportEntity>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub blocks: BTreeMap<u64, Arc<Block>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub inserts: BTreeMap<u64, Arc<InsertEntity>>,
 }
 impl Default for State {
     fn default() -> Self {
@@ -326,6 +385,8 @@ impl Default for State {
             dimensions: BTreeMap::new(),
             sheets: BTreeMap::new(),
             viewports: BTreeMap::new(),
+            blocks: BTreeMap::new(),
+            inserts: BTreeMap::new(),
         }
     }
 }
@@ -377,9 +438,10 @@ impl State {
                 .values()
                 .any(|a| (a.locked || self.layer_locked(a.layer)) && a.center == id)
             || self.points.get(&id).is_some_and(|p| p.locked)
-            || self.segments.values().any(|s| {
-                (s.locked || self.layer_locked(s.layer)) && (s.a == id || s.b == id)
-            })
+            || self
+                .segments
+                .values()
+                .any(|s| (s.locked || self.layer_locked(s.layer)) && (s.a == id || s.b == id))
     }
     pub fn definition_points(&self, d: &Definition) -> Result<Vec<u64>, EngineError> {
         Ok(match *d {
@@ -402,6 +464,7 @@ impl State {
         width: f64,
         name: &str,
         layer: u64,
+        block: u64,
         ids: &mut BTreeSet<u64>,
     ) -> Result<(), EngineError> {
         let p = self.point(center)?;
@@ -411,6 +474,7 @@ impl State {
             || !ids.insert(id)
             || name.len() > 512
             || !(layer == 0 || self.layers.contains_key(&layer))
+            || !(block == 0 || self.blocks.contains_key(&block))
             || !radius.is_finite()
             || !(1e-6..=LIMIT).contains(&radius)
             || ![p.x - radius, p.x + radius, p.y - radius, p.y + radius]
@@ -441,6 +505,8 @@ impl State {
             || self.dimensions.len() > MAX_DIMENSIONS
             || self.sheets.len() > MAX_SHEETS
             || self.viewports.len() > MAX_VIEWPORTS
+            || self.blocks.len() > MAX_BLOCKS
+            || self.inserts.len() > MAX_INSERTS
         {
             return Err(bad("invalid draft header or count budget"));
         }
@@ -479,6 +545,7 @@ impl State {
                 || s.a == s.b
                 || s.name.len() > 512
                 || !(s.layer == 0 || self.layers.contains_key(&s.layer))
+                || !(s.block == 0 || self.blocks.contains_key(&s.block))
                 || !s.width.is_finite()
                 || s.width < 1e-6
                 || s.width > 1000.
@@ -490,26 +557,12 @@ impl State {
         }
         for (&id, c) in &self.circles {
             self.validate_circle(
-                id,
-                c.id,
-                c.center,
-                c.radius,
-                c.width,
-                &c.name,
-                c.layer,
-                &mut ids,
+                id, c.id, c.center, c.radius, c.width, &c.name, c.layer, c.block, &mut ids,
             )?;
         }
         for (&id, a) in &self.arcs {
             self.validate_circle(
-                id,
-                a.id,
-                a.center,
-                a.radius,
-                a.width,
-                &a.name,
-                a.layer,
-                &mut ids,
+                id, a.id, a.center, a.radius, a.width, &a.name, a.layer, a.block, &mut ids,
             )?;
             if !a.start_deg.is_finite()
                 || a.start_deg.abs() > 360000.
@@ -648,7 +701,9 @@ impl State {
                         || self.constraints.contains_key(&p)
                         || self.dimensions.contains_key(&p)
                         || self.sheets.contains_key(&p)
-                        || self.viewports.contains_key(&p))
+                        || self.viewports.contains_key(&p)
+                        || self.blocks.contains_key(&p)
+                        || self.inserts.contains_key(&p))
                 {
                     return Err(bad("dimension point reference has wrong identity kind"));
                 }
@@ -663,7 +718,9 @@ impl State {
                     || self.constraints.contains_key(&d.entity)
                     || self.dimensions.contains_key(&d.entity)
                     || self.sheets.contains_key(&d.entity)
-                    || self.viewports.contains_key(&d.entity))
+                    || self.viewports.contains_key(&d.entity)
+                    || self.blocks.contains_key(&d.entity)
+                    || self.inserts.contains_key(&d.entity))
             {
                 return Err(bad("dimension entity reference has wrong identity kind"));
             }
@@ -689,9 +746,7 @@ impl State {
                 sh.margin_bottom,
                 sh.margin_left,
             ];
-            if !margins
-                .iter()
-                .all(|m| m.is_finite() && *m >= 0.)
+            if !margins.iter().all(|m| m.is_finite() && *m >= 0.)
                 || sh.margin_top + sh.margin_bottom >= sh.height
                 || sh.margin_left + sh.margin_right >= sh.width
             {
@@ -728,6 +783,46 @@ impl State {
                 return Err(bad("viewport rectangle, view or scale outside bounds"));
             }
         }
+        let mut block_names = BTreeSet::new();
+        for (&id, b) in &self.blocks {
+            if id != b.id
+                || id == 0
+                || id >= self.next_id
+                || !ids.insert(id)
+                || b.name.is_empty()
+                || b.name.len() > 512
+                || !block_names.insert(b.name.as_str())
+                || !coord(b.base_x)
+                || !coord(b.base_y)
+            {
+                return Err(bad("invalid block identity, name or base point"));
+            }
+        }
+        for (&id, i) in &self.inserts {
+            if id != i.id
+                || id == 0
+                || id >= self.next_id
+                || !ids.insert(id)
+                || i.name.len() > 512
+                || !self.blocks.contains_key(&i.block)
+                || !(i.parent == 0 || self.blocks.contains_key(&i.parent))
+                || !coord(i.x)
+                || !coord(i.y)
+                || !i.scale.is_finite()
+                || !(1e-6..=1e3).contains(&i.scale)
+                || !i.rotation_deg.is_finite()
+                || i.rotation_deg.abs() > 360000.
+                || !(i.layer == 0 || self.layers.contains_key(&i.layer))
+            {
+                return Err(bad("invalid block insert identity, transform or reference"));
+            }
+        }
+        // Cyclic block graphs and over-deep nesting reject here so every
+        // mutation/restore fails atomically before any read can recurse.
+        crate::blocks::check_graph(self)?;
+        // The exact primitive count every render/snap read will materialize;
+        // exceeding the budget rejects the write rather than the read later.
+        crate::blocks::expand(self)?;
         let s = &self.snaps;
         if !s.polar_increment.is_finite()
             || !(0.01..=360.).contains(&s.polar_increment)

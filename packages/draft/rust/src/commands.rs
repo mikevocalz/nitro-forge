@@ -85,7 +85,9 @@ fn layer(words: &[&str]) -> Result<Plan, EngineError> {
 fn hatch(words: &[&str]) -> Result<Plan, EngineError> {
     let pattern = words[1].to_ascii_lowercase();
     if !HATCH_PATTERNS.contains(&pattern.as_str()) {
-        return Err(bad("HATCH pattern must be one of solid, ansi31, crosshatch or horizontal"));
+        return Err(bad(
+            "HATCH pattern must be one of solid, ansi31, crosshatch or horizontal",
+        ));
     }
     let mut ids = Vec::with_capacity(words.len() - 2);
     for token in &words[2..] {
@@ -95,6 +97,38 @@ fn hatch(words: &[&str]) -> Result<Plan, EngineError> {
         op: "addHatch",
         payload: json!({"pattern":pattern,"boundary_ids":ids}),
         message: "Hatch created",
+    })
+}
+fn block(words: &[&str]) -> Result<Plan, EngineError> {
+    let command = |op, payload, message| {
+        Ok(Plan::Command {
+            op,
+            payload,
+            message,
+        })
+    };
+    match (words[1].to_ascii_uppercase().as_str(), words.len()) {
+        ("NEW", 3) => command("addBlock", json!({"name":words[2]}), "Block created"),
+        ("DELETE", 3) => command("removeBlock", json!({"id":id(words[2])?}), "Block removed"),
+        _ => Err(bad("BLOCK supports NEW name or DELETE id")),
+    }
+}
+fn insert(words: &[&str]) -> Result<Plan, EngineError> {
+    let mut payload = json!({
+        "block": id(words[1])?,
+        "x": world(words[2])?,
+        "y": world(words[3])?,
+    });
+    if words.len() >= 5 {
+        payload["scale"] = json!(number(words[4])?);
+    }
+    if words.len() == 6 {
+        payload["rotation_deg"] = json!(number(words[5])?);
+    }
+    Ok(Plan::Command {
+        op: "addInsert",
+        payload,
+        message: "Block inserted",
     })
 }
 fn dimension(words: &[&str]) -> Result<Plan, EngineError> {
@@ -158,12 +192,14 @@ pub fn parse(text: &str) -> Result<Plan, EngineError> {
   ("ARC",6)=>Ok(Plan::Circular{center:[world(words[1])?,world(words[2])?],radius:world(words[3])?,arc:Some((number(words[4])?,number(words[5])?))}),
   ("SEGMENT",3)=>command("addSegment",json!({"a":id(words[1])?,"b":id(words[2])?}),"Segment created"),
   ("MOVE",4)=>command("updatePoint",json!({"id":id(words[1])?,"x":world(words[2])?,"y":world(words[3])?}),"Point position updated"),
-  ("DELETE",3)=>{let op=match words[1].to_ascii_uppercase().as_str(){"POINT"=>"removePoint","SEGMENT"=>"removeSegment","CONSTRAINT"=>"removeConstraint","CIRCLE"=>"removeCircle","ARC"=>"removeArc","HATCH"=>"removeHatch","DIMENSION"=>"removeDimension","LAYER"=>"removeLayer",_=>return Err(bad("DELETE supports POINT, SEGMENT, CIRCLE, ARC, CONSTRAINT, HATCH, DIMENSION or LAYER"))};command(op,json!({"id":id(words[2])?}),"Entity removed")},
+  ("DELETE",3)=>{let op=match words[1].to_ascii_uppercase().as_str(){"POINT"=>"removePoint","SEGMENT"=>"removeSegment","CONSTRAINT"=>"removeConstraint","CIRCLE"=>"removeCircle","ARC"=>"removeArc","HATCH"=>"removeHatch","DIMENSION"=>"removeDimension","LAYER"=>"removeLayer","BLOCK"=>"removeBlock","INSERT"=>"removeInsert",_=>return Err(bad("DELETE supports POINT, SEGMENT, CIRCLE, ARC, CONSTRAINT, HATCH, DIMENSION, LAYER, BLOCK or INSERT"))};command(op,json!({"id":id(words[2])?}),"Entity removed")},
   ("SOLVE",1|2)=>command("solve",if words.len()==2{json!({"tolerance":number(words[1])?})}else{json!({})},"Linear solve evaluated"),
   ("SNAP",4|6)=>{let mut payload=json!({"x":world(words[1])?,"y":world(words[2])?,"tolerance":number(words[3])?});if words.len()==6{payload["anchor"]=json!({"x":world(words[4])?,"y":world(words[5])?})}command("querySnap",payload,"Snap query evaluated")},
   ("LAYER",3..=4)=>layer(&words),
   ("HATCH",3..=8)=>hatch(&words),
   ("DIM",3..=5)=>dimension(&words),
-  _=>Err(bad("unsupported command or argument count; use POINT, LINE, CIRCLE, ARC, SEGMENT, MOVE, DELETE, SOLVE, SNAP, LAYER, HATCH or DIM"))
+  ("BLOCK",3)=>block(&words),
+  ("INSERT",4..=6)=>insert(&words),
+  _=>Err(bad("unsupported command or argument count; use POINT, LINE, CIRCLE, ARC, SEGMENT, MOVE, DELETE, SOLVE, SNAP, LAYER, HATCH, DIM, BLOCK or INSERT"))
  }
 }

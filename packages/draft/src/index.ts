@@ -2,7 +2,7 @@ import {DocumentHandle,type EngineHost} from '@nitro-forge/ignition';
 export interface DraftPoint{id:number;x:number;y:number;locked:boolean}
 /** Named entity grouping; layer 0 is implicit, reserved and never serialized in `layers`. */
 export interface DraftLayer{id:number;name:string;color:[number,number,number,number]|null;visible:boolean;locked:boolean}
-export interface DraftSegment{id:number;a:number;b:number;name:string;color:[number,number,number,number];width:number;visible:boolean;locked:boolean;layer?:number}
+export interface DraftSegment{id:number;a:number;b:number;name:string;color:[number,number,number,number];width:number;visible:boolean;locked:boolean;layer?:number;block?:number}
 export interface DraftCircle extends Omit<DraftSegment,'a'|'b'>{center:number;radius:number}
 export interface DraftArc extends DraftCircle{start_deg:number;sweep_deg:number}
 export type ConstraintDefinition={kind:'fixed';point:number;x:number;y:number}|{kind:'coincident';a:number;b:number}|{kind:'horizontal'|'vertical';segment:number}|{kind:'distance_x'|'distance_y';a:number;b:number;value:number};
@@ -24,8 +24,12 @@ export interface DraftDimensionState extends DraftDimension{status:'linked'|'orp
 export interface DraftSheet{id:number;name:string;width:number;height:number;margin_top:number;margin_right:number;margin_bottom:number;margin_left:number}
 /** Paper-space viewport entity: `x`,`y`,`width`,`height` is its rectangle in sheet millimetres (bottom-left origin, +y up, fully inside the sheet). `center_x`/`center_y` is the world point at the viewport center; `scale` is paper millimetres per world unit. Model content clips at the viewport's raster boundary — there is no vector clip. Sheet viewports render model space y-up (model +y toward sheet +y), matching CAD identity rotation. */
 export interface DraftViewportEntity{id:number;sheet:number;name:string;x:number;y:number;width:number;height:number;center_x:number;center_y:number;scale:number;visible:boolean;locked:boolean}
+/** Named block definition (slice A9): `base_x`/`base_y` is the definition-space insertion origin every insert of this block places at its own (x,y). Membership lives on members (`block` on segments/circles/arcs, `parent` on inserts), never on the block. Attributes, dynamic blocks, xrefs, non-uniform/mirror scale and explode are deferred. */
+export interface DraftBlock{id:number;name:string;base_x:number;base_y:number}
+/** Block-reference entity: instantiates `block` with its base point at (x,y), uniform positive `scale` and `rotation_deg`. `parent` is the containing block for nested definitions (0 = model space, where x/y are world coordinates); inside a parent the transform fields are in that definition's local space. Members keep their own visible/layer/style inside every instance; nesting is capped at 8 levels and cyclic graphs reject. */
+export interface DraftInsert{id:number;block:number;parent?:number;name:string;x:number;y:number;scale:number;rotation_deg:number;visible:boolean;locked:boolean;layer?:number}
 export interface SnapSettings{grid:boolean;spacing:number;origin_x:number;origin_y:number;endpoint:boolean;midpoint:boolean;projection:boolean;intersection:boolean;ortho:boolean;polar:boolean;polar_increment:number;center:boolean;nearest_circle:boolean;tangent:boolean}
-export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>;hatches?:Record<string,DraftHatch>;dimensions?:Record<string,DraftDimension>;sheets?:Record<string,DraftSheet>;viewports?:Record<string,DraftViewportEntity>}
+export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>;hatches?:Record<string,DraftHatch>;dimensions?:Record<string,DraftDimension>;sheets?:Record<string,DraftSheet>;viewports?:Record<string,DraftViewportEntity>;blocks?:Record<string,DraftBlock>;inserts?:Record<string,DraftInsert>}
 export interface SolveReport{scope:'point_coordinates';status:'solved'|'underconstrained'|'inconsistent';rank:number;dof:number;residual:number;unsatisfied_constraints:number[];unsatisfied_locked_points:number[];applied:boolean}
 export interface SnapResult{kind:'grid'|'endpoint'|'midpoint'|'projection'|'intersection'|'ortho'|'polar'|'center'|'nearest_circle'|'tangent';x:number;y:number;distance:number;sources:number[];angle_degrees?:number}
 export interface DraftSnapQuery{candidate:SnapResult|null;source_revision:number}
@@ -76,6 +80,15 @@ export class DraftDocument{
  addViewport(options:{sheet:number;x:number;y:number;width:number;height:number;center_x:number;center_y:number;scale:number}&Partial<Pick<DraftViewportEntity,'name'|'visible'|'locked'>>){return this.document.apply<{viewport_id:number}>('addViewport',options);}
  updateViewport(id:number,patch:Partial<Omit<DraftViewportEntity,'id'>>){return this.document.apply<{ok:boolean}>('updateViewport',{...patch,id});}
  removeViewport(id:number){return this.document.apply<{ok:boolean}>('removeViewport',{id});}
+ /** Named block definition; members join via the `block` field on segment/circle/arc ops or `parent` on inserts. Block names are unique; `base_x`/`base_y` default to the definition origin (0,0). */
+ addBlock(name:string,options:{base_x?:number;base_y?:number}={}){return this.document.apply<{block_id:number}>('addBlock',{name,...options});}
+ updateBlock(id:number,patch:Partial<Omit<DraftBlock,'id'>>){return this.document.apply<{ok:boolean}>('updateBlock',{...patch,id});}
+ /** Rejects while any entity or insert still references the block (members, targets or parents). */
+ removeBlock(id:number){return this.document.apply<{ok:boolean}>('removeBlock',{id});}
+ /** Block instance: `block` is the target definition, `parent` (default 0) nests it inside another block's definition space. Scale is uniform and positive (1e-6..1e3); rotation is degrees. Cyclic graphs and nesting deeper than 8 levels reject. */
+ addInsert(options:{block:number;x:number;y:number}&Partial<Pick<DraftInsert,'parent'|'scale'|'rotation_deg'|'name'|'visible'|'locked'|'layer'>>){return this.document.apply<{insert_id:number}>('addInsert',options);}
+ updateInsert(id:number,patch:Partial<Omit<DraftInsert,'id'>>){return this.document.apply<{ok:boolean}>('updateInsert',{...patch,id});}
+ removeInsert(id:number){return this.document.apply<{ok:boolean}>('removeInsert',{id});}
  setSnapSettings(patch:Partial<SnapSettings>){return this.document.apply<{ok:boolean}>('setSnapSettings',patch);}
  /** Tolerance is world units; the host converts any screen tolerance with its actual viewport. */
  querySnap(x:number,y:number,tolerance:number,anchor?:{x:number;y:number}){return this.document.apply<DraftSnapQuery>('querySnap',{x,y,tolerance,...(anchor?{anchor}:{})});}
@@ -88,7 +101,7 @@ export class DraftDocument{
  solve(tolerance=1e-7){return this.document.apply<SolveReport>('solve',{tolerance});}
  /** Read-only deterministic closed-loop tracing; tolerance is world units (default 1e-6). */
  findProfiles(tolerance?:number){return this.document.apply<DraftProfiles>('findProfiles',tolerance===undefined?{}:{tolerance});}
- evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'hatches'|'sheets'|'viewports'|'order'>&{dimensions:Record<string,DraftDimensionState>;source_revision:number}>('evaluate',{});}
+ evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'hatches'|'sheets'|'viewports'|'blocks'|'inserts'|'order'>&{dimensions:Record<string,DraftDimensionState>;source_revision:number}>('evaluate',{});}
  renderFrame(viewport:DraftViewport){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',viewport);}
  /** Renders a paper-space sheet at `dpi` (default 96, admitted 24..600): opaque white paper, margin chrome, then each visible viewport's model window clipped at its raster boundary. Print/export stays host-side. */
  renderSheet(sheet_id:number,dpi?:number){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',{sheet_id,...(dpi===undefined?{}:{dpi})});}

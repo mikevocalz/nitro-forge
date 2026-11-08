@@ -1,5 +1,9 @@
 //! World-space finite-geometry candidates; no screen transform is guessed.
-use crate::{circular, model::*};
+//! Effective geometry is authored model-space entities plus materialized
+//! block-instance primitives (slice A9): block members never snap
+//! untransformed, virtual candidates carry `sources` = sorted
+//! [root insert id, member entity id].
+use crate::{blocks, circular, model::*};
 use ignition_core::EngineError;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -27,6 +31,26 @@ struct Candidate {
     priority: u8,
     sources: Vec<u64>,
     angle_degrees: Option<f64>,
+}
+type XY = circular::XY;
+/// Drawable segment for snapping: authored endpoints or a transformed block
+/// instance. `emit_ends` is true only for virtual segments — authored
+/// endpoints already snap through the shared `points` pass.
+struct SegItem {
+    a: XY,
+    b: XY,
+    sources: Vec<u64>,
+    emit_ends: bool,
+}
+struct CurveItem {
+    g: circular::Geometry,
+    sources: Vec<u64>,
+}
+fn merged(mut a: Vec<u64>, b: &[u64]) -> Vec<u64> {
+    a.extend_from_slice(b);
+    a.sort_unstable();
+    a.dedup();
+    a
 }
 pub fn query(
     s: &State,
@@ -116,126 +140,169 @@ pub fn query(
             });
         }
     }
-    for seg in s.segments.values().filter(|seg| seg.visible && s.layer_visible(seg.layer)) {
+    // Effective drawable geometry: authored entities (block members
+    // excluded — they are definition geometry) plus materialized block
+    // instances. Deterministic order: authored id order, then instance
+    // expansion order.
+    let mut segs: Vec<SegItem> = Vec::new();
+    for seg in s
+        .segments
+        .values()
+        .filter(|seg| seg.visible && seg.block == 0 && s.layer_visible(seg.layer))
+    {
         let a = s.point(seg.a)?;
         let b = s.point(seg.b)?;
+        segs.push(SegItem {
+            a: (a.x, a.y),
+            b: (b.x, b.y),
+            sources: vec![seg.id],
+            emit_ends: false,
+        });
+    }
+    let mut curves: Vec<CurveItem> = circular::geometries(s)
+        .into_iter()
+        .map(|g| CurveItem {
+            sources: vec![g.id],
+            g,
+        })
+        .collect();
+    for v in blocks::expand(s)? {
+        let mut sources = vec![v.root, v.member];
+        sources.sort_unstable();
+        if let Some((a, b)) = v.segment {
+            segs.push(SegItem {
+                a,
+                b,
+                sources,
+                emit_ends: true,
+            });
+        } else if let Some(g) = v.curve {
+            curves.push(CurveItem { g, sources });
+        }
+    }
+    for seg in &segs {
+        if settings.endpoint && seg.emit_ends {
+            for p in [seg.a, seg.b] {
+                candidates.push(Candidate {
+                    kind: "endpoint",
+                    x: p.0,
+                    y: p.1,
+                    priority: 0,
+                    sources: seg.sources.clone(),
+                    angle_degrees: None,
+                });
+            }
+        }
         if settings.midpoint {
             candidates.push(Candidate {
                 kind: "midpoint",
-                x: (a.x + b.x) / 2.,
-                y: (a.y + b.y) / 2.,
+                x: (seg.a.0 + seg.b.0) / 2.,
+                y: (seg.a.1 + seg.b.1) / 2.,
                 priority: 3,
-                sources: vec![seg.id],
+                sources: seg.sources.clone(),
                 angle_degrees: None,
             });
         }
         if settings.projection {
-            let (dx, dy) = (b.x - a.x, b.y - a.y);
+            let (dx, dy) = (seg.b.0 - seg.a.0, seg.b.1 - seg.a.1);
             let len = dx * dx + dy * dy;
             if len > 1e-18 {
-                let t = (((x - a.x) * dx + (y - a.y) * dy) / len).clamp(0., 1.);
+                let t = (((x - seg.a.0) * dx + (y - seg.a.1) * dy) / len).clamp(0., 1.);
                 candidates.push(Candidate {
                     kind: "projection",
-                    x: a.x + t * dx,
-                    y: a.y + t * dy,
+                    x: seg.a.0 + t * dx,
+                    y: seg.a.1 + t * dy,
                     priority: 4,
-                    sources: vec![seg.id],
+                    sources: seg.sources.clone(),
                     angle_degrees: None,
                 });
             }
         }
     }
     if settings.intersection {
-        let segments: Vec<_> = s.segments.values().filter(|seg| seg.visible && s.layer_visible(seg.layer)).collect();
-        for (i, a) in segments.iter().enumerate() {
-            for b in &segments[i + 1..] {
-                let (p, q, r, t) = (s.point(a.a)?, s.point(a.b)?, s.point(b.a)?, s.point(b.b)?);
-                let (u, v, w, z) = (q.x - p.x, q.y - p.y, t.x - r.x, t.y - r.y);
+        for (i, a) in segs.iter().enumerate() {
+            for b in &segs[i + 1..] {
+                let (p, q, r, t) = (a.a, a.b, b.a, b.b);
+                let (u, v, w, z) = (q.0 - p.0, q.1 - p.1, t.0 - r.0, t.1 - r.1);
                 let determinant = u * z - v * w;
                 let lengths = ((u * u + v * v) * (w * w + z * z)).sqrt();
                 if lengths <= 1e-18 || determinant.abs() <= 1e-12 * lengths {
                     continue;
                 }
-                let (dx, dy) = (r.x - p.x, r.y - p.y);
+                let (dx, dy) = (r.0 - p.0, r.1 - p.1);
                 let alpha = (dx * z - dy * w) / determinant;
                 let beta = (dx * v - dy * u) / determinant;
                 if (0.0..=1.0).contains(&alpha) && (0.0..=1.0).contains(&beta) {
                     candidates.push(Candidate {
                         kind: "intersection",
-                        x: p.x + alpha * u,
-                        y: p.y + alpha * v,
+                        x: p.0 + alpha * u,
+                        y: p.1 + alpha * v,
                         priority: 2,
-                        sources: vec![a.id, b.id],
+                        sources: merged(a.sources.clone(), &b.sources),
+                        angle_degrees: None,
+                    });
+                }
+            }
+        }
+        for curve in &curves {
+            for seg in &segs {
+                for point in curve.g.segment_hits(seg.a, seg.b) {
+                    candidates.push(Candidate {
+                        kind: "intersection",
+                        x: point.0,
+                        y: point.1,
+                        priority: 2,
+                        sources: merged(curve.sources.clone(), &seg.sources),
+                        angle_degrees: None,
+                    });
+                }
+            }
+        }
+        for (i, first) in curves.iter().enumerate() {
+            for second in &curves[i + 1..] {
+                for point in first.g.circle_hits(&second.g) {
+                    candidates.push(Candidate {
+                        kind: "intersection",
+                        x: point.0,
+                        y: point.1,
+                        priority: 2,
+                        sources: merged(first.sources.clone(), &second.sources),
                         angle_degrees: None,
                     });
                 }
             }
         }
     }
-    let curved = circular::geometries(s);
-    for curve in &curved {
+    for curve in &curves {
+        let g = &curve.g;
         let mut push = |kind, point: (f64, f64), priority| {
             candidates.push(Candidate {
                 kind,
                 x: point.0,
                 y: point.1,
                 priority,
-                sources: vec![curve.id],
+                sources: curve.sources.clone(),
                 angle_degrees: None,
             })
         };
         if settings.center {
-            push("center", curve.center, 1);
+            push("center", g.center, 1);
         }
         if settings.endpoint {
-            for point in curve.ends() {
+            for point in g.ends() {
                 push("endpoint", point, 0);
             }
         }
-        if settings.midpoint && !curve.closed {
-            push("midpoint", curve.point(curve.start + curve.sweep / 2.), 3);
+        if settings.midpoint && !g.closed {
+            push("midpoint", g.point(g.start + g.sweep / 2.), 3);
         }
         if settings.nearest_circle {
-            push("nearest_circle", curve.closest((x, y)), 5);
+            push("nearest_circle", g.closest((x, y)), 5);
         }
         if settings.tangent {
             if let Some(anchor) = anchor {
-                for point in curve.tangents((anchor.x, anchor.y)) {
+                for point in g.tangents((anchor.x, anchor.y)) {
                     push("tangent", point, 6);
-                }
-            }
-        }
-    }
-    if settings.intersection {
-        for curve in &curved {
-            for segment in s.segments.values().filter(|seg| seg.visible && s.layer_visible(seg.layer)) {
-                let a = s.point(segment.a)?;
-                let b = s.point(segment.b)?;
-                for point in curve.segment_hits((a.x, a.y), (b.x, b.y)) {
-                    let mut sources = vec![curve.id, segment.id];
-                    sources.sort_unstable();
-                    candidates.push(Candidate {
-                        kind: "intersection",
-                        x: point.0,
-                        y: point.1,
-                        priority: 2,
-                        sources,
-                        angle_degrees: None,
-                    });
-                }
-            }
-        }
-        for (i, first) in curved.iter().enumerate() {
-            for second in &curved[i + 1..] {
-                for point in first.circle_hits(second) {
-                    candidates.push(Candidate {
-                        kind: "intersection",
-                        x: point.0,
-                        y: point.1,
-                        priority: 2,
-                        sources: vec![first.id, second.id],
-                        angle_degrees: None,
-                    });
                 }
             }
         }
