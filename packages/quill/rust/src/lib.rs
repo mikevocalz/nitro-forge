@@ -17,6 +17,11 @@ mod comments;
 use comments::{validate_comments, Comment};
 mod footnotes;
 use footnotes::{validate_footnotes, Footnote};
+mod citations;
+use citations::{
+    validate_bibliography, validate_citations, validate_sources, BibliographyField, Citation,
+    CitationSource,
+};
 mod toc;
 use toc::{validate_toc, TocField};
 mod revisions;
@@ -80,6 +85,15 @@ pub enum BlockKind {
     /// pre-toc readers reject the unknown variant, so no schema bump.
     #[serde(rename = "toc")]
     Toc,
+    /// A bibliography field block: `inlines` stays empty and
+    /// `Block::bibliography` carries `{sort,entries}` — a cached scan of
+    /// the cited `sources`. Same fail-closed serde-variant precedent as
+    /// `"table"`/`"toc"`: pre-bibliography readers reject the unknown
+    /// variant, so no schema bump; only `insertBibliography` creates one
+    /// (`setBlockKind` can convert it back to a text kind, dropping the
+    /// payload).
+    #[serde(rename = "bibliography")]
+    Bibliography,
 }
 
 impl BlockKind {
@@ -157,6 +171,13 @@ pub struct Block {
     /// Entries are a cached scan snapshot — `listToc` is the live read.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub toc: Option<TocField>,
+    /// Bibliography field payload, present exactly when
+    /// `kind == BlockKind::Bibliography` (enforced by
+    /// `citations::validate_bibliography` on restore and by op guards).
+    /// Entries are a cached scan snapshot — `listBibliography` is the
+    /// live read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bibliography: Option<BibliographyField>,
     /// Paragraph-level formatting (alignment, indents, tab stops — P12
     /// slice 9). `Block` has no `deny_unknown_fields`, so old readers
     /// silently ignore this field: any snapshot carrying it emits the
@@ -174,6 +195,7 @@ impl Block {
             inlines: Vec::new(),
             table: None,
             toc: None,
+            bibliography: None,
             format: None,
         }
     }
@@ -224,6 +246,14 @@ struct Schema3DocSnapshotRef<'a> {
     tracking: &'a Option<TrackChanges>,
     #[serde(skip_serializing_if = "<[Footnote]>::is_empty")]
     footnotes: &'a [Footnote],
+    /// Omitted when empty for the same reason as `footnotes`;
+    /// `citations`/`sources` ride the schema:3 `deny_unknown_fields`
+    /// document, so schema:3-era readers fail closed on those keys — no
+    /// schema bump.
+    #[serde(skip_serializing_if = "<[Citation]>::is_empty")]
+    citations: &'a [Citation],
+    #[serde(skip_serializing_if = "<[CitationSource]>::is_empty")]
+    sources: &'a [CitationSource],
 }
 
 #[derive(Serialize)]
@@ -257,14 +287,18 @@ struct Schema3DocState {
     // that understand it (schema:3-era readers fail closed on it).
     #[serde(default)]
     comments: Vec<Comment>,
-    // `revisions`/`tracking`/`footnotes` are optional for the same reason:
-    // absent means no tracked changes, tracking disabled, and no notes.
+    // `revisions`/`tracking`/`footnotes`/`citations`/`sources` are
+    // optional for the same reason: absent means none.
     #[serde(default)]
     revisions: Vec<Revision>,
     #[serde(default)]
     tracking: Option<TrackChanges>,
     #[serde(default)]
     footnotes: Vec<Footnote>,
+    #[serde(default)]
+    citations: Vec<Citation>,
+    #[serde(default)]
+    sources: Vec<CitationSource>,
 }
 
 #[derive(Serialize)]
@@ -328,6 +362,12 @@ struct UndoEntry {
     /// `(before, after)` footnote/endnote lists for ops that can move
     /// anchors or edit notes; `None` leaves the live list untouched.
     footnotes: Option<(Vec<Footnote>, Vec<Footnote>)>,
+    /// `(before, after)` citation lists for ops that can move anchors or
+    /// edit citations; `None` leaves the live list untouched.
+    citations: Option<(Vec<Citation>, Vec<Citation>)>,
+    /// `(before, after)` bibliography-source lists for source ops (and
+    /// the removeSource citation cascade); `None` leaves it untouched.
+    sources: Option<(Vec<CitationSource>, Vec<CitationSource>)>,
 }
 
 /// Before-images for the document-level collections an op can move or
@@ -345,17 +385,25 @@ struct Collections {
     /// Before-image of the footnote/endnote list; outer `None` leaves it
     /// untouched.
     footnotes: Option<Vec<Footnote>>,
+    /// Before-image of the citation list; outer `None` leaves it
+    /// untouched.
+    citations: Option<Vec<Citation>>,
+    /// Before-image of the bibliography-source list; outer `None` leaves
+    /// it untouched.
+    sources: Option<Vec<CitationSource>>,
 }
 
 impl Collections {
-    /// Bookmark, comment, section, revision, and footnote lists move
-    /// together through every block-count-changing or position-moving op.
+    /// Bookmark, comment, section, revision, footnote, and citation
+    /// lists move together through every block-count-changing or
+    /// position-moving op. Sources never move with block edits.
     fn anchors(
         bookmarks: Vec<Bookmark>,
         comments: Vec<Comment>,
         sections: Vec<Section>,
         revisions: Vec<Revision>,
         footnotes: Vec<Footnote>,
+        citations: Vec<Citation>,
     ) -> Self {
         Self {
             bookmarks: Some(bookmarks),
@@ -363,6 +411,7 @@ impl Collections {
             sections: Some(sections),
             revisions: Some(revisions),
             footnotes: Some(footnotes),
+            citations: Some(citations),
             ..Default::default()
         }
     }
@@ -411,6 +460,8 @@ impl Collections {
         revisions: Vec<Revision>,
         tracking: Option<TrackChanges>,
         footnotes: Vec<Footnote>,
+        citations: Vec<Citation>,
+        sources: Vec<CitationSource>,
     ) -> Self {
         Self {
             bookmarks: Some(bookmarks),
@@ -420,6 +471,8 @@ impl Collections {
             revisions: Some(revisions),
             tracking: Some(tracking),
             footnotes: Some(footnotes),
+            citations: Some(citations),
+            sources: Some(sources),
         }
     }
 }
@@ -1186,6 +1239,12 @@ pub struct QuillEngine {
     tracking: Option<TrackChanges>,
     /// Footnotes/endnotes anchored to live `{block,offset}` positions.
     footnotes: Vec<Footnote>,
+    /// In-text citations anchored to live `{block,offset}` positions and
+    /// naming `sources` ids.
+    citations: Vec<Citation>,
+    /// Bibliography source records; bibliography field entries are caches
+    /// scanned from these plus `citations`.
+    sources: Vec<CitationSource>,
     journal: Journal<UndoEntry>,
 }
 
@@ -1200,6 +1259,8 @@ impl QuillEngine {
             revisions: Vec::new(),
             tracking: None,
             footnotes: Vec::new(),
+            citations: Vec::new(),
+            sources: Vec::new(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
@@ -1233,6 +1294,12 @@ impl QuillEngine {
         let footnotes = before
             .footnotes
             .map(|before| (before, self.footnotes.clone()));
+        let citations = before
+            .citations
+            .map(|before| (before, self.citations.clone()));
+        let sources = before
+            .sources
+            .map(|before| (before, self.sources.clone()));
         self.journal.record(UndoEntry {
             index,
             removed,
@@ -1244,6 +1311,8 @@ impl QuillEngine {
             revisions,
             tracking,
             footnotes,
+            citations,
+            sources,
         });
     }
 
@@ -1293,6 +1362,8 @@ impl QuillEngine {
         let revisions_before = std::mem::take(&mut self.revisions);
         let tracking_before = std::mem::take(&mut self.tracking);
         let footnotes_before = std::mem::take(&mut self.footnotes);
+        let citations_before = std::mem::take(&mut self.citations);
+        let sources_before = std::mem::take(&mut self.sources);
         self.record_undo(
             0,
             old,
@@ -1305,6 +1376,8 @@ impl QuillEngine {
                 revisions_before,
                 tracking_before,
                 footnotes_before,
+                citations_before,
+                sources_before,
             ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
@@ -1326,8 +1399,10 @@ impl QuillEngine {
         next.splice(index..index + count, inserted.iter().cloned());
         lists::validate(&next)?;
         // Splices preserve kind/payload pairs by construction, but the
-        // candidate still goes through the same toc gate restore uses.
-        validate_toc(&next)
+        // candidate still goes through the same field-block gates restore
+        // uses.
+        validate_toc(&next)?;
+        validate_bibliography(&next)
     }
     fn op_insert_text(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let at = parse_pos(field(p, "at")?)?;
@@ -1341,6 +1416,11 @@ impl QuillEngine {
         if self.blocks[at.block].kind == BlockKind::Toc {
             return Err(EngineError::validation(
                 "cannot insert text into a toc field block",
+            ));
+        }
+        if self.blocks[at.block].kind == BlockKind::Bibliography {
+            return Err(EngineError::validation(
+                "cannot insert text into a bibliography field block",
             ));
         }
         if text.is_empty() {
@@ -1366,6 +1446,7 @@ impl QuillEngine {
                     inlines: normalize_inlines(std::mem::take(&mut head)),
                     table: None,
                     toc: None,
+                    bibliography: None,
                     format: old.format.clone(),
                 });
             }
@@ -1384,6 +1465,7 @@ impl QuillEngine {
             inlines: normalize_inlines(head),
             table: None,
             toc: None,
+            bibliography: None,
             format: old.format.clone(),
         });
 
@@ -1394,12 +1476,14 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         self.blocks.splice(at.block..at.block + 1, out);
         self.remap_bookmarks_insert_text(at, &text);
         self.remap_comments_insert_text(at, &text);
         self.remap_sections_insert_text(at, &text);
         self.remap_revisions_insert_text(at, &text);
         self.remap_footnotes_insert_text(at, &text);
+        self.remap_citations_insert_text(at, &text);
         self.remap_toc_insert_text(at, &text);
         // The inserted range ends after the final segment: with `\n`s the
         // last segment lands in block `at.block + added` at `last_len`,
@@ -1428,6 +1512,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
@@ -1457,6 +1542,11 @@ impl QuillEngine {
                 "cannot deleteRange from a toc field block",
             ));
         }
+        if self.blocks[from.block].kind == BlockKind::Bibliography {
+            return Err(EngineError::validation(
+                "cannot deleteRange from a bibliography field block",
+            ));
+        }
         let attr = self.revision_attr(p)?;
 
         let removed: Vec<Block> = self.blocks[from.block..=to.block].to_vec();
@@ -1476,6 +1566,7 @@ impl QuillEngine {
                 inlines: normalize_inlines(inlines),
                 table: b.table.clone(),
                 toc: b.toc.clone(),
+                bibliography: b.bibliography.clone(),
                 format: b.format.clone(),
             }];
         } else {
@@ -1502,6 +1593,7 @@ impl QuillEngine {
                 inlines: normalize_inlines(inlines),
                 table: first.table.clone(),
                 toc: first.toc.clone(),
+                bibliography: first.bibliography.clone(),
                 format: first.format.clone(),
             }];
         }
@@ -1511,6 +1603,7 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         self.blocks
             .splice(from.block..=to.block, new_span.iter().cloned());
         self.remap_bookmarks_delete(from, to);
@@ -1518,6 +1611,7 @@ impl QuillEngine {
         self.remap_sections_delete(from, to);
         self.remap_revisions_delete(from, to);
         self.remap_footnotes_delete(from, to);
+        self.remap_citations_delete(from, to);
         self.remap_toc_delete(from, to);
         // The deletion collapses to its start; the deleted plain text is
         // stored on the record so `rejectRevision` can restore it.
@@ -1542,6 +1636,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         Ok(CommandResult::data(json!({ "deleted_text": deleted_text })))
@@ -1562,6 +1657,7 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
@@ -1571,6 +1667,8 @@ impl QuillEngine {
             revisions: self.revisions.clone(),
             tracking: self.tracking.clone(),
             footnotes: self.footnotes.clone(),
+            citations: self.citations.clone(),
+            sources: self.sources.clone(),
             journal: Journal::new(1),
         };
         let mut deleted = String::new();
@@ -1594,9 +1692,10 @@ impl QuillEngine {
         }
         lists::validate(&staged.blocks)?;
         // Defense-in-depth: the staged candidate goes through the same
-        // table/toc gates restore uses, matching replaceText.
+        // table/field gates restore uses, matching replaceText.
         validate_tables(&staged.blocks)?;
         validate_toc(&staged.blocks)?;
+        validate_bibliography(&staged.blocks)?;
         let data = json!({"deleted_text":deleted});
         if staged.blocks == self.blocks && staged.revisions == self.revisions {
             return Ok(Self::read_only(data));
@@ -1607,6 +1706,8 @@ impl QuillEngine {
         self.sections = staged.sections;
         self.revisions = staged.revisions;
         self.footnotes = staged.footnotes;
+        self.citations = staged.citations;
+        self.sources = staged.sources;
         self.record_undo(
             0,
             self.blocks.clone(),
@@ -1617,6 +1718,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         self.blocks = staged.blocks;
@@ -1654,6 +1756,7 @@ impl QuillEngine {
                 inlines: normalize_inlines(inlines),
                 table: b.table.clone(),
                 toc: b.toc.clone(),
+                bibliography: b.bibliography.clone(),
                 format: b.format.clone(),
             });
         }
@@ -1694,9 +1797,11 @@ impl QuillEngine {
         let old = b.clone();
         let mut new = old.clone();
         new.kind = kind;
-        // Leaving `toc` drops the field payload (kind⇔payload invariant);
-        // entering is impossible — `parse` never yields `BlockKind::Toc`.
+        // Leaving `toc`/`bibliography` drops the field payload
+        // (kind⇔payload invariant); entering is impossible — `parse`
+        // never yields those kinds.
         new.toc = None;
+        new.bibliography = None;
         if kind != BlockKind::List {
             new.list = None;
         }
@@ -1724,6 +1829,7 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         let mut next = old.clone();
         next.insert(index, Block::empty(kind));
         lists::validate(&next)?;
@@ -1733,6 +1839,7 @@ impl QuillEngine {
         self.remap_sections_insert_block(index);
         self.remap_revisions_insert_block(index);
         self.remap_footnotes_insert_block(index);
+        self.remap_citations_insert_block(index);
         self.remap_toc_insert_block(index);
         self.record_undo(
             0,
@@ -1744,6 +1851,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         Ok(CommandResult::data(json!({ "block_index": index })))
@@ -1762,6 +1870,11 @@ impl QuillEngine {
                 "cannot split a toc field block",
             ));
         }
+        if self.blocks[at.block].kind == BlockKind::Bibliography {
+            return Err(EngineError::validation(
+                "cannot split a bibliography field block",
+            ));
+        }
         let old = self.blocks[at.block].clone();
         let (head, tail) = split_inlines(&old.inlines, at.offset);
         let new_span = vec![
@@ -1772,6 +1885,7 @@ impl QuillEngine {
                 inlines: normalize_inlines(head),
                 table: old.table.clone(),
                 toc: old.toc.clone(),
+                bibliography: old.bibliography.clone(),
                 format: old.format.clone(),
             },
             Block {
@@ -1781,6 +1895,7 @@ impl QuillEngine {
                 inlines: normalize_inlines(tail),
                 table: old.table.clone(),
                 toc: old.toc.clone(),
+                bibliography: old.bibliography.clone(),
                 format: old.format.clone(),
             },
         ];
@@ -1790,6 +1905,7 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         self.blocks
             .splice(at.block..at.block + 1, new_span.iter().cloned());
         self.remap_bookmarks_split(at);
@@ -1797,6 +1913,7 @@ impl QuillEngine {
         self.remap_sections_split(at);
         self.remap_revisions_split(at);
         self.remap_footnotes_split(at);
+        self.remap_citations_split(at);
         self.remap_toc_split(at);
         self.record_undo(
             at.block,
@@ -1808,6 +1925,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         Ok(CommandResult::data(
@@ -1835,14 +1953,22 @@ impl QuillEngine {
                 "cannot merge a table block; use deleteTable",
             ));
         }
-        // A toc field cannot merge: the survivor would either keep toc
-        // kind with text inlines (payload invariant) or silently drop the
-        // field. Convert via setBlockKind or delete via a covering range.
+        // A toc/bibliography field cannot merge: the survivor would either
+        // keep field kind with text inlines (payload invariant) or
+        // silently drop the field. Convert via setBlockKind or delete via
+        // a covering range.
         if self.blocks[index - 1].kind == BlockKind::Toc
             || self.blocks[index].kind == BlockKind::Toc
         {
             return Err(EngineError::validation(
                 "cannot merge a toc field block",
+            ));
+        }
+        if self.blocks[index - 1].kind == BlockKind::Bibliography
+            || self.blocks[index].kind == BlockKind::Bibliography
+        {
+            return Err(EngineError::validation(
+                "cannot merge a bibliography field block",
             ));
         }
         let removed: Vec<Block> = self.blocks[index - 1..=index].to_vec();
@@ -1852,6 +1978,7 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         let mut inlines = self.blocks[index - 1].inlines.clone();
         inlines.extend(self.blocks[index].inlines.iter().cloned());
         let merged = vec![Block {
@@ -1861,6 +1988,7 @@ impl QuillEngine {
             inlines: normalize_inlines(inlines),
             table: self.blocks[index - 1].table.clone(),
             toc: self.blocks[index - 1].toc.clone(),
+            bibliography: self.blocks[index - 1].bibliography.clone(),
             format: self.blocks[index - 1].format.clone(),
         }];
         self.blocks
@@ -1870,6 +1998,7 @@ impl QuillEngine {
         self.remap_sections_merge(index);
         self.remap_revisions_merge(index, head_len);
         self.remap_footnotes_merge(index, head_len);
+        self.remap_citations_merge(index, head_len);
         self.remap_toc_merge(index);
         self.record_undo(
             index - 1,
@@ -1881,6 +2010,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
@@ -2044,6 +2174,7 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         let mut staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
@@ -2053,6 +2184,8 @@ impl QuillEngine {
             revisions: self.revisions.clone(),
             tracking: self.tracking.clone(),
             footnotes: self.footnotes.clone(),
+            citations: self.citations.clone(),
+            sources: self.sources.clone(),
             journal: Journal::new(1),
         };
         // Group consecutive matches by block (find_matches is block-ordered),
@@ -2224,12 +2357,36 @@ impl QuillEngine {
             }
         }
 
+        // Citation anchors re-anchor through the same per-block match
+        // spans with bookmark right gravity.
+        if !staged.citations.is_empty() {
+            let repl_len = replacement.chars().count();
+            let mut i = 0;
+            while i < top.len() {
+                let bi = top[i].block;
+                let mut j = i;
+                let mut span: Vec<(usize, usize)> = Vec::new();
+                while j < top.len() && top[j].block == bi {
+                    span.push((top[j].start, top[j].end));
+                    j += 1;
+                }
+                Self::remap_citations_replace_block(
+                    &mut staged.citations,
+                    bi,
+                    &span,
+                    repl_len,
+                );
+                i = j;
+            }
+        }
+
         lists::validate(&staged.blocks)?;
         // In-cell edits only rewrite existing cell-paragraph inlines, but
-        // the staged candidate still goes through the same table/toc gates
-        // restore uses, matching every other cell mutation.
+        // the staged candidate still goes through the same table/field
+        // gates restore uses, matching every other cell mutation.
         validate_tables(&staged.blocks)?;
         validate_toc(&staged.blocks)?;
+        validate_bibliography(&staged.blocks)?;
         // `replaced` counts applied edits: the eventless no-change path
         // (replacement identical to every match) applied nothing.
         if staged.blocks == self.blocks {
@@ -2241,6 +2398,8 @@ impl QuillEngine {
         self.sections = staged.sections;
         self.revisions = staged.revisions;
         self.footnotes = staged.footnotes;
+        self.citations = staged.citations;
+        self.sources = staged.sources;
         self.record_undo(
             0,
             self.blocks.clone(),
@@ -2251,6 +2410,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         self.blocks = staged.blocks;
@@ -2665,6 +2825,11 @@ impl QuillEngine {
                 "cannot apply a block style to a toc field block",
             ));
         }
+        if old.kind == BlockKind::Bibliography {
+            return Err(EngineError::validation(
+                "cannot apply a block style to a bibliography field block",
+            ));
+        }
         // `properties.paragraph` (P12 slice 9) patches the block's paragraph
         // format with the same present-wins/absent-untouched snapshot
         // semantics as the inline stamp below.
@@ -2734,6 +2899,11 @@ impl QuillEngine {
         if old.kind == BlockKind::Toc {
             return Err(EngineError::validation(
                 "cannot format a toc field block",
+            ));
+        }
+        if old.kind == BlockKind::Bibliography {
+            return Err(EngineError::validation(
+                "cannot format a bibliography field block",
             ));
         }
         if patch.is_empty() {
@@ -2828,13 +2998,14 @@ impl QuillEngine {
         cmd: &Command,
         ctx: Option<&TaskContext>,
     ) -> Result<CommandResult, EngineError> {
-        if self
-            .blocks
-            .iter()
-            .any(|b| b.kind == BlockKind::Table || b.kind == BlockKind::Toc)
-        {
+        if self.blocks.iter().any(|b| {
+            matches!(
+                b.kind,
+                BlockKind::Table | BlockKind::Toc | BlockKind::Bibliography
+            )
+        }) {
             return Err(EngineError::validation(
-                "DOCX export does not support tables or toc fields yet",
+                "DOCX export does not support tables or field blocks yet",
             ));
         }
         let bytes = docx::export_docx(&self.blocks)?;
@@ -2866,6 +3037,9 @@ impl QuillEngine {
         // DOCX footnote import is deferred; an imported document gets no
         // footnotes/endnotes.
         let footnotes_before = std::mem::take(&mut self.footnotes);
+        // DOCX citation/bibliography import is deferred the same way.
+        let citations_before = std::mem::take(&mut self.citations);
+        let sources_before = std::mem::take(&mut self.sources);
         self.record_undo(
             0,
             old,
@@ -2878,6 +3052,8 @@ impl QuillEngine {
                 revisions_before,
                 tracking_before,
                 footnotes_before,
+                citations_before,
+                sources_before,
             ),
         );
         Ok(CommandResult::data(serde_json::to_value(SnapshotRef {
@@ -2975,6 +3151,18 @@ impl Engine for QuillEngine {
             "updateToc" => self.op_update_toc(&cmd.payload),
             "refreshToc" => self.op_refresh_toc(&cmd.payload),
             "listToc" => self.op_list_toc(&cmd.payload),
+            "addSource" => self.op_add_source(&cmd.payload),
+            "updateSource" => self.op_update_source(&cmd.payload),
+            "removeSource" => self.op_remove_source(&cmd.payload),
+            "listSources" => self.op_list_sources(),
+            "addCitation" => self.op_add_citation(&cmd.payload),
+            "updateCitation" => self.op_update_citation(&cmd.payload),
+            "removeCitation" => self.op_remove_citation(&cmd.payload),
+            "listCitations" => self.op_list_citations(),
+            "insertBibliography" => self.op_insert_bibliography(&cmd.payload),
+            "updateBibliography" => self.op_update_bibliography(&cmd.payload),
+            "refreshBibliography" => self.op_refresh_bibliography(&cmd.payload),
+            "listBibliography" => self.op_list_bibliography(&cmd.payload),
             "setTrackChanges" => self.op_set_track_changes(&cmd.payload),
             "listRevisions" => self.op_list_revisions(),
             "acceptRevision" => self.op_revision_decision(&cmd.payload, true),
@@ -3016,6 +3204,8 @@ impl Engine for QuillEngine {
         let revisions_before = self.revisions.clone();
         let tracking_before = self.tracking.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
+        let sources_before = self.sources.clone();
         let staged = Self {
             blocks: self.blocks.clone(),
             bookmarks: self.bookmarks.clone(),
@@ -3025,6 +3215,8 @@ impl Engine for QuillEngine {
             revisions: self.revisions.clone(),
             tracking: self.tracking.clone(),
             footnotes: self.footnotes.clone(),
+            citations: self.citations.clone(),
+            sources: self.sources.clone(),
             journal: Journal::new(1),
         };
         let (staged, result) = match ctx {
@@ -3037,6 +3229,7 @@ impl Engine for QuillEngine {
         lists::validate(&staged.blocks)?;
         validate_tables(&staged.blocks)?;
         validate_toc(&staged.blocks)?;
+        validate_bibliography(&staged.blocks)?;
         if result
             .events
             .iter()
@@ -3051,6 +3244,8 @@ impl Engine for QuillEngine {
             self.revisions = staged.revisions;
             self.tracking = staged.tracking;
             self.footnotes = staged.footnotes;
+            self.citations = staged.citations;
+            self.sources = staged.sources;
             self.record_undo(
                 0,
                 removed,
@@ -3063,6 +3258,8 @@ impl Engine for QuillEngine {
                     revisions_before,
                     tracking_before,
                     footnotes_before,
+                    citations_before,
+                    sources_before,
                 ),
             );
             self.blocks = staged.blocks;
@@ -3083,9 +3280,9 @@ impl Engine for QuillEngine {
         // `deny_unknown_fields`, so `comments`/`revisions`/`tracking`/
         // `footnotes` keys also fail schema:3-era readers closed — no
         // schema:4 bump for those).
-        // `styles`/`sections`/`comments`/`revisions`/`tracking`/`footnotes`
-        // are omitted from the document when empty/default, keeping earlier
-        // schema:3 payloads byte-identical.
+        // `styles`/`sections`/`comments`/`revisions`/`tracking`/`footnotes`/
+        // `citations`/`sources` are omitted from the document when
+        // empty/default, keeping earlier schema:3 payloads byte-identical.
         //
         // Paragraph formatting (P12 slice 9) is different: `Block` itself
         // has no `deny_unknown_fields`, so schema≤3 readers would silently
@@ -3099,6 +3296,8 @@ impl Engine for QuillEngine {
             || !self.styles.is_empty()
             || !self.revisions.is_empty()
             || !self.footnotes.is_empty()
+            || !self.citations.is_empty()
+            || !self.sources.is_empty()
             || self.tracking.is_some()
             || !is_default_sections(&self.sections)
             || self.blocks.iter().any(|b| b.style_id.is_some());
@@ -3124,6 +3323,8 @@ impl Engine for QuillEngine {
                     revisions: &self.revisions,
                     tracking: &self.tracking,
                     footnotes: &self.footnotes,
+                    citations: &self.citations,
+                    sources: &self.sources,
                 },
             })?
         } else if needs_v3 {
@@ -3139,6 +3340,8 @@ impl Engine for QuillEngine {
                     revisions: &self.revisions,
                     tracking: &self.tracking,
                     footnotes: &self.footnotes,
+                    citations: &self.citations,
+                    sources: &self.sources,
                 },
             })?
         } else if self.blocks.iter().any(|block| block.list.is_some()) {
@@ -3163,7 +3366,7 @@ impl Engine for QuillEngine {
         });
         // 0 = unwrapped legacy payload; otherwise the wrapper's schema.
         let mut schema_level = 0u32;
-        let (state_blocks, bookmarks, comments, styles, sections, revisions, tracking, footnotes): (
+        let (state_blocks, bookmarks, comments, styles, sections, revisions, tracking, footnotes, citations, sources): (
             Vec<Block>,
             Vec<Bookmark>,
             Vec<Comment>,
@@ -3172,6 +3375,8 @@ impl Engine for QuillEngine {
             Vec<Revision>,
             Option<TrackChanges>,
             Vec<Footnote>,
+            Vec<Citation>,
+            Vec<CitationSource>,
         ) = if wrapped {
             let wrapper: WrappedDocState = serde_json::from_value(value)?;
             if wrapper.kind != "quill" {
@@ -3193,6 +3398,8 @@ impl Engine for QuillEngine {
                             || o.contains_key("revisions")
                             || o.contains_key("tracking")
                             || o.contains_key("footnotes")
+                            || o.contains_key("citations")
+                            || o.contains_key("sources")
                     }) {
                         return Err(EngineError::unsupported(
                             "unsupported Quill snapshot kind/schema",
@@ -3207,6 +3414,8 @@ impl Engine for QuillEngine {
                         default_sections(),
                         Vec::new(),
                         None,
+                        Vec::new(),
+                        Vec::new(),
                         Vec::new(),
                     )
                 }
@@ -3226,6 +3435,8 @@ impl Engine for QuillEngine {
                         doc.revisions,
                         doc.tracking,
                         doc.footnotes,
+                        doc.citations,
+                        doc.sources,
                     )
                 }
                 _ => {
@@ -3243,6 +3454,8 @@ impl Engine for QuillEngine {
                     || o.contains_key("revisions")
                     || o.contains_key("tracking")
                     || o.contains_key("footnotes")
+                    || o.contains_key("citations")
+                    || o.contains_key("sources")
             }) {
                 return Err(EngineError::unsupported(
                     "unsupported Quill snapshot kind/schema",
@@ -3257,6 +3470,8 @@ impl Engine for QuillEngine {
                 default_sections(),
                 Vec::new(),
                 None,
+                Vec::new(),
+                Vec::new(),
                 Vec::new(),
             )
         };
@@ -3278,6 +3493,7 @@ impl Engine for QuillEngine {
         lists::validate(&state_blocks)?;
         validate_tables(&state_blocks)?;
         validate_toc(&state_blocks)?;
+        validate_bibliography(&state_blocks)?;
         for block in all_blocks(&state_blocks) {
             if let Some(format) = &block.format {
                 validate_format(format)?;
@@ -3304,6 +3520,10 @@ impl Engine for QuillEngine {
         validate_sections(&sections, &blocks)?;
         validate_revisions(&revisions, &blocks)?;
         validate_footnotes(&footnotes, &blocks)?;
+        // Sources validate before citations: citation `source` fields must
+        // name an existing source id.
+        validate_sources(&sources)?;
+        validate_citations(&citations, &sources, &blocks)?;
         if let Some(t) = &tracking {
             if let Some(author) = &t.author {
                 comments::validate_comment_author(author)?;
@@ -3317,6 +3537,8 @@ impl Engine for QuillEngine {
         self.revisions = revisions;
         self.tracking = tracking;
         self.footnotes = footnotes;
+        self.citations = citations;
+        self.sources = sources;
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
     }
@@ -3356,6 +3578,14 @@ impl Engine for QuillEngine {
         if let Some(before) = footnotes {
             self.footnotes = before;
         }
+        let citations = entry.citations.as_ref().map(|(before, _)| before.clone());
+        if let Some(before) = citations {
+            self.citations = before;
+        }
+        let sources = entry.sources.as_ref().map(|(before, _)| before.clone());
+        if let Some(before) = sources {
+            self.sources = before;
+        }
         self.journal.push_redo(entry);
         Ok(true)
     }
@@ -3394,6 +3624,14 @@ impl Engine for QuillEngine {
         let footnotes = entry.footnotes.as_ref().map(|(_, after)| after.clone());
         if let Some(after) = footnotes {
             self.footnotes = after;
+        }
+        let citations = entry.citations.as_ref().map(|(_, after)| after.clone());
+        if let Some(after) = citations {
+            self.citations = after;
+        }
+        let sources = entry.sources.as_ref().map(|(_, after)| after.clone());
+        if let Some(after) = sources {
+            self.sources = after;
         }
         self.journal.push_undo(entry);
         Ok(true)

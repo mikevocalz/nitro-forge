@@ -153,3 +153,52 @@ op, undo/redo/batch, schema:3 round-trip, stray-key and hostile-restore
 rejection), `cargo build -p nf-cli` clean, `pnpm --filter
 @nitro-forge/quill test` and `typecheck` (see commit for counts). No
 native/device acceptance implied.
+
+## P12 Quill slice 8 checkpoint — citations/bibliography (2026-11-08, branch codex/w6-quill-citations)
+
+Item 8's third and final coherent subset landed: citations and bibliography
+fields. `addSource`/`updateSource`/`removeSource`/`listSources` maintain a
+durable `CitationSource` record (`{id,author,title,year?,container?,
+volume?,issue?,pages?,doi?,url?,note?}` — author/title required ≤512 chars,
+optional fields raw strings the engine never parses); `addCitation`/
+`updateCitation`/`removeCitation`/`listCitations` maintain `Citation`
+records `{id,at,source,locator?}` whose `at` is a single live
+`{block,offset}` position with bookmark right gravity, remapped through
+every position-moving op (insertText/deleteRange/split/merge/insertBlock/
+table ops/replaceRange/replaceText/changeCase/revision decisions) and
+clamped — never dropped — when a delete covers it; anchors may never sit
+on table/toc/bibliography field blocks, `source` must resolve on every
+mutation and at restore, `listCitations` resolves 1-based `number` in
+document order, and `removeSource` cascades citing citations in one undo
+entry. `insertBibliography`/`updateBibliography`/`refreshBibliography`/
+`listBibliography` manage a `kind:"bibliography"` field block carrying
+`{sort:"alpha"|"citation",entries:[{source,text}]}` — a Word-style cached
+scan in one deterministic format (`Author. Title. Year. Container,
+volume(issue), pages. doi:… url:… note.`) that goes stale on source/citation
+edits while `listBibliography` is the always-live cited-source scan; field
+hygiene, `Pos`-op rejection, list-op range rejection, `setBlockKind`
+payload-drop removal, and `exportDocx` rejection all match the toc-field
+contract. Bounds: ≤1024 sources, ≤2048 citations, ≤64 fields, locator
+≤128 chars; engine-assigned `src-N`/`cit-N` ids. Snapshots need **no
+schema bump**: collections ride the schema:3 `deny_unknown_fields`
+document as optional keys and `kind:"bibliography"` fails closed in every
+pre-feature `BlockKind` reader; restore strictly validates counts,
+uniqueness, referential integrity, bounds, anchors, and field invariants.
+
+Deferred honestly: CSL style processors and bibliography style selection,
+DOI/URL resolution or fetching, Word `CITATION`/`BIBLIOGRAPHY`
+field-code interop, rendered "[n]" marks in the block stream (citations
+are anchors + data; hosts render), multi-line/hanging-indent entry
+layout, bibliography fields inside table cells, and consumer
+anchor→geometry mapping. Mail merge remains the only slice-8 item still
+deferred (no data-source/record model exists).
+
+Local evidence: `cargo test -p quill-engine` 215 passed 0 failed (7 new
+citation tests covering CRUD/numbering, validation and referential
+integrity, field-block anchor rejection + remap, bibliography
+scan/sort/refresh + guards, delete-range/cover/undo, snapshot round-trip
++ hostile restore, batch/new/import/redo), `cargo build -p nf-cli`
+clean, `pnpm install --prefer-offline` clean, `pnpm --filter
+@nitro-forge/quill test` 45 passed across 7 files (1 new nf-cli
+citations e2e), `pnpm --filter @nitro-forge/quill typecheck` clean. No
+native/device acceptance or full P12–P14 completion implied.

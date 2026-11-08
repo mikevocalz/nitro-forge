@@ -286,6 +286,7 @@ impl QuillEngine {
                 inlines: Vec::new(),
                 table: None,
                 toc: Some(field),
+                bibliography: None,
                 format: None,
             },
         );
@@ -297,11 +298,13 @@ impl QuillEngine {
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         self.remap_bookmarks_insert_block(index);
         self.remap_comments_insert_block(index);
         self.remap_sections_insert_block(index);
         self.remap_revisions_insert_block(index);
         self.remap_footnotes_insert_block(index);
+        self.remap_citations_insert_block(index);
         self.remap_toc_insert_block(index);
         // Scan after the splice + remaps so entry indices match the final
         // block list; the new field's own entries are not shifted by the
@@ -322,6 +325,7 @@ impl QuillEngine {
                 sections_before,
                 revisions_before,
                 footnotes_before,
+                citations_before,
             ),
         );
         Ok(CommandResult::data(json!({ "ok": true, "block_index": index })))

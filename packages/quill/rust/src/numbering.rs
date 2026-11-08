@@ -618,6 +618,7 @@ mod tests {
             style_id: None,
             table: None,
             toc: None,
+            bibliography: None,
             format: None,
             inlines: vec![],
         };
@@ -685,6 +686,7 @@ mod tests {
             style_id: None,
             table: None,
             toc: None,
+            bibliography: None,
             format: None,
             inlines: vec![],
         }])

@@ -21,7 +21,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | splice e2e via nf-cli (timeline ops) | 11 pass (4 existing + 7 new) | `pnpm --filter @nitro-forge/splice exec vitest run` |
 | folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments, structural redaction, PDF compare, page images, encryption reconciliation) | 144 pass | `cargo test -p folio-engine` |
 | pitch-engine tests (animation timing) | 17 pass | `cargo test -p pitch-engine` |
-| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, footnotes/endnotes, TOC fields, tables incl. cell merge/unmerge and in-cell find/replace, paragraph format) | 208 pass | `cargo test -p quill-engine` |
+| quill-engine tests (incl. real DOCX zip round-trip, lists, case, bookmarks, styles, sections, comments, revisions/track-changes, footnotes/endnotes, TOC fields, citations/bibliography, tables incl. cell merge/unmerge and in-cell find/replace, paragraph format) | 215 pass | `cargo test -p quill-engine` |
 | nf-sys C FFI + dispatch tests (incl. folio binary-input gate) | 28 pass | `cargo test -p nf-sys` |
 | Package e2e suites (vitest → nf-cli → real Rust) | 4×8 = 32 pass | `pnpm -r test` |
 | Console workflow demo (all 7 products, create→edit→save→reopen) | 14/14 checks | `pnpm --filter @nitro-forge/console demo` |
@@ -54,7 +54,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch; 2026-11-07: keyframed speed (`speed_keys`, `setSpeedKeys`, integral footprint through all structural ops); 2026-11-08: per-clip mix (`gain_db` -60..=12, `pan` -1..=1, `setClipMix`, renderPlan exposure — storage/plan metadata only, no mixer) | ✅ 55 tests |
 | Folio engine | PDF eng (subagent bdd8014e; slice E codex/w1-folio-redact; slice F codex/w1-folio-f) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption (encrypt/decrypt + `open {password}`; all mutating and string-decoding ops reject ciphertext docs), outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment), structural redaction (redactRect: annots + contained image XObjects + PieceInfo/XMP//Info scrub, honest retained reporting, text/vector explicitly not removed), structural PDF compare (comparePdf: page/annot/field/outline/attachment/signature projections, lossy text hint), page images (insertPageImage: jpeg DCTDecode passthrough, real PNG decode gray/RGB alpha-discarded with local five-filter unfiltering, raw 8-bpc samples; appended content stream, inherited /Resources cloned) | ✅ 149 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
-| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + track-changes revisions (`setTrackChanges` + ins/del records with per-op author/time, accept/reject single+all, schema:3 keys, no DOCX interop) + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) + footnotes/endnotes (`addFootnote`/`updateFootnote`/`removeFootnote`/`listFootnotes`, Pos-anchored right-gravity marks remapped through every position-moving op, per-kind document-order numbering, plain-text bodies ≤8192 chars, ≤1024 notes, schema:3 `footnotes` key, no DOCX interop) + TOC fields (`insertToc`/`updateToc`/`refreshToc`/`listToc`, `kind:"toc"` block with `{from_level,to_level,entries}` cache over h1/h2/h3 kinds, live `listToc` scan, block-index entry anchors remapped/dropped on edits, no page numbers, no schema bump, no DOCX interop; mail merge and citations deferred) + paragraph alignment/indents/tab stops (`setParagraphFormat` patch + `properties.paragraph` on paragraph styles, storage-only, schema:4) | ✅ 208 tests |
+| Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + track-changes revisions (`setTrackChanges` + ins/del records with per-op author/time, accept/reject single+all, schema:3 keys, no DOCX interop) + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) + footnotes/endnotes (`addFootnote`/`updateFootnote`/`removeFootnote`/`listFootnotes`, Pos-anchored right-gravity marks remapped through every position-moving op, per-kind document-order numbering, plain-text bodies ≤8192 chars, ≤1024 notes, schema:3 `footnotes` key, no DOCX interop) + TOC fields (`insertToc`/`updateToc`/`refreshToc`/`listToc`, `kind:"toc"` block with `{from_level,to_level,entries}` cache over h1/h2/h3 kinds, live `listToc` scan, block-index entry anchors remapped/dropped on edits, no page numbers, no schema bump, no DOCX interop; mail merge deferred) + citations/bibliography (`addSource`/`updateSource`/`removeSource`/`listSources`, `addCitation`/`updateCitation`/`removeCitation`/`listCitations`, `insertBibliography`/`updateBibliography`/`refreshBibliography`/`listBibliography`; Pos-anchored citations naming source ids with right-gravity remap, `removeSource` cascade, `kind:"bibliography"` field block with cached `{source,text}` entries and `"alpha"|"citation"` sort, live `listBibliography` scan, deterministic single-format entry text — no CSL/DOI/URL fetch/Word field interop, no schema bump) + paragraph alignment/indents/tab stops (`setParagraphFormat` patch + `properties.paragraph` on paragraph styles, storage-only, schema:4) | ✅ 215 tests |
 | Independent review | Reviewer (subagent 3cb4c8fe) | FFI safety, engine spot-checks, TS protocol | ✅ 23 findings; 16 fixed + retested |
 | Example app | RN eng (main session) | Expo screens + useDocument hook | ⚠️ source + typecheck only |
 | Design/UX | — | — | ❌ not staffed this session |
@@ -2151,3 +2151,58 @@ render, comp-removal guard, undo/redo/snapshot/hostile-restore, all bounds,
 nf-cli queue cases), `pnpm --filter @nitro-forge/motion typecheck` clean.
 Encoded export, render-queue UI, native target runs and full P11
 completion are not implied.
+
+## P12 Quill citations/bibliography slice 8 checkpoint (2026-11-08)
+
+Quill gains citations and bibliography fields (P12 slice 8, third half),
+the last engine slice on this branch. New ops:
+`addSource`/`updateSource`/`removeSource`/`listSources`,
+`addCitation`/`updateCitation`/`removeCitation`/`listCitations`, and
+`insertBibliography`/`updateBibliography`/`refreshBibliography`/
+`listBibliography`. Model decisions, mirroring footnotes + TOC: a
+`CitationSource` document-level record (`{id,author,title,year?,
+container?,volume?,issue?,pages?,doi?,url?,note?}`; author/title
+required ≤512 chars, optional fields raw strings never parsed) lives in
+the schema:3 wrapper's `deny_unknown_fields` document as an optional key
+alongside `footnotes` — no schema bump. A `Citation` is `{id,at,source,
+locator?}` with `at` a single live `{block,offset}` position carrying
+bookmark right gravity through every position-moving op
+(`insertText`/`deleteRange`/`splitBlock`/`mergeBlock`/`insertBlock`/
+`insertTable`/`deleteTable`/`replaceRange`/`replaceText`/`changeCase`/
+revision decisions); a delete covering the anchor clamps to the deletion
+start rather than dropping the citation, anchors can never sit on
+table/toc/bibliography field blocks (ops and restore reject, the same
+Pos-unreachable precedent), `source` must resolve on every mutation and
+at restore, `listCitations` resolves 1-based `number` in document order
+(engine stores none), and `removeSource` cascades its citing citations
+in one undo entry. A bibliography is a `kind:"bibliography"` field block
+carrying `{sort:"alpha"|"citation",entries:[{source,text}]}` — cached
+Word-field-style lines in one deterministic format (no CSL, no style
+selection) that go stale on source/citation edits while `listBibliography`
+is the always-live cited-source scan honoring a named field's sort;
+field-block hygiene, `Pos`-op rejection, list-op range rejection,
+`setBlockKind` payload-drop removal, and `exportDocx` rejection all
+match the toc-field contract. Bounds: ≤1024 sources, ≤2048 citations,
+≤64 fields, locator ≤128 chars; ids unique tokens engine-assigned
+`src-N`/`cit-N`. Restore strictly validates counts, uniqueness,
+referential integrity, bounds, anchors, and field invariants before
+replacing state; `new`/`importDocx` reset both collections.
+
+Deferred honestly: CSL style processors and bibliography style
+selection, DOI/URL resolution or fetching, Word `CITATION`/
+`BIBLIOGRAPHY` field-code interop, rendered "[n]" marks in the block
+stream (citations are anchors + data — hosts render), multi-line/
+hanging-indent entry layout, bibliography fields inside table cells,
+and consumer anchor→geometry mapping. Mail merge remains the only P12
+slice-8 item still deferred (no data-source/record model exists).
+
+Local evidence: `cargo test -p quill-engine` 215 passed 0 failed (7 new
+citation tests covering source/citation CRUD + numbering, validation
+and referential integrity, field-block anchor rejection and remap,
+bibliography scan/sort/refresh and guards, delete-range/cover/undo,
+snapshot round-trip + hostile restore, batch/new/import/redo),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/quill test` 45 passed across 7 files (1 new
+nf-cli citations e2e), `pnpm --filter @nitro-forge/quill typecheck`
+clean. No native/device acceptance or full P12–P14 completion is
+implied.

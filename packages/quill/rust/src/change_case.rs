@@ -169,10 +169,11 @@ impl QuillEngine {
                 style_id: block.style_id.clone(),
                 inlines,
                 // Table blocks carry no case-able text; the payload is
-                // preserved verbatim through the clone. Same for toc
-                // field payloads (also no case-able text).
+                // preserved verbatim through the clone. Same for toc and
+                // bibliography field payloads (also no case-able text).
                 table: block.table.clone(),
                 toc: block.toc.clone(),
+                bibliography: block.bibliography.clone(),
                 format: block.format.clone(),
             });
         }
@@ -183,6 +184,7 @@ impl QuillEngine {
         let comments_before = self.comments.clone();
         let revisions_before = self.revisions.clone();
         let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
         for (bi, map) in &offset_maps {
             for bm in self.bookmarks.iter_mut().filter(|b| b.block == *bi) {
                 bm.offset = map[bm.offset];
@@ -200,6 +202,11 @@ impl QuillEngine {
                     f.at.offset = map[f.at.offset];
                 }
             }
+            for c in self.citations.iter_mut() {
+                if c.at.block == *bi {
+                    c.at.offset = map[c.at.offset];
+                }
+            }
         }
         // `span` borrows `self.blocks`; end that borrow before the
         // whole-engine remap call.
@@ -214,6 +221,7 @@ impl QuillEngine {
                 comments: Some(comments_before),
                 revisions: Some(revisions_before),
                 footnotes: Some(footnotes_before),
+                citations: Some(citations_before),
                 ..Default::default()
             },
         );
@@ -271,6 +279,7 @@ mod tests {
             style_id: None,
             table: None,
             toc: None,
+            bibliography: None,
             format: None,
             inlines: vec![
                 run("a", Style::default()),
@@ -340,6 +349,7 @@ mod tests {
                 style_id: None,
                 table: None,
                 toc: None,
+                bibliography: None,
                 format: None,
                 inlines: vec![run("abß", Style::default())],
             },
@@ -349,6 +359,7 @@ mod tests {
                 style_id: None,
                 table: None,
                 toc: None,
+                bibliography: None,
                 format: None,
                 inlines: vec![run("éz", Style::default())],
             },
