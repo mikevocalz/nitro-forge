@@ -35,6 +35,7 @@ export const OPS = {
   fillLayer: "fillLayer",
   applyFilter: "applyFilter",
   flatten: "flatten",
+  encodePng: "encodePng",
   getLayer: "getLayer",
   setLayerTransform: "setLayerTransform",
   translateLayers: "translateLayers",
@@ -231,6 +232,24 @@ export class PrismDocument {
   flatten() {
     return this.call<{ pixels_b64: string; width: number; height: number }>(
       OPS.flatten,
+    );
+  }
+  /**
+   * PNG-encode rendered RGBA (no file I/O — `png_b64` carries the bytes,
+   * same base64 convention as `pixels_b64`). Without `layer` the pixels are
+   * exactly what {@linkcode flatten} returns; with `layer` the named
+   * layer's subtree renders alone at canvas size (content + transform +
+   * mask — opacity, blend and clipping are NOT applied, matching
+   * `layerThumbnail` semantics). Format is an honest subset: 8-bit RGBA,
+   * non-interlaced, no palette, no 16-bit, no ancillary chunks; output is
+   * deterministic for identical pixels. Budget: ≤4096 px per side and
+   * ≤1,048,576 px total — larger canvases reject with OutOfBounds. Read-only:
+   * no undo entry, no `document:changed`.
+   */
+  encodePng(options: { layer?: number } = {}) {
+    return this.call<{ width: number; height: number; format: "png"; png_b64: string }>(
+      OPS.encodePng,
+      options.layer === undefined ? {} : { layer: options.layer },
     );
   }
   getLayer(id: number) {

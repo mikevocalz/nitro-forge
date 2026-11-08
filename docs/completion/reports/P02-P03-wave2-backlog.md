@@ -54,7 +54,7 @@ present, not that acceptance is proven. No slice is marked complete.
 | HTTP transport + revision polling | `collaboration-http.ts` | exists; loopback fixture only |
 | `packages/collaboration-server` (SQLite WAL CAS) | `packages/collaboration-server/` | exists; loopback, fixture auth only |
 | `UndoTransactionCoordinator` + `__batch` | `transactions.ts`, `batch.rs` | exists; all 7 original engines |
-| File import/export bytes contract | `transfer.ts`, `transfer-ui.ts` | exists; only `.nfd` real; `TRANSFER_DEFERRED` lists prism:png, splice:video, pitch:pptx, metadata |
+| File import/export bytes contract | `transfer.ts`, `transfer-ui.ts` | exists; only `.nfd` real; `TRANSFER_DEFERRED` lists splice:video, pitch:pptx, metadata (prism:png cleared — engine `encodePng` op landed on `codex/w10-prism-png`; sheet-side png ExportFormat registration remains host work) |
 | Native tasks/media cache/binary ABI | `cpp/NitroForgeV1/*`, `nf_v1.h`, `ffi_binary.rs` | exists; iOS+Android JSI probe passed |
 | Telemetry package | `packages/telemetry` | exists; consent Off/Local/diagnostics proven natively; no product UI, no sink |
 | Native file/share/picker | NYC-Tron `platform-services/documents` + `transfer-ui.ts` | exists; iOS+Android picker/share/relaunch pass; Android recipient delivery unverified |
@@ -144,7 +144,8 @@ present, not that acceptance is proven. No slice is marked complete.
 ## ENGINE_OPS.md / registration gaps
 
 - No engine-op gaps for P02/P03 proper. `TRANSFER_DEFERRED` items
-  (prism:png, splice:video, pitch:pptx, metadata) belong to
+  (splice:video, pitch:pptx, metadata; prism:png cleared by the
+  `encodePng` op) belong to
   P05/P08/P14/P04 slices; each admitted op needs table + dispatch + OPS
   map + snapshot notes together.
 - Host-contract registration: extend `docs/ARCHITECTURE.md` for the
