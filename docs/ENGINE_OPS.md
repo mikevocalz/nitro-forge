@@ -1377,14 +1377,17 @@ fol_hlink`; font slots are the OOXML major/minor latin typefaces
 `major_latin|minor_latin`. Slots are sparse: an absent slot means "no
 theme value stored", never an implicit default. Bounds: ≤32 themes,
 names/font families non-blank ≤128 UTF-8 bytes; all ids share the
-document `next_id` space. HONESTY BOUNDARY: the engine stores/validates
-the slot maps and the deck→theme binding as DATA ONLY — it does NOT
-resolve theme colors/fonts onto objects, masters, layouts or
-placeholders, and placeholder `inherit_theme` stays an independent flag.
+document `next_id` space. THEME APPLICATION BOUNDARY: the engine stores/validates
+the slot maps and the deck→theme binding; `slideLayout` reports the
+bound theme so `inherit_theme` placeholders resolve against it, but the
+engine maps no theme slots onto object/master/layout styles itself —
+hosts own slot→style application, and there are no object-level theme
+references.
 NYC-Tron `kind:"template"` presets (a bundled theme + master/layout set)
-are deferred: masters/layouts/placeholders are separate validated
-collections and the apply/bind slice does not exist yet, so a template
-bundle has no honest semantics to store in this slice. Older snapshots
+are deferred: masters/layouts/placeholders/themes are separate
+validated collections and no template-bundle op exists, so a template
+bundle has no honest semantics to store in this slice (apply/bind
+resolves single decks only). Older snapshots
 default to `themes:[]` and absent `deck_theme`.
 Masters/layouts/placeholders are slide-master DATA (P14 slice 8a, mirroring
 the pinned NYC-Tron `MasterLayoutEditor` contract): flat deck-level
@@ -1392,11 +1395,18 @@ collections, a layout back-references its master via `master_id`, and
 placeholders are typed regions on layouts. Bounds: ≤64 masters, ≤256
 layouts, ≤64 placeholders per layout; names/labels non-blank ≤128 UTF-8
 bytes; placeholder x/y finite within ±1,000,000 and w/h finite >0
-≤1,000,000. All ids share the document `next_id` space. HONESTY BOUNDARY:
-the engine stores/validates these definitions and the slide→layout
-binding; it does NOT render master content onto slides or resolve
-placeholders into objects — apply/bind is a later slice. NYC-Tron layout
-`parentId` inheritance is not modeled yet. `removeMaster` cascade-removes
+≤1,000,000. All ids share the document `next_id` space. APPLY/BIND (P14 apply/bind slice): the engine stores the slide→layout
+binding plus the object→placeholder content binding and resolves the
+chain DERIVATIVELY at read time — masters carry no object payloads, so
+there is nothing to materialize onto slides. `slideLayout {slide}`
+returns the bound `SlideLayout`, its `SlideMaster`, the deck-bound
+`DeckTheme`, the EFFECTIVE background (`slide.background` when set, else
+`master.background`), and every layout placeholder extended with
+`objects` — the z-ordered ids of the slide objects bound to it.
+Placeholder `inherit_theme` flags resolve against the reported deck
+theme; the engine maps no theme slots onto object styles (hosts own
+slot→style application) and there are no object-level theme references.
+NYC-Tron layout `parentId` inheritance is not modeled. `removeMaster` cascade-removes
 its layouts; `removeLayout` and `removeMaster` clear slide `layout_id`
 bindings without touching slide content. Older snapshots default to
 `masters:[]`/`layouts:[]` and absent `layout_id`.
@@ -1409,11 +1419,26 @@ them. The engine stores the kind and the tags as DATA ONLY — it performs
 no morph evaluation, interpolation or rendering (same honesty boundary as
 the other transition kinds).
 `Obj = { id, kind:"text"|"rect"|"image"|"roundedRect"|"ellipse"|"triangle"|"diamond"|"line"|"arrow"|"star"|"connector"|"media", x,y,w,h, rotation_deg,
-text?{content,font_size,color,bold,italic}, fill?[u8;4], stroke?:{width,color:[u8;4]}, connector?:ConnectorSpec, media?:MediaSpec, morph_name?:string, src?:string }`.
+text?{content,font_size,color,bold,italic}, fill?[u8;4], stroke?:{width,color:[u8;4]}, connector?:ConnectorSpec, media?:MediaSpec, morph_name?:string, placeholder_id?:number, src?:string }`.
 `morph_name` is an optional bounded non-blank tag (<=128 UTF-8 bytes),
 unique per slide, that hosts use to pair objects across adjacent slides
 during a `"morph"` transition; it is stored data only — the engine never
 interpolates morph geometry.
+`placeholder_id` is the optional object→placeholder content binding
+(P14 apply/bind): it references a `Placeholder.id` on the layout bound to
+the object's slide (`Slide.layout_id` → `SlideLayout.placeholders`). It is
+written only by `setObjectPlaceholder` (`placeholder:null`/omitted
+clears), must resolve on the slide's CURRENT bound layout — placeholder
+ids are deck-unique so a tag can never resolve on another layout — and
+connector objects reject (they carry no geometry or content payload).
+Rebinding a slide's layout (`setSlideLayout` to a different layout or
+null), removing the placeholder (`removePlaceholder`), removing the
+layout (`removeLayout`) or its master (`removeMaster` cascade) clears the
+affected tags; slide object content is otherwise untouched. Resolution
+is DERIVED, never materialized: `slideLayout` reports the effective
+binding chain at read time (see below). Snapshots carrying any
+`placeholder_id` use the `{kind:"pitch",schema:8}` wrapper because the
+field is additive and a schema:≤7 reader would silently drop it.
 Shape presets are inscribed in the object's axis-aligned `x,y,w,h` bounds
 before `rotation_deg`: `roundedRect` is a rectangle with corner radius
 `min(w,h)/4`; `ellipse` is the inscribed ellipse; `triangle` is isosceles
@@ -1497,10 +1522,12 @@ document `next_id` identity space.
 | `addLayout` | `{master,name}` | `{layout_id}` | `master` must be an existing master id; ≤256 layouts deck-wide; one undo entry |
 | `renameLayout` | `{id,name}` | `{ok}` | equal name is an eventless no-op preserving redo |
 | `removeLayout` | `{id}` | `{ok}` | clears slide `layout_id` bindings to it; slide content untouched; one undo entry |
-| `setSlideLayout` | `{slide,layout}` | `{ok}` | slide = id; `layout` is an existing layout id or null/omitted to clear the binding; equal rebind is an eventless no-op; DATA ONLY — no master content is applied to the slide |
+| `setSlideLayout` | `{slide,layout}` | `{ok}` | slide = id; `layout` is an existing layout id or null/omitted to clear the binding; equal rebind is an eventless no-op; changing the binding also clears every object `placeholder_id` tag on the slide (placeholder ids are deck-unique to one layout) |
 | `addPlaceholder` | `{layout,kind,x,y,w,h,label,inherit_theme?}` | `{placeholder_id}` | `layout` must exist; `kind` is the bounded catalog `title|body|image|media|date|footer|pageNumber`; bounds per the Placeholder contract; `label` non-blank ≤128 bytes; ≤64 placeholders per layout; id from `next_id`; one undo entry |
 | `updatePlaceholder` | `{layout,id,kind?,x?,y?,w?,h?,label?,inherit_theme?}` | `{ok}` | partial in-place patch retains placeholder id and position; merged result re-validated; equal/empty patch is an eventless no-op preserving redo |
-| `removePlaceholder` | `{layout,id}` | `{ok}` | unknown placeholder id → NotFound |
+| `removePlaceholder` | `{layout,id}` | `{ok}` | unknown placeholder id → NotFound; clears `placeholder_id` tags referencing it on slides bound to that layout |
+| `setObjectPlaceholder` | `{slide,object,placeholder}` | `{ok}` | slide/object = ids; `placeholder` is a placeholder id on the slide's CURRENT bound layout or null/omitted to clear the tag. The slide must have a `layout_id` binding and the placeholder must belong to that layout (deck-unique ids → tags never resolve on other layouts); connector objects reject. Equal re-tag/clear-on-untagged is an eventless no-op; one undo entry; bound objects emit the schema:8 snapshot wrapper |
+| `slideLayout` | `{slide}` | `{slide,layout_id,layout,master_id,master,theme_id,theme,background,placeholders:[{…,objects:[ids]}]}` | read-only DERIVED apply/bind resolution: bound layout + its master + deck theme, effective `background` = `slide.background ?? master.background`, and each layout placeholder extended with `objects` (z-ordered ids of objects bound via `placeholder_id`). Unbound slides resolve null layout/master/placeholders; the deck theme is deck-level and always reported. `inherit_theme` placeholders resolve against `theme`; no theme slots are mapped onto styles. No journal entry, no events, no state change |
 | `addTheme` | `{name,colors?,fonts?}` | `{theme_id}` | name non-blank ≤128 UTF-8 bytes; `colors` is an optional object of OOXML color slots (`dk1|lt1|dk2|lt2|accent1..accent6|hlink|fol_hlink`) → `[r,g,b,a]`, `fonts` an optional object of font slots (`major_latin|minor_latin`) → non-blank ≤128-byte family names; unknown slots reject; ≤32 themes; id from `next_id`; one undo entry; theme data emits the schema:6 snapshot wrapper |
 | `renameTheme` | `{id,name}` | `{ok}` | equal name is an eventless no-op preserving redo |
 | `setThemeColor` | `{id,slot,color}` | `{ok}` | `slot` is a bounded color slot; `color` `[r,g,b,a]` or null/omitted to clear the slot; equal/absent-clear is an eventless no-op |
@@ -1573,7 +1600,7 @@ Animation evaluation caps at4096 objects/animations per slide; references and ob
 
 The pinned alpha.4 SlideAnimationPane supports effect/add/remove but lacks timing/trigger edit callbacks. The adapter offers all seven real effects, retains nonabsolute sourceTrigger metadata and refuses to bind that old pane over triggered programs rather than mislabel relative delays as absolute starts. Typed engine APIs/readPitchSlideAt accept explicit click history. No fake preview timer, host UI activation or new Pitch renderer is provided. Actual CPU pixel integration is checked through the existing Prism renderer.
 
-Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text`, an object `stroke`, a connector, a media object/spec, any master/layout/placeholder definition or a slide `layout_id` binding uses `{kind:"pitch",schema:4,document:PitchState}``; any document carrying a `"morph"` transition kind or an object `morph_name` tag uses `{kind:"pitch",schema:5,document:PitchState}`; any document carrying a deck theme definition or a `deck_theme` binding uses `{kind:"pitch",schema:6,document:PitchState}`; any document carrying a chart or table object with embedded bounded data uses `{kind:"pitch",schema:7,document:PitchState}``. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads, schema:≤3 readers reject schema:4 payloads, schema:≤4 readers reject schema:5 payloads, schema:≤5 readers reject schema:6 payloads and schema:≤6 readers reject schema:7 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes/connectors/media/masters/layouts/placeholders/layout bindings/morph tags/themes/chart-table data (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke`/`connector`/`media`/`morph_name`/`themes`/`deck_theme`/`chart`/`table` fields do not, which is why shapes/strokes/connectors/media take schema:4, morph data takes schema:5, themes take schema:6 and chart/table data takes schema:7 rather than reusing earlier wrappers). Readers accept legacy root payloads and schema:2, schema:3, schema:4, schema:5, schema:6 and schema:7 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
+Explicit trigger intent uses `addTriggeredAnimationV1` / `updateTriggeredAnimationV1`; explicit click histories (including empty) use `slideAtWithClicksV1`. These aliases share current implementation semantics, but old engines reject their unknown names instead of silently ignoring new fields. The typed facade keeps legacy operation names when new arguments are omitted. Snapshots using nondefault deck size, section metadata/counter, nonabsolute triggers or new effects (without notes/ink) use an engine-local JSON `{kind:"pitch",schema:2,document:PitchState}` wrapper inside unchanged NFD1 framing; any document carrying slide speaker notes, non-empty slide ink, a slide transition or slide timing uses `{kind:"pitch",schema:3,document:PitchState}` instead; any document carrying a shape preset beyond `rect`/`image`/`text`, an object `stroke`, a connector, a media object/spec, any master/layout/placeholder definition or a slide `layout_id` binding uses `{kind:"pitch",schema:4,document:PitchState}``; any document carrying a `"morph"` transition kind or an object `morph_name` tag uses `{kind:"pitch",schema:5,document:PitchState}`; any document carrying a deck theme definition or a `deck_theme` binding uses `{kind:"pitch",schema:6,document:PitchState}`; any document carrying a chart or table object with embedded bounded data uses `{kind:"pitch",schema:7,document:PitchState}`; any document carrying an object `placeholder_id` binding uses `{kind:"pitch",schema:8,document:PitchState}``. Root `meta` is absent so legacy readers fail rather than silently discard fields, and schema:2 readers reject schema:3 payloads, schema:≤3 readers reject schema:4 payloads, schema:≤4 readers reject schema:5 payloads, schema:≤5 readers reject schema:6 payloads, schema:≤6 readers reject schema:7 payloads and schema:≤7 readers reject schema:8 payloads rather than dropping notes/ink/transitions/timing/shapes/strokes/connectors/media/masters/layouts/placeholders/layout bindings/morph tags/themes/chart-table data/placeholder bindings (new `ObjKind` variants already fail closed as unknown variants, but the additive `stroke`/`connector`/`media`/`morph_name`/`themes`/`deck_theme`/`chart`/`table` fields do not, which is why shapes/strokes/connectors/media take schema:4, morph data takes schema:5, themes take schema:6, chart/table data takes schema:7 and placeholder bindings take schema:8 rather than reusing earlier wrappers). Readers accept legacy root payloads and schema:2, schema:3, schema:4, schema:5, schema:6, schema:7 and schema:8 wrappers, strictly validating wrapper kind/schema/keys before replacement; persisted empty-string notes normalize to absent, matching `setNotes` semantics. Legacy-feature-only documents keep the existing payload shape. Older unwrapped extended snapshots remain readable, but already-lost metadata cannot be recovered. P20 still requires matching reader/writer/runtime versions before activation; no old-reader forward-compatible roundtrip is claimed.
 
 ## quill-engine — `QuillEngine::new()`
 

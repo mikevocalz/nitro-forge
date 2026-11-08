@@ -926,6 +926,53 @@ nf-cli scene cases), package typecheck clean, `cargo build -p nf-cli`
 clean. No pixel rendering, native target run or full P14 completion is
 claimed.
 
+## P14 Pitch masters/layouts apply-bind source checkpoint (2026-11-08)
+
+Pitch masters/layouts/placeholders gain the apply/bind slice on top of
+the slice-8a storage model. The inheritance chain is slide → layout →
+master → deck theme: `Slide.layout_id` binds a slide to a `SlideLayout`,
+which back-references its `SlideMaster` via `master_id`, and
+`deck_theme` binds the deck to a `DeckTheme`. "Apply" is DERIVED
+resolution, never materialization — masters carry no object payloads, so
+there is nothing to copy onto slides. Two bindings are stored:
+`Slide.layout_id` (existing) and the new `Obj.placeholder_id`, the
+object→placeholder content tag written only by `setObjectPlaceholder`
+(`placeholder:null`/omitted clears). A tag must resolve on the slide's
+CURRENT bound layout — placeholder ids are deck-unique, so a tag can
+never resolve on another layout — and connector objects reject (no
+geometry/content payload). Cascades mirror the existing binding rules:
+`setSlideLayout` to a different layout or null, `removePlaceholder`,
+`removeLayout` and the `removeMaster` cascade all clear the affected
+tags without touching slide object content; equal re-tags and clears on
+untagged objects are eventless no-ops with one undo entry per mutation.
+The new read-only `slideLayout {slide}` resolves the chain into
+effective chrome: bound layout/master/theme (null when unbound), the
+EFFECTIVE background (`slide.background ?? master.background`), and each
+layout placeholder extended with `objects` — the z-ordered ids of the
+objects bound to it. `inherit_theme` placeholders resolve against the
+reported deck theme; the engine maps no theme slots onto object styles
+(hosts own slot→style application) and there are no object-level theme
+references. `describe`/`slideScene` expose `placeholder_id` on objects
+verbatim. Restore/ops validation rejects tags without a slide layout
+binding, tags outside the bound layout and unknown placeholder ids
+atomically. Snapshots carrying any `placeholder_id` use the new
+`{kind:"pitch",schema:8}` wrapper (additive Obj field a schema:≤7 reader
+would silently drop); readers accept schema:2 through schema:8 and the
+legacy-reader reject probes moved to schema:9. Deferred honestly:
+NYC-Tron layout `parentId` inheritance, materializing placeholder
+objects onto slides (no stored master content exists to copy),
+object-level theme references, per-placeholder kind↔object-kind
+compatibility rules (any non-connector object may tag any placeholder
+kind), theme `kind:"template"` bundles, and all pixel rendering (hosts
+project `slideLayout`/`slideScene` through the existing Prism path).
+Local evidence: `cargo test -p pitch-engine` 93 passed (5 new
+apply/bind tests covering resolution, cascades, atomic validation,
+connector rejection and hostile restore), `pnpm install
+--prefer-offline` clean, `pnpm --filter @nitro-forge/pitch test` 47
+passed across 12 files (2 new nf-cli apply-bind cases), package
+typecheck clean, `cargo build -p nf-cli` clean. No native/device
+acceptance, UI wiring or full P14 completion is claimed.
+
 ## P16 design components & instances slice D checkpoint (2026-11-07)
 
 Design gains the NYC-Tron L-01/L-05 component model as a materialized-instance slice. `Kind` adds `component` (frame-like definition node owning the template subtree, optional flow layout, named variant bundles) and `instance` (leaf storing `instance:{component,variant?,overrides?}` with no stored children/layout and fixed sizing only). Overrides are a bounded `{node,path,value}` set — `name|fill|x|y|width|height|visible|locked|text` — targeting the component root id (expanded instance root) or descendant template ids, with path↔value kind checks, per-axis geometry bounds, unique `(node,path)` pairs, and whole-document validation on mutation and hostile restore. The component-reference graph must be acyclic (Kahn check), which bounds expansion independently of the read caps.

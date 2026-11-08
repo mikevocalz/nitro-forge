@@ -410,6 +410,16 @@ pub struct Obj {
     /// engine performs no morph interpolation or rendering.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub morph_name: Option<String>,
+    /// Optional binding to a placeholder region on the slide's bound
+    /// layout (`masters.rs`, P14 apply/bind slice): the object is the
+    /// stored content of that placeholder. Must reference a placeholder
+    /// of the layout in `Slide.layout_id` (enforced by
+    /// `setObjectPlaceholder`, `masters::validate` and restore); cleared
+    /// when the slide's layout binding changes or the placeholder,
+    /// layout or master is removed. Resolution is derived at read time
+    /// (`slideLayout`) — nothing is materialized onto the slide.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placeholder_id: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub src: Option<String>,
 }
@@ -575,10 +585,11 @@ pub struct Slide {
     /// Optional per-slide rehearsal/advance timing; absent means host default.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timing: Option<SlideTiming>,
-    /// Optional binding to a stored slide layout (`masters.rs`). DATA ONLY:
-    /// the engine records the reference; it does not render master/layout
-    /// content onto the slide (apply/bind is a later slice). Cleared when
-    /// the referenced layout (or its master) is removed.
+    /// Optional binding to a stored slide layout (`masters.rs`). The
+    /// engine records the reference; "apply" is derived resolution via
+    /// the `slideLayout` read, not materialized content. Cleared when
+    /// the referenced layout (or its master) is removed; rebinding also
+    /// clears the slide's object `placeholder_id` tags.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout_id: Option<u64>,
 }
@@ -1391,7 +1402,8 @@ impl Engine for PitchEngine {
             "addSection"|"updateSection"|"removeSection" => sections::apply(self,&cmd),
             "addMaster"|"renameMaster"|"setMasterBackground"|"removeMaster"
             |"addLayout"|"renameLayout"|"removeLayout"|"setSlideLayout"
-            |"addPlaceholder"|"updatePlaceholder"|"removePlaceholder" => {
+            |"addPlaceholder"|"updatePlaceholder"|"removePlaceholder"
+            |"setObjectPlaceholder" => {
                 masters::apply(self, &cmd)
             }
             "addTheme"|"renameTheme"|"setThemeColor"|"setThemeFont"
@@ -1571,6 +1583,7 @@ impl Engine for PitchEngine {
                     chart: None,
                     table: None,
                     morph_name: None,
+                    placeholder_id: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1649,6 +1662,7 @@ impl Engine for PitchEngine {
                     chart: None,
                     table: None,
                     morph_name: None,
+                    placeholder_id: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1693,6 +1707,7 @@ impl Engine for PitchEngine {
                     chart: None,
                     table: None,
                     morph_name: None,
+                    placeholder_id: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1725,6 +1740,7 @@ impl Engine for PitchEngine {
                     chart: None,
                     table: None,
                     morph_name: None,
+                    placeholder_id: None,
                     src: Some(src),
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1761,6 +1777,7 @@ impl Engine for PitchEngine {
                     chart: None,
                     table: None,
                     morph_name: None,
+                    placeholder_id: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -1880,6 +1897,7 @@ impl Engine for PitchEngine {
                     chart: None,
                     table: None,
                     morph_name: None,
+                    placeholder_id: None,
                     src: None,
                 });
                 Ok(CommandResult::data(json!({ "object_id": id })))
@@ -2294,6 +2312,10 @@ impl Engine for PitchEngine {
                     "timing": self.state.slides[slide].timing,
                 })))
             }
+            "slideLayout" => {
+                let slide = self.slide_index(req_u64(p, "slide")?)?;
+                masters::slide_layout(&self.state, slide)
+            }
             "deckTheme" => {
                 let theme = self
                     .state
@@ -2385,7 +2407,9 @@ impl Engine for PitchEngine {
         // with embedded bounded data (P14 slice 10); the `chart`/`table`
         // Obj fields are additive like `media`/`morph_name`, so chart/table
         // data takes schema:7 even though the new ObjKind variants also
-        // fail closed as unknown variants on old readers.
+        // fail closed as unknown variants on old readers. schema:8
+        // additionally carries object→placeholder content bindings
+        // (`Obj.placeholder_id`, P14 apply/bind slice).
         let extended = self.state.size != SlideSize::default()
             || !self.state.sections.is_empty() || self.state.next_section_id != 1
             || self.state.slides.iter().flat_map(|slide| &slide.animations).any(|anim|
@@ -2408,7 +2432,15 @@ impl Engine for PitchEngine {
         let schema7 = self.state.slides.iter().any(|slide|
             slide.objects.iter().any(|object|
                 matches!(object.kind, ObjKind::Chart | ObjKind::Table)));
-        let payload = if schema7 {
+        // schema:8 additionally carries object→placeholder content bindings
+        // (P14 apply/bind slice); `placeholder_id` is an additive Obj field
+        // a schema:≤7 reader would silently drop, so bound objects take
+        // schema:8 even though masters/layouts already force ≥schema:4.
+        let schema8 = self.state.slides.iter().any(|slide|
+            slide.objects.iter().any(|object| object.placeholder_id.is_some()));
+        let payload = if schema8 {
+            serde_json::to_vec(&json!({"kind":"pitch","schema":8,"document":self.state}))?
+        } else if schema7 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":7,"document":self.state}))?
         } else if schema6 {
             serde_json::to_vec(&json!({"kind":"pitch","schema":6,"document":self.state}))?
@@ -2437,8 +2469,9 @@ impl Engine for PitchEngine {
             // connectors/media objects; schema:5 = morph transitions and
             // per-object morph names; schema:6 = named deck themes and the
             // deck→theme binding; schema:7 = chart/table objects with
-            // embedded bounded data.
-            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4 || wrapper.schema == 5 || wrapper.schema == 6 || wrapper.schema == 7) {
+            // embedded bounded data; schema:8 = object→placeholder content
+            // bindings (P14 apply/bind slice).
+            if wrapper.kind != "pitch" || !(wrapper.schema == 2 || wrapper.schema == 3 || wrapper.schema == 4 || wrapper.schema == 5 || wrapper.schema == 6 || wrapper.schema == 7 || wrapper.schema == 8) {
                 return Err(EngineError::serialization("unsupported Pitch snapshot kind/schema"));
             }
             wrapper.document

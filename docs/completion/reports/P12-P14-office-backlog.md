@@ -80,7 +80,12 @@ text frames/wrap layout, layout spreads/masters.
 6. Persistent ink (`addInkStroke` etc.; bounded points/strokes).
 7. Media object metadata (`ObjKind::Media`; decode/playback is host-side).
 8. Masters/layouts/placeholders (largest schema change; split CRUD from
-   apply/bind).
+   apply/bind). **Done:** slice 8a landed storage (schema:4) and the
+   apply/bind slice landed derived resolution — `setObjectPlaceholder`
+   object→placeholder tags plus the read-only `slideLayout` chain
+   resolution (schema:8). Deferred within item 8: NYC-Tron layout
+   `parentId` inheritance, materialized placeholder objects, object-level
+   theme references, template bundles (item 9).
 9. Themes/templates.
 10. Charts/tables in slides (embedded bounded data recommended).
 11. Morph transitions (after transitions; `setMorphName` + kind).
