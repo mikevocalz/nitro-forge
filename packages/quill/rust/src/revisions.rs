@@ -471,6 +471,7 @@ impl QuillEngine {
             styles: Some(self.styles.clone()),
             sections: Some(self.sections.clone()),
             revisions: Some(revisions_before),
+            footnotes: Some(self.footnotes.clone()),
             ..Default::default()
         };
         let removed = std::mem::replace(&mut self.blocks, stage.blocks.clone());
@@ -479,6 +480,7 @@ impl QuillEngine {
         self.styles = stage.styles.clone();
         self.sections = stage.sections.clone();
         self.revisions = stage.revisions.clone();
+        self.footnotes = stage.footnotes.clone();
         self.record_undo(0, removed, self.blocks.clone(), before);
     }
 
@@ -1258,5 +1260,75 @@ mod tests {
         e.undo().unwrap();
         e.undo().unwrap();
         assert_eq!(e.tracking, None);
+    }
+
+    fn notes(e: &mut QuillEngine) -> Vec<Value> {
+        apply(e, "listFootnotes", json!({})).data["footnotes"]
+            .as_array()
+            .unwrap()
+            .clone()
+    }
+
+    /// Rejecting a tracked insertion deletes its marked range on the
+    /// staged engine; footnote anchors after the range must follow the
+    /// moved text — `commit_staged` has to carry `stage.footnotes` back.
+    #[test]
+    fn reject_revision_remaps_footnote_anchor() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "keep here");
+        track(&mut e, None);
+        apply(
+            &mut e,
+            "insertText",
+            json!({"at":{"block":0,"offset":4},"text":" DROP"}),
+        );
+        // "keep DROP here" is 14 chars; anchor the note at the end.
+        apply(
+            &mut e,
+            "addFootnote",
+            json!({"at":{"block":0,"offset":14},"body":"tail note"}),
+        );
+        assert_eq!(notes(&mut e)[0]["at"], json!({"block":0,"offset":14}));
+        let id = revisions(&mut e)[0]["id"].as_str().unwrap().to_string();
+        apply(&mut e, "rejectRevision", json!({"id": id}));
+        assert_eq!(text_of(&mut e), "keep here");
+        // The staged deleteRange removed " DROP" (5 chars) before the
+        // right-gravity mark: 14 -> 9, still the block end.
+        assert_eq!(notes(&mut e)[0]["at"], json!({"block":0,"offset":9}));
+        // Undo restores both the marked text and the pre-decision anchor.
+        e.undo().unwrap();
+        assert_eq!(text_of(&mut e), "keep DROP here");
+        assert_eq!(notes(&mut e)[0]["at"], json!({"block":0,"offset":14}));
+    }
+
+    /// Same contract through the `*All` batch path and the other staged
+    /// op: rejecting a tracked deletion re-inserts its stored text, which
+    /// must shift a footnote anchored after the collapse point right.
+    #[test]
+    fn reject_all_revisions_remaps_footnote_anchor() {
+        let mut e = engine();
+        insert(&mut e, 0, 0, "keep here");
+        track(&mut e, None);
+        // Tracked deletion of the space at offset 4 leaves "keephere".
+        apply(
+            &mut e,
+            "deleteRange",
+            json!({"from":{"block":0,"offset":4},"to":{"block":0,"offset":5}}),
+        );
+        assert_eq!(text_of(&mut e), "keephere");
+        apply(
+            &mut e,
+            "addFootnote",
+            json!({"at":{"block":0,"offset":8},"body":"n"}),
+        );
+        let r = apply(&mut e, "rejectAllRevisions", json!({"kind":"del"}));
+        assert_eq!(r.data["applied"], 1);
+        assert_eq!(text_of(&mut e), "keep here");
+        // The staged insertText put " " back at offset 4; the mark at
+        // offset 8 shifts right to 9 — the end of "keep here".
+        assert_eq!(notes(&mut e)[0]["at"], json!({"block":0,"offset":9}));
+        e.undo().unwrap();
+        assert_eq!(text_of(&mut e), "keephere");
+        assert_eq!(notes(&mut e)[0]["at"], json!({"block":0,"offset":8}));
     }
 }
