@@ -10,17 +10,23 @@ fn shape(e: &mut MotionEngine, comp: Option<u64>) -> u64 {
     if let Some(c) = comp {
         p["comp"] = json!(c);
     }
-    call(e, "addShapeLayer", p).data["layer_id"].as_u64().unwrap()
+    call(e, "addShapeLayer", p).data["layer_id"]
+        .as_u64()
+        .unwrap()
 }
 fn comp(e: &mut MotionEngine, p: Value) -> u64 {
-    call(e, "addComposition", p).data["comp_id"].as_u64().unwrap()
+    call(e, "addComposition", p).data["comp_id"]
+        .as_u64()
+        .unwrap()
 }
 fn comp_layer(e: &mut MotionEngine, target: u64, into: Option<u64>) -> u64 {
     let mut p = json!({"comp":target});
     if let Some(c) = into {
         p["into"] = json!(c);
     }
-    call(e, "addCompLayer", p).data["layer_id"].as_u64().unwrap()
+    call(e, "addCompLayer", p).data["layer_id"]
+        .as_u64()
+        .unwrap()
 }
 fn pixels(e: &mut MotionEngine, t: f64) -> Vec<u8> {
     e.apply(Command::new("renderFrame", json!({"time_s":t})).with_binary(None))
@@ -76,7 +82,10 @@ fn nested_comp_renders_real_pixels_with_proportional_time_mapping() {
         json!(2.0)
     );
     let d = call(&mut e, "describe", json!({}));
-    assert_eq!(d.data["compositions"][c.to_string()]["duration_s"], json!(2.0));
+    assert_eq!(
+        d.data["compositions"][c.to_string()]["duration_s"],
+        json!(2.0)
+    );
     assert_eq!(d.data["schema"], json!(2));
 }
 
@@ -89,11 +98,7 @@ fn comp_ops_duplicate_parent_reparent_and_removal_rules() {
     let inner = shape(&mut e, Some(a));
     // Transform parent inside one composition.
     let parent = shape(&mut e, Some(a));
-    call(
-        &mut e,
-        "updateLayer",
-        json!({"id":parent,"visible":false}),
-    );
+    call(&mut e, "updateLayer", json!({"id":parent,"visible":false}));
     call(
         &mut e,
         "setLayerParent",
@@ -108,7 +113,11 @@ fn comp_ops_duplicate_parent_reparent_and_removal_rules() {
     // Child inherits the parent's translation: red lands at x=2, not x=0.
     assert!(red_at(&pixels(&mut e, 0.), 2));
     // Clearing the parent link returns the child to its local transform.
-    call(&mut e, "setLayerParent", json!({"layer":inner,"parent":null}));
+    call(
+        &mut e,
+        "setLayerParent",
+        json!({"layer":inner,"parent":null}),
+    );
     assert!(red_at(&pixels(&mut e, 0.), 0));
     // setLayerParent across compositions and self-parenting reject atomically.
     let before = e.snapshot().unwrap();
@@ -207,12 +216,7 @@ fn comp_depth_cycle_caps_and_aggregate_layer_budget_are_enforced() {
     let (x, y) = (comps[8], comps[9]);
     comp_layer(&mut e, y, Some(x));
     let before = e.snapshot().unwrap();
-    assert!(try_call(
-        &mut e,
-        "addCompLayer",
-        json!({"comp":x,"into":y})
-    )
-    .is_err());
+    assert!(try_call(&mut e, "addCompLayer", json!({"comp":x,"into":y})).is_err());
     assert_eq!(e.snapshot().unwrap(), before);
     // Sixteen-composition cap on a fresh document.
     let mut e3 = MotionEngine::new();
@@ -232,10 +236,14 @@ fn comp_depth_cycle_caps_and_aggregate_layer_budget_are_enforced() {
     }
     shape(&mut e2, Some(c));
     let before = e2.snapshot().unwrap();
-    assert!(try_call(&mut e2, "addShapeLayer", json!({
-        "comp":c,
-        "shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[0,0,0,255]}
-    }))
+    assert!(try_call(
+        &mut e2,
+        "addShapeLayer",
+        json!({
+            "comp":c,
+            "shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[0,0,0,255]}
+        })
+    )
     .is_err());
     assert_eq!(e2.snapshot().unwrap(), before);
 }
@@ -268,11 +276,7 @@ fn batch_atomicity_and_snapshot_schema_migration() {
         .as_array_mut()
         .unwrap()
         .retain(|l| l.get("comp_id").is_none() || l["comp_id"].is_null());
-    for layer in wire["layers"]
-        .as_array_mut()
-        .unwrap()
-        .iter_mut()
-    {
+    for layer in wire["layers"].as_array_mut().unwrap().iter_mut() {
         let o = layer.as_object_mut().unwrap();
         o.remove("kind");
         o.remove("parent_id");
@@ -291,7 +295,11 @@ fn batch_atomicity_and_snapshot_schema_migration() {
     } else {
         old.state.layers[0].id
     };
-    call(&mut old, "updateLayer", json!({"id":root_layer,"name":"Migrated"}));
+    call(
+        &mut old,
+        "updateLayer",
+        json!({"id":root_layer,"name":"Migrated"}),
+    );
     let mut reopened = MotionEngine::new();
     reopened.restore(&old.snapshot().unwrap()).unwrap();
     assert_eq!(reopened.state.schema, 2);
@@ -334,7 +342,11 @@ fn shear_composed_parent_transform_fails_render_not_state() {
     assert_eq!(evaluated["transform"]["sx"], json!(1.0));
     assert_eq!(evaluated["parent_id"], json!(parent));
     // Clearing the parent makes the same document render again.
-    call(&mut e, "setLayerParent", json!({"layer":child,"parent":null}));
+    call(
+        &mut e,
+        "setLayerParent",
+        json!({"layer":child,"parent":null}),
+    );
     assert!(e
         .apply(Command::new("renderFrame", json!({"time_s":0})).with_binary(None))
         .is_ok());
@@ -355,8 +367,8 @@ fn duplicate_composition_preserves_comp_and_asset_references() {
         json!({"asset_id":asset,"comp":outer}),
     )
     .data["layer_id"]
-    .as_u64()
-    .unwrap();
+        .as_u64()
+        .unwrap();
     let dup = call(&mut e, "duplicateComposition", json!({"id":outer})).data["comp_id"]
         .as_u64()
         .unwrap();
@@ -420,12 +432,7 @@ fn set_layer_order_targets_the_owning_composition() {
     );
     // Mixed or partial id sets reject atomically.
     let before = e.snapshot().unwrap();
-    assert!(try_call(
-        &mut e,
-        "setLayerOrder",
-        json!({"order":[r1,a1]})
-    )
-    .is_err());
+    assert!(try_call(&mut e, "setLayerOrder", json!({"order":[r1,a1]})).is_err());
     assert!(try_call(&mut e, "setLayerOrder", json!({"order":[r1]})).is_err());
     assert_eq!(e.snapshot().unwrap(), before);
 }
@@ -447,8 +454,16 @@ fn reparent_layer_index_bounds_and_root_target() {
     .is_err());
     assert_eq!(e.snapshot().unwrap(), before);
     // index == len appends; comp 0 selects the root composition.
-    call(&mut e, "reparentLayer", json!({"layer":l,"comp":a,"index":1}));
-    call(&mut e, "reparentLayer", json!({"layer":l,"comp":0,"index":0}));
+    call(
+        &mut e,
+        "reparentLayer",
+        json!({"layer":l,"comp":a,"index":1}),
+    );
+    call(
+        &mut e,
+        "reparentLayer",
+        json!({"layer":l,"comp":0,"index":0}),
+    );
     let d = call(&mut e, "describe", json!({}));
     assert_eq!(d.data["layers"][0]["id"], json!(l));
     assert_eq!(d.data["layers"].as_array().unwrap().len(), 1);
@@ -562,10 +577,12 @@ fn hostile_composition_restores_reject_without_mutating() {
     deep["compositions"][c.to_string()]["layers"]
         .as_array_mut()
         .unwrap()
-        .push(json!({"id":100,"name":"l","visible":true,"locked":false,"kind":"comp",
+        .push(
+            json!({"id":100,"name":"l","visible":true,"locked":false,"kind":"comp",
             "comp_id":2,
             "transform":{"tx":0,"ty":0,"sx":1,"sy":1,"rotation":0,"ox":0,"oy":0},
-            "opacity":1,"curves":[]}));
+            "opacity":1,"curves":[]}),
+        );
     deep["next_layer_id"] = json!(200);
     assert!(e
         .restore(&encode_envelope(&serde_json::to_vec(&deep).unwrap()))

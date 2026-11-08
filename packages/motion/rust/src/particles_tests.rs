@@ -21,8 +21,7 @@ fn emitter_json() -> Value {
     })
 }
 fn particles_layer(e: &mut MotionEngine) -> u64 {
-    call(e, "addParticlesLayer", json!({"name":"fx"}))
-        .data["layer_id"]
+    call(e, "addParticlesLayer", json!({"name":"fx"})).data["layer_id"]
         .as_u64()
         .unwrap()
 }
@@ -98,8 +97,8 @@ fn emitter_bounds_caps_and_kind_rules_hold() {
         json!({"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[0,255,0,255]}}),
     )
     .data["layer_id"]
-    .as_u64()
-    .unwrap();
+        .as_u64()
+        .unwrap();
     // Emitters only attach to particles layers.
     assert!(try_call(
         &mut e,
@@ -147,21 +146,15 @@ fn emitter_bounds_caps_and_kind_rules_hold() {
         // 13 particles layers per comp stays under the 16 canvas-raster cap.
         if i % 13 == 0 {
             comps.push(
-                call(&mut e2, "addComposition", json!({"width":4,"height":4}))
-                    .data["comp_id"]
+                call(&mut e2, "addComposition", json!({"width":4,"height":4})).data["comp_id"]
                     .as_u64()
                     .unwrap(),
             );
         }
         let comp = comps[i / 13];
-        let l = call(
-            &mut e2,
-            "addParticlesLayer",
-            json!({"comp":comp}),
-        )
-        .data["layer_id"]
-        .as_u64()
-        .unwrap();
+        let l = call(&mut e2, "addParticlesLayer", json!({"comp":comp})).data["layer_id"]
+            .as_u64()
+            .unwrap();
         let result = try_call(
             &mut e2,
             "setParticleEmitter",
@@ -199,8 +192,7 @@ fn hostile_restore_rejects_bad_emitters_and_state_survives() {
     assert_eq!(e.snapshot().unwrap(), good);
 
     let mut wire = serde_json::to_value(&*e.state).unwrap();
-    wire["layers"][0]["emitter"]["sprite"] =
-        json!({"kind":"asset","asset_id":77});
+    wire["layers"][0]["emitter"]["sprite"] = json!({"kind":"asset","asset_id":77});
     assert!(e
         .restore(&encode_envelope(&serde_json::to_vec(&wire).unwrap()))
         .is_err());
@@ -254,8 +246,10 @@ fn lifetime_window_and_undo_redo_are_exact() {
     let cleared = frame(&mut e, 0.5);
     assert!(lit_pixels(&cleared, 8).is_empty());
     let described = call(&mut e, "describe", json!({}));
-    assert!(described.data["layers"][0]["emitter"].is_null()
-        || described.data["layers"][0].get("emitter").is_none());
+    assert!(
+        described.data["layers"][0]["emitter"].is_null()
+            || described.data["layers"][0].get("emitter").is_none()
+    );
     assert!(e.redo().unwrap());
     assert_eq!(frame(&mut e, 0.5), mid);
 }
@@ -263,7 +257,11 @@ fn lifetime_window_and_undo_redo_are_exact() {
 #[test]
 fn layer_transform_and_asset_sprites_apply() {
     let mut e = MotionEngine::new();
-    call(&mut e, "new", json!({"width":12,"height":12,"duration_s":2}));
+    call(
+        &mut e,
+        "new",
+        json!({"width":12,"height":12,"duration_s":2}),
+    );
     // 2x2 opaque white asset as sprite.
     let asset = call(
         &mut e,
@@ -310,11 +308,7 @@ fn layer_transform_and_asset_sprites_apply() {
             "spawn":{"x":1,"y":1,"w":0.001,"h":0.001}
         }),
     );
-    call(
-        &mut e,
-        "updateLayer",
-        json!({"id":id,"transform":{"tx":5}}),
-    );
+    call(&mut e, "updateLayer", json!({"id":id,"transform":{"tx":5}}));
     let moved = frame(&mut e, 1.0);
     let lit_moved = lit_pixels(&moved, 12);
     assert!(lit_moved.iter().all(|&(x, _)| x >= 5));

@@ -82,7 +82,9 @@ impl MotionPath {
         }
         for n in &self.nodes {
             if !finite(n.x) || !finite(n.y) {
-                return Err(EngineError::validation("path node coordinates must be finite"));
+                return Err(EngineError::validation(
+                    "path node coordinates must be finite",
+                ));
             }
             for h in [n.in_handle, n.out_handle].into_iter().flatten() {
                 if !finite(h[0]) || !finite(h[1]) {
@@ -133,14 +135,14 @@ impl MotionPath {
         }
         let i = lo.min(table.pts.len() - 2);
         let seg = table.cum[i + 1] - table.cum[i];
-        let t = if seg > 0. { (target - table.cum[i]) / seg } else { 0. };
+        let t = if seg > 0. {
+            (target - table.cum[i]) / seg
+        } else {
+            0.
+        };
         let (a, b) = (table.pts[i], table.pts[i + 1]);
         let d = (b.0 - a.0, b.1 - a.1);
-        Ok((
-            a.0 + d.0 * t,
-            a.1 + d.1 * t,
-            d.1.atan2(d.0).to_degrees(),
-        ))
+        Ok((a.0 + d.0 * t, a.1 + d.1 * t, d.1.atan2(d.0).to_degrees()))
     }
 
     /// Flatten to a vertex polyline plus cumulative arc lengths, bounded by
@@ -156,7 +158,11 @@ impl MotionPath {
             };
         };
         pts.push((first.x, first.y));
-        let seg_count = if self.closed && n > 1 { n } else { n.saturating_sub(1) };
+        let seg_count = if self.closed && n > 1 {
+            n
+        } else {
+            n.saturating_sub(1)
+        };
         // Per-segment descriptors: (p0, p3, Option<(c1, c2)>, weight).
         let mut segs = Vec::with_capacity(seg_count);
         let mut beziers = 0usize;

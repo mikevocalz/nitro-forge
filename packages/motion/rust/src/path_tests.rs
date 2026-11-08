@@ -214,14 +214,13 @@ fn motion_path_validation_clear_and_hostile_restore() {
     )
     .is_err());
     // Locked layers reject path edits.
-    call(&mut e, "setMotionPath", json!({"layer":id,"path":{"nodes":[{"x":0,"y":0},{"x":7,"y":0}]}}));
-    call(&mut e, "updateLayer", json!({"id":id,"locked":true}));
-    assert!(try_call(
+    call(
         &mut e,
         "setMotionPath",
-        json!({"layer":id,"path":null}),
-    )
-    .is_err());
+        json!({"layer":id,"path":{"nodes":[{"x":0,"y":0},{"x":7,"y":0}]}}),
+    );
+    call(&mut e, "updateLayer", json!({"id":id,"locked":true}));
+    assert!(try_call(&mut e, "setMotionPath", json!({"layer":id,"path":null}),).is_err());
     call(&mut e, "updateLayer", json!({"id":id,"locked":false}));
     // Clearing the path removes the progress curve and base atomically.
     call(
@@ -268,7 +267,11 @@ fn motion_path_validation_clear_and_hostile_restore() {
         .unwrap();
     assert_eq!(fresh.snapshot().unwrap(), cleared_snap);
     // Undo/redo round-trips the path op.
-    call(&mut e, "setMotionPath", json!({"layer":id,"path":{"nodes":[{"x":0,"y":0},{"x":7,"y":0}]}}));
+    call(
+        &mut e,
+        "setMotionPath",
+        json!({"layer":id,"path":{"nodes":[{"x":0,"y":0},{"x":7,"y":0}]}}),
+    );
     let attached = e.snapshot().unwrap();
     assert!(e.undo().unwrap());
     assert_eq!(e.snapshot().unwrap(), cleared_snap);

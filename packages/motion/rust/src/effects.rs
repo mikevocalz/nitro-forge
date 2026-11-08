@@ -75,9 +75,7 @@ fn field_f64<E: serde::de::Error>(
         .and_then(Value::as_f64)
         .ok_or_else(|| E::custom("effect parameter must be a finite number"))
 }
-fn field_color<E: serde::de::Error>(
-    object: &serde_json::Map<String, Value>,
-) -> Result<[u8; 4], E> {
+fn field_color<E: serde::de::Error>(object: &serde_json::Map<String, Value>) -> Result<[u8; 4], E> {
     let array = object
         .get("color")
         .and_then(Value::as_array)
@@ -311,9 +309,7 @@ pub fn apply_effects(
                     }
                 })?
             }
-            LayerEffect::GaussianBlur { radius_px } => {
-                gaussian_blur(buf, w, h, *radius_px, ctx)?
-            }
+            LayerEffect::GaussianBlur { radius_px } => gaussian_blur(buf, w, h, *radius_px, ctx)?,
             LayerEffect::Fill { color, opacity } => {
                 let op = *opacity;
                 pixel_pass(buf, ctx, |px| {

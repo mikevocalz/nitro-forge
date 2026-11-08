@@ -12,8 +12,8 @@ fn rect(e: &mut MotionEngine, x: f64, y: f64, w: f64, h: f64, fill: [u8; 4]) -> 
         json!({"shape":{"kind":"rect","x":x,"y":y,"w":w,"h":h,"fill":fill}}),
     )
     .data["layer_id"]
-    .as_u64()
-    .unwrap()
+        .as_u64()
+        .unwrap()
 }
 fn pixels(e: &mut MotionEngine, t: f64) -> Vec<u8> {
     e.apply(Command::new("renderFrame", json!({"time_s":t})).with_binary(None))
@@ -31,8 +31,8 @@ fn ingest(e: &mut MotionEngine, w: u32, h: u32, bytes: Vec<u8>) -> u64 {
     )
     .unwrap()
     .data["asset_id"]
-    .as_u64()
-    .unwrap()
+        .as_u64()
+        .unwrap()
 }
 /// W3C Compositing Level 1 channel formula, mirroring Prism's reference so a
 /// wrong mode name or dropped plumbing fails the pixel check.
@@ -143,15 +143,31 @@ fn blend_names_validate_atomically_and_undo_redo_roundtrip() {
         assert_eq!(e.snapshot().unwrap(), before);
     }
     // "normal" and null both store the absent default.
-    call(&mut e, "setLayerBlend", json!({"layer":top,"blend":"multiply"}));
+    call(
+        &mut e,
+        "setLayerBlend",
+        json!({"layer":top,"blend":"multiply"}),
+    );
     let multiplied = e.snapshot().unwrap();
-    call(&mut e, "setLayerBlend", json!({"layer":top,"blend":"normal"}));
+    call(
+        &mut e,
+        "setLayerBlend",
+        json!({"layer":top,"blend":"normal"}),
+    );
     assert_eq!(e.snapshot().unwrap(), before);
-    call(&mut e, "setLayerBlend", json!({"layer":top,"blend":"screen"}));
+    call(
+        &mut e,
+        "setLayerBlend",
+        json!({"layer":top,"blend":"screen"}),
+    );
     let screened = e.snapshot().unwrap();
     assert_ne!(screened, multiplied);
     // A repeated identical write is a silent no-op.
-    let noop = call(&mut e, "setLayerBlend", json!({"layer":top,"blend":"screen"}));
+    let noop = call(
+        &mut e,
+        "setLayerBlend",
+        json!({"layer":top,"blend":"screen"}),
+    );
     assert!(noop.events.is_empty());
     // Undo/redo round-trips the blend field.
     assert!(e.undo().unwrap());
@@ -177,24 +193,45 @@ fn clipped_masks_to_unclipped_sibling_below() {
     let top = rect(&mut e, 1., 0., 2., 1., [0, 0, 255, 255]);
     // Bottom layer cannot clip: nothing below it.
     let before = e.snapshot().unwrap();
-    assert!(try_call(&mut e, "setLayerClipped", json!({"layer":base,"clipped":true})).is_err());
+    assert!(try_call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":base,"clipped":true})
+    )
+    .is_err());
     assert_eq!(e.snapshot().unwrap(), before);
-    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":true}));
+    call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":top,"clipped":true}),
+    );
     // x0: base only -> red. x1: both -> clipped layer wins through base alpha.
     // x2: outside the base -> clipped away entirely.
     assert_eq!(
         pixels(&mut e, 0.),
         vec![255, 0, 0, 255, 0, 0, 255, 255, 0, 0, 0, 0]
     );
-    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":false}));
+    call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":top,"clipped":false}),
+    );
     assert_eq!(
         pixels(&mut e, 0.),
         vec![255, 0, 0, 255, 0, 0, 255, 255, 0, 0, 255, 255]
     );
     // A second consecutive clipped layer joins the same clip run.
-    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":true}));
+    call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":top,"clipped":true}),
+    );
     let third = rect(&mut e, 0., 0., 3., 1., [0, 255, 0, 255]);
-    call(&mut e, "setLayerClipped", json!({"layer":third,"clipped":true}));
+    call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":third,"clipped":true}),
+    );
     // Both clipped layers composite through the base alpha (x0,x1): the top
     // of the run (green) wins where it covers.
     assert_eq!(
@@ -206,15 +243,14 @@ fn clipped_masks_to_unclipped_sibling_below() {
     assert!(try_call(&mut e, "removeLayer", json!({"id":base})).is_err());
     assert_eq!(e.snapshot().unwrap(), before);
     // Reordering a clipped layer to the bottom rejects atomically too.
-    assert!(try_call(
-        &mut e,
-        "setLayerOrder",
-        json!({"order":[top,base,third]})
-    )
-    .is_err());
+    assert!(try_call(&mut e, "setLayerOrder", json!({"order":[top,base,third]})).is_err());
     assert_eq!(e.snapshot().unwrap(), before);
     // Undo/redo round-trips the clipped flag.
-    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":false}));
+    call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":top,"clipped":false}),
+    );
     let unclipped_top = e.snapshot().unwrap();
     assert!(e.undo().unwrap());
     assert_eq!(e.snapshot().unwrap(), before);
@@ -226,8 +262,7 @@ fn blend_and_clip_compose_with_comp_layers_and_rasters() {
     let mut e = MotionEngine::new();
     call(&mut e, "new", json!({"width":2,"height":1,"duration_s":1}));
     // Nested comp: multiply-blended top over a mid gray base.
-    let c = call(&mut e, "addComposition", json!({"width":2,"height":1}))
-        .data["comp_id"]
+    let c = call(&mut e, "addComposition", json!({"width":2,"height":1})).data["comp_id"]
         .as_u64()
         .unwrap();
     call(
@@ -241,15 +276,14 @@ fn blend_and_clip_compose_with_comp_layers_and_rasters() {
         json!({"comp":c,"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[100,100,100,255]}}),
     )
     .data["layer_id"]
-    .as_u64()
-    .unwrap();
+        .as_u64()
+        .unwrap();
     call(
         &mut e,
         "setLayerBlend",
         json!({"layer":top_in_comp,"blend":"multiply"}),
     );
-    let inst = call(&mut e, "addCompLayer", json!({"comp":c}))
-        .data["layer_id"]
+    let inst = call(&mut e, "addCompLayer", json!({"comp":c})).data["layer_id"]
         .as_u64()
         .unwrap();
     // The instance composites the comp's blended pixels at root.
@@ -267,24 +301,15 @@ fn blend_and_clip_compose_with_comp_layers_and_rasters() {
         json!({"layer":inst,"clipped":true}),
     );
     // inst shows only through base's alpha (x0); x1 clips away.
-    assert_eq!(
-        pixels(&mut e, 0.),
-        vec![78, 78, 78, 255, 0, 0, 0, 0]
-    );
+    assert_eq!(pixels(&mut e, 0.), vec![78, 78, 78, 255, 0, 0, 0, 0]);
     call(
         &mut e,
         "setLayerClipped",
         json!({"layer":inst,"clipped":false}),
     );
     // A raster layer honors blend against whatever is beneath it.
-    let asset = ingest(
-        &mut e,
-        2,
-        1,
-        vec![200, 100, 50, 255, 200, 100, 50, 255],
-    );
-    let raster = call(&mut e, "addRasterLayer", json!({"asset_id":asset}))
-        .data["layer_id"]
+    let asset = ingest(&mut e, 2, 1, vec![200, 100, 50, 255, 200, 100, 50, 255]);
+    let raster = call(&mut e, "addRasterLayer", json!({"asset_id":asset})).data["layer_id"]
         .as_u64()
         .unwrap();
     call(
@@ -305,8 +330,16 @@ fn blend_clipped_survive_snapshot_and_hostile_restore_rejects() {
     call(&mut e, "new", json!({"width":2,"height":1,"duration_s":1}));
     rect(&mut e, 0., 0., 1., 1., [100, 150, 200, 255]);
     let top = rect(&mut e, 0., 0., 2., 1., [200, 100, 50, 255]);
-    call(&mut e, "setLayerBlend", json!({"layer":top,"blend":"screen"}));
-    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":true}));
+    call(
+        &mut e,
+        "setLayerBlend",
+        json!({"layer":top,"blend":"screen"}),
+    );
+    call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":top,"clipped":true}),
+    );
     let snap = e.snapshot().unwrap();
     let mut reopened = MotionEngine::new();
     reopened.restore(&snap).unwrap();
@@ -367,6 +400,10 @@ fn blend_clipped_survive_snapshot_and_hostile_restore_rejects() {
     let mut old = MotionEngine::new();
     old.restore(&encode_envelope(&serde_json::to_vec(&s1).unwrap()))
         .unwrap();
-    assert!(old.state.layers.iter().all(|l| l.blend.is_none() && !l.clipped));
+    assert!(old
+        .state
+        .layers
+        .iter()
+        .all(|l| l.blend.is_none() && !l.clipped));
     assert_eq!(e.snapshot().unwrap(), snap);
 }
