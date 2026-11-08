@@ -3,6 +3,7 @@ mod assets;
 mod curve;
 mod effects;
 mod expressions;
+mod graph;
 mod particles;
 mod path;
 mod transform3d;
@@ -10,6 +11,7 @@ use assets::RasterAsset;
 use curve::{evaluate, Key};
 use effects::{apply_effects, LayerEffect};
 use expressions::{Env as ExprEnv, PropertyExpr};
+use graph::{Binding, Graph, GraphNode};
 use particles::{ParticleEmitter, ParticleSprite};
 use path::MotionPath;
 use transform3d::Transform3D;
@@ -385,6 +387,12 @@ struct State {
         skip_serializing_if = "assets::is_initial_asset_id"
     )]
     next_asset_id: u64,
+    /// Bounded scalar value node graph (slice I): a document-global f64 DAG
+    /// plus `(layer, property)` bindings, mutually exclusive with curves
+    /// and expressions on the same cell. Additive serde default keeps
+    /// schema at 2; graph-free documents serialize byte-identically.
+    #[serde(default, skip_serializing_if = "Graph::is_default")]
+    graph: Graph,
 }
 impl Default for State {
     fn default() -> Self {
@@ -403,6 +411,7 @@ impl Default for State {
             next_comp_id: 1,
             assets: BTreeMap::new(),
             next_asset_id: 1,
+            graph: Graph::default(),
         }
     }
 }
@@ -999,6 +1008,50 @@ fn validate(s: &State) -> Result<(), EngineError> {
             }
         }
     }
+    // Pass 2d: bounded scalar value graph (slice I). Structural checks
+    // (caps, ids, kind/pin/param shape, edge targets, acyclicity, binding
+    // shape) live in graph::validate_structure; here the graph is checked
+    // against document state — property source layers must exist, binding
+    // layers must exist with the same kind gates as curves/expressions, and
+    // a binding is mutually exclusive with that property's curve AND
+    // expression (hostile restores reject rather than pick a winner).
+    graph::validate_structure(&s.graph).map_err(bad)?;
+    {
+        // Global layer lookup across every composition for graph refs.
+        let find_layer = |layer_id: u64| -> Option<&Layer> {
+            comp_members
+                .values()
+                .find_map(|members| members.get(&layer_id).copied())
+        };
+        for node in &s.graph.nodes {
+            if node.kind == graph::NodeKind::Property {
+                let layer_id = node
+                    .params
+                    .and_then(|p| p.layer)
+                    .ok_or_else(|| bad("property node requires a layer"))?;
+                if find_layer(layer_id).is_none() {
+                    return Err(bad("graph property source references unknown layer"));
+                }
+            }
+        }
+        for b in &s.graph.bindings {
+            let layer = find_layer(b.layer)
+                .ok_or_else(|| bad("graph binding references unknown layer"))?;
+            if b.property.is_3d() && layer.transform3d.is_none() {
+                return Err(bad("3D graph bindings require a transform3d"));
+            }
+            if b.property == Property::PathProgress && layer.path.is_none() {
+                return Err(bad("path progress graph binding requires a motion path"));
+            }
+            if layer.curves.iter().any(|c| c.property == b.property)
+                || layer.expressions.iter().any(|e| e.property == b.property)
+            {
+                return Err(bad(
+                    "property cannot have both keys/expression and a graph binding",
+                ));
+            }
+        }
+    }
     // Pass 2b: matte chains are acyclic and bounded so render recursion
     // terminates. Sources are already proven same-composition above, and the
     // check covers every matte edge including disabled ones.
@@ -1382,6 +1435,182 @@ impl<'a> ExprResolver<'a> {
         }
     }
 }
+/// Per-call graph evaluator (slice I). Built once per `evaluate`/
+/// `renderFrame` with the root time; it precomputes every composition's
+/// local env and eagerly evaluates the whole DAG once per comp context
+/// (≤16 comps × ≤512 O(1) node evals — trivially inside budget). Node
+/// evaluation is a flat iterative pass over the Kahn topo order: no
+/// recursion whose depth scales with document content. `property` sources
+/// read pre-binding curve/base values in the referenced layer's OWN comp
+/// context, which keeps the graph acyclic across the layer boundary.
+struct GraphEval<'a> {
+    /// Kahn order (ascending-id ties); nodes absent here are a defensive
+    /// cycle remainder and evaluate to 0.0.
+    topo: Vec<u64>,
+    nodes: BTreeMap<u64, &'a GraphNode>,
+    /// `(layer, property)` → bound node id (validate guarantees unique).
+    bindings: BTreeMap<(u64, Property), u64>,
+    /// Comp key (None = root) → local env.
+    envs: BTreeMap<Option<u64>, graph::CompEnv>,
+    /// Comp key → that comp's layers.
+    comp_layers: BTreeMap<Option<u64>, &'a [Arc<Layer>]>,
+    /// Layer id → (comp key, index into that comp's layer slice).
+    layer_pos: BTreeMap<u64, (Option<u64>, usize)>,
+    /// Precomputed node values per comp context.
+    tables: BTreeMap<Option<u64>, BTreeMap<u64, f64>>,
+}
+impl<'a> GraphEval<'a> {
+    fn new(state: &'a State, root_time: f64) -> Self {
+        let root_fps = rate_fps(&state.frame_rate);
+        let mut envs = BTreeMap::new();
+        let mut comp_layers = BTreeMap::new();
+        let mut layer_pos = BTreeMap::new();
+        envs.insert(
+            None,
+            graph::CompEnv {
+                time: root_time,
+                frame: (root_time * root_fps).floor(),
+                fps: root_fps,
+                duration: state.duration_s,
+            },
+        );
+        comp_layers.insert(None, state.layers.as_slice());
+        for (index, l) in state.layers.iter().enumerate() {
+            layer_pos.insert(l.id, (None, index));
+        }
+        for (id, comp) in &state.compositions {
+            // Same duration-scaled local time `comp_local_time`/`evaluate`
+            // and the nested render path already use for curves.
+            let local = (root_time * comp.duration_s / state.duration_s)
+                .clamp(0., comp.duration_s);
+            let fps = rate_fps(&comp.frame_rate);
+            envs.insert(
+                Some(*id),
+                graph::CompEnv {
+                    time: local,
+                    frame: (local * fps).floor(),
+                    fps,
+                    duration: comp.duration_s,
+                },
+            );
+            comp_layers.insert(Some(*id), comp.layers.as_slice());
+            for (index, l) in comp.layers.iter().enumerate() {
+                layer_pos.insert(l.id, (Some(*id), index));
+            }
+        }
+        let nodes: BTreeMap<u64, &GraphNode> =
+            state.graph.nodes.iter().map(|n| (n.id, n)).collect();
+        let bindings: BTreeMap<(u64, Property), u64> = state
+            .graph
+            .bindings
+            .iter()
+            .map(|b| ((b.layer, b.property), b.node))
+            .collect();
+        let mut eval = Self {
+            topo: graph::topo_order(&state.graph.nodes),
+            nodes,
+            bindings,
+            envs,
+            comp_layers,
+            layer_pos,
+            tables: BTreeMap::new(),
+        };
+        // Eager per-comp tables: every comp env is known up front, and the
+        // ≤16×512 worst case is trivial next to a single rasterized frame.
+        let comps: Vec<Option<u64>> = eval.envs.keys().copied().collect();
+        for comp in comps {
+            let table = eval.compute_table(comp);
+            eval.tables.insert(comp, table);
+        }
+        eval
+    }
+    /// Pre-binding property read for `property` source nodes: the layer's
+    /// curve evaluated at its own comp's local time, else the stored base
+    /// value. Expressions and graph bindings are never consulted, so graph
+    /// evaluation cannot cycle through layer state. Mirrors
+    /// `ExprResolver::resolve_non_expr` including the sx/sy sign rule.
+    fn property_value(&self, layer_id: u64, property: Property) -> f64 {
+        let Some(&(comp, index)) = self.layer_pos.get(&layer_id) else {
+            return 0.;
+        };
+        let Some(layers) = self.comp_layers.get(&comp) else {
+            return 0.;
+        };
+        let Some(layer) = layers.get(index) else {
+            return 0.;
+        };
+        let base = property.read(layer);
+        if let Some(curve) = layer.curves.iter().find(|c| c.property == property) {
+            let env = self.envs[&comp];
+            let (mut min, mut max) = property.bounds();
+            if matches!(property, Property::Sx | Property::Sy) {
+                if base > 0. {
+                    min = 1e-6
+                } else {
+                    max = -1e-6
+                }
+            }
+            curve::evaluate(&curve.keys, base, env.time, env.duration, min, max)
+                .unwrap_or(0.)
+        } else {
+            base
+        }
+    }
+    /// Evaluate every node once for one comp context, in topo order.
+    /// Iterative by construction; the op counter is a defensive backstop
+    /// that saturates remaining nodes to 0.0 (unreachable: ≤512 nodes).
+    fn compute_table(&self, comp: Option<u64>) -> BTreeMap<u64, f64> {
+        let env = self.envs[&comp];
+        let mut values: BTreeMap<u64, f64> = BTreeMap::new();
+        let mut ops = 0u32;
+        let mut saturated = false;
+        for &id in &self.topo {
+            let Some(node) = self.nodes.get(&id) else {
+                continue;
+            };
+            if saturated {
+                values.insert(id, 0.);
+                continue;
+            }
+            // Resolve every declared pin: edge refs read already-evaluated
+            // topo predecessors (a missing entry is the defensive cycle
+            // remainder → 0.0), const literals pass through.
+            let mut pins: Vec<(&str, f64)> = Vec::with_capacity(node.inputs.len());
+            for (name, edge) in &node.inputs {
+                ops += 1;
+                let v = match edge {
+                    graph::EdgeRef::Const(c) => c.value,
+                    graph::EdgeRef::Node(r) => values.get(&r.node).copied().unwrap_or(0.),
+                };
+                pins.push((name.as_str(), v));
+            }
+            ops += 1;
+            if ops > graph::MAX_OPS {
+                saturated = true;
+                values.insert(id, 0.);
+                continue;
+            }
+            let get = |name: &str| {
+                pins.iter()
+                    .find(|(k, _)| *k == name)
+                    .map(|(_, v)| *v)
+                    .unwrap_or(0.)
+            };
+            let mut prop = |layer: u64, property: Property| self.property_value(layer, property);
+            values.insert(id, graph::eval_kind(node.kind, node.params, &get, &env, &mut prop));
+        }
+        values
+    }
+    /// Sanitized bound value for `(layer, property)` in comp `comp`, or
+    /// None when the cell is unbound. Non-finite → 0.0, finite → clamped
+    /// to the property bounds — identical to the expression boundary.
+    fn bound_value(&self, comp: Option<u64>, layer: u64, property: Property) -> Option<f64> {
+        let node = *self.bindings.get(&(layer, property))?;
+        let raw = *self.tables.get(&comp)?.get(&node)?;
+        let (lo, hi) = property.bounds();
+        Some(if raw.is_finite() { raw.clamp(lo, hi) } else { 0. })
+    }
+}
 pub struct MotionEngine {
     state: Arc<State>,
     journal: Journal<Arc<State>>,
@@ -1408,6 +1637,7 @@ impl MotionEngine {
         duration_s: f64,
         fps: f64,
         time: f64,
+        graph: Option<(&GraphEval, Option<u64>)>,
     ) -> Result<Vec<Layer>, EngineError> {
         if !time.is_finite() || time < 0. || time > duration_s {
             return Err(bad("time outside composition"));
@@ -1417,6 +1647,15 @@ impl MotionEngine {
         for (index, l) in layers.iter().enumerate() {
             let mut out = (**l).clone();
             for property in Property::ALL {
+                // Graph bindings (slice I) are a third mutually-exclusive
+                // value source applied at the same point curve/expression
+                // values land; the sanitized node output wins the cell.
+                if let Some((eval, comp)) = graph {
+                    if let Some(value) = eval.bound_value(comp, l.id, property) {
+                        property.write(&mut out, value);
+                        continue;
+                    }
+                }
                 if l.curves.iter().any(|c| c.property == property)
                     || l.expressions.iter().any(|e| e.property == property)
                 {
@@ -1483,14 +1722,15 @@ impl MotionEngine {
         depth: usize,
         matte_depth: usize,
         siblings: bool,
+        graph: Option<&GraphEval>,
     ) -> Result<(), EngineError> {
         if let Some(c) = ctx {
             c.checkpoint()?
         }
         let layer = if l.effects.is_empty() {
-            self.stage_content(prism, view, l, by_id, time, ctx, depth)?
+            self.stage_content(prism, view, l, by_id, time, ctx, depth, graph)?
         } else {
-            self.stage_effects(prism, view, l, by_id, time, ctx, depth)?
+            self.stage_effects(prism, view, l, by_id, time, ctx, depth, graph)?
         };
         prism.apply(Command::new(
             "setLayerOpacity",
@@ -1519,7 +1759,8 @@ impl MotionEngine {
             // the matte mask render (a full-scene pass over the source) is
             // skipped entirely for hidden targets.
             if matte.enabled && l.visible {
-                let mask = self.matte_mask(view, matte, by_id, time, ctx, depth, matte_depth)?;
+                let mask =
+                    self.matte_mask(view, matte, by_id, time, ctx, depth, matte_depth, graph)?;
                 // Prism masks are canvas-space alpha: paint the derived mask
                 // over an empty mask, then feather it inside Prism.
                 prism.apply(Command::new("addMask", json!({"id":layer,"fill":"hide"})))?;
@@ -1555,6 +1796,7 @@ impl MotionEngine {
         time: f64,
         ctx: Option<&TaskContext>,
         depth: usize,
+        graph: Option<&GraphEval>,
     ) -> Result<u64, EngineError> {
         // Particles bake the effective affine (own transform plus parent
         // chain, shear included — no decompose needed) into per-particle
@@ -1615,7 +1857,14 @@ impl MotionEngine {
                     fps: rate_fps(&comp.frame_rate),
                     layers: &comp.layers,
                 };
-                let pixels = self.render_comp(&child_view, child_time, ctx, depth + 1)?;
+                let pixels = self.render_comp(
+                    &child_view,
+                    child_time,
+                    ctx,
+                    depth + 1,
+                    graph,
+                    Some(comp_id),
+                )?;
                 let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
                 let id = added.data["layer_id"]
                     .as_u64()
@@ -1694,9 +1943,10 @@ impl MotionEngine {
         time: f64,
         ctx: Option<&TaskContext>,
         depth: usize,
+        graph: Option<&GraphEval>,
     ) -> Result<u64, EngineError> {
         let mut offscreen = prism_engine::PrismEngine::new(view.width, view.height);
-        self.stage_content(&mut offscreen, view, l, by_id, time, ctx, depth)?;
+        self.stage_content(&mut offscreen, view, l, by_id, time, ctx, depth, graph)?;
         if let Some(c) = ctx {
             c.checkpoint()?
         }
@@ -1753,6 +2003,7 @@ impl MotionEngine {
         ctx: Option<&TaskContext>,
         depth: usize,
         matte_depth: usize,
+        graph: Option<&GraphEval>,
     ) -> Result<Vec<u8>, EngineError> {
         if matte_depth >= MAX_MATTE_DEPTH {
             return Err(bad("matte chain depth exceeded"));
@@ -1772,6 +2023,7 @@ impl MotionEngine {
             depth,
             matte_depth + 1,
             false,
+            graph,
         )?;
         if let Some(c) = ctx {
             c.checkpoint()?
@@ -1810,18 +2062,26 @@ impl MotionEngine {
         time: f64,
         ctx: Option<&TaskContext>,
         depth: usize,
+        graph: Option<&GraphEval>,
+        comp: Option<u64>,
     ) -> Result<Vec<u8>, EngineError> {
         if depth > MAX_COMP_DEPTH {
             return Err(bad("composition nesting depth exceeded"));
         }
-        let layers = self.evaluated_layers(view.layers, view.duration_s, view.fps, time)?;
+        let layers = self.evaluated_layers(
+            view.layers,
+            view.duration_s,
+            view.fps,
+            time,
+            graph.map(|g| (g, comp)),
+        )?;
         let by_id: BTreeMap<u64, &Layer> = layers.iter().map(|l| (l.id, l)).collect();
         let mut prism = prism_engine::PrismEngine::new(view.width, view.height);
         for l in &layers {
             // matte_depth restarts at every composition boundary, so the
             // worst case is MAX_COMP_DEPTH comp renders each taking up to
             // MAX_MATTE_DEPTH matte hops (transient mask buffers included).
-            self.stage_layer(&mut prism, view, l, &by_id, time, ctx, depth, 0, true)?;
+            self.stage_layer(&mut prism, view, l, &by_id, time, ctx, depth, 0, true, graph)?;
         }
         if let Some(c) = ctx {
             c.checkpoint()?
@@ -1848,7 +2108,8 @@ impl MotionEngine {
             return Err(bad("time outside composition"));
         }
         let view = self.state.comp_view(None)?;
-        let bytes = self.render_comp(&view, time, ctx, 0)?;
+        let ge = GraphEval::new(&self.state, time);
+        let bytes = self.render_comp(&view, time, ctx, 0, Some(&ge), None)?;
         Ok(
             CommandResult::read_only(json!({"width":self.state.width,"height":self.state.height}))
                 .with_bytes(cmd, "pixels_b64", bytes),
@@ -1962,11 +2223,13 @@ impl Engine for MotionEngine {
             if !t.is_finite() || t < 0. || t > self.state.duration_s {
                 return Err(bad("time outside composition"));
             }
+            let ge = GraphEval::new(&self.state, t);
             let root = self.evaluated_layers(
                 &self.state.layers,
                 self.state.duration_s,
                 rate_fps(&self.state.frame_rate),
                 t,
+                Some((&ge, None)),
             )?;
             // Each nested composition is evaluated independently at its
             // duration-scaled local time (the same mapping renderFrame uses
@@ -1988,6 +2251,7 @@ impl Engine for MotionEngine {
                             comp.duration_s,
                             rate_fps(&comp.frame_rate),
                             local,
+                            Some((&ge, Some(*id))),
                         )?)?,
                     }),
                 );
@@ -2131,6 +2395,27 @@ impl Engine for MotionEngine {
                     }
                     layers.push(Arc::new(nl));
                 }
+                // Graph bindings are document-global; the duplicated
+                // composition's layers inherit the same (layer,property)→
+                // node bindings under their fresh identities, the
+                // parent_id/matte remap precedent. `property` source-node
+                // params keep reading the original layers — nodes are
+                // shared, never duplicated. The ≤128 binding cap is
+                // re-checked by validate, so an over-full graph rejects
+                // the whole duplication atomically.
+                let inherited: Vec<Binding> = next
+                    .graph
+                    .bindings
+                    .iter()
+                    .filter_map(|b| {
+                        layer_ids.get(&b.layer).map(|&nid| Binding {
+                            layer: nid,
+                            property: b.property,
+                            node: b.node,
+                        })
+                    })
+                    .collect();
+                next.graph.bindings.extend(inherited);
                 let mut name = format!("{} copy", src.name);
                 while name.len() > 512 {
                     name.pop();
@@ -2390,9 +2675,13 @@ impl Engine for MotionEngine {
                     nl.path_progress = 0.;
                     nl.curves.retain(|c| c.property != Property::PathProgress);
                     // A path_progress expression without a path violates the
-                    // same gate, so it clears in the same atomic write.
+                    // same gate, so it clears in the same atomic write; the
+                    // slice-I graph binding on that cell drops with them.
                     nl.expressions
                         .retain(|e| e.property != Property::PathProgress);
+                    next.graph.bindings.retain(|b| {
+                        b.layer != layer_id || b.property != Property::PathProgress
+                    });
                 }
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
@@ -2457,8 +2746,12 @@ impl Engine for MotionEngine {
                 if nl.transform3d.is_none() {
                     nl.curves.retain(|c| !c.property.is_3d());
                     // rx/ry/z expressions require transform3d too; they
-                    // clear atomically with it like the curves do.
+                    // clear atomically with it like the curves do, and so
+                    // do slice-I graph bindings on those cells.
                     nl.expressions.retain(|e| !e.property.is_3d());
+                    next.graph
+                        .bindings
+                        .retain(|b| b.layer != layer_id || !b.property.is_3d());
                 }
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
@@ -2507,11 +2800,82 @@ impl Engine for MotionEngine {
                         }
                         // Ownership rule: an expression and a curve never
                         // coexist on one (layer, property) — the curve clears
-                        // in this same journal entry.
+                        // in this same journal entry. A slice-I graph
+                        // binding on the same cell drops atomically too.
                         nl.curves.retain(|c| c.property != property);
+                        next.graph
+                            .bindings
+                            .retain(|b| b.layer != layer_id || b.property != property);
                     }
                 }
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
+            "setGraph" => {
+                // Full replacement of graph nodes and bindings (the
+                // setLayerEffects/setPropertyKeys precedent — no
+                // incremental add/remove/connect ops). Payload is
+                // `{nodes?,bindings?}` or null; absent fields clear.
+                let mut graph = match p {
+                    Value::Null => Graph::default(),
+                    Value::Object(object) => {
+                        if object
+                            .keys()
+                            .any(|k| !["nodes", "bindings"].contains(&k.as_str()))
+                        {
+                            return Err(bad("unknown setGraph field"));
+                        }
+                        let nodes = match p.get("nodes") {
+                            None | Some(Value::Null) => Vec::new(),
+                            Some(v) => serde_json::from_value::<Vec<GraphNode>>(v.clone())
+                                .map_err(|_| bad("invalid graph nodes"))?,
+                        };
+                        let bindings = match p.get("bindings") {
+                            None | Some(Value::Null) => Vec::new(),
+                            Some(v) => serde_json::from_value::<Vec<Binding>>(v.clone())
+                                .map_err(|_| bad("invalid graph bindings"))?,
+                        };
+                        Graph {
+                            nodes,
+                            bindings,
+                            next_node_id: next.graph.next_node_id,
+                        }
+                    }
+                    _ => return Err(bad("setGraph payload must be an object or null")),
+                };
+                // Locked-layer bindings reject before any clear; unknown
+                // layers and kind gates are re-checked by validate().
+                for b in &graph.bindings {
+                    let (comp_key, i) =
+                        locate_layer(&next, b.layer).ok_or_else(|| bad("unknown layer"))?;
+                    if comp_layers(&next, comp_key).unwrap()[i].locked {
+                        return Err(bad("layer is locked"));
+                    }
+                }
+                // Mutual exclusion, last-write-wins: each binding atomically
+                // clears a conflicting curve and expression on its
+                // (layer, property) inside this same journal entry.
+                for b in &graph.bindings {
+                    if let Some((comp_key, i)) = locate_layer(&next, b.layer) {
+                        let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                        let mut nl = (*arc).clone();
+                        nl.curves.retain(|c| c.property != b.property);
+                        nl.expressions.retain(|e| e.property != b.property);
+                        comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+                    }
+                }
+                // Advance the monotonic counter past the largest supplied
+                // id; ids themselves are client-chosen within the safe
+                // range and uniqueness is validated below.
+                if let Some(max_id) = graph.nodes.iter().map(|n| n.id).max() {
+                    let needed = max_id
+                        .checked_add(1)
+                        .filter(|v| *v <= SAFE_ID)
+                        .ok_or_else(|| bad("graph identity exhausted"))?;
+                    if needed > graph.next_node_id {
+                        graph.next_node_id = needed;
+                    }
+                }
+                next.graph = graph;
             }
             "addShapeLayer" => {
                 let shape: Shape = serde_json::from_value(
@@ -2804,8 +3168,12 @@ impl Engine for MotionEngine {
                         })
                     }
                     // Last-write-wins: writing keys for a property clears its
-                    // expression in the same journal entry (slice D).
+                    // expression in the same journal entry (slice D), and a
+                    // slice-I graph binding on the same cell drops too.
                     layer.expressions.retain(|e| e.property != property);
+                    next.graph
+                        .bindings
+                        .retain(|b| b.layer != layer_id || b.property != property);
                     comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(layer);
                 }
             }
@@ -3181,3 +3549,5 @@ mod particles_tests;
 mod transform3d_tests;
 #[cfg(test)]
 mod expression_tests;
+#[cfg(test)]
+mod graph_tests;
