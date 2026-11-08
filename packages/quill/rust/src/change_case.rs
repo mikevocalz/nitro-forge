@@ -179,6 +179,7 @@ impl QuillEngine {
         let bookmarks_before = self.bookmarks.clone();
         let comments_before = self.comments.clone();
         let revisions_before = self.revisions.clone();
+        let footnotes_before = self.footnotes.clone();
         for (bi, map) in &offset_maps {
             for bm in self.bookmarks.iter_mut().filter(|b| b.block == *bi) {
                 bm.offset = map[bm.offset];
@@ -189,6 +190,11 @@ impl QuillEngine {
                 }
                 if c.to.block == *bi {
                     c.to.offset = map[c.to.offset];
+                }
+            }
+            for f in self.footnotes.iter_mut() {
+                if f.at.block == *bi {
+                    f.at.offset = map[f.at.offset];
                 }
             }
         }
@@ -204,6 +210,7 @@ impl QuillEngine {
                 bookmarks: Some(bookmarks_before),
                 comments: Some(comments_before),
                 revisions: Some(revisions_before),
+                footnotes: Some(footnotes_before),
                 ..Default::default()
             },
         );

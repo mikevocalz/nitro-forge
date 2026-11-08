@@ -285,6 +285,53 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("footnotes/endnotes anchor, renumber, persist, and undo via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "see evidence here");
+    const added = await doc.addFootnote({
+      at: { block: 0, offset: 4 },
+      body: "first note",
+    });
+    expect(added.data.id).toBe("fn-1");
+    await doc.addFootnote({
+      at: { block: 0, offset: 15 },
+      kind: "endnote",
+      body: "end note",
+    });
+    let notes = (await doc.listFootnotes()).data.footnotes;
+    expect(notes.map((n) => n.id)).toEqual(["fn-1", "fn-2"]);
+    // Per-kind numbering: each kind starts at 1 in document order.
+    expect(notes[0]).toMatchObject({ kind: "footnote", number: 1 });
+    expect(notes[1]).toMatchObject({ kind: "endnote", number: 1 });
+
+    // Right-gravity anchor: inserting exactly at the mark lands before it.
+    await doc.insertText({ block: 0, offset: 4 }, "XX");
+    notes = (await doc.listFootnotes()).data.footnotes;
+    expect(notes[0]?.at).toEqual({ block: 0, offset: 6 });
+
+    // updateFootnote patches body/kind; kind moves the note between
+    // sequences and renumbers.
+    await doc.updateFootnote("fn-1", { kind: "endnote", body: "moved" });
+    notes = (await doc.listFootnotes()).data.footnotes;
+    expect(notes[0]?.id).toBe("fn-1");
+    expect(notes[0]).toMatchObject({ kind: "endnote", number: 1, body: "moved" });
+    expect(notes[1]).toMatchObject({ kind: "endnote", number: 2 });
+
+    // Snapshot keeps the schema:3 footnotes collection; anchors survive.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    notes = (await re.listFootnotes()).data.footnotes;
+    expect(notes).toHaveLength(2);
+    expect(notes[0]?.at.offset).toBe(6);
+    // removeFootnote + undo restores the list.
+    await re.removeFootnote("fn-2");
+    expect((await re.listFootnotes()).data.footnotes).toHaveLength(1);
+    expect(await re.undo()).toBe(true);
+    expect((await re.listFootnotes()).data.footnotes).toHaveLength(2);
+    await re.close();
+  });
+
   it("inserts tables, edits cell text, and keeps anchors stable", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "before\nafter");

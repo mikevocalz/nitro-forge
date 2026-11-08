@@ -95,3 +95,34 @@ media decode/render, real transition/morph pixel evaluation.
   `slideAtWithClicksV1` are implemented and described in prose but missing
   from the Pitch op table in `docs/ENGINE_OPS.md` — fix in the next Pitch
   slice.
+
+## P12 Quill slice 8 checkpoint — footnotes/endnotes (2026-11-08, branch codex/w6-quill-footnotes)
+
+Item 8 landed its largest coherent honest subset: footnotes and endnotes.
+A `Footnote` is `{id,at,kind,body}` — a single live `{block,offset}`
+reference anchor (bookmark right gravity, comment-endpoint clamp-on-delete
+semantics, never drops) plus a plain-text body stored on the record outside
+the block stream. Ops: `addFootnote` (auto `fn-N` id when omitted),
+`updateFootnote`, `removeFootnote`, `listFootnotes` (per-kind 1-based
+numbering in document order; the engine stores no numbers). Anchors re-map
+through every position-moving op via the shared comments/revisions
+machinery, including `changeCase`, `replaceText` match spans, and table
+insert/delete (anchors may never sit on a table block). Bounds: ≤1024
+notes, bodies ≤8192 chars (empty allowed), unique token ids. Snapshots ride
+the schema:3 `deny_unknown_fields` document as an optional `footnotes` key
+— no schema bump; schema:2/legacy strays reject. Undo/redo, batches,
+eventless reads, and hostile-restore validation all covered.
+
+Deferred honestly (follow-up slices): the TOC field (needs a field/code
+model plus heading-scan semantics), mail merge (needs a data-source/record
+model; bounded-row merge is a separate contract), citations/bibliography
+(no citation semantics distinct from footnotes are defined — `kind` covers
+footnote vs endnote placement only), rich/multi-paragraph note bodies, and
+DOCX `w:footnoteReference`/`w:endnoteReference`/`footnotes.xml` interop.
+
+Local evidence: `cargo test -p quill-engine` 184 passed (9 new footnote
+tests covering ops, per-kind numbering, remap through every position-moving
+op, undo/redo/batch, schema:3 round-trip, stray-key and hostile-restore
+rejection), `cargo build -p nf-cli` clean, `pnpm --filter
+@nitro-forge/quill test` and `typecheck` (see commit for counts). No
+native/device acceptance implied.

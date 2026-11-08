@@ -410,10 +410,12 @@ impl QuillEngine {
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
+        let footnotes_before = self.footnotes.clone();
         self.remap_bookmarks_insert_block(index);
         self.remap_comments_insert_block(index);
         self.remap_sections_insert_block(index);
         self.remap_revisions_insert_block(index);
+        self.remap_footnotes_insert_block(index);
         self.record_undo(
             0,
             old,
@@ -423,6 +425,7 @@ impl QuillEngine {
                 comments_before,
                 sections_before,
                 revisions_before,
+                footnotes_before,
             ),
         );
         Ok(CommandResult::data(json!({ "ok": true, "block_index": index })))
@@ -460,6 +463,7 @@ impl QuillEngine {
         let comments_before = self.comments.clone();
         let sections_before = self.sections.clone();
         let revisions_before = self.revisions.clone();
+        let footnotes_before = self.footnotes.clone();
         // Remaps interpret stored (pre-delete) block indices.
         self.bookmarks.retain(|b| b.block != index);
         for bm in &mut self.bookmarks {
@@ -490,6 +494,17 @@ impl QuillEngine {
                 }
             }
         }
+        // Footnote anchors can never sit on a table block (ops and restore
+        // both reject that), but shift defensively like every other
+        // position-anchored collection.
+        for f in &mut self.footnotes {
+            if f.at.block == index {
+                f.at.block = clamp.block;
+                f.at.offset = clamp.offset;
+            } else if f.at.block > index {
+                f.at.block -= 1;
+            }
+        }
         let mut kept = Vec::with_capacity(self.sections.len());
         for mut s in std::mem::take(&mut self.sections) {
             if s.block == index && index != 0 {
@@ -511,6 +526,7 @@ impl QuillEngine {
                 comments_before,
                 sections_before,
                 revisions_before,
+                footnotes_before,
             ),
         );
         Ok(CommandResult::data(json!({ "ok": true })))
