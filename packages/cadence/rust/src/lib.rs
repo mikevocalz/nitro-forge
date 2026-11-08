@@ -31,6 +31,10 @@ const MIN_BPM: f64 = 20.0;
 const MAX_BPM: f64 = 400.0;
 const DEFAULT_BPM: f64 = 120.0;
 const DEFAULT_VELOCITY: u8 = 100;
+/// Clip gain bounds, dB. -60 is deep enough to read as silence next to the
+/// muted flag; +12 is a moderate boost.
+pub(crate) const MIN_CLIP_GAIN_DB: f64 = -60.0;
+pub(crate) const MAX_CLIP_GAIN_DB: f64 = 12.0;
 /// Note attack/release ramp length, seconds.
 pub(crate) const ENVELOPE_S: f64 = 0.020;
 
@@ -63,6 +67,13 @@ pub struct Clip {
     pub id: u64,
     pub start_ticks: u64,
     pub length_ticks: u64,
+    /// Clip gain in dB, -60..=12; 0 dB is unity. Honored by the mix path
+    /// (render, meter, loudness, spectrogram, renderStems).
+    #[serde(default)]
+    pub gain_db: f64,
+    /// A muted clip contributes silence to the mix.
+    #[serde(default)]
+    pub muted: bool,
     #[serde(default)]
     pub notes: Vec<Note>,
 }
@@ -641,6 +652,8 @@ impl Engine for CadenceEngine {
                     id,
                     start_ticks: start,
                     length_ticks: len,
+                    gain_db: 0.0,
+                    muted: false,
                     notes: Vec::new(),
                 });
                 // Keep clips in timeline order for deterministic describe/render.
@@ -703,6 +716,95 @@ impl Engine for CadenceEngine {
                         n.length_ticks = len - n.start_ticks;
                     }
                 }
+                Ok(Self::changed(json!({ "ok": true })))
+            }
+            /// Split a clip at an absolute timeline tick strictly inside it.
+            /// The left half keeps the id; the right half gets a new id and
+            /// copies gain/mute. Notes are clip-relative: a note entirely on
+            /// one side moves or stays; a note spanning the split point is
+            /// cut into two notes at the boundary (same pitch/velocity/
+            /// channel, no overlap, no zero-length piece).
+            "splitClip" => {
+                let id = req_u64(p, "id")?;
+                let at = req_ticks(p, "at_ticks")?;
+                let (ti, ci) = self
+                    .doc
+                    .clip_location(id)
+                    .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))?;
+                let clip = &self.doc.tracks[ti].clips[ci];
+                let (start, end) = (clip.start_ticks, clip.end_ticks());
+                if at <= start || at >= end {
+                    return Err(EngineError::validation(
+                        "at_ticks must lie strictly inside the clip's timeline span",
+                    ));
+                }
+                let split = at - start;
+                self.record();
+                let right_id = self.doc.alloc_id();
+                let clip = &mut self.doc.tracks[ti].clips[ci];
+                let right_len = clip.length_ticks - split;
+                let mut left_notes = Vec::with_capacity(clip.notes.len());
+                let mut right_notes = Vec::new();
+                for mut n in std::mem::take(&mut clip.notes) {
+                    let ns = n.start_ticks;
+                    let ne = ns.saturating_add(n.length_ticks);
+                    if ne <= split {
+                        left_notes.push(n);
+                    } else if ns >= split {
+                        n.start_ticks = ns - split;
+                        right_notes.push(n);
+                    } else {
+                        // Spanning the boundary: cut into a left piece ending
+                        // at the split and a right piece starting at 0.
+                        let mut left = n.clone();
+                        left.length_ticks = split - ns;
+                        left_notes.push(left);
+                        n.start_ticks = 0;
+                        n.length_ticks = ne - split;
+                        right_notes.push(n);
+                    }
+                }
+                clip.notes = left_notes;
+                clip.length_ticks = split;
+                let (gain_db, muted) = (clip.gain_db, clip.muted);
+                self.doc.tracks[ti].clips.insert(
+                    ci + 1,
+                    Clip {
+                        id: right_id,
+                        start_ticks: at,
+                        length_ticks: right_len,
+                        gain_db,
+                        muted,
+                        notes: right_notes,
+                    },
+                );
+                Ok(Self::changed(json!({ "left_id": id, "right_id": right_id })))
+            }
+            "setClipGain" => {
+                let id = req_u64(p, "id")?;
+                let gain_db = req_f64(p, "gain_db")?;
+                if !(MIN_CLIP_GAIN_DB..=MAX_CLIP_GAIN_DB).contains(&gain_db) {
+                    return Err(EngineError::validation(format!(
+                        "gain_db must be in {MIN_CLIP_GAIN_DB}..={MAX_CLIP_GAIN_DB}"
+                    )));
+                }
+                let (ti, ci) = self
+                    .doc
+                    .clip_location(id)
+                    .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))?;
+                self.record();
+                self.doc.tracks[ti].clips[ci].gain_db = gain_db;
+                Ok(Self::changed(json!({ "ok": true })))
+            }
+            "setClipMute" => {
+                let id = req_u64(p, "id")?;
+                let muted = req_bool(p, "muted")?;
+                let (ti, ci) = self
+                    .doc
+                    .clip_location(id)
+                    .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))?;
+                self.record();
+                self.doc.tracks[ti].clips[ci].muted = muted;
                 Ok(Self::changed(json!({ "ok": true })))
             }
 

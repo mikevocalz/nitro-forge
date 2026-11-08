@@ -179,6 +179,8 @@ export interface CadenceDescribe {
       readonly id: number;
       readonly start_ticks: number;
       readonly length_ticks: number;
+      readonly gain_db: number;
+      readonly muted: boolean;
       readonly notes?: readonly { pitch: number; velocity: number; start_ticks: number; length_ticks: number }[];
     }[];
   }[];

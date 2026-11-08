@@ -1023,7 +1023,8 @@ tracks: [Track], metronome: {enabled, volume 0..=1} }`. `Track = { id, name,
 kind:"midi"|"audio"|"bus", volume 0..=1, pan -1..=1, muted, solo, clips: [Clip],
 output: bus id|null, sends: [{bus, level 0..=1}], inserts: [Insert],
 group: string|null, solo_safe, automation: {gain: Lane, pan: Lane} }`.
-`Clip = { id, start_ticks, length_ticks, notes: [Note] }` (midi tracks only;
+`Clip = { id, start_ticks, length_ticks, gain_db -60..=12 (default 0), muted
+(default false), notes: [Note] }` (midi tracks only;
 audio track clips have no notes — `addNote` → Validation; buses hold no clips).
 `Note = { pitch 0..127, velocity 0..127, start_ticks, length_ticks, channel 0..15 }` (clip-relative).
 `Insert = { id, bypassed, kind:"gain"|"eq"|"compressor", params }`; gain
@@ -1035,7 +1036,8 @@ release_ms 5..2000, makeup_db 0..24}`. ≤8 inserts per track.
 gain values 0..=1, pan -1..=1. Fields added after the first release default on
 restore, so older snapshots load unchanged.
 
-Signal flow: source track notes → inserts → fader+pan (or read-mode automation,
+Signal flow: source track notes (each clip's `gain_db`/`muted` applied to its
+notes first) → inserts → fader+pan (or read-mode automation,
 linear between points, held at the ends) → its `output` (bus or master), plus
 post-fader sends. Buses sum inputs → inserts → fader + balance (pan on a bus
 attenuates the far side only) → master. Buses feed the master only. Audibility:
@@ -1062,6 +1064,9 @@ passes `include_metronome: true`.
 | `removeClip` | `{id}` | `{ok}` | |
 | `moveClip` | `{id,start_ticks}` | `{ok}` | reject overlap |
 | `resizeClip` | `{id,length_ticks}` | `{ok}` | notes outside trimmed |
+| `splitClip` | `{id,at_ticks}` | `{left_id,right_id}` | `at_ticks` absolute, strictly inside the clip span; left keeps the id, right gets a new id and copies `gain_db`/`muted`; notes are clip-relative and a note spanning the cut is divided into two notes at the boundary (same pitch/velocity/channel) |
+| `setClipGain` | `{id,gain_db}` | `{ok}` | -60..=12 dB; scales every note the clip contributes, before track inserts/fader; honored by render, meter, loudness, spectrogram, renderStems |
+| `setClipMute` | `{id,muted}` | `{ok}` | muted clip contributes silence to the mix |
 | `addNote` | `{clip,pitch,velocity?,start_ticks,length_ticks}` | `{index}` | pitch 0..127; bounds-checked vs clip length |
 | `removeNote` | `{clip,index}` | `{ok}` | |
 | `moveNote` | `{clip,index,start_ticks,pitch?}` | `{ok}` | note keeps its index; omitted pitch is unchanged; start+length past clip end → OutOfBounds; pitch 0..127 |

@@ -23,6 +23,9 @@ export const OPS = {
   removeClip: "removeClip",
   moveClip: "moveClip",
   resizeClip: "resizeClip",
+  splitClip: "splitClip",
+  setClipGain: "setClipGain",
+  setClipMute: "setClipMute",
   addNote: "addNote",
   removeNote: "removeNote",
   moveNote: "moveNote",
@@ -233,6 +236,22 @@ export class CadenceDocument {
   }
   resizeClip(id: number, lengthTicks: number) {
     return this.call(OPS.resizeClip, { id, length_ticks: lengthTicks });
+  }
+  /**
+   * Split a clip at an absolute timeline tick strictly inside it. The left
+   * half keeps the id; the right half gets a new id and copies gain/mute.
+   * Notes spanning the split are cut into two at the boundary.
+   */
+  splitClip(id: number, atTicks: number) {
+    return this.call<{ left_id: number; right_id: number }>(OPS.splitClip, { id, at_ticks: atTicks });
+  }
+  /** Clip gain in dB, -60..=12; scales every note the clip contributes. */
+  setClipGain(id: number, gainDb: number) {
+    return this.call(OPS.setClipGain, { id, gain_db: gainDb });
+  }
+  /** A muted clip contributes silence to the mix. */
+  setClipMute(id: number, muted: boolean) {
+    return this.call(OPS.setClipMute, { id, muted });
   }
   addNote(
     clip: number,

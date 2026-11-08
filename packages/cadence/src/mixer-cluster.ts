@@ -14,7 +14,7 @@ export interface CadenceMixerState extends Omit<CadenceDescribe,'tracks'> {
     readonly kind:TrackKind;readonly output:number|null;readonly sends:readonly {bus:number;level:number}[];
     readonly group:string|null;readonly solo_safe:boolean;readonly inserts:readonly MixerInsert[];
     readonly automation:Readonly<Record<AutomationParam,{readonly mode:AutomationMode;readonly points:readonly {ticks:number;value:number}[]}>>;
-    readonly clips:readonly {id:number;start_ticks:number;length_ticks:number;notes:readonly {pitch:number;velocity:number;start_ticks:number;length_ticks:number;channel:number}[]}[];
+    readonly clips:readonly {id:number;start_ticks:number;length_ticks:number;gain_db:number;muted:boolean;notes:readonly {pitch:number;velocity:number;start_ticks:number;length_ticks:number;channel:number}[]}[];
   })[];
 }
 /** Canonical engine ID accepted by {@linkcode CadenceMixerAdapter} callbacks. */
