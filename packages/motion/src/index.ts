@@ -45,8 +45,16 @@ export interface CompositionSettings{title:string;width:number;height:number;dur
 /** A nested composition; the root composition is the document header (title/width/height/duration_s/frame_rate) plus `layers`. */
 export interface MotionComposition{id:number;name:string;width:number;height:number;duration_s:number;frame_rate:{num:number;den:number};layers:MotionLayer[]}
 /** describe always materializes assets:{}, compositions:{} and both next_* counters, including legacy shape snapshots. */
-export interface MotionState extends CompositionSettings{kind:'motion';schema:1|2;next_layer_id:number;next_key_id:number;layers:MotionLayer[];compositions:Readonly<Record<string,MotionComposition>>;next_comp_id:number;assets:Readonly<Record<string,MotionRasterAsset>>;next_asset_id:number}
+export interface MotionState extends CompositionSettings{kind:'motion';schema:1|2;next_layer_id:number;next_key_id:number;layers:MotionLayer[];compositions:Readonly<Record<string,MotionComposition>>;next_comp_id:number;assets:Readonly<Record<string,MotionRasterAsset>>;next_asset_id:number;render_queue:RenderJob[];next_job_id:number}
 export interface MotionEvaluation{layers:MotionLayer[];compositions:Readonly<Record<string,MotionComposition>>}
+/** Durable render-queue job status (engine slice J1). Synchronous stepping means a job is never persistently "rendering": pending = frames remain, done = all frames stepped, cancelled = dropped from the pending order with progress retained. */
+export type RenderJobStatus='pending'|'done'|'cancelled';
+/** One durable render job: inclusive 0-based frame range rendered at the target composition's own frame rate (`comp_id` absent = root; a nested id renders that composition standalone). `frames_done` counts frames already returned by `renderQueueFrame`; `frames_done === to_frame-from_frame+1` exactly when `status==='done'`. */
+export interface RenderJob{id:number;name?:string;comp_id?:number;from_frame:number;to_frame:number;status:RenderJobStatus;frames_done:number}
+/** Real queue counters reported by `renderQueueFrame` — exact frame/job counts, never percentages or estimates. */
+export interface RenderQueueSummary{jobs:number;pending:number;done:number;cancelled:number;pending_frames:number}
+/** Result of one `renderQueueFrame` step: the raw RGBA frame (same `pixels_b64`/binary-output contract as `renderFrame`) plus exact progress. No encoding or export is implied — J2 remains blocked on an encoder provider. */
+export interface RenderQueueStep{job_id:number;name?:string;comp_id?:number;frame:number;from_frame:number;to_frame:number;frames_done:number;frames_total:number;status:RenderJobStatus;width:number;height:number;pixels_b64?:string;queue:RenderQueueSummary}
 export class MotionDocument{
  private constructor(private readonly document:DocumentHandle){}
  static async open(host:EngineHost,settings:Partial<CompositionSettings>={}){return new MotionDocument(await DocumentHandle.openInitialized(host,'motion',doc=>doc.apply('new',settings)));}
@@ -99,5 +107,15 @@ export class MotionDocument{
  evaluate(time_s:number){return this.document.apply<MotionEvaluation>('evaluate',{time_s});}
  /** One real bounded RGBA frame; no encoding, file delivery or render queue. */
  renderFrame(time_s:number){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',{time_s});}
+ /** Enqueue a durable render job: inclusive 0-based `from_frame`..`to_frame` at the target composition's frame rate (`comp` omitted/0 = root). At most 256 jobs, 4096 frames/job and 16384 frames total; pending jobs must fit the composition's current duration. */
+ addRenderJob(patch:{name?:string;comp?:number;from_frame:number;to_frame:number}){return this.document.apply<{job_id:number}>('addRenderJob',patch);}
+ /** Exact permutation of all job ids (pending, done and cancelled) — same contract as `setLayerOrder`. */
+ setRenderQueueOrder(order:readonly number[]){return this.document.apply<{ok:boolean}>('setRenderQueueOrder',{order});}
+ /** Pending → cancelled; progress so far is retained and the job stays listed until removed. Done/cancelled jobs reject. */
+ cancelRenderJob(job:number){return this.document.apply<{ok:boolean}>('cancelRenderJob',{job});}
+ /** Remove a job from the queue entirely, regardless of status. */
+ removeRenderJob(job:number){return this.document.apply<{ok:boolean}>('removeRenderJob',{job});}
+ /** Step the queue by one real frame: renders the next frame of `job` (or the first pending job) through the same path as `renderFrame` and returns raw RGBA plus exact progress. Mutating and undoable; emits `document:changed`. No encoding — J2 stays blocked. */
+ renderQueueFrame(job?:number){return this.document.apply<RenderQueueStep>('renderQueueFrame',job===undefined?{}:{job});}
  save(){return this.document.snapshot();} undo(){return this.document.undo();} redo(){return this.document.redo();} close(){return this.document.close();}
 }

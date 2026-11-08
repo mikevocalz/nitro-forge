@@ -8,19 +8,19 @@ mod transform3d;
 use assets::RasterAsset;
 use curve::{evaluate, Key};
 use effects::{apply_effects, LayerEffect};
-use particles::{ParticleEmitter, ParticleSprite};
-use path::MotionPath;
-use transform3d::Transform3D;
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
 };
+use particles::{ParticleEmitter, ParticleSprite};
+use path::MotionPath;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
 };
+use transform3d::Transform3D;
 const HISTORY: usize = 16;
 const MAX_BYTES: usize = 16 * 1024 * 1024;
 const SAFE_ID: u64 = 9_007_199_254_740_991;
@@ -29,6 +29,13 @@ const SCHEMA_VERSION: u32 = 2;
 const MAX_COMPOSITIONS: usize = 16;
 /// Longest chain of nested compositions below the root composition.
 const MAX_COMP_DEPTH: usize = 8;
+/// Render queue (slice J1): durable jobs only — stepping returns raw RGBA per
+/// frame and no encoder exists, so the queue never claims encoded output.
+const MAX_RENDER_JOBS: usize = 256;
+/// Largest inclusive frame span accepted for one render job.
+const MAX_JOB_FRAMES: u64 = 4096;
+/// Largest summed frame span stored across the whole queue.
+const MAX_QUEUE_FRAMES: usize = 16384;
 /// Longest matte reference chain rendered within one composition.
 const MAX_MATTE_DEPTH: usize = 8;
 /// Largest accepted matte feather radius in pixels.
@@ -213,6 +220,48 @@ struct LayerMatte {
 fn matte_enabled_default() -> bool {
     true
 }
+/// Durable render-queue job status (slice J1). Engines are synchronous and
+/// single-threaded, so a job is never persistently "rendering": `renderQueueFrame`
+/// renders one frame and advances `frames_done` inside one atomic `apply`, so the
+/// only observable states are pending (frames remain), done (all frames rendered)
+/// and cancelled (removed from the pending order, progress retained).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum JobStatus {
+    Pending,
+    Done,
+    Cancelled,
+}
+/// One durable render job: an inclusive 0-based frame range
+/// `[from_frame, to_frame]` rendered at the target composition's own rational
+/// frame rate (`frame n` maps to `n * den/num` seconds, clamped by the existing
+/// composition-duration invariant). `comp_id` absent selects the root
+/// composition; a nested id renders that composition standalone at its own
+/// dimensions/rate/duration — never through a parent comp layer's time scaling.
+/// `frames_done` counts frames already stepped through `renderQueueFrame`;
+/// the invariant `frames_done == to_frame - from_frame + 1` holds exactly when
+/// `status == done`, and pending/cancelled jobs always have frames remaining.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RenderJob {
+    id: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    comp_id: Option<u64>,
+    from_frame: u64,
+    to_frame: u64,
+    status: JobStatus,
+    #[serde(default, skip_serializing_if = "is_zero_u64")]
+    frames_done: u64,
+}
+fn is_zero_u64(v: &u64) -> bool {
+    *v == 0
+}
+/// Map a 0-based frame index to seconds under a rational frame rate.
+fn frame_time(rate: &Rate, frame: u64) -> f64 {
+    frame as f64 * f64::from(rate.den) / f64::from(rate.num)
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum LayerKind {
@@ -337,6 +386,14 @@ struct State {
         skip_serializing_if = "assets::is_initial_asset_id"
     )]
     next_asset_id: u64,
+    /// Durable render queue (slice J1), ordered bottom-to-top like layers;
+    /// done/cancelled jobs stay listed until `removeRenderJob`. Additive
+    /// serde default keeps schema at 2; empty queues serialize identically
+    /// to pre-J1 snapshots.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    render_queue: Vec<RenderJob>,
+    #[serde(default = "initial_job_id", skip_serializing_if = "is_initial_job_id")]
+    next_job_id: u64,
 }
 impl Default for State {
     fn default() -> Self {
@@ -355,11 +412,19 @@ impl Default for State {
             next_comp_id: 1,
             assets: BTreeMap::new(),
             next_asset_id: 1,
+            render_queue: vec![],
+            next_job_id: 1,
         }
     }
 }
 fn initial_comp_id() -> u64 {
     1
+}
+fn initial_job_id() -> u64 {
+    1
+}
+fn is_initial_job_id(id: &u64) -> bool {
+    *id == 1
 }
 fn is_initial_comp_id(id: &u64) -> bool {
     *id == 1
@@ -373,15 +438,12 @@ fn is_zero_f64(v: &f64) -> bool {
 /// schema:1 snapshots predate `kind`; infer it from the content source.
 /// Hostile or inconsistent explicit kinds are left for `validate` to reject.
 fn normalize_layers(state: &mut State) {
-    let all = state
-        .layers
-        .iter_mut()
-        .chain(
-            state
-                .compositions
-                .values_mut()
-                .flat_map(|c| c.layers.iter_mut()),
-        );
+    let all = state.layers.iter_mut().chain(
+        state
+            .compositions
+            .values_mut()
+            .flat_map(|c| c.layers.iter_mut()),
+    );
     for layer in all {
         if layer.kind.is_none() {
             Arc::make_mut(layer).kind = Some(if layer.comp_id.is_some() {
@@ -460,9 +522,7 @@ fn decompose(m: &Affine) -> Option<Transform> {
     }
     let sy = m.d * m.a - m.b * m.c;
     let sy = sy / sx;
-    if sy.abs() < 1e-9
-        || !sy.is_finite()
-        || (m.a * m.c + m.b * m.d).abs() / (sx * sy.abs()) > 1e-6
+    if sy.abs() < 1e-9 || !sy.is_finite() || (m.a * m.c + m.b * m.d).abs() / (sx * sy.abs()) > 1e-6
     {
         return None;
     }
@@ -624,14 +684,60 @@ fn validate(s: &State) -> Result<(), EngineError> {
             .filter(|v| *v <= assets::MAX_RGBA)
             .ok_or_else(|| bad("decoded raster asset total exceeds 4 MiB"))?;
     }
+    // Render queue (slice J1): bounded durable jobs. Every job's composition
+    // reference must resolve (structural ops reject before stranding one),
+    // stored frame spans fit per-job and total budgets, progress/status stay
+    // consistent, and — for pending jobs only — the last frame must still map
+    // inside the composition's current duration/rate so `renderQueueFrame`
+    // can never step into an unrenderable time. Done/cancelled jobs are
+    // history and do not constrain `setComposition`.
+    if s.render_queue.len() > MAX_RENDER_JOBS || s.next_job_id == 0 || s.next_job_id > SAFE_ID {
+        return Err(bad("invalid render queue counter/count"));
+    }
+    let mut job_ids = BTreeSet::new();
+    let mut queue_frames = 0usize;
+    for j in &s.render_queue {
+        let total = j
+            .to_frame
+            .checked_sub(j.from_frame)
+            .and_then(|d| d.checked_add(1));
+        let Some(total) = total else {
+            return Err(bad("invalid render job frame range"));
+        };
+        if j.id == 0
+            || j.id >= s.next_job_id
+            || !job_ids.insert(j.id)
+            || j.name.as_ref().is_some_and(|n| n.len() > 512)
+            || total > MAX_JOB_FRAMES
+            || j.frames_done > total
+            || (j.frames_done == total) != (j.status == JobStatus::Done)
+        {
+            return Err(bad("invalid render job"));
+        }
+        let (duration_s, rate) = match j.comp_id {
+            None => (s.duration_s, &s.frame_rate),
+            Some(cid) => {
+                let comp = s
+                    .compositions
+                    .get(&cid)
+                    .ok_or_else(|| bad("render job references unknown composition"))?;
+                (comp.duration_s, &comp.frame_rate)
+            }
+        };
+        if j.status == JobStatus::Pending {
+            let t = frame_time(rate, j.to_frame);
+            if !t.is_finite() || t > duration_s {
+                return Err(bad("render job frames exceed composition duration"));
+            }
+        }
+        queue_frames += total as usize;
+        if queue_frames > MAX_QUEUE_FRAMES {
+            return Err(bad("render queue frame budget exceeded"));
+        }
+    }
     // Composition views: key 0 is the root, other keys are composition ids.
-    let mut views: Vec<(u64, u32, u32, f64, &[Arc<Layer>])> = vec![(
-        0,
-        s.width,
-        s.height,
-        s.duration_s,
-        s.layers.as_slice(),
-    )];
+    let mut views: Vec<(u64, u32, u32, f64, &[Arc<Layer>])> =
+        vec![(0, s.width, s.height, s.duration_s, s.layers.as_slice())];
     for (id, comp) in &s.compositions {
         views.push((
             *id,
@@ -644,8 +750,7 @@ fn validate(s: &State) -> Result<(), EngineError> {
     // Pass 1: globally unique layer/key identities, per-comp id sets, budgets.
     let (mut ids, mut keys) = (BTreeSet::new(), BTreeSet::new());
     let mut comp_members: BTreeMap<u64, BTreeMap<u64, &Layer>> = BTreeMap::new();
-    let (mut total_layers, mut curves, mut count, mut emitters) =
-        (0usize, 0usize, 0usize, 0usize);
+    let (mut total_layers, mut curves, mut count, mut emitters) = (0usize, 0usize, 0usize, 0usize);
     for &(key, _, _, _, layers) in &views {
         let members = comp_members.entry(key).or_default();
         for l in layers {
@@ -712,9 +817,7 @@ fn validate(s: &State) -> Result<(), EngineError> {
                     ));
                 }
             }
-            if l.effects.len() > effects::MAX_EFFECTS
-                || l.effects.iter().any(|e| !e.valid())
-            {
+            if l.effects.len() > effects::MAX_EFFECTS || l.effects.iter().any(|e| !e.valid()) {
                 return Err(bad("invalid layer effect stack"));
             }
             if let Some(emitter) = &l.emitter {
@@ -745,9 +848,7 @@ fn validate(s: &State) -> Result<(), EngineError> {
             }
             // 3D curves require the transform3d they animate; the transform
             // itself re-checks its own bounds for hostile restores.
-            if l.transform3d.is_none()
-                && l.curves.iter().any(|c| c.property.is_3d())
-            {
+            if l.transform3d.is_none() && l.curves.iter().any(|c| c.property.is_3d()) {
                 return Err(bad("3D curves require a transform3d"));
             }
             if let Some(t3) = &l.transform3d {
@@ -801,7 +902,9 @@ fn validate(s: &State) -> Result<(), EngineError> {
             }
             if let Some(pid) = l.parent_id {
                 if pid == l.id || !members.contains_key(&pid) {
-                    return Err(bad("layer parent must be another layer in the same composition"));
+                    return Err(bad(
+                        "layer parent must be another layer in the same composition",
+                    ));
                 }
                 // Parent chains are acyclic and bounded by the comp's layer count.
                 let mut seen = BTreeSet::new();
@@ -855,8 +958,7 @@ fn validate(s: &State) -> Result<(), EngineError> {
                         max = -1e-6
                     }
                 }
-                evaluate(&c.keys, c.property.read(l), 0., duration_s, min, max)
-                    .map_err(bad)?;
+                evaluate(&c.keys, c.property.read(l), 0., duration_s, min, max).map_err(bad)?;
             }
         }
     }
@@ -1015,16 +1117,15 @@ fn opt_string(p: &Value, name: &str, default: &str) -> Result<String, EngineErro
 fn opt_u32(p: &Value, name: &str, default: u32) -> Result<u32, EngineError> {
     match p.get(name) {
         None | Some(Value::Null) => Ok(default),
-        Some(v) => serde_json::from_value(v.clone())
-            .map_err(|_| bad("expected an integer within range")),
+        Some(v) => {
+            serde_json::from_value(v.clone()).map_err(|_| bad("expected an integer within range"))
+        }
     }
 }
 fn opt_f64(p: &Value, name: &str, default: f64) -> Result<f64, EngineError> {
     match p.get(name) {
         None | Some(Value::Null) => Ok(default),
-        Some(v) => v
-            .as_f64()
-            .ok_or_else(|| bad("expected a finite number")),
+        Some(v) => v.as_f64().ok_or_else(|| bad("expected a finite number")),
     }
 }
 pub struct MotionEngine {
@@ -1060,15 +1161,8 @@ impl MotionEngine {
                 let mut out = (**l).clone();
                 for c in &l.curves {
                     let (min, max) = c.property.bounds();
-                    let value = evaluate(
-                        &c.keys,
-                        c.property.read(l),
-                        time,
-                        duration_s,
-                        min,
-                        max,
-                    )
-                    .map_err(bad)?;
+                    let value = evaluate(&c.keys, c.property.read(l), time, duration_s, min, max)
+                        .map_err(bad)?;
                     c.property.write(&mut out, value)
                 }
                 out.curves.clear();
@@ -1078,8 +1172,9 @@ impl MotionEngine {
                 // rotation. Runs after curves so path_progress keys win and
                 // tx/ty keys compose with (never replace) the path offset.
                 if let Some(mpath) = &out.path {
-                    let (px, py, deg) =
-                        mpath.sample_at(out.path_progress).map_err(|_| bad("invalid motion path"))?;
+                    let (px, py, deg) = mpath
+                        .sample_at(out.path_progress)
+                        .map_err(|_| bad("invalid motion path"))?;
                     let orient = mpath.auto_orient;
                     // Path nodes/handles are each bounded ±1e7, so sampled
                     // offsets can reach ~±2e7; adding to an evaluated base
@@ -1285,8 +1380,7 @@ impl MotionEngine {
                     ctx,
                 )?;
                 let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
-                let id = added
-                    .data["layer_id"]
+                let id = added.data["layer_id"]
                     .as_u64()
                     .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
                 prism.apply(
@@ -1300,8 +1394,7 @@ impl MotionEngine {
             }
             None => return Err(bad("layer kind missing")),
         };
-        let layer = result
-            .data["layer_id"]
+        let layer = result.data["layer_id"]
             .as_u64()
             .ok_or_else(|| bad("Prism did not return a layer"))?;
         prism.apply(Command::new(
@@ -1353,8 +1446,7 @@ impl MotionEngine {
             ctx,
         )?;
         let added = prism.apply(Command::new("addRasterLayer", json!({})))?;
-        let layer = added
-            .data["layer_id"]
+        let layer = added.data["layer_id"]
             .as_u64()
             .ok_or_else(|| bad("Prism raster layer returned no ID"))?;
         prism.apply(
@@ -1495,6 +1587,120 @@ impl MotionEngine {
                 .with_bytes(cmd, "pixels_b64", bytes),
         )
     }
+    /// Step the durable render queue by exactly one frame (slice J1). The
+    /// target is the `job` payload id or, when absent, the first pending job
+    /// in queue order. The frame renders through the same `render_comp` path
+    /// as `renderFrame` — real Prism-composited RGBA, no encoder and no
+    /// simulated progress — then the job's `frames_done`/`status` advance in
+    /// the same atomic commit, journaled like every other mutation (whole-
+    /// state Arc/COW entries are cheap relative to a frame render, and queue
+    /// progress is durable document state that undo must be able to rewind).
+    /// A render failure returns before any mutation, so a rejected step never
+    /// consumes a frame.
+    fn render_queue_step(
+        &mut self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let index = match cmd.payload.get("job") {
+            None | Some(Value::Null) => self
+                .state
+                .render_queue
+                .iter()
+                .position(|j| j.status == JobStatus::Pending)
+                .ok_or_else(|| bad("render queue has no pending jobs"))?,
+            Some(v) => {
+                let jid = v.as_u64().ok_or_else(|| bad("job must be an integer id"))?;
+                let i = self
+                    .state
+                    .render_queue
+                    .iter()
+                    .position(|j| j.id == jid)
+                    .ok_or_else(|| bad("unknown render job"))?;
+                if self.state.render_queue[i].status != JobStatus::Pending {
+                    return Err(bad("render job is not pending"));
+                }
+                i
+            }
+        };
+        let job = self.state.render_queue[index].clone();
+        let total = job.to_frame - job.from_frame + 1;
+        let done = job.frames_done + 1;
+        let frame = job.from_frame + job.frames_done;
+        let (width, height, duration_s, layers, rate) = match job.comp_id {
+            None => (
+                self.state.width,
+                self.state.height,
+                self.state.duration_s,
+                self.state.layers.as_slice(),
+                &self.state.frame_rate,
+            ),
+            Some(cid) => {
+                let comp = self
+                    .state
+                    .compositions
+                    .get(&cid)
+                    .ok_or_else(|| bad("render job references unknown composition"))?;
+                (
+                    comp.width,
+                    comp.height,
+                    comp.duration_s,
+                    comp.layers.as_slice(),
+                    &comp.frame_rate,
+                )
+            }
+        };
+        // `validate` guarantees a pending job's last frame maps inside the
+        // composition duration, and frame times are monotonic in the index.
+        let time = frame_time(rate, frame);
+        let view = CompView {
+            width,
+            height,
+            duration_s,
+            layers,
+        };
+        let bytes = self.render_comp(&view, time, ctx, 0)?;
+        let mut next = (*self.state).clone();
+        let stepped = &mut next.render_queue[index];
+        stepped.frames_done = done;
+        if done == total {
+            stepped.status = JobStatus::Done;
+        }
+        next.schema = SCHEMA_VERSION;
+        validate(&next)?;
+        self.journal.record(self.state.clone());
+        self.state = Arc::new(next);
+        let mut data = json!({
+            "job_id": job.id,
+            "frame": frame,
+            "from_frame": job.from_frame,
+            "to_frame": job.to_frame,
+            "frames_done": done,
+            "frames_total": total,
+            "status": if done == total { JobStatus::Done } else { JobStatus::Pending },
+            "width": width,
+            "height": height,
+        });
+        if let Some(name) = &job.name {
+            data["name"] = json!(name);
+        }
+        if let Some(comp_id) = job.comp_id {
+            data["comp_id"] = json!(comp_id);
+        }
+        let queue = &self.state.render_queue;
+        data["queue"] = json!({
+            "jobs": queue.len(),
+            "pending": queue.iter().filter(|j| j.status == JobStatus::Pending).count(),
+            "done": queue.iter().filter(|j| j.status == JobStatus::Done).count(),
+            "cancelled": queue.iter().filter(|j| j.status == JobStatus::Cancelled).count(),
+            "pending_frames": queue
+                .iter()
+                .filter(|j| j.status == JobStatus::Pending)
+                .map(|j| j.to_frame - j.from_frame + 1 - j.frames_done)
+                .sum::<u64>(),
+        });
+        Ok(CommandResult::data(data).with_bytes(cmd, "pixels_b64", bytes))
+    }
 }
 impl Engine for MotionEngine {
     fn kind(&self) -> EngineKind {
@@ -1593,6 +1799,10 @@ impl Engine for MotionEngine {
                 value["compositions"] = json!({});
             }
             value["next_comp_id"] = json!(self.state.next_comp_id);
+            if value.get("render_queue").is_none() {
+                value["render_queue"] = json!([]);
+            }
+            value["next_job_id"] = json!(self.state.next_job_id);
             return Ok(CommandResult::read_only(value));
         }
         if cmd.op == "evaluate" {
@@ -1603,8 +1813,7 @@ impl Engine for MotionEngine {
             if !t.is_finite() || t < 0. || t > self.state.duration_s {
                 return Err(bad("time outside composition"));
             }
-            let root = self
-                .evaluated_layers(&self.state.layers, self.state.duration_s, t)?;
+            let root = self.evaluated_layers(&self.state.layers, self.state.duration_s, t)?;
             // Each nested composition is evaluated independently at its
             // duration-scaled local time (the same mapping renderFrame uses
             // per instance; multiple instances share one reported evaluation).
@@ -1640,6 +1849,9 @@ impl Engine for MotionEngine {
         }
         if cmd.op == "renderFrame" {
             return self.render(&cmd, None);
+        }
+        if cmd.op == "renderQueueFrame" {
+            return self.render_queue_step(&cmd, None);
         }
         let mut next = (*self.state).clone();
         let mut data = json!({"ok":true});
@@ -1728,24 +1940,21 @@ impl Engine for MotionEngine {
                 for l in &src.layers {
                     let mut nl = (**l).clone();
                     nl.id = layer_ids[&l.id];
-                    nl.parent_id = nl
-                        .parent_id
-                        .map(|pid| {
-                            layer_ids
-                                .get(&pid)
-                                .copied()
-                                .ok_or_else(|| bad("layer parent outside duplicated composition"))
-                        })
-                        .transpose()?;
+                    nl.parent_id =
+                        nl.parent_id
+                            .map(|pid| {
+                                layer_ids.get(&pid).copied().ok_or_else(|| {
+                                    bad("layer parent outside duplicated composition")
+                                })
+                            })
+                            .transpose()?;
                     // Matte sources are same-composition layers, so they
                     // remap to the copy's fresh identities like parent links.
                     if let Some(matte) = nl.matte.as_mut() {
                         matte.source_layer = layer_ids
                             .get(&matte.source_layer)
                             .copied()
-                            .ok_or_else(|| {
-                                bad("matte source outside duplicated composition")
-                            })?;
+                            .ok_or_else(|| bad("matte source outside duplicated composition"))?;
                     }
                     for c in &mut nl.curves {
                         for k in Arc::make_mut(&mut c.keys).iter_mut() {
@@ -1784,14 +1993,17 @@ impl Engine for MotionEngine {
                 let referenced = next
                     .layers
                     .iter()
-                    .chain(
-                        next.compositions
-                            .values()
-                            .flat_map(|c| c.layers.iter()),
-                    )
+                    .chain(next.compositions.values().flat_map(|c| c.layers.iter()))
                     .any(|l| l.comp_id == Some(comp_id));
-                if referenced {
-                    return Err(bad("composition remains referenced by a comp layer"));
+                // Render-queue jobs hold the same kind of durable reference:
+                // removing the composition would strand them, so the op
+                // rejects until the jobs are removed or cancelled first
+                // (cancelled jobs still count — they are retained history).
+                let queued = next.render_queue.iter().any(|j| j.comp_id == Some(comp_id));
+                if referenced || queued {
+                    return Err(bad(
+                        "composition remains referenced by a comp layer or render job",
+                    ));
                 }
                 next.compositions.remove(&comp_id);
             }
@@ -1806,8 +2018,8 @@ impl Engine for MotionEngine {
                     .checked_add(1)
                     .ok_or_else(|| bad("layer identity exhausted"))?;
                 let name = opt_string(p, "name", "Composition layer")?;
-                let layers = comp_layers_mut(&mut next, into)
-                    .ok_or_else(|| bad("unknown composition"))?;
+                let layers =
+                    comp_layers_mut(&mut next, into).ok_or_else(|| bad("unknown composition"))?;
                 layers.push(Arc::new(Layer {
                     id: layer,
                     name,
@@ -1868,20 +2080,15 @@ impl Engine for MotionEngine {
                 if arc.locked {
                     return Err(bad("layer is locked"));
                 }
-                let mut removed = comp_layers_mut(&mut next, src_key)
-                    .unwrap()
-                    .remove(src_i);
+                let mut removed = comp_layers_mut(&mut next, src_key).unwrap().remove(src_i);
                 if src_key != target {
                     // The transform parent and former children stay behind in the
                     // source composition; their links cannot cross compositions.
-                    clear_parent_links(
-                        comp_layers_mut(&mut next, src_key).unwrap(),
-                        layer_id,
-                    );
+                    clear_parent_links(comp_layers_mut(&mut next, src_key).unwrap(), layer_id);
                     Arc::make_mut(&mut removed).parent_id = None;
                 }
-                let dest = comp_layers_mut(&mut next, target)
-                    .ok_or_else(|| bad("unknown composition"))?;
+                let dest =
+                    comp_layers_mut(&mut next, target).ok_or_else(|| bad("unknown composition"))?;
                 if index > dest.len() {
                     return Err(bad("index out of bounds"));
                 }
@@ -1952,9 +2159,7 @@ impl Engine for MotionEngine {
                     }
                     let layers = comp_layers(&next, comp_key).unwrap();
                     if !layers.iter().any(|l| l.id == matte.source_layer) {
-                        return Err(bad(
-                            "matte source must be a layer in the same composition",
-                        ));
+                        return Err(bad("matte source must be a layer in the same composition"));
                     }
                     if matte_reaches(layers, matte.source_layer, layer_id) {
                         return Err(bad("matte chain would cycle"));
@@ -1973,9 +2178,7 @@ impl Engine for MotionEngine {
                     Some(v) => serde_json::from_value::<Vec<LayerEffect>>(v.clone())
                         .map_err(|_| bad("invalid effects"))?,
                 };
-                if stack.len() > effects::MAX_EFFECTS
-                    || stack.iter().any(|e| !e.valid())
-                {
+                if stack.len() > effects::MAX_EFFECTS || stack.iter().any(|e| !e.valid()) {
                     return Err(bad("invalid layer effect stack"));
                 }
                 let (comp_key, i) =
@@ -2093,8 +2296,8 @@ impl Engine for MotionEngine {
                 next.next_layer_id = layer
                     .checked_add(1)
                     .ok_or_else(|| bad("layer identity exhausted"))?;
-                let layers = comp_layers_mut(&mut next, into)
-                    .ok_or_else(|| bad("unknown composition"))?;
+                let layers =
+                    comp_layers_mut(&mut next, into).ok_or_else(|| bad("unknown composition"))?;
                 layers.push(Arc::new(Layer {
                     id: layer,
                     name,
@@ -2130,8 +2333,8 @@ impl Engine for MotionEngine {
                     .checked_add(1)
                     .ok_or_else(|| bad("layer identity exhausted"))?;
                 let name = opt_string(p, "name", "Raster layer")?;
-                let layers = comp_layers_mut(&mut next, into)
-                    .ok_or_else(|| bad("unknown composition"))?;
+                let layers =
+                    comp_layers_mut(&mut next, into).ok_or_else(|| bad("unknown composition"))?;
                 layers.push(Arc::new(Layer {
                     id: layer,
                     name,
@@ -2163,8 +2366,8 @@ impl Engine for MotionEngine {
                     .checked_add(1)
                     .ok_or_else(|| bad("layer identity exhausted"))?;
                 let name = opt_string(p, "name", "Particles")?;
-                let layers = comp_layers_mut(&mut next, into)
-                    .ok_or_else(|| bad("unknown composition"))?;
+                let layers =
+                    comp_layers_mut(&mut next, into).ok_or_else(|| bad("unknown composition"))?;
                 layers.push(Arc::new(Layer {
                     id: layer,
                     name,
@@ -2194,16 +2397,10 @@ impl Engine for MotionEngine {
                 let referenced = next
                     .layers
                     .iter()
-                    .chain(
-                        next.compositions
-                            .values()
-                            .flat_map(|c| c.layers.iter()),
-                    )
+                    .chain(next.compositions.values().flat_map(|c| c.layers.iter()))
                     .any(|l| {
                         l.asset_id == Some(asset_id)
-                            || l.emitter
-                                .as_ref()
-                                .and_then(|e| e.sprite.asset_id())
+                            || l.emitter.as_ref().and_then(|e| e.sprite.asset_id())
                                 == Some(asset_id)
                     });
                 if referenced {
@@ -2254,6 +2451,109 @@ impl Engine for MotionEngine {
                 }
                 *comp_layers_mut(&mut next, key).unwrap() = layers;
             }
+            "addRenderJob" => {
+                if next.render_queue.len() >= MAX_RENDER_JOBS {
+                    return Err(bad("render queue job budget exceeded"));
+                }
+                let from_frame = p
+                    .get("from_frame")
+                    .and_then(Value::as_u64)
+                    .ok_or_else(|| bad("from_frame must be a nonnegative integer"))?;
+                let to_frame = p
+                    .get("to_frame")
+                    .and_then(Value::as_u64)
+                    .ok_or_else(|| bad("to_frame must be a nonnegative integer"))?;
+                let span = to_frame
+                    .checked_sub(from_frame)
+                    .and_then(|d| d.checked_add(1))
+                    .ok_or_else(|| bad("invalid render job frame range"))?;
+                if span > MAX_JOB_FRAMES {
+                    return Err(bad("render job frame range exceeds budget"));
+                }
+                let into = State::comp_arg(p, "comp")?;
+                if let Some(cid) = into {
+                    if !next.compositions.contains_key(&cid) {
+                        return Err(bad("unknown composition"));
+                    }
+                }
+                let name = match p.get("name") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => Some(
+                        v.as_str()
+                            .ok_or_else(|| bad("name must be a string"))?
+                            .to_string(),
+                    ),
+                };
+                let queued: usize = next
+                    .render_queue
+                    .iter()
+                    .map(|j| (j.to_frame - j.from_frame + 1) as usize)
+                    .sum();
+                if queued + span as usize > MAX_QUEUE_FRAMES {
+                    return Err(bad("render queue frame budget exceeded"));
+                }
+                let job_id = next.next_job_id;
+                next.next_job_id = job_id
+                    .checked_add(1)
+                    .ok_or_else(|| bad("render job identity exhausted"))?;
+                next.render_queue.push(RenderJob {
+                    id: job_id,
+                    name,
+                    comp_id: into,
+                    from_frame,
+                    to_frame,
+                    status: JobStatus::Pending,
+                    frames_done: 0,
+                });
+                data = json!({"job_id":job_id});
+            }
+            "setRenderQueueOrder" => {
+                let order: Vec<u64> = serde_json::from_value(
+                    p.get("order")
+                        .cloned()
+                        .ok_or_else(|| bad("order required"))?,
+                )?;
+                let order_set: BTreeSet<u64> = order.iter().copied().collect();
+                if order_set.len() != order.len()
+                    || order_set
+                        != next
+                            .render_queue
+                            .iter()
+                            .map(|j| j.id)
+                            .collect::<BTreeSet<_>>()
+                {
+                    return Err(bad("order must be an exact permutation"));
+                }
+                let mut jobs = Vec::with_capacity(order.len());
+                for job_id in order {
+                    jobs.push(
+                        next.render_queue
+                            .iter()
+                            .find(|j| j.id == job_id)
+                            .ok_or_else(|| bad("unknown render job"))?
+                            .clone(),
+                    )
+                }
+                next.render_queue = jobs;
+            }
+            "cancelRenderJob" | "removeRenderJob" => {
+                let job_id = id(p, "job")?;
+                let i = next
+                    .render_queue
+                    .iter()
+                    .position(|j| j.id == job_id)
+                    .ok_or_else(|| bad("unknown render job"))?;
+                if cmd.op == "cancelRenderJob" {
+                    // Only pending jobs cancel; done/cancelled are terminal
+                    // history and removing them is `removeRenderJob`'s job.
+                    if next.render_queue[i].status != JobStatus::Pending {
+                        return Err(bad("render job is not pending"));
+                    }
+                    next.render_queue[i].status = JobStatus::Cancelled;
+                } else {
+                    next.render_queue.remove(i);
+                }
+            }
             "updateLayer" | "removeLayer" | "setPropertyKeys" => {
                 let layer_id = id(
                     p,
@@ -2272,10 +2572,7 @@ impl Engine for MotionEngine {
                         return Err(bad("layer is locked"));
                     }
                     comp_layers_mut(&mut next, comp_key).unwrap().remove(i);
-                    clear_parent_links(
-                        comp_layers_mut(&mut next, comp_key).unwrap(),
-                        layer_id,
-                    );
+                    clear_parent_links(comp_layers_mut(&mut next, comp_key).unwrap(), layer_id);
                 } else if cmd.op == "updateLayer" {
                     if p.get("shape").is_some() && l.shape.is_none()
                         || p.get("asset_id").is_some() && l.asset_id.is_none()
@@ -2418,6 +2715,14 @@ impl Engine for MotionEngine {
                 return Err(bad("invalid render command"));
             }
             self.render(&cmd, Some(ctx))?
+        } else if cmd.op == "renderQueueFrame" {
+            if cmd.v != 1 || cmd.input.is_some() {
+                return Err(bad("invalid render command"));
+            }
+            // Mutating like every queue op: journals progress and emits
+            // document:changed, but renders through the same checkpointed
+            // comp path as renderFrame so tasks can cancel mid-frame.
+            self.render_queue_step(&cmd, Some(ctx))?
         } else {
             self.apply(cmd)?
         };
@@ -2728,16 +3033,18 @@ mod tests {
 #[cfg(test)]
 mod blend_tests;
 #[cfg(test)]
-mod matte_tests;
+mod comp_tests;
 #[cfg(test)]
 mod effects_tests;
 #[cfg(test)]
-mod raster_tests;
+mod matte_tests;
 #[cfg(test)]
-mod comp_tests;
+mod particles_tests;
 #[cfg(test)]
 mod path_tests;
 #[cfg(test)]
-mod particles_tests;
+mod queue_tests;
+#[cfg(test)]
+mod raster_tests;
 #[cfg(test)]
 mod transform3d_tests;

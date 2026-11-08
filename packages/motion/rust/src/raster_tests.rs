@@ -181,7 +181,10 @@ fn update_layer_retargets_asset_with_atomic_validation() {
     let l = layer(&mut e, a);
     let before = e.snapshot().unwrap();
     // Unknown and cleared asset references reject without touching state.
-    for patch in [json!({"id":l,"asset_id":99}), json!({"id":l,"asset_id":null})] {
+    for patch in [
+        json!({"id":l,"asset_id":99}),
+        json!({"id":l,"asset_id":null}),
+    ] {
         assert!(e.apply(Command::new("updateLayer", patch)).is_err());
         assert_eq!(e.snapshot().unwrap(), before);
     }
@@ -195,8 +198,8 @@ fn update_layer_retargets_asset_with_atomic_validation() {
         json!({"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[0,0,255,255]}}),
     )
     .data["layer_id"]
-    .as_u64()
-    .unwrap();
+        .as_u64()
+        .unwrap();
     let before = e.snapshot().unwrap();
     assert!(e
         .apply(Command::new("updateLayer", json!({"id":s,"asset_id":b})))

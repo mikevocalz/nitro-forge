@@ -101,10 +101,24 @@ mod tests {
         let t2d = Transform::default();
         // rx = 90°: the layer plane is edge-on to the view axis, so the
         // projected y coefficient vanishes (a horizontal line, not an error).
-        let p = projected_affine(&t2d, &Transform3D { rx: 90., ry: 0., z: 0. });
+        let p = projected_affine(
+            &t2d,
+            &Transform3D {
+                rx: 90.,
+                ry: 0.,
+                z: 0.,
+            },
+        );
         assert!((p[0] - 1.).abs() < 1e-12 && p[3].abs() < 1e-12);
         // ry = 90° collapses the projected x coefficient instead.
-        let p = projected_affine(&t2d, &Transform3D { rx: 0., ry: 90., z: 0. });
+        let p = projected_affine(
+            &t2d,
+            &Transform3D {
+                rx: 0.,
+                ry: 90.,
+                z: 0.,
+            },
+        );
         assert!(p[0].abs() < 1e-12 && (p[3] - 1.).abs() < 1e-12);
     }
     #[test]
@@ -112,7 +126,11 @@ mod tests {
         let t2d = Transform::default();
         let p = projected_affine(
             &t2d,
-            &Transform3D { rx: 30., ry: 45., z: 7. },
+            &Transform3D {
+                rx: 30.,
+                ry: 45.,
+                z: 7.,
+            },
         );
         // a' = cos(ry), c' = sin(ry)·sin(rx): nonzero off-diagonal shear.
         let (sry, cry) = 45f64.to_radians().sin_cos();
@@ -120,7 +138,14 @@ mod tests {
         assert!((p[0] - cry).abs() < 1e-12);
         assert!((p[2] - sry * srx).abs() < 1e-12);
         // z is depth only: it never enters the orthographic coefficients.
-        let q = projected_affine(&t2d, &Transform3D { rx: 30., ry: 45., z: -9e6 });
+        let q = projected_affine(
+            &t2d,
+            &Transform3D {
+                rx: 30.,
+                ry: 45.,
+                z: -9e6,
+            },
+        );
         assert_eq!(p, q);
     }
 }

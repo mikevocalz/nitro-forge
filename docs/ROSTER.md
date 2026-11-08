@@ -1429,3 +1429,42 @@ rejection and nested-comp projection, plus 3 projection unit tests),
 nf-cli transform3d case), `pnpm --filter @nitro-forge/motion typecheck`
 clean. 3D rasterization, camera, lights, depth ordering and full P11
 completion are not implied.
+
+## P11 Motion slice J1 durable render queue source checkpoint (2026-11-08)
+
+Motion gains a durable `render_queue` of bounded jobs (`{id,name?,comp_id?,
+from_frame,to_frame,status,frames_done}`) with ops `addRenderJob`,
+`setRenderQueueOrder` (exact permutation), `cancelRenderJob`,
+`removeRenderJob` and `renderQueueFrame`. Jobs are inclusive 0-based frame
+ranges rendered at the target composition's own rational frame rate —
+`comp_id` absent is the root, a nested id renders that composition
+standalone. Bounds: 256 jobs, 4096 frames/job, 16384 summed frames; pending
+jobs must keep their last frame inside the composition's current
+duration/rate, so `setComposition` changes that would strand one reject
+atomically while done/cancelled history never constrains.
+`removeComposition` rejects while any job references the comp. Statuses are
+`pending|done|cancelled` — no persisted `rendering` state exists because
+stepping renders and commits inside one atomic `apply`; `renderQueueFrame`
+returns the real `render_comp` RGBA (byte-identical to `renderFrame` at the
+mapped time, verified in tests) plus exact integer progress
+(`frames_done`/`frames_total`/queue counters — never percentages) through
+the same `pixels_b64`/binary-output contract. Stepping is journaled like
+every mutation: queue progress is durable document state, so undo rewinds
+real frames (16-entry journal bounds reach) and restore resets history.
+Snapshot schema stays 2 via additive serde defaults (`render_queue` skipped
+when empty, `next_job_id` skipped at 1); `describe` materializes both.
+Hostile restores re-check job ids, ranges, progress/status consistency,
+comp refs, name length and all budgets. **No encoder exists**: the queue
+returns raw RGBA frames only and never claims encoded output — J2 remains
+blocked. Time-range jobs and stepped ranges are deferred.
+
+Local evidence: `cargo test -p motion-engine` 81 passed (10 new covering
+enqueue/reorder/cancel/remove, real-pixel stepping identical to
+`renderFrame`, named-job stepping, queue summaries, comp-job standalone
+render, comp-removal guard, undo/redo/snapshot/hostile-restore, all bounds,
+`setComposition` stranding rules, atomic batches and cancelled tasks),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/motion test` 11 passed across 9 files (2 new
+nf-cli queue cases), `pnpm --filter @nitro-forge/motion typecheck` clean.
+Encoded export, render-queue UI, native target runs and full P11
+completion are not implied.

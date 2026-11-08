@@ -19,8 +19,7 @@ fn ingest(e: &mut MotionEngine, w: u32, h: u32, bytes: Vec<u8>) -> u64 {
         .unwrap()
 }
 fn raster_layer(e: &mut MotionEngine, asset: u64) -> u64 {
-    call(e, "addRasterLayer", json!({"asset_id":asset}))
-        .data["layer_id"]
+    call(e, "addRasterLayer", json!({"asset_id":asset})).data["layer_id"]
         .as_u64()
         .unwrap()
 }
@@ -31,7 +30,11 @@ fn pixels(e: &mut MotionEngine, time: f64) -> Vec<u8> {
         .unwrap()
 }
 fn set_effects(e: &mut MotionEngine, layer: u64, effects: Value) {
-    call(e, "setLayerEffects", json!({"layer":layer,"effects":effects}));
+    call(
+        e,
+        "setLayerEffects",
+        json!({"layer":layer,"effects":effects}),
+    );
 }
 fn doc(w: u32, h: u32) -> MotionEngine {
     let mut e = MotionEngine::new();
@@ -180,21 +183,9 @@ fn effects_apply_after_transform_and_before_opacity_blend_matte() {
     // Swapping the matte source to an opaque white asset unmattes the
     // target: the uncovered pixel shows the white mask, the covered pixel
     // shows the inverted (black) shape on top.
-    let opaque = ingest(
-        &mut e,
-        2,
-        1,
-        vec![255, 255, 255, 255, 255, 255, 255, 255],
-    );
-    call(
-        &mut e,
-        "updateLayer",
-        json!({"id":mask,"asset_id":opaque}),
-    );
-    assert_eq!(
-        pixels(&mut e, 0.),
-        vec![255, 255, 255, 255, 0, 0, 0, 255]
-    );
+    let opaque = ingest(&mut e, 2, 1, vec![255, 255, 255, 255, 255, 255, 255, 255]);
+    call(&mut e, "updateLayer", json!({"id":mask,"asset_id":opaque}));
+    assert_eq!(pixels(&mut e, 0.), vec![255, 255, 255, 255, 0, 0, 0, 255]);
     // An effect on the matte source that forces alpha to 0 empties the
     // derived mask, hiding the target and leaving the transparent source.
     set_effects(
@@ -207,8 +198,7 @@ fn effects_apply_after_transform_and_before_opacity_blend_matte() {
 #[test]
 fn comp_layer_and_nested_layer_effects_render() {
     let mut e = doc(2, 1);
-    let comp = call(&mut e, "addComposition", json!({"width":2,"height":1}))
-        .data["comp_id"]
+    let comp = call(&mut e, "addComposition", json!({"width":2,"height":1})).data["comp_id"]
         .as_u64()
         .unwrap();
     // Effect inside the nested composition.
@@ -219,11 +209,10 @@ fn comp_layer_and_nested_layer_effects_render() {
         json!({"asset_id":inner_asset,"comp":comp}),
     )
     .data["layer_id"]
-    .as_u64()
-    .unwrap();
+        .as_u64()
+        .unwrap();
     set_effects(&mut e, inner, json!([{"kind":"invert"}]));
-    let outer = call(&mut e, "addCompLayer", json!({"comp":comp}))
-        .data["layer_id"]
+    let outer = call(&mut e, "addCompLayer", json!({"comp":comp})).data["layer_id"]
         .as_u64()
         .unwrap();
     assert_eq!(
@@ -232,10 +221,7 @@ fn comp_layer_and_nested_layer_effects_render() {
     );
     // Effect on the comp layer itself inverts the composed frame.
     set_effects(&mut e, outer, json!([{"kind":"invert"}]));
-    assert_eq!(
-        pixels(&mut e, 0.),
-        vec![10, 0, 0, 255, 0, 0, 200, 255]
-    );
+    assert_eq!(pixels(&mut e, 0.), vec![10, 0, 0, 255, 0, 0, 200, 255]);
 }
 #[test]
 fn set_layer_effects_validates_atomically_and_replays_history() {
@@ -261,28 +247,25 @@ fn set_layer_effects_validates_atomically_and_replays_history() {
         json!({"kind":"invert"}),
     ] {
         assert!(
-            try_call(&mut e, "setLayerEffects", json!({"layer":layer,"effects":bad})).is_err(),
+            try_call(
+                &mut e,
+                "setLayerEffects",
+                json!({"layer":layer,"effects":bad})
+            )
+            .is_err(),
             "accepted hostile effects: {bad}"
         );
         assert_eq!(e.snapshot().unwrap(), before);
     }
     // Locked layers reject; equal writes are eventless; null/[] clears.
-    call(
-        &mut e,
-        "updateLayer",
-        json!({"id":layer,"locked":true}),
-    );
+    call(&mut e, "updateLayer", json!({"id":layer,"locked":true}));
     assert!(try_call(
         &mut e,
         "setLayerEffects",
         json!({"layer":layer,"effects":[{"kind":"invert"}]})
     )
     .is_err());
-    call(
-        &mut e,
-        "updateLayer",
-        json!({"id":layer,"locked":false}),
-    );
+    call(&mut e, "updateLayer", json!({"id":layer,"locked":false}));
     set_effects(&mut e, layer, json!([{"kind":"invert"}]));
     let effected = e.snapshot().unwrap();
     let noop = call(
@@ -323,7 +306,11 @@ fn blend_mode_composites_the_effected_pixels() {
     // blends the effected result. multiply of inverted [55,155,205] over
     // [100,150,200]: round(channel_base*channel_fx/255).
     set_effects(&mut e, top, json!([{"kind":"invert"}]));
-    call(&mut e, "setLayerBlend", json!({"layer":top,"blend":"multiply"}));
+    call(
+        &mut e,
+        "setLayerBlend",
+        json!({"layer":top,"blend":"multiply"}),
+    );
     assert_eq!(pixels(&mut e, 0.), vec![22, 91, 161, 255]);
     // The same blend without the effect would composite the raw [200,100,50]
     // to [78,59,39]; clearing the stack proves the pixels above came from the
@@ -340,14 +327,22 @@ fn clipping_masks_the_effected_pixels() {
     rect(&mut e, 0., 0., 2., 1., [255, 0, 0, 255]);
     let top = rect(&mut e, 1., 0., 2., 1., [0, 0, 255, 255]);
     set_effects(&mut e, top, json!([{"kind":"invert"}]));
-    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":true}));
+    call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":top,"clipped":true}),
+    );
     assert_eq!(
         pixels(&mut e, 0.),
         vec![255, 0, 0, 255, 255, 255, 0, 255, 0, 0, 0, 0]
     );
     // Unclipped, the effected yellow reaches x2 — the clip, not the effect,
     // removed it.
-    call(&mut e, "setLayerClipped", json!({"layer":top,"clipped":false}));
+    call(
+        &mut e,
+        "setLayerClipped",
+        json!({"layer":top,"clipped":false}),
+    );
     assert_eq!(
         pixels(&mut e, 0.),
         vec![255, 0, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255]
@@ -377,8 +372,7 @@ fn set_layer_effects_rejects_unknown_layer() {
         json!({"layer":"1","effects":[{"kind":"invert"}]})
     )
     .is_err());
-    let comp = call(&mut e, "addComposition", json!({"width":1,"height":1}))
-        .data["comp_id"]
+    let comp = call(&mut e, "addComposition", json!({"width":1,"height":1})).data["comp_id"]
         .as_u64()
         .unwrap();
     let inner = call(
@@ -444,18 +438,12 @@ fn hostile_restore_rejects_bad_effects_and_good_ones_roundtrip() {
     assert_eq!(reopened.state.layers[0].effects.len(), 1);
     // Hostile mutations of the serialized state all reject and preserve state.
     for mutate in [
-        |v: &mut Value| {
-            v["layers"][0]["effects"] = json!([{"kind":"invert","bogus":true}])
-        },
-        |v: &mut Value| {
-            v["layers"][0]["effects"] = json!(vec![json!({"kind":"invert"}); 17])
-        },
+        |v: &mut Value| v["layers"][0]["effects"] = json!([{"kind":"invert","bogus":true}]),
+        |v: &mut Value| v["layers"][0]["effects"] = json!(vec![json!({"kind":"invert"}); 17]),
         |v: &mut Value| {
             v["layers"][0]["effects"] = json!([{"kind":"gaussian-blur","radius_px":1e9}])
         },
-        |v: &mut Value| {
-            v["layers"][0]["effects"] = json!([{"kind":"contrast","amount":-0.5}])
-        },
+        |v: &mut Value| v["layers"][0]["effects"] = json!([{"kind":"contrast","amount":-0.5}]),
         |v: &mut Value| v["layers"][0]["effects"] = json!([{"kind":"nope"}]),
     ] {
         let mut wire = serde_json::to_value(&*reopened.state).unwrap();

@@ -280,11 +280,7 @@ impl ParticleEmitter {
                     && r.h <= MAX_SPAWN_COORD
             })
             && match &self.sprite {
-                ParticleSprite::Shape {
-                    width,
-                    height,
-                    ..
-                } => {
+                ParticleSprite::Shape { width, height, .. } => {
                     width.is_finite()
                         && height.is_finite()
                         && *width > 0.
@@ -435,10 +431,12 @@ fn stamp_sprite(
                     // size; source dims come from the asset.
                     let fx = ((px as f64 + 0.5 - x0) / dw * f64::from(asset.width))
                         .floor()
-                        .clamp(0., f64::from(asset.width) - 1.) as usize;
+                        .clamp(0., f64::from(asset.width) - 1.)
+                        as usize;
                     let fy = ((py as f64 + 0.5 - y0) / dh * f64::from(asset.height))
                         .floor()
-                        .clamp(0., f64::from(asset.height) - 1.) as usize;
+                        .clamp(0., f64::from(asset.height) - 1.)
+                        as usize;
                     let i = (fy * asset.width as usize + fx) * 4;
                     (
                         f64::from(asset.pixels[i]) / 255.,
@@ -528,9 +526,7 @@ pub fn render(
     }
     let scale_x = affine.a.hypot(affine.b);
     let scale_y = affine.c.hypot(affine.d);
-    let mut budget = STAMP_BUDGET_FACTOR
-        .saturating_mul(w)
-        .saturating_mul(h);
+    let mut budget = STAMP_BUDGET_FACTOR.saturating_mul(w).saturating_mul(h);
     let mut alive = 0usize;
     let mut ticks = 0u32;
     for n in n_min..=n_max {
@@ -571,14 +567,8 @@ pub fn render(
         if !(size_mult.is_finite() && size_mult > 0.) {
             continue;
         }
-        let lx = sx
-            + sw * u_sx
-            + angle.cos() * speed * tau
-            + 0.5 * e.gravity[0] * tau * tau;
-        let ly = sy
-            + sh * u_sy
-            + angle.sin() * speed * tau
-            + 0.5 * e.gravity[1] * tau * tau;
+        let lx = sx + sw * u_sx + angle.cos() * speed * tau + 0.5 * e.gravity[0] * tau * tau;
+        let ly = sy + sh * u_sy + angle.sin() * speed * tau + 0.5 * e.gravity[1] * tau * tau;
         let cx = affine.a * lx + affine.c * ly + affine.e;
         let cy = affine.b * lx + affine.d * ly + affine.f;
         if !(cx.is_finite() && cy.is_finite()) {
@@ -586,19 +576,20 @@ pub fn render(
         }
         let (bw, bh) = match &sprite {
             ResolvedSprite::Shape { width, height, .. } => (*width, *height),
-            ResolvedSprite::Asset(asset) => {
-                (f64::from(asset.width), f64::from(asset.height))
-            }
+            ResolvedSprite::Asset(asset) => (f64::from(asset.width), f64::from(asset.height)),
         };
         let dw = bw * scale_x * size_mult;
         let dh = bh * scale_y * size_mult;
         if !(dw.is_finite() && dh.is_finite() && dw >= 0.25 && dh >= 0.25) {
             continue;
         }
-        let ellipse = matches!(&sprite, ResolvedSprite::Shape {
-            shape: SpriteShape::Ellipse,
-            ..
-        });
+        let ellipse = matches!(
+            &sprite,
+            ResolvedSprite::Shape {
+                shape: SpriteShape::Ellipse,
+                ..
+            }
+        );
         stamp_sprite(
             &mut buf,
             w,

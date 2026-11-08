@@ -13,8 +13,8 @@ fn shape_layer(e: &mut MotionEngine) -> u64 {
         json!({"shape":{"kind":"rect","x":0,"y":0,"w":4,"h":4,"fill":[255,0,0,255]}}),
     )
     .data["layer_id"]
-    .as_u64()
-    .unwrap()
+        .as_u64()
+        .unwrap()
 }
 fn linear_keys() -> Value {
     json!([
@@ -218,8 +218,12 @@ fn bounds_locked_and_hostile_restore_reject_atomically() {
         json!("rx"),
     ] {
         assert!(
-            try_call(&mut e, "setLayer3D", json!({"layer":id,"transform3d":bad3d}))
-                .is_err(),
+            try_call(
+                &mut e,
+                "setLayer3D",
+                json!({"layer":id,"transform3d":bad3d})
+            )
+            .is_err(),
             "accepted {bad3d}"
         );
         assert_eq!(e.snapshot().unwrap(), baseline);
@@ -268,7 +272,10 @@ fn bounds_locked_and_hostile_restore_reject_atomically() {
             property: Property::Rx,
             keys: Arc::new(vec![Key {
                 id: 1,
-                at: curve::Point { time: 0., value: 10. },
+                at: curve::Point {
+                    time: 0.,
+                    value: 10.,
+                },
                 interpolation: curve::Interpolation::Hold,
                 incoming: None,
                 outgoing: None,
@@ -282,8 +289,11 @@ fn bounds_locked_and_hostile_restore_reject_atomically() {
     assert_eq!(e.snapshot().unwrap(), pre_hostile);
     // Hostile restore: out-of-range transform3d value.
     let mut state = (*e.state).clone();
-    Arc::make_mut(&mut state.layers[0]).transform3d =
-        Some(Transform3D { rx: 1e9, ry: 0., z: 0. });
+    Arc::make_mut(&mut state.layers[0]).transform3d = Some(Transform3D {
+        rx: 1e9,
+        ry: 0.,
+        z: 0.,
+    });
     assert!(e
         .restore(&encode_envelope(&serde_json::to_vec(&state).unwrap()))
         .is_err());
@@ -291,7 +301,9 @@ fn bounds_locked_and_hostile_restore_reject_atomically() {
     // Hostile restore: unknown transform3d field fails closed.
     let mut wire = serde_json::to_value(&*e.state).unwrap();
     wire["layers"][0]["transform3d"] = json!({"rx":0,"ry":0,"z":0,"roll":1});
-    assert!(e.restore(&encode_envelope(&serde_json::to_vec(&wire).unwrap())).is_err());
+    assert!(e
+        .restore(&encode_envelope(&serde_json::to_vec(&wire).unwrap()))
+        .is_err());
     assert_eq!(e.snapshot().unwrap(), pre_hostile);
 }
 
@@ -308,8 +320,8 @@ fn nested_comp_layers_project_too() {
         json!({"comp":comp,"shape":{"kind":"rect","x":0,"y":0,"w":2,"h":2,"fill":[0,255,0,255]}}),
     )
     .data["layer_id"]
-    .as_u64()
-    .unwrap();
+        .as_u64()
+        .unwrap();
     call(
         &mut e,
         "setLayer3D",
@@ -327,9 +339,5 @@ fn nested_comp_layers_project_too() {
         .unwrap();
     assert_eq!(layer["transform3d"]["ry"], json!(90.));
     // ry = 90° edge-on: projected x coefficient vanishes.
-    assert!(layer["projected_transform"]["a"]
-        .as_f64()
-        .unwrap()
-        .abs()
-        < 1e-9);
+    assert!(layer["projected_transform"]["a"].as_f64().unwrap().abs() < 1e-9);
 }
