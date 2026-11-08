@@ -1103,6 +1103,7 @@ passes `include_metronome: true`.
 | `meter` | `{from_ticks,to_ticks,sample_rate,window_ms?=50,include_metronome?}` | `{window_frames,window_seconds,tracks:[{id,peak[],rms[],max_peak,clipped}],master}` | read-only; post-fader per track/bus; sample_rate 8000..192000; ≤4096 windows |
 | `loudness` | same range | `{integrated_lufs,momentary_max_lufs,short_term_max_lufs,sample_peak_dbfs,momentary_lufs[],step_seconds}` | read-only BS.1770 K-weighted, gated; `null` = silent/too short |
 | `spectrogram` | range + `{fft_size?=2048,hop?,bands?=64}` | `{bands_hz,hop_seconds,frames}` | read-only; Hann STFT of mono master, log bands, dB floored -120; ≤2048 frames |
+| `detectBeats` | range + `{fft_size?=1024,hop?=fft_size/2}` | `{onsets_seconds,estimated_bpm,hop_seconds}` | read-only; spectral-flux onsets on the mono master (local maxima above mean+σ, ≥80 ms apart, ≤8192 onsets, ≤16384 STFT frames); `estimated_bpm` is the novelty autocorrelation peak in 60..=240 BPM, `null` under four onsets |
 
 Ticks→seconds: `ticks / (ppq * bpm / 60)`. Undo: prior field values / removed entities.
 

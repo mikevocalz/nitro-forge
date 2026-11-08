@@ -648,6 +648,53 @@ fn loudness_and_spectrogram_ops() {
     rejects(&mut e, "spectrogram", json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 48000, "bands": 4}), ErrorCode::Validation);
 }
 
+#[test]
+fn detect_beats_finds_the_metronome_pulse() {
+    let mut e = CadenceEngine::new();
+    ok(&mut e, "setMetronome", json!({"enabled": true, "volume": 1.0}));
+    let depth = undo_depth(&mut e);
+    // Eight beats at 120 BPM in the 4 s range; the click sitting on the
+    // first STFT frame edge can be missed, so assert the pulse, not a count.
+    let r = ok(
+        &mut e,
+        "detectBeats",
+        json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "include_metronome": true}),
+    );
+    let onsets = r["onsets_seconds"].as_array().unwrap();
+    assert!(onsets.len() >= 4, "{r}");
+    let times: Vec<f64> = onsets.iter().map(|v| v.as_f64().unwrap()).collect();
+    for w in times.windows(2) {
+        assert!((w[1] - w[0] - 0.5).abs() < 0.15, "beat spacing {times:?}");
+    }
+    let bpm = r["estimated_bpm"].as_f64().unwrap();
+    assert!((80.0..=160.0).contains(&bpm), "bpm {bpm}");
+    // Without the metronome requested the mix is silent: no onsets, no bpm.
+    let silent = ok(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000}));
+    assert_eq!(silent["onsets_seconds"].as_array().unwrap().len(), 0);
+    assert!(silent["estimated_bpm"].is_null());
+    assert_eq!(undo_depth(&mut e), depth, "read-only op recorded undo");
+    rejects(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 100}), ErrorCode::Validation);
+    rejects(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "fft_size": 1000}), ErrorCode::Validation);
+    rejects(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "hop": 0}), ErrorCode::Validation);
+    // hop 1 over ~2.6 s at 8 kHz exceeds the frame cap before any FFT runs.
+    rejects(
+        &mut e,
+        "detectBeats",
+        json!({"from_ticks": 0, "to_ticks": 5000, "sample_rate": 8000, "fft_size": 256, "hop": 1}),
+        ErrorCode::Validation,
+    );
+}
+
+#[test]
+fn detect_beats_on_a_steady_tone_has_no_pulse() {
+    let mut e = CadenceEngine::new();
+    tone_track(&mut e);
+    let r = ok(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 8000}));
+    // One attack transient at most; below the four-onset floor for bpm.
+    assert!(r["onsets_seconds"].as_array().unwrap().len() <= 1, "{r}");
+    assert!(r["estimated_bpm"].is_null());
+}
+
 // ---- compatibility -------------------------------------------------------------------
 
 #[test]

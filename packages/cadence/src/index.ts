@@ -60,6 +60,7 @@ export const OPS = {
   meter: "meter",
   loudness: "loudness",
   spectrogram: "spectrogram",
+  detectBeats: "detectBeats",
 } as const;
 
 /** `bus` tracks sum source tracks routed or sent to them and hold no clips. */
@@ -142,6 +143,14 @@ export interface SpectrogramResult {
   hop_seconds: number;
   /** One row per hop, one dB value per band, floored at -120. */
   frames: number[][];
+}
+
+export interface BeatDetectionResult {
+  /** Onset times in seconds from the start of the range. */
+  onsets_seconds: number[];
+  /** Autocorrelation tempo estimate in BPM; null under four onsets. */
+  estimated_bpm: number | null;
+  hop_seconds: number;
 }
 
 export interface InsertPreset {
@@ -390,6 +399,18 @@ export class CadenceDocument {
       fft_size: options.fftSize,
       hop: options.hop,
       bands: options.bands,
+    });
+  }
+  /**
+   * Spectral-flux onset detection and a tempo estimate over the mono
+   * master. Read-only; `estimated_bpm` is null when fewer than four onsets
+   * are found. Same range bounds as the other analysis ops.
+   */
+  detectBeats(range: AnalysisRange, options: { fftSize?: number; hop?: number } = {}) {
+    return this.call<BeatDetectionResult>(OPS.detectBeats, {
+      ...analysisPayload(range),
+      fft_size: options.fftSize,
+      hop: options.hop,
     });
   }
   project() {

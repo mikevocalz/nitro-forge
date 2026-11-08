@@ -422,7 +422,7 @@ impl Engine for CadenceEngine {
     fn apply_long(&mut self,cmd:Command,ctx:&TaskContext)->Result<CommandResult,EngineError>{
         if cmd.op==ignition_core::OP_BATCH{return self.apply_batch(cmd,Some(ctx));}
         ctx.checkpoint()?;
-        let result=if matches!(cmd.op.as_str(),"render"|"renderStems")&&cmd.v==1{self.render_or_stems(&cmd,Some(ctx))}else{self.apply(cmd)}?;
+        let result=if matches!(cmd.op.as_str(),"render"|"renderStems")&&cmd.v==1{self.render_or_stems(&cmd,Some(ctx))}else if cmd.op=="detectBeats"&&cmd.v==1{self.detect_beats_op(&cmd.payload,Some(ctx))}else{self.apply(cmd)}?;
         ctx.set_progress(1.0);Ok(result)
     }
 
