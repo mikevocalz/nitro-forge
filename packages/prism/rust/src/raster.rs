@@ -155,6 +155,78 @@ pub fn write_region(
     }
 }
 
+/// Resample `src` (`sw*sh` RGBA) translated by `(tx, ty)` source pixels into
+/// a `dw*dh` buffer: `out[x,y]` reads `src` at `(x + tx, y + ty)` with
+/// premultiplied bilinear filtering, transparent outside. Integer offsets
+/// are pixel-exact, so `crop` on untransformed content is lossless.
+pub fn resample_translated(
+    src: &[u8],
+    sw: usize,
+    sh: usize,
+    tx: f64,
+    ty: f64,
+    dw: usize,
+    dh: usize,
+    task: &mut RenderTask,
+) -> Result<Vec<u8>, EngineError> {
+    let mut out = vec![0u8; dw.saturating_mul(dh).saturating_mul(4)];
+    if dw == 0 || dh == 0 || sw == 0 || sh == 0 {
+        return Ok(out);
+    }
+    let fetch = |x: i64, y: i64| -> [f64; 4] {
+        if x < 0 || y < 0 || x >= sw as i64 || y >= sh as i64 {
+            return [0.0; 4];
+        }
+        let o = ((y as usize) * sw + x as usize) * 4;
+        if o + 4 > src.len() {
+            return [0.0; 4];
+        }
+        let a = src[o + 3] as f64 / 255.0;
+        [src[o] as f64 * a, src[o + 1] as f64 * a, src[o + 2] as f64 * a, a]
+    };
+    let total = (dw * dh).max(1) as f32;
+    for y in 0..dh {
+        for x in 0..dw {
+            let i = y * dw + x;
+            task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
+            // Texel k covers continuous coords [k + 0.5, k + 1.5): sample the
+            // destination center shifted by the translation, then drop the
+            // half-texel origin exactly like render::sample_raster.
+            let fx = x as f64 + tx;
+            let fy = y as f64 + ty;
+            let (x0, y0) = (fx.floor() as i64, fy.floor() as i64);
+            let (txf, tyf) = (fx - x0 as f64, fy - y0 as f64);
+            let p = [
+                fetch(x0, y0),
+                fetch(x0 + 1, y0),
+                fetch(x0, y0 + 1),
+                fetch(x0 + 1, y0 + 1),
+            ];
+            let wts = [
+                (1.0 - txf) * (1.0 - tyf),
+                txf * (1.0 - tyf),
+                (1.0 - txf) * tyf,
+                txf * tyf,
+            ];
+            let mut acc = [0.0; 4];
+            for k in 0..4 {
+                for c in 0..4 {
+                    acc[c] += p[k][c] * wts[k];
+                }
+            }
+            if acc[3] <= 0.0 {
+                continue;
+            }
+            let o = i * 4;
+            for c in 0..3 {
+                out[o + c] = (acc[c] / acc[3]).round().clamp(0.0, 255.0) as u8;
+            }
+            out[o + 3] = (acc[3] * 255.0).round().clamp(0.0, 255.0) as u8;
+        }
+    }
+    Ok(out)
+}
+
 /// Crop/pad a canvas buffer to new dimensions, top-left aligned, padding
 /// with transparent black.
 pub fn resize_canvas(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usize) -> Vec<u8> {

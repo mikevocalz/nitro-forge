@@ -39,6 +39,57 @@ pub(crate) fn resize_alpha(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usiz
     out
 }
 
+/// Crop a `sw*sh` alpha buffer to `(dx, dy, dw, dh)`, zero outside.
+pub(crate) fn crop_alpha(
+    buf: &[u8],
+    sw: usize,
+    sh: usize,
+    dx: i64,
+    dy: i64,
+    dw: usize,
+    dh: usize,
+) -> Vec<u8> {
+    let mut out = vec![0u8; dw.saturating_mul(dh)];
+    for r in 0..dh as i64 {
+        let sy = dy + r;
+        if sy < 0 || sy >= sh as i64 {
+            continue;
+        }
+        for c in 0..dw as i64 {
+            let sx = dx + c;
+            if sx < 0 || sx >= sw as i64 {
+                continue;
+            }
+            let s = sy as usize * sw + sx as usize;
+            if s < buf.len() {
+                out[r as usize * dw + c as usize] = buf[s];
+            }
+        }
+    }
+    out
+}
+
+/// Translate the coordinate fields of a gradient paint; solids are untouched.
+fn shift_paint(p: &mut Paint, sx: f64, sy: f64) {
+    match p {
+        Paint::Solid { .. } => {}
+        Paint::Linear { x0, y0, x1, y1, .. } => {
+            *x0 -= sx;
+            *y0 -= sy;
+            *x1 -= sx;
+            *y1 -= sy;
+        }
+        Paint::Radial { cx, cy, fx, fy, .. } => {
+            *cx -= sx;
+            *cy -= sy;
+            if let (Some(fx), Some(fy)) = (fx, fy) {
+                *fx -= sx;
+                *fy -= sy;
+            }
+        }
+    }
+}
+
 /// Snapshot tree invariants: unique ids, parents exist and are containers,
 /// boolean children are vector layers, no cycles.
 pub(crate) fn validate_tree(layers: &[Layer]) -> Result<(), EngineError> {
@@ -369,6 +420,7 @@ impl PrismEngine {
             "setBooleanOp" => self.op_set_boolean_op(p),
             "rasterizeLayer" => self.op_rasterize_layer(p, ctx),
             "floodFill" => self.op_flood_fill(p, ctx),
+            "crop" => self.op_crop(p, ctx),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
     }
@@ -1729,6 +1781,197 @@ impl PrismEngine {
         self.layers.retain(|l| !doomed.contains(&l.id));
         self.selected.retain(|s| !doomed.contains(s));
         ok()
+    }
+
+    // -- document crop -------------------------------------------------------
+
+    /// `crop {x,y,w,h}` — offset-crop the document. Intersection semantics:
+    /// the rect is rounded outward to whole pixels, then intersected with
+    /// the canvas; a rect that misses it is `OutOfBounds`, and cropping to
+    /// the full canvas is a read-only no-op.
+    ///
+    /// Content stored in layer coordinates (raster buffers, shape bounds,
+    /// path nodes, gradient geometry) is shifted by `-s`, where `s` is the
+    /// canvas delta pulled back through each layer's effective transform —
+    /// so the rendered image is preserved exactly while transforms
+    /// themselves stay untouched. Masks and the pixel selection live in
+    /// canvas space and are cropped at the pixel offset; artboards shift by
+    /// the canvas delta and may leave the canvas. One undo entry. Like
+    /// `resize`, this is a document-level op: locked layers are not
+    /// consulted.
+    fn op_crop(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let x = req_coord(p, "x")?;
+        let y = req_coord(p, "y")?;
+        let w = req_coord(p, "w")?;
+        let h = req_coord(p, "h")?;
+        if w <= 0.0 || h <= 0.0 {
+            return Err(EngineError::validation("crop w/h must be positive"));
+        }
+        let (cw, ch) = (self.width as i64, self.height as i64);
+        let ix0 = (x.floor() as i64).max(0);
+        let iy0 = (y.floor() as i64).max(0);
+        let ix1 = ((x + w).ceil() as i64).min(cw);
+        let iy1 = ((y + h).ceil() as i64).min(ch);
+        if ix1 <= ix0 || iy1 <= iy0 {
+            return Err(EngineError::out_of_bounds(
+                "crop region does not intersect the canvas",
+            ));
+        }
+        let (nw, nh) = ((ix1 - ix0) as u32, (iy1 - iy0) as u32);
+        Self::check_dims(nw, nh)?;
+        if ix0 == 0 && iy0 == 0 && nw == self.width && nh == self.height {
+            return read(json!({ "ok": true }));
+        }
+        let (sw, sh) = (self.width as usize, self.height as usize);
+        let (dw, dh) = (nw as usize, nh as usize);
+        let (dx, dy) = (ix0 as f64, iy0 as f64);
+
+        // Phase 1 — compute every new buffer and validate every shifted
+        // coordinate before touching the document or the journal. `s` is
+        // the content-space shift for each layer: the canvas delta pulled
+        // back through its effective (ancestor-inclusive) transform.
+        let scene = self.scene();
+        let mut shifts: Vec<(f64, f64)> = Vec::with_capacity(self.layers.len());
+        for l in &self.layers {
+            let e = scene.effective_affine(l);
+            let Some(inv) = e.invert() else {
+                return Err(EngineError::validation(format!(
+                    "layer {} has a degenerate transform",
+                    l.id
+                )));
+            };
+            let (sx, sy) = inv.apply_vec(dx, dy);
+            if !sx.is_finite() || !sy.is_finite() {
+                return Err(EngineError::validation(format!(
+                    "layer {} content shift is not representable",
+                    l.id
+                )));
+            }
+            shifts.push((sx, sy));
+        }
+        let work_units = self
+            .layers
+            .iter()
+            .filter(|l| matches!(l.content, Content::Raster(_)) || l.mask.is_some())
+            .count() as u64
+            + 1;
+        let mut task = RenderTask::new(ctx, work_units);
+        let mut rasters: Vec<(usize, Vec<u8>)> = Vec::new();
+        let mut masks: Vec<(usize, Vec<u8>)> = Vec::new();
+        for (i, l) in self.layers.iter().enumerate() {
+            let (sx, sy) = shifts[i];
+            match &l.content {
+                Content::Raster(px) => {
+                    let buf =
+                        raster::resample_translated(px, sw, sh, sx, sy, dw, dh, &mut task)?;
+                    rasters.push((i, buf));
+                }
+                Content::Shape(s) => {
+                    if !finite(s.x - sx) || !finite(s.y - sy) {
+                        return Err(EngineError::validation(format!(
+                            "cropping layer {} exceeds coordinate bounds",
+                            l.id
+                        )));
+                    }
+                }
+                Content::Path(path) => {
+                    for sp in &path.subpaths {
+                        for n in &sp.nodes {
+                            if !finite(n.x - sx) || !finite(n.y - sy) {
+                                return Err(EngineError::validation(format!(
+                                    "cropping layer {} exceeds coordinate bounds",
+                                    l.id
+                                )));
+                            }
+                        }
+                    }
+                    for paint in path
+                        .fill
+                        .iter()
+                        .chain(path.stroke.iter().map(|s| &s.paint))
+                    {
+                        let mut q = paint.clone();
+                        shift_paint(&mut q, sx, sy);
+                        q.validate()?;
+                    }
+                }
+                Content::Boolean {
+                    fill: Some(f), ..
+                } => {
+                    let mut q = f.clone();
+                    shift_paint(&mut q, sx, sy);
+                    q.validate()?;
+                }
+                _ => {}
+            }
+            if let Some(m) = &l.mask {
+                masks.push((i, crop_alpha(&m.alpha, sw, sh, ix0, iy0, dw, dh)));
+            }
+        }
+        task.step_done();
+        // Artboards and the pixel selection live in canvas space.
+        let mut artboards = self.artboards.clone();
+        for a in &mut artboards {
+            a.x -= dx;
+            a.y -= dy;
+            a.validate()
+                .map_err(|_| EngineError::validation("cropping an artboard exceeds coordinate bounds"))?;
+        }
+        let selection = match &self.selection {
+            None => None,
+            Some(s) => {
+                let c = crop_alpha(s, sw, sh, ix0, iy0, dw, dh);
+                (!select::is_empty(&c)).then_some(c)
+            }
+        };
+        task.checkpoint()?;
+
+        // Phase 2 — commit. Nothing below can fail, so a cancelled task
+        // (which can only error in phase 1) leaves the document untouched.
+        self.record();
+        self.width = nw;
+        self.height = nh;
+        for (i, buf) in rasters {
+            self.layers[i].content = Content::Raster(Arc::new(buf));
+        }
+        for (i, alpha) in masks {
+            if let Some(m) = &mut self.layers[i].mask {
+                m.alpha = Arc::new(alpha);
+            }
+        }
+        for (i, &(sx, sy)) in shifts.iter().enumerate() {
+            match &mut self.layers[i].content {
+                Content::Shape(s) => {
+                    s.x -= sx;
+                    s.y -= sy;
+                }
+                Content::Path(path) => {
+                    for sp in &mut path.subpaths {
+                        for n in &mut sp.nodes {
+                            n.x -= sx;
+                            n.y -= sy;
+                        }
+                    }
+                    if let Some(f) = &mut path.fill {
+                        shift_paint(f, sx, sy);
+                    }
+                    if let Some(st) = &mut path.stroke {
+                        shift_paint(&mut st.paint, sx, sy);
+                    }
+                }
+                Content::Boolean {
+                    fill: Some(f), ..
+                } => shift_paint(f, sx, sy),
+                _ => {}
+            }
+        }
+        self.artboards = artboards;
+        self.selection = selection.map(Arc::new);
+        Ok(CommandResult::data(json!({ "ok": true })))
     }
 
     // -- region fill ---------------------------------------------------------

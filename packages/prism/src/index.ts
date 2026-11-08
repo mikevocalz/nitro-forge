@@ -19,6 +19,7 @@ export const OPS = {
   newDoc: "new",
   describe: "describe",
   resize: "resize",
+  crop: "crop",
   addRasterLayer: "addRasterLayer",
   addShape: "addShape",
   setShapeFill: "setShapeFill",
@@ -161,6 +162,16 @@ export class PrismDocument {
 
   resize(width: number, height: number) {
     return this.call(OPS.resize, { width, height });
+  }
+  /**
+   * Offset-crop the document to `rect` (canvas space). The rect is rounded
+   * outward to whole pixels and intersected with the canvas — partial and
+   * off-canvas crops keep the overlap; a rect that misses is rejected.
+   * Content coordinates, masks, selection and artboards are rebased so the
+   * rendered image is preserved. One undo step.
+   */
+  crop(rect: { x: number; y: number; w: number; h: number }) {
+    return this.call(OPS.crop, rect);
   }
   addRasterLayer(name?: string) {
     return this.call<{ layer_id: number }>(OPS.addRasterLayer, { name });
