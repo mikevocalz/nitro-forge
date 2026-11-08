@@ -2528,3 +2528,266 @@ fn command_grammar_layers_hatches_dimensions_and_deletes() {
     }
     assert_eq!(e.snapshot().unwrap(), before);
 }
+fn sheet(e: &mut DraftEngine, name: &str) -> u64 {
+    apply(
+        e,
+        "addSheet",
+        json!({"name":name,"width":100.,"height":50.}),
+    )
+    .data["sheet_id"]
+        .as_u64()
+        .unwrap()
+}
+fn viewport_on(e: &mut DraftEngine, sheet_id: u64) -> u64 {
+    apply(
+        e,
+        "addViewport",
+        json!({"sheet":sheet_id,"x":20.,"y":10.,"width":60.,"height":30.,"center_x":5.,"center_y":0.,"scale":4.}),
+    )
+    .data["viewport_id"]
+        .as_u64()
+        .unwrap()
+}
+fn sheet_frame(sheet_id: u64) -> Value {
+    json!({"sheet_id":sheet_id,"dpi":96.})
+}
+#[test]
+fn paper_space_sheets_viewports_crud_validation_locks_and_history() {
+    let mut e = DraftEngine::new();
+    // Sheet defaults: 10 mm margins on every side.
+    let a = sheet(&mut e, "A3");
+    let b = sheet(&mut e, "Detail");
+    let s = state(&e);
+    assert_eq!(s.sheets[&a].margin_top, 10.);
+    assert_eq!(s.sheets[&a].width, 100.);
+    let vp = viewport_on(&mut e, a);
+    // Duplicate names, bad sizes, bad margins and out-of-sheet rectangles reject atomically.
+    let before = e.snapshot().unwrap();
+    for (op, payload) in [
+        ("addSheet", json!({"name":"A3","width":100.,"height":50.})),
+        ("addSheet", json!({"name":"","width":100.,"height":50.})),
+        ("addSheet", json!({"name":"Tiny","width":10.,"height":50.})),
+        ("addSheet", json!({"name":"BadMargin","width":100.,"height":50.,"margin_top":30.,"margin_bottom":30.})),
+        ("addSheet", json!({"name":"BadMargin2","width":100.,"height":50.,"margin_left":-1.})),
+        ("addViewport", json!({"sheet":9999,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.})),
+        ("addViewport", json!({"sheet":a,"x":-1.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.})),
+        ("addViewport", json!({"sheet":a,"x":90.,"y":0.,"width":20.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.})),
+        ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":0.})),
+        ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1e9})),
+        ("addViewport", json!({"sheet":a,"x":0.,"y":0.,"width":10.,"height":10.,"center_x":0.,"center_y":0.,"scale":1.,"name":""})),
+        ("updateViewport", json!({"id":vp,"name":""})),
+        ("updateSheet", json!({"id":a,"width":10.})),
+        ("updateSheet", json!({"id":9999,"name":"X"})),
+        ("updateSheet", json!({"id":a,"name":"Detail"})),
+        ("removeSheet", json!({"id":a})),
+    ] {
+        assert!(
+            e.apply(Command::new(op, payload)).is_err(),
+            "{op} must reject"
+        );
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+    // Shrinking a sheet under its viewport rejects through final validation.
+    assert!(e
+        .apply(Command::new("updateSheet", json!({"id":a,"width":30.})))
+        .is_err());
+    // Patch updates: rename, resize within viewport bounds stay legal.
+    apply(&mut e, "updateSheet", json!({"id":a,"name":"Site","margin_left":5.}));
+    assert_eq!(state(&e).sheets[&a].name, "Site");
+    assert_eq!(state(&e).sheets[&a].margin_left, 5.);
+    // Locked viewport rejects edits and removal until unlocked.
+    apply(&mut e, "updateViewport", json!({"id":vp,"locked":true}));
+    assert!(e
+        .apply(Command::new("updateViewport", json!({"id":vp,"scale":2.})))
+        .is_err());
+    assert!(e
+        .apply(Command::new("removeViewport", json!({"id":vp})))
+        .is_err());
+    apply(&mut e, "updateViewport", json!({"id":vp,"locked":false}));
+    apply(&mut e, "updateViewport", json!({"id":vp,"name":"Plan"}));
+    assert_eq!(state(&e).viewports[&vp].name, "Plan");
+    // Sheet removal requires emptying viewports first; one undo restores all.
+    let before = e.snapshot().unwrap();
+    apply(&mut e, "removeViewport", json!({"id":vp}));
+    apply(&mut e, "removeSheet", json!({"id":b}));
+    assert!(!state(&e).sheets.contains_key(&b));
+    assert!(e.undo().unwrap());
+    assert!(e.undo().unwrap());
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert!(state(&e).viewports.contains_key(&vp));
+    // Re-adding then undoing a sheet is a single journal entry.
+    let c = sheet(&mut e, "Temp");
+    assert!(state(&e).sheets.contains_key(&c));
+    assert!(e.undo().unwrap());
+    assert!(!state(&e).sheets.contains_key(&c));
+}
+#[test]
+fn sheet_render_composites_clipped_model_space_with_real_pixels() {
+    let mut e = DraftEngine::new();
+    let a = sheet(&mut e, "Sheet");
+    let vp = viewport_on(&mut e, a);
+    // A long model segment runs well past the viewport's world window; only
+    // the in-window portion may appear, clipped by the offscreen raster.
+    let p = point(&mut e, 0., 0.);
+    let q = point(&mut e, 100., 0.);
+    apply(&mut e, "addSegment", json!({"a":p,"b":q,"color":[0,0,0,255],"width":0.5}));
+    let r = apply(&mut e, "renderFrame", sheet_frame(a)).data;
+    assert_eq!(r["width"], 378);
+    assert_eq!(r["height"], 189);
+    let rgba = base64_decode(r["pixels_b64"].as_str().unwrap());
+    assert_eq!(rgba.len(), 378 * 189 * 4);
+    let dark = |x: usize, y: usize| {
+        let i = (y * 378 + x) * 4;
+        rgba[i] < 128 && rgba[i + 1] < 128 && rgba[i + 2] < 128
+    };
+    let white = |x: usize, y: usize| {
+        let i = (y * 378 + x) * 4;
+        rgba[i] == 255 && rgba[i + 1] == 255 && rgba[i + 2] == 255 && rgba[i + 3] == 255
+    };
+    // Expected band: viewport x≈76..303px, y≈38..151px; segment maps near
+    // viewport vertical center. Dark pixels exist inside, none outside it.
+    let mut inside = 0usize;
+    for y in 39..150 {
+        for x in 77..302 {
+            if dark(x, y) {
+                inside += 1;
+            }
+        }
+    }
+    assert!(inside > 50, "viewport must show real clipped geometry");
+    for y in 39..150 {
+        for x in [10, 320, 350] {
+            assert!(white(x, y), "paper outside viewport stays white at {x},{y}");
+        }
+    }
+    // Column just right of the viewport border within its row band is white:
+    // the 100-unit segment cannot spill past the clip.
+    for y in 60..140 {
+        assert!(white(310, y), "geometry clipped at viewport edge");
+    }
+    // Margin chrome and viewport border are real black strokes.
+    assert!(dark(37, 94) || dark(38, 94));
+    // Hidden viewport renders only paper + margins.
+    apply(&mut e, "updateViewport", json!({"id":vp,"visible":false}));
+    let r = apply(&mut e, "renderFrame", sheet_frame(a)).data;
+    let rgba = base64_decode(r["pixels_b64"].as_str().unwrap());
+    let interior_dark = (39..150)
+        .flat_map(|y| (77..302).map(move |x| (x, y)))
+        .filter(|&(x, y)| {
+            let i = (y * 378 + x) * 4;
+            rgba[i] < 128 && rgba[i + 1] < 128 && rgba[i + 2] < 128
+        })
+        .count();
+    assert_eq!(interior_dark, 0);
+    // Payload honesty: unknown sheet, bad dpi, mixed fields and dpi without
+    // sheet_id all reject; the world-viewport form still works unchanged.
+    let before = e.snapshot().unwrap();
+    for payload in [
+        json!({"sheet_id":9999,"dpi":96.}),
+        json!({"sheet_id":a,"dpi":10.}),
+        json!({"sheet_id":a,"dpi":601.}),
+        json!({"sheet_id":a,"dpi":96.,"width":10}),
+        json!({"dpi":96.,"width":3,"height":1,"origin_x":0,"origin_y":0,"scale":1}),
+    ] {
+        assert!(e.apply(Command::new("renderFrame", payload)).is_err());
+    }
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+#[test]
+fn paper_space_snapshots_wrapper_roundtrip_and_hostile_restore() {
+    let mut e = DraftEngine::new();
+    let legacy = e.snapshot().unwrap();
+    let mut reopened = DraftEngine::new();
+    reopened.restore(&legacy).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), legacy);
+    assert!(state(&reopened).sheets.is_empty());
+    let a = sheet(&mut e, "A3");
+    let vp = viewport_on(&mut e, a);
+    apply(&mut e, "updateViewport", json!({"id":vp,"locked":true}));
+    let extended = e.snapshot().unwrap();
+    let (_, payload) = decode_envelope(&extended).unwrap();
+    let wrapped: Value = serde_json::from_slice(payload).unwrap();
+    assert_eq!(wrapped["kind"], "draft");
+    assert_eq!(wrapped["schema"], 2);
+    assert_eq!(wrapped["document"]["sheets"][a.to_string()]["name"], "A3");
+    assert_eq!(wrapped["document"]["viewports"][vp.to_string()]["scale"], 4.);
+    reopened.restore(&extended).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), extended);
+    assert_eq!(state(&reopened).viewports[&vp].sheet, a);
+    let before = reopened.snapshot().unwrap();
+    let mut cases: Vec<Value> = Vec::new();
+    // Dangling sheet reference, reserved/duplicate sheet names, viewport
+    // outside its sheet, bad scale and unwrapped extended state all reject.
+    let mut dangling = wrapped.clone();
+    dangling["document"]["viewports"][vp.to_string()]["sheet"] = json!(4242);
+    cases.push(dangling);
+    let mut dup = wrapped.clone();
+    dup["document"]["sheets"]["77"] =
+        json!({"id":77,"name":"A3","width":100.,"height":50.,"margin_top":10.,"margin_right":10.,"margin_bottom":10.,"margin_left":10.});
+    cases.push(dup);
+    let mut outside = wrapped.clone();
+    outside["document"]["viewports"][vp.to_string()]["x"] = json!(95.);
+    cases.push(outside);
+    let mut bad_scale = wrapped.clone();
+    bad_scale["document"]["viewports"][vp.to_string()]["scale"] = json!(0.);
+    cases.push(bad_scale);
+    let mut bad_margin = wrapped.clone();
+    bad_margin["document"]["sheets"][a.to_string()]["margin_top"] = json!(-5.);
+    cases.push(bad_margin);
+    cases.push(wrapped["document"].clone());
+    let mut bad_field = wrapped.clone();
+    bad_field["document"]["viewports"][vp.to_string()]["rotation"] = json!(30.);
+    cases.push(bad_field);
+    for invalid in cases {
+        assert!(
+            reopened
+                .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+                .is_err()
+        );
+        assert_eq!(reopened.snapshot().unwrap(), before);
+    }
+}
+#[test]
+fn sheet_viewport_renders_model_space_y_up_like_cad() {
+    let mut e = DraftEngine::new();
+    let a = sheet(&mut e, "Sheet");
+    // 80x30 mm viewport at sheet (10,10); scale 4 mm/world unit shows
+    // world x in [-10,10], y in [-3.75,3.75] about center (0,0).
+    apply(
+        &mut e,
+        "addViewport",
+        json!({"sheet":a,"x":10.,"y":10.,"width":80.,"height":30.,"center_x":0.,"center_y":0.,"scale":4.}),
+    );
+    // Asymmetric marker: a horizontal segment at world y=+3 (near the top of
+    // the model window). CAD semantics: model +y must rise toward sheet +y,
+    // i.e. land on the upper half of the viewport on paper.
+    let p = point(&mut e, -8., 3.);
+    let q = point(&mut e, 8., 3.);
+    apply(
+        &mut e,
+        "addSegment",
+        json!({"a":p,"b":q,"color":[0,0,0,255],"width":0.2}),
+    );
+    let r = apply(&mut e, "renderFrame", sheet_frame(a)).data;
+    let rgba = base64_decode(r["pixels_b64"].as_str().unwrap());
+    let w = r["width"].as_u64().unwrap() as usize;
+    assert_eq!(w, 378);
+    // Viewport pixel band: x 38..340, y 38..151 on the 378x189 sheet.
+    let dark_rows = |y0: usize, y1: usize| {
+        (y0..y1)
+            .flat_map(|y| (38..340).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                let i = (y * w + x) * 4;
+                rgba[i] < 128 && rgba[i + 1] < 128 && rgba[i + 2] < 128
+            })
+            .count()
+    };
+    // Correct orientation puts the marker near row ~49 (upper band); a
+    // mirrored viewport would put it near row ~140 (lower band).
+    let upper = dark_rows(42, 62);
+    let lower = dark_rows(125, 145);
+    assert!(
+        upper > 100 && upper > lower * 4,
+        "model +y must render toward sheet +y: upper={upper} lower={lower}"
+    );
+}

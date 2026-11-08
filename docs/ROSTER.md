@@ -1726,6 +1726,51 @@ files (1 new nf-cli grammar e2e), `pnpm --filter @nitro-forge/draft
 typecheck` clean. UI adoption, native acceptance and full P17 completion are
 not implied.
 
+## Draft paper space slice A7 (2026-11-07)
+
+Draft gains bounded paper-space state per the Track-A backlog (`sheets`/
+`viewports` model + ops; `renderFrame{sheet_id}`; print stays host-side).
+`sheets` (at most32) are named page setups in fixed millimetres regardless
+of document `units`: `width`/`height` 50..2000 mm with unique 1..512-byte
+names, four margins (default 10 mm, must leave a positive printable area);
+orientation is derived, never stored. `viewports` (at most64) are
+paper-space rectangles fully contained in their sheet (sheet-mm coordinates,
+bottom-left origin, +y up) carrying a model window: `center_x`/`center_y`
+world point at the viewport center and `scale` as paper mm per world unit
+(1e-6..1e3), plus `visible`/`locked` honored like entities. Ops
+`addSheet`/`updateSheet`/`removeSheet`/`addViewport`/`updateViewport`/
+`removeViewport` follow the layer-op patterns: atomic apply, single journal
+entries, `removeSheet` rejects nonempty sheets, locked viewports reject all
+fields except `id`/`locked`, and final `validate` rejects dangling sheet
+references, duplicate names, bad sizes/margins and out-of-sheet rectangles
+on mutation and hostile restore. `renderFrame` gains the mutually exclusive
+`{sheet_id,dpi?}` form (dpi default 96, admitted 24..600): it rasterizes an
+opaque white paper field at the sheet's pixel size, draws margin/viewport
+borders as fixed 0.25 mm chrome, and composites each visible viewport's
+model window — the full hatch/entity/dimension scene honoring
+`visible`/layer visibility — from an offscreen Prism scene sized to the
+viewport's pixel rectangle. The raster boundary is the honest clip (Prism
+has no vector path-clip); nothing outside the window is rasterized and no
+clip is faked. Sub-pixel viewports draw nothing; oversized pixel budgets
+reject the read. Deferred and documented: paper-space entities, title
+blocks/sheet templates, active-sheet selection, viewport rotation/tint,
+non-uniform scale, plot styles, print/export (`printReady` stays false
+host-side). Snapshot compat is presence-triggered: any sheet/viewport
+forces the existing strict `{kind:"draft",schema:2}` wrapper; inner state
+stays schema:1 and legacy bare snapshots restore byte-identically.
+`describe`/`evaluate` expose the new maps; the command grammar is unchanged
+(typed ops only). `DraftDocument` gains `addSheet`/`updateSheet`/
+`removeSheet`/`addViewport`/`updateViewport`/`removeViewport`/`renderSheet`.
+
+Local evidence: `cargo test -p draft-engine` 45 passed (3 new paper-space
+tests covering CRUD/validation/locks/single-entry undo, real clipped sheet
+pixels including hidden-viewport and payload-honesty rejections, and
+wrapper/hostile-restore cases), `cargo build -p nf-cli` clean,
+`pnpm install --prefer-offline` clean, `pnpm --filter @nitro-forge/draft
+test` 13 passed across 6 files (1 new nf-cli paper-space e2e),
+`pnpm --filter @nitro-forge/draft typecheck` clean. UI adoption, native
+acceptance and full P17 completion are not implied.
+
 ## P16 design comment threads/pins slice G checkpoint (2026-11-08)
 
 Design gains engine-owned comment threads as durable document state under

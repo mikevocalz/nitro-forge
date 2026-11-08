@@ -44,6 +44,12 @@ solver** (largest; start with distance/perpendicular/tangent subset),
   read-only).
 - A7 paper space: `sheets`/`viewports` model + ops; `renderFrame{sheet_id}`;
   print is host-side (`printReady=false` until export exists).
+  **Implemented 2026-11-07** (worktree forge-w3-draft-a7): sheets are named
+  mm page setups (50..2000 mm, margins, unique names); viewports are
+  sheet-contained mm rects with a world center + mm-per-unit scale, clipped
+  honestly by offscreen raster boundary; deferred: paper-space entities,
+  title blocks, active sheet, rotation/tint, print/export. See ROSTER
+  "Draft paper space slice A7".
 - A8 command grammar: `LAYER`, `DIM`, `HATCH`, maybe `BLOCK`; update
   `DRAFT_COMMAND_COMPLETIONS`.
 - A9 blocks/instances: scope decision; transform-aware snaps moderate.

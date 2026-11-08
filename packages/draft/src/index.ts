@@ -20,8 +20,12 @@ export interface DraftDimension{id:number;kind:DraftDimensionKind;points?:number
 export interface DraftDimensionMeasured{value:number|null;lines:Array<[[number,number],[number,number]]>}
 /** `evaluate` projection of a dimension: authored fields plus read-derived status and measured geometry. Orphaned dimensions (references deleted after writes) keep authored refs with `measured:null`. */
 export interface DraftDimensionState extends DraftDimension{status:'linked'|'orphaned';measured:DraftDimensionMeasured|null}
+/** Paper-space sheet (slice A7): named page setup in fixed millimetres regardless of `units`; margins inset the printable area. Sheet coordinates are mm with origin at the paper's bottom-left, +y up; portrait/landscape is derived from width vs height. Title blocks and paper-space entities are deferred. */
+export interface DraftSheet{id:number;name:string;width:number;height:number;margin_top:number;margin_right:number;margin_bottom:number;margin_left:number}
+/** Paper-space viewport entity: `x`,`y`,`width`,`height` is its rectangle in sheet millimetres (bottom-left origin, +y up, fully inside the sheet). `center_x`/`center_y` is the world point at the viewport center; `scale` is paper millimetres per world unit. Model content clips at the viewport's raster boundary — there is no vector clip. Sheet viewports render model space y-up (model +y toward sheet +y), matching CAD identity rotation. */
+export interface DraftViewportEntity{id:number;sheet:number;name:string;x:number;y:number;width:number;height:number;center_x:number;center_y:number;scale:number;visible:boolean;locked:boolean}
 export interface SnapSettings{grid:boolean;spacing:number;origin_x:number;origin_y:number;endpoint:boolean;midpoint:boolean;projection:boolean;intersection:boolean;ortho:boolean;polar:boolean;polar_increment:number;center:boolean;nearest_circle:boolean;tangent:boolean}
-export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>;hatches?:Record<string,DraftHatch>;dimensions?:Record<string,DraftDimension>}
+export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>;hatches?:Record<string,DraftHatch>;dimensions?:Record<string,DraftDimension>;sheets?:Record<string,DraftSheet>;viewports?:Record<string,DraftViewportEntity>}
 export interface SolveReport{scope:'point_coordinates';status:'solved'|'underconstrained'|'inconsistent';rank:number;dof:number;residual:number;unsatisfied_constraints:number[];unsatisfied_locked_points:number[];applied:boolean}
 export interface SnapResult{kind:'grid'|'endpoint'|'midpoint'|'projection'|'intersection'|'ortho'|'polar'|'center'|'nearest_circle'|'tangent';x:number;y:number;distance:number;sources:number[];angle_degrees?:number}
 export interface DraftSnapQuery{candidate:SnapResult|null;source_revision:number}
@@ -64,6 +68,14 @@ export class DraftDocument{
  addDimension(options:{kind:DraftDimensionKind;points?:number[];entity?:number;axis?:DraftDimensionAxis}&Partial<Pick<DraftDimension,'name'|'color'|'width'|'visible'|'locked'|'layer'>>){return this.document.apply<{dimension_id:number}>('addDimension',options);}
  updateDimension(id:number,patch:Partial<Omit<DraftDimension,'id'>>){return this.document.apply<{ok:boolean}>('updateDimension',{...patch,id});}
  removeDimension(id:number){return this.document.apply<{ok:boolean}>('removeDimension',{id});}
+ /** Paper-space sheet: width/height 50..2000 mm, margins default 10 mm and must leave a positive printable area. Sheet names are unique; removing a sheet requires removing its viewports first. */
+ addSheet(name:string,options:{width:number;height:number;margin_top?:number;margin_right?:number;margin_bottom?:number;margin_left?:number}){return this.document.apply<{sheet_id:number}>('addSheet',{name,...options});}
+ updateSheet(id:number,patch:Partial<Omit<DraftSheet,'id'>>){return this.document.apply<{ok:boolean}>('updateSheet',{...patch,id});}
+ removeSheet(id:number){return this.document.apply<{ok:boolean}>('removeSheet',{id});}
+ /** Paper-space viewport on an existing sheet; the rectangle must lie fully inside the sheet and `scale` is paper mm per world unit. */
+ addViewport(options:{sheet:number;x:number;y:number;width:number;height:number;center_x:number;center_y:number;scale:number}&Partial<Pick<DraftViewportEntity,'name'|'visible'|'locked'>>){return this.document.apply<{viewport_id:number}>('addViewport',options);}
+ updateViewport(id:number,patch:Partial<Omit<DraftViewportEntity,'id'>>){return this.document.apply<{ok:boolean}>('updateViewport',{...patch,id});}
+ removeViewport(id:number){return this.document.apply<{ok:boolean}>('removeViewport',{id});}
  setSnapSettings(patch:Partial<SnapSettings>){return this.document.apply<{ok:boolean}>('setSnapSettings',patch);}
  /** Tolerance is world units; the host converts any screen tolerance with its actual viewport. */
  querySnap(x:number,y:number,tolerance:number,anchor?:{x:number;y:number}){return this.document.apply<DraftSnapQuery>('querySnap',{x,y,tolerance,...(anchor?{anchor}:{})});}
@@ -76,8 +88,10 @@ export class DraftDocument{
  solve(tolerance=1e-7){return this.document.apply<SolveReport>('solve',{tolerance});}
  /** Read-only deterministic closed-loop tracing; tolerance is world units (default 1e-6). */
  findProfiles(tolerance?:number){return this.document.apply<DraftProfiles>('findProfiles',tolerance===undefined?{}:{tolerance});}
- evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'hatches'|'order'>&{dimensions:Record<string,DraftDimensionState>;source_revision:number}>('evaluate',{});}
+ evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'hatches'|'sheets'|'viewports'|'order'>&{dimensions:Record<string,DraftDimensionState>;source_revision:number}>('evaluate',{});}
  renderFrame(viewport:DraftViewport){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',viewport);}
+ /** Renders a paper-space sheet at `dpi` (default 96, admitted 24..600): opaque white paper, margin chrome, then each visible viewport's model window clipped at its raster boundary. Print/export stays host-side. */
+ renderSheet(sheet_id:number,dpi?:number){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',{sheet_id,...(dpi===undefined?{}:{dpi})});}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}
 }
 

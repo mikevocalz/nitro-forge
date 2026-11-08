@@ -20,6 +20,8 @@ fn requires_matching_reader(state: &State) -> bool {
         || !state.layers.is_empty()
         || !state.hatches.is_empty()
         || !state.dimensions.is_empty()
+        || !state.sheets.is_empty()
+        || !state.viewports.is_empty()
         || state.segments.values().any(|s| s.layer != 0)
         || state.circles.values().any(|c| c.layer != 0)
         || state.arcs.values().any(|a| a.layer != 0)
@@ -236,7 +238,7 @@ impl Engine for DraftEngine {
             "describe" => {
                 fields(p, &[])?;
                 let mut value = serde_json::to_value(&*self.state)?;
-                for key in ["circles", "arcs", "hatches", "dimensions"] {
+                for key in ["circles", "arcs", "hatches", "dimensions", "sheets", "viewports"] {
                     if value.get(key).is_none() {
                         value[key] = json!({})
                     }
@@ -270,7 +272,7 @@ impl Engine for DraftEngine {
                     evaluated.insert(id.to_string(), value);
                 }
                 return Ok(CommandResult::read_only(
-                    json!({"points":self.state.points,"segments":self.state.segments,"circles":self.state.circles,"arcs":self.state.arcs,"hatches":self.state.hatches,"dimensions":evaluated,"order":self.state.order,"source_revision":self.revision}),
+                    json!({"points":self.state.points,"segments":self.state.segments,"circles":self.state.circles,"arcs":self.state.arcs,"hatches":self.state.hatches,"dimensions":evaluated,"sheets":self.state.sheets,"viewports":self.state.viewports,"order":self.state.order,"source_revision":self.revision}),
                 ));
             }
             "querySnap" => {
@@ -887,6 +889,158 @@ impl Engine for DraftEngine {
                     return Err(bad("dimension is on a locked layer"));
                 }
                 next.dimensions.remove(&id);
+            }
+            "addSheet" => {
+                fields(
+                    p,
+                    &[
+                        "name", "width", "height", "margin_top", "margin_right",
+                        "margin_bottom", "margin_left",
+                    ],
+                )?;
+                let name: String = get(p, "name")?;
+                if name.is_empty()
+                    || name.len() > 512
+                    || next.sheets.values().any(|s| s.name == name)
+                {
+                    return Err(bad("invalid or duplicate sheet name"));
+                }
+                let id = next.allocate()?;
+                next.sheets.insert(
+                    id,
+                    Arc::new(Sheet {
+                        id,
+                        name,
+                        width: get(p, "width")?,
+                        height: get(p, "height")?,
+                        margin_top: optional(p, "margin_top", 10.)?,
+                        margin_right: optional(p, "margin_right", 10.)?,
+                        margin_bottom: optional(p, "margin_bottom", 10.)?,
+                        margin_left: optional(p, "margin_left", 10.)?,
+                    }),
+                );
+                data = json!({"sheet_id":id});
+            }
+            "updateSheet" => {
+                fields(
+                    p,
+                    &[
+                        "id", "name", "width", "height", "margin_top", "margin_right",
+                        "margin_bottom", "margin_left",
+                    ],
+                )?;
+                let id = get(p, "id")?;
+                if !next.sheets.contains_key(&id) {
+                    return Err(bad("unknown sheet"));
+                }
+                if let Some(name) = p.get("name") {
+                    let name: String = serde_json::from_value(name.clone())?;
+                    if name.is_empty()
+                        || name.len() > 512
+                        || next
+                            .sheets
+                            .values()
+                            .any(|s| s.id != id && s.name == name)
+                    {
+                        return Err(bad("invalid or duplicate sheet name"));
+                    }
+                }
+                let sheet = next.sheets.get(&id).ok_or_else(|| bad("unknown sheet"))?;
+                let sheet = patch(
+                    &**sheet,
+                    p,
+                    &[
+                        "id", "name", "width", "height", "margin_top", "margin_right",
+                        "margin_bottom", "margin_left",
+                    ],
+                )?;
+                next.sheets.insert(id, Arc::new(sheet));
+            }
+            "removeSheet" => {
+                fields(p, &["id"])?;
+                let id = get(p, "id")?;
+                if !next.sheets.contains_key(&id) {
+                    return Err(bad("unknown sheet"));
+                }
+                if next.viewports.values().any(|v| v.sheet == id) {
+                    return Err(bad("sheet still contains viewports"));
+                }
+                next.sheets.remove(&id);
+            }
+            "addViewport" => {
+                fields(
+                    p,
+                    &[
+                        "sheet", "x", "y", "width", "height", "center_x", "center_y",
+                        "scale", "name", "visible", "locked",
+                    ],
+                )?;
+                let sheet: u64 = get(p, "sheet")?;
+                if !next.sheets.contains_key(&sheet) {
+                    return Err(bad("unknown sheet"));
+                }
+                let id = next.allocate()?;
+                next.viewports.insert(
+                    id,
+                    Arc::new(ViewportEntity {
+                        id,
+                        sheet,
+                        name: optional(p, "name", "Viewport".into())?,
+                        x: get(p, "x")?,
+                        y: get(p, "y")?,
+                        width: get(p, "width")?,
+                        height: get(p, "height")?,
+                        center_x: get(p, "center_x")?,
+                        center_y: get(p, "center_y")?,
+                        scale: get(p, "scale")?,
+                        visible: optional(p, "visible", true)?,
+                        locked: optional(p, "locked", false)?,
+                    }),
+                );
+                data = json!({"viewport_id":id});
+            }
+            "updateViewport" => {
+                let id = get(p, "id")?;
+                let viewport = next
+                    .viewports
+                    .get(&id)
+                    .ok_or_else(|| bad("unknown viewport"))?;
+                fields(
+                    p,
+                    &[
+                        "id", "sheet", "x", "y", "width", "height", "center_x",
+                        "center_y", "scale", "name", "visible", "locked",
+                    ],
+                )?;
+                if viewport.locked
+                    && p.as_object()
+                        .unwrap()
+                        .keys()
+                        .any(|k| !["id", "locked"].contains(&k.as_str()))
+                {
+                    return Err(bad("viewport is locked"));
+                }
+                let viewport = patch(
+                    &**viewport,
+                    p,
+                    &[
+                        "id", "sheet", "x", "y", "width", "height", "center_x",
+                        "center_y", "scale", "name", "visible", "locked",
+                    ],
+                )?;
+                next.viewports.insert(id, Arc::new(viewport));
+            }
+            "removeViewport" => {
+                fields(p, &["id"])?;
+                let id = get(p, "id")?;
+                let viewport = next
+                    .viewports
+                    .get(&id)
+                    .ok_or_else(|| bad("unknown viewport"))?;
+                if viewport.locked {
+                    return Err(bad("viewport is locked"));
+                }
+                next.viewports.remove(&id);
             }
             "setSnapSettings" => {
                 next.snaps = patch(
