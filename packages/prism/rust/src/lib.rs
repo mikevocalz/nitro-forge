@@ -10,6 +10,7 @@ mod geom;
 mod colors;
 mod model;
 mod ops;
+mod png;
 mod raster;
 mod render;
 mod select;
@@ -39,6 +40,11 @@ const COMMAND_VERSION: u32 = 1;
 /// Canvas ceiling: 2^28 pixels = 1 GiB of RGBA. Larger requests are rejected
 /// with `Validation` so a hostile payload cannot trigger a giant allocation.
 const MAX_PIXELS: u64 = 1 << 28;
+/// `encodePng` export budget — matches the portable PNG preview budget used
+/// by studio-workspace (`validatePreviewSize`): at most 4096 px per side and
+/// 1,048,576 pixels total. Larger canvases reject before any render.
+const PNG_MAX_DIM: u32 = 4096;
+const PNG_MAX_PIXELS: u64 = 1_048_576;
 /// Pixels between cooperative cancellation checkpoints inside long pixel
 /// loops (matches photo's `processPreview` cadence).
 pub(crate) const CHECKPOINT_EVERY_PX: usize = 4096;
@@ -881,6 +887,65 @@ impl PrismEngine {
         .with_bytes(cmd, "pixels_b64", pixels))
     }
 
+    /// `encodePng {layer?}` — PNG-encode rendered RGBA bytes. Without
+    /// `layer` the pixels are exactly what `flatten` returns; with `layer`
+    /// the named layer's subtree renders alone at canvas size through the
+    /// same path as `layerThumbnail` (content + transform + mask — layer
+    /// opacity, blend mode and clipping are NOT applied). The PNG is 8-bit
+    /// RGBA, non-interlaced, no palette; see `png.rs` for the honest subset.
+    /// Budget: ≤4096 px per side and ≤1,048,576 pixels, checked before any
+    /// render allocation. Read-only: no undo entry, no `document:changed`.
+    /// Binary commands receive the PNG bytes as output; JSON callers get
+    /// `png_b64`.
+    fn op_encode_png(
+        &self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let (w, h) = (self.width, self.height);
+        if w == 0 || h == 0 {
+            return Err(EngineError::validation("canvas is empty"));
+        }
+        if w > PNG_MAX_DIM
+            || h > PNG_MAX_DIM
+            || (w as u64).saturating_mul(h as u64) > PNG_MAX_PIXELS
+        {
+            return Err(EngineError::out_of_bounds(format!(
+                "canvas {w}x{h} exceeds the PNG export budget \
+                 (at most {PNG_MAX_DIM} px per side, {PNG_MAX_PIXELS} px total)"
+            )));
+        }
+        let layer_idx = match cmd.payload.get("layer") {
+            None | Some(Value::Null) => None,
+            Some(v) => {
+                let id = v
+                    .as_u64()
+                    .ok_or_else(|| EngineError::invalid("field 'layer' must be a u64"))?;
+                Some(self.layer_index(id)?)
+            }
+        };
+        let units = match layer_idx {
+            None => self.layers.len() as u64,
+            Some(i) => self.subtree_ids(self.layers[i].id).len() as u64,
+        };
+        let mut task = RenderTask::new(ctx, units);
+        let rgba = match layer_idx {
+            None => self.scene().flatten_ctx(&mut task)?,
+            Some(i) => {
+                let scene = self.scene();
+                let l = &self.layers[i];
+                scene.render_layer_ctx(l, &scene.parent_affine(l), &mut task)?
+            }
+        };
+        let png = png::encode_rgba(&rgba, w, h)?;
+        Ok(CommandResult::read_only(json!({
+            "width": w,
+            "height": h,
+            "format": "png",
+        }))
+        .with_bytes(cmd, "png_b64", png))
+    }
+
     /// `getLayer {id}` — the layer object. Read-only.
     fn op_get_layer(&self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
@@ -1088,6 +1153,7 @@ impl PrismEngine {
             "fillLayer" => self.op_fill_layer(&cmd.payload, ctx),
             "applyFilter" => self.op_apply_filter(&cmd.payload, ctx),
             "flatten" => self.op_flatten(&cmd, ctx),
+            "encodePng" => self.op_encode_png(&cmd, ctx),
             "getLayer" => self.op_get_layer(&cmd.payload),
             "describe" => self.op_describe(),
             "setColors" => self.op_set_colors(&cmd.payload),
@@ -2083,6 +2149,88 @@ mod tests {
         assert_eq!(p[0], 255);
         assert_eq!(p[3], 64);
         assert_eq!(pixel(&px, 4, 1, 0), [0, 0, 0, 0]);
+    }
+
+    // -- encodePng -------------------------------------------------------------
+
+    /// Decode `png_b64` from an `encodePng` result into `(w, h, rgba)`.
+    fn png_pixels(e: &mut PrismEngine, payload: Value) -> (u32, u32, Vec<u8>, String) {
+        let r = apply(e, "encodePng", payload);
+        let b64s = r.data["png_b64"].as_str().expect("png_b64 missing").to_string();
+        let bytes = b64::decode(&b64s).unwrap();
+        let (w, h, px) = png::tests::decode(&bytes);
+        (w, h, px, b64s)
+    }
+
+    #[test]
+    fn encode_png_matches_flatten_and_is_deterministic() {
+        let mut e = eng();
+        let l = add_raster(&mut e);
+        fill(&mut e, l, [10, 20, 30, 255]);
+        apply(&mut e, "drawPixels", json!({"id": l, "x": 1, "y": 1, "w": 1, "h": 1,
+            "data_b64": b64::encode(&[200, 100, 50, 255])}));
+        let flat = flatten_pixels(&mut e);
+        let (w, h, px, first) = png_pixels(&mut e, json!({}));
+        assert_eq!((w, h), (4, 4));
+        assert_eq!(px, flat, "encodePng composite must equal flatten pixels");
+        // Read-only: no events, and a second call is byte-identical.
+        let r = e.apply(cmd("encodePng", json!({}))).unwrap();
+        assert!(r.events.is_empty(), "encodePng must not emit events");
+        assert_eq!(r.data["format"], "png");
+        assert_eq!(r.data["png_b64"].as_str().unwrap(), first);
+        // Binary sidecar path returns raw PNG bytes, no png_b64.
+        let bin = e
+            .apply(Command::new("encodePng", json!({})).with_binary(None))
+            .unwrap();
+        assert_eq!(bin.output.as_deref(), Some(b64::decode(&first).unwrap().as_slice()));
+        assert!(bin.data.get("png_b64").is_none());
+        // The op records nothing: undo still unwinds the last real mutation
+        // (the drawPixels), leaving the fillLayer color everywhere.
+        assert!(e.undo().unwrap());
+        assert_eq!(flatten_pixels(&mut e), vec![[10u8, 20, 30, 255]; 16].concat());
+        assert!(e.undo().unwrap());
+        assert_eq!(flatten_pixels(&mut e), vec![0u8; 4 * 4 * 4]);
+    }
+
+    #[test]
+    fn encode_png_layer_renders_subtree_alone() {
+        let mut e = eng();
+        let bottom = add_raster(&mut e);
+        fill(&mut e, bottom, [255, 0, 0, 255]);
+        let top = add_raster(&mut e);
+        fill(&mut e, top, [0, 0, 255, 255]);
+        apply(&mut e, "setLayerOpacity", json!({"id": top, "opacity": 0.5}));
+        // Composite honors opacity; the layer export renders the subtree
+        // alone (same semantics as layerThumbnail: no opacity/blend).
+        let (_, _, comp, _) = png_pixels(&mut e, json!({}));
+        let (_, _, layer_px, _) = png_pixels(&mut e, json!({"layer": top}));
+        assert_eq!(layer_px, vec![[0u8, 0, 255, 255]; 16].concat());
+        assert_ne!(layer_px, comp);
+        // Unknown layer id and malformed layer reject.
+        let err = apply_err(&mut e, "encodePng", json!({"layer": 999}));
+        assert_eq!(err.code, ignition_core::ErrorCode::NotFound);
+        let err = apply_err(&mut e, "encodePng", json!({"layer": "x"}));
+        assert_eq!(err.code, ignition_core::ErrorCode::InvalidCommand);
+    }
+
+    #[test]
+    fn encode_png_respects_export_budget() {
+        // Side over 4096.
+        let mut e = PrismEngine::new(4097, 1);
+        let err = apply_err(&mut e, "encodePng", json!({}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        // Pixel total over 1,048,576 (2048*2048).
+        let mut e = PrismEngine::new(2048, 2048);
+        let err = apply_err(&mut e, "encodePng", json!({}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        // Empty canvas rejects.
+        let mut e = PrismEngine::new(0, 0);
+        let err = apply_err(&mut e, "encodePng", json!({}));
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+        // Boundary values still encode.
+        let mut e = PrismEngine::new(1024, 1024);
+        let r = apply(&mut e, "encodePng", json!({}));
+        assert_eq!(r.data["width"], 1024);
     }
 
     // -- getLayer / describe --------------------------------------------------

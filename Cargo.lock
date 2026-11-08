@@ -976,7 +976,9 @@ dependencies = [
 name = "prism-engine"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "ignition-core",
+ "png",
  "serde",
  "serde_json",
 ]

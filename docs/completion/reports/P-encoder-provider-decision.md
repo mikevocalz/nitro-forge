@@ -120,3 +120,17 @@ choice.
 - Desktop Linux and the XR targets (Quest/PICO) have no named encoder
   candidate here; scope them explicitly before P18/P20 acceptance rather
   than assuming MediaCodec/Media Foundation coverage extends there.
+
+## Addendum — 2026-11 (prism:png engine admission)
+
+The "adjacent non-media" row above is resolved engine-side: Prism gained an
+`encodePng` read op (`codex/w10-prism-png`) that returns deterministic
+8-bit RGBA PNG bytes as `png_b64`/binary output — the same bytes-across-the-
+boundary pattern as `flatten`'s `pixels_b64`, consistent with the I/O-free
+engine contract (no file writes, no host codec). It uses the `png` crate
+0.18.1 already in the workspace lock (MIT OR Apache-2.0; prism
+THIRD_PARTY_NOTICES.md). `TRANSFER_DEFERRED["prism:png"]` is cleared; the
+remaining gap is host-side registration of a png `ExportFormat` in the
+transfer sheets, which this decision never covered. The media-encoder
+provider decision above is unchanged — video/audio export still routes
+through the host provider.

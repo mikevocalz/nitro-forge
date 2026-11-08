@@ -9,3 +9,10 @@ license.workspace = true
 ignition-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+# PNG encoder for the `encodePng` read op (already in the workspace lock via
+# folio-render's `image` dep; MIT OR Apache-2.0 — see THIRD_PARTY_NOTICES.md).
+png = "0.18"
+
+[dev-dependencies]
+# zlib inflate for the encodePng round-trip test (already in the lock tree).
+flate2 = "1"
