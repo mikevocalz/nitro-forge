@@ -2558,3 +2558,310 @@ fn prototype_transition_lifecycle_cascades_and_hostile_restore() {
         .is_err());
     assert_eq!(e2.snapshot().unwrap(), bytes);
 }
+
+// --- Slice F: describeHandoff + exportSlice + state_revision ---
+
+fn handoff(e: &mut DesignEngine) -> Value {
+    call(e, "describeHandoff", json!({})).data
+}
+fn export(e: &mut DesignEngine, node: u64, scale: Option<f64>) -> CommandResult {
+    let mut p = json!({"node": node});
+    if let Some(s) = scale {
+        p["scale"] = json!(s);
+    }
+    e.apply(Command::new("exportSlice", p)).unwrap()
+}
+#[test]
+fn handoff_is_deterministic_bounded_and_eventless_with_revision_tag() {
+    let mut e = DesignEngine::new();
+    let frame = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"name":"Card","x":10,"y":20,"width":200,"height":100,"fill":[10,20,30,255]}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    let text = call(
+        &mut e,
+        "addText",
+        json!({"parent":frame,"name":"Title","content":"Hello handoff","style":{"font_size":24,"font_weight":700}}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    let rect = shape(&mut e, frame, 0., 0., 50., 50., [1, 2, 3, 255]);
+    let before = e.snapshot().unwrap();
+    let h1 = call(&mut e, "describeHandoff", json!({}));
+    assert!(h1.events.is_empty(), "handoff read must be eventless");
+    let h2 = call(&mut e, "describeHandoff", json!({}));
+    assert_eq!(h1.data, h2.data, "handoff must be deterministic");
+    assert_eq!(e.snapshot().unwrap(), before, "handoff must not mutate");
+    let d = &h1.data;
+    assert_eq!(d["state_revision"], json!(3)); // new + addFrame + addText + addShape... see below
+    assert_eq!(d["units"], "document");
+    assert_eq!(d["canvas"]["width"], json!(640.0));
+    assert_eq!(d["assets"], json!([]));
+    assert!(d["deferred"].as_array().unwrap().len() >= 3);
+    // Nodes follow stored DFS order: root, frame, its children.
+    let nodes = d["nodes"].as_array().unwrap();
+    assert_eq!(nodes[0]["id"], json!(1));
+    assert_eq!(nodes[1]["id"], json!(frame));
+    let kinds: Vec<&str> = nodes.iter().map(|n| n["kind"].as_str().unwrap()).collect();
+    assert!(kinds.contains(&"text") && kinds.contains(&"rect") && kinds.contains(&"frame"));
+    let tn = nodes.iter().find(|n| n["id"] == text).unwrap();
+    assert_eq!(tn["text"]["font_size"], json!(24.0));
+    assert_eq!(tn["text"]["content"], json!("Hello handoff"));
+    assert_eq!(tn["text"]["content_truncated"], json!(false));
+    // Measurements mirror evaluateLayout boxes.
+    let eval = call(&mut e, "evaluateLayout", json!({}));
+    assert_eq!(
+        d["measurements"]["boxes"].as_array().unwrap().len(),
+        eval.data["boxes"].as_array().unwrap().len()
+    );
+    assert_eq!(d["measurements"]["total"], eval.data["boxes"].as_array().unwrap().len());
+    assert_eq!(d["measurements"]["truncated"], json!(false));
+    // Typography carries the text node with its evaluated box.
+    let typo = d["typography"].as_array().unwrap();
+    assert_eq!(typo.len(), 1);
+    assert_eq!(typo[0]["node"], json!(text));
+    assert_eq!(typo[0]["text"]["font_weight"], json!(700));
+    // Snippets are tagged with state_revision and deterministic.
+    let snippets = d["snippets"].as_array().unwrap();
+    assert_eq!(snippets.len() as u64, d["snippets_total"].as_u64().unwrap());
+    assert!(snippets.iter().all(|s| s["state_revision"] == d["state_revision"]));
+    let frame_snip = snippets.iter().find(|s| s["node"] == frame).unwrap();
+    assert!(frame_snip["hint"].as_str().unwrap().contains("frame \"Card\""));
+    let text_snip = snippets.iter().find(|s| s["node"] == text).unwrap();
+    assert!(text_snip["hint"].as_str().unwrap().contains("Hello handoff"));
+    // A registered screen surfaces with its evaluated box.
+    call(&mut e, "definePrototypeScreen", json!({"node":frame,"entry":true}));
+    let d2 = handoff(&mut e);
+    assert_eq!(d2["screens"].as_array().unwrap().len(), 1);
+    assert_eq!(d2["screens"][0]["node"], json!(frame));
+    assert_eq!(d2["screens"][0]["entry"], json!(true));
+    assert!(d2["screens"][0]["box"]["width"].is_number());
+    // Reads never touch the journal: undo still removes the screen def.
+    assert!(e.undo().unwrap());
+    assert!(e.state.prototype.screens.is_empty());
+    let _ = rect;
+}
+#[test]
+fn state_revision_advances_on_mutation_batch_undo_redo_and_restore() {
+    let mut e = DesignEngine::new();
+    assert_eq!(handoff(&mut e)["state_revision"], json!(0));
+    shape(&mut e, 1, 0., 0., 10., 10., [0, 0, 0, 255]);
+    assert_eq!(handoff(&mut e)["state_revision"], json!(1));
+    // A no-op mutation does not advance the revision.
+    call(&mut e, "updateNode", json!({"id":2,"name":"same-name-check"}));
+    let rev_after_rename = handoff(&mut e)["state_revision"].as_u64().unwrap();
+    call(&mut e, "updateNode", json!({"id":2,"name":"same-name-check"}));
+    assert_eq!(
+        handoff(&mut e)["state_revision"].as_u64().unwrap(),
+        rev_after_rename,
+        "net-unchanged ops must not bump state_revision"
+    );
+    // Batch commits count as one revision regardless of step count.
+    e.apply(Command::new(
+        ignition_core::OP_BATCH,
+        json!({"commands":[
+            {"op":"addShape","payload":{"parent":1,"kind":"rect","x":0,"y":0,"width":5,"height":5}},
+            {"op":"addShape","payload":{"parent":1,"kind":"ellipse","x":0,"y":0,"width":5,"height":5}},
+        ]}),
+    ))
+    .unwrap();
+    let batch_rev = handoff(&mut e)["state_revision"].as_u64().unwrap();
+    assert_eq!(batch_rev, rev_after_rename + 1);
+    assert!(e.undo().unwrap());
+    assert_eq!(
+        handoff(&mut e)["state_revision"].as_u64().unwrap(),
+        batch_rev + 1,
+        "undo advances the revision"
+    );
+    assert!(e.redo().unwrap());
+    assert_eq!(
+        handoff(&mut e)["state_revision"].as_u64().unwrap(),
+        batch_rev + 2,
+        "redo advances the revision"
+    );
+    // Restore advances the revision; the counter is engine-side so a
+    // snapshot cannot smuggle an arbitrary value.
+    let bytes = e.snapshot().unwrap();
+    let mut e2 = DesignEngine::new();
+    e2.restore(&bytes).unwrap();
+    assert_eq!(handoff(&mut e2)["state_revision"], json!(1));
+    e2.restore(&bytes).unwrap();
+    assert_eq!(handoff(&mut e2)["state_revision"], json!(2));
+}
+#[test]
+fn export_slice_renders_rgba_manifest_and_stays_eventless() {
+    let mut e = DesignEngine::new();
+    let frame = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"name":"Slice","x":10,"y":10,"width":8,"height":6,"fill":[200,100,50,255]}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    let child = shape(&mut e, frame, 1., 1., 2., 2., [0, 255, 0, 255]);
+    let sibling = shape(&mut e, 1, 100., 100., 4., 4., [255, 0, 0, 255]);
+    let before = e.snapshot().unwrap();
+    let r = export(&mut e, frame, None);
+    assert!(r.events.is_empty(), "exportSlice must be eventless");
+    assert_eq!(e.snapshot().unwrap(), before, "exportSlice must not mutate");
+    assert_eq!(r.data["slice"]["width"], json!(8));
+    assert_eq!(r.data["slice"]["height"], json!(6));
+    assert_eq!(r.data["slice"]["scale"], json!(1.0));
+    assert_eq!(r.data["slice"]["format"], "rgba8");
+    let px = r.data["pixels_b64"].as_str().unwrap();
+    let bytes = ignition_core::base64_decode(px).unwrap();
+    assert_eq!(bytes.len(), 8 * 6 * 4);
+    // Frame fill covers the whole slice; the child rect is inside it.
+    assert_eq!(&bytes[0..4], &[200, 100, 50, 255]);
+    // Manifest nodes are slice-relative and subtree-scoped.
+    let m = &r.data["manifest"];
+    assert_eq!(m["pixel_format"], "rgba8");
+    assert_eq!(m["nodes_total"], m["nodes"].as_array().unwrap().len());
+    assert_eq!(m["nodes_truncated"], json!(false));
+    let ids: Vec<u64> = m["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n["id"].as_u64().unwrap())
+        .collect();
+    assert_eq!(ids, vec![frame, child], "sibling outside the slice subtree must not appear");
+    let c = &m["nodes"][1];
+    assert_eq!(c["x"], json!(1.0));
+    assert_eq!(c["y"], json!(1.0));
+    assert_eq!(c["parent"], json!(frame));
+    assert_eq!(c["depth"], json!(1));
+    // Scale multiplies pixels and stays inside the budget.
+    let r2 = export(&mut e, frame, Some(2.0));
+    assert_eq!(r2.data["slice"]["width"], json!(16));
+    assert_eq!(r2.data["slice"]["height"], json!(12));
+    assert_eq!(
+        ignition_core::base64_decode(r2.data["pixels_b64"].as_str().unwrap()).unwrap().len(),
+        16 * 12 * 4
+    );
+    // Binary-output commands receive raw bytes on the output sidecar.
+    let cmd = Command::new("exportSlice", json!({"node": frame})).with_binary(None);
+    let rb = e.apply(cmd).unwrap();
+    assert!(rb.output.is_some());
+    assert_eq!(rb.output.as_ref().unwrap().len(), 8 * 6 * 4);
+    assert!(rb.data.get("pixels_b64").is_none());
+    // Prototype screens are frame/component nodes: exporting a registered
+    // screen id is the same call.
+    call(&mut e, "definePrototypeScreen", json!({"node":frame}));
+    let rs = export(&mut e, frame, None);
+    assert_eq!(rs.data["manifest"]["nodes_total"], json!(2));
+    let _ = sibling;
+}
+#[test]
+fn export_slice_rejects_bad_targets_scale_and_payloads_atomically() {
+    let mut e = DesignEngine::new();
+    let rect = shape(&mut e, 1, 0., 0., 10., 10., [0, 0, 0, 255]);
+    let text = call(
+        &mut e,
+        "addText",
+        json!({"parent":1,"content":"hi"}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    let before = e.snapshot().unwrap();
+    for bad in [
+        json!({"node":999}),
+        json!({"node":rect}),       // rect is not a frame/component
+        json!({"node":text}),       // text is not a frame/component
+        json!({"node":1,"scale":0.1}),
+        json!({"node":1,"scale":5.0}),
+        json!({"node":1,"scale":"2"}),
+        json!({"node":1,"extra":true}),
+        json!({}),
+    ] {
+        assert!(
+            e.apply(Command::new("exportSlice", bad.clone())).is_err(),
+            "exportSlice must reject {bad}"
+        );
+    }
+    assert_eq!(e.snapshot().unwrap(), before, "rejections must be atomic");
+    // Oversized slice: shrink is impossible, so a huge authored child frame
+    // at scale 4 must fail the pixel budget honestly.
+    let big = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"x":0,"y":0,"width":2000.,"height":2000.}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    let snap = e.snapshot().unwrap();
+    // 2000*4=8000px per side → 64M px > 1_048_576 budget → apply errors.
+    assert!(e
+        .apply(Command::new("exportSlice", json!({"node":big,"scale":4.0})))
+        .is_err());
+    // At scale 0.25 it fits: 500x500 = 250_000 px.
+    let ok = e
+        .apply(Command::new("exportSlice", json!({"node":big,"scale":0.25})))
+        .unwrap();
+    assert_eq!(ok.data["slice"]["width"], json!(500));
+    assert_eq!(e.snapshot().unwrap(), snap);
+}
+#[test]
+fn handoff_covers_instances_variables_and_prototype_state() {
+    let mut e = DesignEngine::new();
+    // Component with a variant + instance exercises expansion provenance.
+    let comp = call(
+        &mut e,
+        "addFrame",
+        json!({"parent":1,"name":"Btn","width":80,"height":40,"fill":[9,9,9,255]}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    shape(&mut e, comp, 0., 0., 80., 40., [9, 9, 9, 255]);
+    call(
+        &mut e,
+        "createComponent",
+        json!({"id":comp,"variants":[{"name":"primary","properties":[{"node":comp,"path":"fill","value":[1,2,3,255]}]}]}),
+    );
+    let inst = call(
+        &mut e,
+        "createInstance",
+        json!({"component":comp,"x":5,"y":5,"variant":"primary"}),
+    )
+    .data["node_id"]
+        .as_u64()
+        .unwrap();
+    call(&mut e, "defineMode", json!({"id":"dark","name":"Dark"}));
+    call(
+        &mut e,
+        "defineVariable",
+        json!({"id":"gap","name":"Gap","type":"number","values":{"dark":{"kind":"number","value":12}}}),
+    );
+    call(
+        &mut e,
+        "bindVariable",
+        json!({"node_id":1,"path":"fill_r","variable_id":"gap"}),
+    );
+    let d = handoff(&mut e);
+    // Instance node reports its spec; expanded clone ids appear only in
+    // measurements (synthetic >= 2^53-1), never in stored `nodes`.
+    let inst_entry = d["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|n| n["id"] == inst)
+        .unwrap();
+    assert_eq!(inst_entry["instance"]["component"], json!(comp));
+    assert_eq!(inst_entry["instance"]["variant"], json!("primary"));
+    assert!(d["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|n| n["id"].as_u64().unwrap() < 9_007_199_254_740_991));
+    // exportSlice on the component subtree includes the expanded render.
+    let r = export(&mut e, comp, None);
+    assert!(r.data["manifest"]["nodes_total"].as_u64().unwrap() >= 2);
+}

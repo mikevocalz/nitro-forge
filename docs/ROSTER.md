@@ -1725,3 +1725,42 @@ nf-cli` clean, `pnpm --filter @nitro-forge/draft test` 12 passed across 5
 files (1 new nf-cli grammar e2e), `pnpm --filter @nitro-forge/draft
 typecheck` clean. UI adoption, native acceptance and full P17 completion are
 not implied.
+
+## P16 design handoff + export contract slice F checkpoint (2026-11-08)
+
+`describeHandoff` and `exportSlice` land the L-12 dev-handoff storage scope
+and the L-15 screen/frame membership scope as pure deterministic reads —
+eventless, ungated, non-mutating, no journal entries. `describeHandoff`
+projects evaluated layout measurements (same variables→expansion→layout
+pipeline as `evaluateLayout`, capped at 8192 boxes with a `truncated` flag),
+stored-node structure in DFS order, bounded typography (content preview
+≤256 UTF-8 bytes plus exact byte length/truncation flag), prototype screen
+membership with evaluated boxes, an always-empty `assets` list (no image or
+asset nodes are admitted), and ≤512 deterministic per-node structural
+hints — "code hints" describing stored state, not generated code. A new
+engine-side `state_revision` u64 (the draft `source_revision` precedent)
+advances on every committed state change — mutations, batch commits,
+`restore`, `undo`, `redo` — is never serialized into snapshots (hostile
+restores cannot choose it), does not advance on net-unchanged ops, and is
+exposed on both reads as a host staleness hint. `exportSlice {node,scale?}`
+requires a stored frame/component node (every registered prototype screen
+qualifies), renders its expanded subtree through the same Prism flatten
+path as `renderFrame` translated to the slice's evaluated origin, and
+returns raw RGBA8 (`pixels_b64`/binary sidecar duality) plus a JSON
+manifest of slice-relative node entries capped at 4096 with
+`nodes_total`/`nodes_truncated` — the raster is never truncated. Optional
+`scale` is bounded to 0.25..=4 (default 1) with the scaled pixel count held
+to the 1,048,576-pixel design output budget. Honest deferrals documented in
+`docs/ENGINE_OPS.md`: no PNG/SVG/vector encoder, no real code generation,
+no asset store, export formats/presets/multi-slice batching host-side,
+presence transport-only. No schema or snapshot change.
+
+Local evidence: `cargo test -p design-engine` 49 passed (4 new tests:
+handoff determinism/bounds/eventlessness/revision tags, revision advance
+across mutation/batch/undo/redo/restore, slice RGBA+manifest/subtree scope/
+scale/binary sidecar, atomic rejections and pixel budget, component+
+instance+variable coverage), `cargo build -p nf-cli` clean,
+`pnpm --filter @nitro-forge/design test` 16 passed across 12 files (1 new
+nf-cli live test, 1 new payload-contract test), `pnpm --filter
+@nitro-forge/design typecheck` clean. UI wiring, native acceptance and full
+P16 completion are not implied.
