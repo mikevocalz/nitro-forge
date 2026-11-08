@@ -240,14 +240,14 @@ fn function(name: &str) -> Option<(&'static str, usize)> {
 
 /// NaN-propagating min/max: IEEE min/max would silently drop NaN operands,
 /// but the spec requires non-finite values to propagate to the boundary.
-fn fmin(a: f64, b: f64) -> f64 {
+pub(crate) fn fmin(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else {
         a.min(b)
     }
 }
-fn fmax(a: f64, b: f64) -> f64 {
+pub(crate) fn fmax(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else {
@@ -255,7 +255,7 @@ fn fmax(a: f64, b: f64) -> f64 {
     }
 }
 /// Manual clamp: `f64::clamp` panics on NaN bounds; comparisons keep NaN v.
-fn fclamp(v: f64, lo: f64, hi: f64) -> f64 {
+pub(crate) fn fclamp(v: f64, lo: f64, hi: f64) -> f64 {
     if v < lo {
         lo
     } else if v > hi {

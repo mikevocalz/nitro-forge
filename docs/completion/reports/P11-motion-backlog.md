@@ -64,6 +64,11 @@ artboards. Media decode is host-side only; no encoder exists in Forge.
 - **I — node graph (value nodes only)**: `State.graph` acyclic, topo-sort,
   step cap; feeds expressions/properties, NOT pixel compositing. Needs
   admitted node-type/port spec first.
+  **Implemented 2026-11-08** per `P11-motion-nodegraph-spec.md` (scalar f64
+  DAG, closed 48-kind enum, ≤512 nodes/≤2048 edges/≤128 bindings,
+  `(layer,property)` bindings mutually exclusive with curves and
+  expressions, pre-binding `property` reads, per-comp time-family eval,
+  single `setGraph` full-replacement op). See ROSTER slice-I checkpoint.
 - **J1 — render queue model**: durable `render_queue` jobs, ops
   enqueue/reorder/cancel/remove + `renderQueueFrame` raw RGBA stepping
   with real progress. **J2 encoded export blocked** — no encoder provider

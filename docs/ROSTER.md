@@ -1932,3 +1932,46 @@ Evidence rerun after fixes: `cargo test -p design-engine` 50 passed,
 `cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/design test`
 16 passed across 12 files, `pnpm --filter @nitro-forge/design typecheck`
 clean.
+
+## P11 Motion slice I value node graph source checkpoint (2026-11-08)
+
+Motion gains the admitted slice-I spec
+(`docs/completion/reports/P11-motion-nodegraph-spec.md`): `State.graph`, a
+document-global scalar f64 DAG plus `(layer,property)` bindings, behind the
+single full-replacement `setGraph` op (`{nodes?,bindings?}` or `null`).
+Closed 48-kind enum — sources `const`/`time`/`frame`/`fps`/`duration`/
+`property`, unary/binary math, comparisons, `clamp`/`lerp`/`smoothstep`/
+`select` — with exact per-kind input pins valued as `{"node":id}` or
+`{"const":f64}`; caps ≤512 nodes/≤2048 edges/≤128 bindings inside the 16
+MiB state cap; `schema` stays 2 via additive serde defaults and
+graph-free documents serialize byte-identically (a cleared graph keeps its
+`next_node_id`). Bindings are mutually exclusive with curves AND
+expressions on the same cell — `setGraph` clears conflicts in its journal
+entry while `setPropertyKeys`/`setExpression`/`setMotionPath` null/
+`setLayer3D` null drop conflicting bindings symmetrically, all atomic
+through undo/redo/batch; locked-layer bindings reject. `property` sources
+read pre-binding curve/base values in the referenced layer's own comp
+context (expressions excluded), keeping the graph acyclic by construction;
+`time`-family sources evaluate per consuming comp's local time. Evaluation
+is iterative end to end: Kahn topo-sort (ascending-id ties) plus a flat
+per-comp memoized pass — no recursion whose depth scales with document
+content — with a defensive 4096-op counter saturating to 0.0. `validate`/
+restore re-check structure, caps, edge targets, acyclicity, binding
+referential integrity and exclusivity; `removeLayer`/`removeComposition`
+of referenced layers reject atomically, `reparentLayer` stays valid and
+`duplicateComposition` inherits bindings under fresh layer ids. TS gains
+`MotionGraph*` types, `graph?` on `MotionState` and `setGraph`.
+
+Local evidence: `cargo test -p motion-engine` 97 passed (11 new covering
+the kind/pin/param/edge/cap rejection matrix with snapshot-atomicity,
+write+hostile-restore cycle rejection, topo determinism under reordered
+insertion, pre-binding property reads incl. curve-fed and cross-binding
+cases, exclusivity clears in both directions, per-comp time-family eval
+incl. nested-comp scaling, non-finite sanitize/clamp, seek determinism,
+undo/redo/equal-write/batch atomicity, duplicate/remove/reparent binding
+semantics, hostile-restore matrix and graph-free byte-identity),
+`cargo build -p nf-cli` clean, `pnpm install --prefer-offline` clean,
+`pnpm --filter @nitro-forge/motion test` 11 passed across 10 files (1 new
+nf-cli graph case), `pnpm --filter @nitro-forge/motion typecheck` clean.
+No pixel compositing, multi-type nodes, expression↔graph cross-references
+or node UI is claimed; full P11 completion is not implied.
