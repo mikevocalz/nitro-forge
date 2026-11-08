@@ -57,13 +57,45 @@ it('rejects oversized encoded responses before decoding a declared tiny preview'
  await doc.close();
 });
 
+it('processes white balance and tint through CLI with persisted recipes, undo and reopen',async()=>{
+ const host=new CliHost();let document:PhotoDocument|undefined;let reopened:PhotoDocument|undefined;
+ try{
+  document=await PhotoDocument.open(host);
+  await document.addOriginal({sha256:'a'.repeat(64),asset_ref:'retained:raw',byte_length:20,camera_make:'Pentax',camera_model:'K-7'});
+  const wb:PhotoDevelopV1={schema:1,exposure_ev:0,contrast:1,rgb_gain:[1,1,1],temperature_kelvin:2500,tint:0.5};
+  await document.setDevelop('version-2',wb);
+  expect((await document.readDevelop('version-2')).data.develop).toEqual(wb);
+  const input=new Uint8Array([200,100,50,255]);
+  expect((await document.processPreview(request(wb),input)).pixels).toEqual(new Uint8Array([200,109,95,255]));
+  const snapshot=await document.save();
+  await document.undo();
+  expect((await document.readDevelop('version-2')).data.develop).toEqual(IDENTITY_DEVELOP);
+  await document.redo();
+  reopened=await PhotoDocument.openSnapshot(host,snapshot);
+  expect((await reopened.readDevelop('version-2')).data.develop).toEqual(wb);
+  expect((await reopened.processPreview(request(wb),input)).pixels).toEqual(new Uint8Array([200,109,95,255]));
+  await expect(reopened.processPreview({...request(wb),expected_develop:{...wb,temperature_kelvin:6500}},input)).rejects.toThrow('recipe changed');
+ }finally{await reopened?.close();await document?.close();await host.dispose();}
+});
+
 it('rejects unsupported recipe fields without silently dropping processing intent',async()=>{
  const apply=vi.fn(async()=>({data:{ok:true},events:[]}));
  const host={open:vi.fn(async()=>8),apply,close:vi.fn(async()=>true)} as unknown as EngineHost;
  const doc=await PhotoDocument.open(host);const calls=apply.mock.calls.length;
- const unsupported={...IDENTITY_DEVELOP,temperature_kelvin:6500};
+ const unsupported={...IDENTITY_DEVELOP,clarity:50};
  expect(()=>doc.setDevelop('version-2',unsupported)).toThrow('Unsupported');
  await expect(doc.processPreview(request(unsupported),new Uint8Array([1,2,3,4]))).rejects.toThrow('Unsupported');
+ expect(apply).toHaveBeenCalledTimes(calls);await doc.close();
+});
+
+it('rejects out-of-range white balance fields before transport',async()=>{
+ const apply=vi.fn(async()=>({data:{ok:true},events:[]}));
+ const host={open:vi.fn(async()=>8),apply,close:vi.fn(async()=>true)} as unknown as EngineHost;
+ const doc=await PhotoDocument.open(host);const calls=apply.mock.calls.length;
+ for(const bad of [{...IDENTITY_DEVELOP,temperature_kelvin:1999},{...IDENTITY_DEVELOP,temperature_kelvin:40001},{...IDENTITY_DEVELOP,tint:1.5},{...IDENTITY_DEVELOP,tint:-2}]){
+  expect(()=>doc.setDevelop('version-2',bad as PhotoDevelopV1)).toThrow('Unsupported');
+  await expect(doc.processPreview(request(bad as PhotoDevelopV1),new Uint8Array([1,2,3,4]))).rejects.toThrow('Unsupported');
+ }
  expect(apply).toHaveBeenCalledTimes(calls);await doc.close();
 });
 

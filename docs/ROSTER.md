@@ -625,7 +625,11 @@ Motion now persists owned immutable straight-sRGB RGBA8 assets and real raster l
 
 ## P10 decoded develop preview source checkpoint (2026-11-07)
 
-Photo persists version recipes and processes real bounded straight-alpha sRGB RGBA8. Eleven Photo engine tests and eight TypeScript tests pass, including identity/color/alpha, persistence, stale authority, owned input and malformed/oversized responses. The parent independently verifies a binary FFI preview and a real Photo-to-Motion CLI pixel/history/reopen flow. Those use synthetic decoded pixels, not a RAW decoder or original-file provenance proof. See [the develop source report](completion/reports/P10-nondestructive-develop-preview-source.md). No native target, full RAW controls or P10 acceptance is inferred.
+Photo persists version recipes and processes real bounded straight-alpha sRGB RGBA8. Thirteen Photo engine tests and ten TypeScript tests pass, including identity/color/alpha, persistence, stale authority, owned input and malformed/oversized responses. The parent independently verifies a binary FFI preview and a real Photo-to-Motion CLI pixel/history/reopen flow. Those use synthetic decoded pixels, not a RAW decoder or original-file provenance proof. See [the develop source report](completion/reports/P10-nondestructive-develop-preview-source.md). No native target, full RAW controls or P10 acceptance is inferred.
+
+## P10 develop white balance source checkpoint (2026-11-07)
+
+The develop recipe gains bounded `temperature_kelvin` (2000–40000 K) and `tint` (−1..1) fields that persist, undo/redo and actually change preview pixels through a declared sRGB blackbody-ratio approximation normalized at 6500 K — not ICC or camera calibration. Additive serde-defaulted fields keep legacy recipes/snapshots byte-identical; bounds and hostile-restore rejection are tested. See [the white-balance source report](completion/reports/P10-photo-white-balance-source.md). ICC profile handling, the canonical RAWDevelopPanel binding and all platform acceptance remain open.
 
 ## Shared decoder and backend test entry (2026-11-07)
 
