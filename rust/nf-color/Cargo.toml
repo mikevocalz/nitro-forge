@@ -1,0 +1,16 @@
+[package]
+name = "nf-color"
+description = "Host-side ICC color-management provider (moxcms) for bounded RGB/CMYK/Gray buffer transforms, chained soft-proof and gamut measurement. NOT an engine: no Journal, no snapshot format, no document I/O."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "nf_color"
+path = "src/lib.rs"
+
+[dependencies]
+# Pinned to the exact version already resolved in Cargo.lock via image 0.25
+# (folio-render) so the workspace keeps a single moxcms copy. P07 decision
+# record: docs/completion/reports/P07-icc-color-management-decision.md.
+moxcms = { version = "=0.8.1", features = ["extended_range"] }

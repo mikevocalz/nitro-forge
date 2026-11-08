@@ -819,6 +819,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "nf-color"
+version = "0.1.0"
+dependencies = [
+ "moxcms",
+]
+
+[[package]]
 name = "nf-raw"
 version = "0.1.0"
 dependencies = [
