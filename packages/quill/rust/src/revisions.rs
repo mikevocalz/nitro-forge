@@ -395,6 +395,7 @@ impl QuillEngine {
             sections: self.sections.clone(),
             revisions: self.revisions.clone(),
             tracking: None,
+            footnotes: self.footnotes.clone(),
             journal: Journal::new(1),
         }
     }

@@ -41,6 +41,10 @@ export const OPS = {
   resolveComment: "resolveComment",
   reopenComment: "reopenComment",
   listComments: "listComments",
+  addFootnote: "addFootnote",
+  updateFootnote: "updateFootnote",
+  removeFootnote: "removeFootnote",
+  listFootnotes: "listFootnotes",
   setTrackChanges: "setTrackChanges",
   listRevisions: "listRevisions",
   acceptRevision: "acceptRevision",
@@ -203,6 +207,29 @@ export interface Revision {
   time: number | null;
   /** Present only on `del` records: the deleted plain text. */
   text?: string;
+}
+/**
+ * Footnote/endnote placement kind. `footnote` renders at page bottom,
+ * `endnote` at document end; numbering is per-kind in document order.
+ */
+export type FootnoteKind = "footnote" | "endnote";
+/**
+ * A footnote/endnote: a reference mark anchored at `at` in the block
+ * stream plus a plain-text `body` stored on the record (never part of the
+ * block stream, so `text`/`findText`/DOCX never see it). Bodies may be
+ * empty and are at most 8192 characters; at most 1024 notes per document.
+ * The anchor is a right-gravity live position re-mapped by every
+ * position-moving op like bookmarks; a delete covering it clamps to the
+ * deletion start rather than dropping the note. `number` is resolved by
+ * `listFootnotes` per kind in document order — the engine stores none.
+ */
+export interface Footnote {
+  id: string;
+  at: Pos;
+  kind: FootnoteKind;
+  /** 1-based number within its kind, in document order. */
+  number: number;
+  body: string;
 }
 /** Optional per-edit attribution overriding the tracking default author. */
 export interface RevisionAttribution {
@@ -582,6 +609,47 @@ export class QuillDocument {
   /** Read-only; sorted by anchor position then id. */
   listComments() {
     return this.call<{ comments: DocComment[] }>(OPS.listComments);
+  }
+  /**
+   * Anchor a footnote/endnote reference at `at` (`pos`/`anchor` payload
+   * aliases accepted). `kind` is `"footnote"` (default) or `"endnote"`;
+   * `body` is optional plain text ≤8192 chars (empty allowed); `id` is an
+   * optional unique token — absent, the engine assigns the smallest unused
+   * `fn-N`. Anchors on table blocks reject; at most 1024 notes.
+   */
+  addFootnote(note: {
+    at: Pos;
+    kind?: FootnoteKind;
+    body?: string;
+    id?: string;
+  }) {
+    return this.call<{ ok: boolean; id: string; kind: FootnoteKind }>(
+      OPS.addFootnote,
+      note,
+    );
+  }
+  /**
+   * Replace `body` and/or `kind` on a footnote; `body: null` clears to
+   * empty, `kind` moves the note between the footnote/endnote sequences.
+   * Absent fields keep their values; anchors are not re-pointable; no
+   * effective change is eventless.
+   */
+  updateFootnote(id: string, changes: { body?: string | null; kind?: FootnoteKind }) {
+    return this.call<{ ok: boolean; id: string }>(OPS.updateFootnote, {
+      id,
+      ...changes,
+    });
+  }
+  removeFootnote(id: string) {
+    return this.call<{ ok: boolean; id: string }>(OPS.removeFootnote, { id });
+  }
+  /**
+   * Read-only; sorted by anchor position then id, each entry carrying its
+   * resolved `number` — footnotes and endnotes number independently in
+   * document order.
+   */
+  listFootnotes() {
+    return this.call<{ footnotes: Footnote[] }>(OPS.listFootnotes);
   }
   /**
    * Enable/disable track changes. While enabled, `insertText`,
