@@ -449,8 +449,15 @@ impl Engine for DesignEngine {
             "evaluateLayout" => {
                 let effective = variables::effective(&self.state);
                 let expanded = components::expand(&effective)?;
+                let (boxes, solve) = layout::evaluate_report(&expanded)?;
                 return Ok(CommandResult::read_only(json!({
-                    "boxes": layout::evaluate(&expanded)?
+                    "boxes": boxes,
+                    "constraints": {
+                        "solving": "evaluateLayout",
+                        "status": if solve.unsatisfied.is_empty() { "solved" } else { "partial" },
+                        "constrained": solve.constrained,
+                        "unsatisfied": solve.unsatisfied,
+                    }
                 })))
             }
             "describeComponents" => {
@@ -469,8 +476,19 @@ impl Engine for DesignEngine {
                 )?))
             }
             "readConstraints" => {
+                // Live solve status against the effective (binding-resolved)
+                // stored state — expansion is read-only provenance, so the
+                // stored tree alone decides every reported node id. A
+                // layout that currently cannot evaluate reports
+                // `solve.status:"unavailable"` instead of failing the read.
+                let effective = variables::effective(&self.state);
+                let solve = layout::evaluate_report(&effective)
+                    .ok()
+                    .map(|(_, s)| s);
                 return Ok(CommandResult::read_only(constraints::describe(
-                    &self.state, p,
+                    &self.state,
+                    p,
+                    solve.as_ref(),
                 )?))
             }
             "prototypeGraph" => {

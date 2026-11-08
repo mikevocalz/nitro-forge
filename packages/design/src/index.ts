@@ -98,23 +98,34 @@ export interface VariableBindingInfo extends VariableBinding{resolved:number|nul
 export interface VariableInfo extends DesignVariable{resolved:Record<string,VariableValue>;problems:string[]}
 export interface VariablesDescription{modes:DesignMode[];active_mode:string|null;variables:VariableInfo[];bindings:VariableBindingInfo[]}
 /** NYC-Tron `DesignConstraints` h/v anchor axes. `scale` parses but the
- * engine rejects it until the constraint solver slice; the engine's accepted
- * set is left/right/center/stretch (horizontal) and top/bottom/center/stretch
- * (vertical), where `stretch` is the Figma-style both-edges anchor. */
+ * engine rejects it (proportional scaling stays deferred); the accepted set
+ * is left/right/center/stretch (horizontal) and top/bottom/center/stretch
+ * (vertical), where `stretch` is the both-edges anchor. */
 export type HorizontalAnchor='left'|'right'|'center'|'stretch'|'scale';
 export type VerticalAnchor='top'|'bottom'|'center'|'stretch'|'scale';
 /** Stored responsive constraints on absolute children only — the NYC-Tron
  * `DesignConstraints` contract in snake_case engine fields. C1 admitted the
  * h/v anchors; C2 adds optional per-axis extent bounds (`min_*`/`max_*`,
  * finite, 0..=1e7, min<=max when both present), the `aspect_locked` flag
- * (NYC-Tron `aspectLocked`; no ratio is stored — a solver derives it from
- * geometry at enforcement time) and `relative_to` targets naming the parent
- * frame or a sibling; absent means the parent. `scale` anchors reject until
- * the solver slice. Everything is durable storage only: evaluateLayout does
- * not solve constraints and `enforced` stays false. */
+ * (NYC-Tron `aspectLocked`; no ratio is stored — the solver derives it from
+ * evaluated geometry) and `relative_to` targets naming the parent frame or
+ * a sibling; absent means the parent. `scale` anchors reject. Constraints
+ * are enforced automatically during evaluateLayout/renderFrame: anchors
+ * pin flush to the reference edge/midpoint/span (the contract stores no
+ * inset margins), bounds clamp extents, and unsatisfied nodes (dependency
+ * cycles, bound/aspect conflicts) keep their unconstrained box and are
+ * reported in the solve summary. */
 export interface NodeConstraints{horizontal:HorizontalAnchor;vertical:VerticalAnchor;min_width?:number;max_width?:number;min_height?:number;max_height?:number;aspect_locked?:boolean;relative_to?:number}
-export interface ConstraintNodeInfo{node_id:number;constraints:NodeConstraints;enforced:boolean}
-export interface ConstraintsDescription{solving:'storage-only';accepted:{horizontal:HorizontalAnchor[];vertical:VerticalAnchor[];relative_to:('parent'|'sibling')[];extent_bounds:string};rejected:string[];nodes:ConstraintNodeInfo[]}
+export interface ConstraintNodeInfo{node_id:number;constraints:NodeConstraints;enforced:boolean;satisfied:boolean}
+/** Live constraint-solve summary: `solved` when every constrained node
+ * satisfied its anchors/bounds/aspect, `partial` when some kept their
+ * unconstrained box (listed in `unsatisfied`), `unavailable` when layout
+ * evaluation currently fails so enforcement status is unknown. */
+export interface ConstraintSolveInfo{status:'solved'|'partial'|'unavailable';constrained?:number;unsatisfied?:number[]}
+export interface ConstraintsDescription{solving:'evaluateLayout';solve:ConstraintSolveInfo;accepted:{horizontal:HorizontalAnchor[];vertical:VerticalAnchor[];relative_to:('parent'|'sibling')[];extent_bounds:string};rejected:string[];notes:string[];nodes:ConstraintNodeInfo[]}
+/** Constraint-solve block on evaluateLayout: same status vocabulary as
+ * ConstraintSolveInfo plus the constrained-node count. */
+export interface LayoutConstraintReport{solving:'evaluateLayout';status:'solved'|'partial';constrained:number;unsatisfied:number[]}
 /** NYC-Tron `PrototypeInteraction.trigger` set (InteractionTriggerEditor). */
 export type PrototypeTrigger='tap'|'press'|'hover'|'drag'|'timer';
 /** NYC-Tron `PrototypeInteraction.action` set. */
@@ -248,8 +259,10 @@ export interface ExportSliceResult{slice:ExportSliceInfo;manifest:ExportManifest
 /** Bounded fixed/hug/fill layout and real Prism RGBA plus variables/modes.
  * Text nodes are layout boxes only (renderable:false, fill background draws,
  * no glyphs); bindings resolve at read/render time and never bake into nodes.
- * Constraints are stored h/v anchors on absolute children only — storage and
- * validation, not solving (evaluateLayout ignores them in C1/C2). Components
+ * Constraints are h/v anchors on absolute children only, solved
+ * automatically inside evaluateLayout (flush edge pinning, C2 bounds,
+ * aspect lock; unsatisfied nodes keep unconstrained geometry and are
+ * reported). Components
  * and instances exist: instances expand deterministically at read/render
  * time only (never persisted expanded) under depth/node caps, with a bounded
  * override surface and named variant bundles. Instance sizing stays fixed.
@@ -311,10 +324,18 @@ export class DesignDocument{
   * outside the parent/sibling scope reject with reasons; converting the
   * parent to flow layout, reparenting under one, or removing a `relative_to`
   * target rejects while constraints would be stranded. Constraints are
-  * durable state only: evaluateLayout does not solve them. */
+  * durable state solved automatically at evaluate time: evaluateLayout (and
+  * renderFrame/exportSlice/describeHandoff) pin anchored edges flush to the
+  * reference box, report unsatisfied nodes, and keep unconstrained geometry
+  * for them. */
  setConstraints(id:number,constraints:NodeConstraints|null){return this.document.apply<{ok:boolean}>(OPS.setConstraints,{id,constraints});}
- /** Read-only constraint state plus the accepted/rejected anchor sets;
-  * silent. `enforced` is always false until the solver slice lands. */
+ /** Read-only constraint state plus accepted/rejected anchor sets and the
+  * live solve summary (`solve.status`, per-node `enforced`/`satisfied`);
+  * silent. `solve.status` is `unavailable` while layout evaluation fails.
+  * The solve runs on the unexpanded stored state, so a per-node
+  * `satisfied:true` can still coincide with an evaluateLayout failure on
+  * the expanded state (e.g. synthetic instance clones going out of
+  * bounds). */
  readConstraints(id?:number){return this.document.apply<ConstraintsDescription>(OPS.readConstraints,id===undefined?{}:{id});}
  /** Converts an existing frame subtree into a reusable component
   * definition. Optional `variants` are named override bundles selectable
@@ -411,7 +432,7 @@ export class DesignDocument{
  /** Read-only thread list for the CommentsThreadPanel contract; silent.
   * The engine stores no `page` — hosts map the single canvas to page 0. */
  listComments(){return this.document.apply<{threads:CommentThread[]}>(OPS.listComments,{});}
- evaluateLayout(){return this.document.apply<{boxes:EvaluatedBox[]}>(OPS.evaluateLayout,{});}
+ evaluateLayout(){return this.document.apply<{boxes:EvaluatedBox[];constraints:LayoutConstraintReport}>(OPS.evaluateLayout,{});}
  renderFrame(){return this.document.apply<{width:number;height:number;pixels_b64?:string}>(OPS.renderFrame,{});}
  /** Read-only dev-handoff projection (L-12 storage scope): evaluated
   * measurements, typography, screen membership, deterministic structural

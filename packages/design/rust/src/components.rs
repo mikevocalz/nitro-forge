@@ -132,7 +132,10 @@ fn expand_instance(
         map.insert(*tid, clone_id);
         nodes.insert(clone_id, Arc::new(clone));
     }
-    // Second pass: restore child links through the id map.
+    // Second pass: restore child links through the id map, and retarget
+    // `constraints.relative_to` the same way — a clone's parent-or-sibling
+    // reference names template ids that must resolve inside this expansion
+    // (the component root id lands on the instance node itself).
     for tid in &template_ids {
         let clone_id = map[tid];
         let children: Vec<u64> = orig[tid]
@@ -140,7 +143,19 @@ fn expand_instance(
             .iter()
             .map(|c| map[c])
             .collect();
-        Arc::make_mut(nodes.get_mut(&clone_id).unwrap()).children = children;
+        let clone = Arc::make_mut(nodes.get_mut(&clone_id).unwrap());
+        clone.children = children;
+        if let Some(c) = &mut clone.constraints {
+            if let Some(r) = c.relative_to {
+                c.relative_to = Some(if r == spec.component {
+                    inst_id
+                } else {
+                    *map.get(&r).ok_or_else(|| {
+                        bad("constraint target outside component subtree")
+                    })?
+                });
+            }
+        }
     }
     // Cloned `component` nodes keep their variant bundles, but those
     // overrides still name template ids. Retarget them at this expansion's
@@ -304,12 +319,26 @@ pub fn detach(s: &State, inst_id: u64) -> Result<State, EngineError> {
         // A cloned `component` node keeps its variant bundles; their
         // override targets still name template ids, so re-target them at
         // the detached clones (the whole component subtree was cloned, so
-        // every target resolves through `id_map`).
+        // every target resolves through `id_map`). `constraints.relative_to`
+        // on clones names synthetic expansion ids and remaps the same way;
+        // real-id targets (the instance root's own parent/sibling scope)
+        // stay untouched.
         for variant in &mut clone.variants {
             for ov in &mut variant.properties {
                 ov.node = *id_map.get(&ov.node).ok_or_else(|| {
                     bad("variant override target outside detached subtree")
                 })?;
+            }
+        }
+        if let Some(c) = &mut clone.constraints {
+            if let Some(r) = c.relative_to {
+                // Synthetic ids are strictly > SAFE_ID (real ids reach at
+                // most SAFE_ID), so only those remap through `id_map`.
+                if r > SAFE_ID {
+                    c.relative_to = Some(*id_map.get(&r).ok_or_else(|| {
+                        bad("constraint target outside detached subtree")
+                    })?);
+                }
             }
         }
         if clone.kind == Kind::Instance {
