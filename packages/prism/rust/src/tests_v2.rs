@@ -1697,6 +1697,35 @@ fn erase_stroke_pixel_eventless_noops() {
 }
 
 #[test]
+fn erase_stroke_pixel_fully_outside_selection_is_eventless() {
+    // Regression: the non-ctx apply path must mirror the ctx path — a
+    // committed erase whose dabs are all gated out by the pixel selection
+    // reports ok + dabs but emits no document:changed and records no undo.
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": [200, 0, 0, 255]}));
+    // Selection covers only the right half (x >= 8); the stroke stays at x <= 5.
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 8, "y": 0, "w": 8, "h": 16}}));
+    let samples = stroke_samples(8, 1.0, 8.0, 0.5);
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    assert_eq!(r.data["ok"], true);
+    assert!(r.data["dabs"].as_u64().unwrap() > 0, "dabs still reported");
+    assert_eq!(r.data["mode"], "pixel");
+    assert!(r.events.is_empty(), "erase fully outside selection must not emit document:changed");
+    assert_eq!(e.journal.undo_len(), depth, "no undo entry for a zero-change erase");
+    // Nothing was erased: the layer is still fully opaque everywhere.
+    let f = flat(&mut e);
+    assert_eq!(px(&f, 16, 3, 8)[3], 255);
+    assert_eq!(px(&f, 16, 12, 8)[3], 255);
+}
+
+#[test]
 fn erase_stroke_pixel_gated_by_selection_and_transform() {
     let mut e = eng(16, 16);
     let l = id(&run(&mut e, "addRasterLayer", json!({})));

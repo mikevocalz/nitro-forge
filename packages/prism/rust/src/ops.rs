@@ -2825,6 +2825,30 @@ impl PrismEngine {
             ));
         }
 
+        // Same scratch-buffer semantics as the ctx path: erase a copy of
+        // the region, and stay eventless (no journal, no document:changed)
+        // when the erase provably changed nothing — e.g. dabs gated out by
+        // the pixel selection.
+        let mut work = prev.clone();
+        let changed = stroke::erase_dabs_rgba(
+            &mut work,
+            cw as usize,
+            ch as usize,
+            cx as usize,
+            cy as usize,
+            &dabs,
+            color_alpha,
+            sel_mask,
+            canvas_w,
+            &mut task,
+        )?;
+        if changed == 0 {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+            });
+        }
         self.journal.record(UndoEntry::Pixels {
             layer_id: self.layers[idx].id,
             x: cx,
@@ -2836,18 +2860,15 @@ impl PrismEngine {
         let buf = self
             .raster_mut(idx)
             .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
-        stroke::erase_dabs_rgba(
+        raster::write_region(
             buf,
             canvas_w,
-            canvas_h,
-            0,
-            0,
-            &dabs,
-            color_alpha,
-            sel_mask,
-            canvas_w,
-            &mut task,
-        )?;
+            cx as usize,
+            cy as usize,
+            cw as usize,
+            ch as usize,
+            &work,
+        );
         Ok(CommandResult::data(
             json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
         ))
