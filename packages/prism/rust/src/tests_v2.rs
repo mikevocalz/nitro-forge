@@ -259,6 +259,24 @@ fn magic_wand_and_modify_selection() {
     rejects(&mut e, "magicWand", json!({"x": 1, "y": 1, "tolerance": 300}), ErrorCode::Validation);
 }
 
+#[test]
+fn modify_selection_smooth_rounds_and_thresholds() {
+    let mut e = eng(10, 10);
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 2, "y": 2, "w": 6, "h": 6}}));
+    one_step(&mut e, "modifySelection", json!({"op": "smooth", "radius": 3}));
+    let m = selection_mask(&mut e).unwrap();
+    assert!(m.iter().all(|&v| v == 0 || v == 255), "smooth output is binary");
+    assert_eq!(m[5 * 10 + 5], 255, "interior survives");
+    assert_eq!(m[2 * 10 + 2], 0, "corner rounds away");
+    assert_eq!(m[2 * 10 + 5], 255, "edge midpoint survives");
+    // radius 0 is a no-op mask but still one undo step, like grow 0.
+    let before = describe(&mut e);
+    run(&mut e, "modifySelection", json!({"op": "smooth", "radius": 0}));
+    assert_eq!(describe(&mut e), before);
+    rejects(&mut e, "modifySelection", json!({"op": "smooth", "radius": 999}), ErrorCode::Validation);
+    rejects(&mut e, "modifySelection", json!({"op": "refine", "radius": 1}), ErrorCode::Validation);
+}
+
 // -- groups, lock, blend, clipping -------------------------------------------
 
 #[test]
@@ -950,4 +968,272 @@ fn apply_long_progress_is_monotonic_and_clamped() {
     );
     assert!(samples.iter().any(|&v| v > 0.0), "op should report progress");
     assert_eq!(observer.progress(), 1.0);
+}
+
+// -- document crop ---------------------------------------------------------------
+
+/// Every pixel of `after` must equal `before` shifted by `(dx, dy)`.
+fn assert_crop_matches(before: &[u8], bw: usize, after: &[u8], aw: usize, ah: usize, dx: usize, dy: usize) {
+    for y in 0..ah {
+        for x in 0..aw {
+            assert_eq!(
+                px(after, aw, x, y),
+                px(before, bw, x + dx, y + dy),
+                "crop mismatch at ({x}, {y})"
+            );
+        }
+    }
+}
+
+#[test]
+fn crop_offsets_all_content_and_rebases_canvas() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    // Hide the left two mask columns so the mask crop is observable.
+    run(&mut e, "addMask", json!({"id": r}));
+    run(&mut e, "paintMask", json!({"id": r, "x": 0, "y": 0, "w": 2, "h": 8, "data_b64": b64::encode(&[0u8; 16])}));
+    let s = rect(&mut e, 4.0, 5.0, 2.0, 2.0, BLUE);
+    let p = id(&run(&mut e, "addPath", json!({"path": tri(), "fill": {"type": "solid", "color": [0, 255, 0, 255]}})));
+    let a = id(&run(&mut e, "addArtboard", json!({"x": 1, "y": 2, "w": 3, "h": 3})));
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 8, "h": 8}}));
+    // A translated raster layer and a translated group keep exact pixels.
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"tx": 1, "ty": 0}}));
+    let before = flat(&mut e);
+
+    // Crop (2,1,5,6): rounded to pixels, fully inside → 5x6 canvas.
+    one_step(&mut e, "crop", json!({"x": 2, "y": 1, "w": 5, "h": 6}));
+    let d = describe(&mut e);
+    assert_eq!(d["width"], 5);
+    assert_eq!(d["height"], 6);
+    let after = flat(&mut e);
+    assert_crop_matches(&before, 8, &after, 5, 6, 2, 1);
+    // Vector content shifted by the canvas delta.
+    assert_eq!(bounds(&mut e, s), (2.0, 4.0, 2.0, 2.0));
+    let pl = layer(&describe(&mut e), p)["content"]["path"]["subpaths"][0]["nodes"].clone();
+    assert_eq!(pl[0]["x"], -1.0);
+    assert_eq!(pl[0]["y"], 0.0);
+    assert_eq!(pl[1]["x"], 7.0);
+    // Artboard and pixel-space buffers rebased.
+    let ab = d["artboards"].as_array().unwrap().iter().find(|x| x["id"] == a).unwrap();
+    assert_eq!(ab["x"], -1.0);
+    assert_eq!(ab["y"], 1.0);
+    let sel = selection_mask(&mut e).unwrap();
+    assert_eq!(sel.len(), 5 * 6);
+    assert!(sel.iter().all(|&v| v == 255));
+    let mask = layer(&d, r)["mask"]["mask_b64"].as_str().unwrap();
+    assert_eq!(b64::decode(mask).unwrap().len(), 5 * 6);
+    // The raster buffer itself is the cropped 5x6 region.
+    let pxbuf = b64::decode(layer(&d, r)["content"]["pixels_b64"].as_str().unwrap()).unwrap();
+    assert_eq!(pxbuf.len(), 5 * 6 * 4);
+}
+
+#[test]
+fn crop_intersection_and_fractional_rounding() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    run(&mut e, "drawPixels", json!({"id": r, "x": 0, "y": 0, "w": 8, "h": 8, "data_b64": b64::encode(&vec![0u8; 8 * 8 * 4])}));
+    // Paint one blue texel at old (6,6) before clearing? Simpler: fill then draw blue pixel.
+    run(&mut e, "drawPixels", json!({"id": r, "x": 6, "y": 6, "w": 1, "h": 1, "data_b64": b64::encode(&BLUE)}));
+    let before = flat(&mut e);
+
+    // Negative origin + fractional edges: rect (-2,-1,6.5,6.5) rounds
+    // outward to pixels 0..5 x 0..6 → 5x6 canvas, top-left anchored.
+    one_step(&mut e, "crop", json!({"x": -2.0, "y": -1.0, "w": 6.5, "h": 6.5}));
+    let d = describe(&mut e);
+    assert_eq!(d["width"], 5);
+    assert_eq!(d["height"], 6);
+    assert_crop_matches(&before, 8, &flat(&mut e), 5, 6, 0, 0);
+
+    // A rect hanging off the right/bottom edge keeps only the overlap:
+    // on the 5x6 canvas, x=1..101 y=0..3 → 4x3.
+    one_step(&mut e, "crop", json!({"x": 1.0, "y": 0.0, "w": 100.0, "h": 3.0}));
+    let d = describe(&mut e);
+    assert_eq!(d["width"], 4);
+    assert_eq!(d["height"], 3);
+}
+
+#[test]
+fn crop_rejects_and_noop_is_read_only() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    let before = describe(&mut e);
+    let depth = e.journal.undo_len();
+    rejects(&mut e, "crop", json!({"x": 100, "y": 0, "w": 4, "h": 4}), ErrorCode::OutOfBounds);
+    rejects(&mut e, "crop", json!({"x": -50, "y": 0, "w": 4, "h": 4}), ErrorCode::OutOfBounds);
+    rejects(&mut e, "crop", json!({"x": 0, "y": 0, "w": 0, "h": 4}), ErrorCode::Validation);
+    rejects(&mut e, "crop", json!({"x": 0, "y": 0, "w": 4}), ErrorCode::InvalidCommand);
+    assert_eq!(describe(&mut e), before);
+    assert_eq!(e.journal.undo_len(), depth);
+    // Cropping to the full canvas changes nothing and records nothing.
+    let res = e.apply(Command::new("crop", json!({"x": 0, "y": 0, "w": 8, "h": 8}))).unwrap();
+    assert!(res.events.is_empty());
+    assert_eq!(describe(&mut e), before);
+    assert_eq!(e.journal.undo_len(), depth);
+    // Fractional rect covering the whole canvas is also a no-op.
+    e.apply(Command::new("crop", json!({"x": -1, "y": -1, "w": 10, "h": 10}))).unwrap();
+    assert_eq!(describe(&mut e), before);
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn crop_preserves_rotated_and_grouped_content() {
+    let mut e = eng(12, 12);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    // Checker-ish content so resampling is observable.
+    let mut pxdata = vec![0u8; 12 * 12 * 4];
+    for y in 0..12 {
+        for x in 0..12 {
+            if (x + y) % 2 == 0 {
+                let o = (y * 12 + x) * 4;
+                pxdata[o..o + 4].copy_from_slice(&BLUE);
+            }
+        }
+    }
+    run(&mut e, "drawPixels", json!({"id": r, "x": 0, "y": 0, "w": 12, "h": 12, "data_b64": b64::encode(&pxdata)}));
+    let a = rect(&mut e, 1.0, 1.0, 3.0, 3.0, RED);
+    let b = rect(&mut e, 6.0, 6.0, 3.0, 3.0, [0, 255, 0, 255]);
+    let g = id(&one_step(&mut e, "groupLayers", json!({"ids": [a, b]})));
+    run(&mut e, "setLayerTransform", json!({"id": g, "transform": {"tx": 1, "ty": 0}}));
+    // Raster layers only tolerate translation/identity-linear effective
+    // transforms; rotation lives on a vector child instead.
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"tx": 1, "ty": 0}}));
+    run(&mut e, "setLayerTransform", json!({"id": a, "transform": {"rotation": 20}}));
+    let before = flat(&mut e);
+    assert_eq!(before.len(), 12 * 12 * 4);
+    // Crop must succeed on translated/grouped/rotated-vector content and
+    // undo cleanly; the translated raster resamples pixel-exactly.
+    one_step(&mut e, "crop", json!({"x": 2, "y": 1, "w": 8, "h": 8}));
+    let d = describe(&mut e);
+    assert_eq!(d["width"], 8);
+    assert_eq!(d["height"], 8);
+    assert_eq!(layer(&d, a)["parent"], g);
+    assert_eq!(layer(&d, g)["transform"]["tx"], 1.0, "transforms are untouched by crop");
+    // Group children moved with the group: canvas-space bounds shift by
+    // the crop delta (2,1) — b was at canvas (7,6) via the group's tx=1.
+    let bb = bounds(&mut e, b);
+    assert!((bb.0 - 5.0).abs() < 1e-9 && (bb.1 - 5.0).abs() < 1e-9);
+    assert_eq!(flat(&mut e).len(), 8 * 8 * 4);
+}
+
+#[test]
+fn crop_rejects_transformed_raster_layers() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+
+    // Non-unit scale on the raster's own transform rejects atomically.
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"sx": 0.5}}));
+    rejects(&mut e, "crop", json!({"x": 1, "y": 1, "w": 4, "h": 4}), ErrorCode::Validation);
+    // Rotation rejects the same way (sx back to 1 first).
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"sx": 1.0, "rotation": 30}}));
+    rejects(&mut e, "crop", json!({"x": 1, "y": 1, "w": 4, "h": 4}), ErrorCode::Validation);
+    // A raster inside a scaled group is affected through its ancestors.
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"rotation": 0}}));
+    let r2 = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r2, "color": BLUE}));
+    let r3 = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r3, "color": [0, 255, 0, 255]}));
+    let g = id(&one_step(&mut e, "groupLayers", json!({"ids": [r2, r3]})));
+    run(&mut e, "setLayerTransform", json!({"id": g, "transform": {"sx": 2.0}}));
+    rejects(&mut e, "crop", json!({"x": 1, "y": 1, "w": 4, "h": 4}), ErrorCode::Validation);
+    // Back to identity-linear (scale 1, pure translation): crop succeeds.
+    run(&mut e, "setLayerTransform", json!({"id": g, "transform": {"sx": 1.0}}));
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"tx": 1, "ty": 0}}));
+    one_step(&mut e, "crop", json!({"x": 1, "y": 1, "w": 4, "h": 4}));
+}
+
+// -- pixel sampling ---------------------------------------------------------------
+
+#[test]
+fn sample_pixels_reads_the_composite() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    rect(&mut e, 2.0, 2.0, 4.0, 4.0, BLUE);
+    let depth = e.journal.undo_len();
+
+    let res = e
+        .apply(Command::new("samplePixels", json!({"x": 3, "y": 3})))
+        .unwrap();
+    assert!(res.events.is_empty(), "samplePixels is read-only");
+    assert_eq!(res.data, json!({"r": 0, "g": 0, "b": 255, "a": 255}));
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 0, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 255, "g": 0, "b": 0, "a": 255})
+    );
+    // Outside the canvas samples transparent, not an error.
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 40, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 0, "g": 0, "b": 0, "a": 0})
+    );
+    assert_eq!(e.journal.undo_len(), depth, "sampling records no undo");
+    // A masked layer samples through the mask.
+    run(&mut e, "addMask", json!({"id": r}));
+    run(&mut e, "paintMask", json!({"id": r, "x": 0, "y": 0, "w": 8, "h": 8, "data_b64": b64::encode(&[0u8; 64])}));
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 0, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 0, "g": 0, "b": 0, "a": 0}),
+        "fully masked composite is transparent"
+    );
+    assert_eq!(e.journal.undo_len(), depth + 2, "only the mask ops recorded undo");
+    rejects(&mut e, "samplePixels", json!({"y": 0}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "samplePixels", json!({"x": "a", "y": 0}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "samplePixels", json!({"x": 0, "y": 0, "radius": 999}), ErrorCode::Validation);
+}
+
+#[test]
+fn sample_pixels_radius_box_averages() {
+    let mut e = eng(4, 1);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // Left two pixels red, right two blue.
+    let mut data = Vec::new();
+    for _ in 0..2 {
+        data.extend_from_slice(&RED);
+    }
+    for _ in 0..2 {
+        data.extend_from_slice(&BLUE);
+    }
+    run(&mut e, "drawPixels", json!({"id": l, "x": 0, "y": 0, "w": 4, "h": 1, "data_b64": b64::encode(&data)}));
+    // radius 1 at (1.5, 0.5) covers pixels x=0,1,2 → red,red,blue average.
+    let d = e
+        .apply(Command::new("samplePixels", json!({"x": 1.5, "y": 0.5, "radius": 1})))
+        .unwrap()
+        .data;
+    assert_eq!(d["r"].as_u64().unwrap(), 170);
+    assert_eq!(d["b"].as_u64().unwrap(), 85);
+    assert_eq!(d["a"].as_u64().unwrap(), 255);
+}
+
+#[test]
+fn sample_pixels_radius_averages_in_premultiplied_alpha() {
+    let mut e = eng(2, 1);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // Left pixel translucent red, right pixel fully transparent.
+    let mut data = Vec::new();
+    data.extend_from_slice(&[255, 0, 0, 128]);
+    data.extend_from_slice(&[0, 0, 0, 0]);
+    run(&mut e, "drawPixels", json!({"id": l, "x": 0, "y": 0, "w": 2, "h": 1, "data_b64": b64::encode(&data)}));
+    // Averaging both pixels must keep the red hue: averaging straight-alpha
+    // channels independently would return r≈128 instead of 255.
+    let d = e
+        .apply(Command::new("samplePixels", json!({"x": 0.5, "y": 0.5, "radius": 1})))
+        .unwrap()
+        .data;
+    assert_eq!(d, json!({"r": 255, "g": 0, "b": 0, "a": 64}));
+    // A single translucent pixel still samples its straight color.
+    let d = e
+        .apply(Command::new("samplePixels", json!({"x": 0.5, "y": 0.5})))
+        .unwrap()
+        .data;
+    assert_eq!(d, json!({"r": 255, "g": 0, "b": 0, "a": 128}));
 }

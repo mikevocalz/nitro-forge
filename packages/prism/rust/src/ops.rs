@@ -23,9 +23,13 @@ use crate::raster;
 use crate::render::{self, Scene};
 use crate::select::{self, Combine, Region};
 use crate::vector;
-use crate::{PrismEngine, RenderTask, UndoEntry, MAX_PIXELS};
+use crate::{PrismEngine, RenderTask, UndoEntry, MAX_PIXELS, CHECKPOINT_EVERY_PX};
 
 const MAX_RADIUS: f64 = 250.0;
+
+/// Linear-part tolerance for the `crop` raster-transform check: affine
+/// coefficients within this of the identity count as untransformed.
+const CROP_RASTER_LINEAR_EPS: f64 = 1e-9;
 
 /// Crop/pad a `w*h` alpha buffer, top-left aligned.
 pub(crate) fn resize_alpha(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usize) -> Vec<u8> {
@@ -37,6 +41,60 @@ pub(crate) fn resize_alpha(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usiz
         }
     }
     out
+}
+
+/// Crop a `sw*sh` alpha buffer to `(dx, dy, dw, dh)`, zero outside.
+/// Checkpoints every `CHECKPOINT_EVERY_PX` rows when `task` has a context.
+pub(crate) fn crop_alpha(
+    buf: &[u8],
+    sw: usize,
+    sh: usize,
+    dx: i64,
+    dy: i64,
+    dw: usize,
+    dh: usize,
+    task: &mut RenderTask,
+) -> Result<Vec<u8>, EngineError> {
+    let mut out = vec![0u8; dw.saturating_mul(dh)];
+    for r in 0..dh as i64 {
+        task.tick(r as usize, CHECKPOINT_EVERY_PX, r as f32 / dh.max(1) as f32)?;
+        let sy = dy + r;
+        if sy < 0 || sy >= sh as i64 {
+            continue;
+        }
+        for c in 0..dw as i64 {
+            let sx = dx + c;
+            if sx < 0 || sx >= sw as i64 {
+                continue;
+            }
+            let s = sy as usize * sw + sx as usize;
+            if s < buf.len() {
+                out[r as usize * dw + c as usize] = buf[s];
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Translate the coordinate fields of a gradient paint; solids are untouched.
+fn shift_paint(p: &mut Paint, sx: f64, sy: f64) {
+    match p {
+        Paint::Solid { .. } => {}
+        Paint::Linear { x0, y0, x1, y1, .. } => {
+            *x0 -= sx;
+            *y0 -= sy;
+            *x1 -= sx;
+            *y1 -= sy;
+        }
+        Paint::Radial { cx, cy, fx, fy, .. } => {
+            *cx -= sx;
+            *cy -= sy;
+            if let (Some(fx), Some(fy)) = (fx, fy) {
+                *fx -= sx;
+                *fy -= sy;
+            }
+        }
+    }
 }
 
 /// Snapshot tree invariants: unique ids, parents exist and are containers,
@@ -369,6 +427,8 @@ impl PrismEngine {
             "setBooleanOp" => self.op_set_boolean_op(p),
             "rasterizeLayer" => self.op_rasterize_layer(p, ctx),
             "floodFill" => self.op_flood_fill(p, ctx),
+            "crop" => self.op_crop(p, ctx),
+            "samplePixels" => self.op_sample_pixels(p, ctx),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
     }
@@ -801,6 +861,7 @@ impl PrismEngine {
             "grow" => select::grow(&cur, w, h, radius, &mut task)?,
             "shrink" => select::grow(&cur, w, h, -radius, &mut task)?,
             "feather" => select::feather(&cur, w, h, radius, &mut task)?,
+            "smooth" => select::smooth(&cur, w, h, radius, &mut task)?,
             other => return Err(EngineError::validation(format!("unknown selection op '{other}'"))),
         };
         self.record();
@@ -1728,6 +1789,280 @@ impl PrismEngine {
         self.layers.retain(|l| !doomed.contains(&l.id));
         self.selected.retain(|s| !doomed.contains(s));
         ok()
+    }
+
+    // -- document crop -------------------------------------------------------
+
+    /// `crop {x,y,w,h}` — offset-crop the document. Intersection semantics:
+    /// the rect is rounded outward to whole pixels, then intersected with
+    /// the canvas; a rect that misses it is `OutOfBounds`, and cropping to
+    /// the full canvas is a read-only no-op.
+    ///
+    /// Content stored in layer coordinates (shape bounds, path nodes,
+    /// gradient geometry) is shifted by `-s`, where `s` is the canvas delta
+    /// pulled back through each layer's effective transform — so the
+    /// rendered image is preserved exactly while transforms themselves stay
+    /// untouched. Raster layers resample through a texel grid pinned to the
+    /// buffer's own extent, which only matches the rendered image when the
+    /// layer's effective affine (own transform composed with group
+    /// ancestors) has an identity linear part: translation and
+    /// identity-scale rasters crop pixel-exactly, while any rotation, skew,
+    /// or non-unit scale would silently drop texels — those layers reject
+    /// the whole crop with `Validation` before anything mutates. Masks and
+    /// the pixel selection live in canvas space and are cropped at the
+    /// pixel offset; artboards shift by the canvas delta and may leave the
+    /// canvas. One undo entry. Like `resize`, this is a document-level op:
+    /// locked layers are not consulted.
+    fn op_crop(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let x = req_coord(p, "x")?;
+        let y = req_coord(p, "y")?;
+        let w = req_coord(p, "w")?;
+        let h = req_coord(p, "h")?;
+        if w <= 0.0 || h <= 0.0 {
+            return Err(EngineError::validation("crop w/h must be positive"));
+        }
+        let (cw, ch) = (self.width as i64, self.height as i64);
+        let ix0 = (x.floor() as i64).max(0);
+        let iy0 = (y.floor() as i64).max(0);
+        let ix1 = ((x + w).ceil() as i64).min(cw);
+        let iy1 = ((y + h).ceil() as i64).min(ch);
+        if ix1 <= ix0 || iy1 <= iy0 {
+            return Err(EngineError::out_of_bounds(
+                "crop region does not intersect the canvas",
+            ));
+        }
+        let (nw, nh) = ((ix1 - ix0) as u32, (iy1 - iy0) as u32);
+        Self::check_dims(nw, nh)?;
+        if ix0 == 0 && iy0 == 0 && nw == self.width && nh == self.height {
+            return read(json!({ "ok": true }));
+        }
+        let (sw, sh) = (self.width as usize, self.height as usize);
+        let (dw, dh) = (nw as usize, nh as usize);
+        let (dx, dy) = (ix0 as f64, iy0 as f64);
+
+        // Phase 1 — compute every new buffer and validate every shifted
+        // coordinate before touching the document or the journal. `s` is
+        // the content-space shift for each layer: the canvas delta pulled
+        // back through its effective (ancestor-inclusive) transform.
+        let scene = self.scene();
+        let mut shifts: Vec<(f64, f64)> = Vec::with_capacity(self.layers.len());
+        for l in &self.layers {
+            let e = scene.effective_affine(l);
+            let Some(inv) = e.invert() else {
+                return Err(EngineError::validation(format!(
+                    "layer {} has a degenerate transform",
+                    l.id
+                )));
+            };
+            let (sx, sy) = inv.apply_vec(dx, dy);
+            if !sx.is_finite() || !sy.is_finite() {
+                return Err(EngineError::validation(format!(
+                    "layer {} content shift is not representable",
+                    l.id
+                )));
+            }
+            // The raster resample below pins its texel grid to the buffer's
+            // own [0,w)×[0,h) extent; that equals the rendered window only
+            // when the effective affine's linear part is the identity. A
+            // scaled, rotated, or skewed raster (including via a group
+            // ancestor) would lose texels, so reject the whole crop here —
+            // still in phase 1, before the journal or any state changes.
+            if matches!(l.content, Content::Raster(_))
+                && ((e.a - 1.0).abs() > CROP_RASTER_LINEAR_EPS
+                    || e.b.abs() > CROP_RASTER_LINEAR_EPS
+                    || e.c.abs() > CROP_RASTER_LINEAR_EPS
+                    || (e.d - 1.0).abs() > CROP_RASTER_LINEAR_EPS)
+            {
+                return Err(EngineError::validation(format!(
+                    "crop does not support transformed raster layers (layer {} has rotation, skew, or non-unit scale)",
+                    l.id
+                )));
+            }
+            shifts.push((sx, sy));
+        }
+        let work_units = self
+            .layers
+            .iter()
+            .filter(|l| matches!(l.content, Content::Raster(_)) || l.mask.is_some())
+            .count() as u64
+            + 1;
+        let mut task = RenderTask::new(ctx, work_units);
+        let mut rasters: Vec<(usize, Vec<u8>)> = Vec::new();
+        let mut masks: Vec<(usize, Vec<u8>)> = Vec::new();
+        for (i, l) in self.layers.iter().enumerate() {
+            let (sx, sy) = shifts[i];
+            match &l.content {
+                Content::Raster(px) => {
+                    let buf =
+                        raster::resample_translated(px, sw, sh, sx, sy, dw, dh, &mut task)?;
+                    rasters.push((i, buf));
+                }
+                Content::Shape(s) => {
+                    if !finite(s.x - sx) || !finite(s.y - sy) {
+                        return Err(EngineError::validation(format!(
+                            "cropping layer {} exceeds coordinate bounds",
+                            l.id
+                        )));
+                    }
+                }
+                Content::Path(path) => {
+                    for sp in &path.subpaths {
+                        for n in &sp.nodes {
+                            if !finite(n.x - sx) || !finite(n.y - sy) {
+                                return Err(EngineError::validation(format!(
+                                    "cropping layer {} exceeds coordinate bounds",
+                                    l.id
+                                )));
+                            }
+                        }
+                    }
+                    for paint in path
+                        .fill
+                        .iter()
+                        .chain(path.stroke.iter().map(|s| &s.paint))
+                    {
+                        let mut q = paint.clone();
+                        shift_paint(&mut q, sx, sy);
+                        q.validate()?;
+                    }
+                }
+                Content::Boolean {
+                    fill: Some(f), ..
+                } => {
+                    let mut q = f.clone();
+                    shift_paint(&mut q, sx, sy);
+                    q.validate()?;
+                }
+                _ => {}
+            }
+            if let Some(m) = &l.mask {
+                masks.push((
+                    i,
+                    crop_alpha(&m.alpha, sw, sh, ix0, iy0, dw, dh, &mut task)?,
+                ));
+            }
+        }
+        task.step_done();
+        // Artboards and the pixel selection live in canvas space.
+        let mut artboards = self.artboards.clone();
+        for a in &mut artboards {
+            a.x -= dx;
+            a.y -= dy;
+            a.validate()
+                .map_err(|_| EngineError::validation("cropping an artboard exceeds coordinate bounds"))?;
+        }
+        let selection = match &self.selection {
+            None => None,
+            Some(s) => {
+                let c = crop_alpha(s, sw, sh, ix0, iy0, dw, dh, &mut task)?;
+                (!select::is_empty(&c)).then_some(c)
+            }
+        };
+        task.checkpoint()?;
+
+        // Phase 2 — commit. Nothing below can fail, so a cancelled task
+        // (which can only error in phase 1) leaves the document untouched.
+        self.record();
+        self.width = nw;
+        self.height = nh;
+        for (i, buf) in rasters {
+            self.layers[i].content = Content::Raster(Arc::new(buf));
+        }
+        for (i, alpha) in masks {
+            if let Some(m) = &mut self.layers[i].mask {
+                m.alpha = Arc::new(alpha);
+            }
+        }
+        for (i, &(sx, sy)) in shifts.iter().enumerate() {
+            match &mut self.layers[i].content {
+                Content::Shape(s) => {
+                    s.x -= sx;
+                    s.y -= sy;
+                }
+                Content::Path(path) => {
+                    for sp in &mut path.subpaths {
+                        for n in &mut sp.nodes {
+                            n.x -= sx;
+                            n.y -= sy;
+                        }
+                    }
+                    if let Some(f) = &mut path.fill {
+                        shift_paint(f, sx, sy);
+                    }
+                    if let Some(st) = &mut path.stroke {
+                        shift_paint(&mut st.paint, sx, sy);
+                    }
+                }
+                Content::Boolean {
+                    fill: Some(f), ..
+                } => shift_paint(f, sx, sy),
+                _ => {}
+            }
+        }
+        self.artboards = artboards;
+        self.selection = selection.map(Arc::new);
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    // -- pixel sampling ---------------------------------------------------------
+
+    /// `samplePixels {x,y,radius?}` — composite RGBA at a document-space
+    /// point, read through the real render pipeline (transforms, blend
+    /// modes, masks, groups). `radius` (0..=250, default 0) box-averages a
+    /// square region around the point in premultiplied alpha, so
+    /// translucent composites keep their color. Points outside the canvas
+    /// sample as transparent. Read-only: no undo entry, no events.
+    fn op_sample_pixels(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let transparent = || read(json!({ "r": 0, "g": 0, "b": 0, "a": 0 }));
+        let x = req_coord(p, "x")?;
+        let y = req_coord(p, "y")?;
+        let radius = req_radius(p, "radius", 0.0)?;
+        let (w, h) = (self.width as usize, self.height as usize);
+        if w == 0 || h == 0 {
+            return transparent();
+        }
+        // Pixels touched by the closed box [x±r]×[y±r], clipped to canvas.
+        let x0 = ((x - radius).floor() as i64).max(0);
+        let y0 = ((y - radius).floor() as i64).max(0);
+        let x1 = (((x + radius).floor() as i64) + 1).min(w as i64);
+        let y1 = (((y + radius).floor() as i64) + 1).min(h as i64);
+        if x1 <= x0 || y1 <= y0 {
+            return transparent();
+        }
+        let mut task = RenderTask::new(ctx, self.layers.len() as u64 + 1);
+        let flat = self.scene().flatten_ctx(&mut task)?;
+        task.step_done();
+        // Average in premultiplied space: accumulate rgb*a and a
+        // separately, then un-premultiply by the summed alpha. Averaging
+        // straight-alpha channels independently would darken translucent
+        // composites toward transparent black.
+        let mut acc = [0f64; 4];
+        let mut n = 0f64;
+        for py in y0..y1 {
+            for px in x0..x1 {
+                let o = ((py as usize) * w + px as usize) * 4;
+                let a = flat[o + 3] as f64 / 255.0;
+                for c in 0..3 {
+                    acc[c] += flat[o + c] as f64 * a;
+                }
+                acc[3] += a;
+                n += 1.0;
+            }
+        }
+        if acc[3] <= 1e-12 {
+            return transparent();
+        }
+        let channel = |c: usize| (acc[c] / acc[3]).round().clamp(0.0, 255.0) as u8;
+        let alpha = (acc[3] / n * 255.0).round().clamp(0.0, 255.0) as u8;
+        read(json!({ "r": channel(0), "g": channel(1), "b": channel(2), "a": alpha }))
     }
 
     // -- region fill ---------------------------------------------------------

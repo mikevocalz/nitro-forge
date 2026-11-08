@@ -19,6 +19,7 @@ export const OPS = {
   newDoc: "new",
   describe: "describe",
   resize: "resize",
+  crop: "crop",
   addRasterLayer: "addRasterLayer",
   addShape: "addShape",
   setShapeFill: "setShapeFill",
@@ -56,6 +57,7 @@ export const OPS = {
   setClipped: "setClipped",
   layerThumbnail: "layerThumbnail",
   renderRegion: "renderRegion",
+  samplePixels: "samplePixels",
   addMask: "addMask",
   removeMask: "removeMask",
   setMaskEnabled: "setMaskEnabled",
@@ -161,6 +163,20 @@ export class PrismDocument {
 
   resize(width: number, height: number) {
     return this.call(OPS.resize, { width, height });
+  }
+  /**
+   * Offset-crop the document to `rect` (canvas space). The rect is rounded
+   * outward to whole pixels and intersected with the canvas — partial and
+   * off-canvas crops keep the overlap; a rect that misses is rejected.
+   * Content coordinates, masks, selection and artboards are rebased so the
+   * rendered image is preserved for untransformed content. Raster layers
+   * only support pure
+   * translation/identity scale (including through group ancestors): any
+   * rotation, skew, or non-unit scale rejects the crop with Validation.
+   * One undo step.
+   */
+  crop(rect: { x: number; y: number; w: number; h: number }) {
+    return this.call(OPS.crop, rect);
   }
   addRasterLayer(name?: string) {
     return this.call<{ layer_id: number }>(OPS.addRasterLayer, { name });
@@ -274,7 +290,7 @@ export class PrismDocument {
   magicWand(options: { x: number; y: number; tolerance?: number; contiguous?: boolean; sample?: SampleSource; mode?: SelectionMode }) {
     return this.call(OPS.magicWand, options);
   }
-  modifySelection(op: "grow" | "shrink" | "feather", radius: number) {
+  modifySelection(op: "grow" | "shrink" | "feather" | "smooth", radius: number) {
     return this.call(OPS.modifySelection, { op, radius });
   }
   getSelection() {
@@ -307,6 +323,18 @@ export class PrismDocument {
   }
   renderRegion(x: number, y: number, w: number, h: number, max: number) {
     return this.call<PixelPreview>(OPS.renderRegion, { x, y, w, h, max });
+  }
+  /**
+   * Composite RGBA at a document-space point through the real render
+   * pipeline (transforms, blend modes, masks). `radius` box-averages a
+   * square region; points outside the canvas sample transparent.
+   * Read-only.
+   */
+  samplePixels(x: number, y: number, radius = 0) {
+    return this.call<{ r: number; g: number; b: number; a: number }>(
+      OPS.samplePixels,
+      { x, y, radius },
+    );
   }
 
   // -- masks (B-12) -------------------------------------------------------------

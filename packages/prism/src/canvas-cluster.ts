@@ -82,7 +82,7 @@ export class PrismCanvasAdapter {
     onInvertSelection: ()=>this.commit(this.doc.invertSelection()),
     onMagicWand: (request:{x:number;y:number;tolerance:number;contiguous:boolean;sample:'composite'|{readonly layer:CanvasId};mode:SelectionMode})=>
       this.commit(this.doc.magicWand({...request,sample:request.sample==='composite'?'composite':{layer:id(request.sample.layer)}})),
-    onModifySelection: (request:{op:'grow'|'shrink'|'feather';radius:number})=>this.commit(this.doc.modifySelection(request.op,request.radius)),
+    onModifySelection: (request:{op:'grow'|'shrink'|'feather'|'smooth';radius:number})=>this.commit(this.doc.modifySelection(request.op,request.radius)),
   };}
 
   masks(){return {
@@ -101,6 +101,15 @@ export class PrismCanvasAdapter {
     select:(ids:readonly CanvasId[])=>this.commit(this.doc.selectLayers(ids.map(id))),
     loadThumbnail:async(layerId:string,max:number)=>raster((await this.doc.layerThumbnail(id(layerId),max)).data),
   };}
+
+  /** Document-level ops: offset crop and eyedropper sampling. */
+  document(){
+    return {
+      onCrop:(r:{x:number;y:number;w:number;h:number})=>this.commit(this.doc.crop(r)),
+      /** Read-only composite sample; does not commit. */
+      sample:(x:number,y:number,radius=0)=>this.doc.samplePixels(x,y,radius),
+    };
+  }
 
   artboards(){return {
     onAddArtboard:(r:{name?:string;x:number;y:number;w:number;h:number})=>this.commit(this.doc.addArtboard(r,r.name)),

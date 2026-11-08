@@ -172,6 +172,23 @@ pub fn feather(
     Ok(a.into_iter().map(|v| v.round().clamp(0.0, 255.0) as u8).collect())
 }
 
+/// Selection "smooth" (Photoshop-style edge rounding): blur the mask by
+/// `radius`, then re-threshold at 50% so stair-stepped edges settle into a
+/// harder, rounder boundary. `radius <= 0` is a no-op, matching `feather`.
+pub fn smooth(
+    mask: &[u8],
+    w: usize,
+    h: usize,
+    radius: f64,
+    task: &mut RenderTask,
+) -> Result<Vec<u8>, EngineError> {
+    if radius <= 0.0 || w == 0 || h == 0 {
+        return Ok(mask.to_vec());
+    }
+    let blurred = feather(mask, w, h, radius, task)?;
+    Ok(blurred.iter().map(|&v| if v >= 128 { 255 } else { 0 }).collect())
+}
+
 /// 1D squared distance transform (Felzenszwalb–Huttenlocher).
 fn edt_1d(f: &[f64], d: &mut [f64], v: &mut [usize], z: &mut [f64]) {
     let n = f.len();
@@ -394,6 +411,24 @@ mod tests {
             color_region(&px, 3, 1, 0, 0, 0, false, &mut t).unwrap(),
             vec![255, 0, 255]
         );
+    }
+
+    #[test]
+    fn smooth_blurs_then_thresholds_to_binary() {
+        let mut t = task();
+        // A three-pixel diagonal staircase: the jagged edge smooths into a
+        // wider, rounder band.
+        let mut m = vec![0u8; 100];
+        for y in 0..10 {
+            for x in y..(y + 3).min(10) {
+                m[y * 10 + x] = 255;
+            }
+        }
+        let s = smooth(&m, 10, 10, 1.0, &mut t).unwrap();
+        assert!(s.iter().all(|&v| v == 0 || v == 255), "smooth output is binary");
+        assert_ne!(s, m, "the staircase edge rounds off");
+        assert!(s.iter().filter(|&&v| v == 255).count() > 15);
+        assert_eq!(smooth(&m, 10, 10, 0.0, &mut t).unwrap(), m, "radius 0 is a no-op");
     }
 
     #[test]
