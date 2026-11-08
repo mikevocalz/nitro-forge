@@ -483,18 +483,16 @@ impl Engine for DesignEngine {
                     &self.state, p,
                 )?))
             }
-<<<<<<< HEAD
             "listComments" => {
                 return Ok(CommandResult::read_only(json!({
                     "threads": &self.state.comments.threads
                 })))
-=======
+            }
             "describeHandoff" => {
                 return Ok(CommandResult::read_only(handoff::describe(
                     &self.state,
                     self.state_revision,
                 )?))
->>>>>>> codex/w1-design-handoff
             }
             "renderFrame" => return self.render(&cmd, None),
             "exportSlice" => return self.export_slice(&cmd, None),
