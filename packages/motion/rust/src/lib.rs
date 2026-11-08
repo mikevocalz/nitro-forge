@@ -2,12 +2,14 @@
 mod assets;
 mod curve;
 mod effects;
+mod expressions;
 mod particles;
 mod path;
 mod transform3d;
 use assets::RasterAsset;
 use curve::{evaluate, Key};
 use effects::{apply_effects, LayerEffect};
+use expressions::{Env as ExprEnv, PropertyExpr};
 use particles::{ParticleEmitter, ParticleSprite};
 use path::MotionPath;
 use transform3d::Transform3D;
@@ -70,7 +72,7 @@ struct Shape {
     h: f64,
     fill: [u8; 4],
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum Property {
     Tx,
@@ -138,6 +140,43 @@ impl Property {
     /// them atomically when the 3D transform is cleared.
     fn is_3d(self) -> bool {
         matches!(self, Self::Rx | Self::Ry | Self::Z)
+    }
+    /// Every bindable scalar property, in declaration order (slice D
+    /// expressions and the eval resolver iterate this set).
+    const ALL: [Self; 12] = [
+        Self::Tx,
+        Self::Ty,
+        Self::Sx,
+        Self::Sy,
+        Self::Rotation,
+        Self::Ox,
+        Self::Oy,
+        Self::Opacity,
+        Self::PathProgress,
+        Self::Rx,
+        Self::Ry,
+        Self::Z,
+    ];
+    /// Dense slot for per-evaluation memo tables.
+    fn index(self) -> usize {
+        match self {
+            Self::Tx => 0,
+            Self::Ty => 1,
+            Self::Sx => 2,
+            Self::Sy => 3,
+            Self::Rotation => 4,
+            Self::Ox => 5,
+            Self::Oy => 6,
+            Self::Opacity => 7,
+            Self::PathProgress => 8,
+            Self::Rx => 9,
+            Self::Ry => 10,
+            Self::Z => 11,
+        }
+    }
+    /// Wire name → property (the same serde names curves/expressions use).
+    pub(crate) fn from_name(s: &str) -> Option<Self> {
+        serde_json::from_value(Value::String(s.to_string())).ok()
     }
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -287,6 +326,15 @@ struct Layer {
     /// rendering. Additive serde default keeps schema at 2.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     transform3d: Option<Transform3D>,
+    /// Bounded scalar expressions (slice D): at most one per property,
+    /// mutually exclusive with that property's curve — `setExpression`
+    /// clears the curve and `setPropertyKeys` clears the expression in the
+    /// same journal entry (last write wins). Sources are UTF-8 text
+    /// re-parsed at op time and on restore; evaluation resolves each
+    /// property as expression → curve → base. Additive serde default keeps
+    /// schema at 2; expression-free layers serialize identically.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    expressions: Vec<PropertyExpr>,
     transform: Transform,
     opacity: f64,
     curves: Vec<Curve>,
@@ -522,7 +570,12 @@ struct CompView<'a> {
     width: u32,
     height: u32,
     duration_s: f64,
+    /// Rational frame rate as f64 (`num/den`); expression `fps`/`frame`.
+    fps: f64,
     layers: &'a [Arc<Layer>],
+}
+fn rate_fps(rate: &Rate) -> f64 {
+    f64::from(rate.num) / f64::from(rate.den)
 }
 impl State {
     fn comp_view(&self, comp: Option<u64>) -> Result<CompView<'_>, EngineError> {
@@ -531,6 +584,7 @@ impl State {
                 width: self.width,
                 height: self.height,
                 duration_s: self.duration_s,
+                fps: rate_fps(&self.frame_rate),
                 layers: &self.layers,
             }),
             Some(id) => {
@@ -542,6 +596,7 @@ impl State {
                     width: c.width,
                     height: c.height,
                     duration_s: c.duration_s,
+                    fps: rate_fps(&c.frame_rate),
                     layers: &c.layers,
                 })
             }
@@ -860,6 +915,80 @@ fn validate(s: &State) -> Result<(), EngineError> {
             }
         }
     }
+    // Pass 2c: bounded expressions (slice D). Per layer: unique properties,
+    // kind gates (3D needs transform3d, path_progress needs path), mutual
+    // exclusion with that property's curve, source cap and a full re-parse
+    // (hostile restores reject, never partially parse). References must
+    // name layers in the same composition; the whole-document
+    // `(layer, property)` dependency graph must be acyclic — self
+    // references included.
+    let mut expr_edges: BTreeMap<(u64, Property), Vec<(u64, Property)>> = BTreeMap::new();
+    let mut expr_cells: BTreeSet<(u64, Property)> = BTreeSet::new();
+    for &(key, _, _, _, layers) in &views {
+        let members = &comp_members[&key];
+        for l in layers {
+            let mut expr_props = BTreeSet::new();
+            for e in &l.expressions {
+                if !expr_props.insert(e.property) {
+                    return Err(bad("duplicate property expression"));
+                }
+                if e.property.is_3d() && l.transform3d.is_none() {
+                    return Err(bad("3D expressions require a transform3d"));
+                }
+                if e.property == Property::PathProgress && l.path.is_none() {
+                    return Err(bad("path progress requires a motion path"));
+                }
+                if l.curves.iter().any(|c| c.property == e.property) {
+                    return Err(bad("property cannot have both keys and an expression"));
+                }
+                if e.source.len() > expressions::MAX_SOURCE_BYTES {
+                    return Err(bad("expression source exceeds budget"));
+                }
+                let ast = expressions::parse(&e.source).map_err(|_| bad("invalid expression"))?;
+                expr_cells.insert((l.id, e.property));
+                for r in ast.references() {
+                    let target = r.0.unwrap_or(l.id);
+                    if !members.contains_key(&target) {
+                        return Err(bad(
+                            "expression references a layer outside its composition",
+                        ));
+                    }
+                    expr_edges
+                        .entry((l.id, e.property))
+                        .or_default()
+                        .push((target, r.1));
+                }
+            }
+        }
+    }
+    fn expr_acyclic(
+        node: (u64, Property),
+        edges: &BTreeMap<(u64, Property), Vec<(u64, Property)>>,
+        visiting: &mut BTreeSet<(u64, Property)>,
+        done: &mut BTreeSet<(u64, Property)>,
+    ) -> Result<(), EngineError> {
+        if done.contains(&node) {
+            return Ok(());
+        }
+        if !visiting.insert(node) {
+            return Err(bad("cyclic expression dependency"));
+        }
+        if let Some(next) = edges.get(&node) {
+            for &dep in next {
+                expr_acyclic(dep, edges, visiting, done)?;
+            }
+        }
+        visiting.remove(&node);
+        done.insert(node);
+        Ok(())
+    }
+    {
+        let mut visiting = BTreeSet::new();
+        let mut done = BTreeSet::new();
+        for &node in expr_edges.keys().chain(expr_cells.iter()) {
+            expr_acyclic(node, &expr_edges, &mut visiting, &mut done)?;
+        }
+    }
     // Pass 2b: matte chains are acyclic and bounded so render recursion
     // terminates. Sources are already proven same-composition above, and the
     // check covers every matte edge including disabled ones.
@@ -1027,6 +1156,96 @@ fn opt_f64(p: &Value, name: &str, default: f64) -> Result<f64, EngineError> {
             .ok_or_else(|| bad("expected a finite number")),
     }
 }
+/// Per-`evaluated_layers`-call resolver for expression/curve/base property
+/// values (slice D). `(layer, property)` cells resolve memoized so
+/// `this.<prop>`/`layer(<id>).<prop>` references see the same resolved value
+/// everywhere; `busy` is a defensive cycle backstop — `validate` already
+/// proves the expression dependency graph acyclic, so it is unreachable on
+/// admitted state.
+struct ExprResolver<'a> {
+    layers: &'a [Arc<Layer>],
+    by_id: BTreeMap<u64, usize>,
+    env: ExprEnv,
+    values: Vec<[f64; 12]>,
+    done: Vec<[bool; 12]>,
+    busy: Vec<[bool; 12]>,
+}
+impl<'a> ExprResolver<'a> {
+    fn new(layers: &'a [Arc<Layer>], duration_s: f64, fps: f64, time: f64) -> Self {
+        Self {
+            layers,
+            by_id: layers.iter().enumerate().map(|(i, l)| (l.id, i)).collect(),
+            env: ExprEnv {
+                time,
+                frame: (time * fps).floor(),
+                fps,
+                duration: duration_s,
+            },
+            values: vec![[0.; 12]; layers.len()],
+            done: vec![[false; 12]; layers.len()],
+            busy: vec![[false; 12]; layers.len()],
+        }
+    }
+    fn resolve(&mut self, index: usize, property: Property) -> Result<f64, EngineError> {
+        let slot = property.index();
+        if self.done[index][slot] {
+            return Ok(self.values[index][slot]);
+        }
+        if self.busy[index][slot] {
+            return Ok(0.);
+        }
+        self.busy[index][slot] = true;
+        let layer = &self.layers[index];
+        let value = if let Some(expr) = layer.expressions.iter().find(|e| e.property == property)
+        {
+            match expressions::parse(&expr.source) {
+                Ok(ast) => {
+                    let env = self.env;
+                    let owner = layer.id;
+                    let raw = ast.eval(&env, owner, &mut |id, prop| {
+                        self.resolve_ref(id, prop)
+                    });
+                    // Property boundary: non-finite (including the defensive
+                    // step-cap NaN) resolves to 0.0; finite clamps into the
+                    // property's existing bounds. Evaluation never fails.
+                    let (lo, hi) = property.bounds();
+                    if raw.is_finite() {
+                        raw.clamp(lo, hi)
+                    } else {
+                        0.
+                    }
+                }
+                // Unreachable on validated state; defensive 0.0.
+                Err(_) => 0.,
+            }
+        } else if let Some(curve) = layer.curves.iter().find(|c| c.property == property) {
+            let (min, max) = property.bounds();
+            evaluate(
+                &curve.keys,
+                property.read(layer),
+                self.env.time,
+                self.env.duration,
+                min,
+                max,
+            )
+            .map_err(bad)?
+        } else {
+            property.read(layer)
+        };
+        self.busy[index][slot] = false;
+        self.done[index][slot] = true;
+        self.values[index][slot] = value;
+        Ok(value)
+    }
+    /// `layer(<id>).<prop>` target: ids are validated same-comp, so a miss
+    /// is defensive-only and resolves to 0.0.
+    fn resolve_ref(&mut self, id: u64, property: Property) -> f64 {
+        match self.by_id.get(&id) {
+            Some(&index) => self.resolve(index, property).unwrap_or(0.),
+            None => 0.,
+        }
+    }
+}
 pub struct MotionEngine {
     state: Arc<State>,
     journal: Journal<Arc<State>>,
@@ -1043,61 +1262,64 @@ impl MotionEngine {
             journal: Journal::new(HISTORY),
         }
     }
-    /// Evaluate one composition's layers at a local time. Curves resolve
-    /// against that composition's own duration.
+    /// Evaluate one composition's layers at a local time. Curves and
+    /// expressions resolve against that composition's own duration, frame
+    /// rate and local time; `this`/`layer()` references resolve through the
+    /// shared per-call memo so results are order-independent and seek-safe.
     fn evaluated_layers(
         &self,
         layers: &[Arc<Layer>],
         duration_s: f64,
+        fps: f64,
         time: f64,
     ) -> Result<Vec<Layer>, EngineError> {
         if !time.is_finite() || time < 0. || time > duration_s {
             return Err(bad("time outside composition"));
         }
-        layers
-            .iter()
-            .map(|l| {
-                let mut out = (**l).clone();
-                for c in &l.curves {
-                    let (min, max) = c.property.bounds();
-                    let value = evaluate(
-                        &c.keys,
-                        c.property.read(l),
-                        time,
-                        duration_s,
-                        min,
-                        max,
-                    )
-                    .map_err(bad)?;
-                    c.property.write(&mut out, value)
+        let mut resolver = ExprResolver::new(layers, duration_s, fps, time);
+        let mut out_layers = Vec::with_capacity(layers.len());
+        for (index, l) in layers.iter().enumerate() {
+            let mut out = (**l).clone();
+            for property in Property::ALL {
+                if l.curves.iter().any(|c| c.property == property)
+                    || l.expressions.iter().any(|e| e.property == property)
+                {
+                    let value = resolver.resolve(index, property)?;
+                    property.write(&mut out, value)
                 }
-                out.curves.clear();
-                // Motion path (slice E): the evaluated progress selects an
-                // arc-length point whose offset adds to tx/ty in the layer's
-                // transform space; auto_orient adds the tangent angle to
-                // rotation. Runs after curves so path_progress keys win and
-                // tx/ty keys compose with (never replace) the path offset.
-                if let Some(mpath) = &out.path {
-                    let (px, py, deg) =
-                        mpath.sample_at(out.path_progress).map_err(|_| bad("invalid motion path"))?;
-                    let orient = mpath.auto_orient;
-                    // Path nodes/handles are each bounded ±1e7, so sampled
-                    // offsets can reach ~±2e7; adding to an evaluated base
-                    // that is itself ±1e7 could push tx/ty/rotation past
-                    // Prism's transform bound and fail setLayerTransform on
-                    // an otherwise valid document. Saturate at the shared
-                    // ±1e7 bound instead — extreme paths visibly distort at
-                    // the boundary, a documented limitation like the
-                    // parent-compose shear/bounds case.
-                    out.transform.tx = (out.transform.tx + px).clamp(-1e7, 1e7);
-                    out.transform.ty = (out.transform.ty + py).clamp(-1e7, 1e7);
-                    if orient {
-                        out.transform.rotation = (out.transform.rotation + deg).clamp(-1e7, 1e7);
-                    }
+            }
+            out.curves.clear();
+            // Expressions are cleared from evaluated output like curves:
+            // resolved values land in the same fields and `describe` remains
+            // the verbatim expression view.
+            out.expressions.clear();
+            // Motion path (slice E): the evaluated progress selects an
+            // arc-length point whose offset adds to tx/ty in the layer's
+            // transform space; auto_orient adds the tangent angle to
+            // rotation. Runs after curves and expressions so path_progress
+            // animation wins and tx/ty/rotation compose with (never replace)
+            // the path offset.
+            if let Some(mpath) = &out.path {
+                let (px, py, deg) =
+                    mpath.sample_at(out.path_progress).map_err(|_| bad("invalid motion path"))?;
+                let orient = mpath.auto_orient;
+                // Path nodes/handles are each bounded ±1e7, so sampled
+                // offsets can reach ~±2e7; adding to an evaluated base
+                // that is itself ±1e7 could push tx/ty/rotation past
+                // Prism's transform bound and fail setLayerTransform on
+                // an otherwise valid document. Saturate at the shared
+                // ±1e7 bound instead — extreme paths visibly distort at
+                // the boundary, a documented limitation like the
+                // parent-compose shear/bounds case.
+                out.transform.tx = (out.transform.tx + px).clamp(-1e7, 1e7);
+                out.transform.ty = (out.transform.ty + py).clamp(-1e7, 1e7);
+                if orient {
+                    out.transform.rotation = (out.transform.rotation + deg).clamp(-1e7, 1e7);
                 }
-                Ok(out)
-            })
-            .collect()
+            }
+            out_layers.push(out);
+        }
+        Ok(out_layers)
     }
     /// Local time inside `comp` for a root-composition time `time`.
     /// Nested time maps proportionally through each composition's duration:
@@ -1254,6 +1476,7 @@ impl MotionEngine {
                     width: comp.width,
                     height: comp.height,
                     duration_s: comp.duration_s,
+                    fps: rate_fps(&comp.frame_rate),
                     layers: &comp.layers,
                 };
                 let pixels = self.render_comp(&child_view, child_time, ctx, depth + 1)?;
@@ -1455,7 +1678,7 @@ impl MotionEngine {
         if depth > MAX_COMP_DEPTH {
             return Err(bad("composition nesting depth exceeded"));
         }
-        let layers = self.evaluated_layers(view.layers, view.duration_s, time)?;
+        let layers = self.evaluated_layers(view.layers, view.duration_s, view.fps, time)?;
         let by_id: BTreeMap<u64, &Layer> = layers.iter().map(|l| (l.id, l)).collect();
         let mut prism = prism_engine::PrismEngine::new(view.width, view.height);
         for l in &layers {
@@ -1603,8 +1826,12 @@ impl Engine for MotionEngine {
             if !t.is_finite() || t < 0. || t > self.state.duration_s {
                 return Err(bad("time outside composition"));
             }
-            let root = self
-                .evaluated_layers(&self.state.layers, self.state.duration_s, t)?;
+            let root = self.evaluated_layers(
+                &self.state.layers,
+                self.state.duration_s,
+                rate_fps(&self.state.frame_rate),
+                t,
+            )?;
             // Each nested composition is evaluated independently at its
             // duration-scaled local time (the same mapping renderFrame uses
             // per instance; multiple instances share one reported evaluation).
@@ -1621,7 +1848,10 @@ impl Engine for MotionEngine {
                         "duration_s": comp.duration_s,
                         "frame_rate": comp.frame_rate,
                         "layers": evaluated_json(&self.evaluated_layers(
-                            &comp.layers, comp.duration_s, local,
+                            &comp.layers,
+                            comp.duration_s,
+                            rate_fps(&comp.frame_rate),
+                            local,
                         )?)?,
                     }),
                 );
@@ -1747,6 +1977,13 @@ impl Engine for MotionEngine {
                                 bad("matte source outside duplicated composition")
                             })?;
                     }
+                    // `layer(<id>)` expression refs are same-composition, so
+                    // they remap to the copy's fresh identities like
+                    // parent/matte links; `this` refs need no rewrite.
+                    for e in &mut nl.expressions {
+                        e.source = expressions::remap_layer_refs(&e.source, &layer_ids)
+                            .map_err(|_| bad("invalid expression"))?;
+                    }
                     for c in &mut nl.curves {
                         for k in Arc::make_mut(&mut c.keys).iter_mut() {
                             k.id = next.next_key_id;
@@ -1828,6 +2065,7 @@ impl Engine for MotionEngine {
                     emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
+                    expressions: vec![],
                     curves: vec![],
                 }));
                 data = json!({"layer_id":layer});
@@ -2015,6 +2253,10 @@ impl Engine for MotionEngine {
                 if nl.path.is_none() {
                     nl.path_progress = 0.;
                     nl.curves.retain(|c| c.property != Property::PathProgress);
+                    // A path_progress expression without a path violates the
+                    // same gate, so it clears in the same atomic write.
+                    nl.expressions
+                        .retain(|e| e.property != Property::PathProgress);
                 }
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
@@ -2078,6 +2320,60 @@ impl Engine for MotionEngine {
                 nl.transform3d = t3;
                 if nl.transform3d.is_none() {
                     nl.curves.retain(|c| !c.property.is_3d());
+                    // rx/ry/z expressions require transform3d too; they
+                    // clear atomically with it like the curves do.
+                    nl.expressions.retain(|e| !e.property.is_3d());
+                }
+                comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
+            }
+            "setExpression" => {
+                let layer_id = id(p, "layer")?;
+                let property: Property = serde_json::from_value(
+                    p.get("property")
+                        .cloned()
+                        .ok_or_else(|| bad("property required"))?,
+                )?;
+                // `source` is required: a string ≤4KiB to set/replace, or
+                // explicit null to clear. Absent rejects.
+                let source = match p.get("source") {
+                    None => return Err(bad("source required")),
+                    Some(Value::Null) => None,
+                    Some(v) => Some(
+                        v.as_str()
+                            .ok_or_else(|| bad("source must be a string or null"))?,
+                    ),
+                };
+                let (comp_key, i) =
+                    locate_layer(&next, layer_id).ok_or_else(|| bad("unknown layer"))?;
+                let arc = comp_layers(&next, comp_key).unwrap()[i].clone();
+                if arc.locked {
+                    return Err(bad("layer is locked"));
+                }
+                let mut nl = (*arc).clone();
+                match source {
+                    None => {
+                        nl.expressions.retain(|e| e.property != property);
+                    }
+                    Some(source) => {
+                        // Parse now so malformed input rejects before any
+                        // state change; validate() re-checks caps, kind
+                        // gates, mutual exclusion and dependency acyclicity.
+                        expressions::parse(source).map_err(|_| bad("invalid expression"))?;
+                        if let Some(existing) =
+                            nl.expressions.iter_mut().find(|e| e.property == property)
+                        {
+                            existing.source = source.to_string();
+                        } else {
+                            nl.expressions.push(PropertyExpr {
+                                property,
+                                source: source.to_string(),
+                            });
+                        }
+                        // Ownership rule: an expression and a curve never
+                        // coexist on one (layer, property) — the curve clears
+                        // in this same journal entry.
+                        nl.curves.retain(|c| c.property != property);
+                    }
                 }
                 comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(nl);
             }
@@ -2115,6 +2411,7 @@ impl Engine for MotionEngine {
                     emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
+                    expressions: vec![],
                     curves: vec![],
                 }));
                 data = json!({"layer_id":layer});
@@ -2152,6 +2449,7 @@ impl Engine for MotionEngine {
                     emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
+                    expressions: vec![],
                     curves: vec![],
                 }));
                 data = json!({"layer_id":layer});
@@ -2185,6 +2483,7 @@ impl Engine for MotionEngine {
                     emitter: None,
                     transform: Transform::default(),
                     opacity: 1.,
+                    expressions: vec![],
                     curves: vec![],
                 }));
                 data = json!({"layer_id":layer});
@@ -2368,6 +2667,9 @@ impl Engine for MotionEngine {
                             keys: Arc::new(keys),
                         })
                     }
+                    // Last-write-wins: writing keys for a property clears its
+                    // expression in the same journal entry (slice D).
+                    layer.expressions.retain(|e| e.property != property);
                     comp_layers_mut(&mut next, comp_key).unwrap()[i] = Arc::new(layer);
                 }
             }
@@ -2741,3 +3043,5 @@ mod path_tests;
 mod particles_tests;
 #[cfg(test)]
 mod transform3d_tests;
+#[cfg(test)]
+mod expression_tests;

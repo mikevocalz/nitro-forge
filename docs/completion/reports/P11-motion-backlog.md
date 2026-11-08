@@ -40,6 +40,10 @@ artboards. Media decode is host-side only; no encoder exists in Forge.
   `time/frame/fps/duration/this.<prop>/comp().layer()` refs; source ≤4 KiB,
   AST ≤512 nodes, eval ≤10k steps; spec MUST be written into ENGINE_OPS
   before coding. Expression owns or yields to keys — pick and document.
+  **Implemented 2026-11-08** per `P11-motion-expressions-spec.md` (chose
+  mutually-exclusive last-write-wins ownership; `layer(<id>)` same-comp
+  refs only, `comp()` deferred; no time-remap op — backlog item folded
+  into expressions only). See ROSTER slice-D checkpoint.
 - **E — motion paths**: `Layer.path` adopting Prism node model;
   `Property::PathProgress` via existing curve machinery; arc-length table
   (≤256 nodes, ≤4096 samples); `setMotionPath`, `auto_orient`.
