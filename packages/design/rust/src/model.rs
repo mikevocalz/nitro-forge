@@ -178,10 +178,14 @@ pub enum VerticalAnchor {
 /// Responsive constraints stored on absolute children only (the NYC-Tron
 /// `DesignConstraints` contract). C1 admitted the h/v anchors; C2 adds
 /// bounded min/max extents, the `aspect_locked` flag and parent-or-sibling
-/// `relative_to` targets. All of it is still storage + validation: no solver
-/// reads these fields, `evaluateLayout` ignores them, and `scale` anchors
-/// remain rejected. `relative_to` maps NYC-Tron `relativeToId` to the
-/// engine's numeric node id; absent means the parent frame.
+/// `relative_to` targets. `layout::evaluate_report` solves them
+/// automatically: anchors pin the child's edge/midpoint/span flush to the
+/// reference box (the contract stores no inset margins), bounds clamp
+/// extents and `aspect_locked` derives the ratio from evaluated geometry —
+/// unsatisfied nodes keep their unconstrained box and are reported, never
+/// silently dropped. `scale` anchors remain
+/// rejected. `relative_to` maps NYC-Tron `relativeToId` to the engine's
+/// numeric node id; absent means the parent frame.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NodeConstraints {
@@ -1505,7 +1509,9 @@ pub fn validate(s: &State) -> Result<(), EngineError> {
     // Constraint state is durable on absolute children only. Flow children
     // get positions from their parent's layout, the root has no parent
     // frame, `scale` is deferred solver work, and `relative_to` is bounded
-    // to the parent frame or a sibling until wider targets land.
+    // to the parent frame or a sibling until wider targets land. The
+    // layout pass solves admitted constraints; this validation only gates
+    // what may be stored.
     for (id, n) in &s.nodes {
         let Some(c) = &n.constraints else {
             continue;

@@ -11,11 +11,13 @@ it('runs constraint anchors through the real nf-cli engine: store, read, wrapper
   const state=await doc.describe();
   expect(state.data.nodes[String(node_id)]!.constraints).toEqual({horizontal:'left',vertical:'top',relative_to:1});
   const read=(await doc.readConstraints(node_id)).data;
-  expect(read.solving).toBe('storage-only');
-  expect(read.nodes).toEqual([{node_id,constraints:{horizontal:'left',vertical:'top',relative_to:1},enforced:false}]);
-  // Storage only: evaluated boxes keep authored coordinates.
-  const boxes=(await doc.evaluateLayout()).data.boxes;
-  expect(boxes.find(b=>b.id===node_id)).toMatchObject({x:1,y:1});
+  expect(read.solving).toBe('evaluateLayout');
+  expect(read.solve.status).toBe('solved');
+  expect(read.nodes).toEqual([{node_id,constraints:{horizontal:'left',vertical:'top',relative_to:1},enforced:true,satisfied:true}]);
+  // Enforcement is live: left/top pin flush to the parent (root) box.
+  const layout=(await doc.evaluateLayout()).data;
+  expect(layout.constraints.status).toBe('solved');
+  expect(layout.boxes.find(b=>b.id===node_id)).toMatchObject({x:0,y:0});
   // Rejections surface as engine errors with reasons.
   await expect(doc.setConstraints(1,{horizontal:'left',vertical:'top'})).rejects.toThrow(/root/);
   await expect(doc.setConstraints(node_id,{horizontal:'scale',vertical:'top'})).rejects.toThrow(/scale/);

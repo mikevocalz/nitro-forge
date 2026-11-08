@@ -84,3 +84,17 @@ bump); Prism has no text op (font metrics undecided); no PNG/SVG encoder
 admitted; presence transport needs collaboration-server work; prototype
 playback clock is host-owned; native/JSI binaries need rebuild per new
 ops.
+
+## Constraint solver checkpoint (2026-11-08)
+
+C1/C2 constraints are now enforced, closing the largest remaining Design
+slice. `evaluateLayout` solves constraints automatically (no separate
+solve op): flush edge/midpoint/span pinning against the parent-or-sibling
+reference, C2 extent bounds, `aspect_locked` derived from evaluated
+geometry, topological sibling-dependency resolution with cycle/bound/aspect
+conflicts reported as unsatisfied (baseline geometry kept). `scale`
+anchors, inset margins, wider `relative_to` targets, stored ratios and
+constraint-aware hug/fill stay deferred. `readConstraints` reports live
+`solve` status; `evaluateLayout` carries a `constraints` report block.
+Snapshots unchanged (solving is derived). Evidence: 54 Rust tests, 19
+Vitest incl. 1 new nf-cli solver e2e; see ROSTER.md.

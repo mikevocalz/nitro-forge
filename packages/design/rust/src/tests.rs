@@ -1381,9 +1381,10 @@ fn constraints_store_clear_persist_undo_and_read_silently() {
             relative_to: Some(1),
         })
     );
-    // Storage only: evaluated boxes keep authored x/y.
+    // Enforcement is live: left/top pin flush to the parent (root) box, so
+    // the authored (1,1) offset is overridden to the canvas origin.
     let boxes = layout::evaluate(&e.state).unwrap();
-    assert_eq!((boxes[1].x, boxes[1].y), (1., 1.));
+    assert_eq!((boxes[1].x, boxes[1].y), (0., 0.));
     // Repeating the same write is a silent no-op.
     assert!(call(
         &mut e,
@@ -1392,14 +1393,16 @@ fn constraints_store_clear_persist_undo_and_read_silently() {
     )
     .events
     .is_empty());
-    // readConstraints is silent and reports storage-only enforcement.
+    // readConstraints is silent and reports live solve status.
     let read = call(&mut e, "readConstraints", json!({}));
     assert!(read.events.is_empty());
-    assert_eq!(read.data["solving"], "storage-only");
+    assert_eq!(read.data["solving"], "evaluateLayout");
+    assert_eq!(read.data["solve"]["status"], "solved");
     assert_eq!(read.data["accepted"]["horizontal"], json!(["left","right","center","stretch"]));
     assert_eq!(read.data["nodes"].as_array().unwrap().len(), 1);
     assert_eq!(read.data["nodes"][0]["node_id"], rect);
-    assert_eq!(read.data["nodes"][0]["enforced"], false);
+    assert_eq!(read.data["nodes"][0]["enforced"], true);
+    assert_eq!(read.data["nodes"][0]["satisfied"], true);
     assert_eq!(read.data["nodes"][0]["constraints"]["horizontal"], "left");
     let filtered = call(&mut e, "readConstraints", json!({"id":1}));
     assert!(filtered.data["nodes"].as_array().unwrap().is_empty());
@@ -1599,14 +1602,16 @@ fn constraints_c2_bounds_targets_and_hostile_restore() {
     assert_eq!(c.max_height, None);
     assert!(c.aspect_locked);
     assert_eq!(c.relative_to, Some(sibling));
-    // Storage only: evaluated boxes keep authored x/y.
+    // Left/top pin flush to the sibling's box origin (5,5); the C2 bounds
+    // and aspect flag solve live inside evaluateLayout.
     let boxes = layout::evaluate(&e.state).unwrap();
-    assert_eq!((boxes[1].x, boxes[1].y), (1., 1.));
-    // readConstraints echoes the stored C2 fields and stays silent.
+    assert_eq!((boxes[1].x, boxes[1].y), (5., 5.));
+    // readConstraints echoes the stored C2 fields and reports live status.
     let read = call(&mut e, "readConstraints", json!({"id":rect}));
     assert!(read.events.is_empty());
-    assert_eq!(read.data["solving"], "storage-only");
-    assert_eq!(read.data["nodes"][0]["enforced"], false);
+    assert_eq!(read.data["solving"], "evaluateLayout");
+    assert_eq!(read.data["nodes"][0]["enforced"], true);
+    assert_eq!(read.data["nodes"][0]["satisfied"], true);
     let reported = &read.data["nodes"][0]["constraints"];
     assert_eq!(reported["min_width"], 1.5);
     assert_eq!(reported["max_width"], 8.);
@@ -1740,6 +1745,128 @@ fn constraints_c2_bounds_targets_and_hostile_restore() {
         e.state.nodes[&inner].constraints.as_ref().unwrap().relative_to,
         None
     );
+}
+#[test]
+fn constraints_solve_anchors_bounds_aspect_siblings_and_cycles() {
+    let mut e = DesignEngine::new();
+    call(&mut e, "new", json!({"width":20,"height":10}));
+    let find = |e: &DesignEngine, id: u64| {
+        layout::evaluate(&e.state)
+            .unwrap()
+            .into_iter()
+            .find(|b| b.id == id)
+            .unwrap()
+    };
+    // right/bottom pin flush to the parent (root) box and stay pinned
+    // across canvas resizes.
+    let rect = shape(&mut e, 1, 15., 5., 2., 2., [255; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":rect,"constraints":{"horizontal":"right","vertical":"bottom"}}),
+    );
+    let b = find(&e, rect);
+    assert_eq!((b.x, b.y, b.width, b.height), (18., 8., 2., 2.));
+    call(&mut e, "setComposition", json!({"width":30,"height":20}));
+    let b = find(&e, rect);
+    assert_eq!((b.x, b.y), (28., 18.));
+    // center pins the midpoint on both axes.
+    let ctr = shape(&mut e, 1, 4., 3., 4., 2., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":ctr,"constraints":{"horizontal":"center","vertical":"center"}}),
+    );
+    let b = find(&e, ctr);
+    assert_eq!((b.x, b.y), (13., 9.));
+    // stretch spans the reference extent.
+    let str_ = shape(&mut e, 1, 2., 1., 4., 3., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":str_,"constraints":{"horizontal":"stretch","vertical":"stretch"}}),
+    );
+    let b = find(&e, str_);
+    assert_eq!((b.x, b.y, b.width, b.height), (0., 0., 30., 20.));
+    // A bound that the stretch cannot satisfy marks the node unsatisfied
+    // and keeps its unconstrained geometry — honestly reported, not hidden.
+    let bounded = shape(&mut e, 1, 1., 1., 2., 2., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":bounded,"constraints":{"horizontal":"stretch","vertical":"top","max_width":5.}}),
+    );
+    let (_, solve) = layout::evaluate_report(&e.state).unwrap();
+    assert_eq!(solve.unsatisfied, vec![bounded]);
+    let b = find(&e, bounded);
+    assert_eq!((b.x, b.y, b.width, b.height), (1., 1., 2., 2.));
+    // aspect_locked derives the ratio from evaluated geometry: vertical
+    // stretch pins height, width follows at the authored 2:1 ratio.
+    let aspect = shape(&mut e, 1, 1., 1., 4., 2., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":aspect,"constraints":{"horizontal":"left","vertical":"stretch","aspect_locked":true}}),
+    );
+    let b = find(&e, aspect);
+    assert_eq!((b.x, b.y, b.width, b.height), (0., 0., 40., 20.));
+    // Sibling relative_to tracks the sibling's solved box.
+    let anchor = shape(&mut e, 1, 6., 1., 2., 2., [0; 4]);
+    let follower = shape(&mut e, 1, 10., 1., 2., 2., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":follower,"constraints":{"horizontal":"right","vertical":"top","relative_to":anchor}}),
+    );
+    let b = find(&e, follower);
+    assert_eq!((b.x, b.y), (6., 1.));
+    call(&mut e, "updateNode", json!({"id":anchor,"x":12.}));
+    let b = find(&e, follower);
+    assert_eq!((b.x, b.y), (12., 1.));
+    // Mutually referencing constrained siblings form a dependency cycle:
+    // both keep authored geometry and report unsatisfied.
+    let cyc_a = shape(&mut e, 1, 3., 6., 1., 1., [0; 4]);
+    let cyc_b = shape(&mut e, 1, 7., 6., 1., 1., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":cyc_a,"constraints":{"horizontal":"left","vertical":"top","relative_to":cyc_b}}),
+    );
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":cyc_b,"constraints":{"horizontal":"left","vertical":"top","relative_to":cyc_a}}),
+    );
+    let (_, solve) = layout::evaluate_report(&e.state).unwrap();
+    assert!(solve.unsatisfied.contains(&cyc_a) && solve.unsatisfied.contains(&cyc_b));
+    let b = find(&e, cyc_a);
+    assert_eq!((b.x, b.y), (3., 6.));
+    // evaluateLayout exposes the same report; readConstraints marks nodes.
+    let result = e
+        .apply(Command::new("evaluateLayout", json!({})))
+        .unwrap();
+    assert_eq!(result.data["constraints"]["status"], "partial");
+    assert!(result.data["constraints"]["unsatisfied"]
+        .as_array()
+        .unwrap()
+        .contains(&json!(bounded)));
+    let read = call(&mut e, "readConstraints", json!({"id":bounded}));
+    assert_eq!(read.data["solve"]["status"], "partial");
+    assert_eq!(read.data["nodes"][0]["satisfied"], false);
+    let read = call(&mut e, "readConstraints", json!({"id":rect}));
+    assert_eq!(read.data["nodes"][0]["satisfied"], true);
+    // Nested absolute frames scope constraints to their own evaluated box.
+    let frame = call(&mut e, "addFrame", json!({"parent":1,"x":5,"y":5,"width":10,"height":10})).data["node_id"]
+        .as_u64()
+        .unwrap();
+    let inner = shape(&mut e, frame, 0., 0., 2., 2., [0; 4]);
+    call(
+        &mut e,
+        "setConstraints",
+        json!({"id":inner,"constraints":{"horizontal":"right","vertical":"bottom","relative_to":frame}}),
+    );
+    let b = find(&e, inner);
+    assert_eq!((b.x, b.y), (13., 13.));
 }
 fn make_component(e: &mut DesignEngine, child_fill: [u8; 4]) -> (u64, u64) {
     let frame = call(

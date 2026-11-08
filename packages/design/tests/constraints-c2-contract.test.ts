@@ -13,12 +13,12 @@ it('runs C2 constraint bounds, aspect flag and relative targets through the real
   const state=await doc.describe();
   expect(state.data.nodes[String(rect)]!.constraints).toEqual({horizontal:'left',vertical:'top',min_width:1,max_width:8,min_height:0.5,max_height:4,aspect_locked:true,relative_to:sibling});
   const read=(await doc.readConstraints(rect)).data;
-  expect(read.solving).toBe('storage-only');
+  expect(read.solving).toBe('evaluateLayout');
   expect(read.accepted.relative_to).toEqual(['parent','sibling']);
-  expect(read.nodes).toEqual([{node_id:rect,constraints:{horizontal:'left',vertical:'top',min_width:1,max_width:8,min_height:0.5,max_height:4,aspect_locked:true,relative_to:sibling},enforced:false}]);
-  // Storage only: evaluated boxes keep authored coordinates.
+  expect(read.nodes).toEqual([{node_id:rect,constraints:{horizontal:'left',vertical:'top',min_width:1,max_width:8,min_height:0.5,max_height:4,aspect_locked:true,relative_to:sibling},enforced:true,satisfied:true}]);
+  // Enforcement is live: left/top pin flush to the sibling's box (5,5).
   const boxes=(await doc.evaluateLayout()).data.boxes;
-  expect(boxes.find(b=>b.id===rect)).toMatchObject({x:1,y:1});
+  expect(boxes.find(b=>b.id===rect)).toMatchObject({x:5,y:5});
   // Validation rejections surface as engine errors.
   await expect(doc.setConstraints(rect,{horizontal:'left',vertical:'top',min_width:9,max_width:2})).rejects.toThrow(/minimum exceeds maximum/);
   await expect(doc.setConstraints(rect,{horizontal:'left',vertical:'top',min_height:-1})).rejects.toThrow(/bounds/);

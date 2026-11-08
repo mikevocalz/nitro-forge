@@ -2343,3 +2343,42 @@ round-trip + hostile restore, batch/new/import/redo),
 nf-cli citations e2e), `pnpm --filter @nitro-forge/quill typecheck`
 clean. No native/device acceptance or full P12–P14 completion is
 implied.
+
+## P16 design constraint solver checkpoint (2026-11-08)
+
+Design constraints are now enforced, not just stored. `layout::evaluate`
+gains a derived solve pass inside absolute placement: each absolute
+parent's constrained children solve in one deterministic topological pass
+over sibling `relative_to` dependencies (functional dep graph, cycle
+members revert to baseline). Anchors pin FLUSH — left/right/center/stretch
+and top/bottom/center/stretch land the child's edge/midpoint/span exactly
+on the live reference box (parent frame or sibling's solved box); the
+NYC-Tron `DesignConstraints` contract stores no inset margins, and a
+margin measured against the live reference would drift with it, so flush
+pinning is the only responsive honest semantics. C2 `min_*`/`max_*` bounds
+clamp resolved extents and `aspect_locked` derives the ratio from the
+unconstrained evaluated box (height-from-width unless only the vertical
+axis stretches). Unsatisfied nodes — dependency cycles, bound/aspect
+conflicts, non-positive solved extents — keep their unconstrained box and
+are reported, never silently dropped or fatal to the read. `scale` anchors
+stay rejected; grandparents/arbitrary `relative_to`, inset margins,
+stored ratios and constraint-aware hug/fill measurement remain deferred
+(hug/fill still measures pre-constraint geometry; frames do not clip).
+Instance expansion retargets `constraints.relative_to` through the clone
+id map and `detachInstance` remaps synthetic targets back to real ids.
+`evaluateLayout` gains a `constraints` report block
+(`{solving:"evaluateLayout",status,constrained,unsatisfied}`);
+`readConstraints` reports `solving:"evaluateLayout"`, a live `solve`
+summary (`solved`/`partial`/`unavailable` against the effective stored
+state) and per-node `enforced`/`satisfied`. No schema change: solving is
+derived, snapshots/undo untouched. x/y bindings resolve first, so
+constraints anchor against binding-resolved geometry.
+
+Local evidence: `cargo test -p design-engine` 54 passed (1 new solver
+test covering resize response, center/stretch, bound conflict, aspect
+lock, sibling tracking, dep cycles, nested frames and the evaluateLayout
+report), `cargo build -p nf-cli` clean, `pnpm install --prefer-offline`
+clean, `pnpm --filter @nitro-forge/design test` 19 passed across 15 files
+(1 new nf-cli solver e2e, 2 updated contract tests),
+`pnpm --filter @nitro-forge/design typecheck` clean. No native/device
+acceptance or full P16 completion is implied.
