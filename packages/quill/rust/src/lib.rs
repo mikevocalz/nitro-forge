@@ -2981,13 +2981,38 @@ impl QuillEngine {
                 Some(m) => {
                     let chars: Vec<char> = text.chars().collect();
                     let scale = eff / m.units_per_em();
+                    // Shaped path: one harfrust pass over the whole block
+                    // text (GSUB+GPOS: kerning, ligatures, complex-script
+                    // reordering), with each glyph's x_advance folded back
+                    // onto its cluster's first char so the greedy wrap
+                    // keeps contiguous char spans. Shaped output is not
+                    // prefix-additive under reordering/ligatures, so the
+                    // prefix is reconstructed per char rather than queried
+                    // per candidate line. `None` (shape error/panic) falls
+                    // back to the slice-1 unshaped per-char advances.
+                    let byte_offsets: Vec<usize> =
+                        text.char_indices().map(|(i, _)| i).collect();
+                    let shaped = m.shape_char_advances(&text, &byte_offsets);
                     let mut prefix = Vec::with_capacity(chars.len() + 1);
                     prefix.push(0.0f64);
                     let mut acc = 0.0f64;
-                    for &c in &chars {
-                        let units = *advance_cache.entry(c).or_insert_with(|| m.advance_units(c));
-                        acc += units * scale;
-                        prefix.push(acc);
+                    match shaped {
+                        Some(advances) => {
+                            debug_assert_eq!(advances.len(), chars.len());
+                            for &units in &advances {
+                                acc += units * scale;
+                                prefix.push(acc);
+                            }
+                        }
+                        None => {
+                            for &c in &chars {
+                                let units = *advance_cache
+                                    .entry(c)
+                                    .or_insert_with(|| m.advance_units(c));
+                                acc += units * scale;
+                                prefix.push(acc);
+                            }
+                        }
                     }
                     wrap_block_measured(&chars, &prefix, page_width)
                 }
@@ -4536,7 +4561,7 @@ mod tests {
         assert_eq!(r.data["family"], "NFTestMono");
         assert_eq!(r.data["face_index"], 0);
         assert_eq!(r.data["units_per_em"], 1000);
-        assert_eq!(r.data["num_glyphs"], 96);
+        assert_eq!(r.data["num_glyphs"], 97);
         assert_eq!(r.data["sha256"].as_str().unwrap().len(), 64);
         assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
 
@@ -4746,8 +4771,11 @@ mod tests {
     fn layout_with_font_uses_real_advances() {
         let mut e = engine();
         register_test_font(&mut e);
-        // 'W' = 1000 units → 10pt at font_size 10 (upem 1000).
-        // Stub mode would give every char 5pt; real metrics give W 10pt.
+        // 'W' = 1000 units → 10pt at font_size 10 (upem 1000), but the
+        // fixture's GPOS kern ('W'+'W' −300, on the pair's first glyph)
+        // shapes "WWWW" to per-char advances 7/7/7/10pt: three W's (21pt)
+        // fit a 25pt line where two unshaped W's (20pt) were the old max.
+        // Stub mode would give every char 5pt; shaped metrics give W ~7-10pt.
         insert(&mut e, 0, 0, "WWWW");
         let measured = apply(
             &mut e,
@@ -4755,9 +4783,9 @@ mod tests {
             json!({"page_width": 25.0, "font_size": 10.0, "font": "NFTestMono"}),
         );
         let lines = measured.data["pages"][0]["lines"].as_array().unwrap();
-        assert_eq!(lines.len(), 2, "two W's (20pt) fit, three (30pt) do not");
-        assert_eq!(lines[0]["end"], 2);
-        assert_eq!(lines[1]["start"], 2);
+        assert_eq!(lines.len(), 2, "three shaped W's (21pt) fit, four (31pt) do not");
+        assert_eq!(lines[0]["end"], 3);
+        assert_eq!(lines[1]["start"], 3);
         assert_eq!(lines[1]["end"], 4);
 
         // Same call without `font` keeps the 0.5em estimate: 4 chars × 5pt
@@ -4838,7 +4866,9 @@ mod tests {
     fn layout_font_paginates_and_covers_headings_and_tables() {
         let mut e = engine();
         register_test_font(&mut e);
-        // h1 'W's are wider still (eff = 14pt → W = 14pt).
+        // h1 'W's are wider still (eff = 14pt → shaped advances
+        // 9.8/9.8/9.8/14pt after the W+W kern). Three fit a 30pt line
+        // (29.4pt), four do not (43.4pt).
         insert(&mut e, 0, 0, "WWWW");
         apply(&mut e, "setBlockKind", json!({"block": 0, "kind": "h1"}));
         let r = apply(
@@ -4846,10 +4876,10 @@ mod tests {
             "layout",
             json!({"page_width": 30.0, "font_size": 10.0, "font": "NFTestMono"}),
         );
-        // h1 W = 14pt → two per line (28pt), same 2-line split as para at 25.
+        // h1 shaped WWW = 29.4pt ≤ 30 → same 2-line split, now (0,3),(3,4).
         let lines = r.data["pages"][0]["lines"].as_array().unwrap();
         assert_eq!(lines.len(), 2);
-        assert_eq!(lines[0]["end"], 2);
+        assert_eq!(lines[0]["end"], 3);
 
         // Table block: serialized cell text measures with the same face;
         // unmapped control chars (\n, \t) take the .notdef advance.
@@ -4890,6 +4920,79 @@ mod tests {
         // Control chars likewise fall back to .notdef.
         assert_eq!(m.advance_units('\n'), 500.0);
         assert_eq!(m.advance_units('\t'), 500.0);
+    }
+
+    /// Shaped (harfrust) per-char advances for the fixture: GPOS kern
+    /// 'W'+'W' −300 units lands on the FIRST glyph of each pair, GSUB liga
+    /// 'f'+'i' → 'f_i' (600 units) collapses two chars into one cluster.
+    #[test]
+    fn shaped_advances_apply_kern_and_liga() {
+        use fonts::FaceMeasure;
+        let mut reg = fonts::FontRegistry::default();
+        reg.register("NFTestMono", 0, test_font_bytes().to_vec())
+            .unwrap();
+        let face = reg.find("NFTestMono").unwrap();
+        let m = FaceMeasure::open(face).unwrap();
+        let adv = |text: &str| {
+            let offs: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
+            m.shape_char_advances(text, &offs).unwrap()
+        };
+        // Unshaped would be [1000; 4]; kerned pairs give 700 on W0..W2.
+        assert_eq!(adv("WWWW"), vec![700.0, 700.0, 700.0, 1000.0]);
+        // 'fi' ligates: full 600-unit advance on 'f', nothing on 'i'.
+        assert_eq!(adv("fi"), vec![600.0, 0.0]);
+        // No kern pair, no ligature: identical to unshaped hmtx advances.
+        assert_eq!(adv("To"), vec![500.0, 500.0]);
+        assert_eq!(adv("A A"), vec![500.0, 250.0, 500.0]);
+        // Shaping is deterministic across calls.
+        assert_eq!(adv("WWWW"), adv("WWWW"));
+    }
+
+    /// `layout {font}` wraps on SHAPED advances: the 'W'+'W' kern and the
+    /// 'fi' ligature change line breaks vs the unshaped hmtx prefix.
+    #[test]
+    fn layout_with_font_uses_shaped_advances() {
+        let mut e = engine();
+        register_test_font(&mut e);
+
+        // Kern: "WWWW" shapes to per-char advances 7/7/7/10pt at font 10 —
+        // three W's (21pt) fit a 25pt line where unshaped metrics allowed
+        // only two (20pt; three unshaped = 30pt).
+        insert(&mut e, 0, 0, "WWWW");
+        let r = apply(
+            &mut e,
+            "layout",
+            json!({"page_width": 25.0, "font_size": 10.0, "font": "NFTestMono"}),
+        );
+        let spans: Vec<(u64, u64)> = r.data["pages"][0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|l| (l["start"].as_u64().unwrap(), l["end"].as_u64().unwrap()))
+            .collect();
+        assert_eq!(spans, vec![(0, 3), (3, 4)]);
+
+        // Ligature: "fi" shapes to a single 600-unit glyph → 6pt at font
+        // 10; unshaped f+i would be 7pt. At page_width 8 the shaped word
+        // fits one line while the 0.5em stub estimate (10pt) hard-breaks.
+        let mut e2 = engine();
+        register_test_font(&mut e2);
+        insert(&mut e2, 0, 0, "fi");
+        let r = apply(
+            &mut e2,
+            "layout",
+            json!({"page_width": 8.0, "font_size": 10.0, "page_height": 1000.0, "font": "NFTestMono"}),
+        );
+        let lines = r.data["pages"][0]["lines"].as_array().unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0]["start"], 0);
+        assert_eq!(lines[0]["end"], 2);
+        let stub = apply(
+            &mut e2,
+            "layout",
+            json!({"page_width": 8.0, "font_size": 10.0, "page_height": 1000.0}),
+        );
+        assert_eq!(stub.data["pages"][0]["lines"].as_array().unwrap().len(), 2);
     }
 
     // -- DOCX round-trip -----------------------------------------------------
