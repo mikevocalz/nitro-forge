@@ -12,8 +12,8 @@ output actually exists; anything not executed is marked NOT RUN.
 | tally-engine unit + formula tests | 27 pass | `cargo test -p tally-engine` |
 | cadence-engine tests (incl. real PCM render, stems, clip split/gain/mute, beat detection) | 70 pass | `cargo test -p cadence-engine` |
 | @nitro-forge/cadence vitest e2e via nf-cli | 45 pass | `pnpm --filter @nitro-forge/cadence test` |
-| splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch, keyframed speed) | 51 pass | `cargo test -p splice-engine` |
-| splice vitest via nf-cli + unit (timeline ops, cluster, transfer, keyframed speed) | 34 pass (incl. 7 speed-keys e2e + 1 view unit) | `pnpm --filter @nitro-forge/splice test` |
+| splice-engine tests (incl. track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch, keyframed speed, per-clip mix) | 55 pass | `cargo test -p splice-engine` |
+| splice vitest via nf-cli + unit (timeline ops, cluster, transfer, keyframed speed, clip mix) | 39 pass (incl. 7 speed-keys e2e + 4 clip-mix e2e + 1 view unit) | `pnpm --filter @nitro-forge/splice test` |
 | folio-engine tests (real PDF round-trip via lopdf; page ops, ink/link annots, encryption, outlines, form fields, signatures, attachments) | 112 pass | `cargo test -p folio-engine` |
 
 | cadence-engine tests (incl. real PCM render) | 21 pass | `cargo test -p cadence-engine` |
@@ -28,6 +28,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Typecheck: ignition + 7 product packages + apps/console + apps/example | clean | `pnpm -r exec tsc --noEmit` |
 | Post-review full workspace retest | 184 Rust + 32 vitest pass | `cargo test --workspace && pnpm -r test` |
 | Folio slice E (redactRect + comparePdf, 2026-11-07 `codex/w1-folio-redact`; review fixes `codex/w1-folio-e`) | 133 folio Rust tests + 35 folio vitest pass; nf-cli build + folio typecheck clean | `cargo test -p folio-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/folio test`, `pnpm --filter @nitro-forge/folio typecheck` |
+| Splice per-clip mix (`gain_db`/`pan`, `setClipMix`; `codex/w4-splice-mix`) | 55 splice Rust tests + 39 splice vitest pass; nf-cli build + splice typecheck clean | `cargo test -p splice-engine`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/splice test`, `pnpm --filter @nitro-forge/splice typecheck` |
 
 ## Transport status
 
@@ -49,7 +50,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Prism engine | Graphics eng (subagent 3ba36e7a) | layers, pixels, filters, flatten; 2026-11-05 W2 ops slice: `modifySelection` smooth, `crop` (intersection semantics; transformed rasters reject), `samplePixels` (composite eyedropper, premultiplied average) | ✅ 131 tests |
 | Tally engine | Spreadsheet eng (subagent ddf87203) | formula parser/evaluator | ✅ 27 tests |
 | Cadence engine | Audio/DSP eng (subagent 75836ea5) | MIDI clips, transport, PCM render; 2026-11-05 w3: renderStems, splitClip/setClipGain/setClipMute, detectBeats | ✅ 70 tests |
-| Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch; 2026-11-07: keyframed speed (`speed_keys`, `setSpeedKeys`, integral footprint through all structural ops) | ✅ 51 tests |
+| Splice engine | Video systems eng (subagent 75836ea5) | timeline, split/trim/speed; 2026-11-05: track flags, ripple/roll/slip/slide, insert/overwrite, transitions, markers, loop range, batch; 2026-11-07: keyframed speed (`speed_keys`, `setSpeedKeys`, integral footprint through all structural ops); 2026-11-08: per-clip mix (`gain_db` -60..=12, `pan` -1..=1, `setClipMix`, renderPlan exposure — storage/plan metadata only, no mixer) | ✅ 55 tests |
 | Folio engine | PDF eng (subagent bdd8014e; slice E codex/w1-folio-redact) | lopdf parse/annotate/save; page ops (move/delete/duplicate/insert/listPageInfo), ink/link annots, encryption, outline (bookmark) ops, form fields (listFormFields/fillFormField, checkbox+radio subset), signatures (listSignatures read), file attachments (list/get/addFileAttachment), structural redaction (redactRect: annots + contained image XObjects + PieceInfo/XMP//Info scrub, honest retained reporting, text/vector explicitly not removed), structural PDF compare (comparePdf: page/annot/field/outline/attachment/signature projections, lossy text hint) | ✅ 133 tests |
 | Pitch engine | Presentation eng (subagent bdd8014e) | slides, objects, animation resolve | ✅ 17 tests |
 | Quill engine | Text/layout eng (subagent fa0fd913) | blocks/styles/layout + DOCX + lists + case + bookmarks + named styles + sections/page-setup/headers + range-anchored comments + block-model tables (insert/delete, cell text, row/column structural ops, rectangular cell merge/unmerge via `Table.merges` registry, in-cell find/replace + `text`/`layout` cell coverage; no styling or DOCX table interop) | ✅ 154 tests |

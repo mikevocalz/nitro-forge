@@ -36,6 +36,13 @@ export interface TimelineClipView {
    * the curve — this is read-only data for a ramp editor (D-32/G-13).
    */
   readonly speedKeys?: readonly { readonly tFrame: number; readonly speed: number }[];
+  /**
+   * Per-clip mix metadata, present only when the clip carries a non-neutral
+   * value (`gainDb` ≠ 0 dB, `pan` ≠ center). Storage + renderPlan data for a
+   * future mixer — Splice does not mix audio. Absent means 0 dB / center.
+   */
+  readonly gainDb?: number;
+  readonly pan?: number;
 }
 
 /** A track as NYC-Tron `TimelineTrack` takes it, with the header flags. */
@@ -177,6 +184,8 @@ interface RawClip {
   out_s: number;
   speed: number;
   speed_keys?: SpeedKey[];
+  gain_db?: number;
+  pan?: number;
 }
 interface RawTimeline {
   sources: Record<string, { name: string; duration_s: number }>;
@@ -287,6 +296,8 @@ export function timelineView(raw: RawTimeline, rate: FrameRate): SpliceTimelineV
                 })),
               }
             : {}),
+          ...(c.gain_db ? { gainDb: c.gain_db } : {}),
+          ...(c.pan ? { pan: c.pan } : {}),
         };
       });
     return {
@@ -440,6 +451,18 @@ export class SpliceTimelineAdapter {
     const fps = fpsOf(this.rate);
     const starts = new Map(view.tracks.flatMap((t) => t.clips.map((c) => [c.id, c.startFrame / fps] as const)));
     return this.run(batchOps(edits, starts));
+  }
+
+  /**
+   * Per-clip mix metadata (`setClipMix`): `gainDb` in -60..=12 dB (0 =
+   * unity), `pan` in -1..=1 (0 = center). Omitted fields keep their value.
+   * Storage only — no NYC-Tron mixer control is wired to it yet.
+   */
+  setClipMix(clipId: string, mix: { gainDb?: number; pan?: number }): Promise<SpliceTimelineView> {
+    const payload: Record<string, unknown> = { id: engineId(clipId) };
+    if (mix.gainDb !== undefined) payload.gain_db = mix.gainDb;
+    if (mix.pan !== undefined) payload.pan = mix.pan;
+    return this.run([{ op: "setClipMix", payload }]);
   }
 
   /** `TrackHeaders.onSetFlag`. */

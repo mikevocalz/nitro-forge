@@ -171,6 +171,28 @@ describe("timelineView", () => {
     // End = start 1 s + 4·ln2 s → ceil to whole frames at 24 fps.
     expect(v.durationFrames).toBe(Math.ceil((1 + 4 * Math.LN2) * 24 - 1e-6));
   });
+  it("surfaces non-neutral clip mix as gainDb/pan, omits neutral", () => {
+    const v = timelineView(
+      {
+        sources: raw.sources,
+        tracks: [
+          {
+            id: 2,
+            kind: "audio",
+            clips: [
+              { id: 4, source_id: 1, timeline_start_s: 0, in_s: 0, out_s: 4, speed: 1, gain_db: -6, pan: 0.5 },
+              { id: 5, source_id: 1, timeline_start_s: 4, in_s: 0, out_s: 4, speed: 1 },
+            ],
+          },
+        ],
+      },
+      R24,
+    );
+    const [mixed, plain] = v.tracks[0]!.clips;
+    expect(mixed).toMatchObject({ gainDb: -6, pan: 0.5 });
+    expect(plain!.gainDb).toBeUndefined();
+    expect(plain!.pan).toBeUndefined();
+  });
 });
 
 describe("transition presets", () => {
