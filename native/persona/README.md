@@ -1,5 +1,7 @@
 # Nitro Forge native personas — first implementation slice
 
+End-to-end plan and phase status: [docs/ROADMAP.md](docs/ROADMAP.md).
+
 Standalone premium digital-human SDK work. This is not a Moyo package and has
 no downstream app dependency. It is distinct from the existing studio's Vector,
 Pixel, Layout and Sketch "personas" (editing modes).
