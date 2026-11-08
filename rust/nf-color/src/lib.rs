@@ -23,6 +23,8 @@
 //!   cross-check (approximation of lcms `cmsFLAGS_GAMUTCHECK`; the method
 //!   and thresholds are part of the contract — see [`GamutReport`]).
 
+#![forbid(unsafe_code)]
+
 use std::sync::{Arc, OnceLock};
 
 use moxcms::{
@@ -623,7 +625,15 @@ impl SoftProof {
     pub fn transform_u8(&self, src: &[u8], dst: &mut [u8]) -> Result<u64, ColorError> {
         let proof_ch = self.doc_to_proof.dst_channels().count();
         let pixels = src.len() / self.doc_to_proof.src_channels().count();
-        let mut mid = vec![0u8; pixels * proof_ch];
+        let mid_bytes = pixels
+            .checked_mul(proof_ch)
+            .ok_or(ColorError::LimitExceeded("soft-proof scratch overflow"))?;
+        if mid_bytes > MAX_TRANSFORM_BYTES {
+            return Err(ColorError::LimitExceeded(
+                "soft-proof intermediate exceeds MAX_TRANSFORM_BYTES",
+            ));
+        }
+        let mut mid = vec![0u8; mid_bytes];
         self.doc_to_proof.transform_u8(src, &mut mid)?;
         self.proof_to_display.transform_u8(&mid, dst)
     }
@@ -635,7 +645,18 @@ impl SoftProof {
     pub fn transform_f32(&self, src: &[f32], dst: &mut [f32]) -> Result<u64, ColorError> {
         let proof_ch = self.doc_to_proof.dst_channels().count();
         let pixels = src.len() / self.doc_to_proof.src_channels().count();
-        let mut mid = vec![0f32; pixels * proof_ch];
+        let mid_floats = pixels
+            .checked_mul(proof_ch)
+            .ok_or(ColorError::LimitExceeded("soft-proof scratch overflow"))?;
+        let mid_bytes = mid_floats
+            .checked_mul(4)
+            .ok_or(ColorError::LimitExceeded("soft-proof scratch overflow"))?;
+        if mid_bytes > MAX_TRANSFORM_BYTES {
+            return Err(ColorError::LimitExceeded(
+                "soft-proof intermediate exceeds MAX_TRANSFORM_BYTES",
+            ));
+        }
+        let mut mid = vec![0f32; mid_floats];
         self.doc_to_proof.transform_f32(src, &mut mid)?;
         self.proof_to_display.transform_f32(&mid, dst)
     }
@@ -738,7 +759,7 @@ impl GamutMeter {
             let mut oor = false;
             for c in 0..proof_ch {
                 let v = dst[i * proof_ch + c];
-                if v < -GAMUT_EPSILON || v > 1.0 + GAMUT_EPSILON {
+                if !v.is_finite() || v < -GAMUT_EPSILON || v > 1.0 + GAMUT_EPSILON {
                     oor = true;
                     break;
                 }
@@ -749,7 +770,7 @@ impl GamutMeter {
             let mut bad = false;
             for c in 0..src_ch {
                 let d = (rt[i * src_ch + c] - src[i * src_ch + c]).abs();
-                if d > GAMUT_ROUNDTRIP_DELTA {
+                if !d.is_finite() || d > GAMUT_ROUNDTRIP_DELTA {
                     bad = true;
                     break;
                 }
