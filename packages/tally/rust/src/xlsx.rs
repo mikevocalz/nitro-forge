@@ -21,7 +21,15 @@
 //!   borders; `number_format` is **not** translated — it is a
 //!   host-interpreted preset/custom pattern with no defined XLSX mapping
 //!   (same deferral as `exportCsv` ignoring formats).
-//! * Merged regions export as `<mergeCells>`.
+//! * Merged regions export as `<mergeCells>`; the active sheet exports as
+//!   `<workbookView activeTab>` so export→import preserves it.
+//! * Strings are XML-escaped; `\r` is written `_x000D_`-style (the Excel
+//!   `_xHHHH_` convention — a literal CR would be normalized to LF by any
+//!   conforming XML parser) and literal `_xHHHH_` sequences have their
+//!   underscore escaped as `_x005F_` so they survive the round trip.
+//!   Cell raws containing XML-1.0-illegal characters (C0 controls other
+//!   than tab/LF/CR) reject the whole export rather than emit unparseable
+//!   XML.
 //!
 //! Export bounds: at most `MAX_XLSX_CELLS` cell/style entries across the
 //! whole workbook (cells plus format-only addresses); ZIP entries are
@@ -43,8 +51,11 @@
 //!   errors (`t="e"` → stored as the `=#…!` error-literal formula so the
 //!   computed value keeps its error type). `<f>` elements become `=…`
 //!   raws; `t="shared"|"array"|"dataTable"` formulas, ISO-8601 `t="d"`
-//!   cells and unknown `t` values reject the whole import. Cells without
-//!   an `r` attribute take positional interpretation (row/column cursors).
+//!   cells and unknown `t` values reject the whole import. Character data
+//!   is read from both `Text` and `CDATA` events; `_xHHHH_` escapes are
+//!   decoded and malformed entities/encodings reject the import rather
+//!   than silently dropping text. Cells without an `r` attribute take
+//!   positional interpretation (row/column cursors).
 //! * `<mergeCells>` regions import into `Sheet.merges` after the same
 //!   normalization/overlap/cap checks `restore` enforces.
 //! * The import **replaces the whole workbook** (like `importDocx`
@@ -54,25 +65,52 @@
 //!   it; any protected sheet rejects the op up front (same rule as `new`).
 //!
 //! Hostile-input bounds (zip-bomb discipline, same as folio's lopdf and
-//! quill's docx caps): ≤4096 archive entries, each read part ≤128 MiB
-//! uncompressed (checked via the central directory *and* enforced by
-//! `take()` while streaming), ≤256 MiB total uncompressed across all read
-//! parts, ≤1,048,576 shared strings, ≤1024 sheets, ≤1,048,576 imported
-//! cells. Any violation rejects before mutation — the op is atomic.
+//! quill's docx caps): the compressed archive itself is capped at
+//! `MAX_XLSX_INPUT_BYTES` (the `bytes_b64` field length is bounded before
+//! `base64_decode` allocates), ≤4096 archive entries, each read part
+//! ≤128 MiB uncompressed (enforced by `take()` while streaming and by
+//! post-read accounting — the central directory's claimed sizes are
+//! attacker-controlled and never trusted), ≤256 MiB total uncompressed
+//! across all read parts **counted in actual bytes read**, ≤1,048,576
+//! shared strings, ≤1024 sheets, ≤1,048,576 imported cells. Any violation
+//! rejects before mutation — the op is atomic.
 use super::*;
 use format_ops::{BorderSide, BorderStyle, CellFormat};
 use formula::{fmt_addr, fmt_num, on_sheet, parse_addr, Evaluator, SHEET_MAX_COLUMNS, SHEET_MAX_ROWS};
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::io::{Cursor, Read, Write};
 
 /// Archive entry-count cap (real workbooks carry a handful of parts).
 const MAX_XLSX_ENTRIES: usize = 4096;
 /// Per-part uncompressed cap (worksheet/sharedStrings/workbook XML).
+/// `#[cfg(test)]` shrinks the byte caps so hostile-input regression tests
+/// don't have to materialize hundreds of MiB; the accounting logic under
+/// test is identical.
+#[cfg(not(test))]
 const MAX_PART_BYTES: u64 = 128 * 1024 * 1024;
-/// Total uncompressed cap across every part the importer reads.
+#[cfg(test)]
+const MAX_PART_BYTES: u64 = 4 * 1024 * 1024;
+/// Total uncompressed cap across every part the importer reads — counted
+/// in ACTUAL bytes read, never the central directory's claimed sizes
+/// (those are attacker-controlled).
+#[cfg(not(test))]
 const MAX_TOTAL_BYTES: u64 = 256 * 1024 * 1024;
+#[cfg(test)]
+const MAX_TOTAL_BYTES: u64 = 8 * 1024 * 1024;
+/// Compressed archive cap for `importXlsx` input (the `.xlsx` file bytes
+/// themselves, before any inflation). Deliberately generous next to the
+/// uncompressed part caps — it exists so `base64_decode`/`ZipArchive`
+/// can't be made to allocate unboundedly, not to bound document size.
+#[cfg(not(test))]
+const MAX_XLSX_INPUT_BYTES: usize = 512 * 1024 * 1024;
+#[cfg(test)]
+const MAX_XLSX_INPUT_BYTES: usize = 1024 * 1024;
+/// `bytes_b64` field-length cap: base64 encodes 3 bytes as 4 chars, so the
+/// field length is bounded BEFORE `base64_decode` allocates the archive.
+const MAX_XLSX_INPUT_B64: usize = MAX_XLSX_INPUT_BYTES / 3 * 4 + 8;
 /// Shared-string table cap.
 const MAX_SHARED_STRINGS: usize = 1_048_576;
 /// Imported-sheet cap.
@@ -102,20 +140,101 @@ fn local_name(qname: &[u8]) -> &[u8] {
 fn attr_val(e: &BytesStart<'_>, key: &[u8]) -> Option<String> {
     for a in e.attributes().flatten() {
         if local_name(a.key.as_ref()) == key {
-            return a.unescape_value().ok().map(|v| v.into_owned());
+            return a
+                .unescape_value()
+                .ok()
+                .map(|v| xlsx_unescape(&v).into_owned());
         }
     }
     None
 }
 
+/// True when `b[i..]` begins a literal `_xHHHH_`-shaped sequence — the
+/// `_xHHHH_` escape convention Excel/OOXML uses for characters XML would
+/// normalize or forbid. Both `x` cases count, matching `xlsx_unescape`.
+fn x_escape_at(b: &[u8], i: usize) -> bool {
+    i + 7 <= b.len()
+        && b[i] == b'_'
+        && (b[i + 1] == b'x' || b[i + 1] == b'X')
+        && b[i + 2..i + 6].iter().all(|c| c.is_ascii_hexdigit())
+        && b[i + 6] == b'_'
+}
+
+/// XML-escape `s`; `in_attr` additionally escapes `"`. `\r` is written
+/// `_x000D_` (a literal CR is normalized to LF by any conforming XML
+/// parser, so the Excel `_xHHHH_` convention is the only way to preserve
+/// it), and a literal `_xHHHH_` sequence in the source has its underscore
+/// escaped as `_x005F_` so the importer doesn't decode it. C0 controls
+/// other than tab/LF/CR never reach here — `exportXlsx` rejects them.
+fn esc_xml(s: &str, in_attr: bool) -> String {
+    let b = s.as_bytes();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0usize;
+    while i < s.len() {
+        let c = s[i..].chars().next().unwrap();
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' if in_attr => out.push_str("&quot;"),
+            '\r' => out.push_str("_x000D_"),
+            '_' if x_escape_at(b, i) => out.push_str("_x005F_"),
+            _ => out.push(c),
+        }
+        i += c.len_utf8();
+    }
+    out
+}
+
+/// Decode `_xHHHH_` escapes — the inverse of `esc_xml`'s `_x000D_` /
+/// `_x005F_` output and Excel's convention for characters XML normalizes
+/// away. Sequences that don't form a valid Unicode scalar stay literal.
+fn xlsx_unescape(s: &str) -> Cow<'_, str> {
+    let b = s.as_bytes();
+    let has_escape = b
+        .windows(3)
+        .any(|w| w[0] == b'_' && (w[1] == b'x' || w[1] == b'X'));
+    if !has_escape {
+        return Cow::Borrowed(s);
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0usize;
+    while i < s.len() {
+        if x_escape_at(b, i) {
+            let decoded = u32::from_str_radix(
+                std::str::from_utf8(&b[i + 2..i + 6]).unwrap_or("0"),
+                16,
+            )
+            .ok()
+            .and_then(char::from_u32);
+            if let Some(ch) = decoded {
+                out.push(ch);
+                i += 7;
+                continue;
+            }
+        }
+        let c = s[i..].chars().next().unwrap();
+        out.push(c);
+        i += c.len_utf8();
+    }
+    Cow::Owned(out)
+}
+
+/// XML 1.0 `Char` production: tab/LF/CR plus the non-surrogate planes —
+/// the set a conforming parser accepts verbatim.
+fn xml10_char_ok(c: char) -> bool {
+    matches!(c, '\u{9}' | '\u{A}' | '\u{D}')
+        || ('\u{20}'..='\u{D7FF}').contains(&c)
+        || ('\u{E000}'..='\u{FFFD}').contains(&c)
+        || ('\u{10000}'..='\u{10FFFF}').contains(&c)
+}
+
 fn esc(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
+    esc_xml(s, false)
 }
 
 fn esc_attr(s: &str) -> String {
-    esc(s).replace('"', "&quot;")
+    esc_xml(s, true)
 }
 
 // ---------------------------------------------------------------------------
@@ -123,16 +242,20 @@ fn esc_attr(s: &str) -> String {
 // ---------------------------------------------------------------------------
 
 /// Excel sheet-name rules: 1–31 chars, none of `[]:*?/\`, no leading or
-/// trailing apostrophe.
+/// trailing apostrophe, no control characters, and not shaped like a cell
+/// reference (`A1`-style names are rejected by Excel too).
 fn xlsx_name_ok(name: &str) -> bool {
     let n = name.chars().count();
     n >= 1
         && n <= 31
         && !name.starts_with('\'')
         && !name.ends_with('\'')
-        && !name
-            .chars()
-            .any(|c| matches!(c, '[' | ']' | ':' | '*' | '?' | '/' | '\\'))
+        && !name.chars().any(|c| {
+            c.is_control() || matches!(c, '[' | ']' | ':' | '*' | '?' | '/' | '\\')
+        })
+        // Excel rejects names shaped like an in-bounds cell reference
+        // ("A1"); out-of-range shapes like "Sheet1" stay legal.
+        && !parse_addr(name).is_some_and(|(c, r)| on_sheet(c, r))
 }
 
 /// Border style → OOXML `style` attribute (the serde names already match).
@@ -386,10 +509,12 @@ fn content_types_xml(sheet_count: usize, has_styles: bool) -> String {
 const ROOT_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>"#;
 
-fn workbook_xml(names: &[String]) -> String {
+fn workbook_xml(names: &[String], active: usize) -> String {
     let mut s = String::new();
     s.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>");
-    s.push_str("<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>");
+    s.push_str("<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><bookViews><workbookView activeTab=\"");
+    s.push_str(&active.min(names.len().saturating_sub(1)).to_string());
+    s.push_str("\"/></bookViews><sheets>");
     for (i, name) in names.iter().enumerate() {
         s.push_str(&format!(
             "<sheet name=\"{}\" sheetId=\"{}\" r:id=\"rId{}\"/>",
@@ -428,9 +553,21 @@ impl TallyEngine {
         for s in &self.doc.sheets {
             if !xlsx_name_ok(&s.name) {
                 return Err(EngineError::validation(format!(
-                    "sheet name '{}' is not a valid XLSX sheet name (1-31 chars, none of []:*?/\\, no leading/trailing apostrophe)",
+                    "sheet name '{}' is not a valid XLSX sheet name (1-31 chars, none of []:*?/\\, no leading/trailing apostrophe, no control characters, not cell-reference-shaped)",
                     s.name
                 )));
+            }
+        }
+        // XML 1.0 cannot carry C0 controls other than tab/LF/CR (CR itself
+        // is `_x000D_`-escaped on write); reject the whole export rather
+        // than emit unparseable XML — the same atomic rule as names.
+        for sheet in &self.doc.sheets {
+            for (addr, cell) in &sheet.cells {
+                if !cell.raw.chars().all(xml10_char_ok) {
+                    return Err(EngineError::validation(format!(
+                        "cell {addr} contains a control character that cannot be represented in XLSX"
+                    )));
+                }
             }
         }
         // Union of content and format addresses per sheet; cap the total.
@@ -480,7 +617,7 @@ impl TallyEngine {
         let names: Vec<String> = self.doc.sheets.iter().map(|s| s.name.clone()).collect();
         put("[Content_Types].xml", &content_types_xml(names.len(), has_styles))?;
         put("_rels/.rels", ROOT_RELS)?;
-        put("xl/workbook.xml", &workbook_xml(&names))?;
+        put("xl/workbook.xml", &workbook_xml(&names, self.doc.active))?;
         put(
             "xl/_rels/workbook.xml.rels",
             &workbook_rels_xml(names.len(), has_styles),
@@ -505,7 +642,34 @@ impl TallyEngine {
     /// `importXlsx {bytes_b64}` or binary sidecar → whole-workbook replace.
     /// Atomic: parse/validate fully, then one `Reset` undo entry.
     pub(super) fn op_import_xlsx(&mut self, cmd: &mut Command) -> Result<CommandResult, EngineError> {
+        // Sanity-cap the compressed archive BEFORE base64_decode allocates:
+        // the b64 field is ~4/3 the archive size so its length is bounded
+        // first; the binary sidecar and the decoded bytes get the archive
+        // cap itself. This is a transport sanity bound, not a document
+        // limit — the uncompressed part caps do the real zip-bomb work.
+        if let Some(Value::String(s)) = cmd.payload.get("bytes_b64") {
+            if s.len() > MAX_XLSX_INPUT_B64 {
+                return Err(EngineError::out_of_bounds(format!(
+                    "xlsx bytes_b64 exceeds the {} MiB input limit",
+                    MAX_XLSX_INPUT_BYTES / (1024 * 1024)
+                )));
+            }
+        }
+        if let Some(input) = &cmd.input {
+            if input.len() > MAX_XLSX_INPUT_BYTES {
+                return Err(EngineError::out_of_bounds(format!(
+                    "xlsx input exceeds the {} MiB limit",
+                    MAX_XLSX_INPUT_BYTES / (1024 * 1024)
+                )));
+            }
+        }
         let bytes = cmd.bytes_input("bytes_b64", base64_decode)?;
+        if bytes.len() > MAX_XLSX_INPUT_BYTES {
+            return Err(EngineError::out_of_bounds(format!(
+                "xlsx input exceeds the {} MiB limit",
+                MAX_XLSX_INPUT_BYTES / (1024 * 1024)
+            )));
+        }
         let (sheets, active) = import_xlsx(&bytes)?;
         let sheet_count = sheets.len();
         let cell_count: usize = sheets.iter().map(|s| s.cells.len()).sum();
@@ -673,7 +837,10 @@ struct RelTarget {
 }
 
 /// Read one zip member with the part cap; `total` accumulates the
-/// uncompressed budget across parts.
+/// uncompressed budget across parts in ACTUAL bytes read. The central
+/// directory's sizes are attacker-controlled (a forged entry can claim
+/// any uncompressed size), so `file.size()` is never consulted: `take()`
+/// bounds each part's read and the post-read length drives both caps.
 fn read_part<'a>(
     archive: &mut zip::ZipArchive<Cursor<&'a [u8]>>,
     name: &str,
@@ -682,30 +849,25 @@ fn read_part<'a>(
     let mut file = archive.by_name(name).map_err(|_| {
         EngineError::serialization(format!("xlsx missing part '{name}'"))
     })?;
-    let size = file.size();
-    if size > MAX_PART_BYTES {
-        return Err(EngineError::out_of_bounds(format!(
-            "xlsx part '{name}' exceeds the {} MiB limit",
-            MAX_PART_BYTES / (1024 * 1024)
-        )));
-    }
-    if *total + size > MAX_TOTAL_BYTES {
-        return Err(EngineError::out_of_bounds(
-            "xlsx uncompressed parts exceed the 256 MiB total limit",
-        ));
-    }
-    *total += size;
     let mut buf = Vec::new();
     file.by_ref()
         .take(MAX_PART_BYTES + 1)
         .read_to_end(&mut buf)
         .map_err(|e| EngineError::serialization(format!("xlsx part '{name}' unreadable: {e}")))?;
-    if buf.len() as u64 > MAX_PART_BYTES {
+    let actual = buf.len() as u64;
+    if actual > MAX_PART_BYTES {
         return Err(EngineError::out_of_bounds(format!(
             "xlsx part '{name}' exceeds the {} MiB limit",
             MAX_PART_BYTES / (1024 * 1024)
         )));
     }
+    if *total + actual > MAX_TOTAL_BYTES {
+        return Err(EngineError::out_of_bounds(format!(
+            "xlsx uncompressed parts exceed the {} MiB total limit",
+            MAX_TOTAL_BYTES / (1024 * 1024)
+        )));
+    }
+    *total += actual;
     String::from_utf8(buf)
         .map_err(|_| EngineError::serialization(format!("xlsx part '{name}' is not UTF-8")))
 }
@@ -856,9 +1018,18 @@ fn parse_shared_strings(xml: &str) -> Result<Vec<String>, EngineError> {
                 _ => {}
             },
             Event::Text(e) if in_si && in_t && !in_rph => {
-                if let Ok(t) = e.unescape() {
-                    cur.push_str(&t);
-                }
+                // Unescape failures reject the import — silently dropping
+                // text would corrupt the string without a trace.
+                let t = e.unescape().map_err(|err| {
+                    EngineError::serialization(format!("malformed sharedStrings.xml text: {err}"))
+                })?;
+                cur.push_str(&xlsx_unescape(&t));
+            }
+            Event::CData(e) if in_si && in_t && !in_rph => {
+                let t = e.decode().map_err(|err| {
+                    EngineError::serialization(format!("malformed sharedStrings.xml CDATA: {err}"))
+                })?;
+                cur.push_str(&xlsx_unescape(&t));
             }
             _ => {}
         }
@@ -879,6 +1050,21 @@ struct CellAcc {
     is: String,
     in_is: bool,
     in_rph: bool,
+}
+
+/// Append character data to the in-progress cell (`<f>`, `<v>` or `<is>`),
+/// decoding `_xHHHH_` escapes. `in_f`/`in_v` mirror the parser's flags;
+/// `<is>` text is taken only outside `<rPh>` phonetic runs.
+fn push_cell_text(acc: &mut CellAcc, in_f: bool, in_v: bool, text: &str) {
+    if in_f {
+        if let Some(f) = &mut acc.f {
+            f.push_str(&xlsx_unescape(text));
+        }
+    } else if in_v {
+        acc.v.push_str(&xlsx_unescape(text));
+    } else if acc.in_is && !acc.in_rph {
+        acc.is.push_str(&xlsx_unescape(text));
+    }
 }
 
 /// Parse one worksheet part into cells + merges.
@@ -1084,21 +1270,24 @@ fn parse_sheet(
             }
             Event::Text(e) => {
                 if in_c {
-                    if in_f {
-                        if let Ok(t) = e.unescape() {
-                            if let Some(f) = &mut acc.f {
-                                f.push_str(&t);
-                            }
-                        }
-                    } else if in_v {
-                        if let Ok(t) = e.unescape() {
-                            acc.v.push_str(&t);
-                        }
-                    } else if acc.in_is && !acc.in_rph {
-                        if let Ok(t) = e.unescape() {
-                            acc.is.push_str(&t);
-                        }
-                    }
+                    // Unescape failures reject the import — silently
+                    // dropping text would corrupt the cell without a trace.
+                    let t = e.unescape().map_err(|err| {
+                        EngineError::serialization(format!(
+                            "malformed worksheet XML text: {err}"
+                        ))
+                    })?;
+                    push_cell_text(&mut acc, in_f, in_v, &t);
+                }
+            }
+            Event::CData(e) => {
+                if in_c {
+                    let t = e.decode().map_err(|err| {
+                        EngineError::serialization(format!(
+                            "malformed worksheet XML CDATA: {err}"
+                        ))
+                    })?;
+                    push_cell_text(&mut acc, in_f, in_v, &t);
                 }
             }
             Event::End(e) => {
@@ -1243,8 +1432,11 @@ fn cell_raw(acc: &CellAcc, shared: &[String]) -> Result<Option<String>, EngineEr
             if ERR_LITERALS.contains(&v) {
                 Ok(Some(format!("={v}")))
             } else {
+                // Strict subset by design: ONE unsupported error literal
+                // rejects the WHOLE import (see ENGINE_OPS.md XLSX rules).
                 Err(EngineError::validation(format!(
-                    "xlsx error cell value '{v}' is not a known error literal"
+                    "xlsx error literal '{v}' is not supported: importXlsx admits only the six engine error literals ({}) — other Excel error literals such as #N/A, #SPILL! or #CALC! reject the entire workbook",
+                    ERR_LITERALS.join(", ")
                 )))
             }
         }
@@ -1545,5 +1737,216 @@ mod tests {
             )
             .unwrap_err();
         assert_eq!(err.code, ignition_core::ErrorCode::InvalidCommand);
+    }
+
+    /// Build an xlsx with `sheets` worksheet parts that each decompress to
+    /// `pad` bytes of 'a' text, then forge the central-directory
+    /// uncompressed-size fields to 64 bytes — claimed sizes must never
+    /// drive the import's byte budget.
+    fn forged_size_xlsx(pad: usize, sheets: usize) -> Vec<u8> {
+        let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        let mut put = |name: &str, body: &str| {
+            zip.start_file(name, opts).unwrap();
+            zip.write_all(body.as_bytes()).unwrap();
+        };
+        put("[Content_Types].xml", "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>");
+        let mut wb = String::from("<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>");
+        let mut rels = String::from("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">");
+        for i in 1..=sheets {
+            wb.push_str(&format!(
+                "<sheet name=\"S{i}\" sheetId=\"{i}\" r:id=\"rId{i}\"/>"
+            ));
+            rels.push_str(&format!(
+                "<Relationship Id=\"rId{i}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet{i}.xml\"/>"
+            ));
+        }
+        wb.push_str("</sheets></workbook>");
+        rels.push_str("</Relationships>");
+        put("xl/workbook.xml", &wb);
+        put("xl/_rels/workbook.xml.rels", &rels);
+        let pad_body = format!("<worksheet>{}</worksheet>", "a".repeat(pad));
+        for i in 1..=sheets {
+            put(&format!("xl/worksheets/sheet{i}.xml"), &pad_body);
+        }
+        let mut bytes = zip.finish().unwrap().into_inner();
+        // Walk the central directory from the EOCD and shrink the
+        // uncompressed-size field (offset 24) of every worksheet entry.
+        let eocd = bytes
+            .windows(4)
+            .rposition(|w| w == b"PK\x05\x06")
+            .expect("end of central directory");
+        let cd_off =
+            u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+        let mut i = cd_off;
+        while i + 46 <= bytes.len() && &bytes[i..i + 4] == b"PK\x01\x02" {
+            let name_len = u16::from_le_bytes([bytes[i + 28], bytes[i + 29]]) as usize;
+            let extra_len = u16::from_le_bytes([bytes[i + 30], bytes[i + 31]]) as usize;
+            let comment_len = u16::from_le_bytes([bytes[i + 32], bytes[i + 33]]) as usize;
+            let name_start = i + 46;
+            if bytes[name_start..name_start + name_len].starts_with(b"xl/worksheets/") {
+                bytes[i + 24..i + 28].copy_from_slice(&64u32.to_le_bytes());
+            }
+            i = name_start + name_len + extra_len + comment_len;
+        }
+        bytes
+    }
+
+    #[test]
+    fn import_xlsx_total_cap_counts_actual_bytes_not_forged_sizes() {
+        // Test-build caps: MAX_PART_BYTES = 4 MiB, MAX_TOTAL_BYTES = 8 MiB.
+        // Three ~3 MiB worksheet parts stay under the per-part cap but
+        // exceed the total; their forged central-directory sizes claim
+        // ~64 bytes each, which the old accounting would have trusted.
+        let bytes = forged_size_xlsx(3 * 1024 * 1024, 3);
+        // Sanity: the forgery actually landed — the central directory now
+        // claims 64 bytes while the parts decompress to ~3 MiB each.
+        let mut z = zip::ZipArchive::new(Cursor::new(&bytes[..])).unwrap();
+        assert_eq!(z.by_name("xl/worksheets/sheet1.xml").unwrap().size(), 64);
+        drop(z);
+        let mut e = TallyEngine::new();
+        apply(&mut e, "setCell", json!({"addr":"A1","value":"keep"}));
+        let before = e.snapshot().unwrap();
+        let err =
+            apply_err(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        assert_eq!(e.snapshot().unwrap(), before);
+        assert_eq!(raw(&mut e, "A1"), "keep");
+    }
+
+    #[test]
+    fn import_xlsx_reads_cdata_and_decodes_x_escapes() {
+        let xml = "<worksheet xmlns=\"x\"><sheetData><row><c r=\"A1\" t=\"inlineStr\"><is><t><![CDATA[line1\nline2 <tag> & more]]></t></is></c><c r=\"B1\" t=\"inlineStr\"><is><t>a_x000D_b_x005F_x000D_</t></is></c><c r=\"C1\"><f><![CDATA[B1&\"x\"]]></f><v>1</v></c></row></sheetData></worksheet>";
+        let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let opts = zip::write::SimpleFileOptions::default();
+        for (n, b) in [
+            ("xl/workbook.xml", "<workbook xmlns:r=\"x\"><sheets><sheet name=\"S\" r:id=\"rId1\"/></sheets></workbook>"),
+            ("xl/_rels/workbook.xml.rels", "<Relationships><Relationship Id=\"rId1\" Type=\"http://x/worksheet\" Target=\"worksheets/s1.xml\"/></Relationships>"),
+            ("xl/worksheets/s1.xml", xml),
+        ] {
+            zip.start_file(n, opts).unwrap();
+            zip.write_all(b.as_bytes()).unwrap();
+        }
+        let bytes = zip.finish().unwrap().into_inner();
+        let mut e = TallyEngine::new();
+        apply(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
+        // CDATA content is literal (no entity unescaping inside).
+        assert_eq!(raw(&mut e, "A1"), "line1\nline2 <tag> & more");
+        // `_x000D_` decodes to CR; `_x005F_x000D_` decodes to the literal
+        // text "_x000D_" (escaped underscore + literal suffix).
+        assert_eq!(raw(&mut e, "B1"), "a\rb_x000D_");
+        // CDATA inside <f> becomes the formula body.
+        assert_eq!(raw(&mut e, "C1"), "=B1&\"x\"");
+    }
+
+    #[test]
+    fn export_xlsx_rejects_xml_illegal_control_characters() {
+        let mut e = TallyEngine::new();
+        apply(&mut e, "setCell", json!({"addr":"A1","value":"bad\u{1}char"}));
+        let err = apply_err(&mut e, "exportXlsx", json!({}));
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+        // Sheet names with control characters and cell-reference-shaped
+        // names reject too (Excel rules, enforced symmetrically).
+        let mut e2 = TallyEngine::new();
+        apply(&mut e2, "renameSheet", json!({"sheet":0,"to":"bad\u{7}name"}));
+        assert_eq!(
+            apply_err(&mut e2, "exportXlsx", json!({})).code,
+            ignition_core::ErrorCode::Validation
+        );
+        let mut e3 = TallyEngine::new();
+        apply(&mut e3, "renameSheet", json!({"sheet":0,"to":"A1"}));
+        assert_eq!(
+            apply_err(&mut e3, "exportXlsx", json!({})).code,
+            ignition_core::ErrorCode::Validation
+        );
+        // Tab/LF/CR remain legal: \r round-trips through `_x000D_`.
+        let mut e4 = TallyEngine::new();
+        apply(&mut e4, "setCell", json!({"addr":"A1","value":"a\rb\tc\nd"}));
+        let r = apply(&mut e4, "exportXlsx", json!({}));
+        let b64 = r.data["bytes_b64"].as_str().unwrap().to_string();
+        let bytes = crate::base64_decode(&b64).unwrap();
+        let mut zip = zip::ZipArchive::new(Cursor::new(&bytes[..])).unwrap();
+        let mut sheet = String::new();
+        zip.by_name("xl/worksheets/sheet1.xml")
+            .unwrap()
+            .read_to_string(&mut sheet)
+            .unwrap();
+        assert!(sheet.contains("_x000D_"));
+        let mut e5 = TallyEngine::new();
+        apply(&mut e5, "importXlsx", json!({"bytes_b64": b64}));
+        assert_eq!(raw(&mut e5, "A1"), "a\rb\tc\nd");
+    }
+
+    #[test]
+    fn export_xlsx_emits_active_tab_and_round_trips_it() {
+        let mut e = TallyEngine::new();
+        apply(&mut e, "addSheet", json!({"name":"Second"}));
+        apply(&mut e, "setActive", json!({"sheet":"Second"}));
+        let r = apply(&mut e, "exportXlsx", json!({}));
+        let b64 = r.data["bytes_b64"].as_str().unwrap().to_string();
+        let bytes = crate::base64_decode(&b64).unwrap();
+        let mut zip = zip::ZipArchive::new(Cursor::new(&bytes[..])).unwrap();
+        let mut wb = String::new();
+        zip.by_name("xl/workbook.xml")
+            .unwrap()
+            .read_to_string(&mut wb)
+            .unwrap();
+        assert!(wb.contains("<workbookView activeTab=\"1\"/>"));
+        let mut e2 = TallyEngine::new();
+        apply(&mut e2, "importXlsx", json!({"bytes_b64": b64}));
+        assert_eq!(
+            apply(&mut e2, "workbook", json!({})).data["active"],
+            json!(1)
+        );
+    }
+
+    #[test]
+    fn import_xlsx_error_literal_names_the_unsupported_value() {
+        let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let opts = zip::write::SimpleFileOptions::default();
+        zip.start_file("xl/workbook.xml", opts).unwrap();
+        zip.write_all(b"<workbook><sheets><sheet name=\"S\" r:id=\"rId1\"/></sheets></workbook>").unwrap();
+        zip.start_file("xl/_rels/workbook.xml.rels", opts).unwrap();
+        zip.write_all(b"<Relationships><Relationship Id=\"rId1\" Type=\"http://x/worksheet\" Target=\"worksheets/s1.xml\"/></Relationships>").unwrap();
+        zip.start_file("xl/worksheets/s1.xml", opts).unwrap();
+        zip.write_all(b"<worksheet><sheetData><row><c r=\"A1\" t=\"e\"><v>#N/A</v></c></row></sheetData></worksheet>").unwrap();
+        let bytes = zip.finish().unwrap().into_inner();
+        let mut e = TallyEngine::new();
+        apply(&mut e, "setCell", json!({"addr":"A1","value":"keep"}));
+        let before = e.snapshot().unwrap();
+        let err = apply_err(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+        assert!(err.message.contains("#N/A"), "{}", err.message);
+        assert!(err.message.contains("#SPILL!"), "{}", err.message);
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+
+    #[test]
+    fn import_xlsx_rejects_unescape_failures_and_oversized_input() {
+        // An unrecognized entity must reject the import, not silently drop
+        // the surrounding text.
+        let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let opts = zip::write::SimpleFileOptions::default();
+        zip.start_file("xl/workbook.xml", opts).unwrap();
+        zip.write_all(b"<workbook><sheets><sheet name=\"S\" r:id=\"rId1\"/></sheets></workbook>").unwrap();
+        zip.start_file("xl/_rels/workbook.xml.rels", opts).unwrap();
+        zip.write_all(b"<Relationships><Relationship Id=\"rId1\" Type=\"http://x/worksheet\" Target=\"worksheets/s1.xml\"/></Relationships>").unwrap();
+        zip.start_file("xl/worksheets/s1.xml", opts).unwrap();
+        zip.write_all(b"<worksheet><sheetData><row><c r=\"A1\" t=\"inlineStr\"><is><t>ok&bogus;entity</t></is></c></row></sheetData></worksheet>").unwrap();
+        let bytes = zip.finish().unwrap().into_inner();
+        let mut e = TallyEngine::new();
+        let err = apply_err(&mut e, "importXlsx", json!({"bytes_b64": crate::base64_encode(&bytes)}));
+        assert_eq!(err.code, ignition_core::ErrorCode::Serialization);
+        // Oversized compressed input rejects before decode allocates
+        // (test-build cap: MAX_XLSX_INPUT_BYTES = 1 MiB).
+        let oversized_b64 = "A".repeat(MAX_XLSX_INPUT_B64 + 4);
+        let err = apply_err(&mut e, "importXlsx", json!({"bytes_b64": oversized_b64}));
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
+        let big = vec![b'x'; MAX_XLSX_INPUT_BYTES + 1];
+        let err = e
+            .apply(Command::new("importXlsx", json!({})).with_binary(Some(big)))
+            .unwrap_err();
+        assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds);
     }
 }

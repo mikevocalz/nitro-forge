@@ -987,10 +987,19 @@ to a generated `styles.xml` (bold/italic → fonts, `fill` → solid fills,
 `border` style/color/sides → borders). `number_format` is **not**
 translated — it is a host-interpreted preset/custom pattern with no
 defined XLSX mapping (same deferral as `exportCsv`). Merged regions export
-as `<mergeCells>`. Sheet names must satisfy the Excel rules (1–31 chars,
-none of `[]:*?/\`, no leading/trailing `'`) — an invalid name rejects the
-whole export rather than silently renaming. The export is capped at
-1,048,576 cell/style entries across the workbook. `importXlsx` **replaces
+as `<mergeCells>` and the active sheet exports as
+`<bookViews><workbookView activeTab>` so export→import preserves it.
+Sheet names must satisfy the Excel rules (1–31 chars,
+none of `[]:*?/\`, no leading/trailing `'`, no control characters, and
+not shaped like an in-bounds cell reference such as `A1`) — an invalid
+name rejects the whole export rather than silently renaming. Cell raws
+containing XML-1.0-illegal characters (C0 controls other than tab/LF/CR)
+reject the whole export the same way; `\r` is written `_x000D_`-style
+(the Excel `_xHHHH_` convention — a literal CR would be normalized to LF
+by any conforming XML parser) and literal `_xHHHH_` sequences have their
+underscore escaped as `_x005F_` so they survive the round trip. The
+export is capped at 1,048,576 cell/style entries across the workbook.
+`importXlsx` **replaces
 the whole workbook** (the `importDocx` precedent): every `<sheet>` in
 `xl/workbook.xml` resolves through `xl/_rels/workbook.xml.rels` to its
 worksheet part, `xl/sharedStrings.xml` (incl. rich-text runs, phonetic
@@ -999,10 +1008,14 @@ sheet (clamped). Admitted cell types: numbers (`t="n"`/absent), shared
 and inline strings, `t="str"`, booleans (`t="b"` → `TRUE`/`FALSE` raw —
 the same literal model `setCell` bools have), and errors (`t="e"` → the
 `=#…!` error-literal formula so the computed value keeps its error type;
-only the six engine literals are admitted, so e.g. `#N/A` rejects).
-`<f>` elements become `=…` raws; `t="shared"|"array"|"dataTable"`
-formulas, `t="d"` ISO dates and unknown `t` values reject
-(`unsupported`). Cells without `r` take positional row/column cursors.
+only the six engine literals are admitted — **a single unsupported error
+literal such as `#N/A`, `#SPILL!` or `#CALC! rejects the WHOLE import**,
+a deliberate strict-subset choice). `<f>` elements become `=…` raws;
+`t="shared"|"array"|"dataTable"` formulas, `t="d"` ISO dates and unknown
+`t` values reject (`unsupported`). Character data is read from both
+`Text` and `CDATA` events, `_xHHHH_` escapes are decoded, and malformed
+entities/encodings reject the import rather than silently dropping text.
+Cells without `r` take positional row/column cursors.
 `<mergeCells>` regions import after the same normalization/overlap/cap
 checks `restore` enforces. Everything else in the package — `styles.xml`,
 defined names, data validation, conditional formats, charts, images,
@@ -1011,12 +1024,20 @@ heights, cached formula values — is ignored (documented loss, matching
 CSV's verbatim-text precedent); string cells whose text is numeric-
 looking or `=`-prefixed compute as number/formula exactly like `importCsv`
 fields, because raws carry no type tag. The import is atomic: the archive
-(≤4096 entries), each read part (≤128 MiB uncompressed, checked via the
-central directory and enforced while streaming), 256 MiB total
+(≤4096 entries), each read part (≤128 MiB uncompressed, enforced by
+`take()` while streaming and by post-read length — never the forgeable
+central-directory size), 256 MiB total
 uncompressed, 1,048,576 shared strings, 1024 sheets and 1,048,576 cells
 are all bounded before the single `Reset` undo entry commits — hostile or
 malformed input mutates and journals nothing, and any protected sheet
-rejects the op up front like `new`. Snapshot compat is unchanged: an
+rejects the op up front like `new`. The compressed archive input itself
+is sanity-capped at 512 MiB (`bytes_b64` field length is checked before
+`base64_decode` allocates; the binary sidecar and decoded bytes get the
+same cap) — a transport bound, not a document limit. Per-part and total
+uncompressed budgets are counted in ACTUAL bytes read (`take()`-bounded
+streaming plus post-read lengths); the central directory's claimed sizes
+are attacker-controlled and never trusted, so a forged directory cannot
+bypass the 256 MiB total. Snapshot compat is unchanged: an
 imported workbook is ordinary engine state (merges make it emit the
 existing schema:8 wrapper).
 

@@ -2440,3 +2440,19 @@ test` 89 passed across 23 files (4 new nf-cli xlsx e2e incl. a
 hand-built two-sheet fixture and runImport/runExport coverage),
 `pnpm --filter @nitro-forge/tally typecheck` clean. No native/device
 acceptance or full P13 completion is implied.
+
+Independent-review fixes on the same slice (same branch): the 256 MiB
+total-uncompressed budget now counts ACTUAL bytes read — the central
+directory's claimed sizes are attacker-controlled and are no longer
+consulted (regression test forges them); `importXlsx` input is
+sanity-capped at 512 MiB compressed with the `bytes_b64` length checked
+before `base64_decode` allocates; `exportXlsx` emits
+`<workbookView activeTab>` and rejects cell raws/sheet names carrying
+XML-1.0-illegal control characters (names also reject in-bounds
+cell-reference shapes like `A1`), writing `\r` as `_x000D_` with
+`_x005F_` underscore disambiguation; import reads `CDATA` alongside
+`Text`, decodes `_xHHHH_`, rejects unescape failures instead of silently
+dropping text, and the `t="e"` rejection names the unsupported literal
+and its blast radius. `cargo test -p tally-engine` 225 passed (6 new
+regression tests), `cargo build -p nf-cli` clean, `pnpm --filter
+@nitro-forge/tally test`/`typecheck` clean.
