@@ -4,8 +4,13 @@ import {
   lumaStats,
   lightingPassed,
   qualityForFrame,
+  qualityForCapture,
+  faceCoveragePassed,
+  headPosePassed,
   LIGHTING_MIN_MEAN,
   LIGHTING_MAX_MEAN,
+  FACE_DETECTION_MAX_AGE_MS,
+  type FaceDetection,
 } from '../persona-capture/quality.ts';
 import { CAPTURE_STEPS, CAPTURE_STEP_IDS, CAPTURE_STEP_SKIPPABLE } from '../persona-capture/steps.ts';
 
@@ -50,4 +55,65 @@ test('capture step plan matches the native session contract', () => {
   assert.equal(new Set(CAPTURE_STEP_IDS).size, CAPTURE_STEP_IDS.length);
   assert.equal(CAPTURE_STEP_IDS[0], 'front');
   assert.equal(CAPTURE_STEPS.every((s) => s.id && s.prompt), true);
+});
+
+const NOW = 1_000_000;
+
+function detection(over: Partial<FaceDetection> = {}): FaceDetection {
+  return {
+    faceCount: 1,
+    box: { x: 0.35, y: 0.2, width: 0.3, height: 0.4 },
+    yawDeg: 0,
+    rollDeg: 0,
+    at: NOW,
+    ...over,
+  };
+}
+
+test('face coverage passes for a single centered face', () => {
+  assert.equal(faceCoveragePassed(detection(), NOW), true);
+});
+
+test('face coverage fails without a fresh single face', () => {
+  assert.equal(faceCoveragePassed(null, NOW), false);
+  assert.equal(faceCoveragePassed(detection({ faceCount: 0, box: null }), NOW), false);
+  assert.equal(faceCoveragePassed(detection({ faceCount: 2 }), NOW), false);
+  assert.equal(
+    faceCoveragePassed(detection({ at: NOW - FACE_DETECTION_MAX_AGE_MS - 1 }), NOW),
+    false,
+  );
+});
+
+test('face coverage rejects tiny, huge and off-center faces', () => {
+  assert.equal(
+    faceCoveragePassed(detection({ box: { x: 0.4, y: 0.4, width: 0.05, height: 0.05 } }), NOW),
+    false,
+  );
+  assert.equal(
+    faceCoveragePassed(detection({ box: { x: 0, y: 0, width: 0.95, height: 0.95 } }), NOW),
+    false,
+  );
+  assert.equal(
+    faceCoveragePassed(detection({ box: { x: 0.8, y: 0.1, width: 0.15, height: 0.3 } }), NOW),
+    false,
+  );
+});
+
+test('head pose uses measured yaw/roll and rejects missing angles', () => {
+  assert.equal(headPosePassed(detection({ yawDeg: 10, rollDeg: -8 }), NOW), true);
+  assert.equal(headPosePassed(detection({ yawDeg: 40 }), NOW), false);
+  assert.equal(headPosePassed(detection({ yawDeg: null }), NOW), false);
+  assert.equal(headPosePassed(detection({ rollDeg: null }), NOW), false);
+});
+
+test('qualityForCapture includes face gates only when detection exists', () => {
+  const { buf, w, h, bpr } = yPlane(140);
+  const stats = lumaStats(buf, w, h, bpr);
+  const lit = qualityForFrame(stats);
+  const noDet = qualityForCapture(stats, null, NOW);
+  assert.deepEqual(noDet.gateNames, ['lighting']);
+  const withDet = qualityForCapture(stats, detection(), NOW);
+  assert.deepEqual(withDet.gateNames, ['lighting', 'face_coverage', 'head_pose']);
+  assert.deepEqual(withDet.gatePassed, [true, true, true]);
+  assert.deepEqual(lit.gatePassed, noDet.gatePassed);
 });

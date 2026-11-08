@@ -168,7 +168,10 @@ the zero-copy GPU preview (`getNativeBuffer()` -> `RNWebGPU
 pass, orientation/mirroring applied as UV metadata, never buffer rotation),
 periodic Y-plane luma statistics feeding `qualityForFrame` gates, and
 `runOnJS` handoff that calls `capturePhotoToFile` and hands the file path to
-`PersonaCapture.observe(...)`. Quality gates currently measure lighting only;
-head pose, device pose, glasses and face coverage remain unmeasured until a
-real landmark/pose evaluator lands. Generation/fitting, phone-headset
+`PersonaCapture.observe(...)`. Quality gates measure lighting (Y-plane luma in the frame worklet),
+face coverage and head yaw/roll via VisionCamera's platform-native
+`CameraObjectOutput` face detection (`useObjectOutput({types:['face']})`);
+a missing or stale detection omits those gates rather than passing them.
+Device pose, glasses/occlusion and head pitch remain unmeasured until a
+pose/landmark evaluator lands. Generation/fitting, phone-headset
 transport and persistence are still host-owned and not implemented.

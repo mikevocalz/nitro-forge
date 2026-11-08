@@ -8,15 +8,22 @@ import {
 } from 'react-native-webgpu';
 import {
   Camera,
+  isScannedFace,
   useCameraDevices,
   useCameraPermission,
   useFrameOutput,
+  useObjectOutput,
   usePhotoOutput,
 } from 'react-native-vision-camera';
 import { runOnJS } from 'react-native-worklets';
 import { PersonaCapture } from '@nitro-forge/persona-native/capture';
 import { CAPTURE_SOURCE, CAPTURE_STEPS, CAPTURE_STEP_IDS, CAPTURE_STEP_SKIPPABLE } from './steps';
-import { lumaStats, qualityForFrame, type QualityVerdict } from './quality';
+import {
+  lumaStats,
+  qualityForCapture,
+  type FaceDetection,
+  type LumaStats,
+} from './quality';
 
 /**
  * Phone-hosted guided persona capture.
@@ -103,6 +110,7 @@ export function PersonaCaptureScreen() {
   const epochRef = useRef(0);
   const busyRef = useRef(false);
   const frameCounter = useRef({ n: 0 });
+  const faceRef = useRef<FaceDetection | null>(null);
 
   const devices = useCameraDevices();
   const cameraDevice = useMemo(
@@ -113,6 +121,30 @@ export function PersonaCaptureScreen() {
   const photoOutput = usePhotoOutput({
     targetResolution: { width: 1280, height: 720 },
     qualityPrioritization: 'quality',
+  });
+
+  // Platform-native face detection (bounding box + yaw/roll). Runs on the
+  // JS thread; the latest snapshot is read by the quality gate on pass.
+  const objectOutput = useObjectOutput({
+    types: ['face'],
+    onObjectsScanned: (objects) => {
+      const faces = objects.filter(isScannedFace);
+      const primary = faces[0];
+      faceRef.current = {
+        faceCount: faces.length,
+        box: primary
+          ? {
+              x: primary.boundingBox.x,
+              y: primary.boundingBox.y,
+              width: primary.boundingBox.width,
+              height: primary.boundingBox.height,
+            }
+          : null,
+        yawDeg: primary?.hasYawAngle ? primary.yawAngle : null,
+        rollDeg: primary?.hasRollAngle ? primary.rollAngle : null,
+        at: Date.now(),
+      };
+    },
   });
 
   useEffect(() => {
@@ -180,12 +212,15 @@ export function PersonaCaptureScreen() {
     }
   }, [hasPermission]);
 
-  /** JS-side handler invoked from the frame worklet on a quality pass. */
-  const onQualityPass = useCallback(
-    async (gateNames: string[], gatePassed: boolean[]) => {
+  /** JS-side handler invoked from the frame worklet with luma stats. */
+  const onLumaStats = useCallback(
+    async (mean: number, darkRatio: number, samples: number) => {
       const capture = captureRef.current;
       if (!capture || busyRef.current) return;
       if (capture.stage() !== 'capture') return;
+      const stats: LumaStats = { mean, darkRatio, samples };
+      const verdict = qualityForCapture(stats, faceRef.current, Date.now());
+      if (!verdict.gatePassed.every(Boolean)) return;
       const step = CAPTURE_STEPS[completed];
       if (!step) return;
       busyRef.current = true;
@@ -196,8 +231,8 @@ export function PersonaCaptureScreen() {
           epochRef.current,
           step.id,
           file.filePath,
-          gateNames,
-          gatePassed,
+          verdict.gateNames,
+          verdict.gatePassed,
         );
         if (ok) {
           setCompleted((n) => n + 1);
@@ -282,16 +317,15 @@ export function PersonaCaptureScreen() {
           }
         }
         // CPU-side luma metrics on a cadence (state-only, not frame-coupled).
+        // The JS side combines these with the latest face detection and only
+        // then decides whether a photo should be captured for this step.
         frameCounter.current.n += 1;
         if (frameCounter.current.n % LUMA_EVERY_N_FRAMES === 0 && frame.isPlanar) {
           const planes = frame.getPlanes();
           const y = planes[0];
           if (y && y.isValid) {
             const stats = lumaStats(y.getPixelBuffer(), y.width, y.height, y.bytesPerRow);
-            const verdict: QualityVerdict = qualityForFrame(stats);
-            if (verdict.gatePassed.every(Boolean)) {
-              runOnJS(onQualityPass)(verdict.gateNames, verdict.gatePassed);
-            }
+            runOnJS(onLumaStats)(stats.mean, stats.darkRatio, stats.samples);
           }
         }
       } catch {
@@ -305,7 +339,10 @@ export function PersonaCaptureScreen() {
     onFrameDropped: () => {},
   });
 
-  const outputs = useMemo(() => [frameOutput, photoOutput], [frameOutput, photoOutput]);
+  const outputs = useMemo(
+    () => [frameOutput, photoOutput, objectOutput],
+    [frameOutput, photoOutput, objectOutput],
+  );
 
   const currentStep = CAPTURE_STEPS[Math.min(completed, CAPTURE_STEPS.length - 1)];
   const coverageDone = completed >= CAPTURE_STEPS.length;
