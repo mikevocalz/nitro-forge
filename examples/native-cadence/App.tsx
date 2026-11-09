@@ -17,6 +17,7 @@ import { useReservedRegions, isReservedRegionsAvailable } from "@nyc-tron/reserv
 import { foldFeaturesFromRegions, resolveUsableRegions, type Rect } from "@nyc-tron/core/folds";
 import { shareDiagnosticTrace } from "./verify-documents";
 import { verifyNativeEngines } from "./verify-engines";
+import { verifyQuillRenderPage } from "./verify-quill-render";
 import { verifyNativeServices } from "./verify-services";
 import { verifyNativeTelemetry } from "./verify-telemetry";
 import { verifyPickerCancellation, shareTestSnapshot, importTestSnapshot,
@@ -302,6 +303,13 @@ export default function App() {
               action(async () => {
                 store.setState({ verification: null });
                 const verification = await verifyNativeEngines();
+                console.info(verification);
+                store.setState({ verification });
+              })}/>
+            <Action label="Verify quill renderPage" disabled={state.pending} onPress={() =>
+              action(async () => {
+                store.setState({ verification: null });
+                const verification = await verifyQuillRenderPage();
                 console.info(verification);
                 store.setState({ verification });
               })}/>

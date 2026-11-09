@@ -1,0 +1,220 @@
+P01b — iOS SIMULATOR native/runtime evidence (2026-11-08)
+================================================================
+
+SCOPE: iOS SIMULATOR ONLY. No physical device was attached, launched, or
+validated. Argent reported the paired physical iPhone unreachable (tunnel
+down) and was not used. Everything below ran on a simulator; nothing here is
+device evidence.
+
+HOST / TOOLCHAIN
+----------------
+Machine:        macOS 27.0 (26A428), arm64 (Apple Silicon)
+Xcode:          27.1 (27A9269); Swift 6.4 toolchain
+Simulator:      "Forge Completion iPhone Duo" — foldable iPhone Duo sim,
+                iOS 27.1 runtime
+UDID:           BBCC4078-E64D-4642-893B-ACF80ACB29A1 (Booted)
+Driver:         argent MCP (/opt/homebrew/bin/argent), accessibility-tree
+                taps/swipes + verbatim AX text capture; simctl for
+                install/launch; Metro for JS bundles.
+Disk:           host volume hit 100% during the session (ENOSPC in Metro
+                cache writes and Xcode .dia/manifest writes at points);
+                builds and bundles still completed. Recorded as an
+                environmental caveat, not a product failure.
+
+HARNESS A — Forge native-cadence app (current source, this worktree)
+---------------------------------------------------------------------
+Worktree:  forge-w28-ios, branch codex/w28-ios-evidence, base c3cbbbf
+Bundle id: ai.nitroforge.cadence.native ("Nitro Forge Cadence Native")
+JS:        Metro on :8081 from examples/native-cadence
+Build:     xcodebuild Debug-iphonesimulator of
+           examples/native-cadence/ios/NitroForgeCadenceNative.xcodeproj
+           against freshly built
+           packages/ignition/native/ForgeRust.xcframework
+           (ios-arm64_x86_64-simulator). BUILD SUCCEEDED; installed and
+           launched on the simulator above.
+Native path under test: @nitro-forge/ignition createNitroHost -> real Rust
+engines via Nitro JSI (not nf-cli, not TS mocks).
+
+RESULTS (verbatim AX text captured from the running app)
+
+1) "Verify native engines" — PASS
+   "Native engine round trips passed: prism, cadence, splice, folio,
+    pitch, tally, quill, photo, motion, design, draft. Cadence edit,
+    undo, redo and reopen passed."
+   Covers per engine: new, describe, NFD1 snapshot round trip, invalid
+   snapshot rejection, post-close rejection; plus Cadence edit/undo/redo
+   and snapshot reopen with committed values.
+
+   Harness fixes required to reach this result (in this commit):
+   - All `describe` calls now send payload:{} — Rust engines reject a
+     missing payload ("payload must be an object").
+   - Draft's describe emits source_revision, which restore deliberately
+     bumps; the comparison now excludes that one revision field instead
+     of failing a legitimate round trip.
+
+2) "Verify quill renderPage" — PASS (Quill renderPage R1-R3)
+   "Quill renderPage passed on device: registerFont ok sha256=f6a446f65dbd…;
+    renderPage fixed-geometry 267x133 inked; renderPage deterministic;
+    renderPage use_sections section=0 number=1 816x1056 inked;
+    renderPage empty-font rejection ok; renderPage out-of-range-page
+    rejection ok."
+   (String said "on device"; the run was on the simulator — wording
+   corrected in the harness to platform-neutral.)
+   Exercises real Rust quill: registerFont with embedded test TTF,
+   fixed-geometry render (200pt x 100pt @96dpi -> 267x133), byte-exact
+   determinism, use_sections pagination, and both documented rejections.
+
+3) "Verify native services" — PASS
+   "Native services passed: bounded LRU, owned binary buffers, task
+    progress/results, cancellation and cleanup."
+   Covers N-13/N-14/N-16: media cache capacity/eviction/oversize/close,
+   owned binary sidecar transport, startTask progress/results,
+   cancellation, cleanup.
+
+4) "Verify native telemetry" — PASS
+   "Native telemetry passed: real engine timings/errors, consent
+    off/local/diagnostics, payload isolation and revoked-span cleanup.
+    Diagnostic sink was memory only."
+
+HARNESS B — P03 decoder/native host (ai.nyctron.p03bridge)
+---------------------------------------------------------
+Project: /Users/mikevocalz/recovered-work/2026-11-05/p03-decoder-native-host
+App:     "Nitro Forge Cadence Native" display name, bundle ai.nyctron.p03bridge
+JS:      Metro on :8081 from the p03 host; platform-services TS source
+         imported live from tron-complete/packages/platform-services.
+Native:  Debug-iphonesimulator build of the same Xcode project shape,
+         including NYCTron platform-services pod compiled from
+         tron-complete iOS sources. BUILD SUCCEEDED earlier this session
+         after Swift API repairs (MediaEncoder, SpeechRecognizerEngine,
+         NYCAudioDevice — edits live in tron-complete, outside this
+         Forge branch).
+
+RESULTS (verbatim AX text)
+
+5) Bridge mode (platform media decoder) — PASS, reproduced twice
+   "P03 BRIDGE PASS
+    PASS actual Expo native capabilities
+    PASS cfr: 12 actual PTS and 12 real JPEG files
+    PASS vfr: 12 actual PTS and 12 real JPEG files
+    PASS bframes: 12 actual PTS and 12 real JPEG files
+    PASS actual native cache cleanup of 36 JPEG files
+    PASS native cap and missing-timestamp errors"
+
+6) "Run native player lifecycle" — PASS
+   "P03 PLAYER PASS
+    PASS native source A readiness
+    PASS actual play and advancing clock
+    PASS native pause
+    PASS seek token acknowledged within 10ms (not frame pixels)
+    PASS source B replaces A and clears seek token
+    PASS no callback after React unmount (500ms)
+    PASS fresh native remount readiness
+    PASS actual native missing-file error
+    PASS native source recovery after error"
+
+7) "Run platform-services probe" (encoder/speech/audio) — PARTIAL,
+   with a real simulator crash documented
+
+   Encoder — PASS:
+     "encoder.isAvailable=true
+      encoder.probe container=mp4 video=true audio=true hw=undefined
+      encoder.encode mime=video/mp4 bytes=16272 durationUs=1000000
+        fileExists=true fileSize=16272
+      encoder empty-request rejection code=out-of-range
+      encoder.clearCache outputGone=true"
+     A synthetic 64x64 RGBA clip + 22050Hz PCM tone was encoded to a real
+     MP4 by the NYC-Tron MediaEncoder Swift code on the simulator.
+
+   Speech — probe PASS, start NOT verified on simulator:
+     "speech.isAvailable=true
+      speech.probe available=true onDevice=true networkPossible=true"
+     Speech + microphone permission alerts were granted. speech.start
+     then exceeded a 60 s JS timeout; the process subsequently aborted.
+     Crash report (~/Library/Logs/DiagnosticReports/
+     NitroForgeCadenceNative-2026-11-08-215318.ips): EXC_CRASH/SIGABRT,
+     faulting thread inside AVAudioEngine.inputNode ->
+     AVAudioIONodeImpl::GetInputFormat -> AUAudioUnitV2Bridge ->
+     AudioUnitInitialize -> _ReportRPCTimeout "Initialize: RPC timeout.
+     Apparently deadlocked. Aborting now." Simulator log shows the same
+     CoreAudio RPC timeout ~9 s after engine init. Speech start/stop
+     lifecycle is therefore UNVERIFIED on simulator — the recognizer
+     probe and permission path work; session start deadlocks in
+     CoreAudio on this runtime. Not a physical-device result either way.
+
+   Audio device — output PASS, input NOT verified on simulator:
+     "audio.isAvailable=true
+      audio.probe available=true defaultRate=48000 outputs=1 inputs=1
+      audio.openOutput stream=ios-out-5 format=48000Hz/2ch/f32
+        latencyMs=10
+      audio wrote 24 chunks stats queued=12000 dropped=0 underrun=0
+      audio output stream closed"
+     Real AVAudioEngine output stream: 0.25 s of 440 Hz PCM written in
+     24 chunks, stats clean, stream closed. openInput then timed out
+     (15 s) and the same CoreAudio input-path deadlock crashed the app
+     (same .ips signature family). Input capture UNVERIFIED on
+     simulator.
+
+   Harness fixes made while driving this probe (outside this repo):
+   - ServicesProbeApp.js: stripped TS annotations (file is .js; babel
+     rejected them), wrapped fixture deletes (encoder.clearCache removes
+     the shared cache dir), raised speech.start timeout to 60 s.
+   - tron-complete device.ts: AudioDeviceNative.writeOutput signature
+     corrected to the real native contract — ONE AudioWriteRecord
+     argument {stream,samples,sampleFormat,frames} on both iOS Swift and
+     Android Kotlin (previously called with two args -> "takes 1
+     argument(s), but received 2"); samples sent as a fresh Uint8Array
+     (Expo `Data` fields reject ArrayBuffer: "Cannot convert a
+     JavaScript value to Data because it is not a Uint8Array").
+
+REACHABILITY OF RECENT WORK (current-source simulator build)
+------------------------------------------------------------
+Runtime-verified on the simulator in this session:
+  - All 11 engines incl. draft/design/motion/photo end-to-end
+    (init/describe/NFD1 snapshot/restore/reject/close + Cadence
+    edit/undo/redo/reopen) via the production Nitro host.
+  - Quill renderPage R1-R3 (registerFont, fixed geometry, deterministic
+    pixels, use_sections, rejection paths) — real Rust raster output.
+  - Nitro media cache + binary sidecar transport + task/cancellation.
+  - Telemetry consent/timing/payload-isolation path.
+  - NYC-Tron platform-services: media decoder (cfr/vfr/bframes, real
+    JPEG frames + PTS), AVPlayer-based player lifecycle, AVAssetWriter
+    MP4 encoder, audio output stream. Speech probe + permissions OK;
+    speech.start and audio.openInput blocked by simulator CoreAudio
+    deadlock (crash), not by missing code.
+
+Build/source-verified but NOT runtime-exercised on iOS this session:
+  - nf-color, splice-render, raw-decode, scene-render: covered by Rust
+    cargo logs already in this directory (w20/w26) and by the engine
+    round-trip probe only at the envelope level; no dedicated iOS
+    raster/decode assertions were run.
+  - Consumer/demo harness (NYC-Tron Instruments Demo app on the same
+    simulator): present on the home screen; not driven this session.
+
+UNRUN / BLOCKED
+---------------
+  - Physical device: none attached; out of scope by request.
+  - Speech session start/stop and audio input capture: blocked by iOS
+    simulator CoreAudio RPC deadlock (SIGABRT). Requires a physical
+    device or a different simulator runtime to evaluate.
+  - Picker/share/bookmark/transact UI probes in the w28 app: buttons
+    exist; not exercised this session (engine/services/telemetry/quill
+    were the requested subset).
+  - Metro emitted ENOSPC cache-write errors under disk pressure; bundles
+    still completed. Reproducibility caveat only.
+
+COMMANDS (abridged, exact order)
+--------------------------------
+  cd forge-w28-ios && git worktree/branch codex/w28-ios-evidence
+  cargo build -p nf-sys -> packages/ignition/native/ForgeRust.xcframework
+  cd examples/native-cadence && pnpm start --port 8081 --localhost
+  xcodebuild -project ios/NitroForgeCadenceNative.xcodeproj \
+    -scheme NitroForgeCadenceNative -configuration Debug \
+    -destination 'platform=iOS Simulator,id=BBCC4078-...' \
+    -derivedDataPath <derived>   # BUILD SUCCEEDED
+  xcrun simctl install <udid> <app>; xcrun simctl launch <udid> \
+    ai.nitroforge.cadence.native
+  argent gesture-tap/swipe + describe  # all UI results above
+  p03 host: same flow for ai.nyctron.p03bridge (Metro from
+    p03-decoder-native-host on :8081)
+
+No physical-device validation is claimed anywhere in this file.

@@ -5,6 +5,18 @@ import { CadenceInstrumentSession } from "@nitro-forge/cadence/instrument-sessio
 export async function verifyNativeEngines(): Promise<string> {
   const host = createNitroHost();
   const verified: string[] = [];
+  // `describe` equality is a document-content check. Draft also emits
+  // `source_revision`, a monotonic counter that `restore` deliberately bumps
+  // (each restore is a new source revision), so it is excluded from the
+  // comparison — the same reason payload-less `describe` is sent as `{}`
+  // (draft validates payload shape; its TS API always sends an object).
+  const describeJson = async (handle: number) => {
+    const { data } = await host.apply<Record<string, unknown>>(handle, {
+      op: "describe", payload: {},
+    });
+    if (data && typeof data === "object") delete data.source_revision;
+    return JSON.stringify(data);
+  };
   try {
     for (const kind of ENGINE_KINDS) {
       const handle = await host.open(kind);
@@ -14,24 +26,24 @@ export async function verifyNativeEngines(): Promise<string> {
         await host.apply(handle, {
           op: "new", payload: kind === "prism" ? { width: 32, height: 32 } : {},
         });
-        const before = JSON.stringify((await host.apply(handle, { op: "describe" })).data);
+        const before = await describeJson(handle);
         const bytes = await host.snapshot(handle);
         if (String.fromCharCode(...bytes.subarray(0, 4)) !== "NFD1")
           throw new Error(`${kind}: invalid snapshot envelope`);
         await host.restore(handle, bytes);
-        if (JSON.stringify((await host.apply(handle, { op: "describe" })).data) !== before)
+        if (await describeJson(handle) !== before)
           throw new Error(`${kind}: snapshot round trip changed document`);
         let rejected = false;
         try { await host.restore(handle, new Uint8Array([0])); }
         catch { rejected = true; }
         if (!rejected) throw new Error(`${kind}: accepted invalid snapshot`);
-        if (JSON.stringify((await host.apply(handle, { op: "describe" })).data) !== before)
+        if (await describeJson(handle) !== before)
           throw new Error(`${kind}: invalid restore changed document`);
       } finally {
         await host.close(handle);
       }
       let rejected = false;
-      try { await host.apply(handle, { op: "describe" }); }
+      try { await host.apply(handle, { op: "describe", payload: {} }); }
       catch { rejected = true; }
       if (!rejected) throw new Error(`${kind}: closed document remained usable`);
       verified.push(kind);
@@ -50,7 +62,7 @@ export async function verifyNativeEngines(): Promise<string> {
       const restored = await host.open("cadence");
       try {
         await host.restore(restored, bytes);
-        const { data } = await host.apply<{ tracks: { volume: number; pan: number }[] }>(restored, { op: "describe" });
+        const { data } = await host.apply<{ tracks: { volume: number; pan: number }[] }>(restored, { op: "describe", payload: {} });
         if (data.tracks[0]?.volume !== 0.5 || data.tracks[0]?.pan !== 0.25)
           throw new Error("Cadence: reopened snapshot lost committed values");
       } finally { await host.close(restored); }
