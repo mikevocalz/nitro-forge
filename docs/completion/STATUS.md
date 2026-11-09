@@ -198,3 +198,29 @@ byte-equal, stale recipe rejected); `cargo build -p nf-cli` and photo
 `tsc --noEmit` clean. iOS/Android/visionOS/Quest/PICO/Linux/Windows/WASM
 remain NOT-RUN per the admission; CDDL source-offer mechanics for shipped
 binaries are still open. No phase or platform acceptance is promoted.
+
+## scene-render tier-1 CPU rasterizer (2026-11-13, `codex/w25-draft-trackb`)
+
+The P17 Track-B B0 decision's first buildable slice now exists as
+`rust/scene-render`, a non-engine JSON-lines host service in the
+`folio-render`/`raw-decode` provider family: ops `render`/`describe`
+consume a canonical scene description (world-space f32le/u32le binary
+attributes, PBR-state materials, named RGBA8 textures by content,
+perspective/orthographic cameras) and return deterministic RGBA8/PNG.
+The rasterizer is fixed-order pure Rust — view-space near/far clipping,
+perspective-correct barycentric interpolation, z-buffer, backface
+culling, per-pixel Lambert + Blinn-Phong + ambient + emission,
+nearest/bilinear texture sampling, sRGB at the boundaries — the only
+parity-claimable path per the B0 decision; the wgpu tier stays
+deferred and display-only. Bounds are fail-closed (≤4096 px/side,
+≤32 MiB output, ≤1M triangles, ≤64 MiB textures, ≤256 MiB frames).
+The scene engine itself (tag 11) is NOT built — it remains an open B0
+sign-off; no engine crate, op name, snapshot format or
+`components.json`/`ENGINE_OPS.md` engine row changed (ENGINE_OPS.md
+gains a "NOT an Engine" service section). Verified on this dev host
+(macOS arm64): `cargo test -p scene-render` 11 pass incl. real renders,
+determinism and hostile bounds; `cargo build --workspace` clean;
+draft vitest unchanged. iOS/Android/WASM/Windows NOT-RUN; no TS
+adapter exists yet (no `packages/scene`). No phase or platform
+acceptance is promoted. See
+`docs/completion/reports/P17-scene-render-tier1.md`.
