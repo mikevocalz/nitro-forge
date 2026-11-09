@@ -18,6 +18,13 @@ pub const IDENTITY: M4 = [
     [0.0, 0.0, 0.0, 1.0],
 ];
 
+/// Row-major 3x3 identity (rotation-only transforms).
+pub const IDENTITY_M3: M3 = [
+    [1.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [0.0, 0.0, 1.0],
+];
+
 pub fn v3_sub(a: V3, b: V3) -> V3 {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }

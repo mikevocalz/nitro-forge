@@ -20,11 +20,21 @@
 //!   `[x,y,z]` composed `R = Rz·Ry·Rx` (X applied first). Local matrix is
 //!   `T·R·S`; world = parent chain product, root parent id 0.
 //! - Cameras look down their local -Z with local +Y up; a camera node's
-//!   world translation is the view position.
+//!   world translation is the view position. The emitted camera basis
+//!   (forward/up) is transformed by world ROTATION only — node or
+//!   ancestor scale never skews it.
 //! - Directional lights emit along their local `direction` vector
-//!   (default `[0,-1,0]`, normalized, rotation-only transform — the
-//!   direction the light *travels*, matching scene-render). Point lights
-//!   sit at the node's world position; ambient ignores the transform.
+//!   (default `[0,-1,0]`, normalized at write, transformed by world
+//!   ROTATION only — the direction the light *travels*, matching
+//!   scene-render; scale never skews it). Point lights sit at the
+//!   node's world position; ambient ignores the transform.
+//! - A negative-determinant transform chain mirrors geometry: emitted
+//!   triangle winding inverts, so a mirrored mesh renders inside-out
+//!   under the rasterizer's backface culling unless its material sets
+//!   `double_sided:true`. Positions transform normally (mirrored),
+//!   normals via the inverse-transpose; `pick` hits both faces
+//!   regardless, and directions/camera basis stay rotation-only (a
+//!   mirror does not flip them).
 //! - `visible:false` on a node or any ancestor excludes the subtree from
 //!   `bounds`, `pick` and `renderFrame` emission.
 //! - Determinism: fixed BTreeMap id order everywhere, f32 fixed-order
@@ -62,6 +72,13 @@ const MAX_TEXTURE_NAME: usize = 256;
 const MAX_LIGHTS_EMIT: usize = 16; // scene-render MAX_LIGHTS
 const MAX_RENDER_DIM: u64 = 4096;
 const MAX_PICK_TRIANGLES: usize = 1_000_000;
+/// Emitted-geometry caps on `renderFrame`/`bounds`, mirroring the
+/// scene-render service limits (`rust/scene-render`
+/// MAX_VERTICES_PER_SCENE / MAX_TRIANGLES / MAX_TEXTURES) so node
+/// instancing cannot amplify a read op into a multi-GB payload.
+const MAX_EMIT_VERTICES: usize = 3_000_000;
+const MAX_EMIT_TRIANGLES: usize = 1_000_000;
+const MAX_TEXTURES_EMIT: usize = 256;
 
 // ---- Document model ----
 
@@ -629,6 +646,35 @@ pub(crate) fn world_matrices(s: &State) -> BTreeMap<u64, math::M4> {
             m = m4_mul(&m, &trs_to_m4(n.transform.translation, n.transform.rotation_deg, n.transform.scale));
         }
         out.insert(id, m);
+    }
+    out
+}
+
+/// World rotation (M3) per node id: the product of ancestor euler
+/// rotations with every scale removed — the correct transform for
+/// direction vectors (directional-light directions, the emitted camera
+/// basis). Because each local matrix is `T·R·S`, the rotation part
+/// composes independently of scale: `R_world = R_parent · R_local`,
+/// accumulated root→node in the same chain order as `world_matrices`.
+/// Negative scale mirrors positions but does not flip directions.
+pub(crate) fn world_rotations(s: &State) -> BTreeMap<u64, math::M3> {
+    let mut out = BTreeMap::new();
+    for &id in s.nodes.keys() {
+        let mut chain = Vec::new();
+        let mut cur = id;
+        loop {
+            let Some(n) = s.nodes.get(&cur) else { break };
+            chain.push(n);
+            if n.parent == 0 {
+                break;
+            }
+            cur = n.parent;
+        }
+        let mut r = math::IDENTITY_M3;
+        for n in chain.iter().rev() {
+            r = math::m3_mul(&r, &math::euler_to_mat3(n.transform.rotation_deg));
+        }
+        out.insert(id, r);
     }
     out
 }

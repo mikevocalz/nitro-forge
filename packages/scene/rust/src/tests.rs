@@ -14,6 +14,9 @@ fn apply(e: &mut SceneEngine, op: &str, payload: Value) -> Value {
 fn apply_err(e: &mut SceneEngine, op: &str, payload: Value) -> String {
     e.apply(Command::new(op, payload)).unwrap_err().message
 }
+fn apply_err_full(e: &mut SceneEngine, op: &str, payload: Value) -> ignition_core::EngineError {
+    e.apply(Command::new(op, payload)).unwrap_err()
+}
 
 fn new_scene() -> SceneEngine {
     let mut e = SceneEngine::new();
@@ -550,4 +553,152 @@ fn light_and_camera_node_emission() {
     apply(&mut e, "updateNode", json!({"id":l,"visible":false}));
     let scene2 = apply(&mut e, "renderFrame", json!({"width":32,"height":32,"camera_node":cam}));
     assert_eq!(scene2["lights"].as_array().unwrap().len(), 1);
+}
+
+/// Flat f32 positions blob → canonical base64 (all zeros is finite).
+fn positions_b64(verts: usize) -> String {
+    let mut bytes = Vec::with_capacity(verts * 12);
+    for _ in 0..verts * 3 {
+        bytes.extend_from_slice(&0.0f32.to_le_bytes());
+    }
+    ignition_core::base64_encode(&bytes)
+}
+fn indices_b64(ix: &[u32]) -> String {
+    let mut bytes = Vec::with_capacity(ix.len() * 4);
+    for i in ix {
+        bytes.extend_from_slice(&i.to_le_bytes());
+    }
+    ignition_core::base64_encode(&bytes)
+}
+
+#[test]
+fn render_frame_and_bounds_reject_vertex_instancing_amplification() {
+    let mut e = new_scene();
+    let mat = add_material(&mut e);
+    // One 99,999-vertex mesh referenced by 31 nodes: stored geometry is
+    // tiny, but EMITTED geometry is 31 × 99,999 = 3,099,969 vertices —
+    // over the scene-render service's 3,000,000-vertex scene cap. The
+    // single-triangle index keeps emitted triangles at 31.
+    let mesh_id = apply(
+        &mut e,
+        "addMesh",
+        json!({
+            "material": mat,
+            "positions_b64": positions_b64(99_999),
+            "indices_b64": indices_b64(&[0, 1, 2]),
+        }),
+    )["mesh_id"]
+    .as_u64()
+    .unwrap();
+    for _ in 0..31 {
+        apply(&mut e, "addNode", json!({"kind":"mesh","mesh":mesh_id}));
+    }
+    add_camera(&mut e, 5.0);
+    // Both reads reject OutOfBounds before emitting — no multi-GB JSON.
+    let err = apply_err_full(&mut e, "renderFrame", json!({"width":8,"height":8}));
+    assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds, "{err:?}");
+    assert!(err.message.contains("vertices"), "{}", err.message);
+    let err = apply_err_full(&mut e, "bounds", json!({}));
+    assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds, "{err:?}");
+    assert!(err.message.contains("vertices"), "{}", err.message);
+}
+
+#[test]
+fn render_frame_rejects_triangle_instancing_amplification() {
+    let mut e = new_scene();
+    let mat = add_material(&mut e);
+    // 300,000 indexed triangles per instance; 4 instances = 1.2M
+    // triangles > the 1,000,000 service cap while vertices stay under.
+    let ix: Vec<u32> = (0..900_000u32).map(|i| i % 99_999).collect();
+    let mesh_id = apply(
+        &mut e,
+        "addMesh",
+        json!({
+            "material": mat,
+            "positions_b64": positions_b64(99_999),
+            "indices_b64": indices_b64(&ix),
+        }),
+    )["mesh_id"]
+    .as_u64()
+    .unwrap();
+    for _ in 0..4 {
+        apply(&mut e, "addNode", json!({"kind":"mesh","mesh":mesh_id}));
+    }
+    add_camera(&mut e, 5.0);
+    let err = apply_err_full(&mut e, "renderFrame", json!({"width":8,"height":8}));
+    assert_eq!(err.code, ignition_core::ErrorCode::OutOfBounds, "{err:?}");
+    assert!(err.message.contains("triangles"), "{}", err.message);
+}
+
+#[test]
+fn render_frame_directions_ignore_scale() {
+    let mut e = new_scene();
+    let mat = add_material(&mut e);
+    add_box(&mut e, mat);
+    // Directional light with non-uniform scale AND rotation: the
+    // emitted direction must be rotation-only. Rz(90)·normalize([1,1,0])
+    // = [-√2/2, +√2/2, 0]; applying scale [4,1,1] first would skew it.
+    apply(
+        &mut e,
+        "addNode",
+        json!({
+            "kind":"light",
+            "light":{"type":"directional","direction":[1,1,0],"intensity":1},
+            "transform":{"rotation_deg":[0,0,90],"scale":[4,1,1]},
+        }),
+    );
+    // Camera under a non-uniformly scaled parent (and own scale): the
+    // emitted forward/up basis must be unaffected by any scale.
+    // Ry(45) maps local -Z to (-√2/2, 0, -√2/2), +Y stays +Y.
+    let g = apply(
+        &mut e,
+        "addNode",
+        json!({"kind":"group","transform":{"scale":[3,1,1]}}),
+    )["node_id"]
+    .as_u64()
+    .unwrap();
+    let cam = apply(
+        &mut e,
+        "addNode",
+        json!({
+            "kind":"camera",
+            "camera":{"type":"perspective","fov_y_degrees":60,"near":0.1,"far":100},
+            "parent": g,
+            "transform":{"translation":[0,0,5],"rotation_deg":[0,45,0],"scale":[2,1,1]},
+        }),
+    )["node_id"]
+    .as_u64()
+    .unwrap();
+    let scene = apply(
+        &mut e,
+        "renderFrame",
+        json!({"width":8,"height":8,"camera_node":cam}),
+    );
+    let light = scene["lights"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["type"] == "directional")
+        .unwrap();
+    let d = light["direction"].as_array().unwrap();
+    let inv = std::f64::consts::FRAC_1_SQRT_2;
+    assert!((d[0].as_f64().unwrap() + inv).abs() < 1e-4, "{scene}");
+    assert!((d[1].as_f64().unwrap() - inv).abs() < 1e-4, "{scene}");
+    assert!(d[2].as_f64().unwrap().abs() < 1e-6, "{scene}");
+    // Camera basis: forward = normalize(target - position).
+    let pos = scene["camera"]["position"].as_array().unwrap();
+    let tgt = scene["camera"]["target"].as_array().unwrap();
+    let f = [
+        tgt[0].as_f64().unwrap() - pos[0].as_f64().unwrap(),
+        tgt[1].as_f64().unwrap() - pos[1].as_f64().unwrap(),
+        tgt[2].as_f64().unwrap() - pos[2].as_f64().unwrap(),
+    ];
+    let fl = (f[0] * f[0] + f[1] * f[1] + f[2] * f[2]).sqrt();
+    assert!((f[0] / fl + inv).abs() < 1e-4, "{scene}");
+    assert!((f[1] / fl).abs() < 1e-4, "{scene}");
+    assert!((f[2] / fl + inv).abs() < 1e-4, "{scene}");
+    let up = scene["camera"]["up"].as_array().unwrap();
+    assert!((up[0].as_f64().unwrap()).abs() < 1e-4, "{scene}");
+    assert!((up[1].as_f64().unwrap() - 1.0).abs() < 1e-4, "{scene}");
+    assert!(up[2].as_f64().unwrap().abs() < 1e-4, "{scene}");
 }

@@ -24,7 +24,22 @@ pub fn b64(bytes: &[u8]) -> String {
     base64_encode(bytes)
 }
 
-fn decode_f32(b64s: &str, what: &str) -> Result<Vec<f32>, EngineError> {
+/// Cheap pre-decode bound: canonical base64 carries 3 bytes per 4 chars
+/// and '=' padding only shrinks the result, so `ceil(len/4)*3` is a
+/// safe upper bound on the decoded length — at most 2 bytes above the
+/// true count. Rejecting on the string length alone bounds the
+/// transient decode allocation by the caller's expected size instead of
+/// the raw input length.
+fn decode_f32(
+    b64s: &str,
+    what: &str,
+    max_decoded_bytes: usize,
+) -> Result<Vec<f32>, EngineError> {
+    if b64s.len().div_ceil(4) * 3 > max_decoded_bytes.saturating_add(2) {
+        return Err(out_of_bounds(format!(
+            "{what} implies more than {max_decoded_bytes} decoded bytes"
+        )));
+    }
     let bytes = base64_decode(b64s).map_err(|e| invalid(format!("{what}: {e}")))?;
     if bytes.len() % 4 != 0 {
         return Err(invalid(format!("{what}: byte length must be a multiple of 4")));
@@ -89,7 +104,16 @@ pub fn decode_mesh(
     max_vertices: usize,
     what: &str,
 ) -> Result<Decoded, EngineError> {
-    let positions = decode_f32(positions_b64, &format!("{what}.positions_b64"))?;
+    // f32 attribute blobs are pre-capped by `max_vertices` before decode
+    // (positions/normals ≤ verts*3 floats = verts*12 bytes, uvs ≤
+    // verts*2 floats = verts*8 bytes). `indices_b64` has no per-mesh
+    // count bound — it stays bounded by the 8 MiB encoded-state cap and
+    // the command-frame cap, and index VALUES are range-checked below.
+    let positions = decode_f32(
+        positions_b64,
+        &format!("{what}.positions_b64"),
+        max_vertices * 12,
+    )?;
     if positions.len() % 3 != 0 {
         return Err(invalid(format!(
             "{what}.positions_b64 length must be a multiple of 3 floats"
@@ -108,7 +132,11 @@ pub fn decode_mesh(
     let normals = match normals_b64 {
         None => None,
         Some(b64s) => {
-            let n = decode_f32(b64s, &format!("{what}.normals_b64"))?;
+            let n = decode_f32(
+                b64s,
+                &format!("{what}.normals_b64"),
+                max_vertices * 12,
+            )?;
             if n.len() != positions.len() {
                 return Err(invalid(format!(
                     "{what}.normals_b64 must have the same float count as positions_b64"
@@ -128,7 +156,7 @@ pub fn decode_mesh(
     let uvs = match uvs_b64 {
         None => None,
         Some(b64s) => {
-            let u = decode_f32(b64s, &format!("{what}.uvs_b64"))?;
+            let u = decode_f32(b64s, &format!("{what}.uvs_b64"), max_vertices * 8)?;
             if u.len() != verts * 2 {
                 return Err(invalid(format!(
                     "{what}.uvs_b64 must have exactly 2 floats per vertex"

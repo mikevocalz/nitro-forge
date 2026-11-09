@@ -5,7 +5,7 @@
 //! deterministic BTreeMap id order over fully-visible node chains.
 
 use crate::codec::{decode_mesh, invalid, out_of_bounds};
-use crate::math::{m4_mul_dir, m4_mul_v3, normal_matrix, ray_triangle, v3_len, v3_norm, V3};
+use crate::math::{m3_mul_v, m4_mul_v3, normal_matrix, ray_triangle, v3_len, v3_norm, V3};
 use crate::{chain_visible, world_matrices, LightKind, NodeKind, State, CameraType};
 use ignition_core::{CommandResult, EngineError};
 use serde_json::{json, Value};
@@ -30,12 +30,42 @@ fn visible_mesh_nodes<'a>(
     out
 }
 
+/// Accumulated post-instancing geometry budget shared by `bounds` and
+/// `renderFrame`: the scene-render service caps (3M verts / 1M tris)
+/// apply to the EMITTED description, so node instancing is counted per
+/// instance, not per stored mesh.
+struct EmitBudget {
+    vertices: usize,
+    triangles: usize,
+}
+impl EmitBudget {
+    fn add(&mut self, verts: usize, tris: usize, what: &str) -> Result<(), EngineError> {
+        self.vertices += verts;
+        self.triangles += tris;
+        if self.vertices > crate::MAX_EMIT_VERTICES || self.triangles > crate::MAX_EMIT_TRIANGLES {
+            return Err(out_of_bounds(format!(
+                "{what} emits {} vertices / {} triangles across instanced meshes; \
+                 service limits are {} vertices / {} triangles",
+                self.vertices,
+                self.triangles,
+                crate::MAX_EMIT_VERTICES,
+                crate::MAX_EMIT_TRIANGLES
+            )));
+        }
+        Ok(())
+    }
+}
+
 /// `bounds` → world-space AABB over every visible mesh vertex, or null.
 pub fn bounds(s: &State) -> Result<CommandResult, EngineError> {
     let worlds = world_matrices(s);
     let mut min = [f32::INFINITY; 3];
     let mut max = [f32::NEG_INFINITY; 3];
     let mut any = false;
+    let mut budget = EmitBudget {
+        vertices: 0,
+        triangles: 0,
+    };
     for (_nid, mid, world) in visible_mesh_nodes(s, &worlds) {
         let Some(mesh) = s.meshes.get(&mid) else { continue };
         let textured = s
@@ -52,6 +82,15 @@ pub fn bounds(s: &State) -> Result<CommandResult, EngineError> {
             crate::MAX_VERTICES_PER_MESH,
             "mesh",
         )?;
+        // Reject BEFORE transforming: instanced vertices would otherwise
+        // be walked with no budget (same amplification as renderFrame).
+        let verts = d.positions.len() / 3;
+        let tris = d
+            .indices
+            .as_ref()
+            .map(|ix| ix.len() / 3)
+            .unwrap_or(verts / 3);
+        budget.add(verts, tris, "bounds")?;
         for v in d.positions.chunks_exact(3) {
             let w = m4_mul_v3(&world, [v[0], v[1], v[2]]);
             for i in 0..3 {
@@ -193,7 +232,12 @@ fn vec3(p: &Value, key: &str) -> Result<V3, EngineError> {
 /// (the service validates it); `camera_node` picks a camera node; with
 /// neither, the lowest-id visible camera node is used. Errors when no
 /// camera resolves or a node camera's up is parallel to its forward.
-fn resolve_camera(s: &State, p: &Value, worlds: &std::collections::BTreeMap<u64, crate::math::M4>) -> Result<Value, EngineError> {
+fn resolve_camera(
+    s: &State,
+    p: &Value,
+    worlds: &std::collections::BTreeMap<u64, crate::math::M4>,
+    rotations: &std::collections::BTreeMap<u64, crate::math::M3>,
+) -> Result<Value, EngineError> {
     if let Some(c) = p.get("camera") {
         if c.is_object() {
             return Ok(c.clone());
@@ -233,8 +277,15 @@ fn resolve_camera(s: &State, p: &Value, worlds: &std::collections::BTreeMap<u64,
     let cam = chosen.camera.as_ref().unwrap();
     let position = [world[0][3], world[1][3], world[2][3]];
     // Camera looks down local -Z, up is local +Y (documented convention).
-    let forward = v3_norm(m4_mul_dir(world, [0.0, 0.0, -1.0]));
-    let up = v3_norm(m4_mul_dir(world, [0.0, 1.0, 0.0]));
+    // Directions transform by world ROTATION only — TRS scale (own or
+    // ancestor, uniform or not, positive or negative) never skews the
+    // emitted basis.
+    let rot = rotations
+        .get(&chosen.id)
+        .copied()
+        .unwrap_or(crate::math::IDENTITY_M3);
+    let forward = v3_norm(m3_mul_v(&rot, [0.0, 0.0, -1.0]));
+    let up = v3_norm(m3_mul_v(&rot, [0.0, 1.0, 0.0]));
     if v3_len(forward) == 0.0 || v3_len(up) == 0.0
         || forward.iter().zip(up.iter()).map(|(a, b)| a * b).sum::<f32>().abs() > 0.99999
     {
@@ -296,7 +347,8 @@ pub fn render_frame(s: &State, p: &Value) -> Result<CommandResult, EngineError> 
         Some(_) => return Err(invalid("'format' must be 'raw' or 'png'")),
     };
     let worlds = world_matrices(s);
-    let camera = resolve_camera(s, p, &worlds)?;
+    let rotations = crate::world_rotations(s);
+    let camera = resolve_camera(s, p, &worlds, &rotations)?;
 
     // Lights: visible light nodes in id order, world-transformed.
     let mut lights = Vec::new();
@@ -313,10 +365,12 @@ pub fn render_frame(s: &State, p: &Value) -> Result<CommandResult, EngineError> 
                 "intensity": lp.intensity,
             })),
             LightKind::Directional => {
-                // Direction the light travels: local `direction` rotated
-                // by the world linear part (scale does not skew direction
-                // after normalization).
-                let d = v3_norm(m4_mul_dir(&world, lp.direction));
+                // Direction the light travels, transformed by world
+                // ROTATION only (rotation part of the TRS chain): TRS
+                // scale — non-uniform or negative — must not skew or
+                // flip the emitted direction.
+                let rot = rotations.get(id).copied().unwrap_or(crate::math::IDENTITY_M3);
+                let d = v3_norm(m3_mul_v(&rot, lp.direction));
                 lights.push(json!({
                     "type": "directional",
                     "direction": d,
@@ -352,6 +406,13 @@ pub fn render_frame(s: &State, p: &Value) -> Result<CommandResult, EngineError> 
         let obj = t.as_object().ok_or_else(|| {
             invalid("'textures' must be an object mapping names to RGBA8 images")
         })?;
+        if obj.len() > crate::MAX_TEXTURES_EMIT {
+            return Err(out_of_bounds(format!(
+                "renderFrame textures has {} entries; service limit is {}",
+                obj.len(),
+                crate::MAX_TEXTURES_EMIT
+            )));
+        }
         for (name, tv) in obj {
             if name.is_empty() || name.len() > 256 {
                 return Err(invalid("texture names must be 1..=256 bytes"));
@@ -373,6 +434,10 @@ pub fn render_frame(s: &State, p: &Value) -> Result<CommandResult, EngineError> 
     let mut material_index: std::collections::BTreeMap<u64, usize> = Default::default();
     let mut materials_out: Vec<Value> = Vec::new();
     let mut meshes_out: Vec<Value> = Vec::new();
+    let mut budget = EmitBudget {
+        vertices: 0,
+        triangles: 0,
+    };
     for (nid, mid, world) in visible_mesh_nodes(s, &worlds) {
         let Some(mesh) = s.meshes.get(&mid) else { continue };
         let Some(mat) = s.materials.get(&mesh.material) else {
@@ -410,6 +475,17 @@ pub fn render_frame(s: &State, p: &Value) -> Result<CommandResult, EngineError> 
             crate::MAX_VERTICES_PER_MESH,
             "mesh",
         )?;
+        // Emitted-geometry budget (post-instancing): reject BEFORE
+        // transforming/encoding this mesh's attributes, so a scene that
+        // amplifies past the scene-render service limits fails the read
+        // instead of building a multi-GB JSON description.
+        let ev = d.positions.len() / 3;
+        let et = d
+            .indices
+            .as_ref()
+            .map(|ix| ix.len() / 3)
+            .unwrap_or(ev / 3);
+        budget.add(ev, et, "renderFrame")?;
         // Transform positions; normals via inverse-transpose (falls back
         // to the raw linear part if singular — unreachable for valid
         // non-zero-scale TRS but kept fail-safe).
