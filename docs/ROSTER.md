@@ -61,7 +61,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | nf-sys C ABI (staticlib/cdylib) | ✅ verified — FFI round-trip test passes |
 | Nitro HybridObject codegen (nitrogen) | ⚠️ spec written (`Forge.nitro.ts` + `nitro.json`); codegen NOT run |
 | iOS simulator build + run (examples/native-cadence, Debug-iphonesimulator) | ✅ verified on iOS 27.1 simulator only (merge `625dab7`) — physical device NOT RUN |
-| Android debug build + run (examples/native-cadence, arm64-v8a APK) | ✅ verified on API 36 emulator only (merge `e7e3e26`) — physical device NOT RUN |
+| Android debug build + run (examples/native-cadence, arm64-v8a APK) | ✅ verified on API 36 emulator only (merges `e7e3e26` + `994e06f`, all 12 engine kinds incl. scene) — physical device NOT RUN |
 | WASM build | ❌ NOT RUN |
 | apps/example on simulator/device | ❌ NOT RUN (examples/native-cadence ran instead — see verified rows) |
 
