@@ -854,6 +854,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "nf-wasm-probe"
+version = "0.1.0"
+dependencies = [
+ "cadence-engine",
+ "design-engine",
+ "draft-engine",
+ "folio-engine",
+ "ignition-core",
+ "motion-engine",
+ "photo-engine",
+ "pitch-engine",
+ "prism-engine",
+ "quill-engine",
+ "scene-engine",
+ "serde_json",
+ "splice-engine",
+ "tally-engine",
+]
+
+[[package]]
 name = "nom"
 version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
