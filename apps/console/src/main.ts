@@ -18,6 +18,7 @@ import { PhotoDocument } from "@nitro-forge/photo";
 import { MotionDocument } from "@nitro-forge/motion";
 import { DesignDocument } from "@nitro-forge/design";
 import { DraftDocument } from "@nitro-forge/draft";
+import { SceneDocument } from "@nitro-forge/scene";
 
 let failures = 0;
 const ok = (name: string, cond: boolean, detail = "") => {
@@ -306,6 +307,62 @@ async function main() {
     ok(
       "reopen keeps geometry",
       Object.keys((await re.describe()).data.segments).length === 4,
+    );
+    await re.close();
+  }
+
+  console.log("\n▸ Scene — 3D scene graph (render stays host-side)");
+  {
+    const doc = await SceneDocument.open(host, "demo-scene");
+    const mat = (await doc.addMaterial({ name: "paint", color: "#3366CC" }))
+      .data.material_id;
+    const mesh = (
+      await doc.addMeshPrimitive({ kind: "box", size: [2, 2, 2], material: mat })
+    ).data.mesh_id;
+    const cam = (
+      await doc.addNode({
+        kind: "camera",
+        name: "cam",
+        camera: { type: "perspective", fov_y_degrees: 60 },
+        translation: [0, 0, 5],
+      })
+    ).data.node_id;
+    await doc.addNode({
+      kind: "light",
+      light: { type: "ambient", color: [1, 1, 1], intensity: 0.6 },
+    });
+    const box = (await doc.addNode({ kind: "mesh", name: "box", mesh })).data
+      .node_id;
+    const bounds = (await doc.bounds()).data.bounds;
+    ok(
+      "world bounds span the box",
+      bounds !== null && bounds.min[0] === -1 && bounds.max[0] === 1,
+      JSON.stringify(bounds),
+    );
+    const pick = await doc.pick([0, 0, 5], [0, 0, -1]);
+    ok("pick hits the box", pick.data.hit?.node_id === box);
+    // renderFrame emits the canonical scene-render description; pixels are
+    // the host service's job, not the engine's.
+    const frame = (
+      await doc.renderFrame({ width: 16, height: 16, camera_node: cam })
+    ).data as { meshes: unknown[]; camera: { type: string } };
+    ok(
+      "renderFrame emits scene description",
+      frame.meshes.length === 1 && frame.camera.type === "perspective",
+    );
+    const dup = (await doc.duplicateNode(box)).data;
+    ok("duplicate subtree", dup.count === 1 && dup.node_id !== box);
+    await doc.undo();
+    ok(
+      "undo drops the duplicate",
+      Object.keys((await doc.describe()).data.nodes).length === 3,
+    );
+    const snap = await doc.save();
+    await doc.close();
+    const re = await SceneDocument.openSnapshot(host, snap);
+    ok(
+      "reopen keeps nodes",
+      Object.keys((await re.describe()).data.nodes).length === 3,
     );
     await re.close();
   }
