@@ -2336,3 +2336,51 @@ service additionally clamps to `max_dim` (default/hard cap 4096) and the
 32 MiB decoded budget. `search.pages` absent = every page in order.
 Encrypted documents open only with the correct `password`
 (`encrypted:true` reports the security-handler revision != unprotected).
+
+## scene-render service — host-side, NOT an Engine
+
+`rust/scene-render` is a sibling deterministic CPU rasterizer for the
+P17 Track-B scene engine (B0 tier 1,
+`docs/completion/reports/P17-3d-backend-decision.md`, implementation
+`docs/completion/reports/P17-scene-render-tier1.md`). It is not an
+`Engine`: no `EngineKind`, no `Command`/`Journal`, no `NFD1` snapshot,
+no mutations, no sessions — stateless per call. It speaks the same
+stdin/stdout JSON-lines frame shape as `nf-cli`/`folio-render`
+(`{"id","handle","op","payload"}` → `{"id","ok","data"|"error"}`,
+errors are `EngineError`); `handle` is ignored. Each `render` payload
+is the complete canonical scene description: `width`/`height` (1..=4096
+per side, decoded RGBA ≤ 32 MiB), `format` (`raw` default | `png`),
+`camera` (`perspective` look-at with `fov_y_degrees`/`near`/`far`, or
+`orthographic` with `half_height`), `background`, `lights` (≤16:
+ambient/directional/point), `materials` (≤1024: PBR state
+`color`/`metallic`/`roughness`/`specular`/`emission`/`texture`/
+`texture_filter`/`double_sided`), `textures` (≤256 named RGBA8 images
+totaling ≤ 64 MiB decoded, ≤ 4096² each), `meshes` (≤4096:
+world-space `positions_b64` f32le xyz, optional `normals_b64`/`uvs_b64`
+f32le and `indices_b64` u32le, `material` index). Vertex attributes are
+little-endian binary base64, not JSON arrays. Colors accept `#RRGGBB[AA]`
+(sRGB→linear) or `[r,g,b(,a)]` linear floats; alpha is ignored
+throughout — output is opaque RGBA (alpha 255). A textured material
+requires `uvs_b64` on every mesh using it.
+
+The rasterizer is fixed-order pure Rust: view-space near/far
+Sutherland–Hodgman clipping, perspective-correct barycentric
+interpolation, z-buffer on ndc z, backface culling (`double_sided`
+escapes), per-pixel Lambert + Blinn-Phong + ambient + emission,
+nearest/bilinear texture sampling with edge clamp, sRGB encode once at
+output. Identical input produces byte-identical RGBA/PNG on every
+target — the only parity-claimable path; the deferred wgpu tier is
+display-only per B0. Bounds are fail-closed: ≤ 1,000,000 triangles,
+≤ 3,000,000 vertices per scene (500,000 per mesh), all coordinates
+finite, protocol frame ≤ 256 MiB raw rejected before JSON parse.
+Shading is the admitted Phong approximation of PBR state — not PBR,
+no shadows/IBL/transparency/wrap modes. Platform status: pure Rust,
+no native deps — macOS arm64 dev host RUN (cargo tests); other targets
+NOT-RUN. Deferred: scene-graph engine (tag 11), primitive generation,
+node transforms/picking, node-material DAG, UV packing, baking,
+glTF/OBJ import, GPU tier, TS adapter.
+
+| Op | Payload | Returns |
+|---|---|---|
+| `render` | scene description (above) | raw: `{format:"raw",width,height,stride,bytes_b64,stats}`; png: `{format:"png",width,height,bytes_b64,stats}` — `stats` counts meshes/triangles/materials/lights/textures |
+| `describe` | `{}` | service name/tier/backend/version/`deterministic:true`/bounds/deferred list |

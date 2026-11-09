@@ -86,6 +86,14 @@ solver** (largest; start with distance/perpendicular/tangent subset),
 Recommendation: **new engine kind** (tag 11, e.g. `packages/scene`) —
 draft's model is fundamentally 2D-bounded.
 
+**B0 decided** (`P17-3d-backend-decision.md`, 2026-11-13): two-tier
+`scene-render` host service — Tier-1 deterministic CPU rasterizer +
+deferred display-only wgpu preview. **Tier-1 implemented**
+(`P17-scene-render-tier1.md`, `codex/w25-draft-trackb`):
+`rust/scene-render` non-engine JSON-lines service, `render`/`describe`
+ops, real renders/determinism/bounds verified. The scene engine
+itself (B1–B6) remains unbuilt pending the doc's open sign-offs.
+
 - **B0 decision doc first** (`P17-3d-backend-decision.md`): renderer
   candidates (filament C++ FFI / wgpu Apache-MIT / bounded CPU rasterizer
   for tests); geometry (glam/nalgebra/parry3d all permissive); UV
