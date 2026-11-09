@@ -1,0 +1,16 @@
+[package]
+name = "scene-engine"
+description = "Nitro-Forge scene document engine core (P17 Track-B tag 11)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ignition-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# Integration tests feed `renderFrame` output into the real tier-1
+# rasterizer service — the same path a host takes.
+scene-render = { path = "../../../rust/scene-render" }

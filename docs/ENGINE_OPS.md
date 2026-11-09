@@ -2306,6 +2306,39 @@ Blocks (A9): `blocks` maps safe shared-space ids to `{name,base_x,base_y}` (at m
 
 Matching-reader safety: when any circle/arc exists, center/nearest_circle/tangent is enabled, any layer map entry or nonzero entity `layer` exists, any hatch exists, any dimension exists, any sheet/viewport exists, any block/insert exists, or any enabled/disabled constraint carries a slice-A5 nonlinear kind, snapshot JSON is `{kind:"draft",schema:2,document:<validated internal schema1 state>}` inside unchanged NFD1 framing. Legacy root required fields (units/points/etc.) are absent, so old readers fail rather than discard new geometry/settings. New readers accept strict Draft/schema2 wrappers or unchanged legacy state, reject unknown wrapper fields/kind/schema and reject unwrapped extended state. Empty circular maps plus false new flags retain the original legacy serialization. Describe/evaluate are current-source API state, not this persistence wrapper; native/checkpoint ordinals and global envelopes remain unchanged.
 
+## scene-engine — `SceneEngine::new()` (bounded 3D scene graph)
+
+Scene appends native/NCC1 tag 11 after Draft10, preserving tags0..10. NFD1 framing is unchanged; JSON state carries `kind:"scene",schema:1`, a document `name`, monotonic `revision`/`next_id`, and three `BTreeMap` collections — `nodes`, `meshes`, `materials` — keyed by safe shared-space ids. The engine owns document state only (B0 split, `P17-3d-backend-decision.md`): the scene graph, mesh geometry, PBR-state materials, cameras and lights. It never rasterizes — `renderFrame` returns the canonical scene description the host submits unchanged to the `scene-render` service, exactly like draft `renderFrame` pixels stay Prism-side and folio renders stay folio-render-side. Texture pixels never enter state: materials reference textures by asset name and `renderFrame` requires the host to supply `{width,height,bytes_b64}` RGBA8 payloads under `textures`.
+
+Conventions (fixed): right-handed world, +Y up. Node `transform` is TRS — `translation`/`rotation_deg` (euler degrees `[x,y,z]`, composed `R = Rz·Ry·Rx`) /`scale` — local matrix `T·R·S`, world = parent-chain product, root `parent` id 0. Cameras look down local -Z with local +Y up. Directional lights emit along their local `direction` (the direction the light travels, normalized at write; default `[0,-1,0]`); point lights sit at the node's world position; ambient ignores the transform. `visible:false` on a node or any ancestor excludes the subtree from `bounds`, `pick` and `renderFrame`. Node kinds: `group`/`layer` are transform/visibility containers (layer is a semantic grouping label, not a render pass), `mesh` references a `meshes` id, `camera` carries `camera` params, `light` carries `light` params; mismatched payload fields reject at validation. Parent graphs must be acyclic — `updateNode` reparenting and hostile snapshots both reject cycles.
+
+Every mutation validates the whole assembled document before commit (counts, identities, references, transform/camera/light/material bounds, decoded mesh geometry, parent acyclicity, the 8 MiB encoded-state cap) and is atomic: errors leave state, journal and events untouched. Mutating ops record one `Journal` entry and emit `document:changed`; identical-content writes are read-only no-ops. Read ops (`describe`/`bounds`/`pick`/`renderFrame`) emit nothing and record nothing. `__batch` commits one history entry. Determinism: fixed `BTreeMap` id order everywhere, fixed-order f32 math, no hash iteration, no threading; f32 libm is not correctly-rounded so cross-target bit parity is not claimed.
+
+Bounds: ≤4096 nodes, ≤1024 meshes, ≤1024 materials, ≤100,000 vertices per mesh / ≤500,000 total, ≤128-byte names, transform translation ±1e9 / rotation ±1e6 degrees / scale ±[1e-6,1e6] non-zero, camera `0 < near < far` with perspective `fov_y_degrees` in (0,180) or ortho positive `half_height`, light colors 0..=1 with intensity ≥0 (point ≤1e9, others ≤1e6), material channels 0..=1 with `texture_filter` `nearest|bilinear`, texture names 1..=256 bytes of `[A-Za-z0-9._:-]`, custom mesh attributes canonical base64 little-endian f32/u32 (positions required; a textured material requires `uvs_b64` on every mesh using it), ≤16 visible lights and ≤4096px/32 MiB decoded output admitted on `renderFrame`, pick tests ≤1,000,000 triangles. `renderFrame` camera resolves as: explicit `camera` object passthrough, else `camera_node` id, else the lowest-id visible camera node; none → error.
+
+| Op | Payload | Result / behavior |
+| --- | --- | --- |
+| `new` | `{name?}` | `{ok}`; resets to empty scene. |
+| `describe` | `{}` | Full state: `{kind,schema,name,revision,next_id,nodes,meshes,materials}`. |
+| `addNode` | `{kind:group|layer|mesh|camera|light,name?,parent?,visible?,translation?,rotation_deg?,scale?,transform?,mesh?,camera?,light?}` | `{node_id}`; transform fields flat or nested under `transform`; mesh/camera/light kinds require their payload. |
+| `updateNode` | `{id,name?,visible?,parent?}` | `{ok}`; `parent` reparents (0 = root) and cycle-forming reparents reject. |
+| `setTransform` | `{id,translation?,rotation_deg?,scale?,transform?}` | `{ok}`; partial TRS patch merged onto current values. |
+| `removeNode` | `{id}` | `{ok}`; removes the node's whole subtree. |
+| `duplicateNode` | `{id,name?}` | `{node_id,count}`; deep-copies the subtree under the same parent with fresh ids; `name` renames only the copy root. |
+| `addMaterial` | `{name?,color?,metallic?,roughness?,specular?,emission?,texture?,texture_filter?,double_sided?}` | `{material_id}`; colors accept `#RRGGBB[AA]` (sRGB→linear) or linear `[r,g,b(,a)]`. |
+| `updateMaterial` | `{id,...partial material fields}` | `{ok}`; `texture:null` clears the reference. |
+| `removeMaterial` | `{id}` | `{ok}`; whole-document validation rejects while any mesh references it. |
+| `addMesh` | `{positions_b64,normals_b64?,uvs_b64?,indices_b64?,material?,name?}` | `{mesh_id}`; omitted `material` takes the lowest-id material; every mesh must reference an existing material. |
+| `updateMesh` | `{id,positions_b64?,normals_b64?,uvs_b64?,indices_b64?,material?,name?}` | `{ok}`; any supplied geometry key replaces the whole attribute set; `positions_b64` then required. |
+| `removeMesh` | `{id}` | `{ok}`; mesh nodes referencing it fail whole-document validation, so removal rejects while referenced. |
+| `setMaterial` | `{mesh,material}` | `{ok}`; reassigns a mesh's material; both ids must exist. |
+| `addMeshPrimitive` | `{kind:box|plane|sphere|cylinder|torus,...params,material?,name?}` | `{mesh_id}`; deterministic in-engine geometry (mesh-local, +Y up, outward winding): box `size`; plane `width`,`depth`,`width_segments`,`depth_segments`; sphere `radius`,`latitude_segments`,`longitude_segments`; cylinder `radius`,`height`,`radial_segments`; torus `major_radius`,`minor_radius`,`major_segments`,`minor_segments`. Segment counts 2..=256. |
+| `bounds` | `{}` | `{bounds:{min,max}|null}`; world-space AABB over visible mesh vertices only. |
+| `pick` | `{origin:[x,y,z],direction:[x,y,z]}` | `{hit:{node_id,mesh_id,triangle,distance,point,normal}|null,triangles_tested}`; nearest ray→triangle over visible geometry, both faces (selection, not culling). |
+| `renderFrame` | `{width,height,format?:raw|png,camera_node?,camera?,textures?,background?}` | Canonical scene-render `render` payload: world-space meshes with transformed attributes, materials re-indexed by first use, resolved camera, world-transformed lights (≤16 visible), pass-through `textures`/`background`. Read-only; the engine emits the description, the host rasterizes. |
+
+`renderFrame` world-transforms positions by each node's world matrix, normals by the inverse-transpose normal matrix (singular chains reject), and emits meshes in node-id order; invisible subtrees emit nothing. A material `texture` name must resolve in the supplied `textures` map or the read fails — there is no silent untextured fallback. Deferred honestly (B0/B1 boundary): linked node instances (`duplicateNode` deep-copies; shared-instance semantics stay deferred), UV packing beyond primitive/author-supplied UVs, node-material DAG/cook, `evaluate`-style separate projection op (`describe` + `bounds` cover current reads), glTF/OBJ import, GPU tier, shadows/IBL/transparency, f32 cross-target bit parity.
+
 ## folio-render service — host-side, NOT an Engine
 
 `rust/folio-render` is a sibling read-only PDF service (pdfium via
@@ -2377,9 +2410,11 @@ finite, protocol frame ≤ 256 MiB raw rejected before JSON parse.
 Shading is the admitted Phong approximation of PBR state — not PBR,
 no shadows/IBL/transparency/wrap modes. Platform status: pure Rust,
 no native deps — macOS arm64 dev host RUN (cargo tests); other targets
-NOT-RUN. Deferred: scene-graph engine (tag 11), primitive generation,
-node transforms/picking, node-material DAG, UV packing, baking,
-glTF/OBJ import, GPU tier, TS adapter.
+NOT-RUN. The scene-graph engine (tag 11, `scene-engine` above) and the
+`@nitro-forge/scene` TypeScript wrapper now exist and emit these
+descriptions via `renderFrame`; the service contract itself is
+unchanged. Still deferred: node-material DAG, UV packing, baking,
+glTF/OBJ import, GPU tier.
 
 | Op | Payload | Returns |
 |---|---|---|

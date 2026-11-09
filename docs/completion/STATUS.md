@@ -224,3 +224,29 @@ draft vitest unchanged. iOS/Android/WASM/Windows NOT-RUN; no TS
 adapter exists yet (no `packages/scene`). No phase or platform
 acceptance is promoted. See
 `docs/completion/reports/P17-scene-render-tier1.md`.
+
+## scene-engine tag 11 first slice (2026-11-08, `codex/w27-scene-engine`)
+
+The P17 Track-B B0 decision's engine half now exists: `packages/scene/rust`
+implements `ignition_core::Engine` as `EngineKind::Scene` (tag 11, after
+Draft10), registered in `nf-cli`, `nf-sys`, the batch all-kind cases, the
+TypeScript `EngineKind` unions and the NFC1/NCC1 persisted tag maps. Per
+the B0 split the engine owns document state only — scene graph nodes
+(`group`/`layer`/`mesh`/`camera`/`light`, TRS transforms, acyclic parent
+graphs), PBR-state materials matching the scene-render model, custom
+base64 mesh attributes and deterministic primitives, bounded Journal
+undo and NFD1 snapshots — while rendering stays host-side: `renderFrame`
+emits the canonical scene-render `render` payload (world-space meshes,
+re-indexed materials, resolved camera/lights, host-supplied texture
+pixels) and never rasterizes. Ops are documented in `docs/ENGINE_OPS.md`;
+the TypeScript wrapper `@nitro-forge/scene` and a console demo section
+cover the real nf-cli path. Verified on this dev host (macOS arm64):
+`cargo test -p scene-engine` 16 pass (incl. renderFrame output rendered
+by the real scene-render service), `cargo test -p nf-sys` 28 pass,
+`cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/scene test`
+3 pass, `pnpm --filter @nitro-forge/scene typecheck` clean,
+`pnpm --filter @nitro-forge/console demo` 34/34. Deferred per B0:
+node-material DAG, UV packing, glTF/OBJ import, wgpu tier,
+shadows/IBL/transparency; iOS/Android/WASM/Windows NOT-RUN. No phase or
+platform acceptance is promoted. Branch `codex/w27-scene-engine` is
+committed, not merged.

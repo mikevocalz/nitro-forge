@@ -10,10 +10,10 @@ fn task_batch(engine: &mut dyn Engine, steps: Value, ctx: &TaskContext) -> Resul
     engine.apply_long(Command::new("__batch", json!({ "commands": steps })), ctx)
 }
 
-const ALL_KINDS: [EngineKind; 11] = [
+const ALL_KINDS: [EngineKind; 12] = [
     EngineKind::Prism, EngineKind::Cadence, EngineKind::Splice, EngineKind::Folio,
     EngineKind::Pitch, EngineKind::Tally, EngineKind::Quill, EngineKind::Photo,
-    EngineKind::Motion, EngineKind::Design, EngineKind::Draft,
+    EngineKind::Motion, EngineKind::Design, EngineKind::Draft, EngineKind::Scene,
 ];
 
 fn fresh_engine(kind: EngineKind) -> Box<dyn Engine> {
@@ -64,6 +64,9 @@ fn compound_edits_are_atomic_single_history_entries_for_all_seven_engines() {
         (EngineKind::Quill, json!({}), json!({"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"base"}}),
          json!([{"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"first "}},
                 {"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"second "}}])),
+        (EngineKind::Scene, json!({}), json!({"op":"addMaterial","payload":{"name":"before","color":[0.5,0.5,0.5]}}),
+         json!([{"op":"addMaterial","payload":{"name":"first","color":[1,0,0]}},
+                {"op":"addMaterial","payload":{"name":"second","color":[0,1,0]}}])),
     ];
     for (kind, initial, previous, edits) in cases {
         let mut engine = factory(kind).unwrap();

@@ -23,6 +23,7 @@ for (const [kind, mutation] of [
   ['motion', { op: 'addShapeLayer', payload: { shape: { kind: 'rect', x: 0, y: 0, w: 4, h: 4, fill: [255, 0, 0, 255] }, name: 'Bridge' } }],
   ['design', { op: 'addText', payload: { parent: 1, content: 'Bridge test' } }],
   ['draft', { op: 'addPoint', payload: { x: 0, y: 0, locked: false } }],
+  ['scene', { op: 'addMaterial', payload: { name: 'Bridge' } }],
 ]) {
   const handle = await call('open', kind);
   try {

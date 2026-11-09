@@ -17,6 +17,7 @@ fn factory(kind: EngineKind) -> Option<Box<dyn Engine>> {
         EngineKind::Motion => Some(Box::new(motion_engine::MotionEngine::new())),
         EngineKind::Design => Some(Box::new(design_engine::DesignEngine::new())),
         EngineKind::Draft => Some(Box::new(draft_engine::DraftEngine::new())),
+        EngineKind::Scene => Some(Box::new(scene_engine::SceneEngine::new())),
     }
 }
 

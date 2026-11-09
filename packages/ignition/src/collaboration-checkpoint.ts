@@ -21,7 +21,7 @@ export interface CollaborationCheckpointStore {
 }
 // NCC1 has independent fixed engine tags; persisted formats never depend on
 // the ordering of the runtime engine list.
-const TAGS: Readonly<Record<EngineKind, number>> = { prism: 0, cadence: 1, splice: 2, folio: 3, pitch: 4, tally: 5, quill: 6, photo: 7, motion: 8, design: 9, draft: 10 };
+const TAGS: Readonly<Record<EngineKind, number>> = { prism: 0, cadence: 1, splice: 2, folio: 3, pitch: 4, tally: 5, quill: 6, photo: 7, motion: 8, design: 9, draft: 10, scene: 11 };
 const KINDS = new Map(Object.entries(TAGS).map(([kind, tag]) => [tag, kind as EngineKind]));
 const HEADER = 24, CAP = 256 * 1024 * 1024;
 

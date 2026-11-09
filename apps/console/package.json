@@ -26,6 +26,7 @@
     "@nitro-forge/photo": "workspace:*",
     "@nitro-forge/motion": "workspace:*",
     "@nitro-forge/design": "workspace:*",
-    "@nitro-forge/draft": "workspace:*"
+    "@nitro-forge/draft": "workspace:*",
+    "@nitro-forge/scene": "workspace:*"
   }
 }

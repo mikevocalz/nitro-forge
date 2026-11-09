@@ -243,6 +243,9 @@ importers:
       '@nitro-forge/quill':
         specifier: workspace:*
         version: link:../../packages/quill
+      '@nitro-forge/scene':
+        specifier: workspace:*
+        version: link:../../packages/scene
       '@nitro-forge/splice':
         specifier: workspace:*
         version: link:../../packages/splice
@@ -835,6 +838,16 @@ importers:
       vitest:
         specifier: 5.1.0
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/scene:
+    dependencies:
+      '@nitro-forge/ignition':
+        specifier: workspace:*
+        version: link:../ignition
+    devDependencies:
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
 
   packages/splice:
     dependencies:
