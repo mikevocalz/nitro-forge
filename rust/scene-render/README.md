@@ -14,8 +14,9 @@ clipping, perspective-correct barycentric interpolation, z-buffer,
 per-pixel Lambert/Blinn-Phong shading (PBR channels mapped onto the
 admitted Phong approximation), nearest/bilinear texture sampling.
 Fixed evaluation order, f32 math, no threading — byte-identical output
-for identical input on every target, including WASM-compatible pure
-Rust. This is the ONLY parity-claimable render path; the deferred
+for identical input on a given toolchain/target (f32 libm calls can
+differ by ulps across platforms; cross-target parity is not claimed).
+This is the ONLY parity-claimable render path; the deferred
 wgpu tier (tier 2) would be display-only per the B0 decision.
 
 Wire protocol: stdin/stdout JSON-lines, same shape as `nf-cli` /
@@ -93,7 +94,8 @@ Notes:
 Output ≤ 4096 px/side and ≤ 32 MiB decoded RGBA; ≤ 1,000,000 triangles;
 ≤ 3,000,000 vertices per scene (500,000 per mesh); ≤ 4096 meshes;
 ≤ 1024 materials; ≤ 16 lights; ≤ 256 textures totaling ≤ 64 MiB
-decoded RGBA8 (each ≤ 4096²); protocol frame ≤ 256 MiB raw, rejected
+decoded RGBA8 (each ≤ 8,388,608 px / 32 MiB decoded, ≤ 64 MiB total);
+protocol frame ≤ 256 MiB raw, rejected
 before JSON parse. All coordinates must be finite.
 
 ## Build & test

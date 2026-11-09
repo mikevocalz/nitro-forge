@@ -322,6 +322,125 @@ fn directional_light_lambert_diffuse_and_facing() {
 }
 
 #[test]
+fn off_axis_camera_renders_pixels() {
+    // Regression for the double view-transform bug: `ClipVert` carries
+    // VIEW-space positions, so only `proj` may be applied at
+    // projection time — feeding them through `proj * view` again
+    // applies the view transform twice. The default test camera sits
+    // on the z-axis where the error mostly rescales depth; a camera
+    // off-axis exercises the rotation and exposes it.
+    let svc = SceneRenderService::new();
+    let mut scene = base_scene(64, 64);
+    // Camera on +x looking at the origin: view x = -world z,
+    // view y = world y, view z = world x - 5.
+    scene["camera"] = json!({
+        "type": "perspective",
+        "position": [5.0, 0.0, 0.0],
+        "target": [0.0, 0.0, 0.0],
+        "up": [0.0, 1.0, 0.0],
+        "fov_y_degrees": 60.0,
+        "near": 0.1,
+        "far": 100.0,
+    });
+    scene["materials"] = json!([emission_material([1.0, 0.0, 0.0])]);
+    // Triangle in the world x=0 plane (the view-facing plane for this
+    // camera): (y,z) pairs mirror the front_tri winding, which stays
+    // front-facing as seen from +x.
+    scene["meshes"] = json!([{
+        "positions_b64": f32b64(&[
+            0.0, -1.0, -1.0,
+            0.0, 1.0, -1.0,
+            0.0, 0.0, 1.0,
+        ]),
+        "material": 0,
+    }]);
+    let (_, _, rgba) = render_rgba(&svc, scene);
+    assert_eq!(
+        px(&rgba, 64, 32, 32),
+        [255, 0, 0, 255],
+        "off-axis camera must still rasterize the triangle"
+    );
+    assert_eq!(px(&rgba, 64, 2, 2), [0, 0, 0, 255]);
+}
+
+#[test]
+fn depth_is_screen_linear_for_correct_occlusion() {
+    // Regression for the depth-interpolation bug: NDC depth is
+    // screen-linear (the per-vertex w divide already happened), so the
+    // z-buffer value is a PLAIN barycentric sum of z_ndc — dividing by
+    // the interpolated 1/w (the perspective-correct denominator) is
+    // wrong and flips occlusion where vertex depths differ.
+    let svc = SceneRenderService::new();
+    let mut scene = base_scene(64, 64);
+    scene["materials"] = json!([
+        emission_material([1.0, 0.0, 0.0]), // mat 0: red ramp tri
+        emission_material([0.0, 0.0, 1.0]), // mat 1: blue flat quad
+    ]);
+    // Flat blue quad at world z=0 (view z=-5, w=5) covering the view.
+    // Front-facing winding, same orientation as front_tri.
+    let quad = json!({
+        "positions_b64": f32b64(&[
+            -1.6f32, -1.6, 0.0, 1.6, -1.6, 0.0, 1.6, 1.6, 0.0, -1.6, 1.6, 0.0,
+        ]),
+        "indices_b64": u32b64(&[0, 1, 2, 0, 2, 3]),
+        "material": 1,
+    });
+    // Red triangle with vertices at three different view depths
+    // (world z = 3, -3, 0 → view z = -2, -8, -5 → clip w = 2, 8, 5).
+    // Its screen-linear z_ndc ramp crosses the quad's constant depth
+    // inside the triangle, so the correct winner changes across it.
+    let ramp = json!({
+        "positions_b64": f32b64(&[
+            -1.0f32, 0.0, 3.0, // near vertex (view z=-2)
+            -1.0, 0.0, -3.0,  // far vertex  (view z=-8)
+            0.0, 1.5, 0.0,    // mid vertex  (view z=-5, on quad plane)
+        ]),
+        "material": 0,
+    });
+    scene["meshes"] = json!([ramp, quad]);
+    let (_, _, rgba) = render_rgba(&svc, scene);
+    // Near the near vertex the ramp is closer than the quad → red.
+    assert_eq!(
+        px(&rgba, 64, 8, 30),
+        [255, 0, 0, 255],
+        "near-vertex region must win the depth test"
+    );
+    // Between the far vertex and the on-plane vertex the ramp's
+    // screen-linear depth is FARTHER than the quad → blue. The buggy
+    // 1/w-weighted depth wrongly pulls the near vertex's weight in and
+    // lets the ramp win here.
+    assert_eq!(
+        px(&rgba, 64, 24, 29),
+        [0, 0, 255, 255],
+        "mid-triangle occlusion must follow screen-linear depth"
+    );
+}
+
+#[test]
+fn hostile_multibyte_color_string_rejects_without_panic() {
+    // Regression: `parse_color` sliced `hex[i..i+2]` on a `str`; a
+    // multibyte UTF-8 color of length 6/8 bytes panics on a non-char
+    // boundary. Must be a clean InvalidCommand, never a panic.
+    let svc = SceneRenderService::new();
+    // "aébcd" is 6 bytes but 'é' straddles the [0..2] slice boundary.
+    let mut scene = base_scene(64, 64);
+    scene["materials"] = json!([{ "emission": "#aébcd", "roughness": 1.0 }]);
+    scene["meshes"] = json!([front_tri(0.0)]);
+    assert_eq!(
+        call_err(&svc, "render", scene),
+        ErrorCode::InvalidCommand,
+        "multibyte color must reject cleanly"
+    );
+    // Same trick at 8 bytes via the background field.
+    let mut scene2 = base_scene(64, 64);
+    scene2["background"] = json!("#aébcdef"); // 8 bytes, é at offset 1
+    assert_eq!(
+        call_err(&svc, "render", scene2),
+        ErrorCode::InvalidCommand
+    );
+}
+
+#[test]
 fn png_format_produces_real_png_bytes() {
     let svc = SceneRenderService::new();
     let mut scene = base_scene(32, 32);

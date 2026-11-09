@@ -54,7 +54,8 @@ B0 open point 7's proposed caps, implemented pending sign-off:
 ≤4096 px/side and ≤32 MiB decoded RGBA output; ≤1,000,000 triangles;
 ≤3,000,000 vertices per scene (500,000 per mesh); ≤4096 meshes;
 ≤1024 materials; ≤16 lights; ≤256 textures totaling ≤64 MiB decoded
-RGBA8 (≤4096² each); frame ≤256 MiB raw rejected before JSON parse.
+RGBA8 (each ≤ 8,388,608 px / 32 MiB decoded, ≤ 64 MiB total);
+frame ≤256 MiB raw rejected before JSON parse.
 All vertex/texture/camera data must be finite; textured materials on
 UV-less meshes reject rather than silently sampling (0,0).
 
@@ -81,7 +82,7 @@ the folio-render-style "NOT an Engine" section).
 ## Verification (actually run)
 
 - `cargo build -p scene-render` — clean, no warnings.
-- `cargo test -p scene-render` — **11 integration tests pass**,
+- `cargo test -p scene-render` — **14 integration tests pass**,
   all against the real compiled binary/library: real pixel renders
   (single triangle, z-buffer ordering, backface culling +
   double-sided, orthographic camera, textured quad, Lambert

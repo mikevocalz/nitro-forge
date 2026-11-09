@@ -2355,7 +2355,7 @@ per side, decoded RGBA ≤ 32 MiB), `format` (`raw` default | `png`),
 ambient/directional/point), `materials` (≤1024: PBR state
 `color`/`metallic`/`roughness`/`specular`/`emission`/`texture`/
 `texture_filter`/`double_sided`), `textures` (≤256 named RGBA8 images
-totaling ≤ 64 MiB decoded, ≤ 4096² each), `meshes` (≤4096:
+totaling ≤ 64 MiB decoded, each ≤ 8,388,608 px / 32 MiB decoded), `meshes` (≤4096:
 world-space `positions_b64` f32le xyz, optional `normals_b64`/`uvs_b64`
 f32le and `indices_b64` u32le, `material` index). Vertex attributes are
 little-endian binary base64, not JSON arrays. Colors accept `#RRGGBB[AA]`
@@ -2368,9 +2368,10 @@ Sutherland–Hodgman clipping, perspective-correct barycentric
 interpolation, z-buffer on ndc z, backface culling (`double_sided`
 escapes), per-pixel Lambert + Blinn-Phong + ambient + emission,
 nearest/bilinear texture sampling with edge clamp, sRGB encode once at
-output. Identical input produces byte-identical RGBA/PNG on every
-target — the only parity-claimable path; the deferred wgpu tier is
-display-only per B0. Bounds are fail-closed: ≤ 1,000,000 triangles,
+output. Identical input produces byte-identical RGBA/PNG for a given
+toolchain/target — f32 libm calls (`powf`, `tan`, `sqrt`) can differ
+by ulps across platforms, so cross-target parity is not claimed; the
+deferred wgpu tier is display-only per B0. Bounds are fail-closed: ≤ 1,000,000 triangles,
 ≤ 3,000,000 vertices per scene (500,000 per mesh), all coordinates
 finite, protocol frame ≤ 256 MiB raw rejected before JSON parse.
 Shading is the admitted Phong approximation of PBR state — not PBR,

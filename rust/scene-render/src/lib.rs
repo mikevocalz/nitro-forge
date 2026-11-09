@@ -19,9 +19,12 @@
 //! decision, would be display-only and never parity-claimed anyway.
 //!
 //! Determinism contract: identical scene JSON produces byte-identical
-//! RGBA/PNG on every target. All math is f32 in a fixed evaluation
-//! order; there are no hash-map iterations in the render path, no
-//! threading, no SIMD-dependent reordering and no float fast-math.
+//! RGBA/PNG on a given toolchain/target. All math is f32 in a fixed
+//! evaluation order; there are no hash-map iterations in the render
+//! path, no threading, no SIMD-dependent reordering and no float
+//! fast-math. f32 libm calls (`powf`, `tan`, `sqrt`) are not
+//! correctly-rounded and can differ by ulps across platforms, so
+//! cross-target byte parity is NOT claimed.
 //!
 //! Honest v1 scope (per B0): world-space triangle meshes only — node
 //! transforms, scene graph, primitive generation, cameras-as-nodes,
@@ -138,17 +141,6 @@ fn v3_norm(a: V3) -> V3 {
     }
 }
 
-fn m4_mul(a: &M4, b: &M4) -> M4 {
-    let mut out = [[0.0f32; 4]; 4];
-    for r in 0..4 {
-        for c in 0..4 {
-            out[r][c] =
-                a[r][0] * b[0][c] + a[r][1] * b[1][c] + a[r][2] * b[2][c] + a[r][3] * b[3][c];
-        }
-    }
-    out
-}
-
 fn m4_mul_v4(m: &M4, v: [f32; 4]) -> [f32; 4] {
     [
         m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2] + m[0][3] * v[3],
@@ -257,6 +249,12 @@ fn parse_color(v: &Value, what: &str) -> Result<[f32; 3], EngineError> {
                 return Err(invalid(format!(
                     "{what}: hex color must be #RRGGBB or #RRGGBBAA"
                 )));
+            }
+            // `len()` counts bytes: a multibyte UTF-8 string of length
+            // 6/8 would panic on `hex[i..i+2]` at a non-char boundary.
+            // Hex colors are ASCII by definition — reject first.
+            if !hex.is_ascii() {
+                return Err(invalid(format!("{what}: bad hex color '{s}'")));
             }
             let byte = |i: usize| -> Result<f32, EngineError> {
                 u8::from_str_radix(&hex[i..i + 2], 16)
@@ -514,8 +512,10 @@ struct Scene {
     height: u32,
     /// world → view transform.
     view: M4,
-    /// proj * view, used for vertex projection.
-    mvp: M4,
+    /// view → clip projection (applied to `ClipVert.view`, which is
+    /// already view-space — `proj * view * world` would apply the
+    /// view transform twice).
+    proj: M4,
     /// Camera world-space position (for the view direction in shading).
     camera_pos: V3,
     /// View-space near/far clip distances (positive).
@@ -785,7 +785,8 @@ fn parse_scene(payload: &Value) -> Result<Scene, EngineError> {
             )))
         }
     };
-    let mvp = m4_mul(&proj, &view);
+    // NOTE: no `proj * view` product is stored — `ClipVert` carries
+    // view-space positions, so `proj` alone is applied at projection.
 
     let background = color_field(payload, "background", [0.0, 0.0, 0.0], what)?;
 
@@ -950,7 +951,7 @@ fn parse_scene(payload: &Value) -> Result<Scene, EngineError> {
         width: width as u32,
         height: height as u32,
         view,
-        mvp,
+        proj,
         camera_pos: position,
         clip_near: near,
         clip_far: far,
@@ -1059,8 +1060,10 @@ fn clip_tri(tri: &[ClipVert; 3], near: f32, far: f32) -> Vec<[ClipVert; 3]> {
     tris
 }
 
-fn project_vert(v: &ClipVert, mvp: &M4, w_px: f32, h_px: f32, ortho: bool) -> Option<ProjectedVert> {
-    let clip = m4_mul_v4(mvp, [v.view[0], v.view[1], v.view[2], 1.0]);
+/// `v.view` is already view-space, so only the projection is applied
+/// here (`proj * view * world` would transform twice).
+fn project_vert(v: &ClipVert, proj: &M4, w_px: f32, h_px: f32, ortho: bool) -> Option<ProjectedVert> {
+    let clip = m4_mul_v4(proj, [v.view[0], v.view[1], v.view[2], 1.0]);
     // For perspective, clip.w = -view.z > 0 after near clipping. For
     // ortho, clip.w == 1.
     let w = if ortho { 1.0 } else { clip[3] };
@@ -1257,7 +1260,7 @@ pub(crate) fn render_scene(scene: &Scene, ctx: &TaskContext) -> Result<Vec<u8>, 
                 }; 3];
                 let mut ok = true;
                 for (k, sv) in sub.iter().enumerate() {
-                    match project_vert(sv, &scene.mvp, w_f, h_f, scene.orthographic) {
+                    match project_vert(sv, &scene.proj, w_f, h_f, scene.orthographic) {
                         Some(p) => pv[k] = p,
                         None => {
                             ok = false;
@@ -1349,11 +1352,15 @@ fn raster_tri(
             if !(den > 0.0) || !den.is_finite() {
                 continue;
             }
-            // Perspective-correct depth: numerator interpolates
-            // z_ndc (= z_clip / w) linearly; denominator is the
-            // interpolated 1/w. For ortho (w == 1) this reduces to
-            // plain barycentric z.
-            let z = (l0 * pv[0].z_ndc + l1 * pv[1].z_ndc + l2 * pv[2].z_ndc) / den;
+            // NDC depth is screen-linear: the per-vertex perspective
+            // divide already happened in `project_vert`, so z_ndc
+            // interpolates with the PLAIN barycentric weights — the
+            // same convention hardware rasterizers use. The 1/w
+            // denominator below is only for perspective-correct
+            // attributes (world pos, normal, uv); applying it to
+            // depth would weight nearer vertices too heavily and
+            // flip occlusion on depth-varying triangles.
+            let z = l0 * pv[0].z_ndc + l1 * pv[1].z_ndc + l2 * pv[2].z_ndc;
             let idx = py as usize * w + px as usize;
             if !(z < depth[idx]) {
                 continue;
