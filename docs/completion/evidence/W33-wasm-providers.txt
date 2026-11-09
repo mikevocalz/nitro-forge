@@ -1,0 +1,12 @@
+rust/nf-color [wasm32-unknown-unknown] ::    Compiling nf-color v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/rust/nf-color)     Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.01s 
+rust/nf-color [wasm32-wasip1] ::    Compiling nf-color v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/rust/nf-color)     Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.92s 
+rust/splice-render [wasm32-unknown-unknown] ::    Compiling splice-render v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/rust/splice-render)     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.96s 
+rust/splice-render [wasm32-wasip1] ::    Compiling splice-render v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/rust/splice-render)     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.83s 
+rust/scene-render [wasm32-unknown-unknown] ::    Compiling scene-render v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/rust/scene-render)     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.75s 
+rust/scene-render [wasm32-wasip1] ::    Compiling scene-render v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/rust/scene-render)     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.74s 
+rust/folio-render [wasm32-unknown-unknown] :: For more information about this error, try `rustc --explain E0599`. error: could not compile `folio-render` (lib) due to 3 previous errors 
+rust/folio-render [wasm32-wasip1] :: For more information about this error, try `rustc --explain E0599`. error: could not compile `folio-render` (lib) due to 3 previous errors 
+rust/raw-decode [wasm32-unknown-unknown] ::   
+rust/raw-decode [wasm32-wasip1] ::   
+rust/nf-raw [wasm32-unknown-unknown] ::   
+rust/nf-raw [wasm32-wasip1] ::   

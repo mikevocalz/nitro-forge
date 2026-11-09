@@ -1,0 +1,49 @@
+=== prism-engine ===
+   Compiling flate2 v1.1.10
+   Compiling png v0.18.1
+   Compiling prism-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/prism/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.08s
+=== cadence-engine ===
+    |    ^^^^^^^^^^^^^
+
+warning: `cadence-engine` (lib) generated 3 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.26s
+=== splice-engine ===
+   Compiling splice-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/splice/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.00s
+=== folio-engine ===
+    | |__________________^
+
+error: could not compile `getrandom` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+=== pitch-engine ===
+   Compiling pitch-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/pitch/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.15s
+=== tally-engine ===
+   Compiling flate2 v1.1.10
+   Compiling ignition-core v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/rust/ignition-core)
+   Compiling tally-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/tally/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.41s
+=== quill-engine ===
+   Compiling harfrust v0.15.0
+   Compiling skrifa v0.49.0
+   Compiling quill-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/quill/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.99s
+=== photo-engine ===
+   Compiling serde v1.0.229
+   Compiling ignition-core v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/rust/ignition-core)
+   Compiling photo-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/photo/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.52s
+=== motion-engine ===
+   Compiling prism-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/prism/rust)
+   Compiling motion-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/motion/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.72s
+=== design-engine ===
+   Compiling design-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/design/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.02s
+=== draft-engine ===
+   Compiling draft-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/draft/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.09s
+=== scene-engine ===
+   Compiling scene-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w33-wasm/packages/scene/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.12s

@@ -10,6 +10,7 @@ members = [
     "rust/splice-render",
     "rust/raw-decode",
     "rust/scene-render",
+    "rust/wasm-probe",
     "packages/*/rust",
 ]
 

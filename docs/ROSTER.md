@@ -63,7 +63,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | Nitro HybridObject codegen (nitrogen) | ⚠️ spec written (`Forge.nitro.ts` + `nitro.json`); codegen NOT run |
 | iOS simulator build + run (examples/native-cadence, Debug-iphonesimulator) | ✅ verified on iOS 27.1 simulator only (merges `625dab7` pre-scene 11-kind run + `codex/w32-ios-scene` all-12 incl. scene at `ad2696e`) — physical device NOT RUN |
 | Android debug build + run (examples/native-cadence, arm64-v8a APK) | ✅ verified on API 36 emulator only (merges `e7e3e26` + `994e06f`, all 12 engine kinds incl. scene) — physical device NOT RUN |
-| WASM build | ❌ NOT RUN |
+| WASM build | ✅ crates compile + engine round-trip probe passes (2026-11-08 `codex/w33-wasm`) — rustup stable 1.99.1, both `wasm32-unknown-unknown` and `wasm32-wasip1` targets: `ignition-core` + all 12 engine crates (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene) compile; `wasm32-unknown-unknown` caveat: folio-engine fails on `getrandom` (needs `wasm_js` backend; WASI's native `random_get` covers it on wasip1). Pure-Rust providers nf-color, splice-render, scene-render compile on both targets. NOT wasm-feasible: `nf-raw`/`raw-decode` (LibRaw C++ via cc-rs fails on both targets) and `folio-render` (pdfium dynamic library loading unsupported on wasm). Probe: `rust/wasm-probe` (`nf-wasm-probe`, wasip1 `_start`) runs all 12 engines through new/describe/`NFD1`-snapshot/restore/invalid-restore-reject under Node WASI — all PASS, `docs/completion/evidence/W33-wasm-*.txt`. Browser/wasm-bindgen host, wasm-opt, and non-WASI runtimes NOT RUN |
 | apps/example on simulator/device | ❌ NOT RUN (examples/native-cadence ran instead — see verified rows) |
 
 ## Workstreams
