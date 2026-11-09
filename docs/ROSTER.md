@@ -48,6 +48,7 @@ output actually exists; anything not executed is marked NOT RUN.
 | iOS simulator engine round-trip (P01b, 2026-11-08 merge `625dab7`; harness fixes in `examples/native-cadence/verify-engines.ts`) | All 11 pre-scene engines (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft) passed new/describe/NFD1 snapshot/restore/describe-equality/invalid-restore rejection/close/closed-handle probes through real Nitro JSI (`createNitroHost`) on iOS 27.1 "Forge Completion iPhone Duo" simulator; Cadence edit/undo/redo/reopen passed. SIMULATOR evidence only — no physical device attached or validated; scene engine not in this build (pre-scene base c3cbbbf) | `examples/native-cadence` verify-engines probe on iOS simulator; evidence `docs/completion/evidence/P01b-ios-sim-2026-11-08.txt` |
 | iOS simulator quill renderPage + native services/telemetry + decoder/player/encoder (P01b, merge `625dab7`) | Quill renderPage R1-R3 passed (registerFont sha256 `f6a446f65dbd…`, fixed-geometry 267x133 inked, deterministic, use_sections 816x1056, empty-font + out-of-range-page rejections); native services passed (bounded LRU, owned binary buffers, task progress/results, cancellation, cleanup — N-13/N-14/N-16); native telemetry passed (consent off/local/diagnostics, payload isolation — N-18); decoder bridge passed twice (cfr/vfr/bframes, 12 real JPEG frames + PTS each, cache cleanup, cap/missing-timestamp errors); native player lifecycle passed; NYC-Tron MediaEncoder produced a real 16272-byte MP4. UNVERIFIED on simulator: speech.start and audio.openInput (CoreAudio RPC deadlock, SIGABRT — environmental, not a product verdict) | `examples/native-cadence` verify-quill-render/services/telemetry probes + `ai.nyctron.p03bridge` decoder/player/encoder probes on iOS simulator; evidence `docs/completion/evidence/P01b-ios-sim-2026-11-08.txt` |
 | Android emulator engine round-trip + quill renderPage + services (W29, 2026-11-08 merge `e7e3e26`) | 10 of 11 pre-scene engines passed the full probe set on Android 16 (API 36) arm64-v8a emulator via real Nitro JSI; draft passed snapshot envelope/invalid-restore atomicity/close but strict describe-equality reported `source_revision` divergence only (restore consumes a revision by design; merged probe excludes that field — all document fields identical). Quill renderPage R1-R3 passed; native services passed (N-13/N-14/N-16). EMULATOR evidence only — not physical-device validation; APK at c3cbbbf predates the scene merge, so scene engine has NO mobile runtime evidence; telemetry, decoder/player/encoder, speech and audio providers not exercised in this pass | `examples/native-cadence` verify-engines/verify-quill-render/verify-services probes on Android emulator; evidence `docs/completion/evidence/W29-android-runtime-probes.txt` + `W29-android-artifacts.json` + screenshots |
+| Android emulator all-12 engine round-trip incl. scene (W31, 2026-11-08 merge `994e06f`) | ALL 12 engine kinds — prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene — passed the full probe set (new/describe/NFD1 snapshot/restore/describe-equality/invalid-restore rejection/close/closed-handle) on Android 16 (API 36) arm64-v8a emulator via real Nitro JSI at HEAD; `libNitroForgeV1.so` rebuilt at HEAD contains `scene_engine` symbols (verified via `strings()`); draft passed with `source_revision` excluded by the merged probe. Quill renderPage R1-R3 and native services (N-13/N-14/N-16) passed. EMULATOR evidence only — not physical-device validation; scene engine has Android-emulator round-trip evidence but no render/provider-level mobile evidence; telemetry, decoder/player/encoder, speech and audio providers not exercised | `examples/native-cadence` verify-engines/verify-quill-render/verify-services probes on Android emulator; evidence `docs/completion/evidence/W31-android-runtime-probes.txt` + `W31-android-artifacts.json` + screenshots; APK sha256 `3809a886…bc01e` archived under `native-artifacts/` |
 
 ## Transport status
 
@@ -2702,10 +2703,22 @@ identically. Quill renderPage R1-R3 and native services (N-13/N-14/N-16)
 passed. Telemetry, decoder/player/encoder, speech and audio providers were
 not exercised in this pass.
 
-Honest limits: both runs are SIMULATOR/EMULATOR evidence, not physical
-device validation, and neither is a platform-matrix pass. Both builds
-predate the scene-engine merge (`180c1e8`): the scene engine (tag 11) has
-unit/contract tests and a console demo but NO mobile runtime evidence yet.
-The completion ledger records these as `in-progress` tier evidence
-(`w28-ios-*`/`w29-android-*` entries in `docs/completion/components.json`),
-not platform passes.
+Android 16 (API 36) arm64-v8a emulator `emulator-5554` (W31, merge
+`994e06f`, `docs/completion/evidence/W31-android-runtime-probes.txt`,
+`W31-android-artifacts.json`, three screenshots): `libNitroForgeV1.so`
+rebuilt at HEAD — `strings()` confirms `scene_engine` symbols — and ALL
+12 engine kinds including scene passed the full round-trip probe, with
+draft now passing under the merged `source_revision`-excluding harness.
+Quill renderPage R1-R3 and native services (N-13/N-14/N-16) passed again.
+This is the first mobile runtime evidence for the scene engine; it is
+still emulator-tier, not physical-device, and scene render/provider paths
+(scene-render service, nf-color, splice-render, raw-decode) remain
+source-level only on mobile.
+
+Honest limits: all runs are SIMULATOR/EMULATOR evidence, not physical
+device validation, and none is a platform-matrix pass. The iOS build
+predates the scene-engine merge (`180c1e8`): scene has Android-emulator
+round-trip evidence (W31) but NO iOS runtime evidence yet. The completion
+ledger records these as `in-progress` tier evidence
+(`w28-ios-*`/`w29-android-*`/`w31-android-*` entries in
+`docs/completion/components.json`), not platform passes.
