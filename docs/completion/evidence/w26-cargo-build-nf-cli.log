@@ -1,0 +1,153 @@
+   Compiling cfg-if v1.0.5
+   Compiling memchr v2.8.3
+   Compiling version_check v0.9.5
+   Compiling serde_core v1.0.229
+   Compiling simd-adler32 v0.3.10
+   Compiling typenum v1.20.1
+   Compiling serde v1.0.229
+   Compiling crc32fast v1.5.2
+   Compiling syn v3.0.9
+   Compiling adler2 v2.0.1
+   Compiling libc v0.2.190
+   Compiling bitflags v2.13.2
+   Compiling miniz_oxide v0.9.1
+   Compiling crossbeam-utils v0.8.23
+   Compiling generic-array v0.14.7
+   Compiling rustversion v1.0.23
+   Compiling getrandom v0.3.4
+   Compiling crossbeam-epoch v0.9.21
+   Compiling zerocopy v0.8.62
+   Compiling log v0.4.34
+   Compiling flate2 v1.1.10
+   Compiling equivalent v1.0.2
+   Compiling crossbeam-deque v0.8.8
+   Compiling hashbrown v0.17.1
+   Compiling num-traits v0.2.19
+   Compiling miniz_oxide v0.8.9
+   Compiling fdeflate v0.3.7
+   Compiling tinyvec v1.13.3
+   Compiling cpufeatures v0.2.17
+   Compiling rayon-core v1.13.0
+   Compiling indexmap v2.14.2
+   Compiling stable_deref_trait v1.2.1
+   Compiling png v0.18.1
+   Compiling unicode-normalization v0.1.25
+   Compiling rand_core v0.9.5
+   Compiling crypto-common v0.1.7
+   Compiling block-padding v0.3.3
+   Compiling block-buffer v0.10.4
+   Compiling encoding_rs v0.8.42
+   Compiling inout v0.1.4
+   Compiling digest v0.10.7
+   Compiling cipher v0.4.4
+   Compiling core-foundation-sys v0.8.7
+   Compiling smallvec v1.16.5
+   Compiling bumpalo v3.20.3
+   Compiling zip v2.4.2
+   Compiling once_cell v1.21.4
+   Compiling foldhash v0.2.0
+   Compiling iana-time-zone v0.1.65
+   Compiling zopfli v0.8.4
+   Compiling sha2 v0.10.9
+   Compiling nom v8.0.0
+   Compiling scopeguard v1.2.0
+   Compiling powerfmt v0.2.1
+   Compiling deranged v0.5.8
+   Compiling synstructure v0.14.0
+   Compiling unicode-properties v0.1.4
+   Compiling serde_json v1.0.154
+   Compiling bytecount v0.6.9
+   Compiling simdutf8 v0.1.5
+   Compiling multiversion_no_op v1.0.0
+   Compiling time-core v0.1.9
+   Compiling num-conv v0.2.2
+   Compiling unicode-bidi v0.3.18
+   Compiling either v1.19.0
+   Compiling strict-num v0.1.1
+   Compiling thiserror-impl v2.0.21
+   Compiling serde_derive v1.0.229
+   Compiling bytemuck_derive v1.12.1
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling displaydoc v0.2.7
+   Compiling arrayref v0.3.9
+   Compiling jiff-core v0.1.1
+   Compiling time v0.3.55
+   Compiling stringprep v0.1.5
+   Compiling rayon v1.12.0
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.4
+   Compiling bytemuck v1.25.2
+   Compiling chrono v0.4.45
+   Compiling thiserror v2.0.21
+   Compiling aes v0.8.4
+   Compiling font-types v0.12.7
+   Compiling tiny-skia-path v0.12.0
+   Compiling read-fonts v0.46.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling jiff v0.2.38
+   Compiling ecb v0.1.2
+   Compiling rand_chacha v0.9.0
+   Compiling cbc v0.1.2
+   Compiling rand v0.9.5
+   Compiling nom_locate v5.0.0
+   Compiling md-5 v0.10.6
+   Compiling quick-xml v0.37.5
+   Compiling rangemap v1.8.0
+   Compiling arrayvec v0.7.8
+   Compiling weezl v0.1.12
+   Compiling tiny-skia v0.12.0
+   Compiling ignition-core v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/rust/ignition-core)
+   Compiling prism-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/prism/rust)
+   Compiling cadence-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/cadence/rust)
+   Compiling tally-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/tally/rust)
+   Compiling photo-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/photo/rust)
+   Compiling splice-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/splice/rust)
+   Compiling pitch-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/pitch/rust)
+warning: unused doc comment
+   --> packages/cadence/rust/src/lib.rs:721:13
+    |
+721 | /             /// Split a clip at an absolute timeline tick strictly inside it.
+722 | |             /// The left half keeps the id; the right half gets a new id and
+723 | |             /// copies gain/mute. Notes are clip-relative: a note entirely on
+724 | |             /// one side moves or stays; a note spanning the split point is
+725 | |             /// cut into two notes at the boundary (same pitch/velocity/
+726 | |             /// channel, no overlap, no zero-length piece).
+    | |___________________________________________________________^
+727 | /             "splitClip" => {
+728 | |                 let id = req_u64(p, "id")?;
+729 | |                 let at = req_ticks(p, "at_ticks")?;
+730 | |                 let (ti, ci) = self
+...   |
+781 | |                 Ok(Self::changed(json!({ "left_id": id, "right_id": right_id })))
+782 | |             }
+    | |_____________- rustdoc does not generate documentation for match arms
+    |
+    = help: use `//` for a plain comment
+    = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+   Compiling lopdf v0.36.0
+warning: constant `B64_ALPHABET` is never used
+   --> packages/cadence/rust/src/lib.rs:261:7
+    |
+261 | const B64_ALPHABET: &[u8; 64] =
+    |       ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `base64_encode` is never used
+   --> packages/cadence/rust/src/lib.rs:264:4
+    |
+264 | fn base64_encode(bytes: &[u8]) -> String {
+    |    ^^^^^^^^^^^^^
+
+warning: `cadence-engine` (lib) generated 3 warnings
+   Compiling design-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/design/rust)
+   Compiling draft-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/draft/rust)
+   Compiling motion-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/motion/rust)
+   Compiling folio-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/folio/rust)
+   Compiling skrifa v0.49.0
+   Compiling harfrust v0.15.0
+   Compiling quill-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/packages/quill/rust)
+   Compiling nf-cli v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2/rust/nf-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 26.69s
