@@ -1093,6 +1093,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a611d15b50743feb4c76b7d03edcb0e64f399c26961e4efe6975bc398be6aa3d"
 
 [[package]]
+name = "raw-decode"
+version = "0.1.0"
+dependencies = [
+ "ignition-core",
+ "nf-raw",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rayon"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

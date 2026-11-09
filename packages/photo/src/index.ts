@@ -1,5 +1,6 @@
 import {ownDevelopRecipe,ownPreviewRequest,type PhotoDevelopV1,type PhotoPreviewRequest,type PhotoPreviewData,type PhotoPreviewResult} from './develop';
 export * from './develop';
+export * from './raw';
 import {DocumentHandle,bytesToBase64,base64ToBytes,type EngineHost} from '@nitro-forge/ignition';
 /** Host-claimed metadata; the catalog does not decode bytes or verify content hashes. */
 export interface OriginalDescriptor {sha256:string;asset_ref:string;byte_length:number;camera_make:string;camera_model:string}

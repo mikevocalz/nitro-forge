@@ -170,3 +170,31 @@ JSON-lines host protocol, no WASM/bundle-size measurement, no ICC-aware PNG
 encode, no spot/ink model; engine crates untouched and `prism-engine` keeps
 `rgba8-straight-sRGB` as its working space. No phase or platform acceptance
 is promoted.
+
+## raw-decode service first slice (2026-11-08, `codex/w24-raw-wiring`)
+
+The P10 RAW product admission's deferred host-wiring step now exists as
+`rust/raw-decode`, a non-engine JSON-lines service in the
+`folio-render`/`splice-render`/`nf-raw` provider family: ops `probe`,
+`decodePreview`, `jobStatus`, `cancelJob`, `describe` run
+`nf_raw::probe`/`nf_raw::decode_preview` on a single dedicated LibRaw
+worker thread (the admission's single-worker rule) with bounded jobs
+(≤8 live, ≤256 MiB queued input) and cooperative `AtomicBool`
+cancellation at LibRaw callback boundaries. The `@nitro-forge/photo` TS
+surface gains `RawDecodeService` (spawn adapter, `RAW_DECODE` env,
+default `target/debug/raw-decode`) and `processDecodedPreview`, the
+admitted chain original bytes → bounded RGBA8 →
+`PhotoDocument.processPreview`, whose existing identity/recipe guards
+reject stale decodes. No engine crate, op name, snapshot format or
+`components.json`/`ENGINE_OPS.md` row changed; `asset_ref` resolution and
+original-byte retention remain unimplemented host concerns, and decoded
+output is preview-quality (no ICC/develop pipeline). Verified on this dev
+host (macOS arm64): `cargo test -p raw-decode` 11 pass plus the ignored
+real-fixture test pass against the CC0 Pentax K-7 DNG
+(`NF_RAW_TEST_FIXTURE`, sha256 `f441c366…c92386`);
+`pnpm --filter @nitro-forge/photo test` 14 pass including 4 raw.e2e
+tests that drive the real binary into the real engine (identity develop
+byte-equal, stale recipe rejected); `cargo build -p nf-cli` and photo
+`tsc --noEmit` clean. iOS/Android/visionOS/Quest/PICO/Linux/Windows/WASM
+remain NOT-RUN per the admission; CDDL source-offer mechanics for shipped
+binaries are still open. No phase or platform acceptance is promoted.

@@ -1,0 +1,20 @@
+[package]
+name = "raw-decode"
+description = "Host-side RAW probe/decode-preview service over nf-raw (LibRaw). NOT an Engine: no Journal, no snapshot format, no document I/O. See docs/completion/reports/P10-raw-product-admission.md."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "raw_decode"
+path = "src/lib.rs"
+
+[[bin]]
+name = "raw-decode"
+path = "src/main.rs"
+
+[dependencies]
+ignition-core = { workspace = true }
+nf-raw = { path = "../nf-raw" }
+serde = { workspace = true }
+serde_json = { workspace = true }
