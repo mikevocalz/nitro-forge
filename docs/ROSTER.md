@@ -45,6 +45,9 @@ output actually exists; anything not executed is marked NOT RUN.
 | raw-decode service first slice (nf-raw host wiring, 2026-11-08 `codex/w24-raw-wiring`; admission `P10-raw-product-admission.md`) | 11 raw-decode Rust tests pass (hostile inputs, job lifecycle, cancel, bounds) + 1 ignored real-fixture test pass against the CC0 Pentax K-7 DNG (sha256 `f441c366…c92386`, `NF_RAW_TEST_FIXTURE`) on macOS arm64 + 14 photo vitest pass incl. 4 raw.e2e driving real DNG bytes through the `raw-decode` binary into `photo-engine processPreview` (identity develop byte-equal, stale recipe rejected); nf-cli build + photo typecheck clean. Engine crates untouched; no ENGINE_OPS/components.json changes. All other platforms NOT-RUN | `cargo test -p raw-decode`, `NF_RAW_TEST_FIXTURE=… cargo test -p raw-decode -- --ignored`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/photo test`, `pnpm --filter @nitro-forge/photo typecheck` |
 | scene-render tier-1 CPU rasterizer (P17 Track-B B0 tier 1, 2026-11-13 `codex/w25-draft-trackb`; decision `P17-3d-backend-decision.md`, report `P17-scene-render-tier1.md`) | 14 scene-render Rust tests pass on macOS arm64 — real renders (triangle/z-buffer/backface-cull/double-sided/ortho camera/textured quad/Lambert directional facing), byte-identical determinism across service instances, PNG output, hostile bounds (>1M-triangle scene, NaN vertices, bad indices/base64, oversized dims/output, missing camera, texture mismatch) and a stdio wire roundtrip through the real binary; `cargo build --workspace` clean; draft vitest 17 pass unchanged. Pure Rust, no native deps. NOT done: scene engine (tag 11), wgpu tier, TS adapter, shadows/IBL/transparency, WASM/other-platform runs | `cargo test -p scene-render`, `cargo build --workspace`, `pnpm --filter @nitro-forge/draft test` |
 | scene-engine tag 11 (P17 Track-B B1, 2026-11-08 `codex/w27-scene-engine`; decision `P17-3d-backend-decision.md`) | 19 scene-engine Rust tests pass on macOS arm64 — node lifecycle/undo, reparent+cycle+subtree removal, materials/meshes/custom b64, duplicate subtree, TRS world evaluation, bounds, ray pick, light/camera emission, primitive generation, renderFrame→real `scene-render` raster (lit pixel vs background), renderFrame camera/texture validation, atomic `__batch`, snapshot roundtrip + hostile restore, emitted-geometry instancing caps on renderFrame/bounds (vertex + triangle amplification → OutOfBounds), rotation-only light/camera direction transforms under non-uniform scale; `cargo test -p nf-sys` 28 pass incl. scene in all-kind batch cases; `cargo build -p nf-cli` clean; `@nitro-forge/scene` vitest 3 pass via real nf-cli; scene typecheck clean; console demo scene section pass. Pure Rust, no native deps. NOT done: node-material DAG, UV packing, glTF/OBJ import, wgpu tier, WASM/other-platform runs, studio app surface | `cargo test -p scene-engine`, `cargo test -p nf-sys`, `cargo build -p nf-cli`, `pnpm --filter @nitro-forge/scene test`, `pnpm --filter @nitro-forge/scene typecheck`, `pnpm --filter @nitro-forge/console demo` |
+| iOS simulator engine round-trip (P01b, 2026-11-08 merge `625dab7`; harness fixes in `examples/native-cadence/verify-engines.ts`) | All 11 pre-scene engines (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft) passed new/describe/NFD1 snapshot/restore/describe-equality/invalid-restore rejection/close/closed-handle probes through real Nitro JSI (`createNitroHost`) on iOS 27.1 "Forge Completion iPhone Duo" simulator; Cadence edit/undo/redo/reopen passed. SIMULATOR evidence only — no physical device attached or validated; scene engine not in this build (pre-scene base c3cbbbf) | `examples/native-cadence` verify-engines probe on iOS simulator; evidence `docs/completion/evidence/P01b-ios-sim-2026-11-08.txt` |
+| iOS simulator quill renderPage + native services/telemetry + decoder/player/encoder (P01b, merge `625dab7`) | Quill renderPage R1-R3 passed (registerFont sha256 `f6a446f65dbd…`, fixed-geometry 267x133 inked, deterministic, use_sections 816x1056, empty-font + out-of-range-page rejections); native services passed (bounded LRU, owned binary buffers, task progress/results, cancellation, cleanup — N-13/N-14/N-16); native telemetry passed (consent off/local/diagnostics, payload isolation — N-18); decoder bridge passed twice (cfr/vfr/bframes, 12 real JPEG frames + PTS each, cache cleanup, cap/missing-timestamp errors); native player lifecycle passed; NYC-Tron MediaEncoder produced a real 16272-byte MP4. UNVERIFIED on simulator: speech.start and audio.openInput (CoreAudio RPC deadlock, SIGABRT — environmental, not a product verdict) | `examples/native-cadence` verify-quill-render/services/telemetry probes + `ai.nyctron.p03bridge` decoder/player/encoder probes on iOS simulator; evidence `docs/completion/evidence/P01b-ios-sim-2026-11-08.txt` |
+| Android emulator engine round-trip + quill renderPage + services (W29, 2026-11-08 merge `e7e3e26`) | 10 of 11 pre-scene engines passed the full probe set on Android 16 (API 36) arm64-v8a emulator via real Nitro JSI; draft passed snapshot envelope/invalid-restore atomicity/close but strict describe-equality reported `source_revision` divergence only (restore consumes a revision by design; merged probe excludes that field — all document fields identical). Quill renderPage R1-R3 passed; native services passed (N-13/N-14/N-16). EMULATOR evidence only — not physical-device validation; APK at c3cbbbf predates the scene merge, so scene engine has NO mobile runtime evidence; telemetry, decoder/player/encoder, speech and audio providers not exercised in this pass | `examples/native-cadence` verify-engines/verify-quill-render/verify-services probes on Android emulator; evidence `docs/completion/evidence/W29-android-runtime-probes.txt` + `W29-android-artifacts.json` + screenshots |
 
 ## Transport status
 
@@ -56,8 +59,10 @@ output actually exists; anything not executed is marked NOT RUN.
 | scene-render JSON-lines (CPU raster service) | ✅ verified macOS arm64 only (cargo tests + stdio roundtrip); other platforms NOT-RUN |
 | nf-sys C ABI (staticlib/cdylib) | ✅ verified — FFI round-trip test passes |
 | Nitro HybridObject codegen (nitrogen) | ⚠️ spec written (`Forge.nitro.ts` + `nitro.json`); codegen NOT run |
-| iOS / Android / WASM builds | ❌ NOT RUN |
-| apps/example on simulator/device | ❌ NOT RUN |
+| iOS simulator build + run (examples/native-cadence, Debug-iphonesimulator) | ✅ verified on iOS 27.1 simulator only (merge `625dab7`) — physical device NOT RUN |
+| Android debug build + run (examples/native-cadence, arm64-v8a APK) | ✅ verified on API 36 emulator only (merge `e7e3e26`) — physical device NOT RUN |
+| WASM build | ❌ NOT RUN |
+| apps/example on simulator/device | ❌ NOT RUN (examples/native-cadence ran instead — see verified rows) |
 
 ## Workstreams
 
@@ -2664,3 +2669,43 @@ clean, `pnpm --filter @nitro-forge/console demo` 34/34. Honest limits:
 node-material DAG/cook, UV packing, glTF/OBJ import, wgpu tier,
 shadows/IBL/transparency, WASM and all non-macOS-arm64 targets NOT-RUN;
 f32 libm means cross-target bit parity is not claimed.
+
+## Mobile runtime probe evidence (2026-11-08, `codex/complete-all-components`)
+
+Two runtime-evidence merges landed on the completion branch: `625dab7`
+(iOS simulator, evidence commit `4e2f6f0`) and `e7e3e26` (Android emulator,
+evidence commit `88439bf`). Both drove `examples/native-cadence` through
+real Nitro JSI (`@nitro-forge/ignition` `createNitroHost` → Rust engines),
+not nf-cli and not TS mocks.
+
+iOS 27.1 "Forge Completion iPhone Duo" simulator (P01b,
+`docs/completion/evidence/P01b-ios-sim-2026-11-08.txt`): all 11 pre-scene
+engines passed the full round-trip probe (new/describe/NFD1 snapshot/
+restore/describe-equality/invalid-restore rejection/close/closed-handle)
+plus Cadence edit/undo/redo/reopen; Quill renderPage R1-R3 passed; native
+services (N-13/N-14/N-16) and telemetry (N-18) passed; the P03 decoder
+bridge passed twice with real JPEG frames and PTS, the native player
+lifecycle passed, and the NYC-Tron MediaEncoder produced a real MP4.
+Speech `start` and audio `openInput` are UNVERIFIED — the simulator
+CoreAudio RPC deadlock (SIGABRT) is environmental, not a product verdict
+either way. Full detail, verbatim AX captures and the crash-report
+signature are in the evidence file.
+
+Android 16 (API 36) arm64-v8a emulator `emulator-5554` (W29,
+`docs/completion/evidence/W29-android-runtime-probes.txt`,
+`W29-android-artifacts.json`, three screenshots): 10 of 11 pre-scene
+engines passed the same probe set at APK revision `c3cbbbf`; draft passed
+every check except strict describe-equality, which differed only in
+`source_revision` — `restore()` consumes a revision by design and the
+merged probe now excludes that field, so all document fields round-tripped
+identically. Quill renderPage R1-R3 and native services (N-13/N-14/N-16)
+passed. Telemetry, decoder/player/encoder, speech and audio providers were
+not exercised in this pass.
+
+Honest limits: both runs are SIMULATOR/EMULATOR evidence, not physical
+device validation, and neither is a platform-matrix pass. Both builds
+predate the scene-engine merge (`180c1e8`): the scene engine (tag 11) has
+unit/contract tests and a console demo but NO mobile runtime evidence yet.
+The completion ledger records these as `in-progress` tier evidence
+(`w28-ios-*`/`w29-android-*` entries in `docs/completion/components.json`),
+not platform passes.
