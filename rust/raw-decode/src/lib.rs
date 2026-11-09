@@ -531,9 +531,12 @@ pub fn run_stdio(service: &mut RawDecodeService) -> std::io::Result<()> {
                         Err(_) => {
                             // Match nf-cli's session-safety rule: a panic
                             // poisons the service, so drop every live job.
-                            // Decode jobs keep running on the worker until
-                            // their next LibRaw callback boundary (the
-                            // service is gone, so results are discarded).
+                            // Set each job's cancel flag first so in-flight
+                            // decodes stop at the next LibRaw callback
+                            // boundary instead of running to completion.
+                            for job in service.jobs.values() {
+                                job.cancel.store(true, Ordering::Relaxed);
+                            }
                             service.jobs.clear();
                             service.queued_input = 0;
                             FrameResponse {
