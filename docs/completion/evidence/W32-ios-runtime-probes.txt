@@ -1,0 +1,159 @@
+W32 iOS SIMULATOR runtime probes — scene engine (kind "scene", ENGINE_KINDS tag 11)
+=================================================================================
+
+Scope: iOS SIMULATOR ONLY. No physical device was attached, launched, or
+validated for this run. The paired physical iPhone ("Mike's iPhone",
+udid 00008150-0002790A36D9401C) appeared in argent list-devices as
+state "paired" / tunnelState "unavailable" and was not used.
+
+Target: iOS simulator "Forge Completion iPhone Duo" (foldable iPhone Duo),
+UDID BBCC4078-E64D-4642-893B-ACF80ACB29A1, iOS 27.1 runtime
+(com.apple.CoreSimulator.SimRuntime.iOS-27-1), Booted throughout.
+Screenshots were captured on the cover panel (1398x2034).
+
+Host / toolchain
+----------------
+Machine:   macOS 27.0 (26A428), arm64 (Apple Silicon)
+Xcode:     27.1 (27A9269)
+Source:    ad2696e083e34c8933f20bde0389e3b96ec0ddf5
+           (codex/complete-all-components HEAD; worktree
+           forge-w32-ios-scene, branch codex/w32-ios-scene)
+           ENGINE_KINDS in packages/ignition/src/types.ts lists all 12
+           kinds ending in "scene"; rust/nf-sys/src/lib.rs:43 registers
+           SceneEngine for EngineKind::Scene.
+Disk:      host data volume was at ~5.9 GiB free at start, ~2.1 GiB after
+           the build; rebuildable outputs in this worktree were cleaned
+           after capture (see CLEANUP).
+
+Native runtime
+--------------
+packages/ignition/native/ForgeRust.xcframework rebuilt at this revision via
+  bash packages/ignition/scripts/build-apple.sh
+(cargo build --locked --release -p nf-sys for aarch64-apple-ios,
+aarch64-apple-ios-sim, x86_64-apple-ios; lipo + xcodebuild
+-create-xcframework). nm/strings on
+ForgeRust.xcframework/ios-arm64_x86_64-simulator/libnf_sys.a show scene_engine
+symbols (SceneEngine::new, Engine::apply_long, scene State/Node/Mesh types).
+sha256(libnf_sys.a simulator slice):
+  286d1fb6005c9351def17bfcf97e5da8f827e1baf7ba32f92afd1b3f2f68f9b2
+The built app binary contains 429 scene_engine symbol references:
+  .deriveddata/.../NitroForgeCadenceNative.debug.dylib
+  sha256 e4637c7c439684ac19b1aa5f675f452791829bc0238a2942ab048e2b63ef087b
+
+App: ai.nitroforge.cadence.native ("Nitro Forge Cadence Native"),
+examples/native-cadence, Debug-iphonesimulator build of
+ios/NitroForgeCadenceNative.xcodeproj against the xcframework above.
+BUILD SUCCEEDED; installed via `xcrun simctl install` and launched via
+`xcrun simctl launch` on the UDID above.
+
+JS bundle: Metro (`pnpm exec expo start --port 8084 --localhost`) from
+forge-w32-ios-scene/examples/native-cadence. Ports 8081 and 8082 were
+already bound by other sessions' Metro processes (forge-w28-ios on 8081;
+forge-w29-android on 8082 — both left running untouched), so this run used
+8084. iOS has no `adb reverse` equivalent, so the app's packager location
+was set through NSUserDefaults before first launch:
+  xcrun simctl spawn <udid> defaults write ai.nitroforge.cadence.native \
+    RCT_jsLocation -string "localhost:8084"
+(RCTBundleURLProvider reads RCT_jsLocation and verifies
+http://localhost:8084/status = packager-status:running.) Metro logged
+"iOS Bundled 544ms index.js (964 modules)". Workspace packages
+(@nitro-forge/ignition, cadence, telemetry, prism) resolved to this
+worktree's sources via the standalone pnpm workspace
+(`pnpm install --frozen-lockfile`, pnpm 10.32.1).
+
+Native path under test: @nitro-forge/ignition createNitroHost -> real Rust
+engines via Nitro JSI (not nf-cli, not TS mocks).
+
+Harness notes (local, uncommitted build scaffolding — no engine code touched)
+---------------------------------------------------------------------------
+1. examples/native-cadence/ios/ is gitignored expo-prebuild output and did
+   not exist in this fresh worktree; the copy in forge-complete lacked the
+   generated ios/build tree. ios/ was copied from the forge-complete
+   checkout (same commit ad2696e) and the generated SPM/autolinking tree
+   was regenerated in-worktree:
+     node node_modules/react-native/scripts/setup-apple-spm.js sync
+     node node_modules/react-native/scripts/setup-apple-spm.js update --yes
+   (ReactNative 0.88.1 SPM artifacts were already in
+   ~/Library/Caches/ReactNative/spm-artifacts/0.88.1; NitroForgeV1 was
+   autolinked as a self-managed local package pointing at
+   packages/ignition/native/ForgeRust.xcframework.)
+2. First xcodebuild failed compiling react-native-video
+   (tooling/react-native-video-v1/experimental-build-v1.tgz):
+   ios/core/NowPlayingInfoCenterManager.swift calls runOnMainThread, but
+   the Nitro v1 port deleted ios/core/Utils/RunOnMainThread.swift (see
+   tooling/react-native-video-v1/
+   react-native-video-beta12-nitro-v1-experimental-1-recovered.patch:2400,
+   which shows the removed file). This is a pre-existing tgz defect at
+   HEAD, unrelated to the scene engine; the Android build is unaffected
+   (Kotlin Threading helper). Local-only repair, NOT committed:
+   restored ios/core/Utils/RunOnMainThread.swift inside the installed
+   node_modules copy of react-native-video with the exact upstream content
+   (runOnMainThread + runOnMainThreadSync). After that BUILD SUCCEEDED.
+   Recommend a follow-up: repack experimental-build-v1.tgz or patch
+   NowPlayingInfoCenterManager.swift upstream.
+
+RESULTS (verbatim Metro console + AX text captured from the running app)
+--------------------------------------------------------------------------
+
+Probe 1 — "Verify native engines" (verify-engines.ts) — PASS
+Metro console (verbatim):
+  INFO  Native engine round trips passed: prism, cadence, splice, folio,
+  pitch, tally, quill, photo, motion, design, draft, scene. Cadence edit,
+  undo, redo and reopen passed.
+Same string rendered in-app as AXStaticText:
+  "Native engine round trips passed: prism, cadence, splice, folio, pitch,
+  tally, quill, photo, motion, design, draft, scene. Cadence edit, undo,
+  redo and reopen passed."
+(The probe ran twice — two taps — identical PASS both times.)
+Covers per engine: new, describe, NFD1 snapshot round trip, invalid
+snapshot rejection, post-close rejection; plus Cadence edit/undo/redo and
+snapshot reopen with committed values. ALL 12 ENGINE_KINDS including
+scene (kind tag 11) passed on the iOS simulator via the production Nitro
+host. Draft passes because verify-engines.ts at this revision strips the
+intentionally bumped source_revision before comparing describe output.
+
+Screenshot: W32-ios-engines-all12-pass.png
+
+Probe 2 — "Verify quill renderPage" (verify-quill-render.ts) — PASS
+Metro console (verbatim):
+  INFO  Quill renderPage passed: registerFont ok sha256=f6a446f65dbd…;
+  renderPage fixed-geometry 267x133 inked; renderPage deterministic;
+  renderPage use_sections section=0 number=1 816x1056 inked; renderPage
+  empty-font rejection ok; renderPage out-of-range-page rejection ok.
+Same string rendered in-app as AXStaticText.
+Exercises real Rust quill: registerFont with embedded test TTF,
+fixed-geometry render (200pt x 100pt @96dpi -> 267x133), byte-exact
+determinism, use_sections pagination, and both documented rejections.
+
+Screenshot: W32-ios-quill-renderpage-pass.png
+
+Probe 3 — "Verify native services" (verify-services.ts) — PASS
+Metro console (verbatim):
+  INFO  Native services passed: bounded LRU, owned binary buffers, task
+  progress/results, cancellation and cleanup.
+Same string rendered in-app as AXStaticText.
+
+Screenshot: W32-ios-services-pass.png
+
+Not exercised in this pass: "Verify native telemetry" UI probe,
+nf-color, splice-render, raw-decode, scene-render provider paths, and
+NYC-Tron platform-services encoder / speech / audio providers. Engine-kind
+coverage (scene included) is proven at the envelope/JSI level; provider-
+level scene render paths remain build/source-level unless separately
+proven. P01b already covered native telemetry + platform-services on this
+same simulator at an earlier revision.
+
+UI driving: argent MCP (ax-service describe + gesture-tap/gesture-swipe on
+normalized coordinates taken from the element tree; no pixel-derived
+taps). simctl used for install/launch/defaults only.
+
+CLEANUP
+-------
+After capture, this worktree's rebuildable outputs were removed to relieve
+host disk pressure (data volume hit 100% / ~2.1 GiB free):
+  .deriveddata/  examples/native-cadence/ios/build/  target/
+  packages/ignition/native/ForgeRust.xcframework  examples/native-cadence/node_modules
+The installed app remains on the simulator; Metro on :8084 was stopped.
+Other sessions' Metro processes on :8081/:8082 were not touched.
+
+No physical-device validation is claimed anywhere in this file.

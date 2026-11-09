@@ -1,0 +1,66 @@
+{
+  "sourceRevision": "ad2696e083e34c8933f20bde0389e3b96ec0ddf5",
+  "branch": "codex/w32-ios-scene",
+  "worktree": "forge-w32-ios-scene",
+  "evidenceKind": "ios-simulator",
+  "device": {
+    "name": "Forge Completion iPhone Duo",
+    "udid": "BBCC4078-E64D-4642-893B-ACF80ACB29A1",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-1",
+    "foldable": true,
+    "screenshotPanel": "cover (1398x2034)",
+    "note": "Simulator only; the paired physical iPhone was unreachable (tunnelState unavailable) and unused."
+  },
+  "host": {
+    "macOS": "27.0 (26A428) arm64",
+    "xcode": "27.1 (27A9269)"
+  },
+  "app": {
+    "bundleId": "ai.nitroforge.cadence.native",
+    "displayName": "Nitro Forge Cadence Native",
+    "configuration": "Debug-iphonesimulator",
+    "project": "examples/native-cadence/ios/NitroForgeCadenceNative.xcodeproj",
+    "debugDylibSha256": "e4637c7c439684ac19b1aa5f675f452791829bc0238a2942ab048e2b63ef087b",
+    "sceneEngineSymbolRefsInBinary": 429
+  },
+  "nativeRuntime": {
+    "xcframework": "packages/ignition/native/ForgeRust.xcframework",
+    "builtVia": "bash packages/ignition/scripts/build-apple.sh",
+    "simulatorSliceSha256": "286d1fb6005c9351def17bfcf97e5da8f827e1baf7ba32f92afd1b3f2f68f9b2",
+    "sceneSymbolsVerified": "nm/strings on ios-arm64_x86_64-simulator/libnf_sys.a show scene_engine SceneEngine/State/Node/Mesh symbols"
+  },
+  "jsBundle": {
+    "metro": "pnpm exec expo start --port 8084 --localhost",
+    "metroRoot": "forge-w32-ios-scene/examples/native-cadence",
+    "packagerLocation": "defaults write ai.nitroforge.cadence.native RCT_jsLocation localhost:8084 (RCTBundleURLProvider; iOS has no adb-reverse equivalent)",
+    "note": "Ports 8081/8082 bound by other sessions' Metro (forge-w28-ios, forge-w29-android); left untouched. Metro logged 'iOS Bundled 544ms index.js (964 modules)'."
+  },
+  "results": {
+    "verifyNativeEngines": {
+      "status": "passed",
+      "passed": ["prism", "cadence", "splice", "folio", "pitch", "tally", "quill", "photo", "motion", "design", "draft", "scene"],
+      "failed": [],
+      "detail": "All 12 ENGINE_KINDS including scene (tag 11) passed new/describe/NFD1 snapshot/restore/describe-equality/invalid-restore atomicity/close/closed-handle rejection. Cadence edit/undo/redo/reopen passed. Draft source_revision stripped by harness before compare.",
+      "metroLog": "INFO  Native engine round trips passed: prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene. Cadence edit, undo, redo and reopen passed.",
+      "screenshot": "W32-ios-engines-all12-pass.png"
+    },
+    "verifyQuillRenderPage": {
+      "status": "passed",
+      "detail": "registerFont ok sha256=f6a446f65dbd…; fixed-geometry 267x133 inked; deterministic; use_sections 816x1056 inked; empty-font and out-of-range-page rejections ok",
+      "metroLog": "INFO  Quill renderPage passed: registerFont ok sha256=f6a446f65dbd…; renderPage fixed-geometry 267x133 inked; renderPage deterministic; renderPage use_sections section=0 number=1 816x1056 inked; renderPage empty-font rejection ok; renderPage out-of-range-page rejection ok.",
+      "screenshot": "W32-ios-quill-renderpage-pass.png"
+    },
+    "verifyNativeServices": {
+      "status": "passed",
+      "detail": "bounded LRU, owned binary buffers, task progress/results, cancellation and cleanup",
+      "metroLog": "INFO  Native services passed: bounded LRU, owned binary buffers, task progress/results, cancellation and cleanup.",
+      "screenshot": "W32-ios-services-pass.png"
+    }
+  },
+  "harnessRepairs": [
+    "ios/ prebuild output copied from forge-complete checkout (same commit) and ios/build regenerated in-worktree via setup-apple-spm.js sync + update",
+    "react-native-video tgz defect at HEAD: ios/core/Utils/RunOnMainThread.swift was deleted by the Nitro v1 port while NowPlayingInfoCenterManager.swift still calls runOnMainThread; restored the file inside the installed node_modules copy only (uncommitted). iOS build then succeeded."
+  ],
+  "cleanup": "Worktree rebuildables removed after capture (.deriveddata, ios/build, target, ForgeRust.xcframework, node_modules) due to host disk pressure; Metro :8084 stopped.",
+  "notExercised": ["verify-native-telemetry UI probe", "nf-color", "splice-render", "raw-decode", "scene-render provider paths", "platform-services encoder/speech/audio"]
+}
