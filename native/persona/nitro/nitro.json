@@ -1,0 +1,8 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "environment": "react-native",
+  "cxxNamespace": ["nitroforge", "persona"],
+  "apple": {"moduleName": "NitroForgePersona"},
+  "android": {"namespace": ["nitroforge", "persona"], "cxxLibName": "NitroForgePersona"},
+  "ignorePaths": ["**/node_modules", "**/tests"]
+}

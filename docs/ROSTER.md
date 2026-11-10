@@ -601,3 +601,30 @@ Workspace/presets, contextual overflow, file transfer, color dialog and presente
 ## Recovery phase 6
 
 See [PHASE6](recovery/PHASE6.md): 340 Rust / 446 Forge package tests pass, one pre-existing native check skipped. Actual linked C++ task/binary/cache and FIFO tests and generated-header compilation pass. NYC-Tron has 716 source tests, 435 full Chromium tests and an actual iOS simulator app build. Native runtime, Android decoder, complete RNW app and QNX gates remain explicitly open.
+
+## Native digital-human personas — 2026-11-07
+
+First standalone SDK slice in `native/persona` (unrelated to studio editing-mode
+personas): bounded C++ performance timeline, calibrated coefficient retargeting,
+named NVIDIA Audio2X frame ingestion, CPU mesh-bound splat deformation, C ABI,
+CMake/SwiftPM entry points and Nitro v1 generated adapter. Linux strict native/C
+consumer tests, CMake/CTest (2/2), ASan/UBSan (leak detection unavailable), Nitro
+v1 codegen and generated constructor/implementation syntax compilation passed.
+No CUDA inference, model weights, GNM evaluator, capture/reconstruction, GPU
+rasterizer, linked RN host, SwiftPM build or headset validation is claimed.
+See [native persona implementation status](../native/persona/README.md).
+
+### Persona XR capture (2026-11-07)
+
+- Implemented optional C++ Meta face v2/social eyes and Android face v1/eyes adapters.
+- Strict GCC compilation and fake-runtime contract tests against pinned real OpenXR headers PASS.
+- Actual headset SDK capture, Android permissions, PICO ABI, GNM mapping and splat GPU binding NOT RUN / pending.
+- The adapters remain separate from the Nitro v1 performance bridge and document engines.
+
+- Follow-up: XR-to-session clock mapping, validity-aware rig mapping and source-aware fusion implemented; sparse mesh to bound-splat CPU evaluation added. CMake/CTest 5/5 pass locally. Device and GPU tests remain NOT RUN.
+
+- Persona capture lifecycle: CMake/CTest 6/6 locally. Craft Anything 0.5.0 installed/checksummed; brief/report ran, browser capture blocked by socket permission on that host. Follow-up on macOS with the vendored 0.3.0 CLI over its MCP server: clean-room `web_site_open`/`web_site_capture` succeeded for both reference pages (390/768/1440 px screenshots, visible text, outline, design tokens) and `core_report_write` produced a report; evidence ids and artifact paths are recorded in `native/persona/research/craft-anything/STUDY.md`. A second pass used the checksummed 0.5.0 macOS CLI in deep mode against the Likeness (beta) Play Store listing and compatible-devices page at phone width; the eight published app screenshots were downloaded at native resolution and text-extracted with macOS Vision OCR, confirming capture is phone-hosted and the headset only previews/edits. This is documentation-and-listing evidence only — no live capture UI, pixel-parity or device validation is claimed. Native guide UI, camera quality and fitting still pending.
+
+- Persona capture contract follow-up (2026-11-07): the user-supplied APKMirror bundle of `com.google.android.apps.vr.doppel` (Likeness beta 2026.10.18, v2273) was verified by Craft Anything 0.5.0 `android_package_show` against a Google signing certificate (v2/v3 valid). Split-module names, assets and DEX classes show a RealVatar/GNOME morphable-model pipeline (MediaPipe TFLite, encrypted UV encoder/feature-decoder modules, `GNome*` protos, `AvatarSyncPayload`, `CloudSyncAcknowledgementActivity`) — not Gaussian splats. `capture_session.hpp` gained `CaptureSource` (local/companion_phone/supplied_media), a `handoff` stage requiring `transferAcknowledged()` before processing, typed `CaptureQuality`/`QualityGate` verdicts with `lastRejection()` feedback, and review-stage `CaptureAppearance` edits (warmth/brightness/touch-up/background fill). CMake/CTest 4/4 in Release and ASan/UBSan clean; the capture test was made NDEBUG-safe.  Still NOT RUN: real camera/quality evaluation, model fitting, phone/headset transport, rendered UI and headset validation.
+
+- Persona phone capture adapter (2026-11-07): Nitro `PersonaCapture` HybridObject spec + C++ implementation over `CaptureSession` (Nitrogen regenerated, 2/2 HybridObjects); VisionCamera v5.2.4 outputs-based phone adapter in `apps/example/src/persona-capture/` with worklet frame processing, zero-copy WebGPU preview, Y-plane luma lighting gate and `runOnJS` photo-capture handoff into `observe()`. `apps/example` typecheck clean; node tests 22/23 pass (1 pre-existing skip). Face coverage + head yaw/roll gates added via `useObjectOutput({types:['face']})` (platform-native ScannedFace bounding box + angles, staleness-bounded); apps/example typecheck clean, node tests 29/30 (1 pre-existing skip). Device-stability gate added via expo-sensors accelerometer window (steady |a| ~1g, fail-closed); panel buttons moved to NYC-Tron Button. NOT RUN: device camera validation, glasses/pitch evaluators, phone-to-face pose (needs ARCore/ARKit), fitting, transport, headset.
