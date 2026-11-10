@@ -129,3 +129,25 @@ establish QNX device execution, Marathon Wayland session behavior, React/Fabric
 rendering of the studio, accessibility, or acceptance of every one of the 341
 UI contracts. Native media, input hardware, and other optional services retain
 their separate capability and target acceptance gates.
+
+## Mobile source ownership correction
+
+Hosted iOS compilation exposed a source ownership error in the first Qt
+candidate. Nitrogen's SwiftPM shared C++ target scans `cpp/`; placing the
+portable registration adapter there made that target import the generated
+autolinking header owned by the later Apple bridge target. The iOS build failed
+before runtime acceptance.
+
+The adapter now lives at `portable/NitroForgeRegistration.cpp`, and portable
+CMake selects that path explicitly. Its implementation bytes are unchanged.
+Apple and Android retain their generated installers. Regenerating all four
+Nitro classes leaves generated sources and the package manifest unchanged.
+
+A fresh package passed the strict two-package offline install, the eleven-engine
+C++ consumer, and both separately selected Qt/Hermes platform adapters. Both
+rebuilt native executables and the Metro bundles match the preceding run's
+hashes. The new archive SHA-256 is
+`51f4dd09ec31aff7f5e7e360e86b66a3372b4cebaab36606c72b23fde8c5acee`.
+[The correction receipt](evidence/ignition-qt-registration-2026-11-10.json)
+records those checks and the failing hosted job. The corrected iOS build still
+requires its hosted run; these Linux checks do not replace it.
