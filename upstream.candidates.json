@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "description": "Observed Git HEADs of public ArtCraft repos, never an admitted/linked Rust engine dependency. Updating a lastObservedSha does not install or approve any upstream source.",
+  "candidates": [
+    {
+      "name": "photocraft",
+      "repository": "storytold/photocraft",
+      "baseRef": "main",
+      "lastObservedSha": "5d9c57e60db966382abda2638d0ccbb7489d8ee7",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "wordcraft",
+      "repository": "storytold/wordcraft",
+      "baseRef": "main",
+      "lastObservedSha": "242e850aaad6bf38e1cd2be4122cc7cb9e5a15a8",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "gridcraft",
+      "repository": "storytold/gridcraft",
+      "baseRef": "main",
+      "lastObservedSha": "488f9982ebf05be9bfe581489d0edc6e3918eec7",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "deckcraft",
+      "repository": "storytold/deckcraft",
+      "baseRef": "main",
+      "lastObservedSha": "0d45a64db23baa0a4c8f9f7ac14c59c91b40fec9",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "pdfcraft",
+      "repository": "storytold/pdfcraft",
+      "baseRef": "main",
+      "lastObservedSha": "1303684851f45b0d798d34bfed78a90880516ef5",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "filmcraft",
+      "repository": "storytold/filmcraft",
+      "baseRef": "main",
+      "lastObservedSha": "68919ed87aa6a097a4d21414ec7c438883f5fe22",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "soundcraft",
+      "repository": "storytold/soundcraft",
+      "baseRef": "main",
+      "lastObservedSha": "8444edf075eae24ad37b128675c939fd5d370a60",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "vectorcraft",
+      "repository": "storytold/vectorcraft",
+      "baseRef": "main",
+      "lastObservedSha": "4ee0ef231aa31f50192f0072554fa390957532bf",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "designcraft",
+      "repository": "storytold/designcraft",
+      "baseRef": "main",
+      "lastObservedSha": "cc3c70d4be5092262b61c43b607e26b4a0b82fc6",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "effectcraft",
+      "repository": "storytold/effectcraft",
+      "baseRef": "main",
+      "lastObservedSha": "9d7baea5cce3ddb4a1a33a0f1f6c3de439eddae3",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    },
+    {
+      "name": "figcraft",
+      "repository": "storytold/figcraft",
+      "baseRef": "main",
+      "lastObservedSha": "e65ce42000ea2bd3c31d14f6c7e47d14bc6ab164",
+      "admittedSha": null,
+      "licenseReview": "unreviewed",
+      "runtimeStatus": "not-integrated"
+    }
+  ]
+}

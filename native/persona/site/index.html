@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nitro Forge — Persona</title>
+<meta name="description" content="Capture your face on your phone. Render a live persona in your XR headset. Nitro Forge Persona SDK.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#EAF2F8; --mut:#8FA3B8; --faint:#5C6E82;
+  --cyan:#4FE3C1; --cyan-ink:#04231C;
+  --ground:#070B14;
+  --glass:linear-gradient(165deg,rgba(255,255,255,.10),rgba(255,255,255,.03));
+  --line:rgba(255,255,255,.09);
+  --radius:28px;
+}
+*{margin:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--ground);color:var(--ink);font-family:'Satoshi',system-ui,sans-serif;
+  background:
+   radial-gradient(95% 80% at 50% 32%, rgba(2,5,10,.9), transparent 78%),
+   radial-gradient(120% 90% at 70% 8%, rgba(38,70,110,.5), transparent 60%),
+   radial-gradient(80% 60% at 12% 92%, rgba(20,60,80,.35), transparent 60%),
+   var(--ground);
+  overflow-x:hidden}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.10;mix-blend-mode:overlay;z-index:50;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+h1,h2,h3{font-family:'Clash Display',sans-serif;letter-spacing:-.02em}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1280px;margin:0 auto;padding:0 28px}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--mut)}
+
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;justify-content:space-between;align-items:center;
+  padding:18px 28px;background:rgba(7,11,20,.55);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.05)}
+nav .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+nav .brand .sq{width:10px;height:10px;border-radius:3px;background:var(--cyan);box-shadow:0 0 14px rgba(79,227,193,.7)}
+nav ul{display:flex;gap:28px;list-style:none}
+nav ul a{font-size:13.5px;color:var(--mut)}
+nav ul a:hover{color:var(--ink)}
+nav .cta{background:var(--cyan);color:var(--cyan-ink);font-weight:700;font-size:13px;padding:10px 20px;border-radius:999px;white-space:nowrap}
+@media(max-width:760px){nav ul{display:none}nav{padding:14px 18px}nav .brand{font-size:13px}nav .cta{display:none}}
+
+/* ---------- hero ---------- */
+.hero{min-height:100vh;display:grid;place-items:center;position:relative;padding:110px 24px 60px}
+.hero h1{font-size:clamp(54px,10.8vw,190px);line-height:.88;font-weight:700;text-align:center;position:relative;z-index:1}
+.hero h1 span{display:block;text-shadow:0 3px 34px rgba(2,5,10,.85)}
+.hero h1 span:nth-child(2){padding-left:15%}
+.hero h1 span:nth-child(3){padding-left:29%;color:var(--cyan)}
+.hero-card{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);width:min(340px,72vw);z-index:2;
+  background:linear-gradient(165deg,rgba(255,255,255,.10),rgba(255,255,255,.03));
+  background-color:rgba(8,13,22,.8);
+  border:1px solid var(--line);border-radius:var(--radius);padding:22px;
+  backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);
+  box-shadow:0 50px 90px -35px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.15)}
+.orb{width:160px;height:160px;margin:6px auto;border-radius:50%;position:relative;overflow:hidden;
+  background:
+   radial-gradient(58% 58% at 50% 56%, rgba(79,227,193,.32), transparent 70%),
+   radial-gradient(80% 80% at 50% 42%, #17344f 0%, #0a1424 58%, #05080f 100%);
+  box-shadow:inset 0 0 0 1.5px rgba(160,255,225,.35), inset 0 -20px 44px rgba(79,227,193,.16), 0 26px 55px -22px rgba(0,0,0,.85)}
+.orb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.8}
+.orb::after{content:"";position:absolute;inset:-45%;background:conic-gradient(from 0deg,transparent,rgba(120,255,220,.22),transparent 30%);animation:spin 8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero-card h2{font-size:16px;font-weight:600;margin-top:14px;text-align:center}
+.hero-card p{font-size:13px;color:var(--mut);margin-top:6px;line-height:1.55;text-align:center}
+.hero-card .btn{display:flex;justify-content:center;margin-top:16px;background:var(--cyan);color:var(--cyan-ink);
+  font-weight:700;font-size:14px;padding:13px 24px;border-radius:999px;border:0;cursor:pointer;width:100%}
+.hero-card .btn:active{transform:scale(.98)}
+.scroll-hint{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--mut)}
+
+/* ---------- pipeline rail ---------- */
+.rail-sec{padding:140px 0 120px;position:relative}
+.rail-head{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;margin-bottom:56px;flex-wrap:wrap}
+.rail-head h2{font-size:clamp(34px,4.6vw,64px);font-weight:700;line-height:1.02;max-width:14ch}
+.rail-head .mono{flex-shrink:0;padding-bottom:10px}
+.rail{display:flex;gap:22px;overflow-x:auto;padding:20px 4px 40px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.rail::-webkit-scrollbar{display:none}
+.step{flex:0 0 min(320px,78vw);scroll-snap-align:center;border-radius:24px;padding:28px;
+  background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px);
+  position:relative;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.step:hover{transform:translateY(-6px)}
+.step .num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:.2em}
+.step h3{font-size:22px;font-weight:600;margin:14px 0 10px}
+.step p{font-size:13.5px;color:var(--mut);line-height:1.6}
+.step .gate{display:inline-block;margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);
+  border:1px solid rgba(79,227,193,.3);border-radius:999px;padding:5px 12px}
+.step:last-child{background:linear-gradient(165deg,rgba(79,227,193,.16),rgba(79,227,193,.04));border-color:rgba(79,227,193,.35)}
+.step.last .num{color:var(--ink)}
+
+/* ---------- gates ---------- */
+.gates-sec{padding:120px 0;position:relative}
+.gates-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:56px}
+.gate-card{border-radius:22px;padding:26px;background:rgba(255,255,255,.045);border:1px solid var(--line);
+  backdrop-filter:blur(12px);position:relative;overflow:hidden}
+.gate-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.7}
+.gate-card .g-name{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+.gate-card .g-val{font-family:'Clash Display',sans-serif;font-size:30px;font-weight:600;margin-top:12px}
+.gate-card .g-val.pass{color:var(--cyan)}
+.gate-card .g-note{font-size:12.5px;color:var(--faint);margin-top:8px;line-height:1.5}
+
+/* ---------- phone demo ---------- */
+.demo-sec{padding:140px 0 160px}
+.demo-wrap{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.demo-copy h2{font-size:clamp(32px,4vw,56px);font-weight:700;line-height:1.05;margin-bottom:22px}
+.demo-copy p{color:var(--mut);font-size:15.5px;line-height:1.7;max-width:46ch}
+.demo-copy .list{margin-top:28px;display:grid;gap:12px}
+.demo-copy .list div{display:flex;gap:14px;align-items:baseline;font-size:14.5px;color:var(--ink)}
+.demo-copy .list .mono{color:var(--cyan);min-width:64px}
+.phone{width:min(320px,80vw);margin:0 auto;border-radius:44px;padding:12px;
+  background:linear-gradient(170deg,#1a2334,#0d1220);border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 60px 100px -40px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.1)}
+.phone .screen{border-radius:34px;overflow:hidden;background:#0A0F1A;aspect-ratio:9/19;position:relative;
+  display:flex;flex-direction:column}
+.phone .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:90px;height:22px;border-radius:12px;background:#000;z-index:3}
+.cam{flex:1;position:relative;background:radial-gradient(90% 70% at 50% 30%,#1c2c48,#0a0f1a 75%)}
+.cam .face{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:56%;opacity:.95;
+  filter:saturate(.8) brightness(1.1);mix-blend-mode:screen}
+.cam .oval{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:62%;aspect-ratio:1;
+  border:1.5px solid rgba(79,227,193,.5);border-radius:50%;box-shadow:0 0 30px rgba(79,227,193,.15) inset}
+.cam .oval.ok{border-color:rgba(79,227,193,.9);box-shadow:0 0 44px rgba(79,227,193,.3) inset,0 0 20px rgba(79,227,193,.2)}
+.cam .tag{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);
+  background:rgba(4,20,16,.6);border:1px solid rgba(79,227,193,.3);padding:5px 12px;border-radius:999px;z-index:2}
+.dock{padding:14px 18px 20px;background:rgba(10,15,26,.9);border-top:1px solid rgba(255,255,255,.06)}
+.dock .stepname{font-size:13px;font-weight:600;display:flex;justify-content:space-between}
+.dock .stepname span:last-child{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mut);letter-spacing:.1em}
+.dock .gates{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.dock .g{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:5px 9px;border-radius:7px;border:1px solid var(--line);color:var(--mut);transition:all .3s}
+.dock .g.on{color:var(--cyan);border-color:rgba(79,227,193,.45);background:rgba(79,227,193,.08)}
+.dock .btnrow{display:flex;gap:10px;margin-top:14px}
+.dock .b{flex:1;text-align:center;font-size:12.5px;font-weight:600;padding:11px;border-radius:14px;border:0;cursor:pointer}
+.dock .b.primary{background:var(--cyan);color:var(--cyan-ink)}
+.dock .b.ghost{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--line)}
+@media(max-width:900px){.demo-wrap{grid-template-columns:1fr}}
+
+/* ---------- cta ---------- */
+.cta-sec{padding:160px 0;text-align:center;position:relative}
+.cta-sec h2{font-size:clamp(40px,6.5vw,96px);font-weight:700;line-height:1}
+.cta-sec h2 span{color:var(--cyan)}
+.cta-sec p{color:var(--mut);margin:24px auto 0;max-width:48ch;font-size:16px;line-height:1.6}
+.cta-sec .btn{display:inline-block;margin-top:36px;background:var(--cyan);color:var(--cyan-ink);font-weight:700;
+  font-size:16px;padding:17px 40px;border-radius:999px}
+footer{border-top:1px solid rgba(255,255,255,.06);padding:44px 28px;display:flex;justify-content:space-between;
+  flex-wrap:wrap;gap:20px;color:var(--faint);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="index.html"><span class="sq"></span>Nitro Forge</a>
+  <ul>
+    <li><a href="#pipeline">Pipeline</a></li>
+    <li><a href="#gates">Quality gates</a></li>
+    <li><a href="#capture">Capture</a></li>
+    <li><a href="capture.html">Try the flow</a></li>
+  </ul>
+  <a class="cta" href="capture.html">Get the SDK</a>
+</nav>
+
+<!-- HERO: staggered type, glass card breaks the headline -->
+<section class="hero">
+  <h1>
+    <span>Your face,</span>
+    <span>captured on</span>
+    <span>your phone.</span>
+  </h1>
+  <div class="hero-card" data-wd-float>
+    <div class="orb"><img src="assets/head-glass.png" alt="Parametric head model fitted by Nitro Forge"></div>
+    <h2>Guided capture, five gates</h2>
+    <p>Lighting, framing, pose and expression are scored live on-device. What passes becomes a live persona in your headset.</p>
+    <a class="btn" href="capture.html">Start a capture</a>
+  </div>
+  <div class="scroll-hint">The pipeline ↓</div>
+</section>
+
+<!-- PIPELINE: horizontal rail, object crossing -->
+<section class="rail-sec wrap" id="pipeline">
+  <div class="rail-head">
+    <h2>Phone in.<br>Persona out.</h2>
+    <div class="mono">capture &rarr; fit &rarr; transfer &rarr; render</div>
+  </div>
+  <div class="rail">
+    <div class="step">
+      <div class="num">01</div>
+      <h3>Guided capture</h3>
+      <p>The phone walks you through framing, lighting and six prompted expressions. VisionCamera streams frames to a GPU worklet — nothing touches the JS thread.</p>
+      <span class="gate">front camera · yuv</span>
+    </div>
+    <div class="step">
+      <div class="num">02</div>
+      <h3>Quality gates</h3>
+      <p>Every frame is scored against five typed gates. A failed gate names itself, so the guide can say exactly what to fix — never a bare rejection.</p>
+      <span class="gate">lighting · pose · stability</span>
+    </div>
+    <div class="step">
+      <div class="num">03</div>
+      <h3>GNM fit</h3>
+      <p>Passing frames fit Google's open GNM Head V3 parametric model — 253 identity + 383 expression coefficients, solved jointly across poses.</p>
+      <span class="gate">Apache-2.0 · 17,821 verts</span>
+    </div>
+    <div class="step">
+      <div class="num">04</div>
+      <h3>Transfer</h3>
+      <p>The sealed bundle crosses to the headset over an acknowledged channel. Processing starts only after the receiver confirms — recapture never loses your current avatar.</p>
+      <span class="gate">acknowledged handoff</span>
+    </div>
+    <div class="step last">
+      <div class="num">05</div>
+      <h3>Live presence</h3>
+      <p>Expression coefficients drive the rigged head every frame. The same pipeline that rendered the preview animates you in the headset.</p>
+      <span class="gate">expression-driven</span>
+    </div>
+  </div>
+</section>
+
+<!-- GATES: lit cards, owned cyan -->
+<section class="gates-sec wrap" id="gates">
+  <div class="mono">What the guide actually measures</div>
+  <h2 style="font-size:clamp(32px,4vw,56px);font-weight:700;margin-top:18px;max-width:16ch">Five gates, all on-device.</h2>
+  <div class="gates-grid">
+    <div class="gate-card"><div class="g-name">Lighting</div><div class="g-val pass">Luma scan</div><div class="g-note">Y-plane statistics per frame; rejects under-exposed and blown-out capture before it wastes a fit.</div></div>
+    <div class="gate-card"><div class="g-name">Face coverage</div><div class="g-val pass">BBox + pose</div><div class="g-note">Face output bounds checked against the oval guide; partial exits fail closed.</div></div>
+    <div class="gate-card"><div class="g-name">Head pose</div><div class="g-val pass">Yaw · roll</div><div class="g-note">Off-axis heads are rejected early so the solver never sees degenerate geometry.</div></div>
+    <div class="gate-card"><div class="g-name">Device stability</div><div class="g-val pass">Accel window</div><div class="g-note">Accelerometer variance over a sliding window — a shaky phone is a blurry persona.</div></div>
+    <div class="gate-card"><div class="g-name">Expression steps</div><div class="g-val pass">6 prompts</div><div class="g-note">Neutral, smile, jaw, brow — each skippable, each contributing its own expression slice to the fit.</div></div>
+  </div>
+</section>
+
+<!-- CAPTURE DEMO: phone mock + copy -->
+<section class="demo-sec wrap" id="capture">
+  <div class="demo-wrap">
+    <div class="demo-copy">
+      <div class="mono">The flow</div>
+      <h2 style="margin-top:18px">Shot like a product,<br>scored like an instrument.</h2>
+      <p>The capture screen is the product. It shows the live gate verdicts, names the step you're on, and never lets a bad frame through silently.</p>
+      <div class="list">
+        <div><span class="mono">GATE</span> Live verdicts per frame, not post-hoc warnings</div>
+        <div><span class="mono">SKIP</span> Expression steps are optional — neutral identity is never hostage</div>
+        <div><span class="mono">REVIEW</span> Warmth, brightness and touch-up before anything is sent</div>
+        <div><span class="mono">SAFE</span> A failed recapture keeps your existing avatar untouched</div>
+      </div>
+      <a class="btn" href="capture.html" style="display:inline-block;margin-top:30px;background:var(--cyan);color:var(--cyan-ink);font-weight:700;font-size:14px;padding:14px 28px;border-radius:999px">Open the capture prototype</a>
+    </div>
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="cam">
+          <div class="oval"></div>
+          <img class="face" src="assets/head-glass.png" alt="">
+          <div class="tag">Hold still — lighting pass</div>
+        </div>
+        <div class="dock">
+          <div class="stepname"><span>Step 3 of 7 — Face the camera</span><span>NEUTRAL</span></div>
+          <div class="gates">
+            <span class="g on">lighting</span><span class="g on">coverage</span><span class="g on">pose</span><span class="g">glasses</span>
+          </div>
+          <div class="btnrow"><button class="b ghost">Skip</button><button class="b primary">Capture</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-sec wrap">
+  <h2>Put a <span>you</span><br>in the room.</h2>
+  <p>The SDK is Apache-clean where the model is, honest about what it measures, and built to be dropped into a React Native app with Nitro modules and VisionCamera.</p>
+  <a class="btn" href="capture.html">Try the capture flow</a>
+</section>
+
+<footer>
+  <span>Nitro Forge · Persona SDK</span>
+  <span>GNM Head V3 — Apache-2.0 · MediaPipe correspondence — CC-BY-NC, verify before shipping</span>
+  <span>Independent implementation. Not affiliated with Apple or Google.</span>
+</footer>
+
+</body>
+</html>

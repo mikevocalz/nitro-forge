@@ -1,0 +1,50 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nitro Forge Persona — a</title>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#EAF2F8;--mut:#8FA3B8;--cyan:#4FE3C1;--glass:rgba(255,255,255,.055);--line:rgba(255,255,255,.09)}
+*{margin:0;box-sizing:border-box}
+body{background:#070B14;color:var(--ink);font-family:'Clash Display',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;
+ background:
+  radial-gradient(120% 90% at 70% 10%, rgba(38,70,110,.55), transparent 60%),
+  radial-gradient(80% 60% at 15% 90%, rgba(20,60,80,.4), transparent 60%),
+  #070B14}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.12;mix-blend-mode:overlay;
+ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.hero{min-height:100vh;display:grid;place-items:center;position:relative;padding:24px}
+nav{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:22px 32px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+nav b{color:var(--ink);font-weight:600}
+nav .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);margin-right:8px;vertical-align:1px}
+h1{font-size:clamp(52px,10.5vw,180px);line-height:.9;letter-spacing:-.03em;font-weight:700;text-align:center;position:relative;z-index:1}
+h1 span{display:block}
+h1 span:nth-child(2){padding-left:16%}
+h1 span:nth-child(3){padding-left:30%;color:var(--cyan);text-shadow:0 0 40px rgba(79,227,193,.35)}
+.card{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);width:min(340px,72vw);z-index:2;
+ background:linear-gradient(165deg,rgba(255,255,255,.10),rgba(255,255,255,.03));
+ border:1px solid var(--line);border-radius:28px;padding:22px;
+ backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);
+ box-shadow:0 40px 80px -30px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.14)}
+.card .orb{width:150px;height:150px;margin:6px auto;border-radius:50%;position:relative;overflow:hidden;
+ background:radial-gradient(60% 60% at 50% 55%, rgba(79,227,193,.5), transparent 70%),
+ radial-gradient(80% 80% at 50% 40%, #16324a 0%, #0a1424 60%, #05080f 100%);
+ box-shadow:inset 0 0 0 1.5px rgba(160,255,225,.35), inset 0 -18px 40px rgba(79,227,193,.15), 0 24px 50px -20px rgba(0,0,0,.8)}
+.card .orb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.9;mix-blend-mode:screen}
+.card .orb::after{content:"";position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent,rgba(120,255,220,.25),transparent 30%);animation:spin 7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card h2{font-size:15px;font-weight:600;letter-spacing:.02em;margin-top:14px}
+.card p{font-size:12.5px;color:var(--mut);margin-top:6px;line-height:1.5}
+.btn{display:inline-flex;align-items:center;gap:10px;margin-top:16px;background:var(--cyan);color:#04231c;font-weight:700;font-size:13.5px;padding:12px 22px;border-radius:999px;border:0;cursor:pointer;letter-spacing:.01em}
+.under{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--mut)}
+</style></head><body>
+<section class="hero">
+<nav><span><span class="dot"></span><b>Nitro Forge</b>&nbsp;/ Persona</span><span>SDK · v0.4</span></nav>
+<h1><span>Your face,</span><span>captured on</span><span>your phone.</span></h1>
+<div class="card" data-wd-float>
+ <div class="orb"><img src="../assets/head-glass.png" alt="Parametric head model"></div>
+ <h2>Guided capture, five gates</h2>
+ <p>Lighting, framing, pose and expression are scored live on-device. What passes becomes a live persona in your headset.</p>
+ <button class="btn">Start a capture →</button>
+</div>
+<div class="under">Scroll — the pipeline is below</div>
+</section>
+</body></html>

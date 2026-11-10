@@ -53,6 +53,12 @@ export default function Home() {
             </Pressable>
           </Link>)}
         </View>
+        <Link href="/persona-capture" asChild>
+          <Pressable accessibilityRole="link" accessibilityLabel="Open persona capture"
+            style={{ marginTop: 24, alignSelf: 'flex-start' }}>
+            {({ pressed }) => <Text style={{ color: pressed ? colors.accent : colors.accent, fontSize: 12, fontWeight: '500' }}>Persona capture (camera) →</Text>}
+          </Pressable>
+        </Link>
         <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 18, marginTop: 24 }}>Your apps, separate workspaces.</Text>
       </View>
     </ScrollView>

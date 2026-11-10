@@ -1,0 +1,7 @@
+{
+  "question": "How should an independent premium native persona component deliver the observable capture, review and live-presence experience of Vision Pro Persona and Galaxy XR Likeness?",
+  "purpose": "Native component design and interoperability",
+  "targets": ["https://support.apple.com/en-us/118496", "https://support.google.com/android-xr/answer/16778585?hl=en"],
+  "constraints": ["Public observable behavior", "Nitro v1 adapter with standalone native core", "No invented access to private models or raw tracking", "No WebView product shell"],
+  "done_when": "A native experience implementation backed by behavioral evidence and device validation"
+}

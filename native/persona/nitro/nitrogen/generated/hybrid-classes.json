@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "classes": {
+    "PersonaCapture": {
+      "android": {
+        "implementation": {
+          "className": "HybridPersonaCapture",
+          "include": "<NitroForgePersona/HybridPersonaCapture.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridPersonaCapture",
+          "include": "<NitroForgePersona/HybridPersonaCapture.hpp>"
+        },
+        "language": "c++"
+      }
+    },
+    "PersonaPerformance": {
+      "android": {
+        "implementation": {
+          "className": "HybridPersonaPerformance",
+          "include": "<NitroForgePersona/HybridPersonaPerformance.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridPersonaPerformance",
+          "include": "<NitroForgePersona/HybridPersonaPerformance.hpp>"
+        },
+        "language": "c++"
+      }
+    }
+  }
+}
