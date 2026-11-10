@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "NitroForge docs/ROSTER.md reviewed 2026-11-02; statuses are historical or planned and do not certify a release",
+  "product": "nitro-forge",
+  "status": "not-released",
+  "distribution": {
+    "channel": "github-release-tarballs",
+    "checksums": "SHA256SUMS",
+    "npm": "not-used"
+  },
+  "engineApis": [
+    "ignition",
+    "prism",
+    "cadence",
+    "splice",
+    "folio",
+    "pitch",
+    "tally",
+    "quill"
+  ],
+  "runtimes": {
+    "rust-cli": {
+      "status": "historically-tested",
+      "evidence": "docs/ROSTER.md; needs fresh PR SHA retest"
+    },
+    "rust-c-ffi": {
+      "status": "historically-tested",
+      "evidence": "docs/ROSTER.md; native consumer not linked"
+    },
+    "react-native-ios": {
+      "status": "not-verified"
+    },
+    "react-native-android": {
+      "status": "not-verified"
+    },
+    "web-wasm": {
+      "status": "not-verified"
+    },
+    "skia-v3-graphite": {
+      "status": "target-only",
+      "dependency": "PR #1: react-native-skia@3.8.1"
+    },
+    "expo-ui-editor": {
+      "status": "planned"
+    },
+    "native-adaptive-layout": {
+      "status": "planned"
+    }
+  },
+  "consumerStatus": {
+    "moyo": "not-integrated",
+    "nycMon": "not-integrated",
+    "dvnt": "not-integrated",
+    "paCasa": "not-integrated",
+    "harlemMight": "not-integrated"
+  }
+}
