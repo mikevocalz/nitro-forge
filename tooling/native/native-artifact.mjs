@@ -16,7 +16,7 @@ function fileDigest(path) {
   } finally { closeSync(descriptor); }
 }
 
-function requireInternalLinks(entries) {
+export function validateAppPayloadSymlinks(entries, filesystemPlatform = process.platform) {
   const indexed = new Map(entries.map(entry => [entry.path, entry]));
   for (const link of entries.filter(entry => entry.type === "symlink")) {
     // Resolve against the collected manifest, never by following a filesystem
@@ -39,7 +39,10 @@ function requireInternalLinks(entries) {
           throw new Error("App symlink must use an internal relative target: " + current.path);
         }
         if (++expansions > 40) throw new Error("App symlink cycle or excessive link depth: " + link.path);
-        remaining = [...target.split("/"), ...remaining];
+        // Windows readlink uses backslashes even for a link created from a
+        // slash-separated target. Preserve the literal manifest entry, but
+        // interpret separators according to the host that owns this payload.
+        remaining = [...target.split(filesystemPlatform === "win32" ? /[\\/]/ : /\//), ...remaining];
       } else {
         if (remaining.some(part => part && part !== ".") && current.type !== "directory") {
           throw new Error("App symlink traverses a non-directory: " + link.path);
@@ -79,7 +82,7 @@ export function fingerprintNativeArtifact(platform, input) {
     };
     visit(artifact, ".");
     entries.sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0);
-    requireInternalLinks(entries);
+    validateAppPayloadSymlinks(entries);
   }
   const kind = platform === "ios" ? "ios-app" : "android-apk";
   const algorithm = platform === "ios" ? APP_PAYLOAD_ALGORITHM : APK_ALGORITHM;

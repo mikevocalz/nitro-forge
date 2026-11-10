@@ -4,7 +4,7 @@ import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlin
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { APP_PAYLOAD_ALGORITHM, APK_ALGORITHM, fingerprintNativeArtifact, recordNativeArtifact } from "./native-artifact.mjs";
+import { APP_PAYLOAD_ALGORITHM, APK_ALGORITHM, fingerprintNativeArtifact, recordNativeArtifact, validateAppPayloadSymlinks } from "./native-artifact.mjs";
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "native-artifact-"));
@@ -41,7 +41,9 @@ test("app identity is independent of its absolute path and file enumeration orde
   const paths = JSON.parse(original.manifestText).entries.map(entry => entry.path);
   assert.deepEqual(paths, [...paths].sort());
   assert.ok(!original.manifestText.includes(root));
-  chmodSync(join(moved, "Launcher"), 0o644);
+  // Read-only mode is meaningful on Windows too; changing execute bits alone
+  // is not. The manifest must preserve the permissions the host actually has.
+  chmodSync(join(moved, "Launcher"), 0o444);
   assert.notEqual(original.sha256, fingerprintNativeArtifact("ios", moved).sha256);
 });
 
@@ -51,14 +53,14 @@ test("framework symlinks are recorded without duplicate traversal and retain rel
     mkdirSync(join(framework, "Versions", version), { recursive: true });
     writeFileSync(join(framework, "Versions", version, "Engine"), "identical framework bytes");
   }
-  symlinkSync("A", join(framework, "Versions", "Current"));
-  symlinkSync("Versions/Current/Engine", join(framework, "Engine"));
+  symlinkSync("A", join(framework, "Versions", "Current"), "dir");
+  symlinkSync("Versions/Current/Engine", join(framework, "Engine"), "file");
   const before = fingerprintNativeArtifact("ios", app), entries = JSON.parse(before.manifestText).entries;
   assert.equal(entries.filter(entry => entry.type === "symlink").length, 2);
   assert.ok(!entries.some(entry => entry.path.includes("Current/Engine")));
   const relocated = join(root, "Relocated.app"); cpSync(app, relocated, { recursive: true, verbatimSymlinks: true });
   assert.equal(fingerprintNativeArtifact("ios", relocated).sha256, before.sha256);
-  rmSync(join(framework, "Versions", "Current")); symlinkSync("B", join(framework, "Versions", "Current"));
+  rmSync(join(framework, "Versions", "Current")); symlinkSync("B", join(framework, "Versions", "Current"), "dir");
   assert.notEqual(fingerprintNativeArtifact("ios", app).sha256, before.sha256);
 });
 
@@ -72,10 +74,23 @@ test("app identity rejects external, dangling and cyclic symlinks without follow
   }
   // Lexical normalization alone misses this escape through a directory link.
   mkdirSync(join(app, "deep"));
-  symlinkSync("deep", join(app, "directory"));
-  symlinkSync("..", join(app, "deep", "up"));
+  symlinkSync("deep", join(app, "directory"), "dir");
+  symlinkSync("..", join(app, "deep", "up"), "dir");
   symlinkSync("directory/up/../outside", link);
   assert.throws(() => fingerprintNativeArtifact("ios", app), /escapes/);
+});
+
+test("Windows link separators are interpreted without changing literal manifest targets", () => {
+  const entries = [
+    { path: ".", type: "directory" }, { path: "Folder", type: "directory" },
+    { path: "Folder/Engine", type: "file" }, { path: "Link", type: "symlink", target: "Folder\\Engine" },
+  ];
+  const unchanged = JSON.stringify(entries);
+  validateAppPayloadSymlinks(entries, "win32");
+  assert.equal(JSON.stringify(entries), unchanged);
+  assert.throws(() => validateAppPayloadSymlinks(entries, "linux"), /missing internal/);
+  entries[3].target = "..\\outside";
+  assert.throws(() => validateAppPayloadSymlinks(entries, "win32"), /escapes/);
 });
 
 test("Android identity hashes raw APK bytes and both platforms persist a verifiable manifest", t => {
