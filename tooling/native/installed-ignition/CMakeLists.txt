@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.22)
+project(InstalledIgnitionConsumer LANGUAGES CXX)
+enable_testing()
+
+if(NOT EXISTS "${IGNITION_PACKAGE_ROOT}/package.json")
+  message(FATAL_ERROR "IGNITION_PACKAGE_ROOT must be an installed Ignition package")
+endif()
+add_subdirectory("${IGNITION_PACKAGE_ROOT}" ignition)
+add_executable(ignition_consumer session.cpp)
+target_link_libraries(ignition_consumer PRIVATE NitroForge::RustSession NitroForge::SerialQueue)
+add_test(NAME installed_ignition_session COMMAND ignition_consumer)

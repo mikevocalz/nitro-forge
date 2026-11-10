@@ -1,5 +1,17 @@
 {
   "version": "1.0.0-alpha.nightly.120.g33ef045b96c0",
   "source": "https://github.com/margelo/nitro/releases",
-  "note": "Release candidate pin; app migration still requires native tests."
+  "note": "Release candidate pin; app migration still requires native tests.",
+  "sourceCompatibilityProfiles": [
+    {
+      "name": "rnqnx-qt-alpha105",
+      "manifest": "packages/ignition/package.json",
+      "packageName": "@nitro-forge/ignition",
+      "version": "1.0.0-alpha.nightly.105.g69d365fc9b18",
+      "platforms": ["qnx", "marathon"],
+      "peerDependencies": ["nitro-core", "react-native-nitro-modules"],
+      "evidence": "docs/native/evidence/ignition-qt-2026-11-10.json",
+      "note": "Generated classes are source-compiled against one exact Qt host core; this does not approve binary interoperability, a mobile runtime downgrade, or target-device acceptance."
+    }
+  ]
 }

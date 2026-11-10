@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "checkedOn": "2026-11-10",
+  "scope": "Portable registration source isolation after hosted iOS SwiftPM compilation found a generated-header dependency in its shared Cxx source target. New packed package checked on Linux Qt/Hermes with both native platform adapters; no iOS correction build or physical target run is claimed here.",
+  "sourceCommit": "3c968f2aadfa944ecbb14e5a828ce7b44d0a471a",
+  "failedHostedJob": "https://github.com/mikevocalz/nitro-forge/actions/runs/42768873709/job/129673285910",
+  "sourceChange": {
+    "from": "packages/ignition/cpp/NitroForgeRegistration.cpp",
+    "to": "packages/ignition/portable/NitroForgeRegistration.cpp",
+    "implementationBytesUnchanged": true,
+    "implementationSha256": "5e059cdefc793aeaa9c069c40080bb6368596d224940ccb4cae6aa78e2dc548b",
+    "generatedSourceChanges": false,
+    "manifestChanges": false
+  },
+  "package": {
+    "name": "@nitro-forge/ignition",
+    "version": "0.1.0",
+    "archive": "nitro-forge-ignition-0.1.0.tgz",
+    "sha256": "51f4dd09ec31aff7f5e7e360e86b66a3372b4cebaab36606c72b23fde8c5acee",
+    "manifestSha256": "bf1f698fc7fd7b813ee3ed7b88d997ca49cce3f12a59705c966ef7c949cdab0e",
+    "integrity": "sha512-l5yFVI1sg9nr4kUaPCZRQLsqTF1PzOn0HtlCLOkOlPJo0xUhw7PowxJS2jn3xso/nhqrI59jq1nXdPofhkAvlQ=="
+  },
+  "profiles": {
+    "qtNitroCore": "1.0.0-alpha.nightly.105.g69d365fc9b18",
+    "qtSourceCompatibility": "rnqnx-qt-alpha105",
+    "mobileGenerator": "1.0.0-alpha.nightly.120.g33ef045b96c0"
+  },
+  "checks": {
+    "lockedOfflineRustBuild": "passed",
+    "strictOfflineInstall": {
+      "packageCount": 2,
+      "mobileInstallerInstalled": false
+    },
+    "nitrogen": {
+      "generatedClasses": 4,
+      "generatedSourceChanges": false
+    },
+    "packedCppConsumer": "INSTALLED_IGNITION_OK engines=11 reopen=11 edit=1 undo=1 redo=1 binary=1 cancel=1 fifo=1 close=1",
+    "releaseNativeArtifactReceiptTests": 19,
+    "metro": [
+      {
+        "platform": "qnx",
+        "bytes": 76149,
+        "sha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+        "warnings": [],
+        "mobileNitroProviderCount": 0
+      },
+      {
+        "platform": "marathon",
+        "bytes": 76149,
+        "sha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+        "warnings": [],
+        "mobileNitroProviderCount": 0
+      }
+    ]
+  },
+  "nativeHost": {
+    "operatingSystem": "Linux",
+    "architecture": "x86_64",
+    "qt": "6.11.1",
+    "reactNativeJsi": "0.88.1",
+    "nativeConsumerSourceCommit": "eb2b9dbfc0a5366684387ebfa66c2f9e42078b1d"
+  },
+  "runtime": [
+    {
+      "platform": "qnx",
+      "binarySha256": "4bb0ca506ec07b68fccf0a6b061702a9315d922e93680501404159530a7dde81",
+      "bundleSha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+      "output": "NATIVE_PACKAGE_QT_HERMES_OK completions=114 owner-thread=1 dispatcher=real installed-registration=1 platform=qnx",
+      "realQtDispatcher": true,
+      "directPublicNitroConstructorVerified": true,
+      "reactFabricRenderer": false,
+      "physicalTargetExecution": false
+    },
+    {
+      "platform": "marathon",
+      "binarySha256": "095e2a61c61eb0b9f84e3ed6e475b1a7f9df97fe9a586d24eaf474c6194f93a4",
+      "bundleSha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+      "output": "NATIVE_PACKAGE_QT_HERMES_OK completions=115 owner-thread=1 dispatcher=real installed-registration=1 platform=marathon",
+      "realQtDispatcher": true,
+      "directPublicNitroConstructorVerified": true,
+      "reactFabricRenderer": false,
+      "physicalTargetExecution": false
+    }
+  ],
+  "skills": [
+    {
+      "source": "margelo/react-native-skills",
+      "commit": "1e9e17be6f41c838db472d6a4b943fc26355a3be",
+      "selected": [
+        "api-design",
+        "build-nitro-modules",
+        "cpp"
+      ],
+      "decision": "Keep generated Apple/Android sources untouched; separate portable-only registration from shared source ownership and verify real packaged native behavior."
+    },
+    {
+      "source": "mikevocalz/nyc-mon/skills/no-ai-slop/SKILL.md",
+      "blob": "e2008aa08d688846b0373b83d7c3d33b85eaabdd",
+      "decision": "Report actual compiler cause and separate Linux host evidence from iOS/physical targets."
+    }
+  ],
+  "remaining": [
+    "Hosted iOS compilation/runtime of the corrected source ownership",
+    "QNX operating system and device execution",
+    "Marathon Wayland session and device execution",
+    "React/Fabric studio rendering and hardware accessibility/input"
+  ]
+}

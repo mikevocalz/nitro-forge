@@ -7,8 +7,15 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./native": "./CMakeLists.txt",
     "./cli": "./src/host-cli.ts",
-    "./nitro": "./src/specs/ForgeFactory.nitro.ts",
+    "./nitro": {
+      "types": "./src/specs/ForgeFactory.nitro.ts",
+      "qnx": "./portable/ForgeFactory.cjs",
+      "marathon": "./portable/ForgeFactory.cjs",
+      "default": "./src/specs/ForgeFactory.nitro.ts"
+    },
     "./v1-host": "./src/v1-host.ts",
     "./workspace": "./src/workspace.ts",
     "./transfer": "./src/transfer.ts",
@@ -34,11 +41,43 @@
     "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0"
   },
   "imports": {
-    "#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs"
+    "#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs",
+    "#forge-factory": {
+      "types": "./nitrogen/generated/shared/javascript/ForgeFactory.d.cts",
+      "qnx": "./portable/ForgeFactory.cjs",
+      "marathon": "./portable/ForgeFactory.cjs",
+      "default": "./nitrogen/generated/shared/javascript/ForgeFactory.cjs"
+    }
+  },
+  "rnqnxNative": {
+    "schemaVersion": 1,
+    "platforms": {
+      "qnx": {
+        "cmakeListsPath": "qt/CMakeLists.txt",
+        "target": "nitroforge_nitro",
+        "registrationHeader": "NitroForgeV1/NitroForgeRegistration.hpp",
+        "registrationFunction": "nitroforge::native::registerNitroForgeClasses",
+        "nitroCoreVersions": ["1.0.0-alpha.nightly.105.g69d365fc9b18"],
+        "requiresDispatcher": true
+      },
+      "marathon": {
+        "cmakeListsPath": "qt/CMakeLists.txt",
+        "target": "nitroforge_nitro",
+        "registrationHeader": "NitroForgeV1/NitroForgeRegistration.hpp",
+        "registrationFunction": "nitroforge::native::registerNitroForgeClasses",
+        "nitroCoreVersions": ["1.0.0-alpha.nightly.105.g69d365fc9b18"],
+        "requiresDispatcher": true
+      }
+    }
   },
   "peerDependencies": {
-    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
-    "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0"
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.105.g69d365fc9b18 || 1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "nitro-core": "1.0.0-alpha.nightly.105.g69d365fc9b18 || 1.0.0-alpha.nightly.120.g33ef045b96c0"
+  },
+  "peerDependenciesMeta": {
+    "react-native-nitro-modules": {
+      "optional": true
+    }
   },
   "swiftpmConfig": {
     "name": "NitroForgeV1",

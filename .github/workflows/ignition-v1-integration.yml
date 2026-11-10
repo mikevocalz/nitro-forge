@@ -44,6 +44,11 @@ jobs:
           /tmp/byte-cache-test
       - run: cmp packages/ignition/cpp/nf_v1.h rust/nf-sys/include/nf_v1.h
       - run: cargo test --locked -p nf-sys && cargo build --locked -p nf-sys
+      - name: Build and execute the installed portable package
+        run: >-
+          node tooling/native/installed-ignition/verify.mjs
+          --rust-archive "${{ github.workspace }}/target/debug/libnf_sys.a"
+          --output "${{ runner.temp }}/installed-ignition"
       - name: Verify shared document lifecycle, autosave, transactions and collaboration
         run: |
           cargo build --locked -p nf-cli

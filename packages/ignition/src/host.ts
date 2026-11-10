@@ -173,7 +173,7 @@ export { parseNativeError as normalizeNativeEngineError };
 export function createNativeForgeFactory(): ForgeFactory {
   // Generated v1 constructor uses getHybridClass, never the removed v0 API.
   // Loading it only here preserves Node tooling and web host isolation.
-  const { ForgeFactory } = require("#nitro/ForgeFactory") as {
+  const { ForgeFactory } = require("#forge-factory") as {
     ForgeFactory: new () => ForgeFactory;
   };
   return new ForgeFactory();

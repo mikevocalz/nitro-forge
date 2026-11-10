@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "checkedOn": "2026-11-10",
+  "scope": "Final codegen-compatible packed Ignition root and direct ./nitro entry run in Linux standalone Qt/Hermes/JSI consumers with actual distinct QNX or Marathon Nitro installers. Own platform class is present, opposite absent, actual platform getter verified. No React/Fabric surface, QNX OS or Marathon device execution.",
+  "nativeHost": {
+    "operatingSystem": "Linux",
+    "architecture": "x86_64",
+    "qt": "6.11.1",
+    "reactNativeJsi": "0.88.1",
+    "hermesSourceCommit": "9a115f15785851f4ff2747ebb090ddd066fc8ad2"
+  },
+  "profiles": {
+    "qtNitroCore": "1.0.0-alpha.nightly.105.g69d365fc9b18",
+    "qtSourceCompatibility": "rnqnx-qt-alpha105",
+    "mobileGenerator": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "mobileRuntimeRequirement": "matching alpha120; alpha105 peer allowance is for the Qt host dependency graph"
+  },
+  "dependencyInstallation": {
+    "command": "npm install --offline --ignore-scripts --strict-peer-deps --no-audit --no-fund",
+    "packageCount": 2,
+    "packages": [
+      "@nitro-forge/ignition",
+      "nitro-core"
+    ],
+    "mobileInstallerInstalled": false
+  },
+  "package": {
+    "name": "@nitro-forge/ignition",
+    "version": "0.1.0",
+    "archive": "nitro-forge-ignition-0.1.0.tgz",
+    "sha256": "27d1d99c29d313fe78a8b24f13185ba5fde96904127b04050c2e3db9a81a1351",
+    "manifestSha256": "bf1f698fc7fd7b813ee3ed7b88d997ca49cce3f12a59705c966ef7c949cdab0e",
+    "integrity": "sha512-elUtKjMOIHAdRapW0+hqcMdKhjZGszusw+ZTgPkZmzwwh7P4ewztTD4IhfqJ5KrXFZXN5KIkZgZTd/dpYzWZ6g=="
+  },
+  "source": {
+    "forgeBase": "f5469d03cf2153a8f694ae61d911861264e9216d",
+    "genericNativeDiscoveryCommit": "89ec5ef8d9ea9b430daa913ddf6ed778593a2d64",
+    "metroPublicEntryCommit": "d74bd9be10e90e09f532574ec3ce9207debddc5b",
+    "scenarioFile": "tooling/native/installed-ignition/qt-scenario.ts",
+    "scenarioSha256": "9deed0e49d0557d329c1d0e1e7f39f037c0a4083855d71f5a59a486acccaea77",
+    "reviewerScenarioSha256": "ba278d1a699c1986b6d3a4dbd9f8c29ff0fa0ee00deb3161737aa6b4220db584",
+    "reviewerExtraAssertion": "Import public ./nitro constructor, instantiate Factory and check open method before base scenario",
+    "reviewedLocalNativeCommit": "eb2b9dbfc0a5366684387ebfa66c2f9e42078b1d",
+    "reviewedLocalMetroCommit": "98f095923a3de4e8656ddf224f85cc72ff0cca9b",
+    "publicationNote": "Published source trees preserve the reviewed native and Metro implementation files. Original local review commits are retained separately for the recorded build provenance."
+  },
+  "regeneration": {
+    "generator": "Nitrogen alpha120",
+    "hybridClasses": 4,
+    "passed": true,
+    "generatedSourceChanges": false
+  },
+  "portableNativeConsumer": {
+    "passed": true,
+    "output": "INSTALLED_IGNITION_OK engines=11 reopen=11 edit=1 undo=1 redo=1 binary=1 cancel=1 fifo=1 close=1"
+  },
+  "metro": {
+    "version": "0.87.1",
+    "node": "v26.13.0",
+    "results": [
+      {
+        "platform": "qnx",
+        "bytes": 76149,
+        "sha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+        "selectedEntries": [
+          "@nitro-forge/ignition/nitro",
+          "#forge-factory"
+        ],
+        "selectedFile": "portable/ForgeFactory.cjs",
+        "mobileNitroProviderCount": 0,
+        "resolverWarnings": []
+      },
+      {
+        "platform": "marathon",
+        "bytes": 76149,
+        "sha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+        "selectedEntries": [
+          "@nitro-forge/ignition/nitro",
+          "#forge-factory"
+        ],
+        "selectedFile": "portable/ForgeFactory.cjs",
+        "mobileNitroProviderCount": 0,
+        "resolverWarnings": []
+      }
+    ]
+  },
+  "nativeRuntime": [
+    {
+      "platform": "qnx",
+      "binarySha256": "4bb0ca506ec07b68fccf0a6b061702a9315d922e93680501404159530a7dde81",
+      "bundleSha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+      "configuredBundleSha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+      "exitCode": 0,
+      "output": "NATIVE_PACKAGE_QT_HERMES_OK completions=113 owner-thread=1 dispatcher=real installed-registration=1 platform=qnx",
+      "realQtDispatcher": true,
+      "directPublicNitroConstructorVerified": true,
+      "reactFabricRenderer": false,
+      "physicalTargetExecution": false
+    },
+    {
+      "platform": "marathon",
+      "binarySha256": "095e2a61c61eb0b9f84e3ed6e475b1a7f9df97fe9a586d24eaf474c6194f93a4",
+      "bundleSha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+      "configuredBundleSha256": "67a81fb6b439a17aa9d534f000304d4b19f9d9973de4461fe5812e047eb0a660",
+      "exitCode": 0,
+      "output": "NATIVE_PACKAGE_QT_HERMES_OK completions=115 owner-thread=1 dispatcher=real installed-registration=1 platform=marathon",
+      "realQtDispatcher": true,
+      "directPublicNitroConstructorVerified": true,
+      "reactFabricRenderer": false,
+      "physicalTargetExecution": false
+    }
+  ],
+  "otherChecks": {
+    "ignitionTypecheck": "passed",
+    "ignitionNativeHostTests": 8,
+    "genericNativeDiscoveryTests": 5,
+    "existingNativeConsumerConfigurationChecks": 52,
+    "existingNativeBuildPlanChecks": 8,
+    "reactNativeTypecheck": "passed"
+  },
+  "unverified": [
+    "QNX operating system/device execution",
+    "Marathon Wayland compositor/session and device execution",
+    "React/Fabric studio rendering",
+    "Accessibility and hardware inputs",
+    "All 341 UI contracts"
+  ]
+}
