@@ -1,0 +1,13 @@
+Browser: Google Chrome 156.0.8078.81, local http://127.0.0.1:4179/
+Source: companion NYC-Tron packages/platform-services/tests/browser/checkpoints.html
+The page executes the actual built platform-services/checkpoints web adapter.
+
+Initial run:
+PASS: owned buffers, atomic transaction abort, retained checkpoint, fresh connection and cleanup. Prior page checkpoint reopened: false.
+
+Full page reload:
+PASS: owned buffers, atomic transaction abort, retained checkpoint, fresh connection and cleanup. Prior page checkpoint reopened: true.
+
+The page aborts the IndexedDB transaction after the put request's success
+event. The provider rejects the write and retains the previous bytes. The
+result was observed through Chrome's accessibility tree in the task's tab.

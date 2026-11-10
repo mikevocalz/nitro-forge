@@ -15,9 +15,26 @@ config.watchFolders = [
   ...(config.watchFolders ?? []),
   path.join(forgeRoot, "packages/ignition"),
   path.join(forgeRoot, "packages/cadence"),
+  path.join(forgeRoot, "packages/telemetry"),
 ];
+
+// Explicit lab mode serves a separate acceptance entry. Normal consumers keep
+// their released dependency graph; candidate-only exports are isolated here.
+const acceptanceEntry = { media: "media-acceptance", checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance", collaboration: "collaboration-acceptance" }[process.env.FORGE_ACCEPTANCE];
+if (acceptanceEntry) {
+  const rewrite = config.server?.rewriteRequestUrl;
+  config.server = {
+    ...config.server,
+    rewriteRequestUrl(url) {
+      const rewritten = rewrite ? rewrite(url) : url;
+      return rewritten.replace(/\/index\.bundle(?=\?|$)/, `/${acceptanceEntry}.bundle`);
+    },
+  };
+}
 
 module.exports = withNycTronDevLink(
   pinToApp(config, { projectRoot, packages: [...SHARED_RUNTIME, "react-native-nitro-modules"] }),
-  { projectRoot },
+  { projectRoot, ...(process.env.NYC_TRON_PACKAGES ? {
+    includePackages: process.env.NYC_TRON_PACKAGES.split(",").map(name => name.trim()).filter(Boolean),
+  } : {}) },
 );

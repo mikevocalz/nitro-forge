@@ -5,6 +5,7 @@ import type {
   EngineKind,
 } from "./types";
 import { EngineError } from "./types";
+import type { ForgeFactory } from "./specs/ForgeFactory.nitro";
 
 /**
  * EngineHost — the transport contract between TypeScript and Rust engines.
@@ -137,24 +138,47 @@ function parseNativeError(e: unknown): EngineError {
   const start = msg.indexOf("{");
   if (start >= 0) {
     try {
-      const shape = JSON.parse(msg.slice(start)) as EngineErrorShape;
-      if (shape.code) return new EngineError(shape);
+      const parsed = JSON.parse(msg.slice(start)) as Record<string, unknown>;
+      const shape = (parsed.code ? parsed : parsed.error) as EngineErrorShape | undefined;
+      if (shape && ["invalid_command", "not_found", "validation", "serialization", "out_of_bounds", "unsupported", "internal", "cancelled"].includes(shape.code) &&
+          typeof shape.message === "string" && typeof shape.recoverable === "boolean") return new EngineError(shape);
     } catch {
       /* fall through */
     }
   }
+  // Older open/snapshot entrypoints return Rust's Display form, whereas
+  // command results carry {ok:false,error:{...}} JSON. Preserve both formats.
+  const legacy = /^(?:(?:open|snapshot|restore|undo|redo|apply|applyBinary|Error|native|Native):\s*){0,2}(InvalidCommand|NotFound|Validation|Serialization|OutOfBounds|Unsupported|Internal|Cancelled):\s*([\s\S]*)$/.exec(msg);
+  if (legacy) {
+    const codes: Record<string, EngineErrorShape["code"]> = {
+      InvalidCommand: "invalid_command", NotFound: "not_found", Validation: "validation",
+      Serialization: "serialization", OutOfBounds: "out_of_bounds", Unsupported: "unsupported",
+      Internal: "internal", Cancelled: "cancelled",
+    };
+    const code = codes[legacy[1]!]!;
+    return new EngineError({ code, message: legacy[2]!, recoverable: code !== "internal" });
+  }
   return new EngineError({ code: "internal", message: msg, recoverable: false });
 }
 
+/** Normalize rejections from raw native documents/tasks using the same closed
+ * error categories as EngineHost. Unknown native failures remain fatal. */
+export { parseNativeError as normalizeNativeEngineError };
+
 /**
- * Create the production host. Resolves `react-native-nitro-modules` lazily so
- * this module stays importable where Nitro doesn't exist (Node tooling).
+ * Create the production factory, including native tasks and media caches.
+ * Resolve the generated constructor lazily so Node/web imports have no native
+ * runtime side effects. Callers own and must close documents and caches.
  */
-export function createNitroHost(): EngineHost {
+export function createNativeForgeFactory(): ForgeFactory {
   // Generated v1 constructor uses getHybridClass, never the removed v0 API.
   // Loading it only here preserves Node tooling and web host isolation.
   const { ForgeFactory } = require("#nitro/ForgeFactory") as {
-    ForgeFactory: new () => ForgeFactoryNative;
+    ForgeFactory: new () => ForgeFactory;
   };
-  return new NitroHost(new ForgeFactory());
+  return new ForgeFactory();
+}
+
+export function createNitroHost(): EngineHost {
+  return new NitroHost(createNativeForgeFactory());
 }

@@ -14,7 +14,9 @@ export const OPS = {
   deleteRange: "deleteRange",
   replaceRange: "replaceRange",
   applyStyle: "applyStyle",
+  changeCase: "changeCase",
   setBlockKind: "setBlockKind",
+  setListKind:"setListKind",setListFormat:"setListFormat",shiftListLevel:"shiftListLevel",
   insertBlock: "insertBlock",
   splitBlock: "splitBlock",
   mergeBlock: "mergeBlock",
@@ -25,8 +27,15 @@ export const OPS = {
   importDocx: "importDocx",
 } as const;
 
+export type TextCase = "sentence" | "lower" | "upper" | "capitalize";
+
 export type BlockKind = "para" | "h1" | "h2" | "h3" | "list" | "quote";
 
+export type ListKind="none"|"bullet"|"numbered"|"multilevel";
+export type ListFormat="bullet"|"decimal"|"lowerLetter"|"upperLetter"|"lowerRoman"|"upperRoman";
+export interface ListLevel {format:ListFormat;start:number;indent_twips:number;hanging_twips:number}
+export interface ListDefinition {id:number;kind:Exclude<ListKind,"none">;levels:readonly ListLevel[]}
+export interface ListItem {level:number;definition:ListDefinition}
 export interface Pos {
   block: number;
   offset: number;
@@ -41,6 +50,12 @@ export interface Style {
   underline?: boolean;
   strike?: boolean;
   color?: string;
+  /** Exact #RRGGBB inline background color; null clears. */
+  highlight?: string | null;
+  /** Direct Latin run font; null clears an explicit family. Does not install fonts. */
+  font_family?: string | null;
+  /** Points, 1..1638 in half-point increments; null clears an explicit size. */
+  font_size?: number | null;
   link?: string;
 }
 export interface LayoutLine {
@@ -56,8 +71,8 @@ export class QuillDocument {
   private constructor(private doc: DocumentHandle) {}
 
   static async open(host: EngineHost): Promise<QuillDocument> {
-    const doc = await DocumentHandle.open(host, "quill");
-    await doc.apply(OPS.newDoc, {});
+    const doc = await DocumentHandle.openInitialized(host, "quill",
+      (document) => document.apply(OPS.newDoc, {}));
     return new QuillDocument(doc);
   }
 
@@ -66,8 +81,8 @@ export class QuillDocument {
     host: EngineHost,
     docxBytes: Uint8Array,
   ): Promise<QuillDocument> {
-    const doc = await DocumentHandle.open(host, "quill");
-    await doc.apply(OPS.importDocx, { bytes_b64: bytesToBase64(docxBytes) });
+    const doc = await DocumentHandle.openInitialized(host, "quill",
+      (document) => document.apply(OPS.importDocx, { bytes_b64: bytesToBase64(docxBytes) }));
     return new QuillDocument(doc);
   }
 
@@ -75,8 +90,7 @@ export class QuillDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<QuillDocument> {
-    const doc = await DocumentHandle.open(host, "quill");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openSnapshot(host, "quill", bytes);
     return new QuillDocument(doc);
   }
 
@@ -97,9 +111,18 @@ export class QuillDocument {
   replaceRange(from: Pos, to: Pos, text: string) {
     return this.call<{ deleted_text: string }>(OPS.replaceRange, { from, to, text });
   }
+  /** Unicode default casing; preserves run styles and returns the adjusted scalar selection. */
+  changeCase(from: Pos, to: Pos, mode: TextCase) {
+    return this.call<{ from: Pos; to: Pos }>(OPS.changeCase, { from, to, mode });
+  }
   applyStyle(from: Pos, to: Pos, style: Style) {
     return this.call(OPS.applyStyle, { from, to, style });
   }
+  setListKind(first:number,last:number,kind:ListKind){return this.call<{ok:boolean}>(OPS.setListKind,{first,last,kind});}
+  setListFormat(first:number,last:number,level:number,format:ListFormat,options:Partial<Pick<ListLevel,"start"|"indent_twips"|"hanging_twips">>={}){
+    return this.call<{ok:boolean}>(OPS.setListFormat,{...(options.start===undefined?{}:{start:options.start}),...(options.indent_twips===undefined?{}:{indent_twips:options.indent_twips}),...(options.hanging_twips===undefined?{}:{hanging_twips:options.hanging_twips}),first,last,level,format});
+  }
+  shiftListLevel(first:number,last:number,direction:1|-1){return this.call<{ok:boolean}>(OPS.shiftListLevel,{first,last,direction});}
   setBlockKind(block: number, kind: BlockKind) {
     return this.call(OPS.setBlockKind, { block, kind });
   }

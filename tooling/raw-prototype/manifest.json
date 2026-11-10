@@ -1,0 +1,21 @@
+{
+  "prototypeOnly": true,
+  "source": {
+    "version": "0.22.3",
+    "url": "https://www.libraw.org/data/LibRaw-0.22.3.tar.gz",
+    "sha256": "789f3c33466210a1a0907f747a97c715d21bbf4af712f257fcbbd90111b227e4",
+    "licenseOptions": ["LGPL-2.1-only", "CDDL-1.0"],
+    "notices": ["COPYRIGHT", "LICENSE.LGPL", "LICENSE.CDDL"]
+  },
+  "fixture": {
+    "name": "Pentax K-7 12bit (3:2) camera DNG",
+    "repositoryId": 827,
+    "url": "https://raw.pixls.us/getfile.php/827/nice/Pentax%20-%20K-7%20-%2012bit%20(3:2).DNG",
+    "sha256": "f441c36678dfca4f38e25a580f4f8485d78d8067a054153bc36be71e56c92386",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "provenance": "https://raw.pixls.us/json/getrepository.php?set=all",
+    "listedDate": "2017-01-12",
+    "listedSizeMB": 19.85
+  }
+}

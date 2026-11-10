@@ -1,0 +1,6 @@
+{
+  "description": "Source: android-devtools\nMode: nested\nCoordinates are normalized [0,1] fractions of the screen (x, y, width, height), not pixels.\nPass them straight to gesture-tap / gesture-swipe / gesture-pinch, which expect this same space.\nTo tap an element, use its centre: tap_x = frame.x + frame.width / 2, tap_y = frame.y + frame.height / 2.\n\nROOT  Screen (0.000, 0.000, 1.000, 1.000)\n\n  Image \"Back\" id=\"com.android.launcher3:id/back\" [clickable,long-clickable]  (0.152, 0.950, 0.174, 0.048)\n  Image \"Home\" id=\"com.android.launcher3:id/home\" [clickable,long-clickable]  (0.402, 0.950, 0.194, 0.048)\n  Image \"Recents\" id=\"com.android.launcher3:id/recent_apps\" [clickable,long-clickable]  (0.672, 0.950, 0.174, 0.048)\n  ScrollView [scrollable]  (0.000, 0.000, 1.000, 1.000)\n    StaticText \"Native media passed: 192x128; frame 150000us 96x64; PCM 12000 frames at 24000Hz, 440 crossings; bounds and cache cleanup.\"  (0.058, 0.026, 0.883, 0.057)",
+  "source": "android-devtools"
+}
+--- Screen after action ---
+Saved: /var/folders/37/s0s6qm2x3cx1mdsr_fv0y1pr0000gn/T/simserver-i3A1ko/media/648156000-1793979784655.png

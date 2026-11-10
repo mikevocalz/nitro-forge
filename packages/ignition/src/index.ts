@@ -13,6 +13,8 @@ export { base64ToBytes, bytesToBase64 } from "./base64";
 export {
   NitroHost,
   createNitroHost,
+  createNativeForgeFactory,
+  normalizeNativeEngineError,
   type EngineHost,
   type ForgeFactoryNative,
   type ForgeDocumentNative,
@@ -20,3 +22,6 @@ export {
 export { DocumentHandle, type ForgeListener } from "./document";
 export type { ForgeFactory } from "./specs/ForgeFactory.nitro";
 export type { ForgeDocument } from "./specs/ForgeDocument.nitro";
+export type { ForgeTask } from "./specs/ForgeTask.nitro";
+export type { ForgeMediaCache } from "./specs/ForgeMediaCache.nitro";
+export type { ForgeBinaryCommandResult } from "./contracts";

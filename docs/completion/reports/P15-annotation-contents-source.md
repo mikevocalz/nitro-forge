@@ -1,0 +1,9 @@
+# P15 persistent PDF annotation text edits
+
+Added `setAnnotationContents({page,id,contents})` and a typed FolioDocument method. The operation resolves an actual page-owned Text/Highlight annotation, validates a maximum of 32767 UTF-16 code units (64 KiB including BOM), edits only its PDF /Contents entry in a scratch document, then records one undo entry before replacement. Wrong-page/missing/dangling annotations, unsupported types, invalid payloads and oversized text fail before live mutation/history changes. Identical decoded text emits no event or undo entry, preserving redo.
+
+Annotation creation now uses lopdf's existing `text_string` helper: ASCII uses PDFDocEncoding, non-ASCII uses UTF-16BE. Annotation listing uses the corresponding `decode_text_string`; the unrelated lossy page-content text extraction remains unchanged. The new operation preserves annotation identity, geometry and unrelated dictionary data. It does not fabricate author/time, appearance streams, replies, resolved state or rendered page pixels.
+
+Verification: all 20 Folio engine tests pass, including three new focused tests for Unicode PDF save/reopen and NFD1 roundtrip, undo/redo/noops, wrong-page/missing/oversized/unsupported atomicity, and indirect Annots arrays. Four existing office adapter tests and the Folio TypeScript typecheck pass. No native build, broad platform suite or runtime UI check ran.
+
+The engine operation is implemented, so its engine deferral is removed. The pinned canonical CommentsThreadPanel has no edit callback; no replacement control or invented callback was added. Its existing delete/reply/resolve capabilities are unchanged. Rendering, glyph positions, additional annotation types, authors/replies/review state and the wider P15 exit remain open. Existing whole-PDF scratch/history clones retain their memory costs; this slice makes no bounded total-memory claim or component/phase acceptance promotion.

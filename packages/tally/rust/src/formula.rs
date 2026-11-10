@@ -38,6 +38,8 @@
 //! * Error literals (`#DIV/0!`, `#VALUE!`, `#REF!`, `#NAME?`, `#NUM!`,
 //!   `#CYCLE!`) may be written in formulas and evaluate to themselves.
 
+mod conditional;
+
 use serde_json::{json, Value as JsonValue};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -914,6 +916,7 @@ pub struct Evaluator<'a, S: CellLookup + ?Sized> {
     visiting: HashSet<String>,
     memo: HashMap<String, Value>,
     depth: usize,
+    conditional_work: usize,
 }
 
 impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
@@ -923,6 +926,7 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
             visiting: HashSet::new(),
             memo: HashMap::new(),
             depth: 0,
+            conditional_work: 0,
         }
     }
 
@@ -1142,6 +1146,8 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
     fn eval_call(&mut self, name: &str, args: &[Expr]) -> Value {
         let un = name.to_ascii_uppercase();
         match un.as_str() {
+            "COUNTIF" => self.conditional(args, false),
+            "SUMIF" => self.conditional(args, true),
             "SUM" | "AVERAGE" | "MIN" | "MAX" => {
                 let ns = match self.numbers(args) {
                     Ok(v) => v,

@@ -16,6 +16,8 @@ mod ffi_binary;
 mod ffi_v1;
 mod ffi_v1_parts;
 mod session_registry;
+#[cfg(test)]
+mod batch_tests;
 
 use ignition_core::{
     base64_decode,
@@ -34,6 +36,10 @@ fn factory(kind: EngineKind) -> Option<Box<dyn Engine>> {
         EngineKind::Pitch => Some(Box::new(pitch_engine::PitchEngine::new())),
         EngineKind::Tally => Some(Box::new(tally_engine::TallyEngine::new())),
         EngineKind::Quill => Some(Box::new(quill_engine::QuillEngine::new())),
+        EngineKind::Photo => Some(Box::new(photo_engine::PhotoEngine::new())),
+        EngineKind::Motion => Some(Box::new(motion_engine::MotionEngine::new())),
+        EngineKind::Design => Some(Box::new(design_engine::DesignEngine::new())),
+        EngineKind::Draft => Some(Box::new(draft_engine::DraftEngine::new())),
     }
 }
 
@@ -74,7 +80,7 @@ unsafe fn read_str<'a>(s: *const c_char) -> Result<&'a str, EngineError> {
         .map_err(|_| EngineError::invalid("argument is not valid UTF-8"))
 }
 
-/// Open an engine. `kind` is one of: prism cadence splice folio pitch tally quill.
+/// Open an engine. `kind` is one of: prism cadence splice folio pitch tally quill photo motion design draft.
 /// Returns a handle > 0, or 0 on failure (writes an error string to
 /// `*out_err`, free with nf_free_string).
 #[no_mangle]

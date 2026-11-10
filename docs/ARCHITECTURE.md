@@ -1,6 +1,6 @@
 # Nitro-Forge Architecture — Ignition Contracts
 
-Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill)
+Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill, Photo, Motion, Design and Draft)
 implement against these contracts. Changes require touching every engine, so they are
 deliberately small.
 
@@ -71,7 +71,16 @@ pub trait Engine: Send + 'static {
   *before* mutation (e.g. a cell's previous value, a clip's previous span, the pixel
   region about to be overwritten).
 - `undo`/`redo` return `Ok(false)` when the respective stack is empty — never an error.
-- A new `apply` clears the redo stack.
+- A new mutating `apply` clears the redo stack; read-only commands preserve it.
+
+`__batch` is an engine-level atomic boundary for compound gestures. Each engine
+stages its document state with a temporary one-entry journal, applies the bounded
+command plan there, and records its original state once before publishing a
+successful mutation. Original history is neither copied nor cleared while
+staging. Read-only and rejected plans leave the original journal untouched.
+Prism's shared raster buffers retain copy-on-write ownership. Native queues
+already serialize the whole command, so no other document operation observes
+an intermediate step. This adds no C ABI layout or generated Nitro type changes.
 
 ### Errors
 `EngineError { code, message, recoverable }` with a closed `ErrorCode` enum:
@@ -128,3 +137,15 @@ The additive C ABI in `nf_v1.h` preserves existing result layouts. Binary inputs
 `Engine::apply_long` checks cancellation before atomic operations. Cadence synthesis checks every 8192 samples and between mix stages; EQ/compressor processing retains continuous state and is not interrupted mid-stage. Folio save and Quill DOCX export add safe read-only checkpoints. Other commands may finish after cancellation was requested; a successful atomic mutation is never reported as cancelled. `cancelled` is a recoverable error. Progress is monotonic checkpoint progress, not elapsed-time estimation. Media decoding is a separate Expo queue and is not cancelled by ForgeTask.
 
 The media cache owns derived bytes only. Capacity is 1..256 MiB, with at most 4096 entries and 1024-byte keys. Put copies input before queueing; get returns a copy and updates LRU order. Close drains earlier work, clears bytes and rejects later operations. Keys must encode source revision and decode options. It neither persists engine documents nor generates waveforms/thumbnails itself. See recovery/PHASE6.md for executed checks and platform gates.
+
+
+The registered Photo engine adds catalog descriptors and version identities to the shared contract. Original bytes, decoder resources and durable asset retention remain host-owned; the catalog performs no I/O or RAW processing. Photo appends persisted/native kind tag 7 without changing established tags 0–6. Its explicit photo/schema-1 snapshot payload is inside unchanged NFD1 framing. Native binaries must include the new registered factory before opening this kind; source registration alone does not establish a target build or app rollout.
+
+
+The registered Motion engine appends native and NFC1/NCC1 tag 8 after Photo 7; tags 0–7 stay fixed. Its `kind:"motion",schema:1` JSON payload uses the unchanged NFD1 envelope header. Motion owns bounded flat 2D shape layers and scalar hold/linear/absolute-handle Bezier curves; frame evaluation materializes an ephemeral Prism engine and returns its actual RGBA composite through the original JSON/binary command result contract. It does not duplicate the renderer or own media/encoder resources. Geometry/translation/origin/rotation bounds match Prism's public 1e7 coordinate limit, with scale magnitude 1e-6..1e4 and same-sign scale curves.
+
+Motion validates the complete candidate before mutation and retains sixteen Arc/COW history entries under a 16 MiB serialized-state cap. Render tasks checkpoint between layers and before/after synchronous Prism flatten, without promising interruption inside that compositor. Snapshot opening uses the shared owning DocumentHandle.openSnapshot helper. Registration, focused host tests and generated enum checks do not establish a native target rebuild, app rollout, encoding queue or complete P11 acceptance.
+
+The registered Design engine appends native and NFC1/NCC1 tag 9 after Motion 8. Its explicit design/schema-1 tree uses the unchanged NFD1 envelope, sixteen Arc/COW history entries and an 8 MiB encoded-state cap. Fixed frame trees evaluate row/column layout into validated world boxes and render actual ephemeral Prism RGBA. Ancestor visibility and authored edit locks are explicit; unlocked ancestor layout may change a locked child's evaluated geometry. Frames have visible overflow, without a clipping claim. Full components, text layout, variables, constraints, prototypes, native consumer rebuild and application activation remain separate work.
+
+The registered Draft engine appends native/checkpoint identity 10 after Design9. It owns bounded 2D points, segments, snap settings and linear coordinate constraints, with real rank/DOF/residual results and atomic solved geometry. Exact locked coordinates remain fixed. World viewport and selection are host-owned; projected finite paths use actual Prism RGBA. Schema1 NFD1 snapshots have an 8 MiB cap and sixteen Arc/COW history entries. This source registration does not supply general nonlinear CAD, 3D processing, native target acceptance or default product activation.

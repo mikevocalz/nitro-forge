@@ -12,6 +12,10 @@ export const OPS = {
   renameSheet: "renameSheet",
   removeSheet: "removeSheet",
   setActive: "setActive",
+  moveSheet: "moveSheet",
+  duplicateSheet: "duplicateSheet",
+  protectSheet: "protectSheet",
+  setSheetColor: "setSheetColor",
   setCell: "setCell",
   setRange: "setRange",
   fillRange: "fillRange",
@@ -37,8 +41,10 @@ export interface CellInfo {
   computed: CellValue;
 }
 
+export type SheetTabTone = "primary" | "accent" | "success" | "info" | "muted";
+
 export interface WorkbookInfo {
-  sheets: { name: string; cell_count: number }[];
+  sheets: { name: string; cell_count: number; tone?: SheetTabTone | null; is_protected?: boolean }[];
   active: number;
 }
 
@@ -46,8 +52,8 @@ export class TallyDocument {
   private constructor(private doc: DocumentHandle) {}
 
   static async open(host: EngineHost): Promise<TallyDocument> {
-    const doc = await DocumentHandle.open(host, "tally");
-    await doc.apply(OPS.newDoc, {});
+    const doc = await DocumentHandle.openInitialized(host, "tally",
+      (document) => document.apply(OPS.newDoc, {}));
     return new TallyDocument(doc);
   }
 
@@ -56,8 +62,7 @@ export class TallyDocument {
     host: EngineHost,
     bytes: Uint8Array,
   ): Promise<TallyDocument> {
-    const doc = await DocumentHandle.open(host, "tally");
-    await doc.restore(bytes);
+    const doc = await DocumentHandle.openSnapshot(host, "tally", bytes);
     return new TallyDocument(doc);
   }
 
@@ -80,6 +85,18 @@ export class TallyDocument {
   }
   setActive(sheet: string | number) {
     return this.call(OPS.setActive, { sheet });
+  }
+  protectSheet(sheet: string | number, protectedValue: boolean) {
+    return this.call<{ ok: boolean }>(OPS.protectSheet, { sheet, protected: protectedValue });
+  }
+  duplicateSheet(sheet: string | number) {
+    return this.call<{ sheet: { id: number; name: string; index: number } }>(OPS.duplicateSheet, { sheet });
+  }
+  moveSheet(sheet: string | number, toIndex: number) {
+    return this.call<{ ok: boolean }>(OPS.moveSheet, { sheet, toIndex });
+  }
+  setSheetColor(sheet: string | number, tone: SheetTabTone | null) {
+    return this.call<{ ok: boolean }>(OPS.setSheetColor, { sheet, tone });
   }
   setCell(addr: string, value: string) {
     return this.call<{ addr: string; computed: CellValue }>(OPS.setCell, {

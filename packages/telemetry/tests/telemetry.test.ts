@@ -4,6 +4,38 @@ import { createTelemetry, instrumentHost, redactAttributes, scrubMessage } from 
 import { createTestTelemetry } from "../src/testing";
 
 describe("consent", () => {
+  it("does not resurrect spans after consent is revoked and restored", () => {
+    const t = createTelemetry({ consent: "local" });
+    const span = t.span("engine.apply");
+    t.setConsent("off");
+    t.setConsent("local");
+    span.end();
+    expect(t.exportTrace().events).toEqual([]);
+  });
+
+  it("flush waits for automatically dispatched sink work", async () => {
+    let complete!: () => void;
+    const t = createTelemetry({ consent: "diagnostics", batchSize: 1,
+      sink: () => new Promise<void>(resolve => { complete = resolve; }) });
+    t.trace("ready");
+    let settled = false;
+    const flushed = t.flush().then(() => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    complete();
+    await flushed;
+    expect(settled).toBe(true);
+  });
+
+  it("validates bounds and protects retained events from consumer mutation", () => {
+    expect(() => createTelemetry({ consent: "off", maxEvents: 0 })).toThrow(RangeError);
+    expect(() => createTelemetry({ consent: "local", batchSize: Infinity })).toThrow(RangeError);
+    const t = createTelemetry({ consent: "local" });
+    t.trace("ready", { count: 1 });
+    const event = t.exportTrace().events[0]!;
+    expect(Object.isFrozen(event)).toBe(true);
+    expect(Object.isFrozen(event.attrs)).toBe(true);
+  });
   it("records nothing under off, keeps local events on the device, sends only under diagnostics", async () => {
     const sent: unknown[] = [];
     const t = createTelemetry({ consent: "off", sink: b => void sent.push(...b), batchSize: 1 });

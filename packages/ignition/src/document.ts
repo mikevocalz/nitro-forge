@@ -22,6 +22,36 @@ export class DocumentHandle {
     return new DocumentHandle(host, kind, id);
   }
 
+  /** Publish a document only after initialization succeeds. Failed imports and
+   * restores release their native session without masking the original error. */
+  static async openInitialized(
+    host: EngineHost,
+    kind: EngineKind,
+    initialize: (document: DocumentHandle) => Promise<unknown>,
+  ): Promise<DocumentHandle> {
+    const document = await DocumentHandle.open(host, kind);
+    try {
+      await initialize(document);
+      return document;
+    } catch (error) {
+      try {
+        await document.close();
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], "Document initialization and cleanup failed", { cause: error });
+      }
+      throw error;
+    }
+  }
+
+  /** Own borrowed snapshot bytes before asynchronous native session allocation.
+   * The engine validates its envelope/schema; failed restores retain cleanup semantics. */
+  static async openSnapshot(host: EngineHost, kind: EngineKind, bytes: Uint8Array): Promise<DocumentHandle> {
+    if (bytes.byteLength > 256 * 1024 * 1024)
+      throw new RangeError("Snapshot exceeds the 256 MiB document boundary");
+    const owned = Uint8Array.from(bytes);
+    return DocumentHandle.openInitialized(host, kind, document => document.restore(owned));
+  }
+
   private assertOpen() {
     if (this.closed) {
       throw new Error(`document handle ${this.id} is closed`);
@@ -60,6 +90,15 @@ export class DocumentHandle {
     return res;
   }
 
+  /** One atomic engine edit and one history entry. A failed step leaves the
+   * document and both history stacks intact. Reserved operations cannot nest. */
+  applyBatch(commands: readonly Command[]): Promise<CommandResult<{ results: unknown[] }>> {
+    this.assertOpen();
+    if (!Array.isArray(commands) || commands.length < 1 || commands.length > 64)
+      return Promise.reject(new RangeError("A transaction requires 1..64 commands"));
+    return this.apply("__batch", { commands });
+  }
+
   /** Serialize the whole document into the versioned NFD1 envelope. */
   snapshot(): Promise<Uint8Array> {
     this.assertOpen();
@@ -73,14 +112,18 @@ export class DocumentHandle {
     this.emit([{ kind: "document:restored" }]);
   }
 
-  undo(): Promise<boolean> {
+  async undo(): Promise<boolean> {
     this.assertOpen();
-    return this.host.undo(this.id);
+    const changed = await this.host.undo(this.id);
+    if (changed) this.emit([{ kind: "document:changed" }]);
+    return changed;
   }
 
-  redo(): Promise<boolean> {
+  async redo(): Promise<boolean> {
     this.assertOpen();
-    return this.host.redo(this.id);
+    const changed = await this.host.redo(this.id);
+    if (changed) this.emit([{ kind: "document:changed" }]);
+    return changed;
   }
 
   async close(): Promise<void> {

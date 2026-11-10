@@ -16,7 +16,8 @@
     "./turret": "./src/persona-turret.tsx",
     "./composer": "./src/persona-composer.tsx",
     "./directions": "./src/forge-directions.ts",
-    "./nyc-tron-host": "./src/nyc-tron-host.tsx"
+    "./nyc-tron-host": "./src/nyc-tron-host.tsx",
+    "./rgba-png": "./src/rgba-png.ts"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",

@@ -12,13 +12,13 @@ import type {
   QuillListBinding, QuillOutlineHeading, QuillRibbonBinding,
 } from "../src/office-cluster";
 
-// RichTextRibbon: the toggles, color and paragraph style Quill can write.
+// RichTextRibbon: the toggles, font family, color and paragraph style Quill can write.
 export const ribbonFits = (b: QuillRibbonBinding): Pick<
-  RichTextRibbonProps, "onToggle" | "onColorChange" | "paragraphStyles" | "onParagraphStyleChange"
+  RichTextRibbonProps, "onToggle" | "onChangeCase" | "fontFamily" | "onFontFamilyChange" | "fontSize" | "onFontSizeChange" | "highlight" | "onHighlightChange" | "onColorChange" | "paragraphStyles" | "onParagraphStyleChange"
 > => b;
 // BulletsNumberingEditor: list items, kind and the kinds Quill stores.
 export const listFits = (b: QuillListBinding): Pick<
-  BulletsNumberingEditorProps, "items" | "kind" | "kinds" | "onKindChange"
+  BulletsNumberingEditorProps, "items" | "kind" | "kinds" | "selectionStart" | "selectionEnd" | "levelFormats" | "onKindChange" | "onLevelFormatChange" | "onShiftLevel"
 > => b;
 // NavigationOutline: headings read from the document.
 export const outlineFits = (headings: QuillOutlineHeading[]): NavigationOutlineProps["headings"] => headings;

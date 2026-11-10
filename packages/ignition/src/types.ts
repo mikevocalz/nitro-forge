@@ -8,6 +8,10 @@ export const ENGINE_KINDS = [
   "pitch",
   "tally",
   "quill",
+  "photo",
+  "motion",
+  "design",
+  "draft",
 ] as const;
 export type EngineKind = (typeof ENGINE_KINDS)[number];
 

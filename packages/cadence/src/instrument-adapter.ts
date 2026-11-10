@@ -65,8 +65,8 @@ function ensureBounded(value: number, min: number, max: number): number {
  * const controls = createCadenceTrackInstrumentBindings(cadence, track.id);
  * <InstrumentKnob label="Gain" value={track.volume} {...controls.gain}/>
  *
- * Never commit an x/y dual property pair using sequential operations until
- * Cadence has an atomic batch/transaction op. One gesture => one engine command.
+ * One gesture => one engine command. For paired gain/pan edits use the
+ * instrument session's xyPad binding, backed by the atomic engine batch.
  */
 export function createCadenceTrackInstrumentBindings(
   document: TrackCommands,

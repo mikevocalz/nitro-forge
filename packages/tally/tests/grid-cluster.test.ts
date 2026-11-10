@@ -10,14 +10,37 @@ const ok = <T>(data: T) => Promise.resolve({ events: [], data });
 
 function fakeSheets() {
   const state = { sheets: ["Sheet1", "Sheet2"], active: 0 };
+  const protectedNames = new Set<string>();
+  const tones = new Map<string, string | null>();
   const doc = {
-    workbook: vi.fn(() => ok({ sheets: state.sheets.map(name => ({ name, cell_count: 0 })), active: state.active })),
+    workbook: vi.fn(() => ok({ sheets: state.sheets.map(name => ({ name, cell_count: 0, tone: tones.get(name) ?? null, is_protected: protectedNames.has(name) })), active: state.active })),
     setActive: vi.fn((i: number) => { state.active = i; return ok({ ok: true }); }),
     addSheet: vi.fn(() => { state.sheets.push("Sheet" + (state.sheets.length + 1)); return ok({ sheet: "x" }); }),
     renameSheet: vi.fn((i: number, to: string) => {
       if (state.sheets.some(n => n.toLowerCase() === to.toLowerCase())) return Promise.reject(new Error(`sheet name '${to}' already exists`));
       state.sheets[i] = to; return ok({ ok: true });
     }),
+    protectSheet: vi.fn((i: number, value: boolean) => {
+      const name = state.sheets[i]!;
+      if (value) protectedNames.add(name); else protectedNames.delete(name);
+      return ok({ ok: true });
+    }),
+    duplicateSheet: vi.fn((i: number) => {
+      const active = state.sheets[state.active];
+      const name = state.sheets[i]! + " Copy 1";
+      state.sheets.splice(i + 1, 0, name);
+      tones.set(name, tones.get(state.sheets[i]!) ?? null);
+      state.active = state.sheets.indexOf(active!);
+      return ok({ sheet: { id: 2, name, index: i + 1 } });
+    }),
+    moveSheet: vi.fn((i: number, to: number) => {
+      const active = state.sheets[state.active];
+      const [sheet] = state.sheets.splice(i, 1);
+      state.sheets.splice(to, 0, sheet!);
+      state.active = state.sheets.indexOf(active!);
+      return ok({ ok: true });
+    }),
+    setSheetColor: vi.fn((i: number, tone: string | null) => { tones.set(state.sheets[i]!, tone); return ok({ ok: true }); }),
     removeSheet: vi.fn((i: number) => { state.sheets.splice(i, 1); state.active = Math.min(state.active, state.sheets.length - 1); return ok({ ok: true }); }),
   };
   return { state, doc: doc as unknown as TallySheetDocument, raw: doc };
@@ -56,9 +79,48 @@ describe("I-08 SheetTabs binding over Tally sheet ops", () => {
     await expect(binding.onSelect("-1")).rejects.toThrow(RangeError);
   });
 
+  it("forwards reorder and semantic tones and refreshes after each write", async () => {
+    const { doc, raw } = fakeSheets();
+    const changes: unknown[] = [];
+    const binding = await bindTallySheetTabs(doc, next => changes.push(next));
+    await binding.onMove("0", 1);
+    expect(raw.moveSheet).toHaveBeenCalledWith(0, 1);
+    expect(changes.at(-1)).toMatchObject({ activeId: "1", tabs: [{ name: "Sheet2" }, { name: "Sheet1" }] });
+    await binding.onToneChange("1", "accent");
+    expect(changes.at(-1)).toMatchObject({ tabs: [{ name: "Sheet2" }, { name: "Sheet1", tone: "accent" }] });
+    await binding.onToneChange("1", undefined);
+    expect(raw.setSheetColor).toHaveBeenLastCalledWith(1, null);
+    expect((changes.at(-1) as { tabs: unknown[] }).tabs[1]).not.toHaveProperty("tone");
+  });
+
+  it("forwards duplication and refreshes canonical tabs", async () => {
+    const { doc, raw } = fakeSheets();
+    const onChanged = vi.fn();
+    const binding = await bindTallySheetTabs(doc, onChanged);
+    await binding.onDuplicate("0");
+    expect(raw.duplicateSheet).toHaveBeenCalledWith(0);
+    expect(onChanged).toHaveBeenCalledWith(expect.objectContaining({
+      tabs: [{ id: "0", name: "Sheet1" }, { id: "1", name: "Sheet1 Copy 1" }, { id: "2", name: "Sheet2" }], activeId: "0",
+    }));
+  });
+
+  it("forwards protection and refreshes the canonical lock state", async () => {
+    const { doc, raw } = fakeSheets();
+    const onChanged = vi.fn();
+    const binding = await bindTallySheetTabs(doc, onChanged);
+    await binding.onProtectedChange("0", true);
+    expect(raw.protectSheet).toHaveBeenCalledWith(0, true);
+    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ tabs: [
+      { id: "0", name: "Sheet1", isProtected: true }, { id: "1", name: "Sheet2" },
+    ] }));
+    raw.protectSheet.mockRejectedValueOnce(new Error("rejected"));
+    await expect(binding.onProtectedChange("0", false)).rejects.toThrow("rejected");
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
   it("offers only callbacks Tally can back; the rest are named DEFERs", async () => {
     const binding = await bindTallySheetTabs(fakeSheets().doc, () => {});
-    expect(Object.keys(binding).sort()).toEqual(["activeId", "onAdd", "onRemove", "onRename", "onSelect", "tabs"]);
+    expect(Object.keys(binding).sort()).toEqual(["activeId", "onAdd", "onDuplicate", "onMove", "onProtectedChange", "onRemove", "onRename", "onSelect", "onToneChange", "tabs"]);
     for (const op of Object.keys(TALLY_DEFERRED_OPS)) expect(Object.values(OPS)).not.toContain(op);
   });
 });

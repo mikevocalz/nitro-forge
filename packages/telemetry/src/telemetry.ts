@@ -53,6 +53,16 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
   const maxEvents = options.maxEvents ?? 500;
   const batchSize = options.batchSize ?? 50;
   const clock = options.clock ?? (() => globalThis.performance.now());
+  for (const [name, value] of [["maxEvents", maxEvents], ["batchSize", batchSize]] as const) {
+    if (!Number.isSafeInteger(value) || value < 1 || value > 10000)
+      throw new RangeError(`${name} must be an integer in 1..10000`);
+  }
+  const checkConsent = (value: TelemetryConsent) => {
+    if (!["off", "local", "diagnostics"].includes(value)) throw new RangeError("Invalid telemetry consent");
+  };
+  checkConsent(options.consent);
+  let epoch = 0;
+  const pending = new Set<Promise<void>>();
   let consent = options.consent;
   let buffer: TelemetryEvent[] = [];
   let queue: TelemetryEvent[] = [];
@@ -75,6 +85,8 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
     }
   };
   const record = (event: TelemetryEvent) => {
+    Object.freeze(event.attrs);
+    Object.freeze(event);
     buffer.push(event);
     if (buffer.length > maxEvents) {
       buffer.splice(0, buffer.length - maxEvents);
@@ -86,7 +98,9 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
     if (queue.length >= batchSize) {
       const batch = queue;
       queue = [];
-      void send(batch);
+      const sending = send(Object.freeze(batch) as unknown as TelemetryEvent[]);
+      pending.add(sending);
+      void sending.finally(() => pending.delete(sending));
     }
   };
 
@@ -95,6 +109,8 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
       return consent;
     },
     setConsent(next) {
+      checkConsent(next);
+      if (next !== consent) epoch += 1;
       if (next === "off") {
         buffer = [];
         overflowed = 0;
@@ -106,12 +122,13 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
     span(name, attrs) {
       checkName(name);
       if (consent === "off") return noop;
+      const startedEpoch = epoch;
       const start = clock();
       const kept = attrsOf(attrs);
       let ended = false;
       return {
         end(outcome = "ok") {
-          if (ended || consent === "off") return;
+          if (ended || consent === "off" || startedEpoch !== epoch) return;
           ended = true;
           record({ type: "span", name, at: start, durationMs: Math.max(0, clock() - start), outcome, attrs: kept });
         },
@@ -160,10 +177,14 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
       };
     },
     async flush() {
-      if (consent !== "diagnostics" || !queue.length) return;
-      const batch = queue;
-      queue = [];
-      await send(batch);
+      if (consent === "diagnostics" && queue.length) {
+        const batch = queue;
+        queue = [];
+        const sending = send(Object.freeze(batch) as unknown as TelemetryEvent[]);
+        pending.add(sending);
+        void sending.finally(() => pending.delete(sending));
+      }
+      await Promise.all([...pending]);
     },
   };
   return telemetry;

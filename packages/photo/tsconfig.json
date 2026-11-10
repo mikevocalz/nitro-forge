@@ -1,0 +1,1 @@
+{"extends":"../../tsconfig.base.json","compilerOptions":{"types":["node"],"paths":{"@nitro-forge/ignition":["../ignition/src/index.ts"]}},"include":["src"]}

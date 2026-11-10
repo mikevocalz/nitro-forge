@@ -46,6 +46,8 @@ export function instrumentHost(host: EngineHost, telemetry: Telemetry): EngineHo
       kinds.delete(handle);
       return closed;
     },
-    dispose: () => host.dispose(),
+    async dispose() {
+      try { await host.dispose(); } finally { kinds.clear(); }
+    },
   };
 }

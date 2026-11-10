@@ -1,0 +1,38 @@
+{
+  "typed": "f6",
+  "keys": 1
+}
+--- Screen after action ---
+Saved: /var/folders/37/s0s6qm2x3cx1mdsr_fv0y1pr0000gn/T/simserver-HOjJ47/media/440495000-1793976718465.png
+--- Elements after action (describe) ---
+Source: ax-service
+Mode: flat
+Coordinates are normalized [0,1] fractions of the screen (x, y, width, height), not pixels.
+Pass them straight to gesture-tap / gesture-swipe / gesture-pinch, which expect this same space.
+To tap an element, use its centre: tap_x = frame.x + frame.width / 2, tap_y = frame.y + frame.height / 2.
+
+ROOT  AXGroup (0.000, 0.000, 1.000, 1.000)
+
+  AXGroup "Cadence native instrument editor"  (0.000, 0.000, 1.000, 1.000)
+  AXStaticText "Cadence / Native"  (0.034, 0.044, 0.931, 0.050)
+  AXAdjustable "Vertical scroll bar, 2 pages" value="0%"  (0.929, 0.087, 0.064, 0.826)
+  AXStaticText "SwiftUI · Jetpack Compose · Rust-owned document"  (0.034, 0.106, 0.931, 0.025)
+  AXStaticText "Diagnostics: local only"  (0.034, 0.157, 0.931, 0.025)
+  AXStaticText "Local mode keeps up to 200 events in memory. Nothing uploads automatically. Off clears the trace."  (0.034, 0.194, 0.931, 0.050)
+  AXGroup "Off" value="radio button, unchecked"  (0.034, 0.256, 0.117, 0.065)
+  AXGroup "Local only" value="radio button, checked"  (0.169, 0.256, 0.212, 0.065)
+  AXStaticText "Retained events: 4"  (0.034, 0.332, 0.931, 0.025)
+  AXButton "Share diagnostic trace"  (0.034, 0.369, 0.931, 0.071)
+  AXStaticText "Hardware keys: linked. F6 decreases gain, F7 Undo, F8 Redo."  (0.034, 0.452, 0.931, 0.025)
+  AXStaticText "Shortcut: Decrease gain"  (0.034, 0.489, 0.931, 0.025)
+  AXAdjustable "Gain" value="0.9"  (0.034, 0.540, 0.352, 0.242)
+  AXAdjustable "Pan" value="0"  (0.614, 0.540, 0.206, 0.242)
+  AXStaticText "0.9"  (0.163, 0.622, 0.094, 0.049)
+  AXStaticText "0"  (0.705, 0.636, 0.024, 0.029)
+  AXStaticText "Pan"  (0.697, 0.668, 0.039, 0.018)
+  AXStaticText "Gain"  (0.177, 0.674, 0.067, 0.026)
+  AXStaticText "Native instrument 01"  (0.067, 0.828, 0.867, 0.025)
+  AXStaticText "Gain 0.90 · Pan 0.00 · 120 BPM"  (0.067, 0.859, 0.867, 0.025)
+  AXGroup "SwiftUI / Compose knob" value="radio button"  (0.034, 0.930, 0.420, 0.070)
+  AXGroup "React Native knob" value="radio button"  (0.476, 0.930, 0.333, 0.070)
+  AXAdjustable "Horizontal scroll bar, 1 page" value="0%"  (0.017, 0.951, 0.856, 0.044)
