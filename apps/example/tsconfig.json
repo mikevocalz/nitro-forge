@@ -6,6 +6,9 @@
       "@webgpu/types"
     ],
     "noEmit": true,
+    "paths": {
+      "nitro-core": ["./node_modules/nitro-core"]
+    },
     "allowImportingTsExtensions": true
   },
   "include": [
