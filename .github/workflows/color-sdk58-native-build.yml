@@ -1,0 +1,81 @@
+name: Forge color SDK58 native builds
+
+on:
+  pull_request:
+    paths:
+      - 'packages/color-ui/**'
+      - 'apps/forge-color-lab/**'
+      - '.github/workflows/color-sdk58-native-build.yml'
+      - 'tooling/nyc-tron.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-native-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Use preinstalled GitHub-hosted Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "Using Android SDK: ${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Expo SDK58 Android project
+        run: pnpm --dir apps/forge-color-lab exec expo prebuild --platform android --no-install
+      - name: Compile app and linked native UI modules
+        working-directory: apps/forge-color-lab/android
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+  ios-native-build:
+    runs-on: macos-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Expo SDK58 Apple project
+        run: pnpm --dir apps/forge-color-lab exec expo prebuild --platform ios --no-install
+      - name: Resolve native CocoaPods dependencies
+        working-directory: apps/forge-color-lab/ios
+        run: pod install
+      - name: Compile native app for iOS Simulator without signing
+        working-directory: apps/forge-color-lab/ios
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only the top-level CocoaPods workspace is valid. The nested
+          # .xcodeproj/project.xcworkspace is NOT a CocoaPods workspace.
+          workspace=$(find . -maxdepth 1 -name '*.xcworkspace' -type d -print -quit)
+          project=$(find . -maxdepth 1 -name '*.xcodeproj' -type d -print -quit)
+          test -n "$workspace" && test -n "$project"
+          scheme=$(basename "$project" .xcodeproj)
+          echo "Compiling iOS app scheme: $scheme in $workspace"
+          # Explicitly check the actual app scheme, not first in the list
+          # (which can be 'boost' or an unrelated Pod target).
+          xcodebuild -list -json -workspace "$workspace" | SCHEME="$scheme" python3 -c 'import json,os,sys; d=json.load(sys.stdin); target=os.environ["SCHEME"]; assert target in d.get("workspace",{}).get("schemes",[]), f"Missing app scheme: {target}"'
+          xcodebuild -workspace "$workspace" -scheme "$scheme" \
+            -configuration Debug -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
