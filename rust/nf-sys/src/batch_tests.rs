@@ -6,7 +6,7 @@ fn batch(engine: &mut dyn Engine, steps: Value) -> Result<ignition_core::Command
 }
 
 #[test]
-fn compound_edits_are_atomic_single_history_entries_for_all_seven_engines() {
+fn compound_edits_are_atomic_single_history_entries_for_all_registered_engines() {
     let cases = [
         (EngineKind::Prism, json!({"width":2,"height":2}),
          json!({"op":"setColors","payload":{"foreground":[10,20,30,255]}}),
@@ -29,6 +29,21 @@ fn compound_edits_are_atomic_single_history_entries_for_all_seven_engines() {
         (EngineKind::Quill, json!({}), json!({"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"base"}}),
          json!([{"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"first "}},
                 {"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"second "}}])),
+        (EngineKind::Photo, json!({}),
+         json!({"op":"addOriginal","payload":{"sha256":"a".repeat(64),"asset_ref":"asset:before","byte_length":4,"camera_make":"test","camera_model":"test"}}),
+         json!([{"op":"addOriginal","payload":{"sha256":"b".repeat(64),"asset_ref":"asset:first","byte_length":4,"camera_make":"test","camera_model":"test"}},
+                {"op":"addOriginal","payload":{"sha256":"c".repeat(64),"asset_ref":"asset:second","byte_length":4,"camera_make":"test","camera_model":"test"}}])),
+        (EngineKind::Motion, json!({"width":2,"height":2}),
+         json!({"op":"addShapeLayer","payload":{"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[1,2,3,255]}}}),
+         json!([{"op":"addShapeLayer","payload":{"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[4,5,6,255]}}},
+                {"op":"addShapeLayer","payload":{"shape":{"kind":"ellipse","x":0,"y":0,"w":1,"h":1,"fill":[7,8,9,255]}}}])),
+        (EngineKind::Design, json!({"width":2,"height":2}),
+         json!({"op":"addShape","payload":{"parent":1,"kind":"rect","width":1,"height":1}}),
+         json!([{"op":"addShape","payload":{"parent":1,"kind":"rect","width":1,"height":1}},
+                {"op":"addShape","payload":{"parent":1,"kind":"ellipse","width":1,"height":1}}])),
+        (EngineKind::Draft, json!({}), json!({"op":"addPoint","payload":{"x":0,"y":0}}),
+         json!([{"op":"addPoint","payload":{"x":1,"y":1}},
+                {"op":"addPoint","payload":{"x":2,"y":2}}])),
     ];
     for (kind, initial, previous, edits) in cases {
         let mut engine = factory(kind).unwrap();
@@ -48,7 +63,12 @@ fn compound_edits_are_atomic_single_history_entries_for_all_seven_engines() {
         assert!(engine.redo().unwrap());
         assert_eq!(engine.snapshot().unwrap(), before, "prior redo {kind:?}");
 
-        let read = batch(engine.as_mut(), json!([{"op":"describe"},{"op":"describe"}])).unwrap();
+        // Draft's revision-bearing describe/query results cannot be returned
+        // from staged batches; its render is a supported read-only operation.
+        let read_op = if kind == EngineKind::Draft {
+            json!({"op":"renderFrame","payload":{"width":1,"height":1,"origin_x":0,"origin_y":0,"scale":1}})
+        } else { json!({"op":"describe","payload":{}}) };
+        let read = batch(engine.as_mut(), json!([read_op, read_op])).unwrap();
         assert!(read.events.is_empty(), "read-only batch {kind:?}");
         assert_eq!(engine.snapshot().unwrap(), before);
         assert!(engine.redo().unwrap(), "read-only batch erased redo {kind:?}");

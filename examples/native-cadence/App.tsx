@@ -19,6 +19,7 @@ import { shareDiagnosticTrace } from "./verify-documents";
 import { verifyNativeEngines } from "./verify-engines";
 import { verifyNativeServices } from "./verify-services";
 import { verifyNativeTelemetry } from "./verify-telemetry";
+import { verifyNativeRuntime } from "./verify-native-runtime";
 import { verifyPickerCancellation, shareTestSnapshot, importTestSnapshot,
   retainTestBookmark, restoreTestBookmark, verifyMissingFixture } from "./verify-documents";
 
@@ -315,6 +316,13 @@ export default function App() {
               action(async () => {
                 store.setState({ verification: null });
                 const verification = await verifyNativeTelemetry();
+                store.setState({ verification });
+              })}/>
+            <Action label="Verify native tasks and cache" disabled={state.pending} onPress={() =>
+              action(async () => {
+                store.setState({ verification: null });
+                const verification = await verifyNativeRuntime();
+                console.info(verification);
                 store.setState({ verification });
               })}/>
             <Action label="Test picker cancellation" disabled={state.pending} onPress={() =>

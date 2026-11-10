@@ -85,9 +85,9 @@ export class UndoTransactionCoordinator<T> {
       if (!commands.length) return { committed: false, result: null };
       const result = await this.document.applyBatch(commands);
       return { committed: result.events.some(event => event.kind === "document:changed"), result };
-    }).finally(() => { this.pending = undefined; });
-    const promise = operation.then(result => { this.idle(); return result; }, error => {
-      this.idle(error instanceof Error ? error.message : String(error)); throw error;
+    });
+    const promise = operation.then(result => { this.pending = undefined; this.idle(); return result; }, error => {
+      this.pending = undefined; this.idle(error instanceof Error ? error.message : String(error)); throw error;
     });
     this.pending = this.completed = { id, promise };
     this.publish({ phase: "committing", gestureId: id, input: active.input, preview: active.preview, error: null });
@@ -95,22 +95,25 @@ export class UndoTransactionCoordinator<T> {
   }
   private history(direction: "undo" | "redo"): Promise<boolean> {
     if (this.closed || this.pending || this.historyPending) return Promise.reject(new Error("Transaction coordinator is closed or committing"));
-    if (this.active) this.cancel(this.active.id);
-    const operation = Promise.resolve().then(() => this.document[direction]())
-      .finally(() => { this.historyPending = undefined; });
-    this.historyPending = operation.then(changed => { this.idle(); return changed; }, error => {
-      this.idle(error instanceof Error ? error.message : String(error)); throw error;
+    // Retire the preview without an intermediate idle publication. Observers
+    // must see history ownership before they can start another gesture.
+    this.active = undefined;
+    const operation = Promise.resolve().then(() => this.document[direction]());
+    const pending = operation.then(changed => { this.historyPending = undefined; this.idle(); return changed; }, error => {
+      this.historyPending = undefined; this.idle(error instanceof Error ? error.message : String(error)); throw error;
     });
+    this.historyPending = pending;
     this.publish({ phase: "committing", gestureId: null, input: null, preview: null, error: null });
-    return this.historyPending;
+    return pending;
   }
   undo(): Promise<boolean> { return this.history("undo"); }
   redo(): Promise<boolean> { return this.history("redo"); }
   close(): Promise<void> {
     if (this.closing) return this.closing;
-    this.closed = true; this.active = undefined; this.idle();
+    this.closed = true; this.active = undefined;
     this.closing = (this.pending?.promise.then(() => undefined) ?? this.historyPending?.then(() => undefined) ?? Promise.resolve())
       .finally(() => { this.listeners.clear(); });
+    this.idle();
     return this.closing;
   }
 }

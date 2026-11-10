@@ -17,6 +17,7 @@
     ]
   },
   "include": [
-    "App.tsx"
+    "App.tsx",
+    "RuntimeAcceptance.tsx"
   ]
 }

@@ -2,7 +2,7 @@ import { afterEach, expect, it } from "vitest";
 import { CliHost } from "../src/host-cli";
 import { DocumentCollaboration, CollaborationConflict, type CollaborationTransport,
   type RemoteRevision } from "../src/collaboration";
-import type { EngineKind } from "../src/types";
+import { ENGINE_KINDS, type EngineKind } from "../src/types";
 
 const hosts: CliHost[] = [];
 afterEach(async () => { await Promise.all(hosts.splice(0).map(h => h.dispose())); });
@@ -41,15 +41,17 @@ async function session(transport: CollaborationTransport, kind: EngineKind = "ca
     [{ op: "new", payload: kind === "prism" ? { width: 4, height: 4 } : kind === "folio" ? { pages: 1 } : {} }]);
 }
 
-it("round-trips all seven engines through owned remote revisions", async () => {
-  for (const kind of ["prism", "cadence", "splice", "folio", "pitch", "tally", "quill"] as EngineKind[]) {
+it("round-trips every registered engine through owned remote revisions", async () => {
+  for (const kind of ENGINE_KINDS) {
     const server = provider(); const a = await session(server.transport, kind);
-    const initial = (await a.describe()).data;
+    const initial = (await a.describe<Record<string, unknown>>()).data;
     expect(await a.undo()).toBe(false);
     expect(await a.syncNow()).toMatchObject({ revision: 1, dirty: false, syncing: false });
     const b = await session(server.transport, kind);
     await b.acceptRemote();
-    expect((await b.describe()).data).toEqual(initial);
+    // A remote restore advances Draft's owner-local stale-input token.
+    expect((await b.describe()).data).toEqual(kind === "draft"
+      ? { ...initial, source_revision: expect.any(Number) } : initial);
     expect(b.state).toMatchObject({ revision: 1, dirty: false });
     await a.close(); await b.close();
   }

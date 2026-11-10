@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createCheckpointStore, DocumentAutosave, type Checkpoint, type CheckpointStore } from "../src/autosave";
 import { DocumentHandle } from "../src/document";
 import { CliHost } from "../src/host-cli";
+import { ENGINE_KINDS } from "../src/types";
 
 const hosts: CliHost[] = [];
 afterEach(async () => { await Promise.all(hosts.splice(0).map(host => host.dispose())); });
@@ -22,6 +23,27 @@ async function fixture(store = memoryStore()) {
 }
 
 const tempo = async (doc: DocumentHandle) => (await doc.apply<{ tempo_bpm: number }>("describe")).data.tempo_bpm;
+
+it("reopens a durable checkpoint for every registered Rust engine", async () => {
+  const host = new CliHost(); hosts.push(host);
+  for (const kind of ENGINE_KINDS) {
+    let persisted: Uint8Array | undefined;
+    const store = createCheckpointStore({
+      read: async () => persisted,
+      write: async (_key, bytes) => { persisted = Uint8Array.from(bytes); },
+    });
+    const document = await DocumentHandle.open(host, kind);
+    await document.apply("new", kind === "prism" ? { width: 4, height: 4 } : kind === "folio" ? { pages: 1 } : {});
+    const expected = (await document.apply<Record<string, unknown>>("describe", {})).data;
+    const autosave = new DocumentAutosave(document, store, `document:${kind}`, 60_000);
+    await document.restore(await document.snapshot()); await autosave.flush();
+    const reopened = (await DocumentAutosave.recover(host, kind, store, `document:${kind}`))!;
+    // Draft's source_revision is a live owner's stale-input token, not saved state.
+    expect((await reopened.apply("describe", {})).data).toEqual(kind === "draft"
+      ? { ...expected, source_revision: expect.any(Number) } : expected);
+    await reopened.close(); await autosave.close(); await document.close();
+  }
+});
 
 it("keeps persisted engine tags stable and recovered snapshot views independently owned", async () => {
   let bytes: Uint8Array | undefined;
@@ -82,6 +104,27 @@ it("retains dirty state and the previous checkpoint after failed storage, then r
   store.write = write; await autosave.flush();
   expect(autosave.state).toMatchObject({ savedRevision: 2, error: null });
   await autosave.close(); await doc.close();
+});
+
+it("checkpoints an accepted edit whose completion arrives after close starts", async () => {
+  const { host, doc, store, autosave } = await fixture();
+  const editing = doc.apply("setTempo", { bpm: 145 });
+  const closing = autosave.close();
+  await Promise.all([editing, closing]);
+  const restored = await DocumentAutosave.recover(host, "cadence", store, "test-document");
+  expect(restored).toBeDefined();
+  expect(await tempo(restored!)).toBe(145);
+  await restored!.close(); await doc.close();
+});
+
+it("rejects shutdown when the final checkpoint cannot be persisted", async () => {
+  const { doc, store, autosave } = await fixture();
+  const failure = new Error("storage unavailable");
+  store.write = async () => { throw failure; };
+  await expect(autosave.close()).rejects.toBe(failure);
+  expect(autosave.state.error).toBe(failure);
+  expect(store.value).toBeUndefined();
+  await doc.close();
 });
 
 it("rejects foreign/corrupt recovery and closes a session when engine decoding fails", async () => {

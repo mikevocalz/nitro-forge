@@ -74,7 +74,7 @@ The screen uses the canonical production host:
 
 The screen disposes the host on failure, retry and unmount. **Reconnect native
 engine** exercises session replacement. **Verify native engines** initializes
-all seven Rust engines through JSI and checks describe, NFD1 round trips,
+every registered Rust engine through JSI and checks describe, NFD1 round trips,
 invalid-restore atomicity and closure. It also edits Cadence gain/pan, undoes,
 redoes and opens the saved bytes in a second document. Errors appear on screen;
 there is no CLI or fake fallback. Snapshot bytes are in memory and are not
@@ -82,6 +82,36 @@ claimed to be saved to device storage.
 
 See [the P01 report](../../docs/completion/reports/P01.md) for exact executed
 runtime evidence, native binary provenance and outstanding acceptance gates.
+
+### Task, cache and binary runtime acceptance
+
+**Verify native tasks and cache** constructs the generated `ForgeFactory`
+directly. It checks owned raw Prism input/output and restore buffers, native
+cache LRU/copy/bounds behavior, running Cadence cancellation at an observed
+checkpoint, queued mutation cancellation, task progress/result bytes, FIFO
+close, post-close rejection, and output lifetime after the source document
+closes. The verifier owns and closes its documents/cache and never substitutes
+a CLI or fake factory. A missing native binding is a failure.
+
+To run this screen automatically in an installed native build:
+
+```sh
+FORGE_ACCEPTANCE=runtime EXPO_PUBLIC_FORGE_REVISION=$(git rev-parse HEAD) \
+  pnpm start --port 8081 --localhost
+```
+
+The existing native consumer CI now launches its built Android APK and iOS
+simulator app using `tooling/native/run-runtime-acceptance.mjs`. It requires
+a native `FORGE_NATIVE_RUNTIME_PASS` report containing all eight checks and
+the matching platform/source commit, then saves the report and screenshot.
+Android checks the app's accessibility hierarchy; iOS captures the simulator
+app's native console. Metro logs are retained on failure. Typechecking,
+bundling, or compiling this harness alone does not satisfy runtime acceptance.
+
+For an already running Android emulator, set `FORGE_ANDROID_SERIAL` if it is
+not `emulator-5554`. For iOS, the runner uses an available iPhone simulator and
+shuts down only a simulator that it booted. Both runners need the corresponding
+platform toolchain and the built application artifact.
 
 ## Historical integration CI evidence
 

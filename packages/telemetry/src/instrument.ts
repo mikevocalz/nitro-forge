@@ -23,19 +23,24 @@ export function instrumentHost(host: EngineHost, telemetry: Telemetry): EngineHo
       const span = telemetry.span("engine.apply", { engine: engineOf(handle), op: cmd.op });
       try {
         const result = await host.apply<T>(handle, cmd);
-        span.end("ok");
-        telemetry.trace("engine.events", { engine: engineOf(handle), op: cmd.op, count: result.events.length });
+        if (span.end("ok")) telemetry.trace("engine.events", { engine: engineOf(handle), op: cmd.op, count: result.events.length });
         return result;
       } catch (error) {
-        span.end("error");
-        telemetry.failure("engine.apply", error, { engine: engineOf(handle), op: cmd.op });
+        if (span.end("error")) telemetry.failure("engine.apply", error, { engine: engineOf(handle), op: cmd.op });
         throw error;
       }
     },
     async snapshot(handle) {
-      const bytes = await telemetry.time("engine.snapshot", { engine: engineOf(handle) }, () => host.snapshot(handle));
-      telemetry.trace("engine.snapshot.size", { engine: engineOf(handle), bytes: bytes.byteLength });
-      return bytes;
+      const attrs = { engine: engineOf(handle) };
+      const span = telemetry.span("engine.snapshot", attrs);
+      try {
+        const bytes = await host.snapshot(handle);
+        if (span.end("ok")) telemetry.trace("engine.snapshot.size", { ...attrs, bytes: bytes.byteLength });
+        return bytes;
+      } catch (error) {
+        if (span.end("error")) telemetry.failure("engine.snapshot", error, attrs);
+        throw error;
+      }
     },
     restore: (handle, bytes) =>
       telemetry.time("engine.restore", { engine: engineOf(handle), bytes: bytes.byteLength }, () => host.restore(handle, bytes)),

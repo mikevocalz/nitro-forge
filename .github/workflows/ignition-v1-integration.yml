@@ -8,6 +8,7 @@ on:
       - 'packages/design/**'
       - 'packages/draft/**'
       - 'packages/collaboration-server/**'
+      - 'packages/telemetry/**'
       - 'rust/nf-sys/**'
       - 'rust/ignition-core/**'
       - 'rust/nf-cli/**'
@@ -39,6 +40,8 @@ jobs:
         run: |
           g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp tooling/native/serial_queue_test.cpp -o /tmp/serial-queue-test
           /tmp/serial-queue-test
+          g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp tooling/native/byte_cache_test.cpp -o /tmp/byte-cache-test
+          /tmp/byte-cache-test
       - run: cmp packages/ignition/cpp/nf_v1.h rust/nf-sys/include/nf_v1.h
       - run: cargo test --locked -p nf-sys && cargo build --locked -p nf-sys
       - name: Verify shared document lifecycle, autosave, transactions and collaboration
@@ -47,6 +50,8 @@ jobs:
           pnpm --filter @nitro-forge/ignition test
           pnpm --filter @nitro-forge/collaboration-server typecheck
           pnpm --filter @nitro-forge/collaboration-server test
+          pnpm --filter @nitro-forge/telemetry typecheck
+          pnpm --filter @nitro-forge/telemetry test
         env:
           NF_CLI: ${{ github.workspace }}/target/debug/nf-cli
       - name: Verify Photo Motion Design and Draft source backends

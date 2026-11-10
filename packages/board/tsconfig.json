@@ -3,8 +3,16 @@
   "compilerOptions": {
     "noEmit": true,
     "resolvePackageJsonImports": true,
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "experimentalDecorators": false
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "nitrogen/generated/shared/javascript/**/*.d.cts"]
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "nitrogen/generated/shared/javascript/**/*.d.cts",
+    "src/**/*.tsx"
+  ]
 }

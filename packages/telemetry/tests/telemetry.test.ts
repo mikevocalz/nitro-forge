@@ -4,6 +4,20 @@ import { createTelemetry, instrumentHost, redactAttributes, scrubMessage } from 
 import { createTestTelemetry } from "../src/testing";
 
 describe("consent", () => {
+  it.each(["off", "local", "diagnostics"] as const)("does not retrospectively record an async failure started under %s", async consent => {
+    const sent: unknown[] = [];
+    const t = createTelemetry({ consent, batchSize: 1, sink: batch => { sent.push(...batch); } });
+    let reject!: (error: Error) => void;
+    const failure = new Error("task failed");
+    const task = t.time("engine.apply", { op: "render" }, () => new Promise<void>((_resolve, fail) => { reject = fail; }));
+    t.setConsent("off"); t.setConsent("diagnostics");
+    reject(failure);
+    await expect(task).rejects.toBe(failure);
+    await t.flush();
+    expect(t.exportTrace().events).toEqual([]);
+    expect(sent).toEqual([]);
+  });
+
   it("does not resurrect spans after consent is revoked and restored", () => {
     const t = createTelemetry({ consent: "local" });
     const span = t.span("engine.apply");
@@ -67,6 +81,17 @@ describe("consent", () => {
 });
 
 describe("privacy", () => {
+  it("redacts arbitrary error names and runtime engine codes before storing or sending", async () => {
+    const tt = createTestTelemetry();
+    const error = new Error("failed"); error.name = "https://private.example/document-secret";
+    tt.telemetry.failure("engine.apply", error);
+    tt.telemetry.failure("engine.apply", new EngineError({ code: "private document text" as never, message: "failed", recoverable: true }));
+    await tt.telemetry.flush();
+    expect(tt.failures().map(event => event.code)).toEqual(["unknown", "unknown"]);
+    expect(tt.sent().map(event => event.type === "failure" && event.code)).toEqual(["unknown", "unknown"]);
+    expect(tt.telemetry.exportTrace().redacted).toBe(2);
+  });
+
   it("drops attributes that could carry document text", () => {
     const { attrs, dropped } = redactAttributes({ op: "set_text", engine: "quill", bytes: 12, ok: true,
       text: "Dear Ms. Alvarez, the contract…", nan: Number.NaN, "bad key": "x" });
@@ -95,6 +120,36 @@ describe("privacy", () => {
 });
 
 describe("timings and buffer", () => {
+  it("bounds a stalled sink to one active batch and the latest maxEvents queued", async () => {
+    const batches: string[][] = [];
+    let release!: () => void;
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const t = createTelemetry({ consent: "diagnostics", batchSize: 1, maxEvents: 2, sink: async batch => {
+      batches.push(batch.map(event => event.name));
+      if (batches.length === 1) await blocked;
+    } });
+    t.trace("first"); await Promise.resolve();
+    for (let i = 0; i < 20; i++) t.trace(`queued.${i}`);
+    await Promise.resolve();
+    expect(batches).toEqual([["first"]]);
+    release(); await t.flush();
+    expect(batches).toEqual([["first"], ["queued.18"], ["queued.19"]]);
+    expect(t.exportTrace().events.map(event => event.name)).toEqual(["queued.18", "queued.19"]);
+  });
+
+  it("drops unsent work after consent changes while an earlier batch is in flight", async () => {
+    const sent: string[] = [];
+    let release!: () => void;
+    const t = createTelemetry({ consent: "diagnostics", batchSize: 1, sink: async batch => {
+      sent.push(...batch.map(event => event.name));
+      await new Promise<void>(resolve => { release = resolve; });
+    } });
+    t.trace("first"); await Promise.resolve(); t.trace("discarded");
+    t.setConsent("off"); t.setConsent("diagnostics");
+    release(); await t.flush();
+    expect(sent).toEqual(["first"]);
+  });
+
   it("times spans on the clock, ends each once, and bounds the buffer", () => {
     let now = 0;
     const t = createTelemetry({ consent: "local", clock: () => now, maxEvents: 2 });
@@ -159,5 +214,21 @@ describe("instrumentHost", () => {
     expect(tt.failures("engine.apply")[0]).toMatchObject({ code: "invalid_command", attrs: { engine: "tally", op: "explode" } });
     expect(JSON.stringify(tt.events())).not.toContain("private");
     expect(tt.spans().map(s => s.name)).toEqual(["engine.open", "engine.apply", "engine.apply", "engine.snapshot", "engine.undo", "engine.close"]);
+  });
+
+  it.each(["apply", "snapshot", "failure"] as const)("drops %s completion metrics across a consent boundary", async operation => {
+    const t = createTelemetry({ consent: "local" }), original = fakeHost();
+    let release!: () => void;
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const failure = new Error("task rejected");
+    const bytes = new Uint8Array([1, 2]);
+    original.apply = async <T>() => { await blocked; if (operation === "failure") throw failure; return { data: {} as T, events: [] }; };
+    original.snapshot = async () => { await blocked; return bytes; };
+    const host = instrumentHost(original, t);
+    const task = operation === "snapshot" ? host.snapshot(7) : host.apply(7, { op: "render" });
+    t.setConsent("off"); t.setConsent("local"); release();
+    if (operation === "failure") await expect(task).rejects.toBe(failure);
+    else await task;
+    expect(t.exportTrace().events).toEqual([]);
   });
 });

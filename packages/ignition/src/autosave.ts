@@ -135,12 +135,13 @@ export class DocumentAutosave {
     return this.drain();
   }
 
-  private drain(): Promise<void> {
+  private drain(finalCheckpoint = false): Promise<void> {
     this.cancelTimer();
     if (this.running) return this.running;
     this.error = null;
     this.running = Promise.resolve().then(async () => {
-      while (this.savedRevision < this.revision) {
+      while (this.savedRevision < this.revision || finalCheckpoint) {
+        finalCheckpoint = false;
         const revision = this.revision;
         const bytes = await this.document.snapshot();
         validateCheckpoint(bytes);
@@ -159,13 +160,21 @@ export class DocumentAutosave {
     return this.running;
   }
 
-  /** Detach before closing the engine. Rejected flush remains observable and
+  /** Stop admitting edits before closing autosave, then close the engine after
+   * this resolves. A final queued snapshot includes accepted edits whose change
+   * events have not arrived yet. Rejected persistence remains observable and
    * rejects close; the caller can offer recovery without claiming a save. */
   close(): Promise<void> {
     if (this.closing) return this.closing;
     this.stopped = true;
     this.unsubscribe();
-    this.closing = this.drain().finally(() => { this.listeners.clear(); });
+    this.cancelTimer();
+    // Publish close before observers can reenter it, then start a distinct
+    // final save even if an earlier drain has just left its revision loop.
+    this.closing = Promise.resolve().then(async () => {
+      if (this.running) await this.running;
+      await this.drain(true);
+    }).finally(() => { this.listeners.clear(); });
     return this.closing;
   }
 
