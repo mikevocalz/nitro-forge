@@ -1,0 +1,11 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "environment": "react-native",
+  "cxxNamespace": ["forgeboard"],
+  "apple": { "moduleName": "NitroForgeBoard" },
+  "android": {
+    "namespace": ["forgeboard"],
+    "cxxLibName": "NitroForgeBoard"
+  },
+  "ignorePaths": ["**/node_modules", "**/tests"]
+}
