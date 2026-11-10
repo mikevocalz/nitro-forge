@@ -7,18 +7,17 @@ recorded independently.
 
 ## Candidate revisions and evidence
 
-- [Forge PR #70](https://github.com/mikevocalz/nitro-forge/pull/70) builds on Board PR #69; first source checkpoint `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`.
-- [NYC-Tron PR #57](https://github.com/mikevocalz/NYC-Tron-UI/pull/57), source/API/runtime-gate checkpoint `10f3df208b549567c5084eeea91b2d5f9863fd78`.
+- [Forge PR #70](https://github.com/mikevocalz/nitro-forge/pull/70) builds on Board PR #69; native/MMKV source checkpoint `cc4893b29f6182c71705a64785a41f5bbf3f5507` (following the first checkpoint `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`).
+- [NYC-Tron PR #57](https://github.com/mikevocalz/NYC-Tron-UI/pull/57), source/API/runtime-gate checkpoint `2449fe53f84ef4822e7eb8d275b0c1a6e440560f`.
 - [Viro PR #86](https://github.com/mikevocalz/viro/pull/86), actual Muse pose provider `e84a1a9a37168a835f7730e09016917b9d49c6ef`.
 
-The synced NYC-Tron inventory records 332 local implementations, eight pinned external
-implementations and one pending MMKV row at that historical inventory revision.
-This candidate now implements the actual MMKV 4.3.2 binding port to Nitro 120,
+The synced NYC-Tron inventory now records 332 local implementations and nine
+pinned external implementations: all 341 original IDs have reviewed source
+ownership. N-10 includes the actual MMKV 4.3.2 binding port to Nitro 120,
 including SwiftPM/JNI registration and the public all-engine
-`@nitro-forge/ignition/autosave/mmkv` adapter. The next committed NYC-Tron inventory
-will pin these source files. Native compilation and two-process runtime acceptance
-remain separate checks. Component completion stays in-progress until every
-mandatory gate has its own passing evidence.
+`@nitro-forge/ignition/autosave/mmkv` adapter. Native compilation and two-process
+runtime acceptance remain separate checks. Component completion stays
+in-progress until every mandatory gate has its own passing evidence.
 
 The source synchronization tool checks committed inventory bytes, exact 341 IDs,
 original baseline hash, names/phases, safe owner paths and immutable revisions.
@@ -29,8 +28,18 @@ See [native service evidence](../../recovery/V1_INFRASTRUCTURE_ACCEPTANCE.md) fo
 actual Rust/C++/TypeScript commands and limits. The
 [native runtime workflow](../../../.github/workflows/cadence-native-consumer.yml)
 launches the generated native Factory on iOS/Android and retains revision-bound
-reports, logs and screenshots. The first checkpoint passed thirteen independent
-source/adapter CI workflows; native app execution remains a distinct gate.
+reports, logs and screenshots. All fourteen non-native source/adapter/ledger
+workflows passed at the MMKV checkpoint; the native consumer install/type/port
+job and both native app jobs passed in [run 42759521341](https://github.com/mikevocalz/nitro-forge/actions/runs/42759521341).
+The tested merge was `aa11c3b3b3b9170a48c4ecfef8ae2a1ad3ed0533`, distinct from
+the candidate head. [Android receipts](../evidence/v1-native-cc4893b/android/provenance.json)
+and [iOS receipts](../evidence/v1-native-cc4893b/ios/provenance.json) retain the
+three initial write checks and fifteen final checks, all eleven engine kinds,
+a common run nonce and distinct process identities across OS termination/relaunch.
+The actual generated objects also passed binary ownership, cache bounds/LRU,
+FIFO close, task cancellation and snapshot lifetime checks. This proves those
+scoped emulator/simulator behaviors; it does not establish sudden-power-loss
+durability or the complete eight-platform matrix.
 
 ## Ownership and scope
 
@@ -47,19 +56,19 @@ NYC-Tron, artificial pose, or in-memory substitute is used as completion evidenc
 
 Public/native source is owned by NYC-Tron at the pinned inventory revision:
 
-- [packages/native-controls/src/NativePointerInput.tsx](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/src/NativePointerInput.tsx)
-- [packages/native-controls/src/NativePointerInput.web.tsx](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/src/NativePointerInput.web.tsx)
-- [packages/native-controls/src/pointer-input.ts](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/src/pointer-input.ts)
-- [packages/native-controls/ios/TronPointerCaptureView.swift](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/ios/TronPointerCaptureView.swift)
-- [packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt)
+- [packages/native-controls/src/NativePointerInput.tsx](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/src/NativePointerInput.tsx)
+- [packages/native-controls/src/NativePointerInput.web.tsx](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/src/NativePointerInput.web.tsx)
+- [packages/native-controls/src/pointer-input.ts](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/src/pointer-input.ts)
+- [packages/native-controls/ios/TronPointerCaptureView.swift](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/ios/TronPointerCaptureView.swift)
+- [packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt)
 
 ## N-03
 
 **LogitechMuseSpatialInk.** Actual Viro ARKit/GCStylus pose now provides validated orientation and tip pressure; Muse six-DoF and tracking-loss behavior still needs supported physical visionOS hardware.
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/spatial-ink`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/spatial-ink`.
 
-- [packages/spatial-ink/src/muse.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/spatial-ink/src/muse.ts)
+- [packages/spatial-ink/src/muse.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/spatial-ink/src/muse.ts)
 
 Owner: `mikevocalz/viro` at `e84a1a9a37168a835f7730e09016917b9d49c6ef`. Public imports: `@reactvision/react-viro:ViroVisionOSModule`.
 
@@ -73,86 +82,90 @@ Owner: `mikevocalz/viro` at `e84a1a9a37168a835f7730e09016917b9d49c6ef`. Public i
 
 Public/native source is owned by NYC-Tron at the pinned inventory revision:
 
-- [packages/native-controls/src/pointer-input.ts](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/src/pointer-input.ts)
-- [packages/native-controls/ios/TronPointerCaptureView.swift](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/ios/TronPointerCaptureView.swift)
-- [packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt)
+- [packages/native-controls/src/pointer-input.ts](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/src/pointer-input.ts)
+- [packages/native-controls/ios/TronPointerCaptureView.swift](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/ios/TronPointerCaptureView.swift)
+- [packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt)
 
 ## N-09
 
 **XRPresentationAdapter.** Typed optional Viro image renderer adapter now owns frame and native-load lifetimes; headset rendering/input/lifecycle/performance acceptance remains unverified.
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/board/xr`, `@nitro-forge/board/xr/viro`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/board/xr`, `@nitro-forge/board/xr/viro`.
 
-- [packages/board/src/xr/presentation.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/board/src/xr/presentation.ts)
-- [packages/board/src/xr/ViroDocumentSurface.tsx](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/board/src/xr/ViroDocumentSurface.tsx)
+- [packages/board/src/xr/presentation.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/board/src/xr/presentation.ts)
+- [packages/board/src/xr/ViroDocumentSurface.tsx](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/board/src/xr/ViroDocumentSurface.tsx)
 
 ## N-10
 
-**OfflineCheckpointAndAutosave.** The candidate contains the MMKV v4.3.2 Nitro 120 binding/SwiftPM/JNI port, the scoped all-engine MMKV storage adapter, and the repaired Board MMKV/Yjs adapters. The Linux gate compiles installed C++ against the actual host and reopens real MMKVCore storage in a second process. The native runner requires three write checks, OS termination, a distinct process token, and fifteen final checks covering all eleven engine kinds. Actual iOS/Android binding execution remains a required gate. See the [MMKV port and evidence guide](../../native/MMKV_V1_PORT.md).
+**OfflineCheckpointAndAutosave.** The candidate contains the MMKV v4.3.2 Nitro 120 binding/SwiftPM/JNI port, the scoped all-engine MMKV storage adapter, and the repaired Board MMKV/Yjs adapters. The Linux gate compiles installed C++ against the actual host and reopens real MMKVCore storage in a second process. The native runner requires three write checks, OS termination, a distinct process token, and fifteen final checks covering all eleven engine kinds. Actual iOS and Android binding execution passed in run `42759521341`; the original revision-bound receipts are linked above. Sudden-power-loss and the remaining platform matrix need separate evidence. See the [MMKV port and evidence guide](../../native/MMKV_V1_PORT.md).
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/ignition/autosave`, `@nitro-forge/board/offline/mmkv`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/autosave`, `@nitro-forge/ignition/autosave/mmkv`, `@nitro-forge/board/offline/mmkv`.
 
-- [packages/ignition/src/autosave.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/src/autosave.ts)
-- [packages/board/src/offline-mmkv.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/board/src/offline-mmkv.ts)
+- [packages/ignition/src/autosave.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/src/autosave.ts)
+- [packages/ignition/src/autosave-mmkv.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/src/autosave-mmkv.ts)
+- [packages/board/src/offline-mmkv.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/board/src/offline-mmkv.ts)
+- [examples/native-cadence/patches/react-native-mmkv@4.3.2.patch](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/examples/native-cadence/patches/react-native-mmkv@4.3.2.patch)
+- [examples/native-cadence/verify-board-offline.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/examples/native-cadence/verify-board-offline.ts)
+- [examples/native-cadence/verify-native-runtime.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/examples/native-cadence/verify-native-runtime.ts)
 
 ## N-11
 
 **CollaborationAdapter.** All eleven engine collaboration envelopes and real Yjs merge/reconnect/reopen adapters exist; authenticated multi-device/product transport and wider platform recovery evidence remain unverified.
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/ignition/collaboration`, `@nitro-forge/ignition/collaboration-http`, `@nitro-forge/board/offline/yjs`, `@nitro-forge/board/offline/sync`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/collaboration`, `@nitro-forge/ignition/collaboration-http`, `@nitro-forge/board/offline/yjs`, `@nitro-forge/board/offline/sync`.
 
-- [packages/ignition/src/collaboration.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/src/collaboration.ts)
-- [packages/ignition/src/collaboration-http.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/src/collaboration-http.ts)
-- [packages/board/src/offline-yjs.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/board/src/offline-yjs.ts)
-- [packages/board/src/offline-sync.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/board/src/offline-sync.ts)
+- [packages/ignition/src/collaboration.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/src/collaboration.ts)
+- [packages/ignition/src/collaboration-http.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/src/collaboration-http.ts)
+- [packages/board/src/offline-yjs.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/board/src/offline-yjs.ts)
+- [packages/board/src/offline-sync.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/board/src/offline-sync.ts)
 
 ## N-13
 
 **LongTaskScheduler.** Native queue/task source and Rust/C++ contract checks pass; generated-object simulator app-launch gate is running. Product latency/suspend/resume on the complete device matrix remains unverified.
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/ignition/nitro`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/nitro`.
 
-- [packages/ignition/src/specs/ForgeTask.nitro.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/src/specs/ForgeTask.nitro.ts)
-- [packages/ignition/cpp/NitroForgeV1/HybridForgeTask.hpp](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/cpp/NitroForgeV1/HybridForgeTask.hpp)
-- [packages/ignition/cpp/NitroForgeV1/SerialQueue.hpp](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/cpp/NitroForgeV1/SerialQueue.hpp)
+- [packages/ignition/src/specs/ForgeTask.nitro.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/src/specs/ForgeTask.nitro.ts)
+- [packages/ignition/cpp/NitroForgeV1/HybridForgeTask.hpp](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/cpp/NitroForgeV1/HybridForgeTask.hpp)
+- [packages/ignition/cpp/NitroForgeV1/SerialQueue.hpp](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/cpp/NitroForgeV1/SerialQueue.hpp)
 
 ## N-14
 
 **MediaCache.** Native byte/metadata bounds, LRU and allocation-failure safety have tests; generated-object app-launch evidence and device pressure budgets remain separate.
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/ignition/nitro`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/nitro`.
 
-- [packages/ignition/src/specs/ForgeMediaCache.nitro.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/src/specs/ForgeMediaCache.nitro.ts)
-- [packages/ignition/cpp/NitroForgeV1/ByteCache.hpp](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/cpp/NitroForgeV1/ByteCache.hpp)
-- [packages/ignition/cpp/NitroForgeV1/HybridForgeMediaCache.hpp](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/cpp/NitroForgeV1/HybridForgeMediaCache.hpp)
+- [packages/ignition/src/specs/ForgeMediaCache.nitro.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/src/specs/ForgeMediaCache.nitro.ts)
+- [packages/ignition/cpp/NitroForgeV1/ByteCache.hpp](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/cpp/NitroForgeV1/ByteCache.hpp)
+- [packages/ignition/cpp/NitroForgeV1/HybridForgeMediaCache.hpp](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/cpp/NitroForgeV1/HybridForgeMediaCache.hpp)
 
 ## N-15
 
 **UndoTransactionCoordinator.** Engine-side batch transactions cover all eleven engines; reentrant gesture/close lifetimes are fixed. Product undo/reopen interaction acceptance remains unverified on the complete platform matrix.
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/ignition/transactions`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/transactions`.
 
-- [packages/ignition/src/transactions.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/src/transactions.ts)
-- [rust/nf-sys/src/batch_tests.rs](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/rust/nf-sys/src/batch_tests.rs)
+- [packages/ignition/src/transactions.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/src/transactions.ts)
+- [rust/nf-sys/src/batch_tests.rs](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/rust/nf-sys/src/batch_tests.rs)
 
 ## N-16
 
 **NativeBinaryTransport.** Owned native ArrayBuffer request/result/checkpoint lifetimes have Rust/C++ checks and a generated-object app-launch gate; no zero-copy claim; full device memory/latency evidence remains unverified.
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/ignition/nitro`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/nitro`.
 
-- [packages/ignition/src/specs/ForgeDocument.nitro.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/src/specs/ForgeDocument.nitro.ts)
-- [packages/ignition/cpp/NitroForgeV1/HybridForgeDocument.hpp](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/ignition/cpp/NitroForgeV1/HybridForgeDocument.hpp)
+- [packages/ignition/src/specs/ForgeDocument.nitro.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/src/specs/ForgeDocument.nitro.ts)
+- [packages/ignition/cpp/NitroForgeV1/HybridForgeDocument.hpp](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/ignition/cpp/NitroForgeV1/HybridForgeDocument.hpp)
 
 ## N-18
 
 **TestAndTelemetryAdapter.** Consent-period ownership, bounded queues and redacted failures are implemented/tested. Product consent UX, configured sink and physical device traces remain independent acceptance work.
 
-Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. Public imports: `@nitro-forge/telemetry`, `@nitro-forge/telemetry/testing`.
+Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/telemetry`, `@nitro-forge/telemetry/testing`.
 
-- [packages/telemetry/src/telemetry.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/telemetry/src/telemetry.ts)
-- [packages/telemetry/src/instrument.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/telemetry/src/instrument.ts)
-- [packages/telemetry/src/testing.ts](https://github.com/mikevocalz/nitro-forge/blob/23f08c3b050c766222e5a8f33386fcca7bb8b6ac/packages/telemetry/src/testing.ts)
+- [packages/telemetry/src/telemetry.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/telemetry/src/telemetry.ts)
+- [packages/telemetry/src/instrument.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/telemetry/src/instrument.ts)
+- [packages/telemetry/src/testing.ts](https://github.com/mikevocalz/nitro-forge/blob/cc4893b29f6182c71705a64785a41f5bbf3f5507/packages/telemetry/src/testing.ts)
 
 ## N-19
 
@@ -160,11 +173,11 @@ Owner: `mikevocalz/nitro-forge` at `23f08c3b050c766222e5a8f33386fcca7bb8b6ac`. P
 
 Public/native source is owned by NYC-Tron at the pinned inventory revision:
 
-- [packages/platform-services/src/media/index.ts](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/platform-services/src/media/index.ts)
-- [packages/platform-services/src/media/index.native.ts](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/platform-services/src/media/index.native.ts)
-- [packages/platform-services/ios/NYCTronMediaDecoderModule.swift](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/platform-services/ios/NYCTronMediaDecoderModule.swift)
-- [packages/platform-services/android/src/main/java/com/nyctron/platformservices/AndroidMediaDecoder.kt](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/platform-services/android/src/main/java/com/nyctron/platformservices/AndroidMediaDecoder.kt)
-- [packages/native-controls/src/NativeVideoPlayer.tsx](https://github.com/mikevocalz/NYC-Tron-UI/blob/10f3df208b549567c5084eeea91b2d5f9863fd78/packages/native-controls/src/NativeVideoPlayer.tsx)
+- [packages/platform-services/src/media/index.ts](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/platform-services/src/media/index.ts)
+- [packages/platform-services/src/media/index.native.ts](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/platform-services/src/media/index.native.ts)
+- [packages/platform-services/ios/NYCTronMediaDecoderModule.swift](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/platform-services/ios/NYCTronMediaDecoderModule.swift)
+- [packages/platform-services/android/src/main/java/com/nyctron/platformservices/AndroidMediaDecoder.kt](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/platform-services/android/src/main/java/com/nyctron/platformservices/AndroidMediaDecoder.kt)
+- [packages/native-controls/src/NativeVideoPlayer.tsx](https://github.com/mikevocalz/NYC-Tron-UI/blob/2449fe53f84ef4822e7eb8d275b0c1a6e440560f/packages/native-controls/src/NativeVideoPlayer.tsx)
 
 ## Release boundary
 

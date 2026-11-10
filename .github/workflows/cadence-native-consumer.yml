@@ -46,8 +46,8 @@ jobs:
       - name: Typecheck
         working-directory: examples/native-cadence
         run: corepack pnpm typecheck
-      - name: Verify fresh native receipts and actual entry routing
-        run: node --test tooling/native/runtime-receipt.test.mjs
+      - name: Verify full native payload identity, fresh receipts and actual entry routing
+        run: node --test tooling/native/native-artifact.test.mjs tooling/native/runtime-receipt.test.mjs
       - name: Compile the MMKV v4 port and verify real core reopen
         env:
           FORGE_MMKV_PORT_OUTPUT: ${{ runner.temp }}/forge-mmkv-port

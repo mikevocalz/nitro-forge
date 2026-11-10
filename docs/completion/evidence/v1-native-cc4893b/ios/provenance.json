@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-10",
+  "repository": "mikevocalz/nitro-forge",
+  "headRevision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+  "testedMergeRevision": "aa11c3b3b3b9170a48c4ecfef8ae2a1ad3ed0533",
+  "workflowUrl": "https://github.com/mikevocalz/nitro-forge/actions/runs/42759521341",
+  "jobId": 129642079212,
+  "artifactId": 13738438154,
+  "artifactSha256": "f9de877e893dbf9d6b1c8eea49bbe3ef8eb04db09ee5e030299f9229031775c5",
+  "result": "passed",
+  "limits": "iOS simulator process termination/relaunch and generated-binding execution; no physical-device, sudden-power-loss, spoken screen-reader or complete eight-platform acceptance is inferred. This historical runner binarySha256 identifies the debug launcher only; the next runner separately fingerprints the complete app payload.",
+  "files": [
+    {
+      "path": "result.json",
+      "sha256": "b47e7481a0ccbbb36061f664dac7f4d7236f6d9b38d1860ca06fc118148dfb97",
+      "bytes": 1518
+    },
+    {
+      "path": "before-process-restart.json",
+      "sha256": "db0ba70a210c78404d7b72c5f69a6f3c9387bcbac3bdabbc750a42ce81c4489e",
+      "bytes": 531
+    },
+    {
+      "path": "invocation.json",
+      "sha256": "a8953c4aa23dfdac3160da15a07fd670529991213f387962382cd410d8edfbaf",
+      "bytes": 324
+    },
+    {
+      "path": "receipt-complete.json",
+      "sha256": "722dde45b13e1ae9e8291eee31158b350953d74388794da233704b65be178689",
+      "bytes": 1097
+    },
+    {
+      "path": "receipt-restart-required.json",
+      "sha256": "46f4021d8615803796ae89030b1f949bf698152529fd61e570f888a142e9391f",
+      "bytes": 654
+    },
+    {
+      "path": "selected-simulator.json",
+      "sha256": "dbd8d398b5906e4a8bd677bb52b7bcbe2afdd0d174ec05200a4f001651dbcda4",
+      "bytes": 501
+    }
+  ]
+}

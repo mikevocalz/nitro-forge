@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { parseRuntimeReceipt, runtimeChecks, verifyRestart } from "./runtime-receipt.mjs";
+import { recordNativeArtifact } from "./native-artifact.mjs";
 
 const [platform, input] = process.argv.slice(2);
 if (!["android", "ios"].includes(platform) || !input)
@@ -86,6 +87,7 @@ function storeFirst(report) {
 
 try {
   if (!existsSync(artifact)) throw new Error(`Built native app is missing: ${artifact}`);
+  const nativeArtifact = recordNativeArtifact(platform, artifact, output);
   revision = run("git", ["-C", repo, "rev-parse", "HEAD"]).trim();
   writeFileSync(join(output, "invocation.json"), JSON.stringify({ platform, artifact, revision, runId,
     requestedSimulator: process.env.FORGE_IOS_UDID ?? null }, null, 2) + "\n");
@@ -129,7 +131,7 @@ try {
   });
   const metro = await waitFor(async () => { const status = await probeMetro(); return status.ready ? status : undefined; }, "the acceptance Metro server", 90000);
   event("metro-ready", { origin: metro.origin });
-  let report, first, binary = artifact, host;
+  let report, first, launcher, host;
   if (platform === "android") {
     const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT;
     if (!sdk) throw new Error("ANDROID_HOME must point to the SDK used to build the app");
@@ -192,7 +194,7 @@ try {
     run("xcrun", ["simctl", "bootstatus", device.udid, "-b"], { timeout: 420000 });
     enter("installing iOS app");
     const executable = run("/usr/libexec/PlistBuddy", ["-c", "Print :CFBundleExecutable", join(artifact, "Info.plist")]).trim();
-    binary = join(artifact, executable);
+    launcher = join(artifact, executable);
     run("xcrun", ["simctl", "install", device.udid, artifact], { timeout: 180000 });
     let appProcess;
     for (let launch = 0; launch < 2; launch++) {
@@ -213,7 +215,8 @@ try {
   }
   enter("recording completed native evidence");
   writeFileSync(join(output, "result.json"), JSON.stringify({ ...report,
-    provenance: { ...host, sourceCommit: revision, binarySha256: await digest(binary), launches } }, null, 2) + "\n");
+    provenance: { ...host, sourceCommit: revision, nativeArtifact,
+      ...(launcher ? { launcherSha256: await digest(launcher) } : {}), launches } }, null, 2) + "\n");
   console.info(`Native ${platform} acceptance passed: ${runtimeChecks.length} generated-binding checks at ${revision}. Evidence: ${output}`);
 } catch (error) {
   event("failure", { message: error.message, stack: error.stack });

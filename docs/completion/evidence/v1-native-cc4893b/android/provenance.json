@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-10",
+  "repository": "mikevocalz/nitro-forge",
+  "headRevision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+  "testedMergeRevision": "aa11c3b3b3b9170a48c4ecfef8ae2a1ad3ed0533",
+  "workflowUrl": "https://github.com/mikevocalz/nitro-forge/actions/runs/42759521341",
+  "jobId": 129642079137,
+  "artifactId": 13737747520,
+  "artifactSha256": "d498f0592eaebae02b5bec8fe81d76921b7d15707bb8be2c201e381e6f306907",
+  "result": "passed",
+  "limits": "Android emulator app restart and generated-binding execution; no physical-device, power-loss, screen-reader speech or complete eight-platform acceptance is inferred.",
+  "files": [
+    {
+      "path": "result.json",
+      "sha256": "24a5ee1c194e3ec5013ca045a4dfe2e5bb9e765897ce3006d06449ece66ca6f1",
+      "bytes": 1535
+    },
+    {
+      "path": "before-process-restart.json",
+      "sha256": "829e19cfb7212d9cc195b3ea6480e36f7d76c6cf8e6e76879ef59651de04a57a",
+      "bytes": 535
+    },
+    {
+      "path": "invocation.json",
+      "sha256": "4dfaf6b697873fd8468855e85983456a03208702f46a28451ea1e15bbcf53975",
+      "bytes": 300
+    },
+    {
+      "path": "receipt-complete.json",
+      "sha256": "afbb8da67b37ffb43de775b1476ff11b7801007b92cddcfafe1b376d7d0ee089",
+      "bytes": 1120
+    },
+    {
+      "path": "receipt-restart-required.json",
+      "sha256": "6a13e09dbf16b2d63ce510f4224aa702c72e566e7f01ae012a6ebe76d1196ceb",
+      "bytes": 662
+    },
+    {
+      "path": "screen-1.png",
+      "sha256": "f881a1979e87b490212debbf8ceafc38356cea6337faaec73586a2d7dfc3e25e",
+      "bytes": 27171
+    },
+    {
+      "path": "screen-2.png",
+      "sha256": "fd94f53bdea754161cf22c2e32350a5f48e1c1b9612e3b3f5d8c8acee0bf3eb6",
+      "bytes": 44116
+    }
+  ]
+}

@@ -2,15 +2,18 @@
 
 ## V1 candidate checkpoint — 2026-11-10
 
-The approved twelve-row native/service scope is now active across Forge PR #70,
-NYC-Tron PR #57 and Viro PR #86. The source inventory is 332 local UI/platform
-implementations plus eight pinned external implementations at its last synchronized
-revision. The current candidate completes the real MMKV v4 binding against pinned
-Nitro 120 and adds all-eleven-engine storage/reopen verification; its native CI and
-next immutable inventory pin are separate follow-ups. Current ownership, exact commits
-and remaining acceptance are in [V1 platform closure](reports/V1-PLATFORM-CLOSURE.md).
-The complete 341-ID roster and eight required platforms are retained. No platform
-acceptance is inferred from source synchronization.
+The approved twelve-row native/service scope is implemented across Forge PR #70,
+NYC-Tron PR #57 and Viro PR #86. The committed NYC-Tron inventory at
+`2449fe53f84ef4822e7eb8d275b0c1a6e440560f` records 332 local implementations plus nine
+pinned external implementations, retaining all 341 original IDs. Forge's native
+MMKV v4/Nitro120 checkpoint is `cc4893b29f6182c71705a64785a41f5bbf3f5507`.
+Current ownership, actual verification and remaining acceptance are in
+[V1 platform closure](reports/V1-PLATFORM-CLOSURE.md). The eight required platforms
+are unchanged; source synchronization does not promote platform acceptance.
+At that Forge checkpoint, both actual mobile runtime jobs passed all fifteen
+final checks after OS termination/relaunch, recovering snapshots for all eleven
+engines through the MMKV v4 port. Original reports, artifact hashes and tested
+merge identity are retained in the linked closure report.
 
 ## Earlier phase evidence
 
