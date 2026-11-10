@@ -1,6 +1,11 @@
 import { Platform } from "react-native";
+import { createMMKV } from "react-native-mmkv";
 import { ForgeFactory } from "@nitro-forge/ignition/nitro";
-import { normalizeNativeEngineError, type ForgeDocument, type ForgeMediaCache, type ForgeTask } from "@nitro-forge/ignition";
+import { DocumentHandle, ENGINE_KINDS, normalizeNativeEngineError, type EngineKind, type ForgeDocument, type ForgeMediaCache, type ForgeTask } from "@nitro-forge/ignition";
+import { createCheckpointStore, DocumentAutosave } from "@nitro-forge/ignition/autosave";
+import { createMMKVCheckpointStorage } from "@nitro-forge/ignition/autosave/mmkv";
+import { ForgeV1EngineHost } from "@nitro-forge/ignition/v1-host";
+import { verifyBoardOffline } from "./verify-board-offline";
 
 function check(value: unknown, message: string): asserts value {
   if (!value) throw new Error(`Native runtime: ${message}`);
@@ -16,14 +21,62 @@ async function rejects(work: () => unknown | Promise<unknown>, message: string) 
 }
 const command = (op: string, payload: unknown = {}) => ({ op, payloadJson: JSON.stringify(payload) });
 
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value !== null && typeof value === "object") return Object.fromEntries(
+    Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, canonical(item)]));
+  return value;
+}
+function savedDescription(kind: EngineKind, description: Record<string, unknown>): string {
+  // Draft's source_revision identifies a live owner; it is not persisted state.
+  const value = { ...description };
+  if (kind === "draft") delete value.source_revision;
+  return JSON.stringify(canonical(value));
+}
+
 /** Runs only against generated Nitro v1 bindings in an installed native app.
  * No injectable host, CLI, mock or platform fallback can satisfy this routine. */
 export async function verifyNativeRuntime(): Promise<string> {
-  const started = performance.now(), checks: string[] = [];
+  const started = performance.now();
+  const mmkv = createMMKV({ id: "forge-board-native-acceptance", recoveryStrategy: "recover-on-error" });
+  const offline = await verifyBoardOffline(mmkv);
+  const checks = [...offline.checks];
   const factory = new ForgeFactory();
+  const checkpointHost = new ForgeV1EngineHost(factory);
+  const checkpointStore = createCheckpointStore(createMMKVCheckpointStorage(mmkv, {
+    scope: "native-acceptance/engine-checkpoints", maxCheckpointBytes: 8 * 1024 * 1024,
+  }));
   const documents: ForgeDocument[] = [], tasks: ForgeTask[] = [];
   let cache: ForgeMediaCache | undefined, primaryFailure: unknown;
   try {
+    if (offline.phase === "restart-required") {
+      for (const kind of ENGINE_KINDS) {
+        const document = await DocumentHandle.open(checkpointHost, kind);
+        try {
+          await document.apply("new", kind === "prism" ? { width: 4, height: 4 } : kind === "folio" ? { pages: 1 } : {});
+          const expected = savedDescription(kind, (await document.apply<Record<string, unknown>>("describe", {})).data);
+          await new DocumentAutosave(document, checkpointStore, kind, 60_000).close();
+          mmkv.set(`engine-checkpoint-description/${kind}`, expected);
+        } finally { await document.close(); }
+      }
+      mmkv.set("engine-checkpoint-run", offline.runId);
+      checks.push("mmkv-v4-all-engine-snapshot-write");
+      return `FORGE_NATIVE_RUNTIME_RESTART ${JSON.stringify({
+        schema: 1, platform: Platform.OS, revision: process.env.EXPO_PUBLIC_FORGE_REVISION ?? "local",
+        ...offline, checks, engineKinds: ENGINE_KINDS,
+      })}`;
+    }
+    check(mmkv.getString("engine-checkpoint-run") === offline.runId, "engine checkpoints belong to another run");
+    for (const kind of ENGINE_KINDS) {
+      const document = await DocumentAutosave.recover(checkpointHost, kind, checkpointStore, kind);
+      check(document, `${kind} checkpoint was missing after process relaunch`);
+      try {
+        const actual = savedDescription(kind, (await document.apply<Record<string, unknown>>("describe", {})).data);
+        check(actual === mmkv.getString(`engine-checkpoint-description/${kind}`), `${kind} checkpoint changed across process relaunch`);
+      } finally { await document.close(); }
+    }
+    checks.push("mmkv-v4-all-engine-snapshot-reopen");
+
     const prism = await factory.open("prism"); documents.push(prism);
     await prism.apply(command("new", { width: 1, height: 1 }));
     const layer = JSON.parse((await prism.apply(command("addRasterLayer"))).dataJson).layer_id;
@@ -101,14 +154,16 @@ export async function verifyNativeRuntime(): Promise<string> {
     checks.push("document-fifo-close", "output-survives-document-close");
 
     return `FORGE_NATIVE_RUNTIME_PASS ${JSON.stringify({ schema: 1, platform: Platform.OS,
-      revision: process.env.EXPO_PUBLIC_FORGE_REVISION ?? "local", checks, elapsedMs: Math.round(performance.now() - started) })}`;
+      revision: process.env.EXPO_PUBLIC_FORGE_REVISION ?? "local", runId: offline.runId, processToken: offline.processToken, checks, engineKinds: ENGINE_KINDS,
+      storage: { bindings: "react-native-mmkv@4.3.2 + Nitro 120 port", core: Platform.OS === "ios" ? "MMKVCore@2.4.0" : "io.github.zhongwuzw:mmkv@2.4.1" },
+      elapsedMs: Math.round(performance.now() - started) })}`;
   } catch (error) {
     primaryFailure = error; throw error;
   } finally {
     // Cancellation is nonblocking; document close drains every accepted task.
     const failures: unknown[] = [];
     for (const task of tasks) { try { task.cancel(); } catch (error) { failures.push(error); } }
-    const cleanup = await Promise.allSettled([...(cache ? [cache.close()] : []), ...documents.map(document => document.close())]);
+    const cleanup = await Promise.allSettled([checkpointHost.dispose(), ...(cache ? [cache.close()] : []), ...documents.map(document => document.close())]);
     failures.push(...cleanup.flatMap(result => result.status === "rejected" ? [result.reason] : []));
     try { factory.dispose(); } catch (error) { failures.push(error); }
     if (failures.length) throw new AggregateError(primaryFailure ? [primaryFailure, ...failures] : failures, "Native runtime cleanup failed");

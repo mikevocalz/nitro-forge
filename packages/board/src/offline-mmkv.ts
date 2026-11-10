@@ -15,10 +15,13 @@ const HEADER_BYTES = 32;
 const MAX_BYTES = 32 * 1024 * 1024;
 
 /** Detect corrupt/truncated values. Not a cryptographic security checksum. */
-function crc32(bytes: Uint8Array): number {
+function crc32(bytes: Uint8Array, wholeRecord = false): number {
   let crc = 0xffffffff;
-  for (const byte of bytes) {
-    crc ^= byte;
+  for (let index = 0; index < bytes.length; index++) {
+    // The checksum field cannot protect itself. Version 2 protects revision
+    // and sync metadata as well as document bytes.
+    if (wholeRecord && index >= 28 && index < HEADER_BYTES) continue;
+    crc ^= bytes[index]!;
     for (let i = 0; i < 8; i++) {
       crc = (crc >>> 1) ^ ((crc & 1) === 0 ? 0 : 0xedb88320);
     }
@@ -44,12 +47,12 @@ function encode(checkpoint: BoardCheckpoint, maxBytes: number): ArrayBuffer {
   const buffer = new ArrayBuffer(HEADER_BYTES + bytes.byteLength);
   const view = new DataView(buffer);
   view.setUint32(0, MAGIC, false);
-  view.setUint8(4, 1);
+  view.setUint8(4, 2);
   view.setBigUint64(8, BigInt(checkpoint.revision), false);
   view.setBigUint64(16, BigInt(checkpoint.syncedRevision), false);
   view.setUint32(24, bytes.byteLength, false);
-  view.setUint32(28, crc32(bytes), false);
   new Uint8Array(buffer, HEADER_BYTES).set(bytes);
+  view.setUint32(28, crc32(new Uint8Array(buffer), true), false);
   return buffer;
 }
 
@@ -58,7 +61,8 @@ function decode(documentId: string, raw: ArrayBuffer, maxBytes: number): BoardCh
     throw new CorruptCheckpointError(documentId, "MMKV board checkpoint is truncated");
   }
   const view = new DataView(raw);
-  if (view.getUint32(0, false) !== MAGIC || view.getUint8(4) !== 1) {
+  const format = view.getUint8(4);
+  if (view.getUint32(0, false) !== MAGIC || (format !== 1 && format !== 2)) {
     throw new CorruptCheckpointError(documentId, "MMKV board checkpoint schema is unsupported");
   }
   const revision = Number(view.getBigUint64(8, false));
@@ -70,7 +74,10 @@ function decode(documentId: string, raw: ArrayBuffer, maxBytes: number): BoardCh
     throw new CorruptCheckpointError(documentId, "MMKV board checkpoint header is invalid");
   }
   const bytes = new Uint8Array(raw, HEADER_BYTES, len);
-  if (crc32(bytes) !== view.getUint32(28, false)) {
+  // Legacy version 1 remains readable; the next successful save writes the
+  // stronger envelope. Loading never rewrites a user's stored checkpoint.
+  const checksum = format === 1 ? crc32(bytes) : crc32(new Uint8Array(raw), true);
+  if (checksum !== view.getUint32(28, false)) {
     throw new CorruptCheckpointError(documentId, "MMKV board checkpoint failed checksum");
   }
   return { schemaVersion: 1, documentId, revision, syncedRevision, data: new Uint8Array(bytes) };

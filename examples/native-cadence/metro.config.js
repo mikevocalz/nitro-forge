@@ -6,6 +6,7 @@
 //    the release tarballs. See docs/NYC_TRON_UI_HANDOFF.md.
 const path = require("node:path");
 const { getDefaultConfig } = require("expo/metro-config");
+const { withAcceptanceEntry } = require("./acceptance-entry.cjs");
 const { pinToApp, withNycTronDevLink, SHARED_RUNTIME } = require("../../tooling/nyc-tron-metro.cjs");
 
 const projectRoot = __dirname;
@@ -16,21 +17,25 @@ config.watchFolders = [
   path.join(forgeRoot, "packages/ignition"),
   path.join(forgeRoot, "packages/cadence"),
   path.join(forgeRoot, "packages/telemetry"),
+  path.join(forgeRoot, "packages/board"),
 ];
+
+// lib0's React Native WebCrypto entry expects a separate browser polyfill.
+// Yjs only uses getRandomValues through lib0/random; supply Expo's native RNG
+// for that importer alone. Other WebCrypto/subtle consumers keep normal
+// resolution and cannot mistake this for a complete WebCrypto implementation.
+const upstreamResolver = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if ((platform === "ios" || platform === "android") && moduleName === "lib0/webcrypto" &&
+      /\/lib0\/(?:random\.js|dist\/random(?:-[\w-]+)?\.cjs)$/.test(context.originModulePath.replaceAll("\\", "/"))) {
+    return { type: "sourceFile", filePath: path.join(projectRoot, "yjs-random.native.ts") };
+  }
+  return (upstreamResolver ?? context.resolveRequest)(context, moduleName, platform);
+};
 
 // Explicit lab mode serves a separate acceptance entry. Normal consumers keep
 // their released dependency graph; candidate-only exports are isolated here.
-const acceptanceEntry = { media: "media-acceptance", checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance", collaboration: "collaboration-acceptance", runtime: "runtime-acceptance" }[process.env.FORGE_ACCEPTANCE];
-if (acceptanceEntry) {
-  const rewrite = config.server?.rewriteRequestUrl;
-  config.server = {
-    ...config.server,
-    rewriteRequestUrl(url) {
-      const rewritten = rewrite ? rewrite(url) : url;
-      return rewritten.replace(/\/index\.bundle(?=\?|$)/, `/${acceptanceEntry}.bundle`);
-    },
-  };
-}
+withAcceptanceEntry(config, projectRoot);
 
 module.exports = withNycTronDevLink(
   pinToApp(config, { projectRoot, packages: [...SHARED_RUNTIME, "react-native-nitro-modules"] }),

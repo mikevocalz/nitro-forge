@@ -11,7 +11,7 @@ does not silently upgrade or mix native dependency versions.
 ## Dependencies
 
 This directory is its own pnpm workspace (`pnpm-workspace.yaml`,
-`pnpm-lock.yaml`). It joins `packages/ignition` and `packages/cadence` from
+`pnpm-lock.yaml`). It joins the Forge engine adapters, telemetry and Board from
 this repository's source and installs NYC-Tron from the
 `v0.1.0-alpha.4` release tarballs pinned in `tooling/nyc-tron.json`. There is
 no NYC-Tron checkout and no staging copy. A workspace override keeps every
@@ -100,13 +100,26 @@ FORGE_ACCEPTANCE=runtime EXPO_PUBLIC_FORGE_REVISION=$(git rev-parse HEAD) \
   pnpm start --port 8081 --localhost
 ```
 
-The existing native consumer CI now launches its built Android APK and iOS
-simulator app using `tooling/native/run-runtime-acceptance.mjs`. It requires
-a native `FORGE_NATIVE_RUNTIME_PASS` report containing all eight checks and
-the matching platform/source commit, then saves the report and screenshot.
-Android checks the app's accessibility hierarchy; iOS captures the simulator
-app's native console. Metro logs are retained on failure. Typechecking,
-bundling, or compiling this harness alone does not satisfy runtime acceptance.
+The existing native consumer CI launches its built Android APK and iOS
+simulator app using `tooling/native/run-runtime-acceptance.mjs`. Before the
+eight generated task/cache checks, it exercises actual MMKV v4 storage and
+Yjs. The first process writes a checkpoint and requests a restart. The runner
+stops and relaunches the app, then requires a fresh process token and a native
+`FORGE_NATIVE_RUNTIME_PASS` report containing all fifteen checks and the
+matching platform/source commit/run nonce. Reports, screenshots and Metro logs
+are retained. Typechecking, bundling or compiling this harness alone does not
+satisfy runtime acceptance.
+
+Six MMKV checks cover native binary ownership, a Yjs round trip, process
+reopen, account isolation, corruption preservation and explicit recovery. A
+seventh writes and reopens all eleven engines through Ignition's existing
+checkpoint store and autosave, using the same host-owned MMKV instance. The
+app uses a pinned upstream MMKV 4.3.2 binding port for the existing Nitro v1
+host, plus Expo's secure native randomness for Yjs. Its separate Board/Viro
+renderer is excluded from this offline host's native autolinking. See
+[the MMKV port guide](../../docs/native/MMKV_V1_PORT.md) for exact upstream
+versions, licenses, compatibility changes and the Linux core gate. App relaunch
+is not a sudden power-loss or physical-device UX claim.
 
 For an already running Android emulator, set `FORGE_ANDROID_SERIAL` if it is
 not `emulator-5554`. For iOS, the runner uses an available iPhone simulator and

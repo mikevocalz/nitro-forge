@@ -18,6 +18,8 @@
   },
   "include": [
     "App.tsx",
-    "RuntimeAcceptance.tsx"
-  ]
+    "RuntimeAcceptance.tsx",
+    "yjs-random.native.ts"
+  ],
+  "extends": "expo/tsconfig.base"
 }

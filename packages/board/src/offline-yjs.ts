@@ -193,11 +193,17 @@ export function createLocalYjsBoardSession(options: {
           try {
             document.merge(new Uint8Array(loaded.data), "restore");
           } catch (cause) {
-            throw new CorruptCheckpointError(
-              documentId, "Persisted Yjs board update could not be applied", { cause });
+            // applyUpdate may have changed the live CRDT before throwing.
+            // It cannot be rolled back by merging the saved state again.
+            // Keep storage untouched and require a fresh host-owned document.
+            state = "failed";
+            ++editEpoch;
+            throw new OfflineBoardError("invalid-checkpoint",
+              "Persisted Yjs merge failed; reopen a fresh document from the saved checkpoint", { cause });
           }
         }
       } catch (error) {
+        if (state === "failed") throw error;
         const failure = classifyLoadFailure(documentId, error);
         if (!(failure instanceof CorruptCheckpointError)) {
           state = previous;

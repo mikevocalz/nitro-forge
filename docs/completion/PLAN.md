@@ -2,6 +2,13 @@
 
 This supersedes the limited recovery scope. All 341 canonical IDs are included. Existing merged implementations are audited and reused; missing functionality must be implemented. A source file, a callback-shaped stand-in, a successful compile, or an unavailable-feature message cannot by itself satisfy completion.
 
+## Approved v1 scope update — 2026-11-10
+
+All twelve previously deferred native/service rows are included in the current
+candidate. Their implementations stay with their actual library, engine or Viro
+owners and are pinned in [V1 platform closure](reports/V1-PLATFORM-CLOSURE.md).
+Source coverage and required platform acceptance continue to be separate gates.
+
 ## Ownership and PR structure
 
 Forge owns this canonical ledger, document models, Rust operations, native processing and typed bindings. NYC-Tron owns reusable controls and platform UI/services. One primary Forge draft PR and a linked NYC-Tron draft PR form the program; cross-repository code cannot be represented by one Git diff. Both branches stay open across phases. No phase is merged or released early merely to make the checklist look complete.

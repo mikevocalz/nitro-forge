@@ -38,6 +38,129 @@ function yDoc(): {
 }
 const shape = (id: string) => ({ id, typeName: "shape", type: "draw", x: 1, y: 2 });
 
+function deferred() {
+  let resolve!: () => void;
+  return { promise: new Promise<void>(done => { resolve = done; }), resolve: () => resolve() };
+}
+
+describe("Yjs byte ownership and shutdown boundaries", () => {
+  it("owns a queued remote update before its caller reuses the transport buffer", async () => {
+    const h = mmkvStorage();
+    const local = yDoc(), peer = yDoc();
+    const started = deferred(), release = deferred();
+    const session = createLocalYjsBoardSession({
+      documentId: "owned", document: local.port,
+      storage: {
+        load: h.storage.load,
+        async replaceAtomically(id, checkpoint) {
+          if (checkpoint.revision === 1) { started.resolve(); await release.promise; }
+          await h.storage.replaceAtomically(id, checkpoint);
+        },
+      },
+    });
+    await session.initialize();
+    local.records.set("local", 1);
+    const save = session.saveLocal();
+    await started.promise;
+    peer.records.set("remote", 2);
+    const bytes = Y.encodeStateAsUpdate(peer.doc);
+    const merge = session.mergeRemote(bytes);
+    bytes.fill(0);
+    release.resolve();
+    await save; await merge;
+    expect([...local.records.keys()].sort()).toEqual(["local", "remote"]);
+    await session.close();
+    local.doc.destroy(); peer.doc.destroy();
+  });
+
+  it("drains a transaction observed while the final close write is pending", async () => {
+    const h = mmkvStorage(), local = yDoc();
+    const started = deferred(), release = deferred();
+    const session = createLocalYjsBoardSession({
+      documentId: "late-close", document: local.port,
+      storage: {
+        load: h.storage.load,
+        async replaceAtomically(id, checkpoint) {
+          if (checkpoint.revision === 1) { started.resolve(); await release.promise; }
+          await h.storage.replaceAtomically(id, checkpoint);
+        },
+      },
+      subscribeChanges(listener) {
+        local.doc.on("update", listener);
+        return () => local.doc.off("update", listener);
+      },
+      onPersistenceError(error) { throw error; },
+    });
+    await session.initialize();
+    local.records.set("first", 1);
+    await started.promise;
+    const close = session.close();
+    local.records.set("during-close", 2);
+    release.resolve();
+    await close;
+    expect(session.status).toBe("closed");
+    expect(session.hasUnpersistedChanges).toBe(false);
+    const reopened = yDoc();
+    const next = createLocalYjsBoardSession({ documentId: "late-close", document: reopened.port, storage: h.storage });
+    await next.initialize();
+    expect([...reopened.records.keys()].sort()).toEqual(["during-close", "first"]);
+    await next.close();
+    local.doc.destroy(); reopened.doc.destroy();
+  });
+
+  it("quarantines a partially throwing merge and preserves the last saved checkpoint", async () => {
+    const h = mmkvStorage(), local = yDoc(), peer = yDoc();
+    const session = createLocalYjsBoardSession({
+      documentId: "failed-merge", storage: h.storage,
+      document: {
+        encode: local.port.encode,
+        merge(bytes, origin) {
+          local.port.merge(bytes, origin);
+          if (origin === "remote") throw new Error("host merge listener failed");
+        },
+      },
+    });
+    await session.initialize();
+    local.records.set("durable", 1);
+    await session.saveLocal();
+    peer.records.set("uncommitted", 2);
+    await expect(session.mergeRemote(Y.encodeStateAsUpdate(peer.doc))).rejects.toMatchObject({ code: "invalid-checkpoint" });
+    expect(session.status).toBe("failed");
+    expect(session.hasUnpersistedChanges).toBe(true);
+    await expect(session.saveLocal()).rejects.toMatchObject({ code: "lifecycle" });
+    const reopened = yDoc();
+    const next = createLocalYjsBoardSession({ documentId: "failed-merge", document: reopened.port, storage: h.storage });
+    await next.initialize();
+    expect([...reopened.records.keys()]).toEqual(["durable"]);
+    await next.close(); await session.close();
+    local.doc.destroy(); peer.doc.destroy(); reopened.doc.destroy();
+  });
+
+  it("requires a fresh document after a partially throwing restore", async () => {
+    const h = mmkvStorage(), seed = yDoc();
+    const initial = createLocalYjsBoardSession({ documentId: "failed-restore", document: seed.port, storage: h.storage });
+    await initial.initialize();
+    seed.records.set("saved", 1);
+    await initial.saveLocal(); await initial.close();
+    const persisted = [...h.map.values()].map(value => new Uint8Array(value));
+    const broken = yDoc();
+    const session = createLocalYjsBoardSession({
+      documentId: "failed-restore", storage: h.storage,
+      document: {
+        encode: broken.port.encode,
+        merge(bytes, origin) { broken.port.merge(bytes, origin); throw new Error("restore listener failed"); },
+      },
+    });
+    await expect(session.initialize()).rejects.toMatchObject({ code: "invalid-checkpoint" });
+    expect(session.status).toBe("failed");
+    await expect(session.initialize()).rejects.toMatchObject({ code: "lifecycle" });
+    await expect(session.discardCorruptCheckpoint("failed-restore")).rejects.toMatchObject({ code: "lifecycle" });
+    expect([...h.map.values()].map(value => new Uint8Array(value))).toEqual(persisted);
+    await session.close();
+    seed.doc.destroy(); broken.doc.destroy();
+  });
+});
+
 describe("Moyo-compatible Yjs CRDT + MMKV offline board", () => {
   it("reopens a fresh Y.Doc with every offline stroke preserved", async () => {
     const h = mmkvStorage();

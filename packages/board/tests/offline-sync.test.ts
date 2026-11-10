@@ -30,6 +30,40 @@ function fixture() {
 }
 
 describe("Yjs collaboration coordinator: durable ACKs and offline replay", () => {
+  it("installs its shared operation before a transport re-enters syncNow", async () => {
+    const f = fixture(), local = f.newDoc();
+    const session = createLocalYjsBoardSession({ documentId: "reentrant", document: local.port, storage: f.storage });
+    await session.initialize();
+    local.records.set("stroke", 1); await session.saveLocal();
+    let calls = 0, reentered: Promise<unknown> | undefined;
+    const sync = createYjsBoardSyncCoordinator({
+      session, documentId: "reentrant",
+      transport: { async sendAndAcknowledge() { calls++; reentered = sync.syncNow(); } },
+    });
+    const first = sync.syncNow();
+    await expect(first).resolves.toEqual({ kind: "uploaded", revision: 1 });
+    expect(reentered).toBe(first);
+    expect(calls).toBe(1);
+    await session.close(); local.doc.destroy();
+  });
+
+  it("does not start a queued upload after disposal", async () => {
+    const f = fixture(), local = f.newDoc();
+    const session = createLocalYjsBoardSession({ documentId: "queued-dispose", document: local.port, storage: f.storage });
+    await session.initialize();
+    local.records.set("stroke", 1); await session.saveLocal();
+    let calls = 0;
+    const sync = createYjsBoardSyncCoordinator({
+      session, documentId: "queued-dispose",
+      transport: { async sendAndAcknowledge() { calls++; } },
+    });
+    const pending = sync.syncNow();
+    sync.dispose();
+    await expect(pending).rejects.toMatchObject({ code: "lifecycle" });
+    expect(calls).toBe(0);
+    expect(session.lastReceipt?.needsSync).toBe(true);
+    await session.close(); local.doc.destroy();
+  });
   it("keeps pending work when disconnected, then uploads once transport recovers", async () => {
     const f = fixture();
     const local = f.newDoc();

@@ -1,5 +1,19 @@
 # Completion status
 
+## V1 candidate checkpoint — 2026-11-10
+
+The approved twelve-row native/service scope is now active across Forge PR #70,
+NYC-Tron PR #57 and Viro PR #86. The source inventory is 332 local UI/platform
+implementations plus eight pinned external implementations at its last synchronized
+revision. The current candidate completes the real MMKV v4 binding against pinned
+Nitro 120 and adds all-eleven-engine storage/reopen verification; its native CI and
+next immutable inventory pin are separate follow-ups. Current ownership, exact commits
+and remaining acceptance are in [V1 platform closure](reports/V1-PLATFORM-CLOSURE.md).
+The complete 341-ID roster and eight required platforms are retained. No platform
+acceptance is inferred from source synchronization.
+
+## Earlier phase evidence
+
 P00 and P01 are complete. Fresh iOS/Android builds and native engine/edit/undo/reopen checks pass on both targets; see [P01](reports/P01.md) for provenance.
 
 P02 is in progress. Native task/cache/binary, checkpoint recovery, atomic edits,

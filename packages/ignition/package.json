@@ -15,6 +15,7 @@
     "./workspace-ui": "./src/workspace-ui.ts",
     "./transfer-ui": "./src/transfer-ui.ts",
     "./autosave": "./src/autosave.ts",
+    "./autosave/mmkv": "./src/autosave-mmkv.ts",
     "./transactions": "./src/transactions.ts",
     "./collaboration": "./src/collaboration.ts",
     "./collaboration-http": "./src/collaboration-http.ts",

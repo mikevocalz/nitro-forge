@@ -28,3 +28,51 @@ See [the extraction and validation guide](../../docs/native/NATIVE_BOARD_EXTRACT
 
 No claim is made that merely importing the package provides native iOS
 rendering or a fully migrated Moyo whiteboard.
+
+## Local Yjs persistence
+
+The offline exports are portable and independent of the renderer. Keep the
+host's existing Yjs document as the authority and provide its storage instance:
+
+```ts
+import { createMMKV } from "react-native-mmkv";
+import * as Y from "yjs";
+import { createMMKVBoardStorage } from "@nitro-forge/board/offline/mmkv";
+import { createLocalYjsBoardSession } from "@nitro-forge/board/offline/yjs";
+
+const storage = createMMKVBoardStorage(createMMKV({ id: "boards" }), {
+  scope: "organization-id/account-id",
+});
+
+// `doc` is the host-owned Y.Doc already used by the board and undo manager.
+const session = createLocalYjsBoardSession({
+  documentId: "board-id",
+  storage,
+  document: {
+    encode: () => Y.encodeStateAsUpdate(doc),
+    merge: (bytes, origin) => Y.applyUpdate(doc, bytes, origin),
+  },
+});
+await session.initialize(); // Before mounting the editable view.
+// After a completed local transaction:
+const receipt = await session.saveLocal();
+// On leaving the board, await queued writes before destroying the host's doc:
+await session.close();
+```
+
+Only a successful receipt means the write completed. Storage failures preserve
+the edited live document and remain visible to the caller. Optional
+`subscribeChanges` needs an `onPersistenceError` handler. Corruption is reported
+without overwriting the record; explicit recovery requires the exact board ID.
+A partially throwing Yjs restore/remote merge disables the session and requires
+a fresh host-owned document, since Yjs updates cannot undo a partial merge.
+
+`@nitro-forge/board/offline/sync` supplies a coordinator for the host's
+authenticated transport. An ACK applies only to the revision actually sent;
+later edits stay pending. The SDK does not open sockets or manage credentials.
+
+New MMKV records checksum their metadata and payload together. Legacy records
+remain readable and are upgraded on a successful save. The native acceptance
+app uses a pinned MMKV v4 binding port for Nitro v1; see
+[the compatibility, provenance and execution guide](../../docs/native/MMKV_V1_PORT.md)
+before using the same native dependency graph.

@@ -4,6 +4,7 @@ on:
     paths:
       - 'docs/completion/**'
       - 'tooling/verify-completion-plan*'
+      - 'tooling/sync-library-implementation*'
       - '.github/workflows/completion-plan.yml'
   workflow_dispatch:
 permissions:
@@ -18,3 +19,4 @@ jobs:
           node-version: '24.19.0'
       - run: node tooling/verify-completion-plan.mjs
       - run: node --test tooling/verify-completion-plan.test.mjs
+      - run: node --test tooling/sync-library-implementation.test.mjs

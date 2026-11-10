@@ -77,6 +77,41 @@ describe("offline MMKV v4 checkpoint adapter", () => {
     expect(read?.data).toEqual(next.data);
   });
 
+  it("detects plausible corruption in local and acknowledged revision metadata", async () => {
+    const h = fixture();
+    const storage = createMMKVBoardStorage(h.mmkv, { scope: "metadata" });
+    await storage.replaceAtomically("b", saved("b", 4));
+    const key = [...h.bytes.keys()][0]!, original = h.bytes.get(key)!;
+    for (const offset of [15, 23]) {
+      const damaged = original.slice(0);
+      // Both modified values still satisfy all revision range checks.
+      const bytes = new Uint8Array(damaged);
+      bytes[offset] = bytes[offset]! ^ 1;
+      h.bytes.set(key, damaged);
+      await expect(storage.load("b")).rejects.toThrow(/checksum/);
+      expect(h.bytes.get(key)).toBe(damaged);
+    }
+  });
+
+  it("reads the legacy binary envelope and upgrades only on a successful save", async () => {
+    const h = fixture();
+    const storage = createMMKVBoardStorage(h.mmkv, { scope: "legacy" });
+    // NFB1, format 1, revision 4, synced 0, five-byte 'hello' payload.
+    const legacy = Uint8Array.from([
+      78, 70, 66, 49, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 54, 16, 166, 134,
+      104, 101, 108, 108, 111,
+    ]).buffer;
+    const key = "nitroforge.board.v1/legacy/b";
+    h.bytes.set(key, legacy);
+    const checkpoint = await storage.load("b");
+    expect(checkpoint).toEqual(saved("b", 4));
+    expect(h.bytes.get(key)).toBe(legacy);
+    await storage.replaceAtomically("b", checkpoint!);
+    expect(new Uint8Array(h.bytes.get(key)!)[4]).toBe(2);
+    expect(await storage.load("b")).toEqual(checkpoint);
+  });
+
   it("propagates write failure and refuses cross-document saves", async () => {
     const h = fixture();
     const storage = createMMKVBoardStorage(h.mmkv, { scope: "learner" });
