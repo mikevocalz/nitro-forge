@@ -29,6 +29,7 @@
       "librarySourceSummary": {
         "inScope": 0,
         "reviewedImplemented": 0,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -44,6 +45,7 @@
       "librarySourceSummary": {
         "inScope": 0,
         "reviewedImplemented": 0,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -75,6 +77,7 @@
       "librarySourceSummary": {
         "inScope": 8,
         "reviewedImplemented": 8,
+        "reviewedExternal": 7,
         "enginePlatformIds": [
           "N-10",
           "N-11",
@@ -101,11 +104,10 @@
         "N-19"
       ],
       "librarySourceSummary": {
-        "inScope": 2,
-        "reviewedImplemented": 2,
-        "enginePlatformIds": [
-          "N-19"
-        ]
+        "inScope": 3,
+        "reviewedImplemented": 3,
+        "reviewedExternal": 0,
+        "enginePlatformIds": []
       }
     },
     {
@@ -151,6 +153,7 @@
       "librarySourceSummary": {
         "inScope": 30,
         "reviewedImplemented": 30,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -194,6 +197,7 @@
       "librarySourceSummary": {
         "inScope": 27,
         "reviewedImplemented": 27,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -219,12 +223,11 @@
         "N-04"
       ],
       "librarySourceSummary": {
-        "inScope": 8,
-        "reviewedImplemented": 8,
+        "inScope": 10,
+        "reviewedImplemented": 10,
+        "reviewedExternal": 1,
         "enginePlatformIds": [
-          "N-01",
-          "N-03",
-          "N-04"
+          "N-03"
         ]
       }
     },
@@ -268,6 +271,7 @@
       "librarySourceSummary": {
         "inScope": 27,
         "reviewedImplemented": 27,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -327,6 +331,7 @@
       "librarySourceSummary": {
         "inScope": 41,
         "reviewedImplemented": 41,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -386,6 +391,7 @@
       "librarySourceSummary": {
         "inScope": 41,
         "reviewedImplemented": 41,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -421,6 +427,7 @@
       "librarySourceSummary": {
         "inScope": 18,
         "reviewedImplemented": 18,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -453,6 +460,7 @@
       "librarySourceSummary": {
         "inScope": 15,
         "reviewedImplemented": 15,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -492,6 +500,7 @@
       "librarySourceSummary": {
         "inScope": 22,
         "reviewedImplemented": 22,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -530,6 +539,7 @@
       "librarySourceSummary": {
         "inScope": 21,
         "reviewedImplemented": 21,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -564,6 +574,7 @@
       "librarySourceSummary": {
         "inScope": 16,
         "reviewedImplemented": 16,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -602,6 +613,7 @@
       "librarySourceSummary": {
         "inScope": 21,
         "reviewedImplemented": 21,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -634,6 +646,7 @@
       "librarySourceSummary": {
         "inScope": 15,
         "reviewedImplemented": 15,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -668,6 +681,7 @@
       "librarySourceSummary": {
         "inScope": 17,
         "reviewedImplemented": 17,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -688,6 +702,7 @@
       "librarySourceSummary": {
         "inScope": 0,
         "reviewedImplemented": 0,
+        "reviewedExternal": 1,
         "enginePlatformIds": [
           "N-09"
         ]
@@ -721,6 +736,7 @@
       "librarySourceSummary": {
         "inScope": 0,
         "reviewedImplemented": 0,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     },
@@ -736,6 +752,7 @@
       "librarySourceSummary": {
         "inScope": 0,
         "reviewedImplemented": 0,
+        "reviewedExternal": 0,
         "enginePlatformIds": []
       }
     }
@@ -8795,16 +8812,30 @@
       "baselineStatus": "PARTIAL",
       "baselineEvidence": "forge:#19 board/src/skia/pointer-input.ts; tron:main:packages/ui/src/components/gestures/drag-controller.ts",
       "existingBackendDependency": "none",
-      "knownGap": "hover/pressure on all targets unverified",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Owned UIKit, Compose and DOM pointer adapters now exist in NYC-Tron; physical hover/pressure/tilt, hardware-keyboard and assistive-technology matrix remains unverified.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-01",
       "gates": {},
       "platforms": {},
       "librarySource": {
-        "inScope": false,
-        "review": "outside-library-scope",
-        "candidatePaths": [],
-        "reportPaths": []
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/native-controls/src/NativePointerInput.tsx",
+          "packages/native-controls/src/NativePointerInput.web.tsx",
+          "packages/native-controls/src/pointer-input.ts",
+          "packages/native-controls/ios/TronPointerCaptureView.swift",
+          "packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt"
+        ],
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ]
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -8841,16 +8872,50 @@
       "baselineStatus": "PARTIAL",
       "baselineEvidence": "forge:#15 packages/spatial-ink (Muse tracking, cancel/release)",
       "existingBackendDependency": "Logitech Muse SDK",
-      "knownGap": "SDK-backed 6DoF diagnostics on device pending",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Actual Viro ARKit/GCStylus pose now provides validated orientation and tip pressure; Muse six-DoF and tracking-loss behavior still needs supported physical visionOS hardware.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-03",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/spatial-ink/src/muse.ts"
+              ],
+              "publicExports": [
+                "@nitro-forge/spatial-ink"
+              ]
+            },
+            {
+              "repository": "mikevocalz/viro",
+              "revision": "e84a1a9a37168a835f7730e09016917b9d49c6ef",
+              "sourcePaths": [
+                "ios/ViroReact/VisionOS/ViroSpatialStylusPose.swift",
+                "ios/ViroReact/VisionOS/ViroImmersiveRenderer.swift",
+                "components/VisionOS/ViroVisionOSModule.ts"
+              ],
+              "publicExports": [
+                "@reactvision/react-viro:ViroVisionOSModule"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -8862,16 +8927,28 @@
       "baselineStatus": "ABSENT",
       "baselineEvidence": "none",
       "existingBackendDependency": "google/ink core (forge #46 candidate)",
-      "knownGap": "none",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Observed coalesced/history samples and SDK predictions are separated; palm and pressure/tilt behavior on supported physical devices remains unverified.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-04",
       "gates": {},
       "platforms": {},
       "librarySource": {
-        "inScope": false,
-        "review": "outside-library-scope",
-        "candidatePaths": [],
-        "reportPaths": []
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/native-controls/src/pointer-input.ts",
+          "packages/native-controls/ios/TronPointerCaptureView.swift",
+          "packages/native-controls/android/src/main/java/com/nyctron/instruments/TronPointerCaptureView.kt"
+        ],
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ]
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -8993,16 +9070,40 @@
       "baselineStatus": "PARTIAL",
       "baselineEvidence": "tron:main core/src/spatial.ts + spatial-interactions.ts (pure spec, no renderer)",
       "existingBackendDependency": "Viro/visionOS/PICO adapters",
-      "knownGap": "no renderer",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Typed optional Viro image renderer adapter now owns frame and native-load lifetimes; headset rendering/input/lifecycle/performance acceptance remains unverified.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-09",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/board/src/xr/presentation.ts",
+                "packages/board/src/xr/ViroDocumentSurface.tsx"
+              ],
+              "publicExports": [
+                "@nitro-forge/board/xr",
+                "@nitro-forge/board/xr/viro"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9014,16 +9115,45 @@
       "baselineStatus": "PARTIAL",
       "baselineEvidence": "forge:#19 board/src/offline-mmkv.ts + offline.ts",
       "existingBackendDependency": "ignition snapshot op for non-board engines",
-      "knownGap": "only board persists",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Actual MMKV4.3.2 binding port to pinned Nitro120, scoped Board/Yjs adapters and all-eleven-engine checkpoint storage are implemented. Both iOS and Android passed native two-process execution at cc4893b in run 42759521341; remaining platform/device and sudden-power-loss durability acceptance require separate evidence.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-10",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/ignition/src/autosave.ts",
+                "packages/ignition/src/autosave-mmkv.ts",
+                "packages/board/src/offline-mmkv.ts",
+                "examples/native-cadence/patches/react-native-mmkv@4.3.2.patch",
+                "examples/native-cadence/verify-board-offline.ts",
+                "examples/native-cadence/verify-native-runtime.ts"
+              ],
+              "publicExports": [
+                "@nitro-forge/ignition/autosave",
+                "@nitro-forge/ignition/autosave/mmkv",
+                "@nitro-forge/board/offline/mmkv"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9035,16 +9165,44 @@
       "baselineStatus": "PARTIAL",
       "baselineEvidence": "forge:#19 board/src/offline-yjs.ts + offline-sync.ts",
       "existingBackendDependency": "Yjs/Automerge behind engine (forge #46)",
-      "knownGap": "board only; CRDT choice open",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "All eleven engine collaboration envelopes and real Yjs merge/reconnect/reopen adapters exist; authenticated multi-device/product transport and wider platform recovery evidence remain unverified.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-11",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/ignition/src/collaboration.ts",
+                "packages/ignition/src/collaboration-http.ts",
+                "packages/board/src/offline-yjs.ts",
+                "packages/board/src/offline-sync.ts"
+              ],
+              "publicExports": [
+                "@nitro-forge/ignition/collaboration",
+                "@nitro-forge/ignition/collaboration-http",
+                "@nitro-forge/board/offline/yjs",
+                "@nitro-forge/board/offline/sync"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9084,16 +9242,40 @@
       "baselineStatus": "BUILT-LOCAL",
       "baselineEvidence": "Phase 6: forge-phase6/docs/recovery/PHASE6.md; tron-phase6/docs/MEDIA_RECOVERY.md",
       "existingBackendDependency": "native FIFO + atomic task controls; cooperative safe checkpoints",
-      "knownGap": "native JS/device acceptance; Expo decoder cancellation absent",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Native queue/task source and Rust/C++ contract checks pass; generated-object simulator app-launch gate is running. Product latency/suspend/resume on the complete device matrix remains unverified.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-13",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/ignition/src/specs/ForgeTask.nitro.ts",
+                "packages/ignition/cpp/NitroForgeV1/HybridForgeTask.hpp",
+                "packages/ignition/cpp/NitroForgeV1/SerialQueue.hpp"
+              ],
+              "publicExports": [
+                "@nitro-forge/ignition/nitro"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9105,16 +9287,40 @@
       "baselineStatus": "BUILT-LOCAL",
       "baselineEvidence": "Phase 6: forge-phase6/docs/recovery/PHASE6.md; tron-phase6/docs/MEDIA_RECOVERY.md",
       "existingBackendDependency": "native bounded LRU for host-supplied derived bytes",
-      "knownGap": "native JS/device acceptance; host must generate/key derived bytes",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Native byte/metadata bounds, LRU and allocation-failure safety have tests; generated-object app-launch evidence and device pressure budgets remain separate.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-14",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/ignition/src/specs/ForgeMediaCache.nitro.ts",
+                "packages/ignition/cpp/NitroForgeV1/ByteCache.hpp",
+                "packages/ignition/cpp/NitroForgeV1/HybridForgeMediaCache.hpp"
+              ],
+              "publicExports": [
+                "@nitro-forge/ignition/nitro"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9126,16 +9332,39 @@
       "baselineStatus": "PARTIAL",
       "baselineEvidence": "tron preview/commit split (onPreview/onCommit) in scrubber, knob, layers, crop, graph",
       "existingBackendDependency": "engine transaction boundary op (absent)",
-      "knownGap": "no engine-side gesture transaction",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Engine-side batch transactions cover all eleven engines; reentrant gesture/close lifetimes are fixed. Product undo/reopen interaction acceptance remains unverified on the complete platform matrix.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-15",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/ignition/src/transactions.ts",
+                "rust/nf-sys/src/batch_tests.rs"
+              ],
+              "publicExports": [
+                "@nitro-forge/ignition/transactions"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9147,16 +9376,39 @@
       "baselineStatus": "BUILT-LOCAL",
       "baselineEvidence": "Phase 6: forge-phase6/docs/recovery/PHASE6.md; tron-phase6/docs/MEDIA_RECOVERY.md",
       "existingBackendDependency": "additive native binary command ABI and owned ArrayBuffer",
-      "knownGap": "full native JS/device acceptance; owned copies, not zero-copy",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Owned native ArrayBuffer request/result/checkpoint lifetimes have Rust/C++ checks and a generated-object app-launch gate; no zero-copy claim; full device memory/latency evidence remains unverified.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-16",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/ignition/src/specs/ForgeDocument.nitro.ts",
+                "packages/ignition/cpp/NitroForgeV1/HybridForgeDocument.hpp"
+              ],
+              "publicExports": [
+                "@nitro-forge/ignition/nitro"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9195,16 +9447,41 @@
       "baselineStatus": "DONE",
       "baselineEvidence": "forge:#56 packages/telemetry (consent off/local/diagnostics, redaction, instrumentHost, createTestTelemetry); 12 tests incl. real Prism via nf-cli",
       "existingBackendDependency": "none",
-      "knownGap": "no Nitro JSI/device run; telemetry sink backend and consent UI are separate product decisions",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Consent-period ownership, bounded queues and redacted failures are implemented/tested. Product consent UX, configured sink and physical device traces remain independent acceptance work.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-18",
       "gates": {},
       "platforms": {},
       "librarySource": {
         "inScope": false,
-        "review": "outside-library-scope",
+        "review": "implemented-external",
         "candidatePaths": [],
-        "reportPaths": []
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ],
+        "externalImplementation": {
+          "owners": [
+            {
+              "repository": "mikevocalz/nitro-forge",
+              "revision": "cc4893b29f6182c71705a64785a41f5bbf3f5507",
+              "sourcePaths": [
+                "packages/telemetry/src/telemetry.ts",
+                "packages/telemetry/src/instrument.ts",
+                "packages/telemetry/src/testing.ts"
+              ],
+              "publicExports": [
+                "@nitro-forge/telemetry",
+                "@nitro-forge/telemetry/testing"
+              ]
+            }
+          ]
+        }
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9216,16 +9493,30 @@
       "baselineStatus": "PARTIAL",
       "baselineEvidence": "Phase 6: forge-phase6/docs/recovery/PHASE6.md; tron-phase6/docs/MEDIA_RECOVERY.md",
       "existingBackendDependency": "Expo v2 AVFoundation iOS + browser video/WebAudio",
-      "knownGap": "Android decoder absent; iOS native runtime not exercised",
-      "completion": "unverified",
-      "specification": "pending component-level acceptance audit",
+      "knownGap": "Actual AVFoundation and Android frame/audio decode exist; clean installed-tarball launch gates verify JPEG/PCM/media-time behavior. Native output/lifecycle and assistive-technology acceptance remains evidence-gated.",
+      "completion": "in-progress",
+      "specification": "docs/completion/reports/V1-PLATFORM-CLOSURE.md#n-19",
       "gates": {},
       "platforms": {},
       "librarySource": {
-        "inScope": false,
-        "review": "outside-library-scope",
-        "candidatePaths": [],
-        "reportPaths": []
+        "inScope": true,
+        "review": "implemented",
+        "candidatePaths": [
+          "packages/platform-services/src/media/index.ts",
+          "packages/platform-services/src/media/index.native.ts",
+          "packages/platform-services/ios/NYCTronMediaDecoderModule.swift",
+          "packages/platform-services/android/src/main/java/com/nyctron/platformservices/AndroidMediaDecoder.kt",
+          "packages/native-controls/src/NativeVideoPlayer.tsx"
+        ],
+        "reportPaths": [
+          "reports/V1-PLATFORM-CLOSURE.md"
+        ]
+      },
+      "sourceImplementationCheckpoint": {
+        "uiRepository": "mikevocalz/NYC-Tron-UI",
+        "uiRevision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
+        "ownerInventory": "docs/completion/library-progress.json",
+        "acceptanceMeaning": "Source ownership only; existing mandatory component and eight-platform evidence gates remain unchanged."
       }
     },
     {
@@ -9307,9 +9598,9 @@
   },
   "librarySourceSnapshot": {
     "repository": "mikevocalz/NYC-Tron-UI",
-    "revision": "37645d149b19b3f9ff5feee4ca1ce004137994a4",
+    "revision": "2449fe53f84ef4822e7eb8d275b0c1a6e440560f",
     "path": "docs/completion/library-progress.json",
-    "sha256": "d97fcf0cf5924f2c8cfd0b776f24b96e891178f2726deea054e7fde4ee71c855",
-    "meaning": "Recorded library implementation reviews; component gates and phase acceptance retain their own evidence requirements."
+    "sha256": "18eb84abafdefaba3097a9401c03cc146c75294ecf1374cf6042c4782ab9c2e6",
+    "meaning": "Recorded local and pinned external implementation reviews; component gates and phase acceptance retain their own evidence requirements."
   }
 }

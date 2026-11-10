@@ -13,9 +13,9 @@ export interface TelemetryOptions {
   consent: TelemetryConsent;
   /** Receives `diagnostics` batches; ignored for other consents. */
   sink?: TelemetrySink;
-  /** Events kept on the device; the oldest go first. Default 500. */
+  /** Maximum events in each retained buffer and pending sink queue; oldest go first. Default 500. */
   maxEvents?: number;
-  /** Events per sink batch. Default 50. */
+  /** Maximum events per sink batch. Only one batch is in flight. Default 50. */
   batchSize?: number;
   /** Milliseconds clock. Default `performance.now`. */
   clock?: () => number;
@@ -23,7 +23,9 @@ export interface TelemetryOptions {
 
 /** An open timing; end it exactly once. */
 export interface Span {
-  end(outcome?: "ok" | "error" | "cancelled"): void;
+  /** True only when this call records the span in its original consent period.
+   * Use the result to gate related failure and result metrics. */
+  end(outcome?: "ok" | "error" | "cancelled"): boolean;
 }
 
 /**
@@ -46,7 +48,7 @@ export interface Telemetry {
 }
 
 const NAME = /^[\w.:-]{1,64}$/;
-const noop: Span = { end() {} };
+const noop: Span = { end() { return false; } };
 
 /** Builds a {@link Telemetry}. */
 export function createTelemetry(options: TelemetryOptions): Telemetry {
@@ -62,7 +64,7 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
   };
   checkConsent(options.consent);
   let epoch = 0;
-  const pending = new Set<Promise<void>>();
+  let sending: Promise<void> | undefined;
   let consent = options.consent;
   let buffer: TelemetryEvent[] = [];
   let queue: TelemetryEvent[] = [];
@@ -77,12 +79,22 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
     redacted += dropped;
     return attrs;
   };
-  const send = async (batch: TelemetryEvent[]) => {
-    try {
-      await options.sink?.(batch);
-    } catch {
-      // A failed upload drops the batch; telemetry must never fail the app.
-    }
+  const dispatch = (force = false): Promise<void> | undefined => {
+    if (sending) return sending;
+    if (consent !== "diagnostics" || !options.sink || queue.length === 0 ||
+        (!force && queue.length < Math.min(batchSize, maxEvents))) return undefined;
+    const batch = Object.freeze(queue.splice(0, batchSize));
+    const acceptedEpoch = epoch;
+    // Publish the active promise before invoking an app sink, which may reenter.
+    sending = Promise.resolve().then(async () => {
+      if (consent !== "diagnostics" || acceptedEpoch !== epoch) return;
+      try { await options.sink!(batch); }
+      catch { /* A failed upload drops the batch; telemetry never fails the app. */ }
+    }).finally(() => {
+      sending = undefined;
+      dispatch();
+    });
+    return sending;
   };
   const record = (event: TelemetryEvent) => {
     Object.freeze(event.attrs);
@@ -95,13 +107,8 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
     if (consent !== "diagnostics" || !options.sink) return;
     // Messages stay on the device.
     queue.push(event.type === "failure" ? withoutMessage(event) : event);
-    if (queue.length >= batchSize) {
-      const batch = queue;
-      queue = [];
-      const sending = send(Object.freeze(batch) as unknown as TelemetryEvent[]);
-      pending.add(sending);
-      void sending.finally(() => pending.delete(sending));
-    }
+    if (queue.length > maxEvents) queue.splice(0, queue.length - maxEvents);
+    dispatch();
   };
 
   const telemetry: Telemetry = {
@@ -128,9 +135,10 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
       let ended = false;
       return {
         end(outcome = "ok") {
-          if (ended || consent === "off" || startedEpoch !== epoch) return;
+          if (ended || consent === "off" || startedEpoch !== epoch) return false;
           ended = true;
           record({ type: "span", name, at: start, durationMs: Math.max(0, clock() - start), outcome, attrs: kept });
+          return true;
         },
       };
     },
@@ -141,8 +149,7 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
         span.end("ok");
         return value;
       } catch (error) {
-        span.end("error");
-        telemetry.failure(name, error, attrs);
+        if (span.end("error")) telemetry.failure(name, error, attrs);
         throw error;
       }
     },
@@ -150,7 +157,9 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
       checkName(name);
       if (consent === "off") return;
       const engine = error instanceof EngineError ? error : undefined;
-      const code = engine?.code ?? (error instanceof Error ? error.name : "unknown");
+      const candidate = engine?.code ?? (error instanceof Error ? error.name : "unknown");
+      const code = typeof candidate === "string" && NAME.test(candidate) ? candidate : "unknown";
+      if (code !== candidate) redacted++;
       const message = error instanceof Error ? scrubMessage(error.message) : undefined;
       record({
         type: "failure",
@@ -177,14 +186,7 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
       };
     },
     async flush() {
-      if (consent === "diagnostics" && queue.length) {
-        const batch = queue;
-        queue = [];
-        const sending = send(Object.freeze(batch) as unknown as TelemetryEvent[]);
-        pending.add(sending);
-        void sending.finally(() => pending.delete(sending));
-      }
-      await Promise.all([...pending]);
+      for (let work = dispatch(true); work; work = dispatch(true)) await work;
     },
   };
   return telemetry;
@@ -192,5 +194,5 @@ export function createTelemetry(options: TelemetryOptions): Telemetry {
 
 function withoutMessage(event: Extract<TelemetryEvent, { type: "failure" }>): TelemetryEvent {
   const { message: _message, ...rest } = event;
-  return rest;
+  return Object.freeze(rest);
 }

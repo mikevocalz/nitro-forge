@@ -20,6 +20,8 @@ class HybridForgeMediaCache final:public HybridForgeMediaCacheSpec {
  Promise<bool> remove(const std::string& key)override{return enqueue<bool>([key](State& s){return s.cache.remove(key);});}
  Promise<void> clear()override{return enqueue<void>([](State& s){s.cache.clear();});}
  Promise<void> close()override{return enqueue<void>([](State& s){s.cache.clear();s.closed=true;},true);}
+ protected:
+ size_t getExternalMemorySize()noexcept override{return _state->bytes.load();}
  private:
  template<typename T,typename Work>Promise<T> enqueue(Work work,bool closing=false){
   auto promise=Promise<T>::pending();const auto state=_state;

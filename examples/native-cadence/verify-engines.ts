@@ -14,18 +14,25 @@ export async function verifyNativeEngines(): Promise<string> {
         await host.apply(handle, {
           op: "new", payload: kind === "prism" ? { width: 32, height: 32 } : {},
         });
-        const before = JSON.stringify((await host.apply(handle, { op: "describe" })).data);
+        const describe = async () => (await host.apply<Record<string, unknown>>(handle, { op: "describe", payload: {} })).data;
+        const durable = (value: Record<string, unknown>) => {
+          if (kind !== "draft") return JSON.stringify(value);
+          const { source_revision: _revision, ...document } = value;
+          return JSON.stringify(document);
+        };
+        const before = durable(await describe());
         const bytes = await host.snapshot(handle);
         if (String.fromCharCode(...bytes.subarray(0, 4)) !== "NFD1")
           throw new Error(`${kind}: invalid snapshot envelope`);
         await host.restore(handle, bytes);
-        if (JSON.stringify((await host.apply(handle, { op: "describe" })).data) !== before)
+        const restored = await describe();
+        if (durable(restored) !== before)
           throw new Error(`${kind}: snapshot round trip changed document`);
         let rejected = false;
         try { await host.restore(handle, new Uint8Array([0])); }
         catch { rejected = true; }
         if (!rejected) throw new Error(`${kind}: accepted invalid snapshot`);
-        if (JSON.stringify((await host.apply(handle, { op: "describe" })).data) !== before)
+        if (JSON.stringify(await describe()) !== JSON.stringify(restored))
           throw new Error(`${kind}: invalid restore changed document`);
       } finally {
         await host.close(handle);

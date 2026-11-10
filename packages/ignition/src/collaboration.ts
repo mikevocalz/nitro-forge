@@ -72,8 +72,9 @@ export class DocumentCollaboration {
   static async create(host: EngineHost, kind: EngineKind, documentId: string,
     transport: CollaborationTransport, initial: readonly Command[]): Promise<DocumentCollaboration> {
     if (!/^[\w.:-]{1,256}$/.test(documentId)) throw new RangeError("Invalid collaboration document ID");
+    const commands = ownedJson(initial);
     const document = await DocumentHandle.openInitialized(host, kind, async d => {
-      await d.applyBatch(initial);
+      await d.applyBatch(commands);
       // Initialization is not part of the user's edit history.
       await d.restore(await d.snapshot());
     });
@@ -83,10 +84,11 @@ export class DocumentCollaboration {
   /** Reopens an unpublished Rust session with its durable remote base and exact
    * ambiguous upload. Later offline edits remain dirty after lost-ACK recovery. */
   static async recover(options: RecoverCollaborationOptions): Promise<DocumentCollaboration> {
+    const { host, transport, documentId } = options;
     const value = ownCollaborationCheckpoint(options.checkpoint);
-    if (value.documentId !== options.documentId) throw new Error("Checkpoint belongs to another collaboration document");
-    const document = await DocumentHandle.openInitialized(options.host, value.kind, d => d.restore(value.bytes));
-    const owner = new DocumentCollaboration(document, options.transport, options.documentId);
+    if (value.documentId !== documentId) throw new Error("Checkpoint belongs to another collaboration document");
+    const document = await DocumentHandle.openInitialized(host, value.kind, d => d.restore(value.bytes));
+    const owner = new DocumentCollaboration(document, transport, documentId);
     owner.revision = value.revision;
     owner.dirty = value.dirty;
     owner.generation = value.pending && !value.pending.matchesCurrent ? 1 : 0;
@@ -125,7 +127,7 @@ export class DocumentCollaboration {
   undo(): Promise<boolean> { return this.enqueue(() => this.document.undo()); }
   redo(): Promise<boolean> { return this.enqueue(() => this.document.redo()); }
   snapshot(): Promise<Uint8Array> { return this.enqueue(() => this.document.snapshot()); }
-  describe<T = unknown>() { return this.enqueue(() => this.document.apply<T>("describe")); }
+  describe<T = unknown>() { return this.enqueue(() => this.document.apply<T>("describe", {})); }
 
   /** Explicit conflict resolution: discard the local draft and adopt the latest
    * remote snapshot, resetting undo. Never invoke without a user discard choice. */
@@ -165,9 +167,9 @@ export class DocumentCollaboration {
         }
         if (this.dirty) {
           const bytes = await this.document.snapshot();
-          this.attempted = { bytes: bytes.slice(), generation: this.generation, base: this.revision };
+          this.attempted = { bytes: Uint8Array.from(bytes), generation: this.generation, base: this.revision };
           const response = await this.transport.compareAndSwap(this.documentId, this.revision,
-            { kind: this.document.kind, bytes: bytes.slice() });
+            { kind: this.document.kind, bytes: Uint8Array.from(bytes) });
           if (!response.accepted) {
             this.attempted = undefined;
             this.validateRemote(response.current);
@@ -195,11 +197,11 @@ export class DocumentCollaboration {
   }
   private async restoreRemote(remote: RemoteRevision): Promise<void> {
     this.validateRemote(remote);
-    const bytes = remote.bytes.slice();
+    const bytes = Uint8Array.from(remote.bytes), revision = remote.revision;
     // Rust restore validates document semantics atomically and resets history.
     await this.document.restore(bytes);
     this.attempted = undefined;
-    this.revision = remote.revision;
+    this.revision = revision;
     this.dirty = false;
   }
 

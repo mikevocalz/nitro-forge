@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "platform": "android",
+  "revision": "aa11c3b3b3b9170a48c4ecfef8ae2a1ad3ed0533",
+  "runId": "462facc5-398e-4d77-8e26-7f6b257ec1d7",
+  "processToken": "1794287946032-0.9142603570240503",
+  "checks": [
+    "mmkv-v4-native-binary-ownership",
+    "mmkv-v4-yjs-roundtrip",
+    "mmkv-v4-process-reopen",
+    "mmkv-v4-scope-isolation",
+    "mmkv-v4-corruption-preserved",
+    "mmkv-v4-explicit-recovery",
+    "mmkv-v4-all-engine-snapshot-reopen",
+    "binary-input-output-ownership",
+    "restore-input-ownership",
+    "cache-copy-lru-bounds",
+    "cache-fifo-close",
+    "running-and-queued-cancellation",
+    "task-progress-result-ownership",
+    "document-fifo-close",
+    "output-survives-document-close"
+  ],
+  "engineKinds": [
+    "prism",
+    "cadence",
+    "splice",
+    "folio",
+    "pitch",
+    "tally",
+    "quill",
+    "photo",
+    "motion",
+    "design",
+    "draft"
+  ],
+  "storage": {
+    "bindings": "react-native-mmkv@4.3.2 + Nitro 120 port",
+    "core": "io.github.zhongwuzw:mmkv@2.4.1"
+  },
+  "elapsedMs": 322,
+  "phase": "complete",
+  "provenance": {
+    "serial": "emulator-5554",
+    "sourceCommit": "aa11c3b3b3b9170a48c4ecfef8ae2a1ad3ed0533",
+    "binarySha256": "81703b7d7d35fcba9cae466ac61ddd3ab3a28066604c9dbeb6d891904dfe01d3",
+    "launches": [
+      {
+        "launch": 1,
+        "pid": "2644",
+        "processToken": "1794287933986-0.6685075723199881"
+      },
+      {
+        "launch": 2,
+        "pid": "3812",
+        "processToken": "1794287946032-0.9142603570240503"
+      }
+    ]
+  }
+}

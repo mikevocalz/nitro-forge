@@ -30,7 +30,7 @@ export type TelemetryEvent =
       readonly type: "failure";
       readonly name: string;
       readonly at: number;
-      /** `EngineError.code`, or the error's class name. */
+      /** Identifier-shaped `EngineError.code` or error class name; otherwise `unknown`. */
       readonly code: string;
       readonly recoverable: boolean;
       readonly attrs: TelemetryAttributes;
@@ -44,7 +44,9 @@ export type TelemetryEvent =
       readonly attrs: TelemetryAttributes;
     };
 
-/** Receives `diagnostics` batches. A rejected write drops the batch; telemetry never fails the app. */
+/** Receives one `diagnostics` batch at a time. A rejected write drops that batch.
+ * The app owns network deadlines; a stalled sink cannot grow the bounded queue.
+ * Revocation drops unsent work but cannot recall a batch already given to a sink. */
 export type TelemetrySink = (batch: readonly TelemetryEvent[]) => void | Promise<void>;
 
 /** What {@link Telemetry.exportTrace} returns for a bug report. */
@@ -53,7 +55,7 @@ export interface TraceExport {
   readonly exportedAt: string;
   /** Events dropped because the buffer was full. */
   readonly overflowed: number;
-  /** Attributes dropped because they did not look like identifiers. */
+  /** Attributes or error codes dropped because they did not look like identifiers. */
   readonly redacted: number;
   readonly events: readonly TelemetryEvent[];
 }

@@ -122,7 +122,7 @@ export function createHttpCollaborationTransport(options: HttpCollaborationOptio
       validateCheckpoint(checkpoint.bytes);
       return call(id, { method: "PUT", headers: { "Content-Type": "application/octet-stream",
         "X-Forge-Base-Revision": String(baseRevision), "X-Forge-Engine": checkpoint.kind },
-        body: checkpoint.bytes.slice().buffer as ArrayBuffer }, async response => {
+        body: Uint8Array.from(checkpoint.bytes).buffer }, async response => {
         if (response.status === 409) return { accepted: false, current: await decode(response) } as const;
         if (response.status !== 204) throw new CollaborationTransportError(response.status, "Collaboration write rejected");
         const next = revision(response);

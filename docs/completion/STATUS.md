@@ -1,5 +1,22 @@
 # Completion status
 
+## V1 candidate checkpoint — 2026-11-10
+
+The approved twelve-row native/service scope is implemented across Forge PR #70,
+NYC-Tron PR #57 and Viro PR #86. The committed NYC-Tron inventory at
+`2449fe53f84ef4822e7eb8d275b0c1a6e440560f` records 332 local implementations plus nine
+pinned external implementations, retaining all 341 original IDs. Forge's native
+MMKV v4/Nitro120 checkpoint is `cc4893b29f6182c71705a64785a41f5bbf3f5507`.
+Current ownership, actual verification and remaining acceptance are in
+[V1 platform closure](reports/V1-PLATFORM-CLOSURE.md). The eight required platforms
+are unchanged; source synchronization does not promote platform acceptance.
+At that Forge checkpoint, both actual mobile runtime jobs passed all fifteen
+final checks after OS termination/relaunch, recovering snapshots for all eleven
+engines through the MMKV v4 port. Original reports, artifact hashes and tested
+merge identity are retained in the linked closure report.
+
+## Earlier phase evidence
+
 P00 and P01 are complete. Fresh iOS/Android builds and native engine/edit/undo/reopen checks pass on both targets; see [P01](reports/P01.md) for provenance.
 
 P02 is in progress. Native task/cache/binary, checkpoint recovery, atomic edits,

@@ -4,6 +4,10 @@ on:
     paths:
       - "packages/cadence/**"
       - "packages/ignition/**"
+      - "packages/telemetry/**"
+      - "packages/board/**"
+      - "packages/*/rust/**"
+      - "rust/**"
       - "examples/native-cadence/**"
       - "tooling/nyc-tron.json"
       - "tooling/nyc-tron-metro.cjs"
@@ -42,6 +46,20 @@ jobs:
       - name: Typecheck
         working-directory: examples/native-cadence
         run: corepack pnpm typecheck
+      - name: Verify full native payload identity, fresh receipts and actual entry routing
+        run: node --test tooling/native/native-artifact.test.mjs tooling/native/runtime-receipt.test.mjs
+      - name: Compile the MMKV v4 port and verify real core reopen
+        env:
+          FORGE_MMKV_PORT_OUTPUT: ${{ runner.temp }}/forge-mmkv-port
+        run: |
+          git clone --depth 1 --branch v2.4.0 https://github.com/Tencent/MMKV.git "$RUNNER_TEMP/mmkv-core"
+          node tooling/native/verify-mmkv-port.mjs "$RUNNER_TEMP/mmkv-core"
+      - name: Retain MMKV source and core evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: forge-mmkv-port
+          path: ${{ runner.temp }}/forge-mmkv-port
       - name: Bundle with Metro and check one copy of each shared runtime
         working-directory: examples/native-cadence
         run: |
@@ -51,7 +69,7 @@ jobs:
             node ../../tooling/native/check-bundle-singletons.mjs "$RUNNER_TEMP/export-$platform" "$platform"
           done
   android:
-    name: Expo 58 Android consumer compile
+    name: Expo 58 Android consumer compile and runtime
     runs-on: ubuntu-latest
     timeout-minutes: 55
     needs: consumer-types
@@ -89,8 +107,33 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+      - name: Execute generated Nitro bindings on Android
+        shell: bash
+        env:
+          FORGE_ACCEPTANCE_OUTPUT: ${{ runner.temp }}/forge-runtime-android
+        run: |
+          set -euo pipefail
+          export ANDROID_USER_HOME="$RUNNER_TEMP/forge-android-user"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "system-images;android-35;google_apis;x86_64" "emulator" "platform-tools"
+          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force -n ForgeRuntimeAcceptance -k "system-images;android-35;google_apis;x86_64" --path "$ANDROID_AVD_HOME/ForgeRuntimeAcceptance.avd"
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx 'ForgeRuntimeAcceptance'
+          if [[ -e /dev/kvm ]]; then sudo chmod 666 /dev/kvm; fi
+          "$ANDROID_HOME/emulator/emulator" -avd ForgeRuntimeAcceptance -port 5554 -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -memory 3072 > "$RUNNER_TEMP/forge-emulator.log" 2>&1 &
+          forge_emulator_pid=$!
+          trap 'kill "$forge_emulator_pid" 2>/dev/null || true' EXIT
+          node tooling/native/run-runtime-acceptance.mjs android examples/native-cadence/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Retain Android native runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: forge-native-runtime-android
+          path: |
+            ${{ runner.temp }}/forge-runtime-android
+            ${{ runner.temp }}/forge-emulator.log
   ios:
-    name: Expo 58 iOS consumer compile
+    name: Expo 58 iOS consumer compile and runtime
     # Nitro v1's Package.swift declares swift-tools-version 6.4; its README says
     # iOS builds require Swift 6.4 or newer. macos-latest ships Xcode 26.6 with
     # Swift 6.3.3, which cannot resolve the package. xcode-27 carries Swift 6.4.
@@ -106,6 +149,10 @@ jobs:
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
       - run: corepack enable
+      - name: Prewarm the exact iPhone simulator while native code compiles
+        env:
+          FORGE_ACCEPTANCE_OUTPUT: ${{ runner.temp }}/forge-runtime-ios
+        run: node tooling/native/prewarm-simulator.mjs
       - name: Build current Rust XCFramework before SwiftPM resolution
         run: bash packages/ignition/scripts/build-apple.sh
       - working-directory: examples/native-cadence
@@ -121,6 +168,29 @@ jobs:
           project=$(find . -maxdepth 1 -name '*.xcodeproj' -print -quit)
           test -n "$project"
           scheme=$(basename "$project" .xcodeproj)
-          xcodebuild -project "$project" -scheme "$scheme" -configuration Debug \
+          if ! xcodebuild -project "$project" -scheme "$scheme" -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build
+            -derivedDataPath "$RUNNER_TEMP/forge-cadence-build" \
+            CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/forge-cadence-build.log" 2>&1; then
+            tail -n 150 "$RUNNER_TEMP/forge-cadence-build.log"
+            exit 1
+          fi
+          tail -n 8 "$RUNNER_TEMP/forge-cadence-build.log"
+      - name: Execute generated Nitro bindings on iOS
+        shell: bash
+        env:
+          FORGE_ACCEPTANCE_OUTPUT: ${{ runner.temp }}/forge-runtime-ios
+        run: |
+          set -euo pipefail
+          forge_apps=("$RUNNER_TEMP/forge-cadence-build/Build/Products/Debug-iphonesimulator/"*.app)
+          test "${#forge_apps[@]}" -eq 1
+          test -d "${forge_apps[0]}"
+          node tooling/native/run-runtime-acceptance.mjs ios "${forge_apps[0]}"
+      - name: Retain iOS native runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: forge-native-runtime-ios
+          path: |
+            ${{ runner.temp }}/forge-runtime-ios
+            ${{ runner.temp }}/forge-cadence-build.log

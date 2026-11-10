@@ -3,7 +3,16 @@
 Living ledger per the project operating standard. "Evidence" means a command whose
 output actually exists; anything not executed is marked NOT RUN.
 
-## Verified — evidence exists
+## Current v1 source and runtime candidate — 2026-11-10
+
+Current owners, pinned source, app-launch gates and acceptance limits are recorded
+in [V1 platform closure](completion/reports/V1-PLATFORM-CLOSURE.md) and
+[native infrastructure evidence](recovery/V1_INFRASTRUCTURE_ACCEPTANCE.md).
+The original bootstrap counts below are retained as historical evidence. They are
+not the current eleven-engine/Nitro1 inventory and do not override the canonical
+341-row [completion ledger](completion/components.json).
+
+## Historical bootstrap verification — evidence exists
 
 | Check | Result | Command |
 |---|---|---|

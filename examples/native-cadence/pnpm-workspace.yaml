@@ -7,10 +7,15 @@ packages:
   - "../../packages/cadence"
   - "../../packages/telemetry"
   - "../../packages/prism"
+  - "../../packages/board"
 # Keep the app and shared Ignition dependency on the same Nitro v1 nightly.
 # Metro must bundle a single react-native-nitro-modules runtime.
 overrides:
   react-native-nitro-modules: "1.0.0-alpha.nightly.120.g33ef045b96c0"
+packageExtensions:
+  "react-native-mmkv@4.3.2":
+    dependencies:
+      nitro-core: "1.0.0-alpha.nightly.120.g33ef045b96c0"
 minimumReleaseAge: 0
 allowBuilds:
   esbuild: false
@@ -22,3 +27,4 @@ patchedDependencies:
   "@nyc-tron/hardware-keys": patches/@nyc-tron__hardware-keys.patch
   "@nyc-tron/platform-services": patches/@nyc-tron__platform-services.patch
   "@expo/ui@58.0.27": patches/@expo__ui@58.0.27.patch
+  "react-native-mmkv@4.3.2": patches/react-native-mmkv@4.3.2.patch

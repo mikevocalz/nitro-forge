@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "platform": "ios",
+  "revision": "aa11c3b3b3b9170a48c4ecfef8ae2a1ad3ed0533",
+  "runId": "46f78497-abd5-4549-9de3-8ce21385ce41",
+  "processToken": "1794289223243-0.05332019514074562",
+  "checks": [
+    "mmkv-v4-native-binary-ownership",
+    "mmkv-v4-yjs-roundtrip",
+    "mmkv-v4-process-reopen",
+    "mmkv-v4-scope-isolation",
+    "mmkv-v4-corruption-preserved",
+    "mmkv-v4-explicit-recovery",
+    "mmkv-v4-all-engine-snapshot-reopen",
+    "binary-input-output-ownership",
+    "restore-input-ownership",
+    "cache-copy-lru-bounds",
+    "cache-fifo-close",
+    "running-and-queued-cancellation",
+    "task-progress-result-ownership",
+    "document-fifo-close",
+    "output-survives-document-close"
+  ],
+  "engineKinds": [
+    "prism",
+    "cadence",
+    "splice",
+    "folio",
+    "pitch",
+    "tally",
+    "quill",
+    "photo",
+    "motion",
+    "design",
+    "draft"
+  ],
+  "storage": {
+    "bindings": "react-native-mmkv@4.3.2 + Nitro 120 port",
+    "core": "MMKVCore@2.4.0"
+  },
+  "elapsedMs": 120,
+  "phase": "complete",
+  "provenance": {
+    "udid": "C898E3E4-5033-4085-B886-963EE2D0C478",
+    "name": "iPhone Duo",
+    "sourceCommit": "aa11c3b3b3b9170a48c4ecfef8ae2a1ad3ed0533",
+    "binarySha256": "951e06676328f72d29bad173e05f3eb5041c6037feb341924e837920a6916f9b",
+    "launches": [
+      {
+        "launch": 1,
+        "processToken": "1794289198436-0.6274671241334564"
+      },
+      {
+        "launch": 2,
+        "processToken": "1794289223243-0.05332019514074562"
+      }
+    ]
+  }
+}
