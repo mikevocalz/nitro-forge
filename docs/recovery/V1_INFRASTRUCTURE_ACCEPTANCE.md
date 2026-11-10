@@ -32,7 +32,7 @@ cross-engine tests compare durable state without requiring token equality;
 the native engine verifier still requires rejected restoration to leave the
 complete current description, including the token, unchanged.
 
-## Executed locally
+## Executed locally at the initial implementation checkpoint
 
 - `cargo test --locked --workspace`: passed, including every Rust engine,
   nf-sys binary/transaction contracts and ignition-core task ownership.
@@ -74,13 +74,23 @@ runtime failure is an error; no mock, CLI or alternate transport is admitted.
 The existing `cadence-native-consumer.yml` iOS/Android jobs now launch their
 built apps through `tooling/native/run-runtime-acceptance.mjs`. Android reads
 the actual acceptance screen's accessibility hierarchy; iOS reads the native
-simulator app console. The runner requires all eight checks, platform and
-matching source commit, then retains `result.json`, a screenshot and logs.
+simulator app console. The final runner requires three initial write checks,
+actual OS termination/relaunch, a distinct process identity, and fifteen final
+checks covering all eleven engines. Reports retain the platform, exact tested
+revision, native payload manifest, installed consumer identity and command logs.
 
-These launch gates are **pending remote execution** at the time of this
-report. Native compilation, Metro export and the C++/Rust tests above do not
-constitute native JS/device acceptance. The gate is satisfied only by the
-result artifacts from a successful app launch at the reviewed commit.
+Both native jobs passed in [run 42765520077](https://github.com/mikevocalz/nitro-forge/actions/runs/42765520077)
+at head `f5469d03cf2153a8f694ae61d911861264e9216d`; the tested merge was
+`7cc6c15805b20ae69804be9cbf526ae48a4f1a63`. This run passed native MMKV/Yjs
+recovery, binary/cache ownership, FIFO close, running/queued cancellation and
+snapshot lifetime checks. All fourteen other workflows passed at that head.
+The original [receipts and payload verification](https://github.com/mikevocalz/NYC-Tron-UI/tree/e2b65dd5e9288b193b6bfd807d6003b184b8c642/docs/completion/evidence/v1-forge-f5469d0)
+are retained in the coordinated NYC-Tron candidate. The optional iOS screenshot
+was unavailable on its multi-display simulator; no visual acceptance is claimed.
+
+These are recorded emulator/simulator executions of the native generated
+bindings. Physical-device performance, sudden-power-loss recovery, product
+transport and the full platform matrix remain separate acceptance work.
 
 ## Remaining contract boundaries
 

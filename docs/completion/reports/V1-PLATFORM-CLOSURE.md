@@ -41,6 +41,15 @@ FIFO close, task cancellation and snapshot lifetime checks. This proves those
 scoped emulator/simulator behaviors; it does not establish sudden-power-loss
 durability or the complete eight-platform matrix.
 
+The later [native run 42765520077](https://github.com/mikevocalz/nitro-forge/actions/runs/42765520077)
+also passed all three jobs at `f5469d03cf2153a8f694ae61d911861264e9216d`,
+with tested merge `7cc6c15805b20ae69804be9cbf526ae48a4f1a63`. Both mobile jobs
+completed the three write checks, OS restart and fifteen final checks for all
+eleven engines. Its [original receipts and artifact verification](https://github.com/mikevocalz/NYC-Tron-UI/tree/e2b65dd5e9288b193b6bfd807d6003b184b8c642/docs/completion/evidence/v1-forge-f5469d0)
+are retained in the coordinated NYC-Tron candidate. All fourteen non-native
+workflows passed at the same head. The optional iOS screenshot was unavailable;
+this receipt establishes native runtime behavior without a visual acceptance claim.
+
 ## Ownership and scope
 
 NYC-Tron owns generic native input, presentation and platform media. Forge owns
@@ -121,7 +130,7 @@ Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. P
 
 ## N-13
 
-**LongTaskScheduler.** Native queue/task source and Rust/C++ contract checks pass; generated-object simulator app-launch gate is running. Product latency/suspend/resume on the complete device matrix remains unverified.
+**LongTaskScheduler.** Native queue/task source and Rust/C++ contract checks pass. Generated native objects passed running/queued cancellation, FIFO close and snapshot lifetime checks on both iOS and Android in run `42765520077`. Product latency/suspend/resume on the complete device matrix remains unverified.
 
 Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/nitro`.
 
@@ -131,7 +140,7 @@ Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. P
 
 ## N-14
 
-**MediaCache.** Native byte/metadata bounds, LRU and allocation-failure safety have tests; generated-object app-launch evidence and device pressure budgets remain separate.
+**MediaCache.** Native byte/metadata bounds, LRU and allocation-failure safety have tests. Both mobile native jobs passed cache ownership, bounds/LRU and FIFO-close checks in run `42765520077`. Physical-device memory-pressure budgets remain unverified.
 
 Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/nitro`.
 
@@ -150,7 +159,7 @@ Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. P
 
 ## N-16
 
-**NativeBinaryTransport.** Owned native ArrayBuffer request/result/checkpoint lifetimes have Rust/C++ checks and a generated-object app-launch gate; no zero-copy claim; full device memory/latency evidence remains unverified.
+**NativeBinaryTransport.** Owned native ArrayBuffer request/result/checkpoint lifetimes have Rust/C++ checks. Both mobile native jobs passed input/output ownership, restore ownership and output lifetime after document close in run `42765520077`. The transport uses owned copies; full device memory/latency evidence remains unverified.
 
 Owner: `mikevocalz/nitro-forge` at `cc4893b29f6182c71705a64785a41f5bbf3f5507`. Public imports: `@nitro-forge/ignition/nitro`.
 
