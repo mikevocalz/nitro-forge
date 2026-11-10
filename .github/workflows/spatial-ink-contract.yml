@@ -5,24 +5,28 @@ on:
       - 'packages/spatial-ink/**'
       - 'docs/native/SPATIAL_INK_MUSE.md'
       - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/spatial-ink-contract.yml'
   push:
     branches:
       - 'feat/spatial-ink-*'
     paths:
       - 'packages/spatial-ink/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/spatial-ink-contract.yml'
 jobs:
   muse-input:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Use the root packageManager pin; a second version can drift.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - name: Install from the committed lockfile
         run: pnpm install --frozen-lockfile
