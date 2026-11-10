@@ -17,6 +17,9 @@ pub enum ErrorCode {
     OutOfBounds,
     /// A feature is defined but not implemented for this document/op.
     Unsupported,
+    /// A long-running command stopped at a checkpoint because its task was
+    /// cancelled. The document is unchanged.
+    Cancelled,
     /// Anything else. The session should be treated as dead by the host.
     Internal,
 }
@@ -62,6 +65,10 @@ impl EngineError {
 
     pub fn unsupported(message: impl Into<String>) -> Self {
         Self::new(ErrorCode::Unsupported, message)
+    }
+
+    pub fn cancelled() -> Self {
+        Self::new(ErrorCode::Cancelled, "task cancelled")
     }
 
     pub fn internal(message: impl Into<String>) -> Self {

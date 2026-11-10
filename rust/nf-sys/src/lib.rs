@@ -10,6 +10,13 @@
 //! any thread, and the native layer must serialize per-handle (documented in
 //! docs/ARCHITECTURE.md §2).
 
+// New v1 transport is separate: legacy nf_* entrypoints remain available.
+mod dispatch;
+mod ffi_binary;
+mod ffi_v1;
+mod ffi_v1_parts;
+mod session_registry;
+
 use ignition_core::{
     base64_decode,
     Command, Engine, EngineError, EngineKind, ErrorCode, SessionRegistry,

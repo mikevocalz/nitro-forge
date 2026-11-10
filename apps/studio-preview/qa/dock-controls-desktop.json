@@ -1,0 +1,164 @@
+{
+  "launch": true,
+  "headless": true,
+  "capture_network": false,
+  "capture": {
+    "after_each_step": [
+      "screenshot"
+    ],
+    "at_end": [
+      "screenshot"
+    ],
+    "events": []
+  },
+  "screenshot_each_step": false,
+  "keep_bodies": {
+    "header_values": false,
+    "request_body": false,
+    "response_body": false
+  },
+  "environment": {
+    "width": 1440,
+    "height": 1000,
+    "device_scale_factor": 1,
+    "locale": "en-US",
+    "timezone": "America/New_York",
+    "color_scheme": "dark",
+    "reduced_motion": true,
+    "bypass_service_workers": true
+  },
+  "actions": [
+    {
+      "kind": "goto",
+      "url": "http://127.0.0.1:4173/#/apps/prism",
+      "wait_ms": 1600,
+      "step_id": "open-prism"
+    },
+    {
+      "kind": "click",
+      "selector": "[data-testid=\"forge-workspace\"] > div:nth-child(2) summary",
+      "step_id": "open-workspace-properties"
+    },
+    {
+      "kind": "click",
+      "role": "menuitem",
+      "name": "Show Properties",
+      "step_id": "show-properties"
+    },
+    {
+      "kind": "wait",
+      "ms": 350,
+      "step_id": "settle-properties"
+    },
+    {
+      "kind": "click",
+      "selector": "[data-testid=\"forge-workspace\"] > div:nth-child(2) summary",
+      "step_id": "open-workspace-commands"
+    },
+    {
+      "kind": "click",
+      "role": "menuitem",
+      "name": "Show Commands",
+      "step_id": "show-commands"
+    },
+    {
+      "kind": "wait",
+      "ms": 350,
+      "step_id": "settle-commands"
+    },
+    {
+      "kind": "click",
+      "role": "tab",
+      "name": "Properties",
+      "step_id": "activate-properties-tab"
+    },
+    {
+      "kind": "wait",
+      "ms": 250,
+      "step_id": "properties-content"
+    },
+    {
+      "kind": "click",
+      "role": "tab",
+      "name": "Commands",
+      "step_id": "activate-commands-tab"
+    },
+    {
+      "kind": "wait",
+      "ms": 250,
+      "step_id": "commands-content"
+    },
+    {
+      "kind": "click",
+      "role": "tab",
+      "name": "Properties",
+      "step_id": "properties-second-tab"
+    },
+    {
+      "kind": "wait",
+      "ms": 250,
+      "step_id": "properties-second-content"
+    },
+    {
+      "kind": "click",
+      "role": "tab",
+      "name": "Commands",
+      "step_id": "commands-second-tab"
+    },
+    {
+      "kind": "wait",
+      "ms": 250,
+      "step_id": "commands-second-content"
+    },
+    {
+      "kind": "click",
+      "selector": "[data-testid=\"forge-workspace\"] > div:nth-child(2) summary",
+      "step_id": "open-workspace-arrange"
+    },
+    {
+      "kind": "click",
+      "role": "menuitem",
+      "name": "Arrange panels",
+      "step_id": "arrange-panels"
+    },
+    {
+      "kind": "wait",
+      "ms": 300,
+      "step_id": "arrange-content"
+    },
+    {
+      "kind": "press",
+      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Commands\"] [role=\"radio\"]:last-child",
+      "key": "Tab",
+      "step_id": "focus-scroll-bottom-radio"
+    },
+    {
+      "kind": "wait",
+      "ms": 150,
+      "step_id": "segmented-before-move"
+    },
+    {
+      "kind": "click",
+      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Commands\"] [role=\"radio\"]:last-child",
+      "step_id": "choose-bottom-position"
+    },
+    {
+      "kind": "wait",
+      "ms": 350,
+      "step_id": "settle-bottom-position"
+    },
+    {
+      "kind": "press",
+      "selector": "[role=\"radiogroup\"][aria-label=\"Dock position for Commands\"] [role=\"radio\"]:last-child",
+      "key": "Tab",
+      "step_id": "focus-bottom-after-move"
+    },
+    {
+      "kind": "wait",
+      "ms": 150,
+      "step_id": "segmented-after-move"
+    }
+  ],
+  "action_timeout_ms": 6000,
+  "timeout_secs": 45
+}

@@ -1,12 +1,23 @@
 {
-  "cxxNamespace": ["nitroforge"],
-  "ios": {
-    "iosModuleName": "NitroForge"
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "environment": "react-native",
+  "cxxNamespace": [
+    "nitroforge",
+    "ignitionv1"
+  ],
+  "apple": {
+    "moduleName": "NitroForgeV1"
   },
   "android": {
-    "androidNamespace": ["nitroforge"],
-    "androidCxxLibName": "nitroforge"
+    "namespace": [
+      "nitroforge",
+      "ignitionv1"
+    ],
+    "cxxLibName": "NitroForgeV1"
   },
-  "autolinking": {},
-  "ignorePaths": ["node_modules", "lib", "tests"]
+  "ignorePaths": [
+    "**/node_modules",
+    "**/tests",
+    "**/lib"
+  ]
 }

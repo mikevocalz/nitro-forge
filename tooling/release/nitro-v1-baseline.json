@@ -1,0 +1,5 @@
+{
+  "version": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+  "source": "https://github.com/margelo/nitro/releases",
+  "note": "Release candidate pin; app migration still requires native tests."
+}

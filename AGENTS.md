@@ -31,3 +31,19 @@ pnpm --filter @nitro-forge/console demo   # all-engines workflow demo
 - Op names live in `docs/ENGINE_OPS.md` — change the doc and every engine together.
 - No `unsafe` inside product engines (FFI lives in `rust/nf-sys` only).
 - Never claim verification that wasn't run; update `docs/ROSTER.md` truthfully.
+
+## Existing UI controls first
+
+User requirement (2026-11-03), moved to NYC-Tron UI by rule #38 (2026-11-05:
+Forge imports NYC-Tron): use the NYC-Tron UI inventory (release pinned in
+`tooling/nyc-tron.json`, bound in `packages/studio-workspace/src/nyc-tron-host.tsx`)
+before assembling custom controls. Use its TabBar for tab panels and its
+SegmentedControl for mutually exclusive choices, alongside the existing native
+Menu/Select, semantic ui/html and input components. Extend the strict Studio UI
+provider when a canonical component is missing from that boundary. Preserve
+rounded-sm (4px) Studio chrome. Do not substitute action buttons or fake modes
+for existing controls; keep app navigation, tabs and radio choices distinct.
+
+## Advanced native UI extraction
+
+NYC-Tron UI is the single owner of reusable native controls, released as [NYC-Tron `v0.1.0-alpha.3`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v0.1.0-alpha.3), the release `tooling/nyc-tron.json` pins (GitHub Release tarballs, not npm; the controls came in via NYC-Tron PR #2). Forge adds only Rust/native engine behavior and typed adapters. Inspect [the source-port roster](docs/ADVANCED_NATIVE_PORT_ROSTER.md) before introducing an upstream port; file-level license review is mandatory. Never recreate the knob, graph, crop overlay, or generic native popup inside Forge.

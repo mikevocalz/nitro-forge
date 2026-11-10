@@ -1,0 +1,32 @@
+name: Forge Muse spatial ink contract
+on:
+  pull_request:
+    paths:
+      - 'packages/spatial-ink/**'
+      - 'docs/native/SPATIAL_INK_MUSE.md'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/spatial-ink-contract.yml'
+  push:
+    branches:
+      - 'feat/spatial-ink-*'
+    paths:
+      - 'packages/spatial-ink/**'
+      - '.github/workflows/spatial-ink-contract.yml'
+jobs:
+  muse-input:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install from the committed lockfile
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck spatial input
+        run: pnpm --filter @nitro-forge/spatial-ink typecheck
+      - name: Replay hover, press, pressure, cancel, buttons, and timestamps
+        run: pnpm --filter @nitro-forge/spatial-ink test

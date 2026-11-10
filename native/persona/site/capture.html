@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nitro Forge — Persona capture</title>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#EAF2F8;--mut:#8FA3B8;--faint:#5C6E82;--cyan:#4FE3C1;--cyan-ink:#04231C;
+  --glass:linear-gradient(165deg,rgba(255,255,255,.10),rgba(255,255,255,.03));
+  --line:rgba(255,255,255,.09);--red:#FF7A6E;
+}
+*{margin:0;box-sizing:border-box}
+body{min-height:100vh;display:grid;place-items:center;padding:40px 16px;
+  background:radial-gradient(120% 90% at 70% 8%,rgba(38,70,110,.5),transparent 60%),
+  radial-gradient(80% 60% at 12% 92%,rgba(20,60,80,.35),transparent 60%),#070B14;
+  color:var(--ink);font-family:'Satoshi',system-ui,sans-serif}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+
+.phone{width:min(400px,94vw);border-radius:46px;padding:12px;
+  background:linear-gradient(170deg,#1a2334,#0d1220);border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 70px 110px -40px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.1)}
+.screen{border-radius:36px;overflow:hidden;background:#0A0F1A;min-height:720px;display:flex;flex-direction:column;position:relative}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:96px;height:22px;border-radius:12px;background:#000;z-index:5}
+.status{display:flex;justify-content:space-between;padding:38px 22px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mut);letter-spacing:.1em}
+
+/* viewfinder */
+.cam{flex:1;position:relative;min-height:380px;
+  background:radial-gradient(90% 70% at 50% 28%,#1d2d4c,#0a0f1a 78%)}
+.cam .face{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);width:52%;opacity:.95;mix-blend-mode:screen;filter:saturate(.8) brightness(1.1)}
+.oval{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);width:60%;aspect-ratio:1;border-radius:50%;
+  border:1.5px solid rgba(143,163,184,.5);transition:border-color .3s,box-shadow .3s}
+.oval.ok{border-color:var(--cyan);box-shadow:0 0 50px rgba(79,227,193,.18) inset,0 0 24px rgba(79,227,193,.15)}
+.oval.bad{border-color:var(--red);box-shadow:0 0 50px rgba(255,122,110,.15) inset}
+.cam .tag{position:absolute;top:56px;left:50%;transform:translateX(-50%);z-index:2;white-space:nowrap;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--cyan);background:rgba(4,20,16,.65);border:1px solid rgba(79,227,193,.3);
+  padding:6px 13px;border-radius:999px;backdrop-filter:blur(8px)}
+.cam .tag.warn{color:#FFB4A8;border-color:rgba(255,122,110,.4);background:rgba(30,10,8,.6)}
+.stepdots{position:absolute;top:56px;right:16px;z-index:2;display:flex;gap:5px}
+.stepdots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.18)}
+.stepdots i.done{background:var(--cyan)}
+.stepdots i.now{background:var(--ink);transform:scale(1.3)}
+
+/* gate chips */
+.gates{display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px 0}
+.g{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:5px 9px;border-radius:7px;border:1px solid var(--line);color:var(--mut);transition:all .3s}
+.g.on{color:var(--cyan);border-color:rgba(79,227,193,.45);background:rgba(79,227,193,.08)}
+.g.bad{color:#FFB4A8;border-color:rgba(255,122,110,.45);background:rgba(255,122,110,.08)}
+
+/* bottom sheet */
+.sheet{background:rgba(10,15,26,.94);border-top:1px solid rgba(255,255,255,.07);padding:18px 20px 26px;backdrop-filter:blur(16px)}
+.sheet .stepname{display:flex;justify-content:space-between;align-items:baseline}
+.sheet .stepname b{font-family:'Clash Display',sans-serif;font-size:19px;font-weight:600}
+.sheet .stepname span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mut);letter-spacing:.1em}
+.sheet .hint{font-size:12.5px;color:var(--mut);margin-top:8px;line-height:1.5;min-height:36px}
+.sheet .hint b{color:var(--ink)}
+.btnrow{display:flex;gap:10px;margin-top:14px}
+.b{flex:1;text-align:center;font-size:13px;font-weight:600;padding:13px;border-radius:16px;border:0;cursor:pointer;font-family:'Satoshi',sans-serif}
+.b.primary{background:var(--cyan);color:var(--cyan-ink)}
+.b.ghost{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--line)}
+.b:active{transform:scale(.98)}
+.b[disabled]{opacity:.4;cursor:default}
+
+/* progress / processing */
+.proc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:40px;text-align:center}
+.ring{width:74px;height:74px;border-radius:50%;border:2px solid rgba(255,255,255,.1);border-top-color:var(--cyan);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.proc .mono{color:var(--cyan)}
+.proc p{font-size:13px;color:var(--mut);max-width:30ch;line-height:1.6}
+.done-ico{width:74px;height:74px;border-radius:50%;background:rgba(79,227,193,.12);border:1.5px solid rgba(79,227,193,.5);
+  display:grid;place-items:center;font-size:32px;color:var(--cyan)}
+
+/* review sliders */
+.sliders{display:grid;gap:16px;margin-top:6px}
+.sl label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut);margin-bottom:7px}
+.sl label b{color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em}
+.sl input{width:100%;accent-color:var(--cyan);height:4px}
+.tog{display:flex;align-items:center;justify-content:space-between;font-size:13px;padding:10px 0;border-top:1px solid var(--line)}
+.tog input{width:40px;height:22px;accent-color:var(--cyan)}
+
+.hidden{display:none!important}
+.back{position:absolute;top:56px;left:16px;z-index:4;background:rgba(255,255,255,.06);border:1px solid var(--line);
+  color:var(--ink);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="phone">
+ <div class="screen">
+  <div class="notch"></div>
+  <div class="status"><span>9:41</span><span>PERSONA · PROTO</span></div>
+
+  <!-- ============ CAPTURE VIEW ============ -->
+  <div id="view-capture">
+    <button class="back hidden" id="backBtn" onclick="goBack()">‹</button>
+    <div class="stepdots" id="dots"></div>
+    <div class="cam">
+      <div class="oval" id="oval"></div>
+      <img class="face" src="assets/head-glass.png" alt="">
+      <div class="tag" id="camTag">Lighting check</div>
+    </div>
+    <div class="gates" id="gates">
+      <span class="g" data-g="lighting">lighting</span>
+      <span class="g" data-g="coverage">coverage</span>
+      <span class="g" data-g="pose">pose</span>
+      <span class="g" data-g="device">device</span>
+      <span class="g" data-g="glasses">glasses</span>
+    </div>
+    <div class="sheet">
+      <div class="stepname"><b id="stepTitle">Step 1 — Light your face</b><span id="stepCount">1 / 7</span></div>
+      <div class="hint" id="stepHint">Find even light. Avoid strong light from one side.</div>
+      <div class="btnrow">
+        <button class="b ghost" id="skipBtn">Skip</button>
+        <button class="b primary" id="nextBtn">Begin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PROCESSING ============ -->
+  <div id="view-processing" class="hidden">
+    <div class="status"><span>9:41</span><span>PERSONA · PROTO</span></div>
+    <div class="proc">
+      <div class="ring"></div>
+      <div class="mono">Fitting GNM Head V3…</div>
+      <p id="procMsg">Solving 253 identity + 383 expression coefficients across 7 frames.</p>
+    </div>
+  </div>
+
+  <!-- ============ REVIEW ============ -->
+  <div id="view-review" class="hidden">
+    <div class="status"><span>9:41</span><span>PERSONA · PROTO</span></div>
+    <div class="cam" style="min-height:280px">
+      <img class="face" src="assets/head-glass.png" alt="" style="width:60%">
+      <div class="oval ok"></div>
+      <div class="tag">Review your persona</div>
+    </div>
+    <div class="sheet">
+      <div class="stepname"><b>Review</b><span>GNM fit · 0.17px</span></div>
+      <div class="sliders">
+        <div class="sl"><label>Warmth <b id="vWarm">0</b></label><input type="range" min="-50" max="50" value="0" oninput="document.getElementById('vWarm').textContent=this.value"></div>
+        <div class="sl"><label>Brightness <b id="vBri">0</b></label><input type="range" min="-50" max="50" value="0" oninput="document.getElementById('vBri').textContent=this.value"></div>
+        <div class="tog"><span>Portrait touch-up</span><input type="checkbox"></div>
+        <div class="tog"><span>Fill background</span><input type="checkbox" checked></div>
+      </div>
+      <div class="btnrow">
+        <button class="b ghost" onclick="show('view-capture');resetFlow()">Recapture</button>
+        <button class="b primary" onclick="generate()">Generate persona</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DONE ============ -->
+  <div id="view-done" class="hidden">
+    <div class="status"><span>9:41</span><span>PERSONA · PROTO</span></div>
+    <div class="proc">
+      <div class="done-ico">✓</div>
+      <div class="mono" style="color:var(--cyan)">Persona saved</div>
+      <p id="doneMsg">Transferred and acknowledged by the headset. Your avatar is live.</p>
+      <div class="btnrow" style="max-width:280px;width:100%">
+        <button class="b ghost" onclick="location.reload()">Capture again</button>
+        <a class="b primary" href="index.html" style="display:block;line-height:39px">Back to site</a>
+      </div>
+    </div>
+  </div>
+ </div>
+</div>
+
+<script>
+const STEPS=[
+ {t:"Step 1 — Light your face",h:"Find even light. Avoid strong light from one side or backlight.",tag:"Lighting check",skippable:false,gate:"lighting",next:"Begin"},
+ {t:"Step 2 — Frame your face",h:"Center your face inside the oval. Fill about 70% of the frame.",tag:"Hold still",skippable:false,gate:"coverage",next:"Continue"},
+ {t:"Step 3 — Face the camera",h:"Look straight ahead. Slowly turn left, then right.",tag:"Neutral pose",skippable:false,gate:"pose",next:"Turn head"},
+ {t:"Step 4 — Smile",h:"Smile naturally with your mouth closed.",tag:"Expression · smile",skippable:true,gate:null,next:"Smile"},
+ {t:"Step 5 — Open your jaw",h:"Relaxed jaw drop — like the start of a yawn.",tag:"Expression · jaw",skippable:true,gate:null,next:"Drop jaw"},
+ {t:"Step 6 — Raise brows",h:"Lift your eyebrows as if surprised.",tag:"Expression · brows",skippable:true,gate:null,next:"Raise brows"},
+ {t:"Step 7 — Review frames",h:"We captured 7 frames. Checking quality before fitting.",tag:"Quality pass",skippable:false,gate:"device",next:"Generate"},
+];
+let i=0, gateOn={};
+const $=id=>document.getElementById(id);
+function show(id){['view-capture','view-processing','view-review','view-done'].forEach(v=>$(v).classList.toggle('hidden',v!==id))}
+function render(){
+ const s=STEPS[i];
+ $('stepTitle').textContent=s.t;$('stepCount').textContent=(i+1)+" / "+STEPS.length;
+ $('stepHint').innerHTML=s.h;$('camTag').textContent=s.tag;$('nextBtn').textContent=s.next;
+ $('skipBtn').classList.toggle('hidden',!s.skippable);
+ $('backBtn').classList.toggle('hidden',i===0);
+ $('oval').className='oval'+(s.gate&&gateOn[s.gate]?' ok':'');
+ $('dots').innerHTML=STEPS.map((_,k)=>`<i class="${k<i?'done':k===i?'now':''}"></i>`).join('');
+ document.querySelectorAll('#gates .g').forEach(g=>{
+   g.className='g';
+   if(s.gate&&g.dataset.g===s.gate&&gateOn[s.gate])g.classList.add('on')
+ });
+ // simulate gate evaluation over ~1.2s then mark pass
+ if(s.gate){setTimeout(()=>{gateOn[s.gate]=true;render()},1100)}
+}
+function goBack(){if(i>0){i--;render()}}
+function resetFlow(){i=0;gateOn={};render()}
+$('nextBtn').onclick=()=>{i++;if(i>=STEPS.length){finish()}else render()};
+$('skipBtn').onclick=()=>{i++;if(i>=STEPS.length){finish()}else render()};
+$('backBtn').onclick=goBack;
+function finish(){
+ show('view-processing');
+ const msgs=["Scoring 7 frames against quality gates…","Fitting GNM Head V3 identity…","Solving expression coefficients…","Transfer acknowledged by headset…"];
+ let m=0;
+ const t=setInterval(function(){m++;$('procMsg').textContent=msgs[Math.min(m,msgs.length-1)];if(m>=msgs.length){clearInterval(t);setTimeout(function(){show('view-review')},600)}},1100);
+}
+function generate(){
+ show('view-processing');$('procMsg').textContent="Rendering persona preview…";
+ setTimeout(()=>{show('view-done');$('doneMsg').textContent="Transferred and acknowledged by the headset. Warmth/brightness edits applied. Your avatar is live."},1600);
+}
+render();
+</script>
+</body>
+</html>

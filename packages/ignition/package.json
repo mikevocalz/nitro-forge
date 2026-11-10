@@ -8,15 +8,36 @@
   "exports": {
     ".": "./src/index.ts",
     "./cli": "./src/host-cli.ts",
-    "./nitro": "./src/Forge.nitro.ts"
+    "./nitro": "./src/specs/ForgeFactory.nitro.ts",
+    "./v1-host": "./src/v1-host.ts",
+    "./workspace": "./src/workspace.ts",
+    "./transfer": "./src/transfer.ts",
+    "./workspace-ui": "./src/workspace-ui.ts",
+    "./transfer-ui": "./src/transfer-ui.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "codegen": "nitrogen"
   },
   "devDependencies": {
-    "react-native-nitro-modules": "^0.29.8",
-    "typescript": "^5.8.0",
-    "vitest": "^3.1.0"
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0",
+    "nitrogen": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0"
+  },
+  "imports": {
+    "#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs"
+  },
+  "peerDependencies": {
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0"
+  },
+  "swiftpmConfig": {
+    "name": "NitroForgeV1",
+    "dependencies": [
+      "react-native-nitro-modules"
+    ]
   }
 }

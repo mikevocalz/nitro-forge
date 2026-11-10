@@ -1,7 +1,18 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node",
+      "@webgpu/types"
+    ],
+    "noEmit": true,
+    "paths": {
+      "nitro-core": ["./node_modules/nitro-core"]
+    },
+    "allowImportingTsExtensions": true
   },
-  "include": ["app", "src"]
+  "include": [
+    "app",
+    "src"
+  ]
 }

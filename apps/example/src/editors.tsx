@@ -199,7 +199,7 @@ const configs: Record<string, EditorConfig> = {
     open: async (h) => QuillDocument.open(h),
     rows: (s: any) =>
       (s?.blocks ?? []).map((b: any, i: number) => ({
-        label: `¶${i} (${b.kind})`,
+        label: `${b.kind === "h1" || b.kind === "h2" ? "Heading" : b.kind === "quote" ? "Quote" : "Paragraph"} ${i + 1}`,
         value: (b.inlines ?? []).map((x: any) => x.text).join(""),
       })),
     actions: [

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nitroforge.dev/schemas/workspace-layout.v1.json",
+  "title": "NitroForge Studio WorkspaceLayoutV1",
+  "description": "Portable panel configuration; no personal data, engine document or auth information. The runtime must additionally check unique membership across zones, known panel IDs and host geometry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "studioId",
+    "docks",
+    "collapsed",
+    "sizes",
+    "activeTabs",
+    "floating"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "studioId": {
+      "enum": [
+        "prism",
+        "cadence",
+        "splice",
+        "folio",
+        "pitch",
+        "tally",
+        "quill"
+      ]
+    },
+    "docks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "left",
+        "right",
+        "bottom"
+      ],
+      "properties": {
+        "left": {
+          "$ref": "#/$defs/panelIds"
+        },
+        "right": {
+          "$ref": "#/$defs/panelIds"
+        },
+        "bottom": {
+          "$ref": "#/$defs/panelIds"
+        }
+      }
+    },
+    "collapsed": {
+      "$ref": "#/$defs/panelIds"
+    },
+    "activeTabs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "left": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "right": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "bottom": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      }
+    },
+    "sizes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "leftFraction",
+        "rightFraction",
+        "bottomFraction"
+      ],
+      "properties": {
+        "leftFraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.45
+        },
+        "rightFraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.45
+        },
+        "bottomFraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.5
+        }
+      }
+    },
+    "floating": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "panelId",
+          "rect"
+        ],
+        "properties": {
+          "panelId": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1
+          },
+          "rect": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y",
+              "width",
+              "height"
+            ],
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "width": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "height": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "panelIds": {
+      "type": "array",
+      "maxItems": 40,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      }
+    }
+  }
+}

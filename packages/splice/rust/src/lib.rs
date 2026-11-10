@@ -6,6 +6,17 @@
 //! consume.
 //!
 //! Contracts: docs/ARCHITECTURE.md + docs/ENGINE_OPS.md (`splice-engine`).
+//!
+//! Every mutating op is one undo step. Ops that touch several clips (ripple,
+//! roll, slide, insert/overwrite placement, `batch`) edit a copy of the
+//! document, check the whole-document invariants on the copy, and only then
+//! record the journal entry and swap the copy in, so a rejected op leaves the
+//! document byte-for-byte unchanged.
+
+mod annotations;
+mod timeline_edits;
+mod track_ops;
+mod transitions;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
@@ -15,12 +26,25 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
+pub use annotations::{LoopRange, Marker};
+pub use transitions::{Transition, TransitionKind};
+
 const JOURNAL_CAPACITY: usize = 64;
+/// Upper bound on the ops one `batch` may carry.
+const MAX_BATCH_OPS: usize = 256;
 const DEFAULT_FPS: f64 = 30.0;
 const MIN_SPEED: f64 = 0.1;
 const MAX_SPEED: f64 = 10.0;
 /// Tolerance for float comparisons on timeline boundaries.
 const EPS: f64 = 1e-9;
+/// Longest timeline or source position Splice accepts (about 115 days). Far
+/// past any real edit, and small enough that `start + len` never rounds away
+/// a clip's length.
+const MAX_TIME_S: f64 = 1e7;
+/// Ids cross into JavaScript as numbers, so they stay within its safe integers.
+const MAX_ID: u64 = (1 << 53) - 1;
+/// Longest track name, in characters.
+const MAX_TRACK_NAME_CHARS: usize = 120;
 
 // ---------------------------------------------------------------------------
 // Document model
@@ -31,6 +55,33 @@ const EPS: f64 = 1e-9;
 pub enum TrackKind {
     Video,
     Audio,
+    /// Picture composited above the video tracks (picture-in-picture, titles
+    /// rendered to media). Holds ordinary source clips.
+    Overlay,
+}
+
+impl TrackKind {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "video" => Some(Self::Video),
+            "audio" => Some(Self::Audio),
+            "overlay" => Some(Self::Overlay),
+            _ => None,
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Video => "video",
+            Self::Audio => "audio",
+            Self::Overlay => "overlay",
+        }
+    }
+
+    /// Video and overlay tracks carry pictures; audio tracks carry sound.
+    fn is_visual(self) -> bool {
+        matches!(self, Self::Video | Self::Overlay)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,8 +117,51 @@ impl Clip {
 pub struct Track {
     pub id: u64,
     pub kind: TrackKind,
+    /// Display name. Absent until `renameTrack`; hosts show their own default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// A locked track refuses every edit to its clips and transitions, and
+    /// ripple edits on other tracks leave it in place.
+    #[serde(default)]
+    pub locked: bool,
+    /// Video/overlay only: excluded from the picture (`renderPlan.track_active`).
+    #[serde(default)]
+    pub hidden: bool,
+    /// Audio only.
+    #[serde(default)]
+    pub muted: bool,
+    /// Audio only. While any audio track is soloed, only soloed tracks play.
+    #[serde(default)]
+    pub solo: bool,
     #[serde(default)]
     pub clips: Vec<Clip>,
+    #[serde(default)]
+    pub transitions: Vec<Transition>,
+}
+
+impl Track {
+    fn new(id: u64, kind: TrackKind) -> Self {
+        Self {
+            id,
+            kind,
+            name: None,
+            locked: false,
+            hidden: false,
+            muted: false,
+            solo: false,
+            clips: Vec::new(),
+            transitions: Vec::new(),
+        }
+    }
+
+    fn sort_clips(&mut self) {
+        self.clips
+            .sort_by(|a, b| a.timeline_start_s.total_cmp(&b.timeline_start_s));
+    }
+
+    fn clip(&self, id: u64) -> Option<&Clip> {
+        self.clips.iter().find(|c| c.id == id)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -76,6 +170,10 @@ struct Doc {
     next_id: u64,
     sources: BTreeMap<u64, Source>,
     tracks: Vec<Track>,
+    #[serde(default)]
+    markers: Vec<Marker>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    loop_range: Option<LoopRange>,
 }
 
 impl Doc {
@@ -85,12 +183,211 @@ impl Doc {
             next_id: 1,
             sources: BTreeMap::new(),
             tracks: Vec::new(),
+            markers: Vec::new(),
+            loop_range: None,
+        }
+    }
+
+    fn require_track(&self, id: u64) -> Result<usize, EngineError> {
+        self.track_index(id)
+            .ok_or_else(|| EngineError::not_found(format!("no track {id}")))
+    }
+
+    fn require_clip(&self, id: u64) -> Result<(usize, usize), EngineError> {
+        self.clip_location(id)
+            .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))
+    }
+
+    fn require_unlocked(&self, track_idx: usize) -> Result<(), EngineError> {
+        let t = &self.tracks[track_idx];
+        if t.locked {
+            return Err(EngineError::validation(format!("track {} is locked", t.id)));
+        }
+        Ok(())
+    }
+
+    fn source_of(&self, clip: &Clip) -> Result<&Source, EngineError> {
+        self.sources
+            .get(&clip.source_id)
+            .ok_or_else(|| EngineError::internal("clip references missing source"))
+    }
+
+    /// Whether audio track `t` is heard / visual track `t` is seen.
+    fn track_active(&self, t: &Track) -> bool {
+        if t.kind.is_visual() {
+            return !t.hidden;
+        }
+        let any_solo = self
+            .tracks
+            .iter()
+            .any(|o| o.kind == TrackKind::Audio && o.solo);
+        if any_solo {
+            t.solo
+        } else {
+            !t.muted
+        }
+    }
+
+    /// Split the clip at `(track_idx, clip_idx)` at timeline time `at`, which
+    /// must be strictly inside it. The left half keeps the id; the right half
+    /// gets a new one, which is returned. A transition on the clip's tail
+    /// follows the right half, so it stays on the same cut.
+    fn split_at(&mut self, track_idx: usize, clip_idx: usize, at: f64) -> Result<u64, EngineError> {
+        let clip = &self.tracks[track_idx].clips[clip_idx];
+        let (start, end) = (clip.timeline_start_s, clip.timeline_end());
+        if at <= start + EPS || at >= end - EPS {
+            return Err(EngineError::validation(
+                "at_s must be strictly inside the clip's timeline span",
+            ));
+        }
+        let split_media = clip.in_s + (at - start) * clip.speed;
+        let left_id = clip.id;
+        let right_id = self.alloc_id();
+        let track = &mut self.tracks[track_idx];
+        let clip = &mut track.clips[clip_idx];
+        let right = Clip {
+            id: right_id,
+            source_id: clip.source_id,
+            timeline_start_s: at,
+            in_s: split_media,
+            out_s: clip.out_s,
+            speed: clip.speed,
+        };
+        clip.out_s = split_media;
+        track.clips.insert(clip_idx + 1, right);
+        for t in &mut track.transitions {
+            if t.left_id == left_id {
+                t.left_id = right_id;
+            }
+        }
+        Ok(right_id)
+    }
+
+    /// Clip invariants: starts >= 0, spans inside their sources, speeds in
+    /// range, no overlaps on a track. Multi-clip ops run this on their
+    /// working copy before committing. Transitions are not checked here: a
+    /// clip edit that breaks one drops it (`transitions::prune`) rather than
+    /// failing; see `validate_transitions`.
+    fn validate(&self) -> Result<(), EngineError> {
+        for t in &self.tracks {
+            let mut clips: Vec<&Clip> = t.clips.iter().collect();
+            clips.sort_by(|a, b| a.timeline_start_s.total_cmp(&b.timeline_start_s));
+            for c in &clips {
+                if c.timeline_start_s < -EPS {
+                    return Err(EngineError::validation(format!(
+                        "clip {} would start before 0",
+                        c.id
+                    )));
+                }
+                check_speed(c.speed)?;
+                check_span(c.in_s, c.out_s, self.source_of(c)?)?;
+                if c.timeline_end() > MAX_TIME_S {
+                    return Err(EngineError::out_of_bounds(format!(
+                        "clip {} would end past {MAX_TIME_S} s",
+                        c.id
+                    )));
+                }
+            }
+            for w in clips.windows(2) {
+                if w[1].timeline_start_s < w[0].timeline_end() - EPS {
+                    return Err(EngineError::validation(format!(
+                        "clips {} and {} would overlap on track {}",
+                        w[0].id, w[1].id, t.id
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Every transition fits its cut, one per cut (used by transition ops
+    /// and `restore`).
+    fn validate_transitions(&self) -> Result<(), EngineError> {
+        for t in &self.tracks {
+            for (i, tr) in t.transitions.iter().enumerate() {
+                if t.transitions[..i]
+                    .iter()
+                    .any(|o| o.left_id == tr.left_id && o.right_id == tr.right_id)
+                {
+                    return Err(EngineError::validation("that cut already has a transition"));
+                }
+                transitions::check(self, t, &t.transitions, tr)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Everything a snapshot must satisfy beyond the clip and transition
+    /// invariants: rate, source lengths, unique ids below `next_id`, header
+    /// flags that fit the track kind, marker and loop-range bounds.
+    fn validate_restored(&self) -> Result<(), EngineError> {
+        if !(self.fps.is_finite() && self.fps > 0.0) {
+            return Err(EngineError::validation("fps must be > 0"));
+        }
+        if self.next_id > MAX_ID {
+            return Err(EngineError::validation("next_id is out of range"));
+        }
+        let mut ids = std::collections::BTreeSet::new();
+        let mut claim = |id: u64| -> Result<(), EngineError> {
+            if id >= self.next_id || !ids.insert(id) {
+                return Err(EngineError::validation(format!("id {id} is duplicated or not below next_id")));
+            }
+            Ok(())
+        };
+        for (id, s) in &self.sources {
+            claim(*id)?;
+            check_duration(s.duration_s)?;
+        }
+        for t in &self.tracks {
+            claim(t.id)?;
+            if t.kind == TrackKind::Audio && t.hidden {
+                return Err(EngineError::validation("hidden is set on an audio track"));
+            }
+            if t.kind != TrackKind::Audio && (t.muted || t.solo) {
+                return Err(EngineError::validation("muted or solo is set on a video or overlay track"));
+            }
+            if let Some(name) = &t.name {
+                if name.trim().is_empty() || name.chars().count() > MAX_TRACK_NAME_CHARS {
+                    return Err(EngineError::validation("track name is empty or too long"));
+                }
+            }
+            for c in &t.clips {
+                claim(c.id)?;
+            }
+            for x in &t.transitions {
+                claim(x.id)?;
+            }
+        }
+        for m in &self.markers {
+            claim(m.id)?;
+            annotations::check_marker(m)?;
+        }
+        if let Some(r) = self.loop_range {
+            annotations::check_loop(r.in_s, r.out_s)?;
+        }
+        Ok(())
+    }
+
+    /// Snap positions that float math left a hair below 0 and re-sort clips.
+    fn normalize(&mut self) {
+        for t in &mut self.tracks {
+            for c in &mut t.clips {
+                if c.timeline_start_s < 0.0 && c.timeline_start_s > -EPS {
+                    c.timeline_start_s = 0.0;
+                }
+                if c.in_s < 0.0 && c.in_s > -EPS {
+                    c.in_s = 0.0;
+                }
+            }
+            t.sort_clips();
         }
     }
 
     fn alloc_id(&mut self) -> u64 {
         let id = self.next_id;
-        self.next_id += 1;
+        // `restore` keeps next_id at or below MAX_ID, so this never saturates
+        // in practice; saturating keeps it panic-free regardless.
+        self.next_id = self.next_id.saturating_add(1);
         id
     }
 
@@ -172,6 +469,18 @@ fn opt_str(p: &Value, key: &str) -> Result<Option<String>, EngineError> {
     }
 }
 
+fn check_duration(duration_s: f64) -> Result<(), EngineError> {
+    if duration_s <= 0.0 {
+        return Err(EngineError::validation("duration_s must be > 0"));
+    }
+    if duration_s > MAX_TIME_S {
+        return Err(EngineError::out_of_bounds(format!(
+            "duration_s must be at most {MAX_TIME_S}"
+        )));
+    }
+    Ok(())
+}
+
 fn check_speed(speed: f64) -> Result<(), EngineError> {
     if !(MIN_SPEED..=MAX_SPEED).contains(&speed) {
         return Err(EngineError::validation(format!(
@@ -226,13 +535,14 @@ impl SpliceEngine {
         if structural {
             events.push(Event::new("timeline:changed", Value::Null));
         }
-        CommandResult { events, data }
+        CommandResult { events, data, output: None }
     }
 
     fn read_only(data: Value) -> CommandResult {
         CommandResult {
             events: vec![],
             data,
+            output: None,
         }
     }
 }
@@ -243,12 +553,8 @@ impl Default for SpliceEngine {
     }
 }
 
-impl Engine for SpliceEngine {
-    fn kind(&self) -> EngineKind {
-        EngineKind::Splice
-    }
-
-    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+impl SpliceEngine {
+    fn apply_op(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.v != 1 {
             return Err(EngineError::unsupported(format!(
                 "unsupported command version {}",
@@ -272,9 +578,7 @@ impl Engine for SpliceEngine {
             // ---- sources ---------------------------------------------------
             "addSource" => {
                 let duration = req_f64(p, "duration_s")?;
-                if duration <= 0.0 {
-                    return Err(EngineError::validation("duration_s must be > 0"));
-                }
+                check_duration(duration)?;
                 let name = opt_str(p, "name")?;
                 self.record();
                 let id = self.doc.alloc_id();
@@ -300,34 +604,58 @@ impl Engine for SpliceEngine {
             // ---- tracks ----------------------------------------------------
             "addTrack" => {
                 let kind = match p.get("kind").and_then(Value::as_str) {
-                    Some("video") => TrackKind::Video,
-                    Some("audio") => TrackKind::Audio,
-                    Some(_) => {
-                        return Err(EngineError::validation(
-                            "kind must be \"video\" or \"audio\"",
-                        ))
-                    }
+                    Some(s) => TrackKind::parse(s).ok_or_else(|| {
+                        EngineError::validation("kind must be \"video\", \"audio\" or \"overlay\"")
+                    })?,
                     None => return Err(EngineError::invalid("missing or invalid 'kind'")),
                 };
                 self.record();
                 let id = self.doc.alloc_id();
-                self.doc.tracks.push(Track {
-                    id,
-                    kind,
-                    clips: Vec::new(),
-                });
+                self.doc.tracks.push(Track::new(id, kind));
                 Ok(Self::changed(json!({ "track_id": id }), true))
             }
             "removeTrack" => {
                 let id = req_u64(p, "id")?;
-                let idx = self
-                    .doc
-                    .track_index(id)
-                    .ok_or_else(|| EngineError::not_found(format!("no track {id}")))?;
+                let idx = self.doc.require_track(id)?;
+                self.doc.require_unlocked(idx)?;
                 self.record();
                 self.doc.tracks.remove(idx);
                 Ok(Self::changed(json!({ "ok": true }), true))
             }
+            "setTrackFlags" | "renameTrack" | "moveTrack" => {
+                let mut next = self.doc.clone();
+                match track_ops::apply(&mut next, cmd.op.as_str(), p)? {
+                    Some(data) => Ok(self.commit(next, data, true)),
+                    None => Ok(Self::read_only(json!({ "ok": true, "changed": false }))),
+                }
+            }
+
+            // ---- multi-clip edits (ripple, roll, slip, slide) --------------
+            "rippleDelete" | "rippleTrim" | "rollEdit" | "slipClip" | "slideClip" => {
+                let mut next = self.doc.clone();
+                let data = timeline_edits::apply(&mut next, cmd.op.as_str(), p)?;
+                next.normalize();
+                next.validate()?;
+                Ok(self.commit(next, data, true))
+            }
+
+            // ---- transitions -----------------------------------------------
+            "addTransition" | "setTransition" | "removeTransition" => {
+                let mut next = self.doc.clone();
+                let data = transitions::apply(&mut next, cmd.op.as_str(), p)?;
+                next.validate_transitions()?;
+                Ok(self.commit(next, data, true))
+            }
+
+            // ---- markers and loop range ------------------------------------
+            "addMarker" | "updateMarker" | "removeMarker" | "setLoopRange" | "clearLoopRange" => {
+                let mut next = self.doc.clone();
+                let data = annotations::apply(&mut next, cmd.op.as_str(), p)?;
+                Ok(self.commit(next, data, false))
+            }
+
+            // ---- batch -----------------------------------------------------
+            "batch" => self.batch(p),
 
             // ---- clips -----------------------------------------------------
             "addClip" => {
@@ -351,33 +679,31 @@ impl Engine for SpliceEngine {
                 if start < 0.0 {
                     return Err(EngineError::validation("start_s must be >= 0"));
                 }
-                let len = (out_s - in_s) / speed;
-                if self.doc.overlaps(ti, start, len, None) {
-                    return Err(EngineError::validation(
-                        "clip overlaps an existing clip on this track",
-                    ));
-                }
-                self.record();
-                let id = self.doc.alloc_id();
-                self.doc.tracks[ti].clips.push(Clip {
+                self.doc.require_unlocked(ti)?;
+                let placement = timeline_edits::Placement::parse(p)?;
+                let mut next = self.doc.clone();
+                let id = next.alloc_id();
+                let clip = Clip {
                     id,
                     source_id,
                     timeline_start_s: start,
                     in_s,
                     out_s,
                     speed,
-                });
-                self.doc.tracks[ti]
-                    .clips
-                    .sort_by(|a, b| a.timeline_start_s.total_cmp(&b.timeline_start_s));
-                Ok(Self::changed(json!({ "clip_id": id }), true))
+                };
+                let created = timeline_edits::place(
+                    &mut next,
+                    ti,
+                    clip,
+                    placement,
+                    "clip overlaps an existing clip on this track",
+                )?;
+                Ok(self.commit(next, json!({ "clip_id": id, "created": created }), true))
             }
             "removeClip" => {
                 let id = req_u64(p, "id")?;
-                let (ti, ci) = self
-                    .doc
-                    .clip_location(id)
-                    .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))?;
+                let (ti, ci) = self.doc.require_clip(id)?;
+                self.doc.require_unlocked(ti)?;
                 self.record();
                 self.doc.tracks[ti].clips.remove(ci);
                 Ok(Self::changed(json!({ "ok": true }), true))
@@ -388,22 +714,35 @@ impl Engine for SpliceEngine {
                 if start < 0.0 {
                     return Err(EngineError::validation("start_s must be >= 0"));
                 }
-                let (ti, ci) = self
-                    .doc
-                    .clip_location(id)
-                    .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))?;
-                let len = self.doc.tracks[ti].clips[ci].timeline_len();
-                if self.doc.overlaps(ti, start, len, Some(id)) {
-                    return Err(EngineError::validation(
-                        "move would overlap an existing clip on this track",
-                    ));
-                }
-                self.record();
-                self.doc.tracks[ti].clips[ci].timeline_start_s = start;
-                self.doc.tracks[ti]
-                    .clips
-                    .sort_by(|a, b| a.timeline_start_s.total_cmp(&b.timeline_start_s));
-                Ok(Self::changed(json!({ "ok": true }), true))
+                let (ti, ci) = self.doc.require_clip(id)?;
+                self.doc.require_unlocked(ti)?;
+                let target = match p.get("track") {
+                    None | Some(Value::Null) => ti,
+                    Some(_) => {
+                        let to = self.doc.require_track(req_u64(p, "track")?)?;
+                        self.doc.require_unlocked(to)?;
+                        if self.doc.tracks[to].kind.is_visual()
+                            != self.doc.tracks[ti].kind.is_visual()
+                        {
+                            return Err(EngineError::validation(
+                                "audio clips move between audio tracks; video and overlay clips between video and overlay tracks",
+                            ));
+                        }
+                        to
+                    }
+                };
+                let placement = timeline_edits::Placement::parse(p)?;
+                let mut next = self.doc.clone();
+                let mut clip = next.tracks[ti].clips.remove(ci);
+                clip.timeline_start_s = start;
+                let created = timeline_edits::place(
+                    &mut next,
+                    target,
+                    clip,
+                    placement,
+                    "move would overlap an existing clip on this track",
+                )?;
+                Ok(self.commit(next, json!({ "ok": true, "created": created }), true))
             }
             "trimClip" => {
                 let id = req_u64(p, "id")?;
@@ -414,10 +753,8 @@ impl Engine for SpliceEngine {
                         "trimClip requires at least one of 'in_s', 'out_s'",
                     ));
                 }
-                let (ti, ci) = self
-                    .doc
-                    .clip_location(id)
-                    .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))?;
+                let (ti, ci) = self.doc.require_clip(id)?;
+                self.doc.require_unlocked(ti)?;
                 let clip = &self.doc.tracks[ti].clips[ci];
                 let new_in = in_s.unwrap_or(clip.in_s);
                 let new_out = out_s.unwrap_or(clip.out_s);
@@ -445,47 +782,19 @@ impl Engine for SpliceEngine {
             "splitClip" => {
                 let id = req_u64(p, "id")?;
                 let at = req_f64(p, "at_s")?;
-                let (ti, ci) = self
-                    .doc
-                    .clip_location(id)
-                    .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))?;
-                let clip = &self.doc.tracks[ti].clips[ci];
-                let start = clip.timeline_start_s;
-                let end = clip.timeline_end();
-                if !(at > start + EPS && at < end - EPS) {
-                    return Err(EngineError::validation(
-                        "at_s must be strictly inside the clip's timeline span",
-                    ));
-                }
-                // Source-time at the split point (speed-aware).
-                let split_media = clip.in_s + (at - start) * clip.speed;
-                let left_id = clip.id;
-                self.record();
-                let right_id = self.doc.alloc_id();
-                let clip = &mut self.doc.tracks[ti].clips[ci];
-                let right = Clip {
-                    id: right_id,
-                    source_id: clip.source_id,
-                    timeline_start_s: at,
-                    in_s: split_media,
-                    out_s: clip.out_s,
-                    speed: clip.speed,
-                };
-                clip.out_s = split_media;
-                self.doc.tracks[ti].clips.insert(ci + 1, right);
-                Ok(Self::changed(
-                    json!({ "left_id": left_id, "right_id": right_id }),
-                    true,
-                ))
+                let (ti, ci) = self.doc.require_clip(id)?;
+                self.doc.require_unlocked(ti)?;
+                // split_at validates before it changes anything.
+                let mut next = self.doc.clone();
+                let right_id = next.split_at(ti, ci, at)?;
+                Ok(self.commit(next, json!({ "left_id": id, "right_id": right_id }), true))
             }
             "setSpeed" => {
                 let id = req_u64(p, "id")?;
                 let speed = req_f64(p, "speed")?;
                 check_speed(speed)?;
-                let (ti, ci) = self
-                    .doc
-                    .clip_location(id)
-                    .ok_or_else(|| EngineError::not_found(format!("no clip {id}")))?;
+                let (ti, ci) = self.doc.require_clip(id)?;
+                self.doc.require_unlocked(ti)?;
                 let clip = &self.doc.tracks[ti].clips[ci];
                 let new_len = (clip.out_s - clip.in_s) / speed;
                 let start = clip.timeline_start_s;
@@ -526,10 +835,8 @@ impl Engine for SpliceEngine {
                                     json!({
                                         "clip_id": c.id,
                                         "track_id": t.id,
-                                        "track_kind": match t.kind {
-                                            TrackKind::Video => "video",
-                                            TrackKind::Audio => "audio",
-                                        },
+                                        "track_kind": t.kind.as_str(),
+                                        "track_active": self.doc.track_active(t),
                                         "source_id": c.source_id,
                                         "timeline_start_s": c.timeline_start_s,
                                         "timeline_end_s": c.timeline_end(),
@@ -542,11 +849,95 @@ impl Engine for SpliceEngine {
                         )
                     })
                     .collect();
-                Ok(Self::read_only(json!({ "tracks": tracks })))
+                let transitions: Vec<Value> = self
+                    .doc
+                    .tracks
+                    .iter()
+                    .map(|t| Value::Array(transitions::plan(t)))
+                    .collect();
+                Ok(Self::read_only(
+                    json!({ "tracks": tracks, "transitions": transitions }),
+                ))
             }
 
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
+    }
+
+    /// Record the current document as one undo entry, then install `next`.
+    fn commit(&mut self, next: Doc, data: Value, structural: bool) -> CommandResult {
+        self.record();
+        self.doc = next;
+        Self::changed(data, structural)
+    }
+
+    /// `batch {ops:[{op,payload}]}`: run every op on a scratch engine; commit
+    /// all of them as one undo entry, or none if any op fails.
+    fn batch(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let ops = p
+            .get("ops")
+            .and_then(Value::as_array)
+            .ok_or_else(|| EngineError::invalid("missing or invalid 'ops'"))?;
+        if ops.is_empty() {
+            return Err(EngineError::validation("batch needs at least one op"));
+        }
+        if ops.len() > MAX_BATCH_OPS {
+            return Err(EngineError::validation(format!(
+                "batch takes at most {MAX_BATCH_OPS} ops"
+            )));
+        }
+        let mut scratch = SpliceEngine {
+            doc: self.doc.clone(),
+            journal: Journal::new(1),
+        };
+        let mut results = Vec::with_capacity(ops.len());
+        let mut structural = false;
+        for (i, item) in ops.iter().enumerate() {
+            let op = item
+                .get("op")
+                .and_then(Value::as_str)
+                .ok_or_else(|| EngineError::invalid(format!("ops[{i}]: missing or invalid 'op'")))?;
+            if matches!(op, "batch" | "new") {
+                return Err(EngineError::validation(format!(
+                    "ops[{i}]: '{op}' cannot run inside a batch"
+                )));
+            }
+            let payload = item.get("payload").cloned().unwrap_or_else(|| json!({}));
+            let r = scratch
+                .apply(Command::new(op, payload))
+                .map_err(|e| EngineError::new(e.code, format!("ops[{i}] {op}: {}", e.message)))?;
+            structural |= r.events.iter().any(|e| e.kind == "timeline:changed");
+            results.push(r.data);
+        }
+        let data = json!({ "results": results });
+        if scratch.doc == self.doc {
+            // Nothing changed (read-only or no-op ops): no undo entry, no event.
+            return Ok(Self::read_only(data));
+        }
+        Ok(self.commit(scratch.doc, data, structural))
+    }
+}
+
+impl Engine for SpliceEngine {
+    fn kind(&self) -> EngineKind {
+        EngineKind::Splice
+    }
+
+    /// Runs the op, then drops transitions the edit invalidated (clips no
+    /// longer adjacent, or too little media left for the overlap). The drop
+    /// is part of the same undo entry, and the ids are returned as
+    /// `removed_transitions`.
+    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+        let mut result = self.apply_op(cmd)?;
+        if result.events.iter().any(|e| e.kind == "timeline:changed") {
+            let removed = transitions::prune(&mut self.doc);
+            if !removed.is_empty() {
+                if let Value::Object(map) = &mut result.data {
+                    map.insert("removed_transitions".into(), json!(removed));
+                }
+            }
+        }
+        Ok(result)
     }
 
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
@@ -564,9 +955,15 @@ impl Engine for SpliceEngine {
             .copied()
             .chain(doc.tracks.iter().map(|t| t.id))
             .chain(doc.tracks.iter().flat_map(|t| t.clips.iter().map(|c| c.id)))
+            .chain(doc.tracks.iter().flat_map(|t| t.transitions.iter().map(|x| x.id)))
+            .chain(doc.markers.iter().map(|m| m.id))
             .max()
             .unwrap_or(0);
         doc.next_id = doc.next_id.max(max_id.saturating_add(1));
+        // A well-formed envelope can still carry an inconsistent timeline.
+        doc.validate_restored()?;
+        doc.validate()?;
+        doc.validate_transitions()?;
         self.doc = doc;
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
@@ -1090,6 +1487,203 @@ mod tests {
         let wrong_shape = encode_envelope(b"12345");
         assert!(e.restore(&wrong_shape).is_err());
         assert_eq!(describe(&e), before);
+    }
+
+    // ---- batch ---------------------------------------------------------------
+
+    #[test]
+    fn batch_is_all_or_nothing_and_one_undo_step() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let a = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 2.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        let b = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 2.0, "out_s": 4.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        let r = apply_full(
+            &mut e,
+            "batch",
+            json!({"ops": [
+                {"op": "setSpeed", "payload": {"id": a, "speed": 2.0}},
+                {"op": "moveClip", "payload": {"id": b, "start_s": 1.0}},
+                {"op": "addMarker", "payload": {"time_s": 0.5}},
+            ]}),
+        )
+        .unwrap();
+        assert_eq!(r.data["results"].as_array().unwrap().len(), 3);
+        assert!(r.data["results"][2]["marker_id"].is_u64());
+        assert!(r.events.iter().any(|ev| ev.kind == "timeline:changed"));
+        let d = describe(&e);
+        assert_eq!(d["tracks"][0]["clips"][0]["speed"], 2.0);
+        assert_eq!(d["tracks"][0]["clips"][1]["timeline_start_s"], 1.0);
+        // One undo reverts all three.
+        assert!(e.undo().unwrap());
+        let d = describe(&e);
+        assert_eq!(d["tracks"][0]["clips"][0]["speed"], 1.0);
+        assert_eq!(d["markers"], json!([]));
+        // A failing op leaves the document and journal untouched.
+        let before = describe(&e);
+        let err = expect_err(
+            &mut e,
+            "batch",
+            json!({"ops": [
+                {"op": "removeClip", "payload": {"id": a}},
+                {"op": "moveClip", "payload": {"id": a, "start_s": 0.0}},
+            ]}),
+        );
+        assert_eq!(err.code, ErrorCode::NotFound);
+        assert!(err.message.starts_with("ops[1] moveClip:"), "{}", err.message);
+        assert_eq!(describe(&e), before);
+        for bad in [
+            json!({"ops": []}),
+            json!({}),
+            json!({"ops": [{"op": "new"}]}),
+            json!({"ops": [{"op": "batch", "payload": {"ops": []}}]}),
+            json!({"ops": [{"payload": {}}]}),
+        ] {
+            assert!(e.apply(Command::new("batch", bad)).is_err());
+            assert_eq!(describe(&e), before);
+        }
+        // undo now reaches the second addClip, proving no failed batch recorded.
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&e)["tracks"][0]["clips"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn snapshot_carries_flags_markers_transitions_and_loop() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let l = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 2.0, "out_s": 4.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        let r = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 4.0, "out_s": 6.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        apply(&mut e, "addTransition", json!({"left": l, "right": r, "kind": "cross_dissolve", "duration_s": 1.0})).unwrap();
+        apply(&mut e, "addMarker", json!({"time_s": 1.0, "name": "Intro"})).unwrap();
+        apply(&mut e, "setLoopRange", json!({"in_s": 0.5, "out_s": 3.0})).unwrap();
+        apply(&mut e, "renameTrack", json!({"id": tid, "name": "A-roll"})).unwrap();
+        apply(&mut e, "setTrackFlags", json!({"id": tid, "locked": true})).unwrap();
+        let snap = e.snapshot().unwrap();
+        let mut e2 = eng();
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&e2), describe(&e));
+        // Ids continue past markers and transitions too.
+        let m = apply(&mut e2, "addMarker", json!({"time_s": 2.0})).unwrap()["marker_id"].as_u64().unwrap();
+        assert!(m >= describe(&e)["next_id"].as_u64().unwrap());
+    }
+
+    #[test]
+    fn restore_rejects_an_inconsistent_timeline() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0})).unwrap();
+        let mut doc = describe(&e);
+        // Second clip overlapping the first: well-formed JSON, broken timeline.
+        let mut dup = doc["tracks"][0]["clips"][0].clone();
+        dup["id"] = json!(99);
+        dup["timeline_start_s"] = json!(1.0);
+        doc["tracks"][0]["clips"].as_array_mut().unwrap().push(dup);
+        let bytes = encode_envelope(&serde_json::to_vec(&doc).unwrap());
+        let before = describe(&e);
+        assert_eq!(e.restore(&bytes).unwrap_err().code, ErrorCode::Validation);
+        assert_eq!(describe(&e), before);
+    }
+
+    #[test]
+    fn restore_rejects_broken_snapshot_fields() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let l = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 2.0, "out_s": 4.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        let r = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 4.0, "out_s": 6.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        apply(&mut e, "addTransition", json!({"left": l, "right": r, "kind": "cross_dissolve", "duration_s": 1.0})).unwrap();
+        apply(&mut e, "addMarker", json!({"time_s": 1.0})).unwrap();
+        let good = describe(&e);
+        apply(&mut e, "addTrack", json!({"kind": "audio"})).unwrap();
+        let with_audio = describe(&e);
+        type Breaker = fn(&mut Value);
+        let breakers: [(&str, Breaker); 9] = [
+            ("next_id past 2^53", |d| d["next_id"] = json!(u64::MAX)),
+            ("duplicate clip id", |d| {
+                let first = d["tracks"][0]["clips"][0]["id"].clone();
+                d["tracks"][0]["clips"][1]["id"] = first;
+            }),
+            ("fps 0", |d| d["fps"] = json!(0.0)),
+            ("source duration 0", |d| {
+                let k = d["sources"].as_object().unwrap().keys().next().unwrap().clone();
+                d["sources"][k]["duration_s"] = json!(0.0);
+            }),
+            ("hidden audio", |d| d["tracks"][1]["hidden"] = json!(true)),
+            ("solo video", |d| d["tracks"][0]["solo"] = json!(true)),
+            ("negative marker", |d| d["markers"][0]["time_s"] = json!(-1.0)),
+            ("reversed loop", |d| d["loop_range"] = json!({"in_s": 3.0, "out_s": 1.0})),
+            ("two transitions on one cut", |d| {
+                let mut dup = d["tracks"][0]["transitions"][0].clone();
+                let next = d["next_id"].as_u64().unwrap();
+                dup["id"] = json!(next);
+                d["next_id"] = json!(next + 1);
+                d["tracks"][0]["transitions"].as_array_mut().unwrap().push(dup);
+            }),
+        ];
+        let before = describe(&e);
+        for (what, brk) in breakers {
+            let mut doc = with_audio.clone();
+            brk(&mut doc);
+            let bytes = encode_envelope(&serde_json::to_vec(&doc).unwrap());
+            assert!(e.restore(&bytes).is_err(), "{what} was accepted");
+            assert_eq!(describe(&e), before, "{what}");
+        }
+        // The untouched documents restore.
+        for doc in [good, with_audio] {
+            e.restore(&encode_envelope(&serde_json::to_vec(&doc).unwrap())).unwrap();
+        }
+    }
+
+    #[test]
+    fn huge_positions_are_out_of_bounds() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let before = describe(&e);
+        for (op, p) in [
+            ("addClip", json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 1.0, "start_s": 1.7e308})),
+            ("addSource", json!({"duration_s": 1e300})),
+            ("addMarker", json!({"time_s": 1e12})),
+            ("setLoopRange", json!({"in_s": 0.0, "out_s": 1e12})),
+        ] {
+            assert_eq!(expect_err(&mut e, op, p).code, ErrorCode::OutOfBounds, "{op}");
+            assert_eq!(describe(&e), before, "{op}");
+        }
+    }
+
+    #[test]
+    fn unchanged_batch_records_nothing() {
+        let mut e = eng();
+        let (_, tid) = setup(&mut e);
+        let r = apply_full(
+            &mut e,
+            "batch",
+            json!({"ops": [{"op": "describe"}, {"op": "setTrackFlags", "payload": {"id": tid, "locked": false}}]}),
+        )
+        .unwrap();
+        assert!(r.events.is_empty());
+        assert_eq!(r.data["results"].as_array().unwrap().len(), 2);
+        assert!(e.undo().unwrap()); // addTrack
+        assert!(e.undo().unwrap()); // addSource
+        assert!(!e.undo().unwrap());
+    }
+
+    #[test]
+    fn roll_back_to_the_first_media_frame_is_accepted() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        // Right clip at speed 3 with its in-point 0.3 s into the media: rolling
+        // the cut 0.1 s earlier puts the in-point at 0.3 - 0.1 * 3, which is
+        // -5.6e-17 in floating point.
+        let l = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 5.0, "out_s": 6.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        let r = apply(&mut e, "addClip", json!({"track": tid, "source": sid, "in_s": 0.3, "out_s": 3.3, "speed": 3.0}))
+            .unwrap()["clip_id"].as_u64().unwrap();
+        apply(&mut e, "rollEdit", json!({"left": l, "right": r, "delta_s": -0.1})).unwrap();
+        assert_eq!(describe(&e)["tracks"][0]["clips"][1]["in_s"], 0.0);
     }
 
     #[test]

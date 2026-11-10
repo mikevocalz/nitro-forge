@@ -1,114 +1,51 @@
-import { Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { useEditorDoc, type EditorDoc } from "../../src/useDocument";
-import { getEditorConfig, type EditorConfig } from "../../src/editors";
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useMemo, useRef } from 'react';
+import { useColorScheme } from 'react-native';
+import { Button } from '@nitro-forge/studio-workspace/ui';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ForgeWorkspace, QuillTextEditor, type QuillTextEditorHandle } from '@nitro-forge/studio-workspace';
+import { PrismEditor } from '@nitro-forge/studio-workspace/prism';
+import { STUDIOS, type Studio } from '@nitro-forge/studio-layout';
+import { useEditorDoc } from '../../src/useDocument';
+import { getEditorConfig } from '../../src/editors';
+import { PersonaDock, usePersonaPlacement, usePersonaSession } from '../../src/persona/persona-placement-host';
+import { playTurretHaptic } from '../../src/persona/turret-haptics-driver';
 
 export default function EditorScreen() {
   const { product } = useLocalSearchParams<{ product: string }>();
-  const config = useMemo<EditorConfig>(
-    () => getEditorConfig(product ?? ""),
-    [product],
-  );
+  const studioId: Studio = STUDIOS.find(id => id === product) ?? 'prism';
+  // Each studio owns its document session. Pending actions from the previous
+  // studio retain its unmounted hook and cannot dispatch to the next engine.
+  return <StudioEditor key={studioId} studioId={studioId} />;
+}
+
+function StudioEditor({ studioId }: { studioId: Studio }) {
+  const router = useRouter();
+  const theme = useColorScheme() === 'light' ? 'light' : 'dark';
+  const config = useMemo(() => getEditorConfig(studioId), [studioId]);
   const open = useCallback(config.open, [config]);
   const doc = useEditorDoc(open);
-
-  return (
-    <View style={styles.root}>
-      <Stack.Screen options={{ title: config.title }} />
-      {doc.error && <Text style={styles.error}>{doc.error}</Text>}
-      {!doc.state && !doc.error && (
-        <ActivityIndicator style={styles.spinner} />
-      )}
-      {!!doc.state && <DocBody doc={doc} config={config} />}
-      <Toolbar doc={doc} />
-    </View>
-  );
+  const textEditor = useRef<QuillTextEditorHandle>(null);
+  const save = async () => { await textEditor.current?.flush(); return doc.save(); };
+  // One persona session per Prism document, shared with the sheet route.
+  const personaKey = `persona:${studioId}`;
+  const personas = usePersonaSession(personaKey);
+  const placement = usePersonaPlacement(personas);
+  // Phones present the sheet route, two-pane foldables the docked panel;
+  // regular-width windows keep PrismEditor's own inline panel.
+  const openPersonas = placement.mode === 'sheet' ? () => router.push({ pathname: '/personas', params: { session: personaKey } })
+    : placement.mode === 'dock' ? () => personas.ui.setState({ open: true }) : undefined;
+  const prism = studioId === 'prism';
+  return <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={{ flex: 1 }}>
+    <Stack.Screen options={{ headerShown: false }} />
+    <ForgeWorkspace studioId={studioId} title={config.title} documentTitle={`Untitled ${config.title} document`}
+      headerLeading={<Button title="All apps" aria-label="All apps" onPress={() => router.replace('/')} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" />}
+      theme={theme} state={doc.state} rows={doc.state ? config.rows(doc.state) : []}
+      actions={config.actions.map(action => ({ title: action.title, run: () => action.run(doc) }))}
+      onUndo={doc.undo} onRedo={doc.redo} onSave={save} onRefresh={doc.reload}
+      busy={!doc.state} error={doc.error}>
+      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={`Untitled ${config.title} document`} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} personas={personas.personas} onPersonaEffect={playTurretHaptic} onComposePersona={() => router.push({ pathname: '/persona-composer', params: { session: personaKey } })} {...(openPersonas ? { onOpenPersonas: openPersonas } : {})} /> : undefined}
+    </ForgeWorkspace>
+    {prism && <PersonaDock session={personas} sessionKey={personaKey} placement={placement} />}
+  </SafeAreaView>;
 }
-
-function DocBody({ doc, config }: { doc: EditorDoc; config: EditorConfig }) {
-  const rows = config.rows(doc.state);
-  return (
-    <ScrollView style={styles.body} contentContainerStyle={{ padding: 16 }}>
-      {rows.map((r, i) => (
-        <View key={i} style={styles.row}>
-          <Text style={styles.rowLabel}>{r.label}</Text>
-          <Text style={styles.rowValue}>{r.value}</Text>
-        </View>
-      ))}
-      {config.actions.map((a) => (
-        <Pressable
-          key={a.title}
-          style={({ pressed }) => [styles.action, pressed && styles.pressed]}
-          onPress={() => void a.run(doc)}
-        >
-          <Text style={styles.actionText}>{a.title}</Text>
-        </Pressable>
-      ))}
-    </ScrollView>
-  );
-}
-
-function Toolbar({ doc }: { doc: EditorDoc }) {
-  return (
-    <View style={styles.toolbar}>
-      <Tb title="Undo" onPress={doc.undo} />
-      <Tb title="Redo" onPress={doc.redo} />
-      <Tb title="Save" onPress={async () => void (await doc.save())} />
-      <Tb title="Refresh" onPress={doc.reload} />
-    </View>
-  );
-}
-
-function Tb({ title, onPress }: { title: string; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.tbBtn, pressed && styles.pressed]}
-    >
-      <Text style={styles.tbText}>{title}</Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#f3f4f6" },
-  spinner: { marginTop: 48 },
-  error: { color: "#b91c1c", margin: 16 },
-  body: { flex: 1 },
-  row: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 6,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  rowLabel: { fontSize: 14, color: "#374151", flexShrink: 1 },
-  rowValue: { fontSize: 14, color: "#6b7280", flexShrink: 1, textAlign: "right" },
-  action: {
-    backgroundColor: "#111827",
-    borderRadius: 10,
-    padding: 14,
-    marginTop: 10,
-    alignItems: "center",
-  },
-  actionText: { color: "#fff", fontWeight: "600", fontSize: 15 },
-  pressed: { opacity: 0.7 },
-  toolbar: {
-    flexDirection: "row",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#d1d5db",
-    backgroundColor: "#fff",
-  },
-  tbBtn: { flex: 1, paddingVertical: 14, alignItems: "center" },
-  tbText: { fontSize: 15, fontWeight: "500", color: "#111827" },
-});

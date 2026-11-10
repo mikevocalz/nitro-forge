@@ -3,3 +3,38 @@ packages:
   - "apps/*"
 allowBuilds:
   esbuild: false
+
+overrides:
+  enhanced-resolve: 5.26.1
+
+  # User-requested Metro0.87.2 with reviewed Expo file-map compatibility port.
+  # Keep the full family coherent; see docs/native/METRO_FILE_MAP_PORT.md.
+  metro: 0.87.2
+  metro-babel-transformer: 0.87.2
+  metro-cache: 0.87.2
+  metro-cache-key: 0.87.2
+  metro-config: 0.87.2
+  metro-core: 0.87.2
+  metro-file-map: 0.87.2
+  metro-minify-terser: 0.87.2
+  metro-resolver: 0.87.2
+  metro-runtime: 0.87.2
+  metro-source-map: 0.87.2
+  metro-symbolicate: 0.87.2
+  metro-transform-plugins: 0.87.2
+  metro-transform-worker: 0.87.2
+
+patchedDependencies:
+  "@expo/metro-file-map@58.0.5": patches/@expo__metro-file-map@58.0.5.patch
+  '@expo/ui@58.0.27': patches/@expo__ui@58.0.27.patch
+  '@react-native-masked-view/masked-view@0.3.2': patches/@react-native-masked-view__masked-view@0.3.2.patch
+  expo-router@58.0.30: patches/expo-router@58.0.30.patch
+  react-native-pulsar@1.7.0: patches/react-native-pulsar@1.7.0.patch
+  react-native-safe-area-context@5.11.1: patches/react-native-safe-area-context@5.11.1.patch
+  react-native-screens@4.30.1: patches/react-native-screens@4.30.1.patch
+  react-native-skia@3.9.1: patches/react-native-skia@3.9.1.patch
+  react-native-svg@15.16.0: patches/react-native-svg@15.16.0.patch
+  react-native-webgpu@0.21.0: patches/react-native-webgpu@0.21.0.patch
+
+# No release-age quarantine: CI and local installs take new versions immediately.
+minimumReleaseAge: 0

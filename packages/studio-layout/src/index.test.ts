@@ -1,0 +1,193 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  createWorkspace, dockPanel, collapsePanel, floatPanel, resizeDock,
+  parsePreset, serializePreset, stageFits, applyDockAction, resolveDockDropPreview, type Layout,
+} from "./index.ts";
+
+const known = new Set(["tools", "layers", "assets", "inspector", "timeline"]);
+const wide = { width: 1300, height: 800, minStageWidth: 500, minStageHeight: 330 };
+function withLayers(): Layout {
+  const result = dockPanel(createWorkspace("prism"), "layers", "left", 0, known, wide);
+  assert.equal(result.ok, true);
+  return result.layout;
+}
+
+test("persist and restore a versioned panel configuration safely", () => {
+  const l = withLayers();
+  assert.deepEqual(parsePreset(serializePreset(l, known), known), l);
+  assert.equal(parsePreset("{", known), null);
+  const copy = JSON.parse(JSON.stringify(l));
+  copy.docks.right = ["layers"];
+  assert.equal(parsePreset(JSON.stringify(copy), known), null);
+  copy.docks.right = ["unknown"];
+  assert.equal(parsePreset(JSON.stringify(copy), known), null);
+  copy.docks.right = [];
+  copy.activeTabs = { right: "layers" };
+  assert.equal(parsePreset(JSON.stringify(copy), known), null);
+});
+test("move a panel exactly once without mutating its previous layout", () => {
+  const l = withLayers();
+  const result = dockPanel(l, "layers", "right", 0, known, wide);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.layout.docks.left, []);
+  assert.deepEqual(result.layout.docks.right, ["layers"]);
+  assert.deepEqual(l.docks.left, ["layers"]);
+  assert.equal(dockPanel(l, "unknown", "left", 0, known, wide).ok, false);
+  assert.equal(dockPanel(l, "layers", "left", 5, known, wide).ok, false);
+});
+test("keep stage minimum space when docking or resizing panels", () => {
+  const first = withLayers();
+  const right = dockPanel(first, "inspector", "right", 0, known, wide);
+  assert.equal(right.ok, true);
+  const narrow = { width: 700, height: 800, minStageWidth: 450, minStageHeight: 300 };
+  assert.equal(stageFits(right.layout, narrow), false);
+  const denied = resizeDock(right.layout, "right", 0.45, narrow);
+  assert.equal(denied.ok, false);
+  assert.equal(denied.layout.sizes.rightFraction, 0.24);
+});
+test("collapse and reopen keep a panel and select a live tab", () => {
+  const l = withLayers();
+  const added = dockPanel(l, "assets", "left", 1, known);
+  assert.equal(added.ok, true);
+  const closed = collapsePanel(added.layout, "assets", true);
+  assert.equal(closed.ok, true);
+  assert.deepEqual(closed.layout.docks.left, ["layers", "assets"]);
+  assert.equal(closed.layout.activeTabs.left, "layers");
+  assert.deepEqual(closed.layout.collapsed, ["assets"]);
+  const reopened = collapsePanel(closed.layout, "assets", false);
+  assert.equal(reopened.ok, true);
+  assert.equal(reopened.layout.activeTabs.left, "assets");
+});
+test("floating panels require valid normalized host-relative rectangles", () => {
+  const l = withLayers();
+  const f = floatPanel(l, "layers", { x: 0.5, y: 0.3, width: 0.4, height: 0.3 }, known);
+  assert.equal(f.ok, true);
+  assert.deepEqual(f.layout.docks.left, []);
+  assert.deepEqual(parsePreset(JSON.stringify(f.layout), known), f.layout);
+  assert.equal(floatPanel(l, "layers", { x: 0.8, y: 0.3, width: 0.4, height: 0.3 }, known).ok, false);
+});
+test("reject bad viewport measurements and untenable bottom dock sizes", () => {
+  let l = withLayers();
+  assert.equal(stageFits(l, { width: 0, height: 800, minStageWidth: 400, minStageHeight: 300 }), false);
+  const added = dockPanel(l, "timeline", "bottom", 0, known, wide);
+  assert.equal(added.ok, true);
+  l = added.layout;
+  const denied = resizeDock(l, "bottom", 0.5, {
+    width: 1300, height: 500, minStageWidth: 500, minStageHeight: 330,
+  });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.layout.sizes.bottomFraction, 0.27);
+});
+
+test("accessible dock actions match pointer docking and tab order", () => {
+  const start = withLayers();
+  const added = dockPanel(start, "assets", "left", 1, known);
+  assert.equal(added.ok, true);
+  const moved = applyDockAction(added.layout, "layers", "move-after", known);
+  assert.equal(moved.ok, true);
+  assert.deepEqual(moved.layout.docks.left, ["assets", "layers"]);
+  const before = applyDockAction(moved.layout, "layers", "move-before", known);
+  assert.equal(before.ok, true);
+  assert.deepEqual(before.layout.docks.left, ["layers", "assets"]);
+  const right = applyDockAction(before.layout, "assets", "move-right", known, wide);
+  assert.equal(right.ok, true);
+  assert.deepEqual(right.layout.docks.right, ["assets"]);
+  assert.deepEqual(before.layout.docks.right, []);
+});
+
+test("screen reader collapse/activate has no hidden or unreachable selected tab", () => {
+  const start = withLayers();
+  const closed = applyDockAction(start, "layers", "collapse", known);
+  assert.equal(closed.ok, true);
+  assert.deepEqual(closed.layout.collapsed, ["layers"]);
+  assert.equal(closed.layout.activeTabs.left, undefined);
+  const activated = applyDockAction(closed.layout, "layers", "activate", known, wide);
+  assert.equal(activated.ok, true);
+  assert.deepEqual(activated.layout.collapsed, []);
+  assert.equal(activated.layout.activeTabs.left, "layers");
+});
+
+test("keyboard dock requests reject unknown panels and stage-blocking destinations", () => {
+  const start = withLayers();
+  const bad = applyDockAction(start, "invented", "move-right", known, wide);
+  assert.equal(bad.ok, false);
+  assert.equal(bad.layout, start);
+  const narrow = { width: 550, height: 500, minStageWidth: 420, minStageHeight: 290 };
+  const denied = applyDockAction(start, "inspector", "move-right", known, narrow);
+  assert.equal(denied.ok, false);
+  assert.equal(denied.layout, start);
+  const unknown = applyDockAction(start, "layers", "move-before", known);
+  assert.equal(unknown.ok, true);
+  assert.equal(unknown.layout, start);
+});
+
+
+test("magnetic left/right/bottom rails derive previews from the measured host origin", () => {
+  const layout = createWorkspace("prism");
+  const host = { x: 100, y: 60, width: 1300, height: 800 };
+  const base = { layout, known, panelId: "layers", host,
+    minimumStageWidth: 500, minimumStageHeight: 330 };
+  const left = resolveDockDropPreview({ ...base, point: {x: 107, y: 300} });
+  assert.deepEqual(left, {
+    dock: "left", position: 0, rect: {x: 100, y: 60, width: 286, height: 800},
+  });
+  const right = resolveDockDropPreview({ ...base, point: {x: 1390, y: 300} });
+  assert.deepEqual(right, {
+    dock: "right", position: 0, rect: {x: 1088, y: 60, width: 312, height: 800},
+  });
+  const bottom = resolveDockDropPreview({ ...base, point: {x: 750, y: 852} });
+  assert.deepEqual(bottom, {
+    dock: "bottom", position: 0, rect: {x: 100, y: 644, width: 1300, height: 216},
+  });
+  assert.deepEqual(layout.docks, {left:[],right:[],bottom:[]});
+});
+
+test("snap previews reject blocked hinge regions and invalid host geometry", () => {
+  const base = {layout:createWorkspace("prism"),known,panelId:"layers",
+    point: {x: 102, y: 200}, host: {x:100,y:60,width:1300,height:800},
+    minimumStageWidth:500,minimumStageHeight:330};
+  assert.equal(resolveDockDropPreview({ ...base,
+    blockedRegions:[{x:220,y:60,width:24,height:800}],
+  }), null);
+  assert.equal(resolveDockDropPreview({ ...base,
+    // A zero-width separating crease inside the dock also blocks the rail.
+    blockedRegions:[{x:220,y:60,width:0,height:800}],
+  }), null);
+  assert.notEqual(resolveDockDropPreview({ ...base,
+    blockedRegions:[{x:1800,y:60,width:24,height:800}],
+  }), null);
+  assert.equal(resolveDockDropPreview({ ...base,
+    point: {x:98,y:200},
+  }), null);
+  assert.equal(resolveDockDropPreview({ ...base, snapDistance: Infinity }), null);
+});
+
+test("small windows decline magnetic drops that would consume the canvas", () => {
+  const base = {layout:createWorkspace("prism"),known,panelId:"inspector",
+    host:{x:20,y:20,width:500,height:600},
+    point:{x:510,y:100},minimumStageWidth:420,minimumStageHeight:360};
+  assert.equal(resolveDockDropPreview(base), null);
+  const allowed = resolveDockDropPreview({ ...base, minimumStageWidth:320 });
+  assert.equal(allowed?.dock, "right");
+  const after = dockPanel(base.layout,"inspector","right",0,known,
+    {width:500,height:600,minStageWidth:320,minStageHeight:360});
+  assert.equal(after.ok,true);
+  assert.deepEqual(base.layout.docks.right,[]);
+  assert.deepEqual(after.layout.docks.right,["inspector"]);
+});
+
+test("the published preset schema requires exactly what parsePreset requires", async () => {
+  const { readFileSync } = await import("node:fs");
+  const schema = JSON.parse(readFileSync(new URL("../../../docs/ux/studio-workspace-layout.v1.schema.json", import.meta.url), "utf8"));
+  const preset = JSON.parse(serializePreset(withLayers(), known));
+  assert.deepEqual([...schema.required].sort(), Object.keys(preset).sort(),
+    "every field parsePreset needs must be schema-required, and nothing more");
+  assert.equal(schema.properties.activeTabs.additionalProperties, false);
+  assert.deepEqual(Object.keys(schema.properties.activeTabs.properties).sort(), ["bottom", "left", "right"]);
+  for (const field of ["activeTabs", "floating"]) {
+    const copy = { ...preset };
+    delete copy[field];
+    assert.equal(parsePreset(JSON.stringify(copy), known), null, `${field} is required at runtime`);
+  }
+});

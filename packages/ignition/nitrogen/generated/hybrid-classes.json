@@ -1,0 +1,69 @@
+{
+  "version": 2,
+  "classes": {
+    "ForgeDocument": {
+      "android": {
+        "implementation": {
+          "className": "HybridForgeDocument",
+          "include": "<NitroForgeV1/HybridForgeDocument.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridForgeDocument",
+          "include": "<NitroForgeV1/HybridForgeDocument.hpp>"
+        },
+        "language": "c++"
+      }
+    },
+    "ForgeFactory": {
+      "android": {
+        "implementation": {
+          "className": "HybridForgeFactory",
+          "include": "<NitroForgeV1/HybridForgeFactory.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridForgeFactory",
+          "include": "<NitroForgeV1/HybridForgeFactory.hpp>"
+        },
+        "language": "c++"
+      }
+    },
+    "ForgeMediaCache": {
+      "android": {
+        "implementation": {
+          "className": "HybridForgeMediaCache",
+          "include": "<NitroForgeV1/HybridForgeMediaCache.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridForgeMediaCache",
+          "include": "<NitroForgeV1/HybridForgeMediaCache.hpp>"
+        },
+        "language": "c++"
+      }
+    },
+    "ForgeTask": {
+      "android": {
+        "implementation": {
+          "className": "HybridForgeTask",
+          "include": "<NitroForgeV1/HybridForgeTask.hpp>"
+        },
+        "language": "c++"
+      },
+      "apple": {
+        "implementation": {
+          "className": "HybridForgeTask",
+          "include": "<NitroForgeV1/HybridForgeTask.hpp>"
+        },
+        "language": "c++"
+      }
+    }
+  }
+}

@@ -1,0 +1,58 @@
+name: Tally grid adapter (independent Rust bridge)
+
+on:
+  pull_request:
+    paths:
+      - "packages/tally/**"
+      - "packages/ignition/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docs/TALLY_GRID_INTEGRATION.md"
+      - "tooling/nyc-tron.json"
+      - "tooling/verify-nyc-tron-pin.mjs"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/tally-bridge.yml"
+  push:
+    branches: [master]
+    paths:
+      - "packages/tally/**"
+      - "packages/ignition/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docs/TALLY_GRID_INTEGRATION.md"
+      - "tooling/nyc-tron.json"
+      - "tooling/verify-nyc-tron-pin.mjs"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/tally-bridge.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck-and-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Install Forge workspace
+        run: corepack pnpm install --frozen-lockfile
+      - name: Verify the NYC-Tron release pin (URL, lockfile, tarball sha256)
+        run: node tooling/verify-nyc-tron-pin.mjs --download
+      - name: Typecheck Tally adapter and the NYC-Tron consumer contract
+        run: corepack pnpm --filter @nitro-forge/tally typecheck
+      - name: Test bounded windows, cluster bindings and Rust command handoff (mock host)
+        run: corepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.test.ts tests/grid-cluster.test.ts tests/nyc-tron-consumer.test.ts
+      - name: Test atomic range edits and reference shifting in Rust
+        run: cargo test -p tally-engine
+      - name: Compile real Rust Tally engine host
+        run: cargo build -p nf-cli
+      - name: Test live Rust sheet formulas, sheet tabs, range reads and adapter undo
+        run: corepack pnpm --filter @nitro-forge/tally exec vitest run tests/grid-adapter.e2e.test.ts tests/grid-cluster.e2e.test.ts tests/range-ops.e2e.test.ts
+      # This compiles Rust on Linux and validates its protocol, not a native
+      # Nitro JSI/Swift/WinUI component or a physical device renderer.

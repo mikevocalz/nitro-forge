@@ -9,11 +9,21 @@
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Event, Journal,
+    Event, Journal, TaskContext,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::f64::consts::PI;
+
+mod analysis;
+mod dsp;
+mod mix_ops;
+mod mixer_model;
+mod presets;
+mod render;
+#[cfg(test)]
+mod mix_ops_tests;
+
+use mixer_model::{Metronome, Send as TrackSend, Insert, TrackAutomation};
 
 const PPQ: u32 = 960;
 const JOURNAL_CAPACITY: usize = 64;
@@ -22,7 +32,7 @@ const MAX_BPM: f64 = 400.0;
 const DEFAULT_BPM: f64 = 120.0;
 const DEFAULT_VELOCITY: u8 = 100;
 /// Note attack/release ramp length, seconds.
-const ENVELOPE_S: f64 = 0.020;
+pub(crate) const ENVELOPE_S: f64 = 0.020;
 
 // ---------------------------------------------------------------------------
 // Document model
@@ -33,6 +43,8 @@ const ENVELOPE_S: f64 = 0.020;
 pub enum TrackKind {
     Midi,
     Audio,
+    /// Sums source tracks routed or sent to it; has no clips.
+    Bus,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -41,6 +53,9 @@ pub struct Note {
     pub velocity: u8,
     pub start_ticks: u64,
     pub length_ticks: u64,
+    /// MIDI channel 0..=15 (shown as 1-16).
+    #[serde(default)]
+    pub channel: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -71,6 +86,23 @@ pub struct Track {
     pub solo: bool,
     #[serde(default)]
     pub clips: Vec<Clip>,
+    /// Bus id this track feeds; `None` is the master.
+    #[serde(default)]
+    pub output: Option<u64>,
+    /// Post-fader sends to buses.
+    #[serde(default)]
+    pub sends: Vec<TrackSend>,
+    /// Insert effects, processed in order before the fader.
+    #[serde(default)]
+    pub inserts: Vec<Insert>,
+    /// Mix group name, for group solo and mute.
+    #[serde(default)]
+    pub group: Option<String>,
+    /// Keeps sounding while other tracks are soloed (unless muted).
+    #[serde(default)]
+    pub solo_safe: bool,
+    #[serde(default)]
+    pub automation: TrackAutomation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -81,6 +113,8 @@ struct Doc {
     playhead_ticks: u64,
     next_id: u64,
     tracks: Vec<Track>,
+    #[serde(default)]
+    metronome: Metronome,
 }
 
 impl Doc {
@@ -92,6 +126,7 @@ impl Doc {
             playhead_ticks: 0,
             next_id: 1,
             tracks: Vec::new(),
+            metronome: Metronome::default(),
         }
     }
 
@@ -139,20 +174,20 @@ impl Doc {
 // violations are Validation/OutOfBounds/NotFound per the shared rules.
 // ---------------------------------------------------------------------------
 
-fn req_u64(p: &Value, key: &str) -> Result<u64, EngineError> {
+pub(crate) fn req_u64(p: &Value, key: &str) -> Result<u64, EngineError> {
     p.get(key)
         .and_then(Value::as_u64)
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
 }
 
-fn req_i64(p: &Value, key: &str) -> Result<i64, EngineError> {
+pub(crate) fn req_i64(p: &Value, key: &str) -> Result<i64, EngineError> {
     p.get(key)
         .and_then(Value::as_i64)
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
 }
 
 /// Tick fields: must be an integer ≥ 0.
-fn req_ticks(p: &Value, key: &str) -> Result<u64, EngineError> {
+pub(crate) fn req_ticks(p: &Value, key: &str) -> Result<u64, EngineError> {
     match p.get(key) {
         Some(v) => {
             if let Some(u) = v.as_u64() {
@@ -167,14 +202,14 @@ fn req_ticks(p: &Value, key: &str) -> Result<u64, EngineError> {
     }
 }
 
-fn req_f64(p: &Value, key: &str) -> Result<f64, EngineError> {
+pub(crate) fn req_f64(p: &Value, key: &str) -> Result<f64, EngineError> {
     p.get(key)
         .and_then(Value::as_f64)
         .filter(|f| f.is_finite())
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
 }
 
-fn opt_f64(p: &Value, key: &str) -> Result<Option<f64>, EngineError> {
+pub(crate) fn opt_f64(p: &Value, key: &str) -> Result<Option<f64>, EngineError> {
     match p.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(v) => v
@@ -185,13 +220,13 @@ fn opt_f64(p: &Value, key: &str) -> Result<Option<f64>, EngineError> {
     }
 }
 
-fn req_bool(p: &Value, key: &str) -> Result<bool, EngineError> {
+pub(crate) fn req_bool(p: &Value, key: &str) -> Result<bool, EngineError> {
     p.get(key)
         .and_then(Value::as_bool)
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
 }
 
-fn req_str<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
+pub(crate) fn req_str<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
     p.get(key)
         .and_then(Value::as_str)
         .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))
@@ -261,19 +296,38 @@ impl CadenceEngine {
     }
 
     /// Record undo *after* validation, immediately before mutation.
-    fn record(&mut self) {
+    pub(crate) fn record(&mut self) {
         self.journal.record(self.doc.clone());
     }
 
-    fn changed(data: Value) -> CommandResult {
+    pub(crate) fn changed(data: Value) -> CommandResult {
         CommandResult {
+            output: None,
             events: vec![Event::new("document:changed", Value::Null)],
             data,
         }
     }
 
-    fn read_only(data: Value) -> CommandResult {
+    /// Resolve `{clip, index}` to (track_idx, clip_idx, note_idx). Missing
+    /// clip is NotFound; an index past the clip's notes is OutOfBounds.
+    pub(crate) fn note_location(&self, p: &Value) -> Result<(usize, usize, usize), EngineError> {
+        let clip_id = req_u64(p, "clip")?;
+        let index = req_u64(p, "index")?;
+        let (ti, ci) = self
+            .doc
+            .clip_location(clip_id)
+            .ok_or_else(|| EngineError::not_found(format!("no clip {clip_id}")))?;
+        if index >= self.doc.tracks[ti].clips[ci].notes.len() as u64 {
+            return Err(EngineError::out_of_bounds(format!(
+                "note index {index} out of range"
+            )));
+        }
+        Ok((ti, ci, index as usize))
+    }
+
+    pub(crate) fn read_only(data: Value) -> CommandResult {
         CommandResult {
+            output: None,
             events: vec![],
             data,
         }
@@ -286,9 +340,41 @@ impl Default for CadenceEngine {
     }
 }
 
+impl CadenceEngine {
+ fn render_command(&self,cmd:&Command,ctx:Option<&TaskContext>)->Result<CommandResult,EngineError>{
+ let p=&cmd.payload;
+                let from = req_ticks(p, "from_ticks")?;
+                let to = req_ticks(p, "to_ticks")?;
+                let sample_rate = req_u64(p, "sample_rate")?;
+                if to <= from {
+                    return Err(EngineError::validation("to_ticks must be > from_ticks"));
+                }
+                if sample_rate == 0 {
+                    return Err(EngineError::validation("sample_rate must be > 0"));
+                }
+                let click = match p.get("include_metronome") {
+                    None | Some(Value::Null) => false,
+                    Some(_) => req_bool(p, "include_metronome")?,
+                };
+                let mix = render::mixdown_with_context(&self.doc, from, to, sample_rate, click, false,ctx)?;
+                Ok(Self::read_only(json!({
+
+                    "frames": mix.frames,
+                    "channels": 2,
+                })).with_bytes(cmd,"samples_b64",render::to_f32le(&mix.master)))
+
+ }
+}
+
 impl Engine for CadenceEngine {
     fn kind(&self) -> EngineKind {
         EngineKind::Cadence
+    }
+
+    fn apply_long(&mut self,cmd:Command,ctx:&TaskContext)->Result<CommandResult,EngineError>{
+        ctx.checkpoint()?;
+        let result=if cmd.op=="render"&&cmd.v==1{self.render_command(&cmd,Some(ctx))}else{self.apply(cmd)}?;
+        ctx.set_progress(1.0);Ok(result)
     }
 
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
@@ -363,15 +449,19 @@ impl Engine for CadenceEngine {
                     None | Some(Value::Null) => TrackKind::Midi,
                     Some(Value::String(s)) if s == "midi" => TrackKind::Midi,
                     Some(Value::String(s)) if s == "audio" => TrackKind::Audio,
+                    Some(Value::String(s)) if s == "bus" => TrackKind::Bus,
                     Some(_) => {
                         return Err(EngineError::validation(
-                            "kind must be \"midi\" or \"audio\"",
+                            "kind must be \"midi\", \"audio\" or \"bus\"",
                         ))
                     }
                 };
                 self.record();
                 let id = self.doc.alloc_id();
-                let name = name.unwrap_or_else(|| format!("Track {}", self.doc.tracks.len() + 1));
+                let name = name.unwrap_or_else(|| match kind {
+                    TrackKind::Bus => format!("Bus {}", self.doc.tracks.iter().filter(|t| t.kind == TrackKind::Bus).count() + 1),
+                    _ => format!("Track {}", self.doc.tracks.len() + 1),
+                });
                 self.doc.tracks.push(Track {
                     id,
                     name,
@@ -381,6 +471,12 @@ impl Engine for CadenceEngine {
                     muted: false,
                     solo: false,
                     clips: Vec::new(),
+                    output: None,
+                    sends: Vec::new(),
+                    inserts: Vec::new(),
+                    group: None,
+                    solo_safe: false,
+                    automation: TrackAutomation::default(),
                 });
                 Ok(Self::changed(json!({ "track_id": id })))
             }
@@ -392,6 +488,14 @@ impl Engine for CadenceEngine {
                     .ok_or_else(|| EngineError::not_found(format!("no track {id}")))?;
                 self.record();
                 self.doc.tracks.remove(idx);
+                // Removing a bus reroutes what fed it to the master and drops
+                // sends to it, in the same undo step.
+                for t in &mut self.doc.tracks {
+                    if t.output == Some(id) {
+                        t.output = None;
+                    }
+                    t.sends.retain(|s| s.bus != id);
+                }
                 Ok(Self::changed(json!({ "ok": true })))
             }
             "renameTrack" => {
@@ -468,6 +572,9 @@ impl Engine for CadenceEngine {
                     .doc
                     .track_index(track_id)
                     .ok_or_else(|| EngineError::not_found(format!("no track {track_id}")))?;
+                if self.doc.tracks[ti].kind == TrackKind::Bus {
+                    return Err(EngineError::validation("buses hold no clips"));
+                }
                 if self.doc.overlaps(ti, start, len, None) {
                     return Err(EngineError::validation(
                         "clip overlaps an existing clip on this track",
@@ -562,6 +669,16 @@ impl Engine for CadenceEngine {
                 };
                 let start = req_ticks(p, "start_ticks")?;
                 let len = req_ticks(p, "length_ticks")?;
+                let channel = match p.get("channel") {
+                    None | Some(Value::Null) => 0,
+                    Some(_) => {
+                        let ch = req_i64(p, "channel")?;
+                        if !(0..=15).contains(&ch) {
+                            return Err(EngineError::validation("channel must be in 0..=15 (MIDI channels 1-16)"));
+                        }
+                        ch as u8
+                    }
+                };
                 if !(0..=127).contains(&pitch) {
                     return Err(EngineError::validation("pitch must be in 0..=127"));
                 }
@@ -590,6 +707,7 @@ impl Engine for CadenceEngine {
                     velocity,
                     start_ticks: start,
                     length_ticks: len,
+                    channel,
                 });
                 Ok(Self::changed(json!({ "index": index })))
             }
@@ -607,6 +725,62 @@ impl Engine for CadenceEngine {
                 }
                 self.record();
                 self.doc.tracks[ti].clips[ci].notes.remove(index as usize);
+                Ok(Self::changed(json!({ "ok": true })))
+            }
+            // Note edits keep the note at its index, so an editor's selection
+            // and the index it holds stay valid across move/resize/velocity.
+            "moveNote" => {
+                let (ti, ci, ni) = self.note_location(p)?;
+                let start = req_ticks(p, "start_ticks")?;
+                let note = &self.doc.tracks[ti].clips[ci].notes[ni];
+                // Pitch is optional so a time-only drag cannot clobber a pitch
+                // the caller never read; a piano-roll drag sends both at once.
+                let pitch = match p.get("pitch") {
+                    None | Some(Value::Null) => note.pitch,
+                    Some(_) => {
+                        let pitch = req_i64(p, "pitch")?;
+                        if !(0..=127).contains(&pitch) {
+                            return Err(EngineError::validation("pitch must be in 0..=127"));
+                        }
+                        pitch as u8
+                    }
+                };
+                let clip_len = self.doc.tracks[ti].clips[ci].length_ticks;
+                if start.saturating_add(note.length_ticks) > clip_len {
+                    return Err(EngineError::out_of_bounds(
+                        "note would extend past the end of the clip",
+                    ));
+                }
+                self.record();
+                let note = &mut self.doc.tracks[ti].clips[ci].notes[ni];
+                note.start_ticks = start;
+                note.pitch = pitch;
+                Ok(Self::changed(json!({ "ok": true })))
+            }
+            "resizeNote" => {
+                let (ti, ci, ni) = self.note_location(p)?;
+                let len = req_ticks(p, "length_ticks")?;
+                if len == 0 {
+                    return Err(EngineError::validation("length_ticks must be > 0"));
+                }
+                let start = self.doc.tracks[ti].clips[ci].notes[ni].start_ticks;
+                if start.saturating_add(len) > self.doc.tracks[ti].clips[ci].length_ticks {
+                    return Err(EngineError::out_of_bounds(
+                        "note would extend past the end of the clip",
+                    ));
+                }
+                self.record();
+                self.doc.tracks[ti].clips[ci].notes[ni].length_ticks = len;
+                Ok(Self::changed(json!({ "ok": true })))
+            }
+            "setVelocity" => {
+                let (ti, ci, ni) = self.note_location(p)?;
+                let velocity = req_i64(p, "velocity")?;
+                if !(0..=127).contains(&velocity) {
+                    return Err(EngineError::validation("velocity must be in 0..=127"));
+                }
+                self.record();
+                self.doc.tracks[ti].clips[ci].notes[ni].velocity = velocity as u8;
                 Ok(Self::changed(json!({ "ok": true })))
             }
 
@@ -631,25 +805,11 @@ impl Engine for CadenceEngine {
                     "length_ticks": self.doc.length_ticks(),
                 })))
             }
-            "render" => {
-                let from = req_ticks(p, "from_ticks")?;
-                let to = req_ticks(p, "to_ticks")?;
-                let sample_rate = req_u64(p, "sample_rate")?;
-                if to <= from {
-                    return Err(EngineError::validation("to_ticks must be > from_ticks"));
-                }
-                if sample_rate == 0 {
-                    return Err(EngineError::validation("sample_rate must be > 0"));
-                }
-                let (bytes, frames) = render_audio(&self.doc, from, to, sample_rate)?;
-                Ok(Self::read_only(json!({
-                    "samples_b64": base64_encode(&bytes),
-                    "frames": frames,
-                    "channels": 2,
-                })))
-            }
+            "render" => self.render_command(&cmd,None),
 
-            other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
+            other => self
+                .apply_mixer(other, p)
+                .unwrap_or_else(|| Err(EngineError::invalid(format!("unknown op '{other}'")))),
         }
     }
 
@@ -667,6 +827,7 @@ impl Engine for CadenceEngine {
             .iter()
             .map(|t| t.id)
             .chain(doc.tracks.iter().flat_map(|t| t.clips.iter().map(|c| c.id)))
+            .chain(doc.tracks.iter().flat_map(|t| t.inserts.iter().map(|i| i.id)))
             .max()
             .unwrap_or(0);
         doc.next_id = doc.next_id.max(max_id.saturating_add(1));
@@ -698,96 +859,6 @@ impl Engine for CadenceEngine {
             None => Ok(false),
         }
     }
-}
-
-// ---------------------------------------------------------------------------
-// Offline render — sine-oscillator mixdown, f32le stereo interleaved.
-// ---------------------------------------------------------------------------
-
-/// Synthesize `[from_ticks, to_ticks)` into interleaved f32 stereo frames.
-/// Sample-accurate: note boundaries are converted to fractional sample
-/// positions via `seconds = ticks / (ppq * bpm / 60)`; a note contributes to
-/// output frame `i` while `i` falls inside its (fractional) sample span.
-fn render_audio(
-    doc: &Doc,
-    from_ticks: u64,
-    to_ticks: u64,
-    sample_rate: u64,
-) -> Result<(Vec<u8>, usize), EngineError> {
-    let sr = sample_rate as f64;
-    let seconds_per_tick = 60.0 / (doc.ppq as f64 * doc.tempo_bpm);
-    let frames = ((to_ticks - from_ticks) as f64 * seconds_per_tick * sr).round();
-    if frames > (usize::MAX / 16) as f64 {
-        return Err(EngineError::validation("render range too large"));
-    }
-    let frames = frames as usize;
-    let mut mix = vec![0.0f64; frames * 2];
-
-    let any_solo = doc.tracks.iter().any(|t| t.solo);
-    let ramp_samples = ENVELOPE_S * sr;
-
-    for track in &doc.tracks {
-        // Solo takes precedence over mute: with any soloed track only soloed
-        // tracks sound; otherwise every non-muted track sounds.
-        let audible = if any_solo { track.solo } else { !track.muted };
-        if !audible {
-            continue;
-        }
-        // Equal-power pan: pan -1..1 → angle 0..π/2.
-        let angle = (track.pan.clamp(-1.0, 1.0) + 1.0) * PI / 4.0;
-        let gain_l = angle.cos() * track.volume;
-        let gain_r = angle.sin() * track.volume;
-
-        for clip in &track.clips {
-            let clip_start = clip.start_ticks;
-            let clip_end = clip.end_ticks();
-            if clip_end <= from_ticks || clip_start >= to_ticks {
-                continue;
-            }
-            for note in &clip.notes {
-                let note_start = clip_start.saturating_add(note.start_ticks);
-                // Clip the note's sounding end to the clip boundary.
-                let note_end = note_start.saturating_add(note.length_ticks).min(clip_end);
-                if note_end <= note_start {
-                    continue;
-                }
-                // Fractional sample positions relative to the render window.
-                let s0 = (note_start as f64 - from_ticks as f64) * seconds_per_tick * sr;
-                let s1 = (note_end as f64 - from_ticks as f64) * seconds_per_tick * sr;
-                let i0 = s0.ceil().max(0.0) as usize;
-                let i1 = s1.ceil().min(frames as f64) as usize;
-                if i0 >= i1 {
-                    continue;
-                }
-                let freq = 440.0 * 2f64.powf((note.pitch as f64 - 69.0) / 12.0);
-                let vel = note.velocity as f64 / 127.0;
-                for i in i0..i1 {
-                    let x = i as f64 - s0; // samples since note-on (fractional)
-                    let attack = if x < ramp_samples {
-                        (x / ramp_samples).max(0.0)
-                    } else {
-                        1.0
-                    };
-                    let rel = s1 - i as f64;
-                    let release = if rel < ramp_samples {
-                        (rel / ramp_samples).max(0.0)
-                    } else {
-                        1.0
-                    };
-                    let env = attack.min(release);
-                    let s = (2.0 * PI * freq * x / sr).sin() * env * vel;
-                    mix[i * 2] += s * gain_l;
-                    mix[i * 2 + 1] += s * gain_r;
-                }
-            }
-        }
-    }
-
-    let mut bytes = Vec::with_capacity(frames * 8);
-    for v in &mix {
-        bytes.extend_from_slice(&(*v as f32).to_le_bytes());
-    }
-    Ok((bytes, frames))
 }
 
 // ---------------------------------------------------------------------------
@@ -1141,6 +1212,180 @@ mod tests {
         );
         assert_eq!(err.code, ErrorCode::Validation);
         assert_eq!(describe(&e), before);
+    }
+
+    /// Clip [0, 960) holding notes 60 @ [0,240) v100 and 64 @ [240,480) v90.
+    fn doc_with_notes(e: &mut CadenceEngine) -> u64 {
+        let (_, c) = doc_with_clip(e);
+        apply(
+            e,
+            "addNote",
+            json!({"clip": c, "pitch": 60, "velocity": 100, "start_ticks": 0, "length_ticks": 240}),
+        )
+        .unwrap();
+        apply(
+            e,
+            "addNote",
+            json!({"clip": c, "pitch": 64, "velocity": 90, "start_ticks": 240, "length_ticks": 240}),
+        )
+        .unwrap();
+        c
+    }
+
+    fn note(e: &CadenceEngine, i: usize) -> Value {
+        describe(e)["tracks"][0]["clips"][0]["notes"][i].clone()
+    }
+
+    #[test]
+    fn move_note_changes_time_and_pitch_in_place() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        apply(
+            &mut e,
+            "moveNote",
+            json!({"clip": c, "index": 0, "start_ticks": 480, "pitch": 67}),
+        )
+        .unwrap();
+        let n = note(&e, 0);
+        assert_eq!(n["start_ticks"], 480);
+        assert_eq!(n["pitch"], 67);
+        assert_eq!(n["length_ticks"], 240, "move keeps length");
+        assert_eq!(n["velocity"], 100, "move keeps velocity");
+        // index identity: the other note did not shift
+        assert_eq!(note(&e, 1)["pitch"], 64);
+
+        // time-only move keeps pitch
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 0, "start_ticks": 0})).unwrap();
+        assert_eq!(note(&e, 0)["pitch"], 67);
+        assert_eq!(note(&e, 0)["start_ticks"], 0);
+
+        // last legal start: 960 - 240
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 0, "start_ticks": 720})).unwrap();
+        assert_eq!(note(&e, 0)["start_ticks"], 720);
+    }
+
+    #[test]
+    fn move_note_rejects_without_mutating() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        for (bad, code) in [
+            (json!({"clip": c, "index": 0, "start_ticks": 721}), ErrorCode::OutOfBounds),
+            (json!({"clip": c, "index": 0, "start_ticks": 0, "pitch": 128}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 0, "start_ticks": 0, "pitch": -1}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 0, "start_ticks": -5}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 2, "start_ticks": 0}), ErrorCode::OutOfBounds),
+            (json!({"clip": 4242, "index": 0, "start_ticks": 0}), ErrorCode::NotFound),
+            (json!({"clip": c, "start_ticks": 0}), ErrorCode::InvalidCommand),
+            (json!({"clip": c, "index": 0}), ErrorCode::InvalidCommand),
+        ] {
+            let before = describe(&e);
+            let err = expect_err(&mut e, "moveNote", bad.clone());
+            assert_eq!(err.code, code, "{bad}");
+            assert_eq!(describe(&e), before, "moveNote mutated on {bad}");
+        }
+        // nothing recorded: the only undo steps are the setup ops
+        assert!(e.undo().unwrap()); // second addNote
+        assert_eq!(describe(&e)["tracks"][0]["clips"][0]["notes"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn resize_note_bounds_and_identity() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        apply(&mut e, "resizeNote", json!({"clip": c, "index": 1, "length_ticks": 720})).unwrap();
+        let n = note(&e, 1);
+        assert_eq!(n["length_ticks"], 720); // 240 + 720 == clip end
+        assert_eq!(n["start_ticks"], 240);
+        assert_eq!(n["pitch"], 64);
+        assert_eq!(note(&e, 0)["length_ticks"], 240);
+        for (bad, code) in [
+            (json!({"clip": c, "index": 1, "length_ticks": 721}), ErrorCode::OutOfBounds),
+            (json!({"clip": c, "index": 1, "length_ticks": 0}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 9, "length_ticks": 10}), ErrorCode::OutOfBounds),
+            (json!({"clip": 4242, "index": 0, "length_ticks": 10}), ErrorCode::NotFound),
+        ] {
+            let before = describe(&e);
+            assert_eq!(expect_err(&mut e, "resizeNote", bad.clone()).code, code, "{bad}");
+            assert_eq!(describe(&e), before);
+        }
+    }
+
+    #[test]
+    fn set_velocity_validates() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 1, "velocity": 0})).unwrap();
+        assert_eq!(note(&e, 1)["velocity"], 0);
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 1, "velocity": 127})).unwrap();
+        assert_eq!(note(&e, 1)["velocity"], 127);
+        assert_eq!(note(&e, 0)["velocity"], 100);
+        for (bad, code) in [
+            (json!({"clip": c, "index": 1, "velocity": 128}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 1, "velocity": -1}), ErrorCode::Validation),
+            (json!({"clip": c, "index": 1, "velocity": 1.5}), ErrorCode::InvalidCommand),
+            (json!({"clip": c, "index": 1}), ErrorCode::InvalidCommand),
+            (json!({"clip": c, "index": 7, "velocity": 1}), ErrorCode::OutOfBounds),
+        ] {
+            let before = describe(&e);
+            assert_eq!(expect_err(&mut e, "setVelocity", bad.clone()).code, code, "{bad}");
+            assert_eq!(describe(&e), before);
+        }
+    }
+
+    #[test]
+    fn note_edits_undo_and_redo_one_step_each() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        let base = describe(&e);
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 0, "start_ticks": 480, "pitch": 72})).unwrap();
+        let moved = describe(&e);
+        apply(&mut e, "resizeNote", json!({"clip": c, "index": 0, "length_ticks": 480})).unwrap();
+        let resized = describe(&e);
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 0, "velocity": 30})).unwrap();
+        let final_state = describe(&e);
+
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&e), resized);
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&e), moved);
+        assert!(e.undo().unwrap());
+        assert_eq!(describe(&e), base, "move undo restores pitch and start together");
+        assert!(e.redo().unwrap());
+        assert!(e.redo().unwrap());
+        assert!(e.redo().unwrap());
+        assert_eq!(describe(&e), final_state);
+        assert!(!e.redo().unwrap());
+    }
+
+    #[test]
+    fn note_edits_reach_the_render() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        // Velocity 0 on both notes renders silence.
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 0, "velocity": 0})).unwrap();
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 1, "velocity": 0})).unwrap();
+        let r = apply(&mut e, "render", json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 8000})).unwrap();
+        assert!(f32s(&b64_decode(r["samples_b64"].as_str().unwrap())).iter().all(|&v| v == 0.0));
+        // Restore one note, move it into the last quarter: only that window sounds.
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 0, "velocity": 127})).unwrap();
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 0, "start_ticks": 720})).unwrap();
+        let early = apply(&mut e, "render", json!({"from_ticks": 0, "to_ticks": 720, "sample_rate": 8000})).unwrap();
+        assert!(f32s(&b64_decode(early["samples_b64"].as_str().unwrap())).iter().all(|&v| v == 0.0));
+        let late = apply(&mut e, "render", json!({"from_ticks": 720, "to_ticks": 960, "sample_rate": 8000})).unwrap();
+        assert!(f32s(&b64_decode(late["samples_b64"].as_str().unwrap())).iter().any(|&v| v != 0.0));
+    }
+
+    #[test]
+    fn note_edits_survive_snapshot() {
+        let mut e = eng();
+        let c = doc_with_notes(&mut e);
+        apply(&mut e, "moveNote", json!({"clip": c, "index": 1, "start_ticks": 600, "pitch": 48})).unwrap();
+        apply(&mut e, "resizeNote", json!({"clip": c, "index": 1, "length_ticks": 360})).unwrap();
+        apply(&mut e, "setVelocity", json!({"clip": c, "index": 1, "velocity": 12})).unwrap();
+        let snap = e.snapshot().unwrap();
+        let mut e2 = eng();
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&e2), describe(&e));
     }
 
     // ---- project ----------------------------------------------------------

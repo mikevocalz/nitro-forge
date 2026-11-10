@@ -1,0 +1,27 @@
+apply plugin: 'com.android.library'
+// Pure C++ specs use the Java loader below; generated Kotlin loader is not needed.
+def forgeArchitectures = (rootProject.findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a,x86,x86_64').split(',')
+
+android {
+  namespace 'com.nitroforge.ignitionv1'
+  compileSdk rootProject.ext.compileSdkVersion
+  ndkVersion rootProject.ext.ndkVersion
+  defaultConfig {
+    minSdk rootProject.ext.minSdkVersion
+    targetSdk rootProject.ext.targetSdkVersion
+    ndk { abiFilters(*forgeArchitectures) }
+    externalNativeBuild {
+      cmake {
+        arguments '-DANDROID_STL=c++_shared', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+        cppFlags '-fexceptions -frtti'
+      }
+    }
+  }
+  externalNativeBuild { cmake { path 'CMakeLists.txt' } }
+  buildFeatures { prefab true }
+}
+repositories { google(); mavenCentral() }
+dependencies {
+  implementation 'com.facebook.react:react-android'
+  implementation project(':react-native-nitro-modules')
+}

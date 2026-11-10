@@ -1,0 +1,26 @@
+name: Persona native core
+on:
+  pull_request:
+    paths: ['native/persona/**', '.github/workflows/persona-native-core.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: KhronosGroup/OpenXR-SDK
+          ref: 24a1f2b92d212501a2b1b8d30ffd53abf55fcfa8
+          path: .toolchain/openxr
+      - run: bash native/persona/test.sh
+      - run: cmake -S native/persona -B /tmp/persona-cmake -DCMAKE_BUILD_TYPE=Debug -DPERSONA_BUILD_OPENXR=ON -DPERSONA_OPENXR_INCLUDE_DIR="$GITHUB_WORKSPACE/.toolchain/openxr/include"
+      - run: cmake --build /tmp/persona-cmake
+      - run: ctest --test-dir /tmp/persona-cmake --output-on-failure
+      - if: runner.os == 'Linux'
+        run: PERSONA_SANITIZE=1 bash native/persona/test.sh

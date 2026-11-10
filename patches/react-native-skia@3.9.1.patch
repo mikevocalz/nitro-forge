@@ -1,0 +1,15 @@
+diff --git a/Package.swift b/Package.swift
+index 9203fefc2d6c8f315c3b9bcf92241af259e49b39..80d807a54c7847f7127b63182ea620872bcf9f31 100644
+--- a/Package.swift
++++ b/Package.swift
+@@ -40,7 +40,9 @@ guard let binariesPath = nodePackage("react-native-skia-graphite-apple-ios") els
+     dependencies without --omit=optional, on macOS.
+     """)
+ }
+-guard let dawnPath = nodePackage("react-native-webgpu-dawn") else {
++// Resolve pnpm symlinks so skia and webgpu hand SwiftPM the same Dawn path;
++// two symlinked spellings of one package are a "conflicting identity".
++guard let dawnPath = nodePackage("react-native-webgpu-dawn").map({ URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }) else {
+   fatalError(
+     """
+     react-native-webgpu-dawn was not found next to react-native-skia. It ships the \

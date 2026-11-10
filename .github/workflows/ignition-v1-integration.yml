@@ -1,0 +1,49 @@
+name: Ignition v1 shared host
+on:
+  pull_request:
+    paths:
+      - 'packages/ignition/**'
+      - 'rust/nf-sys/**'
+      - 'tooling/native/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'apps/example/package.json'
+      - '.github/workflows/ignition-v1-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host-and-native-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - run: corepack enable && pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm --filter @nitro-forge/ignition codegen
+      - run: git diff --exit-code -- packages/ignition/nitrogen packages/ignition/Package.swift
+      - run: pnpm --filter @nitro-forge/ignition typecheck
+      - run: pnpm --filter @nitro-forge/ignition exec vitest run tests/nitro-host.test.ts
+      - name: Verify document FIFO ordering and lifetime
+        run: |
+          g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp tooling/native/serial_queue_test.cpp -o /tmp/serial-queue-test
+          /tmp/serial-queue-test
+      - run: cmp packages/ignition/cpp/nf_v1.h rust/nf-sys/include/nf_v1.h
+      - run: cargo test --locked -p nf-sys && cargo build --locked -p nf-sys
+      - name: Link real C++ session to Rust and exercise round trip
+        run: |
+          g++ -std=c++20 -Wall -Wextra -Werror -I packages/ignition/cpp \
+            tooling/native/nf_v1_cpp_smoke.cpp packages/ignition/cpp/ForgeRustSession.cpp \
+            target/debug/libnf_sys.a -ldl -lpthread -lm -o target/nf-v1-smoke
+          target/nf-v1-smoke
+      - name: Compile v1 implementations against generated specs
+        run: |
+          NITRO_ROOT=$(pnpm --filter @nitro-forge/ignition exec node -p "require('node:path').dirname(require.resolve('nitro-core/package.json'))")
+          RN_ROOT=$(pnpm --filter @nitro-forge/example exec node -p "require('node:path').dirname(require.resolve('react-native/package.json'))")
+          g++ -std=c++20 -Wall -Wextra -Werror -Wno-unused-parameter -fsyntax-only \
+            -I packages/ignition/cpp -I packages/ignition/nitrogen/generated/shared/c++/include \
+            -isystem "$NITRO_ROOT/native/cpp/include" -isystem "$RN_ROOT/ReactCommon/jsi" -isystem "$RN_ROOT/ReactCommon" \
+            packages/ignition/cpp/HybridForgeFactory.cpp packages/ignition/cpp/HybridForgeDocument.cpp \
+            packages/ignition/nitrogen/generated/android/c++/*.cpp

@@ -6,8 +6,16 @@
 //! `Arc` so structural undo entries are cheap.
 
 mod b64;
+mod geom;
+mod colors;
 mod model;
+mod ops;
 mod raster;
+mod render;
+mod select;
+mod vector;
+#[cfg(test)]
+mod tests_v2;
 
 use std::sync::Arc;
 
@@ -17,7 +25,8 @@ use ignition_core::{
 };
 use serde_json::{json, Value};
 
-use model::{Content, DocWire, Layer, Shape, ShapeKind};
+use model::{Artboard, Content, DocWire, Layer, Shape, ShapeKind};
+use colors::DocColors;
 use raster::Filter;
 
 /// Journal depth per ENGINE_OPS.md ("capacity 64").
@@ -36,6 +45,10 @@ struct DocState {
     height: u32,
     next_id: u64,
     layers: Vec<Layer>,
+    artboards: Vec<Artboard>,
+    selection: Option<Arc<Vec<u8>>>,
+    selected: Vec<u64>,
+    colors: DocColors,
 }
 
 /// Undo entries, recorded before mutation (ENGINE_OPS.md, prism "Undo"):
@@ -52,6 +65,8 @@ enum UndoEntry {
         h: u32,
         prev: Vec<u8>,
     },
+    /// Prior document palette (setColors / swapColors / clearRecentColors).
+    Colors(DocColors),
 }
 
 pub struct PrismEngine {
@@ -59,6 +74,12 @@ pub struct PrismEngine {
     height: u32,
     next_id: u64,
     layers: Vec<Layer>,
+    artboards: Vec<Artboard>,
+    /// Pixel selection, canvas-sized `w*h` alpha; `None` = nothing selected.
+    selection: Option<Arc<Vec<u8>>>,
+    /// Object selection (layer ids), in selection order.
+    selected: Vec<u64>,
+    colors: DocColors,
     journal: Journal<UndoEntry>,
 }
 
@@ -71,6 +92,10 @@ impl PrismEngine {
             height,
             next_id: 1,
             layers: Vec::new(),
+            artboards: Vec::new(),
+            selection: None,
+            selected: Vec::new(),
+            colors: DocColors::default(),
             journal: Journal::new(JOURNAL_CAPACITY),
         }
     }
@@ -83,6 +108,10 @@ impl PrismEngine {
             height: self.height,
             next_id: self.next_id,
             layers: self.layers.clone(),
+            artboards: self.artboards.clone(),
+            selection: self.selection.clone(),
+            selected: self.selected.clone(),
+            colors: self.colors.clone(),
         }
     }
 
@@ -91,6 +120,10 @@ impl PrismEngine {
         self.height = s.height;
         self.next_id = s.next_id;
         self.layers = s.layers;
+        self.artboards = s.artboards;
+        self.selection = s.selection;
+        self.selected = s.selected;
+        self.colors = s.colors;
     }
 
     /// Canvas buffer length (`w*h*4`), 0 on overflow — callers guard.
@@ -104,7 +137,9 @@ impl PrismEngine {
 
     fn alloc_id(&mut self) -> u64 {
         // Snapshots could carry a stale next_id; skip in-use ids defensively.
-        while self.layers.iter().any(|l| l.id == self.next_id) {
+        while self.layers.iter().any(|l| l.id == self.next_id)
+            || self.artboards.iter().any(|a| a.id == self.next_id)
+        {
             self.next_id = self.next_id.saturating_add(1);
         }
         let id = self.next_id;
@@ -157,6 +192,10 @@ impl PrismEngine {
             height: self.height,
             next_id: self.next_id,
             layers: self.layers.iter().map(Layer::to_wire).collect(),
+            artboards: self.artboards.clone(),
+            selected: self.selected.clone(),
+            selection_b64: self.selection.as_ref().map(|s| b64::encode(s)),
+            colors: self.colors.clone(),
         }
     }
 
@@ -293,6 +332,9 @@ impl PrismEngine {
         self.height = h;
         self.next_id = 1;
         self.layers.clear();
+        self.artboards.clear();
+        self.selection = None;
+        self.selected.clear();
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -307,6 +349,12 @@ impl PrismEngine {
                 let resized = raster::resize_canvas(px, sw, sh, dw, dh);
                 *px = Arc::new(resized);
             }
+            if let Some(mask) = &mut layer.mask {
+                mask.alpha = Arc::new(ops::resize_alpha(&mask.alpha, sw, sh, dw, dh));
+            }
+        }
+        if let Some(sel) = &self.selection {
+            self.selection = Some(Arc::new(ops::resize_alpha(sel, sw, sh, dw, dh)));
         }
         self.width = w;
         self.height = h;
@@ -318,13 +366,11 @@ impl PrismEngine {
         let name = Self::opt_name(p)?;
         self.journal.record(UndoEntry::Doc(self.capture()));
         let id = self.alloc_id();
-        let layer = Layer {
+        let layer = Layer::new(
             id,
-            name: name.unwrap_or_else(|| format!("Layer {id}")),
-            opacity: 1.0,
-            visible: true,
-            content: Content::Raster(Arc::new(vec![0u8; self.pixel_len()])),
-        };
+            name.unwrap_or_else(|| format!("Layer {id}")),
+            Content::Raster(Arc::new(vec![0u8; self.pixel_len()])),
+        );
         self.layers.push(layer);
         Ok(CommandResult::data(json!({ "layer_id": id })))
     }
@@ -335,21 +381,67 @@ impl PrismEngine {
         let name = Self::opt_name(p)?;
         self.journal.record(UndoEntry::Doc(self.capture()));
         let id = self.alloc_id();
-        self.layers.push(Layer {
+        self.layers.push(Layer::new(
             id,
-            name: name.unwrap_or_else(|| format!("Shape {id}")),
-            opacity: 1.0,
-            visible: true,
-            content: Content::Shape(shape),
-        });
+            name.unwrap_or_else(|| format!("Shape {id}")),
+            Content::Shape(shape),
+        ));
         Ok(CommandResult::data(json!({ "layer_id": id })))
+    }
+
+    /// Relative translation and axis-aligned resize, anchored at the top-left.
+    /// Validate computed bounds before touching the document or its history.
+    fn op_transform_shape(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.layer_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
+        let mut shape = match &self.layers[idx].content {
+            Content::Shape(shape) => shape.clone(),
+            _ => {
+                return Err(EngineError::validation("transformShape requires a shape layer"));
+            }
+        };
+        let dx = Self::req_f64(p, "dx")?;
+        let dy = Self::req_f64(p, "dy")?;
+        let scale_x = Self::req_f64(p, "scale_x")?;
+        let scale_y = Self::req_f64(p, "scale_y")?;
+        if !dx.is_finite() || !dy.is_finite() || !scale_x.is_finite()
+            || !scale_y.is_finite() || scale_x <= 0.0 || scale_y <= 0.0 {
+            return Err(EngineError::validation("translation must be finite and scales positive and finite"));
+        }
+        shape.x += dx;
+        shape.y += dy;
+        shape.w *= scale_x;
+        shape.h *= scale_y;
+        shape.validate()?;
+        self.journal.record(UndoEntry::Doc(self.capture()));
+        self.layers[idx].content = Content::Shape(shape);
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    /// `setShapeFill {id,color}` — edits only the fill, preserving geometry and identity.
+    fn op_set_shape_fill(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.layer_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
+        let color = Self::req_color(p, "color")?;
+        if !matches!(self.layers[idx].content, Content::Shape(_)) {
+            return Err(EngineError::validation("setShapeFill requires a shape layer"));
+        }
+        self.journal.record(UndoEntry::Doc(self.capture()));
+        if let Content::Shape(shape) = &mut self.layers[idx].content {
+            shape.fill = color;
+        }
+        Ok(CommandResult::data(json!({ "ok": true })))
     }
 
     /// `removeLayer {id}`.
     fn op_remove_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
+        let id = self.layers[idx].id;
+        let doomed = self.subtree_ids(id);
         self.journal.record(UndoEntry::Doc(self.capture()));
-        self.layers.remove(idx);
+        self.layers.retain(|l| !doomed.contains(&l.id));
+        self.selected.retain(|s| !doomed.contains(s));
         Ok(CommandResult::data(json!({ "ok": true })))
     }
 
@@ -386,6 +478,7 @@ impl PrismEngine {
         if !opacity.is_finite() || !(0.0..=1.0).contains(&opacity) {
             return Err(EngineError::validation("opacity must be in 0..=1"));
         }
+        self.ensure_unlocked(idx)?;
         self.journal.record(UndoEntry::Doc(self.capture()));
         self.layers[idx].opacity = opacity;
         Ok(CommandResult::data(json!({ "ok": true })))
@@ -401,16 +494,16 @@ impl PrismEngine {
     }
 
     /// `drawPixels {id,x,y,w,h,data_b64}` — real src-over blend, clipped to
-    /// canvas. `data` is `w*h*4` RGBA. Raster layers only.
-    fn op_draw_pixels(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    /// canvas. `data` is `w*h*4` RGBA. Raster layers only. The pixels may
+    /// instead arrive as the command's binary input, with `data_b64` omitted.
+    fn op_draw_pixels(&mut self, cmd: &mut Command) -> Result<CommandResult, EngineError> {
+        let p = &cmd.payload;
         let idx = self.raster_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
         let x = Self::req_f64(p, "x")?;
         let y = Self::req_f64(p, "y")?;
         let w = Self::req_f64(p, "w")?;
         let h = Self::req_f64(p, "h")?;
-        let data_b64 = Self::field(p, "data_b64")?
-            .as_str()
-            .ok_or_else(|| EngineError::invalid("field 'data_b64' must be a string"))?;
         if !x.is_finite() || !y.is_finite() {
             return Err(EngineError::validation("x/y must be finite"));
         }
@@ -427,12 +520,13 @@ impl PrismEngine {
         if w.fract() != 0.0 || h.fract() != 0.0 || w > i64::MAX as f64 || h > i64::MAX as f64 {
             return Err(EngineError::validation("w/h must be integers"));
         }
-        let data = b64::decode(data_b64)
-            .map_err(|_| EngineError::validation("data_b64 is not valid base64"))?;
+        let data = cmd.bytes_input("data_b64", |text| {
+            b64::decode(text).map_err(|_| EngineError::validation("data_b64 is not valid base64"))
+        })?;
         let expected = (w as u128) * (h as u128) * 4;
         if expected != data.len() as u128 {
             return Err(EngineError::validation(format!(
-                "data_b64 length {} does not equal w*h*4 ({expected})",
+                "pixel data length {} does not equal w*h*4 ({expected})",
                 data.len()
             )));
         }
@@ -450,6 +544,7 @@ impl PrismEngine {
             return Ok(CommandResult {
                 events: Vec::new(),
                 data: json!({ "ok": true }),
+                output: None,
             });
         }
         let (cx, cy) = (x0 as u32, y0 as u32);
@@ -501,6 +596,7 @@ impl PrismEngine {
     fn op_fill_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.raster_index(Self::req_id(p)?)?;
         let color = Self::req_color(p, "color")?;
+        self.ensure_unlocked(idx)?;
         self.record_full_layer_pixels(idx)?;
         let buf = self
             .raster_mut(idx)
@@ -542,6 +638,7 @@ impl PrismEngine {
                 )))
             }
         };
+        self.ensure_unlocked(idx)?;
         self.record_full_layer_pixels(idx)?;
         let buf = self
             .raster_mut(idx)
@@ -551,21 +648,15 @@ impl PrismEngine {
     }
 
     /// `flatten {}` — composite bottom→top honoring opacity/visible; shapes
-    /// rasterized. Read-only: no undo entry, no `document:changed`.
-    fn op_flatten(&self) -> Result<CommandResult, EngineError> {
-        let pixels = raster::flatten(
-            self.width as usize,
-            self.height as usize,
-            &self.layers,
-        );
-        Ok(CommandResult {
-            events: Vec::new(),
-            data: json!({
-                "pixels_b64": b64::encode(&pixels),
-                "width": self.width,
-                "height": self.height,
-            }),
-        })
+    /// rasterized. Read-only: no undo entry, no `document:changed`. A binary
+    /// command gets the RGBA bytes as output instead of `pixels_b64`.
+    fn op_flatten(&self, cmd: &Command) -> Result<CommandResult, EngineError> {
+        let pixels = self.scene().flatten();
+        Ok(CommandResult::read_only(json!({
+            "width": self.width,
+            "height": self.height,
+        }))
+        .with_bytes(cmd, "pixels_b64", pixels))
     }
 
     /// `getLayer {id}` — the layer object. Read-only.
@@ -575,16 +666,82 @@ impl PrismEngine {
         let data = serde_json::to_value(&wire)
             .map_err(|e| EngineError::internal(e.to_string()))?;
         Ok(CommandResult {
+            output: None,
             events: Vec::new(),
             data,
         })
     }
 
     /// `describe` — complete document state. Read-only.
+    // -- document colors (C-01) -------------------------------------------
+
+    fn opt_color(p: &Value, key: &str) -> Result<Option<[u8; 4]>, EngineError> {
+        match p.get(key) {
+            None | Some(Value::Null) => Ok(None),
+            Some(_) => Self::req_color(p, key).map(Some),
+        }
+    }
+
+    /// Commit a new palette, recording the old one. `None` means the op
+    /// changed nothing: no undo entry and no `document:changed`.
+    fn commit_colors(&mut self, next: Option<DocColors>) -> CommandResult {
+        let Some(next) = next else {
+            return CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "changed": false }),
+            };
+        };
+        let prev = std::mem::replace(&mut self.colors, next);
+        self.journal.record(UndoEntry::Colors(prev));
+        CommandResult::data(json!({ "ok": true, "changed": true }))
+    }
+
+    fn op_set_colors(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let fg = Self::opt_color(p, "foreground")?;
+        let bg = Self::opt_color(p, "background")?;
+        if fg.is_none() && bg.is_none() {
+            return Err(EngineError::invalid(
+                "setColors needs 'foreground' and/or 'background'",
+            ));
+        }
+        let remember = match p.get("remember") {
+            None | Some(Value::Null) => true,
+            Some(Value::Bool(b)) => *b,
+            Some(_) => return Err(EngineError::invalid("field 'remember' must be a boolean")),
+        };
+        let next = self.colors.committed(fg, bg, remember);
+        Ok(self.commit_colors(next))
+    }
+
+    fn op_swap_colors(&mut self) -> Result<CommandResult, EngineError> {
+        let next = self.colors.swapped();
+        Ok(self.commit_colors(next))
+    }
+
+    fn op_clear_recent_colors(&mut self) -> Result<CommandResult, EngineError> {
+        let next = (!self.colors.recent.is_empty()).then(|| DocColors {
+            recent: Vec::new(),
+            ..self.colors.clone()
+        });
+        Ok(self.commit_colors(next))
+    }
+
+    fn op_get_colors(&self) -> Result<CommandResult, EngineError> {
+        let data =
+            serde_json::to_value(&self.colors).map_err(|e| EngineError::internal(e.to_string()))?;
+        Ok(CommandResult {
+            output: None,
+            events: Vec::new(),
+            data,
+        })
+    }
+
     fn op_describe(&self) -> Result<CommandResult, EngineError> {
         let data = serde_json::to_value(self.to_wire())
             .map_err(|e| EngineError::internal(e.to_string()))?;
         Ok(CommandResult {
+            output: None,
             events: Vec::new(),
             data,
         })
@@ -683,7 +840,11 @@ impl Engine for PrismEngine {
         EngineKind::Prism
     }
 
-    fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
+    fn binary_input_ops(&self) -> &'static [&'static str] {
+        &["drawPixels"]
+    }
+
+    fn apply(&mut self, mut cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.v != COMMAND_VERSION {
             return Err(EngineError::unsupported(format!(
                 "unsupported command version {}",
@@ -695,18 +856,24 @@ impl Engine for PrismEngine {
             "resize" => self.op_resize(&cmd.payload),
             "addRasterLayer" => self.op_add_raster_layer(&cmd.payload),
             "addShape" => self.op_add_shape(&cmd.payload),
+            "setShapeFill" => self.op_set_shape_fill(&cmd.payload),
+            "transformShape" => self.op_transform_shape(&cmd.payload),
             "removeLayer" => self.op_remove_layer(&cmd.payload),
             "moveLayer" => self.op_move_layer(&cmd.payload),
             "renameLayer" => self.op_rename_layer(&cmd.payload),
             "setLayerOpacity" => self.op_set_opacity(&cmd.payload),
             "setLayerVisible" => self.op_set_visible(&cmd.payload),
-            "drawPixels" => self.op_draw_pixels(&cmd.payload),
+            "drawPixels" => self.op_draw_pixels(&mut cmd),
             "fillLayer" => self.op_fill_layer(&cmd.payload),
             "applyFilter" => self.op_apply_filter(&cmd.payload),
-            "flatten" => self.op_flatten(),
+            "flatten" => self.op_flatten(&cmd),
             "getLayer" => self.op_get_layer(&cmd.payload),
             "describe" => self.op_describe(),
-            other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
+            "setColors" => self.op_set_colors(&cmd.payload),
+            "swapColors" => self.op_swap_colors(),
+            "clearRecentColors" => self.op_clear_recent_colors(),
+            "getColors" => self.op_get_colors(),
+            other => self.apply_v2(other, &cmd.payload),
         }
     }
 
@@ -732,10 +899,36 @@ impl Engine for PrismEngine {
         for lw in wire.layers {
             layers.push(Layer::from_wire(lw, pixel_len)?);
         }
+        ops::validate_tree(&layers)?;
+        for a in &wire.artboards {
+            a.validate()
+                .map_err(|_| EngineError::serialization("invalid artboard in snapshot"))?;
+        }
+        let selection = match &wire.selection_b64 {
+            None => None,
+            Some(s) => {
+                let bytes = b64::decode(s)?;
+                if bytes.len() != pixel_len / 4 {
+                    return Err(EngineError::serialization(
+                        "selection length does not match canvas",
+                    ));
+                }
+                Some(Arc::new(bytes))
+            }
+        };
+        let selected: Vec<u64> = wire
+            .selected
+            .into_iter()
+            .filter(|id| layers.iter().any(|l| l.id == *id))
+            .collect();
         self.width = wire.width;
         self.height = wire.height;
         self.next_id = wire.next_id;
         self.layers = layers;
+        self.artboards = wire.artboards;
+        self.selection = selection;
+        self.selected = selected;
+        self.colors = wire.colors.normalized();
         // Undo entries refer to pre-restore state; the document is replaced.
         self.journal = Journal::new(JOURNAL_CAPACITY);
         Ok(())
@@ -755,6 +948,10 @@ impl Engine for PrismEngine {
                 let inverse = self.invert_pixels(pixels);
                 self.journal.push_redo(inverse);
             }
+            UndoEntry::Colors(prev) => {
+                let cur = std::mem::replace(&mut self.colors, prev);
+                self.journal.push_redo(UndoEntry::Colors(cur));
+            }
         }
         Ok(true)
     }
@@ -772,6 +969,10 @@ impl Engine for PrismEngine {
             pixels @ UndoEntry::Pixels { .. } => {
                 let inverse = self.invert_pixels(pixels);
                 self.journal.push_undo(inverse);
+            }
+            UndoEntry::Colors(prev) => {
+                let cur = std::mem::replace(&mut self.colors, prev);
+                self.journal.push_undo(UndoEntry::Colors(cur));
             }
         }
         Ok(true)
@@ -834,6 +1035,130 @@ mod tests {
 
     fn fill(e: &mut PrismEngine, id: u64, color: [u8; 4]) {
         apply(e, "fillLayer", json!({"id": id, "color": color}));
+    }
+
+    #[test]
+    fn shape_fill_preserves_identity_geometry_and_round_trips() {
+        for kind in ["rect", "ellipse"] {
+            let mut e = eng();
+            let id = apply(&mut e, "addShape", json!({"name": "art", "shape": {
+                "kind": kind, "x": 0, "y": 0, "w": 4, "h": 4, "fill": [255,0,0,255]
+            }})).data["layer_id"].as_u64().unwrap();
+            let before = e.snapshot().unwrap();
+            apply(&mut e, "setShapeFill", json!({"id": id, "color": [0,128,255,255]}));
+            let after = e.snapshot().unwrap();
+            let layer = apply(&mut e, "getLayer", json!({"id": id})).data;
+            assert_eq!(layer["name"], "art");
+            assert_eq!(layer["content"]["shape"]["kind"], kind);
+            assert_eq!(layer["content"]["shape"]["w"], 4.0);
+            assert_eq!(pixel(&flatten_pixels(&mut e), 4, 2, 2), [0,128,255,255]);
+            assert!(e.undo().unwrap());
+            assert_eq!(e.snapshot().unwrap(), before);
+            assert!(e.redo().unwrap());
+            assert_eq!(e.snapshot().unwrap(), after);
+            let mut restored = eng();
+            restored.restore(&after).unwrap();
+            assert_eq!(restored.snapshot().unwrap(), after);
+            assert_eq!(flatten_pixels(&mut restored), flatten_pixels(&mut e));
+        }
+    }
+
+    #[test]
+    fn invalid_shape_fill_is_atomic_and_keeps_redo() {
+        let mut e = eng();
+        let raster = add_raster(&mut e);
+        let id = apply(&mut e, "addShape", json!({"shape": {
+            "kind": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "fill": [255,0,0,255]
+        }})).data["layer_id"].as_u64().unwrap();
+        apply(&mut e, "setShapeFill", json!({"id": id, "color": [0,0,255,0]}));
+        assert_eq!(pixel(&flatten_pixels(&mut e), 4, 2, 2), [0,0,0,0]);
+        let after = e.snapshot().unwrap();
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        for payload in [
+            json!({"id": raster, "color": [0,0,0,255]}),
+            json!({"id": 999, "color": [0,0,0,255]}),
+            json!({"id": id, "color": [0,0,256,255]}),
+            json!({"id": id, "color": [0,0,-1,255]}),
+            json!({"id": id, "color": [0,0,1.5,255]}),
+            json!({"id": id, "color": [0,0,0]}),
+            json!({"id": id}),
+        ] {
+            apply_err(&mut e, "setShapeFill", payload);
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), after);
+    }
+
+    #[test]
+    fn shape_transform_pixels_identity_history_and_restore() {
+        for kind in ["rect", "ellipse"] {
+            let mut e = eng();
+            let id = apply(&mut e, "addShape", json!({"name": "art", "shape": {
+                "kind": kind, "x": 0, "y": 0, "w": 1, "h": 1, "fill": [0,128,255,255]
+            }})).data["layer_id"].as_u64().unwrap();
+            let before = e.snapshot().unwrap();
+            let original = apply(&mut e, "getLayer", json!({"id": id})).data;
+            let result = apply(&mut e, "transformShape", json!({
+                "id": id, "dx": 1, "dy": 1, "scale_x": 2, "scale_y": 2
+            }));
+            assert!(result.events.iter().any(|ev| ev.kind == "document:changed"));
+            let transformed = apply(&mut e, "getLayer", json!({"id": id})).data;
+            let mut expected = original;
+            expected["content"]["shape"]["x"] = json!(1.0);
+            expected["content"]["shape"]["y"] = json!(1.0);
+            expected["content"]["shape"]["w"] = json!(2.0);
+            expected["content"]["shape"]["h"] = json!(2.0);
+            assert_eq!(transformed, expected);
+            assert_eq!(pixel(&flatten_pixels(&mut e), 4, 0, 0), [0,0,0,0]);
+            assert_eq!(pixel(&flatten_pixels(&mut e), 4, 1, 1), [0,128,255,255]);
+            let after = e.snapshot().unwrap();
+            assert!(e.undo().unwrap());
+            assert_eq!(e.snapshot().unwrap(), before);
+            assert!(e.redo().unwrap());
+            assert_eq!(e.snapshot().unwrap(), after);
+            let mut restored = eng();
+            restored.restore(&after).unwrap();
+            assert_eq!(restored.snapshot().unwrap(), after);
+            assert_eq!(flatten_pixels(&mut restored), flatten_pixels(&mut e));
+            // Off-canvas translation is valid, with rendering clipped to canvas.
+            apply(&mut e, "transformShape", json!({
+                "id": id, "dx": -10, "dy": -10, "scale_x": 1, "scale_y": 1
+            }));
+            assert!(flatten_pixels(&mut e).iter().all(|channel| *channel == 0));
+        }
+    }
+
+    #[test]
+    fn invalid_shape_transform_preserves_state_and_redo() {
+        let mut e = eng();
+        let raster = add_raster(&mut e);
+        let id = apply(&mut e, "addShape", json!({"shape": {
+            "kind": "rect", "x": 1e7, "y": 1e7, "w": 1e7, "h": 1e7,
+            "fill": [255,0,0,255]
+        }})).data["layer_id"].as_u64().unwrap();
+        apply(&mut e, "transformShape", json!({
+            "id": id, "dx": 0, "dy": 0, "scale_x": 0.5, "scale_y": 0.5
+        }));
+        let after = e.snapshot().unwrap();
+        assert!(e.undo().unwrap());
+        let before = e.snapshot().unwrap();
+        let base = json!({"id": id, "dx": 0, "dy": 0, "scale_x": 1, "scale_y": 1});
+        for (key, value) in [
+            ("id", json!(raster)), ("id", json!(999)),
+            ("dx", json!(1e308)), ("dy", json!(1e308)),
+            ("scale_x", json!(2)), ("scale_y", json!(2)),
+            ("scale_x", json!(0)), ("scale_y", json!(-1)),
+            ("dx", Value::Null), ("scale_y", json!("1")),
+        ] {
+            let mut payload = base.clone();
+            payload[key] = value;
+            apply_err(&mut e, "transformShape", payload);
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        assert!(e.redo().unwrap());
+        assert_eq!(e.snapshot().unwrap(), after);
     }
 
     // -- construction / new / describe --------------------------------------
@@ -1487,6 +1812,7 @@ mod tests {
                 v: 2,
                 op: "describe".into(),
                 payload: json!({}),
+                input: None, binary_output: false,
             })
             .unwrap_err();
         assert_eq!(err.code, ignition_core::ErrorCode::Unsupported);
@@ -1803,5 +2129,109 @@ mod tests {
         assert!(e.undo().unwrap());
         assert!(!e.undo().unwrap());
         drop(undo_depth_before);
+    }
+
+    // -- document colors (C-01) -------------------------------------------
+
+    #[test]
+    fn set_colors_commits_records_and_undoes() {
+        let mut e = eng();
+        let r = apply(
+            &mut e,
+            "setColors",
+            json!({"foreground": [10, 20, 30, 255]}),
+        );
+        assert!(r.events.iter().any(|ev| ev.kind == "document:changed"));
+        let c = apply(&mut e, "getColors", json!({})).data;
+        assert_eq!(c["foreground"], json!([10, 20, 30, 255]));
+        assert_eq!(c["recent"], json!([[10, 20, 30, 255]]));
+        assert_eq!(
+            describe(&mut e)["colors"]["foreground"],
+            json!([10, 20, 30, 255])
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["foreground"],
+            json!([0, 0, 0, 255])
+        );
+        assert!(e.redo().unwrap());
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["foreground"],
+            json!([10, 20, 30, 255])
+        );
+    }
+
+    #[test]
+    fn set_colors_is_atomic_on_bad_channel() {
+        let mut e = eng();
+        let before = apply(&mut e, "getColors", json!({})).data;
+        let err = apply_err(
+            &mut e,
+            "setColors",
+            json!({"foreground": [1, 2, 3, 255], "background": [1, 2, 300, 255]}),
+        );
+        assert_eq!(err.code, ignition_core::ErrorCode::Validation);
+        assert_eq!(apply(&mut e, "getColors", json!({})).data, before);
+        assert!(!e.undo().unwrap());
+    }
+
+    #[test]
+    fn set_colors_requires_a_color_and_unchanged_commit_records_nothing() {
+        let mut e = eng();
+        let err = apply_err(&mut e, "setColors", json!({}));
+        assert_eq!(err.code, ignition_core::ErrorCode::InvalidCommand);
+        let r = apply(
+            &mut e,
+            "setColors",
+            json!({"foreground": [0, 0, 0, 255], "remember": false}),
+        );
+        assert_eq!(r.data["changed"], json!(false));
+        assert!(r.events.is_empty());
+        assert!(!e.undo().unwrap());
+    }
+
+    #[test]
+    fn swap_and_clear_recent_are_single_undo_steps() {
+        let mut e = eng();
+        apply(&mut e, "setColors", json!({"background": [9, 9, 9, 255]}));
+        apply(&mut e, "swapColors", json!({}));
+        let c = apply(&mut e, "getColors", json!({})).data;
+        assert_eq!(c["foreground"], json!([9, 9, 9, 255]));
+        assert_eq!(c["background"], json!([0, 0, 0, 255]));
+        apply(&mut e, "clearRecentColors", json!({}));
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["recent"],
+            json!([])
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["recent"],
+            json!([[9, 9, 9, 255]])
+        );
+        assert!(e.undo().unwrap());
+        assert_eq!(
+            apply(&mut e, "getColors", json!({})).data["foreground"],
+            json!([0, 0, 0, 255])
+        );
+    }
+
+    #[test]
+    fn colors_survive_snapshot_and_old_snapshots_get_defaults() {
+        let mut e = eng();
+        apply(&mut e, "setColors", json!({"foreground": [1, 2, 3, 4]}));
+        let bytes = e.snapshot().unwrap();
+        let mut f = eng();
+        f.restore(&bytes).unwrap();
+        assert_eq!(
+            apply(&mut f, "getColors", json!({})).data["foreground"],
+            json!([1, 2, 3, 4])
+        );
+
+        let legacy = encode_envelope(br#"{"width":2,"height":2,"next_id":1,"layers":[]}"#);
+        let mut g = eng();
+        g.restore(&legacy).unwrap();
+        let c = apply(&mut g, "getColors", json!({})).data;
+        assert_eq!(c["foreground"], json!([0, 0, 0, 255]));
+        assert_eq!(c["background"], json!([255, 255, 255, 255]));
     }
 }

@@ -11,6 +11,7 @@ mod error;
 mod journal;
 mod protocol;
 mod session;
+mod task;
 
 pub use command::{
     Command, CommandResult, Event, COMMAND_VERSION, OP_REDO, OP_SNAPSHOT, OP_UNDO,
@@ -23,3 +24,4 @@ pub use protocol::{
     base64_decode, base64_encode, run_stdio, FrameRequest, FrameResponse,
 };
 pub use session::SessionRegistry;
+pub use task::TaskContext;

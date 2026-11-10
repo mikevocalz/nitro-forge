@@ -10,3 +10,8 @@ coverage/
 .expo/
 android/build/
 ios/build/
+
+# Local preview packages and QA output
+artifacts/
+__pycache__/
+native/persona/site/shots/

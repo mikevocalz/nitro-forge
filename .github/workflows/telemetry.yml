@@ -1,0 +1,49 @@
+name: Telemetry adapter (N-18)
+
+on:
+  pull_request:
+    paths:
+      - "packages/telemetry/**"
+      - "packages/ignition/**"
+      - "packages/prism/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/telemetry.yml"
+  push:
+    branches: [master]
+    paths:
+      - "packages/telemetry/**"
+      - "packages/ignition/**"
+      - "packages/prism/**"
+      - "rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/telemetry.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  telemetry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: corepack enable
+      - name: Install Forge workspace
+        run: corepack pnpm install --frozen-lockfile
+      - name: Typecheck the telemetry package
+        run: corepack pnpm --filter @nitro-forge/telemetry typecheck
+      - name: Unit tests (consent, redaction, buffer, sink, host wrapper)
+        run: corepack pnpm --filter @nitro-forge/telemetry exec vitest run tests/telemetry.test.ts
+      - name: Compile the real Rust engine host
+        run: cargo build -p nf-cli
+      - name: Instrumented real Prism engine through nf-cli
+        run: corepack pnpm --filter @nitro-forge/telemetry exec vitest run tests/e2e.test.ts
+      # Node and the JSON-lines host only: no Nitro JSI, device or sink endpoint is exercised.
