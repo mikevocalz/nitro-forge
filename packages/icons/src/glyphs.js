@@ -4,6 +4,7 @@
  * paint=knockout cuts detail using the supplied surface color.
  * This is a curated artwork set, NOT a placeholder for all catalog IDs.
  */
+import {iconIds,hasIconId} from "./catalog.js";
 const S=(...d)=>d.map(p=>[p,"stroke"]);
 const F=(...d)=>d.map(p=>[p,"fill"]);
 const K=(...d)=>d.map(p=>[p,"knockout"]);
@@ -96,9 +97,37 @@ timeline:both(S("M3 5h18v14H3z","M3 10h18","M8 10v9","M14 10v9","M6 14h3","M12 1
 "color-wheel":both(S("M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z","M12 3v9l8 4","M12 12l-8 4"),
  F("M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22z")),
 });
-export const glyphIds=Object.freeze(Object.keys(glyphs));
-/** Never render misleading generic artwork for an unimplemented semantic ID. */
+/**
+ * Artwork keys whose name is not itself a catalog slug. Every other key draws
+ * each catalog ID with that exact slug (e.g. `home` draws `navigation/home`).
+ */
+const artworkAliases=Object.freeze({
+ brush:["paint/paintbrush"],
+ scissors:["edit/cut"],
+ table:["spreadsheet/sheet"],
+ pdf:["file/document-pdf"],
+ music:["audio/note"],
+ sparkles:["ai/ai-sparkle"],
+});
+const artworkById=new Map();
+for(const id of iconIds){
+ const slug=id.slice(id.indexOf("/")+1);
+ if(Object.hasOwn(glyphs,slug))artworkById.set(id,glyphs[slug]);
+}
+for(const [key,ids] of Object.entries(artworkAliases)){
+ for(const id of ids){
+  if(!hasIconId(id))throw new Error("Forge glyph alias targets unknown icon ID "+id);
+  artworkById.set(id,glyphs[key]);
+ }
+}
+/** Catalog IDs (`category/slug`) that have finished outline and filled artwork. */
+export const glyphIds=Object.freeze([...artworkById.keys()]);
+/**
+ * Returns the paths for a catalog ID such as `vector/pen`, or undefined when
+ * the ID is unknown or has no finished artwork. Bare slugs and IDs in the
+ * wrong category are rejected so a backlog name never borrows another glyph.
+ */
 export function getGlyph(id,variant="outline"){
- const slug=typeof id==="string"?id.split("/").at(-1):"";
- return glyphs[slug]?.[variant];
+ if(variant!=="outline"&&variant!=="filled")return undefined;
+ return typeof id==="string"?artworkById.get(id)?.[variant]:undefined;
 }

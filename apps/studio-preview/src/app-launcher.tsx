@@ -21,7 +21,7 @@ export function AppLauncher({ opened, theme }: { opened: readonly Studio[]; them
       const isOpen = opened.includes(app);
       const name = id[0]!.toUpperCase() + id.slice(1);
       return <Link className="app-card-link w-full h-full self-stretch" key={id} href={`#/apps/${id}`} title={info.detail} aria-label={`${isOpen ? 'Continue in' : 'Open'} ${name} — ${info.task}`}><Card surface="page" padded={false} style={{ borderRadius: 4, width: '100%' }} className={`w-full h-full app-card app-card-${id}${isOpen ? ' app-card-open' : ''}`}>
-        <Text className="app-glyph" aria-hidden><ForgeIcon name={info.glyph} size={29} color="currentColor" appearance={theme} surfaceColor={theme === 'dark' ? '#29253c' : '#eeebfc'} reducedMotion /></Text>
+        <Text className="app-glyph" aria-hidden><ForgeIcon name={info.glyph} size={29} color="currentColor" appearance={theme} reducedMotion /></Text>
         <Page className="app-card-copy">
           <Page className="app-card-identity"><Heading level={3} className="app-name">{name}</Heading><Text className="app-category">{info.category}</Text></Page>
           <Paragraph className="app-task">{info.task}</Paragraph>

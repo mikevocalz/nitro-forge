@@ -39,7 +39,7 @@ export default function Home() {
               {({ pressed }) => <Card surface="page" padded={false} style={{ width: '100%', borderRadius: scale.radius.panel, borderColor: pressed ? colors.accent : colors.line, backgroundColor: pressed ? colors.soft : colors.raised }}>
               <View style={{ padding: compact ? 17 : 22, flexDirection: 'row', alignItems: 'flex-start', gap: compact ? 14 : 18 }}>
               <View accessible={false} importantForAccessibility="no-hide-descendants" style={{ width: compact ? 48 : 54, height: compact ? 48 : 54, borderRadius: scale.radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.soft }}>
-                <ForgeIcon name={app.glyph} size={29} color={colors.accent} appearance={theme} surfaceColor={colors.soft} reducedMotion />
+                <ForgeIcon name={app.glyph} size={29} color={colors.accent} appearance={theme} reducedMotion />
               </View>
               <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
