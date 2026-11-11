@@ -34,8 +34,8 @@
   "dependencies": {
     "@nitro-forge/media-ui": "workspace:*",
     "zustand": "^5.0.0",
-    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
-    "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz"
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-ui-1.0.0-rc.1.tgz",
+    "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-platform-services-1.0.0-rc.1.tgz"
   },
   "peerDependencies": {
     "expo": "^58.0.0",

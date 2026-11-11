@@ -12,12 +12,14 @@ import {MagicSelectionControls} from '@nyc-tron/ui/components/forge/selection/Ma
 import {ForegroundBackgroundChips} from '@nyc-tron/ui/components/forge/color/ForegroundBackgroundChips';
 import {SwatchGrid} from '@nyc-tron/ui/components/forge/color/SwatchGrid';
 import {ColorPickerDialog} from '@nyc-tron/ui/components/forge/color/ColorPickerDialog';
+import {EyedropperTool} from '@nyc-tron/ui/components/forge/color/EyedropperTool';
 import {PrecisionScrubber} from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
 import {rgbToHsv,hsvToRgb,type HsvColor} from '@nyc-tron/ui/components/forge/color';
 import type {AlignReferenceKind,DistributeMode} from '@nyc-tron/ui/components/forge/canvas/align-distribute-model';
 import type {PrismDocument} from '../../../packages/prism/src/index';
 import {PrismCanvasAdapter,canvasClippingRows,type PrismCanvasState} from '../../../packages/prism/src/canvas-cluster';
 import {bindPrismColors,readPrismColors,type PrismColorBinding,type ColorSlot,type ColorValue,toEngineColor,commitPrismFill} from '../../../packages/prism/src/color-cluster';
+import {prismSampledColorWrite,samplePrismColor,PRISM_SAMPLE_SOURCES} from './prism-eyedropper-wiring';
 
 export interface PrismDetailControlsProps {
  document:PrismDocument;
@@ -44,7 +46,7 @@ export function PrismDetailControls(props:PrismDetailControlsProps){
   reference:'canvas' as AlignReferenceKind,distribution:'centers' as DistributeMode,spacing:undefined as number|undefined,
   refine:{feather:0,grow:0},radii:{grow:1,feather:1,smooth:1},wand:{tolerance:32,contiguous:true,sample:'composite' as 'composite'|'layer'},
   active:'foreground' as ColorSlot,query:'',palette:null as PrismColorBinding|null,hasSelection:false,readStatus:'idle' as 'idle'|'loading'|'ready'|'error',readError:'',retry:0,
-  picker:null as {session:number;slot:ColorSlot;original:HsvColor;draft:HsvColor}|null,session:0})),[document]);
+  picker:null as {session:number;slot:ColorSlot;original:HsvColor;draft:HsvColor}|null,session:0,sample:{x:0,y:0,radius:0}})),[document]);
  const view=useStore(store,s=>s),propertyLayerId=props.selectedLayerId===undefined?view.layerId:props.selectedLayerId;
  const layer=props.selectedLayerId===null?undefined:state.layers.find(item=>item.id===propertyLayerId)??state.layers[0];
  const board=state.artboards.find(item=>String(item.id)===view.artboardId);
@@ -88,6 +90,11 @@ export function PrismDetailControls(props:PrismDetailControlsProps){
  const openColor=()=>{if(!palette||!current())return;const original=rgbToHsv(palette.pair[view.active]);pickerOwner.current={document,state,session:view.session+1};select({session:view.session+1,picker:{session:view.session+1,slot:view.active,original,draft:original}});};
  const commitColor=(slot:ColorSlot,color:ColorValue)=>write(()=>colorActions.commit(slot,color));
  const picker=view.picker&&pickerOwner.current?.document===document&&pickerOwner.current.state===state&&pickerOwner.current.session===view.picker.session?view.picker:null;
+ // C-11: the request names this document and render generation; a newer generation rejects older samples and applies.
+ const sizeKnown=[state.width,state.height].every(n=>Number.isSafeInteger(n)&&n>0);
+ const sampleRequest={documentId:String(document.handle.id),revision:String(generation),sourceId:PRISM_SAMPLE_SOURCES[0].id,
+  x:Math.min(view.sample.x,Math.max(0,state.width-1)),y:Math.min(view.sample.y,Math.max(0,state.height-1)),radius:view.sample.radius};
+ const sampleIdentity=()=>({documentId:String(context.current.document.handle.id),revision:String(context.current.generation)});
  const selectObject=(id:number)=>{const next=state.selected.includes(id)?state.selected.filter(value=>value!==id):[...state.selected,id];return write(()=>adapter.layers().select(next));};
  return <View testID="prism-detail-controls" style={{gap:scale.space.group}}>
   <TabBar semantics="tabs" density="compact" aria-label="Image detail panels" tabs={(['objects','selection','artboards','colors','vector'] as const).map(panel=>({key:panel,label:panel==='objects'?'Objects':panel==='selection'?'Selection':panel==='artboards'?'Artboards':panel==='vector'?'Vector':'Colors',icon:null,active:view.panel===panel,onPress:()=>select({panel,picker:null})}))}/>
@@ -140,6 +147,13 @@ export function PrismDetailControls(props:PrismDetailControlsProps){
     <SwatchGrid groups={groups} query={view.query} onQueryChange={query=>{if(current())store.setState({query});}} disabled={disabled} onSelect={swatch=>commitColor(view.active,swatch.color)}/>
     {layer&&['shape','path','boolean','raster'].includes(layer.content.type)&&<Button title="Apply foreground to layer" disabled={disabled||layer.locked} targetSize={scale.size.target} onPress={()=>{void write(()=>layer.content.type==='raster'?document.fillLayer(layer.id,toEngineColor(palette.pair.foreground)):commitPrismFill(document,layer.id,palette.pair.foreground));}}/>}
     <Button title="Clear recent document colors" variant="ghost" disabled={disabled||!palette.recent.length} targetSize={scale.size.target} onPress={()=>{void write(colorActions.clearRecent);}}/>
+    {sizeKnown&&<>
+     <Text style={{color:colors.muted}}>{`Sample a pixel of the flattened image, then apply it as the ${view.active} color.`}</Text>
+     <EyedropperTool key={key+'eyedropper'} request={sampleRequest} documentWidth={state.width} documentHeight={state.height} sources={PRISM_SAMPLE_SOURCES} disabled={disabled}
+      onRequestChange={next=>{if(current())store.setState({sample:{x:next.x,y:next.y,radius:next.radius}});}}
+      onSample={request=>samplePrismColor(document,request,sampleIdentity)}
+      onApply={(sample,request)=>{try{return write(prismSampledColorWrite(document,sample,request,sampleIdentity,view.active));}catch(error){return Promise.reject(error);}}}/>
+    </>}
    </>}
    {picker&&!disabled&&<ColorPickerDialog key={key+String(picker.session)} visible original={picker.original} value={picker.draft}
     target={picker.slot} onValueChange={draft=>{if(current())store.setState(s=>s.picker?.session===picker.session?{picker:{...s.picker,draft}}:{});}} onCancel={()=>{if(current()&&store.getState().picker?.session===picker.session)select({picker:null});}}

@@ -28,7 +28,7 @@ it('queued EQ edits retain neighboring bands and continue after rejection',async
 });
 it('automation and batch velocity map one gesture to one history entry; MIDI channels are zero-based',async()=>{
  const {doc,a,track,clip}=await setup();try{
- const lane=a.automation(track,'pan');await lane.onPointAdd(0,-1);await lane.onPointAdd(960,1);await lane.onModeCommit('read');await lane.onPointMove(0,240,-0.5);expect((await a.read()).tracks[0]!.automation.pan.points[0]).toEqual({ticks:240,value:-0.5});
+ const lane=a.automation(track,'pan');await lane.onPointAdd(0,-1);await lane.onPointAdd(960,1);await lane.onModeCommit('read');await expect(lane.onModeCommit('latch')).rejects.toThrow(/off and read/);await lane.onPointMove(0,240,-0.5);expect((await a.read()).tracks[0]!.automation.pan.points[0]).toEqual({ticks:240,value:-0.5});
  const before=await a.read();await a.midi(clip).onVelocitiesCommit([{index:0,velocity:20},{index:1,velocity:110}]);expect((await a.read()).tracks[0]!.clips[0]!.notes.map(n=>n.velocity)).toEqual([20,110]);await doc.undo();expect(await a.read()).toEqual(before);await a.midi(clip).onNoteChannel(0,15);expect((await a.read()).tracks[0]!.clips[0]!.notes[0]!.channel).toBe(15);
  }finally{await doc.close();}
 });

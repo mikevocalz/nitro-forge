@@ -96,7 +96,9 @@ export class CadenceMixerAdapter {
     onPointAdd:(ticks:number,value:number)=>this.commit(()=>this.doc.addAutomationPoint(id(track),param,ticks,value)),
     onPointMove:(index:number,ticks:number,value:number)=>this.commit(()=>this.doc.moveAutomationPoint(id(track),param,index,ticks,value)),
     onPointRemove:(index:number)=>this.commit(()=>this.doc.removeAutomationPoint(id(track),param,index)),
-    onModeCommit:(mode:AutomationMode)=>this.commit(()=>this.doc.setAutomationMode(id(track),param,mode)),
+    /** NYC-Tron offers write/touch/latch/trim too; those need a transport host, so they reject. */
+    onModeCommit:(mode:string)=>mode==='off'||mode==='read'?this.commit(()=>this.doc.setAutomationMode(id(track),param,mode))
+      :Promise.reject(new Error(`Cadence automation supports off and read; ${mode} needs a live transport host.`)),
   };}
   /** Batch velocity is one command/undo step; channel is zero-based 0..15. */
   midi(clip:MixerId){return {

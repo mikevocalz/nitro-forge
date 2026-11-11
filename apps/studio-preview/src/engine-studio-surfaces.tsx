@@ -22,7 +22,8 @@ import { clampViewport, followPlayhead, type TimelineViewport } from '@nyc-tron/
 import { TallyDetailControls, boundedTallyFreeze, useTallyDetailView } from './tally-detail-controls';
 import type { TallyDocument } from '../../../packages/tally/src/index';
 import { readTallyWindow, commitTallyGridCell, type TallyGridData } from '../../../packages/tally/src/grid-adapter';
-import { bindTallySheetTabs, readTallySheetTabs, commitTallyFill, TALLY_SHEET_BOUNDS, type TallySheetTabsBinding } from '../../../packages/tally/src/grid-cluster';
+import { bindTallySheetTabs, readTallySheetTabs, TALLY_SHEET_BOUNDS, type TallySheetTabsBinding } from '../../../packages/tally/src/grid-cluster';
+import { commitTallyAutoFill, type FillPlanShape } from './tally-rows-wiring';
 import { CadenceDetailControls } from './cadence-detail-controls';
 import { CadenceMixerAdapter, mixerClusterChannels, type CadenceMixerState } from '../../../packages/cadence/src/mixer-cluster';
 import type { CadenceDocument } from '../../../packages/cadence/src/index';
@@ -192,9 +193,11 @@ function TallySurface(props: EngineStudioSurfaceProps) {
         store.setState({ range: next, ready: false });
       } }}
       {...(cellWritesAllowed && document ? { onCommitCell: (address: string, raw: string) => commit(() => commitTallyGridCell(document, address, raw)),
-        onFillRange: (plan: Parameters<typeof commitTallyFill>[1]) => commit(() => commitTallyFill(document, plan)) } : {})}/>}
+        // I-07: the grid's own fill handle and Ctrl/Cmd+D/R follow the mode chosen in AutoFillModePicker.
+        onFillRange: (plan: FillPlanShape) => commit(() => commitTallyAutoFill(document, plan, details.fillMode)) } : {})}/>}
     {visibleTabs && document && <ScrollView style={{ maxHeight: 300, flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ padding: scale.space.inset }}>
-      <TallyDetailControls document={document} sheetId={visibleTabs.activeId} cells={cells} selection={details.selection} getSelection={details.getSelection}
+      <TallyDetailControls document={document} sheetId={visibleTabs.activeId} sheetName={visibleTabs.tabs.find(tab => tab.id === visibleTabs.activeId)?.name ?? ''}
+        onSelectionChange={details.onSelectionChange} fillMode={details.fillMode} onFillModeChange={details.onFillModeChange} cells={cells} selection={details.selection} getSelection={details.getSelection}
         freeze={freeze} viewport={gridSize} window={readRange} onFreezeChange={details.onFreezeChange} disabled={!canEdit} commit={commit} density={props.density} theme={props.theme}/>
     </ScrollView>}
   </View>;
