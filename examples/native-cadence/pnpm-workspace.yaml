@@ -17,8 +17,4 @@ allowBuilds:
 # @expo/ui 58.0.27 ships spm.config.json but no prebuilt XCFramework, so Expo's
 # SwiftPM plugin refuses it. The patch adds its Package.swift (see the file).
 patchedDependencies:
-  "@nyc-tron/reserved-regions": patches/@nyc-tron__reserved-regions.patch
-  "@nyc-tron/ui": patches/@nyc-tron__ui.patch
-  "@nyc-tron/hardware-keys": patches/@nyc-tron__hardware-keys.patch
-  "@nyc-tron/platform-services": patches/@nyc-tron__platform-services.patch
   "@expo/ui@58.0.27": patches/@expo__ui@58.0.27.patch

@@ -22,8 +22,8 @@
     "zustand": "5.0.16",
     "@nitro-forge/icons": "workspace:*",
     "react-native-svg": "15.16.0",
-    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
-    "@nyc-tron/expo-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-expo-controls-0.1.0-alpha.4.tgz"
+    "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-ui-1.0.0-rc.1.tgz",
+    "@nyc-tron/expo-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-expo-controls-1.0.0-rc.1.tgz"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
