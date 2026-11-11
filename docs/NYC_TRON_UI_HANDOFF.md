@@ -214,7 +214,7 @@ unextracted.
 
 ## Studio preview wiring status (2026-11-11)
 
-Pinned release: `v0.1.0-alpha.4`. Checked against the NYC-Tron-UI PR #54 head
+Pinned release at the time: `v0.1.0-alpha.4`. Checked against the NYC-Tron-UI PR #54 head
 (`d5207cc7`, branch `codex/complete-all-components`).
 
 Wired in `apps/studio-preview` (Splice surface):
@@ -238,9 +238,9 @@ The nine rows that `alpha.4` did not ship are covered in the next section.
 Component props were read from NYC-Tron-UI `main` at `11c1ce8` (the source of
 `v1.0.0`, whose `packages/ui/package.json` exports all nine paths). Ops were
 checked in `packages/{tally,prism,cadence}/src/index.ts` and
-`docs/ENGINE_OPS.md`. The app still pins `v0.1.0-alpha.4`, so the `.tsx`
-files that import these components do not typecheck until the pin moves to
-`v1.0.0`. The engine logic lives in plain modules with node tests that do not
+`docs/ENGINE_OPS.md`. The app pins `v1.0.0-rc.1` (`tooling/nyc-tron.json`),
+which ships all nine paths, and the `.tsx` files that import them typecheck
+against it. The engine logic lives in plain modules with node tests that do not
 import the UI package: `tally-rows-wiring.ts`, `prism-eyedropper-wiring.ts` and
 `cadence-gain-wiring.ts` under `apps/studio-preview/src`.
 
