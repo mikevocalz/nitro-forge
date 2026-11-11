@@ -8,7 +8,8 @@
     "nf-console": "./src/main.ts"
   },
   "scripts": {
-    "demo": "tsx src/main.ts"
+    "demo": "tsx src/main.ts",
+    "test": "tsx src/main.ts"
   },
   "devDependencies": {
     "tsx": "4.23.15"
@@ -21,6 +22,11 @@
     "@nitro-forge/folio": "workspace:*",
     "@nitro-forge/pitch": "workspace:*",
     "@nitro-forge/tally": "workspace:*",
-    "@nitro-forge/quill": "workspace:*"
+    "@nitro-forge/quill": "workspace:*",
+    "@nitro-forge/photo": "workspace:*",
+    "@nitro-forge/motion": "workspace:*",
+    "@nitro-forge/design": "workspace:*",
+    "@nitro-forge/draft": "workspace:*",
+    "@nitro-forge/scene": "workspace:*"
   }
 }

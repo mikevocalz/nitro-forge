@@ -24,6 +24,9 @@ impl TallyEngine {
                 .ok_or_else(|| EngineError::validation("sheet copy name space exhausted"))?;
         }
         copy.id = id;
+        // Views are bound to the source sheet id; the copy starts with no
+        // view selection (its `active_view` would dangle otherwise).
+        copy.active_view = None;
         let name = copy.name.clone();
         let active_id = self.doc.sheets[self.doc.active].id;
         self.journal.record(UndoEntry::Reset { prev: self.doc.clone() });

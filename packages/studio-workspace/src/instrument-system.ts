@@ -4,7 +4,7 @@
  * No library images or proprietary editor code are embedded in this package.
  */
 
-export type ForgeStudio = 'prism' | 'cadence' | 'splice' | 'quill' | 'tally' | 'pitch' | 'folio' | 'board';
+export type ForgeStudio = 'prism' | 'cadence' | 'splice' | 'quill' | 'tally' | 'pitch' | 'folio' | 'photo' | 'motion' | 'design' | 'draft' | 'board';
 export type InputModality = 'pointer' | 'touch' | 'pen' | 'keyboard' | 'accessibility' | 'controller' | 'gaze';
 export type InstrumentFamily = 'spatial' | 'color' | 'temporal' | 'audio' | 'ink' | 'type' | 'data' | 'layers' | 'export';
 export type EditBoundary = 'engine-transaction' | 'read-only-signal' | 'workspace-local';

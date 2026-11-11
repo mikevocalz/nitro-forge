@@ -65,6 +65,582 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await re.close();
   });
 
+  it("findText locates matches and replaceText swaps them in one undo", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "Foo bar foo");
+    const found = await doc.findText("foo");
+    expect(found.data.count).toBe(2);
+    expect(found.data.matches[0]?.text).toBe("Foo");
+    const sensitive = await doc.findText("foo", { caseSensitive: true });
+    expect(sensitive.data.count).toBe(1);
+    expect(sensitive.data.matches[0]?.from.offset).toBe(8);
+
+    const replaced = await doc.replaceText("foo", "qux");
+    expect(replaced.data.replaced).toBe(2);
+    expect((await doc.text()).data.text).toBe("qux bar qux");
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.text()).data.text).toBe("Foo bar foo");
+    await doc.close();
+  });
+
+  it("bookmarks track edits, persist through snapshots, and undo", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "hello world");
+    await doc.addBookmark("mid", { block: 0, offset: 6 });
+    await doc.insertText({ block: 0, offset: 0 }, "XX");
+    expect((await doc.listBookmarks()).data.bookmarks).toEqual([
+      { name: "mid", pos: { block: 0, offset: 8 } },
+    ]);
+    // snapshot keeps the schema:3 bookmark collection
+    const bytes = await doc.save();
+    await doc.close();
+
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.listBookmarks()).data.bookmarks[0]?.pos.offset).toBe(8);
+    await re.removeBookmarkByName("mid");
+    expect((await re.listBookmarks()).data.bookmarks).toEqual([]);
+    await expect(
+      re.addBookmark("mid", { block: 0, offset: 0 }),
+    ).resolves.toBeDefined();
+    await expect(
+      re.addBookmark("mid", { block: 0, offset: 1 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await re.close();
+  });
+
+  it("named styles define, apply, persist, and undo via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "hello world");
+    await doc.defineStyle({
+      id: "emph",
+      name: "Emphasis",
+      kind: "character",
+      properties: { italic: true, color: "#ff0000" },
+    });
+    await doc.defineStyle({
+      id: "title",
+      name: "Title",
+      kind: "paragraph",
+      properties: { bold: true, font_size: 18 },
+    });
+    const listed = await doc.listStyles();
+    expect(listed.data.styles.map((s) => s.id)).toEqual(["emph", "title"]);
+
+    await doc.applyNamedStyle("emph", { block: 0, offset: 0 }, { block: 0, offset: 5 });
+    await doc.setBlockStyle(0, "title");
+    const blocks = await doc.blocks<any>();
+    expect(blocks.data.blocks[0].style_id).toBe("title");
+    expect(blocks.data.blocks[0].inlines[0].style.bold).toBe(true);
+    expect(blocks.data.blocks[0].inlines[0].style.font_size).toBe(18);
+    // "hello" got both the paragraph stamp and the character range style
+    const hello = blocks.data.blocks[0].inlines.find((i: any) => i.text === "hello");
+    expect(hello.style.italic).toBe(true);
+    expect(hello.style.color).toBe("#ff0000");
+
+    // kind mismatches reject
+    await expect(
+      doc.applyNamedStyle("title", { block: 0, offset: 0 }, { block: 0, offset: 1 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.setBlockStyle(0, "emph")).rejects.toBeInstanceOf(EngineError);
+
+    // snapshot keeps definitions + reference; reopen resolves them
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.listStyles()).data.styles).toHaveLength(2);
+    expect((await re.blocks<any>()).data.blocks[0].style_id).toBe("title");
+
+    // removeStyle clears the block reference atomically; undo restores it
+    await re.removeStyle("title");
+    expect((await re.blocks<any>()).data.blocks[0].style_id).toBeUndefined();
+    expect(await re.undo()).toBe(true);
+    expect((await re.blocks<any>()).data.blocks[0].style_id).toBe("title");
+    await re.close();
+  });
+
+  it("sections carry page setup and headers through edits and snapshots", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "one\ntwo\nthree\nfour");
+    const first = await doc.listSections();
+    expect(first.data.sections).toHaveLength(1);
+    expect(first.data.sections[0]?.block).toBe(0);
+    expect(first.data.sections[0]?.page.width).toBe(612);
+
+    await doc.setPageSetup(0, {
+      width: 595,
+      height: 842,
+      orientation: "landscape",
+      columns: 2,
+      column_gap: 36,
+      start: "continuous",
+    });
+    await doc.setHeaderFooter(0, {
+      header: "Running head",
+      footer: "Page",
+      different_first: true,
+      first_header: "First",
+      page_numbers: true,
+      number_start: 3,
+      number_format: "roman",
+    });
+    const inserted = await doc.insertSection(2, {
+      page_setup: { margin_top: 100 },
+      header_footer: { footer: "Second section" },
+    });
+    expect(inserted.data.section).toBe(1);
+    const listed = await doc.listSections();
+    expect(listed.data.sections.map((s) => s.block)).toEqual([0, 2]);
+    // Inherits the owning section's settings, patch applied on top.
+    expect(listed.data.sections[1]?.page.width).toBe(595);
+    expect(listed.data.sections[1]?.page.margin_top).toBe(100);
+    expect(listed.data.sections[1]?.header_footer.header).toBe("Running head");
+    expect(listed.data.sections[1]?.header_footer.footer).toBe("Second section");
+
+    // Boundaries track block edits: one newline at block 0 shifts section 1.
+    await doc.insertText({ block: 0, offset: 0 }, "x\ny");
+    expect((await doc.listSections()).data.sections.map((s) => s.block)).toEqual([0, 3]);
+
+    // Invalid page setup rejects without touching state.
+    await expect(
+      doc.setPageSetup(1, { margin_top: 2000 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.insertSection(0)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.removeSection(0)).rejects.toBeInstanceOf(EngineError);
+
+    // Snapshot keeps sections; undo/redo round-trips them.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.listSections()).data.sections.map((s) => s.block)).toEqual([0, 3]);
+    await re.removeSection(1);
+    expect((await re.listSections()).data.sections).toHaveLength(1);
+    expect(await re.undo()).toBe(true);
+    expect((await re.listSections()).data.sections).toHaveLength(2);
+    await re.close();
+  });
+
+  it("comments anchor ranges, track edits, persist, and resolve via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "hello world\nsecond");
+    await doc.addComment({
+      id: "c1",
+      from: { block: 0, offset: 0 },
+      to: { block: 0, offset: 5 },
+      author: "Ada",
+      body: "check this",
+    });
+    await doc.addComment({
+      id: "c2",
+      from: { block: 1, offset: 0 },
+      to: { block: 1, offset: 0 },
+      body: "point note",
+    });
+    const listed = await doc.listComments();
+    expect(listed.data.comments.map((c) => c.id)).toEqual(["c1", "c2"]);
+    expect(listed.data.comments[0]?.author).toBe("Ada");
+    expect(listed.data.comments[0]?.resolved).toBe(false);
+
+    // Edits re-anchor: insert before/at the range start keeps `from`
+    // left-gravity (new text lands inside), `to` shifts right.
+    await doc.insertText({ block: 0, offset: 0 }, "XX");
+    let c1 = (await doc.listComments()).data.comments[0]!;
+    expect(c1.from.offset).toBe(0);
+    expect(c1.to.offset).toBe(7);
+    // Insert exactly at `from` again: still inside, end moves again.
+    await doc.insertText({ block: 0, offset: 0 }, "!");
+    c1 = (await doc.listComments()).data.comments[0]!;
+    expect(c1.from.offset).toBe(0);
+    expect(c1.to.offset).toBe(8);
+
+    // Resolve/reopen and update round-trip; duplicate ids reject.
+    await doc.resolveComment("c1");
+    expect((await doc.listComments()).data.comments[0]?.resolved).toBe(true);
+    await doc.reopenComment("c1");
+    await doc.updateComment("c1", { body: "revised", author: null });
+    const updated = (await doc.listComments()).data.comments[0]!;
+    expect(updated.body).toBe("revised");
+    expect(updated.author).toBeNull();
+    await expect(
+      doc.addComment({
+        id: "c1",
+        from: { block: 0, offset: 0 },
+        to: { block: 0, offset: 1 },
+        body: "dup",
+      }),
+    ).rejects.toBeInstanceOf(EngineError);
+
+    // Snapshot keeps the schema:3 comments collection; anchors survive.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    const restored = (await re.listComments()).data.comments;
+    expect(restored).toHaveLength(2);
+    expect(restored[0]?.from.offset).toBe(0);
+    expect(restored[0]?.to.offset).toBe(8);
+    // Undo restores the comment list, not just the text.
+    await re.removeComment("c2");
+    expect((await re.listComments()).data.comments).toHaveLength(1);
+    expect(await re.undo()).toBe(true);
+    expect((await re.listComments()).data.comments).toHaveLength(2);
+    await re.close();
+  });
+
+  it("footnotes/endnotes anchor, renumber, persist, and undo via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "see evidence here");
+    const added = await doc.addFootnote({
+      at: { block: 0, offset: 4 },
+      body: "first note",
+    });
+    expect(added.data.id).toBe("fn-1");
+    await doc.addFootnote({
+      at: { block: 0, offset: 15 },
+      kind: "endnote",
+      body: "end note",
+    });
+    let notes = (await doc.listFootnotes()).data.footnotes;
+    expect(notes.map((n) => n.id)).toEqual(["fn-1", "fn-2"]);
+    // Per-kind numbering: each kind starts at 1 in document order.
+    expect(notes[0]).toMatchObject({ kind: "footnote", number: 1 });
+    expect(notes[1]).toMatchObject({ kind: "endnote", number: 1 });
+
+    // Right-gravity anchor: inserting exactly at the mark lands before it.
+    await doc.insertText({ block: 0, offset: 4 }, "XX");
+    notes = (await doc.listFootnotes()).data.footnotes;
+    expect(notes[0]?.at).toEqual({ block: 0, offset: 6 });
+
+    // updateFootnote patches body/kind; kind moves the note between
+    // sequences and renumbers.
+    await doc.updateFootnote("fn-1", { kind: "endnote", body: "moved" });
+    notes = (await doc.listFootnotes()).data.footnotes;
+    expect(notes[0]?.id).toBe("fn-1");
+    expect(notes[0]).toMatchObject({ kind: "endnote", number: 1, body: "moved" });
+    expect(notes[1]).toMatchObject({ kind: "endnote", number: 2 });
+
+    // Snapshot keeps the schema:3 footnotes collection; anchors survive.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    notes = (await re.listFootnotes()).data.footnotes;
+    expect(notes).toHaveLength(2);
+    expect(notes[0]?.at.offset).toBe(6);
+    // removeFootnote + undo restores the list.
+    await re.removeFootnote("fn-2");
+    expect((await re.listFootnotes()).data.footnotes).toHaveLength(1);
+    expect(await re.undo()).toBe(true);
+    expect((await re.listFootnotes()).data.footnotes).toHaveLength(2);
+    await re.close();
+  });
+
+  it("toc fields scan headings, cache entries, and undo via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "Alpha");
+    await doc.setBlockKind(0, "h1");
+    await doc.insertBlock(1);
+    await doc.insertText({ block: 1, offset: 0 }, "Beta");
+    await doc.setBlockKind(1, "h2");
+    await doc.insertBlock(2);
+    await doc.insertText({ block: 2, offset: 0 }, "Gamma");
+    await doc.setBlockKind(2, "h3");
+    // Live scan sees all three heading kinds; paragraphs are not entries.
+    const live = await doc.listToc();
+    expect(live.data.entries).toEqual([
+      { level: 1, title: "Alpha", block: 0 },
+      { level: 2, title: "Beta", block: 1 },
+      { level: 3, title: "Gamma", block: 2 },
+    ]);
+    // insertToc appends a field whose cached entries honor its range.
+    const ins = await doc.insertToc(3, { from_level: 1, to_level: 2 });
+    expect(ins.data.block_index).toBe(3);
+    const blocks = await doc.blocks<any>();
+    expect(blocks.data.blocks[3].kind).toBe("toc");
+    expect(blocks.data.blocks[3].toc.entries).toHaveLength(2);
+    // listToc {block} honors the field range; bare listToc does not.
+    expect((await doc.listToc(3)).data.count).toBe(2);
+    expect((await doc.listToc()).data.count).toBe(3);
+    // Entries are a cache: editing a heading leaves the stored title
+    // stale until refreshToc regenerates it.
+    await doc.insertText({ block: 1, offset: 4 }, " Prime");
+    let field = (await doc.blocks<any>()).data.blocks[3].toc;
+    expect(field.entries[1].title).toBe("Beta");
+    await doc.refreshToc(3);
+    field = (await doc.blocks<any>()).data.blocks[3].toc;
+    expect(field.entries[1].title).toBe("Beta Prime");
+    // updateToc re-ranges and rescans in one step; identical is eventless.
+    await doc.updateToc(3, { to_level: 3 });
+    field = (await doc.blocks<any>()).data.blocks[3].toc;
+    expect(field.entries).toHaveLength(3);
+    // Snapshot keeps the toc payload inside blocks; restore round-trips.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    const reBlocks = await re.blocks<any>();
+    expect(reBlocks.data.blocks[3].kind).toBe("toc");
+    expect(reBlocks.data.blocks[3].toc.entries).toHaveLength(3);
+    // Inserting a block before the headings shifts cached entry indices.
+    await re.insertBlock(0);
+    const shifted = (await re.blocks<any>()).data.blocks[4].toc.entries;
+    expect(shifted[0].block).toBe(1);
+    // One undo removes the whole field.
+    expect(await re.undo()).toBe(true);
+    const undone = await re.blocks<any>();
+    expect(undone.data.blocks).toHaveLength(4);
+    await re.close();
+  });
+
+  it("citations, sources, and bibliography fields persist via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "see the evidence");
+    const s1 = await doc.addSource({
+      author: "Ada Lovelace",
+      title: "Notes",
+      year: "1843",
+      container: "Journal",
+    });
+    expect(s1.data.id).toBe("src-1");
+    await doc.addSource({
+      id: "src-b",
+      author: "Grace Hopper",
+      title: "Compilers",
+      year: "1952",
+    });
+    const c1 = await doc.addCitation({
+      at: { block: 0, offset: 4 },
+      source: "src-1",
+      locator: "p. 12",
+    });
+    expect(c1.data.id).toBe("cit-1");
+    await doc.addCitation({ at: { block: 0, offset: 15 }, source: "src-b" });
+    let cites = (await doc.listCitations()).data.citations;
+    expect(cites.map((c) => c.id)).toEqual(["cit-1", "cit-2"]);
+    expect(cites[0]).toMatchObject({ number: 1, source: "src-1", locator: "p. 12" });
+    // Right-gravity anchor: text inserted at the mark lands before it.
+    await doc.insertText({ block: 0, offset: 4 }, "XX");
+    cites = (await doc.listCitations()).data.citations;
+    expect(cites[0]?.at).toEqual({ block: 0, offset: 6 });
+    // updateCitation re-points the source; locator null clears.
+    await doc.updateCitation("cit-1", { source: "src-b", locator: null });
+    cites = (await doc.listCitations()).data.citations;
+    expect(cites[0]).toMatchObject({ source: "src-b" });
+    expect(cites[0]?.locator).toBeUndefined();
+    // listSources reports stored fields plus cited counts.
+    const sources = (await doc.listSources()).data.sources;
+    expect(sources.find((s) => s.id === "src-1")?.cited).toBe(0);
+    expect(sources.find((s) => s.id === "src-b")?.cited).toBe(2);
+    // insertBibliography caches a live scan; listBibliography agrees.
+    const ins = await doc.insertBibliography(1);
+    expect(ins.data.block_index).toBe(1);
+    const blocks = await doc.blocks<any>();
+    expect(blocks.data.blocks[1].kind).toBe("bibliography");
+    // Only src-b is cited now → one alpha-sorted entry.
+    expect(blocks.data.blocks[1].bibliography.entries).toHaveLength(1);
+    expect(blocks.data.blocks[1].bibliography.entries[0].source).toBe("src-b");
+    const live = await doc.listBibliography();
+    expect(live.data.count).toBe(1);
+    expect(live.data.entries[0]?.text).toContain("Grace Hopper");
+    // removeSource cascades its citations in one undo step — both
+    // citations reference src-b, so both go.
+    await doc.removeSource("src-b");
+    expect((await doc.listCitations()).data.citations).toHaveLength(0);
+    expect((await doc.listSources()).data.sources).toHaveLength(1);
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.listCitations()).data.citations).toHaveLength(2);
+    // Snapshot keeps citations/sources in the schema:3 document and the
+    // bibliography payload inside blocks; restore round-trips.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.listCitations()).data.citations).toHaveLength(2);
+    expect((await re.listBibliography(1)).data.count).toBe(1);
+    await re.close();
+  });
+
+  it("inserts tables, edits cell text, and keeps anchors stable", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "before\nafter");
+    await doc.addBookmark("tail", { block: 1, offset: 0 });
+    const ins = await doc.insertTable(1, 2, 3);
+    expect(ins.data.block_index).toBe(1);
+    const tables = (await doc.listTables()).data.tables;
+    expect(tables).toEqual([{ block: 1, rows: 2, cols: 3, merges: [] }]);
+    await doc.setCellText(1, 0, 0, "hello\nworld");
+    await doc.setCellText(1, 1, 2, "corner");
+    const described = (await doc.describeTable(1)).data;
+    expect(described.cells[0]?.[0]).toBe("hello\nworld");
+    expect(described.cells[1]?.[2]).toBe("corner");
+    expect(described.cells[0]?.[1]).toBe("");
+    // The bookmark after the insertion point shifted one block; in-cell
+    // edits never move top-level anchors.
+    const bms = (await doc.listBookmarks()).data.bookmarks;
+    expect(bms[0]?.pos.block).toBe(2);
+    // describe/blocks expose the table block with its payload.
+    const blocks = await doc.blocks<any>();
+    expect(blocks.data.blocks[1].kind).toBe("table");
+    expect(blocks.data.blocks[1].table.rows).toBe(2);
+    // Snapshot round-trip preserves the table and the bookmark.
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    expect((await re.describeTable(1)).data.cells[0]?.[0]).toBe("hello\nworld");
+    expect((await re.listBookmarks()).data.bookmarks[0]?.pos.block).toBe(2);
+    // deleteTable removes the block and shifts anchors back.
+    await re.deleteTable(1);
+    expect((await re.listTables()).data.tables).toHaveLength(0);
+    expect((await re.listBookmarks()).data.bookmarks[0]?.pos.block).toBe(1);
+    expect(await re.undo()).toBe(true);
+    expect((await re.listTables()).data.tables).toHaveLength(1);
+    await re.close();
+  });
+
+  it("rejects out-of-bounds tables and cell edits atomically", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertTable(1, 1, 1);
+    await expect(doc.insertTable(9, 1, 1)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.insertTable(0, 0, 1)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.insertTable(0, 1, 27)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.setCellText(1, 5, 0, "x")).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.setCellText(0, 0, 0, "x")).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deleteTable(0)).rejects.toBeInstanceOf(EngineError);
+    // Document unchanged: still [para, table].
+    expect((await doc.listTables()).data.tables).toEqual([{ block: 1, rows: 1, cols: 1, merges: [] }]);
+    await doc.close();
+  });
+
+  it("inserts and deletes table rows and columns with undo", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertTable(0, 2, 2);
+    await doc.setCellText(0, 0, 0, "a");
+    await doc.setCellText(0, 1, 1, "d");
+    // Insert a row at the top and a column on the right.
+    await doc.insertTableRow(0, 0);
+    await doc.insertTableColumn(0, 2);
+    let d = (await doc.describeTable(0)).data;
+    expect(d.rows).toBe(3);
+    expect(d.cols).toBe(3);
+    expect(d.cells).toEqual([["", "", ""], ["a", "", ""], ["", "d", ""]]);
+    // Structural edits never move top-level anchors: bookmark stays put.
+    await doc.insertBlock(1);
+    await doc.addBookmark("b", { block: 1, offset: 0 });
+    await doc.insertTableRow(0, 3);
+    await doc.deleteTableColumn(0, 0);
+    d = (await doc.describeTable(0)).data;
+    expect(d.rows).toBe(4);
+    expect(d.cols).toBe(2);
+    // Column 0 (holding "a") was deleted; "d" shifted left with its row.
+    expect(d.cells[1]).toEqual(["", ""]);
+    expect(d.cells[2]).toEqual(["d", ""]);
+    expect((await doc.listBookmarks()).data.bookmarks[0]?.pos.block).toBe(1);
+    // Bounds and min-dims reject atomically.
+    await expect(doc.insertTableRow(0, 5)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deleteTableRow(0, 9)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deleteTableColumn(0, 9)).rejects.toBeInstanceOf(EngineError);
+    await doc.deleteTableRow(0, 0);
+    await doc.deleteTableRow(0, 0);
+    await doc.deleteTableRow(0, 0);
+    // Now a single row remains; deleting it must reject (and record
+    // nothing, so the next undo restores the third successful delete).
+    await expect(doc.deleteTableRow(0, 0)).rejects.toBeInstanceOf(EngineError);
+    expect((await doc.describeTable(0)).data.rows).toBe(1);
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.describeTable(0)).data.rows).toBe(2);
+    await doc.undo();
+    await doc.undo();
+    expect((await doc.describeTable(0)).data.rows).toBe(4);
+    await doc.close();
+  });
+
+  it("merges and unmerges table cells with undo and snapshot round-trip", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertTable(0, 3, 3);
+    await doc.setCellText(0, 0, 0, "anchor");
+    await doc.setCellText(0, 1, 1, "covered");
+    // Merge a 2x2 region (corners given in reverse order).
+    await doc.mergeTableCells(0, { row: 1, col: 1 }, { row: 0, col: 0 });
+    let d = (await doc.describeTable(0)).data;
+    expect(d.merges).toEqual([{ row: 0, col: 0, rows: 2, cols: 2 }]);
+    expect(d.cells[0]?.[0]).toBe("anchor");
+    // Covered content is discarded; covered cells report empty text.
+    expect(d.cells[0]?.[1]).toBe("");
+    expect(d.cells[1]?.[1]).toBe("");
+    expect(d.cells[2]?.[2]).toBe("");
+    // Covered cells reject setCellText; the anchor stays editable.
+    await expect(doc.setCellText(0, 1, 1, "x")).rejects.toBeInstanceOf(EngineError);
+    await doc.setCellText(0, 0, 0, "anchor2");
+    // Overlapping and single-cell merges reject atomically.
+    await expect(
+      doc.mergeTableCells(0, { row: 0, col: 0 }, { row: 2, col: 2 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    await expect(
+      doc.mergeTableCells(0, { row: 2, col: 2 }, { row: 2, col: 2 }),
+    ).rejects.toBeInstanceOf(EngineError);
+    // Structural ops that would cut the merge reject; ones outside shift it.
+    await expect(doc.insertTableRow(0, 1)).rejects.toBeInstanceOf(EngineError);
+    await expect(doc.deleteTableColumn(0, 1)).rejects.toBeInstanceOf(EngineError);
+    await doc.insertTableRow(0, 0);
+    d = (await doc.describeTable(0)).data;
+    expect(d.merges).toEqual([{ row: 1, col: 0, rows: 2, cols: 2 }]);
+    // Unmerge via a covered cell restores empty ordinary cells.
+    await doc.unmergeTableCells(0, 1, 1);
+    d = (await doc.describeTable(0)).data;
+    expect(d.merges).toEqual([]);
+    expect(d.cells[1]?.[0]).toBe("anchor2");
+    expect(d.cells[1]?.[1]).toBe("");
+    // Undo restores the merge; snapshot round-trip preserves it.
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.describeTable(0)).data.merges).toEqual([
+      { row: 1, col: 0, rows: 2, cols: 2 },
+    ]);
+    const bytes = await doc.save();
+    await doc.close();
+    const re = await QuillDocument.openSnapshot(host, bytes);
+    const rd = (await re.describeTable(0)).data;
+    expect(rd.merges).toEqual([{ row: 1, col: 0, rows: 2, cols: 2 }]);
+    expect(rd.cells[1]?.[0]).toBe("anchor2");
+    await re.close();
+  });
+
+  it("finds and replaces text inside table cells via nf-cli", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "top foo");
+    // The table is the last block: whole-document reads still cover it.
+    await doc.insertTable(1, 2, 2);
+    await doc.setCellText(1, 0, 0, "foo bar");
+    await doc.setCellText(1, 0, 1, "foo");
+    await doc.setCellText(1, 1, 0, "x\nfoo y\nfoo");
+
+    const found = await doc.findText("foo");
+    expect(found.data.count).toBe(1);
+    expect(found.data.cell_count).toBe(4);
+    const first = found.data.cell_matches[0];
+    expect(first?.from).toEqual({
+      block: 1, row: 0, col: 0, cell_block: 0, offset: 0,
+    });
+    expect(first?.to.offset).toBe(3);
+    // The last match lives in the cell's third paragraph.
+    expect(found.data.cell_matches[3]?.from.cell_block).toBe(2);
+
+    const replaced = await doc.replaceText("foo", "z");
+    expect(replaced.data.replaced).toBe(5);
+    const d = (await doc.describeTable(1)).data;
+    expect(d.cells[0]?.[0]).toBe("z bar");
+    expect(d.cells[1]?.[0]).toBe("x\nz y\nz");
+    expect((await doc.text()).data.text).toContain("top z");
+    // Undo restores every cell edit in one step.
+    expect(await doc.undo()).toBe(true);
+    expect((await doc.describeTable(1)).data.cells[0]?.[0]).toBe("foo bar");
+
+    // text serializes the cell grid; layout reports table lines.
+    const t = await doc.text();
+    expect(t.data.text).toBe("top foo\nfoo bar\tfoo\nx\nfoo y\nfoo\t");
+    const layout = await doc.layout(200, 10);
+    expect(
+      layout.data.pages.some((p) =>
+        p.lines.some((l) => l.block === 1 && l.end > l.start),
+      ),
+    ).toBe(true);
+    await doc.close();
+  });
+
   it("undo restores deleted text; bad positions error cleanly", async () => {
     const doc = await QuillDocument.open(host);
     await doc.insertText({ block: 0, offset: 0 }, "abcdef");
@@ -75,6 +651,39 @@ describe("quill engine e2e (real Rust via nf-cli)", () => {
     await expect(
       doc.insertText({ block: 99, offset: 0 }, "x"),
     ).rejects.toBeInstanceOf(EngineError);
+    await doc.close();
+  });
+
+  it("track changes records, lists, accepts and rejects revisions", async () => {
+    const doc = await QuillDocument.open(host);
+    await doc.insertText({ block: 0, offset: 0 }, "hello world");
+    await doc.setTrackChanges(true, "Ada");
+    await doc.insertText({ block: 0, offset: 11 }, "!", { time: 1700000000 });
+    await doc.deleteRange({ block: 0, offset: 0 }, { block: 0, offset: 6 });
+    const listed = (await doc.listRevisions()).data.revisions;
+    expect(listed).toHaveLength(2);
+    const ins = listed.find((r) => r.kind === "ins")!;
+    const del = listed.find((r) => r.kind === "del")!;
+    expect(ins.author).toBe("Ada");
+    expect(ins.time).toBe(1700000000);
+    // The later deleteRange re-maps the insertion anchor left by 6.
+    expect(ins.to).toEqual({ block: 0, offset: 6 });
+    expect(del.text).toBe("hello ");
+    expect((await doc.text()).data.text).toBe("world!");
+
+    // Snapshot round-trip keeps revisions and the tracking setting.
+    const snap = await doc.save();
+    const re = await QuillDocument.openSnapshot(host, snap);
+    expect((await re.listRevisions()).data.revisions).toHaveLength(2);
+
+    // Rejecting the deletion restores its plain text; rejecting the
+    // insertion deletes the marked "!".
+    await re.rejectRevision(del.id);
+    expect((await re.text()).data.text).toBe("hello world!");
+    await re.rejectRevision(ins.id);
+    expect((await re.text()).data.text).toBe("hello world");
+    expect((await re.listRevisions()).data.revisions).toHaveLength(0);
+    await re.close();
     await doc.close();
   });
 });

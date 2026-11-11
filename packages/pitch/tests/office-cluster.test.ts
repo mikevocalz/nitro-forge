@@ -46,6 +46,28 @@ describe("Pitch deck read for J-01/J-02/J-05/J-09", () => {
     expect(() => pitchId("01")).toThrow(RangeError);
     expect(pitchId("12")).toBe(12);
   });
+
+  it("refuses shape presets the pinned renderer cannot draw and passes rect stroke through", async () => {
+    const withShape = structuredClone(state) as { slides: { objects: Record<string, unknown>[] }[] };
+    withShape.slides[0]!.objects.push({ id: 7, kind: "ellipse", x: 0, y: 0, w: 5, h: 5, rotation_deg: 0 });
+    await expect(readPitchDeck(fake(withShape).doc)).rejects.toThrow(/newer NYC-Tron slide renderer/);
+    const stroked = structuredClone(state) as { slides: { objects: Record<string, unknown>[] }[] };
+    stroked.slides[0]!.objects[1]!["stroke"] = { width: 2, color: [1, 2, 3, 255] };
+    const deck = await readPitchDeck(fake(stroked).doc);
+    expect(deck.slides[0]!.objects[1]).toMatchObject({ kind: "rect", stroke: { width: 2, color: [1, 2, 3, 255] } });
+    const withConnector = structuredClone(state) as { slides: { objects: Record<string, unknown>[] }[] };
+    withConnector.slides[0]!.objects.push({
+      id: 8, kind: "connector", x: 0, y: 0, w: 0, h: 0, rotation_deg: 0,
+      connector: { from: { type: "free", x: 0, y: 0 }, to: { type: "free", x: 5, y: 5 }, route: "straight", arrows: "none" },
+    });
+    await expect(readPitchDeck(fake(withConnector).doc)).rejects.toThrow(/newer NYC-Tron slide renderer/);
+    const withMedia = structuredClone(state) as { slides: { objects: Record<string, unknown>[] }[] };
+    withMedia.slides[0]!.objects.push({
+      id: 9, kind: "media", x: 0, y: 0, w: 10, h: 10, rotation_deg: 0,
+      media: { src: "clip.mp4", kind: "video" },
+    });
+    await expect(readPitchDeck(fake(withMedia).doc)).rejects.toThrow(/newer NYC-Tron slide renderer/);
+  });
 });
 
 describe("slide list binding", () => {

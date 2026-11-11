@@ -3,18 +3,18 @@
 //! step, so a rejected command leaves the document untouched and an
 //! accepted one undoes in one step.
 
-use crate::analysis::{self, SpectroOptions};
+use crate::analysis::{self, BeatOptions, SpectroOptions};
 use crate::dsp::{compressor_out_db, eq_response_db};
 use crate::mixer_model::{
     AutomationMode, AutomationParam, AutomationPoint, Effect, Insert, Send, MAX_GROUP_NAME,
     MAX_INSERTS,
 };
 use crate::presets;
-use crate::render::mixdown;
+use crate::render::{mixdown, mixdown_with_context};
 use crate::{
     opt_f64, req_bool, req_f64, req_str, req_ticks, req_u64, CadenceEngine, TrackKind,
 };
-use ignition_core::{CommandResult, EngineError};
+use ignition_core::{CommandResult, EngineError, TaskContext};
 use serde_json::{json, Value};
 
 type OpResult = Result<CommandResult, EngineError>;
@@ -147,6 +147,7 @@ impl CadenceEngine {
             "meter" => self.meter(p),
             "loudness" => self.loudness(p),
             "spectrogram" => self.spectrogram(p),
+            "detectBeats" => self.detect_beats_op(p, None),
             _ => return None,
         };
         Some(r)
@@ -530,5 +531,28 @@ impl CadenceEngine {
         let mix = mixdown(&self.doc, from, to, sr, click, false)?;
         let opts = SpectroOptions { fft_size: fft_size as usize, hop: hop as usize, bands: bands as usize };
         analysis::spectrogram(&mix, sr, &opts).map(Self::read_only)
+    }
+
+    /// `detectBeats` body; `ctx` lets the task path checkpoint inside the
+    /// mixdown like `render` does. Read-only either way.
+    pub(crate) fn detect_beats_op(&self, p: &Value, ctx: Option<&TaskContext>) -> OpResult {
+        let (from, to, sr, click) = range(p)?;
+        let size = |key: &str, default: u64| -> Result<u64, EngineError> {
+            match p.get(key) {
+                None | Some(Value::Null) => Ok(default),
+                Some(v) => v.as_u64().ok_or_else(|| EngineError::invalid(format!("invalid '{key}'"))),
+            }
+        };
+        let fft_size = size("fft_size", 1024)?;
+        if !(256..=8192).contains(&fft_size) || !fft_size.is_power_of_two() {
+            return Err(EngineError::validation("fft_size must be a power of two in 256..=8192"));
+        }
+        let hop = size("hop", fft_size / 2)?;
+        if hop == 0 || hop > fft_size {
+            return Err(EngineError::validation("hop must be in 1..=fft_size"));
+        }
+        let mix = mixdown_with_context(&self.doc, from, to, sr, click, false, ctx)?;
+        let opts = BeatOptions { fft_size: fft_size as usize, hop: hop as usize };
+        analysis::detect_beats(&mix, sr, &opts).map(Self::read_only)
     }
 }

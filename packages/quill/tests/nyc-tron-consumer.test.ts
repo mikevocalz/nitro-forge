@@ -9,7 +9,7 @@ import type { RichTextRibbonProps } from "@nyc-tron/ui/components/forge/document
 import type { BulletsNumberingEditorProps } from "@nyc-tron/ui/components/forge/document/BulletsNumberingEditor";
 import type { NavigationOutlineProps } from "@nyc-tron/ui/components/forge/document/NavigationOutline";
 import type {
-  QuillListBinding, QuillOutlineHeading, QuillRibbonBinding,
+  QuillBookmarkBinding, QuillListBinding, QuillOutlineHeading, QuillRibbonBinding,
 } from "../src/office-cluster";
 
 // RichTextRibbon: the toggles, font family, color and paragraph style Quill can write.
@@ -22,6 +22,10 @@ export const listFits = (b: QuillListBinding): Pick<
 > => b;
 // NavigationOutline: headings read from the document.
 export const outlineFits = (headings: QuillOutlineHeading[]): NavigationOutlineProps["headings"] => headings;
+// NavigationOutline Bookmarks view: engine-backed named positions.
+export const bookmarkFits = (b: QuillBookmarkBinding): Pick<
+  NavigationOutlineProps, "bookmarks" | "onJumpToBookmark"
+> => b;
 
 describe("NYC-Tron pin", () => {
   it("installs @nyc-tron/ui from the release tarball recorded in tooling/nyc-tron.json", () => {

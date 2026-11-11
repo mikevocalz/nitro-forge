@@ -16,16 +16,21 @@ use serde_json::{json, Value};
 use crate::b64;
 use crate::geom::{Affine, Rect};
 use crate::model::{
-    Artboard, BlendMode, BoolOp, Content, FillRule, Layer, Mask, Node, NodeKind, Paint, PaintOrder, PathData,
-    Stroke, Subpath, Transform, MAX_COORD,
+    Artboard, BlendMode, BoolOp, Content, FillRule, Layer, LineCap, Mask, Node, NodeKind, Paint,
+    PaintOrder, PathData, Stroke, Subpath, Transform, MAX_COORD,
 };
 use crate::raster;
 use crate::render::{self, Scene};
 use crate::select::{self, Combine, Region};
+use crate::stroke;
 use crate::vector;
-use crate::{PrismEngine, UndoEntry, MAX_PIXELS};
+use crate::{PrismEngine, RenderTask, UndoEntry, MAX_PIXELS, CHECKPOINT_EVERY_PX};
 
 const MAX_RADIUS: f64 = 250.0;
+
+/// Linear-part tolerance for the `crop` raster-transform check: affine
+/// coefficients within this of the identity count as untransformed.
+const CROP_RASTER_LINEAR_EPS: f64 = 1e-9;
 
 /// Crop/pad a `w*h` alpha buffer, top-left aligned.
 pub(crate) fn resize_alpha(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usize) -> Vec<u8> {
@@ -37,6 +42,60 @@ pub(crate) fn resize_alpha(buf: &[u8], sw: usize, sh: usize, dw: usize, dh: usiz
         }
     }
     out
+}
+
+/// Crop a `sw*sh` alpha buffer to `(dx, dy, dw, dh)`, zero outside.
+/// Checkpoints every `CHECKPOINT_EVERY_PX` rows when `task` has a context.
+pub(crate) fn crop_alpha(
+    buf: &[u8],
+    sw: usize,
+    sh: usize,
+    dx: i64,
+    dy: i64,
+    dw: usize,
+    dh: usize,
+    task: &mut RenderTask,
+) -> Result<Vec<u8>, EngineError> {
+    let mut out = vec![0u8; dw.saturating_mul(dh)];
+    for r in 0..dh as i64 {
+        task.tick(r as usize, CHECKPOINT_EVERY_PX, r as f32 / dh.max(1) as f32)?;
+        let sy = dy + r;
+        if sy < 0 || sy >= sh as i64 {
+            continue;
+        }
+        for c in 0..dw as i64 {
+            let sx = dx + c;
+            if sx < 0 || sx >= sw as i64 {
+                continue;
+            }
+            let s = sy as usize * sw + sx as usize;
+            if s < buf.len() {
+                out[r as usize * dw + c as usize] = buf[s];
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Translate the coordinate fields of a gradient paint; solids are untouched.
+fn shift_paint(p: &mut Paint, sx: f64, sy: f64) {
+    match p {
+        Paint::Solid { .. } => {}
+        Paint::Linear { x0, y0, x1, y1, .. } => {
+            *x0 -= sx;
+            *y0 -= sy;
+            *x1 -= sx;
+            *y1 -= sy;
+        }
+        Paint::Radial { cx, cy, fx, fy, .. } => {
+            *cx -= sx;
+            *cy -= sy;
+            if let (Some(fx), Some(fy)) = (fx, fy) {
+                *fx -= sx;
+                *fy -= sy;
+            }
+        }
+    }
 }
 
 /// Snapshot tree invariants: unique ids, parents exist and are containers,
@@ -196,8 +255,14 @@ fn combine_mode(p: &Value) -> Result<Combine, EngineError> {
     }
 }
 
-fn thumb(px: &[u8], w: usize, h: usize, max: usize) -> Result<CommandResult, EngineError> {
-    let (out, tw, th) = render::fit(px, w, h, max);
+fn thumb(
+    px: &[u8],
+    w: usize,
+    h: usize,
+    max: usize,
+    task: &mut RenderTask,
+) -> Result<CommandResult, EngineError> {
+    let (out, tw, th) = render::fit(px, w, h, max, task)?;
     read(json!({ "width": tw, "height": th, "pixels_b64": b64::encode(&out) }))
 }
 
@@ -305,7 +370,12 @@ impl PrismEngine {
         Ok(next)
     }
 
-    pub(crate) fn apply_v2(&mut self, op: &str, p: &Value) -> Result<CommandResult, EngineError> {
+    pub(crate) fn apply_v2(
+        &mut self,
+        op: &str,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         match op {
             "setLayerTransform" => self.op_set_layer_transform(p),
             "translateLayers" => self.op_translate_layers(p),
@@ -315,33 +385,34 @@ impl PrismEngine {
             "alignLayers" => self.op_align_layers(p),
             "distributeLayers" => self.op_distribute_layers(p),
             "selectLayers" => self.op_select_layers(p),
-            "selectRegion" => self.op_select_region(p),
+            "selectRegion" => self.op_select_region(p, ctx),
             "selectAll" => self.op_select_all(),
             "deselect" => self.op_deselect(),
             "invertSelection" => self.op_invert_selection(),
-            "magicWand" => self.op_magic_wand(p),
-            "modifySelection" => self.op_modify_selection(p),
+            "magicWand" => self.op_magic_wand(p, ctx),
+            "modifySelection" => self.op_modify_selection(p, ctx),
             "getSelection" => self.op_get_selection(),
             "groupLayers" => self.op_group_layers(p),
             "ungroupLayer" => self.op_ungroup_layer(p),
+            "duplicateLayer" => self.op_duplicate_layer(p),
             "setLayerParent" => self.op_set_layer_parent(p),
             "setLayerLocked" => self.op_set_layer_locked(p),
             "setLayerBlend" => self.op_set_layer_blend(p),
             "setClipped" => self.op_set_clipped(p),
-            "layerThumbnail" => self.op_layer_thumbnail(p),
-            "renderRegion" => self.op_render_region(p),
+            "layerThumbnail" => self.op_layer_thumbnail(p, ctx),
+            "renderRegion" => self.op_render_region(p, ctx),
             "addMask" => self.op_add_mask(p),
             "removeMask" => self.op_remove_mask(p),
             "setMaskEnabled" => self.op_set_mask_enabled(p),
             "invertMask" => self.op_invert_mask(p),
-            "paintMask" => self.op_paint_mask(p),
-            "refineMask" => self.op_refine_mask(p),
-            "maskThumbnail" => self.op_mask_thumbnail(p),
+            "paintMask" => self.op_paint_mask(p, ctx),
+            "refineMask" => self.op_refine_mask(p, ctx),
+            "maskThumbnail" => self.op_mask_thumbnail(p, ctx),
             "addArtboard" => self.op_add_artboard(p),
             "removeArtboard" => self.op_remove_artboard(p),
             "updateArtboard" => self.op_update_artboard(p),
             "moveArtboard" => self.op_move_artboard(p),
-            "artboardThumbnail" => self.op_artboard_thumbnail(p),
+            "artboardThumbnail" => self.op_artboard_thumbnail(p, ctx),
             "addPath" => self.op_add_path(p),
             "setPathNodes" => self.op_set_path_nodes(p),
             "setPathNode" => self.op_set_path_node(p),
@@ -356,8 +427,17 @@ impl PrismEngine {
             "convertToPath" => self.op_convert_to_path(p),
             "booleanLayers" => self.op_boolean_layers(p),
             "setBooleanOp" => self.op_set_boolean_op(p),
-            "rasterizeLayer" => self.op_rasterize_layer(p),
-            "floodFill" => self.op_flood_fill(p),
+            "rasterizeLayer" => self.op_rasterize_layer(p, ctx),
+            "floodFill" => self.op_flood_fill(p, ctx),
+            "crop" => self.op_crop(p, ctx),
+            "samplePixels" => self.op_sample_pixels(p, ctx),
+            "modelStroke" => self.op_model_stroke(p, ctx),
+            "addBrush" => self.op_add_brush(p),
+            "setBrush" => self.op_set_brush(p),
+            "removeBrush" => self.op_remove_brush(p),
+            "listBrushes" => self.op_list_brushes(),
+            "paintStroke" => self.op_paint_stroke(p, ctx),
+            "eraseStroke" => self.op_erase_stroke(p, ctx),
             other => Err(EngineError::invalid(format!("unknown op '{other}'"))),
         }
     }
@@ -657,14 +737,23 @@ impl PrismEngine {
         }
     }
 
-    fn op_select_region(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_select_region(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let region = Self::parse_region(Self::field(p, "shape")?)?;
         let mode = combine_mode(p)?;
         let feather = req_radius(p, "feather", 0.0)?;
         let (w, h) = (self.width as usize, self.height as usize);
-        let mut mask = select::rasterize(&region, w, h);
-        mask = select::feather(&mask, w, h, feather);
-        let next = select::combine(self.selection.as_deref().map(|v| v.as_slice()), &mask, mode);
+        // Units: rasterize, feather, combine — all computed before the
+        // selection is committed, so cancellation leaves state untouched.
+        let mut task = RenderTask::new(ctx, 3);
+        let mut mask = select::rasterize(&region, w, h, &mut task)?;
+        task.step_done();
+        mask = select::feather(&mask, w, h, feather, &mut task)?;
+        task.step_done();
+        let next = select::combine(self.selection.as_deref().map(|v| v.as_slice()), &mask, mode, &mut task)?;
         self.record();
         self.set_selection(next);
         ok()
@@ -696,8 +785,34 @@ impl PrismEngine {
         ok()
     }
 
+    /// Render units a `sample_buffer` call will consume: a composite sample
+    /// flattens the whole scene, a layer sample renders that subtree.
+    fn sample_units(&self, p: &Value, default_layer: Option<usize>) -> Result<u64, EngineError> {
+        let which = p.get("sample");
+        let layer_idx = match which {
+            None => default_layer,
+            Some(Value::String(s)) if s == "composite" => None,
+            Some(Value::String(s)) if s == "layer" => {
+                Some(default_layer.ok_or_else(|| EngineError::validation("sample \"layer\" needs a target layer"))?)
+            }
+            Some(v) => match v.get("layer").and_then(Value::as_u64) {
+                Some(id) => Some(self.layer_index(id)?),
+                None => return Err(EngineError::validation("sample must be \"composite\", \"layer\" or {\"layer\": id}")),
+            },
+        };
+        Ok(match layer_idx {
+            None => self.layers.len() as u64,
+            Some(i) => self.subtree_ids(self.layers[i].id).len() as u64,
+        })
+    }
+
     /// RGBA sample buffer for magic wand / flood fill.
-    fn sample_buffer(&self, p: &Value, default_layer: Option<usize>) -> Result<Vec<u8>, EngineError> {
+    fn sample_buffer(
+        &self,
+        p: &Value,
+        default_layer: Option<usize>,
+        task: &mut RenderTask,
+    ) -> Result<Vec<u8>, EngineError> {
         let scene = self.scene();
         let which = p.get("sample");
         let layer_idx = match which {
@@ -712,37 +827,50 @@ impl PrismEngine {
             },
         };
         Ok(match layer_idx {
-            None => scene.flatten(),
+            None => scene.flatten_ctx(task)?,
             Some(i) => {
                 let l = &self.layers[i];
-                scene.render_layer(l, &scene.parent_affine(l))
+                scene.render_layer_ctx(l, &scene.parent_affine(l), task)?
             }
         })
     }
 
-    fn op_magic_wand(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_magic_wand(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let (x, y) = self.canvas_point(p)?;
         let tol = req_tolerance(p)?;
         let contiguous = opt_bool(p, "contiguous", true)?;
         let mode = combine_mode(p)?;
-        let buf = self.sample_buffer(p, None)?;
+        // Units: sample render + color region + combine.
+        let mut task = RenderTask::new(ctx, self.sample_units(p, None)? + 2);
+        let buf = self.sample_buffer(p, None, &mut task)?;
         let (w, h) = (self.width as usize, self.height as usize);
-        let region = select::color_region(&buf, w, h, x, y, tol, contiguous);
-        let next = select::combine(self.selection.as_deref().map(|v| v.as_slice()), &region, mode);
+        let region = select::color_region(&buf, w, h, x, y, tol, contiguous, &mut task)?;
+        task.step_done();
+        let next = select::combine(self.selection.as_deref().map(|v| v.as_slice()), &region, mode, &mut task)?;
         self.record();
         self.set_selection(next);
         ok()
     }
 
-    fn op_modify_selection(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_modify_selection(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let op = req_str(p, "op")?;
         let radius = req_radius(p, "radius", 0.0)?;
         let cur = self.require_selection()?.clone();
         let (w, h) = (self.width as usize, self.height as usize);
+        let mut task = RenderTask::new(ctx, 1);
         let next = match op {
-            "grow" => select::grow(&cur, w, h, radius),
-            "shrink" => select::grow(&cur, w, h, -radius),
-            "feather" => select::feather(&cur, w, h, radius),
+            "grow" => select::grow(&cur, w, h, radius, &mut task)?,
+            "shrink" => select::grow(&cur, w, h, -radius, &mut task)?,
+            "feather" => select::feather(&cur, w, h, radius, &mut task)?,
+            "smooth" => select::smooth(&cur, w, h, radius, &mut task)?,
             other => return Err(EngineError::validation(format!("unknown selection op '{other}'"))),
         };
         self.record();
@@ -916,6 +1044,53 @@ impl PrismEngine {
         ok()
     }
 
+    /// `duplicateLayer {id,name?}` — deep copy of the layer and, for groups
+    /// and booleans, its whole subtree. Every copied member gets a fresh id
+    /// and parent links are remapped; the copy keeps the source's position
+    /// rules (stack order, transform, mask, blend, lock, clipping) and sits
+    /// directly above the source among its siblings. `name` renames only the
+    /// copied root; the default is `"<name> copy"`. Object selection is left
+    /// untouched. Duplication does not edit the source, so a locked layer may
+    /// be duplicated (the copy stays locked). One undo entry.
+    fn op_duplicate_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let idx = self.layer_index(Self::req_id(p)?)?;
+        let name = Self::opt_name(p)?;
+        let root_id = self.layers[idx].id;
+        let subtree = self.subtree_ids(root_id);
+        // Vec order is the stack order inside every parent, so copying the
+        // members in their existing order preserves all internal stacking.
+        let members: Vec<Layer> = self
+            .layers
+            .iter()
+            .filter(|l| subtree.contains(&l.id))
+            .cloned()
+            .collect();
+        self.record();
+        let mut remap = std::collections::HashMap::with_capacity(members.len());
+        for m in &members {
+            remap.insert(m.id, self.alloc_id());
+        }
+        let new_root = remap[&root_id];
+        let mut copies: Vec<Layer> = members
+            .into_iter()
+            .map(|mut l| {
+                let old = l.id;
+                l.id = remap[&old];
+                l.parent = l.parent.map(|pid| remap.get(&pid).copied().unwrap_or(pid));
+                if old == root_id {
+                    let n = name.clone().unwrap_or_else(|| format!("{} copy", l.name));
+                    l.name = n;
+                }
+                l
+            })
+            .collect();
+        let at = idx + 1;
+        for (k, l) in copies.drain(..).enumerate() {
+            self.layers.insert(at + k, l);
+        }
+        Ok(CommandResult::data(json!({ "layer_id": new_root })))
+    }
+
     fn op_set_layer_locked(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
         let locked = Self::req_bool(p, "locked")?;
@@ -958,16 +1133,32 @@ impl PrismEngine {
 
     // -- thumbnails ----------------------------------------------------------
 
-    fn op_layer_thumbnail(&self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_layer_thumbnail(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
         let max = req_max(p)?;
         let scene = self.scene();
         let l = &self.layers[idx];
-        let px = scene.render_layer(l, &scene.parent_affine(l));
-        thumb(&px, scene.w, scene.h, max)
+        // Units: one render_layer call per layer in the subtree, plus the
+        // thumbnail fit pass.
+        let mut task = RenderTask::new(ctx, self.subtree_ids(l.id).len() as u64 + 1);
+        let px = scene.render_layer_ctx(l, &scene.parent_affine(l), &mut task)?;
+        thumb(&px, scene.w, scene.h, max, &mut task)
     }
 
-    fn region_pixels(&self, x: f64, y: f64, w: f64, h: f64) -> Result<(Vec<u8>, usize, usize), EngineError> {
+    /// `x,y,w,h` region of the flattened composite. Units: scene layers +
+    /// crop + fit.
+    fn region_pixels(
+        &self,
+        x: f64,
+        y: f64,
+        w: f64,
+        h: f64,
+        task: &mut RenderTask,
+    ) -> Result<(Vec<u8>, usize, usize), EngineError> {
         if ![x, y, w, h].iter().all(|v| finite(*v)) || w <= 0.0 || h <= 0.0 {
             return Err(EngineError::validation("region must be finite with positive size"));
         }
@@ -977,15 +1168,23 @@ impl PrismEngine {
             return Err(EngineError::validation("region too large"));
         }
         let scene = self.scene();
-        let flat = scene.flatten();
-        Ok((render::crop(&flat, scene.w, scene.h, x0, y0, rw, rh), rw, rh))
+        let flat = scene.flatten_ctx(task)?;
+        task.step_done();
+        let px = render::crop(&flat, scene.w, scene.h, x0, y0, rw, rh, task)?;
+        task.step_done();
+        Ok((px, rw, rh))
     }
 
-    fn op_render_region(&self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_render_region(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let max = req_max(p)?;
         let (x, y, w, h) = (req_coord(p, "x")?, req_coord(p, "y")?, req_coord(p, "w")?, req_coord(p, "h")?);
-        let (px, rw, rh) = self.region_pixels(x, y, w, h)?;
-        thumb(&px, rw, rh, max)
+        let mut task = RenderTask::new(ctx, self.layers.len() as u64 + 2);
+        let (px, rw, rh) = self.region_pixels(x, y, w, h, &mut task)?;
+        thumb(&px, rw, rh, max, &mut task)
     }
 
     // -- masks ---------------------------------------------------------------
@@ -1057,7 +1256,11 @@ impl PrismEngine {
         ok()
     }
 
-    fn op_paint_mask(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_paint_mask(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let idx = self.mask_index(p)?;
         let x = req_coord(p, "x")?;
         let y = req_coord(p, "y")?;
@@ -1086,36 +1289,91 @@ impl PrismEngine {
         if xi + wi <= 0 || yi + hi <= 0 || xi >= cw || yi >= ch {
             return read(json!({ "ok": true }));
         }
+        let mut task = RenderTask::new(ctx, 1);
+        if ctx.is_some() {
+            // Cancellable path: patch a scratch copy of the mask and commit
+            // only after the last checkpoint.
+            let mut next = self.layers[idx]
+                .mask
+                .as_ref()
+                .expect("mask checked by mask_index")
+                .alpha
+                .as_ref()
+                .clone();
+            Self::paint_mask_rect(&mut next, cw as usize, xi, yi, wi, hi, &data, mode, &mut task)?;
+            task.checkpoint()?;
+            self.record();
+            self.mask_mut(idx).alpha = Arc::new(next);
+            return ok();
+        }
         self.record();
         let alpha = Arc::make_mut(&mut self.mask_mut(idx).alpha);
-        for r in yi.max(0)..(yi + hi).min(ch) {
-            for c in xi.max(0)..(xi + wi).min(cw) {
+        Self::paint_mask_rect(alpha, cw as usize, xi, yi, wi, hi, &data, mode, &mut task)?;
+        ok()
+    }
+
+    /// Apply a `w*h` mask patch at `(x, y)` with `mode` (0 replace,
+    /// 1 add/max, 2 subtract), checkpointing every
+    /// `CHECKPOINT_EVERY_PX` pixels when `task` has a context.
+    #[allow(clippy::too_many_arguments)]
+    fn paint_mask_rect(
+        alpha: &mut [u8],
+        cw: usize,
+        xi: i64,
+        yi: i64,
+        wi: i64,
+        hi: i64,
+        data: &[u8],
+        mode: i32,
+        task: &mut RenderTask,
+    ) -> Result<(), EngineError> {
+        let ch = alpha.len() / cw.max(1);
+        let (x0, x1) = (xi.max(0), (xi + wi).min(cw as i64));
+        let (y0, y1) = (yi.max(0), (yi + hi).min(ch as i64));
+        let total = ((x1 - x0) * (y1 - y0)).max(1) as f32;
+        let mut done = 0usize;
+        for r in y0..y1 {
+            for c in x0..x1 {
                 let src = data[((r - yi) * wi + (c - xi)) as usize];
-                let d = &mut alpha[(r * cw + c) as usize];
+                let d = &mut alpha[(r * cw as i64 + c) as usize];
                 *d = match mode {
                     0 => src,
                     1 => (*d).max(src),
                     _ => ((*d as u32 * (255 - src as u32) + 127) / 255) as u8,
                 };
+                done += 1;
+                task.tick(done, crate::CHECKPOINT_EVERY_PX, done as f32 / total)?;
             }
         }
-        ok()
+        Ok(())
     }
 
-    fn op_refine_mask(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_refine_mask(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let idx = self.mask_index(p)?;
         let feather = req_radius(p, "feather", 0.0)?;
         let grow = req_radius(p, "grow", -MAX_RADIUS)?;
         self.ensure_unlocked(idx)?;
         let (w, h) = (self.width as usize, self.height as usize);
         let cur = self.layers[idx].mask.as_ref().expect("mask checked").alpha.clone();
-        let next = select::feather(&select::grow(&cur, w, h, grow), w, h, feather);
+        // Units: grow, then feather — both produce `next` before commit.
+        let mut task = RenderTask::new(ctx, 2);
+        let grown = select::grow(&cur, w, h, grow, &mut task)?;
+        task.step_done();
+        let next = select::feather(&grown, w, h, feather, &mut task)?;
         self.record();
         self.mask_mut(idx).alpha = Arc::new(next);
         ok()
     }
 
-    fn op_mask_thumbnail(&self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_mask_thumbnail(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let idx = self.mask_index(p)?;
         let max = req_max(p)?;
         let m = self.layers[idx].mask.as_ref().expect("mask checked");
@@ -1125,7 +1383,8 @@ impl PrismEngine {
                 [v, v, v, 255]
             })
             .collect();
-        thumb(&gray, self.width as usize, self.height as usize, max)
+        let mut task = RenderTask::new(ctx, 1);
+        thumb(&gray, self.width as usize, self.height as usize, max, &mut task)
     }
 
     // -- artboards -----------------------------------------------------------
@@ -1191,12 +1450,17 @@ impl PrismEngine {
         ok()
     }
 
-    fn op_artboard_thumbnail(&self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_artboard_thumbnail(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let i = self.artboard_index(Self::req_id(p)?)?;
         let max = req_max(p)?;
         let a = &self.artboards[i];
-        let (px, w, h) = self.region_pixels(a.x, a.y, a.w, a.h)?;
-        thumb(&px, w, h, max)
+        let mut task = RenderTask::new(ctx, self.layers.len() as u64 + 2);
+        let (px, w, h) = self.region_pixels(a.x, a.y, a.w, a.h, &mut task)?;
+        thumb(&px, w, h, max, &mut task)
     }
 }
 
@@ -1554,7 +1818,11 @@ impl PrismEngine {
         ok()
     }
 
-    fn op_rasterize_layer(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_rasterize_layer(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let idx = self.layer_index(Self::req_id(p)?)?;
         if self.layers[idx].is_raster() {
             return Err(EngineError::validation(format!("layer {} is already raster", self.layers[idx].id)));
@@ -1564,7 +1832,9 @@ impl PrismEngine {
         // in; mask, opacity, blend and clipping stay on the layer.
         let mut probe = self.layers[idx].clone();
         probe.mask = None;
-        let pixels = self.scene().render_layer(&probe, &Affine::IDENTITY);
+        // Units: one render_layer call per layer in the subtree.
+        let mut task = RenderTask::new(ctx, self.subtree_ids(probe.id).len() as u64);
+        let pixels = self.scene().render_layer_ctx(&probe, &Affine::IDENTITY, &mut task)?;
         let id = self.layers[idx].id;
         let mut doomed = self.subtree_ids(id);
         doomed.remove(&id);
@@ -1577,9 +1847,287 @@ impl PrismEngine {
         ok()
     }
 
+    // -- document crop -------------------------------------------------------
+
+    /// `crop {x,y,w,h}` — offset-crop the document. Intersection semantics:
+    /// the rect is rounded outward to whole pixels, then intersected with
+    /// the canvas; a rect that misses it is `OutOfBounds`, and cropping to
+    /// the full canvas is a read-only no-op.
+    ///
+    /// Content stored in layer coordinates (shape bounds, path nodes,
+    /// gradient geometry) is shifted by `-s`, where `s` is the canvas delta
+    /// pulled back through each layer's effective transform — so the
+    /// rendered image is preserved exactly while transforms themselves stay
+    /// untouched. Raster layers resample through a texel grid pinned to the
+    /// buffer's own extent, which only matches the rendered image when the
+    /// layer's effective affine (own transform composed with group
+    /// ancestors) has an identity linear part: translation and
+    /// identity-scale rasters crop pixel-exactly, while any rotation, skew,
+    /// or non-unit scale would silently drop texels — those layers reject
+    /// the whole crop with `Validation` before anything mutates. Masks and
+    /// the pixel selection live in canvas space and are cropped at the
+    /// pixel offset; artboards shift by the canvas delta and may leave the
+    /// canvas. One undo entry. Like `resize`, this is a document-level op:
+    /// locked layers are not consulted.
+    fn op_crop(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let x = req_coord(p, "x")?;
+        let y = req_coord(p, "y")?;
+        let w = req_coord(p, "w")?;
+        let h = req_coord(p, "h")?;
+        if w <= 0.0 || h <= 0.0 {
+            return Err(EngineError::validation("crop w/h must be positive"));
+        }
+        let (cw, ch) = (self.width as i64, self.height as i64);
+        let ix0 = (x.floor() as i64).max(0);
+        let iy0 = (y.floor() as i64).max(0);
+        let ix1 = ((x + w).ceil() as i64).min(cw);
+        let iy1 = ((y + h).ceil() as i64).min(ch);
+        if ix1 <= ix0 || iy1 <= iy0 {
+            return Err(EngineError::out_of_bounds(
+                "crop region does not intersect the canvas",
+            ));
+        }
+        let (nw, nh) = ((ix1 - ix0) as u32, (iy1 - iy0) as u32);
+        Self::check_dims(nw, nh)?;
+        if ix0 == 0 && iy0 == 0 && nw == self.width && nh == self.height {
+            return read(json!({ "ok": true }));
+        }
+        let (sw, sh) = (self.width as usize, self.height as usize);
+        let (dw, dh) = (nw as usize, nh as usize);
+        let (dx, dy) = (ix0 as f64, iy0 as f64);
+
+        // Phase 1 — compute every new buffer and validate every shifted
+        // coordinate before touching the document or the journal. `s` is
+        // the content-space shift for each layer: the canvas delta pulled
+        // back through its effective (ancestor-inclusive) transform.
+        let scene = self.scene();
+        let mut shifts: Vec<(f64, f64)> = Vec::with_capacity(self.layers.len());
+        for l in &self.layers {
+            let e = scene.effective_affine(l);
+            let Some(inv) = e.invert() else {
+                return Err(EngineError::validation(format!(
+                    "layer {} has a degenerate transform",
+                    l.id
+                )));
+            };
+            let (sx, sy) = inv.apply_vec(dx, dy);
+            if !sx.is_finite() || !sy.is_finite() {
+                return Err(EngineError::validation(format!(
+                    "layer {} content shift is not representable",
+                    l.id
+                )));
+            }
+            // The raster resample below pins its texel grid to the buffer's
+            // own [0,w)×[0,h) extent; that equals the rendered window only
+            // when the effective affine's linear part is the identity. A
+            // scaled, rotated, or skewed raster (including via a group
+            // ancestor) would lose texels, so reject the whole crop here —
+            // still in phase 1, before the journal or any state changes.
+            if matches!(l.content, Content::Raster(_))
+                && ((e.a - 1.0).abs() > CROP_RASTER_LINEAR_EPS
+                    || e.b.abs() > CROP_RASTER_LINEAR_EPS
+                    || e.c.abs() > CROP_RASTER_LINEAR_EPS
+                    || (e.d - 1.0).abs() > CROP_RASTER_LINEAR_EPS)
+            {
+                return Err(EngineError::validation(format!(
+                    "crop does not support transformed raster layers (layer {} has rotation, skew, or non-unit scale)",
+                    l.id
+                )));
+            }
+            shifts.push((sx, sy));
+        }
+        let work_units = self
+            .layers
+            .iter()
+            .filter(|l| matches!(l.content, Content::Raster(_)) || l.mask.is_some())
+            .count() as u64
+            + 1;
+        let mut task = RenderTask::new(ctx, work_units);
+        let mut rasters: Vec<(usize, Vec<u8>)> = Vec::new();
+        let mut masks: Vec<(usize, Vec<u8>)> = Vec::new();
+        for (i, l) in self.layers.iter().enumerate() {
+            let (sx, sy) = shifts[i];
+            match &l.content {
+                Content::Raster(px) => {
+                    let buf =
+                        raster::resample_translated(px, sw, sh, sx, sy, dw, dh, &mut task)?;
+                    rasters.push((i, buf));
+                }
+                Content::Shape(s) => {
+                    if !finite(s.x - sx) || !finite(s.y - sy) {
+                        return Err(EngineError::validation(format!(
+                            "cropping layer {} exceeds coordinate bounds",
+                            l.id
+                        )));
+                    }
+                }
+                Content::Path(path) => {
+                    for sp in &path.subpaths {
+                        for n in &sp.nodes {
+                            if !finite(n.x - sx) || !finite(n.y - sy) {
+                                return Err(EngineError::validation(format!(
+                                    "cropping layer {} exceeds coordinate bounds",
+                                    l.id
+                                )));
+                            }
+                        }
+                    }
+                    for paint in path
+                        .fill
+                        .iter()
+                        .chain(path.stroke.iter().map(|s| &s.paint))
+                    {
+                        let mut q = paint.clone();
+                        shift_paint(&mut q, sx, sy);
+                        q.validate()?;
+                    }
+                }
+                Content::Boolean {
+                    fill: Some(f), ..
+                } => {
+                    let mut q = f.clone();
+                    shift_paint(&mut q, sx, sy);
+                    q.validate()?;
+                }
+                _ => {}
+            }
+            if let Some(m) = &l.mask {
+                masks.push((
+                    i,
+                    crop_alpha(&m.alpha, sw, sh, ix0, iy0, dw, dh, &mut task)?,
+                ));
+            }
+        }
+        task.step_done();
+        // Artboards and the pixel selection live in canvas space.
+        let mut artboards = self.artboards.clone();
+        for a in &mut artboards {
+            a.x -= dx;
+            a.y -= dy;
+            a.validate()
+                .map_err(|_| EngineError::validation("cropping an artboard exceeds coordinate bounds"))?;
+        }
+        let selection = match &self.selection {
+            None => None,
+            Some(s) => {
+                let c = crop_alpha(s, sw, sh, ix0, iy0, dw, dh, &mut task)?;
+                (!select::is_empty(&c)).then_some(c)
+            }
+        };
+        task.checkpoint()?;
+
+        // Phase 2 — commit. Nothing below can fail, so a cancelled task
+        // (which can only error in phase 1) leaves the document untouched.
+        self.record();
+        self.width = nw;
+        self.height = nh;
+        for (i, buf) in rasters {
+            self.layers[i].content = Content::Raster(Arc::new(buf));
+        }
+        for (i, alpha) in masks {
+            if let Some(m) = &mut self.layers[i].mask {
+                m.alpha = Arc::new(alpha);
+            }
+        }
+        for (i, &(sx, sy)) in shifts.iter().enumerate() {
+            match &mut self.layers[i].content {
+                Content::Shape(s) => {
+                    s.x -= sx;
+                    s.y -= sy;
+                }
+                Content::Path(path) => {
+                    for sp in &mut path.subpaths {
+                        for n in &mut sp.nodes {
+                            n.x -= sx;
+                            n.y -= sy;
+                        }
+                    }
+                    if let Some(f) = &mut path.fill {
+                        shift_paint(f, sx, sy);
+                    }
+                    if let Some(st) = &mut path.stroke {
+                        shift_paint(&mut st.paint, sx, sy);
+                    }
+                }
+                Content::Boolean {
+                    fill: Some(f), ..
+                } => shift_paint(f, sx, sy),
+                _ => {}
+            }
+        }
+        self.artboards = artboards;
+        self.selection = selection.map(Arc::new);
+        Ok(CommandResult::data(json!({ "ok": true })))
+    }
+
+    // -- pixel sampling ---------------------------------------------------------
+
+    /// `samplePixels {x,y,radius?}` — composite RGBA at a document-space
+    /// point, read through the real render pipeline (transforms, blend
+    /// modes, masks, groups). `radius` (0..=250, default 0) box-averages a
+    /// square region around the point in premultiplied alpha, so
+    /// translucent composites keep their color. Points outside the canvas
+    /// sample as transparent. Read-only: no undo entry, no events.
+    fn op_sample_pixels(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let transparent = || read(json!({ "r": 0, "g": 0, "b": 0, "a": 0 }));
+        let x = req_coord(p, "x")?;
+        let y = req_coord(p, "y")?;
+        let radius = req_radius(p, "radius", 0.0)?;
+        let (w, h) = (self.width as usize, self.height as usize);
+        if w == 0 || h == 0 {
+            return transparent();
+        }
+        // Pixels touched by the closed box [x±r]×[y±r], clipped to canvas.
+        let x0 = ((x - radius).floor() as i64).max(0);
+        let y0 = ((y - radius).floor() as i64).max(0);
+        let x1 = (((x + radius).floor() as i64) + 1).min(w as i64);
+        let y1 = (((y + radius).floor() as i64) + 1).min(h as i64);
+        if x1 <= x0 || y1 <= y0 {
+            return transparent();
+        }
+        let mut task = RenderTask::new(ctx, self.layers.len() as u64 + 1);
+        let flat = self.scene().flatten_ctx(&mut task)?;
+        task.step_done();
+        // Average in premultiplied space: accumulate rgb*a and a
+        // separately, then un-premultiply by the summed alpha. Averaging
+        // straight-alpha channels independently would darken translucent
+        // composites toward transparent black.
+        let mut acc = [0f64; 4];
+        let mut n = 0f64;
+        for py in y0..y1 {
+            for px in x0..x1 {
+                let o = ((py as usize) * w + px as usize) * 4;
+                let a = flat[o + 3] as f64 / 255.0;
+                for c in 0..3 {
+                    acc[c] += flat[o + c] as f64 * a;
+                }
+                acc[3] += a;
+                n += 1.0;
+            }
+        }
+        if acc[3] <= 1e-12 {
+            return transparent();
+        }
+        let channel = |c: usize| (acc[c] / acc[3]).round().clamp(0.0, 255.0) as u8;
+        let alpha = (acc[3] / n * 255.0).round().clamp(0.0, 255.0) as u8;
+        read(json!({ "r": channel(0), "g": channel(1), "b": channel(2), "a": alpha }))
+    }
+
     // -- region fill ---------------------------------------------------------
 
-    fn op_flood_fill(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    fn op_flood_fill(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
         let idx = self.raster_index(Self::req_id(p)?)?;
         let (x, y) = self.canvas_point(p)?;
         let color = Self::req_color(p, "color")?;
@@ -1590,29 +2138,1362 @@ impl PrismEngine {
         if transform.invert().is_none() {
             return Err(EngineError::validation("raster transform cannot be inverted"));
         }
-        let buf = self.sample_buffer(p, Some(idx))?;
+        // Units: sample render + color region + coverage pullback + blend.
+        let mut task = RenderTask::new(ctx, self.sample_units(p, Some(idx))? + 3);
+        let buf = self.sample_buffer(p, Some(idx), &mut task)?;
         let (w, h) = (self.width as usize, self.height as usize);
-        let mut region = select::color_region(&buf, w, h, x, y, tol, contiguous);
+        let mut region = select::color_region(&buf, w, h, x, y, tol, contiguous, &mut task)?;
         if let Some(sel) = &self.selection {
-            for (r, s) in region.iter_mut().zip(sel.iter()) {
+            let total = region.len().max(1) as f32;
+            for (i, (r, s)) in region.iter_mut().zip(sel.iter()).enumerate() {
+                task.tick(i, crate::CHECKPOINT_EVERY_PX, i as f32 / total)?;
                 *r = ((*r as u32 * *s as u32 + 127) / 255) as u8;
             }
         }
+        task.step_done();
         // Region and selection are canvas-space. Pull their coverage back
         // through the complete layer/ancestor transform before editing pixels.
-        let region = if transform.is_identity() { region } else { select::pullback_coverage(&region, w, h, &transform) };
+        let region = if transform.is_identity() {
+            region
+        } else {
+            select::pullback_coverage(&region, w, h, &transform, &mut task)?
+        };
+        task.step_done();
         if select::is_empty(&region) {
             return read(json!({ "ok": true, "filled": 0 }));
         }
+        if ctx.is_some() {
+            // Cancellable path: blend into a scratch copy of the layer and
+            // commit only after the last checkpoint.
+            let mut work = self
+                .raster_ref(idx)
+                .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?
+                .clone();
+            let filled = Self::blend_region(&mut work, &region, &color, &mut task)?;
+            task.checkpoint()?;
+            self.record_full_layer_pixels(idx)?;
+            self.layers[idx].content = Content::Raster(Arc::new(work));
+            return Ok(CommandResult::data(json!({ "ok": true, "filled": filled })));
+        }
         self.record_full_layer_pixels(idx)?;
         let target = self.raster_mut(idx).ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+        let filled = Self::blend_region(target, &region, &color, &mut task)?;
+        Ok(CommandResult::data(json!({ "ok": true, "filled": filled })))
+    }
+
+    /// Blend `color` into `target` (canvas-sized RGBA) weighted by `region`
+    /// coverage, checkpointing every `CHECKPOINT_EVERY_PX` pixels.
+    fn blend_region(
+        target: &mut [u8],
+        region: &[u8],
+        color: &[u8; 4],
+        task: &mut RenderTask,
+    ) -> Result<u64, EngineError> {
+        let total = region.len().max(1) as f32;
         let mut filled = 0u64;
         for (i, &cov) in region.iter().enumerate() {
+            task.tick(i, crate::CHECKPOINT_EVERY_PX, i as f32 / total)?;
             if cov > 0 {
-                raster::blend_pixel(&mut target[i * 4..i * 4 + 4], &color, cov as f64 / 255.0);
+                raster::blend_pixel(&mut target[i * 4..i * 4 + 4], color, cov as f64 / 255.0);
                 filled += 1;
             }
         }
-        Ok(CommandResult::data(json!({ "ok": true, "filled": filled })))
+        Ok(filled)
+    }
+
+    // -- brush / stroke ops (P06, per P-prism-brush-ink-decision) -----------
+
+    /// `modelStroke {samples, params?, predict?}` — run the stroke-modeler
+    /// pipeline and return modeled (+ optional lookahead) points. Pure,
+    /// read-only, eventless.
+    fn op_model_stroke(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let samples = stroke::parse_samples(p.get("samples"))?;
+        let params = stroke::parse_params(p.get("params"))?;
+        let predict = stroke::parse_predict(p.get("predict"))?;
+        let (segments, predicted) = stroke::model_stroke(&samples, &params, predict, ctx)?;
+        let modeled: Vec<Value> = segments
+            .iter()
+            .flatten()
+            .map(stroke::ModeledPoint::to_json)
+            .collect();
+        let predicted_json: Vec<Value> =
+            predicted.iter().map(stroke::ModeledPoint::to_json).collect();
+        Ok(CommandResult {
+            output: None,
+            events: Vec::new(),
+            data: json!({ "modeled": modeled, "predicted": predicted_json }),
+        })
+    }
+
+    /// `addBrush {name?, size?, opacity?, flow?, spacing?, hardness?,
+    /// color?, dynamics?, taper?}` — flat brush fields; missing fields take
+    /// preset defaults. <= [`stroke::MAX_BRUSHES`] per document.
+    fn op_add_brush(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        if self.brushes.len() >= stroke::MAX_BRUSHES {
+            return Err(EngineError::validation(format!(
+                "document already has the maximum of {} brushes",
+                stroke::MAX_BRUSHES
+            )));
+        }
+        let patch = stroke::parse_brush_patch(Some(p))?;
+        // Validate the patch fully before touching history or the id
+        // counter — a rejected brush must leave the document untouched.
+        stroke::brush_from_patch(0, patch.clone(), "Brush".to_string())?;
+        self.record();
+        let id = self.alloc_id();
+        let brush = stroke::brush_from_patch(id, patch, format!("Brush {id}"))?;
+        self.brushes.push(brush);
+        Ok(CommandResult::data(json!({ "brush_id": id })))
+    }
+
+    /// `setBrush {id, ...patch}` — partial merge; identical result records
+    /// nothing (`changed:false`, no undo, no event).
+    fn op_set_brush(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let id = Self::req_u64(p, "id")?;
+        let idx = self
+            .brushes
+            .iter()
+            .position(|b| b.id == id)
+            .ok_or_else(|| EngineError::not_found(format!("brush {id} not found")))?;
+        let patch = stroke::parse_brush_patch(Some(p))?;
+        let next = stroke::brush_apply_patch(&self.brushes[idx], patch)?;
+        if next == self.brushes[idx] {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "changed": false }),
+            });
+        }
+        self.record();
+        self.brushes[idx] = next;
+        Ok(CommandResult::data(json!({ "ok": true, "changed": true })))
+    }
+
+    /// `removeBrush {id}`.
+    fn op_remove_brush(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+        let id = Self::req_u64(p, "id")?;
+        let idx = self
+            .brushes
+            .iter()
+            .position(|b| b.id == id)
+            .ok_or_else(|| EngineError::not_found(format!("brush {id} not found")))?;
+        self.record();
+        self.brushes.remove(idx);
+        ok()
+    }
+
+    /// `listBrushes {}` — the document brush table. Read-only.
+    fn op_list_brushes(&self) -> Result<CommandResult, EngineError> {
+        let brushes = serde_json::to_value(&self.brushes)
+            .map_err(|e| EngineError::internal(e.to_string()))?;
+        Ok(CommandResult {
+            output: None,
+            events: Vec::new(),
+            data: json!({ "brushes": brushes }),
+        })
+    }
+
+    /// Front half shared by `paintStroke` and `eraseStroke`: resolve the
+    /// brush (exactly one of `brush_id`/`brush`), parse samples/params/
+    /// `commit`, run the stroke modeler, and generate canvas-space dabs.
+    /// Every early exit is read-only — empty, fully off-canvas, dry-run, or
+    /// fully transparent strokes return data without touching the document.
+    fn prepare_stroke_dabs(
+        &self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<PreparedStroke, EngineError> {
+        let has_id = p.get("brush_id").is_some_and(|v| !v.is_null());
+        let has_inline = p.get("brush").is_some_and(|v| !v.is_null());
+        if has_id == has_inline {
+            return Err(EngineError::invalid(
+                "stroke ops need exactly one of 'brush_id' or 'brush'",
+            ));
+        }
+        let brush = if has_id {
+            let bid = Self::req_u64(p, "brush_id")?;
+            self.brushes
+                .iter()
+                .find(|b| b.id == bid)
+                .cloned()
+                .ok_or_else(|| EngineError::not_found(format!("brush {bid} not found")))?
+        } else {
+            let patch = stroke::parse_brush_patch(p.get("brush"))?;
+            stroke::brush_from_patch(0, patch, "brush".to_string())?
+        };
+        let samples = stroke::parse_samples(p.get("samples"))?;
+        let params = stroke::parse_params(p.get("params"))?;
+        let commit = match p.get("commit") {
+            None | Some(Value::Null) => true,
+            Some(Value::Bool(b)) => *b,
+            Some(_) => return Err(EngineError::invalid("field 'commit' must be a boolean")),
+        };
+
+        let (segments, _) = stroke::model_stroke(&samples, &params, None, ctx)?;
+        let canvas_dabs = stroke::generate_dabs(&segments, &brush)?;
+        let dab_count = canvas_dabs.len();
+        let Some((bx0, by0, bx1, by1)) = stroke::dabs_bounds(&canvas_dabs) else {
+            return Ok(PreparedStroke::Empty { dabs: 0 });
+        };
+        // Clip the dab bounds to the canvas, same integer-rect semantics as
+        // drawPixels.
+        let x0 = (bx0.floor() as i64).max(0);
+        let y0 = (by0.floor() as i64).max(0);
+        let x1 = (bx1.ceil() as i64).min(self.width as i64);
+        let y1 = (by1.ceil() as i64).min(self.height as i64);
+        if x1 <= x0 || y1 <= y0 {
+            return Ok(PreparedStroke::Empty { dabs: dab_count });
+        }
+        let bounds = DabBounds {
+            x: x0 as u32,
+            y: y0 as u32,
+            w: (x1 - x0) as u32,
+            h: (y1 - y0) as u32,
+        };
+        // A stroke that cannot put down a single semi-transparent dab —
+        // transparent brush color or zero alpha on every dab — changes no
+        // pixel on either the paint or the erase path, so the committed
+        // path treats it as eventless: no undo entry, no document:changed.
+        // The same predicate rides along on `Preview` so dry runs (notably
+        // `mode:"vector"`, whose `removed` must equal what a commit would
+        // erase) can mirror the gate instead of reporting phantom hits.
+        let transparent = brush.color[3] == 0 || canvas_dabs.iter().all(|d| d.alpha <= 0.0);
+        if !commit {
+            return Ok(PreparedStroke::Preview {
+                count: dab_count,
+                bounds,
+                dabs: canvas_dabs,
+                transparent,
+            });
+        }
+        if transparent {
+            return Ok(PreparedStroke::Empty { dabs: dab_count });
+        }
+        Ok(PreparedStroke::Ready {
+            dabs: canvas_dabs,
+            count: dab_count,
+            color: brush.color,
+        })
+    }
+
+    /// `paintStroke {id, brush_id?|brush?, samples, params?, commit?}` —
+    /// model the samples, resolve dabs through the brush, and stamp them
+    /// src-over onto a raster layer. Samples are **canvas-space**; the
+    /// raster buffer is layer-local, so dab centers are mapped through the
+    /// inverse of the layer's complete transform (own + ancestors) and
+    /// radii scaled by its mean scale — the same convention stroke widths
+    /// use (under non-uniform scale a dab is approximated by a circle of
+    /// `radius / mean_scale`; see docs/ENGINE_OPS.md). The pixel selection
+    /// is honored exactly like `floodFill`: canvas coverage is pulled back
+    /// into layer-local texels and gates each stamped pixel.
+    ///
+    /// One undo entry (pixel region) per committed stroke; `commit:false`
+    /// is a read-only dry run returning the dab count and canvas-space
+    /// bounds. Exactly one of `brush_id`/`brush` is required. A stroke
+    /// that cannot put down a single semi-transparent dab — transparent
+    /// brush/color, or dabs landing fully outside the layer's texels —
+    /// returns eventless with no journal entry, like the other no-op
+    /// paths. Total stamp work is capped at [`stroke::MAX_STROKE_PIXELS`]
+    /// (checked before any mutation); over-budget strokes are rejected
+    /// with `Validation`.
+    fn op_paint_stroke(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let idx = self.raster_index(Self::req_id(p)?)?;
+        self.ensure_unlocked(idx)?;
+        let (canvas_dabs, dab_count, color) = match self.prepare_stroke_dabs(p, ctx)? {
+            PreparedStroke::Empty { dabs } => {
+                return Ok(CommandResult {
+                    output: None,
+                    events: Vec::new(),
+                    data: json!({ "ok": true, "dabs": dabs }),
+                });
+            }
+            PreparedStroke::Preview { count: dabs, bounds, .. } => {
+                return Ok(CommandResult {
+                    output: None,
+                    events: Vec::new(),
+                    data: json!({
+                        "dabs": dabs,
+                        "bounds": { "x": bounds.x, "y": bounds.y, "w": bounds.w, "h": bounds.h },
+                    }),
+                });
+            }
+            PreparedStroke::Ready { dabs, count, color, .. } => (dabs, count, color),
+        };
+
+        // Map canvas-space dabs into the layer's local texel space. The
+        // raster buffer is canvas-sized but indexed by layer-local pixels;
+        // `effective_affine` maps local → canvas (same convention as
+        // floodFill's coverage pullback).
+        let transform = self.scene().effective_affine(&self.layers[idx]);
+        let inv = transform
+            .invert()
+            .ok_or_else(|| EngineError::validation("layer transform cannot be inverted"))?;
+        let dabs: Vec<stroke::Dab> = if transform.is_identity() {
+            canvas_dabs
+        } else {
+            let s = transform.mean_scale().max(1e-9);
+            canvas_dabs
+                .iter()
+                .map(|d| {
+                    let (x, y) = inv.apply(d.x, d.y);
+                    stroke::Dab {
+                        x,
+                        y,
+                        radius: d.radius / s,
+                        inner: d.inner / s,
+                        alpha: d.alpha,
+                        hardness: d.hardness,
+                    }
+                })
+                .collect()
+        };
+        // Recompute the stamp region in layer-local coordinates; dabs whose
+        // transformed centers land outside the buffer's texels clip away.
+        let Some((lx0, ly0, lx1, ly1)) = stroke::dabs_bounds(&dabs) else {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count }),
+            });
+        };
+        let x0 = (lx0.floor() as i64).max(0);
+        let y0 = (ly0.floor() as i64).max(0);
+        let x1 = (lx1.ceil() as i64).min(self.width as i64);
+        let y1 = (ly1.ceil() as i64).min(self.height as i64);
+        if x1 <= x0 || y1 <= y0 {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count }),
+            });
+        }
+        let (cx, cy) = (x0 as u32, y0 as u32);
+        let (cw, ch) = ((x1 - x0) as u32, (y1 - y0) as u32);
+
+        // Pixel-work budget: the stamp visits every pixel in each dab's
+        // clipped bbox, so overlapping dabs multiply the cost. Check the
+        // exact visit count against the canvas-pixel ceiling BEFORE any
+        // journal entry or mutation — a rejected stroke is fully atomic.
+        let (bw, bh, box_, boy) = if ctx.is_some() {
+            (cw as usize, ch as usize, cx as usize, cy as usize)
+        } else {
+            (self.width as usize, self.height as usize, 0usize, 0usize)
+        };
+        let stamp_work = stroke::stamp_pixel_work(&dabs, bw, bh, box_, boy);
+        if stamp_work > stroke::MAX_STROKE_PIXELS {
+            return Err(EngineError::validation(format!(
+                "stroke would visit {stamp_work} stamp pixels, exceeding the {} budget",
+                stroke::MAX_STROKE_PIXELS
+            )));
+        }
+
+        let canvas_w = self.width as usize;
+        let canvas_h = self.height as usize;
+        let buf = self
+            .raster_ref(idx)
+            .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+        let prev = raster::read_region(
+            buf,
+            canvas_w,
+            cx as usize,
+            cy as usize,
+            cw as usize,
+            ch as usize,
+        );
+        let mut task = RenderTask::new(ctx, 2);
+        // The pixel selection lives in canvas space; pull it back into
+        // layer-local coverage exactly like floodFill (identity transform
+        // reuses the mask directly). Owned locals keep the borrows clear of
+        // the later `&mut self` calls.
+        let selection_arc = self.selection.clone();
+        let sel_pulled: Option<Vec<u8>> = match &selection_arc {
+            Some(sel) if !transform.is_identity() => Some(select::pullback_coverage(
+                sel,
+                canvas_w,
+                canvas_h,
+                &transform,
+                &mut task,
+            )?),
+            _ => None,
+        };
+        let sel_mask: Option<&[u8]> = sel_pulled
+            .as_deref()
+            .or_else(|| selection_arc.as_deref().map(|v| v.as_slice()));
+        task.step_done();
+        if ctx.is_some() {
+            // Cancellable path: stamp into a scratch copy of the region,
+            // checkpointing per dab pixel batch, then commit once.
+            let mut work = prev.clone();
+            stroke::stamp_dabs(
+                &mut work,
+                cw as usize,
+                ch as usize,
+                cx as usize,
+                cy as usize,
+                &dabs,
+                color,
+                sel_mask,
+                canvas_w,
+                &mut task,
+            )?;
+            task.checkpoint()?;
+            self.journal.record(UndoEntry::Pixels {
+                layer_id: self.layers[idx].id,
+                x: cx,
+                y: cy,
+                w: cw,
+                h: ch,
+                prev,
+            });
+            let buf = self
+                .raster_mut(idx)
+                .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+            raster::write_region(
+                buf,
+                canvas_w,
+                cx as usize,
+                cy as usize,
+                cw as usize,
+                ch as usize,
+                &work,
+            );
+            return Ok(CommandResult::data(json!({ "ok": true, "dabs": dab_count })));
+        }
+
+        self.journal.record(UndoEntry::Pixels {
+            layer_id: self.layers[idx].id,
+            x: cx,
+            y: cy,
+            w: cw,
+            h: ch,
+            prev,
+        });
+        let buf = self
+            .raster_mut(idx)
+            .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+        stroke::stamp_dabs(
+            buf,
+            canvas_w,
+            canvas_h,
+            0,
+            0,
+            &dabs,
+            color,
+            sel_mask,
+            canvas_w,
+            &mut task,
+        )?;
+        Ok(CommandResult::data(json!({ "ok": true, "dabs": dab_count })))
+    }
+
+    // -- eraser stroke (B-18 engine side) --------------------------------------
+
+    /// `eraseStroke {id, mode?, brush_id?|brush?, samples, params?, commit?}`
+    /// — the eraser counterpart of `paintStroke`. `mode` is `"pixel"`
+    /// (default), `"mask"` or `"vector"`; `id` is required for pixel/mask
+    /// and optional for vector (absent = whole-document scope).
+    ///
+    /// `pixel`: raster layer only, unlocked. Identical geometry to
+    /// `paintStroke` — canvas-space samples mapped through the layer's
+    /// complete transform inverse, radii scaled by mean scale, pixel
+    /// selection pulled back into layer-local coverage — but composites
+    /// destination-out: each covered pixel's alpha is multiplied by
+    /// `1 - coverage * dab.alpha * (color.a/255) * selection`, colors
+    /// unchanged. One pixel-region undo entry per committed stroke.
+    ///
+    /// `mask`: any unlocked layer that already has a mask. The mask is a
+    /// canvas-space alpha buffer, so dabs are used untransformed and the
+    /// pixel selection gates directly (no pullback). Erase reduces mask
+    /// alpha the same way; one document undo entry per committed stroke.
+    ///
+    /// Both modes share `prepare_stroke_dabs` (same brush/sample/commit
+    /// contract, same ≤2^28 dab-stamp pixel budget, same eventless dry-run
+    /// and transparent-stroke exits) and add a changed-pixel check: a
+    /// committed stroke that provably alters nothing returns eventless
+    /// with no journal entry.
+    fn op_erase_stroke(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let mode = match p.get("mode") {
+            None | Some(Value::Null) => EraseMode::Pixel,
+            Some(Value::String(s)) if s == "pixel" => EraseMode::Pixel,
+            Some(Value::String(s)) if s == "mask" => EraseMode::Mask,
+            Some(Value::String(s)) if s == "vector" => EraseMode::Vector,
+            Some(Value::String(s)) => {
+                return Err(EngineError::validation(format!(
+                    "unknown erase mode '{s}' (expected 'pixel', 'mask' or 'vector')"
+                )));
+            }
+            Some(_) => return Err(EngineError::invalid("field 'mode' must be a string")),
+        };
+        match mode {
+            EraseMode::Pixel => {
+                let idx = self.raster_index(Self::req_id(p)?)?;
+                self.ensure_unlocked(idx)?;
+                self.erase_stroke_pixels(idx, p, ctx, mode)
+            }
+            EraseMode::Mask => {
+                let idx = self.mask_index(p)?;
+                self.ensure_unlocked(idx)?;
+                self.erase_stroke_mask(idx, p, ctx, mode)
+            }
+            EraseMode::Vector => self.erase_stroke_vector(p, ctx),
+        }
+    }
+
+    /// `mode:"pixel"` — destination-out erase of the raster layer's pixels.
+    fn erase_stroke_pixels(
+        &mut self,
+        idx: usize,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+        mode: EraseMode,
+    ) -> Result<CommandResult, EngineError> {
+        let (canvas_dabs, dab_count, color) =
+            match self.prepare_stroke_dabs(p, ctx)? {
+                PreparedStroke::Empty { dabs } => {
+                    return Ok(CommandResult {
+                        output: None,
+                        events: Vec::new(),
+                        data: json!({ "ok": true, "dabs": dabs, "mode": mode.as_str() }),
+                    });
+                }
+                PreparedStroke::Preview { count: dabs, bounds, .. } => {
+                    return Ok(CommandResult {
+                        output: None,
+                        events: Vec::new(),
+                        data: json!({
+                            "dabs": dabs,
+                            "mode": mode.as_str(),
+                            "bounds": { "x": bounds.x, "y": bounds.y, "w": bounds.w, "h": bounds.h },
+                        }),
+                    });
+                }
+                PreparedStroke::Ready { dabs, count, color, .. } => (dabs, count, color),
+            };
+        // Canvas-space dab bounds were already clipped by the helper; the
+        // stamp region is recomputed in layer-local coordinates below.
+
+        // Same canvas→local mapping as paintStroke: the raster buffer is
+        // canvas-sized but indexed by layer-local pixels.
+        let transform = self.scene().effective_affine(&self.layers[idx]);
+        let inv = transform
+            .invert()
+            .ok_or_else(|| EngineError::validation("layer transform cannot be inverted"))?;
+        let dabs: Vec<stroke::Dab> = if transform.is_identity() {
+            canvas_dabs
+        } else {
+            let s = transform.mean_scale().max(1e-9);
+            canvas_dabs
+                .iter()
+                .map(|d| {
+                    let (x, y) = inv.apply(d.x, d.y);
+                    stroke::Dab {
+                        x,
+                        y,
+                        radius: d.radius / s,
+                        inner: d.inner / s,
+                        alpha: d.alpha,
+                        hardness: d.hardness,
+                    }
+                })
+                .collect()
+        };
+        let Some((lx0, ly0, lx1, ly1)) = stroke::dabs_bounds(&dabs) else {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+            });
+        };
+        let x0 = (lx0.floor() as i64).max(0);
+        let y0 = (ly0.floor() as i64).max(0);
+        let x1 = (lx1.ceil() as i64).min(self.width as i64);
+        let y1 = (ly1.ceil() as i64).min(self.height as i64);
+        if x1 <= x0 || y1 <= y0 {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+            });
+        }
+        let (cx, cy) = (x0 as u32, y0 as u32);
+        let (cw, ch) = ((x1 - x0) as u32, (y1 - y0) as u32);
+
+        // Same pixel-work budget as paintStroke, checked before mutation.
+        let (bw, bh, box_, boy) = if ctx.is_some() {
+            (cw as usize, ch as usize, cx as usize, cy as usize)
+        } else {
+            (self.width as usize, self.height as usize, 0usize, 0usize)
+        };
+        let stamp_work = stroke::stamp_pixel_work(&dabs, bw, bh, box_, boy);
+        if stamp_work > stroke::MAX_STROKE_PIXELS {
+            return Err(EngineError::validation(format!(
+                "stroke would visit {stamp_work} stamp pixels, exceeding the {} budget",
+                stroke::MAX_STROKE_PIXELS
+            )));
+        }
+
+        let canvas_w = self.width as usize;
+        let canvas_h = self.height as usize;
+        let color_alpha = color[3] as f64 / 255.0;
+        let buf = self
+            .raster_ref(idx)
+            .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+        let prev = raster::read_region(
+            buf,
+            canvas_w,
+            cx as usize,
+            cy as usize,
+            cw as usize,
+            ch as usize,
+        );
+        // Erase can only reduce alpha: a stamp region that is already fully
+        // transparent cannot change, so the stroke is eventless.
+        if prev.chunks_exact(4).all(|px| px[3] == 0) {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+            });
+        }
+        let mut task = RenderTask::new(ctx, 2);
+        // Pixel selection: canvas coverage pulled back into layer-local
+        // texels, exactly like paintStroke/floodFill.
+        let selection_arc = self.selection.clone();
+        let sel_pulled: Option<Vec<u8>> = match &selection_arc {
+            Some(sel) if !transform.is_identity() => Some(select::pullback_coverage(
+                sel,
+                canvas_w,
+                canvas_h,
+                &transform,
+                &mut task,
+            )?),
+            _ => None,
+        };
+        let sel_mask: Option<&[u8]> = sel_pulled
+            .as_deref()
+            .or_else(|| selection_arc.as_deref().map(|v| v.as_slice()));
+        task.step_done();
+        if ctx.is_some() {
+            // Cancellable path: erase into a scratch copy of the region,
+            // checkpointing per dab pixel batch, commit once — and stay
+            // eventless when the erase provably changed nothing.
+            let mut work = prev.clone();
+            stroke::erase_dabs_rgba(
+                &mut work,
+                cw as usize,
+                ch as usize,
+                cx as usize,
+                cy as usize,
+                &dabs,
+                color_alpha,
+                sel_mask,
+                canvas_w,
+                &mut task,
+            )?;
+            task.checkpoint()?;
+            if work == prev {
+                return Ok(CommandResult {
+                    output: None,
+                    events: Vec::new(),
+                    data: json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+                });
+            }
+            self.journal.record(UndoEntry::Pixels {
+                layer_id: self.layers[idx].id,
+                x: cx,
+                y: cy,
+                w: cw,
+                h: ch,
+                prev,
+            });
+            let buf = self
+                .raster_mut(idx)
+                .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+            raster::write_region(
+                buf,
+                canvas_w,
+                cx as usize,
+                cy as usize,
+                cw as usize,
+                ch as usize,
+                &work,
+            );
+            return Ok(CommandResult::data(
+                json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+            ));
+        }
+
+        // Same scratch-buffer semantics as the ctx path: erase a copy of
+        // the region, and stay eventless (no journal, no document:changed)
+        // when the erase provably changed nothing — e.g. dabs gated out by
+        // the pixel selection.
+        let mut work = prev.clone();
+        let changed = stroke::erase_dabs_rgba(
+            &mut work,
+            cw as usize,
+            ch as usize,
+            cx as usize,
+            cy as usize,
+            &dabs,
+            color_alpha,
+            sel_mask,
+            canvas_w,
+            &mut task,
+        )?;
+        if changed == 0 {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+            });
+        }
+        self.journal.record(UndoEntry::Pixels {
+            layer_id: self.layers[idx].id,
+            x: cx,
+            y: cy,
+            w: cw,
+            h: ch,
+            prev,
+        });
+        let buf = self
+            .raster_mut(idx)
+            .ok_or_else(|| EngineError::internal("raster layer missing buffer"))?;
+        raster::write_region(
+            buf,
+            canvas_w,
+            cx as usize,
+            cy as usize,
+            cw as usize,
+            ch as usize,
+            &work,
+        );
+        Ok(CommandResult::data(
+            json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+        ))
+    }
+
+    /// `mode:"mask"` — destination-out erase of the layer's canvas-space
+    /// mask alpha. Requires an existing mask (`mask_index`); the layer's
+    /// own transform does not apply because masks are indexed in canvas
+    /// space (same convention as `paintMask`).
+    fn erase_stroke_mask(
+        &mut self,
+        idx: usize,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+        mode: EraseMode,
+    ) -> Result<CommandResult, EngineError> {
+        let (canvas_dabs, dab_count, color) =
+            match self.prepare_stroke_dabs(p, ctx)? {
+                PreparedStroke::Empty { dabs } => {
+                    return Ok(CommandResult {
+                        output: None,
+                        events: Vec::new(),
+                        data: json!({ "ok": true, "dabs": dabs, "mode": mode.as_str() }),
+                    });
+                }
+                PreparedStroke::Preview { count: dabs, bounds, .. } => {
+                    return Ok(CommandResult {
+                        output: None,
+                        events: Vec::new(),
+                        data: json!({
+                            "dabs": dabs,
+                            "mode": mode.as_str(),
+                            "bounds": { "x": bounds.x, "y": bounds.y, "w": bounds.w, "h": bounds.h },
+                        }),
+                    });
+                }
+                PreparedStroke::Ready { dabs, count, color, .. } => (dabs, count, color),
+            };
+
+        let canvas_w = self.width as usize;
+        let canvas_h = self.height as usize;
+        // The mask is canvas-sized; the whole-canvas rect is the stamp
+        // region, so the budget check uses full canvas dims for both the
+        // cancellable and non-cancellable paths.
+        let stamp_work = stroke::stamp_pixel_work(&canvas_dabs, canvas_w, canvas_h, 0, 0);
+        if stamp_work > stroke::MAX_STROKE_PIXELS {
+            return Err(EngineError::validation(format!(
+                "stroke would visit {stamp_work} stamp pixels, exceeding the {} budget",
+                stroke::MAX_STROKE_PIXELS
+            )));
+        }
+
+        let mut task = RenderTask::new(ctx, 1);
+        // Erase into a scratch copy first: cancellation leaves the mask
+        // untouched, and a zero-change erase stays eventless (no journal
+        // entry, no document:changed). Mask ops record a full document
+        // undo entry, same as paintMask.
+        let mut next = self
+            .layers[idx]
+            .mask
+            .as_ref()
+            .expect("mask checked by mask_index")
+            .alpha
+            .as_ref()
+            .clone();
+        let color_alpha = color[3] as f64 / 255.0;
+        // The pixel selection is canvas-space, same space as the mask —
+        // gate directly, no pullback.
+        let sel_mask: Option<&[u8]> = self.selection.as_deref().map(|v| v.as_slice());
+        let changed = stroke::erase_dabs_alpha(
+            &mut next,
+            canvas_w,
+            canvas_h,
+            0,
+            0,
+            &canvas_dabs,
+            color_alpha,
+            sel_mask,
+            canvas_w,
+            &mut task,
+        )?;
+        if changed == 0 {
+            return Ok(CommandResult {
+                output: None,
+                events: Vec::new(),
+                data: json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+            });
+        }
+        task.checkpoint()?;
+        self.record();
+        self.mask_mut(idx).alpha = Arc::new(next);
+        Ok(CommandResult::data(
+            json!({ "ok": true, "dabs": dab_count, "mode": mode.as_str() }),
+        ))
+    }
+
+    // -- vector eraser (B-18 engine side) -------------------------------------
+
+    /// `mode:"vector"` — object eraser, NOT a path boolean. Removes whole
+    /// vector entities (shape and path layers) whose painted geometry
+    /// intersects the brush footprint; it never cuts or reshapes geometry.
+    ///
+    /// `id` is optional and acts as a scope root: absent → every layer in
+    /// the document is a candidate; present → only the subtree of that
+    /// layer (the layer itself when it is a shape/path). Groups, boolean
+    /// containers and raster layers are never removed — boolean *operands*
+    /// are ordinary vector entities, so erasing one changes the boolean's
+    /// rendered result through its remaining operands.
+    ///
+    /// Footprint: each dab with `alpha > 0` contributes its outer-radius
+    /// disc in canvas space (dab alpha magnitude does not scale the hit —
+    /// the eraser is binary per entity). Painted geometry is the same
+    /// model `hitTest`/`layerBounds` use: the fill region (fill-rule aware
+    /// winding of the flattened subpaths, present when the layer defines a
+    /// fill — a path with neither fill nor stroke paints nothing and is
+    /// never a hit) unioned with the stroke band, i.e. points within
+    /// `stroke.width · mean_scale / 2` of the centerline. Miter tips beyond
+    /// that band and square-cap dot corners are approximated, matching
+    /// `hitTest`'s distance model. Layer visibility gates candidates;
+    /// opacity, blend mode, masks, clipping and paint alpha do not — this
+    /// is object-level erase, documented in ENGINE_OPS.md.
+    ///
+    /// Committed strokes that hit nothing return eventless with
+    /// `removed: []`; a hit on a locked entity rejects the whole op with
+    /// `Validation` before any mutation. The dry run applies the same
+    /// gates in the same order — a fully transparent stroke previews
+    /// `removed: []` and a locked hit rejects with `Validation` — so
+    /// `removed` always equals what a commit would erase. One document
+    /// undo entry per committed stroke. Geometry testing is bounded by
+    /// [`MAX_VECTOR_ERASE_TESTS`] primitive visits → `Validation`.
+    fn erase_stroke_vector(
+        &mut self,
+        p: &Value,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let scope: Option<HashSet<u64>> = match p.get("id") {
+            None | Some(Value::Null) => None,
+            Some(v) => {
+                let id = v
+                    .as_u64()
+                    .ok_or_else(|| EngineError::invalid("field 'id' must be a u64"))?;
+                // Validate existence (NotFound) even though subtree_ids
+                // only needs the id value.
+                self.layer_index(id)?;
+                Some(self.subtree_ids(id))
+            }
+        };
+        match self.prepare_stroke_dabs(p, ctx)? {
+            PreparedStroke::Empty { dabs } => read(json!({
+                "ok": true,
+                "dabs": dabs,
+                "mode": EraseMode::Vector.as_str(),
+                "removed": [],
+            })),
+            PreparedStroke::Preview {
+                count,
+                bounds,
+                dabs,
+                transparent,
+            } => {
+                // Mirror the committed path's gates in the same order, so
+                // `removed` is always exactly what a commit would erase:
+                // a fully transparent stroke is eventless (Empty), and a
+                // locked hit rejects with `Validation` before any removal.
+                if transparent {
+                    return read(json!({
+                        "dabs": count,
+                        "mode": EraseMode::Vector.as_str(),
+                        "removed": [],
+                    }));
+                }
+                let footprint: Vec<stroke::Dab> =
+                    dabs.iter().copied().filter(|d| d.alpha > 0.0).collect();
+                let hits = self.vector_erase_hits(&footprint, scope.as_ref(), ctx)?;
+                for &i in &hits {
+                    self.ensure_unlocked(i)?;
+                }
+                let removed: Vec<u64> = hits.iter().map(|&i| self.layers[i].id).collect();
+                read(json!({
+                    "dabs": count,
+                    "mode": EraseMode::Vector.as_str(),
+                    "bounds": { "x": bounds.x, "y": bounds.y, "w": bounds.w, "h": bounds.h },
+                    "removed": removed,
+                }))
+            }
+            PreparedStroke::Ready { dabs, count, .. } => {
+                let footprint: Vec<stroke::Dab> =
+                    dabs.into_iter().filter(|d| d.alpha > 0.0).collect();
+                let hits = self.vector_erase_hits(&footprint, scope.as_ref(), ctx)?;
+                if hits.is_empty() {
+                    return read(json!({
+                        "ok": true,
+                        "dabs": count,
+                        "mode": EraseMode::Vector.as_str(),
+                        "removed": [],
+                    }));
+                }
+                // Validate every hit is unlocked before recording — a
+                // locked entity anywhere in the footprint rejects the
+                // whole stroke atomically.
+                for &i in &hits {
+                    self.ensure_unlocked(i)?;
+                }
+                self.record();
+                let doomed: HashSet<u64> = hits.iter().map(|&i| self.layers[i].id).collect();
+                let removed: Vec<u64> = self
+                    .layers
+                    .iter()
+                    .filter(|l| doomed.contains(&l.id))
+                    .map(|l| l.id)
+                    .collect();
+                self.layers.retain(|l| !doomed.contains(&l.id));
+                self.selected.retain(|s| !doomed.contains(s));
+                Ok(CommandResult::data(json!({
+                    "ok": true,
+                    "dabs": count,
+                    "mode": EraseMode::Vector.as_str(),
+                    "removed": removed,
+                })))
+            }
+        }
+    }
+
+    /// Indices of in-scope, effectively visible vector entities whose
+    /// painted geometry intersects any footprint dab disc, in layer order.
+    /// Read-only; shared by the committed and dry-run paths.
+    fn vector_erase_hits(
+        &self,
+        dabs: &[stroke::Dab],
+        scope: Option<&HashSet<u64>>,
+        ctx: Option<&ignition_core::TaskContext>,
+    ) -> Result<Vec<usize>, EngineError> {
+        if dabs.is_empty() {
+            return Ok(Vec::new());
+        }
+        // Footprint AABB for the cheap entity-level reject.
+        let (mut fx0, mut fy0, mut fx1, mut fy1) =
+            (f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY);
+        for d in dabs {
+            fx0 = fx0.min(d.x - d.radius);
+            fy0 = fy0.min(d.y - d.radius);
+            fx1 = fx1.max(d.x + d.radius);
+            fy1 = fy1.max(d.y + d.radius);
+        }
+        let mut cands = Vec::new();
+        for (i, l) in self.layers.iter().enumerate() {
+            if !l.is_vector() {
+                continue;
+            }
+            if let Some(s) = scope {
+                if !s.contains(&l.id) {
+                    continue;
+                }
+            }
+            if !self.effectively_visible(i) {
+                continue;
+            }
+            cands.push(i);
+        }
+        let mut hits = Vec::new();
+        let mut tests = 0u64;
+        let task = RenderTask::new(ctx, cands.len().max(1) as u64);
+        for (k, &i) in cands.iter().enumerate() {
+            task.tick(k, 8, k as f32 / cands.len().max(1) as f32)?;
+            // Cheap conservative reject before flattening: skip entities
+            // whose control-point bounds cannot reach the footprint.
+            let Some(b) = self.vector_erase_bounds(i) else {
+                continue;
+            };
+            if b.2 < fx0 || b.0 > fx1 || b.3 < fy0 || b.1 > fy1 {
+                continue;
+            }
+            let Some(g) = self.vector_erase_geom(i) else {
+                continue;
+            };
+            tests += 1;
+            if tests > MAX_VECTOR_ERASE_TESTS {
+                return Err(vector_erase_budget_error());
+            }
+            if g.bounds.2 < fx0 || g.bounds.0 > fx1 || g.bounds.3 < fy0 || g.bounds.1 > fy1 {
+                continue;
+            }
+            if vector_geom_hit(&g, dabs, &mut tests, &task)? {
+                hits.push(i);
+            }
+        }
+        Ok(hits)
+    }
+
+    /// `visible` flags of the layer and every ancestor.
+    fn effectively_visible(&self, idx: usize) -> bool {
+        let mut cur = Some(idx);
+        let mut steps = 0;
+        while let Some(i) = cur {
+            if !self.layers[i].visible {
+                return false;
+            }
+            steps += 1;
+            if steps > self.layers.len() {
+                return false;
+            }
+            cur = self.layers[i]
+                .parent
+                .and_then(|p| self.layers.iter().position(|l| l.id == p));
+        }
+        true
+    }
+
+    /// Flattened painted geometry of one vector layer in canvas space, for
+    /// the eraser footprint test. `None` for non-vector content and for
+    /// paths that define neither fill nor stroke (they paint nothing).
+    fn vector_erase_geom(&self, idx: usize) -> Option<VectorEraseGeom> {
+        let layer = &self.layers[idx];
+        let m = self.scene().effective_affine(layer);
+        let shape_subs;
+        let (subpaths, has_fill, fill_rule, stroke): (&[Subpath], bool, FillRule, Option<&Stroke>) =
+            match &layer.content {
+                Content::Shape(s) => {
+                    shape_subs = vector::shape_to_subpaths(s);
+                    (shape_subs.as_slice(), true, FillRule::Nonzero, None)
+                }
+                Content::Path(p) => {
+                    if p.fill.is_none() && p.stroke.is_none() {
+                        return None;
+                    }
+                    (p.subpaths.as_slice(), p.fill.is_some(), p.fill_rule, p.stroke.as_ref())
+                }
+                _ => return None,
+            };
+        let polys = vector::flatten(subpaths, &m);
+        let stroke_hw = stroke.map(|s| s.width * m.mean_scale() / 2.0).unwrap_or(0.0);
+        let mut segs: Vec<(f64, f64, f64, f64, f64)> = Vec::new();
+        let mut dots: Vec<(f64, f64, f64)> = Vec::new();
+        let (mut x0, mut y0, mut x1, mut y1) =
+            (f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY);
+        let mut pts_total = 0usize;
+        for pl in &polys {
+            let pts = &pl.pts;
+            pts_total += pts.len();
+            let n = pts.len();
+            if n == 0 {
+                continue;
+            }
+            for p in pts {
+                x0 = x0.min(p.0);
+                y0 = y0.min(p.1);
+                x1 = x1.max(p.0);
+                y1 = y1.max(p.1);
+            }
+            if n == 1 {
+                // Zero-length subpath: a stroked dot only with round/square
+                // caps (butt draws nothing). Approximated as a disc of the
+                // stroke half-width — square-cap corners under-cover.
+                if let Some(s) = stroke {
+                    if s.cap != LineCap::Butt {
+                        dots.push((pts[0].0, pts[0].1, stroke_hw));
+                    }
+                }
+                continue;
+            }
+            for i in 0..n {
+                let a = pts[i];
+                let b = pts[(i + 1) % n];
+                if (a.0 - b.0).abs() < 1e-9 && (a.1 - b.1).abs() < 1e-9 {
+                    continue;
+                }
+                // Fill treats every subpath as a closed ring; the stroke
+                // centerline is closed only when the subpath is. A segment
+                // that is both gets the stroke pad, which subsumes the
+                // fill-edge threshold. The open-path closing edge exists
+                // only for the fill — skip it for stroke-only geometry.
+                let stroked = stroke.is_some() && (i + 1 < n || pl.closed);
+                if !(has_fill || stroked) {
+                    continue;
+                }
+                let pad = if stroked { stroke_hw } else { 0.0 };
+                segs.push((a.0, a.1, b.0, b.1, pad));
+            }
+        }
+        if segs.is_empty() && dots.is_empty() && !has_fill {
+            return None;
+        }
+        if !x0.is_finite() {
+            return None;
+        }
+        let pad = stroke_hw.max(0.0);
+        Some(VectorEraseGeom {
+            polys,
+            has_fill,
+            fill_rule,
+            segs,
+            dots,
+            pts_total,
+            bounds: (x0 - pad, y0 - pad, x1 + pad, y1 + pad),
+        })
+    }
+
+    /// Conservative canvas-space AABB `(minx, miny, maxx, maxy)` of a
+    /// vector layer's painted geometry, computed without flattening so
+    /// `vector_erase_hits` can reject far-away entities cheaply. A shape's
+    /// bounds are its transformed rect — the ellipse's cubic arcs stay
+    /// inside it — and a path's bounds are the convex hull of its node
+    /// anchors and Bézier control points (a flattened curve never leaves
+    /// its control hull), padded by the stroke half-width. `None` for
+    /// non-vector content and for paths that define neither fill nor
+    /// stroke — the same set `vector_erase_geom` rejects.
+    fn vector_erase_bounds(&self, idx: usize) -> Option<(f64, f64, f64, f64)> {
+        let layer = &self.layers[idx];
+        let m = self.scene().effective_affine(layer);
+        let mut acc: Option<(f64, f64, f64, f64)> = None;
+        let mut extend = |p: (f64, f64)| {
+            acc = Some(match acc {
+                None => (p.0, p.1, p.0, p.1),
+                Some((x0, y0, x1, y1)) => {
+                    (x0.min(p.0), y0.min(p.1), x1.max(p.0), y1.max(p.1))
+                }
+            });
+        };
+        match &layer.content {
+            Content::Shape(s) => {
+                for (cx, cy) in [
+                    (s.x, s.y),
+                    (s.x + s.w, s.y),
+                    (s.x + s.w, s.y + s.h),
+                    (s.x, s.y + s.h),
+                ] {
+                    extend(m.apply(cx, cy));
+                }
+            }
+            Content::Path(p) => {
+                if p.fill.is_none() && p.stroke.is_none() {
+                    return None;
+                }
+                for sp in &p.subpaths {
+                    for n in &sp.nodes {
+                        extend(m.apply(n.x, n.y));
+                        if let Some(h) = n.in_handle {
+                            extend(m.apply(n.x + h[0], n.y + h[1]));
+                        }
+                        if let Some(h) = n.out_handle {
+                            extend(m.apply(n.x + h[0], n.y + h[1]));
+                        }
+                    }
+                }
+                let hw = p
+                    .stroke
+                    .as_ref()
+                    .map(|s| s.width * m.mean_scale() / 2.0)
+                    .unwrap_or(0.0)
+                    .max(0.0);
+                return acc.map(|(x0, y0, x1, y1)| (x0 - hw, y0 - hw, x1 + hw, y1 + hw));
+            }
+            _ => return None,
+        }
+        acc
     }
 }
+
+/// Geometry-test budget for `eraseStroke mode:"vector"`: every dab×entity
+/// AABB check, segment visit, dot visit and fill-winding edge pass counts
+/// once, so hostile path/dab combinations reject with `Validation` before
+/// they can stall the op.
+const MAX_VECTOR_ERASE_TESTS: u64 = 1 << 24;
+
+fn vector_erase_budget_error() -> EngineError {
+    EngineError::validation(format!(
+        "vector erase geometry test exceeds the {MAX_VECTOR_ERASE_TESTS} budget"
+    ))
+}
+
+/// One vector entity's painted geometry in canvas space.
+struct VectorEraseGeom {
+    /// Flattened subpaths for the fill winding test.
+    polys: Vec<vector::Polyline>,
+    /// Whether a fill region exists (fill-rule aware).
+    has_fill: bool,
+    fill_rule: FillRule,
+    /// `(ax, ay, bx, by, pad)` distance-test segments: a dab hits when the
+    /// center-to-segment distance is ≤ `dab.radius + pad`.
+    segs: Vec<(f64, f64, f64, f64, f64)>,
+    /// `(x, y, pad)` degenerate stroked points.
+    dots: Vec<(f64, f64, f64)>,
+    /// Total polyline points — charged per winding evaluation.
+    pts_total: usize,
+    /// `(minx, miny, maxx, maxy)` including the stroke pad.
+    bounds: (f64, f64, f64, f64),
+}
+
+/// Squared-free point-to-segment distance.
+fn point_seg_dist(px: f64, py: f64, ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
+    let (dx, dy) = (bx - ax, by - ay);
+    let l2 = dx * dx + dy * dy;
+    let t = if l2 > 0.0 {
+        (((px - ax) * dx + (py - ay) * dy) / l2).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let (qx, qy) = (ax + t * dx, ay + t * dy);
+    (px - qx).hypot(py - qy)
+}
+
+/// Does any footprint dab disc intersect the entity's painted geometry?
+/// `tests` accumulates primitive visits against [`MAX_VECTOR_ERASE_TESTS`];
+/// `task` checkpoints per dab batch for cancellation.
+fn vector_geom_hit(
+    g: &VectorEraseGeom,
+    dabs: &[stroke::Dab],
+    tests: &mut u64,
+    task: &RenderTask<'_>,
+) -> Result<bool, EngineError> {
+    for (di, d) in dabs.iter().enumerate() {
+        task.tick(di, 32, di as f32 / dabs.len().max(1) as f32)?;
+        let r = d.radius;
+        *tests += 1;
+        if *tests > MAX_VECTOR_ERASE_TESTS {
+            return Err(vector_erase_budget_error());
+        }
+        // Dab disc vs entity bounds (bounds already carry the max pad).
+        if d.x + r < g.bounds.0
+            || d.x - r > g.bounds.2
+            || d.y + r < g.bounds.1
+            || d.y - r > g.bounds.3
+        {
+            continue;
+        }
+        for &(ax, ay, bx, by, pad) in &g.segs {
+            *tests += 1;
+            if *tests > MAX_VECTOR_ERASE_TESTS {
+                return Err(vector_erase_budget_error());
+            }
+            let rr = r + pad;
+            let (sx0, sy0) = (ax.min(bx), ay.min(by));
+            let (sx1, sy1) = (ax.max(bx), ay.max(by));
+            if sx1 < d.x - rr || sx0 > d.x + rr || sy1 < d.y - rr || sy0 > d.y + rr {
+                continue;
+            }
+            if point_seg_dist(d.x, d.y, ax, ay, bx, by) <= rr {
+                return Ok(true);
+            }
+        }
+        for &(px, py, pad) in &g.dots {
+            *tests += 1;
+            if *tests > MAX_VECTOR_ERASE_TESTS {
+                return Err(vector_erase_budget_error());
+            }
+            if point_seg_dist(d.x, d.y, px, py, px, py) <= r + pad {
+                return Ok(true);
+            }
+        }
+        if g.has_fill {
+            // Containment case: a dab disc strictly inside the fill (or a
+            // hole) crosses no edge, so only the winding test at the dab
+            // center distinguishes them. Charged per polyline point.
+            *tests += g.pts_total as u64;
+            if *tests > MAX_VECTOR_ERASE_TESTS {
+                return Err(vector_erase_budget_error());
+            }
+            if vector::point_in_fill(&g.polys, g.fill_rule, d.x, d.y) {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
+/// Result of [`PrismEngine::prepare_stroke_dabs`]'s front half.
+enum PreparedStroke {
+    /// Stroke produced no usable dabs or is fully transparent — the caller
+    /// returns `{ok:true, dabs}` eventless.
+    Empty { dabs: usize },
+    /// `commit:false` dry run — the caller returns `{dabs, bounds}`. The
+    /// canvas-space dabs ride along so `mode:"vector"` can report which
+    /// entities the footprint would erase; raster/mask callers ignore them.
+    Preview {
+        count: usize,
+        bounds: DabBounds,
+        dabs: Vec<stroke::Dab>,
+        /// True when the committed path would take the `Empty` exit
+        /// (transparent brush color or zero alpha on every dab).
+        transparent: bool,
+    },
+    /// Committed stroke ready to stamp: canvas-space dabs, dab count, and
+    /// the brush color (paint needs the full RGBA; erase uses `color[3]`
+    /// as its strength multiplier). The clipped canvas bounds were only
+    /// needed for the dry-run preview, which `Preview` already carries.
+    Ready {
+        dabs: Vec<stroke::Dab>,
+        count: usize,
+        color: [u8; 4],
+    },
+}
+
+/// Integer-clipped canvas-space dab bounds.
+struct DabBounds {
+    x: u32,
+    y: u32,
+    w: u32,
+    h: u32,
+}
+
+/// Eraser target selected by `eraseStroke.mode`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EraseMode {
+    Pixel,
+    Mask,
+    Vector,
+}
+
+impl EraseMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            EraseMode::Pixel => "pixel",
+            EraseMode::Mask => "mask",
+            EraseMode::Vector => "vector",
+        }
+    }
+}
+

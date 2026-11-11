@@ -97,6 +97,33 @@ mod tests {
     }
 
     #[test]
+    fn folio_add_file_attachment_accepts_binary_sidecar() {
+        // `binary_input_ops` is the host-side gate: without
+        // "addFileAttachment" listed, `input` bytes never reach the op.
+        let mut folio = factory(EngineKind::Folio).unwrap();
+        run_command(
+            folio.as_mut(),
+            Command::new("new", json!({ "pages": 1 })),
+            None,
+        )
+        .unwrap();
+        let add = Command::new("addFileAttachment", json!({ "name": "raw.bin" }))
+            .with_binary(Some(b"sidecar bytes".to_vec()));
+        run_command(folio.as_mut(), add, None).unwrap();
+        let got = run_command(
+            folio.as_mut(),
+            Command::new("getAttachment", json!({ "name": "raw.bin" })),
+            None,
+        )
+        .unwrap();
+        let b64 = got.data["bytes_b64"].as_str().unwrap();
+        assert_eq!(
+            ignition_core::base64_decode(b64).unwrap(),
+            b"sidecar bytes".to_vec()
+        );
+    }
+
+    #[test]
     fn binary_snapshot_returns_raw_envelope_bytes() {
         let mut tally = factory(EngineKind::Tally).unwrap();
         let cmd = Command::new(OP_SNAPSHOT, json!({})).with_binary(None);

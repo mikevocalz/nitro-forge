@@ -1,0 +1,90 @@
+W31 Android emulator runtime probes — scene engine (kind "scene", ENGINE_KINDS tag 11)
+=====================================================================================
+
+Target: Android emulator AVD "ForgeCompletion_API36", serial emulator-5554,
+Android 16 (API 36), arm64-v8a, ro.kernel.qemu=1. Emulator scope only; this is
+not physical-device validation.
+
+App: ai.nitroforge.cadence.studio (examples/native-cadence debug build)
+Source revision: 313973fba0a6a5c3ed359c0d978d8eef36143ac9
+  (codex/complete-all-components HEAD; ENGINE_KINDS in
+  packages/ignition/src/types.ts lists all 12 kinds ending in "scene";
+  rust/nf-sys/src/lib.rs:43 registers SceneEngine for EngineKind::Scene)
+Worktree: forge-w31-scene-android, branch codex/w31-scene-android.
+
+Native runtime: lib/arm64-v8a/libNitroForgeV1.so inside the APK was rebuilt at
+this revision. Rust archive built with
+  ANDROID_NDK_HOME=~/Library/Android/sdk/ndk/27.1.12297006 \
+    bash packages/ignition/scripts/build-android.sh arm64-v8a
+(cargo ndk -t arm64-v8a --platform 24 build --locked --release -p nf-sys;
+cargo-ndk from ~/.cargo/bin). Gradle externalNativeBuild
+(:nitro-forge_ignition:buildCMakeDebug[arm64-v8a]) linked it via CMakeLists.txt.
+strings() on the APK's libNitroForgeV1.so shows scene_engine symbols
+(SceneEngine::new, Engine::apply/snapshot/restore/undo/redo/apply_batch,
+bilinear_filter, is_down3).
+
+JS bundle: Metro dev bundle served by `expo start --port 8084 --localhost`
+from forge-w31-scene-android/examples/native-cadence; adb reverse tcp:8081
+tcp:8084. NOTE: host ports 8081 and 8082 were already bound by other sessions'
+Metro processes (forge-w28-ios on 8081; a zombie expo start on 8082 whose
+cwd forge-w29-android no longer exists — left running untouched per session
+rules), so this run used 8084 and repointed the emulator's reverse from
+8081->8082 to 8081->8084. Workspace packages (@nitro-forge/ignition,
+cadence, telemetry) resolved to this worktree's sources via the standalone
+pnpm workspace in examples/native-cadence (pnpm install --frozen-lockfile).
+
+Probe 1 — "Verify native engines" (verify-engines.ts)
+-----------------------------------------------------
+Metro console (verbatim):
+
+  INFO  Native engine round trips passed: prism, cadence, splice, folio,
+  pitch, tally, quill, photo, motion, design, draft, scene. Cadence edit,
+  undo, redo and reopen passed.
+
+The same string is rendered in the app UI (accessibility tree StaticText,
+accessibilityLiveRegion="polite"):
+
+  "Native engine round trips passed: prism, cadence, splice, folio, pitch,
+  tally, quill, photo, motion, design, draft, scene. Cadence edit, undo,
+  redo and reopen passed."
+
+Result: ALL 12 registered engine kinds passed on the emulator — new ->
+describe -> NFD1 snapshot -> restore -> describe equality -> invalid-restore
+rejection with state unchanged -> close -> closed-handle rejection — including
+scene (kind tag 11). Draft now also passes: verify-engines.ts at this revision
+strips the intentionally bumped source_revision before comparing describe
+output (the W29 "document fields differ" caveat is resolved at harness level).
+Cadence instrument edit/undo/redo/reopen session passed.
+
+Screenshot: W31-android-engines-all12-pass.png
+
+Probe 2 — "Verify quill renderPage" (verify-quill-render.ts)
+------------------------------------------------------------
+Metro console (verbatim):
+
+  INFO  Quill renderPage passed: registerFont ok sha256=f6a446f65dbd…;
+  renderPage fixed-geometry 267x133 inked; renderPage deterministic;
+  renderPage use_sections section=0 number=1 816x1056 inked; renderPage
+  empty-font rejection ok; renderPage out-of-range-page rejection ok.
+
+Rendered in-app as a StaticText as well. Same coverage as W29: registerFont
+with deterministic test font, fixed-geometry 200pt x 100pt render at 96dpi,
+determinism, use_sections pagination, empty-font and out-of-range-page
+rejections.
+
+Screenshot: W31-android-quill-renderpage-pass.png
+
+Probe 3 — "Verify native services" (verify-services.ts)
+--------------------------------------------------------
+Metro console and in-app StaticText (verbatim):
+
+  Native services passed: bounded LRU, owned binary buffers, task
+  progress/results, cancellation and cleanup.
+
+Screenshot: W31-android-services-pass.png
+
+Not exercised in this pass: verify-native-telemetry UI probe, nf-color,
+splice-render, raw-decode, scene-render provider paths, and NYC-Tron
+platform-services encoder / speech / audio providers. Engine-kind coverage
+(scene included) is proven; provider-level scene render paths remain
+build/source-level unless separately proven.

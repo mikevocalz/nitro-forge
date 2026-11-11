@@ -173,6 +173,47 @@ fn malformed_input_resize_restore_and_raster_budgets_reject_atomically() {
     assert_eq!(e.snapshot().unwrap(), before);
 }
 #[test]
+fn update_layer_retargets_asset_with_atomic_validation() {
+    let mut e = MotionEngine::new();
+    call(&mut e, "new", json!({"width":2,"height":1,"duration_s":1}));
+    let a = ingest(&mut e, 1, 1, vec![255, 0, 0, 255]);
+    let b = ingest(&mut e, 1, 1, vec![0, 255, 0, 255]);
+    let l = layer(&mut e, a);
+    let before = e.snapshot().unwrap();
+    // Unknown and cleared asset references reject without touching state.
+    for patch in [
+        json!({"id":l,"asset_id":99}),
+        json!({"id":l,"asset_id":null}),
+    ] {
+        assert!(e.apply(Command::new("updateLayer", patch)).is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    // A valid retarget succeeds and renders the new asset's pixels.
+    call(&mut e, "updateLayer", json!({"id":l,"asset_id":b}));
+    assert_eq!(pixels(&mut e, 0.), vec![0, 255, 0, 255, 0, 0, 0, 0]);
+    // content kind cannot change: shape/comp layers reject asset_id patches.
+    let s = call(
+        &mut e,
+        "addShapeLayer",
+        json!({"shape":{"kind":"rect","x":0,"y":0,"w":1,"h":1,"fill":[0,0,255,255]}}),
+    )
+    .data["layer_id"]
+        .as_u64()
+        .unwrap();
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("updateLayer", json!({"id":s,"asset_id":b})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+    // An asset that no longer fits the containing composition rejects.
+    let big = ingest(&mut e, 2, 2, vec![0, 0, 255, 255].repeat(4));
+    let before = e.snapshot().unwrap();
+    assert!(e
+        .apply(Command::new("updateLayer", json!({"id":l,"asset_id":big})))
+        .is_err());
+    assert_eq!(e.snapshot().unwrap(), before);
+}
+#[test]
 fn wholly_transparent_rasters_render_even_with_nonzero_pivot() {
     let mut e = MotionEngine::new();
     call(&mut e, "new", json!({"width":2,"height":1}));

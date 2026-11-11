@@ -194,17 +194,7 @@ impl Engine for PhotoEngine {
     }
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let staged = Self {
-                state: Arc::clone(&self.state),
-                journal: Journal::new(1),
-            };
-            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
-            if result.events.iter().any(|e| e.kind == "document:changed") {
-                self.journal.record(Arc::clone(&self.state));
-                self.state = staged.state;
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         if cmd.v != 1 {
             return Err(EngineError::unsupported(
@@ -343,8 +333,25 @@ impl Engine for PhotoEngine {
         };
         self.replace(next, data)
     }
+    fn apply_batch(&mut self, cmd: Command, ctx: Option<&ignition_core::TaskContext>) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let staged = Self {
+            state: Arc::clone(&self.state),
+            journal: Journal::new(1),
+        };
+        let (staged, result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if result.events.iter().any(|e| e.kind == "document:changed") {
+            self.journal.record(Arc::clone(&self.state));
+            self.state = staged.state;
+        }
+        Ok(result)
+    }
     fn binary_input_ops(&self) -> &'static [&'static str] { &["processPreview"] }
     fn apply_long(&mut self, command: Command, ctx: &ignition_core::TaskContext) -> Result<CommandResult, EngineError> {
+        if command.op == ignition_core::OP_BATCH { return self.apply_batch(command, Some(ctx)); }
         if command.v != 1 { return Err(EngineError::unsupported("unsupported photo command version")); }
         if command.op == "processPreview" { return self.process_preview(command, Some(ctx)); }
         ctx.checkpoint()?;let result=self.apply(command)?;ctx.set_progress(1.0);Ok(result)

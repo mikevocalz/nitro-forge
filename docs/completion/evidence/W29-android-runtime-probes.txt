@@ -1,0 +1,82 @@
+W29 Android emulator runtime probes — raw UI results
+=====================================================
+
+Target: Android emulator AVD "ForgeCompletion_API36", serial emulator-5554,
+Android 16 (API 36), arm64-v8a, ro.kernel.qemu=1. Emulator scope only; this is
+not physical-device validation.
+
+App: ai.nitroforge.cadence.studio (examples/native-cadence debug build)
+Source revision: c3cbbbf3c88d04430ce61b4a1eec0593dfbe3e21
+  (merge: scene-render tier-1 deterministic CPU rasterizer, P17 Track-B B0)
+  plus the probe changes committed on codex/w29-android-evidence:
+  - examples/native-cadence/verify-engines.ts: describe calls pass payload {},
+    per-engine failures are collected instead of aborting the probe, and a
+    describe mismatch is classified as "document fields differ" vs
+    "describe fields identical except source_revision".
+  - examples/native-cadence/App.tsx + verify-quill-render.ts +
+    quill-test-font.ts: "Verify quill renderPage" action (new in this branch).
+
+Native runtime: Metro dev bundle served by `expo start --port 8082 --localhost`
+from forge-w29-android/examples/native-cadence; adb reverse tcp:8081 tcp:8082.
+Workspace packages (@nitro-forge/ignition, cadence, telemetry) resolved to the
+worktree sources; third-party deps resolved from the shared pnpm store of the
+main checkout (identical locked versions). Installed APK pulled back from the
+device and hashed: a818a0565f01179e8253965fb2f11801cb8200eacdb0f81d0561bfae80129c23
+(90,535,850 bytes; arm64-v8a only; lib/arm64-v8a/libNitroForgeV1.so sha256
+850dba7c592080af519939e47ac5163a5399a972011753d889354d097d5fd257).
+strings() on libNitroForgeV1.so lists exactly the 11 ENGINE_KINDS registered at
+c3cbbbf (prism, cadence, splice, folio, pitch, tally, quill, photo, motion,
+design, draft) — no "scene" engine, consistent with this revision.
+
+Probe 1 — "Verify native engines" (verify-engines.ts)
+-----------------------------------------------------
+Result shown in app (accessibility tree) and Metro console:
+
+  engine failures: draft: draft: snapshot round trip changed document
+  (describe fields identical except source_revision). Passed: prism, cadence,
+  splice, folio, pitch, tally, quill, photo, motion, design. Cadence edit,
+  undo, redo and reopen passed.
+
+Reading: for each of the 11 registered kinds the probe ran new -> describe ->
+NFD1 snapshot -> restore -> describe equality -> invalid-restore rejection with
+state unchanged -> close -> closed-handle rejection. Ten kinds passed all of
+it. Draft passed snapshot envelope, invalid-restore atomicity and close, but
+its describe output differs after a valid restore ONLY in source_revision:
+packages/draft/rust/src/engine.rs restore() intentionally consumes a revision
+(next_revision() at ~line 1578) and describe reports source_revision, so the
+strict full-JSON equality fails. All document fields are identical. Whether a
+revision bump on restore should be reflected in describe is a contract
+question for review; it is not silent state loss.
+
+Screenshot: W29-android-engines-draft-source-revision.png
+
+Probe 2 — "Verify quill renderPage" (verify-quill-render.ts, new on branch)
+--------------------------------------------------------------------------
+Result shown in app and Metro console:
+
+  Quill renderPage passed on device: registerFont ok sha256=f6a446f65dbd…;
+  renderPage fixed-geometry 267x133 inked; renderPage deterministic;
+  renderPage use_sections section=0 number=1 816x1056 inked; renderPage
+  empty-font rejection ok; renderPage out-of-range-page rejection ok.
+
+Covers quill renderPage R1-R3 on the real Nitro host: registerFont with a
+deterministic test font, fixed-geometry 200pt x 100pt render at 96dpi
+(267x133 px RGBA), determinism on repeat, use_sections pagination path,
+empty-font and out-of-range-page rejections.
+
+Screenshot: W29-android-quill-renderpage-pass.png
+
+Probe 3 — "Verify native services" (verify-services.ts, pre-existing)
+---------------------------------------------------------------------
+Result shown in app and Metro console:
+
+  Native services passed: bounded LRU, owned binary buffers, task
+  progress/results, cancellation and cleanup.
+
+Screenshot: W29-android-services-pass.png
+
+Not exercised on Android in this pass: nf-color, splice-render, raw-decode,
+scene-render provider paths, and the NYC-Tron platform-services encoder /
+speech / audio providers. Those landed after this APK's revision or have no
+on-device probe wired into this app; their status remains build/source-level
+unless separately proven. "Verify native telemetry" was not run in this pass.

@@ -80,6 +80,15 @@ Complete real rendering, transforms, selection, masks, crop/encode, artboards an
 
 Implement brush/dynamics/taper/stabilization, pixel/vector/mask erasing, hardware input/prediction/Muse integration and actual timelapse encoding.
 
+Progress (`codex/w5-prism-brush`): Prism brush/stroke engine landed —
+`modelStroke` (spec-level reimplementation of the google/ink
+ink-stroke-modeler smoothing/spring/prediction pipeline), brush preset CRUD
+(`addBrush`/`setBrush`/`removeBrush`/`listBrushes`), and `paintStroke` dab
+commit. Details and fidelity/deferral notes:
+`docs/completion/reports/P06-prism-brush-engine.md`. Erase modes, timelapse
+encoding, hardware stylus/palm-rejection/Muse input and the UI components
+(B-15/B-16/B-17/B-29/B-32/B-33, N-01/N-04) remain open.
+
 ### P07 — Color and image processing
 
 Complete color spaces/gamut/ICC/proof, swatches/gradients/mesh, histograms/curves/grading/scopes and actual eyedropper sampling.
@@ -184,8 +193,8 @@ Publish all completed packages and platform artifacts, verify checksums/exports/
 | B-12 | MaskThumbnailAndEditor | P05 | BUILT-LOCAL | publication and native/device acceptance pending; prism mask model (absent) |
 | B-13 | ClippingMaskControls | P05 | BUILT-LOCAL | publication and native/device acceptance pending; prism clipping (absent) |
 | B-14 | ArtboardNavigator | P05 | BUILT-LOCAL | publication and native/device acceptance pending; prism has one canvas; pitch slides exist |
-| B-15 | BrushPresetBrowser | P06 | ABSENT | none; brush engine (absent) |
-| B-16 | BrushDynamicsInspector | P06 | ABSENT | none; brush engine |
+| B-15 | BrushPresetBrowser | P06 | ABSENT | engine brush presets landed (`addBrush`/`setBrush`/`removeBrush`/`listBrushes`, `codex/w5-prism-brush`); UI component not built |
+| B-16 | BrushDynamicsInspector | P06 | ABSENT | engine dynamics coefficients landed on brushes (`dynamics` field); UI inspector not built |
 | B-17 | InkStrokePreview | P06 | PARTIAL | tilt/twist + latency readout absent; board ink |
 | B-18 | EraserModePicker | P06 | PARTIAL | mode picker UI only; pixel/vector/mask erase engines absent; board erase + prism raster erase (absent) |
 | B-19 | SelectionMarquee | P05 | BUILT-LOCAL | publication and native/device acceptance pending; prism selection model |
@@ -198,11 +207,11 @@ Publish all completed packages and platform artifacts, verify checksums/exports/
 | B-26 | GuidedCropAndStraighten | P05 | PARTIAL | ratio presets + straighten absent; no real crop op; prism crop/resize op (resize only) |
 | B-27 | CanvasCompareView | P05 | BUILT-LOCAL | publication and native/device acceptance pending; prism flatten (exists) |
 | B-28 | FloatingPaletteUndockHandle | P05 | DONE | device gates only; none |
-| B-29 | BrushTaperControl | P06 | ABSENT | none; brush engine |
+| B-29 | BrushTaperControl | P06 | ABSENT | engine `taper` field landed on brushes; UI control not built |
 | B-30 | ColorDropCanvasTarget | P05 | BUILT-LOCAL | publication and native/device acceptance pending; prism ops: fillLayer exists (raster only) |
 | B-31 | ReferenceImageBoard | P05 | BUILT-LOCAL | publication and native/device acceptance pending; none (reference images are not document state) |
 | B-32 | TimelapsePlaybackExporter | P06 | ABSENT | no encoder in any engine; history replay + video encoder (absent) |
-| B-33 | BrushStabilizationPreview | P06 | ABSENT | none; ink stabilizer (google/ink candidate, forge #46) |
+| B-33 | BrushStabilizationPreview | P06 | ABSENT | engine stroke modeler landed (`modelStroke` smoothing/spring/prediction); live preview UI not built |
 | B-34 | GestureCustomizationPanel | P05 | BUILT-LOCAL | publication and native/device acceptance pending; none |
 | C-01 | ColorPickerDialog | P07 | BUILT-LOCAL | native/device acceptance and publication pending; Prism setColors/swapColors/getColors/setFill implemented; previews host-owned |
 | C-02 | SVColorField | P07 | DONE | device gates only; none |

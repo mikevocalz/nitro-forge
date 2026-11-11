@@ -11,11 +11,13 @@ enum Op {
     Gt,
     Ge,
 }
+#[derive(Clone, Copy)]
 enum Token {
     Literal(char),
     Any,
     Star,
 }
+#[derive(Clone)]
 enum Criterion {
     Number(Op, f64),
     Text(Op, Vec<Token>),
@@ -141,6 +143,35 @@ impl Criterion {
         }
     }
 }
+/// A parsed COUNTIF-style criteria string, reusable across many computed
+/// values (conditional-format rules evaluate one criteria per cell).
+#[derive(Clone)]
+pub struct CriteriaMatcher(Criterion);
+
+impl CriteriaMatcher {
+    /// Parse a criteria string (`">=3"`, `"apple*"`, `""`, …) under the same
+    /// rules `COUNTIF` applies to its criteria argument: numbers and
+    /// `=`/`<>`/`<`/`<=`/`>`/`>=`-prefixed numerics compare numbers only,
+    /// text supports `*`/`?`/`~` wildcards with ASCII-case-insensitive
+    /// matching, and relational non-numeric text rejects.
+    pub fn parse(criteria: &str) -> Result<Self, Value> {
+        let mut work = 0usize;
+        criterion(Value::Str(criteria.to_string()), &mut work).map(Self)
+    }
+
+    /// Whether `criteria` parses; used by op validation and hostile-restore
+    /// checks so stored rules always satisfy the matcher.
+    pub fn is_valid(criteria: &str) -> bool {
+        Self::parse(criteria).is_ok()
+    }
+
+    /// Test a computed cell value against the criteria. `work` is the shared
+    /// per-evaluator conditional allowance; exhaustion returns `#NUM!`.
+    pub fn matches(&self, value: &Value, work: &mut usize) -> Result<bool, Value> {
+        self.0.matches(value.clone(), work)
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Rect {
     c: u32,
@@ -148,16 +179,7 @@ struct Rect {
     w: u32,
     h: u32,
 }
-fn rect(expr: &Expr) -> Result<Rect, Value> {
-    let (c0, r0, c1, r1) = match expr {
-        Expr::Cell(a) => {
-            let (c, r) = parse_addr(a).ok_or(Value::Err(ERR_REF))?;
-            (c, r, c, r)
-        }
-        Expr::Range { c0, r0, c1, r1 } => (*c0, *r0, *c1, *r1),
-        Expr::BadRef => return Err(Value::Err(ERR_REF)),
-        _ => return Err(Value::Err(ERR_VALUE)),
-    };
+fn rect_coords(c0: u32, r0: u32, c1: u32, r1: u32) -> Result<Rect, Value> {
     if !on_sheet(c0, r0) || !on_sheet(c1, r1) {
         return Err(Value::Err(ERR_REF));
     }
@@ -168,15 +190,42 @@ fn rect(expr: &Expr) -> Result<Rect, Value> {
     }
     Ok(Rect { c: c0, r: r0, w, h })
 }
+
+fn rect(expr: &Expr) -> Result<Rect, Value> {
+    let (c0, r0, c1, r1) = match expr {
+        Expr::Cell(a) => {
+            let (c, r) = parse_addr(a).ok_or(Value::Err(ERR_REF))?;
+            (c, r, c, r)
+        }
+        Expr::Range { c0, r0, c1, r1 } => (*c0, *r0, *c1, *r1),
+        Expr::BadRef => return Err(Value::Err(ERR_REF)),
+        _ => return Err(Value::Err(ERR_VALUE)),
+    };
+    rect_coords(c0, r0, c1, r1)
+}
+
 impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
+    /// Range argument for COUNTIF/SUMIF: a literal ref/range, or a defined
+    /// name bound to this sheet (unresolved names stay `#VALUE!`, matching
+    /// how a non-rectangle argument is rejected).
+    fn rect_arg(&self, expr: &Expr) -> Result<Rect, Value> {
+        if let Expr::Name(name) = expr {
+            if let Some((c0, r0, c1, r1)) = self.name_rect(name) {
+                return rect_coords(c0, r0, c1, r1);
+            }
+            return Err(Value::Err(ERR_VALUE));
+        }
+        rect(expr)
+    }
+
     pub(super) fn conditional(&mut self, args: &[Expr], sum: bool) -> Value {
         let result = (|| -> Result<Value, Value> {
             if (!sum && args.len() != 2) || (sum && !(2..=3).contains(&args.len())) {
                 return Err(Value::Err(ERR_VALUE));
             }
-            let criteria_range = rect(&args[0])?;
+            let criteria_range = self.rect_arg(&args[0])?;
             let sum_range = if sum && args.len() == 3 {
-                rect(&args[2])?
+                self.rect_arg(&args[2])?
             } else {
                 criteria_range
             };
@@ -189,13 +238,22 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
             for row in 0..criteria_range.h {
                 for col in 0..criteria_range.w {
                     spend(&mut self.conditional_work, 1)?;
-                    let value =
-                        self.eval_cell(&fmt_addr(criteria_range.c + col, criteria_range.r + row));
+                    // COUNTIF/SUMIF ranges are same-sheet by contract, so
+                    // the cells live on `current` — the sheet whose
+                    // formula is evaluating, which may differ from `home`
+                    // when a cross-sheet reference pulled this formula in.
+                    let value = self.eval_at(
+                        self.current,
+                        &fmt_addr(criteria_range.c + col, criteria_range.r + row),
+                    );
                     if criteria.matches(value, &mut self.conditional_work)? {
                         if !sum {
                             result += 1.0;
                         } else {
-                            match self.eval_cell(&fmt_addr(sum_range.c + col, sum_range.r + row)) {
+                            match self.eval_at(
+                                self.current,
+                                &fmt_addr(sum_range.c + col, sum_range.r + row),
+                            ) {
                                 Value::Num(n) => {
                                     result += n;
                                     if !result.is_finite() {
@@ -212,6 +270,36 @@ impl<'a, S: CellLookup + ?Sized> Evaluator<'a, S> {
             Ok(Value::Num(result))
         })();
         result.unwrap_or_else(|error| error)
+    }
+
+    /// Charge `n` units of the shared per-evaluator conditional allowance for
+    /// work that is not a criteria match — `sortRange` uses this for key-cell
+    /// evaluations and sort comparisons so large sorts cannot run unbounded.
+    /// Exhaustion returns the `#NUM!` error value; callers map it to an op
+    /// error before mutating.
+    pub fn charge_work(&mut self, n: usize) -> Result<(), Value> {
+        spend(&mut self.conditional_work, n)
+    }
+
+    /// Test an already-computed value against `matcher`, sharing the
+    /// evaluator's conditional work allowance. Every candidate rule-cell
+    /// evaluation is charged one unit up front — numeric comparisons,
+    /// empty-criteria matches and type mismatches never reach `pattern`'s
+    /// inner spends, so without the flat charge a large rule×cell product
+    /// (conditional formats evaluate up to 256 rules over 16,384 cells)
+    /// could serialize unbounded match reports. Error-valued cells never
+    /// match; matcher failures (work exhaustion, over-long text) surface as
+    /// `Err`. Pair with `eval_cell` so the cell evaluates once per request.
+    pub fn match_value(
+        &mut self,
+        value: &Value,
+        matcher: &CriteriaMatcher,
+    ) -> Result<bool, Value> {
+        spend(&mut self.conditional_work, 1)?;
+        match value {
+            Value::Err(_) => Ok(false),
+            _ => matcher.matches(value, &mut self.conditional_work),
+        }
     }
 }
 

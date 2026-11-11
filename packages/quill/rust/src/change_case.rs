@@ -51,6 +51,13 @@ impl QuillEngine {
                     .ok_or_else(|| EngineError::validation("changeCase context exceeds 1 MiB"))?;
             }
         }
+        // Re-anchor position marks inside the affected blocks through the
+        // conversion: each mark keeps the output offset produced by the
+        // source scalars before it (case mapping can expand one scalar
+        // into several, e.g. ß → SS). `offset_maps` records, per affected
+        // block, the output offset before each source scalar (plus the
+        // final length); bookmarks and comment anchors share the mapping.
+        let mut offset_maps: Vec<(usize, Vec<usize>)> = Vec::with_capacity(span.len());
         let mut next = Vec::with_capacity(span.len());
         let mut output_bytes = 0usize;
         let mut changed = false;
@@ -73,6 +80,8 @@ impl QuillEngine {
             let mut offset = 0;
             let mut selected_chars = 0;
             let mut inlines = Vec::new();
+            let mut produced = 0usize;
+            let mut offset_map = Vec::with_capacity(offset + 1);
             let mut word = false;
             let mut sentence = true;
             let mut punctuation = false;
@@ -135,10 +144,17 @@ impl QuillEngine {
                     } else {
                         c.to_string()
                     };
+                    // Marks at this source boundary keep the output
+                    // offset produced so far.
+                    offset_map.push(produced);
                     append(&mut inlines, &text, &inline.style);
+                    produced += text.chars().count();
                     offset += 1;
                 }
             }
+            // Marks at the block end map to the converted block length.
+            offset_map.push(produced);
+            offset_maps.push((block_index, offset_map));
             if lower.next().is_some() {
                 return Err(EngineError::unsupported(
                     "Unicode lowercase alignment changed",
@@ -150,18 +166,65 @@ impl QuillEngine {
             next.push(Block {
                 kind: block.kind,
                 list: block.list.clone(),
+                style_id: block.style_id.clone(),
                 inlines,
+                // Table blocks carry no case-able text; the payload is
+                // preserved verbatim through the clone. Same for toc and
+                // bibliography field payloads (also no case-able text).
+                table: block.table.clone(),
+                toc: block.toc.clone(),
+                bibliography: block.bibliography.clone(),
+                format: block.format.clone(),
             });
         }
         if !changed {
             return Ok(Self::read_only(response(to)));
         }
+        let bookmarks_before = self.bookmarks.clone();
+        let comments_before = self.comments.clone();
+        let revisions_before = self.revisions.clone();
+        let footnotes_before = self.footnotes.clone();
+        let citations_before = self.citations.clone();
+        for (bi, map) in &offset_maps {
+            for bm in self.bookmarks.iter_mut().filter(|b| b.block == *bi) {
+                bm.offset = map[bm.offset];
+            }
+            for c in self.comments.iter_mut() {
+                if c.from.block == *bi {
+                    c.from.offset = map[c.from.offset];
+                }
+                if c.to.block == *bi {
+                    c.to.offset = map[c.to.offset];
+                }
+            }
+            for f in self.footnotes.iter_mut() {
+                if f.at.block == *bi {
+                    f.at.offset = map[f.at.offset];
+                }
+            }
+            for c in self.citations.iter_mut() {
+                if c.at.block == *bi {
+                    c.at.offset = map[c.at.offset];
+                }
+            }
+        }
+        // `span` borrows `self.blocks`; end that borrow before the
+        // whole-engine remap call.
         let removed = span.to_vec();
-        self.journal.record(UndoEntry {
-            index: from.block,
+        self.remap_revisions_change_case(&offset_maps);
+        self.record_undo(
+            from.block,
             removed,
-            inserted: next.clone(),
-        });
+            next.clone(),
+            Collections {
+                bookmarks: Some(bookmarks_before),
+                comments: Some(comments_before),
+                revisions: Some(revisions_before),
+                footnotes: Some(footnotes_before),
+                citations: Some(citations_before),
+                ..Default::default()
+            },
+        );
         self.blocks.splice(from.block..=to.block, next);
         Ok(CommandResult::data(response(end)))
     }
@@ -213,6 +276,11 @@ mod tests {
         e.blocks = vec![Block {
             kind: BlockKind::H1,
             list: None,
+            style_id: None,
+            table: None,
+            toc: None,
+            bibliography: None,
+            format: None,
             inlines: vec![
                 run("a", Style::default()),
                 run("ß", style.clone()),
@@ -278,11 +346,21 @@ mod tests {
             Block {
                 kind: BlockKind::Para,
                 list: None,
+                style_id: None,
+                table: None,
+                toc: None,
+                bibliography: None,
+                format: None,
                 inlines: vec![run("abß", Style::default())],
             },
             Block {
                 kind: BlockKind::Quote,
                 list: None,
+                style_id: None,
+                table: None,
+                toc: None,
+                bibliography: None,
+                format: None,
                 inlines: vec![run("éz", Style::default())],
             },
         ];

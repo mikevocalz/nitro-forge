@@ -121,8 +121,8 @@ like the NYC-Tron props.
 | I-02 | `SpreadsheetGrid` `onFillRange` | `commitTallyFill` → `fillRange`; rectangular paste via `setRange` | Implemented in the engine: reference shifting and one undo entry per edit. Callback shape matches the unreleased UI cluster; release-pin update remains pending. |
 | I-06 | `SpreadsheetGrid` outlines, `forge/spreadsheet/FormulaReferenceText` | none needed: references come from the formula text | BUILD |
 | I-08 | `forge/spreadsheet/SheetTabs` | `bindTallySheetTabs` → `onSelect`/`onAdd`/`onRename`/`onRemove` over `setActive`/`addSheet`/`renameSheet`/`removeSheet` | BUILD; duplicate, move, protect and tab color **DEFER** on ops `duplicateSheet`, `moveSheet`, `protectSheet`, `setSheetColor` |
-| I-13 | `forge/spreadsheet/ChartBuilder` | `readTallyRange` for the data | BUILD for building and previewing; saving **DEFER** on op `insertChart` (leave `onInsert` unset) |
-| I-14 | `forge/spreadsheet/SparklineEditor`, `Sparkline` | `readTallyRange` | BUILD for editing and drawing in a cell; saving **DEFER** on op `setSparkline` |
+| I-13 | `forge/spreadsheet/ChartBuilder` | `readTallyRange` for the data; `insertChart`/`updateChart`/`removeChart`/`listCharts` persist bounded specs (schema:5) | BUILD; saving **IMPLEMENTED** (storage-only — host renders) |
+| I-14 | `forge/spreadsheet/SparklineEditor`, `Sparkline` | `readTallyRange`; `setSparkline`/`clearSparkline`/`listSparklines` persist bounded specs (schema:5) | BUILD; saving **IMPLEMENTED** (storage-only — host renders) |
 | I-17 | `forge/spreadsheet/FreezeSplitControls`, `SplitSpreadsheetView` | none: app view state feeding `frozenRows`/`frozenColumns` | BUILD; saving with the workbook **DEFER** on op `setSheetView` |
 | I-20 | `forge/spreadsheet/SpreadsheetCardsView` | `readTallyRange`, `commitTallyCardField` (`setCell`) | BUILD |
 

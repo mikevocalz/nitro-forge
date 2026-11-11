@@ -314,15 +314,18 @@ impl QuillEngine {
             _ => return Err(EngineError::unsupported("unknown list operation")),
         }
         validate(&next)?;
+        // List ops rewrite `kind`/`list` over a block range; a table, toc,
+        // or bibliography block inside it would lose its kind/payload
+        // invariant, so the merged candidate must still satisfy table,
+        // toc, and bibliography validation.
+        crate::tables::validate_tables(&next)?;
+        crate::toc::validate_toc(&next)?;
+        crate::citations::validate_bibliography(&next)?;
         if next == self.blocks {
             return Ok(Self::read_only(json!({"ok":true})));
         }
         let removed = self.blocks.clone();
-        self.journal.record(UndoEntry {
-            index: 0,
-            removed,
-            inserted: next.clone(),
-        });
+        self.record_undo(0, removed, next.clone(), Collections::default());
         self.blocks = next;
         Ok(CommandResult::data(json!({"ok":true})))
     }
@@ -532,6 +535,129 @@ mod tests {
             assert_eq!(e.snapshot().unwrap(), before);
         }
         assert!(e.redo().unwrap());
+    }
+    #[test]
+    fn list_ops_cannot_corrupt_toc_blocks() {
+        // h1 "Alpha", h2 "Beta", para "body", h3 "Gamma", toc field at 4.
+        let mut e = QuillEngine::new();
+        for (index, kind_name, text) in [
+            (0usize, "h1", "Alpha"),
+            (1, "h2", "Beta"),
+            (2, "para", "body"),
+            (3, "h3", "Gamma"),
+        ] {
+            if index > 0 {
+                call(&mut e, "insertBlock", json!({"index":index}));
+            }
+            call(
+                &mut e,
+                "insertText",
+                json!({"at":{"block":index,"offset":0},"text":text}),
+            );
+            if kind_name != "para" {
+                call(
+                    &mut e,
+                    "setBlockKind",
+                    json!({"block":index,"kind":kind_name}),
+                );
+            }
+        }
+        call(&mut e, "insertToc", json!({"index":4}));
+        let before = e.snapshot().unwrap();
+        // setListKind over a range covering the toc field must reject
+        // atomically — rewriting kind/list would strand the toc payload.
+        assert!(e
+            .apply(Command::new(
+                "setListKind",
+                json!({"first":3,"last":4,"kind":"numbered"})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Same corruption attempt staged through __batch must reject too.
+        assert!(e
+            .apply(Command::new(
+                "__batch",
+                json!({"commands":[{"op":"setListKind","payload":{"first":3,"last":4,"kind":"bullet"}}]})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // The pre-fix live state serialized fine but restore rejected it;
+        // the surviving snapshot must round-trip.
+        let mut restored = QuillEngine::new();
+        restored.restore(&before).unwrap();
+        assert_eq!(restored.blocks, e.blocks);
+        // "none" only clears list membership — the toc block keeps its kind
+        // and payload, so it stays valid like the table precedent.
+        let r = call(&mut e, "setListKind", json!({"first":3,"last":4,"kind":"none"}));
+        assert_eq!(r.data["ok"], true);
+        let d = call(&mut e, "describe", json!({})).data;
+        assert!(d["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|b| b["kind"] == "toc" && b.get("toc").is_some()));
+    }
+    #[test]
+    fn list_ops_cannot_corrupt_bibliography_blocks() {
+        // h1 "Alpha", h2 "Beta", para "body", h3 "Gamma", bibliography
+        // field at 4.
+        let mut e = QuillEngine::new();
+        for (index, kind_name, text) in [
+            (0usize, "h1", "Alpha"),
+            (1, "h2", "Beta"),
+            (2, "para", "body"),
+            (3, "h3", "Gamma"),
+        ] {
+            if index > 0 {
+                call(&mut e, "insertBlock", json!({"index":index}));
+            }
+            call(
+                &mut e,
+                "insertText",
+                json!({"at":{"block":index,"offset":0},"text":text}),
+            );
+            if kind_name != "para" {
+                call(
+                    &mut e,
+                    "setBlockKind",
+                    json!({"block":index,"kind":kind_name}),
+                );
+            }
+        }
+        call(&mut e, "insertBibliography", json!({"index":4}));
+        let before = e.snapshot().unwrap();
+        // setListKind over a range covering the bibliography field must
+        // reject atomically — rewriting kind/list would strand the
+        // bibliography payload (snapshot would emit it, restore reject it).
+        assert!(e
+            .apply(Command::new(
+                "setListKind",
+                json!({"first":3,"last":4,"kind":"numbered"})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // Same corruption attempt staged through __batch must reject too.
+        assert!(e
+            .apply(Command::new(
+                "__batch",
+                json!({"commands":[{"op":"setListKind","payload":{"first":3,"last":4,"kind":"bullet"}}]})
+            ))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+        // The surviving snapshot must round-trip.
+        let mut restored = QuillEngine::new();
+        restored.restore(&before).unwrap();
+        assert_eq!(restored.blocks, e.blocks);
+        // "none" only clears list membership — the bibliography block
+        // keeps its kind and payload, so it stays valid.
+        let r = call(&mut e, "setListKind", json!({"first":3,"last":4,"kind":"none"}));
+        assert_eq!(r.data["ok"], true);
+        let d = call(&mut e, "describe", json!({})).data;
+        assert!(d["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|b| b["kind"] == "bibliography" && b.get("bibliography").is_some()));
     }
     #[test]
     fn legacy_defaults_export_actual_bullets_without_literal_text_or_fake_retained_numbers() {

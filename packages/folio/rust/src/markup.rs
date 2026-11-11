@@ -34,6 +34,33 @@ pub(super) fn quad(rect: [f64; 4], markup: bool) -> Result<Option<Vec<Object>>, 
             .collect(),
     ))
 }
+/// Positive, bounded, f32-representable `[x, y, w, h]` caller rectangle,
+/// returned as PDF `/Rect` corners `[x1, y1, x2, y2]`. Shared by annotations
+/// that carry geometry without `/QuadPoints` (Link, computed Ink bounds).
+pub(super) fn checked_rect(rect: [f64; 4]) -> Result<[f32; 4], EngineError> {
+    let [x, y, w, h] = rect;
+    let coords = [x, y, x + w, y + h];
+    if coords
+        .iter()
+        .any(|v| !v.is_finite() || !(*v as f32).is_finite())
+    {
+        return Err(EngineError::validation(
+            "annotation rectangle exceeds PDF numeric representation",
+        ));
+    }
+    let [left, bottom, right, top] = coords.map(|v| v as f32);
+    if w <= 0.
+        || h <= 0.
+        || coords.iter().any(|v| v.abs() > 1_000_000.)
+        || left >= right
+        || bottom >= top
+    {
+        return Err(EngineError::validation(
+            "annotation requires positive nondegenerate rectangle within +/-1000000 PDF units",
+        ));
+    }
+    Ok([left, bottom, right, top])
+}
 // Shape dictionaries emit PDF1.4 IC; preserve higher headers and catalog metadata.
 pub(super) fn shape_version(current: &str) -> Result<String,EngineError> {
     let (major,minor)=current.split_once('.').ok_or_else(||EngineError::validation("unknown PDF header version"))?;

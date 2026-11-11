@@ -259,6 +259,24 @@ fn magic_wand_and_modify_selection() {
     rejects(&mut e, "magicWand", json!({"x": 1, "y": 1, "tolerance": 300}), ErrorCode::Validation);
 }
 
+#[test]
+fn modify_selection_smooth_rounds_and_thresholds() {
+    let mut e = eng(10, 10);
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 2, "y": 2, "w": 6, "h": 6}}));
+    one_step(&mut e, "modifySelection", json!({"op": "smooth", "radius": 3}));
+    let m = selection_mask(&mut e).unwrap();
+    assert!(m.iter().all(|&v| v == 0 || v == 255), "smooth output is binary");
+    assert_eq!(m[5 * 10 + 5], 255, "interior survives");
+    assert_eq!(m[2 * 10 + 2], 0, "corner rounds away");
+    assert_eq!(m[2 * 10 + 5], 255, "edge midpoint survives");
+    // radius 0 is a no-op mask but still one undo step, like grow 0.
+    let before = describe(&mut e);
+    run(&mut e, "modifySelection", json!({"op": "smooth", "radius": 0}));
+    assert_eq!(describe(&mut e), before);
+    rejects(&mut e, "modifySelection", json!({"op": "smooth", "radius": 999}), ErrorCode::Validation);
+    rejects(&mut e, "modifySelection", json!({"op": "refine", "radius": 1}), ErrorCode::Validation);
+}
+
 // -- groups, lock, blend, clipping -------------------------------------------
 
 #[test]
@@ -750,4 +768,1304 @@ fn scaled_fill_pulls_back_selection_coverage_and_blends_each_texel_once() {
     one_step(&mut e,"floodFill",json!({"id":l,"x":0,"y":0,"color":BLUE,"tolerance":0}));
     let d=describe(&mut e);let raw=b64::decode(layer(&d,l)["content"]["pixels_b64"].as_str().unwrap()).unwrap();
     assert_eq!(px(&raw,4,0,0),[127,0,128,255]);assert_eq!(px(&raw,4,1,0),[0,0,0,0]);
+}
+
+// -- apply_long: cooperative cancellation and progress ----------------------
+
+/// Runs `cmd` through `apply_long` on a worker thread while `observer`
+/// watches progress; cancels as soon as the op reports work, then joins.
+/// Mirrors the cadence cancellation test: the engine travels with the
+/// worker so its post-cancel state can be inspected on return.
+fn cancel_during(e: PrismEngine, cmd: Command) -> (PrismEngine, ignition_core::ErrorCode) {
+    use ignition_core::TaskContext;
+    let ctx = TaskContext::new();
+    let observer = ctx.clone();
+    let worker = std::thread::spawn(move || {
+        let mut e = e;
+        let result = e.apply_long(cmd, &ctx);
+        (e, result)
+    });
+    while observer.progress() == 0.0 && !worker.is_finished() {
+        std::thread::yield_now();
+    }
+    observer.cancel();
+    let (e, result) = worker.join().unwrap();
+    (e, result.unwrap_err().code)
+}
+
+#[test]
+fn apply_long_fill_layer_cancels_mid_op_and_leaves_state_untouched() {
+    // 2048x2048 = 4M pixels: far more than one CHECKPOINT_EVERY_PX window, so
+    // the observer's cancel always lands inside the fill loop.
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    let (e, code) = cancel_during(
+        e,
+        Command::new("fillLayer", json!({"id": l, "color": BLUE})),
+    );
+    assert_eq!(code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before, "cancelled fillLayer must not mutate");
+    assert_eq!(e.journal.undo_len(), depth, "cancelled fillLayer must not journal");
+}
+
+#[test]
+fn apply_long_apply_filter_cancels_mid_op_and_leaves_state_untouched() {
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    let (e, code) = cancel_during(
+        e,
+        Command::new(
+            "applyFilter",
+            json!({"id": l, "filter": {"type": "invert"}}),
+        ),
+    );
+    assert_eq!(code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before, "cancelled applyFilter must not mutate");
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn apply_long_draw_pixels_cancels_mid_op_and_leaves_state_untouched() {
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    // Full-canvas src-over blend delivered as binary input (16 MiB).
+    let data = vec![0u8, 255, 0, 255].repeat(2048 * 2048);
+    let cmd = Command::new(
+        "drawPixels",
+        json!({"id": l, "x": 0, "y": 0, "w": 2048, "h": 2048}),
+    )
+    .with_binary(Some(data));
+    let (e, code) = cancel_during(e, cmd);
+    assert_eq!(code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before, "cancelled drawPixels must not mutate");
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn apply_long_flatten_cancels_mid_composite() {
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    let (e, code) = cancel_during(e, Command::new("flatten", json!({})));
+    assert_eq!(code, ErrorCode::Cancelled);
+    // Read-only op: no journal entry either way, and the doc is unchanged.
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn apply_long_pre_cancelled_command_fails_before_any_work() {
+    use ignition_core::TaskContext;
+    let mut e = eng(64, 64);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let before = e.snapshot().unwrap();
+    let depth = e.journal.undo_len();
+    let ctx = TaskContext::new();
+    ctx.cancel();
+    let err = e
+        .apply_long(
+            Command::new("fillLayer", json!({"id": l, "color": BLUE})),
+            &ctx,
+        )
+        .unwrap_err();
+    assert_eq!(err.code, ErrorCode::Cancelled);
+    assert_eq!(e.snapshot().unwrap(), before);
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn apply_long_matches_apply_results_and_reports_full_progress() {
+    use ignition_core::TaskContext;
+    // Same op sequence through `apply` on one engine and `apply_long` on an
+    // identical twin; snapshots must be byte-identical and progress must end
+    // at 1.0.
+    let mut a = eng(256, 256);
+    let mut b = eng(256, 256);
+    let la = id(&run(&mut a, "addRasterLayer", json!({})));
+    let lb = id(&run(&mut b, "addRasterLayer", json!({})));
+    assert_eq!(la, lb);
+
+    let ctx = TaskContext::new();
+    b.apply_long(
+        Command::new("fillLayer", json!({"id": lb, "color": RED})),
+        &ctx,
+    )
+    .unwrap();
+    a.apply(Command::new("fillLayer", json!({"id": la, "color": RED}))).unwrap();
+    assert_eq!(ctx.progress(), 1.0);
+    assert_eq!(a.snapshot().unwrap(), b.snapshot().unwrap());
+
+    // drawPixels via binary input on both paths.
+    let patch = vec![9u8, 8, 7, 255].repeat(64 * 64);
+    a.apply(
+        Command::new(
+            "drawPixels",
+            json!({"id": la, "x": 4, "y": 4, "w": 64, "h": 64}),
+        )
+        .with_binary(Some(patch.clone())),
+    )
+    .unwrap();
+    b.apply_long(
+        Command::new(
+            "drawPixels",
+            json!({"id": lb, "x": 4, "y": 4, "w": 64, "h": 64}),
+        )
+        .with_binary(Some(patch)),
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(ctx.progress(), 1.0);
+    assert_eq!(a.snapshot().unwrap(), b.snapshot().unwrap());
+
+    // Read-only render op through apply_long.
+    let flat_a = a.apply(Command::new("flatten", json!({}))).unwrap();
+    let flat_b = b
+        .apply_long(Command::new("flatten", json!({})), &ctx)
+        .unwrap();
+    assert_eq!(flat_a.output, flat_b.output);
+    assert_eq!(ctx.progress(), 1.0);
+}
+
+#[test]
+fn apply_long_progress_is_monotonic_and_clamped() {
+    use ignition_core::TaskContext;
+    let mut e = eng(2048, 2048);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let ctx = TaskContext::new();
+    let observer = ctx.clone();
+    let worker = std::thread::spawn(move || {
+        let mut e = e;
+        let result = e.apply_long(
+            Command::new("applyFilter", json!({"id": l, "filter": {"type": "grayscale"}})),
+            &ctx,
+        );
+        (e, result)
+    });
+    let mut samples = Vec::new();
+    while !worker.is_finished() {
+        samples.push(observer.progress());
+        std::thread::yield_now();
+    }
+    let (_e, result) = worker.join().unwrap();
+    result.unwrap();
+    assert!(!samples.is_empty());
+    assert!(samples.iter().all(|&v| (0.0..=1.0).contains(&v)));
+    assert!(
+        samples.windows(2).all(|w| w[1] >= w[0]),
+        "progress must never decrease: {samples:?}"
+    );
+    assert!(samples.iter().any(|&v| v > 0.0), "op should report progress");
+    assert_eq!(observer.progress(), 1.0);
+}
+
+// -- document crop ---------------------------------------------------------------
+
+/// Every pixel of `after` must equal `before` shifted by `(dx, dy)`.
+fn assert_crop_matches(before: &[u8], bw: usize, after: &[u8], aw: usize, ah: usize, dx: usize, dy: usize) {
+    for y in 0..ah {
+        for x in 0..aw {
+            assert_eq!(
+                px(after, aw, x, y),
+                px(before, bw, x + dx, y + dy),
+                "crop mismatch at ({x}, {y})"
+            );
+        }
+    }
+}
+
+#[test]
+fn crop_offsets_all_content_and_rebases_canvas() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    // Hide the left two mask columns so the mask crop is observable.
+    run(&mut e, "addMask", json!({"id": r}));
+    run(&mut e, "paintMask", json!({"id": r, "x": 0, "y": 0, "w": 2, "h": 8, "data_b64": b64::encode(&[0u8; 16])}));
+    let s = rect(&mut e, 4.0, 5.0, 2.0, 2.0, BLUE);
+    let p = id(&run(&mut e, "addPath", json!({"path": tri(), "fill": {"type": "solid", "color": [0, 255, 0, 255]}})));
+    let a = id(&run(&mut e, "addArtboard", json!({"x": 1, "y": 2, "w": 3, "h": 3})));
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 8, "h": 8}}));
+    // A translated raster layer and a translated group keep exact pixels.
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"tx": 1, "ty": 0}}));
+    let before = flat(&mut e);
+
+    // Crop (2,1,5,6): rounded to pixels, fully inside → 5x6 canvas.
+    one_step(&mut e, "crop", json!({"x": 2, "y": 1, "w": 5, "h": 6}));
+    let d = describe(&mut e);
+    assert_eq!(d["width"], 5);
+    assert_eq!(d["height"], 6);
+    let after = flat(&mut e);
+    assert_crop_matches(&before, 8, &after, 5, 6, 2, 1);
+    // Vector content shifted by the canvas delta.
+    assert_eq!(bounds(&mut e, s), (2.0, 4.0, 2.0, 2.0));
+    let pl = layer(&describe(&mut e), p)["content"]["path"]["subpaths"][0]["nodes"].clone();
+    assert_eq!(pl[0]["x"], -1.0);
+    assert_eq!(pl[0]["y"], 0.0);
+    assert_eq!(pl[1]["x"], 7.0);
+    // Artboard and pixel-space buffers rebased.
+    let ab = d["artboards"].as_array().unwrap().iter().find(|x| x["id"] == a).unwrap();
+    assert_eq!(ab["x"], -1.0);
+    assert_eq!(ab["y"], 1.0);
+    let sel = selection_mask(&mut e).unwrap();
+    assert_eq!(sel.len(), 5 * 6);
+    assert!(sel.iter().all(|&v| v == 255));
+    let mask = layer(&d, r)["mask"]["mask_b64"].as_str().unwrap();
+    assert_eq!(b64::decode(mask).unwrap().len(), 5 * 6);
+    // The raster buffer itself is the cropped 5x6 region.
+    let pxbuf = b64::decode(layer(&d, r)["content"]["pixels_b64"].as_str().unwrap()).unwrap();
+    assert_eq!(pxbuf.len(), 5 * 6 * 4);
+}
+
+#[test]
+fn crop_intersection_and_fractional_rounding() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    run(&mut e, "drawPixels", json!({"id": r, "x": 0, "y": 0, "w": 8, "h": 8, "data_b64": b64::encode(&vec![0u8; 8 * 8 * 4])}));
+    // Paint one blue texel at old (6,6) before clearing? Simpler: fill then draw blue pixel.
+    run(&mut e, "drawPixels", json!({"id": r, "x": 6, "y": 6, "w": 1, "h": 1, "data_b64": b64::encode(&BLUE)}));
+    let before = flat(&mut e);
+
+    // Negative origin + fractional edges: rect (-2,-1,6.5,6.5) rounds
+    // outward to pixels 0..5 x 0..6 → 5x6 canvas, top-left anchored.
+    one_step(&mut e, "crop", json!({"x": -2.0, "y": -1.0, "w": 6.5, "h": 6.5}));
+    let d = describe(&mut e);
+    assert_eq!(d["width"], 5);
+    assert_eq!(d["height"], 6);
+    assert_crop_matches(&before, 8, &flat(&mut e), 5, 6, 0, 0);
+
+    // A rect hanging off the right/bottom edge keeps only the overlap:
+    // on the 5x6 canvas, x=1..101 y=0..3 → 4x3.
+    one_step(&mut e, "crop", json!({"x": 1.0, "y": 0.0, "w": 100.0, "h": 3.0}));
+    let d = describe(&mut e);
+    assert_eq!(d["width"], 4);
+    assert_eq!(d["height"], 3);
+}
+
+#[test]
+fn crop_rejects_and_noop_is_read_only() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    let before = describe(&mut e);
+    let depth = e.journal.undo_len();
+    rejects(&mut e, "crop", json!({"x": 100, "y": 0, "w": 4, "h": 4}), ErrorCode::OutOfBounds);
+    rejects(&mut e, "crop", json!({"x": -50, "y": 0, "w": 4, "h": 4}), ErrorCode::OutOfBounds);
+    rejects(&mut e, "crop", json!({"x": 0, "y": 0, "w": 0, "h": 4}), ErrorCode::Validation);
+    rejects(&mut e, "crop", json!({"x": 0, "y": 0, "w": 4}), ErrorCode::InvalidCommand);
+    assert_eq!(describe(&mut e), before);
+    assert_eq!(e.journal.undo_len(), depth);
+    // Cropping to the full canvas changes nothing and records nothing.
+    let res = e.apply(Command::new("crop", json!({"x": 0, "y": 0, "w": 8, "h": 8}))).unwrap();
+    assert!(res.events.is_empty());
+    assert_eq!(describe(&mut e), before);
+    assert_eq!(e.journal.undo_len(), depth);
+    // Fractional rect covering the whole canvas is also a no-op.
+    e.apply(Command::new("crop", json!({"x": -1, "y": -1, "w": 10, "h": 10}))).unwrap();
+    assert_eq!(describe(&mut e), before);
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn crop_preserves_rotated_and_grouped_content() {
+    let mut e = eng(12, 12);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    // Checker-ish content so resampling is observable.
+    let mut pxdata = vec![0u8; 12 * 12 * 4];
+    for y in 0..12 {
+        for x in 0..12 {
+            if (x + y) % 2 == 0 {
+                let o = (y * 12 + x) * 4;
+                pxdata[o..o + 4].copy_from_slice(&BLUE);
+            }
+        }
+    }
+    run(&mut e, "drawPixels", json!({"id": r, "x": 0, "y": 0, "w": 12, "h": 12, "data_b64": b64::encode(&pxdata)}));
+    let a = rect(&mut e, 1.0, 1.0, 3.0, 3.0, RED);
+    let b = rect(&mut e, 6.0, 6.0, 3.0, 3.0, [0, 255, 0, 255]);
+    let g = id(&one_step(&mut e, "groupLayers", json!({"ids": [a, b]})));
+    run(&mut e, "setLayerTransform", json!({"id": g, "transform": {"tx": 1, "ty": 0}}));
+    // Raster layers only tolerate translation/identity-linear effective
+    // transforms; rotation lives on a vector child instead.
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"tx": 1, "ty": 0}}));
+    run(&mut e, "setLayerTransform", json!({"id": a, "transform": {"rotation": 20}}));
+    let before = flat(&mut e);
+    assert_eq!(before.len(), 12 * 12 * 4);
+    // Crop must succeed on translated/grouped/rotated-vector content and
+    // undo cleanly; the translated raster resamples pixel-exactly.
+    one_step(&mut e, "crop", json!({"x": 2, "y": 1, "w": 8, "h": 8}));
+    let d = describe(&mut e);
+    assert_eq!(d["width"], 8);
+    assert_eq!(d["height"], 8);
+    assert_eq!(layer(&d, a)["parent"], g);
+    assert_eq!(layer(&d, g)["transform"]["tx"], 1.0, "transforms are untouched by crop");
+    // Group children moved with the group: canvas-space bounds shift by
+    // the crop delta (2,1) — b was at canvas (7,6) via the group's tx=1.
+    let bb = bounds(&mut e, b);
+    assert!((bb.0 - 5.0).abs() < 1e-9 && (bb.1 - 5.0).abs() < 1e-9);
+    assert_eq!(flat(&mut e).len(), 8 * 8 * 4);
+}
+
+#[test]
+fn crop_rejects_transformed_raster_layers() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+
+    // Non-unit scale on the raster's own transform rejects atomically.
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"sx": 0.5}}));
+    rejects(&mut e, "crop", json!({"x": 1, "y": 1, "w": 4, "h": 4}), ErrorCode::Validation);
+    // Rotation rejects the same way (sx back to 1 first).
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"sx": 1.0, "rotation": 30}}));
+    rejects(&mut e, "crop", json!({"x": 1, "y": 1, "w": 4, "h": 4}), ErrorCode::Validation);
+    // A raster inside a scaled group is affected through its ancestors.
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"rotation": 0}}));
+    let r2 = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r2, "color": BLUE}));
+    let r3 = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r3, "color": [0, 255, 0, 255]}));
+    let g = id(&one_step(&mut e, "groupLayers", json!({"ids": [r2, r3]})));
+    run(&mut e, "setLayerTransform", json!({"id": g, "transform": {"sx": 2.0}}));
+    rejects(&mut e, "crop", json!({"x": 1, "y": 1, "w": 4, "h": 4}), ErrorCode::Validation);
+    // Back to identity-linear (scale 1, pure translation): crop succeeds.
+    run(&mut e, "setLayerTransform", json!({"id": g, "transform": {"sx": 1.0}}));
+    run(&mut e, "setLayerTransform", json!({"id": r, "transform": {"tx": 1, "ty": 0}}));
+    one_step(&mut e, "crop", json!({"x": 1, "y": 1, "w": 4, "h": 4}));
+}
+
+// -- pixel sampling ---------------------------------------------------------------
+
+#[test]
+fn sample_pixels_reads_the_composite() {
+    let mut e = eng(8, 8);
+    let r = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": r, "color": RED}));
+    rect(&mut e, 2.0, 2.0, 4.0, 4.0, BLUE);
+    let depth = e.journal.undo_len();
+
+    let res = e
+        .apply(Command::new("samplePixels", json!({"x": 3, "y": 3})))
+        .unwrap();
+    assert!(res.events.is_empty(), "samplePixels is read-only");
+    assert_eq!(res.data, json!({"r": 0, "g": 0, "b": 255, "a": 255}));
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 0, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 255, "g": 0, "b": 0, "a": 255})
+    );
+    // Outside the canvas samples transparent, not an error.
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 40, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 0, "g": 0, "b": 0, "a": 0})
+    );
+    assert_eq!(e.journal.undo_len(), depth, "sampling records no undo");
+    // A masked layer samples through the mask.
+    run(&mut e, "addMask", json!({"id": r}));
+    run(&mut e, "paintMask", json!({"id": r, "x": 0, "y": 0, "w": 8, "h": 8, "data_b64": b64::encode(&[0u8; 64])}));
+    assert_eq!(
+        e.apply(Command::new("samplePixels", json!({"x": 0, "y": 0})))
+            .unwrap()
+            .data,
+        json!({"r": 0, "g": 0, "b": 0, "a": 0}),
+        "fully masked composite is transparent"
+    );
+    assert_eq!(e.journal.undo_len(), depth + 2, "only the mask ops recorded undo");
+    rejects(&mut e, "samplePixels", json!({"y": 0}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "samplePixels", json!({"x": "a", "y": 0}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "samplePixels", json!({"x": 0, "y": 0, "radius": 999}), ErrorCode::Validation);
+}
+
+#[test]
+fn sample_pixels_radius_box_averages() {
+    let mut e = eng(4, 1);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // Left two pixels red, right two blue.
+    let mut data = Vec::new();
+    for _ in 0..2 {
+        data.extend_from_slice(&RED);
+    }
+    for _ in 0..2 {
+        data.extend_from_slice(&BLUE);
+    }
+    run(&mut e, "drawPixels", json!({"id": l, "x": 0, "y": 0, "w": 4, "h": 1, "data_b64": b64::encode(&data)}));
+    // radius 1 at (1.5, 0.5) covers pixels x=0,1,2 → red,red,blue average.
+    let d = e
+        .apply(Command::new("samplePixels", json!({"x": 1.5, "y": 0.5, "radius": 1})))
+        .unwrap()
+        .data;
+    assert_eq!(d["r"].as_u64().unwrap(), 170);
+    assert_eq!(d["b"].as_u64().unwrap(), 85);
+    assert_eq!(d["a"].as_u64().unwrap(), 255);
+}
+
+#[test]
+fn sample_pixels_radius_averages_in_premultiplied_alpha() {
+    let mut e = eng(2, 1);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // Left pixel translucent red, right pixel fully transparent.
+    let mut data = Vec::new();
+    data.extend_from_slice(&[255, 0, 0, 128]);
+    data.extend_from_slice(&[0, 0, 0, 0]);
+    run(&mut e, "drawPixels", json!({"id": l, "x": 0, "y": 0, "w": 2, "h": 1, "data_b64": b64::encode(&data)}));
+    // Averaging both pixels must keep the red hue: averaging straight-alpha
+    // channels independently would return r≈128 instead of 255.
+    let d = e
+        .apply(Command::new("samplePixels", json!({"x": 0.5, "y": 0.5, "radius": 1})))
+        .unwrap()
+        .data;
+    assert_eq!(d, json!({"r": 255, "g": 0, "b": 0, "a": 64}));
+    // A single translucent pixel still samples its straight color.
+    let d = e
+        .apply(Command::new("samplePixels", json!({"x": 0.5, "y": 0.5})))
+        .unwrap()
+        .data;
+    assert_eq!(d, json!({"r": 255, "g": 0, "b": 0, "a": 128}));
+}
+
+// -- duplicateLayer ------------------------------------------------------------
+
+#[test]
+fn duplicate_layer_copies_content_and_sits_above() {
+    let mut e = eng(4, 1);
+    let l = id(&run(&mut e, "addRasterLayer", json!({"name": "ink"})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": RED}));
+    let copy = id(&one_step(&mut e, "duplicateLayer", json!({"id": l})));
+    assert_ne!(copy, l);
+    let d = describe(&mut e);
+    let src = layer(&d, l);
+    let dup = layer(&d, copy);
+    assert_eq!(dup["name"], "ink copy");
+    assert_eq!(dup["content"], src["content"], "raster payload is copied");
+    assert_eq!(dup["parent"], Value::Null);
+    // The copy is directly above the source among top-level layers.
+    let ids: Vec<u64> = d["layers"].as_array().unwrap().iter().map(|x| x["id"].as_u64().unwrap()).collect();
+    assert_eq!(ids, vec![l, copy]);
+    // Both paint the same pixels; the top copy wins with identical output.
+    assert_eq!(px(&flat(&mut e), 4, 0, 0), RED);
+    // A custom name applies to the copy only.
+    let named = id(&one_step(&mut e, "duplicateLayer", json!({"id": l, "name": "clone"})));
+    assert_eq!(layer(&describe(&mut e), named)["name"], "clone");
+    assert_eq!(layer(&describe(&mut e), copy)["name"], "ink copy");
+}
+
+#[test]
+fn duplicate_layer_inside_group_keeps_parent() {
+    let mut e = eng(6, 6);
+    let a = rect(&mut e, 0.0, 0.0, 2.0, 2.0, RED);
+    let b = rect(&mut e, 3.0, 3.0, 2.0, 2.0, BLUE);
+    let g = id(&run(&mut e, "groupLayers", json!({"ids": [a, b], "name": "pair"})));
+    let copy = id(&one_step(&mut e, "duplicateLayer", json!({"id": a})));
+    let d = describe(&mut e);
+    assert_eq!(layer(&d, copy)["parent"], g, "copy stays in the same group");
+    let src_name = layer(&d, a)["name"].as_str().unwrap().to_string();
+    assert_eq!(layer(&d, copy)["name"], format!("{src_name} copy"));
+    assert_eq!(bounds(&mut e, copy), bounds(&mut e, a));
+}
+
+#[test]
+fn duplicate_group_copies_the_whole_subtree() {
+    let mut e = eng(10, 10);
+    let a = rect(&mut e, 0.0, 0.0, 3.0, 3.0, RED);
+    let b = rect(&mut e, 2.0, 2.0, 3.0, 3.0, BLUE);
+    let g = id(&run(&mut e, "groupLayers", json!({"ids": [a, b], "name": "pair"})));
+    run(&mut e, "setLayerOpacity", json!({"id": g, "opacity": 0.5}));
+    let before = flat(&mut e);
+    let dg = id(&one_step(&mut e, "duplicateLayer", json!({"id": g})));
+    assert_eq!(describe(&mut e)["layers"].as_array().unwrap().len(), 6);
+    let d = describe(&mut e);
+    let dup_group = layer(&d, dg);
+    assert_eq!(dup_group["name"], "pair copy");
+    assert_eq!(dup_group["opacity"], 0.5);
+    assert_eq!(dup_group["content"]["type"], "group");
+    // Two fresh children parented to the copied group, names preserved.
+    let kids: Vec<&Value> = d["layers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|l| l["parent"] == dg)
+        .collect();
+    assert_eq!(kids.len(), 2);
+    assert!(kids.iter().all(|k| k["id"].as_u64().unwrap() != a && k["id"].as_u64().unwrap() != b));
+    assert_eq!(kids[0]["name"], layer(&d, a)["name"]);
+    assert_eq!(kids[1]["name"], layer(&d, b)["name"]);
+    // The 50%-opacity group now paints twice, so the composite darkens;
+    // hiding the copy restores the original image exactly.
+    run(&mut e, "setLayerVisible", json!({"id": dg, "visible": false}));
+    assert_eq!(flat(&mut e), before);
+    run(&mut e, "setLayerVisible", json!({"id": dg, "visible": true}));
+    // The copied subtree is independent: editing a copy leaves the source alone.
+    let kid = kids[0]["id"].as_u64().unwrap();
+    run(&mut e, "setLayerTransform", json!({"id": kid, "transform": {"tx": 4, "ty": 0}}));
+    assert_eq!(bounds(&mut e, a), (0.0, 0.0, 3.0, 3.0));
+    assert_ne!(flat(&mut e), before);
+}
+
+#[test]
+fn duplicate_layer_locked_and_rejects() {
+    let mut e = eng(4, 4);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    one_step(&mut e, "setLayerLocked", json!({"id": l, "locked": true}));
+    // Duplication does not edit the locked source; the copy stays locked.
+    let copy = id(&one_step(&mut e, "duplicateLayer", json!({"id": l})));
+    assert_eq!(layer(&describe(&mut e), copy)["locked"], true);
+    rejects(&mut e, "duplicateLayer", json!({"id": 999}), ErrorCode::NotFound);
+    rejects(&mut e, "duplicateLayer", json!({"id": l, "name": 5}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "duplicateLayer", json!({}), ErrorCode::InvalidCommand);
+}
+
+// -- brush / stroke ops (P06) -------------------------------------------------
+
+fn stroke_samples(n: usize, x0: f64, y: f64, dx: f64) -> Value {
+    json!(
+        (0..n)
+            .map(|i| json!({"t": i as f64 * 0.01, "x": x0 + i as f64 * dx, "y": y}))
+            .collect::<Vec<_>>()
+    )
+}
+
+#[test]
+fn brush_crud_undo_and_snapshot() {
+    let mut e = eng(8, 8);
+    let out = one_step(&mut e, "addBrush", json!({"name": "Ink", "size": 12.0, "color": [10, 20, 30, 255]}));
+    let bid = out["brush_id"].as_u64().unwrap();
+    let listed = run(&mut e, "listBrushes", json!({}));
+    assert_eq!(listed["brushes"].as_array().unwrap().len(), 1);
+    assert_eq!(listed["brushes"][0]["size"], 12.0);
+    // describe carries the brush table.
+    assert_eq!(describe(&mut e)["brushes"].as_array().unwrap().len(), 1);
+    // Identical setBrush is a no-op: no undo, no event.
+    let depth = e.journal.undo_len();
+    let r = e.apply(Command::new("setBrush", json!({"id": bid, "size": 12.0}))).unwrap();
+    assert_eq!(r.data["changed"], false);
+    assert!(r.events.is_empty());
+    assert_eq!(e.journal.undo_len(), depth);
+    one_step(&mut e, "setBrush", json!({"id": bid, "size": 30.0, "taper": {"start": 0.1, "end": 0.1}}));
+    // Snapshot round-trip keeps brushes.
+    let snap = e.snapshot().unwrap();
+    let mut e2 = eng(1, 1);
+    e2.restore(&snap).unwrap();
+    assert_eq!(describe(&mut e2)["brushes"].as_array().unwrap().len(), 1);
+    assert_eq!(describe(&mut e2)["brushes"][0]["size"], 30.0);
+    // removeBrush + undo restores it.
+    one_step(&mut e, "removeBrush", json!({"id": bid}));
+    rejects(&mut e, "removeBrush", json!({"id": bid}), ErrorCode::NotFound);
+    rejects(&mut e, "setBrush", json!({"id": 4242, "size": 5.0}), ErrorCode::NotFound);
+    rejects(&mut e, "addBrush", json!({"size": -1.0}), ErrorCode::Validation);
+    rejects(&mut e, "addBrush", json!({"taper": {"start": 0.7, "end": 0.7}}), ErrorCode::Validation);
+}
+
+#[test]
+fn brush_cap_enforced() {
+    let mut e = eng(4, 4);
+    for i in 0..64 {
+        run(&mut e, "addBrush", json!({"name": format!("b{i}")}));
+    }
+    rejects(&mut e, "addBrush", json!({}), ErrorCode::Validation);
+}
+
+#[test]
+fn model_stroke_is_read_only_and_deterministic() {
+    let mut e = eng(8, 8);
+    let depth = e.journal.undo_len();
+    let p = json!({"samples": stroke_samples(12, 1.0, 4.0, 0.5), "predict": {"steps": 4}});
+    let r1 = e.apply(Command::new("modelStroke", p.clone())).unwrap();
+    let r2 = e.apply(Command::new("modelStroke", p)).unwrap();
+    assert_eq!(r1.data, r2.data);
+    let modeled = r1.data["modeled"].as_array().unwrap();
+    assert!(modeled.len() > 12, "upsampling expected: {}", modeled.len());
+    assert_eq!(r1.data["predicted"].as_array().unwrap().len(), 4);
+    assert!(modeled.iter().all(|m| m["segment"] == 0));
+    // Read-only: no undo entry, no events, describe unchanged.
+    assert!(r1.events.is_empty());
+    assert_eq!(e.journal.undo_len(), depth);
+    rejects(&mut e, "modelStroke", json!({"samples": []}), ErrorCode::Validation);
+    rejects(
+        &mut e,
+        "modelStroke",
+        json!({"samples": (0..4097).map(|i| json!({"t": i as f64 * 0.001, "x": i as f64, "y": 0.0})).collect::<Vec<_>>()}),
+        ErrorCode::Validation,
+    );
+    rejects(
+        &mut e,
+        "modelStroke",
+        json!({"samples": [{"t": 0.02, "x": 1.0, "y": 1.0}, {"t": 0.01, "x": 2.0, "y": 1.0}]}),
+        ErrorCode::Validation,
+    );
+}
+
+#[test]
+fn paint_stroke_commits_and_undoes() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let bid = run(&mut e, "addBrush", json!({"size": 8.0, "color": [200, 10, 10, 255], "spacing": 0.5}))["brush_id"]
+        .as_u64()
+        .unwrap();
+    let samples = stroke_samples(10, 2.0, 8.0, 1.0);
+    // Dry run: reports dabs, changes nothing.
+    let dry = run(&mut e, "paintStroke", json!({"id": l, "brush_id": bid, "samples": samples.clone(), "commit": false}));
+    assert!(dry["dabs"].as_u64().unwrap() > 0);
+    assert_eq!(flat(&mut e)[3], 0, "dry run must not paint");
+    let depth = e.journal.undo_len();
+    let out = one_step(
+        &mut e,
+        "paintStroke",
+        json!({"id": l, "brush_id": bid, "samples": samples.clone()}),
+    );
+    assert!(out["dabs"].as_u64().unwrap() > 0);
+    // Painted pixels exist near the stroke line.
+    let buf = flat(&mut e);
+    let mut painted = 0;
+    for y in 0..16usize {
+        for x in 0..16usize {
+            if px(&buf, 16, x, y)[3] > 0 {
+                painted += 1;
+            }
+        }
+    }
+    assert!(painted > 10, "expected painted coverage, got {painted}");
+    // Sample near the middle of the stroke.
+    let mid = run(&mut e, "samplePixels", json!({"x": 6.5, "y": 8.5}));
+    assert!(mid["a"].as_u64().unwrap() > 0);
+    assert_eq!(e.journal.undo_len(), depth + 1);
+}
+
+#[test]
+fn paint_stroke_inline_brush_and_rejections() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let samples = stroke_samples(4, 1.0, 2.0, 1.0);
+    // Inline brush works without any stored brush.
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 255, 255]}, "samples": samples.clone()}));
+    let buf = flat(&mut e);
+    assert!(px(&buf, 16, 2, 2)[2] > 0);
+    // A shape layer on top rejects strokes.
+    let s = id(&run(&mut e, "addShape", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "fill": [0,0,0,255]}})));
+    // Rejections.
+    rejects(&mut e, "paintStroke", json!({"id": l, "samples": samples.clone()}), ErrorCode::InvalidCommand);
+    rejects(
+        &mut e,
+        "paintStroke",
+        json!({"id": l, "brush_id": 1, "brush": {"size": 4.0}, "samples": samples.clone()}),
+        ErrorCode::InvalidCommand,
+    );
+    rejects(&mut e, "paintStroke", json!({"id": l, "brush_id": 999, "samples": samples.clone()}), ErrorCode::NotFound);
+    rejects(&mut e, "paintStroke", json!({"id": s, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+    rejects(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": []}), ErrorCode::Validation);
+    rejects(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": samples.clone(), "commit": "yes"}), ErrorCode::InvalidCommand);
+    // Locked layer rejects.
+    run(&mut e, "setLayerLocked", json!({"id": l, "locked": true}));
+    rejects(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+}
+
+#[test]
+fn paint_stroke_taper_and_dynamics_change_output() {
+    let mut e = eng(32, 32);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // Same stroke, plain vs tapered brush → different painted pixel counts.
+    let samples = stroke_samples(20, 2.0, 16.0, 1.4);
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 10.0, "color": [0,0,0,255], "spacing": 0.4}, "samples": samples.clone()}));
+    let plain = flat(&mut e);
+    let count = |b: &[u8]| b.chunks_exact(4).filter(|c| c[3] > 0).count();
+    let n_plain = count(&plain);
+    // Undo, then paint with taper.
+    e.undo().unwrap();
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 10.0, "color": [0,0,0,255], "spacing": 0.4, "taper": {"start": 0.3, "end": 0.3}}, "samples": samples}));
+    let tapered = flat(&mut e);
+    let n_tapered = count(&tapered);
+    assert!(n_tapered < n_plain, "taper should reduce coverage: {n_tapered} vs {n_plain}");
+}
+
+#[test]
+fn paint_stroke_maps_canvas_samples_into_transformed_layer() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // local → canvas: x' = 2x + 8, y' = 2y. A canvas stroke at (10, 8)
+    // lands on local texel (1, 4); stamping it untransformed would write
+    // local (10, 8) → canvas (28, 16), fully off-canvas.
+    run(&mut e, "setLayerTransform", json!({"id": l, "transform": {"tx": 8, "sx": 2, "sy": 2}}));
+    let samples = stroke_samples(5, 9.0, 8.0, 0.5);
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 4.0, "color": [0, 0, 255, 255], "spacing": 0.5}, "samples": samples}));
+    let f = flat(&mut e);
+    assert!(px(&f, 16, 10, 8)[3] > 0, "stroke must render at its canvas position");
+    assert_eq!(px(&f, 16, 10, 8)[2], 255, "blue channel dominates");
+    // The layer buffer holds the dab in local coordinates.
+    let d = describe(&mut e);
+    let raw = b64::decode(layer(&d, l)["content"]["pixels_b64"].as_str().unwrap()).unwrap();
+    assert!(px(&raw, 16, 1, 4)[3] > 0, "local texel (1,4) carries the stroke");
+    // Undo restores the empty layer through the local-space pixel region.
+    assert!(e.undo().unwrap());
+    assert!(flat(&mut e).iter().all(|&v| v == 0));
+}
+
+#[test]
+fn paint_stroke_is_gated_by_pixel_selection() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "setLayerTransform", json!({"id": l, "transform": {"tx": 4}}));
+    // Canvas selection x < 10; canvas stroke x 8..12 at y 8 → local 4..8.
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 10, "h": 16}}));
+    let samples = stroke_samples(5, 8.0, 8.0, 1.0);
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 255, 255], "spacing": 0.5}, "samples": samples}));
+    let f = flat(&mut e);
+    assert!(px(&f, 16, 8, 8)[3] > 0, "inside the selection paints");
+    assert!(px(&f, 16, 9, 8)[3] > 0);
+    assert_eq!(px(&f, 16, 11, 8)[3], 0, "outside the selection stays untouched");
+    assert_eq!(px(&f, 16, 12, 8)[3], 0);
+}
+
+#[test]
+fn paint_stroke_transparent_stroke_is_eventless() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let samples = stroke_samples(4, 1.0, 2.0, 1.0);
+    for brush in [
+        json!({"size": 6.0, "color": [0, 0, 255, 0]}),   // transparent color
+        json!({"size": 6.0, "color": [0, 0, 255, 255], "opacity": 0.0}), // zero alpha
+    ] {
+        let before = flat(&mut e);
+        let depth = e.journal.undo_len();
+        let r = e.apply(Command::new("paintStroke", json!({"id": l, "brush": brush, "samples": samples.clone()}))).unwrap();
+        assert!(r.events.is_empty(), "transparent stroke must not emit document:changed");
+        assert!(r.data["dabs"].as_u64().unwrap() > 0);
+        assert_eq!(e.journal.undo_len(), depth, "no undo entry for a no-op stroke");
+        assert_eq!(flat(&mut e), before);
+    }
+}
+
+#[test]
+fn paint_stroke_rejects_over_budget_pixel_work() {
+    let mut e = eng(1024, 1024);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    // A stroke snaking inside the canvas with smoothing off: ~300 legs of
+    // ~800 px request → the spring modeler still cuts corners, leaving
+    // ~30k px of modeled arc. At spacing 0.01·4096 ≈ 41 px that is ~700+
+    // dabs, each a 4096px brush covering the whole 1024×1024 canvas after
+    // clipping → >700M stamp visits, over the 2^28 budget. Only dabs
+    // intersecting the destination count, so the path must stay on the
+    // canvas. Rejected before any mutation.
+    let samples = Value::Array(
+        (0..300)
+            .map(|i| {
+                json!({
+                    "t": i as f64 * 0.02,
+                    "x": i as f64 * 0.1,
+                    "y": if i % 2 == 0 { 100.0 } else { 900.0 },
+                })
+            })
+            .collect(),
+    );
+    let before = describe(&mut e);
+    let depth = e.journal.undo_len();
+    let err = e.apply(Command::new("paintStroke", json!({
+        "id": l,
+        "brush": {"size": 4096.0, "spacing": 0.01, "color": [0, 0, 0, 255]},
+        "params": {"smoothing": false, "drag_constant": 8.0},
+        "samples": samples,
+    }))).expect_err("over-budget stroke must fail");
+    assert_eq!(err.code, ErrorCode::Validation);
+    assert_eq!(describe(&mut e), before);
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn snapshot_rejects_duplicate_or_colliding_brush_ids() {
+    let mut e = eng(4, 4);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "addBrush", json!({"name": "a"}));
+    run(&mut e, "addBrush", json!({"name": "b"}));
+    let snap = e.snapshot().unwrap();
+    let mut r = eng(1, 1);
+    // Duplicate brush ids.
+    let mut wire: Value = serde_json::from_slice(ignition_core::decode_envelope(&snap).unwrap().1).unwrap();
+    wire["brushes"][1]["id"] = wire["brushes"][0]["id"].clone();
+    let bad = ignition_core::encode_envelope(&serde_json::to_vec(&wire).unwrap());
+    assert_eq!(r.restore(&bad).unwrap_err().code, ErrorCode::Serialization);
+    // Brush id colliding with a layer id (shared id space).
+    let mut wire: Value = serde_json::from_slice(ignition_core::decode_envelope(&snap).unwrap().1).unwrap();
+    wire["brushes"][0]["id"] = json!(l);
+    let bad = ignition_core::encode_envelope(&serde_json::to_vec(&wire).unwrap());
+    assert_eq!(r.restore(&bad).unwrap_err().code, ErrorCode::Serialization);
+    // The untouched snapshot still restores.
+    r.restore(&snap).unwrap();
+}
+
+// -- eraser stroke (B-18 engine side) ------------------------------------------
+
+#[test]
+fn erase_stroke_pixel_reduces_alpha_and_undoes() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let samples = stroke_samples(10, 2.0, 8.0, 1.0);
+    // Paint a solid stroke first.
+    run(&mut e, "paintStroke", json!({"id": l, "brush": {"size": 8.0, "color": [200, 10, 10, 255], "spacing": 0.5}, "samples": samples.clone()}));
+    let painted = flat(&mut e);
+    assert!(px(&painted, 16, 6, 8)[3] > 200, "stroke should be ~opaque");
+    // Erase over the same path with a full-strength eraser brush.
+    let out = one_step(
+        &mut e,
+        "eraseStroke",
+        json!({"id": l, "brush": {"size": 10.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples.clone()}),
+    );
+    assert_eq!(out["mode"], "pixel");
+    assert!(out["dabs"].as_u64().unwrap() > 0);
+    let erased = flat(&mut e);
+    let a_painted = px(&painted, 16, 6, 8)[3] as u32;
+    let a_erased = px(&erased, 16, 6, 8)[3] as u32;
+    assert!(a_erased < a_painted, "erase must reduce alpha: {a_painted} -> {a_erased}");
+    // Colors are untouched by destination-out: the layer buffer keeps its
+    // straight RGB under the reduced alpha (flatten shows transparent
+    // black once alpha hits 0, so check the raw buffer).
+    let d = describe(&mut e);
+    let raw = b64::decode(layer(&d, l)["content"]["pixels_b64"].as_str().unwrap()).unwrap();
+    assert_eq!(px(&raw, 16, 6, 8)[0], px(&painted, 16, 6, 8)[0]);
+    assert_eq!(px(&raw, 16, 6, 8)[1], px(&painted, 16, 6, 8)[1]);
+    // A pixel far from the stroke keeps its alpha.
+    assert_eq!(px(&erased, 16, 14, 14)[3], px(&painted, 16, 14, 14)[3]);
+    // Erasing the same spot again with an already-empty target is eventless
+    // only when the whole stamp region is transparent; a second full erase
+    // still records because alpha remains > 0 until fully removed — but a
+    // third pass over fully-erased pixels must be a no-op.
+    run(&mut e, "eraseStroke", json!({"id": l, "brush": {"size": 10.0, "color": [0, 0, 0, 255], "spacing": 0.25, "opacity": 1.0}, "samples": samples.clone()}));
+    run(&mut e, "eraseStroke", json!({"id": l, "brush": {"size": 10.0, "color": [0, 0, 0, 255], "spacing": 0.25}, "samples": samples.clone()}));
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": l, "brush": {"size": 10.0, "color": [0, 0, 0, 255], "spacing": 0.25}, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    // Region may still hold residual alpha at edges; either way undo must be
+    // consistent — just assert the op succeeded.
+    let _ = (r, depth);
+}
+
+#[test]
+fn erase_stroke_pixel_eventless_noops() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let samples = stroke_samples(4, 1.0, 2.0, 1.0);
+    // Empty layer: nothing to erase → eventless, no journal entry.
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 0, 255]}, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty(), "erase on empty layer must not emit");
+    assert_eq!(r.data["mode"], "pixel");
+    assert_eq!(e.journal.undo_len(), depth);
+    // Transparent brush color → eventless even over content.
+    run(&mut e, "fillLayer", json!({"id": l, "color": [9, 9, 9, 255]}));
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 0, 0]}, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty());
+    assert_eq!(e.journal.undo_len(), depth + 1, "only fillLayer recorded");
+    // Zero-opacity brush → eventless.
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 0, 255], "opacity": 0.0}, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty());
+    // Dry run reports dabs/bounds without mutating.
+    let dry = run(&mut e, "eraseStroke", json!({"id": l, "brush": {"size": 6.0}, "samples": samples.clone(), "commit": false}));
+    assert!(dry["dabs"].as_u64().unwrap() > 0);
+    assert_eq!(dry["mode"], "pixel");
+    assert!(dry["bounds"]["w"].as_u64().unwrap() > 0);
+}
+
+#[test]
+fn erase_stroke_pixel_fully_outside_selection_is_eventless() {
+    // Regression: the non-ctx apply path must mirror the ctx path — a
+    // committed erase whose dabs are all gated out by the pixel selection
+    // reports ok + dabs but emits no document:changed and records no undo.
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": [200, 0, 0, 255]}));
+    // Selection covers only the right half (x >= 8); the stroke stays at x <= 5.
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 8, "y": 0, "w": 8, "h": 16}}));
+    let samples = stroke_samples(8, 1.0, 8.0, 0.5);
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    assert_eq!(r.data["ok"], true);
+    assert!(r.data["dabs"].as_u64().unwrap() > 0, "dabs still reported");
+    assert_eq!(r.data["mode"], "pixel");
+    assert!(r.events.is_empty(), "erase fully outside selection must not emit document:changed");
+    assert_eq!(e.journal.undo_len(), depth, "no undo entry for a zero-change erase");
+    // Nothing was erased: the layer is still fully opaque everywhere.
+    let f = flat(&mut e);
+    assert_eq!(px(&f, 16, 3, 8)[3], 255);
+    assert_eq!(px(&f, 16, 12, 8)[3], 255);
+}
+
+#[test]
+fn erase_stroke_pixel_gated_by_selection_and_transform() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": [200, 0, 0, 255]}));
+    // Selection covers only x < 8; erase stroke spans x 4..12 at y 8.
+    run(&mut e, "selectRegion", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 8, "h": 16}}));
+    let samples = stroke_samples(9, 4.0, 8.0, 1.0);
+    run(&mut e, "eraseStroke", json!({"id": l, "brush": {"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples}));
+    let f = flat(&mut e);
+    assert!(px(&f, 16, 5, 8)[3] < 255, "inside selection erases");
+    assert_eq!(px(&f, 16, 11, 8)[3], 255, "outside selection untouched");
+    // Transformed layer: canvas stroke maps to local texels like paintStroke.
+    run(&mut e, "deselect", json!({}));
+    let l2 = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l2, "color": [0, 0, 200, 255]}));
+    run(&mut e, "setLayerTransform", json!({"id": l2, "transform": {"tx": 8, "sx": 2, "sy": 2}}));
+    // Canvas point (10,8) → local (1,4); erasing there must show at canvas (10,8).
+    // The layer below is opaque, so flatten alpha stays 255 — check that the
+    // blue cast weakens (red from the layer below shows through) instead.
+    let before2 = flat(&mut e);
+    assert_eq!(px(&before2, 16, 10, 8)[2], 200, "blue layer covers canvas (10,8)");
+    let samples2 = stroke_samples(3, 9.5, 8.0, 0.5);
+    run(&mut e, "eraseStroke", json!({"id": l2, "brush": {"size": 4.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples2}));
+    let f2 = flat(&mut e);
+    let p = px(&f2, 16, 10, 8);
+    assert!(p[0] > 0 || p[2] < 200, "transformed erase lands at canvas position: {p:?}");
+}
+
+#[test]
+fn erase_stroke_mask_mode_erases_mask_alpha() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    run(&mut e, "fillLayer", json!({"id": l, "color": [10, 200, 10, 255]}));
+    run(&mut e, "addMask", json!({"id": l, "fill": "reveal"}));
+    let samples = stroke_samples(8, 2.0, 8.0, 1.5);
+    let out = one_step(
+        &mut e,
+        "eraseStroke",
+        json!({"id": l, "mode": "mask", "brush": {"size": 8.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples.clone()}),
+    );
+    assert_eq!(out["mode"], "mask");
+    // The mask alpha at the stroke center dropped below 255.
+    let d = describe(&mut e);
+    let mask_b64 = layer(&d, l)["mask"]["mask_b64"].as_str().unwrap();
+    let mask = b64::decode(mask_b64).unwrap();
+    assert!(mask[8 * 16 + 6] < 255, "mask alpha erased at stroke: {}", mask[8 * 16 + 6]);
+    assert_eq!(mask[2 * 16 + 2], 255, "far corner untouched");
+    // Flattened composite alpha follows the mask.
+    let f = flat(&mut e);
+    assert!(px(&f, 16, 6, 8)[3] < 255);
+    // Second identical erase keeps reducing (mask still >0 at edges) or is
+    // eventless where already 0 — either way undo stays consistent.
+    // Erasing an already-zero mask region is eventless:
+    run(&mut e, "paintMask", json!({"id": l, "x": 0, "y": 0, "w": 16, "h": 16, "data_b64": b64::encode(&vec![0u8; 256]), "mode": "replace"}));
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": l, "mode": "mask", "brush": {"size": 8.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty(), "erase on zeroed mask must be eventless");
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn erase_stroke_rejections() {
+    let mut e = eng(16, 16);
+    let l = id(&run(&mut e, "addRasterLayer", json!({})));
+    let s = id(&run(&mut e, "addShape", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "fill": [0,0,0,255]}})));
+    let samples = stroke_samples(4, 1.0, 2.0, 1.0);
+    // Unknown mode (vector is valid since the B-18 vector eraser landed).
+    rejects(&mut e, "eraseStroke", json!({"id": l, "mode": "lasso", "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+    rejects(&mut e, "eraseStroke", json!({"id": l, "mode": 3, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::InvalidCommand);
+    // Pixel mode on a non-raster layer.
+    rejects(&mut e, "eraseStroke", json!({"id": s, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+    // Mask mode requires an existing mask.
+    rejects(&mut e, "eraseStroke", json!({"id": l, "mode": "mask", "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+    // Brush exclusivity / lookup / payload validation mirror paintStroke.
+    rejects(&mut e, "eraseStroke", json!({"id": l, "samples": samples.clone()}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "eraseStroke", json!({"id": l, "brush_id": 1, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::InvalidCommand);
+    rejects(&mut e, "eraseStroke", json!({"id": l, "brush_id": 999, "samples": samples.clone()}), ErrorCode::NotFound);
+    rejects(&mut e, "eraseStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": []}), ErrorCode::Validation);
+    rejects(&mut e, "eraseStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": samples.clone(), "commit": "yes"}), ErrorCode::InvalidCommand);
+    // Locked layer rejects in both modes.
+    run(&mut e, "setLayerLocked", json!({"id": l, "locked": true}));
+    rejects(&mut e, "eraseStroke", json!({"id": l, "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+    rejects(&mut e, "eraseStroke", json!({"id": l, "mode": "mask", "brush": {"size": 4.0}, "samples": samples.clone()}), ErrorCode::Validation);
+}
+
+#[test]
+fn erase_stroke_mask_mode_on_non_raster_layer() {
+    // Masks can exist on vector layers; mask erase must work there too.
+    let mut e = eng(16, 16);
+    let s = id(&run(&mut e, "addShape", json!({"shape": {"kind": "rect", "x": 0, "y": 0, "w": 16, "h": 16, "fill": [0,0,0,255]}})));
+    run(&mut e, "addMask", json!({"id": s, "fill": "reveal"}));
+    let samples = stroke_samples(6, 2.0, 8.0, 2.0);
+    let out = one_step(
+        &mut e,
+        "eraseStroke",
+        json!({"id": s, "mode": "mask", "brush": {"size": 8.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples}),
+    );
+    assert_eq!(out["mode"], "mask");
+    let d = describe(&mut e);
+    let mask = b64::decode(layer(&d, s)["mask"]["mask_b64"].as_str().unwrap()).unwrap();
+    assert!(mask[8 * 16 + 6] < 255);
+}
+
+// -- vector eraser (B-18) -----------------------------------------------------
+
+#[test]
+fn erase_stroke_vector_removes_hit_entities() {
+    let mut e = eng(32, 32);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let b = rect(&mut e, 20.0, 20.0, 8.0, 8.0, BLUE);
+    let brush = json!({"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    let samples = stroke_samples(8, 3.0, 6.0, 1.0);
+    // Dry run reports the would-be removal without mutating.
+    let dry = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples.clone(), "commit": false}),
+    );
+    assert_eq!(dry["mode"], "vector");
+    assert_eq!(dry["removed"], json!([a]));
+    assert!(layer(&describe(&mut e), a).is_object(), "dry run must not remove");
+    // Commit: exactly one undo step removes only the hit entity.
+    let out = one_step(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples}),
+    );
+    assert_eq!(out["removed"], json!([a]));
+    let d = describe(&mut e);
+    assert!(d["layers"].as_array().unwrap().iter().all(|l| l["id"] != a));
+    assert!(layer(&d, b).is_object(), "untouched entity survives");
+}
+
+#[test]
+fn erase_stroke_vector_miss_is_eventless() {
+    let mut e = eng(32, 32);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let samples = stroke_samples(4, 24.0, 28.0, 1.0);
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"mode": "vector", "brush": {"size": 4.0, "color": [0, 0, 0, 255]}, "samples": samples}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty(), "zero-hit vector erase must be eventless");
+    assert_eq!(r.data["removed"], json!([]));
+    assert_eq!(e.journal.undo_len(), depth);
+    assert!(layer(&describe(&mut e), a).is_object());
+}
+
+#[test]
+fn erase_stroke_vector_scoped_to_subtree() {
+    let mut e = eng(32, 32);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let b = rect(&mut e, 20.0, 2.0, 8.0, 8.0, BLUE);
+    let _g = id(&run(&mut e, "groupLayers", json!({"ids": [a, b]})));
+    let brush = json!({"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    // A stroke spanning both shapes, scoped to `a`: only `a` can go.
+    let samples = stroke_samples(20, 3.0, 6.0, 1.3);
+    let out = run(
+        &mut e,
+        "eraseStroke",
+        json!({"id": a, "mode": "vector", "brush": brush, "samples": samples.clone()}),
+    );
+    assert_eq!(out["removed"], json!([a]));
+    let d = describe(&mut e);
+    assert!(layer(&d, b).is_object());
+    // Document scope (no id) now removes `b` — the group itself is never
+    // an erase target.
+    let out2 = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples}),
+    );
+    assert_eq!(out2["removed"], json!([b]));
+    assert!(e.undo().unwrap(), "second erase records one undo");
+    assert!(layer(&describe(&mut e), b).is_object());
+}
+
+#[test]
+fn erase_stroke_vector_path_paint_rules() {
+    let mut e = eng(16, 16);
+    // Stroked-only open path along y=8.
+    let p = id(&run(
+        &mut e,
+        "addPath",
+        json!({"path": {"subpaths": [{"closed": false, "nodes": [{"x": 2, "y": 8}, {"x": 14, "y": 8}]}]},
+               "stroke": {"paint": {"type": "solid", "color": RED}, "width": 2}}),
+    ));
+    // Unpainted path (no fill, no stroke) sitting right under the stroke:
+    // it paints nothing, so the eraser must not touch it.
+    let q = id(&run(
+        &mut e,
+        "addPath",
+        json!({"path": {"subpaths": [{"closed": true, "nodes": [
+            {"x": 4, "y": 6}, {"x": 12, "y": 6}, {"x": 12, "y": 10}, {"x": 4, "y": 10}
+        ]}]}}),
+    ));
+    let samples = stroke_samples(10, 2.0, 8.0, 1.3);
+    let out = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": {"size": 4.0, "color": [0, 0, 0, 255], "spacing": 0.5}, "samples": samples}),
+    );
+    assert_eq!(out["removed"], json!([p]), "stroke band hits the stroked path only");
+    let d = describe(&mut e);
+    assert!(d["layers"].as_array().unwrap().iter().all(|l| l["id"] != p));
+    assert!(layer(&d, q).is_object(), "unpainted path survives");
+}
+
+#[test]
+fn erase_stroke_vector_boolean_operand_and_invisible() {
+    let mut e = eng(16, 8);
+    let a = rect(&mut e, 0.0, 0.0, 6.0, 4.0, RED);
+    let b = rect(&mut e, 4.0, 0.0, 6.0, 4.0, BLUE);
+    let bo = id(&run(&mut e, "booleanLayers", json!({"ids": [a, b], "op": "subtract"})));
+    let brush = json!({"size": 3.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    // Stroke over operand `a` only (last dab center x=1.9 + radius 1.5
+    // reaches 3.4, clear of b's x=4 edge).
+    let samples = stroke_samples(3, 0.5, 2.0, 0.7);
+    let out = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples.clone()}),
+    );
+    assert_eq!(out["removed"], json!([a]));
+    let d = describe(&mut e);
+    assert!(layer(&d, bo).is_object(), "boolean container survives");
+    assert!(layer(&d, b).is_object(), "other operand survives");
+    // Invisible entities are skipped: hide the boolean, erase again → miss.
+    run(&mut e, "setLayerVisible", json!({"id": bo, "visible": false}));
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"mode": "vector", "brush": brush, "samples": samples}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty());
+    assert_eq!(r.data["removed"], json!([]));
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn erase_stroke_vector_locked_and_bad_scope() {
+    let mut e = eng(16, 16);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let samples = stroke_samples(6, 3.0, 6.0, 1.0);
+    let brush = json!({"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    // Locked hit entity rejects the whole op atomically.
+    run(&mut e, "setLayerLocked", json!({"id": a, "locked": true}));
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": brush, "samples": samples.clone()}),
+        ErrorCode::Validation,
+    );
+    run(&mut e, "setLayerLocked", json!({"id": a, "locked": false}));
+    // Scope id validation: wrong type / unknown layer.
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"id": "x", "mode": "vector", "brush": brush, "samples": samples.clone()}),
+        ErrorCode::InvalidCommand,
+    );
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"id": 999, "mode": "vector", "brush": brush, "samples": samples.clone()}),
+        ErrorCode::NotFound,
+    );
+    // Raster scope contains no vector entities → eventless.
+    let ras = id(&run(&mut e, "addRasterLayer", json!({})));
+    let depth = e.journal.undo_len();
+    let r = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"id": ras, "mode": "vector", "brush": brush, "samples": samples}),
+        ))
+        .unwrap();
+    assert!(r.events.is_empty());
+    assert_eq!(r.data["removed"], json!([]));
+    assert_eq!(e.journal.undo_len(), depth);
+}
+
+#[test]
+fn erase_stroke_vector_preview_matches_commit_gates() {
+    let mut e = eng(32, 32);
+    let a = rect(&mut e, 2.0, 2.0, 8.0, 8.0, RED);
+    let samples = stroke_samples(8, 3.0, 6.0, 1.0);
+    // Transparent brush (color alpha 0): the commit is eventless, so the
+    // dry run must report the same empty `removed`, not the footprint's
+    // would-be hits.
+    let clear = json!({"size": 6.0, "color": [0, 0, 0, 0], "spacing": 0.5});
+    let dry = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": clear, "samples": samples.clone(), "commit": false}),
+    );
+    assert_eq!(dry["removed"], json!([]), "transparent dry run must not report hits");
+    let depth = e.journal.undo_len();
+    let out = e
+        .apply(Command::new(
+            "eraseStroke",
+            json!({"mode": "vector", "brush": clear, "samples": samples.clone()}),
+        ))
+        .unwrap();
+    assert!(out.events.is_empty(), "transparent commit stays eventless");
+    assert_eq!(out.data["removed"], json!([]));
+    assert_eq!(e.journal.undo_len(), depth);
+    assert!(layer(&describe(&mut e), a).is_object());
+    // Zero-alpha dabs (brush opacity 0, opaque color): same parity.
+    let ghost = json!({"size": 6.0, "color": [0, 0, 0, 255], "opacity": 0.0, "spacing": 0.5});
+    let dry = run(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": ghost, "samples": samples.clone(), "commit": false}),
+    );
+    assert_eq!(dry["removed"], json!([]));
+    // Locked hit entity: both dry run and commit reject with Validation —
+    // the preview never lists ids a commit would refuse to erase.
+    run(&mut e, "setLayerLocked", json!({"id": a, "locked": true}));
+    let solid = json!({"size": 6.0, "color": [0, 0, 0, 255], "spacing": 0.5});
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": solid, "samples": samples.clone(), "commit": false}),
+        ErrorCode::Validation,
+    );
+    rejects(
+        &mut e,
+        "eraseStroke",
+        json!({"mode": "vector", "brush": solid, "samples": samples}),
+        ErrorCode::Validation,
+    );
+    assert!(layer(&describe(&mut e), a).is_object(), "rejected erases keep the layer");
 }

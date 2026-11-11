@@ -1,0 +1,29 @@
+$ node verify-local.mjs
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "../../packages/ignition/src/host-cli" without a file extension (vite.config.ts:6:25). Add the file extension
+  - import "../../packages/ignition/src/types" without a file extension (vite.config.ts:7:42). Add the file extension
+  - import "./types" without a file extension (../../packages/ignition/src/host-cli.ts:10:8). Add the file extension
+  - import "./types" without a file extension (../../packages/ignition/src/host-cli.ts:11:29). Add the file extension
+  - import "./base64" without a file extension (../../packages/ignition/src/host-cli.ts:12:46). Add the file extension
+  - import "./host" without a file extension (../../packages/ignition/src/host-cli.ts:13:33). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+  VITE v8.3.5  ready in 657 ms
+
+  ➜  Local:   http://127.0.0.1:4185/
+
+Unable to interop `export * from "react-native-web"` in /Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/apps/studio-preview/src/react-native-classname.tsx, this may lose module exports. Please export "react-native-web" as ESM or use named exports instead, e.g. `export { A, B } from "react-native-web"`
+prism: mutation, undo/redo, snapshot/reopen passed
+cadence: mutation, undo/redo, snapshot/reopen passed
+splice: mutation, undo/redo, snapshot/reopen passed
+folio: mutation, undo/redo, snapshot/reopen passed
+pitch: mutation, undo/redo, snapshot/reopen passed
+tally: mutation, undo/redo, snapshot/reopen passed
+quill: mutation, undo/redo, snapshot/reopen passed
+photo: mutation, undo/redo, snapshot/reopen passed
+motion: mutation, undo/redo, snapshot/reopen passed
+design: mutation, undo/redo, snapshot/reopen passed
+draft: mutation, undo/redo, snapshot/reopen passed
+Cross-origin, missing-origin and GET requests rejected
+Essay Unicode/newline edits, Word import/export and independent documents passed
+Prism real raster/rectangle/ellipse composite, visibility, opacity, order, remove/undo, existing-shape fill/transform/gesture/undo/redo, PNG and snapshot restore passed

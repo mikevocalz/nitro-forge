@@ -129,6 +129,62 @@ describe("prism canvas/layers ops e2e (real Rust via nf-cli)", () => {
     await doc.close();
   });
 
+  it("crops the document with intersection semantics and samples pixels", async () => {
+    const doc = await PrismDocument.open(host, 8, 8);
+    const l = (await doc.addRasterLayer("paint")).data.layer_id;
+    await doc.fillLayer(l, RED);
+    await doc.addShape({ kind: "rect", x: 4, y: 5, w: 2, h: 2, fill: BLUE });
+    await doc.selectAll();
+    // Eyedropper reads the composite before the crop.
+    expect((await doc.samplePixels(5, 6)).data).toEqual({ r: 0, g: 0, b: 255, a: 255 });
+    expect((await doc.samplePixels(0, 0)).data).toEqual({ r: 255, g: 0, b: 0, a: 255 });
+    expect((await doc.samplePixels(50, 0)).data).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+    // Crop (2,1,5,6) keeps the overlap; content is preserved.
+    await doc.crop({ x: 2, y: 1, w: 5, h: 6 });
+    const desc = await describeDoc(doc);
+    expect(desc.width).toBe(5);
+    expect(desc.height).toBe(6);
+    expect((await doc.samplePixels(3, 5)).data).toEqual({ r: 0, g: 0, b: 255, a: 255 });
+    const sel = (await doc.getSelection()).data as any;
+    expect(sel.width).toBe(5);
+    expect(sel.height).toBe(6);
+    // One undo restores the 8x8 document.
+    expect(await doc.undo()).toBe(true);
+    expect((await describeDoc(doc)).width).toBe(8);
+    await expect(doc.crop({ x: 100, y: 0, w: 4, h: 4 })).rejects.toBeInstanceOf(EngineError);
+    await doc.close();
+  });
+
+  it("smooths a selection edge in one undo step", async () => {
+    const doc = await PrismDocument.open(host, 10, 10);
+    await doc.selectRegion({ kind: "rect", x: 2, y: 2, w: 6, h: 6 });
+    await doc.modifySelection("smooth", 3);
+    const sel = (await doc.getSelection()).data as any;
+    const mask = base64ToBytes(sel.mask_b64);
+    expect(mask.every((v) => v === 0 || v === 255)).toBe(true);
+    expect(mask[5 * 10 + 5]).toBe(255);
+    expect(mask[2 * 10 + 2]).toBe(0);
+    expect(await doc.undo()).toBe(true);
+    await doc.close();
+  });
+
+  it("duplicates a layer and a whole group subtree", async () => {
+    const doc = await PrismDocument.open(host, 8, 8);
+    const a = (await doc.addShape({ kind: "rect", x: 0, y: 0, w: 4, h: 4, fill: RED })).data.layer_id;
+    const b = (await doc.addShape({ kind: "ellipse", x: 2, y: 2, w: 4, h: 4, fill: BLUE })).data.layer_id;
+    const g = (await doc.groupLayers([a, b], "art")).data.layer_id;
+    const dg = (await doc.duplicateLayer(g)).data.layer_id;
+    const desc = await describeDoc(doc);
+    const kids = desc.layers.filter((x: any) => x.parent === dg);
+    expect(kids).toHaveLength(2);
+    expect(desc.layers.find((x: any) => x.id === dg).name).toBe("art copy");
+    expect(desc.layers.find((x: any) => x.id === dg).parent).toBeNull();
+    // One undo removes the whole copied subtree.
+    expect(await doc.undo()).toBe(true);
+    expect((await describeDoc(doc)).layers).toHaveLength(3);
+    await doc.close();
+  });
+
   it("round-trips the new state through save and reopen", async () => {
     const doc = await PrismDocument.open(host, 6, 6);
     const a = (await doc.addShape({ kind: "ellipse", x: 0, y: 0, w: 6, h: 6, fill: RED })).data.layer_id;

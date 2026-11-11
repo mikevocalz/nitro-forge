@@ -24,3 +24,4 @@ motion-engine = { path = "../../packages/motion/rust" }
 design-engine = { path = "../../packages/design/rust" }
 
 draft-engine = { path = "../../packages/draft/rust" }
+scene-engine = { path = "../../packages/scene/rust" }

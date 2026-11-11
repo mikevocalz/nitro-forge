@@ -1,6 +1,6 @@
 # Nitro-Forge Architecture — Ignition Contracts
 
-Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill, Photo, Motion, Design and Draft)
+Status: ratified. All product engines (Prism, Cadence, Splice, Folio, Pitch, Tally, Quill, Photo, Motion, Design, Draft and Scene)
 implement against these contracts. Changes require touching every engine, so they are
 deliberately small.
 
@@ -82,6 +82,21 @@ Prism's shared raster buffers retain copy-on-write ownership. Native queues
 already serialize the whole command, so no other document operation observes
 an intermediate step. This adds no C ABI layout or generated Nitro type changes.
 
+Batch execution has two paths behind `Engine::apply_batch`. Plain `apply`
+runs each step through `apply` on the staged clone. Task-driven `apply_long`
+routes `__batch` to `apply_batch` with the `TaskContext`, which runs every
+step through the staged engine's own `apply_long` on a scoped child context:
+each step observes cancellation and reports progress into its own slice of
+the task's progress, so a heavy op inside a batch (for example Cadence
+`render`, which returns base64 JSON inside a batch) checkpoints mid-step
+instead of running uninterruptible. Splice's `batch` op applies the same
+per-op routing on its scratch engine. Cancellation semantics are unchanged
+and atomic: a cancelled or failed step returns `Cancelled`/the step's error,
+the staged clone is dropped, and the committed document, IDs and journal are
+untouched — a cancelled batch is rejected whole, never partially applied.
+Synchronous `apply`/`nf-cli` batches keep the original non-interruptible
+behavior.
+
 ### Errors
 `EngineError { code, message, recoverable }` with a closed `ErrorCode` enum:
 `InvalidCommand | NotFound | Validation | Serialization | OutOfBounds | Internal`.
@@ -134,7 +149,8 @@ The pinned Nitro nightly-120 factory returns `ForgeDocument` and `ForgeMediaCach
 
 The additive C ABI in `nf_v1.h` preserves existing result layouts. Binary inputs and outputs are capped at 256 MiB; command JSON remains capped at 32 MiB. Input is copied before leaving JS to prevent caller mutation; Rust results are copied to owned native storage and transferred as ArrayBuffer. This is not a zero-copy claim. Callers must free each C result exactly once and retain the opaque task through all worker/observer calls.
 
-`Engine::apply_long` checks cancellation before atomic operations. Cadence synthesis checks every 8192 samples and between mix stages; EQ/compressor processing retains continuous state and is not interrupted mid-stage. Folio save and Quill DOCX export add safe read-only checkpoints. Other commands may finish after cancellation was requested; a successful atomic mutation is never reported as cancelled. `cancelled` is a recoverable error. Progress is monotonic checkpoint progress, not elapsed-time estimation. Media decoding is a separate Expo queue and is not cancelled by ForgeTask.
+`Engine::apply_long` checks cancellation before atomic operations and forwards
+`__batch` to `Engine::apply_batch` with the task context. Cadence synthesis checks every 8192 samples and between mix stages; EQ/compressor processing retains continuous state and is not interrupted mid-stage. Folio save and Quill DOCX export add safe read-only checkpoints. Other commands may finish after cancellation was requested; a successful atomic mutation is never reported as cancelled. `cancelled` is a recoverable error. Progress is monotonic checkpoint progress, not elapsed-time estimation; `TaskContext::scoped` gives batch steps disjoint progress windows so per-step `apply_long` progress composes into task-wide progress. Media decoding is a separate Expo queue and is not cancelled by ForgeTask.
 
 The media cache owns derived bytes only. Capacity is 1..256 MiB, with at most 4096 entries and 1024-byte keys. Put copies input before queueing; get returns a copy and updates LRU order. Close drains earlier work, clears bytes and rejects later operations. Keys must encode source revision and decode options. It neither persists engine documents nor generates waveforms/thumbnails itself. See recovery/PHASE6.md for executed checks and platform gates.
 
@@ -142,10 +158,12 @@ The media cache owns derived bytes only. Capacity is 1..256 MiB, with at most 40
 The registered Photo engine adds catalog descriptors and version identities to the shared contract. Original bytes, decoder resources and durable asset retention remain host-owned; the catalog performs no I/O or RAW processing. Photo appends persisted/native kind tag 7 without changing established tags 0–6. Its explicit photo/schema-1 snapshot payload is inside unchanged NFD1 framing. Native binaries must include the new registered factory before opening this kind; source registration alone does not establish a target build or app rollout.
 
 
-The registered Motion engine appends native and NFC1/NCC1 tag 8 after Photo 7; tags 0–7 stay fixed. Its `kind:"motion",schema:1` JSON payload uses the unchanged NFD1 envelope header. Motion owns bounded flat 2D shape layers and scalar hold/linear/absolute-handle Bezier curves; frame evaluation materializes an ephemeral Prism engine and returns its actual RGBA composite through the original JSON/binary command result contract. It does not duplicate the renderer or own media/encoder resources. Geometry/translation/origin/rotation bounds match Prism's public 1e7 coordinate limit, with scale magnitude 1e-6..1e4 and same-sign scale curves.
+The registered Motion engine appends native and NFC1/NCC1 tag 8 after Photo 7; tags 0–7 stay fixed. Its `kind:"motion",schema:1` JSON payload uses the unchanged NFD1 envelope header. Motion owns bounded flat 2D shape layers and scalar hold/linear/absolute-handle Bezier curves; frame evaluation materializes an ephemeral Prism engine and returns its actual RGBA composite through the original JSON/binary command result contract. It does not duplicate the renderer or own media/encoder resources. Slice J1 adds a durable bounded `render_queue` of frame-range jobs stepped one real RGBA frame per `renderQueueFrame` through the same ephemeral-Prism path — raw pixels and exact integer progress only, journaled and undoable like every mutation; no encoder exists, so encoded export remains unimplemented. Slice G1 adds an optional per-layer `transform3d` (`rx`/`ry` euler degrees + `z` depth, animatable through the same scalar curves) that is stored, snapshotted and curve-evaluated — `evaluate` reports an orthographic `projected_transform` affine — but does not affect the 2D raster output until true projection rendering lands; no camera or lights exist yet. Slice H adds `kind:"media"` layers storing an optional `{source_id,in_point}` footage reference only — `source_id` is an opaque host reference the engine never resolves and `in_point` is stored source time, so media layers render fully transparent (a staged 1x1 transparent raster keeps their stack slot) until the P03 transport contract supplies real pixels; no footage decode or render is claimed. Geometry/translation/origin/rotation bounds match Prism's public 1e7 coordinate limit, with scale magnitude 1e-6..1e4 and same-sign scale curves.
 
 Motion validates the complete candidate before mutation and retains sixteen Arc/COW history entries under a 16 MiB serialized-state cap. Render tasks checkpoint between layers and before/after synchronous Prism flatten, without promising interruption inside that compositor. Snapshot opening uses the shared owning DocumentHandle.openSnapshot helper. Registration, focused host tests and generated enum checks do not establish a native target rebuild, app rollout, encoding queue or complete P11 acceptance.
 
-The registered Design engine appends native and NFC1/NCC1 tag 9 after Motion 8. Its explicit design/schema-1 tree uses the unchanged NFD1 envelope, sixteen Arc/COW history entries and an 8 MiB encoded-state cap. Fixed frame trees evaluate row/column layout into validated world boxes and render actual ephemeral Prism RGBA. Ancestor visibility and authored edit locks are explicit; unlocked ancestor layout may change a locked child's evaluated geometry. Frames have visible overflow, without a clipping claim. Full components, text layout, variables, constraints, prototypes, native consumer rebuild and application activation remain separate work.
+The registered Design engine appends native and NFC1/NCC1 tag 9 after Motion 8. Its explicit design/schema-1 tree uses the unchanged NFD1 envelope, sixteen Arc/COW history entries and an 8 MiB encoded-state cap. Fixed frame trees evaluate row/column layout into validated world boxes and render actual ephemeral Prism RGBA. Ancestor visibility and authored edit locks are explicit; unlocked ancestor layout may change a locked child's evaluated geometry. Frames have visible overflow, without a clipping claim. Text nodes (layout boxes only), variables/modes/bindings, stored-but-unsolved constraints (C1/C2), materialized components/instances (slice D) and the prototype catalog (slice E — screens/hotspots/interactions/transitions with deterministic `prototypeGraph`/`resolvePrototypeEvent` reads; the engine owns no playback clock) have since landed. Glyph text layout, comments, presence transport, native consumer rebuild and application activation remain separate work.
 
 The registered Draft engine appends native/checkpoint identity 10 after Design9. It owns bounded 2D points, segments, snap settings and linear coordinate constraints, with real rank/DOF/residual results and atomic solved geometry. Exact locked coordinates remain fixed. World viewport and selection are host-owned; projected finite paths use actual Prism RGBA. Schema1 NFD1 snapshots have an 8 MiB cap and sixteen Arc/COW history entries. This source registration does not supply general nonlinear CAD, 3D processing, native target acceptance or default product activation.
+
+The registered Scene engine appends native and NFC1/NCC1 tag 11 after Draft 10; tags 0–10 stay fixed. Its `kind:"scene",schema:1` JSON payload uses the unchanged NFD1 envelope header. Per the P17 Track-B B0 decision the engine owns document state only — group/layer/mesh/camera/light nodes with TRS transforms and acyclic parent graphs, PBR-state materials matching the scene-render model, custom base64 mesh attributes and deterministic primitives — and never rasterizes: `renderFrame` emits the canonical scene description the host submits unchanged to the `rust/scene-render` service, keeping the "engines own state, hosts own pixels" split. Bounded Journal undo (32 entries) and an 8 MiB encoded-state cap apply as elsewhere; node-material DAG, UV packing, glTF/OBJ import, GPU tier and native target acceptance remain separate work.

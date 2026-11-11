@@ -1,0 +1,23 @@
+$ vitest run --config ../../tooling/completion-backends.vitest.config.mjs packages/motion/tests
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger[39m
+
+ [32m✓[39m packages/motion/tests/comp-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/transform3d-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/media-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/matte-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/lights-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/expression-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/graph-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/particles-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/queue-cli.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/raster-cli.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/blend-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/effects-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/motion/tests/path-cli.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 16[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m13 passed[39m[22m[90m (13)[39m
+[2m      Tests [22m [1m[32m15 passed[39m[22m[90m (15)[39m
+[2m   Start at [22m 18:03:37
+[2m   Duration [22m 714ms[2m (transform 54%, tests 26%, import 16%, worker 4%)[22m
+

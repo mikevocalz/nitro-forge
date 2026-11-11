@@ -1,0 +1,56 @@
+{
+  "sourceRevision": "313973fba0a6a5c3ed359c0d978d8eef36143ac9",
+  "branch": "codex/w31-scene-android",
+  "worktree": "forge-w31-scene-android",
+  "evidenceKind": "android-emulator",
+  "device": {
+    "avd": "ForgeCompletion_API36",
+    "serial": "emulator-5554",
+    "androidRelease": "16",
+    "sdk": 36,
+    "abi": "arm64-v8a",
+    "qemu": true
+  },
+  "apk": {
+    "package": "ai.nitroforge.cadence.studio",
+    "sha256": "3809a8869100deb14a5a5df0e406f7e219892b0911e0a38969497afcd85bc01e",
+    "bytes": 90863526,
+    "abis": ["arm64-v8a"],
+    "libNitroForgeV1.so.sha256": "49a283f9e68fc8d88da522c35a8f1faeaad1b10b9fd08f20e4117f1eb5fb4dd1",
+    "archivedAt": "native-artifacts/cadence-completion-W31-scene-android.apk",
+    "note": "Gradle installDebug output at examples/native-cadence/android/app/build/outputs/apk/debug/app-debug.apk; libNitroForgeV1.so rebuilt at this revision via packages/ignition/scripts/build-android.sh arm64-v8a (cargo ndk, ANDROID_NDK_HOME=~/Library/Android/sdk/ndk/27.1.12297006) plus :nitro-forge_ignition:buildCMakeDebug[arm64-v8a]. strings() shows scene_engine symbols."
+  },
+  "jsBundle": {
+    "metro": "expo start --port 8084 --localhost",
+    "metroRoot": "forge-w31-scene-android/examples/native-cadence",
+    "adbReverse": "tcp:8081 tcp:8084",
+    "note": "Ports 8081/8082 were bound by other sessions' Metro processes (forge-w28-ios on 8081; zombie forge-w29-android on 8082, left running); this run used 8084 and repointed the emulator reverse. Workspace packages resolved to this worktree via the standalone pnpm workspace in examples/native-cadence."
+  },
+  "results": {
+    "verifyNativeEngines": {
+      "status": "passed",
+      "passed": ["prism", "cadence", "splice", "folio", "pitch", "tally", "quill", "photo", "motion", "design", "draft", "scene"],
+      "failed": [],
+      "detail": "All 12 ENGINE_KINDS including scene (tag 11) passed new/describe/NFD1 snapshot/restore/describe-equality/invalid-restore atomicity/close/closed-handle rejection. Draft source_revision caveat from W29 resolved by harness stripping that field before compare.",
+      "cadenceSession": "edit, undo, redo and reopen passed"
+    },
+    "verifyQuillRenderPage": {
+      "status": "passed",
+      "detail": "registerFont ok sha256=f6a446f65dbd…; renderPage fixed-geometry 267x133 inked; deterministic; use_sections section=0 number=1 816x1056 inked; empty-font and out-of-range-page rejections ok"
+    },
+    "verifyNativeServices": {
+      "status": "passed",
+      "detail": "bounded LRU, owned binary buffers, task progress/results, cancellation and cleanup"
+    }
+  },
+  "notRun": [
+    "verifyNativeTelemetry",
+    "nf-color", "splice-render", "raw-decode", "scene-render provider paths",
+    "NYC-Tron platform-services encoder, speech and audio providers"
+  ],
+  "screenshots": [
+    "W31-android-engines-all12-pass.png",
+    "W31-android-quill-renderpage-pass.png",
+    "W31-android-services-pass.png"
+  ]
+}

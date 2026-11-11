@@ -1,0 +1,149 @@
+   Compiling motion-engine v0.1.0 (/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/packages/motion/rust)
+warning: unused imports: `ParticleEmitter`, `ParticleSprite`, and `SpriteShape`
+ --> packages/motion/rust/src/particles_tests.rs:1:24
+  |
+1 | use super::particles::{ParticleEmitter, ParticleSprite, SpriteShape, MAX_EMITTERS};
+  |                        ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `motion-engine` (lib test) generated 1 warning (run `cargo fix --lib -p motion-engine --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.86s
+     Running unittests src/lib.rs (target/debug/deps/motion_engine-a85deed94135e58d)
+
+running 126 tests
+test comp_tests::nested_comp_renders_real_pixels_with_proportional_time_mapping ... ok
+test comp_tests::duplicate_composition_preserves_comp_and_asset_references ... ok
+test comp_tests::batch_atomicity_and_snapshot_schema_migration ... ok
+test blend_tests::clipped_masks_to_unclipped_sibling_below ... ok
+test comp_tests::reparent_layer_index_bounds_and_root_target ... ok
+test comp_tests::comp_ops_duplicate_parent_reparent_and_removal_rules ... ok
+test blend_tests::blend_names_validate_atomically_and_undo_redo_roundtrip ... ok
+test curve::tests::base_endpoints_hold_and_linear ... ok
+test curve::tests::bezier_inverts_actual_time_and_defaults_to_linear ... ok
+test blend_tests::blend_clipped_survive_snapshot_and_hostile_restore_rejects ... ok
+test curve::tests::validates_unsampled_tail_and_handle_constraints ... ok
+test comp_tests::schema2_missing_kind_rejects_while_schema1_infers ... ok
+test blend_tests::blend_and_clip_compose_with_comp_layers_and_rasters ... ok
+test comp_tests::hostile_composition_restores_reject_without_mutating ... ok
+test comp_tests::shear_composed_parent_transform_fails_render_not_state ... ok
+test effects_tests::comp_layer_and_nested_layer_effects_render ... ok
+test effects_tests::clipping_masks_the_effected_pixels ... ok
+test effects_tests::blend_mode_composites_the_effected_pixels ... ok
+test effects_tests::effects_compose_in_stack_order ... ok
+test comp_tests::set_layer_order_targets_the_owning_composition ... ok
+test effects_tests::gaussian_blur_spreads_alpha_and_color_across_pixels ... ok
+test effects_tests::effected_layers_share_the_canvas_storage_budget ... ok
+test effects_tests::each_registered_effect_is_pixel_verified ... ok
+test effects_tests::effects_apply_after_transform_and_before_opacity_blend_matte ... ok
+test effects_tests::set_layer_effects_rejects_unknown_layer ... ok
+test expression_tests::cross_comp_layer_ref_rejects_and_same_comp_works ... ok
+test effects_tests::set_layer_effects_validates_atomically_and_replays_history ... ok
+test expression_tests::deep_nesting_rejects_without_aborting ... ok
+test expression_tests::duplicate_composition_remaps_layer_refs ... ok
+test effects_tests::hostile_restore_rejects_bad_effects_and_good_ones_roundtrip ... ok
+test expression_tests::equal_write_eventless_and_clear_semantics ... ok
+test expression_tests::kind_gates_and_structural_clears ... ok
+test expression_tests::dependency_cycles_reject_at_op_time ... ok
+test expression_tests::mutual_exclusion_is_atomic_both_directions ... ok
+test blend_tests::every_w3c_blend_mode_composites_expected_pixels ... ok
+test expression_tests::removing_a_referenced_layer_rejects ... ok
+test expression_tests::seek_determinism_and_render_pixels ... ok
+test expression_tests::nonfinite_sanitizes_and_finite_clamps ... ok
+test graph_tests::graph_free_snapshot_is_byte_identical ... ok
+test expression_tests::time_frame_fps_duration_and_nested_comp_time ... ok
+test graph_tests::basic_graph_drives_bound_property_seek_safe_and_renders ... ok
+test expression_tests::parse_and_bounds_rejection_matrix_is_atomic ... ok
+test graph_tests::binding_exclusivity_clears_in_both_directions_atomically ... ok
+test graph_tests::non_finite_propagates_and_sanitizes_at_binding ... ok
+test expression_tests::hostile_restore_rejects_and_preserves_state ... ok
+test graph_tests::structural_ops_remap_or_reject_bindings ... ok
+test graph_tests::hostile_restore_rejects_bad_graph_atomically ... ok
+test lights::tests::apply_multiplies_rgb_and_preserves_alpha ... ok
+test graph_tests::property_source_reads_pre_binding_curve_or_base ... ok
+test lights::tests::hostile_light_payloads_reject ... ok
+test lights::tests::normal_matches_the_projected_rotation_chain ... ok
+test expression_tests::whitelisted_functions_and_this_refs ... ok
+test lights::tests::shade_is_lambert_times_color_times_intensity ... ok
+test graph_tests::time_family_sources_use_owning_comp_local_time ... ok
+test graph_tests::topo_order_determinism_independent_of_insertion_order ... ok
+test matte_tests::invisible_matted_target_skips_mask_render ... ok
+test matte_tests::matte_feather_softens_edges_within_bound ... ok
+test graph_tests::undo_redo_equal_write_and_batch_atomicity ... ok
+test matte_tests::every_matte_mode_pixel_verifies_alpha_and_luma ... ok
+test matte_tests::nested_matte_source_applies_its_own_matte ... ok
+test matte_tests::matte_renders_inside_nested_compositions_and_on_comp_sources ... ok
+test matte_tests::matte_validates_atomically_and_rejects_bad_references ... ok
+test media_tests::add_set_clear_media_round_trip ... ok
+test matte_tests::matte_strand_prevention_across_layer_ops ... ok
+test media_tests::media_snapshot_round_trip_undo_redo_and_equal_writes ... ok
+test media_tests::media_composes_like_other_layers_minus_content ... ok
+test media_tests::media_renders_transparent_and_never_fakes_pixels ... ok
+test particles_tests::emitter_spec_roundtrips_through_snapshot ... ok
+test particles_tests::lifetime_window_and_undo_redo_are_exact ... ok
+test matte_tests::matte_snapshot_undo_redo_equal_patch_and_hostile_restore ... ok
+test particles_tests::particles_render_deterministically_and_seek_safely ... ok
+test particles_tests::seed_changes_particle_layout ... ok
+test particles_tests::hostile_restore_rejects_bad_emitters_and_state_survives ... ok
+test media_tests::media_validation_bounds_and_kind_exclusivity ... ok
+test path_tests::auto_orient_adds_tangent_angle_to_rotation ... ok
+test path_tests::polyline_arc_length_and_progress_are_exact ... ok
+test particles_tests::layer_transform_and_asset_sprites_apply ... ok
+test path_tests::extreme_path_offsets_saturate_at_transform_bound ... ok
+test projection::tests::translation_and_scale_map_pixels_deterministically ... ok
+test path_tests::path_progress_curve_positions_layer_along_path ... ok
+test projection::tests::identity_resample_is_byte_identical ... ok
+test projection::tests::singular_projection_is_transparent_not_garbage ... ok
+test graph_tests::kind_pin_param_and_edge_validation_matrix_is_atomic ... ok
+test path_tests::bezier_paths_subdivide_within_the_sample_budget ... ok
+test queue_tests::enqueue_reorder_cancel_remove_and_describe_report_real_state ... ok
+test queue_tests::explicit_job_stepping_and_queue_summary_are_exact ... ok
+test queue_tests::cancelled_task_never_consumes_a_frame ... ok
+test queue_tests::comp_jobs_render_standalone_and_removal_is_guarded ... ok
+test matte_tests::matte_cycles_transitive_depth_and_duplicates_are_rejected ... ok
+test queue_tests::set_composition_cannot_strand_pending_jobs_but_history_is_free ... ok
+test path_tests::motion_path_validation_clear_and_hostile_restore ... ok
+test queue_tests::queue_ops_compose_inside_atomic_batches ... ok
+test queue_tests::stepping_renders_real_frames_and_completes_jobs ... ok
+test raster_tests::malformed_input_resize_restore_and_raster_budgets_reject_atomically ... ok
+test raster_tests::raster_pivot_curves_and_history_preserve_identity_and_bytes ... ok
+test queue_tests::undo_redo_snapshot_and_restore_round_trip_queue_state ... ok
+test raster_tests::immutable_owned_rgba_and_shared_asset_layers_render_actual_pixels ... ok
+test raster_tests::wholly_transparent_rasters_render_even_with_nonzero_pivot ... ok
+test queue_tests::hostile_restore_rejects_queue_bounds_and_inconsistent_progress ... ok
+test raster_tests::update_layer_retargets_asset_with_atomic_validation ... ok
+test render3d_tests::identity_3d_and_transform_free_layers_render_byte_identically ... ok
+test render3d_tests::light_rig_validation_atomicity_undo_and_snapshot ... ok
+test render3d_tests::ry_only_compresses_x_by_cos_ry_with_hand_verified_pixels ... ok
+test render3d_tests::rx_only_compresses_y_and_combined_rx_ry_shears ... ok
+test render3d_tests::particles_and_media_layers_accept_3d ... ok
+test render3d_tests::lights_shade_3d_layers_only_with_lambert_ambient ... ok
+test render3d_tests::composes_with_effects_parents_mattes_and_nested_comps ... ok
+test tests::accepted_coordinate_limits_match_prism_public_render_operations ... ok
+test tests::real_rgba_json_binary_history_and_snapshot ... ok
+test tests::pivoted_mirror_batch_and_corrupt_restore_are_real_and_atomic ... ok
+test transform3d::tests::combined_tilt_produces_shear_the_2d_transform_cannot_express ... ok
+test tests::validation_batch_and_cancel_preserve_state ... ok
+test transform3d::tests::edge_on_rotations_collapse_the_projected_axis ... ok
+test transform3d::tests::identity_orientation_projects_to_the_2d_affine ... ok
+test tests::malformed_key_values_never_panic_or_change_state_or_redo ... ok
+test transform3d_tests::nested_comp_layers_project_too ... ok
+test transform3d_tests::clear_is_atomic_and_equal_writes_are_eventless ... ok
+test transform3d_tests::bounds_locked_and_hostile_restore_reject_atomically ... ok
+test transform3d_tests::set_eval_curves_and_projected_transform ... ok
+test transform3d_tests::render_applies_3d_projection_and_snapshot_round_trips ... ok
+test particles_tests::emitter_bounds_caps_and_kind_rules_hold ... ok
+test comp_tests::comp_depth_cycle_caps_and_aggregate_layer_budget_are_enforced ... ok
+test queue_tests::queue_frame_and_job_budgets_are_enforced_at_op_time ... ok
+test expression_tests::long_dependency_chain_evaluates_without_recursion ... ok
+test tests::budgets_and_sixteen_entry_history_are_bounded ... ok
+test raster_tests::decoded_asset_budget_and_legacy_shape_snapshot_are_validated_before_publication ... ok
+
+test result: ok. 126 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.47s
+
+   Doc-tests motion_engine
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

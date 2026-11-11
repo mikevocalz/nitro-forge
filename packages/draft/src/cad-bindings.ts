@@ -21,6 +21,15 @@ export const DRAFT_COMMAND_COMPLETIONS=[
  {id:'delete-circle',label:'DELETE CIRCLE id',replacement:'DELETE CIRCLE '},{id:'delete-arc',label:'DELETE ARC id',replacement:'DELETE ARC '},
  {id:'delete-constraint',label:'DELETE CONSTRAINT id',replacement:'DELETE CONSTRAINT '},{id:'solve',label:'SOLVE [tolerance]',replacement:'SOLVE'},
  {id:'snap',label:'SNAP x y tolerance [anchorX anchorY]',replacement:'SNAP '},
+ {id:'layer-new',label:'LAYER NEW name',replacement:'LAYER NEW '},{id:'layer-rename',label:'LAYER RENAME id name',replacement:'LAYER RENAME '},
+ {id:'layer-visible',label:'LAYER VISIBLE id on|off',replacement:'LAYER VISIBLE '},{id:'layer-lock',label:'LAYER LOCK id on|off',replacement:'LAYER LOCK '},
+ {id:'layer-delete',label:'LAYER DELETE id',replacement:'LAYER DELETE '},{id:'delete-layer',label:'DELETE LAYER id',replacement:'DELETE LAYER '},
+ {id:'hatch',label:'HATCH pattern id [id...] (boundary entity ids)',replacement:'HATCH '},{id:'delete-hatch',label:'DELETE HATCH id',replacement:'DELETE HATCH '},
+ {id:'dim-linear',label:'DIM LINEAR a b x|y',replacement:'DIM LINEAR '},{id:'dim-aligned',label:'DIM ALIGNED a b',replacement:'DIM ALIGNED '},
+ {id:'dim-angular',label:'DIM ANGULAR vertex first second',replacement:'DIM ANGULAR '},{id:'dim-radial',label:'DIM RADIAL entity',replacement:'DIM RADIAL '},
+ {id:'dim-diameter',label:'DIM DIAMETER entity',replacement:'DIM DIAMETER '},{id:'delete-dimension',label:'DELETE DIMENSION id',replacement:'DELETE DIMENSION '},
+ {id:'block-new',label:'BLOCK NEW name',replacement:'BLOCK NEW '},{id:'block-delete',label:'BLOCK DELETE id',replacement:'BLOCK DELETE '},
+ {id:'insert',label:'INSERT blockId x y [scale] [rotationDeg]',replacement:'INSERT '},{id:'delete-insert',label:'DELETE INSERT id',replacement:'DELETE INSERT '},
 ] as const;
 /** Errors reject so the canonical editor retains its draft; no simulated geometry or optimistic history. */
 export function bindDraftingCommandLine(document:Pick<DraftDocument,'executeCommand'>,host:DraftCommandHost):DraftCommandBinding{

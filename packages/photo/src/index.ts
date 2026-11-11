@@ -1,5 +1,6 @@
 import {ownDevelopRecipe,ownPreviewRequest,type PhotoDevelopV1,type PhotoPreviewRequest,type PhotoPreviewData,type PhotoPreviewResult} from './develop';
 export * from './develop';
+export * from './raw';
 import {DocumentHandle,bytesToBase64,base64ToBytes,type EngineHost} from '@nitro-forge/ignition';
 /** Host-claimed metadata; the catalog does not decode bytes or verify content hashes. */
 export interface OriginalDescriptor {sha256:string;asset_ref:string;byte_length:number;camera_make:string;camera_model:string}
@@ -40,7 +41,8 @@ export class PhotoDocument {
   const response=await this.document.apply<PhotoPreviewData>(OPS.processPreview,{...owned,pixels_b64:encoded});
   const data=response.data;
   if(data.format!==owned.format||data.width!==owned.width||data.height!==owned.height||data.row_stride!==owned.width*4||data.original_id!==owned.original_id||data.version_id!==owned.version_id||data.original_sha256!==owned.original_sha256||typeof data.pixels_b64!=='string')throw new Error('Mismatched photo preview response');
-  if(!data.develop||data.develop.schema!==owned.expected_develop.schema||data.develop.exposure_ev!==owned.expected_develop.exposure_ev||data.develop.contrast!==owned.expected_develop.contrast||!Array.isArray(data.develop.rgb_gain)||data.develop.rgb_gain.length!==3||data.develop.rgb_gain.some((gain,index)=>gain!==owned.expected_develop.rgb_gain[index]))throw new Error('Mismatched preview develop recipe');
+  const expected=owned.expected_develop,returned=data.develop;
+  if(!returned||returned.schema!==expected.schema||returned.exposure_ev!==expected.exposure_ev||returned.contrast!==expected.contrast||!Array.isArray(returned.rgb_gain)||returned.rgb_gain.length!==3||returned.rgb_gain.some((gain,index)=>gain!==expected.rgb_gain[index])||(returned.temperature_kelvin??undefined)!==(expected.temperature_kelvin??undefined)||(returned.tint??0)!==(expected.tint??0))throw new Error('Mismatched preview develop recipe');
   if(data.pixels_b64.length!==Math.ceil(owned.width*owned.height*4/3)*4)throw new Error('Photo preview response exceeds encoded byte budget');
   const output=base64ToBytes(data.pixels_b64);
   if(output.byteLength!==owned.width*owned.height*4)throw new Error('Invalid photo preview byte length');

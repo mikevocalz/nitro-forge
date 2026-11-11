@@ -19,11 +19,25 @@ for (const [kind, mutation] of [
   ['pitch', { op: 'addSlide', payload: { layout: 'title' } }],
   ['tally', { op: 'setCell', payload: { addr: 'A1', value: '=SUM(1,2,3)' } }],
   ['quill', { op: 'insertText', payload: { at: { block: 0, offset: 0 }, text: 'Bridge test' } }],
+  ['photo', { op: 'addOriginal', payload: { sha256: 'f'.repeat(64), asset_ref: 'bridge:raw', byte_length: 16, camera_make: 'Bridge', camera_model: 'Cam' } }],
+  ['motion', { op: 'addShapeLayer', payload: { shape: { kind: 'rect', x: 0, y: 0, w: 4, h: 4, fill: [255, 0, 0, 255] }, name: 'Bridge' } }],
+  ['design', { op: 'addText', payload: { parent: 1, content: 'Bridge test' } }],
+  ['draft', { op: 'addPoint', payload: { x: 0, y: 0, locked: false } }],
+  ['scene', { op: 'addMaterial', payload: { name: 'Bridge' } }],
 ]) {
   const handle = await call('open', kind);
   try {
     await call('apply', handle, { op: 'new', payload: kind === 'prism' ? { width: 64, height: 64 } : kind === 'folio' ? { pages: 1 } : {} });
-    const state = async () => (await call('apply', handle, { op: 'describe', payload: {} })).data;
+    // draft's describe carries a monotonic source_revision that is not undo
+    // state; strip it so the comparison checks document content only.
+    const state = async () => {
+      const data = (await call('apply', handle, { op: 'describe', payload: {} })).data;
+      if (data && typeof data === 'object' && 'source_revision' in data) {
+        const { source_revision: _revision, ...rest } = data;
+        return rest;
+      }
+      return data;
+    };
     const before = await state();
     await call('apply', handle, mutation);
     const after = await state();
@@ -37,7 +51,13 @@ for (const [kind, mutation] of [
     const reopened = await call('open', kind);
     try {
       await call('restore', reopened, bytes);
-      assert.deepEqual((await call('apply', reopened, { op: 'describe', payload: {} })).data, after);
+      const restored = (await call('apply', reopened, { op: 'describe', payload: {} })).data;
+      if (restored && typeof restored === 'object' && 'source_revision' in restored) {
+        const { source_revision: _revision, ...content } = restored;
+        assert.deepEqual(content, after);
+      } else {
+        assert.deepEqual(restored, after);
+      }
     } finally { await call('close', reopened); }
     console.log(`${kind}: mutation, undo/redo, snapshot/reopen passed`);
   } finally { await call('close', handle); }

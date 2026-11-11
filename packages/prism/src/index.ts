@@ -6,9 +6,11 @@ import {
 } from "@nitro-forge/ignition";
 import type { Rgba } from "./rgba";
 import type {
-  AlignEdge, AlignTarget, Artboard, BlendMode, BooleanOp, FillRule, LayerBounds, LayerTransform, NodeKind,
-  Paint, PaintOrder, PathNode, PixelPreview, SampleSource, SelectionMode, SelectionShape, SelectionState,
-  Stroke, Subpath,
+  AlignEdge, AlignTarget, Artboard, BlendMode, BooleanOp, Brush, BrushPatch, FillRule, LayerBounds, LayerTransform,
+  ModeledStroke, NodeKind, Paint, PaintOrder, PaintStrokeOptions, PaintStrokePreview, PaintStrokeResult,
+  EraseMode, EraseStrokeOptions, EraseStrokePreview, EraseStrokeResult,
+  PathNode, PixelPreview, SampleSource, SelectionMode, SelectionShape, SelectionState, Stroke, StrokeModelParams,
+  StrokePredict, StrokeSample, Subpath,
 } from "./canvas-types";
 
 export type { Rgba } from "./rgba";
@@ -19,6 +21,7 @@ export const OPS = {
   newDoc: "new",
   describe: "describe",
   resize: "resize",
+  crop: "crop",
   addRasterLayer: "addRasterLayer",
   addShape: "addShape",
   setShapeFill: "setShapeFill",
@@ -32,6 +35,7 @@ export const OPS = {
   fillLayer: "fillLayer",
   applyFilter: "applyFilter",
   flatten: "flatten",
+  encodePng: "encodePng",
   getLayer: "getLayer",
   setLayerTransform: "setLayerTransform",
   translateLayers: "translateLayers",
@@ -50,12 +54,14 @@ export const OPS = {
   getSelection: "getSelection",
   groupLayers: "groupLayers",
   ungroupLayer: "ungroupLayer",
+  duplicateLayer: "duplicateLayer",
   setLayerParent: "setLayerParent",
   setLayerLocked: "setLayerLocked",
   setLayerBlend: "setLayerBlend",
   setClipped: "setClipped",
   layerThumbnail: "layerThumbnail",
   renderRegion: "renderRegion",
+  samplePixels: "samplePixels",
   addMask: "addMask",
   removeMask: "removeMask",
   setMaskEnabled: "setMaskEnabled",
@@ -88,6 +94,13 @@ export const OPS = {
   swapColors: "swapColors",
   clearRecentColors: "clearRecentColors",
   getColors: "getColors",
+  modelStroke: "modelStroke",
+  addBrush: "addBrush",
+  setBrush: "setBrush",
+  removeBrush: "removeBrush",
+  listBrushes: "listBrushes",
+  paintStroke: "paintStroke",
+  eraseStroke: "eraseStroke",
 } as const;
 
 /** Document palette returned by `getColors` and included in `describe`. */
@@ -162,6 +175,20 @@ export class PrismDocument {
   resize(width: number, height: number) {
     return this.call(OPS.resize, { width, height });
   }
+  /**
+   * Offset-crop the document to `rect` (canvas space). The rect is rounded
+   * outward to whole pixels and intersected with the canvas — partial and
+   * off-canvas crops keep the overlap; a rect that misses is rejected.
+   * Content coordinates, masks, selection and artboards are rebased so the
+   * rendered image is preserved for untransformed content. Raster layers
+   * only support pure
+   * translation/identity scale (including through group ancestors): any
+   * rotation, skew, or non-unit scale rejects the crop with Validation.
+   * One undo step.
+   */
+  crop(rect: { x: number; y: number; w: number; h: number }) {
+    return this.call(OPS.crop, rect);
+  }
   addRasterLayer(name?: string) {
     return this.call<{ layer_id: number }>(OPS.addRasterLayer, { name });
   }
@@ -205,6 +232,24 @@ export class PrismDocument {
   flatten() {
     return this.call<{ pixels_b64: string; width: number; height: number }>(
       OPS.flatten,
+    );
+  }
+  /**
+   * PNG-encode rendered RGBA (no file I/O — `png_b64` carries the bytes,
+   * same base64 convention as `pixels_b64`). Without `layer` the pixels are
+   * exactly what {@linkcode flatten} returns; with `layer` the named
+   * layer's subtree renders alone at canvas size (content + transform +
+   * mask — opacity, blend and clipping are NOT applied, matching
+   * `layerThumbnail` semantics). Format is an honest subset: 8-bit RGBA,
+   * non-interlaced, no palette, no 16-bit, no ancillary chunks; output is
+   * deterministic for identical pixels. Budget: ≤4096 px per side and
+   * ≤1,048,576 px total — larger canvases reject with OutOfBounds. Read-only:
+   * no undo entry, no `document:changed`.
+   */
+  encodePng(options: { layer?: number } = {}) {
+    return this.call<{ width: number; height: number; format: "png"; png_b64: string }>(
+      OPS.encodePng,
+      options.layer === undefined ? {} : { layer: options.layer },
     );
   }
   getLayer(id: number) {
@@ -274,7 +319,7 @@ export class PrismDocument {
   magicWand(options: { x: number; y: number; tolerance?: number; contiguous?: boolean; sample?: SampleSource; mode?: SelectionMode }) {
     return this.call(OPS.magicWand, options);
   }
-  modifySelection(op: "grow" | "shrink" | "feather", radius: number) {
+  modifySelection(op: "grow" | "shrink" | "feather" | "smooth", radius: number) {
     return this.call(OPS.modifySelection, { op, radius });
   }
   getSelection() {
@@ -287,6 +332,16 @@ export class PrismDocument {
   }
   ungroupLayer(id: number) {
     return this.call(OPS.ungroupLayer, { id });
+  }
+  /**
+   * Deep-copy a layer — for groups and booleans the whole subtree is
+   * duplicated with fresh ids and remapped parents. The copy keeps every
+   * property (transform, mask, blend, lock, clipping) and lands directly
+   * above the source among its siblings; `name` renames the copied root
+   * (default `"<name> copy"`). One undo step.
+   */
+  duplicateLayer(id: number, name?: string) {
+    return this.call<{ layer_id: number }>(OPS.duplicateLayer, { id, name });
   }
   setLayerParent(id: number, parent: number | null) {
     return this.call(OPS.setLayerParent, { id, parent });
@@ -307,6 +362,18 @@ export class PrismDocument {
   }
   renderRegion(x: number, y: number, w: number, h: number, max: number) {
     return this.call<PixelPreview>(OPS.renderRegion, { x, y, w, h, max });
+  }
+  /**
+   * Composite RGBA at a document-space point through the real render
+   * pipeline (transforms, blend modes, masks). `radius` box-averages a
+   * square region; points outside the canvas sample transparent.
+   * Read-only.
+   */
+  samplePixels(x: number, y: number, radius = 0) {
+    return this.call<{ r: number; g: number; b: number; a: number }>(
+      OPS.samplePixels,
+      { x, y, radius },
+    );
   }
 
   // -- masks (B-12) -------------------------------------------------------------
@@ -397,6 +464,83 @@ export class PrismDocument {
   }
   rasterizeLayer(id: number) {
     return this.call(OPS.rasterizeLayer, { id });
+  }
+
+  // -- brush / stroke (P06) ---------------------------------------------------
+  /**
+   * Run the engine's stroke modeler over raw stylus samples: wobble
+   * smoothing → damped-spring position model → stylus-state interpolation,
+   * plus optional velocity lookahead. Pure and read-only — nothing is
+   * recorded or emitted. `t` is seconds, `x`/`y` canvas pixels; at most
+   * 4096 samples per call. Deterministic: identical input gives identical
+   * output on every target.
+   */
+  modelStroke(samples: StrokeSample[], options: { params?: StrokeModelParams; predict?: StrokePredict | boolean } = {}) {
+    return this.call<ModeledStroke>(OPS.modelStroke, {
+      samples,
+      ...(options.params ? { params: options.params } : {}),
+      ...(options.predict !== undefined ? { predict: options.predict } : {}),
+    });
+  }
+  /** Add a brush preset (≤64 per document). Missing fields take defaults. */
+  addBrush(brush: BrushPatch) {
+    return this.call<{ brush_id: number }>(OPS.addBrush, brush);
+  }
+  /** Partial brush update; identical values record nothing (`changed:false`). */
+  setBrush(id: number, patch: BrushPatch) {
+    return this.call<{ ok: true; changed: boolean }>(OPS.setBrush, { id, ...patch });
+  }
+  removeBrush(id: number) {
+    return this.call(OPS.removeBrush, { id });
+  }
+  /** The document brush table. Read-only. */
+  listBrushes() {
+    return this.call<{ brushes: Brush[] }>(OPS.listBrushes, {});
+  }
+  /**
+   * Commit a brush stroke to a raster layer: samples are modeled, resolved
+   * through the brush (dynamics/taper) into dabs and stamped src-over.
+   * One undo step per stroke. `commit:false` is a read-only dry run
+   * returning the dab count and bounds.
+   */
+  paintStroke(options: PaintStrokeOptions) {
+    const { brush_id, brush, commit, ...rest } = options;
+    return this.call<PaintStrokeResult | PaintStrokePreview>(OPS.paintStroke, {
+      ...rest,
+      ...(brush_id !== undefined ? { brush_id } : {}),
+      ...(brush !== undefined ? { brush } : {}),
+      ...(commit !== undefined ? { commit } : {}),
+    });
+  }
+
+  /**
+   * Eraser counterpart of {@linkcode paintStroke}: models the same samples
+   * into dabs through the brush, then composites destination-out instead of
+   * src-over — covered pixels lose alpha proportional to dab coverage,
+   * `brush.opacity`/`flow`/dynamics/taper, the brush color's alpha, and the
+   * pixel selection.
+   *
+   * `mode:"pixel"` (default) erases a raster layer's pixels through the
+   * layer's complete transform (same canvas→local mapping and selection
+   * pullback as `paintStroke`); `mode:"mask"` erases the layer's
+   * canvas-space mask alpha and requires an existing mask; `mode:"vector"`
+   * is an object eraser that removes whole shape/path layers intersecting
+   * the brush footprint (`id` optional = scope root, absent = document).
+   * See docs/ENGINE_OPS.md for exact semantics.
+   *
+   * One undo step per committed stroke; `commit:false` is a read-only dry
+   * run returning `{dabs, bounds, mode}`. Strokes that change nothing
+   * (empty target, fully transparent brush, off-canvas, or a provably
+   * unchanged erase) return eventless with no journal entry.
+   */
+  eraseStroke(options: EraseStrokeOptions) {
+    const { brush_id, brush, commit, ...rest } = options;
+    return this.call<EraseStrokeResult | EraseStrokePreview>(OPS.eraseStroke, {
+      ...rest,
+      ...(brush_id !== undefined ? { brush_id } : {}),
+      ...(brush !== undefined ? { brush } : {}),
+      ...(commit !== undefined ? { commit } : {}),
+    });
   }
 
   // -- region fill (B-30) -----------------------------------------------------------
