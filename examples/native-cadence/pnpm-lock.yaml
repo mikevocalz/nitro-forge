@@ -3059,7 +3059,7 @@ packages:
       react-native: '>=0.88.0'
 
   react-native-video@file:../../tooling/react-native-video-v1/experimental-build-v1.tgz:
-    resolution: {integrity: sha512-izGcGMnqrgsw/851nRIxynxTg5jvbP29rnE15ZlxUZlLo9VmSvBrRow8JDNbY77+rop0dIeR221uGyHGF57P7w==, tarball: file:../../tooling/react-native-video-v1/experimental-build-v1.tgz}
+    resolution: {integrity: sha512-yBbPoM+UXvUQGXVzPDDQFeZXLlpjTHkKWbQX03+98yLSKBrA+sqWuJ0KBT8Ss/eskPdWCsL2G1LZGhDrNWFxWg==, tarball: file:../../tooling/react-native-video-v1/experimental-build-v1.tgz}
     version: 7.0.0-beta.12-nitrov1-experimental.1
     peerDependencies:
       react: '*'
