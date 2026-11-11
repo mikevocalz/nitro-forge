@@ -111,7 +111,12 @@ pub(crate) fn check(
     let (left_cover, right_cover) = if keyed {
         (
             span_len(&left.speed_keys, left.speed, left.out_s, left.out_s + after),
-            span_len(&right.speed_keys, right.speed, right.in_s - before, right.in_s),
+            span_len(
+                &right.speed_keys,
+                right.speed,
+                right.in_s - before,
+                right.in_s,
+            ),
         )
     } else {
         (after / left.speed, before / right.speed)

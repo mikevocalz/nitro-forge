@@ -184,9 +184,19 @@ fn roll(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
     // by the media `delta` seconds of playback consumes past its out-point,
     // and the right clip's in-point advances by the media its first `delta`
     // timeline seconds consume. Constant clips reduce to `+= delta * speed`.
-    let new_l_out = media_for_offset(&track.clips[li].speed_keys, track.clips[li].speed, track.clips[li].out_s, delta);
+    let new_l_out = media_for_offset(
+        &track.clips[li].speed_keys,
+        track.clips[li].speed,
+        track.clips[li].out_s,
+        delta,
+    );
     track.clips[li].out_s = new_l_out;
-    let ri_in = media_for_offset(&track.clips[ri].speed_keys, track.clips[ri].speed, track.clips[ri].in_s, delta);
+    let ri_in = media_for_offset(
+        &track.clips[ri].speed_keys,
+        track.clips[ri].speed,
+        track.clips[ri].in_s,
+        delta,
+    );
     let r = &mut track.clips[ri];
     r.in_s = ri_in;
     r.timeline_start_s += delta;
