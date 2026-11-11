@@ -27,6 +27,7 @@ import { CadenceDetailControls } from './cadence-detail-controls';
 import { CadenceMixerAdapter, mixerClusterChannels, type CadenceMixerState } from '../../../packages/cadence/src/mixer-cluster';
 import type { CadenceDocument } from '../../../packages/cadence/src/index';
 import { createCadenceTempoBindings } from '../../../packages/cadence/src/editor-adapter';
+import { spliceTrimHandlers } from './splice-trim-wiring';
 import { SpliceDetailControls, SpliceTransitionOverlay, spliceTimelineExtent, useSpliceDetailSelection } from './splice-detail-controls';
 import type { SpliceDocument } from '../../../packages/splice/src/index';
 import { SpliceTimelineAdapter, timelineClusterCallbacks, type SpliceTimelineView } from '../../../packages/splice/src/timeline-cluster';
@@ -331,7 +332,7 @@ function SpliceSurface(props: EngineStudioSurfaceProps) {
   };
   if (!rate) return <Banner tone="danger" title={`The sequence rate ${fps} cannot be represented by the timeline controls.`} live="alert"/>;
   if (!adapter) return null;
-  const bindings = timelineClusterCallbacks(adapter);
+  const bindings = timelineClusterCallbacks(adapter), trim = spliceTrimHandlers(bindings, commit);
   return <ScrollView testID="splice-engine-surface" style={{ flex: 1 }} contentContainerStyle={{ padding: scale.space.element, gap: scale.space.element }}
     onLayout={event => { const width = event.nativeEvent.layout.width; if (width > 0) store.setState(current => ({ width, viewport: { ...current.viewport, widthPx: Math.max(1, width - (width < 700 ? 56 : 232) - scale.space.element * 2) } })); }}>
     {error && <Banner tone="danger" title={error} live="alert"/>}
@@ -345,9 +346,9 @@ function SpliceSurface(props: EngineStudioSurfaceProps) {
       <OverlayAndEffectsTrackStack tracks={view.tracks} viewport={viewport} onViewportChange={viewport => store.setState({ viewport })}
         rate={rate} durationFrames={extent} playheadFrame={cursor} {...(selected ? { selectedClipId: selected } : {})}
         selectedClipIds={selectedClipIds} onSelect={selection.selectClip} onToggleSelect={selection.toggleClip}
-        laneOverlay={<SpliceTransitionOverlay adapter={adapter} view={view} rate={rate} viewport={viewport} selection={selection} disabled={!ready} commit={commit} laneHeight={Math.max(56, scale.size.target)}/>} onEdit={edit => { void commit(() => bindings.onEdit(edit)).catch(() => {}); }}
+        laneOverlay={<SpliceTransitionOverlay adapter={adapter} view={view} rate={rate} viewport={viewport} selection={selection} disabled={!ready} commit={commit} laneHeight={Math.max(56, scale.size.target)}/>} onEdit={trim.onEdit} tool={selection.tool}
         compactHeaders={compact} headerWidth={headerWidth} laneHeight={Math.max(56, scale.size.target)} disabled={!ready}
-        onSetFlag={(id, flag, value) => { void commit(() => bindings.onSetFlag(id, flag, value)).catch(() => {}); }}
+        onSetFlag={trim.onSetFlag}
         onRename={(id, name) => { void commit(() => bindings.onRename(id, name)).catch(() => {}); }}
         onMoveTrack={(id, index) => { void commit(() => bindings.onMoveTrack(id, index)).catch(() => {}); }}
         onAddTrack={kind => { void commit(() => bindings.onAddTrack(kind)).catch(() => {}); }}/>

@@ -7,12 +7,15 @@ import { TimelineMarkers } from '@nyc-tron/ui/components/forge/timeline/Timeline
 import { TransitionHandles } from '@nyc-tron/ui/components/forge/timeline/TransitionHandles';
 import { TransitionPresetBrowser } from '@nyc-tron/ui/components/forge/timeline/TransitionPresetBrowser';
 import { BatchEditPanel } from '@nyc-tron/ui/components/forge/timeline/BatchEditPanel';
+import { RollSlipSlideControls } from '@nyc-tron/ui/components/forge/timeline/RollSlipSlideControls';
+import type { TimelineTool } from '@nyc-tron/ui/components/forge/timeline/TimelineClipLane';
 import { clipsOfCut, cutsOf, maxTransitionFrames, transitionAt, transitionTarget, type TimelineCut } from '@nyc-tron/ui/components/forge/timeline/transitions';
 import { stackOrder } from '@nyc-tron/ui/components/forge/timeline/track-stack';
 import type { FrameRate } from '@nyc-tron/ui/components/forge/timebase';
 import type { TimelineViewport } from '@nyc-tron/ui/components/forge/timeline/viewport';
 import type { SpliceDocument } from '../../../packages/splice/src/index';
 import { spliceTimelineExtent } from './splice-timeline-extent';
+import { spliceTrimHandlers } from './splice-trim-wiring';
 export { spliceTimelineExtent } from './splice-timeline-extent';
 import { SPLICE_TRANSITION_PRESETS, timelineClusterCallbacks, type SpliceTimelineAdapter, type SpliceTimelineView } from '../../../packages/splice/src/timeline-cluster';
 
@@ -21,11 +24,13 @@ type DetailSelection = {
   selectedCut: TimelineCut | undefined;
   selectedTransitionId: string | undefined;
   selectedMarkerId: string | undefined;
+  /** Drives both the D-21 nudge buttons and the drag tool on the clip lanes. */
+  tool: TimelineTool;
 };
 /** Presentation selection resets on document identity, never on density or pane geometry. */
 export function useSpliceDetailSelection(document: SpliceDocument | null) {
   const store = useMemo(() => createStore<DetailSelection>(() => ({
-    selectedClipIds: [], selectedCut: undefined, selectedTransitionId: undefined, selectedMarkerId: undefined,
+    selectedClipIds: [], selectedCut: undefined, selectedTransitionId: undefined, selectedMarkerId: undefined, tool: 'select',
   })), [document]);
   const state = useStore(store, value => value);
   return { ...state,
@@ -36,6 +41,7 @@ export function useSpliceDetailSelection(document: SpliceDocument | null) {
     selectCut: (selectedCut: TimelineCut | undefined) => store.setState({ selectedCut, selectedTransitionId: undefined }),
     selectTransition: (selectedTransitionId: string | undefined) => store.setState({ selectedTransitionId }),
     selectMarker: (selectedMarkerId: string | undefined) => store.setState({ selectedMarkerId }),
+    setTool: (tool: TimelineTool) => store.setState({ tool }),
   };
 }
 export type SpliceDetailSelection = ReturnType<typeof useSpliceDetailSelection>;
@@ -94,7 +100,7 @@ export function SpliceDetailControls(props: SpliceDetailProps & {
   const { view, selection, commit, adapter, disabled } = props;
   const revision = useReadRevision(view);
   const scale = resolveWorkspaceScale(props.density), colors = workspaceThemes[props.theme];
-  const bindings = timelineClusterCallbacks(adapter);
+  const bindings = timelineClusterCallbacks(adapter), handlers = spliceTrimHandlers(bindings, commit);
   const cut = currentCut(props), located = cut ? clipsOfCut(view.tracks, cut) : undefined;
   const existing = cut ? transitionAt(view.transitions, cut) : undefined;
   const browserCut = located ? { target: transitionTarget(located.track), maxFrames: maxTransitionFrames(located.left, located.right),
@@ -120,6 +126,14 @@ export function SpliceDetailControls(props: SpliceDetailProps & {
           ? adapter.setTransition(existing.id, { kind: preset.kind, durationSeconds })
           : bindings.onAddTransition({ leftClipId: cut.leftClipId, rightClipId: cut.rightClipId, kind, durationSeconds }));
       }}/>
+    <Text style={{ color: colors.muted, fontSize: scale.type.body }}>
+      {selectedClipIds.length === 1
+        ? 'Trim tools act on the selected clip. Slip moves the media inside it, slide moves it between its neighbours, roll moves the cut.'
+        : 'Select one clip to use the slip, slide and roll nudges. The tool also applies to dragging on the lanes.'}
+    </Text>
+    <RollSlipSlideControls key={revision} tool={selection.tool} onToolChange={selection.setTool} tracks={view.tracks} rate={props.rate}
+      {...(selectedClipIds.length === 1 ? { selectedClipId: selectedClipIds[0]! } : {})} disabled={disabled}
+      onEdit={handlers.onEdit}/>
     <BatchEditPanel key={revision} tracks={view.tracks} selectedClipIds={selectedClipIds} rate={props.rate} disabled={disabled}
       onClearSelection={selection.clearClips} onApply={edits => observedCommit(commit, () => bindings.onApply(edits))}/>
   </View>;
