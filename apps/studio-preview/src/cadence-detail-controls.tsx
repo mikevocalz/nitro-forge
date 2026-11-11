@@ -9,6 +9,8 @@ import {PluginPresetBrowser} from '@nyc-tron/ui/components/forge/audio/PluginPre
 import {PrecisionScrubber} from '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber';
 import {MIDIPianoRoll,PIANO_ROLL_KEY_COLUMN} from '@nyc-tron/ui/components/forge/midi/MIDIPianoRoll';
 import {MIDIVelocityLane} from '@nyc-tron/ui/components/forge/midi/MIDIVelocityLane';
+import {VerticalFader} from '@nyc-tron/ui/components/forge/audio/VerticalFader';
+import {commitCadenceTrackGain} from './cadence-gain-wiring';
 import {CadenceAnalysisControls} from './cadence-analysis-controls';
 import {CadenceMixerAdapter,mixerClusterRoutes,mixerClusterSlots,type CadenceMixerState,type MixerInsert} from '../../../packages/cadence/src/mixer-cluster';
 import {createCadenceClipBindings} from '../../../packages/cadence/src/editor-adapter';
@@ -99,6 +101,8 @@ export function CadenceDetailControls(props:CadenceDetailControlsProps){
    <Select label="Track to edit" value={String(track.id)} options={selectableTracks.map(t=>({value:String(t.id),label:t.name}))}
     disabled={disabled} onValueChange={id=>select({trackId:Number(id),slotId:null,clipId:null,note:undefined,scrollX:0})}/>
    <TrackNameEditor key={track.id} document={document} name={track.name} disabled={disabled} targetSize={scale.size.target} onCommit={name=>write(()=>document.renameTrack(track.id,name))}/>
+   <VerticalFader key={controlBoundary+'gain'} scope={`cadence-gain:${track.id}`} revision={authority.current.revision} label={`${track.name} gain`} value={track.volume}
+    targetSize={scale.size.target} disabled={disabled} onCommit={gain=>write(()=>commitCadenceTrackGain(document,track.id,gain))}/>
    {view.panel==='effects'&&<>
    <InsertEffectRack key={controlBoundary} label={track.name} inserts={mixerClusterSlots(project,track.id)} disabled={disabled}
     {...(slot?{selectedId:String(slot.id)}:{})} onSelect={id=>select({slotId:Number(id)})}

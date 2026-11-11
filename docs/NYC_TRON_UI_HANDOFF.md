@@ -230,15 +230,39 @@ Deferred, with the blocker named:
 | Row | Component | Engine op (verified in `docs/ENGINE_OPS.md` and `packages/*/src`) | Blocker |
 | --- | --- | --- | --- |
 | D-13 | `LoopRangeBar` | Splice `setLoopRange` / `clearLoopRange` (adapter `setLoopRange`) | The bar always renders a player "Loop playback" switch (`onLoopingChange` is required) and the Splice surface has no transport, so the switch would do nothing. Unblocks when a transport exists or NYC-Tron-UI renders the switch only when `onLoopingChange` is passed. |
-| I-15 | `PivotFieldList` | Tally `insertPivot`, `describePivot`, `refreshPivot` | Not in `alpha.4`. No release contains PR #54, and the pin policy (`tooling/nyc-tron.json`, `verify-nyc-tron-pin.mjs`) accepts only a release tarball URL with a sha256. |
-| I-12 | `SortFilterHeader` | Tally `sortRange`, `setFilter`, `evaluateFilters` | Same: absent from `alpha.4`. |
-| I-04 | `NameBox` | Tally `defineName`, `listNames` | Same. |
-| I-11 | `ValidationDropdown` | Tally `setValidation`, `validateCell` | Same. |
-| I-07 | `FillHandleAndAutoFill` | Tally `fillSeries`, `fillRange` | Same. |
-| C-11 | `EyedropperTool` | Prism `samplePixels` | Same. |
-| E-35 | `BeatDetectionMarkerLane` | Cadence `detectBeats` | Same. |
-| B-11 | `LayerBlendAndOpacity` | Prism `setLayerBlend`, `setLayerOpacity` | Same. |
-| E-14 | `VerticalFader` | Cadence `setTrackGain` | Same. |
 
-When a NYC-Tron-UI release that contains PR #54 exists, update
-`tooling/nyc-tron.json` and the manifests together, then wire the rows above.
+The nine rows that `alpha.4` did not ship are covered in the next section.
+
+## Studio preview rows against NYC-Tron-UI v1.0.0 (2026-11-11)
+
+Component props were read from NYC-Tron-UI `main` at `11c1ce8` (the source of
+`v1.0.0`, whose `packages/ui/package.json` exports all nine paths). Ops were
+checked in `packages/{tally,prism,cadence}/src/index.ts` and
+`docs/ENGINE_OPS.md`. The app still pins `v0.1.0-alpha.4`, so the `.tsx`
+files that import these components do not typecheck until the pin moves to
+`v1.0.0`. The engine logic lives in plain modules with node tests that do not
+import the UI package: `tally-rows-wiring.ts`, `prism-eyedropper-wiring.ts` and
+`cadence-gain-wiring.ts` under `apps/studio-preview/src`.
+
+Wired:
+
+| Row | Component | Engine ops | Where | Notes |
+| --- | --- | --- | --- | --- |
+| I-12 | `SortFilterHeader` | `sortRange`, `getFilters`, `setFilter`, `clearFilter`, `evaluateFilters` | Tally, "Sort and filter" tab, over the grid selection | Operator and operand map to COUNTIF criteria (`=`, `*x*`, `>n`, `<n`, `""`, `<>`; wildcards escaped with `~`). A changed filter sets the new rule, then clears the old one: two undo entries, because Tally has no filter update op. `sortRange` is destructive, so removing the last sort key is refused with a pointer to Undo. The grid does not hide rows (SpreadsheetGrid v1.0.0 has no hidden-row prop), and the pane says so. |
+| I-04 | `NameBox` | `listNames` | Tally, "Selection" tab | Lists names bound to the active sheet. Navigation sets the grid selection and calls no op. NameBox has no define callback, so `defineName` stays unused. |
+| I-11 | `ValidationDropdown` | `validateCell`, `getCell`, `setCell` | Tally, "Selection" tab, focus cell | Shown for `list` rules; `number` and `text` rules show their pass state as text. `allowOther` is off and `allowBlank` on (Tally reports a blank cell valid under any rule). Values starting with `=` are refused because `setCell` would store a formula. The dropdown picks a value; it does not author rules, so `setValidation` stays unused. |
+| I-07 | `FillHandleAndAutoFill` | `fillRange`, `fillSeries` | Tally, `AutoFillModePicker` in the "Data" tab; grid `onFillRange` | The overlay itself is not mounted: SpreadsheetGrid already draws the fill handle from the same `fill-handle` planner, and a second handle would duplicate it. Modes offered: `copy` (`fillRange`) and `series` (`fillSeries`, step inferred). `formulas` is not offered because `fillRange` already shifts relative references. |
+| C-11 | `EyedropperTool` | `samplePixels`, `setColors` | Prism, "Colors" tab | One source, the flattened composite. Profile id `prism-rgba8`, since Prism has no ICC handling. Apply writes the active foreground or background slot. A sample from an older render generation is refused. |
+| E-14 | `VerticalFader` | `setTrackGain` | Cadence, track section of the effects and MIDI tabs | Linear gain 0..1 maps to track `volume` 0..1. |
+
+Deferred, with the blocker named:
+
+| Row | Component | Engine ops | Blocker |
+| --- | --- | --- | --- |
+| I-15 | `PivotFieldList` | `insertPivot`, `updatePivot`, `describePivot`, `refreshPivot` | `onAssign(fieldId, 'filters')` carries no accepted values, while Tally's `PivotFilterInput` requires 1 to 64 `values` per filter field, so every "Add ... to filters" button would fail. The list also has no source-range input and Tally's `insertPivot` needs a source range and at least one value slot, so the first assignment on a workbook without a pivot cannot create one. Unblocks when NYC-Tron-UI adds a filter-value picker (or renders the filters zone only when a capability prop allows it) and the host gets a source-range step. |
+| E-35 | `BeatDetectionMarkerLane` | `detectBeats` | The lane always renders a "Beat detection sensitivity" scrubber, and `detectBeats` takes only `fft_size` and `hop`. Its `lane` is a `TimelineMarkers` with add, move, rename and remove, and Cadence has no marker ops to store detected beats. Both controls would be live with nothing behind them. Unblocks with a Cadence sensitivity parameter (or a NYC-Tron prop that hides the scrubber) plus Cadence marker storage. |
+| B-11 | `LayerBlendAndOpacity` | `setLayerBlend`, `setLayerOpacity` | Mode and opacity map directly. The "Layer alpha representation" menu always offers Straight and Premultiplied, and Prism has no op that changes a layer's alpha mode, so choosing Premultiplied would fail every time. The compositing-space menu can be given one entry, but the alpha menu cannot be limited. Unblocks when NYC-Tron-UI accepts an alpha-mode capability list, or Prism adds an alpha-mode op. |
+
+`docs/COMPONENT_OWNERSHIP.md` on NYC-Tron-UI `main` does not list these nine
+components yet; its "Eyedropper / canvas sampling" row still reads "NOT
+EXTRACTED".
