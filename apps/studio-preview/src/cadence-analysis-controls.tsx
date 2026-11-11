@@ -112,7 +112,7 @@ export function CadenceAnalysisControls(props:CadenceAnalysisControlsProps){
      <Select label="Automation parameter" value={view.param} options={[{value:'gain',label:'Gain'},{value:'pan',label:'Pan'}]} disabled={disabled}
       onValueChange={value=>{if(value==='gain'||value==='pan')select({param:value,selectedTick:undefined});}}/>
      <AutomationModePicker key={controlKey+'mode'} mode={lane.mode} label={`${track.name} ${view.param} automation mode`} disabled={disabled}
-      onModeCommit={mode=>write(()=>adapter.automation(track.id,view.param).onModeCommit(mode))}/>
+      onModeCommit={mode=>write(()=>{if(mode!=='off'&&mode!=='read')throw new Error('Live automation modes require a transport host.');return adapter.automation(track.id,view.param).onModeCommit(mode);})}/>
      {supportsGrid&&visiblePoints.length<=2048?<AutomationLane key={controlKey} label={`${track.name} ${view.param} · first ${view.bars} bars`} param={view.param}
       points={visiblePoints.map(item=>item.point)} mode={lane.mode} lengthTicks={windowTicks} ppq={project.ppq} beatsPerBar={quarterBeats}
       snapTicks={Math.max(1,Math.round(project.ppq/4))} pixelsPerTick={Math.min(.1,4096/windowTicks)} disabled={disabled}
