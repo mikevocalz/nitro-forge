@@ -49,16 +49,55 @@ export type TallySheetDocument = Pick<TallyDocument, "workbook" | "setActive" | 
  * Engine operations the cluster's UI can express but Tally does not have yet.
  * Each is a DEFER: the matching NYC-Tron callback is left out, so its control
  * is not drawn. Adding the op to `packages/tally/rust` and `OPS` is what
- * lifts the deferral.
+ * lifts the deferral. Chart (`insertChart`/`updateChart`/`removeChart`/
+ * `listCharts`) and sparkline (`setSparkline`/`clearSparkline`/
+ * `listSparklines`) persistence landed in slice 7 as storage-only specs —
+ * hosts wire `ChartBuilder.onInsert`/`SparklineEditor` callbacks to the
+ * `TallyDocument` methods directly; rendering stays host-side.
+ *
+ * `setSheetView` landed in slice 8 (`saveSheetView`/`setSheetView`/
+ * `removeSheetView`/`listSheetViews`): workbook-persisted named views that
+ * capture the sheet's filter specs — the only durable view state the
+ * engine owns. Frozen panes, splits, scroll, zoom and column widths remain
+ * host view state (the engine does not own them), so the I-17 freeze/split
+ * half of the deferral is honestly still open even though the op name is
+ * now backed.
+ *
+ * Cell/range comments landed in slice 9 (`addComment`/`updateComment`/
+ * `removeComment`/`resolveComment`/`reopenComment`/`listComments`):
+ * workbook-persisted single-entry comments anchored to cell/range
+ * coordinates — hosts wire comment-pin UI to the `TallyDocument` methods
+ * directly; threading/replies stay deferred. Slice 13 added the
+ * row/column structural ops those anchors now remap with
+ * (`insertRows`/`deleteRows`/`insertCols`/`deleteCols` on
+ * `TallyDocument`, plus `mergeCells`/`unmergeCells`/`listMergedCells`
+ * for merged regions); hosts wire row/column UI to the methods directly.
+ *
+ * Delimited text transfer landed in slice 10 (`importCsv`/`importTsv`/
+ * `exportCsv`/`exportTsv`): the engine parses/serializes RFC 4180 text
+ * in-op — `TallyDocument.importCsv`/`exportCsv` (and the TSV pair) take
+ * and return strings; the file-export sheet's CSV/TSV import formats in
+ * `transfer.ts` ride the same ops. XLSX stays deferred on dependency
+ * admission (backlog: "XLSX blocked on dependency admission").
+ *
+ * Pivot tables landed in slice 11-A as storage-only specs
+ * (`insertPivot`/`updatePivot`/`removePivot`/`listPivots`/`describePivot`
+ * on `TallyDocument`): the engine stores the bounded spec — output sheet,
+ * source sheet+range, field-offset rows/columns/values/filters/sort —
+ * and writes no cells. Compute, refresh, materialization and any pivot
+ * UI are deferred; hosts wire the methods directly when a later slice
+ * lands them.
+ *
+ * Table objects (Excel Tables) landed in slice 12 as storage + CRUD +
+ * read ops (`insertTable`/`updateTable`/`removeTable`/`listTables`/
+ * `describeTable` on `TallyDocument`): a workbook-unique display name, a
+ * canonical sheet range including the header row, and storage-only
+ * header/totals/banding flags. Table ranges may not overlap each other
+ * or merged regions on their sheet, and they remap with the structural
+ * row/column ops. Structured references, totals computation and any
+ * table UI are deferred; hosts wire the methods directly.
  */
-export const TALLY_DEFERRED_OPS = {
-  /** I-13 `onInsert`: a chart object saved in the workbook. */
-  insertChart: "I-13",
-  /** I-14 `onApply`/`onRemove`: sparkline groups saved in the workbook. */
-  setSparkline: "I-14",
-  /** I-17: freeze panes and split saved with the sheet; today they are app view state only. */
-  setSheetView: "I-17",
-} as const;
+export const TALLY_DEFERRED_OPS = {} as const;
 export type TallyDeferredOp = keyof typeof TALLY_DEFERRED_OPS;
 
 function requireData<T>(response: { data?: T }, op: string): T {

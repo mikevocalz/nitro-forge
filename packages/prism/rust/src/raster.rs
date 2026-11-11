@@ -2,7 +2,10 @@
 //! canvas-region helpers. All functions are panic-free for any buffer
 //! contents; callers guarantee region bounds before calling read/write.
 
+use ignition_core::EngineError;
+
 use crate::model::{Shape, ShapeKind};
+use crate::{RenderTask, CHECKPOINT_EVERY_PX};
 
 /// Source-over alpha blend of one straight-alpha RGBA `src` pixel onto `dst`
 /// (a 4-byte slice), with the source alpha pre-scaled by `opacity` (0..=1).
@@ -56,15 +59,22 @@ pub fn shape_covers(shape: &Shape, px: f64, py: f64) -> bool {
 }
 
 /// Per-channel filters applied in place to an RGBA buffer. Alpha is never
-/// touched.
+/// touched. Checkpoints every `CHECKPOINT_EVERY_PX` pixels when `task` has
+/// a context.
 pub enum Filter {
     Grayscale,
     Invert,
     Brightness(f64), // amount -1..=1, scaled by 255
 }
 
-pub fn apply_filter(buf: &mut [u8], filter: &Filter) {
-    for px in buf.chunks_exact_mut(4) {
+pub fn apply_filter(
+    buf: &mut [u8],
+    filter: &Filter,
+    task: &mut RenderTask,
+) -> Result<(), EngineError> {
+    let total = (buf.len() / 4).max(1) as f32;
+    for (i, px) in buf.chunks_exact_mut(4).enumerate() {
+        task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
         match filter {
             Filter::Grayscale => {
                 // ITU-R 601 luma coefficients.
@@ -90,6 +100,7 @@ pub fn apply_filter(buf: &mut [u8], filter: &Filter) {
             }
         }
     }
+    Ok(())
 }
 
 /// Copy a `w*h` pixel region out of a canvas-sized buffer. Assumes
@@ -142,6 +153,78 @@ pub fn write_region(
             buf[dst_off..dst_end].copy_from_slice(&src[src_off..src_end]);
         }
     }
+}
+
+/// Resample `src` (`sw*sh` RGBA) translated by `(tx, ty)` source pixels into
+/// a `dw*dh` buffer: `out[x,y]` reads `src` at `(x + tx, y + ty)` with
+/// premultiplied bilinear filtering, transparent outside. Integer offsets
+/// are pixel-exact, so `crop` on untransformed content is lossless.
+pub fn resample_translated(
+    src: &[u8],
+    sw: usize,
+    sh: usize,
+    tx: f64,
+    ty: f64,
+    dw: usize,
+    dh: usize,
+    task: &mut RenderTask,
+) -> Result<Vec<u8>, EngineError> {
+    let mut out = vec![0u8; dw.saturating_mul(dh).saturating_mul(4)];
+    if dw == 0 || dh == 0 || sw == 0 || sh == 0 {
+        return Ok(out);
+    }
+    let fetch = |x: i64, y: i64| -> [f64; 4] {
+        if x < 0 || y < 0 || x >= sw as i64 || y >= sh as i64 {
+            return [0.0; 4];
+        }
+        let o = ((y as usize) * sw + x as usize) * 4;
+        if o + 4 > src.len() {
+            return [0.0; 4];
+        }
+        let a = src[o + 3] as f64 / 255.0;
+        [src[o] as f64 * a, src[o + 1] as f64 * a, src[o + 2] as f64 * a, a]
+    };
+    let total = (dw * dh).max(1) as f32;
+    for y in 0..dh {
+        for x in 0..dw {
+            let i = y * dw + x;
+            task.tick(i, CHECKPOINT_EVERY_PX, i as f32 / total)?;
+            // Texel k covers continuous coords [k + 0.5, k + 1.5): sample the
+            // destination center shifted by the translation, then drop the
+            // half-texel origin exactly like render::sample_raster.
+            let fx = x as f64 + tx;
+            let fy = y as f64 + ty;
+            let (x0, y0) = (fx.floor() as i64, fy.floor() as i64);
+            let (txf, tyf) = (fx - x0 as f64, fy - y0 as f64);
+            let p = [
+                fetch(x0, y0),
+                fetch(x0 + 1, y0),
+                fetch(x0, y0 + 1),
+                fetch(x0 + 1, y0 + 1),
+            ];
+            let wts = [
+                (1.0 - txf) * (1.0 - tyf),
+                txf * (1.0 - tyf),
+                (1.0 - txf) * tyf,
+                txf * tyf,
+            ];
+            let mut acc = [0.0; 4];
+            for k in 0..4 {
+                for c in 0..4 {
+                    acc[c] += p[k][c] * wts[k];
+                }
+            }
+            if acc[3] <= 0.0 {
+                continue;
+            }
+            let o = i * 4;
+            for c in 0..3 {
+                out[o + c] = (acc[c] / acc[3]).round().clamp(0.0, 255.0) as u8;
+            }
+            out[o + 3] = (acc[3] * 255.0).round().clamp(0.0, 255.0) as u8;
+        }
+    }
+    Ok(out)
 }
 
 /// Crop/pad a canvas buffer to new dimensions, top-left aligned, padding

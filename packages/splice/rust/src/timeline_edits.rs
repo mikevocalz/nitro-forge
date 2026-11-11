@@ -7,7 +7,7 @@
 //! Times are seconds; `delta_s` is timeline time except for `slipClip`, where
 //! it is media time.
 
-use crate::{check_span, opt_str, req_f64, req_u64, Clip, Doc, EngineError, EPS};
+use crate::{check_span, media_for_offset, opt_str, req_f64, req_u64, Clip, Doc, EngineError, EPS};
 use serde_json::{json, Value};
 
 /// Which tracks a ripple shifts.
@@ -135,11 +135,21 @@ fn ripple_trim(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
     doc.require_unlocked(ti)?;
     let clip = doc.tracks[ti].clips[ci].clone();
     let old_end = clip.timeline_end();
+    // `delta` timeline seconds at an edge consumes a media span that depends
+    // on the speed curve: `media_for_offset` inverts the footprint integral
+    // (and is the exact `delta * speed` closed form for constant clips).
     let (new_in, new_out) = if head {
-        (clip.in_s + delta * clip.speed, clip.out_s)
+        (
+            media_for_offset(&clip.speed_keys, clip.speed, clip.in_s, delta),
+            clip.out_s,
+        )
     } else {
-        (clip.in_s, clip.out_s + delta * clip.speed)
+        (
+            clip.in_s,
+            media_for_offset(&clip.speed_keys, clip.speed, clip.out_s, delta),
+        )
     };
+
     check_span(new_in, new_out, doc.source_of(&clip)?)?;
     let c = &mut doc.tracks[ti].clips[ci];
     c.in_s = new_in;
@@ -170,21 +180,49 @@ fn roll(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
             "roll needs the left clip to end where the right clip starts",
         ));
     }
-    let l = &mut track.clips[li];
-    l.out_s += delta * l.speed;
+    // The cut moves `delta` timeline seconds: the left clip's tail extends
+    // by the media `delta` seconds of playback consumes past its out-point,
+    // and the right clip's in-point advances by the media its first `delta`
+    // timeline seconds consume. Constant clips reduce to `+= delta * speed`.
+    let new_l_out = media_for_offset(
+        &track.clips[li].speed_keys,
+        track.clips[li].speed,
+        track.clips[li].out_s,
+        delta,
+    );
+    track.clips[li].out_s = new_l_out;
+    let ri_in = media_for_offset(
+        &track.clips[ri].speed_keys,
+        track.clips[ri].speed,
+        track.clips[ri].in_s,
+        delta,
+    );
     let r = &mut track.clips[ri];
-    r.in_s += delta * r.speed;
+    r.in_s = ri_in;
     r.timeline_start_s += delta;
     Ok(json!({ "ok": true }))
 }
 
 /// `slipClip {id, delta_s}`: show different media in the same timeline slot.
-/// `delta_s` is media time; in- and out-point both move by it.
+/// `delta_s` is media time; in- and out-point both move by it. A keyframed
+/// clip keeps its slot only when the shifted media window happens to span
+/// the same timeline length — anything else would move the clip's end, so
+/// it is rejected rather than silently re-timing the edit.
 fn slip(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
     let id = req_u64(p, "id")?;
     let delta = nonzero_delta(p)?;
     let (ti, ci) = doc.require_clip(id)?;
     doc.require_unlocked(ti)?;
+    let c = &doc.tracks[ti].clips[ci];
+    if !c.speed_keys.is_empty() {
+        let old_len = c.timeline_len();
+        let new_len = c.span_len(c.in_s + delta, c.out_s + delta);
+        if (new_len - old_len).abs() > EPS {
+            return Err(EngineError::validation(
+                "slipClip would change a keyframed clip's timeline length",
+            ));
+        }
+    }
     let c = &mut doc.tracks[ti].clips[ci];
     c.in_s += delta;
     c.out_s += delta;
@@ -216,11 +254,15 @@ fn slide(doc: &mut Doc, p: &Value) -> Result<Value, EngineError> {
     track.clips[ci].timeline_start_s += delta;
     if let Some(i) = prev {
         let c = &mut track.clips[i];
-        c.out_s += delta * c.speed;
+        // The neighbour gives or takes `delta` timeline seconds at its cut:
+        // its media boundary moves by whatever that costs under its curve.
+        let new_out = media_for_offset(&c.speed_keys, c.speed, c.out_s, delta);
+        c.out_s = new_out;
     }
     if let Some(i) = next {
         let c = &mut track.clips[i];
-        c.in_s += delta * c.speed;
+        let new_in = media_for_offset(&c.speed_keys, c.speed, c.in_s, delta);
+        c.in_s = new_in;
         c.timeline_start_s += delta;
     }
     Ok(json!({ "ok": true }))

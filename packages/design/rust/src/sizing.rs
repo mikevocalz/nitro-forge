@@ -182,8 +182,32 @@ impl Resolver<'_> {
     }
     fn hug(&mut self, id: u64, axis: Axis) -> Result<f64, EngineError> {
         let n = &self.s.nodes[&id];
-        if n.kind != Kind::Frame {
-            return Err(bad("hug requires a frame"));
+        if n.kind == Kind::Text {
+            // Deterministic stub metrics, NOT glyph metrics: width assumes a
+            // flat 0.6 em advance per character of the longest line and height
+            // a 1.2 em line box per '\n'-separated line at font_size. Real font
+            // metrics are a Prism/font gate; until then hug sizes text boxes
+            // approximately and renderFrame draws no glyphs.
+            let t = n
+                .text
+                .as_ref()
+                .ok_or_else(|| bad("text node requires a text style"))?;
+            let lines = t.content.split('\n').count().max(1) as f64;
+            let longest = t
+                .content
+                .split('\n')
+                .map(|l| l.chars().count())
+                .max()
+                .unwrap_or(0) as f64;
+            let extent = if axis == Axis::X {
+                longest * t.font_size * 0.6
+            } else {
+                lines * t.font_size * 1.2
+            };
+            return Ok(extent.max(0.001));
+        }
+        if !matches!(n.kind, Kind::Frame | Kind::Component) {
+            return Err(bad("hug requires a frame or component"));
         }
         if let Some(l) = &n.layout {
             if axis == main(l) {

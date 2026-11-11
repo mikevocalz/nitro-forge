@@ -1,0 +1,24 @@
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/packages/cadence[39m
+
+ [32m✓[39m tests/instrument-adapter.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/v1-host-session.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m tests/instrument-session.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m tests/clip-ops.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m tests/e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m tests/editor-adapter.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m tests/note-ops.e2e.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m tests/mixer-cluster.e2e.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m tests/mixer-ops.e2e.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 142[2mms[22m[39m
+ [32m✓[39m tests/instrument-adapter.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m tests/transfer.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 2416[2mms[22m[39m
+   [32m✓[39m cadence WAV export (real Rust via nf-cli) [2m(3)[22m
+     [33m[2m✓[22m[39m renders the whole song into a valid float WAV, continuously[33m 1404[2mms[22m[39m
+   [33m[2m✓[22m[39m WAV keeps stateful insert output continuous across ten seconds[33m 994[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+[2m      Tests [22m [1m[32m45 passed[39m[22m[90m (45)[39m
+[2m   Start at [22m 18:03:45
+[2m   Duration [22m 2.86s[2m (tests 73%, transform 20%, import 6%, worker 1%)[22m
+

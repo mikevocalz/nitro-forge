@@ -1,0 +1,63 @@
+{
+  "sourceRevision": "c3cbbbf3c88d04430ce61b4a1eec0593dfbe3e21",
+  "branch": "codex/w29-android-evidence",
+  "worktree": "forge-w29-android",
+  "evidenceKind": "android-emulator",
+  "device": {
+    "avd": "ForgeCompletion_API36",
+    "serial": "emulator-5554",
+    "androidRelease": "16",
+    "sdk": 36,
+    "abi": "arm64-v8a",
+    "qemu": true
+  },
+  "apk": {
+    "package": "ai.nitroforge.cadence.studio",
+    "sha256": "a818a0565f01179e8253965fb2f11801cb8200eacdb0f81d0561bfae80129c23",
+    "bytes": 90535850,
+    "abis": ["arm64-v8a"],
+    "libNitroForgeV1.so.sha256": "850dba7c592080af519939e47ac5163a5399a972011753d889354d097d5fd257",
+    "archivedAt": "native-artifacts/cadence-completion-W29-android.apk",
+    "note": "Gradle build output directory was removed during disk cleanup; APK recovered by pulling base.apk from the emulator and re-hashed."
+  },
+  "rustArchives": {
+    "arm64-v8a": "c3aaf7c0ff1543ea53768f4b1f0720a14efeff54408ce386a1dd0446a296a0bc",
+    "armeabi-v7a": "219c2cc51c96815cd80b2b04f1a093283e544c847046d2b56c5222f62e12d314",
+    "x86": "55a9e5f8f8697eca99939d8df27e4b3f7097615ca3f25975148a2282871e3476",
+    "x86_64": "9e8a55c93e6845beb4248eb3f9a3ff92e7de70c3c55d09bbaa1bc54ec4295050"
+  },
+  "jsBundle": {
+    "metro": "expo start --port 8082 --localhost",
+    "metroRoot": "forge-w29-android/examples/native-cadence",
+    "adbReverse": "tcp:8081 tcp:8082",
+    "note": "Workspace packages resolved to worktree sources; third-party deps from the shared pnpm store."
+  },
+  "results": {
+    "verifyNativeEngines": {
+      "status": "partial-failure",
+      "passed": ["prism", "cadence", "splice", "folio", "pitch", "tally", "quill", "photo", "motion", "design"],
+      "failed": ["draft"],
+      "failure": "draft: snapshot round trip changed document (describe fields identical except source_revision)",
+      "cadenceSession": "edit, undo, redo and reopen passed",
+      "explanation": "draft restore() intentionally consumes a revision (packages/draft/rust/src/engine.rs ~1578) and describe reports source_revision; all document fields round-tripped identically."
+    },
+    "verifyQuillRenderPage": {
+      "status": "passed",
+      "detail": "registerFont ok; renderPage fixed-geometry 267x133 inked; deterministic; use_sections section=0 number=1 816x1056 inked; empty-font and out-of-range-page rejections ok"
+    },
+    "verifyNativeServices": {
+      "status": "passed",
+      "detail": "bounded LRU, owned binary buffers, task progress/results, cancellation and cleanup"
+    }
+  },
+  "notRun": [
+    "verifyNativeTelemetry",
+    "nf-color", "splice-render", "raw-decode", "scene-render provider paths",
+    "NYC-Tron platform-services encoder, speech and audio providers"
+  ],
+  "screenshots": [
+    "W29-android-engines-draft-source-revision.png",
+    "W29-android-quill-renderpage-pass.png",
+    "W29-android-services-pass.png"
+  ]
+}

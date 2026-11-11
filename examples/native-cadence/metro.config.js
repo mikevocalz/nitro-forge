@@ -16,11 +16,12 @@ config.watchFolders = [
   path.join(forgeRoot, "packages/ignition"),
   path.join(forgeRoot, "packages/cadence"),
   path.join(forgeRoot, "packages/telemetry"),
+  path.join(forgeRoot, "packages/media-ui"),
 ];
 
 // Explicit lab mode serves a separate acceptance entry. Normal consumers keep
 // their released dependency graph; candidate-only exports are isolated here.
-const acceptanceEntry = { media: "media-acceptance", checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance", collaboration: "collaboration-acceptance" }[process.env.FORGE_ACCEPTANCE];
+const acceptanceEntry = { player: "player-acceptance", media: "media-acceptance", checkpoints: "checkpoint-acceptance", transactions: "transaction-acceptance", telemetry: "telemetry-acceptance", collaboration: "collaboration-acceptance" }[process.env.FORGE_ACCEPTANCE];
 if (acceptanceEntry) {
   const rewrite = config.server?.rewriteRequestUrl;
   config.server = {
@@ -33,7 +34,7 @@ if (acceptanceEntry) {
 }
 
 module.exports = withNycTronDevLink(
-  pinToApp(config, { projectRoot, packages: [...SHARED_RUNTIME, "react-native-nitro-modules"] }),
+  pinToApp(config, { projectRoot, packages: [...SHARED_RUNTIME, "react-native-nitro-modules", "react-native-video"] }),
   { projectRoot, ...(process.env.NYC_TRON_PACKAGES ? {
     includePackages: process.env.NYC_TRON_PACKAGES.split(",").map(name => name.trim()).filter(Boolean),
   } : {}) },

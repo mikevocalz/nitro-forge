@@ -211,3 +211,34 @@ Forge engines.
 This handoff is an architecture contract. Existing Forge apps and native
 builds have not migrated, and most components listed above are still
 unextracted.
+
+## Studio preview wiring status (2026-11-11)
+
+Pinned release: `v0.1.0-alpha.4`. Checked against the NYC-Tron-UI PR #54 head
+(`d5207cc7`, branch `codex/complete-all-components`).
+
+Wired in `apps/studio-preview` (Splice surface):
+
+- D-21 `RollSlipSlideControls` -> `rollEdit`, `slipClip`, `slideClip`. The tool
+  also drives drag editing on the clip lanes.
+- D-18 `TrackHeaders` (inside `OverlayAndEffectsTrackStack`) -> `setTrackFlags`.
+  Already mounted; its handler now goes through `spliceTrimHandlers`, which has
+  a test.
+
+Deferred, with the blocker named:
+
+| Row | Component | Engine op (verified in `docs/ENGINE_OPS.md` and `packages/*/src`) | Blocker |
+| --- | --- | --- | --- |
+| D-13 | `LoopRangeBar` | Splice `setLoopRange` / `clearLoopRange` (adapter `setLoopRange`) | The bar always renders a player "Loop playback" switch (`onLoopingChange` is required) and the Splice surface has no transport, so the switch would do nothing. Unblocks when a transport exists or NYC-Tron-UI renders the switch only when `onLoopingChange` is passed. |
+| I-15 | `PivotFieldList` | Tally `insertPivot`, `describePivot`, `refreshPivot` | Not in `alpha.4`. No release contains PR #54, and the pin policy (`tooling/nyc-tron.json`, `verify-nyc-tron-pin.mjs`) accepts only a release tarball URL with a sha256. |
+| I-12 | `SortFilterHeader` | Tally `sortRange`, `setFilter`, `evaluateFilters` | Same: absent from `alpha.4`. |
+| I-04 | `NameBox` | Tally `defineName`, `listNames` | Same. |
+| I-11 | `ValidationDropdown` | Tally `setValidation`, `validateCell` | Same. |
+| I-07 | `FillHandleAndAutoFill` | Tally `fillSeries`, `fillRange` | Same. |
+| C-11 | `EyedropperTool` | Prism `samplePixels` | Same. |
+| E-35 | `BeatDetectionMarkerLane` | Cadence `detectBeats` | Same. |
+| B-11 | `LayerBlendAndOpacity` | Prism `setLayerBlend`, `setLayerOpacity` | Same. |
+| E-14 | `VerticalFader` | Cadence `setTrackGain` | Same. |
+
+When a NYC-Tron-UI release that contains PR #54 exists, update
+`tooling/nyc-tron.json` and the manifests together, then wire the rows above.

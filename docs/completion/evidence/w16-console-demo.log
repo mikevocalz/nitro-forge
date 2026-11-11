@@ -1,0 +1,54 @@
+$ tsx src/main.ts
+
+▸ Prism — image editor
+  ✓ flatten 32×32
+  ✓ reopen preserves 2 layers — 2
+
+▸ Cadence — audio
+  ✓ rendered PCM frames — 41344
+  ✓ reopen tempo
+
+▸ Splice — video
+  ✓ split at 5s
+  ✓ reopen duration
+
+▸ Folio — PDF
+  ✓ real PDF bytes
+  ✓ PDF reopens with annotation
+
+▸ Pitch — presentations
+  ✓ slideInLeft mid-flight
+  ✓ reopen deck
+
+▸ Tally — spreadsheet
+  ✓ =B1*B2 — 59.97
+  ✓ reopen formula
+
+▸ Quill — rich text
+  ✓ DOCX zip magic
+  ✓ DOCX re-imports
+
+▸ Photo — catalog & develop
+  ✓ develop preview lifts exposure — 176
+  ✓ undo restores identity develop
+  ✓ reopen keeps rating + versions — rating 4, 2 versions
+
+▸ Motion — composition
+  ✓ linear tx midpoint — 3.5
+  ✓ rendered RGBA frame
+  ✓ undo clears the tx curve
+  ✓ reopen keeps layer
+
+▸ Design — interface document
+  ✓ evaluated layout boxes — 4
+  ✓ undo removes the text node
+  ✓ reopen keeps nodes — 4
+
+▸ Draft — CAD drawing
+  ✓ closed profile area 100 — 100
+  ✓ rendered draft pixels
+  ✓ undo drops a segment
+  ✓ reopen keeps geometry
+
+Done.
+

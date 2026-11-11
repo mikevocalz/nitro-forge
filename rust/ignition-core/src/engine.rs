@@ -1,6 +1,7 @@
 use crate::command::{Command, CommandResult};
 use crate::error::EngineError;
 use crate::TaskContext;
+use crate::OP_BATCH;
 use serde::{Deserialize, Serialize};
 
 /// Identity of an engine implementation.
@@ -18,6 +19,7 @@ pub enum EngineKind {
     Motion,
     Design,
     Draft,
+    Scene,
 }
 
 impl EngineKind {
@@ -34,6 +36,7 @@ impl EngineKind {
             EngineKind::Motion => "motion",
             EngineKind::Design => "design",
             EngineKind::Draft => "draft",
+            EngineKind::Scene => "scene",
         }
     }
 
@@ -50,6 +53,7 @@ impl EngineKind {
             "motion" => Some(EngineKind::Motion),
             "design" => Some(EngineKind::Design),
             "draft" => Some(EngineKind::Draft),
+            "scene" => Some(EngineKind::Scene),
             _ => None,
         }
     }
@@ -85,14 +89,33 @@ pub trait Engine: Send + 'static {
         &[]
     }
 
+    /// Apply a `__batch` command atomically on this engine.
+    ///
+    /// `apply` calls this with `ctx: None`; `apply_long` calls it with
+    /// `Some(ctx)` so every batch step runs through `apply_long` and can be
+    /// cancelled. Implementations keep the staged-clone commit contract:
+    /// validate and execute the plan on an isolated clone with a temporary
+    /// journal, then publish state and record one undo entry only on success.
+    /// A `None` context preserves the original synchronous behavior exactly.
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError>;
+
     /// Run a command as a cancelable task. Same atomicity contract as
     /// `apply`: a cancelled command returns `ErrorCode::Cancelled` and leaves
     /// the document unchanged.
     ///
-    /// The default checks for cancellation once, then runs `apply` to
-    /// completion. Engines with long ops override it to check `ctx` between
-    /// chunks or stages and report progress through `ctx.set_progress`.
+    /// The default routes `__batch` to `apply_batch` with the task context,
+    /// checks for cancellation once, then runs `apply` to completion. Engines
+    /// with long ops override it to check `ctx` between chunks or stages and
+    /// report progress through `ctx.set_progress`; overrides must forward
+    /// `OP_BATCH` to `apply_batch` themselves so batch steps stay cancellable.
     fn apply_long(&mut self, cmd: Command, ctx: &TaskContext) -> Result<CommandResult, EngineError> {
+        if cmd.op == OP_BATCH {
+            return self.apply_batch(cmd, Some(ctx));
+        }
         ctx.checkpoint()?;
         let result = self.apply(cmd)?;
         ctx.set_progress(1.0);

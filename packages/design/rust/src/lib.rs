@@ -1,20 +1,47 @@
 #![forbid(unsafe_code)]
 //! Fixed-size design hierarchy/layout. Prism owns actual rasterization.
+mod components;
+mod constraints;
+mod handoff;
 mod layout;
 mod model;
+mod prototype;
 mod sizing;
+mod variables;
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
     Journal, TaskContext,
 };
 use model::*;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 fn id(p: &Value, key: &str) -> Result<u64, EngineError> {
     p.get(key)
         .and_then(Value::as_u64)
         .ok_or_else(|| bad("expected integer node identity"))
+}
+fn num(p: &Value, key: &str) -> Result<f64, EngineError> {
+    p.get(key)
+        .and_then(Value::as_f64)
+        .ok_or_else(|| bad("expected numeric field"))
+}
+fn opt_u64(p: &Value, key: &str) -> Result<Option<u64>, EngineError> {
+    p.get(key)
+        .map(|v| {
+            v.as_u64()
+                .ok_or_else(|| bad("expected integer field"))
+        })
+        .transpose()
+}
+fn opt_str<'a>(p: &'a Value, key: &str) -> Result<Option<&'a str>, EngineError> {
+    match p.get(key) {
+        Some(Value::Null) | None => Ok(None),
+        Some(v) => v
+            .as_str()
+            .map(Some)
+            .ok_or_else(|| bad("expected string field")),
+    }
 }
 fn merge<T: Serialize + DeserializeOwned>(
     current: &T,
@@ -31,9 +58,71 @@ fn merge<T: Serialize + DeserializeOwned>(
     }
     Ok(serde_json::from_value(next)?)
 }
+/// Kinds that may own children and flow layout: frames and component
+/// definitions. Instances are leaves until read-time expansion.
+fn container_kind(k: Kind) -> bool {
+    matches!(k, Kind::Frame | Kind::Component)
+}
+fn fields(p: &Value, allowed: &[&str]) -> Result<(), EngineError> {
+    let object = p.as_object().ok_or_else(|| bad("expected object payload"))?;
+    if object.keys().any(|k| !allowed.contains(&k.as_str())) {
+        return Err(bad("unknown field"));
+    }
+    Ok(())
+}
+fn text_field<'a>(p: &'a Value, key: &str) -> Result<&'a str, EngineError> {
+    p.get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| bad("expected string field"))
+}
+/// Prism `Shape::validate` coordinate bound (`MAX_COORD` in prism's model,
+/// not re-exported). `export_slice` clamps or substitutes member geometry
+/// that would exceed it after translation and scaling.
+const SLICE_SHAPE_MAX_COORD: f64 = 1.0e7;
+/// Whether an ellipse with translated/scaled bounds `(x,y,w,h)` covers every
+/// canvas pixel center. The covered region is convex, so containing the four
+/// extreme pixel centers `(0.5,0.5)`…`(w-0.5,h-0.5)` contains the whole
+/// pixel-center grid — matching Prism's per-pixel-center sampling.
+fn ellipse_covers_canvas(x: f64, y: f64, w: f64, h: f64, cw: f64, ch: f64) -> bool {
+    let rx = w / 2.;
+    let ry = h / 2.;
+    if !(rx > 0. && ry > 0.) {
+        return false;
+    }
+    let cx = x + rx;
+    let cy = y + ry;
+    [
+        (0.5, 0.5),
+        (cw - 0.5, 0.5),
+        (0.5, ch - 0.5),
+        (cw - 0.5, ch - 0.5),
+    ]
+    .iter()
+    .all(|&(px, py)| {
+        let dx = (px - cx) / rx;
+        let dy = (py - cy) / ry;
+        dx * dx + dy * dy <= 1.
+    })
+}
+/// Smallest unused `prefix-N` symbol id; the collection caps bound the scan.
+fn generated_id(prefix: &str, taken: &dyn Fn(&str) -> bool) -> Result<String, EngineError> {
+    for i in 1..=8192u64 {
+        let candidate = format!("{prefix}-{i}");
+        if !taken(&candidate) {
+            return Ok(candidate);
+        }
+    }
+    Err(bad("identity exhausted"))
+}
 pub struct DesignEngine {
     state: Arc<State>,
     journal: Journal<Arc<State>>,
+    /// Monotonic mutation counter exposed as `state_revision` on the
+    /// handoff reads (draft's `source_revision` precedent). Engine-side
+    /// only: snapshots never serialize it, `restore` simply advances it,
+    /// and undo/redo advance it like any other state change. It is a
+    /// staleness hint for hosts, not a security boundary.
+    state_revision: u64,
 }
 impl Default for DesignEngine {
     fn default() -> Self {
@@ -45,7 +134,14 @@ impl DesignEngine {
         Self {
             state: Arc::new(State::default()),
             journal: Journal::new(16),
+            state_revision: 0,
         }
+    }
+    fn next_revision(&self) -> Result<u64, EngineError> {
+        self.state_revision
+            .checked_add(1)
+            .filter(|v| *v <= SAFE_ID)
+            .ok_or_else(|| bad("state revision budget exhausted"))
     }
     fn read_axis_sizing(&self, p: &Value) -> Result<CommandResult, EngineError> {
         let node_id = id(p, "id")?;
@@ -54,7 +150,8 @@ impl DesignEngine {
             .nodes
             .get(&node_id)
             .ok_or_else(|| bad("unknown node"))?;
-        let sizes = sizing::evaluate(&self.state)?;
+        let effective = variables::effective(&self.state);
+        let sizes = sizing::evaluate(&effective)?;
         let unavailable = if node_id == 1 {
             Some("Root canvas sizing uses setComposition".to_string())
         } else {
@@ -79,13 +176,10 @@ impl DesignEngine {
             let hug = capability(SizeMode::Hug);
             let fill = capability(SizeMode::Fill);
             let current_mode = sizing::mode(node, axis);
-            let resolved = sizes.values[&(node_id, axis)];
-            let value = if current_mode == SizeMode::Fixed {
-                sizing::authored(node, axis)
-            } else {
-                resolved
-            };
-            let mut info = json!({"mode":current_mode,"value":value,"fixedValue":sizing::authored(node,axis),"resolvedValue":resolved,"canHug":hug.is_ok(),"canFill":fill.is_ok()});
+            // `value` is the effective current size: for fixed axes a bound
+            // variable overrides the authored scalar, matching resolvedValue.
+            let value = sizes.values[&(node_id, axis)];
+            let mut info = json!({"mode":current_mode,"value":value,"fixedValue":sizing::authored(node,axis),"resolvedValue":sizes.values[&(node_id,axis)],"canHug":hug.is_ok(),"canFill":fill.is_ok()});
             if let Some(reason) = &unavailable {
                 info["unavailableReason"] = json!(reason);
             }
@@ -106,7 +200,9 @@ impl DesignEngine {
         cmd: &Command,
         ctx: Option<&TaskContext>,
     ) -> Result<CommandResult, EngineError> {
-        let boxes = layout::evaluate(&self.state)?;
+        let effective = variables::effective(&self.state);
+        let expanded = components::expand(&effective)?;
+        let boxes = layout::evaluate(&expanded)?;
         let root = &self.state.nodes[&1];
         let mut prism = prism_engine::PrismEngine::new(root.width as u32, root.height as u32);
         for b in boxes {
@@ -116,6 +212,9 @@ impl DesignEngine {
             if !b.visible {
                 continue;
             }
+            // Text nodes are layout boxes only: `renderable:false` in
+            // evaluateLayout and no glyphs here. The fill still draws as a
+            // plain rect background; real text rendering is a Prism/font gate.
             let kind = if b.kind == Kind::Ellipse {
                 "ellipse"
             } else {
@@ -140,6 +239,194 @@ impl DesignEngine {
             .with_bytes(cmd, "pixels_b64", pixels),
         )
     }
+    /// `exportSlice {node, scale?}` — read-only RGBA8 raster plus JSON
+    /// manifest for one frame/component subtree (slice F). `node` must be
+    /// a stored `frame`/`component`; prototype screens are exactly that
+    /// node set, so screen membership is covered without a separate id
+    /// space. Renders through the same variables→expansion→layout→Prism
+    /// flatten pipeline as `renderFrame`, translated to the slice's
+    /// evaluated origin and multiplied by the optional bounded `scale`
+    /// (default 1, [0.25,4]). Pixel output is capped at the design output
+    /// budget `MAX_SLICE_PIXELS` (1_048_576). No PNG/SVG encoder exists:
+    /// bytes are raw RGBA via the `pixels_b64`/binary sidecar duality, and
+    /// per-slice format/presets stay host-side.
+    fn export_slice(
+        &self,
+        cmd: &Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let p = &cmd.payload;
+        if p
+            .as_object()
+            .is_none_or(|o| o.keys().any(|k| !["node", "scale"].contains(&k.as_str())))
+        {
+            return Err(bad("expected slice object with node/scale fields"));
+        }
+        let node_id = id(p, "node")?;
+        let node = self
+            .state
+            .nodes
+            .get(&node_id)
+            .ok_or_else(|| bad("unknown node"))?;
+        if !matches!(node.kind, Kind::Frame | Kind::Component) {
+            return Err(bad("export slice requires a frame or component node"));
+        }
+        let scale = match p.get("scale") {
+            Some(Value::Null) | None => 1.,
+            Some(v) => v
+                .as_f64()
+                .ok_or_else(|| bad("scale must be numeric"))?,
+        };
+        if !scale.is_finite()
+            || !(handoff::MIN_SLICE_SCALE..=handoff::MAX_SLICE_SCALE).contains(&scale)
+        {
+            return Err(bad("scale must be finite within 0.25..=4"));
+        }
+        let effective = variables::effective(&self.state);
+        let expanded = components::expand(&effective)?;
+        let boxes = layout::evaluate(&expanded)?;
+        let target = boxes
+            .iter()
+            .find(|b| b.id == node_id)
+            .ok_or_else(|| bad("slice node has no evaluated box"))?;
+        let origin = (target.x, target.y);
+        let width_f = target.width * scale;
+        let height_f = target.height * scale;
+        let width_px = width_f.ceil();
+        let height_px = height_f.ceil();
+        if !width_px.is_finite()
+            || !height_px.is_finite()
+            || width_px < 1.
+            || height_px < 1.
+            || width_px > u32::MAX as f64
+            || height_px > u32::MAX as f64
+            || (width_px * height_px) > handoff::MAX_SLICE_PIXELS as f64
+        {
+            return Err(bad("export slice exceeds the pixel output budget"));
+        }
+        let members = handoff::subtree_members(&expanded, node_id)?;
+        let info = handoff::subtree_info(&expanded, node_id);
+        let slice_boxes: Vec<&layout::BoxNode> = boxes
+            .iter()
+            .filter(|b| members.contains(&b.id))
+            .collect();
+        let mut prism = prism_engine::PrismEngine::new(width_px as u32, height_px as u32);
+        for b in &slice_boxes {
+            if let Some(c) = ctx {
+                c.checkpoint()?;
+            }
+            if !b.visible {
+                continue;
+            }
+            // Translate+scale into slice pixel space, then cull against the
+            // canvas before Prism ever sees the box: a member that cannot
+            // cover a canvas pixel is skipped, which both avoids rasterizing
+            // invisible work and keeps out-of-slice geometry away from
+            // Prism's coordinate bound.
+            let sx = (b.x - origin.0) * scale;
+            let sy = (b.y - origin.1) * scale;
+            let sw = b.width * scale;
+            let sh = b.height * scale;
+            if sx + sw <= 0. || sy + sh <= 0. || sx >= width_px || sy >= height_px {
+                continue;
+            }
+            // Same shape mapping as renderFrame: text nodes draw their
+            // fill background only; `renderable:false` is manifest data.
+            let kind = if b.kind == Kind::Ellipse {
+                "ellipse"
+            } else {
+                "rect"
+            };
+            // Prism `Shape::validate` rejects |coord| > MAX_COORD (1e7).
+            // Design eval coordinates reach ±1e7 and `scale` multiplies
+            // extents by up to 4, so a member intersecting the slice can
+            // still overflow. In-bounds shapes pass through untouched. A
+            // rect that overflows is clamped to its canvas intersection —
+            // pixel-identical because the raster only samples canvas
+            // pixels. An ellipse's coverage depends on its whole bounding
+            // box, so the only exact substitution is a canvas-covering one
+            // (emitted as a canvas rect); a partially visible oversized
+            // ellipse has no exact Prism representation and rejects honestly
+            // rather than rasterizing wrong pixels.
+            let in_bounds = [sx, sy, sw, sh]
+                .iter()
+                .all(|v| v.is_finite() && v.abs() <= SLICE_SHAPE_MAX_COORD);
+            let shape = if in_bounds {
+                json!({"kind":kind,"x":sx,"y":sy,"w":sw,"h":sh,"fill":b.fill})
+            } else {
+                match kind {
+                    "rect" => {
+                        let x0 = sx.max(0.);
+                        let y0 = sy.max(0.);
+                        let x1 = (sx + sw).min(width_px);
+                        let y1 = (sy + sh).min(height_px);
+                        json!({"kind":"rect","x":x0,"y":y0,"w":x1-x0,"h":y1-y0,"fill":b.fill})
+                    }
+                    "ellipse"
+                        if ellipse_covers_canvas(sx, sy, sw, sh, width_px, height_px) =>
+                    {
+                        json!({"kind":"rect","x":0.,"y":0.,"w":width_px,"h":height_px,"fill":b.fill})
+                    }
+                    _ => {
+                        return Err(bad(
+                            "export slice member exceeds the raster coordinate budget",
+                        ))
+                    }
+                }
+            };
+            prism.apply(Command::new("addShape", json!({"shape": shape})))?;
+        }
+        if let Some(c) = ctx {
+            c.checkpoint()?;
+        }
+        let pixels = prism
+            .apply(Command::new("flatten", json!({})).with_binary(None))?
+            .output
+            .ok_or_else(|| bad("Prism did not return RGBA"))?;
+        if let Some(c) = ctx {
+            c.checkpoint()?;
+        }
+        let (manifest_nodes, nodes_total, nodes_truncated) = handoff::manifest_nodes(
+            &expanded,
+            &slice_boxes,
+            &info,
+            origin,
+        );
+        Ok(CommandResult::read_only(json!({
+            "slice": {
+                "node": node_id,
+                "name": node.name,
+                "kind": node.kind,
+                "state_revision": self.state_revision,
+                "box": {"x": target.x, "y": target.y, "width": target.width, "height": target.height},
+                "origin": {"x": origin.0, "y": origin.1},
+                "scale": scale,
+                "width": width_px as u32,
+                "height": height_px as u32,
+                "format": "rgba8",
+            },
+            "manifest": {
+                "node": node_id,
+                "name": node.name,
+                "kind": node.kind,
+                "state_revision": self.state_revision,
+                "pixel_format": "rgba8",
+                "origin": {"x": origin.0, "y": origin.1},
+                "scale": scale,
+                "width": width_px as u32,
+                "height": height_px as u32,
+                "nodes_total": nodes_total,
+                "nodes_truncated": nodes_truncated,
+                "nodes": manifest_nodes,
+                "notes": [
+                    "raw RGBA8 pixels only; no PNG/SVG/vector encoder exists",
+                    "per-slice output format and presets are host-side",
+                    "node x/y are document units relative to the slice origin; synthetic expansion ids >= 2^53 are read-only provenance",
+                ],
+            },
+        }))
+        .with_bytes(cmd, "pixels_b64", pixels))
+    }
 }
 impl Engine for DesignEngine {
     fn kind(&self) -> EngineKind {
@@ -147,19 +434,7 @@ impl Engine for DesignEngine {
     }
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let staged = Self {
-                state: self.state.clone(),
-                journal: Journal::new(1),
-            };
-            let (staged, mut result) = ignition_core::execute_batch(staged, batch)?;
-            if self.state != staged.state {
-                self.journal.record(self.state.clone());
-                self.state = staged.state;
-            } else {
-                result.events.clear();
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         if cmd.v != 1 || cmd.input.is_some() {
             return Err(bad("design requires v1 and no binary input"));
@@ -172,11 +447,73 @@ impl Engine for DesignEngine {
                 )?))
             }
             "evaluateLayout" => {
-                return Ok(CommandResult::read_only(
-                    json!({"boxes":layout::evaluate(&self.state)?}),
-                ))
+                let effective = variables::effective(&self.state);
+                let expanded = components::expand(&effective)?;
+                let (boxes, solve) = layout::evaluate_report(&expanded)?;
+                return Ok(CommandResult::read_only(json!({
+                    "boxes": boxes,
+                    "constraints": {
+                        "solving": "evaluateLayout",
+                        "status": if solve.unsatisfied.is_empty() { "solved" } else { "partial" },
+                        "constrained": solve.constrained,
+                        "unsatisfied": solve.unsatisfied,
+                    }
+                })))
+            }
+            "describeComponents" => {
+                return Ok(CommandResult::read_only(components::describe(
+                    &self.state,
+                )?))
+            }
+            "describeVariables" => {
+                return Ok(CommandResult::read_only(variables::describe(
+                    &self.state,
+                )?))
+            }
+            "listBindings" => {
+                return Ok(CommandResult::read_only(variables::list(
+                    &self.state, p,
+                )?))
+            }
+            "readConstraints" => {
+                // Live solve status against the effective (binding-resolved)
+                // stored state — expansion is read-only provenance, so the
+                // stored tree alone decides every reported node id. A
+                // layout that currently cannot evaluate reports
+                // `solve.status:"unavailable"` instead of failing the read.
+                let effective = variables::effective(&self.state);
+                let solve = layout::evaluate_report(&effective)
+                    .ok()
+                    .map(|(_, s)| s);
+                return Ok(CommandResult::read_only(constraints::describe(
+                    &self.state,
+                    p,
+                    solve.as_ref(),
+                )?))
+            }
+            "prototypeGraph" => {
+                return Ok(CommandResult::read_only(prototype::graph(
+                    &self.state,
+                )))
+            }
+            "resolvePrototypeEvent" => {
+                return Ok(CommandResult::read_only(prototype::resolve(
+                    &self.state, p,
+                )?))
+            }
+            "listComments" => {
+                return Ok(CommandResult::read_only(json!({
+                    "threads": &self.state.comments.threads
+                })))
+            }
+            "describeHandoff" => {
+                return Ok(CommandResult::read_only(handoff::describe(
+                    &self.state,
+                    self.state_revision,
+                )?))
             }
             "renderFrame" => return self.render(&cmd, None),
+            "exportSlice" => return self.export_slice(&cmd, None),
             _ => {}
         }
         if cmd.op == "readAxisSizing" {
@@ -220,8 +557,8 @@ impl Engine for DesignEngine {
             "addFrame" | "addShape" => {
                 let parent = id(p, "parent")?;
                 next.editable(parent, false)?;
-                if next.nodes[&parent].kind != Kind::Frame {
-                    return Err(bad("parent must be a frame"));
+                if !container_kind(next.nodes[&parent].kind) {
+                    return Err(bad("parent must be a frame or component"));
                 }
                 let node_id = next.next_id;
                 next.next_id = node_id
@@ -238,10 +575,73 @@ impl Engine for DesignEngine {
                         .remove("kind")
                         .ok_or_else(|| bad("shape kind required"))?;
                     node.kind = serde_json::from_value(kind)?;
-                    if node.kind == Kind::Frame {
-                        return Err(bad("use addFrame for frame nodes"));
+                    // addShape admits leaf primitives only; frames come from
+                    // addFrame and component/instance nodes from their own ops.
+                    if !matches!(node.kind, Kind::Rect | Kind::Ellipse) {
+                        return Err(bad("addShape admits rect or ellipse only"));
                     }
                 }
+                node = merge(
+                    &node,
+                    &Value::Object(patch),
+                    &["name", "x", "y", "width", "height", "fill", "visible"],
+                )?;
+                next.nodes.insert(node_id, Arc::new(node));
+                Arc::make_mut(next.nodes.get_mut(&parent).unwrap())
+                    .children
+                    .push(node_id);
+                data = json!({"node_id":node_id});
+            }
+            "addText" => {
+                // `parent` is optional and defaults to the root canvas, unlike
+                // addFrame/addShape which require it explicitly.
+                let parent = match p.get("parent") {
+                    Some(v) => v
+                        .as_u64()
+                        .ok_or_else(|| bad("expected integer parent"))?,
+                    None => 1,
+                };
+                next.editable(parent, false)?;
+                if !container_kind(next.nodes[&parent].kind) {
+                    return Err(bad("parent must be a frame or component"));
+                }
+                let node_id = next.next_id;
+                next.next_id = node_id
+                    .checked_add(1)
+                    .ok_or_else(|| bad("identity exhausted"))?;
+                let object = p
+                    .as_object()
+                    .ok_or_else(|| bad("expected node object"))?;
+                let content = object
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| bad("text content must be a string"))?;
+                let mut style = TextStyle {
+                    content: content.into(),
+                    ..Default::default()
+                };
+                // `style` carries font fields only; content is top-level so it
+                // cannot be set twice.
+                if let Some(sv) = object.get("style") {
+                    style = merge(
+                        &style,
+                        sv,
+                        &[
+                            "font_family",
+                            "font_size",
+                            "font_weight",
+                            "font_style",
+                        ],
+                    )?;
+                }
+                let mut patch = object.clone();
+                for k in ["parent", "content", "style"] {
+                    patch.remove(k);
+                }
+                let mut node = Node::frame(node_id, 100., 100.);
+                node.kind = Kind::Text;
+                node.name = "Text".into();
+                node.text = Some(style);
                 node = merge(
                     &node,
                     &Value::Object(patch),
@@ -260,7 +660,12 @@ impl Engine for DesignEngine {
                     .ok_or_else(|| bad("expected patch object"))?
                     .clone();
                 patch.remove("id");
+                // `text` counts toward the patch length so a combined
+                // locked+text patch is not mistaken for a lock-only unlock.
                 let unlock = patch.len() == 1 && patch.contains_key("locked");
+                // `text` is a partial TextStyle patch (or null), merged over
+                // the node's current style; handled after the node merge.
+                let text_patch = patch.remove("text");
                 next.editable(node_id, unlock)?;
                 if node_id == 1
                     && patch
@@ -278,13 +683,39 @@ impl Engine for DesignEngine {
                 {
                     return Err(bad("switch to fixed sizing before editing a fixed extent"));
                 }
-                let changed = merge(
+                let mut changed = merge(
                     &**node,
                     &Value::Object(patch),
                     &[
                         "name", "x", "y", "width", "height", "fill", "visible", "locked",
                     ],
                 )?;
+                if let Some(tv) = text_patch {
+                    if changed.kind != Kind::Text {
+                        return Err(bad("text style requires a text node"));
+                    }
+                    match tv {
+                        // Reserved: a text node cannot exist without a style
+                        // and non-text nodes reject `text` above, so clearing
+                        // can never validate. Reject explicitly.
+                        Value::Null => return Err(bad("text style cannot be cleared")),
+                        Value::Object(_) => {
+                            let current = changed.text.clone().unwrap_or_default();
+                            changed.text = Some(merge(
+                                &current,
+                                &tv,
+                                &[
+                                    "content",
+                                    "font_family",
+                                    "font_size",
+                                    "font_weight",
+                                    "font_style",
+                                ],
+                            )?);
+                        }
+                        _ => return Err(bad("text patch must be an object or null")),
+                    }
+                }
                 next.nodes.insert(node_id, Arc::new(changed));
             }
             "setAxisSizing" => {
@@ -305,6 +736,13 @@ impl Engine for DesignEngine {
                 let mode: SizeMode = serde_json::from_value(
                     p.get("mode").cloned().ok_or_else(|| bad("mode required"))?,
                 )?;
+                // Instances are fixed-sizing only (instance hug/fill is
+                // deferred); `validate` enforces the same on hostile input.
+                if next.nodes[&node_id].kind == Kind::Instance
+                    && mode != SizeMode::Fixed
+                {
+                    return Err(bad("instance sizing must be fixed"));
+                }
                 let value = p
                     .get("value")
                     .map(|v| {
@@ -319,7 +757,8 @@ impl Engine for DesignEngine {
                     && value.is_none()
                     && sizing::mode(&self.state.nodes[&node_id], axis) != SizeMode::Fixed
                 {
-                    Some(sizing::evaluate(&self.state)?.values[&(node_id, axis)])
+                    // Freeze captures the effective (binding-resolved) size.
+                    Some(sizing::evaluate(&variables::effective(&self.state))?.values[&(node_id, axis)])
                 } else {
                     value
                 };
@@ -343,14 +782,31 @@ impl Engine for DesignEngine {
                 let node_id = id(p, "id")?;
                 next.editable(node_id, false)?;
                 let node = Arc::make_mut(next.nodes.get_mut(&node_id).unwrap());
-                if node.kind != Kind::Frame {
-                    return Err(bad("layout requires a frame"));
+                if !container_kind(node.kind) {
+                    return Err(bad("layout requires a frame or component"));
                 }
                 node.layout = serde_json::from_value(
                     p.get("layout")
                         .cloned()
                         .ok_or_else(|| bad("layout required (or null for absolute)"))?,
                 )?;
+            }
+            "setConstraints" => {
+                fields(p, &["id", "constraints"])?;
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                let value = p
+                    .get("constraints")
+                    .ok_or_else(|| bad("constraints required (object or null)"))?;
+                let constraints = match value {
+                    Value::Null => None,
+                    Value::Object(_) => Some(serde_json::from_value::<NodeConstraints>(
+                        value.clone(),
+                    )?),
+                    _ => return Err(bad("constraints must be an object or null")),
+                };
+                Arc::make_mut(next.nodes.get_mut(&node_id).unwrap()).constraints =
+                    constraints;
             }
             "setChildOrder" => {
                 let parent = id(p, "parent")?;
@@ -376,7 +832,7 @@ impl Engine for DesignEngine {
                 next.editable(node_id, false)?;
                 next.editable(parent, false)?;
                 if node_id == 1
-                    || next.nodes[&parent].kind != Kind::Frame
+                    || !container_kind(next.nodes[&parent].kind)
                     || next.subtree(node_id).contains(&parent)
                 {
                     return Err(bad("invalid parent or cycle"));
@@ -412,6 +868,907 @@ impl Engine for DesignEngine {
                 for id in all {
                     next.nodes.remove(&id);
                 }
+                next.bindings.retain(|b| next.nodes.contains_key(&b.node_id));
+                // Prototype screens/hotspots/interactions referencing the
+                // removed subtree are pruned like bindings; undo restores.
+                prototype::prune(&mut next);
+            }
+            "defineMode" => {
+                fields(p, &["id", "name"])?;
+                if next.modes.len() >= MAX_MODES {
+                    return Err(bad("mode budget exceeded"));
+                }
+                let name = text_field(p, "name")?;
+                let mode_id = match p.get("id") {
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("mode id must be a string"))?
+                        .to_string(),
+                    None => generated_id("mode", &|c| {
+                        next.modes.iter().any(|m| m.id == c)
+                    })?,
+                };
+                next.modes.push(Mode {
+                    id: mode_id,
+                    name: name.into(),
+                });
+            }
+            "renameMode" => {
+                fields(p, &["id", "name"])?;
+                let mode_id = text_field(p, "id")?;
+                let name = text_field(p, "name")?;
+                let mode = next
+                    .modes
+                    .iter_mut()
+                    .find(|m| m.id == mode_id)
+                    .ok_or_else(|| bad("unknown mode"))?;
+                mode.name = name.into();
+            }
+            "removeMode" => {
+                fields(p, &["id"])?;
+                let mode_id = text_field(p, "id")?;
+                let before = next.modes.len();
+                next.modes.retain(|m| m.id != mode_id);
+                if next.modes.len() == before {
+                    return Err(bad("unknown mode"));
+                }
+                for v in next.variables.values_mut() {
+                    v.values.remove(mode_id);
+                }
+                if next.active_mode.as_deref() == Some(mode_id) {
+                    next.active_mode = next.modes.first().map(|m| m.id.clone());
+                }
+            }
+            "defineVariable" => {
+                fields(p, &["id", "name", "type", "values"])?;
+                if next.variables.len() >= MAX_VARIABLES {
+                    return Err(bad("variable budget exceeded"));
+                }
+                let name = text_field(p, "name")?;
+                let var_type: VarType = serde_json::from_value(
+                    p.get("type")
+                        .cloned()
+                        .ok_or_else(|| bad("variable type required"))?,
+                )?;
+                let values: BTreeMap<String, VarValue> = match p.get("values") {
+                    Some(v) => serde_json::from_value(v.clone())?,
+                    None => BTreeMap::new(),
+                };
+                let variable_id = match p.get("id") {
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("variable id must be a string"))?
+                        .to_string(),
+                    None => generated_id("var", &|c| {
+                        next.variables.contains_key(c)
+                    })?,
+                };
+                if next.variables.contains_key(&variable_id) {
+                    return Err(bad("variable already exists"));
+                }
+                next.variables.insert(
+                    variable_id.clone(),
+                    Variable {
+                        id: variable_id,
+                        name: name.into(),
+                        var_type,
+                        values,
+                    },
+                );
+            }
+            "setVariableValue" => {
+                fields(p, &["id", "mode", "value"])?;
+                let variable_id = text_field(p, "id")?;
+                let mode = text_field(p, "mode")?;
+                let value: VarValue = serde_json::from_value(
+                    p.get("value")
+                        .cloned()
+                        .ok_or_else(|| bad("variable value required"))?,
+                )?;
+                if !next.modes.iter().any(|m| m.id == mode) {
+                    return Err(bad("unknown mode"));
+                }
+                let variable = next
+                    .variables
+                    .get_mut(variable_id)
+                    .ok_or_else(|| bad("unknown variable"))?;
+                variable.values.insert(mode.into(), value);
+            }
+            "removeVariable" => {
+                fields(p, &["id"])?;
+                let variable_id = text_field(p, "id")?;
+                if next.variables.remove(variable_id).is_none() {
+                    return Err(bad("unknown variable"));
+                }
+                next.bindings.retain(|b| b.variable_id != variable_id);
+                // set-variable interactions targeting the removed variable
+                // are dropped like bindings; undo restores them.
+                next.prototype.interactions.retain(|i| {
+                    !matches!(
+                        &i.target,
+                        Some(PrototypeTarget::Variable { id }) if id.as_str() == variable_id
+                    )
+                });
+            }
+            "setActiveMode" => {
+                fields(p, &["id"])?;
+                let mode_id = text_field(p, "id")?;
+                if !next.modes.iter().any(|m| m.id == mode_id) {
+                    return Err(bad("unknown mode"));
+                }
+                next.active_mode = Some(mode_id.into());
+            }
+            "bindVariable" => {
+                fields(p, &["node_id", "path", "variable_id"])?;
+                let node_id = id(p, "node_id")?;
+                let path: BindPath = serde_json::from_value(
+                    p.get("path")
+                        .cloned()
+                        .ok_or_else(|| bad("binding path required"))?,
+                )?;
+                let variable_id = text_field(p, "variable_id")?;
+                next.editable(node_id, false)?;
+                let node = next
+                    .nodes
+                    .get(&node_id)
+                    .ok_or_else(|| bad("unknown node"))?;
+                let variable = next
+                    .variables
+                    .get(variable_id)
+                    .ok_or_else(|| bad("unknown variable"))?;
+                if variable.var_type != VarType::Number {
+                    return Err(bad("only number variables can bind properties"));
+                }
+                match path {
+                    BindPath::Gap
+                    | BindPath::PaddingTop
+                    | BindPath::PaddingRight
+                    | BindPath::PaddingBottom
+                    | BindPath::PaddingLeft
+                        if node.kind != Kind::Frame =>
+                    {
+                        return Err(bad("layout bindings require a frame"));
+                    }
+                    BindPath::X | BindPath::Y => {
+                        if node_id == 1 {
+                            return Err(bad("root position is fixed"));
+                        }
+                        if let Some(parent) = next.parent(node_id) {
+                            if next.nodes[&parent].layout.is_some() {
+                                return Err(bad(
+                                    "flow layout positions children; x/y bindings need absolute placement",
+                                ));
+                            }
+                        }
+                    }
+                    BindPath::Width | BindPath::Height if node_id == 1 => {
+                        return Err(bad("root canvas size uses setComposition"));
+                    }
+                    BindPath::Width if node.sizing.x != SizeMode::Fixed => {
+                        return Err(bad("width bindings require fixed x sizing"));
+                    }
+                    BindPath::Height if node.sizing.y != SizeMode::Fixed => {
+                        return Err(bad("height bindings require fixed y sizing"));
+                    }
+                    _ => {}
+                }
+                if let Some(binding) = next
+                    .bindings
+                    .iter_mut()
+                    .find(|b| b.node_id == node_id && b.path == path)
+                {
+                    binding.variable_id = variable_id.into();
+                } else {
+                    next.bindings.push(Binding {
+                        node_id,
+                        path,
+                        variable_id: variable_id.into(),
+                    });
+                    next.bindings.sort();
+                }
+            }
+            "unbindVariable" => {
+                fields(p, &["node_id", "path"])?;
+                let node_id = id(p, "node_id")?;
+                let path: BindPath = serde_json::from_value(
+                    p.get("path")
+                        .cloned()
+                        .ok_or_else(|| bad("binding path required"))?,
+                )?;
+                next.bindings
+                    .retain(|b| !(b.node_id == node_id && b.path == path));
+            }
+            "createComponent" | "updateComponent" => {
+                fields(p, &["id", "name", "variants"])?;
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                if node_id == 1 {
+                    return Err(bad("root canvas cannot become a component"));
+                }
+                let kind = next.nodes[&node_id].kind;
+                if cmd.op == "createComponent" {
+                    if kind != Kind::Frame {
+                        return Err(bad("createComponent requires a frame subtree"));
+                    }
+                } else if kind != Kind::Component {
+                    return Err(bad("updateComponent requires a component"));
+                }
+                let node = Arc::make_mut(next.nodes.get_mut(&node_id).unwrap());
+                if cmd.op == "createComponent" {
+                    node.kind = Kind::Component;
+                }
+                if let Some(v) = p.get("name") {
+                    node.name = v
+                        .as_str()
+                        .ok_or_else(|| bad("component name must be a string"))?
+                        .into();
+                }
+                if let Some(v) = p.get("variants") {
+                    node.variants = serde_json::from_value(v.clone())?;
+                }
+            }
+            "createInstance" => {
+                fields(
+                    p,
+                    &[
+                        "component",
+                        "parent",
+                        "name",
+                        "x",
+                        "y",
+                        "width",
+                        "height",
+                        "fill",
+                        "visible",
+                        "locked",
+                        "variant",
+                        "overrides",
+                    ],
+                )?;
+                let component = id(p, "component")?;
+                let comp = next
+                    .nodes
+                    .get(&component)
+                    .ok_or_else(|| bad("unknown component"))?;
+                if comp.kind != Kind::Component {
+                    return Err(bad("createInstance target is not a component"));
+                }
+                let parent = match p.get("parent") {
+                    Some(v) => v
+                        .as_u64()
+                        .ok_or_else(|| bad("expected integer parent"))?,
+                    None => 1,
+                };
+                next.editable(parent, false)?;
+                if !container_kind(next.nodes[&parent].kind) {
+                    return Err(bad("parent must be a frame or component"));
+                }
+                let node_id = next.next_id;
+                next.next_id = node_id
+                    .checked_add(1)
+                    .ok_or_else(|| bad("identity exhausted"))?;
+                // The instance starts as a materialized copy of the component
+                // root box: name/geometry/fill/visibility default from the
+                // template, payload fields override, sizing stays fixed
+                // (instance hug/fill is deferred — see ENGINE_OPS.md).
+                let mut node = Node::frame(node_id, comp.width, comp.height);
+                node.kind = Kind::Instance;
+                node.name = comp.name.clone();
+                node.x = comp.x;
+                node.y = comp.y;
+                node.fill = comp.fill;
+                node.visible = comp.visible;
+                node.locked = comp.locked;
+                let mut patch = p
+                    .as_object()
+                    .ok_or_else(|| bad("expected node object"))?
+                    .clone();
+                for k in [
+                    "component",
+                    "parent",
+                    "variant",
+                    "overrides",
+                ] {
+                    patch.remove(k);
+                }
+                node = merge(
+                    &node,
+                    &Value::Object(patch),
+                    &["name", "x", "y", "width", "height", "fill", "visible", "locked"],
+                )?;
+                let variant = match p.get("variant") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(
+                        v.as_str()
+                            .ok_or_else(|| bad("variant must be a string or null"))?
+                            .to_string(),
+                    ),
+                };
+                let overrides = match p.get("overrides") {
+                    Some(Value::Null) | None => vec![],
+                    Some(v) => serde_json::from_value(v.clone())?,
+                };
+                node.instance = Some(InstanceSpec {
+                    component,
+                    variant,
+                    overrides,
+                });
+                next.nodes.insert(node_id, Arc::new(node));
+                Arc::make_mut(next.nodes.get_mut(&parent).unwrap())
+                    .children
+                    .push(node_id);
+                data = json!({"node_id":node_id});
+            }
+            "updateInstance" => {
+                fields(p, &["id", "variant", "overrides"])?;
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                let node = next
+                    .nodes
+                    .get(&node_id)
+                    .ok_or_else(|| bad("unknown node"))?;
+                if node.kind != Kind::Instance {
+                    return Err(bad("updateInstance requires an instance node"));
+                }
+                let node = Arc::make_mut(next.nodes.get_mut(&node_id).unwrap());
+                let spec = node
+                    .instance
+                    .as_mut()
+                    .ok_or_else(|| bad("instance node requires an instance spec"))?;
+                if p.as_object().is_some_and(|o| o.contains_key("variant")) {
+                    spec.variant = match p.get("variant") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(
+                            v.as_str()
+                                .ok_or_else(|| bad("variant must be a string or null"))?
+                                .to_string(),
+                        ),
+                    };
+                }
+                if p.as_object().is_some_and(|o| o.contains_key("overrides")) {
+                    spec.overrides = match p.get("overrides") {
+                        Some(Value::Null) | None => vec![],
+                        Some(v) => serde_json::from_value(v.clone())?,
+                    };
+                }
+            }
+            "detachInstance" => {
+                fields(p, &["id"])?;
+                let node_id = id(p, "id")?;
+                next.editable(node_id, false)?;
+                next = components::detach(&next, node_id)?;
+            }
+            // --- Prototype catalog (slice E). Mutations are journaled like
+            // every other op; the two reads above stay eventless. ---
+            "definePrototypeScreen" => {
+                fields(p, &["node", "entry"])?;
+                let node_id = id(p, "node")?;
+                let entry = p
+                    .get("entry")
+                    .map(|v| {
+                        v.as_bool()
+                            .ok_or_else(|| bad("entry must be a boolean"))
+                    })
+                    .transpose()?
+                    .unwrap_or(false);
+                if next
+                    .prototype
+                    .screens
+                    .iter()
+                    .any(|s| s.node == node_id)
+                {
+                    return Err(bad("prototype screen already exists"));
+                }
+                next.prototype.screens.push(PrototypeScreen { node: node_id, entry });
+            }
+            "updatePrototypeScreen" => {
+                fields(p, &["node", "entry"])?;
+                let node_id = id(p, "node")?;
+                let entry = p
+                    .get("entry")
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| bad("entry must be a boolean"))?;
+                let sc = next
+                    .prototype
+                    .screens
+                    .iter_mut()
+                    .find(|s| s.node == node_id)
+                    .ok_or_else(|| bad("unknown prototype screen"))?;
+                sc.entry = entry;
+            }
+            "removePrototypeScreen" => {
+                fields(p, &["node"])?;
+                let node_id = id(p, "node")?;
+                let before = next.prototype.screens.len();
+                next.prototype.screens.retain(|s| s.node != node_id);
+                if next.prototype.screens.len() == before {
+                    return Err(bad("unknown prototype screen"));
+                }
+                // Cascade like removeNode: hotspots on the screen, every
+                // interaction attached to them or naming the screen (as
+                // attachment or screen target) are removed with it.
+                let doomed: std::collections::BTreeSet<String> = next
+                    .prototype
+                    .hotspots
+                    .iter()
+                    .filter(|h| h.screen == node_id)
+                    .map(|h| h.id.clone())
+                    .collect();
+                next.prototype.hotspots.retain(|h| h.screen != node_id);
+                next.prototype.interactions.retain(|i| {
+                    !(i.screen == Some(node_id)
+                        || i.hotspot.as_ref().is_some_and(|h| doomed.contains(h))
+                        || matches!(&i.target, Some(PrototypeTarget::Screen { node }) if *node == node_id))
+                });
+            }
+            "definePrototypeHotspot" => {
+                fields(
+                    p,
+                    &["id", "screen", "label", "x", "y", "width", "height"],
+                )?;
+                let hotspot_id = match p.get("id") {
+                    Some(Value::Null) | None => generated_id("hotspot", &|c| {
+                        next.prototype.hotspots.iter().any(|h| h.id == c)
+                    })?,
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("hotspot id must be a string"))?
+                        .to_string(),
+                };
+                if next
+                    .prototype
+                    .hotspots
+                    .iter()
+                    .any(|h| h.id == hotspot_id)
+                {
+                    return Err(bad("hotspot already exists"));
+                }
+                let hotspot = PrototypeHotspot {
+                    id: hotspot_id.clone(),
+                    screen: id(p, "screen")?,
+                    label: text_field(p, "label")?.into(),
+                    x: num(p, "x")?,
+                    y: num(p, "y")?,
+                    width: num(p, "width")?,
+                    height: num(p, "height")?,
+                };
+                next.prototype.hotspots.push(hotspot);
+                data = json!({"id": hotspot_id});
+            }
+            "updatePrototypeHotspot" => {
+                fields(
+                    p,
+                    &["id", "screen", "label", "x", "y", "width", "height"],
+                )?;
+                let hotspot_id = text_field(p, "id")?;
+                let h = next
+                    .prototype
+                    .hotspots
+                    .iter_mut()
+                    .find(|h| h.id == hotspot_id)
+                    .ok_or_else(|| bad("unknown hotspot"))?;
+                if let Some(v) = p.get("screen") {
+                    h.screen = v
+                        .as_u64()
+                        .ok_or_else(|| bad("screen must be a node id"))?;
+                }
+                if let Some(v) = p.get("label") {
+                    h.label = v
+                        .as_str()
+                        .ok_or_else(|| bad("label must be a string"))?
+                        .into();
+                }
+                for (key, slot) in [
+                    ("x", &mut h.x),
+                    ("y", &mut h.y),
+                    ("width", &mut h.width),
+                    ("height", &mut h.height),
+                ] {
+                    if let Some(v) = p.get(key) {
+                        *slot = v
+                            .as_f64()
+                            .ok_or_else(|| bad("hotspot geometry must be numeric"))?;
+                    }
+                }
+            }
+            "removePrototypeHotspot" => {
+                fields(p, &["id"])?;
+                let hotspot_id = text_field(p, "id")?;
+                let before = next.prototype.hotspots.len();
+                next.prototype.hotspots.retain(|h| h.id != hotspot_id);
+                if next.prototype.hotspots.len() == before {
+                    return Err(bad("unknown hotspot"));
+                }
+                next.prototype
+                    .interactions
+                    .retain(|i| i.hotspot.as_deref() != Some(hotspot_id));
+            }
+            "definePrototypeTransition" => {
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "label",
+                        "kind",
+                        "easing",
+                        "direction",
+                        "duration_ms",
+                    ],
+                )?;
+                let transition_id = match p.get("id") {
+                    Some(Value::Null) | None => generated_id("transition", &|c| {
+                        next.prototype
+                            .transitions
+                            .iter()
+                            .any(|t| t.id == c)
+                    })?,
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("transition id must be a string"))?
+                        .to_string(),
+                };
+                if next
+                    .prototype
+                    .transitions
+                    .iter()
+                    .any(|t| t.id == transition_id)
+                {
+                    return Err(bad("transition already exists"));
+                }
+                let kind: TransitionKind = serde_json::from_value(
+                    p.get("kind")
+                        .cloned()
+                        .ok_or_else(|| bad("transition kind required"))?,
+                )?;
+                let easing = match p.get("easing") {
+                    Some(Value::Null) | None => TransitionEasing::default(),
+                    Some(v) => serde_json::from_value(v.clone())?,
+                };
+                let direction = match p.get("direction") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(serde_json::from_value(v.clone())?),
+                };
+                let duration_ms = opt_u64(p, "duration_ms")?.unwrap_or(0);
+                let label = match opt_str(p, "label")? {
+                    Some(l) => l.to_string(),
+                    None => transition_id.clone(),
+                };
+                next.prototype.transitions.push(PrototypeTransition {
+                    id: transition_id.clone(),
+                    label,
+                    kind,
+                    easing,
+                    direction,
+                    duration_ms,
+                });
+                data = json!({"id": transition_id});
+            }
+            "updatePrototypeTransition" => {
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "label",
+                        "kind",
+                        "easing",
+                        "direction",
+                        "duration_ms",
+                    ],
+                )?;
+                let transition_id = text_field(p, "id")?;
+                let t = next
+                    .prototype
+                    .transitions
+                    .iter_mut()
+                    .find(|t| t.id == transition_id)
+                    .ok_or_else(|| bad("unknown transition"))?;
+                if let Some(v) = p.get("label") {
+                    t.label = v
+                        .as_str()
+                        .ok_or_else(|| bad("label must be a string"))?
+                        .into();
+                }
+                if let Some(v) = p.get("kind") {
+                    t.kind = serde_json::from_value(v.clone())?;
+                }
+                if let Some(v) = p.get("easing") {
+                    t.easing = serde_json::from_value(v.clone())?;
+                }
+                if p
+                    .as_object()
+                    .is_some_and(|o| o.contains_key("direction"))
+                {
+                    t.direction = match p.get("direction") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(serde_json::from_value(v.clone())?),
+                    };
+                }
+                if let Some(v) = p.get("duration_ms") {
+                    t.duration_ms = v
+                        .as_u64()
+                        .ok_or_else(|| bad("duration_ms must be an integer"))?;
+                }
+                // A non-slide kind cannot keep a direction; normalize
+                // before whole-document validation sees the candidate.
+                if t.kind != TransitionKind::Slide {
+                    t.direction = None;
+                }
+            }
+            "removePrototypeTransition" => {
+                fields(p, &["id"])?;
+                let transition_id = text_field(p, "id")?;
+                if next
+                    .prototype
+                    .interactions
+                    .iter()
+                    .any(|i| i.transition.as_deref() == Some(transition_id))
+                {
+                    return Err(bad("transition is referenced by an interaction"));
+                }
+                let before = next.prototype.transitions.len();
+                next.prototype
+                    .transitions
+                    .retain(|t| t.id != transition_id);
+                if next.prototype.transitions.len() == before {
+                    return Err(bad("unknown transition"));
+                }
+            }
+            "definePrototypeInteraction" => {
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "hotspot",
+                        "screen",
+                        "trigger",
+                        "delay_ms",
+                        "action",
+                        "target",
+                        "transition",
+                        "duration_ms",
+                        "value",
+                    ],
+                )?;
+                let interaction_id = match p.get("id") {
+                    Some(Value::Null) | None => generated_id("interaction", &|c| {
+                        next.prototype
+                            .interactions
+                            .iter()
+                            .any(|i| i.id == c)
+                    })?,
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("interaction id must be a string"))?
+                        .to_string(),
+                };
+                if next
+                    .prototype
+                    .interactions
+                    .iter()
+                    .any(|i| i.id == interaction_id)
+                {
+                    return Err(bad("interaction already exists"));
+                }
+                let hotspot = match p.get("hotspot") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(
+                        v.as_str()
+                            .ok_or_else(|| bad("hotspot must be a string id"))?
+                            .to_string(),
+                    ),
+                };
+                let screen = match p.get("screen") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(
+                        v.as_u64()
+                            .ok_or_else(|| bad("screen must be a node id"))?,
+                    ),
+                };
+                let target = match p.get("target") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(serde_json::from_value(v.clone())?),
+                };
+                let value = match p.get("value") {
+                    Some(Value::Null) | None => None,
+                    Some(v) => Some(serde_json::from_value(v.clone())?),
+                };
+                next.prototype.interactions.push(PrototypeInteraction {
+                    id: interaction_id.clone(),
+                    hotspot,
+                    screen,
+                    trigger: serde_json::from_value(
+                        p.get("trigger")
+                            .cloned()
+                            .ok_or_else(|| bad("interaction trigger required"))?,
+                    )?,
+                    delay_ms: opt_u64(p, "delay_ms")?.unwrap_or(0),
+                    action: serde_json::from_value(
+                        p.get("action")
+                            .cloned()
+                            .ok_or_else(|| bad("interaction action required"))?,
+                    )?,
+                    target,
+                    transition: opt_str(p, "transition")?.map(str::to_string),
+                    duration_ms: opt_u64(p, "duration_ms")?,
+                    value,
+                });
+                data = json!({"id": interaction_id});
+            }
+            "updatePrototypeInteraction" => {
+                fields(
+                    p,
+                    &[
+                        "id",
+                        "hotspot",
+                        "screen",
+                        "trigger",
+                        "delay_ms",
+                        "action",
+                        "target",
+                        "transition",
+                        "duration_ms",
+                        "value",
+                    ],
+                )?;
+                let interaction_id = text_field(p, "id")?;
+                let i = next
+                    .prototype
+                    .interactions
+                    .iter_mut()
+                    .find(|i| i.id == interaction_id)
+                    .ok_or_else(|| bad("unknown interaction"))?;
+                let object = p
+                    .as_object()
+                    .ok_or_else(|| bad("expected patch object"))?;
+                if object.contains_key("hotspot") {
+                    i.hotspot = match p.get("hotspot") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(
+                            v.as_str()
+                                .ok_or_else(|| bad("hotspot must be a string id"))?
+                                .to_string(),
+                        ),
+                    };
+                }
+                if object.contains_key("screen") {
+                    i.screen = match p.get("screen") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(
+                            v.as_u64()
+                                .ok_or_else(|| bad("screen must be a node id"))?,
+                        ),
+                    };
+                }
+                if let Some(v) = p.get("trigger") {
+                    i.trigger = serde_json::from_value(v.clone())?;
+                }
+                if let Some(v) = p.get("delay_ms") {
+                    i.delay_ms = v
+                        .as_u64()
+                        .ok_or_else(|| bad("delay_ms must be an integer"))?;
+                }
+                if let Some(v) = p.get("action") {
+                    i.action = serde_json::from_value(v.clone())?;
+                }
+                if object.contains_key("target") {
+                    i.target = match p.get("target") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(serde_json::from_value(v.clone())?),
+                    };
+                }
+                if object.contains_key("transition") {
+                    i.transition = opt_str(p, "transition")?.map(str::to_string);
+                }
+                if object.contains_key("duration_ms") {
+                    i.duration_ms = match p.get("duration_ms") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(
+                            v.as_u64()
+                                .ok_or_else(|| bad("duration_ms must be an integer"))?,
+                        ),
+                    };
+                }
+                if object.contains_key("value") {
+                    i.value = match p.get("value") {
+                        Some(Value::Null) | None => None,
+                        Some(v) => Some(serde_json::from_value(v.clone())?),
+                    };
+                }
+            }
+            "removePrototypeInteraction" => {
+                fields(p, &["id"])?;
+                let interaction_id = text_field(p, "id")?;
+                let before = next.prototype.interactions.len();
+                next.prototype
+                    .interactions
+                    .retain(|i| i.id != interaction_id);
+                if next.prototype.interactions.len() == before {
+                    return Err(bad("unknown interaction"));
+                }
+            }
+            // --- Comment threads/pins (slice G). Mutations are journaled
+            // like every other op; `listComments` above stays eventless.
+            // Pins anchor to document-space points, so node removal needs
+            // no cascade and layout changes never move a pin. ---
+            "defineCommentThread" => {
+                fields(p, &["id", "anchor", "body", "author", "time_label"])?;
+                if next.comments.threads.len() >= MAX_COMMENT_THREADS {
+                    return Err(bad("comment thread budget exceeded"));
+                }
+                let anchor: CommentAnchor = serde_json::from_value(
+                    p.get("anchor")
+                        .cloned()
+                        .ok_or_else(|| bad("comment anchor required"))?,
+                )?;
+                let thread_id = match p.get("id") {
+                    Some(Value::Null) | None => generated_id("comment", &|c| {
+                        next.comments.threads.iter().any(|t| t.id == c)
+                    })?,
+                    Some(v) => v
+                        .as_str()
+                        .ok_or_else(|| bad("comment id must be a string"))?
+                        .to_string(),
+                };
+                if next.comments.threads.iter().any(|t| t.id == thread_id) {
+                    return Err(bad("comment thread already exists"));
+                }
+                next.comments.threads.push(CommentThread {
+                    id: thread_id.clone(),
+                    anchor,
+                    body: text_field(p, "body")?.into(),
+                    author: opt_str(p, "author")?.map(str::to_string),
+                    time_label: opt_str(p, "time_label")?.map(str::to_string),
+                    resolved: false,
+                    replies: vec![],
+                });
+                data = json!({"id": thread_id});
+            }
+            "addCommentReply" => {
+                fields(p, &["thread", "body", "author", "time_label"])?;
+                let thread_id = text_field(p, "thread")?;
+                let pos = next
+                    .comments
+                    .threads
+                    .iter()
+                    .position(|t| t.id == thread_id)
+                    .ok_or_else(|| bad("unknown comment thread"))?;
+                if next.comments.threads[pos].replies.len() >= MAX_COMMENT_REPLIES {
+                    return Err(bad("comment reply budget exceeded"));
+                }
+                let entry_id = generated_id("reply", &|c| {
+                    next.comments.threads[pos].replies.iter().any(|r| r.id == c)
+                })?;
+                next.comments.threads[pos].replies.push(CommentEntry {
+                    id: entry_id.clone(),
+                    body: text_field(p, "body")?.into(),
+                    author: opt_str(p, "author")?.map(str::to_string),
+                    time_label: opt_str(p, "time_label")?.map(str::to_string),
+                });
+                data = json!({"id": entry_id});
+            }
+            "setCommentResolved" => {
+                fields(p, &["id", "resolved"])?;
+                let thread_id = text_field(p, "id")?;
+                let resolved = p
+                    .get("resolved")
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| bad("resolved must be a boolean"))?;
+                let t = next
+                    .comments
+                    .threads
+                    .iter_mut()
+                    .find(|t| t.id == thread_id)
+                    .ok_or_else(|| bad("unknown comment thread"))?;
+                t.resolved = resolved;
+            }
+            "removeCommentThread" => {
+                fields(p, &["id"])?;
+                let thread_id = text_field(p, "id")?;
+                let before = next.comments.threads.len();
+                next.comments.threads.retain(|t| t.id != thread_id);
+                if next.comments.threads.len() == before {
+                    return Err(bad("unknown comment thread"));
+                }
             }
             _ => return Err(EngineError::unsupported("unsupported design operation")),
         }
@@ -420,21 +1777,55 @@ impl Engine for DesignEngine {
         if next == *self.state {
             return Ok(CommandResult::read_only(data));
         }
+        let revision = self.next_revision()?;
         self.journal.record(self.state.clone());
         self.state = Arc::new(next);
+        self.state_revision = revision;
         Ok(CommandResult::data(data))
+    }
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let staged = Self {
+            state: self.state.clone(),
+            journal: Journal::new(1),
+            state_revision: self.state_revision,
+        };
+        let (staged, mut result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if self.state != staged.state {
+            let revision = self.next_revision()?;
+            self.journal.record(self.state.clone());
+            self.state = staged.state;
+            self.state_revision = revision;
+        } else {
+            result.events.clear();
+        }
+        Ok(result)
     }
     fn apply_long(
         &mut self,
         cmd: Command,
         ctx: &TaskContext,
     ) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            return self.apply_batch(cmd, Some(ctx));
+        }
         ctx.checkpoint()?;
-        let result = if cmd.op == "renderFrame" {
+        let result = if matches!(cmd.op.as_str(), "renderFrame" | "exportSlice") {
             if cmd.v != 1 || cmd.input.is_some() {
                 return Err(bad("invalid render command"));
             }
-            self.render(&cmd, Some(ctx))?
+            if cmd.op == "renderFrame" {
+                self.render(&cmd, Some(ctx))?
+            } else {
+                self.export_slice(&cmd, Some(ctx))?
+            }
         } else {
             self.apply(cmd)?
         };
@@ -442,37 +1833,87 @@ impl Engine for DesignEngine {
         Ok(result)
     }
     fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
-        Ok(encode_envelope(&serde_json::to_vec(&*self.state)?))
+        // Presence-triggered versioning (quill/pitch/draft precedent): the
+        // schema:2 wrapper `{kind:"design",schema:2,document:<state>}` is
+        // emitted only when schema-2 features (text nodes) exist, so
+        // schema:1-only documents stay byte-identical and old readers fail
+        // closed on `kind:"text"`/`text` instead of silently dropping them.
+        let payload = if requires_wrapper(&self.state) {
+            serde_json::to_vec(&json!({
+                "kind": "design",
+                "schema": 2,
+                "document": &*self.state,
+            }))?
+        } else {
+            serde_json::to_vec(&*self.state)?
+        };
+        Ok(encode_envelope(&payload))
     }
     fn restore(&mut self, bytes: &[u8]) -> Result<(), EngineError> {
         let (_, payload) = decode_envelope(bytes)?;
         if payload.len() > MAX_BYTES {
             return Err(bad("design state exceeds budget"));
         }
-        let next: State = serde_json::from_slice(payload)?;
+        let value: Value = serde_json::from_slice(payload)?;
+        let next: State = if value.get("document").is_some() {
+            #[derive(Deserialize)]
+            #[serde(deny_unknown_fields)]
+            struct Wrapper {
+                kind: String,
+                schema: u32,
+                document: State,
+            }
+            let wrapper: Wrapper = serde_json::from_value(value)?;
+            if wrapper.kind != "design" || wrapper.schema != 2 {
+                return Err(bad("unsupported design snapshot wrapper"));
+            }
+            wrapper.document
+        } else {
+            let state: State = serde_json::from_value(value)?;
+            if requires_wrapper(&state) {
+                return Err(bad("extended design snapshot requires schema2 wrapper"));
+            }
+            state
+        };
         validate(&next)?;
         layout::evaluate(&next)?;
+        // Restore advances the revision like any other state change; the
+        // counter is engine-side so a hostile snapshot cannot choose it.
+        let revision = self.next_revision()?;
         self.state = Arc::new(next);
         self.journal = Journal::new(16);
+        self.state_revision = revision;
         Ok(())
     }
     fn undo(&mut self) -> Result<bool, EngineError> {
-        if let Some(prior) = self.journal.pop_undo() {
-            let current = std::mem::replace(&mut self.state, prior);
-            self.journal.push_redo(current);
-            Ok(true)
-        } else {
-            Ok(false)
+        // Check the journal before spending a revision: an empty undo stack
+        // is `Ok(false)`, not a revision-budget error.
+        if self.journal.undo_len() == 0 {
+            return Ok(false);
         }
+        let revision = self.next_revision()?;
+        let prior = self
+            .journal
+            .pop_undo()
+            .ok_or_else(|| bad("undo journal underflow"))?;
+        let current = std::mem::replace(&mut self.state, prior);
+        self.journal.push_redo(current);
+        self.state_revision = revision;
+        Ok(true)
     }
     fn redo(&mut self) -> Result<bool, EngineError> {
-        if let Some(next) = self.journal.pop_redo() {
-            let current = std::mem::replace(&mut self.state, next);
-            self.journal.push_undo(current);
-            Ok(true)
-        } else {
-            Ok(false)
+        if self.journal.redo_len() == 0 {
+            return Ok(false);
         }
+        let revision = self.next_revision()?;
+        let next = self
+            .journal
+            .pop_redo()
+            .ok_or_else(|| bad("redo journal underflow"))?;
+        let current = std::mem::replace(&mut self.state, next);
+        self.journal.push_undo(current);
+        self.state_revision = revision;
+        Ok(true)
     }
 }
 #[cfg(test)]

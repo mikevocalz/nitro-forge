@@ -1,15 +1,43 @@
 import {DocumentHandle,type EngineHost} from '@nitro-forge/ignition';
 export interface DraftPoint{id:number;x:number;y:number;locked:boolean}
-export interface DraftSegment{id:number;a:number;b:number;name:string;color:[number,number,number,number];width:number;visible:boolean;locked:boolean}
+/** Named entity grouping; layer 0 is implicit, reserved and never serialized in `layers`. */
+export interface DraftLayer{id:number;name:string;color:[number,number,number,number]|null;visible:boolean;locked:boolean}
+export interface DraftSegment{id:number;a:number;b:number;name:string;color:[number,number,number,number];width:number;visible:boolean;locked:boolean;layer?:number;block?:number}
 export interface DraftCircle extends Omit<DraftSegment,'a'|'b'>{center:number;radius:number}
 export interface DraftArc extends DraftCircle{start_deg:number;sweep_deg:number}
-export type ConstraintDefinition={kind:'fixed';point:number;x:number;y:number}|{kind:'coincident';a:number;b:number}|{kind:'horizontal'|'vertical';segment:number}|{kind:'distance_x'|'distance_y';a:number;b:number;value:number};
+/** Linear kinds (`fixed`, `coincident`, `horizontal`, `vertical`, `distance_x`, `distance_y`) solve by exact Gaussian elimination; slice-A5 kinds solve by a bounded Gauss-Newton/Levenberg-Marquardt pass (`distance` point-to-point, `angle` at a vertex in degrees 0<d<180, `perpendicular`/`parallel`/`equal` on segments, `radius` on a circle/arc, `concentric` on two circles/arcs, `midpoint` point-on-segment-midpoint, `tangent` segment-circle or circle-circle with `internal` for internal circle tangency). `a`/`b` fields take segment ids for segment kinds and circle/arc ids for curve kinds as documented per variant. */
+export type ConstraintDefinition={kind:'fixed';point:number;x:number;y:number}|{kind:'coincident';a:number;b:number}|{kind:'horizontal'|'vertical';segment:number}|{kind:'distance_x'|'distance_y';a:number;b:number;value:number}|{kind:'distance';a:number;b:number;value:number}|{kind:'angle';vertex:number;first:number;second:number;degrees:number}|{kind:'perpendicular'|'parallel'|'equal';a:number;b:number}|{kind:'radius';entity:number;value:number}|{kind:'concentric';a:number;b:number}|{kind:'midpoint';point:number;segment:number}|{kind:'tangent';a:number;b:number;internal?:boolean};
 export interface DraftConstraint{id:number;enabled:boolean;definition:ConstraintDefinition}
+/** Explicit world-space boundary loops (outer + holes via even-odd), resolved once at write time; not entity references. Line-pattern segment endpoints clip to the boundary while stroke width may extend width/2 past it. */
+export type DraftHatchLoops=Array<Array<[number,number]>>;
+/** Built-in patterns only: `solid` fills; `ansi31`/`crosshatch`/`horizontal` are bounded line families. */
+export type DraftHatchPattern='solid'|'ansi31'|'crosshatch'|'horizontal';
+export interface DraftHatch{id:number;name:string;pattern:DraftHatchPattern;color:[number,number,number,number];angle:number;scale:number;width:number;visible:boolean;locked:boolean;layer?:number;loops:DraftHatchLoops}
+/** Associative dimension kinds: `linear` needs `axis` ('x'|'y'), point kinds take `points` ids (absent for radial/diameter, which serialize no `points` field), `radial`/`diameter` take a circle/arc `entity` id. Measured geometry is derived per read, never stored; there is no text/glyph backend so numeric labels are not rendered. */
+export type DraftDimensionKind='linear'|'aligned'|'angular'|'radial'|'diameter';
+export type DraftDimensionAxis='x'|'y';
+export interface DraftDimension{id:number;kind:DraftDimensionKind;points?:number[];entity?:number;axis?:DraftDimensionAxis;name:string;color:[number,number,number,number];width:number;visible:boolean;locked:boolean;layer?:number}
+/** Derived world-space annotation strokes (extension lines, dimension line, arrowhead legs, angle rays/arc polyline); `value` is world units or degrees, `null` only for a degenerate angular anchor. */
+export interface DraftDimensionMeasured{value:number|null;lines:Array<[[number,number],[number,number]]>}
+/** `evaluate` projection of a dimension: authored fields plus read-derived status and measured geometry. Orphaned dimensions (references deleted after writes) keep authored refs with `measured:null`. */
+export interface DraftDimensionState extends DraftDimension{status:'linked'|'orphaned';measured:DraftDimensionMeasured|null}
+/** Paper-space sheet (slice A7): named page setup in fixed millimetres regardless of `units`; margins inset the printable area. Sheet coordinates are mm with origin at the paper's bottom-left, +y up; portrait/landscape is derived from width vs height. Title blocks and paper-space entities are deferred. */
+export interface DraftSheet{id:number;name:string;width:number;height:number;margin_top:number;margin_right:number;margin_bottom:number;margin_left:number}
+/** Paper-space viewport entity: `x`,`y`,`width`,`height` is its rectangle in sheet millimetres (bottom-left origin, +y up, fully inside the sheet). `center_x`/`center_y` is the world point at the viewport center; `scale` is paper millimetres per world unit. Model content clips at the viewport's raster boundary — there is no vector clip. Sheet viewports render model space y-up (model +y toward sheet +y), matching CAD identity rotation. */
+export interface DraftViewportEntity{id:number;sheet:number;name:string;x:number;y:number;width:number;height:number;center_x:number;center_y:number;scale:number;visible:boolean;locked:boolean}
+/** Named block definition (slice A9): `base_x`/`base_y` is the definition-space insertion origin every insert of this block places at its own (x,y). Membership lives on members (`block` on segments/circles/arcs, `parent` on inserts), never on the block. Attributes, dynamic blocks, xrefs, non-uniform/mirror scale and explode are deferred. */
+export interface DraftBlock{id:number;name:string;base_x:number;base_y:number}
+/** Block-reference entity: instantiates `block` with its base point at (x,y), uniform positive `scale` and `rotation_deg`. `parent` is the containing block for nested definitions (0 = model space, where x/y are world coordinates); inside a parent the transform fields are in that definition's local space. Members keep their own visible/layer/style inside every instance; nesting is capped at 8 levels and cyclic graphs reject. */
+export interface DraftInsert{id:number;block:number;parent?:number;name:string;x:number;y:number;scale:number;rotation_deg:number;visible:boolean;locked:boolean;layer?:number}
 export interface SnapSettings{grid:boolean;spacing:number;origin_x:number;origin_y:number;endpoint:boolean;midpoint:boolean;projection:boolean;intersection:boolean;ortho:boolean;polar:boolean;polar_increment:number;center:boolean;nearest_circle:boolean;tangent:boolean}
-export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings}
-export interface SolveReport{scope:'point_coordinates';status:'solved'|'underconstrained'|'inconsistent';rank:number;dof:number;residual:number;unsatisfied_constraints:number[];unsatisfied_locked_points:number[];applied:boolean}
+export interface DraftState{kind:'draft';schema:1;units:'mm'|'cm'|'m'|'in';next_id:number;points:Record<string,DraftPoint>;segments:Record<string,DraftSegment>;circles:Record<string,DraftCircle>;arcs:Record<string,DraftArc>;order:number[];constraints:Record<string,DraftConstraint>;snaps:SnapSettings;layers?:Record<string,DraftLayer>;hatches?:Record<string,DraftHatch>;dimensions?:Record<string,DraftDimension>;sheets?:Record<string,DraftSheet>;viewports?:Record<string,DraftViewportEntity>;blocks?:Record<string,DraftBlock>;inserts?:Record<string,DraftInsert>}
+/** `status` merges both solver stages: `unconverged` means the bounded nonlinear pass failed to converge — iteration/variable/work budget, singular system, or a converged iterate outside world/entity bounds (geometry is left unchanged, never partially applied, and the solve is atomic across both stages). `nonlinear` is present only when enabled slice-A5 constraint kinds exist; its `residual` mixes world units, radians and unitless terms per row. */
+export interface SolveReport{scope:'point_coordinates';status:'solved'|'underconstrained'|'inconsistent'|'unconverged';rank:number;dof:number;residual:number;unsatisfied_constraints:number[];unsatisfied_locked_points:number[];applied:boolean;nonlinear?:{status:'solved'|'unconverged';iterations:number;residual:number;unsatisfied_constraints:number[]}}
 export interface SnapResult{kind:'grid'|'endpoint'|'midpoint'|'projection'|'intersection'|'ortho'|'polar'|'center'|'nearest_circle'|'tangent';x:number;y:number;distance:number;sources:number[];angle_degrees?:number}
 export interface DraftSnapQuery{candidate:SnapResult|null;source_revision:number}
+export interface DraftProfileBounds{min_x:number;min_y:number;max_x:number;max_y:number}
+export interface DraftProfile{loops:number[][];area:number;centroid:{x:number;y:number};bounds:DraftProfileBounds}
+export interface DraftProfiles{profiles:DraftProfile[];source_revision:number}
 /** World origin at output pixel (0,0); positive uniform scale is pixels per world unit. */
 export interface DraftViewport{width:number;height:number;origin_x:number;origin_y:number;scale:number}
 /** No screen transforms, selection, nonlinear constraints or 3D ownership. */
@@ -22,17 +50,47 @@ export class DraftDocument{
  addPoint(x:number,y:number,locked=false){return this.document.apply<{point_id:number}>('addPoint',{x,y,locked});}
  updatePoint(id:number,patch:Partial<Pick<DraftPoint,'x'|'y'|'locked'>>){return this.document.apply<{ok:boolean}>('updatePoint',{...patch,id});}
  removePoint(id:number){return this.document.apply<{ok:boolean}>('removePoint',{id});}
- addSegment(a:number,b:number,options:Partial<Pick<DraftSegment,'name'|'color'|'width'|'visible'|'locked'>>={}){return this.document.apply<{segment_id:number}>('addSegment',{...options,a,b});}
+ addSegment(a:number,b:number,options:Partial<Pick<DraftSegment,'name'|'color'|'width'|'visible'|'locked'|'layer'|'block'>>={}){return this.document.apply<{segment_id:number}>('addSegment',{...options,a,b});}
  updateSegment(id:number,patch:Partial<Omit<DraftSegment,'id'>>){return this.document.apply<{ok:boolean}>('updateSegment',{...patch,id});}
  removeSegment(id:number){return this.document.apply<{ok:boolean}>('removeSegment',{id});}
  setSegmentOrder(order:readonly number[]){return this.document.apply<{ok:boolean}>('setSegmentOrder',{order});}
- addCircle(center:number,radius:number,options:Partial<Pick<DraftCircle,'name'|'color'|'width'|'visible'|'locked'>>={}){return this.document.apply<{circle_id:number}>('addCircle',{...options,center,radius});}
- addArc(center:number,radius:number,start_deg:number,sweep_deg:number,options:Partial<Pick<DraftArc,'name'|'color'|'width'|'visible'|'locked'>>={}){return this.document.apply<{arc_id:number}>('addArc',{...options,center,radius,start_deg,sweep_deg});}
+ addCircle(center:number,radius:number,options:Partial<Pick<DraftCircle,'name'|'color'|'width'|'visible'|'locked'|'layer'|'block'>>={}){return this.document.apply<{circle_id:number}>('addCircle',{...options,center,radius});}
+ addArc(center:number,radius:number,start_deg:number,sweep_deg:number,options:Partial<Pick<DraftArc,'name'|'color'|'width'|'visible'|'locked'|'layer'|'block'>>={}){return this.document.apply<{arc_id:number}>('addArc',{...options,center,radius,start_deg,sweep_deg});}
  updateCircle(id:number,patch:Partial<Omit<DraftCircle,'id'>>){return this.document.apply<{ok:boolean}>('updateCircle',{...patch,id});}
  updateArc(id:number,patch:Partial<Omit<DraftArc,'id'>>){return this.document.apply<{ok:boolean}>('updateArc',{...patch,id});}
  removeCircle(id:number){return this.document.apply<{ok:boolean}>('removeCircle',{id});}
  removeArc(id:number){return this.document.apply<{ok:boolean}>('removeArc',{id});}
  setEntityOrder(order:readonly number[]){return this.document.apply<{ok:boolean}>('setEntityOrder',{order});}
+ /** Layer 0 is implicit and reserved; named layers carry visibility/lock for their entities. */
+ addLayer(name:string,options:Partial<Pick<DraftLayer,'color'|'visible'|'locked'>>={}){return this.document.apply<{layer_id:number}>('addLayer',{name,...options});}
+ updateLayer(id:number,patch:Partial<Omit<DraftLayer,'id'>>){return this.document.apply<{ok:boolean}>('updateLayer',{...patch,id});}
+ /** Rejects while any segment/circle/arc/hatch still references the layer. */
+ removeLayer(id:number){return this.document.apply<{ok:boolean}>('removeLayer',{id});}
+ /** Exactly one boundary source: explicit `loops` or `boundary_ids` (closed segment/circle/arc loops, traced once; `tolerance` applies only to `boundary_ids`; later entity edits do not move the hatch). Hatches composite beneath entity strokes and paint among themselves in id order. */
+ addHatch(options:{loops:DraftHatchLoops}|{boundary_ids:number[]},patch:Partial<Pick<DraftHatch,'name'|'pattern'|'color'|'angle'|'scale'|'width'|'visible'|'locked'|'layer'>>&{tolerance?:number}={}){return this.document.apply<{hatch_id:number}>('addHatch',{...patch,...options});}
+ updateHatch(id:number,patch:Partial<Omit<DraftHatch,'id'|'loops'>>&{loops?:DraftHatchLoops|{boundary_ids:number[];tolerance?:number}}){const{loops,...rest}=patch;const boundary=loops&&'boundary_ids' in loops?{boundary_ids:loops.boundary_ids,...(loops.tolerance!==undefined?{tolerance:loops.tolerance}:{})}:loops!==undefined?{loops}:{};return this.document.apply<{ok:boolean}>('updateHatch',{...rest,...boundary,id});}
+ removeHatch(id:number){return this.document.apply<{ok:boolean}>('removeHatch',{id});}
+ /** Associative dimension: `points` are 2 point ids (linear/aligned) or 3 (angular vertex,first,second); `entity` is a circle/arc id for radial/diameter; `axis` is required for linear and rejected elsewhere. Writes require every reference to resolve; deleting referenced geometry later orphans the dimension (status `orphaned`, no measured geometry, no rendered strokes). */
+ addDimension(options:{kind:DraftDimensionKind;points?:number[];entity?:number;axis?:DraftDimensionAxis}&Partial<Pick<DraftDimension,'name'|'color'|'width'|'visible'|'locked'|'layer'>>){return this.document.apply<{dimension_id:number}>('addDimension',options);}
+ updateDimension(id:number,patch:Partial<Omit<DraftDimension,'id'>>){return this.document.apply<{ok:boolean}>('updateDimension',{...patch,id});}
+ removeDimension(id:number){return this.document.apply<{ok:boolean}>('removeDimension',{id});}
+ /** Paper-space sheet: width/height 50..2000 mm, margins default 10 mm and must leave a positive printable area. Sheet names are unique; removing a sheet requires removing its viewports first. */
+ addSheet(name:string,options:{width:number;height:number;margin_top?:number;margin_right?:number;margin_bottom?:number;margin_left?:number}){return this.document.apply<{sheet_id:number}>('addSheet',{name,...options});}
+ updateSheet(id:number,patch:Partial<Omit<DraftSheet,'id'>>){return this.document.apply<{ok:boolean}>('updateSheet',{...patch,id});}
+ removeSheet(id:number){return this.document.apply<{ok:boolean}>('removeSheet',{id});}
+ /** Paper-space viewport on an existing sheet; the rectangle must lie fully inside the sheet and `scale` is paper mm per world unit. */
+ addViewport(options:{sheet:number;x:number;y:number;width:number;height:number;center_x:number;center_y:number;scale:number}&Partial<Pick<DraftViewportEntity,'name'|'visible'|'locked'>>){return this.document.apply<{viewport_id:number}>('addViewport',options);}
+ updateViewport(id:number,patch:Partial<Omit<DraftViewportEntity,'id'>>){return this.document.apply<{ok:boolean}>('updateViewport',{...patch,id});}
+ removeViewport(id:number){return this.document.apply<{ok:boolean}>('removeViewport',{id});}
+ /** Named block definition; members join via the `block` field on segment/circle/arc ops or `parent` on inserts. Block names are unique; `base_x`/`base_y` default to the definition origin (0,0). */
+ addBlock(name:string,options:{base_x?:number;base_y?:number}={}){return this.document.apply<{block_id:number}>('addBlock',{name,...options});}
+ updateBlock(id:number,patch:Partial<Omit<DraftBlock,'id'>>){return this.document.apply<{ok:boolean}>('updateBlock',{...patch,id});}
+ /** Rejects while any entity or insert still references the block (members, targets or parents). */
+ removeBlock(id:number){return this.document.apply<{ok:boolean}>('removeBlock',{id});}
+ /** Block instance: `block` is the target definition, `parent` (default 0) nests it inside another block's definition space. Scale is uniform and positive (1e-6..1e3); rotation is degrees. Cyclic graphs and nesting deeper than 8 levels reject. */
+ addInsert(options:{block:number;x:number;y:number}&Partial<Pick<DraftInsert,'parent'|'scale'|'rotation_deg'|'name'|'visible'|'locked'|'layer'>>){return this.document.apply<{insert_id:number}>('addInsert',options);}
+ updateInsert(id:number,patch:Partial<Omit<DraftInsert,'id'>>){return this.document.apply<{ok:boolean}>('updateInsert',{...patch,id});}
+ removeInsert(id:number){return this.document.apply<{ok:boolean}>('removeInsert',{id});}
  setSnapSettings(patch:Partial<SnapSettings>){return this.document.apply<{ok:boolean}>('setSnapSettings',patch);}
  /** Tolerance is world units; the host converts any screen tolerance with its actual viewport. */
  querySnap(x:number,y:number,tolerance:number,anchor?:{x:number;y:number}){return this.document.apply<DraftSnapQuery>('querySnap',{x,y,tolerance,...(anchor?{anchor}:{})});}
@@ -43,8 +101,12 @@ export class DraftDocument{
  removeConstraint(id:number){return this.document.apply<{ok:boolean}>('removeConstraint',{id});}
  /** Publishes only a consistent bounded solution; unconstrained coordinates retain their authored value. */
  solve(tolerance=1e-7){return this.document.apply<SolveReport>('solve',{tolerance});}
- evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'order'>&{source_revision:number}>('evaluate',{});}
+ /** Read-only deterministic closed-loop tracing; tolerance is world units (default 1e-6). */
+ findProfiles(tolerance?:number){return this.document.apply<DraftProfiles>('findProfiles',tolerance===undefined?{}:{tolerance});}
+ evaluate(){return this.document.apply<Pick<DraftState,'points'|'segments'|'circles'|'arcs'|'hatches'|'sheets'|'viewports'|'blocks'|'inserts'|'order'>&{dimensions:Record<string,DraftDimensionState>;source_revision:number}>('evaluate',{});}
  renderFrame(viewport:DraftViewport){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',viewport);}
+ /** Renders a paper-space sheet at `dpi` (default 96, admitted 24..600): opaque white paper, margin chrome, then each visible viewport's model window clipped at its raster boundary. Print/export stays host-side. */
+ renderSheet(sheet_id:number,dpi?:number){return this.document.apply<{width:number;height:number;pixels_b64?:string}>('renderFrame',{sheet_id,...(dpi===undefined?{}:{dpi})});}
  save(){return this.document.snapshot();}undo(){return this.document.undo();}redo(){return this.document.redo();}close(){return this.document.close();}
 }
 

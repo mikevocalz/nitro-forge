@@ -58,7 +58,9 @@ export interface ImportFormat extends TransferFormat {
 
 /** Things an export sheet could offer that no engine op produces yet. */
 export const TRANSFER_DEFERRED = {
-  "prism:png": "prism encode op (flatten returns raw RGBA only)",
+  // prism:png cleared 2026-11: the engine `encodePng` op returns real PNG
+  // bytes (8-bit RGBA, bounded); registering a png ExportFormat in the
+  // sheets remains host-side follow-up, not an engine gap.
   "splice:video": "video encoder backend choice",
   "pitch:pptx": "pitch has no export op",
   "metadata": "no engine has a title/author/metadata op",

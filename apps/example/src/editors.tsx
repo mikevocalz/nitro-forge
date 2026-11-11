@@ -6,6 +6,10 @@ import { FolioDocument } from "@nitro-forge/folio";
 import { PitchDocument } from "@nitro-forge/pitch";
 import { TallyDocument } from "@nitro-forge/tally";
 import { QuillDocument } from "@nitro-forge/quill";
+import { PhotoDocument } from "@nitro-forge/photo";
+import { MotionDocument } from "@nitro-forge/motion";
+import { DesignDocument } from "@nitro-forge/design";
+import { DraftDocument } from "@nitro-forge/draft";
 import type { EditorDoc } from "./useDocument";
 
 export interface Row {
@@ -228,6 +232,137 @@ const configs: Record<string, EditorConfig> = {
               style: { bold: true },
             });
         },
+      },
+    ],
+  },
+  photo: {
+    title: "Photo",
+    open: async (h) => PhotoDocument.open(h),
+    rows: (s: any) => [
+      { label: "Originals", value: String(Object.keys(s?.originals ?? {}).length) },
+      { label: "Versions", value: String(Object.keys(s?.versions ?? {}).length) },
+      ...(Object.values(s?.originals ?? {}) as any[]).map((o: any) => ({
+        label: `${o.camera_make ?? "Camera"} ${o.camera_model ?? ""}`.trim(),
+        value: `rating ${o.rating ?? 0} · ${(o.labels ?? []).length} labels`,
+      })),
+    ],
+    actions: [
+      {
+        title: "Add original",
+        run: (d) =>
+          d.apply("addOriginal", {
+            sha256: "e".repeat(64),
+            asset_ref: "retained:app-raw",
+            byte_length: 2048,
+            camera_make: "Canon",
+            camera_model: "EOS R5",
+          }),
+      },
+      {
+        title: "Rate first original ★4",
+        run: async (d) => {
+          const id = Object.keys((d.state as any)?.originals ?? {})[0];
+          if (id) await d.apply("setRating", { id, rating: 4 });
+        },
+      },
+      {
+        title: "New develop version on first original",
+        run: async (d) => {
+          const s = d.state as any;
+          const id = Object.keys(s?.originals ?? {})[0];
+          if (id) await d.apply("createVersion", { original_id: id, name: "edit" });
+        },
+      },
+    ],
+  },
+  motion: {
+    title: "Motion",
+    open: async (h) =>
+      MotionDocument.open(h, { width: 320, height: 180, duration_s: 4 }),
+    rows: (s: any) => [
+      { label: "Canvas", value: `${s?.width ?? 0} × ${s?.height ?? 0}` },
+      { label: "Duration", value: `${s?.duration_s ?? "?"}s @ ${s?.frame_rate?.num ?? "?"}/${s?.frame_rate?.den ?? "?"}` },
+      ...(s?.layers ?? []).map((l: any) => ({
+        label: l.name ?? `Layer ${l.id}`,
+        value: `${l.kind} · opacity ${l.opacity ?? 1}${l.visible === false ? " · hidden" : ""}`,
+      })),
+    ],
+    actions: [
+      {
+        title: "Add animated rect layer",
+        run: async (d) => {
+          const layer = (
+            await d.apply("addShapeLayer", {
+              shape: { kind: "rect", x: 8, y: 8, w: 48, h: 48, fill: [36, 145, 132, 255] },
+              name: "Box",
+            })
+          ).data as any;
+          await d.apply("setPropertyKeys", {
+            layer: layer.layer_id,
+            property: "tx",
+            keys: [
+              { time: 0, value: 0, interpolation: "linear", in_handle: null, out_handle: null },
+              { time: 2, value: 200, interpolation: "linear", in_handle: null, out_handle: null },
+            ],
+          });
+        },
+      },
+      {
+        title: "Render frame at t=1",
+        run: async (d) => {
+          const frame = await d.apply("renderFrame", { time_s: 1 });
+          void frame;
+        },
+      },
+    ],
+  },
+  design: {
+    title: "Design",
+    open: async (h) =>
+      DesignDocument.open(h, { title: "Untitled screen", width: 960, height: 540 }),
+    rows: (s: any) => [
+      { label: "Title", value: g(s, "title", "—") },
+      { label: "Nodes", value: String(Object.keys(s?.nodes ?? {}).length) },
+    ],
+    actions: [
+      {
+        title: "Add card frame + rect + label",
+        run: async (d) => {
+          const frame = (
+            await d.apply("addFrame", { parent: 1, name: "Card", x: 40, y: 40, width: 240, height: 160, fill: [255, 255, 255, 255] })
+          ).data as any;
+          await d.apply("addShape", {
+            parent: frame.node_id, kind: "rect",
+            x: 12, y: 12, width: 80, height: 40, fill: [36, 145, 132, 255],
+          });
+          await d.apply("addText", { parent: frame.node_id, content: "Hello", x: 12, y: 64, width: 120, height: 24 });
+        },
+      },
+      { title: "Evaluate layout", run: (d) => d.apply("evaluateLayout", {}) },
+    ],
+  },
+  draft: {
+    title: "Draft",
+    open: async (h) => DraftDocument.open(h, "mm"),
+    rows: (s: any) => [
+      { label: "Units", value: String(s?.units ?? "mm") },
+      { label: "Entities", value: `${Object.keys(s?.points ?? {}).length} pts · ${Object.keys(s?.segments ?? {}).length} segs · ${Object.keys(s?.circles ?? {}).length} circles` },
+      { label: "Constraints", value: String(Object.keys(s?.constraints ?? {}).length) },
+    ],
+    actions: [
+      {
+        title: "Draw 100×100 square",
+        run: async (d) => {
+          const ids: number[] = [];
+          for (const [x, y] of [[0, 0], [100, 0], [100, 100], [0, 100]] as const)
+            ids.push(((await d.apply("addPoint", { x, y, locked: false })).data as any).point_id);
+          for (let i = 0; i < 4; i++)
+            await d.apply("addSegment", { a: ids[i], b: ids[(i + 1) % 4] });
+        },
+      },
+      {
+        title: "Find closed profiles",
+        run: (d) => d.apply("findProfiles", {}),
       },
     ],
   },

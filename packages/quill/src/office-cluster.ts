@@ -1,4 +1,4 @@
-import type { BlockKind, Pos, QuillDocument, Style, ListItem, ListFormat, ListKind, TextCase } from "./index";
+import type { BlockKind, Bookmark, Pos, QuillDocument, Style, ListItem, ListFormat, ListKind, TextCase } from "./index";
 import {deriveQuillListMarkers} from './list-markers';
 export {deriveQuillListMarkers} from './list-markers';
 
@@ -18,10 +18,8 @@ export {deriveQuillListMarkers} from './list-markers';
  * have. Each is a DEFER: the matching NYC-Tron prop is left out.
  */
 export const QUILL_DEFERRED_OPS = {
-  /** H-15 bookmarks: Quill has no named positions. */
-  bookmarks: "H-15",
-  /** H-15 page thumbnails: `layout` gives line spans, not pixels. */
-  renderPage: "H-15",
+  // H-15 `renderPage` lifted for R1 (engine op + TS adapter shipped);
+  // full NavigationOutline thumbnail composition remains R3 scope.
 } as const;
 export type QuillDeferredOp = keyof typeof QUILL_DEFERRED_OPS;
 
@@ -246,4 +244,64 @@ export function quillSectionOf(headings: readonly QuillOutlineHeading[], block: 
   let found: string | undefined;
   for (const h of headings) { if (h.block > block) break; found = h.text; }
   return found;
+}
+
+/** A named position as `listBookmarks` reports it. */
+export type QuillBookmark = Bookmark;
+
+/** Reads every bookmark through `listBookmarks` (already position-sorted). */
+export async function readQuillBookmarks(
+  document: Pick<QuillDocument, "listBookmarks">,
+): Promise<QuillBookmark[]> {
+  const data = requireData(await document.listBookmarks(), "listBookmarks");
+  if (!Array.isArray(data.bookmarks)) throw new Error("Quill returned invalid bookmarks");
+  return data.bookmarks.map(b => {
+    if (typeof b.name !== "string" || typeof b.pos?.block !== "number" || typeof b.pos?.offset !== "number") {
+      throw new Error("Quill returned a malformed bookmark");
+    }
+    return { name: b.name, pos: { block: b.pos.block, offset: b.pos.offset } };
+  });
+}
+
+/**
+ * The Bookmarks view props of NYC-Tron's `NavigationOutline` (H-15), backed
+ * by the real `addBookmark`/`removeBookmark`/`listBookmarks` ops. `id` is
+ * the unique bookmark name. `onJump` receives the bookmark's current `Pos`
+ * so the host can move the caret; bookmark positions are re-read on every
+ * jump because edits re-anchor them.
+ */
+export interface QuillBookmarkBinding {
+  readonly bookmarks: readonly { id: string; name: string }[];
+  readonly onJumpToBookmark: (bookmark: { id: string; name: string }) => Promise<void>;
+  readonly addBookmark: (name: string, pos: Pos) => Promise<void>;
+  readonly removeBookmark: (name: string) => Promise<void>;
+}
+
+export async function bindQuillBookmarks(
+  document: Pick<QuillDocument, "listBookmarks" | "addBookmark" | "removeBookmarkByName">,
+  onJump: (pos: Pos) => void,
+  onChanged?: (next: QuillBookmarkBinding) => void,
+): Promise<QuillBookmarkBinding> {
+  const read = async () => {
+    const bookmarks = await readQuillBookmarks(document);
+    const rebind = async () => { if (onChanged) onChanged(await bindQuillBookmarks(document, onJump, onChanged)); };
+    return {
+      bookmarks: bookmarks.map(b => ({ id: b.name, name: b.name })),
+      onJumpToBookmark: async (bookmark: { id: string; name: string }) => {
+        // Positions are re-anchored by edits, so resolve at jump time.
+        const pos = (await readQuillBookmarks(document)).find(b => b.name === bookmark.id)?.pos;
+        if (!pos) throw new Error(`Unknown bookmark "${bookmark.id}"`);
+        onJump(pos);
+      },
+      addBookmark: async (name: string, pos: Pos) => {
+        await document.addBookmark(name, pos);
+        await rebind();
+      },
+      removeBookmark: async (name: string) => {
+        await document.removeBookmarkByName(name);
+        await rebind();
+      },
+    };
+  };
+  return read();
 }

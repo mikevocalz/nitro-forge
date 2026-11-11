@@ -1,8 +1,43 @@
 use crate::{factory, Command, Engine, EngineKind};
+use ignition_core::{ErrorCode, TaskContext};
 use serde_json::{json, Value};
 
 fn batch(engine: &mut dyn Engine, steps: Value) -> Result<ignition_core::CommandResult, ignition_core::EngineError> {
     engine.apply(Command::new("__batch", json!({ "commands": steps })))
+}
+
+fn task_batch(engine: &mut dyn Engine, steps: Value, ctx: &TaskContext) -> Result<ignition_core::CommandResult, ignition_core::EngineError> {
+    engine.apply_long(Command::new("__batch", json!({ "commands": steps })), ctx)
+}
+
+const ALL_KINDS: [EngineKind; 12] = [
+    EngineKind::Prism, EngineKind::Cadence, EngineKind::Splice, EngineKind::Folio,
+    EngineKind::Pitch, EngineKind::Tally, EngineKind::Quill, EngineKind::Photo,
+    EngineKind::Motion, EngineKind::Design, EngineKind::Draft, EngineKind::Scene,
+];
+
+fn fresh_engine(kind: EngineKind) -> Box<dyn Engine> {
+    let mut engine = factory(kind).unwrap();
+    let initial = match kind {
+        EngineKind::Prism => json!({"width":4,"height":4}),
+        EngineKind::Folio => json!({"pages":1}),
+        _ => json!({}),
+    };
+    engine.apply(Command::new("new", initial)).unwrap();
+    engine
+}
+
+/// Two cheap steps every engine accepts inside `__batch`. Draft rejects
+/// revision-bearing reads (`describe`) inside an atomic batch by design, so
+/// it gets real mutations instead.
+fn probe_steps(kind: EngineKind) -> Value {
+    match kind {
+        EngineKind::Draft => json!([
+            {"op":"addPoint","payload":{"x":1,"y":1}},
+            {"op":"addPoint","payload":{"x":2,"y":2}},
+        ]),
+        _ => json!([{"op":"describe"},{"op":"describe"}]),
+    }
 }
 
 #[test]
@@ -29,6 +64,9 @@ fn compound_edits_are_atomic_single_history_entries_for_all_seven_engines() {
         (EngineKind::Quill, json!({}), json!({"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"base"}}),
          json!([{"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"first "}},
                 {"op":"insertText","payload":{"at":{"block":0,"offset":0},"text":"second "}}])),
+        (EngineKind::Scene, json!({}), json!({"op":"addMaterial","payload":{"name":"before","color":[0.5,0.5,0.5]}}),
+         json!([{"op":"addMaterial","payload":{"name":"first","color":[1,0,0]}},
+                {"op":"addMaterial","payload":{"name":"second","color":[0,1,0]}}])),
     ];
     for (kind, initial, previous, edits) in cases {
         let mut engine = factory(kind).unwrap();
@@ -106,6 +144,56 @@ fn pixel_mutations_and_output_budget_failures_leave_shared_raster_bytes_unchange
     assert_eq!(engine.snapshot().unwrap(), before);
     assert!(engine.undo().unwrap(), "prior pixel history was erased");
     assert_ne!(engine.snapshot().unwrap(), before);
+}
+
+#[test]
+fn task_batch_runs_steps_with_ctx_and_reports_progress() {
+    for kind in ALL_KINDS {
+        let mut engine = fresh_engine(kind);
+        let ctx = TaskContext::new();
+        let result = task_batch(engine.as_mut(), probe_steps(kind), &ctx)
+            .unwrap_or_else(|e| panic!("{kind:?} task batch failed: {e}"));
+        assert_eq!(result.data["results"].as_array().unwrap().len(), 2, "{kind:?}");
+        assert_eq!(ctx.progress(), 1.0, "{kind:?}");
+        // A second task on the same engine still works.
+        let ctx = TaskContext::new();
+        task_batch(engine.as_mut(), probe_steps(kind), &ctx).unwrap();
+        assert_eq!(ctx.progress(), 1.0, "{kind:?}");
+    }
+}
+
+#[test]
+fn cancelled_task_batch_is_rejected_without_touching_state_or_history() {
+    for kind in ALL_KINDS {
+        let mut engine = fresh_engine(kind);
+        engine
+            .apply(Command::new("describe", json!({})))
+            .unwrap();
+        let before = engine.snapshot().unwrap();
+        let ctx = TaskContext::new();
+        ctx.cancel();
+        let err = task_batch(engine.as_mut(), probe_steps(kind), &ctx).unwrap_err();
+        assert_eq!(err.code, ErrorCode::Cancelled, "{kind:?}");
+        assert!(err.recoverable, "{kind:?}");
+        assert_eq!(engine.snapshot().unwrap(), before, "{kind:?}");
+        // Prior history survives where `new` recorded an entry (the original
+        // seven engines); newer engines may legitimately have an empty
+        // journal on a fresh document, but undo must still answer cleanly.
+        if matches!(
+            kind,
+            EngineKind::Prism
+                | EngineKind::Cadence
+                | EngineKind::Splice
+                | EngineKind::Folio
+                | EngineKind::Pitch
+                | EngineKind::Tally
+                | EngineKind::Quill
+        ) {
+            assert!(engine.undo().unwrap(), "{kind:?}");
+        } else {
+            engine.undo().unwrap();
+        }
+    }
 }
 
 #[test]

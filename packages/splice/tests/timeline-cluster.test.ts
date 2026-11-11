@@ -135,6 +135,64 @@ describe("timelineView", () => {
     );
     expect(v.tracks[0]!.clips[0]!.startFrame).toBe(7);
   });
+  it("integrates keyframed speed for the duration and surfaces the curve", () => {
+    // Media 0..4 with speed ramping 1→2: footprint = 4·ln2 s ≈ 2.7726 s.
+    const v = timelineView(
+      {
+        sources: raw.sources,
+        tracks: [
+          {
+            id: 2,
+            kind: "video",
+            clips: [
+              {
+                id: 4,
+                source_id: 1,
+                timeline_start_s: 1,
+                in_s: 0,
+                out_s: 4,
+                speed: 1,
+                speed_keys: [
+                  { t_s: 0, speed: 1 },
+                  { t_s: 4, speed: 2 },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      R24,
+    );
+    const clip = v.tracks[0]!.clips[0]!;
+    expect(clip.speedKeys).toEqual([
+      { tFrame: 0, speed: 1 },
+      { tFrame: 96, speed: 2 },
+    ]);
+    // End = start 1 s + 4·ln2 s → ceil to whole frames at 24 fps.
+    expect(v.durationFrames).toBe(Math.ceil((1 + 4 * Math.LN2) * 24 - 1e-6));
+  });
+  it("surfaces non-neutral clip mix as gainDb/pan, omits neutral", () => {
+    const v = timelineView(
+      {
+        sources: raw.sources,
+        tracks: [
+          {
+            id: 2,
+            kind: "audio",
+            clips: [
+              { id: 4, source_id: 1, timeline_start_s: 0, in_s: 0, out_s: 4, speed: 1, gain_db: -6, pan: 0.5 },
+              { id: 5, source_id: 1, timeline_start_s: 4, in_s: 0, out_s: 4, speed: 1 },
+            ],
+          },
+        ],
+      },
+      R24,
+    );
+    const [mixed, plain] = v.tracks[0]!.clips;
+    expect(mixed).toMatchObject({ gainDb: -6, pan: 0.5 });
+    expect(plain!.gainDb).toBeUndefined();
+    expect(plain!.pan).toBeUndefined();
+  });
 });
 
 describe("transition presets", () => {

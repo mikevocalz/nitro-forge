@@ -1,0 +1,36 @@
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/packages/tally[39m
+
+ [32m✓[39m tests/grid-cluster.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/tables.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m tests/data-validation.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m tests/charts-sparklines.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m tests/comments.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m tests/pivots.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m tests/range-ops.e2e.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m tests/structural-merges.e2e.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32m✓[39m tests/cross-sheet.e2e.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m tests/xlsx-transfer.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+ [32m✓[39m tests/grid-adapter.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/nyc-tron-consumer.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/conditional-formats.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m tests/cell-formats.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m tests/sort-filter.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m tests/named-ranges.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32m✓[39m tests/sheet-views.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m tests/csv-transfer.e2e.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m tests/snapshot-wrapper.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/grid-cluster.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m tests/transfer.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tests/grid-adapter.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m23 passed[39m[22m[90m (23)[39m
+[2m      Tests [22m [1m[32m90 passed[39m[22m[90m (90)[39m
+[2m   Start at [22m 18:03:34
+[2m   Duration [22m 1.00s[2m (transform 42%, tests 38%, import 16%, worker 4%)[22m
+
+[2m    Isolate [22m [33m23 workers spawned[39m[2m · ~258ms startup each (spawn + environment, per file)[22m
+[2m            [22m [2mat least ~336ms faster with [22m[33misolate: false[39m[2m — reuses workers across files instead of one per file[22m
+

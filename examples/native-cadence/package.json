@@ -13,8 +13,12 @@
     "@expo/ui": "58.0.27",
     "@nitro-forge/cadence": "workspace:*",
     "@nitro-forge/ignition": "workspace:*",
+    "@nitro-forge/telemetry": "workspace:*",
+    "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz",
+    "@nyc-tron/hardware-keys": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz",
     "@nyc-tron/native-controls": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-native-controls-0.1.0-alpha.4.tgz",
     "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-platform-services-0.1.0-alpha.4.tgz",
+    "@nyc-tron/reserved-regions": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz",
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
     "expo": "58.0.23",
     "expo-constants": "58.0.15",
@@ -22,17 +26,14 @@
     "react": "19.3.0",
     "react-native": "0.88.1",
     "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
-    "zustand": "5.0.16",
-    "@nitro-forge/telemetry": "workspace:*",
-    "@nyc-tron/hardware-keys": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-hardware-keys-0.1.0-alpha.4.tgz",
-    "@nyc-tron/reserved-regions": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-reserved-regions-0.1.0-alpha.4.tgz",
-    "@nyc-tron/core": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-core-0.1.0-alpha.4.tgz"
+    "zustand": "5.0.16"
   },
   "devDependencies": {
     "@react-native-community/cli": "20.2.0",
     "@react-native-community/cli-platform-android": "20.2.0",
     "@react-native-community/cli-platform-ios": "20.2.0",
     "@types/react": "~19.3.0",
+    "react-native-video": "file:../../tooling/react-native-video-v1/experimental-build-v1.tgz",
     "typescript": "~6.0.3"
   },
   "packageManager": "pnpm@10.32.1"

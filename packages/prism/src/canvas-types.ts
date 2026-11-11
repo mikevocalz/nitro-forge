@@ -123,3 +123,190 @@ export type FillRule = "nonzero" | "evenodd";
 export type PaintOrder = "fill-stroke" | "stroke-fill";
 /** Boolean operation of a {@linkcode PrismDocument.booleanLayers} container. */
 export type BooleanOp = "union" | "subtract" | "intersect" | "exclude";
+
+// -- brush / stroke (P06) -----------------------------------------------------
+
+/**
+ * One raw stylus sample for {@linkcode PrismDocument.modelStroke} and
+ * {@linkcode PrismDocument.paintStroke}. `t` is **seconds** (monotonic
+ * non-decreasing), `x`/`y` canvas pixels. `pressure`/`tilt`/`orientation`
+ * are optional; absent values model as unknown. `tilt`/`orientation` are
+ * radians. `contact: false` lifts the pen and ends the current segment.
+ */
+export interface StrokeSample {
+  t: number;
+  x: number;
+  y: number;
+  pressure?: number;
+  tilt?: number;
+  orientation?: number;
+  contact?: boolean;
+}
+
+/** Optional tuning for the engine's stroke modeler (all fields optional). */
+export interface StrokeModelParams {
+  /** Wobble smoothing on/off (default true). */
+  smoothing?: boolean;
+  /** Averaging window in seconds (default 0.04). */
+  smoothing_timeout?: number;
+  /** Speed px/s at/below which full smoothing applies (default 2). */
+  smoothing_speed_floor?: number;
+  /** Speed px/s at/above which no smoothing applies (default 30). */
+  smoothing_speed_ceiling?: number;
+  /** Minimum modeled output rate per second (default 240). */
+  min_output_rate?: number;
+  /** Pen-tip mass/spring constant (default 11/32400). */
+  spring_mass_constant?: number;
+  /** Velocity drag ratio per second (default 72). */
+  drag_constant?: number;
+  /** End-of-stroke settling stop distance in px (default 0.01). */
+  end_of_stroke_stopping_distance?: number;
+  /** End-of-stroke settling iteration cap (default 20). */
+  end_of_stroke_max_iterations?: number;
+}
+
+/** Velocity lookahead past the last modeled point. */
+export interface StrokePredict {
+  /** Points to emit, 1..=64 (default 8). */
+  steps?: number;
+  /** Seconds between lookahead points (default 1/min_output_rate). */
+  interval?: number;
+}
+
+/** One modeled stroke point returned by `modelStroke`. */
+export interface ModeledStrokePoint {
+  t: number;
+  x: number;
+  y: number;
+  pressure: number | null;
+  tilt: number | null;
+  orientation: number | null;
+  /** Contact-segment index (0-based). */
+  segment: number;
+  /** Modeled tip speed, px/s. */
+  speed: number;
+}
+
+/** Result of {@linkcode PrismDocument.modelStroke}. Read-only. */
+export interface ModeledStroke {
+  modeled: ModeledStrokePoint[];
+  predicted: ModeledStrokePoint[];
+}
+
+/** Dynamics coefficients (-1..=1) mapping normalized pressure, velocity
+ * (saturating at 10 brush diameters/second) and tilt (0..=1 over π/2 rad)
+ * to size/opacity/flow multipliers. 0 disables a response. */
+export interface BrushDynamics {
+  size_pressure?: number;
+  size_velocity?: number;
+  size_tilt?: number;
+  opacity_pressure?: number;
+  opacity_velocity?: number;
+  flow_pressure?: number;
+  flow_velocity?: number;
+}
+
+/** Taper envelope over stroke arc length: ramps 0→1 across the first
+ * `start` fraction and 1→0 across the last `end` fraction (start+end ≤ 1). */
+export interface BrushTaper {
+  start?: number;
+  end?: number;
+}
+
+/** A document-level brush preset (≤ 64 per document). */
+export interface Brush {
+  id: number;
+  name: string;
+  /** Base dab diameter, px (0.1..=4096, default 20). */
+  size: number;
+  /** Master alpha multiplier 0..=1 (default 1). */
+  opacity: number;
+  /** Per-dab alpha multiplier 0..=1 (default 1); multiplies with opacity. */
+  flow: number;
+  /** Dab spacing as a fraction of `size` 0..=1 (default 0.25; 0 = every modeled point). */
+  spacing: number;
+  /** Fraction of the dab radius at full coverage 0..=1 (default 0.8). */
+  hardness: number;
+  color: Rgba;
+  dynamics?: BrushDynamics;
+  taper?: BrushTaper;
+}
+
+/** Partial brush fields for `addBrush`/`setBrush`/inline `brush` payloads. */
+export type BrushPatch = Partial<Omit<Brush, "id">>;
+
+/** `paintStroke` options. Exactly one of `brushId`/`brush` is required. */
+export interface PaintStrokeOptions {
+  /** Raster layer id. */
+  id: number;
+  /** Stored brush id, or an inline brush spec (fields as {@link BrushPatch}). */
+  brush_id?: number;
+  brush?: BrushPatch;
+  samples: StrokeSample[];
+  params?: StrokeModelParams;
+  /** false = dry run: returns `{dabs, bounds}` without mutating (default true). */
+  commit?: boolean;
+}
+
+/** Result of a committed `paintStroke`. */
+export interface PaintStrokeResult {
+  ok: true;
+  dabs: number;
+}
+
+/** Result of `paintStroke` with `commit:false`. `bounds` is absent when the
+ * stroke produces no dabs or lands fully off-canvas. */
+export interface PaintStrokePreview {
+  dabs: number;
+  bounds?: { x: number; y: number; w: number; h: number };
+}
+
+// -- eraser stroke (B-18 engine side) -------------------------------------------
+
+/**
+ * Eraser target for {@linkcode PrismDocument.eraseStroke}.
+ * - `"pixel"` (default): destination-out erase of a raster layer's pixels.
+ * - `"mask"`: destination-out erase of the layer's canvas-space mask alpha
+ *   (the layer must already have a mask; works on any layer kind).
+ * - `"vector"`: object eraser — removes whole shape/path layers whose
+ *   painted geometry intersects the brush footprint (never cuts geometry;
+ *   see docs/ENGINE_OPS.md).
+ */
+export type EraseMode = "pixel" | "mask" | "vector";
+
+/** `eraseStroke` options — same brush/sample contract as
+ * {@linkcode PaintStrokeOptions} plus `mode`. Exactly one of
+ * `brush_id`/`brush` is required. */
+export interface EraseStrokeOptions {
+  /** Target layer id — required for `"pixel"`/`"mask"`. For `"vector"` it is
+   * an optional scope root: absent erases across the whole document,
+   * present limits candidates to that layer's subtree. */
+  id?: number;
+  mode?: EraseMode;
+  /** Stored brush id, or an inline brush spec (fields as {@link BrushPatch}). */
+  brush_id?: number;
+  brush?: BrushPatch;
+  samples: StrokeSample[];
+  params?: StrokeModelParams;
+  /** false = dry run: returns `{dabs, bounds, mode, removed?}` without mutating (default true). */
+  commit?: boolean;
+}
+
+/** Result of a committed `eraseStroke`. `removed` is present only for
+ * `mode:"vector"` — the layer ids the stroke erased, in document order. */
+export interface EraseStrokeResult {
+  ok: true;
+  dabs: number;
+  mode: EraseMode;
+  removed?: number[];
+}
+
+/** Result of `eraseStroke` with `commit:false`. `bounds` is absent when the
+ * stroke produces no dabs or lands fully off-canvas. `removed` (vector mode
+ * only) lists the layer ids the stroke would erase. */
+export interface EraseStrokePreview {
+  dabs: number;
+  mode: EraseMode;
+  bounds?: { x: number; y: number; w: number; h: number };
+  removed?: number[];
+}

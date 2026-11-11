@@ -7,6 +7,7 @@ impl FolioEngine {
         &mut self,
         p: &Value,
     ) -> Result<CommandResult, EngineError> {
+        reject_encrypted(&self.doc, "annotation text editing")?;
         let page = req_u64(p, "page")?;
         let page_id = self.page_id(page)?;
         let id = req_u64(p, "id")?;

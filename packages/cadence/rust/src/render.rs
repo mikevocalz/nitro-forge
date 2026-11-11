@@ -184,6 +184,12 @@ fn synthesize(
         if clip_end <= from_ticks || clip_start >= to_ticks {
             continue;
         }
+        // Clip gain/mute scale every note the clip contributes, before the
+        // track's inserts and fader see the summed signal.
+        if clip.muted {
+            continue;
+        }
+        let clip_gain = 10f64.powf(clip.gain_db / 20.0);
         for note in &clip.notes {
             let note_start = clip_start.saturating_add(note.start_ticks);
             let note_end = note_start.saturating_add(note.length_ticks).min(clip_end);
@@ -198,7 +204,7 @@ fn synthesize(
                 continue;
             }
             let freq = 440.0 * 2f64.powf((note.pitch as f64 - 69.0) / 12.0);
-            let vel = note.velocity as f64 / 127.0;
+            let vel = note.velocity as f64 / 127.0 * clip_gain;
             for (i, out) in dry.iter_mut().enumerate().take(i1).skip(i0) {
                 if i%8192==0{if let Some(ctx)=ctx{ctx.checkpoint()?;ctx.set_progress(0.5*i as f32/frames.max(1) as f32);}}
                 let x = i as f64 - s0;

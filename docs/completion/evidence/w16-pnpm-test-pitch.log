@@ -1,0 +1,22 @@
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/Users/mikevocalz/recovered-work/2026-11-05/forge-w16-ledger/packages/pitch[39m
+
+ [32m✓[39m tests/animation-contract.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/scene.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m tests/office-cluster.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m tests/morph.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m tests/charts-tables.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m tests/themes.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m tests/apply-bind.e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m tests/masters.e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m tests/office-cluster.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+ [32m✓[39m tests/e2e.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m tests/nyc-tron-consumer.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/animation-pixels.e2e.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 14[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+[2m      Tests [22m [1m[32m47 passed[39m[22m[90m (47)[39m
+[2m   Start at [22m 18:03:43
+[2m   Duration [22m 634ms[2m (transform 58%, tests 24%, import 15%, worker 3%)[22m
+

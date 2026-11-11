@@ -1,0 +1,27 @@
+[package]
+name = "nf-wasm-probe"
+description = "WASI probe: runs every Nitro-Forge engine through new/describe/snapshot/restore under wasm32-wasip1."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "nf-wasm-probe"
+path = "src/main.rs"
+
+[dependencies]
+ignition-core = { workspace = true }
+serde_json = { workspace = true }
+prism-engine = { path = "../../packages/prism/rust" }
+cadence-engine = { path = "../../packages/cadence/rust" }
+splice-engine = { path = "../../packages/splice/rust" }
+folio-engine = { path = "../../packages/folio/rust" }
+pitch-engine = { path = "../../packages/pitch/rust" }
+tally-engine = { path = "../../packages/tally/rust" }
+quill-engine = { path = "../../packages/quill/rust" }
+photo-engine = { path = "../../packages/photo/rust" }
+motion-engine = { path = "../../packages/motion/rust" }
+design-engine = { path = "../../packages/design/rust" }
+draft-engine = { path = "../../packages/draft/rust" }
+scene-engine = { path = "../../packages/scene/rust" }

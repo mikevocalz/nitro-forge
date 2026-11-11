@@ -10,6 +10,7 @@ export default {
   'packages/motion/tests/**/*.test.ts',
   'packages/design/tests/**/*.test.ts',
   'packages/draft/tests/**/*.test.ts',
+  'packages/scene/tests/**/*.test.ts',
   'packages/ignition/tests/photo-motion-pipeline.test.ts',
  ]},
 };

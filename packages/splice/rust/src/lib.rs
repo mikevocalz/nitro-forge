@@ -20,7 +20,7 @@ mod transitions;
 
 use ignition_core::{
     decode_envelope, encode_envelope, Command, CommandResult, Engine, EngineError, EngineKind,
-    Event, Journal,
+    Event, Journal, TaskContext,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -35,6 +35,15 @@ const MAX_BATCH_OPS: usize = 256;
 const DEFAULT_FPS: f64 = 30.0;
 const MIN_SPEED: f64 = 0.1;
 const MAX_SPEED: f64 = 10.0;
+/// Clip gain bounds in dB — the same range cadence clips use (`gain_db`).
+const MIN_CLIP_GAIN_DB: f64 = -60.0;
+const MAX_CLIP_GAIN_DB: f64 = 12.0;
+/// Stereo pan bounds: -1 = hard left, 0 = center, 1 = hard right (cadence's
+/// track `pan` convention).
+const MIN_PAN: f64 = -1.0;
+const MAX_PAN: f64 = 1.0;
+/// Most speed keys one clip may carry.
+const MAX_SPEED_KEYS: usize = 256;
 /// Tolerance for float comparisons on timeline boundaries.
 const EPS: f64 = 1e-9;
 /// Longest timeline or source position Splice accepts (about 115 days). Far
@@ -90,6 +99,17 @@ pub struct Source {
     pub duration_s: f64,
 }
 
+/// One keyframed speed sample. `t_s` is source-relative media seconds (the
+/// same domain as `in_s`/`out_s`); `speed` is media seconds consumed per
+/// timeline second at that media point. Speed interpolates linearly between
+/// neighbouring keys and holds the end key's value outside the keyed range.
+/// Keys outside `[in_s, out_s]` are inert until a trim reveals them.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SpeedKey {
+    pub t_s: f64,
+    pub speed: f64,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Clip {
     pub id: u64,
@@ -99,18 +119,147 @@ pub struct Clip {
     /// Source span (seconds, source-relative).
     pub in_s: f64,
     pub out_s: f64,
+    /// Constant playback speed. Governs the clip only while `speed_keys` is
+    /// empty; `setSpeed` flattens a keyframed clip back to this field.
     pub speed: f64,
+    /// Keyframed speed curve over media time, sorted by `t_s`. Empty means
+    /// constant speed — the legacy behaviour, and the only shape older
+    /// snapshots carry (the field is skipped when empty, so constant-speed
+    /// documents serialize byte-identically to before).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub speed_keys: Vec<SpeedKey>,
+    /// Clip gain in dB, `MIN_CLIP_GAIN_DB..=MAX_CLIP_GAIN_DB`; 0 dB is unity —
+    /// the same convention cadence clips use. Mix metadata only: Splice has
+    /// no decoder or mixer, so nothing applies it yet; `renderPlan` exposes it
+    /// for a future mixer the way `muted`/`track_active` already are. Skipped
+    /// at the neutral 0 dB so default clips keep their legacy bytes.
+    #[serde(default, skip_serializing_if = "is_neutral_gain_db")]
+    pub gain_db: f64,
+    /// Stereo pan, `MIN_PAN..=MAX_PAN`; 0 is center. Same storage-only note
+    /// as `gain_db`.
+    #[serde(default, skip_serializing_if = "is_neutral_pan")]
+    pub pan: f64,
+}
+
+fn is_neutral_gain_db(v: &f64) -> bool {
+    *v == 0.0
+}
+
+fn is_neutral_pan(v: &f64) -> bool {
+    *v == 0.0
 }
 
 impl Clip {
-    /// Timeline footprint: (out_s - in_s) / speed.
+    /// Timeline footprint of the media span `[a, b]`: the integral of
+    /// `dt / speed(t)` — how many timeline seconds `b - a` media seconds
+    /// occupy under this clip's speed curve. Exact per key segment.
+    fn span_len(&self, a: f64, b: f64) -> f64 {
+        span_len(&self.speed_keys, self.speed, a, b)
+    }
+
+    /// Timeline footprint: media span consumed at the clip's speed curve.
     fn timeline_len(&self) -> f64 {
-        (self.out_s - self.in_s) / self.speed
+        self.span_len(self.in_s, self.out_s)
     }
 
     fn timeline_end(&self) -> f64 {
         self.timeline_start_s + self.timeline_len()
     }
+}
+
+/// Playback speed at media time `t` for a key set + constant fallback.
+pub(crate) fn speed_at(keys: &[SpeedKey], speed: f64, t: f64) -> f64 {
+    if keys.is_empty() {
+        return speed;
+    }
+    if t <= keys[0].t_s {
+        return keys[0].speed;
+    }
+    if t >= keys[keys.len() - 1].t_s {
+        return keys[keys.len() - 1].speed;
+    }
+    // keys are sorted by t_s; find the segment containing t.
+    let i = keys.partition_point(|k| k.t_s <= t).saturating_sub(1);
+    let (a, b) = (keys[i], keys[i + 1]);
+    let f = (t - a.t_s) / (b.t_s - a.t_s);
+    a.speed + (b.speed - a.speed) * f
+}
+
+/// Timeline seconds that the media interval `[a, b]` occupies: the integral
+/// of `1 / speed(t)` over media time. Speed is piecewise linear in `t`, so
+/// each piece integrates in closed form (`h * ln(sb/sa) / (sb - sa)`, with
+/// `h / s` at constant speed). Requires `a <= b` and sorted keys.
+pub(crate) fn span_len(keys: &[SpeedKey], speed: f64, a: f64, b: f64) -> f64 {
+    if keys.is_empty() {
+        return (b - a) / speed;
+    }
+    // Knots: the interval ends plus every key strictly inside (a, b).
+    let mut knots: Vec<(f64, f64)> = Vec::with_capacity(keys.len() + 2);
+    knots.push((a, speed_at(keys, speed, a)));
+    for k in keys {
+        if k.t_s > a && k.t_s < b {
+            knots.push((k.t_s, k.speed));
+        }
+    }
+    knots.push((b, speed_at(keys, speed, b)));
+    let mut total = 0.0;
+    for w in knots.windows(2) {
+        let (t0, s0) = w[0];
+        let (t1, s1) = w[1];
+        let h = t1 - t0;
+        if h <= 0.0 {
+            continue;
+        }
+        total += if (s1 - s0).abs() <= f64::EPSILON * s0.max(s1) {
+            h / s0
+        } else {
+            // ∫ dt / (s0 + (s1-s0)(t-t0)/h) = h * ln(s1/s0) / (s1 - s0)
+            h * ((s1 - s0) / s0).ln_1p() / (s1 - s0)
+        };
+    }
+    total
+}
+
+/// Media time reached after playing `offset` timeline seconds starting at
+/// media time `t0` (signed: negative offsets search backward). Inverts
+/// `span_len`: finds `t1` with `∫_{t0}^{t1} dt / speed(t) = offset`. Speed is
+/// bounded in `MIN_SPEED..=MAX_SPEED`, so `t1 - t0` always lands in
+/// `[offset * MIN_SPEED, offset * MAX_SPEED]` and bisection converges
+/// quickly. Constant-speed clips take the exact closed form.
+pub(crate) fn media_for_offset(
+    keys: &[SpeedKey],
+    speed: f64,
+    t0: f64,
+    offset: f64,
+) -> f64 {
+    if keys.is_empty() {
+        return t0 + offset * speed;
+    }
+    // F(t) = ∫_{t0}^{t} du / speed(u) is strictly increasing in t.
+    let lo = (t0 + offset * MIN_SPEED).min(t0 + offset * MAX_SPEED);
+    let hi = (t0 + offset * MIN_SPEED).max(t0 + offset * MAX_SPEED);
+    // Signed integral helper: F(t) = ∫_{t0}^{t} du / speed(u), positive
+    // when t > t0 and strictly increasing in t.
+    let signed = |t: f64| -> f64 {
+        if t >= t0 {
+            span_len(keys, speed, t0, t)
+        } else {
+            -span_len(keys, speed, t, t0)
+        }
+    };
+    let mut lo_t = lo;
+    let mut hi_t = hi;
+    // F(lo) <= offset <= F(hi) by the speed bounds; 200 iterations is far
+    // past f64 precision on any allowed range.
+    for _ in 0..200 {
+        let mid = lo_t + (hi_t - lo_t) / 2.0;
+        if signed(mid) < offset {
+            lo_t = mid;
+        } else {
+            hi_t = mid;
+        }
+    }
+    lo_t + (hi_t - lo_t) / 2.0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -240,7 +389,37 @@ impl Doc {
                 "at_s must be strictly inside the clip's timeline span",
             ));
         }
-        let split_media = clip.in_s + (at - start) * clip.speed;
+        // Media point `at` timeline seconds into the clip. With speed keys
+        // this inverts the footprint integral; constant clips keep the exact
+        // `in + dt * speed` form.
+        let split_media = media_for_offset(&clip.speed_keys, clip.speed, clip.in_s, at - start);
+        let split_speed = speed_at(&clip.speed_keys, clip.speed, split_media);
+        // The curve is media-anchored, so both halves keep the keys on their
+        // side of the cut. A boundary key at the split point preserves the
+        // interpolated speed exactly on both sides.
+        let mut left_keys: Vec<SpeedKey> = clip
+            .speed_keys
+            .iter()
+            .filter(|k| k.t_s < split_media)
+            .copied()
+            .collect();
+        left_keys.push(SpeedKey {
+            t_s: split_media,
+            speed: split_speed,
+        });
+        let mut right_keys: Vec<SpeedKey> = clip
+            .speed_keys
+            .iter()
+            .filter(|k| k.t_s > split_media)
+            .copied()
+            .collect();
+        right_keys.insert(
+            0,
+            SpeedKey {
+                t_s: split_media,
+                speed: split_speed,
+            },
+        );
         let left_id = clip.id;
         let right_id = self.alloc_id();
         let track = &mut self.tracks[track_idx];
@@ -252,8 +431,22 @@ impl Doc {
             in_s: split_media,
             out_s: clip.out_s,
             speed: clip.speed,
+            speed_keys: if clip.speed_keys.is_empty() {
+                Vec::new()
+            } else {
+                right_keys
+            },
+            // Mix fields are per-clip metadata, not media geometry: both
+            // halves inherit them (same as cadence's splitClip copying gain).
+            gain_db: clip.gain_db,
+            pan: clip.pan,
         };
         clip.out_s = split_media;
+        clip.speed_keys = if clip.speed_keys.is_empty() {
+            Vec::new()
+        } else {
+            left_keys
+        };
         track.clips.insert(clip_idx + 1, right);
         for t in &mut track.transitions {
             if t.left_id == left_id {
@@ -280,6 +473,9 @@ impl Doc {
                     )));
                 }
                 check_speed(c.speed)?;
+                check_speed_keys(c)?;
+                check_gain_db(c.gain_db)?;
+                check_pan(c.pan)?;
                 check_span(c.in_s, c.out_s, self.source_of(c)?)?;
                 if c.timeline_end() > MAX_TIME_S {
                     return Err(EngineError::out_of_bounds(format!(
@@ -490,6 +686,55 @@ fn check_speed(speed: f64) -> Result<(), EngineError> {
     Ok(())
 }
 
+/// Speed-key invariants for one clip: bounded count, media-time positions
+/// within range, speeds in range, strictly increasing `t_s` (the stored
+/// order `speed_at`/`span_len` rely on). Keys outside the clip's media span
+/// are allowed — they are inert data a later trim can reveal.
+fn check_speed_keys(c: &Clip) -> Result<(), EngineError> {
+    if c.speed_keys.len() > MAX_SPEED_KEYS {
+        return Err(EngineError::validation(format!(
+            "clip {} has more than {MAX_SPEED_KEYS} speed keys",
+            c.id
+        )));
+    }
+    let mut prev = f64::NEG_INFINITY;
+    for k in &c.speed_keys {
+        if !(k.t_s.is_finite() && k.t_s >= 0.0 && k.t_s <= MAX_TIME_S) {
+            return Err(EngineError::validation(format!(
+                "clip {} speed key time must be within 0..={MAX_TIME_S}",
+                c.id
+            )));
+        }
+        if k.t_s <= prev {
+            return Err(EngineError::validation(format!(
+                "clip {} speed keys must have strictly increasing t_s",
+                c.id
+            )));
+        }
+        prev = k.t_s;
+        check_speed(k.speed)?;
+    }
+    Ok(())
+}
+
+fn check_gain_db(gain_db: f64) -> Result<(), EngineError> {
+    if !(gain_db.is_finite() && (MIN_CLIP_GAIN_DB..=MAX_CLIP_GAIN_DB).contains(&gain_db)) {
+        return Err(EngineError::validation(format!(
+            "gain_db must be in {MIN_CLIP_GAIN_DB}..={MAX_CLIP_GAIN_DB}"
+        )));
+    }
+    Ok(())
+}
+
+fn check_pan(pan: f64) -> Result<(), EngineError> {
+    if !(pan.is_finite() && (MIN_PAN..=MAX_PAN).contains(&pan)) {
+        return Err(EngineError::validation(format!(
+            "pan must be in {MIN_PAN}..={MAX_PAN}"
+        )));
+    }
+    Ok(())
+}
+
 /// Validate a clip's source span against its source duration.
 fn check_span(in_s: f64, out_s: f64, src: &Source) -> Result<(), EngineError> {
     if in_s < 0.0 {
@@ -505,6 +750,56 @@ fn check_span(in_s: f64, out_s: f64, src: &Source) -> Result<(), EngineError> {
         )));
     }
     Ok(())
+}
+
+/// Parse a `speed_keys` payload field: an array of `{t_s, speed}` in any
+/// order (sorted here), at most `MAX_SPEED_KEYS`, media times within
+/// `0..=MAX_TIME_S`, speeds within the `setSpeed` range, no duplicate `t_s`.
+fn req_speed_keys(p: &Value, key: &str) -> Result<Vec<SpeedKey>, EngineError> {
+    let arr = p
+        .get(key)
+        .and_then(Value::as_array)
+        .ok_or_else(|| EngineError::invalid(format!("missing or invalid '{key}'")))?;
+    if arr.len() > MAX_SPEED_KEYS {
+        return Err(EngineError::out_of_bounds(format!(
+            "{key} takes at most {MAX_SPEED_KEYS} entries"
+        )));
+    }
+    let mut keys = Vec::with_capacity(arr.len());
+    for item in arr {
+        let t_s = item
+            .get("t_s")
+            .and_then(Value::as_f64)
+            .filter(|f| f.is_finite())
+            .ok_or_else(|| EngineError::invalid(format!("invalid '{key}' entry")))?;
+        let speed = item
+            .get("speed")
+            .and_then(Value::as_f64)
+            .filter(|f| f.is_finite())
+            .ok_or_else(|| EngineError::invalid(format!("invalid '{key}' entry")))?;
+        check_speed(speed)?;
+        if !(t_s >= 0.0 && t_s <= MAX_TIME_S) {
+            return Err(EngineError::out_of_bounds(format!(
+                "{key} t_s must be within 0..={MAX_TIME_S}"
+            )));
+        }
+        keys.push(SpeedKey { t_s, speed });
+    }
+    keys.sort_by(|a, b| a.t_s.total_cmp(&b.t_s));
+    if keys.windows(2).any(|w| w[0].t_s == w[1].t_s) {
+        return Err(EngineError::validation(format!(
+            "{key} has duplicate t_s values"
+        )));
+    }
+    Ok(keys)
+}
+
+/// Optional `speed_keys` field: absent/null means no keys (constant speed).
+fn opt_speed_keys(p: &Value) -> Result<Vec<SpeedKey>, EngineError> {
+    match p.get("speed_keys") {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(_) => req_speed_keys(p, "speed_keys"),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -655,7 +950,7 @@ impl SpliceEngine {
             }
 
             // ---- batch -----------------------------------------------------
-            "batch" => self.batch(p),
+            "batch" => self.batch(p, None),
 
             // ---- clips -----------------------------------------------------
             "addClip" => {
@@ -665,6 +960,7 @@ impl SpliceEngine {
                 let out_s = req_f64(p, "out_s")?;
                 let speed = opt_f64(p, "speed")?.unwrap_or(1.0);
                 check_speed(speed)?;
+                let speed_keys = opt_speed_keys(p)?;
                 let ti = self
                     .doc
                     .track_index(track_id)
@@ -690,6 +986,9 @@ impl SpliceEngine {
                     in_s,
                     out_s,
                     speed,
+                    speed_keys,
+                    gain_db: 0.0,
+                    pan: 0.0,
                 };
                 let created = timeline_edits::place(
                     &mut next,
@@ -766,7 +1065,9 @@ impl SpliceEngine {
                 check_span(new_in, new_out, src)?;
                 // Trimming the in-point shifts where the clip's media starts;
                 // the timeline start stays fixed and the footprint changes.
-                let new_len = (new_out - new_in) / clip.speed;
+                // With speed keys the footprint is the curve's integral over
+                // the new media span, not `(out - in) / speed`.
+                let new_len = clip.span_len(new_in, new_out);
                 let start = clip.timeline_start_s;
                 if self.doc.overlaps(ti, start, new_len, Some(id)) {
                     return Err(EngineError::validation(
@@ -796,6 +1097,9 @@ impl SpliceEngine {
                 let (ti, ci) = self.doc.require_clip(id)?;
                 self.doc.require_unlocked(ti)?;
                 let clip = &self.doc.tracks[ti].clips[ci];
+                // setSpeed means "constant speed": it replaces any speed keys
+                // (documented in ENGINE_OPS.md). The footprint is then the
+                // plain `(out - in) / speed`.
                 let new_len = (clip.out_s - clip.in_s) / speed;
                 let start = clip.timeline_start_s;
                 if self.doc.overlaps(ti, start, new_len, Some(id)) {
@@ -803,9 +1107,68 @@ impl SpliceEngine {
                         "speed change would overlap an existing clip on this track",
                     ));
                 }
+                if clip.speed == speed && clip.speed_keys.is_empty() {
+                    return Ok(Self::read_only(json!({ "ok": true, "changed": false })));
+                }
                 self.record();
-                self.doc.tracks[ti].clips[ci].speed = speed;
+                let clip = &mut self.doc.tracks[ti].clips[ci];
+                clip.speed = speed;
+                clip.speed_keys.clear();
                 Ok(Self::changed(json!({ "ok": true }), true))
+            }
+            "setSpeedKeys" => {
+                let id = req_u64(p, "id")?;
+                let keys = req_speed_keys(p, "keys")?;
+                let (ti, ci) = self.doc.require_clip(id)?;
+                self.doc.require_unlocked(ti)?;
+                let clip = &self.doc.tracks[ti].clips[ci];
+                // Full replace. An empty `keys` array returns the clip to
+                // constant `speed`. The footprint is the integral of
+                // 1/speed over the media span under the new curve.
+                if clip.speed_keys == keys {
+                    return Ok(Self::read_only(json!({ "ok": true, "changed": false })));
+                }
+                let new_len = span_len(&keys, clip.speed, clip.in_s, clip.out_s);
+                let start = clip.timeline_start_s;
+                if self.doc.overlaps(ti, start, new_len, Some(id)) {
+                    return Err(EngineError::validation(
+                        "speed keys would overlap an existing clip on this track",
+                    ));
+                }
+                self.record();
+                self.doc.tracks[ti].clips[ci].speed_keys = keys;
+                Ok(Self::changed(json!({ "ok": true }), true))
+            }
+            "setClipMix" => {
+                let id = req_u64(p, "id")?;
+                let gain_db = opt_f64(p, "gain_db")?;
+                let pan = opt_f64(p, "pan")?;
+                if gain_db.is_none() && pan.is_none() {
+                    return Err(EngineError::invalid(
+                        "setClipMix requires at least one of 'gain_db', 'pan'",
+                    ));
+                }
+                if let Some(g) = gain_db {
+                    check_gain_db(g)?;
+                }
+                if let Some(v) = pan {
+                    check_pan(v)?;
+                }
+                let (ti, ci) = self.doc.require_clip(id)?;
+                self.doc.require_unlocked(ti)?;
+                let clip = &self.doc.tracks[ti].clips[ci];
+                let new_gain = gain_db.unwrap_or(clip.gain_db);
+                let new_pan = pan.unwrap_or(clip.pan);
+                if new_gain == clip.gain_db && new_pan == clip.pan {
+                    return Ok(Self::read_only(json!({ "ok": true, "changed": false })));
+                }
+                self.record();
+                let clip = &mut self.doc.tracks[ti].clips[ci];
+                clip.gain_db = new_gain;
+                clip.pan = new_pan;
+                // Mix metadata only: the timeline footprint is unchanged, so
+                // this is a document change, not a timeline change.
+                Ok(Self::changed(json!({ "ok": true }), false))
             }
 
             // ---- queries ---------------------------------------------------
@@ -843,6 +1206,13 @@ impl SpliceEngine {
                                         "in_s": c.in_s,
                                         "out_s": c.out_s,
                                         "speed": c.speed,
+                                        // Keyframed speed curve (media-time
+                                        // keys); empty = constant `speed`.
+                                        "speed_keys": c.speed_keys,
+                                        // Per-clip mix metadata for a future
+                                        // mixer; 0 dB / center pan are unity.
+                                        "gain_db": c.gain_db,
+                                        "pan": c.pan,
                                     })
                                 })
                                 .collect(),
@@ -872,8 +1242,10 @@ impl SpliceEngine {
     }
 
     /// `batch {ops:[{op,payload}]}`: run every op on a scratch engine; commit
-    /// all of them as one undo entry, or none if any op fails.
-    fn batch(&mut self, p: &Value) -> Result<CommandResult, EngineError> {
+    /// all of them as one undo entry, or none if any op fails. With `ctx`
+    /// each op runs through `apply_long` on a scoped slice of the task's
+    /// progress, so cancellation lands between ops or inside a long one.
+    fn batch(&mut self, p: &Value, ctx: Option<&TaskContext>) -> Result<CommandResult, EngineError> {
         let ops = p
             .get("ops")
             .and_then(Value::as_array)
@@ -890,7 +1262,8 @@ impl SpliceEngine {
             doc: self.doc.clone(),
             journal: Journal::new(1),
         };
-        let mut results = Vec::with_capacity(ops.len());
+        let total = ops.len();
+        let mut results = Vec::with_capacity(total);
         let mut structural = false;
         for (i, item) in ops.iter().enumerate() {
             let op = item
@@ -903,8 +1276,19 @@ impl SpliceEngine {
                 )));
             }
             let payload = item.get("payload").cloned().unwrap_or_else(|| json!({}));
-            let r = scratch
-                .apply(Command::new(op, payload))
+            let command = Command::new(op, payload);
+            let applied = match ctx {
+                Some(ctx) => {
+                    ctx.checkpoint()?;
+                    let step = ctx.scoped(
+                        i as f32 / total as f32,
+                        (i + 1) as f32 / total as f32,
+                    );
+                    scratch.apply_long(command, &step)
+                }
+                None => scratch.apply(command),
+            };
+            let r = applied
                 .map_err(|e| EngineError::new(e.code, format!("ops[{i}] {op}: {}", e.message)))?;
             structural |= r.events.iter().any(|e| e.kind == "timeline:changed");
             results.push(r.data);
@@ -929,14 +1313,7 @@ impl Engine for SpliceEngine {
     /// `removed_transitions`.
     fn apply(&mut self, cmd: Command) -> Result<CommandResult, EngineError> {
         if cmd.op == ignition_core::OP_BATCH {
-            let batch = ignition_core::parse_batch(cmd)?;
-            let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
-            let (staged, result) = ignition_core::execute_batch(staged, batch)?;
-            if result.events.iter().any(|event| event.kind == "document:changed") {
-                self.journal.record(self.doc.clone());
-                self.doc = staged.doc;
-            }
-            return Ok(result);
+            return self.apply_batch(cmd, None);
         }
         let mut result = self.apply_op(cmd)?;
         if result.events.iter().any(|e| e.kind == "timeline:changed") {
@@ -947,6 +1324,40 @@ impl Engine for SpliceEngine {
                 }
             }
         }
+        Ok(result)
+    }
+
+    fn apply_batch(
+        &mut self,
+        cmd: Command,
+        ctx: Option<&TaskContext>,
+    ) -> Result<CommandResult, EngineError> {
+        let batch = ignition_core::parse_batch(cmd)?;
+        let staged = Self { doc: self.doc.clone(), journal: Journal::new(1) };
+        let (staged, result) = match ctx {
+            Some(ctx) => ignition_core::execute_batch_with_ctx(staged, batch, ctx)?,
+            None => ignition_core::execute_batch(staged, batch)?,
+        };
+        if result.events.iter().any(|event| event.kind == "document:changed") {
+            self.journal.record(self.doc.clone());
+            self.doc = staged.doc;
+        }
+        Ok(result)
+    }
+
+    /// `__batch` forwards to `apply_batch`; the engine's own `batch` op runs
+    /// its plan on a scratch engine with per-op cancellation and progress.
+    fn apply_long(&mut self, cmd: Command, ctx: &TaskContext) -> Result<CommandResult, EngineError> {
+        if cmd.op == ignition_core::OP_BATCH {
+            return self.apply_batch(cmd, Some(ctx));
+        }
+        ctx.checkpoint()?;
+        let result = if cmd.op == "batch" {
+            self.batch(&cmd.payload, Some(ctx))?
+        } else {
+            self.apply(cmd)?
+        };
+        ctx.set_progress(1.0);
         Ok(result)
     }
 
@@ -1559,6 +1970,46 @@ mod tests {
     }
 
     #[test]
+    fn task_batch_op_is_cancellable_and_reports_progress() {
+        use ignition_core::TaskContext;
+        let mut e = eng();
+        setup(&mut e);
+        let before = describe(&e);
+        let ctx = TaskContext::new();
+        ctx.cancel();
+        let err = e
+            .apply_long(
+                Command::new(
+                    "batch",
+                    json!({"ops": [{"op": "addMarker", "payload": {"time_s": 1.0}}]}),
+                ),
+                &ctx,
+            )
+            .unwrap_err();
+        assert_eq!(err.code, ErrorCode::Cancelled);
+        assert_eq!(describe(&e), before);
+
+        // An uncancelled task batch commits once and reports full progress.
+        let ctx = TaskContext::new();
+        let r = e
+            .apply_long(
+                Command::new(
+                    "batch",
+                    json!({"ops": [
+                        {"op": "addMarker", "payload": {"time_s": 1.0}},
+                        {"op": "setLoopRange", "payload": {"in_s": 0.5, "out_s": 3.0}},
+                    ]}),
+                ),
+                &ctx,
+            )
+            .unwrap();
+        assert_eq!(r.data["results"].as_array().unwrap().len(), 2);
+        assert_eq!(ctx.progress(), 1.0);
+        assert!(e.undo().unwrap(), "task batch recorded no undo entry");
+        assert_eq!(describe(&e), before);
+    }
+
+    #[test]
     fn snapshot_carries_flags_markers_transitions_and_loop() {
         let mut e = eng();
         let (sid, tid) = setup(&mut e);
@@ -1694,6 +2145,601 @@ mod tests {
             .unwrap()["clip_id"].as_u64().unwrap();
         apply(&mut e, "rollEdit", json!({"left": l, "right": r, "delta_s": -0.1})).unwrap();
         assert_eq!(describe(&e)["tracks"][0]["clips"][1]["in_s"], 0.0);
+    }
+
+    // ---- keyframed speed (speed_keys) --------------------------------------
+
+    /// Clip JSON helpers over the `timeline` read.
+    fn clip_json(e: &mut SpliceEngine, track: usize, index: usize) -> Value {
+        apply(e, "timeline", json!({})).unwrap()["tracks"][track]["clips"][index].clone()
+    }
+
+    /// 4 s of media (0..4) with speed ramping 1→2: footprint = 4·ln2 ≈ 2.7726.
+    fn keyed_clip(e: &mut SpliceEngine, sid: u64, tid: u64) -> u64 {
+        let c = apply(
+            e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            e,
+            "setSpeedKeys",
+            json!({"id": c, "keys": [{"t_s": 0.0, "speed": 1.0}, {"t_s": 4.0, "speed": 2.0}]}),
+        )
+        .unwrap();
+        c
+    }
+
+    #[test]
+    fn speed_keys_set_replace_clear_and_bounds() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        // Constant clips carry no speed_keys field at all (legacy bytes).
+        assert!(clip_json(&mut e, 0, 0).get("speed_keys").is_none());
+        // Unsorted input is accepted and stored sorted.
+        apply(
+            &mut e,
+            "setSpeedKeys",
+            json!({"id": c, "keys": [
+                {"t_s": 4.0, "speed": 2.0},
+                {"t_s": 0.0, "speed": 1.0},
+            ]}),
+        )
+        .unwrap();
+        let d = clip_json(&mut e, 0, 0);
+        assert_eq!(d["speed_keys"][0]["t_s"], 0.0);
+        assert_eq!(d["speed_keys"][1]["speed"], 2.0);
+        // Footprint = ∫₀⁴ dt/(1+t/4) = 4·ln2.
+        let secs = apply(&mut e, "duration", json!({})).unwrap()["seconds"]
+            .as_f64()
+            .unwrap();
+        assert!((secs - 4.0 * 2.0f64.ln()).abs() < 1e-9, "{secs}");
+        // renderPlan carries the curve for hosts.
+        let plan = apply(&mut e, "renderPlan", json!({})).unwrap();
+        assert_eq!(plan["tracks"][0][0]["speed_keys"].as_array().unwrap().len(), 2);
+        // Rejected payloads leave state untouched.
+        let before = describe(&e);
+        for bad in [
+            json!({"id": c, "keys": [{"t_s": 0.0, "speed": 0.05}]}),
+            json!({"id": c, "keys": [{"t_s": 0.0, "speed": 11.0}]}),
+            json!({"id": c, "keys": [{"t_s": -1.0, "speed": 1.0}]}),
+            json!({"id": c, "keys": [{"t_s": 0.0, "speed": 1.0}, {"t_s": 0.0, "speed": 2.0}]}),
+            json!({"id": c, "keys": "fast"}),
+            json!({"id": c}),
+            json!({"id": 999, "keys": []}),
+        ] {
+            expect_err(&mut e, "setSpeedKeys", bad);
+            assert_eq!(describe(&e), before);
+        }
+        // Equal write is eventless and records no undo.
+        let r = apply_full(
+            &mut e,
+            "setSpeedKeys",
+            json!({"id": c, "keys": [{"t_s": 0.0, "speed": 1.0}, {"t_s": 4.0, "speed": 2.0}]}),
+        )
+        .unwrap();
+        assert!(r.events.is_empty());
+        assert_eq!(r.data["changed"], false);
+        // keys:[] returns to constant speed (footprint back to 4 s).
+        apply(&mut e, "setSpeedKeys", json!({"id": c, "keys": []})).unwrap();
+        assert!(clip_json(&mut e, 0, 0).get("speed_keys").is_none());
+        assert_eq!(
+            apply(&mut e, "duration", json!({})).unwrap()["seconds"],
+            4.0
+        );
+        // setSpeed on a keyed clip flattens it to constant speed. (The doc
+        // now holds two clips: c at 0..4 and the keyed clip appended at 4.)
+        let k = keyed_clip(&mut e, sid, tid);
+        apply(&mut e, "setSpeed", json!({"id": k, "speed": 2.0})).unwrap();
+        assert!(clip_json(&mut e, 0, 1).get("speed_keys").is_none());
+        // k spans 4..6 at 2x over 4 media-s; c still ends at 4.
+        assert_eq!(
+            apply(&mut e, "duration", json!({})).unwrap()["seconds"],
+            6.0
+        );
+    }
+
+    #[test]
+    fn speed_keys_footprint_and_split() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = keyed_clip(&mut e, sid, tid);
+        // Split at t=2 s of playback: media point solves 4·ln(1+m/4)=2.
+        let m = 4.0 * (0.5f64.exp() - 1.0);
+        let r = apply(&mut e, "splitClip", json!({"id": c, "at_s": 2.0})).unwrap();
+        let left = clip_json(&mut e, 0, 0);
+        let right = clip_json(&mut e, 0, 1);
+        assert!((left["out_s"].as_f64().unwrap() - m).abs() < 1e-6);
+        assert!((right["in_s"].as_f64().unwrap() - m).abs() < 1e-6);
+        assert_eq!(right["timeline_start_s"], 2.0);
+        // Each half keeps its side of the curve plus a shared boundary key.
+        assert_eq!(left["speed_keys"].as_array().unwrap().len(), 2);
+        assert_eq!(right["speed_keys"].as_array().unwrap().len(), 2);
+        let bk = &left["speed_keys"][1];
+        assert!((bk["t_s"].as_f64().unwrap() - m).abs() < 1e-6);
+        assert!((bk["speed"].as_f64().unwrap() - (1.0 + m / 4.0)).abs() < 1e-6);
+        // Footprints sum back to the whole: left ends at 2.0, right ends at
+        // 4·ln2 ≈ 2.7726.
+        let plan = apply(&mut e, "renderPlan", json!({})).unwrap();
+        let clips = plan["tracks"][0].as_array().unwrap();
+        let l_end = clips[0]["timeline_end_s"].as_f64().unwrap();
+        let r_end = clips[1]["timeline_end_s"].as_f64().unwrap();
+        assert!((l_end - 2.0).abs() < 1e-6, "{l_end}");
+        assert!((r_end - 4.0 * 2.0f64.ln()).abs() < 1e-6, "{r_end}");
+        let _ = r;
+    }
+
+    #[test]
+    fn speed_keys_trim_move_ripple() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = keyed_clip(&mut e, sid, tid);
+        // trimClip out_s=2: footprint = ∫₀² dt/(1+t/4) = 4·ln(1.5).
+        apply(&mut e, "trimClip", json!({"id": c, "out_s": 2.0})).unwrap();
+        let secs = apply(&mut e, "duration", json!({})).unwrap()["seconds"]
+            .as_f64()
+            .unwrap();
+        assert!((secs - 4.0 * 1.5f64.ln()).abs() < 1e-9, "{secs}");
+        // moveClip keeps the curve and footprint.
+        apply(&mut e, "moveClip", json!({"id": c, "start_s": 10.0})).unwrap();
+        assert_eq!(clip_json(&mut e, 0, 0)["timeline_start_s"], 10.0);
+        assert_eq!(clip_json(&mut e, 0, 0)["speed_keys"].as_array().unwrap().len(), 2);
+        // A second clip blocks a footprint-growing key change.
+        let c2 = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 1.0, "start_s": 12.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        // c ends at 10 + 4ln1.5 ≈ 11.62; keys slowing it to ~0.1..1 grow it past 12.
+        let before = describe(&e);
+        expect_err(
+            &mut e,
+            "setSpeedKeys",
+            json!({"id": c, "keys": [{"t_s": 0.0, "speed": 0.1}, {"t_s": 2.0, "speed": 0.1}]}),
+        );
+        assert_eq!(describe(&e), before);
+        // rippleDelete removes it and closes the gap: c2 (at 12) shifts left
+        // by the deleted footprint 4·ln(3/2) ≈ 1.6219.
+        let gap = 12.0 - 10.0 - secs;
+        apply(&mut e, "rippleDelete", json!({"id": c})).unwrap();
+        assert_eq!(clip_json(&mut e, 0, 0)["id"], c2);
+        assert!((clip_json(&mut e, 0, 0)["timeline_start_s"].as_f64().unwrap() - (12.0 - secs)).abs() < 1e-6);
+        assert!(gap > 0.0);
+    }
+
+    #[test]
+    fn speed_keys_roll_slip_slide_ripple_trim() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        // Two touching clips: keyed left (0..4 media, ramp 1→2, footprint
+        // 4ln2 ≈ 2.7726), constant right.
+        let l = keyed_clip(&mut e, sid, tid);
+        let l_end = 4.0 * 2.0f64.ln();
+        let r = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 5.0, "out_s": 7.0, "start_s": l_end}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        // rollEdit +0.25: left tail extends by media 0.25 timeline-s cost at
+        // its tail speed (2.0 held past the last key) → out_s += 0.5.
+        apply(&mut e, "rollEdit", json!({"left": l, "right": r, "delta_s": 0.25})).unwrap();
+        let lj = clip_json(&mut e, 0, 0);
+        assert!((lj["out_s"].as_f64().unwrap() - 4.5).abs() < 1e-6);
+        let rj = clip_json(&mut e, 0, 1);
+        assert!((rj["in_s"].as_f64().unwrap() - 5.25).abs() < 1e-6);
+        assert!((rj["timeline_start_s"].as_f64().unwrap() - (l_end + 0.25)).abs() < 1e-6);
+        // slipClip on the keyed clip must preserve footprint: reject.
+        let before = describe(&e);
+        let err = expect_err(&mut e, "slipClip", json!({"id": l, "delta_s": 0.5}));
+        assert_eq!(err.code, ErrorCode::Validation);
+        assert_eq!(describe(&e), before);
+        // rippleTrim tail +0.5 on the keyed clip: the tail speed is the held
+        // last-key value 2.0, so out_s += 0.5 * 2.0 = 1.0 → 5.5.
+        apply(&mut e, "rippleTrim", json!({"id": l, "edge": "tail", "delta_s": 0.5})).unwrap();
+        let lj = clip_json(&mut e, 0, 0);
+        assert!((lj["out_s"].as_f64().unwrap() - 5.5).abs() < 1e-6);
+        // slideClip on the constant right clip adjusts the keyed left tail:
+        // it gives back 0.25 timeline-s at tail speed 2.0 → out_s -= 0.5.
+        apply(&mut e, "slideClip", json!({"id": r, "delta_s": -0.25})).unwrap();
+        let lj = clip_json(&mut e, 0, 0);
+        assert!((lj["out_s"].as_f64().unwrap() - 5.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn speed_keys_undo_redo_snapshot_hostile_restore() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = keyed_clip(&mut e, sid, tid);
+        assert!(e.undo().unwrap()); // undo setSpeedKeys
+        assert!(clip_json(&mut e, 0, 0).get("speed_keys").is_none());
+        assert!(e.redo().unwrap());
+        assert_eq!(clip_json(&mut e, 0, 0)["speed_keys"].as_array().unwrap().len(), 2);
+        // Snapshot round-trips the curve.
+        let snap = e.snapshot().unwrap();
+        let mut e2 = eng();
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&e2), describe(&e));
+        // Hostile restores: each broken speed_keys shape is rejected and the
+        // live document is untouched.
+        let good = describe(&e);
+        let breakers: Vec<(&str, Value)> = vec![
+            ("unsorted keys", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["speed_keys"] = json!([
+                    {"t_s": 4.0, "speed": 2.0},
+                    {"t_s": 0.0, "speed": 1.0},
+                ]);
+                d
+            }),
+            ("duplicate t_s", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["speed_keys"] = json!([
+                    {"t_s": 1.0, "speed": 1.0},
+                    {"t_s": 1.0, "speed": 2.0},
+                ]);
+                d
+            }),
+            ("speed out of range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["speed_keys"] = json!([{"t_s": 0.0, "speed": 42.0}]);
+                d
+            }),
+            ("negative t_s", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["speed_keys"] = json!([{"t_s": -0.5, "speed": 1.0}]);
+                d
+            }),
+            ("too many keys", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["speed_keys"] = json!(
+                    (0..300).map(|i| json!({"t_s": i as f64, "speed": 1.0})).collect::<Vec<_>>()
+                );
+                d
+            }),
+            ("missing speed", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["speed_keys"] = json!([{"t_s": 0.0}]);
+                d
+            }),
+        ];
+        for (what, doc) in breakers {
+            let bytes = encode_envelope(&serde_json::to_vec(&doc).unwrap());
+            assert!(e.restore(&bytes).is_err(), "{what} was accepted");
+            assert_eq!(describe(&e), good, "{what}");
+        }
+        // A legacy clip payload without speed_keys still restores.
+        let mut legacy = good.clone();
+        legacy["tracks"][0]["clips"][0].as_object_mut().unwrap().remove("speed_keys");
+        e.restore(&encode_envelope(&serde_json::to_vec(&legacy).unwrap()))
+            .unwrap();
+        let _ = c;
+    }
+
+    #[test]
+    fn speed_keys_add_clip_batch_and_transition() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        // addClip accepts speed_keys directly.
+        let c = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0,
+                   "speed_keys": [{"t_s": 0.0, "speed": 2.0}, {"t_s": 4.0, "speed": 2.0}]}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        // Constant 2x via keys: footprint exactly 2 s.
+        assert_eq!(
+            apply(&mut e, "duration", json!({})).unwrap()["seconds"],
+            2.0
+        );
+        // batch carries setSpeedKeys as one undo step.
+        apply(
+            &mut e,
+            "batch",
+            json!({"ops": [
+                {"op": "setSpeedKeys", "payload": {"id": c, "keys": [{"t_s": 0.0, "speed": 1.0}]}},
+                {"op": "addMarker", "payload": {"time_s": 1.0}},
+            ]}),
+        )
+        .unwrap();
+        assert_eq!(clip_json(&mut e, 0, 0)["speed_keys"].as_array().unwrap().len(), 1);
+        assert!(e.undo().unwrap());
+        assert_eq!(clip_json(&mut e, 0, 0)["speed_keys"].as_array().unwrap().len(), 2);
+        // Transitions still validate against keyed clips: two keyed clips
+        // touching with enough handle.
+        let l2 = keyed_clip(&mut e, sid, tid);
+        // l2 starts at track end; add a keyed right neighbour touching it.
+        let plan = apply(&mut e, "renderPlan", json!({})).unwrap();
+        let l2_end = plan["tracks"][0]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["clip_id"] == l2)
+            .unwrap()["timeline_end_s"]
+            .as_f64()
+            .unwrap();
+        let r2 = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 5.0, "out_s": 7.0, "start_s": l2_end,
+                   "speed_keys": [{"t_s": 5.0, "speed": 1.0}, {"t_s": 7.0, "speed": 1.0}]}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "addTransition",
+            json!({"left": l2, "right": r2, "kind": "cross_dissolve", "duration_s": 1.0}),
+        )
+        .unwrap();
+    }
+
+    // ---- per-clip mix (gain_db / pan) --------------------------------------
+
+    #[test]
+    fn clip_mix_defaults_are_legacy_bytes() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0}),
+        )
+        .unwrap();
+        // Neutral mix fields are skipped entirely: the clip serializes
+        // exactly as it did before the fields existed.
+        let clip = clip_json(&mut e, 0, 0);
+        assert!(clip.get("gain_db").is_none());
+        assert!(clip.get("pan").is_none());
+        let snap = e.snapshot().unwrap();
+        let payload = decode_envelope(&snap).unwrap().1;
+        let raw = String::from_utf8(payload.to_vec()).unwrap();
+        assert!(!raw.contains("gain_db") && !raw.contains("\"pan\""), "{raw}");
+    }
+
+    #[test]
+    fn set_clip_mix_patch_bounds_and_noop() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        let before = describe(&e);
+        for bad in [
+            json!({"id": c}),                                  // nothing to set
+            json!({"id": c, "gain_db": "loud"}),               // wrong type
+            json!({"id": c, "gain_db": 13.0}),                 // above +12 dB
+            json!({"id": c, "gain_db": -61.0}),                // below -60 dB
+            json!({"id": c, "gain_db": 1e300}),                // not finite-range
+            json!({"id": c, "pan": 1.5}),
+            json!({"id": c, "pan": -1.5}),
+            json!({"id": 999, "gain_db": 0.0}),
+        ] {
+            expect_err(&mut e, "setClipMix", bad);
+            assert_eq!(describe(&e), before);
+        }
+        // Partial patch: gain only, then pan only; the other field keeps its
+        // value (and its serde-skipped neutral state).
+        apply(&mut e, "setClipMix", json!({"id": c, "gain_db": -6.0})).unwrap();
+        let clip = clip_json(&mut e, 0, 0);
+        assert_eq!(clip["gain_db"], -6.0);
+        assert!(clip.get("pan").is_none());
+        apply(&mut e, "setClipMix", json!({"id": c, "pan": 0.5})).unwrap();
+        let clip = clip_json(&mut e, 0, 0);
+        assert_eq!(clip["gain_db"], -6.0);
+        assert_eq!(clip["pan"], 0.5);
+        // renderPlan exposes both for a future mixer.
+        let plan = apply(&mut e, "renderPlan", json!({})).unwrap();
+        let pc = &plan["tracks"][0][0];
+        assert_eq!(pc["gain_db"], -6.0);
+        assert_eq!(pc["pan"], 0.5);
+        // Identical write is an eventless read-only result recording no undo.
+        let r = apply_full(
+            &mut e,
+            "setClipMix",
+            json!({"id": c, "gain_db": -6.0, "pan": 0.5}),
+        )
+        .unwrap();
+        assert!(r.events.is_empty());
+        assert_eq!(r.data["changed"], false);
+        // One undo reverts the whole mix (the two setClipMix ops are two
+        // entries; the second undo reaches the first).
+        assert!(e.undo().unwrap());
+        let clip = clip_json(&mut e, 0, 0);
+        assert_eq!(clip["gain_db"], -6.0);
+        assert!(clip.get("pan").is_none());
+        assert!(e.undo().unwrap());
+        assert!(clip_json(&mut e, 0, 0).get("gain_db").is_none());
+        assert!(e.undo().unwrap()); // addClip
+        assert!(e.undo().unwrap()); // addTrack
+        assert!(e.undo().unwrap()); // addSource
+        assert!(!e.undo().unwrap());
+    }
+
+    #[test]
+    fn clip_mix_survives_structural_ops() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 8.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "setClipMix",
+            json!({"id": c, "gain_db": -3.0, "pan": -1.0}),
+        )
+        .unwrap();
+        // splitClip: both halves inherit the mix.
+        apply(&mut e, "splitClip", json!({"id": c, "at_s": 4.0})).unwrap();
+        for i in 0..2 {
+            let clip = clip_json(&mut e, 0, i);
+            assert_eq!(clip["gain_db"], -3.0, "half {i}");
+            assert_eq!(clip["pan"], -1.0, "half {i}");
+        }
+        // insert placement splitting a straddling clip keeps mix on both
+        // pieces (split_at is shared).
+        let other = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0, "start_s": 20.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        apply(
+            &mut e,
+            "setClipMix",
+            json!({"id": other, "gain_db": 6.0, "pan": 1.0}),
+        )
+        .unwrap();
+        // Default mode rejects the overlap; overwrite splits the straddling
+        // clip and both surviving halves keep the mix.
+        let before = describe(&e);
+        expect_err(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 2.0, "start_s": 21.0}),
+        );
+        assert_eq!(describe(&e), before);
+        apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 2.0,
+                   "start_s": 21.0, "mode": "overwrite"}),
+        )
+        .unwrap();
+        // other (20..24) was split at 21 and 23: three pieces — head 20..21,
+        // tail 23..24 — both must carry gain 6 / pan 1.
+        let clips = apply(&mut e, "timeline", json!({})).unwrap()["tracks"][0]["clips"]
+            .as_array()
+            .unwrap()
+            .clone();
+        let pieces: Vec<&Value> = clips
+            .iter()
+            .filter(|c| c["gain_db"] == 6.0)
+            .collect();
+        assert_eq!(pieces.len(), 2, "{clips:?}");
+        for p in &pieces {
+            assert_eq!(p["pan"], 1.0);
+        }
+        // moveClip / trimClip / rippleDelete keep mix on surviving clips.
+        // The moved head lands at 30 s, last in time order.
+        let head = pieces[0]["id"].as_u64().unwrap();
+        apply(&mut e, "moveClip", json!({"id": head, "start_s": 30.0})).unwrap();
+        let n = apply(&mut e, "timeline", json!({})).unwrap()["tracks"][0]["clips"]
+            .as_array()
+            .unwrap()
+            .len();
+        assert_eq!(clip_json(&mut e, 0, n - 1)["gain_db"], 6.0);
+        apply(&mut e, "trimClip", json!({"id": head, "out_s": 0.5})).unwrap();
+        assert_eq!(clip_json(&mut e, 0, n - 1)["gain_db"], 6.0);
+        apply(&mut e, "rippleDelete", json!({"id": head})).unwrap();
+        // The remaining piece still carries its mix.
+        let clips = apply(&mut e, "timeline", json!({})).unwrap()["tracks"][0]["clips"]
+            .as_array()
+            .unwrap()
+            .clone();
+        let tail = clips.iter().find(|c| c["pan"] == 1.0).unwrap();
+        assert_eq!(tail["gain_db"], 6.0);
+    }
+
+    #[test]
+    fn clip_mix_undo_snapshot_and_hostile_restore() {
+        let mut e = eng();
+        let (sid, tid) = setup(&mut e);
+        let c = apply(
+            &mut e,
+            "addClip",
+            json!({"track": tid, "source": sid, "in_s": 0.0, "out_s": 4.0}),
+        )
+        .unwrap()["clip_id"]
+            .as_u64()
+            .unwrap();
+        apply(&mut e, "setClipMix", json!({"id": c, "gain_db": -12.0, "pan": 1.0})).unwrap();
+        // Snapshot round-trip preserves the mix.
+        let snap = e.snapshot().unwrap();
+        let mut e2 = eng();
+        e2.restore(&snap).unwrap();
+        assert_eq!(describe(&e2), describe(&e));
+        // Hostile restores: out-of-range mix values are rejected and the live
+        // document is untouched.
+        let good = describe(&e);
+        let breakers: Vec<(&str, Value)> = vec![
+            ("gain_db above range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["gain_db"] = json!(12.5);
+                d
+            }),
+            ("gain_db below range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["gain_db"] = json!(-60.5);
+                d
+            }),
+            ("gain_db non-numeric", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["gain_db"] = json!("loud");
+                d
+            }),
+            ("pan above range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["pan"] = json!(1.0001);
+                d
+            }),
+            ("pan below range", {
+                let mut d = good.clone();
+                d["tracks"][0]["clips"][0]["pan"] = json!(-2.0);
+                d
+            }),
+        ];
+        for (what, doc) in breakers {
+            let bytes = encode_envelope(&serde_json::to_vec(&doc).unwrap());
+            assert!(e.restore(&bytes).is_err(), "{what} was accepted");
+            assert_eq!(describe(&e), good, "{what}");
+        }
+        // Boundary values restore fine; a legacy clip without the fields
+        // restores to neutral mix.
+        let mut edge = good.clone();
+        edge["tracks"][0]["clips"][0]["gain_db"] = json!(12.0);
+        edge["tracks"][0]["clips"][0]["pan"] = json!(-1.0);
+        e.restore(&encode_envelope(&serde_json::to_vec(&edge).unwrap())).unwrap();
+        let mut legacy = good.clone();
+        let clip = legacy["tracks"][0]["clips"][0].as_object_mut().unwrap();
+        clip.remove("gain_db");
+        clip.remove("pan");
+        e.restore(&encode_envelope(&serde_json::to_vec(&legacy).unwrap()))
+            .unwrap();
+        assert!(clip_json(&mut e, 0, 0).get("gain_db").is_none());
+        assert!(clip_json(&mut e, 0, 0).get("pan").is_none());
     }
 
     #[test]

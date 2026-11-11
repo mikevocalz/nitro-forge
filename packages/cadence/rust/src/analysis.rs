@@ -11,6 +11,14 @@ use std::f64::consts::PI;
 pub const MAX_METER_WINDOWS: usize = 4096;
 /// Most spectrogram frames one call returns.
 pub const MAX_SPECTRO_FRAMES: usize = 2048;
+/// Most STFT frames `detect_beats` analyzes in one call.
+pub const MAX_BEAT_FRAMES: usize = 16384;
+/// Most onsets `detect_beats` reports in one call.
+pub const MAX_ONSETS: usize = 8192;
+/// Onsets closer than this are merged into the earlier one.
+const MIN_ONSET_SECONDS: f64 = 0.08;
+/// Fewer onsets than this cannot support a tempo estimate.
+const MIN_ONSETS_FOR_BPM: usize = 4;
 
 /// Round for the wire: meters do not need 17 significant digits.
 fn r6(v: f64) -> f64 {
@@ -268,6 +276,125 @@ pub fn spectrogram(mix: &Mixdown, sample_rate: u64, o: &SpectroOptions) -> Resul
         "bands_hz": centres,
         "hop_seconds": o.hop as f64 / sr,
         "frames": frames,
+    }))
+}
+
+/// Options for [`detect_beats`], validated by the op.
+pub struct BeatOptions {
+    pub fft_size: usize,
+    pub hop: usize,
+}
+
+/// Tempo estimate from the novelty envelope: the lag in 60..=240 BPM whose
+/// period best correlates the envelope with itself, reported back as BPM.
+/// `None` when the envelope is too short or perfectly uncorrelated.
+fn estimate_bpm(novelty: &[f64], sr: f64, hop: usize) -> Option<f64> {
+    if novelty.len() < 8 {
+        return None;
+    }
+    let mut best_score = 0.0f64;
+    let mut best_lag = 0usize;
+    let mut bpm = 60.0f64;
+    while bpm <= 240.0 {
+        let lag = ((sr * 60.0) / (bpm * hop as f64)).round() as usize;
+        if lag >= 2 && lag * 2 <= novelty.len() {
+            let mut sum = 0.0;
+            let mut count = 0usize;
+            for i in 0..novelty.len() - lag {
+                sum += novelty[i] * novelty[i + lag];
+                count += 1;
+            }
+            let score = sum / count as f64;
+            if score > best_score {
+                best_score = score;
+                best_lag = lag;
+            }
+        }
+        bpm += 0.5;
+    }
+    if best_lag == 0 {
+        None
+    } else {
+        // Report the BPM the winning lag actually measures, not the
+        // candidate that produced it (lags are integer frames).
+        Some((60.0 * sr / (best_lag as f64 * hop as f64) * 10.0).round() / 10.0)
+    }
+}
+
+/// `detectBeats` op body: spectral-flux onset detection over the mono
+/// master. Each STFT frame's positive magnitude difference against the
+/// previous frame sums into a novelty value; local maxima above
+/// mean + one standard deviation, separated by at least 80 ms, are onsets.
+/// `estimated_bpm` is the novelty autocorrelation peak in 60..=240 BPM,
+/// `null` with fewer than four onsets.
+pub fn detect_beats(mix: &Mixdown, sample_rate: u64, o: &BeatOptions) -> Result<Value, EngineError> {
+    let sr = sample_rate as f64;
+    let n = o.fft_size;
+    let mono: Vec<f64> = mix.master.l.iter().zip(&mix.master.r).map(|(a, b)| (a + b) * 0.5).collect();
+    let count = if mono.len() < n { 1 } else { (mono.len() - n) / o.hop + 1 };
+    if count > MAX_BEAT_FRAMES {
+        return Err(EngineError::validation(format!(
+            "range needs more than {MAX_BEAT_FRAMES} analysis frames; raise hop or shorten the range"
+        )));
+    }
+    let window: Vec<f64> = (0..n).map(|i| 0.5 - 0.5 * (2.0 * PI * i as f64 / n as f64).cos()).collect();
+    let mut novelty = Vec::with_capacity(count);
+    let mut prev = vec![0.0f64; n / 2];
+    let (mut re, mut im) = (vec![0.0; n], vec![0.0; n]);
+    for f in 0..count {
+        let start = f * o.hop;
+        for i in 0..n {
+            re[i] = mono.get(start + i).copied().unwrap_or(0.0) * window[i];
+            im[i] = 0.0;
+        }
+        fft(&mut re, &mut im);
+        let mut flux = 0.0;
+        for k in 1..=n / 2 {
+            let mag = (re[k] * re[k] + im[k] * im[k]).sqrt();
+            flux += (mag - prev[k - 1]).max(0.0);
+            prev[k - 1] = mag;
+        }
+        novelty.push(flux);
+    }
+    // Adaptive threshold: mean + one standard deviation of the flux.
+    let body = &novelty[1.min(novelty.len())..];
+    let mean = body.iter().sum::<f64>() / body.len().max(1) as f64;
+    let var = body.iter().map(|v| (v - mean) * (v - mean)).sum::<f64>() / body.len().max(1) as f64;
+    let threshold = mean + var.sqrt();
+    let min_gap = ((MIN_ONSET_SECONDS * sr) / o.hop as f64).round().max(1.0) as usize;
+    let mut onset_frames: Vec<usize> = Vec::new();
+    let mut last = usize::MAX;
+    for f in 1..count.saturating_sub(1) {
+        if novelty[f] > threshold
+            && novelty[f] >= novelty[f - 1]
+            && novelty[f] >= novelty[f + 1]
+            && (last == usize::MAX || f - last >= min_gap)
+        {
+            onset_frames.push(f);
+            last = f;
+            if onset_frames.len() > MAX_ONSETS {
+                return Err(EngineError::validation(format!(
+                    "range produced more than {MAX_ONSETS} onsets; shorten the range"
+                )));
+            }
+        }
+    }
+    let onsets_seconds: Vec<f64> = onset_frames
+        .iter()
+        .map(|&f| {
+            let t = (f * o.hop) as f64 / sr + n as f64 / (2.0 * sr);
+            (t * 1000.0).round() / 1000.0
+        })
+        .collect();
+    let estimated_bpm = if onset_frames.len() >= MIN_ONSETS_FOR_BPM {
+        estimate_bpm(&novelty, sr, o.hop)
+    } else {
+        None
+    };
+    Ok(json!({
+        "onsets_seconds": onsets_seconds,
+        "estimated_bpm": estimated_bpm,
+        "hop_seconds": o.hop as f64 / sr,
     }))
 }
 

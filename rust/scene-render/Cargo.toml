@@ -1,0 +1,22 @@
+[package]
+name = "scene-render"
+description = "Host-side deterministic CPU scene rasterizer for the P17 Track-B scene engine (B0 tier-1). NOT an Engine: no Journal, no snapshot format, no mutations."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "scene_render"
+path = "src/lib.rs"
+
+[[bin]]
+name = "scene-render"
+path = "src/main.rs"
+
+[dependencies]
+ignition-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# PNG encoding for render format:"png". Already in the workspace lock via
+# prism-engine's `png` dep; MIT OR Apache-2.0 — see THIRD_PARTY_NOTICES.md.
+png = "0.18"

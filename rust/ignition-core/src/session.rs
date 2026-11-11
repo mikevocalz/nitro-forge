@@ -74,6 +74,13 @@ mod tests {
         fn apply(&mut self, _cmd: Command) -> Result<CommandResult, EngineError> {
             Ok(CommandResult::empty())
         }
+        fn apply_batch(
+            &mut self,
+            _cmd: Command,
+            _ctx: Option<&crate::TaskContext>,
+        ) -> Result<CommandResult, EngineError> {
+            Err(EngineError::unsupported("__batch"))
+        }
         fn snapshot(&self) -> Result<Vec<u8>, EngineError> {
             Ok(vec![])
         }

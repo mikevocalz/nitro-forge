@@ -1,0 +1,17 @@
+$ vitest run --config ../../tooling/completion-backends.vitest.config.mjs packages/photo/tests
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/Users/mikevocalz/recovered-work/2026-11-05/forge-w26-ledger2[39m
+
+ [32m✓[39m packages/photo/tests/snapshot-ownership.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m packages/photo/tests/develop.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m packages/photo/tests/raw.e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 14157[2mms[22m[39m
+   [32m✓[39m raw-decode service e2e (real DNG → nf-raw → photo processPreview, macOS arm64) [2m(4)[22m
+     [33m[2m✓[22m[39m probe returns camera metadata for the fixture[33m 2096[2mms[22m[39m
+     [33m[2m✓[22m[39m decodePreview returns bounded straight-alpha RGBA8 within the processPreview budget[33m 5604[2mms[22m[39m
+     [33m[2m✓[22m[39m processDecodedPreview chains real decode into the engine and rejects stale recipes[33m 6351[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m14 passed[39m[22m[90m (14)[39m
+[2m   Start at [22m 19:26:12
+[2m   Duration [22m 14.40s[2m (tests 99%)[22m
+

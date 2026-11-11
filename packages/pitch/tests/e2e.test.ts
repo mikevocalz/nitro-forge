@@ -65,4 +65,367 @@ describe("pitch engine e2e (real Rust via nf-cli)", () => {
     expect(at.data.objects.some((x) => x.id === o)).toBe(true);
     await doc.close();
   });
+
+  it("speaker notes set/read/clear and persist through snapshots", async () => {
+    const doc = await PitchDocument.open(host, "Notes");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    expect((await doc.slideNotes(slide)).data.notes).toBeNull();
+    await doc.setNotes(slide, "remember the demo");
+    expect((await doc.slideNotes(slide)).data.notes).toBe("remember the demo");
+    const described = await doc.describe<any>();
+    expect(described.data.slides[0].notes).toBe("remember the demo");
+
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    expect((await re.slideNotes(slide)).data.notes).toBe("remember the demo");
+
+    await re.setNotes(slide, "");
+    expect((await re.slideNotes(slide)).data.notes).toBeNull();
+    await re.undo();
+    expect((await re.slideNotes(slide)).data.notes).toBe("remember the demo");
+    await expect(
+      re.setNotes(slide, "x".repeat(32769)),
+    ).rejects.toThrow();
+    await re.close();
+    await doc.close();
+  });
+
+  it("ink strokes persist through snapshots with undo and bounds", async () => {
+    const doc = await PitchDocument.open(host, "Ink");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    expect((await doc.slideInk(slide)).data.strokes).toEqual([]);
+
+    const strokeId = (
+      await doc.addInkStroke(slide, {
+        kind: "pen",
+        points: [
+          [10, 20],
+          [30, 40],
+        ],
+        width: 4,
+        color: [255, 0, 0, 200],
+      })
+    ).data.stroke_id;
+    await doc.updateInkStroke(slide, strokeId, {
+      kind: "highlighter",
+      width: 12,
+      opacity: 0.5,
+    });
+    const strokes = (await doc.slideInk(slide)).data.strokes;
+    expect(strokes).toHaveLength(1);
+    expect(strokes[0]!).toMatchObject({
+      id: strokeId,
+      kind: "highlighter",
+      width: 12,
+      opacity: 0.5,
+      points: [
+        [10, 20],
+        [30, 40],
+      ],
+    });
+    expect((await doc.describe<any>()).data.slides[0].ink).toHaveLength(1);
+
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    expect((await re.slideInk(slide)).data.strokes[0]!.id).toBe(strokeId);
+
+    await re.removeInkStroke(slide, strokeId);
+    expect((await re.slideInk(slide)).data.strokes).toEqual([]);
+    await re.undo();
+    expect((await re.slideInk(slide)).data.strokes).toHaveLength(1);
+    await re.clearInk(slide);
+    expect((await re.slideInk(slide)).data.strokes).toEqual([]);
+
+    await expect(
+      re.addInkStroke(slide, {
+        kind: "marker" as never,
+        points: [[0, 0]],
+        width: 1,
+        color: [0, 0, 0, 255],
+      }),
+    ).rejects.toThrow();
+    await expect(
+      re.addInkStroke(slide, {
+        kind: "pen",
+        points: [],
+        width: 1,
+        color: [0, 0, 0, 255],
+      }),
+    ).rejects.toThrow();
+    await re.close();
+    await doc.close();
+  });
+
+  it("slide transitions and rehearsal timing persist through snapshots", async () => {
+    const doc = await PitchDocument.open(host, "Transitions");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    expect((await doc.slideTransition(slide)).data.transition).toBeNull();
+    expect((await doc.slideTiming(slide)).data.timing).toBeNull();
+
+    await doc.setSlideTransition(slide, {
+      kind: "wipe",
+      duration_ms: 500,
+      direction: "left",
+    });
+    await doc.setSlideTiming(slide, { duration_ms: 45000, advance: "after" });
+    expect((await doc.slideTransition(slide)).data.transition).toEqual({
+      kind: "wipe",
+      duration_ms: 500,
+      direction: "left",
+    });
+    expect((await doc.slideTiming(slide)).data.timing).toEqual({
+      duration_ms: 45000,
+      advance: "after",
+    });
+    const described = await doc.describe<any>();
+    expect(described.data.slides[0].transition.kind).toBe("wipe");
+    expect(described.data.slides[0].timing.advance).toBe("after");
+
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    expect((await re.slideTransition(slide)).data.transition?.kind).toBe("wipe");
+    expect((await re.slideTiming(slide)).data.timing?.duration_ms).toBe(45000);
+
+    // kind "none" clears like clearSlideTransition; undo restores
+    await re.setSlideTransition(slide, { kind: "none" });
+    expect((await re.slideTransition(slide)).data.transition).toBeNull();
+    await re.undo();
+    expect((await re.slideTransition(slide)).data.transition?.kind).toBe("wipe");
+    await re.clearSlideTiming(slide);
+    expect((await re.slideTiming(slide)).data.timing).toBeNull();
+    await re.undo();
+    expect((await re.slideTiming(slide)).data.timing?.advance).toBe("after");
+
+    // bounds and hostile payloads reject without mutating
+    await expect(
+      re.setSlideTransition(slide, { kind: "fade", duration_ms: 0 }),
+    ).rejects.toThrow();
+    await expect(
+      re.setSlideTransition(slide, { kind: "melt" as never, duration_ms: 100 }),
+    ).rejects.toThrow();
+    await expect(
+      re.setSlideTiming(slide, { duration_ms: 3600001, advance: "manual" }),
+    ).rejects.toThrow();
+    await expect(
+      re.setSlideTiming(slide, { duration_ms: 1000, advance: "auto" as never }),
+    ).rejects.toThrow();
+    expect((await re.slideTransition(slide)).data.transition?.kind).toBe("wipe");
+    await re.close();
+    await doc.close();
+  });
+
+  it("shape presets add/read/persist/undo with stroke and bounds", async () => {
+    const doc = await PitchDocument.open(host, "Shapes");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    for (const kind of [
+      "rect", "roundedRect", "ellipse", "triangle", "diamond", "line", "arrow", "star",
+    ] as const) {
+      const id = (
+        await doc.addShape(slide, kind, 10, 20, 100, 50, [10, 20, 30, 255], {
+          width: 2.5,
+          color: [200, 100, 50, 128],
+        })
+      ).data.object_id;
+      const described = await doc.describe<any>();
+      const obj = described.data.slides[0].objects.find((o: any) => o.id === id);
+      expect(obj.kind).toBe(kind);
+      expect(obj.stroke).toEqual({ width: 2.5, color: [200, 100, 50, 128] });
+    }
+    // minimal payload omits fill/stroke
+    const bare = (
+      await doc.addShape(slide, "ellipse", 0, 0, 40, 40)
+    ).data.object_id;
+    const described = await doc.describe<any>();
+    const bareObj = described.data.slides[0].objects.find((o: any) => o.id === bare);
+    expect(bareObj.kind).toBe("ellipse");
+    expect(bareObj.fill).toBeUndefined();
+    expect(bareObj.stroke).toBeUndefined();
+
+    // bounds and hostile payloads reject without mutating
+    await expect(
+      doc.addShape(slide, "hexagon" as never, 0, 0, 1, 1),
+    ).rejects.toThrow();
+    await expect(
+      doc.addShape(slide, "ellipse", 0, 0, 1, 1, null, { width: 0, color: [0, 0, 0, 255] }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addShape(slide, "ellipse", 0, 0, 1, 1, [1, 2, 3] as never),
+    ).rejects.toThrow();
+
+    // persist through snapshot, undo removes the last add
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    const reDescribed = await re.describe<any>();
+    expect(
+      reDescribed.data.slides[0].objects.filter((o: any) => o.kind === "star"),
+    ).toHaveLength(1);
+    const star = reDescribed.data.slides[0].objects.find((o: any) => o.kind === "star");
+    expect(star.stroke.width).toBe(2.5);
+    await re.removeObject(slide, star.id);
+    expect(
+      (await re.describe<any>()).data.slides[0].objects.some((o: any) => o.id === star.id),
+    ).toBe(false);
+    await re.undo();
+    expect(
+      (await re.describe<any>()).data.slides[0].objects.some((o: any) => o.id === star.id),
+    ).toBe(true);
+    await re.close();
+    await doc.close();
+  });
+
+  it("connectors resolve, follow bound objects, persist and undo", async () => {
+    const doc = await PitchDocument.open(host, "Connectors");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    const a = (await doc.addRect(slide, 10, 20, 100, 50, [0, 0, 0, 255])).data.object_id;
+    const b = (await doc.addRect(slide, 300, 200, 80, 40, [0, 0, 0, 255])).data.object_id;
+    const connector = (
+      await doc.addConnector(
+        slide,
+        { type: "bound", object_id: a, side: "top" },
+        { type: "bound", object_id: b, side: "left" },
+      )
+    ).data.object_id;
+
+    const find = async () =>
+      (await doc.describe<any>()).data.slides[0].objects.find((o: any) => o.id === connector);
+    // top midpoint of A (60,20) to left midpoint of B (300,220)
+    expect((await find()).resolved.points).toEqual([[60, 20], [300, 220]]);
+    expect((await find()).connector.route).toBe("straight");
+
+    // bound endpoint follows the moved object
+    await doc.moveObject(slide, b, 500, 400);
+    expect((await find()).resolved.points).toEqual([[60, 20], [500, 420]]);
+
+    // elbow route + partial update
+    await doc.updateConnector(slide, connector, { route: "elbow", arrows: "end" });
+    expect((await find()).resolved.points).toEqual([
+      [60, 20], [280, 20], [280, 420], [500, 420],
+    ]);
+    await doc.updateConnector(slide, connector, { arrows: "start" });
+    expect((await find()).connector).toMatchObject({ route: "elbow", arrows: "start" });
+
+    // geometry ops refuse connectors; removing a bound target removes the connector
+    await expect(doc.moveObject(slide, connector, 0, 0)).rejects.toThrow();
+    await doc.removeObject(slide, a);
+    expect(
+      (await doc.describe<any>()).data.slides[0].objects.some((o: any) => o.id === connector),
+    ).toBe(false);
+    await doc.undo();
+    expect(
+      (await doc.describe<any>()).data.slides[0].objects.some((o: any) => o.id === connector),
+    ).toBe(true);
+
+    // bounds and hostile payloads reject without mutating
+    await expect(
+      doc.addConnector(slide, { type: "free", x: 0, y: 0 }, { type: "free", x: 0, y: 0 }, { route: "curved" as never }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addConnector(slide, { type: "bound", object_id: 99999, side: "top" }, { type: "free", x: 0, y: 0 }),
+    ).rejects.toThrow();
+    await expect(
+      doc.updateConnector(slide, connector, { to: { type: "bound", object_id: connector, side: "top" } }),
+    ).rejects.toThrow();
+    expect((await find()).connector.route).toBe("elbow");
+
+    // persist through snapshot with resolved geometry intact
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    const reConn = (await re.describe<any>()).data.slides[0].objects.find((o: any) => o.id === connector);
+    expect(reConn.kind).toBe("connector");
+    expect(reConn.connector.route).toBe("elbow");
+    expect(reConn.resolved.points).toHaveLength(4);
+    await re.close();
+    await doc.close();
+  });
+
+  it("media objects store bounded metadata, persist, and take geometry ops", async () => {
+    const doc = await PitchDocument.open(host, "Media");
+    const slide = (await doc.describe<any>()).data.slides[0].id;
+    const media = (
+      await doc.addMedia(slide, 10, 20, 320, 180, {
+        src: "https://cdn.example.com/clip.mp4",
+        kind: "video",
+        mime: "video/mp4",
+        poster: "https://cdn.example.com/poster.jpg",
+        fit: "cover",
+        volume: 0.5,
+        trim_in_ms: 500,
+        trim_out_ms: 9000,
+        autoplay: true,
+        loop: true,
+        muted: false,
+        show_controls: true,
+        hide_when_stopped: false,
+      })
+    ).data.object_id;
+    const find = async () =>
+      (await doc.describe<any>()).data.slides[0].objects.find((o: any) => o.id === media);
+    expect((await find()).kind).toBe("media");
+    expect((await find()).media).toMatchObject({
+      src: "https://cdn.example.com/clip.mp4",
+      kind: "video",
+      fit: "cover",
+      volume: 0.5,
+      trim_in_ms: 500,
+      trim_out_ms: 9000,
+      loop: true,
+    });
+
+    // partial update: null clears optionals, omitted fields preserve
+    await doc.updateMedia(slide, media, { volume: null, muted: true, trim_out_ms: 2000 });
+    const patched = (await find()).media;
+    expect(patched.volume).toBeUndefined();
+    expect(patched.muted).toBe(true);
+    expect(patched.trim_out_ms).toBe(2000);
+    expect(patched.src).toBe("https://cdn.example.com/clip.mp4");
+
+    // media has real bounds: geometry ops apply (unlike connectors)
+    await doc.moveObject(slide, media, 50, 60);
+    await doc.resizeObject(slide, media, 640, 360);
+    await doc.rotateObject(slide, media, 15);
+    const moved = await find();
+    expect(moved).toMatchObject({ x: 50, y: 60, w: 640, h: 360, rotation_deg: 15 });
+
+    // persist through snapshot and undo
+    const bytes = await doc.save();
+    const re = await PitchDocument.openSnapshot(host, bytes);
+    const reObj = (await re.describe<any>()).data.slides[0].objects.find((o: any) => o.id === media);
+    expect(reObj.kind).toBe("media");
+    expect(reObj.media.kind).toBe("video");
+    expect(reObj.media.trim_out_ms).toBe(2000);
+    await re.updateMedia(slide, media, { kind: "audio", src: "voice.mp3" });
+    expect((await re.describe<any>()).data.slides[0].objects.find((o: any) => o.id === media).media)
+      .toMatchObject({ kind: "audio", src: "voice.mp3" });
+    await re.undo();
+    expect((await re.describe<any>()).data.slides[0].objects.find((o: any) => o.id === media).media.kind)
+      .toBe("video");
+
+    // bounds and hostile payloads reject without mutating
+    await expect(
+      doc.addMedia(slide, 0, 0, 0, 10, { src: "a.mp4", kind: "video" }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addMedia(slide, 0, 0, 10, 10, { src: "a.mp4", kind: "image" as never }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addMedia(slide, 0, 0, 10, 10, { src: "", kind: "video" }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addMedia(slide, 0, 0, 10, 10, {
+        src: "a.mp4", kind: "video", trim_in_ms: 200, trim_out_ms: 100,
+      }),
+    ).rejects.toThrow();
+    await expect(
+      doc.addMedia(slide, 0, 0, 10, 10, { src: "a.mp4", kind: "video", volume: 1.5 }),
+    ).rejects.toThrow();
+    await expect(
+      doc.updateMedia(slide, media, { volume: -0.1 }),
+    ).rejects.toThrow();
+    await expect(
+      doc.updateMedia(slide, media, { fit: "fill" as never }),
+    ).rejects.toThrow();
+    expect((await find()).media.src).toBe("https://cdn.example.com/clip.mp4");
+    await re.close();
+    await doc.close();
+  });
 });

@@ -3,6 +3,16 @@ use super::*;
 use ignition_core::{base64_decode, base64_encode, TaskContext};
 const MAX_PIXELS: u64 = 1_048_576;
 const MAX_SIDE: u64 = 4096;
+/// Illuminant-temperature bounds for the declared blackbody approximation.
+const KELVIN_MIN: f64 = 2000.0;
+const KELVIN_MAX: f64 = 40000.0;
+/// Neutral reference illuminant; gains are normalized to exactly 1.0 here.
+const WB_REFERENCE_KELVIN: f64 = 6500.0;
+/// White-balance channel gains saturate inside the recipe's 0..8 gain budget.
+const WB_GAIN_MIN: f64 = 0.125;
+const WB_GAIN_MAX: f64 = 8.0;
+/// `tint` is bounded -1..=1 and scales the linear green gain by 1-0.5*tint.
+const TINT_GREEN_SCALE: f64 = 0.5;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Develop {
@@ -10,6 +20,15 @@ pub struct Develop {
     pub exposure_ev: f64,
     pub contrast: f64,
     pub rgb_gain: [f64; 3],
+    /// Optional scene illuminant temperature in Kelvin. Absent/null means no
+    /// white-balance correction. Additive schema-1 field: legacy recipes
+    /// deserialize to `None` and re-serialize byte-identically.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub temperature_kelvin: Option<f64>,
+    /// Optional green-magenta trim in -1..=1 applied to the linear green
+    /// channel gain (positive tint reduces green, i.e. magenta). Defaults 0.
+    #[serde(default, skip_serializing_if = "Develop::tint_is_zero")]
+    pub tint: f64,
 }
 impl Default for Develop {
     fn default() -> Self {
@@ -18,10 +37,15 @@ impl Default for Develop {
             exposure_ev: 0.0,
             contrast: 1.0,
             rgb_gain: [1.0; 3],
+            temperature_kelvin: None,
+            tint: 0.0,
         }
     }
 }
 impl Develop {
+    fn tint_is_zero(tint: &f64) -> bool {
+        *tint == 0.0
+    }
     pub(super) fn validate(&self) -> Result<(), EngineError> {
         if self.schema != 1
             || !self.exposure_ev.is_finite()
@@ -32,6 +56,11 @@ impl Develop {
                 .rgb_gain
                 .iter()
                 .any(|g| !g.is_finite() || !(0.0..=8.0).contains(g))
+            || self
+                .temperature_kelvin
+                .is_some_and(|k| !k.is_finite() || !(KELVIN_MIN..=KELVIN_MAX).contains(&k))
+            || !self.tint.is_finite()
+            || !(-1.0..=1.0).contains(&self.tint)
         {
             return Err(bad("unsupported or invalid develop recipe"));
         }
@@ -40,6 +69,52 @@ impl Develop {
     pub(super) fn is_identity(&self) -> bool {
         self == &Self::default()
     }
+    /// Per-channel white-balance gains in linear light, normalized so the
+    /// reference illuminant yields exactly [1,1,1]. This is a bounded
+    /// blackbody-ratio approximation inside the declared sRGB working space,
+    /// not an ICC/profile transform or a calibrated camera calibration.
+    pub(super) fn wb_gains(&self) -> [f64; 3] {
+        let mut gain = [1.0; 3];
+        if let Some(kelvin) = self.temperature_kelvin {
+            let reference = blackbody_rgb(WB_REFERENCE_KELVIN);
+            let illuminant = blackbody_rgb(kelvin);
+            for channel in 0..3 {
+                // The fit can dip near/below zero outside its stable region;
+                // clamp before dividing and saturate the resulting gain.
+                gain[channel] = (reference[channel] / illuminant[channel].max(1.0))
+                    .clamp(WB_GAIN_MIN, WB_GAIN_MAX);
+            }
+        }
+        if self.tint != 0.0 {
+            gain[1] *= (1.0 - TINT_GREEN_SCALE * self.tint).clamp(0.0, 2.0);
+        }
+        gain
+    }
+}
+/// sRGB blackbody approximation (Tanner Helland-style fit of the Planckian
+/// locus) returning 0..255-ish channel values for a Kelvin illuminant.
+/// Honest bounded approximation for white balance only; not a colorimetric
+/// conversion and not valid outside the declared 2000..=40000 K recipe range.
+fn blackbody_rgb(kelvin: f64) -> [f64; 3] {
+    let temp = kelvin / 100.0;
+    let red = if temp <= 66.0 {
+        255.0
+    } else {
+        329.698727446 * (temp - 60.0).powf(-0.1332047592)
+    };
+    let green = if temp <= 66.0 {
+        99.4708025861 * temp.ln() - 161.1195681661
+    } else {
+        288.1221695283 * (temp - 60.0).powf(-0.0755148492)
+    };
+    let blue = if temp >= 66.0 {
+        255.0
+    } else if temp <= 19.0 {
+        0.0
+    } else {
+        138.5177312231 * (temp - 10.0).ln() - 305.0447927307
+    };
+    [red, green, blue]
 }
 fn linear(value: u8) -> f64 {
     let value = f64::from(value) / 255.0;
@@ -161,6 +236,13 @@ impl PhotoEngine {
         }
         if !expected.is_identity() {
             let exposure = 2.0f64.powf(expected.exposure_ev);
+            let wb = expected.wb_gains();
+            // Linear-light per-channel scale: exposure, white balance, manual gain.
+            let scale = [
+                exposure * wb[0] * expected.rgb_gain[0],
+                exposure * wb[1] * expected.rgb_gain[1],
+                exposure * wb[2] * expected.rgb_gain[2],
+            ];
             for (index, pixel) in bytes.chunks_exact_mut(4).enumerate() {
                 if index % 4096 == 0 {
                     if let Some(ctx) = ctx {
@@ -169,7 +251,7 @@ impl PhotoEngine {
                     }
                 }
                 for channel in 0..3 {
-                    let value = linear(pixel[channel]) * exposure * expected.rgb_gain[channel];
+                    let value = linear(pixel[channel]) * scale[channel];
                     pixel[channel] = encoded((value - 0.18) * expected.contrast + 0.18);
                 }
                 // Straight alpha is retained byte-for-byte; hidden RGB is still processed.
@@ -202,6 +284,15 @@ mod tests {
             exposure_ev,
             contrast,
             rgb_gain,
+            temperature_kelvin: None,
+            tint: 0.0,
+        }
+    }
+    fn white_balance(temperature_kelvin: f64, tint: f64) -> Develop {
+        Develop {
+            temperature_kelvin: Some(temperature_kelvin),
+            tint,
+            ..recipe(0.0, 1.0, [1.0; 3])
         }
     }
     fn set(e: &mut PhotoEngine, develop: &Develop) {
@@ -317,6 +408,113 @@ mod tests {
         invalid["versions"]["version-2"]["develop"]["contrast"] = json!(-1);
         assert!(e
             .restore(&encode_envelope(&serde_json::to_vec(&invalid).unwrap()))
+            .is_err());
+        assert_eq!(e.snapshot().unwrap(), before);
+    }
+    #[test]
+    fn white_balance_kelvin_and_tint_process_actual_pixels() {
+        let mut e = fixture();
+        // 2500 K illuminant correction boosts blue; 10000 K warms toward red.
+        // 6500 K reference and tint 0 yield exactly neutral gains.
+        assert_eq!(white_balance(6500.0, 0.0).wb_gains(), [1.0, 1.0, 1.0]);
+        for (settings, input, expected) in [
+            (
+                white_balance(2500.0, 0.0),
+                vec![128, 128, 128, 255],
+                vec![128, 159, 227, 255],
+            ),
+            (
+                white_balance(10000.0, 0.0),
+                vec![128, 128, 128, 255],
+                vec![143, 137, 127, 255],
+            ),
+            (
+                white_balance(6500.0, 1.0),
+                vec![64, 128, 255, 0],
+                vec![64, 92, 255, 0],
+            ),
+            (
+                white_balance(2500.0, 0.5),
+                vec![200, 100, 50, 255],
+                vec![200, 109, 95, 255],
+            ),
+        ] {
+            set(&mut e, &settings);
+            let before = e.snapshot().unwrap();
+            let result = e.apply(command(&settings, input)).unwrap();
+            assert!(result.events.is_empty());
+            assert_eq!(result.output.unwrap(), expected);
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // Distinct recipes actually change pixels in the documented directions.
+        let identity = recipe(0.0, 1.0, [1.0; 3]);
+        set(&mut e, &identity);
+        let neutral = e.apply(command(&identity, vec![128, 128, 128, 255])).unwrap().output.unwrap();
+        set(&mut e, &white_balance(2500.0, 0.0));
+        let cool = e.apply(command(&white_balance(2500.0, 0.0), vec![128, 128, 128, 255])).unwrap().output.unwrap();
+        assert!(cool[2] > neutral[2] && cool[0] <= neutral[0]);
+        set(&mut e, &white_balance(10000.0, 0.0));
+        let warm = e.apply(command(&white_balance(10000.0, 0.0), vec![128, 128, 128, 255])).unwrap().output.unwrap();
+        assert!(warm[0] > neutral[0] && warm[2] < neutral[2]);
+    }
+    #[test]
+    fn white_balance_recipes_persist_validate_bounds_and_restore() {
+        let mut e = fixture();
+        let settings = white_balance(3200.0, -0.25);
+        set(&mut e, &settings);
+        let changed = e.snapshot().unwrap();
+        let mut reopened = PhotoEngine::new();
+        reopened.restore(&changed).unwrap();
+        assert_eq!(reopened.state.versions["version-2"].develop, settings);
+        // Equal write is a noop preserving redo; undo/redo round-trips the recipe.
+        let noop = e
+            .apply(Command::new(
+                "setDevelop",
+                json!({"id":"version-2","develop":settings}),
+            ))
+            .unwrap();
+        assert!(noop.events.is_empty());
+        assert!(e.undo().unwrap());
+        assert!(e.state.versions["version-2"].develop.is_identity());
+        assert!(e.redo().unwrap());
+        assert_eq!(e.state.versions["version-2"].develop, settings);
+        // Legacy recipes without the additive fields still restore as unset.
+        let legacy = json!({"schema":1,"exposure_ev":1.0,"contrast":2.0,"rgb_gain":[1.0,0.8,1.2]});
+        let parsed: Develop = serde_json::from_value(legacy.clone()).unwrap();
+        assert_eq!(parsed.temperature_kelvin, None);
+        assert_eq!(parsed.tint, 0.0);
+        assert_eq!(serde_json::to_value(&parsed).unwrap(), legacy);
+        // Explicit null kelvin deserializes to unset, matching absent.
+        let nulled: Develop =
+            serde_json::from_value(json!({"schema":1,"exposure_ev":0,"contrast":1,"rgb_gain":[1,1,1],"temperature_kelvin":null})).unwrap();
+        assert_eq!(nulled, Develop::default());
+        let before = e.snapshot().unwrap();
+        for invalid in [
+            json!({"schema":1,"exposure_ev":0,"contrast":1,"rgb_gain":[1,1,1],"temperature_kelvin":1999.0}),
+            json!({"schema":1,"exposure_ev":0,"contrast":1,"rgb_gain":[1,1,1],"temperature_kelvin":40001.0}),
+            json!({"schema":1,"exposure_ev":0,"contrast":1,"rgb_gain":[1,1,1],"temperature_kelvin":"warm"}),
+            json!({"schema":1,"exposure_ev":0,"contrast":1,"rgb_gain":[1,1,1],"tint":1.5}),
+            json!({"schema":1,"exposure_ev":0,"contrast":1,"rgb_gain":[1,1,1],"tint":-2}),
+            json!({"schema":1,"exposure_ev":0,"contrast":1,"rgb_gain":[1,1,1],"temperature_kelvin":6500,"unknown":1}),
+        ] {
+            assert!(e
+                .apply(Command::new(
+                    "setDevelop",
+                    json!({"id":"version-2","develop":invalid})
+                ))
+                .is_err());
+            assert_eq!(e.snapshot().unwrap(), before);
+        }
+        // Hostile restore rejects out-of-range white balance before mutation.
+        let mut hostile = serde_json::to_value(&*e.state).unwrap();
+        hostile["versions"]["version-2"]["develop"]["temperature_kelvin"] = json!(100.0);
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
+            .is_err());
+        hostile["versions"]["version-2"]["develop"]["temperature_kelvin"] = json!(6500);
+        hostile["versions"]["version-2"]["develop"]["tint"] = json!(3.0);
+        assert!(e
+            .restore(&encode_envelope(&serde_json::to_vec(&hostile).unwrap()))
             .is_err());
         assert_eq!(e.snapshot().unwrap(), before);
     }

@@ -6,8 +6,11 @@
 //! affine, control points are transformed (affine maps Béziers exactly), and
 //! paint is sampled by inverse-mapping pixel centers into content space.
 
+use ignition_core::EngineError;
+
 use crate::geom::Affine;
 use crate::model::{FillRule, LineCap, LineJoin, Node, NodeKind, Paint, Shape, ShapeKind, Stop, Stroke, Subpath};
+use crate::RenderTask;
 
 pub type Pt = (f64, f64);
 
@@ -140,7 +143,14 @@ fn inside(rule: FillRule, winding: i32) -> bool {
 }
 
 /// Anti-aliased fill coverage (0..=1 per pixel) of closed polygons.
-pub fn fill_coverage(polys: &[Polyline], rule: FillRule, w: usize, h: usize) -> Vec<f32> {
+/// Checkpoints every scanline when `task` has a context.
+pub fn fill_coverage(
+    polys: &[Polyline],
+    rule: FillRule,
+    w: usize,
+    h: usize,
+    task: &mut RenderTask,
+) -> Result<Vec<f32>, EngineError> {
     let mut cov = vec![0f32; w * h];
     let mut edges: Vec<(Pt, Pt)> = Vec::new();
     let (mut ymin, mut ymax) = (f64::INFINITY, f64::NEG_INFINITY);
@@ -160,14 +170,16 @@ pub fn fill_coverage(polys: &[Polyline], rule: FillRule, w: usize, h: usize) -> 
         }
     }
     if edges.is_empty() || w == 0 || h == 0 {
-        return cov;
+        return Ok(cov);
     }
     let r0 = ymin.floor().max(0.0) as usize;
     let r1 = (ymax.ceil().max(0.0) as usize).min(h);
     let weight = 1.0 / (SS * SS) as f32;
     let mut xs: Vec<(f64, i32)> = Vec::new();
     let max_k = (w * SS) as i64;
+    let rows = (r1 - r0).max(1) as f32;
     for row in r0..r1 {
+        task.tick(row - r0, 1, (row - r0) as f32 / rows)?;
         for sy in 0..SS {
             let y = row as f64 + (sy as f64 + 0.5) / SS as f64;
             xs.clear();
@@ -197,7 +209,7 @@ pub fn fill_coverage(polys: &[Polyline], rule: FillRule, w: usize, h: usize) -> 
             }
         }
     }
-    cov
+    Ok(cov)
 }
 
 /// Winding test of one point (hit-testing).
@@ -236,6 +248,7 @@ struct Raster<'a> {
     cov: &'a mut [f32],
     w: usize,
     h: usize,
+    ctx: Option<&'a ignition_core::TaskContext>,
 }
 
 impl Raster<'_> {
@@ -245,6 +258,14 @@ impl Raster<'_> {
         let px1 = (x1.ceil().max(0.0) as usize).min(self.w);
         let py1 = (y1.ceil().max(0.0) as usize).min(self.h);
         for py in py0..py1 {
+            // Coarse checkpoint per covered row. On cancellation `each`
+            // stops early; `stroke_coverage` re-checks at the end and
+            // propagates the error, so partial coverage is never used.
+            if let Some(c) = self.ctx {
+                if c.checkpoint().is_err() {
+                    return;
+                }
+            }
             for px in px0..px1 {
                 let c = f((px as f64 + 0.5, py as f64 + 0.5));
                 let slot = &mut self.cov[py * self.w + px];
@@ -465,15 +486,25 @@ fn dashes(pts: &[Pt], closed: bool, pattern: &[f64], offset: f64) -> Vec<Vec<Pt>
 }
 
 /// Anti-aliased stroke coverage. `width_scale` maps content stroke width
-/// to canvas pixels (the affine's mean scale).
-pub fn stroke_coverage(polys: &[Polyline], s: &Stroke, width_scale: f64, w: usize, h: usize) -> Vec<f32> {
+/// to canvas pixels (the affine's mean scale). Checkpoints between
+/// subpaths and inside coverage rasterization when `task` has a context.
+pub fn stroke_coverage(
+    polys: &[Polyline],
+    s: &Stroke,
+    width_scale: f64,
+    w: usize,
+    h: usize,
+    task: &mut RenderTask,
+) -> Result<Vec<f32>, EngineError> {
     let mut cov = vec![0f32; w * h];
     let hw = s.width * width_scale / 2.0;
-    let mut r = Raster { cov: &mut cov, w, h };
-    for p in polys {
+    let total = polys.len().max(1) as f32;
+    for (pi, p) in polys.iter().enumerate() {
+        task.tick(pi, 1, pi as f32 / total)?;
         if p.pts.is_empty() {
             continue;
         }
+        let mut r = Raster { cov: &mut cov, w, h, ctx: task.context() };
         if s.dash.is_empty() {
             stroke_piece(&mut r, &p.pts, p.closed && p.pts.len() > 2, hw, s);
         } else {
@@ -483,7 +514,10 @@ pub fn stroke_coverage(polys: &[Polyline], s: &Stroke, width_scale: f64, w: usiz
             }
         }
     }
-    cov
+    // `Raster::each` swallows cancellation to keep its signature; surface
+    // it here so a cancelled op never returns partial coverage.
+    task.checkpoint()?;
+    Ok(cov)
 }
 
 /// Distance-based stroke hit test.
@@ -583,7 +617,7 @@ mod tests {
 
     #[test]
     fn fill_square_exact_pixels() {
-        let c = fill_coverage(&[square(1.0, 1.0, 2.0)], FillRule::Nonzero, 4, 4);
+        let c = fill_coverage(&[square(1.0, 1.0, 2.0)], FillRule::Nonzero, 4, 4, &mut RenderTask::new(None, 0)).unwrap();
         assert_eq!(c[5], 1.0);
         assert_eq!(c[10], 1.0);
         assert_eq!(c[0], 0.0);
@@ -592,15 +626,15 @@ mod tests {
 
     #[test]
     fn fill_half_pixel_is_half_covered() {
-        let c = fill_coverage(&[square(0.5, 0.0, 1.0)], FillRule::Nonzero, 2, 1);
+        let c = fill_coverage(&[square(0.5, 0.0, 1.0)], FillRule::Nonzero, 2, 1, &mut RenderTask::new(None, 0)).unwrap();
         assert!((c[0] - 0.5).abs() < 1e-6 && (c[1] - 0.5).abs() < 1e-6, "{c:?}");
     }
 
     #[test]
     fn evenodd_punches_hole() {
         let polys = [square(0.0, 0.0, 6.0), square(2.0, 2.0, 2.0)];
-        let nz = fill_coverage(&polys, FillRule::Nonzero, 6, 6);
-        let eo = fill_coverage(&polys, FillRule::Evenodd, 6, 6);
+        let nz = fill_coverage(&polys, FillRule::Nonzero, 6, 6, &mut RenderTask::new(None, 0)).unwrap();
+        let eo = fill_coverage(&polys, FillRule::Evenodd, 6, 6, &mut RenderTask::new(None, 0)).unwrap();
         assert_eq!(nz[2 * 6 + 2], 1.0);
         assert_eq!(eo[2 * 6 + 2], 0.0);
         assert_eq!(eo[0], 1.0);
@@ -618,8 +652,8 @@ mod tests {
             dash: vec![],
             dash_offset: 0.0,
         };
-        let butt = stroke_coverage(&line, &mk(LineCap::Butt), 1.0, 10, 10);
-        let square = stroke_coverage(&line, &mk(LineCap::Square), 1.0, 10, 10);
+        let butt = stroke_coverage(&line, &mk(LineCap::Butt), 1.0, 10, 10, &mut RenderTask::new(None, 0)).unwrap();
+        let square = stroke_coverage(&line, &mk(LineCap::Square), 1.0, 10, 10, &mut RenderTask::new(None, 0)).unwrap();
         assert_eq!(butt[4 * 10 + 1], 0.0, "butt ends at x=2");
         assert_eq!(square[4 * 10 + 1], 1.0, "square cap extends by half width");
         assert_eq!(butt[4 * 10 + 5], 1.0);
@@ -637,7 +671,7 @@ mod tests {
             dash: vec![2.0, 2.0],
             dash_offset: 0.0,
         };
-        let c = stroke_coverage(&line, &s, 1.0, 12, 4);
+        let c = stroke_coverage(&line, &s, 1.0, 12, 4, &mut RenderTask::new(None, 0)).unwrap();
         assert_eq!(c[12 + 0], 1.0);
         assert_eq!(c[12 + 2], 0.0);
         assert_eq!(c[12 + 4], 1.0);
@@ -655,8 +689,8 @@ mod tests {
             dash: vec![],
             dash_offset: 0.0,
         };
-        let miter = stroke_coverage(&corner, &mk(LineJoin::Miter), 1.0, 10, 10);
-        let bevel = stroke_coverage(&corner, &mk(LineJoin::Bevel), 1.0, 10, 10);
+        let miter = stroke_coverage(&corner, &mk(LineJoin::Miter), 1.0, 10, 10, &mut RenderTask::new(None, 0)).unwrap();
+        let bevel = stroke_coverage(&corner, &mk(LineJoin::Bevel), 1.0, 10, 10, &mut RenderTask::new(None, 0)).unwrap();
         // Outer corner pixel (1,1) center (1.5,1.5).
         assert_eq!(miter[10 + 1], 1.0);
         assert!(bevel[10 + 1] < 1.0);
@@ -702,7 +736,7 @@ mod tests {
     fn ellipse_path_matches_area() {
         let s = Shape { kind: ShapeKind::Ellipse, x: 0.0, y: 0.0, w: 20.0, h: 20.0, fill: [0, 0, 0, 255] };
         let polys = flatten(&shape_to_subpaths(&s), &Affine::IDENTITY);
-        let c = fill_coverage(&polys, FillRule::Nonzero, 20, 20);
+        let c = fill_coverage(&polys, FillRule::Nonzero, 20, 20, &mut RenderTask::new(None, 0)).unwrap();
         let area: f32 = c.iter().sum();
         let expect = std::f32::consts::PI * 100.0;
         assert!((area - expect).abs() / expect < 0.01, "{area} vs {expect}");

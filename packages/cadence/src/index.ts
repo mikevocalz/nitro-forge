@@ -23,6 +23,9 @@ export const OPS = {
   removeClip: "removeClip",
   moveClip: "moveClip",
   resizeClip: "resizeClip",
+  splitClip: "splitClip",
+  setClipGain: "setClipGain",
+  setClipMute: "setClipMute",
   addNote: "addNote",
   removeNote: "removeNote",
   moveNote: "moveNote",
@@ -30,6 +33,7 @@ export const OPS = {
   setVelocity: "setVelocity",
   project: "project",
   render: "render",
+  renderStems: "renderStems",
   setTrackOutput: "setTrackOutput",
   setSend: "setSend",
   removeSend: "removeSend",
@@ -56,6 +60,7 @@ export const OPS = {
   meter: "meter",
   loudness: "loudness",
   spectrogram: "spectrogram",
+  detectBeats: "detectBeats",
 } as const;
 
 /** `bus` tracks sum source tracks routed or sent to them and hold no clips. */
@@ -138,6 +143,14 @@ export interface SpectrogramResult {
   hop_seconds: number;
   /** One row per hop, one dB value per band, floored at -120. */
   frames: number[][];
+}
+
+export interface BeatDetectionResult {
+  /** Onset times in seconds from the start of the range. */
+  onsets_seconds: number[];
+  /** Autocorrelation tempo estimate in BPM; null under four onsets. */
+  estimated_bpm: number | null;
+  hop_seconds: number;
 }
 
 export interface InsertPreset {
@@ -232,6 +245,22 @@ export class CadenceDocument {
   }
   resizeClip(id: number, lengthTicks: number) {
     return this.call(OPS.resizeClip, { id, length_ticks: lengthTicks });
+  }
+  /**
+   * Split a clip at an absolute timeline tick strictly inside it. The left
+   * half keeps the id; the right half gets a new id and copies gain/mute.
+   * Notes spanning the split are cut into two at the boundary.
+   */
+  splitClip(id: number, atTicks: number) {
+    return this.call<{ left_id: number; right_id: number }>(OPS.splitClip, { id, at_ticks: atTicks });
+  }
+  /** Clip gain in dB, -60..=12; scales every note the clip contributes. */
+  setClipGain(id: number, gainDb: number) {
+    return this.call(OPS.setClipGain, { id, gain_db: gainDb });
+  }
+  /** A muted clip contributes silence to the mix. */
+  setClipMute(id: number, muted: boolean) {
+    return this.call(OPS.setClipMute, { id, muted });
   }
   addNote(
     clip: number,
@@ -372,6 +401,18 @@ export class CadenceDocument {
       bands: options.bands,
     });
   }
+  /**
+   * Spectral-flux onset detection and a tempo estimate over the mono
+   * master. Read-only; `estimated_bpm` is null when fewer than four onsets
+   * are found. Same range bounds as the other analysis ops.
+   */
+  detectBeats(range: AnalysisRange, options: { fftSize?: number; hop?: number } = {}) {
+    return this.call<BeatDetectionResult>(OPS.detectBeats, {
+      ...analysisPayload(range),
+      fft_size: options.fftSize,
+      hop: options.hop,
+    });
+  }
   project() {
     return this.call<ProjectInfo>(OPS.project);
   }
@@ -388,6 +429,25 @@ export class CadenceDocument {
       samples: new Float32Array(base64ToBytes(r.data.samples_b64).buffer),
       frames: r.data.frames,
     };
+  }
+  /**
+   * Offline-render the range to per-track/bus stereo stems. Each stem is the
+   * track's post-fader output before it reaches the master, in document
+   * order; muted or silent tracks return zeroed stems. Same range and
+   * sample-rate bounds as `render`. Read-only.
+   */
+  async renderStems(fromTicks: number, toTicks: number, sampleRate = 44100) {
+    const r = await this.call<{ stems_b64: string; frames: number; stems: { id: number }[] }>(
+      OPS.renderStems,
+      { from_ticks: fromTicks, to_ticks: toTicks, sample_rate: sampleRate },
+    );
+    const all = new Float32Array(base64ToBytes(r.data.stems_b64).buffer);
+    const perStem = r.data.frames * 2;
+    const stems = r.data.stems.map((s, i) => ({
+      id: s.id,
+      samples: all.subarray(i * perStem, (i + 1) * perStem),
+    }));
+    return { stems, frames: r.data.frames, channels: 2 as const };
   }
   describe<T = unknown>() {
     return this.call<T>(OPS.describe);

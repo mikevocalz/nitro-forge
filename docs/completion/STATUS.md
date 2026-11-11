@@ -1,5 +1,9 @@
 # Completion status
 
+The remaining P02–P20 program is sequenced in [MEGAPLAN.md](MEGAPLAN.md).
+It records ground truth, worktree/subagent waves, dependency order and the
+lifted native/runtime review gate; it promotes no phase or acceptance field.
+
 P00 and P01 are complete. Fresh iOS/Android builds and native engine/edit/undo/reopen checks pass on both targets; see [P01](reports/P01.md) for provenance.
 
 P02 is in progress. Native task/cache/binary, checkpoint recovery, atomic edits,
@@ -104,7 +108,7 @@ After these checkpoints, the scoped preview TypeScript and completion validator 
 
 ## Intrinsic sizing and owned pixel processing (2026-11-07)
 
-`f125c05` adds actual Design fixed/hug/fill dependency evaluation, read-only capabilities and fixed transitions that freeze evaluated geometry. `10f820b` adds owned Motion raster assets/layers, actual Prism image rendering and legacy snapshot/describe compatibility. `073c9b9` adds persistent Photo recipes and real bounded sRGB preview processing with exact identity/recipe guards. The decoded-pixel pipeline is real, while original storage/RAW decoding, ICC/Kelvin controls and wider motion/design exits remain open.
+`f125c05` adds actual Design fixed/hug/fill dependency evaluation, read-only capabilities and fixed transitions that freeze evaluated geometry. `10f820b` adds owned Motion raster assets/layers, actual Prism image rendering and legacy snapshot/describe compatibility. `073c9b9` adds persistent Photo recipes and real bounded sRGB preview processing with exact identity/recipe guards. The decoded-pixel pipeline is real, while original storage/RAW decoding, ICC profile handling, lens/mask/tone-curve controls and wider motion/design exits remain open. Bounded Kelvin/tint white balance now persists and affects preview pixels as a declared sRGB blackbody approximation (see [the white-balance source report](reports/P10-photo-white-balance-source.md)).
 
 Review also fixed a shared decoder bug (`6949110`) that accepted non-ASCII input as zero bytes. Package test scripts and portable CI discovery now cover the new backend tests. The final local check set passes 54 Rust tests, 18 source/CLI tests, four focused binary FFI tests and preview TypeScript; see [discovery and interoperability](reports/backend-test-discovery.md). Remote CI and native targets remain separate. No platform/phase acceptance or consumer pin is promoted.
 
@@ -117,3 +121,132 @@ Focused local checks pass 123 office Rust tests (Quill 60, Pitch 34, Folio 29), 
 Quill's later marker checkpoint (`038dc87`) derives actual starts, continuation and mixed-context labels from its complete stored block read. NYC-Tron `ca90f80` admits explicit host markers through an advertised source capability; older installed controls retain the strict preview gate. Sixteen focused Quill tests and sixteen Tron office-model tests pass, with package/UI/public-slot typechecks passed. This is source integration, with no default consumer or release activation.
 
 Folio shape checkpoint `32f2b51` adds saved Square/Circle annotations and canonical rectangle/ellipse tool forwarding. Independent review identified minimum-PDF-version handling: older imported headers now upgrade with the shape edit and undo restores the original version, preserving newer headers/catalog metadata. All 31 Folio Rust tests, 15 TS tests and package typecheck pass. See [shape source report](reports/P15-shape-annotations-source.md); renderer placement and viewer/native acceptance remain open.
+
+## folio-render pdfium admission executed (2026-11-12)
+
+The P15 PDF backend decision is now executed as a documented admission in [P15-folio-render-admission](reports/P15-folio-render-admission.md): pdfium via `pdfium-render` remains the primary render/text backend with hayro as the WASM/pure-Rust hedge. License facts were re-verified (pdfium BSD-3-Clause with shipped third-party notices; `pdfium-render` 0.9.5 MIT/Apache-2.0; hayro 0.9.0 Apache-2.0/MIT, MSRV 1.92/edition 2024). A /tmp-only spike extracted the `chromium/8138` mac-arm64 `libpdfium.dylib`: clean system-framework linkage and 112 `FPDF_*` exports confirmed on this dev host; no artifact committed. The report proposes a `rust/folio-render` host-service crate boundary (not an Engine, preserving the I/O-free contract), an in-process runtime-bound FFI worker, a proposed `open`/`renderPage`/`textPage`/`search`/`pageInfo` op contract mapped to K-01–K-21 rows, license-notice obligations, and security/input-bound notes. All non-dev-host builds remain NOT-RUN; no crate, dependency or platform acceptance was added.
+
+## folio-render first implementation slice (2026-11-12, `codex/w5-folio-r`)
+
+The admitted `folio-render` host service is implemented in `rust/folio-render` (workspace member): pdfium via `pdfium-render` 0.9.5 (`pdfium_8125` bindings feature) runtime-bound to a never-committed `libpdfium.dylib`, JSON-lines ops `open`/`renderPage`/`textPage`/`search`/`pageInfo`/`close`/`describe` over engine save bytes, fail-closed bounds per the admission record, and the `folio-render` binary plus `@nitro-forge/folio/render` TS adapter (`FolioRenderService`). `FOLIO_DEFERRED_OPS` no longer lists `renderPage`/`textPositions`; the op contract is recorded in `docs/ENGINE_OPS.md` §folio-render service. Verified on this macOS arm64 host: 6 Rust tests against the real chromium/8138 dylib and 5 vitest e2e driving `FolioDocument.savePdf` bytes through the binary (44 folio vitest total; folio-engine unchanged at 149). iOS/Android/Linux/Windows/WASM remain NOT-RUN; the pdfium binary is resolved via `FOLIO_PDFIUM_LIBRARY`/`FOLIO_PDFIUM_DIR`/`rust/folio-render/lib/` with tarball+ dylib SHA-256 recorded in `rust/folio-render/README.md`. No phase or platform acceptance is promoted.
+
+## Consuming-app adoption for photo/motion/design/draft (2026-11-07, `codex/w14-consumers`)
+
+The four newer engines are now exercised by real consuming apps, closing the
+activation gap noted in earlier checkpoints. `apps/console` demos all 11
+engines end-to-end through nf-cli (photo catalog/develop preview, motion
+composition evaluate/render, design layout, draft profiles — each with
+undo/redo and snapshot reopen; 28/28 checks, failures now exit non-zero).
+`STUDIOS` gains `photo`/`motion`/`design`/`draft` with app manifests, workspace
+icons, read-only `ForgeDocumentStage` projections and shared `EditorConfig`s
+in `apps/example` (also consumed by `apps/studio-preview`), matching the
+existing generic folio/pitch adoption pattern — no new UI framework or
+dedicated canvas surfaces were added. The studio-preview `/api/engine` bridge
+verification now covers all 11 kinds (draft `source_revision` normalized as
+non-undo state). The Nitro kind boundary already carried tags 7–10; no spec
+regeneration or Rust changes were needed. Dedicated editing surfaces, native/
+device acceptance and any P10–P19 phase promotion remain open; see the ROSTER
+section of the same name for exact commands and results.
+
+## nf-color ICC provider first slice (2026-11-08, `codex/w20-nf-color`)
+
+The P07 ICC color-management decision is now executed as a host-side provider
+crate `rust/nf-color` (workspace member, same non-engine contract class as
+`nf-raw`/`folio-render`: no Journal, no snapshot, no document I/O). It wraps
+moxcms `=0.8.1` — the exact version already in `Cargo.lock` via image 0.25 —
+with the `extended_range` feature enabled for gamut measurement. v1 scope per
+the decision record: bounded ICC parsing (`MAX_PROFILE_BYTES` 8 MiB plus
+moxcms CLUT/TRC caps; hostile/mutated-profile rejection tested), built-in
+sRGB/Display-P3/Rec.2020/AdobeRGB/ProPhoto profiles, RGB/RGBA/CMYK/Gray buffer
+transforms under all four rendering intents, chained soft-proof
+(doc → proof → display), and gamut measurement by f32 out-of-range detection
+plus a round-trip delta cross-check (approximation of `cmsFLAGS_GAMUTCHECK`;
+method and thresholds are part of the `GamutReport` contract). Real ICC
+fixtures are vendored under `tests/fixtures/` with per-file provenance in
+`rust/nf-color/THIRD_PARTY_NOTICES.md`. Verified on this dev host:
+`cargo test -p nf-color` 21 pass, `cargo build --workspace` clean; evidence
+log `docs/completion/evidence/w20-cargo-test-nf-color.log`. NOT done: no
+JSON-lines host protocol, no WASM/bundle-size measurement, no ICC-aware PNG
+encode, no spot/ink model; engine crates untouched and `prism-engine` keeps
+`rgba8-straight-sRGB` as its working space. No phase or platform acceptance
+is promoted.
+
+## raw-decode service first slice (2026-11-08, `codex/w24-raw-wiring`)
+
+The P10 RAW product admission's deferred host-wiring step now exists as
+`rust/raw-decode`, a non-engine JSON-lines service in the
+`folio-render`/`splice-render`/`nf-raw` provider family: ops `probe`,
+`decodePreview`, `jobStatus`, `cancelJob`, `describe` run
+`nf_raw::probe`/`nf_raw::decode_preview` on a single dedicated LibRaw
+worker thread (the admission's single-worker rule) with bounded jobs
+(≤8 live, ≤256 MiB queued input) and cooperative `AtomicBool`
+cancellation at LibRaw callback boundaries. The `@nitro-forge/photo` TS
+surface gains `RawDecodeService` (spawn adapter, `RAW_DECODE` env,
+default `target/debug/raw-decode`) and `processDecodedPreview`, the
+admitted chain original bytes → bounded RGBA8 →
+`PhotoDocument.processPreview`, whose existing identity/recipe guards
+reject stale decodes. No engine crate, op name, snapshot format or
+`components.json`/`ENGINE_OPS.md` row changed; `asset_ref` resolution and
+original-byte retention remain unimplemented host concerns, and decoded
+output is preview-quality (no ICC/develop pipeline). Verified on this dev
+host (macOS arm64): `cargo test -p raw-decode` 11 pass plus the ignored
+real-fixture test pass against the CC0 Pentax K-7 DNG
+(`NF_RAW_TEST_FIXTURE`, sha256 `f441c366…c92386`);
+`pnpm --filter @nitro-forge/photo test` 14 pass including 4 raw.e2e
+tests that drive the real binary into the real engine (identity develop
+byte-equal, stale recipe rejected); `cargo build -p nf-cli` and photo
+`tsc --noEmit` clean. iOS/Android/visionOS/Quest/PICO/Linux/Windows/WASM
+remain NOT-RUN per the admission; CDDL source-offer mechanics for shipped
+binaries are still open. No phase or platform acceptance is promoted.
+
+## scene-render tier-1 CPU rasterizer (2026-11-13, `codex/w25-draft-trackb`)
+
+The P17 Track-B B0 decision's first buildable slice now exists as
+`rust/scene-render`, a non-engine JSON-lines host service in the
+`folio-render`/`raw-decode` provider family: ops `render`/`describe`
+consume a canonical scene description (world-space f32le/u32le binary
+attributes, PBR-state materials, named RGBA8 textures by content,
+perspective/orthographic cameras) and return deterministic RGBA8/PNG.
+The rasterizer is fixed-order pure Rust — view-space near/far clipping,
+perspective-correct barycentric interpolation, z-buffer, backface
+culling, per-pixel Lambert + Blinn-Phong + ambient + emission,
+nearest/bilinear texture sampling, sRGB at the boundaries — the only
+parity-claimable path per the B0 decision; the wgpu tier stays
+deferred and display-only. Bounds are fail-closed (≤4096 px/side,
+≤32 MiB output, ≤1M triangles, ≤64 MiB textures, ≤256 MiB frames).
+The scene engine itself (tag 11) is NOT built — it remains an open B0
+sign-off; no engine crate, op name, snapshot format or
+`components.json`/`ENGINE_OPS.md` engine row changed (ENGINE_OPS.md
+gains a "NOT an Engine" service section). Verified on this dev host
+(macOS arm64): `cargo test -p scene-render` 11 pass incl. real renders,
+determinism and hostile bounds; `cargo build --workspace` clean;
+draft vitest unchanged. iOS/Android/WASM/Windows NOT-RUN; no TS
+adapter exists yet (no `packages/scene`). No phase or platform
+acceptance is promoted. See
+`docs/completion/reports/P17-scene-render-tier1.md`.
+
+## scene-engine tag 11 first slice (2026-11-08, `codex/w27-scene-engine`)
+
+The P17 Track-B B0 decision's engine half now exists: `packages/scene/rust`
+implements `ignition_core::Engine` as `EngineKind::Scene` (tag 11, after
+Draft10), registered in `nf-cli`, `nf-sys`, the batch all-kind cases, the
+TypeScript `EngineKind` unions and the NFC1/NCC1 persisted tag maps. Per
+the B0 split the engine owns document state only — scene graph nodes
+(`group`/`layer`/`mesh`/`camera`/`light`, TRS transforms, acyclic parent
+graphs), PBR-state materials matching the scene-render model, custom
+base64 mesh attributes and deterministic primitives, bounded Journal
+undo and NFD1 snapshots — while rendering stays host-side: `renderFrame`
+emits the canonical scene-render `render` payload (world-space meshes,
+re-indexed materials, resolved camera/lights, host-supplied texture
+pixels) and never rasterizes. Ops are documented in `docs/ENGINE_OPS.md`;
+the TypeScript wrapper `@nitro-forge/scene` and a console demo section
+cover the real nf-cli path. Verified on this dev host (macOS arm64):
+`cargo test -p scene-engine` 16 pass (incl. renderFrame output rendered
+by the real scene-render service), `cargo test -p nf-sys` 28 pass,
+`cargo build -p nf-cli` clean, `pnpm --filter @nitro-forge/scene test`
+3 pass, `pnpm --filter @nitro-forge/scene typecheck` clean,
+`pnpm --filter @nitro-forge/console demo` 34/34. Deferred per B0:
+node-material DAG, UV packing, glTF/OBJ import, wgpu tier,
+shadows/IBL/transparency; iOS/Android/WASM/Windows NOT-RUN. No phase or
+platform acceptance is promoted. Branch `codex/w27-scene-engine` is
+committed, not merged.

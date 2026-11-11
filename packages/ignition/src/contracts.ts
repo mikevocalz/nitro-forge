@@ -1,7 +1,7 @@
 /** Engine identifiers are shared with the existing Ignition command registry. */
 export type ForgeEngineKind =
   | "prism" | "cadence" | "splice" | "folio"
-  | "pitch" | "tally" | "quill" | "photo" | "motion" | "design" | "draft";
+  | "pitch" | "tally" | "quill" | "photo" | "motion" | "design" | "draft" | "scene";
 
 /**
  * Nitro v1 supports named native structs. The current Rust engine payload

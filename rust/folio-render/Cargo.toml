@@ -1,0 +1,24 @@
+[package]
+name = "folio-render"
+description = "Host-side read-only PDF render/text service for Folio (pdfium via pdfium-render runtime bindings). NOT an Engine: no Journal, no snapshot format, no mutations."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "folio_render"
+path = "src/lib.rs"
+
+[[bin]]
+name = "folio-render"
+path = "src/main.rs"
+
+[dependencies]
+ignition-core = { workspace = true }
+pdfium-render = { version = "0.9.5", features = ["pdfium_8125"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# PNG encoding for renderPage format:"png". pdfium-render pulls image 0.25
+# with only the jpeg feature; this direct dep unifies the same crate
+# version with the png codec enabled.
+image = { version = "0.25", default-features = false, features = ["png"] }

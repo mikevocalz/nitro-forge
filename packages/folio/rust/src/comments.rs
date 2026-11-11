@@ -371,7 +371,7 @@ fn entry(n: &Node) -> Value {
     }
     v
 }
-fn references_removed(
+pub(super) fn references_removed(
     object: &Object,
     remove: &BTreeSet<ObjectId>,
     depth: usize,
@@ -412,6 +412,7 @@ fn references_removed(
 }
 impl FolioEngine {
     pub(super) fn op_list_comment_threads(&self, p: &Value) -> Result<CommandResult, EngineError> {
+        reject_encrypted(&self.doc, "comment thread listing")?;
         let page = self.page_id(req_u64(p, "page")?)?;
         let graph = Graph::read(&self.doc, page)?;
         let review_author = match p.get("review_author") {
@@ -464,6 +465,7 @@ impl FolioEngine {
         p: &Value,
         review: bool,
     ) -> Result<CommandResult, EngineError> {
+        reject_encrypted(&self.doc, "comment reply/review")?;
         let page = self.page_id(req_u64(p, "page")?)?;
         let graph = Graph::read(&self.doc, page)?;
         let root = graph.target(req_u64(p, "id")?)?;
@@ -523,6 +525,7 @@ impl FolioEngine {
         &mut self,
         p: &Value,
     ) -> Result<CommandResult, EngineError> {
+        reject_encrypted(&self.doc, "annotation deletion")?;
         let page = self.page_id(req_u64(p, "page")?)?;
         let graph = Graph::read(&self.doc, page)?;
         let target = graph.target(req_u64(p, "id")?)?;
