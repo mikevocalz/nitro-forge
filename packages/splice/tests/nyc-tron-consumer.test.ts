@@ -1,9 +1,9 @@
 // Consumer contract against the NYC-Tron release pinned in package.json
-// (v0.1.0-alpha.4). Type-only imports: the adapter's runtime never loads
+// (v1.0.0-rc.1). Type-only imports: the adapter's runtime never loads
 // @nyc-tron/*, React or React Native. `pnpm --filter @nitro-forge/splice
 // typecheck` checks the assignments below; vitest checks the pin itself.
 //
-// Alpha.4 includes timeline cluster 2. The full recovered cluster contract
+// The pinned release includes timeline cluster 2. The full recovered cluster contract
 // is checked against installed release declarations by verify:released-ui.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -23,10 +23,10 @@ export const rateFits = (r: TronFrameRate): FrameRate => r;
 export const clipFits = (c: TimelineClipView): TimelineClipLaneProps["tracks"][number]["clips"][number] => c;
 
 describe("NYC-Tron pin", () => {
-  it("installs @nyc-tron/ui as a dev-only dependency from the alpha.4 release tarball", () => {
+  it("installs @nyc-tron/ui as a dev-only dependency from the pinned release tarball", () => {
     const manifest = JSON.parse(readFileSync(join(import.meta.dirname, "../package.json"), "utf8"));
     expect(manifest.devDependencies["@nyc-tron/ui"]).toBe(
-      "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v0.1.0-alpha.4/nyc-tron-ui-0.1.0-alpha.4.tgz",
+      "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-ui-1.0.0-rc.1.tgz",
     );
     expect(manifest.dependencies?.["@nyc-tron/ui"]).toBeUndefined();
   });
