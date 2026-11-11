@@ -1,0 +1,61 @@
+{
+  "name": "@nitro-forge/board",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone native QuickDraw-compatible whiteboard/canvas renderer for Nitro-Forge",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "imports": {
+    "#nitro/*": "./nitrogen/generated/shared/javascript/*.cjs"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./native": "./src/native.ts",
+    "./specs/*": "./src/specs/*.nitro.ts"
+  },
+  "files": [
+    "src",
+    "android",
+    "nitro.json",
+    "nitrogen",
+    "react-native.config.js",
+    "README.md"
+  ],
+  "scripts": {
+    "codegen": "nitrogen",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:android": "cd android && ./gradlew testDebugUnitTest"
+  },
+  "dependencies": {
+    "@quickdrawjs/core": "0.2.0",
+    "zustand": "^5.0.16"
+  },
+  "peerDependencies": {
+    "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "react": ">=19.0.0",
+    "react-native": ">=0.88.0",
+    "@reactvision/react-viro": ">=3.0.3-moyo.1 <4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@reactvision/react-viro": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "nitro-core": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "nitrogen": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "react-native-nitro-modules": "1.0.0-alpha.nightly.120.g33ef045b96c0",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.7"
+  }
+}

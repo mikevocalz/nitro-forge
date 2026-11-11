@@ -1,0 +1,75 @@
+buildscript {
+  repositories { google(); mavenCentral() }
+  dependencies { classpath "com.android.tools.build:gradle:9.3.1" }
+}
+
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+apply from: "../nitrogen/generated/android/NitroForgeBoard+autolinking.gradle"
+
+def getExtOrDefault(name, fallback) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : fallback
+}
+
+// No Viro assets are bundled. Consumer's Viro AAR supplies CanvasSurfaces;
+// this is a compile-only dependency, and runtime checks gate missing APIs.
+def viroAndroidDir = null
+try {
+  viroAndroidDir = new File(
+    providers.exec {
+      workingDir(rootProject.projectDir)
+      commandLine("node", "--print",
+        "require('path').dirname(require.resolve('@reactvision/react-viro/package.json')) + '/android'")
+    }.standardOutput.asText.get().trim()
+  )
+} catch (Exception e) {
+  logger.warn("[forge-board] Viro package unresolved; current Android XR renderer requires it: ${e.message}")
+}
+
+android {
+  namespace "com.margelo.nitro.forgeboard"
+  ndkVersion getExtOrDefault("ndkVersion", "27.2.12479018")
+  compileSdkVersion getExtOrDefault("compileSdkVersion", 36)
+
+  defaultConfig {
+    minSdkVersion Math.max(getExtOrDefault("minSdkVersion", 26).toInteger(), 26)
+    targetSdkVersion getExtOrDefault("targetSdkVersion", 36)
+    externalNativeBuild {
+      cmake {
+        cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+      }
+    }
+  }
+
+  externalNativeBuild { cmake { path "CMakeLists.txt" } }
+  buildFeatures { buildConfig true; prefab true }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  packagingOptions {
+    excludes += [
+      "**/libc++_shared.so", "**/libNitroModules.so", "**/libfbjni.so",
+      "**/libjsi.so", "**/libreactnative.so"
+    ]
+  }
+}
+
+repositories { google(); mavenCentral() }
+dependencies {
+  implementation "com.facebook.react:react-android"
+  implementation project(":react-native-nitro-modules")
+  testImplementation "junit:junit:4.13.2"
+  testImplementation "org.json:json:20250517"
+
+  if (viroAndroidDir != null) {
+    def a = new File(viroAndroidDir, "react_viro/react_viro-release.aar")
+    if (a.exists()) {
+      compileOnly files(zipTree(a).matching { include "classes.jar" })
+    } else {
+      logger.warn("[forge-board] No react_viro AAR at ${a}; native Kotlin compile requires CanvasSurfaces")
+    }
+  }
+}
