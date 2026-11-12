@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "product": "nitro-forge",
+  "gateSet": "v1",
+  "updatedAt": "2026-11-11",
+  "baseCommit": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+  "source": "Track F gates F1 to F9 of the owner's NYC-Tron UI 1.0.0 and Nitro Forge v1 program (revision 3, 2026-11-11). Acceptance text is copied from it unchanged. References to §2.5, §3.3, §4 and §5 point at that program; F1 carries its §5 Forge rows below, and F8.1 moves §2.5 into design/DIRECTION.md.",
+  "evidenceRule": "Evidence rule for every gate: implement, capture evidence with date and commit in its path, have the reviewer inspect the actual result, and only then change status. A file existing does not prove the claim inside it.",
+  "statusValues": ["not-started", "in-progress", "blocked", "not-run", "passed"],
+  "passedRequires": "status passed needs an evidence path that exists in this repository, the full 40-character commit the evidence was captured at, the signing reviewer and the review date. tooling/validate-v1.mjs enforces this.",
+  "gates": [
+    {
+      "id": "F1",
+      "title": "Packages updated",
+      "owner": "F1",
+      "reviewerRole": "R2",
+      "acceptance": [
+        "§5 table done; build, typecheck, `cargo test --locked --workspace`, package suites and all 22 workflows pass on the new graph."
+      ],
+      "versionBaseline": {
+        "checked": "2026-11-11 against npm",
+        "rule": "Updating packages is a requirement. Every Bump lands; every Hold gets a one-line reason in the support or compatibility document. Then run `pnpm outdated -r` and dispose of every remaining item the same way.",
+        "rows": [
+          { "dependency": "Nitro v1 alpha", "pinned": "nightly.120", "latest": "nightly.136 (`alpha-nightly`)", "action": "Bump; regenerate bindings; run native suites" },
+          { "dependency": "pnpm", "pinned": "12.16.1", "latest": "12.18.0", "action": "Bump" },
+          { "dependency": "expo", "pinned": "58.0.23", "latest": "58.0.24", "action": "Bump" },
+          { "dependency": "expo-router", "pinned": "58.0.30", "latest": "58.0.31", "action": "Bump" },
+          { "dependency": "@expo/ui", "pinned": "^58.0.0", "latest": "58.0.28", "action": "Refresh lockfile to latest 58" },
+          { "dependency": "react", "pinned": "19.3.0 and 19.3.1 mixed", "latest": "19.3.1", "action": "Unify on 19.3.1" },
+          { "dependency": "uniwind", "pinned": "1.13.1 and 1.13.2 mixed", "latest": "1.13.2", "action": "Unify on 1.13.2" },
+          { "dependency": "react-native-gesture-handler", "pinned": "3.4.0", "latest": "3.5.0", "action": "Bump" },
+          { "dependency": "turbo", "pinned": "2.11.10", "latest": "2.11.11", "action": "Bump" },
+          { "dependency": "react-native", "pinned": "0.88.1", "latest": "0.88.1", "action": "Current. Hold 0.89" },
+          { "dependency": "react-native-reanimated, worklets, audio-api, vitest, typescript", "pinned": "4.7.1, 0.13.1, 1.0.0, 5.1.0, 7.0.2", "latest": "same", "action": "Current" },
+          { "dependency": "Rust crates", "pinned": "`Cargo.lock`", "latest": "—", "action": "`cargo update`, `cargo audit`, full `cargo test --locked --workspace`" }
+        ]
+      },
+      "status": "not-started",
+      "statusReason": "No dependency bump has landed on master at 0ad4ed2: package.json still pins turbo 2.11.10 and pnpm 12.16.1. The 22 workflows have not run on an updated graph.",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "F2",
+      "title": "Tron pin",
+      "owner": "F1",
+      "reviewerRole": "R2",
+      "acceptance": [
+        "Repin to Tron `rc.2` when it exists and to `1.0.0` when it exists. Each repin updates `tooling/nyc-tron.json` and every `@nyc-tron` reference, regenerates lockfiles, runs `verify-nyc-tron-pin.mjs --download`, typechecks the wired rows and runs their tests. Forge v1 does not ship pinned to a prerelease."
+      ],
+      "status": "blocked",
+      "statusReason": "Neither Tron v1.0.0-rc.2 nor v1.0.0 exists (gh release list on mikevocalz/NYC-Tron-UI, 2026-11-11: latest is v1.0.0-rc.1). tooling/nyc-tron.json pins v1.0.0-rc.1.",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "F3",
+      "title": "Deferred rows",
+      "owner": "F3",
+      "reviewerRole": "R2",
+      "acceptance": [
+        "Three rows are open in `docs/NYC_TRON_UI_HANDOFF.md`:",
+        "- Pivot field list: the filter zone needs at least one value, which the component does not provide.",
+        "- Beat marker lane: no engine parameter for its sensitivity control.",
+        "- Blend and opacity: no engine op for its premultiplied-alpha option.",
+        "Each needs a component change in Tron or a new engine op in Forge. That is a design decision. For each, write a one-page proposal with both options, the API change, and the test, then stop and report. Implement after the owner chooses. A component change goes into Tron before `rc.2`."
+      ],
+      "status": "not-started",
+      "statusReason": "No proposal exists in the repository at 0ad4ed2, and the owner has made none of the three choices.",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "F4",
+      "title": "App identity and rebranding",
+      "owner": "F4",
+      "reviewerRole": "R2",
+      "acceptance": [
+        "1. Apply gate T3 to every Forge app using Tron's check: icon set, full name, short launcher name, bundle identifier and Android package. Fix \"forge-media-controls-lab\" and give both labs identifiers.",
+        "2. Each studio has its own icon, drawn as one family in the §2.5 spirit: shared grid, shared construction, one distinguishing form and colour per studio, so the set reads as one suite on a home screen. Run §3.3 on the icon family, with the §2.2 icon designers as the bar. Test at 16, 32, 60 and 1024 pixels.",
+        "3. Studios are separately installable and rebrandable by a name replace. Put product name, short name, identifiers and icon paths in one brand manifest per studio that config plugins read. A rebrand test replaces the name and proves the app builds with no old name left in the app label, title bar, About screen or bundle metadata."
+      ],
+      "status": "not-started",
+      "statusReason": "No app configures an icon, the media lab still uses a slug as its display name and both labs lack identifiers. Tron's launcher-label check (gate T3) does not exist yet.",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "F5",
+      "title": "Desktop target and window chrome",
+      "owner": "F5",
+      "reviewerRole": "R1",
+      "acceptance": [
+        "1. ADR and owner decision: which studios get a desktop build for v1. Default proposal: the suite app and one studio on macOS through Spark, since Tron's AppKit lane already runs there; Windows after.",
+        "2. Use Tron's window title bar from T2, themed by Forge's tokens so drawn controls follow the §2.5 radius rule. Document windows get the document name in the title bar, an edited indicator, and a close guard for unsaved changes wired to the Ignition journal.",
+        "3. Menus and shortcuts through Spark's menu and shortcut modules, mapped to the same commands the toolbars use.",
+        "4. On iPad, verify every studio's top toolbar clears the system window controls when the app is windowed.",
+        "5. Note the runtime mismatch: Forge is on React Native 0.88.1 and Nitro v1 alpha, while the Spark lane is on 0.83.10 with Nitro 0.37. State what that means for loading the Rust engines on desktop before promising a desktop studio, and stop to report if it blocks."
+      ],
+      "status": "not-started",
+      "statusReason": "No desktop target exists (studio-preview is a Vite web app). The ADR and the owner's choice of desktop studios are outstanding, and Tron's title bar (gate T2) does not exist yet.",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "F6",
+      "title": "Expo consumer path",
+      "owner": "F6",
+      "reviewerRole": "R2",
+      "acceptance": [
+        "For each studio package: in a new Expo app, install from release tarballs, add the config plugin, prebuild, and open, edit, save, reopen and undo a document on iOS and Android. No hand-edited native files. Add a clean-consumer smoke job like Tron's `consumer-smoke.mjs` and run it in CI against the produced tarballs."
+      ],
+      "status": "not-started",
+      "statusReason": "Forge produces no release tarballs yet and has no clean-consumer smoke job. examples/native-cadence consumes workspace sources, not tarballs.",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "F7",
+      "title": "Platform evidence",
+      "owner": "F0",
+      "reviewerRole": "R1",
+      "acceptance": [
+        "Fresh receipts at the candidate commit for the Rust engines, the C ABI, iOS and Android native apps, and web. `ROSTER.md` and `compatibility.v1.json` agree with each other and with the receipts. Anything not run says NOT RUN."
+      ],
+      "status": "in-progress",
+      "statusReason": "compatibility.v1.json was regenerated from the receipts that exist at 0ad4ed2 and ROSTER.md's transport table now matches it. No candidate commit exists, so no receipt is at the candidate commit. iOS and Android runtime receipts are simulator and emulator runs at older commits; web in a browser is NOT RUN.",
+      "evidence": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "F8",
+      "title": "Design pass",
+      "owner": "F8",
+      "reviewerRole": "R2",
+      "acceptance": [
+        "The brief in §2.5 governs.",
+        "1. Update `design/DIRECTION.md` with the §2.5 brief and the radius rule, so the direction lives in the repository and not only in this prompt.",
+        "2. Radius: define the two tokens once in the shared Forge theme and remove every other radius value. Add a check under `tooling/` that fails CI on any `View` (or component rendering one) styled with `rounded-lg` and larger, on arbitrary `rounded-[...]` values, on per-app radius variables, and on raw numeric `borderRadius` outside the token file and the documented exemptions. Wire it into `validate:v1`.",
+        "3. Run the full §3.3 sequence on every studio. The design-critique step answers the §2.5 question for that studio in writing, with captures beside the reference.",
+        "4. The cross-studio consistency table from the design-system step has no unexplained differences: same switcher, toolbar, context toolbar, panel, inspector and popover construction in all seven studios and both labs.",
+        "5. Micro-interactions, responsive behaviour and native popovers and menus are present in every studio, not only the ones reviewed first.",
+        "Acceptance: the radius check passing with zero exemptions beyond those listed in §2.5; a view-by-view radius inventory per studio showing outer views at `rounded-md` and inner views at `rounded-sm`; side-by-side captures of all studios at iPad size showing one grammar; the critique record for each studio."
+      ],
+      "status": "not-started",
+      "statusReason": "design/DIRECTION.md still says \"4 pt radius\" without the two-token rule, the labs define --radius-control 8px and --radius-card 12px, and no radius check exists under tooling/.",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "F9",
+      "title": "Release",
+      "owner": "F9",
+      "reviewerRole": "R2",
+      "acceptance": [
+        "Follow `RELEASE_TRAIN.md`: one tarball per package plus `SHA256SUMS`, attached to a GitHub Release. First a `1.0.0-rc.1` prerelease, then v1 after the owner approves the exact version and checksum hash, the same way Tron's stable gate works. Set real versions; the root is still `0.0.0`."
+      ],
+      "status": "blocked",
+      "statusReason": "Depends on F1 to F8 and on Tron 1.0.0 (F2). The root version is 0.0.0, no tag or GitHub Release exists, and there is no owner approval to bind to a checksum.",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "reviewedAt": null
+    }
+  ]
+}
