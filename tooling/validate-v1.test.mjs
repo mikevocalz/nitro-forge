@@ -80,6 +80,13 @@ test("prerelease mode reports without failing", () => {
   assert.deepEqual(result.blockers, []);
 });
 
+test("the signing reviewer matches the gate's role after trimming and case folding", () => {
+  const gates = allPassed();
+  gates.gates[0] = { ...passedGate("F1"), reviewer: " r2 " };
+  const result = validateV1({ version: "1.0.0", gates, compatibility: compat() }, { rootDir: sandbox });
+  assert.equal(result.status, "ready");
+});
+
 test("a passed gate without existing evidence, full commit or reviewer is invalid in every mode", () => {
   for (const broken of [
     { evidence: "docs/release/evidence/missing.txt" },
@@ -87,6 +94,10 @@ test("a passed gate without existing evidence, full commit or reviewer is invali
     { commit: "0ad4ed2" },
     { reviewer: null },
     { reviewer: "F0" },
+    { reviewer: " f0 " },
+    { reviewer: "R1" },
+    { reviewer: "someone" },
+    { reviewer: "R2", reviewerRole: "R9" },
     { reviewedAt: null },
   ]) {
     const gates = allPassed();

@@ -37,6 +37,10 @@ export function evidenceExists(path, rootDir = root) {
   return real.startsWith(base + sep) && statSync(real).isFile();
 }
 
+/** Independent reviewer roles from the v1 program; implementer and reviewer are always different subagents. */
+export const REVIEWER_ROLES = ["R1", "R2"];
+const signer = value => (typeof value === "string" ? value.trim().toUpperCase() : "");
+
 /**
  * Checks the gate file. `errors` are malformed records (fatal in every mode).
  * A gate is `ready` only when it is passed with existing evidence, a full commit and a signing reviewer.
@@ -65,7 +69,10 @@ export function validateGateFile(doc, { rootDir = root } = {}) {
     if (hasEvidence && !evidenceOk) errors.push(id + ": evidence path does not exist in the repository: " + gate.evidence);
     const commitOk = typeof gate?.commit === "string" && FULL_SHA.test(gate.commit);
     if (gate?.commit !== null && gate?.commit !== undefined && !commitOk) errors.push(id + ": commit must be a full 40-character SHA");
-    const reviewerOk = typeof gate?.reviewer === "string" && gate.reviewer.trim() !== "" && gate.reviewer !== gate.owner;
+    if (!REVIEWER_ROLES.includes(signer(gate?.reviewerRole))) errors.push(id + ": reviewerRole must be one of " + REVIEWER_ROLES.join(", "));
+    // Compared after trimming and case folding so " f1 " cannot sign a gate owned by "F1".
+    const reviewer = signer(gate?.reviewer);
+    const reviewerOk = reviewer !== "" && reviewer !== signer(gate?.owner) && reviewer === signer(gate?.reviewerRole);
     if (!hasEvidence) problems.push("no evidence");
     if (!commitOk) problems.push("no commit");
     if (!reviewerOk) problems.push("no reviewer signature");
