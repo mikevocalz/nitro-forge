@@ -1,0 +1,1663 @@
+{
+  "schemaVersion": 1,
+  "kind": "github-actions-query",
+  "capturedAt": "2026-11-11",
+  "capturedBy": "F0 subagent (gh run list --commit / gh run view --json jobs)",
+  "repository": "mikevocalz/nitro-forge",
+  "baseCommit": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+  "treeIdentity": {
+    "note": "0ad4ed2 is the merge of PR #75; its tree equals the PR head 3dd98cc, so pull_request runs at 3dd98cc built the same source as master 0ad4ed2. git rev-parse <sha>^{tree} gives the same value for both.",
+    "tree": "b9770620acdc999664dcb34ae759f624b5dd439a",
+    "commits": [
+      "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+      "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9"
+    ]
+  },
+  "logExcerpts": [
+    {
+      "runId": 43113143994,
+      "job": "Expo 58 iOS consumer compile",
+      "line": "2026-11-11T22:53:50.6821920Z ** BUILD SUCCEEDED **"
+    },
+    {
+      "runId": 43113143994,
+      "job": "Expo 58 Android consumer compile",
+      "line": "2026-11-11T22:59:29.2323724Z BUILD SUCCESSFUL in 13m 25s"
+    },
+    {
+      "runId": 43113143814,
+      "job": "rust-session-contracts",
+      "line": "50 `test result:` lines from cargo test --locked --workspace, none FAILED"
+    }
+  ],
+  "limits": "These are GitHub-hosted runner results. iOS and Android jobs compile for the simulator/emulator SDK; nothing is installed or launched. Rust and C ABI tests run on Linux x86_64 only.",
+  "runs": {
+    "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9": [
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "android-native-build",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3"
+              },
+              {
+                "conclusion": "success",
+                "name": "Use preinstalled GitHub-hosted Android SDK"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm install --frozen-lockfile"
+              },
+              {
+                "conclusion": "success",
+                "name": "Generate Expo SDK58 Android project"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile app and linked native UI modules"
+              }
+            ]
+          },
+          {
+            "name": "ios-native-build",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm install --frozen-lockfile"
+              },
+              {
+                "conclusion": "success",
+                "name": "Generate Expo SDK58 Apple project"
+              },
+              {
+                "conclusion": "success",
+                "name": "Resolve native CocoaPods dependencies"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile native app for iOS Simulator without signing"
+              }
+            ]
+          }
+        ],
+        "runId": 43113144035,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113144035",
+        "workflow": "Forge audio SDK58 native builds"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "verify-release-boundaries",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run node --test tooling/release/audit.test.mjs"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run node tooling/release/audit.mjs --offline"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run node tooling/release/check-package-boundaries.mjs"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run node --test tooling/release/nitro-v1-latest.test.mjs"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run node tooling/release/nitro-v1-latest.mjs --offline"
+              }
+            ]
+          },
+          {
+            "name": "npm-latest-review",
+            "conclusion": "skipped",
+            "steps": []
+          },
+          {
+            "name": "nitro-v1-latest",
+            "conclusion": "skipped",
+            "steps": []
+          }
+        ],
+        "runId": 43113143964,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143964",
+        "workflow": "NitroForge npm and SDK release-readiness audit"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "contracts",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run node --experimental-strip-types --test packages/audio-ui/node-tests/audio-api.test.mjs"
+              },
+              {
+                "conclusion": "success",
+                "name": "Reject retired audio dependencies"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143914,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143914",
+        "workflow": "Audio API lifecycle contracts"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "muse-input",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install from the committed lockfile"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck spatial input"
+              },
+              {
+                "conclusion": "success",
+                "name": "Replay hover, press, pressure, cancel, buttons, and timestamps"
+              }
+            ]
+          }
+        ],
+        "runId": 43113144151,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113144151",
+        "workflow": "Forge Muse spatial ink contract"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "telemetry",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable && pnpm install --frozen-lockfile --ignore-scripts"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run cargo build --locked -p nf-cli"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm --filter @nitro-forge/telemetry typecheck"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm --filter @nitro-forge/telemetry test"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143982,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143982",
+        "workflow": "Telemetry adapter"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "prism",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install Forge workspace"
+              },
+              {
+                "conclusion": "success",
+                "name": "Rust unit and op tests (prism-engine)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck the Prism binding"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile the real Rust engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Prism ops through nf-cli"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143907,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143907",
+        "workflow": "Prism canvas/layers ops"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "audio TS + lifecycle contracts (windows-latest)",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install"
+              },
+              {
+                "conclusion": "success",
+                "name": "NYC-Tron release pin (URL, lockfile, SHA256SUMS)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Audio UI TypeScript"
+              },
+              {
+                "conclusion": "success",
+                "name": "Audio recording state-machine tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Expo SDK 58 lab typecheck"
+              },
+              {
+                "conclusion": "skipped",
+                "name": "Bundle Expo Metro web app"
+              },
+              {
+                "conclusion": "success",
+                "name": "Scope statement"
+              }
+            ]
+          },
+          {
+            "name": "audio TS + lifecycle contracts (ubuntu-latest)",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install"
+              },
+              {
+                "conclusion": "success",
+                "name": "NYC-Tron release pin (URL, lockfile, SHA256SUMS)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Audio UI TypeScript"
+              },
+              {
+                "conclusion": "success",
+                "name": "Audio recording state-machine tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Expo SDK 58 lab typecheck"
+              },
+              {
+                "conclusion": "success",
+                "name": "Bundle Expo Metro web app"
+              },
+              {
+                "conclusion": "success",
+                "name": "Scope statement"
+              }
+            ]
+          },
+          {
+            "name": "audio TS + lifecycle contracts (macos-latest)",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install"
+              },
+              {
+                "conclusion": "success",
+                "name": "NYC-Tron release pin (URL, lockfile, SHA256SUMS)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Audio UI TypeScript"
+              },
+              {
+                "conclusion": "success",
+                "name": "Audio recording state-machine tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Expo SDK 58 lab typecheck"
+              },
+              {
+                "conclusion": "skipped",
+                "name": "Bundle Expo Metro web app"
+              },
+              {
+                "conclusion": "success",
+                "name": "Scope statement"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143812,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143812",
+        "workflow": "Forge audio SDK 58 cross-platform contracts"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "host-and-native-contract",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable && pnpm install --frozen-lockfile --ignore-scripts"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm --filter @nitro-forge/ignition codegen"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run git diff --exit-code -- packages/ignition/nitrogen packages/ignition/Package.swift"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm --filter @nitro-forge/ignition typecheck"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm --filter @nitro-forge/ignition exec vitest run tests/nitro-host.test.ts"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify document FIFO ordering and lifetime"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run cmp packages/ignition/cpp/nf_v1.h rust/nf-sys/include/nf_v1.h"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run cargo test --locked -p nf-sys && cargo build --locked -p nf-sys"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify shared document lifecycle, autosave, transactions and collaboration"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify Photo Motion Design and Draft source backends"
+              },
+              {
+                "conclusion": "success",
+                "name": "Link real C++ session to Rust and exercise round trip"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile v1 implementations against generated specs"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143918,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143918",
+        "workflow": "Ignition v1 shared host"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "typecheck-and-adapter",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install Forge workspace"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify the NYC-Tron release pin (URL, lockfile, tarball sha256)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck Tally adapter and the NYC-Tron consumer contract"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test bounded windows, cluster bindings and Rust command handoff (mock host)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test atomic range edits and reference shifting in Rust"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile real Rust Tally engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test live Rust sheet formulas, sheet tabs, range reads and adapter undo"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143788,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143788",
+        "workflow": "Tally grid adapter (independent Rust bridge)"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "TypeScript typecheck + tests",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm install --frozen-lockfile"
+              },
+              {
+                "conclusion": "success",
+                "name": "AGPL package stays opt-in"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck"
+              },
+              {
+                "conclusion": "success",
+                "name": "Speed-curve tests"
+              }
+            ]
+          },
+          {
+            "name": "Swift sandbox check (macOS host)",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run bash packages/native-signal/tests/native/run-swift-check.sh"
+              },
+              {
+                "conclusion": "success",
+                "name": "Scope"
+              }
+            ]
+          },
+          {
+            "name": "Kotlin compile + JVM sandbox check",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile modules and run check"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143837,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143837",
+        "workflow": "ArtCraft native packages"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "cadence",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run dtolnay/rust-toolchain@stable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify NYC-Tron pin"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install workspace (frozen; @nyc-tron/ui from the release tarball)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Build real Rust host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Check adapter TypeScript"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run Cadence tests with Rust host"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143882,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143882",
+        "workflow": "Cadence advanced component adapter"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "adapters",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install Forge workspace"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify the NYC-Tron release pin (URL, lockfile, tarball sha256)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck Pitch, Quill and Folio adapters and the NYC-Tron consumer contract"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test adapter bindings and deferred ops (mock documents)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test office engine document and interchange contracts"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile real Rust engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test adapters and existing engine e2e against real Rust"
+              }
+            ]
+          }
+        ],
+        "runId": 43113144125,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113144125",
+        "workflow": "Office adapters (Pitch, Quill, Folio Rust bridge)"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "TypeScript + contract tests (windows-latest)",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install SDK 58 peer-isolated contract dependencies"
+              },
+              {
+                "conclusion": "success",
+                "name": "NYC-Tron release pin (URL, lockfile, SHA256SUMS)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Strict public API typecheck"
+              },
+              {
+                "conclusion": "success",
+                "name": "Pure behavior contract tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Expo SDK 58 app TypeScript integration"
+              },
+              {
+                "conclusion": "skipped",
+                "name": "Metro web bundle smoke test"
+              },
+              {
+                "conclusion": "success",
+                "name": "Document validation scope"
+              }
+            ]
+          },
+          {
+            "name": "TypeScript + contract tests (ubuntu-latest)",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install SDK 58 peer-isolated contract dependencies"
+              },
+              {
+                "conclusion": "success",
+                "name": "NYC-Tron release pin (URL, lockfile, SHA256SUMS)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Strict public API typecheck"
+              },
+              {
+                "conclusion": "success",
+                "name": "Pure behavior contract tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Expo SDK 58 app TypeScript integration"
+              },
+              {
+                "conclusion": "success",
+                "name": "Metro web bundle smoke test"
+              },
+              {
+                "conclusion": "success",
+                "name": "Document validation scope"
+              }
+            ]
+          },
+          {
+            "name": "TypeScript + contract tests (macos-latest)",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install SDK 58 peer-isolated contract dependencies"
+              },
+              {
+                "conclusion": "success",
+                "name": "NYC-Tron release pin (URL, lockfile, SHA256SUMS)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Strict public API typecheck"
+              },
+              {
+                "conclusion": "success",
+                "name": "Pure behavior contract tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Expo SDK 58 app TypeScript integration"
+              },
+              {
+                "conclusion": "skipped",
+                "name": "Metro web bundle smoke test"
+              },
+              {
+                "conclusion": "success",
+                "name": "Document validation scope"
+              }
+            ]
+          }
+        ],
+        "runId": 43113144127,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113144127",
+        "workflow": "Media UI cross-platform contracts"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "dock-layout",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install for new workspace package"
+              },
+              {
+                "conclusion": "success",
+                "name": "Check recovered adapters against the published NYC-Tron declarations"
+              },
+              {
+                "conclusion": "success",
+                "name": "NYC-Tron release pins match their sha256"
+              },
+              {
+                "conclusion": "success",
+                "name": "Nitro v1 code generation and host contracts"
+              },
+              {
+                "conclusion": "success",
+                "name": "Native host image and gesture dependencies"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run real typed dock model tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Strict TypeScript contract"
+              },
+              {
+                "conclusion": "success",
+                "name": "Original glyph contracts and generated theme parity"
+              },
+              {
+                "conclusion": "success",
+                "name": "Workspace transitions and strict types"
+              },
+              {
+                "conclusion": "success",
+                "name": "Browser UI module contracts and production bundle"
+              },
+              {
+                "conclusion": "success",
+                "name": "Build real engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Prism typed API round trips"
+              },
+              {
+                "conclusion": "success",
+                "name": "Seven-engine browser bridge round trips"
+              }
+            ]
+          },
+          {
+            "name": "rust-session-contracts",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Rust engine tests and v1 session contracts"
+              }
+            ]
+          },
+          {
+            "name": "expo-native-bundles",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run pnpm install --frozen-lockfile --ignore-scripts"
+              },
+              {
+                "conclusion": "success",
+                "name": "Metro0.87.2 compatibility and native styles"
+              },
+              {
+                "conclusion": "success",
+                "name": "Coherent Metro family and dynamic-root API"
+              },
+              {
+                "conclusion": "success",
+                "name": "Export iOS, Android and web bundles through Expo's own Metro"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143814,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143814",
+        "workflow": "Studio workspace and dock contract"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "splice",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install Forge workspace"
+              },
+              {
+                "conclusion": "success",
+                "name": "Splice engine unit tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Format check for the new Splice modules"
+              },
+              {
+                "conclusion": "success",
+                "name": "Workspace Rust tests (other engines, FFI) still pass"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile real Rust engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck the Splice API"
+              },
+              {
+                "conclusion": "success",
+                "name": "Splice e2e against real Rust via nf-cli"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143809,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143809",
+        "workflow": "Splice timeline engine"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T22:36:10Z",
+        "event": "pull_request",
+        "headBranch": "feat/studio-preview-rows-20261111",
+        "headSha": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+        "jobs": [
+          {
+            "name": "Native consumer install, TypeScript and bundle",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify NYC-Tron pin and re-hash release assets"
+              },
+              {
+                "conclusion": "success",
+                "name": "Frozen install from release tarballs"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck"
+              },
+              {
+                "conclusion": "success",
+                "name": "Bundle with Metro and check one copy of each shared runtime"
+              }
+            ]
+          },
+          {
+            "name": "Expo 58 Android consumer compile",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-java@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run dtolnay/rust-toolchain@stable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack pnpm install --frozen-lockfile"
+              },
+              {
+                "conclusion": "success",
+                "name": "Build Rust archives with the React Native app's NDK"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack pnpm exec expo prebuild --platform android --no-install --non-interactive"
+              }
+            ]
+          },
+          {
+            "name": "Expo 58 iOS consumer compile",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run dtolnay/rust-toolchain@stable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Build current Rust XCFramework before SwiftPM resolution"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack pnpm install --frozen-lockfile"
+              }
+            ]
+          }
+        ],
+        "runId": 43113143994,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43113143994",
+        "workflow": "Cadence + NYC-Tron native consumer"
+      }
+    ],
+    "0ad4ed22f7523d4dcf16574a57ea62b067d264da": [
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T23:58:38Z",
+        "event": "push",
+        "headBranch": "master",
+        "headSha": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+        "jobs": [
+          {
+            "name": "splice",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install Forge workspace"
+              },
+              {
+                "conclusion": "success",
+                "name": "Splice engine unit tests"
+              },
+              {
+                "conclusion": "success",
+                "name": "Format check for the new Splice modules"
+              },
+              {
+                "conclusion": "success",
+                "name": "Workspace Rust tests (other engines, FFI) still pass"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile real Rust engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck the Splice API"
+              },
+              {
+                "conclusion": "success",
+                "name": "Splice e2e against real Rust via nf-cli"
+              }
+            ]
+          }
+        ],
+        "runId": 43123839431,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43123839431",
+        "workflow": "Splice timeline engine"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T23:58:38Z",
+        "event": "push",
+        "headBranch": "master",
+        "headSha": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+        "jobs": [
+          {
+            "name": "adapters",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install Forge workspace"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify the NYC-Tron release pin (URL, lockfile, tarball sha256)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck Pitch, Quill and Folio adapters and the NYC-Tron consumer contract"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test adapter bindings and deferred ops (mock documents)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test office engine document and interchange contracts"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile real Rust engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test adapters and existing engine e2e against real Rust"
+              }
+            ]
+          }
+        ],
+        "runId": 43123839417,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43123839417",
+        "workflow": "Office adapters (Pitch, Quill, Folio Rust bridge)"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T23:58:38Z",
+        "event": "push",
+        "headBranch": "master",
+        "headSha": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+        "jobs": [
+          {
+            "name": "prism",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install Forge workspace"
+              },
+              {
+                "conclusion": "success",
+                "name": "Rust unit and op tests (prism-engine)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck the Prism binding"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile the real Rust engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Prism ops through nf-cli"
+              }
+            ]
+          }
+        ],
+        "runId": 43123839367,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43123839367",
+        "workflow": "Prism canvas/layers ops"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T23:58:38Z",
+        "event": "push",
+        "headBranch": "master",
+        "headSha": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+        "jobs": [
+          {
+            "name": "cadence",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run dtolnay/rust-toolchain@stable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify NYC-Tron pin"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install workspace (frozen; @nyc-tron/ui from the release tarball)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Build real Rust host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Check adapter TypeScript"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run Cadence tests with Rust host"
+              }
+            ]
+          }
+        ],
+        "runId": 43123839410,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43123839410",
+        "workflow": "Cadence advanced component adapter"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-11-11T23:58:38Z",
+        "event": "push",
+        "headBranch": "master",
+        "headSha": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+        "jobs": [
+          {
+            "name": "typecheck-and-adapter",
+            "conclusion": "success",
+            "steps": [
+              {
+                "conclusion": "success",
+                "name": "Run actions/checkout@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run actions/setup-node@v4"
+              },
+              {
+                "conclusion": "success",
+                "name": "Run corepack enable"
+              },
+              {
+                "conclusion": "success",
+                "name": "Install Forge workspace"
+              },
+              {
+                "conclusion": "success",
+                "name": "Verify the NYC-Tron release pin (URL, lockfile, tarball sha256)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Typecheck Tally adapter and the NYC-Tron consumer contract"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test bounded windows, cluster bindings and Rust command handoff (mock host)"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test atomic range edits and reference shifting in Rust"
+              },
+              {
+                "conclusion": "success",
+                "name": "Compile real Rust Tally engine host"
+              },
+              {
+                "conclusion": "success",
+                "name": "Test live Rust sheet formulas, sheet tabs, range reads and adapter undo"
+              }
+            ]
+          }
+        ],
+        "runId": 43123839487,
+        "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43123839487",
+        "workflow": "Tally grid adapter (independent Rust bridge)"
+      }
+    ]
+  },
+  "cargoWorkspaceLog": {
+    "runId": 43113143814,
+    "job": "rust-session-contracts",
+    "command": "cargo test --locked --workspace",
+    "runner": "ubuntu-latest (linux x86_64)",
+    "note": "Verbatim Running/Doc-tests and test result lines from the job log, in log order. A tests/service.rs binary belongs to the crate whose lines precede it (folio-render after folio-engine, raw-decode after quill-engine, scene-render after scene-engine, splice-render after splice-engine). The log does not show whether folio-render loaded a pdfium library.",
+    "lines": [
+      "Running unittests src/lib.rs [cadence_engine]",
+      "test result: ok. 70 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [design_engine]",
+      "test result: ok. 56 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [draft_engine]",
+      "test result: ok. 59 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [folio_engine]",
+      "test result: ok. 149 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [folio_render]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running unittests src/main.rs [folio_render]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running tests/service.rs [service]",
+      "test result: ok. 7 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [ignition_core]",
+      "Running unittests src/lib.rs [motion_engine]",
+      "test result: ok. 16 passed; 0 failed; 0 ignored",
+      "test result: ok. 126 passed; 0 failed; 0 ignored",
+      "Running unittests src/main.rs [nf_cli]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [nf_color]",
+      "test result: ok. 21 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [nf_raw]",
+      "test result: ok. 7 passed; 0 failed; 1 ignored",
+      "Running unittests src/lib.rs [nf_sys]",
+      "test result: ok. 28 passed; 0 failed; 0 ignored",
+      "Running unittests src/main.rs [nf_wasm_probe]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [photo_engine]",
+      "test result: ok. 13 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [pitch_engine]",
+      "test result: ok. 93 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [prism_engine]",
+      "test result: ok. 177 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [quill_engine]",
+      "test result: ok. 271 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [raw_decode]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running unittests src/main.rs [raw_decode]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running tests/service.rs [service]",
+      "test result: ok. 11 passed; 0 failed; 1 ignored",
+      "Running unittests src/lib.rs [scene_engine]",
+      "test result: ok. 19 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [scene_render]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running unittests src/main.rs [scene_render]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running tests/service.rs [service]",
+      "test result: ok. 14 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [splice_engine]",
+      "test result: ok. 55 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [splice_render]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running unittests src/main.rs [splice_render]",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Running tests/service.rs [service]",
+      "test result: ok. 20 passed; 0 failed; 0 ignored",
+      "Running unittests src/lib.rs [tally_engine]",
+      "test result: ok. 230 passed; 0 failed; 0 ignored",
+      "Doc-tests cadence_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests design_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests draft_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests folio_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests folio_render",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests ignition_core",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests motion_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests nf_color",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests nf_raw",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests nf_sys",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests photo_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests pitch_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests prism_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests quill_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests raw_decode",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests scene_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests scene_render",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests splice_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests splice_render",
+      "test result: ok. 0 passed; 0 failed; 0 ignored",
+      "Doc-tests tally_engine",
+      "test result: ok. 0 passed; 0 failed; 0 ignored"
+    ]
+  }
+}

@@ -1,57 +1,297 @@
 {
-  "schemaVersion": 1,
-  "generatedFrom": "NitroForge docs/ROSTER.md reviewed 2026-11-02; statuses are historical or planned and do not certify a release",
+  "schemaVersion": 2,
   "product": "nitro-forge",
   "status": "not-released",
+  "version": "0.0.0",
+  "generatedAt": "2026-11-11",
+  "baseCommit": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+  "candidateCommit": null,
+  "generatedFrom": "Evidence receipts in docs/completion/evidence and docs/release/evidence, read at 0ad4ed2. Replaces the 2026-11-02 ROSTER review. docs/ROSTER.md (Transport status) states the same results.",
+  "rules": [
+    "A result applies only to the commit, host and target named in its receipt. It does not transfer to another commit, platform or lane.",
+    "passed: a receipt shows the target running the named checks. build-passed: a receipt shows a compile or bundle, nothing launched. not-verified: a receipt exists but cannot be bound to a source commit, or does not show the claimed result. NOT RUN: no receipt.",
+    "No entry certifies a release. Gate F7 needs fresh receipts at a candidate commit; no candidate commit exists yet."
+  ],
+  "statusValues": ["passed", "build-passed", "partial", "not-verified", "NOT RUN"],
   "distribution": {
     "channel": "github-release-tarballs",
     "checksums": "SHA256SUMS",
-    "npm": "not-used"
+    "npm": "not-used",
+    "status": "NOT RUN",
+    "note": "No tag, GitHub Release or tarball exists. Root version is 0.0.0."
   },
-  "engineApis": [
-    "ignition",
-    "prism",
-    "cadence",
-    "splice",
-    "folio",
-    "pitch",
-    "tally",
-    "quill"
-  ],
+  "engineKinds": {
+    "source": "packages/ignition/src/types.ts ENGINE_KINDS at 0ad4ed2",
+    "kinds": ["prism", "cadence", "splice", "folio", "pitch", "tally", "quill", "photo", "motion", "design", "draft", "scene"]
+  },
   "runtimes": {
-    "rust-cli": {
-      "status": "historically-tested",
-      "evidence": "docs/ROSTER.md; needs fresh PR SHA retest"
+    "rust-engines": {
+      "label": "Rust engine crates (cargo test --locked --workspace)",
+      "status": "passed",
+      "scope": "GitHub-hosted ubuntu-latest, linux x86_64",
+      "receipts": [
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+          "capturedAt": "2026-11-11",
+          "runId": 43113143814,
+          "result": "Studio workspace and dock contract / rust-session-contracts: cargo test --locked --workspace, 50 test result lines, none failed. 3dd98cc has the same tree as 0ad4ed2."
+        },
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+          "capturedAt": "2026-11-11",
+          "runId": 43123839431,
+          "result": "Splice timeline engine (push to master): Splice engine unit tests and the workspace Rust tests step (cargo test --workspace) passed."
+        }
+      ],
+      "notRun": ["macOS, Windows and mobile hosts for cargo test at 0ad4ed2"]
     },
-    "rust-c-ffi": {
-      "status": "historically-tested",
-      "evidence": "docs/ROSTER.md; native consumer not linked"
+    "rust-c-abi": {
+      "label": "nf-sys C ABI and the C++ session linked to it",
+      "status": "passed",
+      "scope": "GitHub-hosted ubuntu-latest, linux x86_64",
+      "receipts": [
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+          "capturedAt": "2026-11-11",
+          "runId": 43113143918,
+          "result": "Ignition v1 shared host: nf_v1.h headers identical, cargo test --locked -p nf-sys (28 pass), real C++ session linked to Rust with a round trip, v1 implementations compiled against generated specs."
+        }
+      ],
+      "notRun": ["C ABI on macOS, Windows and QNX hosts at 0ad4ed2"]
+    },
+    "nf-cli-package-suites": {
+      "label": "TypeScript package suites driving real engines through nf-cli",
+      "status": "passed",
+      "scope": "GitHub-hosted ubuntu-latest, linux x86_64; Splice, Office (Pitch, Quill, Folio), Prism, Cadence and Tally suites",
+      "receipts": [
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+          "capturedAt": "2026-11-11",
+          "result": "Push runs 43123839431, 43123839417, 43123839367, 43123839410 and 43123839487: each compiled nf-cli and ran its e2e suite against real Rust."
+        }
+      ],
+      "notRun": ["Photo, Motion, Design, Draft and Scene vitest suites in CI at 0ad4ed2"]
     },
     "react-native-ios": {
-      "status": "not-verified"
+      "label": "iOS native app (Nitro v1 host to Rust engines)",
+      "status": "partial",
+      "scope": "iOS Simulator only",
+      "build": {
+        "status": "build-passed",
+        "receipts": [
+          {
+            "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+            "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+            "capturedAt": "2026-11-11",
+            "runId": 43113143994,
+            "result": "Cadence + NYC-Tron native consumer / Expo 58 iOS consumer compile on xcode-27: Rust XCFramework built, xcodebuild for generic iOS Simulator, ** BUILD SUCCEEDED **. Not installed or launched."
+          },
+          {
+            "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+            "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+            "capturedAt": "2026-11-11",
+            "runId": 43113144035,
+            "result": "Forge audio SDK58 native builds / ios-native-build: forge-audio-lab compiled for iOS Simulator without signing. Not launched."
+          }
+        ]
+      },
+      "runtime": {
+        "status": "passed",
+        "receipts": [
+          {
+            "path": "docs/completion/evidence/W32-ios-runtime-probes.txt",
+            "commit": "ad2696e083e34c8933f20bde0389e3b96ec0ddf5",
+            "capturedAt": "2026-11-08",
+            "result": "examples/native-cadence on the iOS 27.1 iPhone Duo simulator: all 12 engine kinds passed new/describe/NFD1 snapshot/restore/invalid-restore/close; Quill renderPage and native services passed. Artifact hashes in W32-ios-artifacts.json."
+          },
+          {
+            "path": "docs/completion/evidence/P01-artifacts.json",
+            "commit": "defae632b6a00d58eff28c9eaff255501db49e3c",
+            "capturedAt": "2026-11-06",
+            "result": "P01 fresh iOS simulator build: seven engines and the Cadence edit/undo/redo/reopen probe passed."
+          }
+        ]
+      },
+      "notRun": [
+        "Runtime at 0ad4ed2 (latest runtime receipt is ad2696e)",
+        "Physical iPhone or iPad",
+        "Telemetry, decoder/player/encoder, speech and audio providers in the W32 pass",
+        "Speech start and audio openInput (P01b: simulator CoreAudio deadlock, unverified)"
+      ]
     },
     "react-native-android": {
-      "status": "not-verified"
+      "label": "Android native app (Nitro v1 host to Rust engines)",
+      "status": "partial",
+      "scope": "Android emulator only",
+      "build": {
+        "status": "build-passed",
+        "receipts": [
+          {
+            "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+            "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+            "capturedAt": "2026-11-11",
+            "runId": 43113143994,
+            "result": "Cadence + NYC-Tron native consumer / Expo 58 Android consumer compile: Rust archives built with the app's NDK, prebuild, gradlew assembleDebug, BUILD SUCCESSFUL. Not installed or launched."
+          },
+          {
+            "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+            "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+            "capturedAt": "2026-11-11",
+            "runId": 43113144035,
+            "result": "Forge audio SDK58 native builds / android-native-build: forge-audio-lab :app:assembleDebug passed. Not launched."
+          }
+        ]
+      },
+      "runtime": {
+        "status": "passed",
+        "receipts": [
+          {
+            "path": "docs/completion/evidence/W31-android-runtime-probes.txt",
+            "commit": "313973fba0a6a5c3ed359c0d978d8eef36143ac9",
+            "capturedAt": "2026-11-08",
+            "result": "examples/native-cadence on the API 36 arm64-v8a emulator: all 12 engine kinds passed the round-trip probe; Quill renderPage and native services passed. Artifact hashes in W31-android-artifacts.json."
+          },
+          {
+            "path": "docs/completion/evidence/P01-artifacts.json",
+            "commit": "defae632b6a00d58eff28c9eaff255501db49e3c",
+            "capturedAt": "2026-11-06",
+            "result": "P01 fresh Android build (243 Gradle tasks) and emulator run: seven engines and the Cadence edit/undo/redo/reopen probe passed."
+          }
+        ]
+      },
+      "notRun": [
+        "Runtime at 0ad4ed2 (latest runtime receipt is 313973f)",
+        "Physical Android device",
+        "Telemetry, decoder/player/encoder, speech and audio providers in the W31 pass"
+      ]
     },
-    "web-wasm": {
-      "status": "not-verified"
+    "web": {
+      "label": "Web (Expo web and studio-preview in a browser)",
+      "status": "build-passed",
+      "scope": "Metro web bundle export only",
+      "receipts": [
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+          "capturedAt": "2026-11-11",
+          "runId": 43113143814,
+          "result": "Studio workspace and dock contract / expo-native-bundles: iOS, Android and web bundles exported through Expo's Metro. Nothing ran in a browser."
+        }
+      ],
+      "notRun": [
+        "Any browser runtime of a Forge app or studio",
+        "studio-preview in a browser (w16-studio-preview-integration.log exercises the dev-server engine bridge from Node, has no source revision, and is not a browser run)"
+      ]
+    },
+    "wasm": {
+      "label": "Rust engines compiled to wasm32",
+      "status": "not-verified",
+      "scope": "wasm32-wasip1 under Node WASI; wasm32-unknown-unknown compile",
+      "unboundReceipts": [
+        {
+          "path": "docs/completion/evidence/W33-wasm-summary.txt",
+          "addedIn": "69dd2ee262a736d6963f5d5b574c60e93061704c",
+          "result": "All 12 engines passed the wasip1 round-trip probe; folio-engine failed to compile for wasm32-unknown-unknown (getrandom). The receipt records no source revision, so the result is not bound to a commit."
+        }
+      ],
+      "notRun": ["Browser or wasm-bindgen host", "wasm-opt", "Any wasm run at 0ad4ed2"]
+    },
+    "desktop-macos": {
+      "label": "macOS desktop app (Spark lane)",
+      "status": "NOT RUN",
+      "note": "No desktop target exists. See gate F5."
+    },
+    "desktop-windows": {
+      "label": "Windows desktop app",
+      "status": "NOT RUN",
+      "note": "No desktop target exists. See gate F5."
     },
     "skia-v3-graphite": {
-      "status": "target-only",
-      "dependency": "PR #1: react-native-skia@3.8.1"
+      "label": "React Native Skia v3 Graphite renderer",
+      "status": "NOT RUN",
+      "note": "No workspace package depends on @shopify/react-native-skia at 0ad4ed2."
     },
     "expo-ui-editor": {
-      "status": "planned"
+      "label": "@expo/ui editor surfaces",
+      "status": "NOT RUN",
+      "note": "No receipt."
     },
     "native-adaptive-layout": {
-      "status": "planned"
+      "label": "Native adaptive layout",
+      "status": "NOT RUN",
+      "note": "No receipt."
+    }
+  },
+  "hostServices": {
+    "folio-render": {
+      "status": "not-verified",
+      "note": "Linux CI at 3dd98cc ran its 7 service tests, which pass without running when no pdfium library resolves (rust/folio-render/tests/service.rs). The macOS arm64 pdfium run in w16-cargo-test-folio-render.log records no source revision.",
+      "notRun": ["Any run with pdfium loaded at a recorded commit"]
+    },
+    "raw-decode": {
+      "status": "passed",
+      "scope": "linux x86_64 CI; the real-DNG fixture test is ignored there",
+      "receipts": [
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+          "capturedAt": "2026-11-11",
+          "runId": 43113143814,
+          "result": "raw-decode tests/service.rs 11 pass, 1 ignored; nf-raw 7 pass, 1 ignored."
+        }
+      ],
+      "notRun": ["Real-fixture decode at a recorded commit", "Mobile and WASM targets"]
+    },
+    "scene-render": {
+      "status": "passed",
+      "scope": "linux x86_64 CI",
+      "receipts": [
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+          "capturedAt": "2026-11-11",
+          "runId": 43113143814,
+          "result": "scene-render tests/service.rs 14 pass."
+        }
+      ],
+      "notRun": ["Mobile, WASM and Windows targets"]
+    },
+    "splice-render": {
+      "status": "passed",
+      "scope": "linux x86_64 CI",
+      "receipts": [
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+          "capturedAt": "2026-11-11",
+          "runId": 43113143814,
+          "result": "splice-render tests/service.rs 20 pass."
+        }
+      ],
+      "notRun": ["Mobile, WASM and Windows targets"]
+    },
+    "nf-color": {
+      "status": "passed",
+      "scope": "linux x86_64 CI",
+      "receipts": [
+        {
+          "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+          "commit": "3dd98cc44a888c3f6877f2428bc2e915f1f60dc9",
+          "capturedAt": "2026-11-11",
+          "runId": 43113143814,
+          "result": "nf-color unit tests 21 pass."
+        }
+      ],
+      "notRun": ["Mobile, WASM and Windows targets"]
     }
   },
   "consumerStatus": {
-    "moyo": "not-integrated",
-    "nycMon": "not-integrated",
-    "dvnt": "not-integrated",
-    "paCasa": "not-integrated",
-    "harlemMight": "not-integrated"
+    "status": "not-verified",
+    "note": "No receipt in this repository covers any outside consumer.",
+    "consumers": ["moyo", "nycMon", "dvnt", "paCasa", "harlemMight"]
   }
 }
