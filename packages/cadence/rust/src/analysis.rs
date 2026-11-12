@@ -279,10 +279,23 @@ pub fn spectrogram(mix: &Mixdown, sample_rate: u64, o: &SpectroOptions) -> Resul
     }))
 }
 
+/// Default `detectBeats` sensitivity. It gives k = 1, the mean + one
+/// standard deviation threshold the op used before sensitivity existed.
+pub const DEFAULT_BEAT_SENSITIVITY: f64 = 0.5;
+
 /// Options for [`detect_beats`], validated by the op.
 pub struct BeatOptions {
     pub fft_size: usize,
     pub hop: usize,
+    /// 0.0..=1.0. The onset threshold is mean + k·σ of the spectral flux
+    /// with k = 2·(1 − sensitivity): 0 needs flux two deviations above the
+    /// mean, 1 accepts any local maximum above the mean.
+    pub sensitivity: f64,
+}
+
+/// Threshold multiplier k for a sensitivity in 0..=1.
+fn threshold_k(sensitivity: f64) -> f64 {
+    2.0 * (1.0 - sensitivity)
 }
 
 /// Tempo estimate from the novelty envelope: the lag in 60..=240 BPM whose
@@ -324,7 +337,8 @@ fn estimate_bpm(novelty: &[f64], sr: f64, hop: usize) -> Option<f64> {
 /// `detectBeats` op body: spectral-flux onset detection over the mono
 /// master. Each STFT frame's positive magnitude difference against the
 /// previous frame sums into a novelty value; local maxima above
-/// mean + one standard deviation, separated by at least 80 ms, are onsets.
+/// mean + k·σ (k from `o.sensitivity`, 1 at the default 0.5), separated by
+/// at least 80 ms, are onsets.
 /// `estimated_bpm` is the novelty autocorrelation peak in 60..=240 BPM,
 /// `null` with fewer than four onsets.
 pub fn detect_beats(mix: &Mixdown, sample_rate: u64, o: &BeatOptions) -> Result<Value, EngineError> {
@@ -356,11 +370,11 @@ pub fn detect_beats(mix: &Mixdown, sample_rate: u64, o: &BeatOptions) -> Result<
         }
         novelty.push(flux);
     }
-    // Adaptive threshold: mean + one standard deviation of the flux.
+    // Adaptive threshold: mean + k standard deviations of the flux.
     let body = &novelty[1.min(novelty.len())..];
     let mean = body.iter().sum::<f64>() / body.len().max(1) as f64;
     let var = body.iter().map(|v| (v - mean) * (v - mean)).sum::<f64>() / body.len().max(1) as f64;
-    let threshold = mean + var.sqrt();
+    let threshold = mean + threshold_k(o.sensitivity) * var.sqrt();
     let min_gap = ((MIN_ONSET_SECONDS * sr) / o.hop as f64).round().max(1.0) as usize;
     let mut onset_frames: Vec<usize> = Vec::new();
     let mut last = usize::MAX;

@@ -61,6 +61,11 @@ export const OPS = {
   loudness: "loudness",
   spectrogram: "spectrogram",
   detectBeats: "detectBeats",
+  addMarker: "addMarker",
+  addMarkers: "addMarkers",
+  updateMarker: "updateMarker",
+  removeMarker: "removeMarker",
+  listMarkers: "listMarkers",
 } as const;
 
 /** `bus` tracks sum source tracks routed or sent to them and hold no clips. */
@@ -151,6 +156,70 @@ export interface BeatDetectionResult {
   /** Autocorrelation tempo estimate in BPM; null under four onsets. */
   estimated_bpm: number | null;
   hop_seconds: number;
+}
+
+/** Options for {@linkcode CadenceDocument.detectBeats}. */
+export interface BeatDetectionOptions {
+  /** FFT window, a power of two in 256..8192. @default 1024 */
+  fftSize?: number;
+  /** STFT hop in samples, 1..fftSize. @default fftSize / 2 */
+  hop?: number;
+  /**
+   * 0..1. The onset threshold is mean + k·σ of the spectral flux with
+   * k = 2·(1 − sensitivity): 0 keeps only flux two deviations above the
+   * mean, 1 keeps any local maximum above the mean. 0.5 gives k = 1, the
+   * threshold used before this option existed. Outside 0..1 rejects with
+   * `validation`.
+   * @default 0.5
+   */
+  sensitivity?: number;
+}
+
+/**
+ * A project marker returned by {@linkcode CadenceDocument.listMarkers}.
+ * Positions are ticks, so a marker stays on its beat when the tempo
+ * changes; clip edits never move it.
+ */
+export interface CadenceMarker {
+  /** Engine-assigned, stable across updates and save/load. */
+  id: number;
+  /** Absolute project position. */
+  ticks: number;
+  /** 0 is a point marker; greater than 0 is a range. */
+  length_ticks: number;
+  /** 1..120 characters. */
+  name: string;
+  /** Up to 2000 characters; absent when there is no note. */
+  note?: string;
+}
+
+/**
+ * A marker to add with {@linkcode CadenceDocument.addMarker} or
+ * {@linkcode CadenceDocument.addMarkers}. `ticks + lengthTicks` must stay at
+ * or below 2^53 − 1 (`out_of_bounds` otherwise).
+ */
+export interface MarkerInput {
+  ticks: number;
+  /** @default 0 (point marker) */
+  lengthTicks?: number;
+  /** Trimmed; blank rejects. @default "Marker N", N = marker count after adding */
+  name?: string;
+  note?: string;
+}
+
+/**
+ * Fields to change with {@linkcode CadenceDocument.updateMarker}. At least
+ * one field is required. `note: null` (or `""`) clears the note.
+ */
+export interface MarkerPatch {
+  ticks?: number;
+  lengthTicks?: number;
+  name?: string;
+  note?: string | null;
+}
+
+function markerPayload(m: MarkerInput) {
+  return { ticks: m.ticks, length_ticks: m.lengthTicks, name: m.name, note: m.note };
 }
 
 export interface InsertPreset {
@@ -405,13 +474,45 @@ export class CadenceDocument {
    * Spectral-flux onset detection and a tempo estimate over the mono
    * master. Read-only; `estimated_bpm` is null when fewer than four onsets
    * are found. Same range bounds as the other analysis ops.
+   * `options.sensitivity` moves the onset threshold; see
+   * {@linkcode BeatDetectionOptions}. Store the result with
+   * {@linkcode CadenceDocument.addMarkers} to make it undoable and saved.
    */
-  detectBeats(range: AnalysisRange, options: { fftSize?: number; hop?: number } = {}) {
+  detectBeats(range: AnalysisRange, options: BeatDetectionOptions = {}) {
     return this.call<BeatDetectionResult>(OPS.detectBeats, {
       ...analysisPayload(range),
       fft_size: options.fftSize,
       hop: options.hop,
+      sensitivity: options.sensitivity,
     });
+  }
+  /** Add one marker; one undo step. */
+  addMarker(marker: MarkerInput) {
+    return this.call<{ marker_id: number }>(OPS.addMarker, markerPayload(marker));
+  }
+  /**
+   * Add 1..8192 markers in one undo step, all or nothing. Ids come back in
+   * input order. A project holds at most 8192 markers (`out_of_bounds`).
+   */
+  addMarkers(markers: readonly MarkerInput[]) {
+    return this.call<{ marker_ids: number[] }>(OPS.addMarkers, { markers: markers.map(markerPayload) });
+  }
+  /** Patch one marker; its id never changes. An unchanged patch records no undo step. */
+  updateMarker(id: number, patch: MarkerPatch) {
+    const payload: Record<string, unknown> = { id };
+    if (patch.ticks !== undefined) payload.ticks = patch.ticks;
+    if (patch.lengthTicks !== undefined) payload.length_ticks = patch.lengthTicks;
+    if (patch.name !== undefined) payload.name = patch.name;
+    if (patch.note !== undefined) payload.note = patch.note;
+    return this.call<{ ok: true }>(OPS.updateMarker, payload);
+  }
+  /** Remove one marker; `not_found` for an unknown id. */
+  removeMarker(id: number) {
+    return this.call<{ ok: true }>(OPS.removeMarker, { id });
+  }
+  /** Every marker, ordered by ticks then id. Read-only. */
+  listMarkers() {
+    return this.call<{ markers: CadenceMarker[] }>(OPS.listMarkers);
   }
   project() {
     return this.call<ProjectInfo>(OPS.project);

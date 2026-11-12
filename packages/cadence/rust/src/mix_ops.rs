@@ -551,8 +551,12 @@ impl CadenceEngine {
         if hop == 0 || hop > fft_size {
             return Err(EngineError::validation("hop must be in 1..=fft_size"));
         }
+        let sensitivity = opt_f64(p, "sensitivity")?.unwrap_or(analysis::DEFAULT_BEAT_SENSITIVITY);
+        if !(0.0..=1.0).contains(&sensitivity) {
+            return Err(EngineError::validation("sensitivity must be in 0..=1"));
+        }
         let mix = mixdown_with_context(&self.doc, from, to, sr, click, false, ctx)?;
-        let opts = BeatOptions { fft_size: fft_size as usize, hop: hop as usize };
+        let opts = BeatOptions { fft_size: fft_size as usize, hop: hop as usize, sensitivity };
         analysis::detect_beats(&mix, sr, &opts).map(Self::read_only)
     }
 }
