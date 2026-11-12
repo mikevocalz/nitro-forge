@@ -38,7 +38,7 @@
     "react-native-video": "7.0.0-beta.12-nitrov1-experimental.1"
   },
   "devDependencies": {
-    "vitest": "^3.2.7",
+    "vitest": "^5.1.0",
     "@types/react": "^19.2.0",
     "react-native-video": "file:../../tooling/react-native-video-v1/experimental-build-v1.tgz"
   },
