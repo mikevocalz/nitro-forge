@@ -1,6 +1,8 @@
 # Gate F4: app identity and rebranding.
 # - brand-and-rebrand: manifests, icon sets, the config plugin, and the rebrand
-#   test on the suite and a studio (native projects and the web build).
+#   test on the suite, a studio, Media Lab and Cadence QA (native projects, and
+#   the web build for the suite and the studio). The rebrand test fails when an
+#   app has no src/brand/surfaces.ts, so no app's title bar goes unchecked.
 # - rebranded-*-build: renames a lab app and compiles it, so the brand plugin's
 #   output is proven to build natively, then checks the built label and id.
 # The launcher-label width check comes from NYC-Tron UI (gate T3) once the
@@ -16,13 +18,22 @@ on:
       - 'apps/example/assets/brand/**'
       - 'apps/example/src/brand/**'
       - 'apps/example/app/**'
+      - 'apps/example/src/editors.tsx'
       - 'apps/forge-audio-lab/app.json'
       - 'apps/forge-audio-lab/brand.json'
       - 'apps/forge-audio-lab/assets/brand/**'
+      - 'apps/forge-audio-lab/App.tsx'
+      - 'apps/forge-audio-lab/src/brand/**'
       - 'apps/forge-media-lab/app.json'
       - 'apps/forge-media-lab/brand.json'
+      - 'apps/forge-media-lab/assets/brand/**'
+      - 'apps/forge-media-lab/App.tsx'
+      - 'apps/forge-media-lab/src/brand/**'
       - 'examples/native-cadence/app.json'
       - 'examples/native-cadence/brand.json'
+      - 'examples/native-cadence/assets/brand/**'
+      - 'examples/native-cadence/App.tsx'
+      - 'examples/native-cadence/src/brand/**'
       - 'apps/studio-preview/index.html'
       - 'apps/studio-preview/public/**'
       - 'design/icons/**'
@@ -67,8 +78,15 @@ jobs:
           done
       - name: Rebrand a studio (Prism to Lumen) through prebuild and the web build
         run: node tooling/brand/rebrand-check.mjs --app apps/example --manifest apps/example/brands/prism.json --from Prism --to Lumen --web
-      - name: Rebrand the suite (Forge to Anvil) through prebuild
-        run: node tooling/brand/rebrand-check.mjs --app apps/example --manifest apps/example/brands/suite.json --from Forge --to Anvil
+      - name: Rebrand the suite (Forge to Anvil) through prebuild and the web build
+        run: node tooling/brand/rebrand-check.mjs --app apps/example --manifest apps/example/brands/suite.json --from Forge --to Anvil --web
+      - name: Rebrand Media Lab (to Clip Bench) through prebuild
+        run: node tooling/brand/rebrand-check.mjs --app apps/forge-media-lab --manifest apps/forge-media-lab/brand.json --from "Media Lab" --to "Clip Bench"
+      - name: Rebrand Cadence QA (to Groove QA) through prebuild
+        run: |
+          set -euo pipefail
+          (cd examples/native-cadence && pnpm install --frozen-lockfile --ignore-scripts)
+          node tooling/brand/rebrand-check.mjs --app examples/native-cadence --manifest examples/native-cadence/brand.json --from "Cadence QA" --to "Groove QA"
 
   rebranded-android-build:
     runs-on: ubuntu-latest
@@ -145,3 +163,15 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")" = "ai.nitroforge.soundbench"
           if plutil -convert xml1 -o - "$app/Info.plist" | grep -i -E "audio.?lab"; then echo "old name left in Info.plist"; exit 1; fi
           case "$app" in *[Aa]udio[Ll]ab*) echo "old name left in the bundle name $app"; exit 1;; esac
+      - name: Package the rebranded simulator app
+        working-directory: apps/forge-audio-lab/ios
+        shell: bash
+        run: |
+          set -euo pipefail
+          app=$(find build/dd/Build/Products -maxdepth 2 -name '*.app' -type d -print -quit)
+          tar -czf "$RUNNER_TEMP/sound-bench-ios-simulator.app.tar.gz" -C "$(dirname "$app")" "$(basename "$app")"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rebranded-sound-bench-ios-simulator-app
+          path: ${{ runner.temp }}/sound-bench-ios-simulator.app.tar.gz
+          retention-days: 14

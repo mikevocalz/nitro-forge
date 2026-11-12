@@ -6,7 +6,12 @@
 //
 //   node tooling/brand/rebrand-check.mjs --app apps/example \
 //     --manifest apps/example/brands/prism.json --from Prism --to Lumen \
-//     [--platforms ios,android] [--web] [--keep]
+//     [--platforms ios,android] [--surfaces src/brand/surfaces.ts] [--web] [--keep]
+//
+// The surfaces module is required. It exports shownStrings(brand, version),
+// the title bar, header and About strings that carry the name, and
+// renderedIn, the screens that render them. A missing module, export or
+// screen is a failure, and so is the old name hardcoded in one of the screens.
 //
 // --keep leaves ios/ and android/ in place so CI can compile them next.
 // The script refuses to run when ios/ or android/ already exist in the app.
@@ -22,7 +27,7 @@ const brandLib = createRequire(import.meta.url)('./brand.cjs');
 const { values: args } = parseArgs({
   options: {
     app: { type: 'string' }, manifest: { type: 'string' }, from: { type: 'string' }, to: { type: 'string' },
-    platforms: { type: 'string', default: 'ios,android' }, web: { type: 'boolean', default: false }, keep: { type: 'boolean', default: false },
+    platforms: { type: 'string', default: 'ios,android' }, surfaces: { type: 'string', default: 'src/brand/surfaces.ts' }, web: { type: 'boolean', default: false }, keep: { type: 'boolean', default: false },
   },
 });
 for (const k of ['app', 'manifest', 'from', 'to']) if (!args[k]) throw new Error(`--${k} is required`);
@@ -79,14 +84,32 @@ try {
   const identity = [config.name, config.slug, config.scheme, config.ios?.bundleIdentifier, config.android?.package, config.web?.name, config.web?.shortName, JSON.stringify(shownBrand)];
   noOldName(identity.join('\n'), 'resolved Expo config (name, slug, scheme, identifiers, web, extra.forgeBrand)');
 
-  // 3. Title bar and About strings, from the same function the screens call.
-  const surfacesModule = join(app, 'src/brand/surfaces.ts');
-  if (existsSync(surfacesModule)) {
-    const { brandSurfaces } = await import(surfacesModule);
-    const s = brandSurfaces(config.extra.forgeBrand, config.version ?? '0.0.0');
-    const strings = [s.homeTitle, s.workspaceTitle('Studio'), s.documentTitle('Studio'), s.leading.label, s.about.title, s.about.heading, ...s.about.rows.flatMap(r => [r.label, r.value])];
-    check(strings.includes(brand.productName) || strings.includes(brand.shortName), `title bar and About show the new name: ${JSON.stringify(strings)}`);
-    noOldName(strings.join('\n'), 'title bar and About strings');
+  // 3. Title bar, header and About strings. Every app must have a surfaces
+  // module; without one these strings are not checked, so that is a failure.
+  //   shownStrings(brand, version): the strings the app shows that carry its name
+  //   renderedIn: source files (relative to the app) that render them
+  const surfacesModule = join(app, args.surfaces);
+  if (!existsSync(surfacesModule)) {
+    check(false, `title bar and About NOT CHECKED: ${relative(process.cwd(), surfacesModule)} is missing. Move the app's title and About strings into it (see apps/example/src/brand/surfaces.ts)`);
+  } else {
+    const mod = await import(surfacesModule);
+    if (typeof mod.shownStrings !== 'function') {
+      check(false, `title bar and About NOT CHECKED: ${args.surfaces} does not export shownStrings(brand, version)`);
+    } else {
+      const strings = mod.shownStrings(config.extra.forgeBrand, config.version ?? '0.0.0');
+      check(strings.includes(brand.productName) || strings.includes(brand.shortName), `title bar and About show the new name: ${JSON.stringify(strings)}`);
+      noOldName(strings.join('\n'), 'title bar and About strings');
+    }
+    // The screens must take those strings from the module, not hardcode the old name.
+    const rendered = Array.isArray(mod.renderedIn) ? mod.renderedIn : [];
+    check(rendered.length > 0, rendered.length ? `${args.surfaces} lists the screens that render it: ${rendered.join(', ')}` : `${args.surfaces} does not export renderedIn (the screens that show the name), so they are NOT CHECKED`);
+    for (const file of rendered) {
+      const full = join(app, file);
+      if (!existsSync(full)) { check(false, `${file} (listed in renderedIn) does not exist`); continue; }
+      const src = readFileSync(full, 'utf8');
+      const hits = [original.productName, original.shortName].flatMap(n => brandLib.findDisplayName(src, n));
+      check(hits.length === 0, hits.length ? `${file}: hardcoded old name: ${hits.slice(0, 5).map(h => `"…${h}…"`).join(', ')}` : `${file}: no hardcoded "${original.productName}" or "${original.shortName}"`);
+    }
   }
 
   // 4. Native projects.
@@ -115,14 +138,35 @@ try {
   // 5. Web build: the page title and the embedded app config.
   if (args.web) {
     const out = mkdtempSync(join(tmpdir(), 'forge-rebrand-web-'));
-    expo('export', '--platform', 'web', '--max-workers', '2', '--no-minify', '--output-dir', out);
+    // --clear: Metro caches the inlined app config, so without it a second run
+    // bundles the previous run's manifest.
+    expo('export', '--platform', 'web', '--clear', '--max-workers', '2', '--no-minify', '--output-dir', out);
     const html = readFileSync(join(out, 'index.html'), 'utf8');
     const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
     check(title === brand.productName, `web <title> is "${title}"`);
     noOldName(title, 'web <title>');
     const js = textFiles(out, Infinity).filter(f => f.endsWith('.js')).map(f => readFileSync(f, 'utf8')).join('\n');
     check(js.includes(brand.productName), `web bundle carries "${brand.productName}"`);
-    check(!js.includes(JSON.stringify(original.productName).slice(0, -1) + '"'), `web bundle has no "${original.productName}" string`);
+    // Old full name, slug and scheme: none may be left anywhere in the bundle.
+    // An npm scope (`@nitro-forge/ignition`) is a package name, not the app's,
+    // so a copy right after "@" does not count.
+    for (const [what, value] of [['full name', original.productName], ['slug', original.slug], ['scheme', original.scheme]]) {
+      let n = 0;
+      for (let at = js.indexOf(value); at !== -1; at = js.indexOf(value, at + 1)) if (js[at - 1] !== '@') n++;
+      check(n === 0, `web bundle has ${n} copies of the old ${what} "${value}" (npm scopes excluded)`);
+    }
+    // Old short name as a whole quoted string ("Prism", 'Prism'). A studio
+    // build still bundles the suite's studio list (src/editors.tsx), which
+    // gives every studio a `title`; the single-studio screens show the brand
+    // short name instead (surfaces.workspaceTitle). Those `title:` entries are
+    // counted and printed; any other copy fails.
+    const shortRe = new RegExp(`(["'\`])${original.shortName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\1`, 'g');
+    const copies = [...js.matchAll(shortRe)].map(m => ({ before: js.slice(Math.max(0, m.index - 40), m.index), text: js.slice(Math.max(0, m.index - 40), m.index + m[0].length + 10).replace(/\s+/g, ' ') }));
+    const studioList = copies.filter(c => /\btitle:\s*$/.test(c.before));
+    const other = copies.filter(c => !studioList.includes(c));
+    check(other.length === 0, other.length
+      ? `web bundle has the old short name "${original.shortName}" outside the studio list: ${other.slice(0, 5).map(c => `"…${c.text}…"`).join(', ')}`
+      : `web bundle has no "${original.shortName}" string outside the studio list (${studioList.length} studio-list title${studioList.length === 1 ? '' : 's'}: ${studioList.map(c => `"…${c.text}…"`).join(', ')})`);
     rmSync(out, { recursive: true, force: true });
   }
 } finally {

@@ -6,6 +6,7 @@ import { WaveformLane } from "@nyc-tron/ui/components/forge/WaveformLane";
 import { FRAME_RATES } from "@nyc-tron/ui/components/forge/timebase";
 import type { WaveformPeak } from "@nyc-tron/ui/components/forge/waveform";
 import { LevelFader } from "@nyc-tron/ui/components/forge/audio/LevelFader";
+import { surfaces } from "./src/brand";
 
 interface DemoState { frame: number; gain: number }
 const store = createStore<DemoState>(() => ({ frame: 1800, gain: 0.72 }));
@@ -20,8 +21,8 @@ export default function App() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "#101018" }}
       contentContainerStyle={{ padding: 22, gap: 20, minHeight: 500 }}>
-      <Text style={{ fontSize: 26, fontWeight: "700", color: "white" }}>
-        Forge media controls · SDK 58
+      <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "700", color: "white" }}>
+        {surfaces.title}
       </Text>
       <Text style={{ color: "#CBCBDE" }}>
         Universal SwiftUI / Compose / web transport and responsive waveform

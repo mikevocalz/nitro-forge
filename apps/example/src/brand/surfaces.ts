@@ -53,3 +53,12 @@ export function brandSurfaces(brand: ForgeBrand, version: string): BrandSurfaces
     },
   };
 }
+
+/** Screens that render these strings, relative to the app root. tooling/brand/rebrand-check.mjs scans them for a hardcoded old name. */
+export const renderedIn = ['app/_layout.tsx', 'app/index.tsx', 'app/about.tsx', 'app/editor/[product].tsx'];
+
+/** Every string above that a user sees, for the rebrand test. */
+export function shownStrings(brand: ForgeBrand, version: string): string[] {
+  const s = brandSurfaces(brand, version);
+  return [s.homeTitle, s.workspaceTitle('Studio'), s.documentTitle('Studio'), s.leading.label, s.about.title, s.about.heading, ...s.about.rows.flatMap(r => [r.label, r.value])];
+}

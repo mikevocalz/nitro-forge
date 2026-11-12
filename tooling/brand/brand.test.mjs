@@ -109,3 +109,40 @@ test('validate rejects slug-like and malformed identifiers', () => {
   assert.throws(() => brandLib.validate({ ...good, ios: { bundleIdentifier: 'prism' } }), /reverse-DNS/);
   assert.throws(() => brandLib.validate({ ...good, shortName: '' }), /shortName/);
 });
+
+test('findDisplayName catches a hardcoded name in JSX and strings, not in imports, comments or identifiers', () => {
+  const src = [
+    'import { Lab } from "@nitro-forge/audio-lab";',
+    '// Audio Lab header below',
+    'const AudioLabScreen = () => <Text>Nitro Forge · Native Audio Lab</Text>;',
+    "const id = 'forge-audio-lab';",
+  ].join('\n');
+  const hits = brandLib.findDisplayName(src, 'Audio Lab');
+  assert.equal(hits.length, 1);
+  assert.match(hits[0], /Native Audio Lab/);
+  assert.equal(brandLib.findDisplayName('const x = "http://a.b/Audio Lab";', 'Audio Lab').length, 1, 'a URL inside a string is not a comment');
+  assert.equal(brandLib.findDisplayName('<ForgeIcon /> {surfaces.title}', 'Forge').length, 0);
+});
+
+// Every installable app has a surfaces module the rebrand test can read, and
+// the screens it lists show no hardcoded name.
+const APPS = [
+  ['apps/example', 'apps/example/brands/suite.json'],
+  ['apps/example', 'apps/example/brands/prism.json'],
+  ['apps/forge-audio-lab', 'apps/forge-audio-lab/brand.json'],
+  ['apps/forge-media-lab', 'apps/forge-media-lab/brand.json'],
+  ['examples/native-cadence', 'examples/native-cadence/brand.json'],
+];
+for (const [app, manifest] of APPS) {
+  test(`${manifest}: title strings come from ${app}/src/brand/surfaces.ts`, async () => {
+    const mod = await import(join(root, app, 'src/brand/surfaces.ts'));
+    const b = brandLib.load(join(root, manifest));
+    const shown = mod.shownStrings({ id: b.id, productName: b.productName, shortName: b.shortName, ...(b.engine ? { engine: b.engine } : {}), bundleIdentifier: b.ios.bundleIdentifier, androidPackage: b.android.package }, '0.0.0');
+    assert.ok(shown.includes(b.productName) || shown.includes(b.shortName), `${app} shows neither "${b.productName}" nor "${b.shortName}": ${shown}`);
+    assert.ok(Array.isArray(mod.renderedIn) && mod.renderedIn.length > 0, `${app}: renderedIn is empty`);
+    for (const file of mod.renderedIn) {
+      const src = readFileSync(join(root, app, file), 'utf8');
+      for (const name of [b.productName, b.shortName]) assert.deepEqual(brandLib.findDisplayName(src, name), [], `${app}/${file} hardcodes "${name}"`);
+    }
+  });
+}

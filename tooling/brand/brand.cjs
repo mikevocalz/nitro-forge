@@ -95,4 +95,28 @@ function findName(text, name) {
   return hits;
 }
 
-module.exports = { load, validate, rebrand, spellings, findName, NAME_FIELDS, ICON_KEYS };
+/**
+ * Source text with comments and module specifiers removed, so what remains is
+ * code, string literals and JSX text. `@nitro-forge/...` imports and comments
+ * that mention a name are not something a user sees.
+ */
+function visibleSource(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:"'`\\])\/\/[^\n]*/g, '$1')
+    .replace(/\b(from|import|require)\s*\(?\s*(['"])[^'"\n]*\2/g, '$1 ""');
+}
+
+/**
+ * Hardcoded copies of a display name in source: case-sensitive, whole words,
+ * any run of whitespace between words ("Audio Lab" matches "Native Audio Lab"
+ * but not "AudioLabScreen" or "audio-lab").
+ */
+function findDisplayName(src, name) {
+  const words = name.trim().split(/\s+/).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp(`(?<![A-Za-z0-9_])${words.join('\\s+')}(?![A-Za-z0-9_])`, 'g');
+  const text = visibleSource(src);
+  return [...text.matchAll(re)].map(m => text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30).replace(/\s+/g, ' '));
+}
+
+module.exports = { load, validate, rebrand, spellings, findName, findDisplayName, visibleSource, NAME_FIELDS, ICON_KEYS };
