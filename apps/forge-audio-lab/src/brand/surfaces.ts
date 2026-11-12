@@ -29,7 +29,7 @@ const isBrand = (v: unknown): v is ForgeBrand => {
 /** Reads `extra.forgeBrand` written by the config plugin. Throws if it is missing. */
 export function readBrand(extra: unknown): ForgeBrand {
   const brand = (extra as { forgeBrand?: unknown } | null | undefined)?.forgeBrand;
-  if (!isBrand(brand)) throw new Error('extra.forgeBrand is missing: add tooling/brand/plugin.cjs to app.json plugins');
+  if (!isBrand(brand)) throw new Error('No brand: extra.forgeBrand is missing because tooling/brand/plugin.cjs did not run. Add it to "plugins" in app.json, then restart the bundler.');
   return brand;
 }
 

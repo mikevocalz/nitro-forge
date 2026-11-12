@@ -1,6 +1,6 @@
 'use strict';
 // Brand manifests: one JSON file per installable app. The Expo config plugin
-// (plugin.cjs), the rebrand tool (rebrand.mjs) and the tests all read them
+// (plugin.cjs), the rebrand test (rebrand-check.mjs) and the tests all read them
 // through this module. Schema: brand.schema.json.
 
 const fs = require('node:fs');

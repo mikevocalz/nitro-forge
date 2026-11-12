@@ -1,51 +1,32 @@
 # F4 references: Nitro Forge launcher icon family and launcher labels
 
-Date: 2026-11-11
+Date: 2026-11-11, references section replaced 2026-11-12
 
-## How this was gathered
+## §3.3 step 2 status: NOT MET
 
-- Mobbin MCP (`search_screens`, mode `standard`). The tool's `platform` parameter accepts only `ios` or `web`. It has no iPad value, and every `ios` result came back as an iPhone screen. **Mobbin has no iPad coverage for either surface.** The usable hits are web (desktop) suite launchers, which show the same structure: one family of icons with short names, in a grid.
-- Mobbin queries run:
-  - ios: "app switcher listing other apps in the same product suite"
-  - ios: "Microsoft Office app home with Word Excel PowerPoint app icons"
-  - ios: "office suite app create new menu choosing document, spreadsheet or presentation"
-  - web: "app launcher grid menu showing the company's other apps with their icons"
-  - web: "Microsoft 365 home with Word, Excel, PowerPoint app icons" (returned Canva, Base44, Plane, Replit and others; no Microsoft 365)
-  - web: "Google apps switcher grid with Docs Sheets Slides Drive icons" (returned only Google Gemini; no Workspace switcher)
-  - web: "Adobe Creative Cloud apps list with Photoshop Illustrator Premiere icons"
-- Because there was no iPad coverage, Dribbble was added through WebSearch (limited to dribbble.com): "dribbble app icon family suite" and "dribbble app icon system set of apps suite icons". The Dribbble URLs below all came from those results. I did not open the shot images, so those verdicts rest on each shot's title and description only.
-- Platform guidance: Apple pages were read through their DocC JSON endpoints (`developer.apple.com/tutorials/data/...json`), because the HTML pages render client-side. Android, Microsoft and Google Play pages were read with WebFetch.
-- Mobbin URLs have the utm query strings removed. Every row is a structure reference only. The marks themselves are not to be copied.
+§3.3 step 2 asks for at least three Mobbin references per surface, iPad only, with Dribbble where Mobbin has no iPad coverage. Neither source produced an iPad reference this gate can use, so step 2 is not met for either surface (launcher icon family, launcher label and About/title bar).
 
-## 1. Launcher icon family
+The first version of this file (commit 07aca25) listed 20 rows from iPhone screens, desktop web pages and Dribbble shots chosen from their titles. R2 rejected them. They are removed here; none of them counts as an iPad reference.
 
-| # | Query | Source app | URL | Pattern | Verdict | Reason |
-|---|---|---|---|---|---|---|
-| 1 | web: Adobe Creative Cloud apps list | Adobe (web home) | https://mobbin.com/screens/f5d8b897-8441-4eb4-9e6c-726c09b07312 | "Your apps" grid, 5 per row: the same rounded square, the same dark field, a two-letter monogram, and one accent hue per app (Ps blue, Ai orange, Pr purple, Ae violet, Id pink, Acrobat red) | TAKE | Clearest example of one shared construction with one variable (hue plus mark). Eight icons side by side still read as one family. |
-| 2 | web: Adobe Creative Cloud apps list | Adobe (home, recents) | https://mobbin.com/screens/fa4d753b-fd9e-4802-bc59-01c7908a0f85 | The same family icons shrunk to roughly 16 px badges on file thumbnails (Ps, Ai, Lr, Express, PDF) | TAKE | Shows that the family has to survive at badge size, where only hue and a simple shape remain legible. |
-| 3 | web: Adobe Creative Cloud apps list | Adobe (Files) | https://mobbin.com/screens/dd2a7dff-0dc8-41b5-84a2-235fce949d71 | File grid where each tile carries a small app badge to show which app owns the file | TAKE | A second small-size proof: a file-to-studio badge, the role a studio icon would play in a suite file browser. |
-| 4 | web: Adobe Creative Cloud apps list | Adobe (Apps, Illustration filter) | https://mobbin.com/screens/f964c579-1583-4f38-a20e-dc09ec939cd2 | App cards (icon, short name, one-line purpose) plus a "View all plans" tile showing a cluster of family icons together | TAKE | The cluster tile is the family shown as one object, which is a good model for the suite app's own icon or about screen. |
-| 5 | web: Microsoft 365 home | Canva (web home) | https://mobbin.com/screens/403ab002-0600-44ee-9af7-04320b3badd2 | Row of circular "create" icons: same size and shape, one saturated hue each, one white glyph each (Presentation, Video, Doc, Spreadsheet, Whiteboard, Code, Website) | TAKE | The Canva-side reference for the Affinity-by-Canva bar: a doc-type family where hue plus one glyph carries identity across about 12 types. |
-| 6 | Dribbble search (no Mobbin iPad) | Kapost (Sara Hill) | https://dribbble.com/shots/2171418-Kapost-App-Suite-Icons | Icon set for a multi-app product suite | TAKE (image not viewed) | Of the shots found, this one most directly matches "suite icon family". Open it before relying on it. |
-| 7 | Dribbble search (no Mobbin iPad) | iStat (Bjango, Marc Edwards) | https://dribbble.com/shots/3047583-iStat-app-icon-family | "Family portrait" of the iStat apps, described as a dark grey base with blue and cyan accents | TAKE (image not viewed) | A shared base colour with per-app accents is the same grid-plus-hue structure as Nitro Forge. |
-| 8 | Dribbble search (no Mobbin iPad) | Osmo (Ramotion) | https://dribbble.com/shots/3079347-Osmo-Family-App-Icons | Described as a design system for a suite of Osmo apps | TAKE (image not viewed) | A family system for several apps from one maker. |
-| 9 | Dribbble search (no Mobbin iPad) | Bitstrips / Bitmoji (Matt Grantham) | https://dribbble.com/shots/1785863-Bitstrips-App-Icon-Suite | Described as a standardised parent logo plus a system for new products (blue comic bubble, green chat bubble) | TAKE (image not viewed) | Shows a parent mark rule that extends to future apps, which a suite app plus seven studios will also need. |
-| 10 | Dribbble search (no Mobbin iPad) | Personal Metis (Piet van Dongen) | https://dribbble.com/shots/1026365-Personal-Metis-iOS-App-Icon-Family | Proposed family of icons for three apps in one domain | REJECT | Only three apps and an older iOS style. Weaker than rows 6 to 9. |
-| 11 | ios: app switcher in same suite | Neo Financial | https://mobbin.com/screens/d4835d81-b763-4321-8769-eb4337b4816d | "Explore products" list of two accounts with grey glyph icons | REJECT | iPhone, banking, and only two items with no colour coding. |
-| 12 | ios: Office app home | Trainline | https://mobbin.com/screens/a0eebc8d-5d4a-4216-bc82-da6174ecdafe | Alternate app icon picker | REJECT | iPhone, and these are variants of one app's icon, not a family of apps. |
-| 13 | web: app launcher grid | Squarespace | https://mobbin.com/screens/fb58dc29-6823-4ac5-8602-938d6f1c852d | Monochrome grid of third-party service glyphs | REJECT | Third-party integrations, not a first-party family. Monochrome, so no colour system. |
+### Mobbin, 2026-11-12
 
-## 2. Launcher labels and in-app suite / app-switcher naming
+The MCP tools take `platform: ios` or `web`; there is no iPad value. Every `ios` result below was an iPhone capture (iPhone status bar, Dynamic Island, single column), and every `search_sections` result was a desktop web page.
 
-| # | Query | Source app | URL | Pattern | Verdict | Reason |
-|---|---|---|---|---|---|---|
-| 1 | web: Adobe Creative Cloud apps list | Adobe (web home) | https://mobbin.com/screens/f5d8b897-8441-4eb4-9e6c-726c09b07312 | Labels under icons drop the parent brand: "Photoshop", "Illustrator", "InDesign", "Premiere Pro", "After Effects". Only "Adobe Acrobat" and "Adobe Express" keep it. Variants go on a second line: "Photoshop (web)" | TAKE | Inside the suite's own launcher the parent name is implied and dropped. Labels top out at about 13 characters ("After Effects"). Two-word names wrap to two lines. |
-| 2 | web: Adobe Creative Cloud apps list | Adobe (search dropdown) | https://mobbin.com/screens/e023eeb1-baa6-4647-9b67-fcc287634d6e | "Apps & services" list: short name ("Photoshop", "Adobe Express", "Adobe Fonts") plus a one-line descriptor plus a Launch action | TAKE | Pattern for an in-app switcher: short name first, purpose second, never the full legal name. |
-| 3 | web: Adobe Creative Cloud apps list | Adobe (Apps, filter) | https://mobbin.com/screens/f964c579-1583-4f38-a20e-dc09ec939cd2 | Category chips (Photo, Video, Illustration, 3D & AR) above cards labelled "Illustrator" / "Photoshop" with one-sentence purpose | TAKE | Shows a split between the studio name (proper noun) and the category (plain noun) that Nitro Forge could also use: "Prism" plus "Image". |
-| 4 | web: Microsoft 365 home | Canva (web home, French locale) | https://mobbin.com/screens/403ab002-0600-44ee-9af7-04320b3badd2 | One-word type labels under circle icons: "Présentation", "Vidéo", "Doc", "Tableur", "Tableau blanc", "Site Web" | TAKE | Localisation stress test: "Tableau blanc" and "Réseaux sociaux" wrap to two lines. Short English labels can grow 30 to 50 percent in other languages. |
-| 5 | web: Microsoft 365 home | Replit (home) | https://mobbin.com/screens/d1b52508-5edd-424b-bd62-68bd7b9ba239 | Row of mode tiles labelled "Website", "Mobile", "Design", "3D Game", "Slides" | TAKE | Single-word labels of 7 characters or fewer that fit on one line under a small tile. A good length target. |
-| 6 | web: Google apps switcher | Google Gemini | https://mobbin.com/screens/f0411b5f-3350-4152-baf6-ea946c9b9646 | Drive file picker with Docs/Sheets type badges on thumbnails | REJECT | Shows type badges but no app switcher and no app names. Mobbin has no Google Workspace app switcher. |
-| 7 | ios: app switcher in same suite | Perplexity | https://mobbin.com/screens/91296d89-e2c5-4d3d-b8b8-54a796f9fbd5 | Connector list: "Google Drive", "OneDrive", "Sharepoint", "Outlook" with descriptors | REJECT | iPhone, third-party connectors. Naming is incidental, not a suite switcher. |
+| Tool | Query | What came back |
+|---|---|---|
+| `search_screens` ios | iPad home screen with app icons and labels | Expedia, Brainly, CapCut, talabat, Trainline (alternate icon picker), Lemonade, Insight Timer, Waymo. All iPhone. No home screen. |
+| `search_screens` ios | Procreate gallery screen | Five Procreate Pocket screens (the iPhone app). No Procreate for iPad. |
+| `search_screens` ios | Microsoft Word iPad document editor | TradingView, ChatGPT, Google Calendar, Shopify. All iPhone. No Microsoft app. |
+| `search_flows` ios | iPad creative app about screen with version and app info | About flows from Kino, Craft, DailyArt and Etsy. All iPhone. |
+| `search_sections` | app suite icon family section showing several product app icons | Whop (twice), Airbnb, ClickUp, Sketch. Desktop web. |
+
+### Dribbble
+
+Web search found shots that may show iPad screens or suite icon families: https://dribbble.com/shots/2384373-iPad-Lockscreen, https://dribbble.com/shots/245556-iPad-app-icons-2, https://dribbble.com/shots/1766449-Canva-iPad-App-Icon, https://dribbble.com/shots/10563457-Craft-do-for-iPad-craft-structured-documents-on-your-iPad, https://dribbble.com/shots/13006132-Drawing-App-iPad-Pro, https://dribbble.com/shots/21212599-Creativit-iPad-App. None of their images could be opened from this session: dribbble.com answers a plain request with an empty HTTP 202 bot-check page, the text extractor returns the description without image links, and the Chrome extension was not connected. They are not used as references, because nobody has looked at them.
+
+### To meet step 2
+
+Someone with a browser opens those shots (or captures Affinity, Adobe Fresco, Procreate, Logic Pro or Office on an iPad) and records three per surface with what each image shows.
 
 ## Platform label guidance
 
@@ -65,4 +46,3 @@ Date: 2026-11-11
 
 - The one published hard number for a short app name is Apple's 15 characters for `CFBundleName`. All seven studio names (Prism, Quill, Tally, Pitch, Folio, Splice, Cadence) fit with room to spare. "Nitro Forge" is 11 characters.
 - No platform publishes a Home Screen label width. Microsoft says outright that visible length depends on glyph width. Test the labels on a real iPad Home Screen at the default and the largest text size.
-- Adobe and Canva both drop the parent brand inside their own launcher. Single-word studio names with no "Nitro" prefix follow that pattern.

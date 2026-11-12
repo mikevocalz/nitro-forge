@@ -1,6 +1,6 @@
 // Nitro Forge launcher icon family. Pure SVG source: every app icon, Android
 // adaptive layer, monochrome layer and favicon is generated from this file.
-// Spec: design/icons/ICON-GRID.md. Renders: tooling/brand/render-icons.mjs.
+// Spec: design/APP-IDENTITY.md, "Icon family". Renders: tooling/brand/render-icons.mjs.
 //
 // Grid: 1024 px canvas, 64 px unit (16 x 16 units), centre (512, 512).
 // Every glyph point sits inside the 304 px keyline circle, which is inside the
