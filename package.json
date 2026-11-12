@@ -22,7 +22,10 @@
     "verify:workspace-source": "node tooling/verify-workspace-source.mjs",
     "verify:released-ui": "node tooling/verify-released-ui.mjs",
     "verify:completion": "node tooling/verify-completion-plan.mjs",
-    "test:completion": "node --test tooling/verify-completion-plan.test.mjs"
+    "test:completion": "node --test tooling/verify-completion-plan.test.mjs",
+    "validate:v1": "node tooling/validate-v1.mjs",
+    "validate:v1:prerelease": "node tooling/validate-v1.mjs --version 1.0.0-rc.1",
+    "test:validate-v1": "node --test tooling/validate-v1.test.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

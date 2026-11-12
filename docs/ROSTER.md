@@ -54,18 +54,30 @@ output actually exists; anything not executed is marked NOT RUN.
 
 ## Transport status
 
-| Transport | Status |
-|---|---|
-| nf-cli JSON-lines | ✅ verified — powers all e2e suites |
-| folio-render JSON-lines (pdfium service) | ✅ verified macOS arm64 only — powers render.e2e; other platforms NOT-RUN |
-| raw-decode JSON-lines (nf-raw/LibRaw service) | ✅ verified macOS arm64 only — powers photo raw.e2e; other platforms NOT-RUN |
-| scene-render JSON-lines (CPU raster service) | ✅ verified macOS arm64 only (cargo tests + stdio roundtrip); other platforms NOT-RUN |
-| nf-sys C ABI (staticlib/cdylib) | ✅ verified — FFI round-trip test passes |
-| Nitro HybridObject codegen (nitrogen) | ⚠️ spec written (`Forge.nitro.ts` + `nitro.json`); codegen NOT run |
-| iOS simulator build + run (examples/native-cadence, Debug-iphonesimulator) | ✅ verified on iOS 27.1 simulator only (merges `625dab7` pre-scene 11-kind run + `codex/w32-ios-scene` all-12 incl. scene at `ad2696e`) — physical device NOT RUN |
-| Android debug build + run (examples/native-cadence, arm64-v8a APK) | ✅ verified on API 36 emulator only (merges `e7e3e26` + `994e06f`, all 12 engine kinds incl. scene) — physical device NOT RUN |
-| WASM build | ✅ crates compile + engine round-trip probe passes (2026-11-08 `codex/w33-wasm`) — rustup stable 1.99.1, both `wasm32-unknown-unknown` and `wasm32-wasip1` targets: `ignition-core` + all 12 engine crates (prism, cadence, splice, folio, pitch, tally, quill, photo, motion, design, draft, scene) compile; `wasm32-unknown-unknown` caveat: folio-engine fails on `getrandom` (needs `wasm_js` backend; WASI's native `random_get` covers it on wasip1). Pure-Rust providers nf-color, splice-render, scene-render compile on both targets. NOT wasm-feasible: `nf-raw`/`raw-decode` (LibRaw C++ via cc-rs fails on both targets) and `folio-render` (pdfium dynamic library loading unsupported on wasm). Probe: `rust/wasm-probe` (`nf-wasm-probe`, wasip1 `_start`) runs all 12 engines through new/describe/`NFD1`-snapshot/restore/invalid-restore-reject under Node WASI — all PASS, `docs/completion/evidence/W33-wasm-*.txt`. Browser/wasm-bindgen host, wasm-opt, and non-WASI runtimes NOT RUN |
-| apps/example on simulator/device | ❌ NOT RUN (examples/native-cadence ran instead — see verified rows) |
+This table and `compatibility.v1.json` state the same results; the JSON names
+the receipt and commit for each row. Regenerated 2026-11-11 from receipts read
+at `0ad4ed2`. A result applies only to the commit and target named. No row is
+a release candidate receipt (gate F7 in `docs/release/v1-readiness.json`).
+Linux CI receipts are in `docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json`;
+PR #75 head `3dd98cc` has the same tree as `0ad4ed2`.
+
+| Transport / target | `compatibility.v1.json` | Status |
+|---|---|---|
+| Rust engine crates (`cargo test --locked --workspace`) | `rust-engines`: passed | ✅ Linux x86_64 CI at `3dd98cc` (run 43113143814, 50 result lines, none failed) and the push run at `0ad4ed2` (43123839431). macOS, Windows and mobile hosts NOT RUN at `0ad4ed2` |
+| nf-cli JSON-lines | `nf-cli-package-suites`: passed | ✅ powers the e2e suites. Splice, Office (Pitch, Quill, Folio), Prism, Cadence and Tally suites passed on Linux CI at `0ad4ed2`. Photo, Motion, Design, Draft and Scene suites NOT RUN in CI at `0ad4ed2` |
+| folio-render JSON-lines (pdfium service) | `hostServices.folio-render`: not-verified | ⚠️ the macOS arm64 pdfium run (`w16-cargo-test-folio-render.log`) records no source revision. Linux CI at `3dd98cc` ran the 7 service tests, which skip their checks when no pdfium library resolves. Every platform with pdfium loaded at a recorded commit: NOT RUN |
+| raw-decode JSON-lines (nf-raw/LibRaw service) | `hostServices.raw-decode`: passed | ✅ Linux CI at `3dd98cc`: 11 pass, 1 ignored (the real-DNG fixture test). Real-fixture decode at a recorded commit, mobile and WASM: NOT RUN |
+| scene-render JSON-lines (CPU raster service) | `hostServices.scene-render`: passed | ✅ Linux CI at `3dd98cc`: 14 pass. Mobile, WASM and Windows NOT RUN |
+| splice-render JSON-lines | `hostServices.splice-render`: passed | ✅ Linux CI at `3dd98cc`: 20 pass. Mobile, WASM and Windows NOT RUN |
+| nf-color ICC provider | `hostServices.nf-color`: passed | ✅ Linux CI at `3dd98cc`: 21 pass. Mobile, WASM and Windows NOT RUN |
+| nf-sys C ABI (staticlib/cdylib) | `rust-c-abi`: passed | ✅ Linux CI at `3dd98cc` (run 43113143918): headers identical, 28 nf-sys tests, real C++ session linked to Rust with a round trip. macOS, Windows and QNX hosts NOT RUN |
+| Nitro HybridObject codegen (nitrogen) | not tracked | ✅ `pnpm --filter @nitro-forge/ignition codegen` followed by `git diff --exit-code` on the generated files passed in Ignition v1 shared host CI at `3dd98cc` |
+| iOS build + run (examples/native-cadence) | `react-native-ios`: partial | Build ✅ CI at `3dd98cc` (xcodebuild for iOS Simulator, BUILD SUCCEEDED, not launched; forge-audio-lab also compiled). Run ✅ on the iOS 27.1 simulator at `ad2696e` (W32, all 12 engine kinds incl. scene) and `defae63` (P01). Run at `0ad4ed2` NOT RUN; physical device NOT RUN |
+| Android build + run (examples/native-cadence, arm64-v8a APK) | `react-native-android`: partial | Build ✅ CI at `3dd98cc` (assembleDebug, BUILD SUCCESSFUL, not launched; forge-audio-lab also assembled). Run ✅ on the API 36 emulator at `313973f` (W31, all 12 engine kinds incl. scene) and `defae63` (P01). Run at `0ad4ed2` NOT RUN; physical device NOT RUN |
+| Web (Expo web, studio-preview) | `web`: build-passed | Metro web bundle exported in CI at `3dd98cc`. Any browser run NOT RUN |
+| WASM build | `wasm`: not-verified | ⚠️ the W33 receipts (`docs/completion/evidence/W33-wasm-*.txt`, added in `69dd2ee`) record no source revision, so they are not bound to a commit. They report all 12 engine crates compiling for `wasm32-wasip1` and passing the `nf-wasm-probe` round trip under Node WASI, and folio-engine failing on `getrandom` for `wasm32-unknown-unknown`. `nf-raw`/`raw-decode` and `folio-render` are not wasm-feasible. Browser/wasm-bindgen host, wasm-opt and any run at `0ad4ed2`: NOT RUN |
+| macOS desktop, Windows desktop | `desktop-macos`, `desktop-windows`: NOT RUN | ❌ no desktop target exists (gate F5) |
+| apps/example on simulator/device | not tracked | ❌ NOT RUN (examples/native-cadence ran instead) |
 
 ## Workstreams
 
@@ -2747,7 +2759,7 @@ source-level only on mobile.
 Honest limits: all runs are SIMULATOR/EMULATOR evidence, not physical
 device validation, and none is a platform-matrix pass. The iOS build
 predates the scene-engine merge (`180c1e8`): scene has Android-emulator
-round-trip evidence (W31) but NO iOS runtime evidence yet. The completion
+round-trip evidence (W31) but had no iOS runtime evidence when this entry was written; W32 at `ad2696e` later ran all 12 kinds, scene included, on the iOS simulator. The completion
 ledger records these as `in-progress` tier evidence
 (`w28-ios-*`/`w29-android-*`/`w31-android-*` entries in
 `docs/completion/components.json`), not platform passes.
