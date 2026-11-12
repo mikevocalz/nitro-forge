@@ -64,7 +64,7 @@ own; the names were chosen to clear what platforms publish:
 | Microsoft, MSIX name | Visible length depends on glyph width; "keep it short" | Desktop target is F5 |
 | App Store Connect, Google Play | Store name 30 characters | Full names: longest "Nitro Forge Cadence QA", 22 |
 
-Links: `design/references/app-identity-launcher.md`. On the iOS 27 inner
+Links: `design/references/app-identity-launcher.md`; the §3.3 skill outputs are in `design/APP-IDENTITY-3.3.md`. On the iOS 27 inner
 display every Forge short name sits on one line beside existing long-named
 apps that truncate (`design/icons/renders/device/`).
 

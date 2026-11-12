@@ -146,3 +146,8 @@ for (const [app, manifest] of APPS) {
     }
   });
 }
+
+test('visibleSource keeps a "//" that sits inside a word, so a name after it is still found', () => {
+  assert.equal(brandLib.findDisplayName('<Text>Bench//Audio Lab</Text>', 'Audio Lab').length, 1);
+  assert.equal(brandLib.findDisplayName('x(); // Audio Lab', 'Audio Lab').length, 0);
+});

@@ -103,7 +103,7 @@ function findName(text, name) {
 function visibleSource(src) {
   return src
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/(^|[^:"'`\\])\/\/[^\n]*/g, '$1')
+    .replace(/(^|[\s;{}(),])\/\/[^\n]*/g, '$1')
     .replace(/\b(from|import|require)\s*\(?\s*(['"])[^'"\n]*\2/g, '$1 ""');
 }
 
