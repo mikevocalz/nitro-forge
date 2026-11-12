@@ -61,6 +61,41 @@
 7. Tag a semver GitHub Release with changelog, upstream source SHA provenance, build receipts, compatibility feature manifest and rollback steps. Attach the tarballs and `SHA256SUMS` only after approval. Never `npm publish`.
 8. Each consumer moves its pinned tarball URLs and hashes in its own PR (Dependabot and Renovate do not track URL tarballs), canaries a safe app, then rolls out across Moyo, NYC-MON, DVNT and others after independent CI/device checks. No mandatory same-day upgrade on incompatible apps.
 
+## Dependency baseline, 2026-11-11 (gate F1)
+
+Checked against npm and crates.io on 2026-11-11. Every row is either bumped in this branch or held with its reason. React Native stays on 0.88.1; 0.89 is a release candidate only and is held.
+
+### Bumped
+
+| Dependency | From | To | Notes |
+| --- | --- | --- | --- |
+| Nitro v1 trio (`react-native-nitro-modules`, `nitro-core`, `nitrogen`) | nightly.120 (`g33ef045b96c0`) | nightly.136 (`gdb81de61bd32`, `alpha-nightly`) | Upstream diff is 8 commits: Kotlin struct equality without boxing, Swift enum cases starting with a digit, `open` Android view managers, release tooling. No runtime source change in `react-native-nitro-modules` or `nitro-core`. Regenerated `packages/ignition` and `native/persona/nitro` bindings are byte-identical to the committed nightly.120 output. |
+| pnpm | 12.16.1 (root), 10.32.1 (`examples/native-cadence`) | 12.18.0 everywhere | The standalone native-cadence lockfile was re-resolved because pnpm 12 rejects the pnpm 10 lockfile (tarball entries without `integrity`). |
+| expo / expo-router / @expo/ui | 58.0.23 / 58.0.30 / 58.0.27 | 58.0.24 / 58.0.31 / 58.0.28 | Patches renamed unchanged; `@expo/metro-file-map` moved 58.0.5 to 58.0.6 with it (see `docs/native/METRO_FILE_MAP_PORT.md`). |
+| expo-constants, expo-linking | 58.0.15, 58.0.16 | 58.0.16, 58.0.17 | Peer floors of expo-router 58.0.31. |
+| expo-asset, expo-dev-client, expo-haptics, expo-linear-gradient, expo-sensors, expo-status-bar | SDK 58 patch releases | latest 58.x | |
+| react, react-dom | 19.3.0 and 19.3.1 mixed | 19.3.1 | |
+| uniwind | 1.13.1 and 1.13.2 mixed | 1.13.2 | |
+| react-native-gesture-handler | 3.4.0 | 3.5.0 | Still a deliberate deviation from SDK 58's bundled ~3.3.0; `verify-native-host.cjs` now names 3.5.0. Peer range `>=3.4.0 <4` unchanged. |
+| turbo | 2.11.10 | 2.11.11 | |
+| typescript | 5.9.3 (spatial-ink), 6.0.3 (adaptive-layout, labs, native-cadence) | 7.0.2 | Matches the root. |
+| vitest | 3.2.7 (agpl-speed-curve, audio-ui, media-ui, spatial-ink) | 5.1.0 | Matches the root. |
+| tailwindcss, @tailwindcss/vite, vite, @babel/parser, zustand, @webgpu/types | 4.3.4, 4.3.4, 8.3.5, 8.1.0, 5.0.16, 0.1.21 | 4.3.5, 4.3.5, 8.3.8, 8.1.2, 5.1.0, 0.1.74 | |
+| Rust lockfile | | `cargo update` | 25 semver-compatible updates (cc, flate2, libc, syn, the wasm-bindgen family, zip 2.4.2 to 2.6.1 and others) and 5 removed transitive crates (bitflags 1, defmt x3, displaydoc). |
+
+### Held
+
+| Dependency | Held at | Latest | Reason |
+| --- | --- | --- | --- |
+| react-native | 0.88.1 | 0.89 RC | Release candidate only. |
+| react-native-skia + react-native-webgpu | 3.9.1 + 0.21.0 | 3.10.0 + 0.21.3 | Both move Dawn 157.1.0 to 158.0.0 together; the Graphite/Dawn family needs an iOS and Android build of `apps/example` and NYC-Tron's T1 result on 3.10.0 before it moves. |
+| react-native-svg | 15.16.0 | 15.16.1 | 15.16.1 ships its own `Package.swift`, which collides with the local SwiftPM patch; adopting it needs an iOS SwiftPM build. |
+| react-native-video (vendored `experimental-build-v1.tgz`) | generated with nightly.120 | n/a | Third-party artifact with recorded provenance. A workspace override keeps it on the nightly.136 runtime; regenerating it needs the upstream checkout in `tooling/react-native-video-v1/README.md`. |
+| quick-xml | 0.37.5 | 0.42.0 | RUSTSEC-2026-0194 and -0195 (denial of service). 0.42 changes `name()`, `unescape()` and `decode()`; Tally fails with 12 compile errors and Quill with 29. Needs an engine PR for the XLSX and DOCX readers. |
+| lopdf | 0.36.0 | 0.47.0 | RUSTSEC-2026-0187 (stack overflow on deeply nested objects). 0.47 compiles after 3 call-site fixes but fails 8 of 149 folio-engine tests, including all three encrypted round-trip tests. Needs an engine PR. |
+| zip | 2.6.1 | 9.5.1 | RUSTSEC-2026-0367, -0368, -0369, -0429. All four are in `ZipArchive::extract` / `ZipStreamReader::extract`, which no Forge crate calls (Tally and Quill read entries by name). The 2-to-9 migration goes with the quick-xml engine PR. |
+| harfrust, moxcms, skrifa, rand, sha2, md-5 | current majors | newer majors | Semver-major crate releases; outside `cargo update` and not flagged by `cargo audit`. |
+
 ## Skills and standards
 - [No AI Slop](https://github.com/petergyang/no-ai-slop/blob/000650b156983f5159695b441477f4e63b25dc85/skills/no-ai-slop/SKILL.md) + [Everything Claude Code verification loop](https://github.com/WorldFlowAI/everything-claude-code/blob/432485ba6b92c14fb357276a98957f348bcff9ee/skills/verification-loop/SKILL.md).
 - [Expo overview/upgrade](https://github.com/expo/skills/tree/a9e5bd3fa00b4e61f632e43f85da73aee1942582/plugins/expo/skills) and [Callstack upgrading RN](https://github.com/callstackincubator/agent-skills/blob/59e9d17446a248b21d86f078fcd0bd2d36db1ca4/skills/upgrading-react-native/SKILL.md).

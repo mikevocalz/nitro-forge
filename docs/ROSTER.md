@@ -2751,3 +2751,27 @@ round-trip evidence (W31) but NO iOS runtime evidence yet. The completion
 ledger records these as `in-progress` tier evidence
 (`w28-ios-*`/`w29-android-*`/`w31-android-*` entries in
 `docs/completion/components.json`), not platform passes.
+
+## Dependency baseline F1 (2026-11-11, `deps/f1-baseline-20261111`)
+
+Bump list and holds: `docs/release/RELEASE_TRAIN.md`, "Dependency baseline, 2026-11-11".
+Local runs on macOS arm64, node v26.13.0, pnpm 12.18.0, cargo 1.99.1, on the
+branch's working tree:
+
+- Nitrogen nightly.136 regenerated `packages/ignition` (4 HybridObjects) and
+  `native/persona/nitro` (2) from a deleted `nitrogen/generated`; the output is
+  byte-identical to the committed nightly.120 files.
+- `cargo test --locked --workspace`: 50 suites, 1442 passed, 0 failed, 2 ignored.
+- `cargo audit`: 7 advisories in lopdf 0.36.0, quick-xml 0.37.5 and zip 2.6.1,
+  all held with reasons in the release train.
+- `pnpm typecheck` 28/28 tasks; `pnpm build` 1/1; all 25 package test tasks
+  pass at `--concurrency=4`. One run at default concurrency timed out the
+  collaboration-server process-death test at 5 s; it passed 3 of 3 times alone.
+- `examples/native-cadence`: frozen install, typecheck, Android `expo export`,
+  and `check-bundle-singletons.mjs` (one copy of react-native and
+  react-native-nitro-modules).
+- `nitro-v1-latest.mjs --offline`, `audit.mjs --offline`, `verify-native-host.cjs`,
+  `verify-nyc-tron-pin.mjs`, `verify-released-ui.mjs`, completion-plan checks: pass.
+
+Not run locally: native iOS or Android compilation, devices, simulators. The
+native compiles come from the PR's CI jobs only.
