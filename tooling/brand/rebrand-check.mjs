@@ -102,14 +102,14 @@ try {
     const pbx = readFileSync(join(app, 'ios', project, 'project.pbxproj'), 'utf8');
     const ids = [...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = "?([^";]+)"?;/g)].map(m => m[1]);
     check(ids.length > 0 && ids.every(id => id === brand.ios.bundleIdentifier), `iOS bundle identifier is ${[...new Set(ids)].join(', ')}`);
-    for (const file of textFiles(join(app, 'ios'))) noOldName(readFileSync(file, 'utf8') + file, `ios/${relative(join(app, 'ios'), file)}`);
+    for (const file of textFiles(join(app, 'ios'))) noOldName(readFileSync(file, 'utf8') + '\n' + relative(app, file), `ios/${relative(join(app, 'ios'), file)}`);
   }
   if (platforms.includes('android')) {
     const strings = readFileSync(join(app, 'android/app/src/main/res/values/strings.xml'), 'utf8');
     check(strings.includes(`<string name="app_name">${brand.shortName}</string>`), `Android launcher label (app_name) is "${brand.shortName}"`);
     const gradle = readFileSync(join(app, 'android/app/build.gradle'), 'utf8');
     check(gradle.includes(`applicationId '${brand.android.package}'`) || gradle.includes(`applicationId "${brand.android.package}"`), `Android applicationId is ${brand.android.package}`);
-    for (const file of textFiles(join(app, 'android'))) noOldName(readFileSync(file, 'utf8') + file, `android/${relative(join(app, 'android'), file)}`);
+    for (const file of textFiles(join(app, 'android'))) noOldName(readFileSync(file, 'utf8') + '\n' + relative(app, file), `android/${relative(join(app, 'android'), file)}`);
   }
 
   // 5. Web build: the page title and the embedded app config.
