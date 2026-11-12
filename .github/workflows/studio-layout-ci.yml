@@ -88,6 +88,12 @@ jobs:
         run: |
           pnpm --filter @nitro-forge/studio-preview test:ui-modules
           pnpm --filter @nitro-forge/studio-preview build
+      # A blank page passes typecheck and build; load the Studio and require its launcher.
+      - name: Studio shell renders in Chromium (production build and dev server)
+        run: |
+          pnpm --filter @nitro-forge/studio-preview exec playwright install --with-deps chromium
+          pnpm --filter @nitro-forge/studio-preview test:render:build
+          pnpm --filter @nitro-forge/studio-preview test:render
       # cargo test --workspace runs once, in rust-session-contracts.
       - name: Build real engine host
         run: cargo build --locked -p nf-cli
