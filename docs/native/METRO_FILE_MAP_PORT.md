@@ -1,7 +1,11 @@
 # Expo 58 / Metro 0.87.2 file-map compatibility port
 
 This is a local, version-pinned compatibility patch, not an Expo-endorsed pairing.
-It targets `@expo/metro-file-map@58.0.5`; upstream Metro packages stay at 0.87.2.
+It targets `@expo/metro-file-map@58.0.6`; upstream Metro packages stay at 0.87.2.
+The port was written against 58.0.5. Expo 58.0.24 pulls 58.0.6, whose only
+source change is in `build/lib/RootPathUtils.js` (ancestor-root escape
+patterns), a file this patch does not touch. The same patch applies to 58.0.6
+with `git apply --check` and was renamed on 2026-11-11 without content changes.
 Expo's CLI still uses and verifies its own branded FileMap. There is no CLI
 assertion bypass, no runtime monkeypatch, and no no-op API shim. Expo's scoped,
 on-demand fallback TreeFS remains unchanged.
@@ -69,7 +73,7 @@ validated. JS export does not establish native readiness.
 
 ## Installation
 
-Register patches/@expo__metro-file-map@58.0.5.patch under patchedDependencies and
+Register patches/@expo__metro-file-map@58.0.6.patch under patchedDependencies and
 let pnpm generate the lockfile normally. Do not invent patch hashes. Reading
 pristine source archives for this port was not an installation or execution of
 fresh dependencies.

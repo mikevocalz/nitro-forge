@@ -15,9 +15,9 @@ for (const name of ['expo-image', 'react-native-gesture-handler']) {
   assert.ok(manifest.dependencies[name], `${name} must be declared by the native host`);
   const installed = hostRequire(`${name}/package.json`);
   const matchesExpo = semver.satisfies(installed.version, bundled[name]);
-  // Explicit latest-npm migration: Gesture Handler 3.4 is newer than SDK58's
+  // Explicit latest-npm migration: Gesture Handler 3.5 is newer than SDK58's
   // bundled 3.3. A custom native build is required; Expo Go is not validation.
-  const latestCandidate = name === 'react-native-gesture-handler' && installed.version === '3.4.0';
+  const latestCandidate = name === 'react-native-gesture-handler' && installed.version === '3.5.0';
   assert.ok(matchesExpo || latestCandidate, `${name}@${installed.version} must match the documented host candidate`);
   if (!matchesExpo) console.log(`${name}@${installed.version}: deliberate latest-npm deviation from Expo ${bundled[name]}; native build/device validation remains required`);
   moduleRoots[name] = path.dirname(hostRequire.resolve(`${name}/package.json`));
@@ -56,7 +56,7 @@ for (const platform of ['ios', 'android']) {
   assert.ok(dependency.platforms[platform]);
   console.log(`Gesture Handler ${platform} autolinking passed (configuration evidence, not device input)`);
 }
-const nightly = '1.0.0-alpha.nightly.120.g33ef045b96c0';
+const nightly = '1.0.0-alpha.nightly.136.gdb81de61bd32';
 assert.equal(hostRequire('react-native-nitro-modules/package.json').version, nightly);
 assert.equal(hostRequire('nitro-core/package.json').version, nightly);
 const skiaRequire = createRequire(hostRequire.resolve('react-native-skia/package.json'));

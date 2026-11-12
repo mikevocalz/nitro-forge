@@ -23,7 +23,8 @@ Pixel, Layout and Sketch "personas" (editing modes).
 - C ABI for non-RN consumers; CMake library and SwiftPM manifest. Native core has
   no React Native, Nitro, JSI, JavaScript, CUDA or UI dependency.
 - Actual Nitro v1 decorated class spec, generated Apple/Android bindings and C++
-  implementation using the repository's exact nightly-120 pin. Not a v0
+  implementation using the repository's exact Nitro v1 pin (nightly-136 since
+  2026-11-11; regenerated output was byte-identical to nightly-120). Not a v0
   `createHybridObject` wrapper. The `nitro/` package remains private and outside
   workspace release packaging until native app integration is validated.
 
