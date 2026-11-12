@@ -13,6 +13,7 @@ import {ValidationDropdown} from '@nyc-tron/ui/components/forge/spreadsheet/Vali
 import {AutoFillModePicker} from '@nyc-tron/ui/components/forge/spreadsheet/FillHandleAndAutoFill';
 import {commitTallyFilter,commitTallySort,commitTallyValidatedCell,readTallyNames,readTallySortFilter,readTallyValidation,tallySelectionForRange,tallySortFilterColumns,TALLY_AUTO_FILL_MODES,type AutoFillModeShape,type TallySortFilterRead,type TallyValidationRead} from './tally-rows-wiring';
 import type {TallyDocument} from '../../../packages/tally/src/index';
+import {TallyPivotPanel} from './tally-pivot-panel';
 import {parseTallyCellAddress,tallyCellAddress,TALLY_GRID_MAX_COLUMNS,TALLY_GRID_MAX_ROWS,TALLY_GRID_MAX_WINDOW_CELLS,type TallyGridData} from '../../../packages/tally/src/grid-adapter';
 
 /** Presentation belongs to the active worksheet, never to a native resource. */
@@ -72,7 +73,7 @@ export function boundedTallyFreeze(freeze:FreezeState,viewport:{readonly width:n
 /** Composes supported engine data operations and canonical freeze commands. */
 export function TallyDetailControls(props:TallyDetailControlsProps){
  const {document,sheetId,cells,selection,disabled}=props,scale=resolveWorkspaceScale(props.density),colors=workspaceThemes[props.theme];
- const store=useMemo(()=>createStore(()=>({panel:'selection' as 'selection'|'sort'|'data'|'view',text:'',error:'',retry:0,activeFilterId:null as string|null,
+ const store=useMemo(()=>createStore(()=>({panel:'selection' as 'selection'|'sort'|'data'|'pivot'|'view',text:'',error:'',retry:0,activeFilterId:null as string|null,
   sorts:{key:'',list:[] as readonly SheetSort[]},
   read:{key:'',status:'idle' as 'idle'|'loading'|'ready'|'error',error:'',names:[] as Awaited<ReturnType<typeof readTallyNames>>,validation:null as TallyValidationRead|null,sortFilter:null as TallySortFilterRead|null}})),[document,sheetId]);
  const state=useStore(store,s=>s);
@@ -123,7 +124,7 @@ export function TallyDetailControls(props:TallyDetailControlsProps){
   return write(()=>document.setRange(tallyCellAddress(range.startRow,range.startColumn),rows));
  };
  return <View testID="tally-detail-controls" style={{padding:scale.space.inset,gap:scale.space.element}}>
-  <TabBar semantics="tabs" density="compact" aria-label="Worksheet tools" tabs={(['selection','sort','data','view'] as const).map(panel=>({key:panel,label:panel==='selection'?'Selection':panel==='sort'?'Sort and filter':panel==='data'?'Data':'View',icon:null,active:state.panel===panel,onPress:()=>store.setState({panel,error:''})}))}/>
+  <TabBar semantics="tabs" density="compact" aria-label="Worksheet tools" tabs={(['selection','sort','data','pivot','view'] as const).map(panel=>({key:panel,label:panel==='selection'?'Selection':panel==='sort'?'Sort and filter':panel==='data'?'Data':panel==='pivot'?'Pivot':'View',icon:null,active:state.panel===panel,onPress:()=>store.setState({panel,error:''})}))}/>
   {state.error&&<Banner tone="danger" title={state.error} live="alert"/>}
   {state.panel==='selection'&&<>
    <Text style={{color:colors.text,fontSize:scale.type.body}}>{range?`${rangeAddress(range)} · ${count} cell${count===1?'':'s'}`:'Select a cell or range in the grid.'}</Text>
@@ -157,6 +158,7 @@ export function TallyDetailControls(props:TallyDetailControlsProps){
    <Button title="Apply cell source" variant="ghost" targetSize={scale.size.target} disabled={disabled||!selection||!state.text.length}
     onPress={()=>attempt(()=>{if(!selection)throw new Error('Select a destination cell.');const rows=tallyPasteRows(state.text,selection.focus);return write(()=>document.setRange(selection.focus,rows));})}/>
   </>}
+  {state.panel==='pivot'&&<TallyPivotPanel document={document} sheetId={sheetId} sheetName={props.sheetName} range={range} revision={revision} disabled={disabled} write={write} density={props.density} theme={props.theme}/>}
   {state.panel==='view'&&<>
    <FreezeSplitControls key={boundary} freeze={props.freeze} onFreezeChange={changeFreeze} {...(selection?{focus:selection.focus}:{})}/>
    <Text style={{color:colors.muted,fontSize:scale.type.body}}>Frozen panes are view settings. They are not saved in the workbook.</Text>

@@ -95,6 +95,10 @@ jobs:
         run: |
           pnpm --filter @nitro-forge/prism typecheck
           pnpm --filter @nitro-forge/prism test
+      - name: Studio preview row wiring (recorded calls and real engines)
+        run: |
+          pnpm --filter @nitro-forge/studio-preview test
+          pnpm --filter @nitro-forge/studio-preview test:engine
       - name: Seven-engine browser bridge round trips
         run: pnpm --filter @nitro-forge/studio-preview test:integration
   rust-session-contracts:
