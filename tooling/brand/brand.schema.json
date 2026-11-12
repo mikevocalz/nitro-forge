@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nitro Forge brand manifest",
+  "description": "One per installable app. Read by tooling/brand/plugin.cjs. A rebrand rewrites id, productName, shortName, slug, scheme and the identifiers; engine and icons are left alone.",
+  "type": "object",
+  "required": ["id", "productName", "shortName", "engine", "slug", "scheme", "ios", "android", "icons"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "productName": { "type": "string", "minLength": 1, "description": "Full name: store record, web title, About screen." },
+    "shortName": { "type": "string", "minLength": 1, "description": "Launcher label (CFBundleDisplayName, CFBundleName, Android app_name, web short_name)." },
+    "engine": { "type": ["string", "null"], "description": "Studio a single-studio build opens; null for the suite and labs." },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "scheme": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "ios": {
+      "type": "object", "required": ["bundleIdentifier"], "additionalProperties": false,
+      "properties": { "bundleIdentifier": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]*(\\.[A-Za-z][A-Za-z0-9-]*)+$" } }
+    },
+    "android": {
+      "type": "object", "required": ["package"], "additionalProperties": false,
+      "properties": { "package": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$" } }
+    },
+    "icons": {
+      "type": "object",
+      "required": ["family", "app", "adaptiveForeground", "adaptiveBackground", "adaptiveMonochrome", "favicon"],
+      "additionalProperties": false,
+      "properties": {
+        "family": { "type": "string", "description": "Entry in tooling/brand/icon-family.mjs the artwork is drawn from." },
+        "app": { "type": "string" },
+        "adaptiveForeground": { "type": "string" },
+        "adaptiveBackground": { "type": "string" },
+        "adaptiveMonochrome": { "type": "string" },
+        "favicon": { "type": "string" }
+      }
+    }
+  }
+}

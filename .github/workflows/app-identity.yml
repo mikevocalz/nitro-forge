@@ -1,0 +1,147 @@
+# Gate F4: app identity and rebranding.
+# - brand-and-rebrand: manifests, icon sets, the config plugin, and the rebrand
+#   test on the suite and a studio (native projects and the web build).
+# - rebranded-*-build: renames a lab app and compiles it, so the brand plugin's
+#   output is proven to build natively, then checks the built label and id.
+# The launcher-label width check comes from NYC-Tron UI (gate T3) once the
+# Tron pin moves to rc.2; it is not part of this workflow yet.
+name: App identity and rebrand
+
+on:
+  pull_request:
+    paths:
+      - 'tooling/brand/**'
+      - 'apps/example/app.json'
+      - 'apps/example/brands/**'
+      - 'apps/example/assets/brand/**'
+      - 'apps/example/src/brand/**'
+      - 'apps/example/app/**'
+      - 'apps/forge-audio-lab/app.json'
+      - 'apps/forge-audio-lab/brand.json'
+      - 'apps/forge-audio-lab/assets/brand/**'
+      - 'apps/forge-media-lab/app.json'
+      - 'apps/forge-media-lab/brand.json'
+      - 'examples/native-cadence/app.json'
+      - 'examples/native-cadence/brand.json'
+      - 'apps/studio-preview/index.html'
+      - 'apps/studio-preview/public/**'
+      - 'design/icons/**'
+      - '.github/workflows/app-identity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: '1'
+  EXPO_NO_TELEMETRY: '1'
+
+jobs:
+  brand-and-rebrand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Brand manifests, icon sets and test renders
+        run: node --test tooling/brand/brand.test.mjs
+      - name: Title bar and About strings
+        run: pnpm --filter @nitro-forge/example exec node --experimental-strip-types --test src/brand/surfaces.test.ts
+      - name: Every Forge app resolves its brand
+        run: |
+          set -euo pipefail
+          for app in apps/forge-audio-lab apps/forge-media-lab; do
+            (cd "$app" && pnpm exec expo config --type public --json > /tmp/config.json)
+            node -e 'const c=require("/tmp/config.json");const b=c.extra.forgeBrand;if(!b||c.name!==b.productName)throw new Error("brand not applied in "+process.argv[1]);console.log(process.argv[1], c.name, "/", b.shortName, c.ios.bundleIdentifier, c.android.package)' "$app"
+          done
+          for brand in suite prism quill tally pitch folio splice cadence; do
+            (cd apps/example && FORGE_BRAND=$brand pnpm exec expo config --type public --json > /tmp/config.json)
+            node -e 'const c=require("/tmp/config.json");const b=c.extra.forgeBrand;if(b.id!==process.argv[1])throw new Error("FORGE_BRAND not applied");console.log(b.id, c.name, "/", b.shortName, c.ios.bundleIdentifier, c.android.package)' "$brand"
+          done
+      - name: Rebrand a studio (Prism to Lumen) through prebuild and the web build
+        run: node tooling/brand/rebrand-check.mjs --app apps/example --manifest apps/example/brands/prism.json --from Prism --to Lumen --web
+      - name: Rebrand the suite (Forge to Anvil) through prebuild
+        run: node tooling/brand/rebrand-check.mjs --app apps/example --manifest apps/example/brands/suite.json --from Forge --to Anvil
+
+  rebranded-android-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: pnpm install --frozen-lockfile
+      - name: Rebrand Audio Lab to Sound Bench and generate the Android project
+        run: node tooling/brand/rebrand-check.mjs --app apps/forge-audio-lab --manifest apps/forge-audio-lab/brand.json --from "Audio Lab" --to "Sound Bench" --platforms android --keep
+      - name: Compile the rebranded app
+        working-directory: apps/forge-audio-lab/android
+        run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Built APK carries the new label and package, not the old name
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=apps/forge-audio-lab/android/app/build/outputs/apk/debug/app-debug.apk
+          aapt2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          "$aapt2" dump badging "$apk" | tee /tmp/badging.txt | grep -E "^(package|application-label|launchable-activity)"
+          grep -q "package: name='ai.nitroforge.soundbench'" /tmp/badging.txt
+          grep -q "application-label:'Sound Bench'" /tmp/badging.txt
+          if grep -i -E "audio.?lab" /tmp/badging.txt; then echo "old name left in APK badging"; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rebranded-sound-bench-android-apk
+          path: apps/forge-audio-lab/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+  rebranded-ios-build:
+    runs-on: macos-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Rebrand Audio Lab to Sound Bench and generate the Apple project
+        run: node tooling/brand/rebrand-check.mjs --app apps/forge-audio-lab --manifest apps/forge-audio-lab/brand.json --from "Audio Lab" --to "Sound Bench" --platforms ios --keep
+      - name: Resolve CocoaPods
+        working-directory: apps/forge-audio-lab/ios
+        run: pod install
+      - name: Compile for iOS Simulator and read the built Info.plist
+        working-directory: apps/forge-audio-lab/ios
+        shell: bash
+        run: |
+          set -euo pipefail
+          workspace=$(find . -maxdepth 1 -name '*.xcworkspace' -type d -print -quit)
+          scheme=$(basename "$(find . -maxdepth 1 -name '*.xcodeproj' -type d -print -quit)" .xcodeproj)
+          xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd \
+            CODE_SIGNING_ALLOWED=NO build
+          app=$(find build/dd/Build/Products -maxdepth 2 -name '*.app' -type d -print -quit)
+          echo "Built $app"
+          for key in CFBundleDisplayName CFBundleName CFBundleIdentifier; do
+            printf '%s = %s\n' "$key" "$(/usr/libexec/PlistBuddy -c "Print :$key" "$app/Info.plist")"
+          done
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app/Info.plist")" = "Sound Bench"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")" = "ai.nitroforge.soundbench"
+          if plutil -convert xml1 -o - "$app/Info.plist" | grep -i -E "audio.?lab"; then echo "old name left in Info.plist"; exit 1; fi
+          case "$app" in *[Aa]udio[Ll]ab*) echo "old name left in the bundle name $app"; exit 1;; esac

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../tooling/brand/brand.schema.json",
+  "id": "audio-lab",
+  "productName": "Nitro Forge Audio Lab",
+  "shortName": "Audio Lab",
+  "engine": null,
+  "slug": "forge-audio-lab",
+  "scheme": "forge-audio-lab",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.audiolab"
+  },
+  "android": {
+    "package": "ai.nitroforge.audiolab"
+  },
+  "icons": {
+    "family": "audio-lab",
+    "app": "./assets/brand/audio-lab/icon.png",
+    "adaptiveForeground": "./assets/brand/audio-lab/adaptive-foreground.png",
+    "adaptiveBackground": "./assets/brand/audio-lab/adaptive-background.png",
+    "adaptiveMonochrome": "./assets/brand/audio-lab/adaptive-monochrome.png",
+    "favicon": "./assets/brand/audio-lab/favicon.png"
+  }
+}

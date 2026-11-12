@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../tooling/brand/brand.schema.json",
+  "id": "splice",
+  "productName": "Nitro Forge Splice",
+  "shortName": "Splice",
+  "engine": "splice",
+  "slug": "nitro-forge-splice",
+  "scheme": "nitro-forge-splice",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.splice"
+  },
+  "android": {
+    "package": "ai.nitroforge.splice"
+  },
+  "icons": {
+    "family": "splice",
+    "app": "../assets/brand/splice/icon.png",
+    "adaptiveForeground": "../assets/brand/splice/adaptive-foreground.png",
+    "adaptiveBackground": "../assets/brand/splice/adaptive-background.png",
+    "adaptiveMonochrome": "../assets/brand/splice/adaptive-monochrome.png",
+    "favicon": "../assets/brand/splice/favicon.png"
+  }
+}

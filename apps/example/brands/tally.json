@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../tooling/brand/brand.schema.json",
+  "id": "tally",
+  "productName": "Nitro Forge Tally",
+  "shortName": "Tally",
+  "engine": "tally",
+  "slug": "nitro-forge-tally",
+  "scheme": "nitro-forge-tally",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.tally"
+  },
+  "android": {
+    "package": "ai.nitroforge.tally"
+  },
+  "icons": {
+    "family": "tally",
+    "app": "../assets/brand/tally/icon.png",
+    "adaptiveForeground": "../assets/brand/tally/adaptive-foreground.png",
+    "adaptiveBackground": "../assets/brand/tally/adaptive-background.png",
+    "adaptiveMonochrome": "../assets/brand/tally/adaptive-monochrome.png",
+    "favicon": "../assets/brand/tally/favicon.png"
+  }
+}

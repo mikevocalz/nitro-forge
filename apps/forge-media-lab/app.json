@@ -1,7 +1,5 @@
 {
   "expo": {
-    "name": "forge-media-controls-lab",
-    "slug": "forge-media-controls-lab",
     "version": "0.1.0",
     "orientation": "default",
     "userInterfaceStyle": "dark",
@@ -10,6 +8,14 @@
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "plugins": [
+      [
+        "../../tooling/brand/plugin.cjs",
+        {
+          "manifest": "./brand.json"
+        }
+      ]
+    ]
   }
 }

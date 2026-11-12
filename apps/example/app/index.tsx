@@ -1,4 +1,4 @@
-import { Link, Stack } from 'expo-router';
+import { Link, Redirect, Stack } from 'expo-router';
 import { useColorScheme, useWindowDimensions } from 'react-native';
 import { Pressable, ScrollView, Text, View, Card } from '@nitro-forge/studio-workspace/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,12 +6,19 @@ import { ForgeIcon } from '@nitro-forge/icons/native';
 import { workspaceThemes, workspaceScale as scale } from '@nitro-forge/studio-workspace/theme';
 import { APP_MANIFESTS } from '@nitro-forge/studio-workspace/apps';
 import type { Studio } from '@nitro-forge/studio-layout';
+import { brand, surfaces } from '../src/brand';
 
 const APPS = (Object.keys(APP_MANIFESTS) as Studio[]).map(id => ({
   id, name: id[0]!.toUpperCase() + id.slice(1), ...APP_MANIFESTS[id],
 }));
 
 export default function Home() {
+  // A single-studio build opens its studio directly; only the suite lists apps.
+  if (brand.engine) return <Redirect href={`/editor/${brand.engine}`} />;
+  return <Suite />;
+}
+
+function Suite() {
   const theme = useColorScheme() === 'light' ? 'light' : 'dark';
   const colors = workspaceThemes[theme];
   const { width } = useWindowDimensions();
@@ -19,12 +26,12 @@ export default function Home() {
   const columns = width >= 760;
   const compact = width < 440;
   return <>
-    <Stack.Screen options={{ title: 'NitroForge', headerStyle: { backgroundColor: colors.raised }, headerTintColor: colors.text, headerShadowVisible: false }} />
+    <Stack.Screen options={{ title: surfaces.homeTitle, headerStyle: { backgroundColor: colors.raised }, headerTintColor: colors.text, headerShadowVisible: false }} />
     <ScrollView style={{ flex: 1, backgroundColor: colors.base }} contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={{ paddingLeft: Math.max(compact ? 16 : 24, insets.left), paddingRight: Math.max(compact ? 16 : 24, insets.right), paddingTop: 26, paddingBottom: Math.max(32, insets.bottom + 20), alignItems: 'center' }}>
       <View style={{ width: '100%', maxWidth: 1040 }}>
         <View style={{ gap: 10, marginBottom: 28 }}>
-          <Text style={{ color: colors.muted, fontSize: 11 }}>NitroForge / Your collection</Text>
+          <Text style={{ color: colors.muted, fontSize: 11 }}>{surfaces.homeTitle} / Your collection</Text>
           <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 28, lineHeight: 34, letterSpacing: -.8, fontWeight: '600' }}>Apps</Text>
           <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 21 }}>A dedicated space for everything you create.</Text>
         </View>
@@ -60,6 +67,11 @@ export default function Home() {
           </Pressable>
         </Link>
         <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 18, marginTop: 24 }}>Your apps, separate workspaces.</Text>
+        <Link href="/about" asChild>
+          <Pressable accessibilityRole="link" accessibilityLabel={surfaces.about.title} style={{ marginTop: 12, alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }}>
+            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '500' }}>{surfaces.about.title}</Text>
+          </Pressable>
+        </Link>
       </View>
     </ScrollView>
   </>;
