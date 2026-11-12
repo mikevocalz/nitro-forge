@@ -83,6 +83,13 @@ Checked against npm and crates.io on 2026-11-11. Every row is either bumped in t
 | tailwindcss, @tailwindcss/vite, vite, @babel/parser, zustand, @webgpu/types | 4.3.4, 4.3.4, 8.3.5, 8.1.0, 5.0.16, 0.1.21 | 4.3.5, 4.3.5, 8.3.8, 8.1.2, 5.1.0, 0.1.74 | |
 | Rust lockfile | | `cargo update` | 25 semver-compatible updates (cc, flate2, libc, syn, the wasm-bindgen family, zip 2.4.2 to 2.6.1 and others) and 5 removed transitive crates (bitflags 1, defmt x3, displaydoc). |
 
+### Expo 58.0.24 iOS consumer compile (debug record)
+
+- Symptom: `Expo 58 iOS consumer compile` failed in run 43156219593 with `Unable to resolve module dependency: 'SwiftSyntax'` (also `SwiftDiagnostics`, `SwiftSyntaxMacros`, `SwiftSyntaxBuilder`, `SwiftCompilerPluginMessageHandling`) in target `ExpoModulesMacrosCore`, compiled for `arm64-apple-ios15.0-simulator` and `x86_64-apple-ios15.0-simulator`. Each error follows `swiftlang-6.4.0.34.1-macosx27.0-MacroSupport/.../arm64-apple-macos.swiftmodule is incompatible with this Swift compiler: built for incompatible target`.
+- Cause: expo 58.0.24 requires expo-modules-core ~58.1.0, which pins expo-modules-macros 0.33.0 (master had 58.0.30 and 0.29.0). Upstream PR expo/expo-modules-macros#144 moved the `ExpoModulesMacrosPlugin` product onto a plain target that depends on the macro target. With Xcode 27.1, `ExpoModulesMacrosCore` is then also built for the iOS Simulator, and SwiftPM's swift-syntax prebuilt ships macOS slices only. 0.34.0 and 0.35.0 have the same `Package.swift`.
+- Isolation: a one-target Swift package depending on `ExpoModulesMacrosPlugin` from the 0.33.0 tarball, built with `xcodebuild -sdk iphonesimulator` on Xcode 27.1 (27A9269), fails with the same five errors. The same build with `-IDEPackageEnablePrebuilts=NO` succeeds (swift-syntax builds from source for host and simulator).
+- Fix: `cadence-native-consumer.yml` passes `-IDEPackageEnablePrebuilts=NO` to the iOS `xcodebuild`. Consumers building in the Xcode app need the same default (see `examples/native-cadence/README.md`). Remove the flag once an expo-modules-macros release keeps `ExpoModulesMacrosCore` host-only on Xcode 27.1.
+
 ### Held
 
 | Dependency | Held at | Latest | Reason |
