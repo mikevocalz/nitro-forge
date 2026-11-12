@@ -463,7 +463,13 @@ export interface PivotValueInput {
   agg: PivotAgg;
 }
 
-/** One field filter: a source field offset plus 1–64 accepted literal values. */
+/**
+ * One field filter: a source field offset plus 0–64 accepted literal values
+ * (each 1–512 bytes). An empty `values` list means "All": the field sits in
+ * the filter area and every record passes, so refresh output matches the
+ * same spec without that filter. More than 64 values, an empty-string value
+ * or a duplicate filter field rejects with `Validation`.
+ */
 export interface PivotFilterInput {
   field: number;
   values: string[];

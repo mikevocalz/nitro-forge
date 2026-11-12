@@ -273,4 +273,59 @@ describe("tally pivot specs (real Rust via nf-cli)", () => {
       await doc.close();
     }
   });
+
+  it("treats a filter with no values as All through save/load and refresh", async () => {
+    const rows = [
+      ["east", "1", "10"],
+      ["west", "2", "20"],
+      ["east", "3", "30"],
+      ["west", "4", "40"],
+    ];
+    const spec = {
+      source: { sheet: "Sheet1", range: { from: "A1", to: "C4" } },
+      rows: [0],
+      values: [{ field: 1, agg: "sum" as const }],
+    };
+    const doc = await TallyDocument.open(host);
+    let reopened: TallyDocument | undefined;
+    try {
+      await doc.setRange("A1", rows);
+      await doc.addSheet("Out");
+      const grid = async (d: TallyDocument) =>
+        (await d.exportCsv({ sheet: "Out", range: { from: "A1", to: "B3" } })).data.text;
+      const created = await doc.insertPivot(
+        { ...spec, filters: [{ field: 0, values: [] }] },
+        "Out",
+      );
+      const id = created.data.pivot.id;
+      expect(created.data.pivot.filters).toEqual([{ field: 0, values: [] }]);
+      await doc.refreshPivot(id);
+      // Same grid as the spec with no filter.
+      expect(await grid(doc)).toBe(",sum:1\r\neast,4\r\nwest,6\r\n");
+
+      reopened = await TallyDocument.openSnapshot(host, await doc.save());
+      expect((await reopened.describePivot(id)).data.pivot.filters).toEqual([
+        { field: 0, values: [] },
+      ]);
+      expect(await grid(reopened)).toBe(",sum:1\r\neast,4\r\nwest,6\r\n");
+      const again = await reopened.refreshPivot(id);
+      expect(again.data.changed).toBe(0);
+
+      // 65 values and an empty-string value still reject; the spec is untouched.
+      await expect(
+        doc.updatePivot(id, {
+          filters: [{ field: 0, values: Array.from({ length: 65 }, (_, i) => `v${i}`) }],
+        }),
+      ).rejects.toMatchObject({ code: "validation" });
+      await expect(
+        doc.updatePivot(id, { filters: [{ field: 0, values: [""] }] }),
+      ).rejects.toMatchObject({ code: "validation" });
+      expect((await doc.describePivot(id)).data.pivot.filters).toEqual([
+        { field: 0, values: [] },
+      ]);
+    } finally {
+      await reopened?.close();
+      await doc.close();
+    }
+  });
 });

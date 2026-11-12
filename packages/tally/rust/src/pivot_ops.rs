@@ -21,7 +21,9 @@
 //! enum; `sort` is an optional `{field, ascending}` ordering hint.
 //! Duplicate field indices reject inside `rows` and inside `columns`;
 //! `values` may repeat a field under different aggregations; each
-//! `filters` entry needs a unique field and 1–64 bounded values.
+//! `filters` entry needs a unique field and 0–64 bounded values; an
+//! empty `values` list means "All" (the field is placed in the filter
+//! area but admits every record, as a spreadsheet filter starts).
 //!
 //! **Materialization (slice B)**: `refreshPivot {id}` /
 //! `refreshAllPivots {}` compute the pivot grid from the *computed* source
@@ -108,7 +110,8 @@ pub struct PivotValue {
 }
 
 /// One field filter: `field` a 0-based column offset into the source
-/// range, `values` the 1–64 accepted literal values (≤512 bytes each).
+/// range, `values` the 0–64 accepted literal values (≤512 bytes each);
+/// an empty list means "All" and admits every record.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PivotFilter {
@@ -221,9 +224,10 @@ fn valid_name(name: &str) -> bool {
     !name.is_empty() && name.len() <= MAX_PIVOT_NAME_LEN
 }
 
+/// 0 to `MAX_PIVOT_FILTER_VALUES` non-empty bounded literals. An empty
+/// list is valid and means "All" (see `plan_refresh`).
 fn valid_filter_values(values: &[String]) -> bool {
-    !values.is_empty()
-        && values.len() <= MAX_PIVOT_FILTER_VALUES
+    values.len() <= MAX_PIVOT_FILTER_VALUES
         && values
             .iter()
             .all(|v| !v.is_empty() && v.len() <= MAX_PIVOT_FILTER_VALUE_LEN)
@@ -381,7 +385,7 @@ fn build_spec(
     for f in &filters {
         if !valid_filter_values(&f.values) {
             return Err(EngineError::validation(
-                "pivot filter values must be 1-64 entries of 1-512 bytes",
+                "pivot filter values must be 0-64 entries of 1-512 bytes (empty means All)",
             ));
         }
     }
@@ -772,10 +776,14 @@ impl TallyEngine {
             records.push(row);
         }
         // Field filters: a record passes when every filter's display text
-        // is one of its accepted literals (AND across filters).
+        // is one of its accepted literals (AND across filters). A filter
+        // with no accepted literals is "All" and admits every record.
         let mut kept: Vec<usize> = (0..records.len()).collect();
         kept.retain(|&i| {
             spec.filters.iter().all(|f| {
+                if f.values.is_empty() {
+                    return true;
+                }
                 let text = display_text(&records[i][f.field as usize]);
                 f.values.iter().any(|v| v == &text)
             })
@@ -1479,10 +1487,11 @@ mod tests {
             json!({"source":{"range":{"from":"A1","to":"D2"}},"rows":[0,0],"values":[{"field":0,"agg":"sum"}]}),
             // duplicate filter fields
             json!({"source":{"range":{"from":"A1","to":"D2"}},"filters":[{"field":0,"values":["a"]},{"field":0,"values":["b"]}],"values":[{"field":0,"agg":"sum"}]}),
-            // empty filter values / oversized filter value
-            json!({"source":{"range":{"from":"A1","to":"D2"}},"filters":[{"field":0,"values":[]}],"values":[{"field":0,"agg":"sum"}]}),
+            // empty-string filter value / oversized filter value / 65 values
+            // (an empty list is valid: "All")
             json!({"source":{"range":{"from":"A1","to":"D2"}},"filters":[{"field":0,"values":[""]}],"values":[{"field":0,"agg":"sum"}]}),
             json!({"source":{"range":{"from":"A1","to":"D2"}},"filters":[{"field":0,"values":["x".repeat(513)]}],"values":[{"field":0,"agg":"sum"}]}),
+            json!({"source":{"range":{"from":"A1","to":"D2"}},"filters":[{"field":0,"values":(0..65).map(|i| format!("v{i}")).collect::<Vec<_>>()}],"values":[{"field":0,"agg":"sum"}]}),
             // over-cap range
             json!({"source":{"range":{"from":"A1","to":"XFD1048576"}},"values":[{"field":0,"agg":"sum"}]}),
             // bad range
@@ -1937,6 +1946,86 @@ mod tests {
         assert!(d.get("output").is_none());
         assert!(e.redo().unwrap());
         assert_eq!(raw_on(&mut e, "Out", "B2"), "4");
+    }
+
+    /// I-15 option B: a filter with no accepted values is "All". It
+    /// stores, describes, survives snapshot/restore, and refreshes to the
+    /// same grid as the spec with no filter; assigning it is one undo step.
+    #[test]
+    fn empty_filter_means_all_and_round_trips() {
+        let grid = |e: &mut TallyEngine| -> Vec<String> {
+            ["A1", "B1", "A2", "B2", "A3", "B3", "A4"]
+                .iter()
+                .map(|a| raw_on(e, "Out", a))
+                .collect()
+        };
+        let spec = |filters: Value| {
+            json!({
+                "source": {"sheet":"Sheet1","range":{"from":"A1","to":"C4"}},
+                "rows": [0],
+                "values": [{"field":1,"agg":"sum"}],
+                "filters": filters
+            })
+        };
+        // Baseline: no filter at all.
+        let mut plain = TallyEngine::new();
+        seed_sales(&mut plain);
+        data(&mut plain, "addSheet", json!({"name":"Out"}));
+        insert_on(&mut plain, "Out", spec(json!([])));
+        refresh(&mut plain, 1);
+        let expected = grid(&mut plain);
+        assert_eq!(expected[2], "east");
+        assert_eq!(expected[3], "4");
+
+        let mut e = TallyEngine::new();
+        seed_sales(&mut e);
+        data(&mut e, "addSheet", json!({"name":"Out"}));
+        insert_on(&mut e, "Out", spec(json!([{"field":0,"values":[]}])));
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d["filters"], json!([{"field":0,"values":[]}]));
+        let r = refresh(&mut e, 1);
+        assert_eq!(r.events.len(), 1);
+        assert_eq!(grid(&mut e), expected);
+
+        // Snapshot/restore keeps the empty list.
+        let snap = e.snapshot().unwrap();
+        let mut e2 = TallyEngine::new();
+        e2.restore(&snap).unwrap();
+        let d2 = data(&mut e2, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d2["filters"], json!([{"field":0,"values":[]}]));
+        assert_eq!(grid(&mut e2), expected);
+
+        // updatePivot adding an "All" filter on a second field is one undo
+        // step; the grid is unchanged by it.
+        data(
+            &mut e,
+            "updatePivot",
+            json!({"id":1,"patch":{"filters":[{"field":0,"values":[]},{"field":2,"values":[]}]}}),
+        );
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d["filters"].as_array().unwrap().len(), 2);
+        let r = refresh(&mut e, 1);
+        assert_eq!(r.data["changed"], json!(0));
+        assert!(e.undo().unwrap());
+        let d = data(&mut e, "describePivot", json!({"id":1}))["pivot"].clone();
+        assert_eq!(d["filters"], json!([{"field":0,"values":[]}]));
+
+        // Bounds that still reject: 65 values, an empty-string value,
+        // and a duplicate filter field.
+        for bad in [
+            json!([{"field":0,"values":(0..65).map(|i| format!("v{i}")).collect::<Vec<_>>()}]),
+            json!([{"field":0,"values":[""]}]),
+            json!([{"field":0,"values":[]},{"field":0,"values":[]}]),
+        ] {
+            let err = apply_err(&mut e, "updatePivot", json!({"id":1,"patch":{"filters":bad.clone()}}));
+            assert_eq!(err.code, ErrorCode::Validation, "accepted {bad}");
+        }
+        // 64 values is the inclusive upper bound.
+        data(
+            &mut e,
+            "updatePivot",
+            json!({"id":1,"patch":{"filters":[{"field":0,"values":(0..64).map(|i| format!("v{i}")).collect::<Vec<_>>()}]}}),
+        );
     }
 
     #[test]
