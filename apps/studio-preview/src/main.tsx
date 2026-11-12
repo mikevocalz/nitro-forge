@@ -223,7 +223,7 @@ function App() {
   return <Main dataSet={{ theme }}>
     {lab}
     {!lab && !app && <Nav className="launcher-nav" aria-label="App navigation">
-      <Link className="suite-label" href="#/"><SemanticText className="suite-mark" aria-hidden>N</SemanticText>NitroForge <SemanticText className="suite-caption">The creative collection</SemanticText></Link>
+      <Link className="suite-label" href="#/"><SemanticText className="suite-mark" aria-hidden>N</SemanticText>Nitro Forge <SemanticText className="suite-caption">The creative collection</SemanticText></Link>
       {themeToggle}
     </Nav>}
     {opened.map(id => <Page key={id} className="workspace-container" data-host-width={hostWidth} hidden={!!lab || app !== id}

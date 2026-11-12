@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../tooling/brand/brand.schema.json",
+  "id": "folio",
+  "productName": "Nitro Forge Folio",
+  "shortName": "Folio",
+  "engine": "folio",
+  "slug": "nitro-forge-folio",
+  "scheme": "nitro-forge-folio",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.folio"
+  },
+  "android": {
+    "package": "ai.nitroforge.folio"
+  },
+  "icons": {
+    "family": "folio",
+    "app": "../assets/brand/folio/icon.png",
+    "adaptiveForeground": "../assets/brand/folio/adaptive-foreground.png",
+    "adaptiveBackground": "../assets/brand/folio/adaptive-background.png",
+    "adaptiveMonochrome": "../assets/brand/folio/adaptive-monochrome.png",
+    "favicon": "../assets/brand/folio/favicon.png"
+  }
+}

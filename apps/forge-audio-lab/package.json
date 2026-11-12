@@ -24,7 +24,8 @@
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-ui-1.0.0-rc.1.tgz",
     "tailwindcss": "4.3.5",
     "uniwind": "1.13.2",
-    "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-platform-services-1.0.0-rc.1.tgz"
+    "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-platform-services-1.0.0-rc.1.tgz",
+    "expo-constants": "58.0.16"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
