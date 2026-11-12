@@ -80,31 +80,35 @@ for (const id of family.FAMILY_IDS) {
   }
 }
 
-// Family strips at each test size, on a dark and a light wallpaper, drawn 1:1.
+// Family strips at each test size, on a dark and a light wallpaper, drawn 1:1:
+// the suite and seven studios, then the labs. Cadence QA sits beside Cadence
+// because they share a glyph and only the bench ground tells them apart.
 const SUITE = ['suite', 'prism', 'quill', 'tally', 'pitch', 'folio', 'splice', 'cadence'];
+const ALL = [...SUITE, 'cadence-qa', 'audio-lab', 'media-lab'];
+for (const id of ALL) if (!family.FAMILY[id]) throw new Error(`unknown family member ${id}`);
 for (const size of [16, 32, 60]) {
   const gap = Math.max(6, size / 3);
-  const w = SUITE.length * (size + gap) + gap;
+  const w = ALL.length * (size + gap) + gap;
   const h = (size + gap) * 2 + gap;
   let body = '';
   ['#D9DDE3', '#20242B'].forEach((wall, row) => {
     body += `<rect y="${row * (size + gap)}" width="${w}" height="${size + 2 * gap}" fill="${wall}"/>`;
-    SUITE.forEach((id, i) => {
+    ALL.forEach((id, i) => {
       body += `<g transform="translate(${gap + i * (size + gap)},${gap + row * (size + gap)}) scale(${size / 1024})">${masked(id, row * 10 + i)}</g>`;
     });
   });
   write(join(RENDERS, `family-${size}.png`), png(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${body}</svg>`, w));
 }
 
-// Home-screen mock: the suite at iPad icon size (76 pt drawn at 2x), with the
-// short launcher labels from the manifests, on a dark and a light wallpaper.
+// Home-screen mock: every Forge app at iPad icon size (76 pt drawn at 2x), with
+// the short launcher labels from the manifests, on a dark and a light wallpaper.
 const labels = Object.fromEntries(manifests().map(b => [b.icons.family, b.shortName]));
 {
   const icon = 152, colW = 220, rowH = 236, pad = 48;
-  const w = pad * 2 + colW * 4, h = pad * 2 + rowH * 2;
+  const w = pad * 2 + colW * 4, h = pad * 2 + rowH * Math.ceil(ALL.length / 4);
   const sheet = (wall, ink) => {
     let body = `<rect width="${w}" height="${h}" fill="${wall}"/>`;
-    SUITE.forEach((id, i) => {
+    ALL.forEach((id, i) => {
       const x = pad + (i % 4) * colW + (colW - icon) / 2;
       const y = pad + Math.floor(i / 4) * rowH;
       body += `<g transform="translate(${x},${y}) scale(${icon / 1024})">${masked(id, i)}</g>`;
