@@ -7,10 +7,16 @@ or later on `feat/f4-app-identity-20261111`. The first version of this
 section (PR #79 body at `46b753c`) was written without loading the skills; R2
 rejected it, and nothing from it is carried over unless re-derived here.
 
+Owner update, 2026-11-13: the owner accepted the earlier iPhone Duo captures
+as F4's launcher-reference basis. See
+[F4 reference decision](F4-REFERENCE-DECISION-2026-11-13.md). The dated skill
+outputs below remain historical; no iPad capture, new skill execution or
+complete reference coverage is inferred from that choice.
+
 | Step | Skill | Status |
 |---|---|---|
 | 1 | `design:user-research` | Run. Desk research only; no participants |
-| 2 | Mobbin, then Dribbble | NOT MET (no iPad coverage; Dribbble images not opened) |
+| 2 | Mobbin, then Dribbble | Historical search NOT MET; owner accepted the earlier iPhone Duo launcher captures on 2026-11-13. About/title-bar coverage remains incomplete |
 | 3 | `design:design-system` | Run |
 | 4 | `design:ux-copy` | Run; one copy change made |
 | 5 | `frontend-design:frontend-design` | Run for the launcher; lab-header captures NOT RUN |
@@ -42,7 +48,7 @@ engine", record time to tap and wrong taps, then ask what they expect About
 to show. Not run: there is no iPad build to put in front of anyone yet (F5
 picks desktop studios; no studio has compiled natively, `docs/ROSTER.md`).
 
-## 2. Mobbin, then Dribbble: NOT MET
+## 2. Mobbin, then Dribbble: historical search NOT MET
 
 Mobbin's tools return iPhone captures for `platform: ios` and desktop pages
 for `web` and `search_sections`; five queries across `search_screens`,

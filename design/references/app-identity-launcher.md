@@ -2,7 +2,17 @@
 
 Date: 2026-11-11, references section replaced 2026-11-12
 
-## §3.3 step 2 status: NOT MET
+## Owner reference-device decision, 2026-11-13
+
+The owner chose **"Accept the earlier iPhone Duo captures"** for F4. The
+accepted existing files and their exact provenance are recorded in
+[the decision](../F4-REFERENCE-DECISION-2026-11-13.md) and
+[reference-index.json](../../docs/design/reference-index.json).
+They remain iPhone Duo simulator launcher captures of stub bundles.
+This resolves the F4 device-choice question; it does not create iPad proof,
+complete About/title-bar reference coverage, or pass the release gate.
+
+## Historical §3.3 step 2 search, 2026-11-12: NOT MET
 
 §3.3 step 2 asks for at least three Mobbin references per surface, iPad only, with Dribbble where Mobbin has no iPad coverage. Neither source produced an iPad reference this gate can use, so step 2 is not met for either surface (launcher icon family, launcher label and About/title bar).
 
@@ -24,9 +34,15 @@ The MCP tools take `platform: ios` or `web`; there is no iPad value. Every `ios`
 
 Web search found shots that may show iPad screens or suite icon families: https://dribbble.com/shots/2384373-iPad-Lockscreen, https://dribbble.com/shots/245556-iPad-app-icons-2, https://dribbble.com/shots/1766449-Canva-iPad-App-Icon, https://dribbble.com/shots/10563457-Craft-do-for-iPad-craft-structured-documents-on-your-iPad, https://dribbble.com/shots/13006132-Drawing-App-iPad-Pro, https://dribbble.com/shots/21212599-Creativit-iPad-App. None of their images could be opened from this session: dribbble.com answers a plain request with an empty HTTP 202 bot-check page, the text extractor returns the description without image links, and the Chrome extension was not connected. They are not used as references, because nobody has looked at them.
 
-### To meet step 2
+### Historical next step and current limits
 
-Someone with a browser opens those shots (or captures Affinity, Adobe Fresco, Procreate, Logic Pro or Office on an iPad) and records three per surface with what each image shows.
+The 2026-11-12 record proposed opening those shots or collecting iPad
+captures. The owner's 2026-11-13 decision accepts the earlier iPhone Duo
+launcher captures for F4 instead of keeping that device search open. The
+original three-references-per-surface count is not claimed met, and neither
+accepted home-screen image shows About, a title bar or a lab header. Those
+coverage and review gaps remain listed in the decision. The global iPad
+reference matrix in `docs/design/reference-index.json` remains incomplete.
 
 ## Platform label guidance
 

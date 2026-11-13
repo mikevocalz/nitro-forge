@@ -2,6 +2,14 @@
 
 Gate F4. Written 2026-11-11 on `feat/f4-app-identity-20261111`, base `0ad4ed2`.
 
+## Owner reference-device decision
+
+On 2026-11-13 the owner accepted the earlier iPhone Duo captures as the F4
+launcher icon and label reference basis. Their iOS simulator/stub-bundle
+origin, file hashes and remaining gate criteria are recorded in
+[F4 reference decision](F4-REFERENCE-DECISION-2026-11-13.md). This is a
+reference choice; it adds no iPad or studio runtime result.
+
 ## Names and identifiers
 
 Every installable Forge app has one brand manifest. `tooling/brand/plugin.cjs`
