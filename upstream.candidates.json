@@ -6,7 +6,7 @@
       "name": "photocraft",
       "repository": "storytold/photocraft",
       "baseRef": "main",
-      "lastObservedSha": "5d9c57e60db966382abda2638d0ccbb7489d8ee7",
+      "lastObservedSha": "0e1bf698f39e0e35ae2cd89015a0bd2151357ef1",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -15,7 +15,7 @@
       "name": "wordcraft",
       "repository": "storytold/wordcraft",
       "baseRef": "main",
-      "lastObservedSha": "242e850aaad6bf38e1cd2be4122cc7cb9e5a15a8",
+      "lastObservedSha": "c537ed96b9f1d31402e20b0e1a356368138f78ed",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -24,7 +24,7 @@
       "name": "gridcraft",
       "repository": "storytold/gridcraft",
       "baseRef": "main",
-      "lastObservedSha": "488f9982ebf05be9bfe581489d0edc6e3918eec7",
+      "lastObservedSha": "c0ee120ac2d9b59630f5abf1151dd9b471fe2926",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -33,7 +33,7 @@
       "name": "deckcraft",
       "repository": "storytold/deckcraft",
       "baseRef": "main",
-      "lastObservedSha": "0d45a64db23baa0a4c8f9f7ac14c59c91b40fec9",
+      "lastObservedSha": "7a24b20c8e82fdbd3317f90f237f290e0d1c38be",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -42,7 +42,7 @@
       "name": "pdfcraft",
       "repository": "storytold/pdfcraft",
       "baseRef": "main",
-      "lastObservedSha": "1303684851f45b0d798d34bfed78a90880516ef5",
+      "lastObservedSha": "8034990072fcc745d7af54bd52f27fbe029aafaa",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -51,7 +51,7 @@
       "name": "filmcraft",
       "repository": "storytold/filmcraft",
       "baseRef": "main",
-      "lastObservedSha": "68919ed87aa6a097a4d21414ec7c438883f5fe22",
+      "lastObservedSha": "d1e64ecfcc5e6f21e30f571e6fe3edbe86fdcafa",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -60,7 +60,7 @@
       "name": "soundcraft",
       "repository": "storytold/soundcraft",
       "baseRef": "main",
-      "lastObservedSha": "8444edf075eae24ad37b128675c939fd5d370a60",
+      "lastObservedSha": "ae652ab34bd4330ec92f223381f5d440991a7abb",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -69,7 +69,7 @@
       "name": "vectorcraft",
       "repository": "storytold/vectorcraft",
       "baseRef": "main",
-      "lastObservedSha": "4ee0ef231aa31f50192f0072554fa390957532bf",
+      "lastObservedSha": "608830d6838e29cf8cddad204c6628949bd63323",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -78,7 +78,7 @@
       "name": "designcraft",
       "repository": "storytold/designcraft",
       "baseRef": "main",
-      "lastObservedSha": "cc3c70d4be5092262b61c43b607e26b4a0b82fc6",
+      "lastObservedSha": "cf4efa1833c2ef3775a818ebbc7b004aef42999a",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -87,7 +87,7 @@
       "name": "effectcraft",
       "repository": "storytold/effectcraft",
       "baseRef": "main",
-      "lastObservedSha": "9d7baea5cce3ddb4a1a33a0f1f6c3de439eddae3",
+      "lastObservedSha": "a70eb03fa6d3343fe70b5dcbdb713e70a801b56e",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
@@ -96,7 +96,7 @@
       "name": "figcraft",
       "repository": "storytold/figcraft",
       "baseRef": "main",
-      "lastObservedSha": "e65ce42000ea2bd3c31d14f6c7e47d14bc6ab164",
+      "lastObservedSha": "7a80106a5e892f7253e16e3cddd1910f4e8588af",
       "admittedSha": null,
       "licenseReview": "unreviewed",
       "runtimeStatus": "not-integrated"
