@@ -16,6 +16,6 @@ Only the `cargo audit` row. The F1 gate stays not-started: the other rows and th
 
 ## Result
 
-CI run on the PR head: PENDING. This file is updated with the run URL and conclusion once the job finishes.
+CI run 43387309013 (https://github.com/mikevocalz/nitro-forge/actions/runs/43387309013), job \`cargo-audit\`, PR #83 head at the time of the run: success, 8s. The log shows 1490 advisories loaded and Cargo.lock scanned (185 crate dependencies). The reviewer has not inspected it yet.
 
 Local run: NOT RUN (no cargo-audit installed; the disk budget rules out building it).
