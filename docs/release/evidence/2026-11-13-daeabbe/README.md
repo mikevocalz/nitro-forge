@@ -43,7 +43,7 @@ at `c83c87104d4001e031b94e296d702688f8f902a3`.
 
 The Cargo run used a task-local target directory with
 `CARGO_PROFILE_DEV_DEBUG=0`, `CARGO_PROFILE_TEST_DEBUG=0` and
-`CARGO_INCREMENTAL=0`. The resulting target occupied about 49 MiB; available
+`CARGO_INCREMENTAL=0`. The resulting target occupied about 52 MiB; available
 space stayed above the owner's 10 GiB floor. The compiler reported existing
 unused-doc-comment and dead-code warnings. This is not a release build or a
 performance measurement. Commands and exit codes are in [checks.json](checks.json).

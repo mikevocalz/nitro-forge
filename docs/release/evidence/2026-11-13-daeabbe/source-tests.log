@@ -1,0 +1,42 @@
+✔ E-35 ticks and seconds convert with ppq * bpm / 60; markers become lane markers in frames (1.78525ms)
+✔ E-35 sensitivity is host state checked to 0..1 (0.210291ms)
+✔ E-35 detection passes sensitivity, then adds only new onsets in one addMarkers call (0.892375ms)
+✔ E-35 onsets offset by the range start, dedupe within one run, and respect the 8192-marker cap (2.410584ms)
+✔ E-35 lane add, update and remove map to addMarker, updateMarker and removeMarker in ticks (0.576833ms)
+✔ E-35 cancellation during analysis skips the write, but cancellation after dispatch reports the atomic write (0.331542ms)
+✔ E-35 a failed in-flight marker write still rejects after cancellation (0.457ms)
+✔ E-35 rounded lane metadata and length edits preserve authoritative sub-frame marker ticks (0.364083ms)
+✔ E-14 a fader commit is one setTrackGain with the linear gain as volume; out-of-range never reaches the engine (1.012833ms)
+✔ C-11 a sample is one samplePixels read and Apply writes the same channels to the active slot (1.006125ms)
+✔ C-11 a sample taken against an older revision is never offered or applied (0.341334ms)
+✔ old and incomplete controls never activate node gestures (0.478333ms)
+✔ maps pivoted rotated nonuniform mirrored path through nested groups and actual viewport (0.857292ms)
+✔ rejects singular/nonfinite layer transforms and unusable measured dimensions (0.254667ms)
+✔ rejects unavailable paths and unavailable ancestor chains (0.115875ms)
+✔ trim edits and track flags reach the Splice bindings with the control payload (1.089917ms)
+✔ an engine rejection is not swallowed: it reaches commit and stays observed (0.661458ms)
+✔ a write the admission gate refuses never calls the engine (0.30475ms)
+✔ a sheet switch closes admission until fresh binding and cells settle (0.727041ms)
+✔ failed reads and writes cannot report a stale generation ready (0.147209ms)
+✔ document, viewport and host-busy changes reject captured callbacks (0.119334ms)
+✔ a rejected host commit stays rejected and never reopens readiness (0.316875ms)
+✔ I-15 fields are the source columns; the output sits one column right of the source (1.227791ms)
+✔ I-15 a filters assignment is a filter with no values ("All"); axes and values map to offsets and aggregates (0.358958ms)
+✔ I-15 aggregate, order and remove edit the spec; text fields only count (0.467708ms)
+✔ I-15 a draft without a value calls nothing; the first value inserts; later edits update; the last value is kept (1.069333ms)
+✔ I-15 reads the sheet pivot and per-column numeric flags from computed values (0.441041ms)
+✔ I-12 sort keys reach sortRange in priority order with direction mapped to ascending (1.281542ms)
+✔ I-12 filter operators become COUNTIF criteria and round-trip from stored rules (0.347375ms)
+✔ I-12 a changed filter sets the new rule before clearing the old one; "all" only clears (0.249125ms)
+✔ I-12 read reports the range filters and the engine pass count (0.602708ms)
+✔ I-04 listNames feeds NameBox with this sheet's names and navigation is a selection change (0.34225ms)
+✔ I-11 validateCell supplies the list choices and status; a pick is one setCell (0.237584ms)
+✔ I-07 copy fills with fillRange, series with fillSeries, and formulas is refused (0.135625ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 238.605292
