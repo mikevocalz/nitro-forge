@@ -9,12 +9,12 @@ importers:
   .:
     dependencies:
       nitro-core:
-        specifier: 1.0.0-alpha.nightly.120.g33ef045b96c0
-        version: 1.0.0-alpha.nightly.120.g33ef045b96c0
+        specifier: 1.0.0-alpha.nightly.136.gdb81de61bd32
+        version: 1.0.0-alpha.nightly.136.gdb81de61bd32
     devDependencies:
       nitrogen:
-        specifier: 1.0.0-alpha.nightly.120.g33ef045b96c0
-        version: 1.0.0-alpha.nightly.120.g33ef045b96c0
+        specifier: 1.0.0-alpha.nightly.136.gdb81de61bd32
+        version: 1.0.0-alpha.nightly.136.gdb81de61bd32
 
 packages:
 
@@ -76,11 +76,11 @@ packages:
     resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
     engines: {node: 18 || 20 || >=22}
 
-  nitro-core@1.0.0-alpha.nightly.120.g33ef045b96c0:
-    resolution: {integrity: sha512-HJLx09kp/mgG4v81WdxQ50ymuh4uS1vhD4OTyjRX+FNVS0K6i1picnUiLzfkr0qFwcDAkfTdXmYtaKO7j+hZEg==}
+  nitro-core@1.0.0-alpha.nightly.136.gdb81de61bd32:
+    resolution: {integrity: sha512-2nVhDQRQwoa2To1GKoBGU6eV+7SYLyBPy5tYWiFwuQuwo7ZahIizfG2uiuevwawquR0JvAu1Ddx87x4pjUnirw==}
 
-  nitrogen@1.0.0-alpha.nightly.120.g33ef045b96c0:
-    resolution: {integrity: sha512-bFfD2HaVx+yKz0O3eXEbFRJexsIM7k+O1Ijfh58RWjLfdfa3de6JLp1tFDmButwDVPXiU6dgzGSB6H7eCowjPg==}
+  nitrogen@1.0.0-alpha.nightly.136.gdb81de61bd32:
+    resolution: {integrity: sha512-q2T/wNUuxxWLFhzo1bXQSFJJHB8YEw8DEGre7EVK05E5cCB2bRGznrQbZrdObuRT4eYUwvjW3sRmW1CT87zhYA==}
     hasBin: true
 
   path-browserify@1.0.1:
@@ -172,12 +172,12 @@ snapshots:
     dependencies:
       brace-expansion: 5.0.12
 
-  nitro-core@1.0.0-alpha.nightly.120.g33ef045b96c0: {}
+  nitro-core@1.0.0-alpha.nightly.136.gdb81de61bd32: {}
 
-  nitrogen@1.0.0-alpha.nightly.120.g33ef045b96c0:
+  nitrogen@1.0.0-alpha.nightly.136.gdb81de61bd32:
     dependencies:
       chalk: 5.6.2
-      nitro-core: 1.0.0-alpha.nightly.120.g33ef045b96c0
+      nitro-core: 1.0.0-alpha.nightly.136.gdb81de61bd32
       ts-morph: 28.0.0
       yargs: 18.2.0
       zod: 4.6.7

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../tooling/brand/brand.schema.json",
+  "id": "cadence",
+  "productName": "Nitro Forge Cadence",
+  "shortName": "Cadence",
+  "engine": "cadence",
+  "slug": "nitro-forge-cadence",
+  "scheme": "nitro-forge-cadence",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.cadence"
+  },
+  "android": {
+    "package": "ai.nitroforge.cadence"
+  },
+  "icons": {
+    "family": "cadence",
+    "app": "../assets/brand/cadence/icon.png",
+    "adaptiveForeground": "../assets/brand/cadence/adaptive-foreground.png",
+    "adaptiveBackground": "../assets/brand/cadence/adaptive-background.png",
+    "adaptiveMonochrome": "../assets/brand/cadence/adaptive-monochrome.png",
+    "favicon": "../assets/brand/cadence/favicon.png"
+  }
+}

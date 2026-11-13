@@ -1,7 +1,5 @@
 {
   "expo": {
-    "name": "Nitro Forge Audio Lab",
-    "slug": "forge-audio-lab",
     "version": "0.1.0",
     "orientation": "default",
     "userInterfaceStyle": "dark",
@@ -12,6 +10,12 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "../../tooling/brand/plugin.cjs",
+        {
+          "manifest": "./brand.json"
+        }
+      ],
       [
         "react-native-audio-api",
         {

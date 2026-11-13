@@ -5,6 +5,7 @@ import {
 } from "@nitro-forge/audio-ui";
 import { NativeAudioPreview } from "@nitro-forge/audio-ui/playback";
 import { NativeSourceRecordingTrack } from "@nitro-forge/audio-ui/pcm";
+import { surfaces } from "./src/brand";
 
 /** Single track owner; one vanilla Zustand store, never React useState. */
 const track = createRecordingStore();
@@ -16,8 +17,8 @@ export default function App() {
     <ScrollView
       style={{ backgroundColor: "#101018", flex: 1 }}
       contentContainerStyle={{ minHeight: 560, padding: 22, gap: 20 }}>
-      <Text style={{ fontSize: 26, fontWeight: "700", color: "#FFFFFF" }}>
-        Nitro Forge · Native Audio Lab
+      <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "700", color: "#FFFFFF" }}>
+        {surfaces.title}
       </Text>
       <Text style={{ fontSize: 15, color: "#CBCBE1" }}>
         Audio API 1.0 PCM WAV capture and native audio graph playback; compressed recording with decoded peaks where supported on web

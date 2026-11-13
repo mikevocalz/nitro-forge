@@ -1,8 +1,5 @@
 {
   "expo": {
-    "name": "Nitro Forge Cadence Native",
-    "slug": "nitro-forge-cadence-native",
-    "scheme": "forge-cadence",
     "version": "0.1.0",
     "orientation": "default",
     "newArchEnabled": true,
@@ -12,11 +9,15 @@
     ],
     "userInterfaceStyle": "dark",
     "ios": {
-      "bundleIdentifier": "ai.nitroforge.cadence.native",
       "supportsTablet": true
     },
-    "android": {
-      "package": "ai.nitroforge.cadence.studio"
-    }
+    "plugins": [
+      [
+        "../../tooling/brand/plugin.cjs",
+        {
+          "manifest": "./brand.json"
+        }
+      ]
+    ]
   }
 }

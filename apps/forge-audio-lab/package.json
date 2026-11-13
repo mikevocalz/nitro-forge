@@ -12,22 +12,23 @@
   "dependencies": {
     "@nitro-forge/audio-ui": "workspace:*",
     "@nitro-forge/media-ui": "workspace:*",
-    "@expo/ui": "^58.0.0",
-    "expo": "^58.0.0",
-    "expo-asset": "^58.0.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "@expo/ui": "^58.0.28",
+    "expo": "^58.0.24",
+    "expo-asset": "^58.0.21",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "react-native": "0.88.1",
     "react-native-web": "~0.21.4",
-    "zustand": "^5.0.0",
+    "zustand": "^5.1.0",
     "react-native-audio-api": "1.0.0",
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-ui-1.0.0-rc.1.tgz",
-    "tailwindcss": "4.3.4",
+    "tailwindcss": "4.3.5",
     "uniwind": "1.13.2",
-    "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-platform-services-1.0.0-rc.1.tgz"
+    "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-platform-services-1.0.0-rc.1.tgz",
+    "expo-constants": "58.0.16"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   }
 }

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../tooling/brand/brand.schema.json",
+  "id": "quill",
+  "productName": "Nitro Forge Quill",
+  "shortName": "Quill",
+  "engine": "quill",
+  "slug": "nitro-forge-quill",
+  "scheme": "nitro-forge-quill",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.quill"
+  },
+  "android": {
+    "package": "ai.nitroforge.quill"
+  },
+  "icons": {
+    "family": "quill",
+    "app": "../assets/brand/quill/icon.png",
+    "adaptiveForeground": "../assets/brand/quill/adaptive-foreground.png",
+    "adaptiveBackground": "../assets/brand/quill/adaptive-background.png",
+    "adaptiveMonochrome": "../assets/brand/quill/adaptive-monochrome.png",
+    "favicon": "../assets/brand/quill/favicon.png"
+  }
+}

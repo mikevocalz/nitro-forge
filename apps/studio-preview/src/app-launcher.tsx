@@ -9,7 +9,7 @@ export function AppLauncher({ opened, theme }: { opened: readonly Studio[]; them
   return <Section className="app-launcher" aria-labelledby="apps-heading">
     <Header className="launcher-heading">
       <Page>
-        <Paragraph className="launcher-location">NitroForge / Your collection</Paragraph>
+        <Paragraph className="launcher-location">Nitro Forge / Your collection</Paragraph>
         <Heading level={1} id="apps-heading">Apps</Heading>
         <Paragraph className="launcher-intro">A dedicated space for everything you create.</Paragraph>
       </Page>

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../tooling/brand/brand.schema.json",
+  "id": "cadence-qa",
+  "productName": "Nitro Forge Cadence QA",
+  "shortName": "Cadence QA",
+  "engine": null,
+  "slug": "nitro-forge-cadence-native",
+  "scheme": "forge-cadence",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.cadence.native"
+  },
+  "android": {
+    "package": "ai.nitroforge.cadence.studio"
+  },
+  "icons": {
+    "family": "cadence-qa",
+    "app": "./assets/brand/cadence-qa/icon.png",
+    "adaptiveForeground": "./assets/brand/cadence-qa/adaptive-foreground.png",
+    "adaptiveBackground": "./assets/brand/cadence-qa/adaptive-background.png",
+    "adaptiveMonochrome": "./assets/brand/cadence-qa/adaptive-monochrome.png",
+    "favicon": "./assets/brand/cadence-qa/favicon.png"
+  }
+}
