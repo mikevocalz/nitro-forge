@@ -73,6 +73,30 @@ function nycTronClassName(): Plugin {
   };
 }
 
+/** react-native-gesture-handler probes Reanimated internals by source path
+ * (`react-native-reanimated/src/createAnimatedComponent/AnimatedComponent`).
+ * That path is TypeScript, which dependency pre-bundling leaves external, so the
+ * browser loaded Reanimated's raw sources and failed on its CommonJS version
+ * check. Point those probes at the compiled `lib/module` build, the copy the
+ * package's main entry already loads, so the page holds one Reanimated. */
+function reanimatedCompiledSubpaths(): Plugin {
+  const sourcePath = /^react-native-reanimated\/src\//;
+  return {
+    name: 'reanimated-compiled-subpaths',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (!sourcePath.test(source)) return null;
+      return this.resolve(source.replace(sourcePath, 'react-native-reanimated/lib/module/'), importer, { skipSelf: true });
+    },
+  };
+}
+
+/** React Native libraries read Metro's `__DEV__` global at module scope
+ * (react-native-gesture-handler's createHandler does), so define it per mode. */
+function reactNativeDevFlag(): Plugin {
+  return { name: 'react-native-dev-flag', config: (_, { mode }) => ({ define: { __DEV__: JSON.stringify(mode !== 'production') } }) };
+}
+
 /** Every NYC-Tron entry the app or studio-workspace imports on web. */
 const nycTronEntries = [
   '@nyc-tron/ui/components/forge/layers/LayerStack', '@nyc-tron/ui/components/forge/inputs/PrecisionScrubber',
@@ -91,10 +115,10 @@ const webExtensions = ['.web.mjs', '.mjs', '.web.js', '.js', '.web.ts', '.ts', '
 export default defineConfig({
   // React Native Web Animated uses the RN global alias in lifecycle cleanup.
   define: { global: 'globalThis', 'process.env.NEXT_PUBLIC_BASE_PATH': JSON.stringify('') },
-  plugins: [nycTronClassName(), tailwindcss(), engineBridge()],
+  plugins: [reactNativeDevFlag(), reanimatedCompiledSubpaths(), nycTronClassName(), tailwindcss(), engineBridge()],
   // Dependency pre-bundling resolves NYC-Tron's imports too, so it needs the same routing.
   // Listed up front: a late discovery re-optimizes mid-session and mixes dependency versions.
-  optimizeDeps: { include: nycTronEntries, rolldownOptions: { resolve: { extensions: webExtensions }, plugins: [nycTronClassName()] } },
+  optimizeDeps: { include: nycTronEntries, rolldownOptions: { resolve: { extensions: webExtensions }, plugins: [reanimatedCompiledSubpaths(), nycTronClassName()] } },
   resolve: {
     // React Native packages publish platform siblings without browser exports.
     extensions: webExtensions,
