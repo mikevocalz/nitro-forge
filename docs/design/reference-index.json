@@ -2,6 +2,66 @@
   "schemaVersion": 1,
   "briefSha256": "6cd469784805aaeae2f65db17ff9ace35f3b30f0578929d6de79f9a4147566f3",
   "phase0Status": "incomplete",
+  "ownerDecisions": [
+    {
+      "id": "F4-reference-device-2026-11-13",
+      "gate": "F4",
+      "decidedAt": "2026-11-13",
+      "decider": "repository owner",
+      "instruction": "Accept the earlier iPhone Duo captures",
+      "scope": "F4 launcher icon and label design-reference device choice",
+      "record": "design/F4-REFERENCE-DECISION-2026-11-13.md",
+      "acceptedCapturePaths": [
+        "design/icons/renders/device/2026-11-11-base-0ad4ed2-ios27-duo-inner-home.png",
+        "design/icons/renders/device/2026-11-12-27eafbb-ios27-duo-inner-home-all-apps.png"
+      ],
+      "limits": [
+        "These are iPhone Duo iOS 27.1 simulator inner-panel captures of launcher stub bundles, not iPad captures or proof that the studio apps launch.",
+        "This decision does not complete reference coverage for About/title-bar or lab-header surfaces.",
+        "The global requiredCaptureMatrix, phase0Status, private gallery entries, release acceptance text and validator remain unchanged."
+      ]
+    }
+  ],
+  "acceptedF4Captures": [
+    {
+      "path": "design/icons/renders/device/2026-11-11-base-0ad4ed2-ios27-duo-inner-home.png",
+      "sha256": "208e0edd7adaf4709b0e1ffe8800a67bdee77825d95228323422254a4fd48fae",
+      "bytes": 1469779,
+      "pixelWidth": 1400,
+      "pixelHeight": 985,
+      "assetOrientation": "landscape",
+      "device": "Forge Completion iPhone Duo",
+      "platform": "iOS 27.1 simulator",
+      "panel": "inner",
+      "captureDate": "2026-11-11",
+      "captureSourceRevision": null,
+      "sourceBaselineRevision": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+      "sourceRevisionNote": "The filename records the base revision; an exact capture checkout and working-tree receipt are not retained.",
+      "historicalReceipt": "design/APP-IDENTITY-3.3.md#5-frontend-designfrontend-design",
+      "appVersion": "not recorded for the launcher stub bundles",
+      "observation": "Original Forge icon family and short launcher labels are visible on a simulator home screen; the later capture includes all eleven labels.",
+      "inference": "Accepted by the owner as the existing F4 launcher-reference basis; no iPad or app-runtime inference.",
+      "assetUse": "Existing original Forge capture already in the public repository; no third-party image copied."
+    },
+    {
+      "path": "design/icons/renders/device/2026-11-12-27eafbb-ios27-duo-inner-home-all-apps.png",
+      "sha256": "f4f1e94d560bafa9fc4159a5b2dbf8d307916f2af0961031cc086543b727c6f4",
+      "bytes": 1117786,
+      "pixelWidth": 1200,
+      "pixelHeight": 843,
+      "assetOrientation": "landscape",
+      "device": "Forge Completion iPhone Duo",
+      "platform": "iOS 27.1 simulator",
+      "panel": "inner",
+      "captureDate": "2026-11-12",
+      "captureSourceRevision": "27eafbb0b921d38853e79d6f15704001255f1534",
+      "historicalReceipt": "design/APP-IDENTITY-3.3.md#5-frontend-designfrontend-design",
+      "appVersion": "not recorded for the launcher stub bundles",
+      "observation": "Original Forge icon family and short launcher labels are visible on a simulator home screen; the later capture includes all eleven labels.",
+      "inference": "Accepted by the owner as the existing F4 launcher-reference basis; no iPad or app-runtime inference.",
+      "assetUse": "Existing original Forge capture already in the public repository; no third-party image copied."
+    }
+  ],
   "requiredCaptureMatrix": {
     "deviceSizes": [
       "11in",

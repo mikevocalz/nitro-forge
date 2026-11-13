@@ -86,9 +86,9 @@
         "2. Each studio has its own icon, drawn as one family in the §2.5 spirit: shared grid, shared construction, one distinguishing form and colour per studio, so the set reads as one suite on a home screen. Run §3.3 on the icon family, with the §2.2 icon designers as the bar. Test at 16, 32, 60 and 1024 pixels.",
         "3. Studios are separately installable and rebrandable by a name replace. Put product name, short name, identifiers and icon paths in one brand manifest per studio that config plugins read. A rebrand test replaces the name and proves the app builds with no old name left in the app label, title bar, About screen or bundle metadata."
       ],
-      "status": "not-started",
-      "statusReason": "No app configures an icon, the media lab still uses a slug as its display name and both labs lack identifiers. Tron's launcher-label check (gate T3) does not exist yet.",
-      "evidence": null,
+      "status": "in-progress",
+      "statusReason": "Brand manifests, icon assets and rebrand checks are present in the inspected master baseline a58994d4. On 2026-11-13 the owner accepted the earlier iPhone Duo launcher captures as the F4 design-reference basis. These remain iOS simulator captures of stub launcher bundles, not iPad or studio runtime proof. See design/F4-REFERENCE-DECISION-2026-11-13.md for the exact captures and remaining T3 adoption, platform/rebrand build, rendered-surface and owner-review criteria. No gate acceptance or reviewer signature is inferred.",
+      "evidence": "design/F4-REFERENCE-DECISION-2026-11-13.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null
