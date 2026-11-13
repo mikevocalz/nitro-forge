@@ -88,6 +88,66 @@ jobs:
         run: |
           pnpm --filter @nitro-forge/studio-preview test:ui-modules
           pnpm --filter @nitro-forge/studio-preview build
+      # A blank page passes typecheck and build; load the Studio and require its launcher.
+      - name: Studio shell renders in Chromium (production build and dev server)
+        run: |
+          pnpm --filter @nitro-forge/studio-preview exec playwright install --with-deps chromium
+          pnpm --filter @nitro-forge/studio-preview test:render:build
+          pnpm --filter @nitro-forge/studio-preview test:render
+      - name: Retain the exact rendered production bundle with provenance
+        env:
+          FORGE_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { execFileSync } from 'node:child_process';
+          import { lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+          import { dirname, join, resolve } from 'node:path';
+
+          const sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          const pullRequestHeadRevision = process.env.FORGE_PR_HEAD_SHA;
+          assert.match(sourceRevision, /^[0-9a-f]{40}$/);
+          assert.equal(sourceRevision, process.env.GITHUB_SHA, 'checkout must match the tested workflow revision');
+          assert.match(pullRequestHeadRevision, /^[0-9a-f]{40}$/);
+          const dist = resolve('apps/studio-preview/dist');
+          assert.ok(lstatSync(dist).isDirectory() && !lstatSync(dist).isSymbolicLink());
+          assert.ok(readFileSync(join(dist, 'index.html')).length, 'production index must exist');
+          const output = join(process.env.RUNNER_TEMP, 'studio-preview-rendered-build');
+          mkdirSync(output);
+          const files = [];
+          const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+          function retain(directory, relative = '') {
+            for (const name of readdirSync(directory).sort()) {
+              const path = join(directory, name);
+              const entry = relative ? relative + '/' + name : name;
+              const stat = lstatSync(path);
+              if (stat.isDirectory()) retain(path, entry);
+              else {
+                assert.ok(stat.isFile() && !stat.isSymbolicLink(), 'only regular build files are retained');
+                const bytes = readFileSync(path);
+                const target = join(output, 'dist', entry);
+                mkdirSync(dirname(target), { recursive: true });
+                writeFileSync(target, bytes);
+                files.push({ path: 'dist/' + entry, bytes: bytes.length, sha256: hash(bytes) });
+              }
+            }
+          }
+          retain(dist);
+          writeFileSync(join(output, 'provenance.json'), JSON.stringify({
+            schemaVersion: 1, repository: process.env.GITHUB_REPOSITORY,
+            sourceRevision, pullRequestHeadRevision,
+            runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            runUrl: process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID,
+            capturedAt: new Date().toISOString(), nodeVersion: process.version,
+            lockfileSha256: hash(readFileSync('pnpm-lock.yaml')),
+            buildCommand: 'pnpm --filter @nitro-forge/studio-preview build',
+            passedRenderCommands: ['pnpm --filter @nitro-forge/studio-preview test:render:build', 'pnpm --filter @nitro-forge/studio-preview test:render'],
+            scope: 'Chromium launcher rendering only. Engine operations require the existing Vite/nf-cli bridge; no native or standalone engine-service acceptance.',
+            files,
+          }, null, 2) + '\n');
+          console.log('Retained ' + files.length + ' rendered production files at ' + sourceRevision);
+          NODE
       # cargo test --workspace runs once, in rust-session-contracts.
       - name: Build real engine host
         run: cargo build --locked -p nf-cli
@@ -101,6 +161,14 @@ jobs:
           pnpm --filter @nitro-forge/studio-preview test:engine
       - name: Seven-engine browser bridge round trips
         run: pnpm --filter @nitro-forge/studio-preview test:integration
+      - name: Upload the rendered production bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: studio-preview-rendered-build
+          path: ${{ runner.temp }}/studio-preview-rendered-build/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
   rust-session-contracts:
     runs-on: ubuntu-latest
     steps:
