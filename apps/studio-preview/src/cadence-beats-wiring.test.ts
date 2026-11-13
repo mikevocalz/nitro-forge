@@ -14,6 +14,14 @@ function recorder(data: Record<string, unknown> = {}) {
   } });
   return { doc: doc as never, calls };
 }
+// Compatible with the project's configured TypeScript lib; no Promise.withResolvers required.
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((accept, fail) => { resolve = accept; reject = fail; });
+  return { promise, resolve, reject };
+}
+
 // 960 ppq at 120 BPM: 1920 ticks per second.
 const time = { ppq: 960, tempo_bpm: 120 };
 const fps30 = { numerator: 30, denominator: 1 };
@@ -87,7 +95,7 @@ test('E-35 lane add, update and remove map to addMarker, updateMarker and remove
 
 test('E-35 cancellation during analysis skips the write, but cancellation after dispatch reports the atomic write', async () => {
   const result = { onsets_seconds: [0.5], estimated_bpm: null, hop_seconds: 0.01 };
-  const analysis = Promise.withResolvers<unknown>();
+  const analysis = deferred<unknown>();
   const before = new AbortController();
   let writes = 0;
   const beforeDoc = { detectBeats: () => analysis.promise, addMarkers: async () => { writes++; } };
@@ -97,7 +105,7 @@ test('E-35 cancellation during analysis skips the write, but cancellation after 
   assert.deepEqual(await cancelledAnalysis, { result, added: 0, cancelled: true });
   assert.equal(writes, 0);
 
-  const write = Promise.withResolvers<unknown>(), started = Promise.withResolvers<void>();
+  const write = deferred<unknown>(), started = deferred<void>();
   const during = new AbortController();
   const duringDoc = { detectBeats: async () => ({ data: result }), addMarkers: async () => {
     writes++; started.resolve(); return write.promise;
@@ -111,7 +119,7 @@ test('E-35 cancellation during analysis skips the write, but cancellation after 
 });
 
 test('E-35 a failed in-flight marker write still rejects after cancellation', async () => {
-  const write = Promise.withResolvers<never>(), started = Promise.withResolvers<void>();
+  const write = deferred<never>(), started = deferred<void>();
   const controller = new AbortController();
   const doc = { detectBeats: async () => ({ data: { onsets_seconds: [0.5], estimated_bpm: null, hop_seconds: 0.01 } }),
     addMarkers: async () => { started.resolve(); return write.promise; } };
@@ -137,7 +145,7 @@ test('E-35 rounded lane metadata and length edits preserve authoritative sub-fra
     ['updateMarker', 4, { lengthTicks: 960 }],
   ]);
   calls.length = 0;
-  await updateCadenceLaneMarker(doc, '4', { frame: lane.frame, seconds: lane.frame / 30, durationFrames: lane.durationFrames, durationSeconds: lane.durationFrames! / 30 }, time, current, fps30);
+  await updateCadenceLaneMarker(doc, '4', { frame: lane.frame, seconds: lane.frame / 30, ...(lane.durationFrames === undefined ? {} : { durationFrames: lane.durationFrames, durationSeconds: lane.durationFrames / 30 }) }, time, current, fps30);
   assert.deepEqual(calls, [], 'unchanged rounded position and length do not quantize the stored marker');
   await updateCadenceLaneMarker(doc, '4', { frame: 16, seconds: 16 / 30 }, time, current, fps30);
   assert.deepEqual(calls, [['updateMarker', 4, { ticks: 1024 }]], 'moving to another frame changes only position');

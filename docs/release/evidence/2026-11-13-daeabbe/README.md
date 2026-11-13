@@ -74,3 +74,21 @@ Argent on-screen proof, native iOS/Android and desktop were NOT RUN locally
 for this revision. CI and independent review remain pending. PR #82's web
 render fix remains separate and is a prerequisite for F3 on-screen acceptance.
 No release gate, row acceptance or reviewer signature is promoted here.
+
+## Later CI typecheck correction
+
+The Studio job [132199914030](https://github.com/mikevocalz/nitro-forge/actions/runs/43516570931/job/132199914030)
+on PR head `8780f5a` failed strict TypeScript checking in the regression test.
+The actual log reports TS2550 for `Promise.withResolvers` at lines 90, 100
+and 114, and TS2379 for an explicitly undefined `durationFrames` at line 140.
+Node 26 has the runtime method, but the app's configured ES2022 library does
+not declare it. `exactOptionalPropertyTypes` also requires omitting an
+optional number rather than passing `undefined`.
+
+The test now uses a typed deferred helper built from the ordinary Promise
+constructor and conditionally includes the optional duration fields. The
+same 34 Node tests passed after this correction. No product type, app library
+setting or engine code changed. Local full-app TypeScript remains NOT RUN
+because its workspace dependencies are not installed; exact-head CI must
+confirm the typed result. Earlier runtime receipts remain bound to their
+stated revisions.
