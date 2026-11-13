@@ -1,0 +1,23 @@
+{
+  "$schema": "../../tooling/brand/brand.schema.json",
+  "id": "media-lab",
+  "productName": "Nitro Forge Media Lab",
+  "shortName": "Media Lab",
+  "engine": null,
+  "slug": "forge-media-lab",
+  "scheme": "forge-media-lab",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.medialab"
+  },
+  "android": {
+    "package": "ai.nitroforge.medialab"
+  },
+  "icons": {
+    "family": "media-lab",
+    "app": "./assets/brand/media-lab/icon.png",
+    "adaptiveForeground": "./assets/brand/media-lab/adaptive-foreground.png",
+    "adaptiveBackground": "./assets/brand/media-lab/adaptive-background.png",
+    "adaptiveMonochrome": "./assets/brand/media-lab/adaptive-monochrome.png",
+    "favicon": "./assets/brand/media-lab/favicon.png"
+  }
+}

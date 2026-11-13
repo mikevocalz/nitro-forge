@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../tooling/brand/brand.schema.json",
+  "id": "suite",
+  "productName": "Nitro Forge",
+  "shortName": "Forge",
+  "engine": null,
+  "slug": "nitro-forge",
+  "scheme": "nitro-forge",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.suite"
+  },
+  "android": {
+    "package": "ai.nitroforge.suite"
+  },
+  "icons": {
+    "family": "suite",
+    "app": "../assets/brand/suite/icon.png",
+    "adaptiveForeground": "../assets/brand/suite/adaptive-foreground.png",
+    "adaptiveBackground": "../assets/brand/suite/adaptive-background.png",
+    "adaptiveMonochrome": "../assets/brand/suite/adaptive-monochrome.png",
+    "favicon": "../assets/brand/suite/favicon.png"
+  }
+}

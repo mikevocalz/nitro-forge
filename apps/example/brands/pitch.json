@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../tooling/brand/brand.schema.json",
+  "id": "pitch",
+  "productName": "Nitro Forge Pitch",
+  "shortName": "Pitch",
+  "engine": "pitch",
+  "slug": "nitro-forge-pitch",
+  "scheme": "nitro-forge-pitch",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.pitch"
+  },
+  "android": {
+    "package": "ai.nitroforge.pitch"
+  },
+  "icons": {
+    "family": "pitch",
+    "app": "../assets/brand/pitch/icon.png",
+    "adaptiveForeground": "../assets/brand/pitch/adaptive-foreground.png",
+    "adaptiveBackground": "../assets/brand/pitch/adaptive-background.png",
+    "adaptiveMonochrome": "../assets/brand/pitch/adaptive-monochrome.png",
+    "favicon": "../assets/brand/pitch/favicon.png"
+  }
+}

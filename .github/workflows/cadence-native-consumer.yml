@@ -121,6 +121,13 @@ jobs:
           project=$(find . -maxdepth 1 -name '*.xcodeproj' -print -quit)
           test -n "$project"
           scheme=$(basename "$project" .xcodeproj)
+          # expo-modules-macros 0.33.0 (expo-modules-core 58.1.0, Expo 58.0.24)
+          # makes Xcode 27.1 build ExpoModulesMacrosCore for the iOS Simulator
+          # too. SwiftPM's swift-syntax prebuilt is macOS-only, so that build
+          # fails with "Unable to resolve module dependency: 'SwiftSyntax'".
+          # Building swift-syntax from source covers both platforms.
+          # Record: docs/release/RELEASE_TRAIN.md, "Dependency baseline".
           xcodebuild -project "$project" -scheme "$scheme" -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -IDEPackageEnablePrebuilts=NO \
             CODE_SIGNING_ALLOWED=NO build

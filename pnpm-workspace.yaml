@@ -7,6 +7,12 @@ allowBuilds:
 overrides:
   enhanced-resolve: 5.26.1
 
+  # One Nitro v1 runtime for the whole graph. The vendored react-native-video
+  # experimental tarball peers the nightly it was generated with; this keeps
+  # Metro and the native build on the repository pin (nitro-v1-baseline.json).
+  react-native-nitro-modules: 1.0.0-alpha.nightly.136.gdb81de61bd32
+  nitro-core: 1.0.0-alpha.nightly.136.gdb81de61bd32
+
   # User-requested Metro0.87.2 with reviewed Expo file-map compatibility port.
   # Keep the full family coherent; see docs/native/METRO_FILE_MAP_PORT.md.
   metro: 0.87.2
@@ -25,10 +31,10 @@ overrides:
   metro-transform-worker: 0.87.2
 
 patchedDependencies:
-  "@expo/metro-file-map@58.0.5": patches/@expo__metro-file-map@58.0.5.patch
-  '@expo/ui@58.0.27': patches/@expo__ui@58.0.27.patch
+  "@expo/metro-file-map@58.0.6": patches/@expo__metro-file-map@58.0.6.patch
+  '@expo/ui@58.0.28': patches/@expo__ui@58.0.28.patch
   '@react-native-masked-view/masked-view@0.3.2': patches/@react-native-masked-view__masked-view@0.3.2.patch
-  expo-router@58.0.30: patches/expo-router@58.0.30.patch
+  expo-router@58.0.31: patches/expo-router@58.0.31.patch
   react-native-pulsar@1.7.0: patches/react-native-pulsar@1.7.0.patch
   react-native-safe-area-context@5.11.1: patches/react-native-safe-area-context@5.11.1.patch
   react-native-screens@4.30.1: patches/react-native-screens@4.30.1.patch
