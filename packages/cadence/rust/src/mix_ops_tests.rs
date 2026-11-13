@@ -1059,4 +1059,3 @@ fn task_and_legacy_render_keep_identical_effect_output() {
     assert_eq!(context.progress(),1.0);
     assert_eq!(e.snapshot().unwrap(),before);
 }
-
