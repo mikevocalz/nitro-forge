@@ -22,6 +22,7 @@ import { verifyNativeServices } from "./verify-services";
 import { verifyNativeTelemetry } from "./verify-telemetry";
 import { verifyPickerCancellation, shareTestSnapshot, importTestSnapshot,
   retainTestBookmark, restoreTestBookmark, verifyMissingFixture } from "./verify-documents";
+import { surfaces } from "./src/brand";
 
 type ScreenState = {
   phase: "loading" | "ready" | "error";
@@ -182,7 +183,7 @@ export default function App() {
         store.setState({ width });
     }}>
     <View style={{ gap: 8 }}>
-      <Text ref={headingRef} accessibilityRole="header" style={{ color: colors.text, fontWeight: "800", fontSize: 28 }}>Cadence / Native</Text>
+      <Text ref={headingRef} accessibilityRole="header" style={{ color: colors.text, fontWeight: "800", fontSize: 28 }}>{surfaces.title}</Text>
       <Text style={{ color: colors.muted }}>SwiftUI · Jetpack Compose · Rust-owned document</Text>
     </View>
     <Text style={{ color: colors.muted }}>Reserved regions: {isReservedRegionsAvailable() ? "linked" : "unavailable"}; {reservedRegions.length} reported.</Text>

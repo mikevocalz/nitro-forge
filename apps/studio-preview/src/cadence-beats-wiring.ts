@@ -84,10 +84,12 @@ export async function detectCadenceBeats(document: Pick<CadenceDocument, 'detect
   if (!Number.isSafeInteger(range.fromTicks) || !Number.isSafeInteger(range.toTicks) || range.fromTicks < 0 || range.toTicks <= range.fromTicks)
     throw new RangeError('Add a clip before detecting beats.');
   const result = (await document.detectBeats({ fromTicks: range.fromTicks, toTicks: range.toTicks, sampleRate: 48000, includeMetronome: false }, { sensitivity })).data;
-  if (signal?.aborted) return { result, added: 0 };
+  if (signal?.aborted) return { result, added: 0, cancelled: true };
   const inputs = cadenceBeatMarkerInputs(result, range.fromTicks, existing, time);
   if (inputs.length) await document.addMarkers(inputs);
-  return { result, added: inputs.length };
+  // Once dispatched, addMarkers is atomic and cannot be cancelled. Report its
+  // committed count even when cancellation arrived while it was in flight.
+  return { result, added: inputs.length, cancelled: signal?.aborted ?? false };
 }
 
 /** `lane.onAdd`: a point marker at the playhead. */
@@ -96,12 +98,23 @@ export function addCadenceLaneMarker(document: Pick<CadenceDocument, 'addMarker'
 }
 
 /** `lane.onUpdate`: the lane always sends the position; length, name and note only when changed. */
-export function updateCadenceLaneMarker(document: Pick<CadenceDocument, 'updateMarker'>, id: string, update: MarkerUpdateShape, time: CadenceTimeBase) {
-  const patch: MarkerPatch = { ticks: cadenceSecondsToTicks(update.seconds, time) };
-  if (update.durationSeconds !== undefined) patch.lengthTicks = cadenceSecondsToTicks(update.durationSeconds, time);
+export function updateCadenceLaneMarker(document: Pick<CadenceDocument, 'updateMarker'>, id: string, update: MarkerUpdateShape, time: CadenceTimeBase,
+  current: Pick<CadenceMarker, 'id' | 'ticks' | 'length_ticks'>, rate: FrameRateShape) {
+  const numericId = markerId(id);
+  if (numericId !== current.id) throw new RangeError('The Cadence marker is no longer available.');
+  const patch: MarkerPatch = {};
+  // The lane includes rounded frame/seconds even for rename and note edits.
+  // Preserve the authoritative sub-frame ticks until the displayed position changes.
+  const currentFrame = secondsToFrame(cadenceTicksToSeconds(current.ticks, time), rate);
+  if (update.frame !== currentFrame) patch.ticks = cadenceSecondsToTicks(update.seconds, time);
+  const currentDurationFrames = current.length_ticks > 0
+    ? Math.max(1, secondsToFrame(cadenceTicksToSeconds(current.length_ticks, time), rate)) : undefined;
+  if (update.durationSeconds !== undefined && (update.durationFrames === undefined || update.durationFrames !== currentDurationFrames))
+    patch.lengthTicks = cadenceSecondsToTicks(update.durationSeconds, time);
   if (update.name !== undefined) patch.name = update.name;
   if (update.note !== undefined) patch.note = update.note === '' ? null : update.note;
-  return document.updateMarker(markerId(id), patch);
+  if (Object.keys(patch).length === 0) return Promise.resolve(undefined);
+  return document.updateMarker(numericId, patch);
 }
 
 /** `lane.onRemove`. */

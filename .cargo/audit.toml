@@ -1,0 +1,49 @@
+# cargo-audit configuration for the Forge Cargo.lock.
+#
+# The CI job `cargo audit --deny warnings` (.github/workflows/cargo-audit.yml)
+# reads this file. Only the seven advisories below are ignored. Each one is a
+# held dependency recorded in docs/release/RELEASE_TRAIN.md, "Held". Any other
+# advisory, warning or yanked crate fails the job.
+#
+# Removing an entry is part of the engine PR named in its return condition.
+
+[advisories]
+ignore = [
+  # quick-xml 0.37.5: denial of service.
+  # Reason: 0.42 changes name(), unescape() and decode(); Tally fails with 12
+  # compile errors and Quill with 29.
+  # Return when: the engine PR moves the XLSX and DOCX readers to quick-xml 0.42.
+  "RUSTSEC-2026-0194",
+
+  # quick-xml 0.37.5: denial of service (second advisory, same crate).
+  # Reason: same quick-xml 0.42 migration as RUSTSEC-2026-0194.
+  # Return when: the same engine PR lands.
+  "RUSTSEC-2026-0195",
+
+  # lopdf 0.36.0: stack overflow on deeply nested objects.
+  # Reason: lopdf 0.47 compiles after 3 call-site fixes but fails 8 of 149
+  # folio-engine tests, including all three encrypted round-trip tests.
+  # Return when: an engine PR moves folio to lopdf 0.47 with those tests green.
+  "RUSTSEC-2026-0187",
+
+  # zip 2.6.1: affects ZipArchive::extract and ZipStreamReader::extract.
+  # Reason: no Forge crate calls either function; Tally and Quill read
+  # entries by name.
+  # Return when: the zip 2 to 9 migration lands with the quick-xml engine PR.
+  "RUSTSEC-2026-0367",
+
+  # zip 2.6.1: same extract() code path as RUSTSEC-2026-0367.
+  # Reason: extract() is not called anywhere in Forge.
+  # Return when: the zip 2 to 9 migration lands.
+  "RUSTSEC-2026-0368",
+
+  # zip 2.6.1: same extract() code path as RUSTSEC-2026-0367.
+  # Reason: extract() is not called anywhere in Forge.
+  # Return when: the zip 2 to 9 migration lands.
+  "RUSTSEC-2026-0369",
+
+  # zip 2.6.1: same extract() code path as RUSTSEC-2026-0367.
+  # Reason: extract() is not called anywhere in Forge.
+  # Return when: the zip 2 to 9 migration lands.
+  "RUSTSEC-2026-0429",
+]

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../tooling/brand/brand.schema.json",
+  "id": "prism",
+  "productName": "Nitro Forge Prism",
+  "shortName": "Prism",
+  "engine": "prism",
+  "slug": "nitro-forge-prism",
+  "scheme": "nitro-forge-prism",
+  "ios": {
+    "bundleIdentifier": "ai.nitroforge.prism"
+  },
+  "android": {
+    "package": "ai.nitroforge.prism"
+  },
+  "icons": {
+    "family": "prism",
+    "app": "../assets/brand/prism/icon.png",
+    "adaptiveForeground": "../assets/brand/prism/adaptive-foreground.png",
+    "adaptiveBackground": "../assets/brand/prism/adaptive-background.png",
+    "adaptiveMonochrome": "../assets/brand/prism/adaptive-monochrome.png",
+    "favicon": "../assets/brand/prism/favicon.png"
+  }
+}

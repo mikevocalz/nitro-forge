@@ -10,10 +10,12 @@ import { useEditorDoc } from '../../src/useDocument';
 import { getEditorConfig } from '../../src/editors';
 import { PersonaDock, usePersonaPlacement, usePersonaSession } from '../../src/persona/persona-placement-host';
 import { playTurretHaptic } from '../../src/persona/turret-haptics-driver';
+import { brand, surfaces } from '../../src/brand';
 
 export default function EditorScreen() {
   const { product } = useLocalSearchParams<{ product: string }>();
-  const studioId: Studio = STUDIOS.find(id => id === product) ?? 'prism';
+  // A single-studio build only ever opens its own studio.
+  const studioId: Studio = STUDIOS.find(id => id === (brand.engine ?? product)) ?? 'prism';
   // Each studio owns its document session. Pending actions from the previous
   // studio retain its unmounted hook and cannot dispatch to the next engine.
   return <StudioEditor key={studioId} studioId={studioId} />;
@@ -38,13 +40,13 @@ function StudioEditor({ studioId }: { studioId: Studio }) {
   const prism = studioId === 'prism';
   return <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={{ flex: 1 }}>
     <Stack.Screen options={{ headerShown: false }} />
-    <ForgeWorkspace studioId={studioId} title={config.title} documentTitle={`Untitled ${config.title} document`}
-      headerLeading={<Button title="All apps" aria-label="All apps" onPress={() => router.replace('/')} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" />}
+    <ForgeWorkspace studioId={studioId} title={surfaces.workspaceTitle(config.title)} documentTitle={surfaces.documentTitle(config.title)}
+      headerLeading={<Button title={surfaces.leading.label} aria-label={surfaces.leading.label} onPress={() => surfaces.leading.href === '/' ? router.replace('/') : router.push('/about')} variant="ghost" tone="carolina" size="sm" cornerRadius={4} className="rounded-[4px]" />}
       theme={theme} state={doc.state} rows={doc.state ? config.rows(doc.state) : []}
       actions={config.actions.map(action => ({ title: action.title, run: () => action.run(doc) }))}
       onUndo={doc.undo} onRedo={doc.redo} onSave={save} onRefresh={doc.reload}
       busy={!doc.state} error={doc.error}>
-      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={`Untitled ${config.title} document`} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} personas={personas.personas} onPersonaEffect={playTurretHaptic} onComposePersona={() => router.push({ pathname: '/persona-composer', params: { session: personaKey } })} {...(openPersonas ? { onOpenPersonas: openPersonas } : {})} /> : undefined}
+      {studioId === 'quill' ? <QuillTextEditor ref={textEditor} theme={theme} documentTitle={surfaces.documentTitle(config.title)} state={doc.state} apply={doc.apply} reload={doc.reload} /> : studioId === 'prism' ? <PrismEditor state={doc.state} theme={theme} apply={doc.apply} reload={doc.reload} busy={!doc.state} personas={personas.personas} onPersonaEffect={playTurretHaptic} onComposePersona={() => router.push({ pathname: '/persona-composer', params: { session: personaKey } })} {...(openPersonas ? { onOpenPersonas: openPersonas } : {})} /> : undefined}
     </ForgeWorkspace>
     {prism && <PersonaDock session={personas} sessionKey={personaKey} placement={placement} />}
   </SafeAreaView>;

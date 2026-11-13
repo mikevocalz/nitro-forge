@@ -1288,7 +1288,10 @@ freq_hz 20..20000, gain_db -24..24, q 0.1..18, enabled}]}` (≤8 bands); compres
 release_ms 5..2000, makeup_db 0..24}`. ≤8 inserts per track.
 `Marker = { id, ticks, length_ticks, name, note? }`: a project marker in ticks
 (`length_ticks` 0 is a point marker), so it follows tempo changes; clip edits
-never move it. `markers` is omitted from snapshots while empty.
+never move it. IDs are positive JavaScript-safe integers (1..2^53−1);
+marker allocation rejects exhaustion before mutation. Restore validates IDs and
+normalizes markers into ticks/id order before committing the decoded document.
+`markers` is omitted from snapshots while empty.
 `Lane = { mode:"off"|"read", points: [{ticks, value}] }`, sorted, one point per tick;
 gain values 0..=1, pan -1..=1. Fields added after the first release default on
 restore, so older snapshots load unchanged.

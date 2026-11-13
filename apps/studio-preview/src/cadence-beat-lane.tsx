@@ -58,13 +58,13 @@ export function CadenceBeatLane(props:CadenceBeatLaneProps){
   let outcome:Awaited<ReturnType<typeof detectCadenceBeats>>|null=null;
   try{
    await write(async()=>{outcome=await detectCadenceBeats(document,range,sensitivity,existing,time,controller.signal);});
-   if(!mounted.current||controller.signal.aborted)return;
+   if(!mounted.current||run.current!==controller)return;
    const done=outcome as Awaited<ReturnType<typeof detectCadenceBeats>>|null;
    const found=done?.result.onsets_seconds.length??0,added=done?.added??0;
-   store.setState({status:'ready',bpm:done?.result.estimated_bpm??null,
-    summary:`Sensitivity ${sensitivity.toFixed(2)}: ${found} onset${found===1?'':'s'} found, ${added===0?'no new markers':`${added} marker${added===1?'':'s'} added in one undo step`}.`});
+   store.setState({status:done?.cancelled?'idle':'ready',bpm:done?.result.estimated_bpm??null,
+    summary:done?.cancelled?(added===0?'Detection cancelled before markers were written.':`Cancellation arrived after the marker write started. ${added} marker${added===1?'':'s'} added in one undo step.`):`Sensitivity ${sensitivity.toFixed(2)}: ${found} onset${found===1?'':'s'} found, ${added===0?'no new markers':`${added} marker${added===1?'':'s'} added in one undo step`}.`});
   }catch(error){
-   if(mounted.current&&!controller.signal.aborted)store.setState({status:'error',error:errorText(error)});
+   if(mounted.current&&run.current===controller)store.setState({status:'error',error:errorText(error)});
    throw error;
   }finally{if(run.current===controller)run.current=null;}
  };
@@ -79,13 +79,13 @@ export function CadenceBeatLane(props:CadenceBeatLaneProps){
     {...(range.toTicks<=0?{unavailableReason:'Add a MIDI clip with notes before detecting beats.'}:{})}
     onSensitivityCommit={value=>{store.setState({sensitivity:cadenceBeatSensitivity(value)});}}
     onDetect={detect}
-    onCancel={()=>{run.current?.abort();store.setState({status:'idle',summary:'Detection cancelled. Nothing was written.'});}}
+    onCancel={()=>{run.current?.abort();store.setState({summary:'Cancellation requested. A marker write already started will finish as one undo step.'});}}
     lane={{markers,viewport,rate:RATE,durationFrames,playheadFrame:Math.min(view.playheadFrame,durationFrames),...(selected?{selectedMarkerId:selected}:{}),
      onSelect:id=>store.setState({selected:id}),
      // No transport: seeking moves the lane's own playhead, which is where Add marker puts one.
      onSeek:frame=>store.setState({playheadFrame:frame}),
      onAdd:at=>{void write(()=>addCadenceLaneMarker(document,at,time)).catch(()=>{});},
-     onUpdate:(id,update)=>{void write(()=>updateCadenceLaneMarker(document,id,update,time)).catch(()=>{});},
+     onUpdate:(id,update)=>{void write(()=>{const current=store.getState().markers.find(marker=>String(marker.id)===id);if(!current)throw new Error('The marker is no longer available.');return updateCadenceLaneMarker(document,id,update,time,current,RATE);}).catch(()=>{});},
      onRemove:id=>{void write(()=>removeCadenceLaneMarker(document,id)).catch(()=>{});}}}/>
    {view.summary&&<Text accessibilityLiveRegion="polite" style={textStyle}>{view.summary}</Text>}
    {view.markers.length===0&&<Text style={textStyle}>No markers yet. Detect beats, or add one at the playhead.</Text>}

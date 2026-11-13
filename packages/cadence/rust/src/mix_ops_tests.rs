@@ -896,6 +896,8 @@ fn restore_validates_markers_and_accepts_saves_without_them() {
         |d: &mut Value| d["markers"][0]["name"] = json!(""),
         |d: &mut Value| d["markers"][0]["ticks"] = json!(1u64 << 53),
         |d: &mut Value| d["markers"][0]["extra"] = json!(1),
+        |d: &mut Value| d["markers"][0]["id"] = json!(0),
+        |d: &mut Value| d["markers"][0]["id"] = json!(1u64 << 53),
         |d: &mut Value| d["markers"] = json!([d["markers"][0].clone(), d["markers"][0].clone()]),
     ] {
         let mut bad = doc.clone();
@@ -913,6 +915,34 @@ fn restore_validates_markers_and_accepts_saves_without_them() {
     let (_t, payload) = ignition_core::decode_envelope(&bytes).unwrap();
     let saved: Value = serde_json::from_slice(payload).unwrap();
     assert!(saved.get("markers").is_none());
+}
+
+#[test]
+fn restored_markers_are_sorted_by_ticks_then_id_before_commit() {
+    let mut e = CadenceEngine::new();
+    ok(&mut e, "addMarkers", json!({"markers": [{"ticks": 960}, {"ticks": 0}, {"ticks": 960}]}));
+    let expected = markers(&mut e);
+    let mut reordered = describe(&mut e);
+    reordered["markers"].as_array_mut().unwrap().reverse();
+    e.restore(&encode_envelope(&serde_json::to_vec(&reordered).unwrap())).unwrap();
+    assert_eq!(markers(&mut e), expected);
+    assert!(!e.undo().unwrap(), "successful restore resets history");
+}
+
+#[test]
+fn marker_id_exhaustion_rejects_before_journal_or_document_mutation() {
+    let mut e = CadenceEngine::new();
+    let max_id = (1u64 << 53) - 1;
+    let mut restored = describe(&mut e);
+    restored["next_id"] = json!(max_id);
+    e.restore(&encode_envelope(&serde_json::to_vec(&restored).unwrap())).unwrap();
+    rejects(&mut e, "addMarkers", json!({"markers": [{"ticks": 0}, {"ticks": 1}]}), ErrorCode::OutOfBounds);
+    assert_eq!(ok(&mut e, "addMarker", json!({"ticks": 0}))["marker_id"], max_id);
+    rejects(&mut e, "addMarker", json!({"ticks": 1}), ErrorCode::OutOfBounds);
+    assert!(e.undo().unwrap());
+    assert!(markers(&mut e).is_empty());
+    assert!(e.redo().unwrap());
+    assert_eq!(markers(&mut e)[0]["id"], max_id);
 }
 
 // ---- compatibility -------------------------------------------------------------------

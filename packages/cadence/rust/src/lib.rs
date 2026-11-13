@@ -1009,6 +1009,9 @@ impl Engine for CadenceEngine {
             }
         }
         markers::check_restored(&doc.markers)?;
+        // Imported arrays may be reordered; normalize the decoded candidate
+        // before committing so listMarkers always returns ticks/id order.
+        markers::sort(&mut doc);
         // Commit only after the payload fully decoded; document is a new
         // session state, so undo history is reset.
         self.doc = doc;

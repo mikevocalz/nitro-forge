@@ -76,7 +76,7 @@ describe('E-35 BeatDetectionMarkerLane wiring on Cadence', () => {
       // A lane rename keeps the id and the tick position.
       const first = atLoose[0]!;
       const lane = cadenceLaneMarkers([first], time, { numerator: 30, denominator: 1 })[0]!;
-      await updateCadenceLaneMarker(doc, lane.id, { frame: lane.frame, seconds: first.ticks / 1920, name: 'Downbeat' }, time);
+      await updateCadenceLaneMarker(doc, lane.id, { frame: lane.frame, seconds: lane.frame / 30, name: 'Downbeat' }, time, first, { numerator: 30, denominator: 1 });
       expect((await list())[0]).toMatchObject({ id: first.id, ticks: first.ticks, name: 'Downbeat' });
     } finally {
       await doc.close();

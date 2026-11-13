@@ -117,6 +117,11 @@ pub(crate) fn check_restored(markers: &[Marker]) -> Result<(), EngineError> {
     }
     let mut ids = std::collections::HashSet::new();
     for m in markers {
+        if m.id == 0 || m.id > MAX_MARKER_TICKS {
+            return Err(EngineError::validation(
+                "marker id must be a positive JavaScript-safe integer",
+            ));
+        }
         if !ids.insert(m.id) {
             return Err(EngineError::validation(format!("duplicate marker id {}", m.id)));
         }
@@ -133,7 +138,7 @@ pub(crate) fn check_restored(markers: &[Marker]) -> Result<(), EngineError> {
     Ok(())
 }
 
-fn sort(doc: &mut Doc) {
+pub(crate) fn sort(doc: &mut Doc) {
     doc.markers.sort_by(|a, b| a.ticks.cmp(&b.ticks).then(a.id.cmp(&b.id)));
 }
 
@@ -173,6 +178,16 @@ impl CadenceEngine {
     }
 
     fn check_capacity(&self, adding: usize) -> Result<(), EngineError> {
+        // Restore may load a legacy document whose allocator is beyond the JS
+        // number boundary. Refuse new marker IDs before recording or mutating.
+        if self.doc.next_id == 0
+            || self.doc.next_id > MAX_MARKER_TICKS
+            || (adding as u64).saturating_sub(1) > MAX_MARKER_TICKS - self.doc.next_id
+        {
+            return Err(EngineError::out_of_bounds(
+                "no JavaScript-safe marker ids remain",
+            ));
+        }
         if self.doc.markers.len() + adding > MAX_MARKERS {
             return Err(EngineError::out_of_bounds(format!(
                 "a project holds at most {MAX_MARKERS} markers"

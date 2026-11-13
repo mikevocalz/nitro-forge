@@ -181,7 +181,7 @@ export interface BeatDetectionOptions {
  * changes; clip edits never move it.
  */
 export interface CadenceMarker {
-  /** Engine-assigned, stable across updates and save/load. */
+  /** Engine-assigned positive safe integer (1..2^53−1), stable across updates and save/load. */
   id: number;
   /** Absolute project position. */
   ticks: number;
