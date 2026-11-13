@@ -277,7 +277,8 @@ pivot-table spec:
 the data binding (canonical `"A1"`/`"A1:B2"` under the shared 16,384-cell
 cap), `rows`/`columns` ≤16 unique field indices each, `values` 1–16
 `{field, agg}` slots (`agg` = `sum|count|avg|min|max`), `filters` ≤32
-`{field, values}` entries (unique fields, 1–64 values of 1–512 bytes each)
+`{field, values}` entries (unique fields, 0–64 values of 1–512 bytes each; an
+empty `values` list means "All")
 and `sort` an optional `{field, ascending}` — field indices are 0-based
 column offsets into the source range, at most 256 pivots per workbook.
 `output` is the optional materialization record `{anchor, rows, cols}`:
@@ -842,7 +843,8 @@ canonical `"A1"`/`"A1:B2"` rectangle under the shared 16,384-cell cap.
 not header names: `rows`/`columns` are ≤16 unique indices each,
 `values` is 1–16 `{field, agg}` slots (`agg` the bounded
 `sum|count|avg|min|max` enum), `filters` ≤32 `{field, values}` entries
-(unique fields, 1–64 nonempty values of ≤512 bytes each) and `sort` an
+(unique fields, 0–64 nonempty values of ≤512 bytes each; an empty list is
+"All" and admits every record) and `sort` an
 optional `{field, ascending}` hint; every field index must lie inside
 the source range's column count. Index references were chosen over
 header names because they do not depend on header text existing or
@@ -867,7 +869,9 @@ included), keeps records passing every `filters` entry (a record passes
 when the display text of its value at the filter's field — the same
 canonical scalar text used for labels: strings verbatim, finite numbers
 via `fmt_num`, `TRUE`/`FALSE`, errors as their literal — equals one of
-the filter's 1–64 literals; filters AND together), stable-sorts the
+the filter's 0–64 literals, and every record passes a filter with no
+literals, so its refresh matches the same spec without that filter;
+filters AND together), stable-sorts the
 survivors by the computed value at `sort.field` using the `sortRange`
 class order (empty < number < text < boolean < error, errors last in
 both directions, `ascending:false` inverts within-class only), then
@@ -1269,7 +1273,7 @@ and older readers round-trip unchanged.
 ## cadence-engine — `CadenceEngine::new()`
 
 State `{ tempo_bpm, time_sig: [n,d], ppq: 960, playhead_ticks, next_id,
-tracks: [Track], metronome: {enabled, volume 0..=1} }`. `Track = { id, name,
+tracks: [Track], metronome: {enabled, volume 0..=1}, markers: [Marker] }`. `Track = { id, name,
 kind:"midi"|"audio"|"bus", volume 0..=1, pan -1..=1, muted, solo, clips: [Clip],
 output: bus id|null, sends: [{bus, level 0..=1}], inserts: [Insert],
 group: string|null, solo_safe, automation: {gain: Lane, pan: Lane} }`.
@@ -1282,6 +1286,12 @@ audio track clips have no notes — `addNote` → Validation; buses hold no clip
 freq_hz 20..20000, gain_db -24..24, q 0.1..18, enabled}]}` (≤8 bands); compressor
 `{threshold_db -60..0, ratio 1..20, knee_db 0..24, attack_ms 0.1..200,
 release_ms 5..2000, makeup_db 0..24}`. ≤8 inserts per track.
+`Marker = { id, ticks, length_ticks, name, note? }`: a project marker in ticks
+(`length_ticks` 0 is a point marker), so it follows tempo changes; clip edits
+never move it. IDs are positive JavaScript-safe integers (1..2^53−1);
+marker allocation rejects exhaustion before mutation. Restore validates IDs and
+normalizes markers into ticks/id order before committing the decoded document.
+`markers` is omitted from snapshots while empty.
 `Lane = { mode:"off"|"read", points: [{ticks, value}] }`, sorted, one point per tick;
 gain values 0..=1, pan -1..=1. Fields added after the first release default on
 restore, so older snapshots load unchanged.
@@ -1353,7 +1363,12 @@ passes `include_metronome: true`.
 | `meter` | `{from_ticks,to_ticks,sample_rate,window_ms?=50,include_metronome?}` | `{window_frames,window_seconds,tracks:[{id,peak[],rms[],max_peak,clipped}],master}` | read-only; post-fader per track/bus; sample_rate 8000..192000; ≤4096 windows |
 | `loudness` | same range | `{integrated_lufs,momentary_max_lufs,short_term_max_lufs,sample_peak_dbfs,momentary_lufs[],step_seconds}` | read-only BS.1770 K-weighted, gated; `null` = silent/too short |
 | `spectrogram` | range + `{fft_size?=2048,hop?,bands?=64}` | `{bands_hz,hop_seconds,frames}` | read-only; Hann STFT of mono master, log bands, dB floored -120; ≤2048 frames |
-| `detectBeats` | range + `{fft_size?=1024,hop?=fft_size/2}` | `{onsets_seconds,estimated_bpm,hop_seconds}` | read-only; spectral-flux onsets on the mono master (local maxima above mean+σ, ≥80 ms apart, ≤8192 onsets, ≤16384 STFT frames); `estimated_bpm` is the novelty autocorrelation peak in 60..=240 BPM, `null` under four onsets |
+| `detectBeats` | range + `{fft_size?=1024,hop?=fft_size/2,sensitivity?=0.5}` | `{onsets_seconds,estimated_bpm,hop_seconds}` | read-only; spectral-flux onsets on the mono master (local maxima above mean+k·σ with k = 2·(1−sensitivity), ≥80 ms apart, ≤8192 onsets, ≤16384 STFT frames); `sensitivity` 0..=1 else Validation, and 0.5 (k = 1) gives the output from before the option existed; `estimated_bpm` is the novelty autocorrelation peak in 60..=240 BPM, `null` under four onsets |
+| `addMarker` | `{ticks,length_ticks?=0,name?,note?}` | `{marker_id}` | one undo step; name trimmed, 1..120 chars, default "Marker N" (N = marker count after adding); note ≤2000 chars; `ticks+length_ticks` ≤ 2^53−1 else OutOfBounds; ≤8192 markers per project |
+| `addMarkers` | `{markers:[{ticks,length_ticks?,name?,note?}]}` | `{marker_ids}` | 1..8192 entries, all or nothing, one undo step for the batch; ids in input order |
+| `updateMarker` | `{id,ticks?,length_ticks?,name?,note?}` | `{ok}` | at least one field; id kept; `note:null` or `""` clears; an unchanged patch records no undo step |
+| `removeMarker` | `{id}` | `{ok}` | NotFound for an unknown id |
+| `listMarkers` | `{}` | `{markers:[Marker]}` | read-only; ordered by ticks, then id |
 
 Ticks→seconds: `ticks / (ppq * bpm / 60)`. Undo: prior field values / removed entities.
 

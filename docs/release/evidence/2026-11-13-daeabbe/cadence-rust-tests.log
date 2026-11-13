@@ -1,0 +1,137 @@
+   Compiling cadence-engine v0.1.0 (/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f5-strike/f3-repair/packages/cadence/rust)
+warning: unused doc comment
+   --> packages/cadence/rust/src/lib.rs:727:13
+    |
+727 | /             /// Split a clip at an absolute timeline tick strictly inside it.
+728 | |             /// The left half keeps the id; the right half gets a new id and
+729 | |             /// copies gain/mute. Notes are clip-relative: a note entirely on
+730 | |             /// one side moves or stays; a note spanning the split point is
+731 | |             /// cut into two notes at the boundary (same pitch/velocity/
+732 | |             /// channel, no overlap, no zero-length piece).
+    | |___________________________________________________________^
+733 | /             "splitClip" => {
+734 | |                 let id = req_u64(p, "id")?;
+735 | |                 let at = req_ticks(p, "at_ticks")?;
+736 | |                 let (ti, ci) = self
+...   |
+787 | |                 Ok(Self::changed(json!({ "left_id": id, "right_id": right_id })))
+788 | |             }
+    | |_____________- rustdoc does not generate documentation for match arms
+    |
+    = help: use `//` for a plain comment
+    = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `B64_ALPHABET` is never used
+   --> packages/cadence/rust/src/lib.rs:267:7
+    |
+267 | const B64_ALPHABET: &[u8; 64] =
+    |       ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `base64_encode` is never used
+   --> packages/cadence/rust/src/lib.rs:270:4
+    |
+270 | fn base64_encode(bytes: &[u8]) -> String {
+    |    ^^^^^^^^^^^^^
+
+warning: function `base64_encode` is never used
+   --> packages/cadence/rust/src/lib.rs:270:4
+    |
+270 | fn base64_encode(bytes: &[u8]) -> String {
+    |    ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `cadence-engine` (lib) generated 3 warnings
+warning: `cadence-engine` (lib test) generated 2 warnings (1 duplicate)
+    Finished `test` profile [unoptimized] target(s) in 1.91s
+     Running unittests src/lib.rs (/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f3-cadence-target/debug/deps/cadence_engine-620613784b4c1c48)
+
+running 78 tests
+test dsp::tests::shelves_and_passes_have_the_expected_shape ... ok
+test dsp::tests::peak_band_hits_its_gain_at_centre_and_is_flat_far_away ... ok
+test dsp::tests::compressor_curve_is_continuous_and_reduces_above_threshold ... ok
+test analysis::tests::meter_windows_peak_and_rms ... ok
+test mix_ops_tests::clip_gain_defaults_on_pre_field_snapshots ... ok
+test mix_ops_tests::add_markers_is_one_undo_step_and_round_trips ... ok
+test mix_ops_tests::automation_points_stay_sorted_and_validated ... ok
+test mix_ops_tests::automation_ramps_between_points ... ok
+test dsp::tests::filtering_matches_the_response ... ok
+test mix_ops_tests::group_solo_and_mute_set_every_member_in_one_step ... ok
+test mix_ops_tests::insert_cap ... ok
+test mix_ops_tests::detect_beats_on_a_steady_tone_has_no_pulse ... ok
+test mix_ops_tests::eq_response_and_dynamics_curve_are_read_only ... ok
+test dsp::tests::compressor_pulls_a_loud_tone_toward_the_curve ... ok
+test mix_ops_tests::marker_id_exhaustion_rejects_before_journal_or_document_mutation ... ok
+test mix_ops_tests::insert_lifecycle_and_order ... ok
+test mix_ops_tests::meter_reports_each_track_and_the_master ... ok
+test mix_ops_tests::bus_pan_is_balance ... ok
+test mix_ops_tests::notes_carry_a_midi_channel ... ok
+test mix_ops_tests::presets_list_and_apply_as_one_step ... ok
+test analysis::tests::spectrogram_peaks_in_the_band_holding_the_tone ... ok
+test mix_ops_tests::removing_a_bus_reroutes_its_inputs_in_one_step ... ok
+test mix_ops_tests::restore_validates_markers_and_accepts_saves_without_them ... ok
+test mix_ops_tests::restored_markers_are_sorted_by_ticks_then_id_before_commit ... ok
+test mix_ops_tests::routing_rejects_invalid_targets ... ok
+test analysis::tests::full_scale_1k_in_both_channels_reads_zero_lufs ... ok
+test analysis::tests::minus_20db_tone_and_silence ... ok
+test mix_ops_tests::sends_add_post_fader_signal_to_the_bus ... ok
+test mix_ops_tests::insert_params_validate_atomically_and_reach_the_render ... ok
+test mix_ops_tests::set_velocities_is_atomic_and_one_undo_step ... ok
+test mix_ops_tests::snapshots_from_before_the_mixer_fields_restore ... ok
+test mix_ops_tests::render_stems_returns_one_post_fader_stem_per_track_and_bus ... ok
+test mix_ops_tests::loudness_and_spectrogram_ops ... ok
+test mix_ops_tests::clip_gain_and_mute_reach_the_render_and_meter ... ok
+test mix_ops_tests::split_clip_on_an_audio_clip_and_empty_clip ... ok
+test mix_ops_tests::soloing_a_bus_keeps_its_sources_audible ... ok
+test mix_ops_tests::split_clip_cuts_notes_at_the_boundary ... ok
+test mix_ops_tests::read_mode_automation_drives_the_render ... ok
+test mix_ops_tests::task_batch_render_step_can_cancel_inside_synthesis ... ok
+test mix_ops_tests::solo_safe_keeps_a_track_audible_under_another_solo ... ok
+test mix_ops_tests::update_and_remove_marker ... ok
+test tests::add_note_rejects_audio_track ... ok
+test tests::clip_overlap_rejected ... ok
+test tests::move_note_changes_time_and_pitch_in_place ... ok
+test mix_ops_tests::detect_beats_finds_the_metronome_pulse ... ok
+test tests::new_defaults_and_describe ... ok
+test tests::new_op_resets_document ... ok
+test tests::move_note_rejects_without_mutating ... ok
+test tests::note_edits_survive_snapshot ... ok
+test tests::note_edits_undo_and_redo_one_step_each ... ok
+test tests::note_ops ... ok
+test tests::project_meta ... ok
+test mix_ops_tests::metronome_clicks_only_when_enabled_and_requested ... ok
+test mix_ops_tests::task_render_can_cancel_inside_synthesis ... ok
+test tests::read_only_ops_record_no_undo ... ok
+test tests::note_edits_reach_the_render ... ok
+test mix_ops_tests::task_render_stems_matches_sync_output ... ok
+test tests::resize_clip_trims_notes ... ok
+test tests::resize_note_bounds_and_identity ... ok
+test tests::restore_rejects_garbage_and_keeps_state ... ok
+test tests::set_tempo_validates ... ok
+test tests::set_time_sig_validates_denominator ... ok
+test tests::set_velocity_validates ... ok
+test tests::snapshot_restore_describe_equality ... ok
+test tests::track_crud ... ok
+test tests::render_note_produces_sine ... ok
+test tests::track_mix_fields_validate ... ok
+test tests::transport_moves_playhead ... ok
+test tests::unknown_op_and_bad_version ... ok
+test tests::undo_redo_chain ... ok
+test tests::render_partial_window_and_validation ... ok
+test mix_ops_tests::task_and_legacy_render_keep_identical_effect_output ... ok
+test mix_ops_tests::track_routed_to_a_bus_reaches_the_master_through_it ... ok
+test tests::render_silence_and_length ... ok
+test mix_ops_tests::sensitivity_moves_the_onset_threshold ... ok
+test mix_ops_tests::marker_ops_validate_before_mutating ... ok
+test tests::render_mute_solo_pan ... ok
+test mix_ops_tests::sensitivity_half_reproduces_the_recorded_pre_sensitivity_output ... ok
+
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+
+   Doc-tests cadence_engine
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

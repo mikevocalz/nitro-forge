@@ -695,6 +695,256 @@ fn detect_beats_on_a_steady_tone_has_no_pulse() {
     assert!(r["estimated_bpm"].is_null());
 }
 
+// ---- detectBeats sensitivity (E-35) --------------------------------------------------
+
+/// Sixteen A5 notes an eighth apart over 4 s at 120 BPM, alternating
+/// velocity 127 (on the beat) and `quiet` (between beats).
+fn accent_doc(quiet: u64) -> CadenceEngine {
+    let mut e = CadenceEngine::new();
+    let t = ok(&mut e, "addTrack", json!({}))["track_id"].as_u64().unwrap();
+    let c = ok(&mut e, "addClip", json!({"track": t, "start_ticks": 0, "length_ticks": 7680}))["clip_id"]
+        .as_u64()
+        .unwrap();
+    for i in 0..16u64 {
+        let v = if i % 2 == 0 { 127 } else { quiet };
+        ok(&mut e, "addNote", json!({"clip": c, "pitch": 81, "velocity": v, "start_ticks": i * 480, "length_ticks": 96}));
+    }
+    e
+}
+
+/// Output recorded from `detectBeats` at master `0ad4ed2`+F3 proposals
+/// (`1167e13`), before `sensitivity` existed. Sensitivity omitted and 0.5
+/// must reproduce every one exactly.
+#[test]
+fn sensitivity_half_reproduces_the_recorded_pre_sensitivity_output() {
+    let metro = |sr: u64, fft: Option<u64>, hop: Option<u64>| {
+        let mut p = json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": sr, "include_metronome": true});
+        if let Some(f) = fft {
+            p["fft_size"] = json!(f);
+        }
+        if let Some(h) = hop {
+            p["hop"] = json!(h);
+        }
+        p
+    };
+    let mut clicks = CadenceEngine::new();
+    ok(&mut clicks, "setMetronome", json!({"enabled": true, "volume": 1.0}));
+    let mut tone = CadenceEngine::new();
+    tone_track(&mut tone);
+    let mut accent = accent_doc(12);
+    let golden: Vec<(u8, Value, Value)> = vec![
+        (0, metro(8000, None, None), json!({"estimated_bpm":117.2,"hop_seconds":0.064,"onsets_seconds":[0.512,1.024,1.472,1.984,2.496,3.008,3.52]})),
+        (0, metro(48000, Some(2048), Some(512)), json!({"estimated_bpm":119.7,"hop_seconds":0.010666666666666666,"onsets_seconds":[0.491,0.992,1.493,1.995,2.496,2.997,3.499]})),
+        (0, metro(8000, Some(256), Some(64)), json!({"estimated_bpm":60.0,"hop_seconds":0.008,"onsets_seconds":[0.496,1.0,1.496,2.0,2.496,3.0,3.496]})),
+        (1, json!({"from_ticks": 0, "to_ticks": 960, "sample_rate": 8000}), json!({"estimated_bpm":null,"hop_seconds":0.064,"onsets_seconds":[]})),
+        (2, json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000}), json!({"estimated_bpm":117.2,"hop_seconds":0.064,"onsets_seconds":[0.512,1.024,1.536,1.984,2.496,3.008,3.52]})),
+    ];
+    for (which, payload, expected) in golden {
+        let e = match which {
+            0 => &mut clicks,
+            1 => &mut tone,
+            _ => &mut accent,
+        };
+        assert_eq!(ok(e, "detectBeats", payload.clone()), expected, "omitted {payload}");
+        let mut half = payload.clone();
+        half["sensitivity"] = json!(0.5);
+        assert_eq!(ok(e, "detectBeats", half), expected, "0.5 {payload}");
+    }
+}
+
+#[test]
+fn sensitivity_moves_the_onset_threshold() {
+    // With quiet notes at velocity 30 the default threshold keeps only the
+    // seven loud beats; sensitivity 1.0 also admits the quiet notes.
+    let mut e = accent_doc(30);
+    let depth = undo_depth(&mut e);
+    let count = |e: &mut CadenceEngine, s: f64| {
+        ok(e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "sensitivity": s}))
+            ["onsets_seconds"]
+            .as_array()
+            .unwrap()
+            .len()
+    };
+    let (low, mid, high) = (count(&mut e, 0.0), count(&mut e, 0.5), count(&mut e, 1.0));
+    assert!(low <= mid && mid <= high, "{low} {mid} {high}");
+    assert_eq!(mid, 7, "default finds the loud beats only");
+    assert!(high >= 14, "1.0 finds the quiet notes too: {high}");
+    assert!(low < mid, "0.0 is stricter than the default: {low}");
+    assert_eq!(undo_depth(&mut e), depth, "read-only op recorded undo");
+    for bad in [json!(1.5), json!(-0.1)] {
+        rejects(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "sensitivity": bad}), ErrorCode::Validation);
+    }
+    rejects(&mut e, "detectBeats", json!({"from_ticks": 0, "to_ticks": 7680, "sample_rate": 8000, "sensitivity": "high"}), ErrorCode::InvalidCommand);
+}
+
+// ---- markers (E-35) ------------------------------------------------------------------
+
+fn markers(e: &mut CadenceEngine) -> Vec<Value> {
+    ok(e, "listMarkers", json!({}))["markers"].as_array().unwrap().clone()
+}
+
+#[test]
+fn add_markers_is_one_undo_step_and_round_trips() {
+    let mut e = CadenceEngine::new();
+    let depth = undo_depth(&mut e);
+    let r = ok(
+        &mut e,
+        "addMarkers",
+        json!({"markers": [{"ticks": 1920}, {"ticks": 0, "name": " Intro "}, {"ticks": 960, "length_ticks": 480, "note": "fill"}, {"ticks": 2880}]}),
+    );
+    let ids: Vec<u64> = r["marker_ids"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
+    assert_eq!(ids.len(), 4);
+    assert_eq!(undo_depth(&mut e), depth + 1, "batch is one undo step");
+    let m = markers(&mut e);
+    // Listed by ticks; ids follow input order; default names count up.
+    let ticks: Vec<u64> = m.iter().map(|v| v["ticks"].as_u64().unwrap()).collect();
+    assert_eq!(ticks, vec![0, 960, 1920, 2880]);
+    assert_eq!(m[0]["id"], ids[1]);
+    assert_eq!(m[0]["name"], "Intro");
+    assert_eq!(m[2]["name"], "Marker 1");
+    assert_eq!(m[3]["name"], "Marker 4");
+    assert_eq!(m[1]["length_ticks"], 480);
+    assert_eq!(m[1]["note"], "fill");
+    assert!(m[0].get("note").is_none());
+
+    assert!(e.undo().unwrap());
+    assert!(markers(&mut e).is_empty());
+    assert!(e.redo().unwrap());
+    assert_eq!(markers(&mut e), m);
+
+    // Save and load.
+    let snap = e.snapshot().unwrap();
+    let mut e2 = CadenceEngine::new();
+    e2.restore(&snap).unwrap();
+    assert_eq!(markers(&mut e2), m);
+    // A new id after restore does not collide with a marker id.
+    let next = ok(&mut e2, "addMarker", json!({"ticks": 10}))["marker_id"].as_u64().unwrap();
+    assert!(ids.iter().all(|&i| i < next));
+}
+
+#[test]
+fn update_and_remove_marker() {
+    let mut e = CadenceEngine::new();
+    let id = ok(&mut e, "addMarker", json!({"ticks": 960, "note": "x"}))["marker_id"].as_u64().unwrap();
+    let other = ok(&mut e, "addMarker", json!({"ticks": 1920}))["marker_id"].as_u64().unwrap();
+    let depth = undo_depth(&mut e);
+    ok(&mut e, "updateMarker", json!({"id": id, "ticks": 2880, "name": "Drop"}));
+    assert_eq!(undo_depth(&mut e), depth + 1);
+    let m = markers(&mut e);
+    // The id is kept and the list re-sorts by ticks.
+    assert_eq!(m[0]["id"], other);
+    assert_eq!(m[1]["id"], id);
+    assert_eq!(m[1]["ticks"], 2880);
+    assert_eq!(m[1]["name"], "Drop");
+    assert_eq!(m[1]["note"], "x");
+    // null clears the note; an unchanged patch records nothing.
+    ok(&mut e, "updateMarker", json!({"id": id, "note": null}));
+    assert!(markers(&mut e)[1].get("note").is_none());
+    let depth = undo_depth(&mut e);
+    ok(&mut e, "updateMarker", json!({"id": id, "ticks": 2880}));
+    assert_eq!(undo_depth(&mut e), depth, "no-op update recorded undo");
+    assert!(e.undo().unwrap());
+    assert_eq!(markers(&mut e)[1]["note"], "x");
+
+    ok(&mut e, "removeMarker", json!({"id": other}));
+    assert_eq!(markers(&mut e).len(), 1);
+    assert!(e.undo().unwrap());
+    assert_eq!(markers(&mut e).len(), 2);
+}
+
+#[test]
+fn marker_ops_validate_before_mutating() {
+    let mut e = CadenceEngine::new();
+    let id = ok(&mut e, "addMarker", json!({"ticks": 0}))["marker_id"].as_u64().unwrap();
+    let max = (1u64 << 53) - 1;
+    let long = "n".repeat(121);
+    let note = "n".repeat(2001);
+    for (op, p, code) in [
+        ("addMarker", json!({}), ErrorCode::InvalidCommand),
+        ("addMarker", json!({"ticks": -1}), ErrorCode::Validation),
+        ("addMarker", json!({"ticks": max, "length_ticks": 1}), ErrorCode::OutOfBounds),
+        ("addMarker", json!({"ticks": 0, "name": "  "}), ErrorCode::Validation),
+        ("addMarker", json!({"ticks": 0, "name": long}), ErrorCode::Validation),
+        ("addMarker", json!({"ticks": 0, "note": note}), ErrorCode::Validation),
+        ("addMarker", json!({"ticks": 0, "seconds": 1}), ErrorCode::InvalidCommand),
+        ("addMarkers", json!({"markers": []}), ErrorCode::Validation),
+        ("addMarkers", json!({}), ErrorCode::InvalidCommand),
+        // One bad entry rejects the whole batch.
+        ("addMarkers", json!({"markers": [{"ticks": 0}, {"ticks": 0, "name": ""}]}), ErrorCode::Validation),
+        ("updateMarker", json!({"id": id}), ErrorCode::InvalidCommand),
+        ("updateMarker", json!({"id": 999, "ticks": 1}), ErrorCode::NotFound),
+        ("updateMarker", json!({"id": id, "name": null}), ErrorCode::Validation),
+        ("updateMarker", json!({"id": id, "bogus": 1}), ErrorCode::InvalidCommand),
+        ("removeMarker", json!({"id": 999}), ErrorCode::NotFound),
+    ] {
+        rejects(&mut e, op, p, code);
+    }
+    let too_many: Vec<Value> = (0..8192).map(|i| json!({"ticks": i})).collect();
+    rejects(&mut e, "addMarkers", json!({"markers": too_many}), ErrorCode::OutOfBounds);
+    let fill: Vec<Value> = (0..8191).map(|i| json!({"ticks": i})).collect();
+    ok(&mut e, "addMarkers", json!({"markers": fill}));
+    rejects(&mut e, "addMarker", json!({"ticks": 0}), ErrorCode::OutOfBounds);
+}
+
+#[test]
+fn restore_validates_markers_and_accepts_saves_without_them() {
+    let mut e = CadenceEngine::new();
+    ok(&mut e, "addMarker", json!({"ticks": 0}));
+    let doc = describe(&mut e);
+    let before = doc.clone();
+    for mutate in [
+        |d: &mut Value| d["markers"][0]["name"] = json!(""),
+        |d: &mut Value| d["markers"][0]["ticks"] = json!(1u64 << 53),
+        |d: &mut Value| d["markers"][0]["extra"] = json!(1),
+        |d: &mut Value| d["markers"][0]["id"] = json!(0),
+        |d: &mut Value| d["markers"][0]["id"] = json!(1u64 << 53),
+        |d: &mut Value| d["markers"] = json!([d["markers"][0].clone(), d["markers"][0].clone()]),
+    ] {
+        let mut bad = doc.clone();
+        mutate(&mut bad);
+        assert!(e.restore(&encode_envelope(&serde_json::to_vec(&bad).unwrap())).is_err());
+        assert_eq!(describe(&mut e), before);
+    }
+    // A project saved before markers existed has no `markers` key.
+    let mut old = doc.clone();
+    old.as_object_mut().unwrap().remove("markers");
+    e.restore(&encode_envelope(&serde_json::to_vec(&old).unwrap())).unwrap();
+    assert!(markers(&mut e).is_empty());
+    // A marker-less project still saves without the key.
+    let bytes = e.snapshot().unwrap();
+    let (_t, payload) = ignition_core::decode_envelope(&bytes).unwrap();
+    let saved: Value = serde_json::from_slice(payload).unwrap();
+    assert!(saved.get("markers").is_none());
+}
+
+#[test]
+fn restored_markers_are_sorted_by_ticks_then_id_before_commit() {
+    let mut e = CadenceEngine::new();
+    ok(&mut e, "addMarkers", json!({"markers": [{"ticks": 960}, {"ticks": 0}, {"ticks": 960}]}));
+    let expected = markers(&mut e);
+    let mut reordered = describe(&mut e);
+    reordered["markers"].as_array_mut().unwrap().reverse();
+    e.restore(&encode_envelope(&serde_json::to_vec(&reordered).unwrap())).unwrap();
+    assert_eq!(markers(&mut e), expected);
+    assert!(!e.undo().unwrap(), "successful restore resets history");
+}
+
+#[test]
+fn marker_id_exhaustion_rejects_before_journal_or_document_mutation() {
+    let mut e = CadenceEngine::new();
+    let max_id = (1u64 << 53) - 1;
+    let mut restored = describe(&mut e);
+    restored["next_id"] = json!(max_id);
+    e.restore(&encode_envelope(&serde_json::to_vec(&restored).unwrap())).unwrap();
+    rejects(&mut e, "addMarkers", json!({"markers": [{"ticks": 0}, {"ticks": 1}]}), ErrorCode::OutOfBounds);
+    assert_eq!(ok(&mut e, "addMarker", json!({"ticks": 0}))["marker_id"], max_id);
+    rejects(&mut e, "addMarker", json!({"ticks": 1}), ErrorCode::OutOfBounds);
+    assert!(e.undo().unwrap());
+    assert!(markers(&mut e).is_empty());
+    assert!(e.redo().unwrap());
+    assert_eq!(markers(&mut e)[0]["id"], max_id);
+}
+
 // ---- compatibility -------------------------------------------------------------------
 
 #[test]

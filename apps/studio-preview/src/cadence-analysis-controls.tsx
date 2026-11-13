@@ -13,6 +13,7 @@ import type {EqResponsePoint} from '@nyc-tron/ui/components/forge/audio/eq-graph
 import type {DynamicsCurvePoint} from '@nyc-tron/ui/components/forge/audio/dynamics-graph';
 import type {CadenceDocument,AutomationParam} from '../../../packages/cadence/src/index';
 import {CadenceMixerAdapter,type CadenceMixerState} from '../../../packages/cadence/src/mixer-cluster';
+import {CadenceBeatLane} from './cadence-beat-lane';
 
 export interface CadenceAnalysisControlsProps {
  document:CadenceDocument;
@@ -35,7 +36,7 @@ function clipEnd(project:CadenceMixerState){let end=0;for(const track of project
 export function CadenceAnalysisControls(props:CadenceAnalysisControlsProps){
  const {document,project,disabled,commit}=props,scale=resolveWorkspaceScale(props.density),colors=workspaceThemes[props.theme];
  const adapter=useMemo(()=>new CadenceMixerAdapter(document),[document]);
- const store=useMemo(()=>createStore(()=>({panel:'automation' as 'automation'|'graphs'|'offline',trackId:null as number|null,slotId:null as number|null,param:'gain' as AutomationParam,
+ const store=useMemo(()=>createStore(()=>({panel:'automation' as 'automation'|'graphs'|'offline'|'beats',trackId:null as number|null,slotId:null as number|null,param:'gain' as AutomationParam,
   bars:4,selectedTick:undefined as number|undefined,band:undefined as number|undefined,retry:0,
   graph:null as Graph|null,graphStatus:'idle' as 'idle'|'loading'|'ready'|'error',graphError:'',
   offline:null as Offline|null,offlineStatus:'idle' as 'idle'|'loading'|'ready'|'error',offlineError:'',offlineBusy:false})),[document]);
@@ -101,10 +102,11 @@ export function CadenceAnalysisControls(props:CadenceAnalysisControlsProps){
  const offline=offlineCurrent?view.offline:null;
  const textStyle={color:colors.muted,fontSize:scale.type.body};
  return <View testID="cadence-analysis-controls" style={{gap:scale.space.group}}>
-  <TabBar semantics="tabs" density="compact" aria-label="Automation and analysis panels" tabs={(['automation','graphs','offline'] as const).map(panel=>({key:panel,label:panel==='automation'?'Automation':panel==='graphs'?'EQ / dynamics':'Offline analysis',icon:null,active:view.panel===panel,onPress:()=>select({panel,selectedTick:undefined,band:undefined})}))}/>
-  <Select label="Analysis window" value={String(view.bars)} options={[1,4,8].map(value=>({value:String(value),label:`First ${value} ${value===1?'bar':'bars'}`}))}
-   disabled={disabled} onValueChange={value=>{const bars=Number(value);if([1,4,8].includes(bars))select({bars,selectedTick:undefined});}}/>
-  {view.panel!=='offline'&&<>
+  <TabBar semantics="tabs" density="compact" aria-label="Automation and analysis panels" tabs={(['automation','graphs','offline','beats'] as const).map(panel=>({key:panel,label:panel==='automation'?'Automation':panel==='graphs'?'EQ / dynamics':panel==='beats'?'Beat markers':'Offline analysis',icon:null,active:view.panel===panel,onPress:()=>select({panel,selectedTick:undefined,band:undefined})}))}/>
+  {view.panel!=='beats'&&<Select label="Analysis window" value={String(view.bars)} options={[1,4,8].map(value=>({value:String(value),label:`First ${value} ${value===1?'bar':'bars'}`}))}
+   disabled={disabled} onValueChange={value=>{const bars=Number(value);if([1,4,8].includes(bars))select({bars,selectedTick:undefined});}}/>}
+  {view.panel==='beats'&&<CadenceBeatLane document={document} project={project} disabled={disabled} commit={write} density={props.density} theme={props.theme}/>}
+  {view.panel!=='offline'&&view.panel!=='beats'&&<>
    {!track?<Text style={textStyle}>Add a track in Routing or MIDI to edit automation and insert graphs.</Text>:<>
     <Select label="Track for automation or graphs" value={String(track.id)} options={project.tracks.map(track=>({value:String(track.id),label:track.name}))} disabled={disabled}
      onValueChange={value=>select({trackId:Number(value),slotId:null,selectedTick:undefined,band:undefined})}/>

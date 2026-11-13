@@ -231,6 +231,70 @@ describe("mixer ops against the real Rust Cadence engine", () => {
     }
   });
 
+  it("detectBeats sensitivity 0.5 matches the default and moves the threshold", async () => {
+    const doc = await CadenceDocument.open(host, 120);
+    try {
+      // Loud notes on each beat, quiet ones between them (velocity 30).
+      const track = (await doc.addTrack("midi")).data.track_id;
+      const clip = (await doc.addClip(track, 0, 7680)).data.clip_id;
+      for (let i = 0; i < 16; i++) {
+        await doc.addNote(clip, 81, i * 480, 96, i % 2 === 0 ? 127 : 30);
+      }
+      const range = { fromTicks: 0, toTicks: 7680, sampleRate: 8000 };
+      const byDefault = (await doc.detectBeats(range)).data;
+      const half = (await doc.detectBeats(range, { sensitivity: 0.5 })).data;
+      expect(half).toEqual(byDefault);
+      expect(byDefault.onsets_seconds).toHaveLength(7);
+      const strict = (await doc.detectBeats(range, { sensitivity: 0 })).data;
+      const loose = (await doc.detectBeats(range, { sensitivity: 1 })).data;
+      expect(strict.onsets_seconds.length).toBeLessThan(7);
+      expect(loose.onsets_seconds.length).toBeGreaterThanOrEqual(14);
+      await rejectsWith(doc.detectBeats(range, { sensitivity: 1.5 }), "validation");
+    } finally {
+      await doc.close();
+    }
+  });
+
+  it("stores markers in ticks with batch undo and save/load", async () => {
+    const doc = await CadenceDocument.open(host, 120);
+    let reopened: CadenceDocument | undefined;
+    try {
+      const { marker_ids: ids } = (
+        await doc.addMarkers([{ ticks: 1920 }, { ticks: 0, name: "Intro" }, { ticks: 960, lengthTicks: 480, note: "fill" }])
+      ).data;
+      expect(ids).toHaveLength(3);
+      let markers = (await doc.listMarkers()).data.markers;
+      expect(markers.map((m) => m.ticks)).toEqual([0, 960, 1920]);
+      expect(markers[0]).toEqual({ id: ids[1], ticks: 0, length_ticks: 0, name: "Intro" });
+      expect(markers[1]?.note).toBe("fill");
+
+      // The batch is one undo step.
+      expect(await doc.undo()).toBe(true);
+      expect((await doc.listMarkers()).data.markers).toEqual([]);
+      expect(await doc.redo()).toBe(true);
+      expect((await doc.listMarkers()).data.markers).toEqual(markers);
+
+      await doc.updateMarker(ids[0]!, { ticks: 2880, name: "Drop", note: null });
+      markers = (await doc.listMarkers()).data.markers;
+      expect(markers[2]).toEqual({ id: ids[0], ticks: 2880, length_ticks: 0, name: "Drop" });
+      await doc.removeMarker(ids[2]!);
+      expect((await doc.listMarkers()).data.markers).toHaveLength(2);
+      expect(await doc.undo()).toBe(true);
+      expect((await doc.listMarkers()).data.markers).toHaveLength(3);
+
+      reopened = await CadenceDocument.openSnapshot(host, await doc.save());
+      expect((await reopened.listMarkers()).data.markers).toEqual((await doc.listMarkers()).data.markers);
+
+      await rejectsWith(doc.addMarkers([]), "validation");
+      await rejectsWith(doc.addMarker({ ticks: 0, name: " " }), "validation");
+      await rejectsWith(doc.updateMarker(999, { ticks: 1 }), "not_found");
+      await rejectsWith(doc.removeMarker(999), "not_found");
+    } finally {
+      await reopened?.close();
+      await doc.close();
+    }
+  });
+
   it("measures loudness and a spectrogram", async () => {
     const { doc } = await setup();
     try {

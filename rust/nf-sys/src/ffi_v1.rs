@@ -211,6 +211,59 @@ mod tests {
         }
     }
 
+    /// F3 E-35 and I-15 ops reach the engines through the generic v1 C ABI
+    /// with no new symbols: Cadence markers (batch undo as one step,
+    /// snapshot round-trip), `detectBeats` sensitivity validation, and a
+    /// Tally pivot filter with no values.
+    #[test]
+    fn v1_ffi_carries_cadence_markers_and_tally_all_filter() {
+        unsafe {
+            let mut error: *mut c_char = std::ptr::null_mut();
+            let h = nf_v1_open(b"cadence".as_ptr(), 7, &mut error);
+            assert!(h > 0 && error.is_null());
+            let added = apply(
+                h,
+                r#"{"op":"addMarkers","payload":{"markers":[{"ticks":0},{"ticks":960},{"ticks":1920}]}}"#,
+            );
+            assert_eq!(added["ok"], true, "{added}");
+            assert_eq!(added["data"]["marker_ids"].as_array().unwrap().len(), 3);
+            let list = |h| apply(h, r#"{"op":"listMarkers","payload":{}}"#)["data"]["markers"]
+                .as_array()
+                .unwrap()
+                .len();
+            assert_eq!(list(h), 3);
+            let snapshot = nf_v1_snapshot(h, &mut error);
+            assert!(error.is_null());
+            let bytes = std::slice::from_raw_parts(snapshot.ptr, snapshot.len).to_vec();
+            nf_free_bytes(snapshot);
+            assert_eq!(apply(h, r#"{"op":"__undo"}"#)["data"]["undone"], true);
+            assert_eq!(list(h), 0, "one undo removes the whole batch");
+            assert_eq!(apply(h, r#"{"op":"__redo"}"#)["data"]["redone"], true);
+            assert_eq!(list(h), 3);
+            assert_eq!(apply(h, r#"{"op":"__undo"}"#)["data"]["undone"], true);
+            assert!(nf_v1_restore(h, bytes.as_ptr(), bytes.len()).is_null());
+            assert_eq!(list(h), 3);
+            let bad = apply(
+                h,
+                r#"{"op":"detectBeats","payload":{"from_ticks":0,"to_ticks":960,"sample_rate":8000,"sensitivity":1.5}}"#,
+            );
+            assert_eq!(bad["ok"], false);
+            assert_eq!(bad["error"]["code"], "validation");
+            assert_eq!(nf_v1_close(h), 1);
+
+            let t = nf_v1_open(b"tally".as_ptr(), 5, &mut error);
+            assert!(t > 0 && error.is_null());
+            assert_eq!(apply(t, r#"{"op":"new","payload":{}}"#)["ok"], true);
+            let pivot = apply(
+                t,
+                r#"{"op":"insertPivot","payload":{"pivot":{"source":{"range":{"from":"A1","to":"B2"}},"values":[{"field":1,"agg":"sum"}],"filters":[{"field":0,"values":[]}]}}}"#,
+            );
+            assert_eq!(pivot["ok"], true, "{pivot}");
+            assert_eq!(pivot["data"]["pivot"]["filters"][0]["values"], serde_json::json!([]));
+            assert_eq!(nf_v1_close(t), 1);
+        }
+    }
+
     #[test]
     fn v1_ffi_rejects_corrupt_inputs_and_closed_handles() {
         unsafe {

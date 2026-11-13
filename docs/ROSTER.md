@@ -2764,6 +2764,20 @@ ledger records these as `in-progress` tier evidence
 (`w28-ios-*`/`w29-android-*`/`w31-android-*` entries in
 `docs/completion/components.json`), not platform passes.
 
+## F3 engine ops for I-15 and E-35 (2026-11-12, `feat/f3-engine-ops-20261111`)
+
+The bullets below record the pre-merge branch at `c83c871`. The
+[2026-11-13 review-fix receipt](release/evidence/2026-11-13-daeabbe/README.md)
+records the later source checks without transferring the earlier engine or
+on-screen results to another revision.
+
+Owner chose option B for both rows (`docs/proposals/F3-deferred-rows.md`).
+
+- Tally accepts a pivot filter with no values as "All". Rust: `empty_filter_means_all_and_round_trips` and the updated `insert_validation_is_atomic`; TS: `pivots.e2e.test.ts` over nf-cli.
+- Cadence `detectBeats` takes `sensitivity` (default 0.5). `sensitivity_half_reproduces_the_recorded_pre_sensitivity_output` compares sensitivity omitted and 0.5 against output recorded at `1167e13`, before the change, on five fixtures. Five marker ops (`addMarker`, `addMarkers`, `updateMarker`, `removeMarker`, `listMarkers`) store ticks with undo and snapshots; an nf-sys test drives them through the v1 C ABI.
+- Studio preview: `PivotFieldList` (Tally "Pivot" tab) and `BeatDetectionMarkerLane` (Cadence Analysis "Beat markers" tab) are wired. Node tests with recorded calls and `tests/f3-rows.e2e.test.ts` against nf-cli passed locally on macOS.
+- On-screen check in the browser harness: NOT RUN. At `c83c871` the harness page does not mount in Chromium (`react-native-reanimated` served from source; see the PR). Native iOS and Android: NOT RUN.
+
 ## Dependency baseline F1 (2026-11-11, `deps/f1-baseline-20261111`)
 
 Bump list and holds: `docs/release/RELEASE_TRAIN.md`, "Dependency baseline, 2026-11-11".

@@ -104,7 +104,7 @@ jobs:
           import { execFileSync } from 'node:child_process';
           import { lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
           import { dirname, join, resolve } from 'node:path';
-          
+
           const sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
           const pullRequestHeadRevision = process.env.FORGE_PR_HEAD_SHA;
           assert.match(sourceRevision, /^[0-9a-f]{40}$/);
@@ -155,6 +155,10 @@ jobs:
         run: |
           pnpm --filter @nitro-forge/prism typecheck
           pnpm --filter @nitro-forge/prism test
+      - name: Studio preview row wiring (recorded calls and real engines)
+        run: |
+          pnpm --filter @nitro-forge/studio-preview test
+          pnpm --filter @nitro-forge/studio-preview test:engine
       - name: Seven-engine browser bridge round trips
         run: pnpm --filter @nitro-forge/studio-preview test:integration
       - name: Upload the rendered production bundle

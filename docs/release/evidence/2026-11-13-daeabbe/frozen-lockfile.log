@@ -1,0 +1,5 @@
+npm notice run nitro-forge@0.0.0 npx
+npm notice run 'pnpm' install --lockfile-only --frozen-lockfile --ignore-scripts --offline
+Scope: all 30 workspace projects
+✓ Lockfile passes supply-chain policies (verified 4m ago)
+Done in 52ms using pnpm v12.18.0

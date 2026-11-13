@@ -16,6 +16,7 @@ use serde_json::{json, Value};
 
 mod analysis;
 mod dsp;
+mod markers;
 mod mix_ops;
 mod mixer_model;
 mod presets;
@@ -126,6 +127,10 @@ struct Doc {
     tracks: Vec<Track>,
     #[serde(default)]
     metronome: Metronome,
+    /// Project markers in ticks. Omitted from snapshots while empty, and
+    /// defaulted on restore, so saves from before markers load unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    markers: Vec<markers::Marker>,
 }
 
 impl Doc {
@@ -138,6 +143,7 @@ impl Doc {
             next_id: 1,
             tracks: Vec::new(),
             metronome: Metronome::default(),
+            markers: Vec::new(),
         }
     }
 
@@ -966,7 +972,8 @@ impl Engine for CadenceEngine {
             "renderStems" => self.render_stems_command(&cmd,None),
 
             other => self
-                .apply_mixer(other, p)
+                .apply_markers(other, p)
+                .or_else(|| self.apply_mixer(other, p))
                 .unwrap_or_else(|| Err(EngineError::invalid(format!("unknown op '{other}'")))),
         }
     }
@@ -986,6 +993,7 @@ impl Engine for CadenceEngine {
             .map(|t| t.id)
             .chain(doc.tracks.iter().flat_map(|t| t.clips.iter().map(|c| c.id)))
             .chain(doc.tracks.iter().flat_map(|t| t.inserts.iter().map(|i| i.id)))
+            .chain(doc.markers.iter().map(|m| m.id))
             .max()
             .unwrap_or(0);
         doc.next_id = doc.next_id.max(max_id.saturating_add(1));
@@ -1000,6 +1008,10 @@ impl Engine for CadenceEngine {
                 }
             }
         }
+        markers::check_restored(&doc.markers)?;
+        // Imported arrays may be reordered; normalize the decoded candidate
+        // before committing so listMarkers always returns ticks/id order.
+        markers::sort(&mut doc);
         // Commit only after the payload fully decoded; document is a new
         // session state, so undo history is reset.
         self.doc = doc;
