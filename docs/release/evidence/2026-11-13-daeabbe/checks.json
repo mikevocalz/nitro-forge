@@ -1,0 +1,58 @@
+{
+  "sourceRevision": "daeabbee6c331c02b3d9c9fc23686151c1dd932f",
+  "platform": "macOS arm64",
+  "capturedAt": "2026-11-13",
+  "checks": [
+    {
+      "command": [
+        "node",
+        "--test",
+        "apps/studio-preview/src/cadence-beats-wiring.test.ts",
+        "apps/studio-preview/src/cadence-gain-wiring.test.ts",
+        "apps/studio-preview/src/prism-eyedropper-wiring.test.ts",
+        "apps/studio-preview/src/prism-node-capability.test.ts",
+        "apps/studio-preview/src/prism-node-geometry.test.ts",
+        "apps/studio-preview/src/splice-trim-wiring.test.ts",
+        "apps/studio-preview/src/surface-admission.test.ts",
+        "apps/studio-preview/src/tally-pivot-wiring.test.ts",
+        "apps/studio-preview/src/tally-rows-wiring.test.ts"
+      ],
+      "environment": null,
+      "exitCode": 0,
+      "log": "source-tests.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "cadence-engine"
+      ],
+      "environment": {
+        "CARGO_TARGET_DIR": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f3-cadence-target",
+        "CARGO_PROFILE_DEV_DEBUG": "0",
+        "CARGO_PROFILE_TEST_DEBUG": "0",
+        "CARGO_INCREMENTAL": "0"
+      },
+      "exitCode": 0,
+      "log": "cadence-rust-tests.log"
+    },
+    {
+      "command": [
+        "npx",
+        "--yes",
+        "pnpm@12.18.0",
+        "install",
+        "--lockfile-only",
+        "--frozen-lockfile",
+        "--ignore-scripts",
+        "--offline"
+      ],
+      "environment": null,
+      "exitCode": 0,
+      "log": "frozen-lockfile.log"
+    }
+  ]
+}
