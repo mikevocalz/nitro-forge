@@ -1,6 +1,6 @@
 # Xcode 27.1 and expo-modules-macros 0.33.0
 
-Applies to any iOS consumer of Forge on Expo 58.0.24 or later, built with Xcode 27.1 (27A9269).
+Reproduced on Expo 58.0.24 with Xcode 27.1 (27A9269); expected on later Expo versions that retain the same macro-package target structure. Later Expo versions were not reproduced.
 
 ## Symptom
 
@@ -8,7 +8,7 @@ The iOS build fails in target `ExpoModulesMacrosCore` with `Unable to resolve mo
 
 ## Cause
 
-Expo 58.0.24 requires expo-modules-core ~58.1.0, which pins expo-modules-macros 0.33.0. In that release the `ExpoModulesMacrosPlugin` product holds a plain target that depends on the macro target (expo/expo-modules-macros#144). Xcode 27.1 then also builds `ExpoModulesMacrosCore` for the iOS Simulator. SwiftPM's swift-syntax prebuilt contains macOS slices only, so the simulator build cannot resolve it. expo-modules-macros 0.34.0 and 0.35.0 have the same `Package.swift`.
+Expo 58.0.24 requires expo-modules-core ~58.1.0, which pins expo-modules-macros 0.33.0. In that release the `ExpoModulesMacrosPlugin` product holds a plain target that depends on the macro target (expo/expo-modules-macros#144). Xcode 27.1 then also builds `ExpoModulesMacrosCore` for the iOS Simulator. SwiftPM's swift-syntax prebuilt contains macOS slices only, so the simulator build cannot resolve it. expo-modules-macros 0.34.0 and 0.35.0 have the same `Package.swift`; their builds were not reproduced.
 
 ## Workaround
 

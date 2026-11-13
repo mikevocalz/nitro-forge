@@ -7,7 +7,7 @@ Title: `ExpoModulesMacrosCore` builds for the iOS Simulator on Xcode 27.1 and ca
 
 ## Summary
 
-With expo-modules-macros 0.33.0 (also 0.34.0 and 0.35.0) on Xcode 27.1 (27A9269), an iOS Simulator build fails in `ExpoModulesMacrosCore` with `Unable to resolve module dependency: 'SwiftSyntax'`. `-IDEPackageEnablePrebuilts=NO` makes the build succeed.
+With expo-modules-macros 0.33.0 on Xcode 27.1 (27A9269), an iOS Simulator build fails in `ExpoModulesMacrosCore` with `Unable to resolve module dependency: 'SwiftSyntax'`. `-IDEPackageEnablePrebuilts=NO` makes the build succeed. Versions 0.34.0 and 0.35.0 have the same `Package.swift`; their builds were not reproduced.
 
 ## Environment
 
@@ -32,7 +32,7 @@ With expo-modules-macros 0.33.0 (also 0.34.0 and 0.35.0) on Xcode 27.1 (27A9269)
 
 ## Impact
 
-Every iOS consumer on Expo 58.0.24 or later with Xcode 27.1 sees this unless they disable SwiftPM prebuilts. We worked around it in CI with `-IDEPackageEnablePrebuilts=NO`. We have not tried `npx expo run:ios` or EAS Build.
+Reproduced on Expo 58.0.24 with Xcode 27.1; expected on later Expo versions that retain the same macro-package target structure. Later Expo versions were not reproduced. We worked around the CI build with `-IDEPackageEnablePrebuilts=NO`. We have not tried `npx expo run:ios` or EAS Build.
 
 ## Evidence
 
