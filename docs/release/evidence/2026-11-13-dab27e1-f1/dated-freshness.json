@@ -1,0 +1,2913 @@
+{
+  "sourceCommit": "dab27e177f05a747f2a234e3892f62e2f7b8c28b",
+  "capturedAtUTC": "2026-11-14T01:43:59.449Z",
+  "inputSHA256": {
+    "apps/console/package.json": "e453d6307459330690f2ea589102199035104ef9bace3456b28d982883229231",
+    "apps/example/package.json": "0c5d325100a876fe269d73a9e9331be745aeeda23bf7ea79b928ea207f7aca71",
+    "apps/forge-audio-lab/package.json": "da024212033e23256ec4f07b623503bc05c0d56568a4edbabaea0a42c5dd7c4e",
+    "apps/forge-media-lab/package.json": "abfbdbb734df6c4e52430e154fda86e85dba6a4474c8fb60511081d3a89cc268",
+    "apps/studio-preview/package.json": "aa6cc02487182cc753489c35a08302a1d0d40d1129d23104642dc555a3712fd9",
+    "examples/native-cadence/package.json": "29bdfbcde75b1600e88568402f1d527a0b8708d53356032d19cc763f4e96b235",
+    "native/persona/nitro/package.json": "345a6542b6129f9616de4c3f74022cd10dca8f51f41df451177f867b8fb90383",
+    "package.json": "c670bdd2af2f4eed16e1660696a0f6f6bd3b9468eedac5946f716e116bc15f87",
+    "packages/adaptive-layout/package.json": "93822400c192ae8d6c322405bacb75e6a35304cdc585685d59bb9465c82de0ef",
+    "packages/agpl-speed-curve/package.json": "ab3360c668b8f6a89441e124031d6dd773ec6ac0219d39f1e926514272627935",
+    "packages/audio-ui/package.json": "4c279ca4b048cd9dded7c1a688aa8542b578739cfc3bf34e8a1500f903c9a9e2",
+    "packages/cadence/package.json": "a91e8404df02d41cbd7b221fc8f4141dd3d28bd552d033000d6a6729cb49fb14",
+    "packages/collaboration-server/package.json": "47d11bc039dca8d90dc3e2beed9e4fec0c219949b6f6e7a7a33a81a4d6b4572d",
+    "packages/design/package.json": "289da707ffa267b4a0f96d8414ec7818592ce7c46f1d78bc205bd1d4ad576a0e",
+    "packages/draft/package.json": "5a18943d2ac6639e7402158fa88814b0a2260ec6fb39633df29fca8850627c0d",
+    "packages/folio/package.json": "7b45776c69f7d7bb5d2102a1e58068ffdd34ee8696aeaa02987501ac6f81d087",
+    "packages/icons/package.json": "d0dd1118e11482b33ceb8be02da29c97074caf4489539a79531491f80c269dda",
+    "packages/ignition/package.json": "eba4787c1e66016f7693e8472ae5f2508385b6b3258d18ded43d0c9251a432e3",
+    "packages/media-ui/package.json": "7abb1cb56e7ae1edba4b7d880aa00978a267d3dc2b2f3cb158e4701a6eefaf62",
+    "packages/motion/package.json": "33d354b7e57a8df11bf3617681fc03dae5faf65f8ae5d4c35fb1f49da3b9859b",
+    "packages/native-signal/package.json": "2ce2c701248a00572fdd0ebc57543e3c8b7eceee9f1e828fe1cc692a8e5b52a5",
+    "packages/photo/package.json": "7c25e0f4df48bf52b926be1ea4b97499aa57e5add2d5007f340deb42dbd5cc63",
+    "packages/pitch/package.json": "32f8d30091d01ed88c34cf72ff79a321a96014638238c8687bb9d2fc8f78d595",
+    "packages/prism/package.json": "d08bd132d2d1ca63c2d95567bb13393f18bb4dbfa512efed98b6a6e8fe89b87f",
+    "packages/quill/package.json": "869217c50a8ad81bc1829f4037d09fbd10de9a9c70fe9c9e9c3adbdd37fad74c",
+    "packages/scene/package.json": "54606f912053bf7d259c71f29c2e5da4f683a6e1877274d8cec48b080dd48cc4",
+    "packages/spatial-ink/package.json": "ff4faeb01a4462b293422b759d59b06a117d15772d880789ef16c65d9c6f0d7a",
+    "packages/splice/package.json": "6b0bd127fbecdb7ff9cfd0497c295519564d45d5abdf8312416b75bc0bbc830d",
+    "packages/studio-layout/package.json": "5c5edba24b10d00154be9768075c685c92c7fa71806d8e7d168f2deef8fa1f80",
+    "packages/studio-workspace/package.json": "6d893dad0a194553505f4cdcffef7c98982c4b59f50d903d1e200fcde7dba2b9",
+    "packages/tally/package.json": "9360fdbb53cd4c40e1951df09028409da5e612fc8f39e266bd2085abc042dd77",
+    "packages/telemetry/package.json": "69c0f92732d93e8c5fe4b69ae8254fbec7d9623436037f7c9f4e687d92c77e07",
+    "examples/native-cadence/pnpm-workspace.yaml": "8f9ba202f3dea181dfc5f6c88ca2e31317bb626bf89b17ca9f9a483679b1d175",
+    "pnpm-workspace.yaml": "58e8ae7677f854a6ed461973c3c1e12978de700169d21fd8a1ce7279f4b458e7",
+    "pnpm-lock.yaml": "acc229b7f4f8d25a5eaed1e63491f4fd3a56da1ec40a88e646c8569b05fcdce6",
+    "examples/native-cadence/pnpm-lock.yaml": "9c0d7b0de1f99bcb4bdf5b79dc3d65822e6fa8f07882e22c1c8ba510828c8b6a",
+    "Cargo.lock": "204b348987299a05fb5f76a9e4e18ba5e512f44e2b5f58a1969403f201dd769f",
+    ".cargo/audit.toml": "b252c38c7a0d52032168c7a091b7ef8d30008f9eafa3e04d0272fc8dbcca2a72",
+    "tooling/release/f1-holds-2026-11-13.json": "372d5b550496d954f9bf57abade8c2ed3bb7ab12fe3334b61a4aba2114cc201a"
+  },
+  "workingTreeStatus": " M .github/workflows/artcraft-observer.yml\n M .github/workflows/forge-2046-instruments.yml\n M .github/workflows/persona-continuity.yml\n M apps/example/package.json\n M apps/forge-audio-lab/package.json\n M apps/forge-media-lab/package.json\n M apps/studio-preview/package.json\n M examples/native-cadence/package.json\n M examples/native-cadence/pnpm-lock.yaml\n M packages/adaptive-layout/package.json\n M packages/media-ui/package.json\n M pnpm-lock.yaml\n M pnpm-workspace.yaml\n?? .github/workflows/f1-evidence.yml\n?? tooling/release/f1-evidence.test.mjs\n?? tooling/release/f1-freshness.mjs\n?? tooling/release/f1-holds-2026-11-13.json\n?? tooling/release/record-f1-command.mjs\n",
+  "registry": true,
+  "manifestCount": 32,
+  "files": [
+    "apps/console/package.json",
+    "apps/example/package.json",
+    "apps/forge-audio-lab/package.json",
+    "apps/forge-media-lab/package.json",
+    "apps/studio-preview/package.json",
+    "examples/native-cadence/package.json",
+    "native/persona/nitro/package.json",
+    "package.json",
+    "packages/adaptive-layout/package.json",
+    "packages/agpl-speed-curve/package.json",
+    "packages/audio-ui/package.json",
+    "packages/cadence/package.json",
+    "packages/collaboration-server/package.json",
+    "packages/design/package.json",
+    "packages/draft/package.json",
+    "packages/folio/package.json",
+    "packages/icons/package.json",
+    "packages/ignition/package.json",
+    "packages/media-ui/package.json",
+    "packages/motion/package.json",
+    "packages/native-signal/package.json",
+    "packages/photo/package.json",
+    "packages/pitch/package.json",
+    "packages/prism/package.json",
+    "packages/quill/package.json",
+    "packages/scene/package.json",
+    "packages/spatial-ink/package.json",
+    "packages/splice/package.json",
+    "packages/studio-layout/package.json",
+    "packages/studio-workspace/package.json",
+    "packages/tally/package.json",
+    "packages/telemetry/package.json"
+  ],
+  "workspaceFiles": [
+    "examples/native-cadence/pnpm-workspace.yaml",
+    "pnpm-workspace.yaml"
+  ],
+  "responses": {
+    "@expo/html-elements": {
+      "url": "https://registry.npmjs.org/%40expo%2Fhtml-elements/latest",
+      "latest": "58.0.3"
+    },
+    "@expo/metro-runtime": {
+      "url": "https://registry.npmjs.org/%40expo%2Fmetro-runtime/latest",
+      "latest": "58.0.17"
+    },
+    "@babel/parser": {
+      "url": "https://registry.npmjs.org/%40babel%2Fparser/latest",
+      "latest": "8.1.2"
+    },
+    "@expo/ui": {
+      "url": "https://registry.npmjs.org/%40expo%2Fui/latest",
+      "latest": "58.0.28"
+    },
+    "@react-native-community/cli": {
+      "url": "https://registry.npmjs.org/%40react-native-community%2Fcli/latest",
+      "latest": "21.0.0"
+    },
+    "@react-native-community/cli-platform-android": {
+      "url": "https://registry.npmjs.org/%40react-native-community%2Fcli-platform-android/latest",
+      "latest": "21.0.0"
+    },
+    "@react-native-community/cli-platform-ios": {
+      "url": "https://registry.npmjs.org/%40react-native-community%2Fcli-platform-ios/latest",
+      "latest": "21.0.0"
+    },
+    "@tailwindcss/vite": {
+      "url": "https://registry.npmjs.org/%40tailwindcss%2Fvite/latest",
+      "latest": "4.3.5"
+    },
+    "@types/node": {
+      "url": "https://registry.npmjs.org/%40types%2Fnode/latest",
+      "latest": "26.6.6"
+    },
+    "@types/react": {
+      "url": "https://registry.npmjs.org/%40types%2Freact/latest",
+      "latest": "19.3.0"
+    },
+    "enhanced-resolve": {
+      "url": "https://registry.npmjs.org/enhanced-resolve/latest",
+      "latest": "5.27.0"
+    },
+    "@webgpu/types": {
+      "url": "https://registry.npmjs.org/%40webgpu%2Ftypes/latest",
+      "latest": "0.1.74"
+    },
+    "esbuild": {
+      "url": "https://registry.npmjs.org/esbuild/latest",
+      "latest": "0.28.2"
+    },
+    "@types/react-dom": {
+      "url": "https://registry.npmjs.org/%40types%2Freact-dom/latest",
+      "latest": "19.3.0"
+    },
+    "expo": {
+      "url": "https://registry.npmjs.org/expo/latest",
+      "latest": "58.0.25"
+    },
+    "expo-constants": {
+      "url": "https://registry.npmjs.org/expo-constants/latest",
+      "latest": "58.0.16"
+    },
+    "expo-build-properties": {
+      "url": "https://registry.npmjs.org/expo-build-properties/latest",
+      "latest": "58.0.12"
+    },
+    "expo-dev-client": {
+      "url": "https://registry.npmjs.org/expo-dev-client/latest",
+      "latest": "58.0.20"
+    },
+    "expo-file-system": {
+      "url": "https://registry.npmjs.org/expo-file-system/latest",
+      "latest": "58.0.13"
+    },
+    "expo-haptics": {
+      "url": "https://registry.npmjs.org/expo-haptics/latest",
+      "latest": "58.0.8"
+    },
+    "expo-image": {
+      "url": "https://registry.npmjs.org/expo-image/latest",
+      "latest": "58.0.18"
+    },
+    "expo-linear-gradient": {
+      "url": "https://registry.npmjs.org/expo-linear-gradient/latest",
+      "latest": "58.0.4"
+    },
+    "expo-asset": {
+      "url": "https://registry.npmjs.org/expo-asset/latest",
+      "latest": "58.0.21"
+    },
+    "expo-linking": {
+      "url": "https://registry.npmjs.org/expo-linking/latest",
+      "latest": "58.0.17"
+    },
+    "expo-router": {
+      "url": "https://registry.npmjs.org/expo-router/latest",
+      "latest": "58.0.31"
+    },
+    "expo-drag-drop-content-view": {
+      "url": "https://registry.npmjs.org/expo-drag-drop-content-view/latest",
+      "latest": "0.9.2"
+    },
+    "expo-status-bar": {
+      "url": "https://registry.npmjs.org/expo-status-bar/latest",
+      "latest": "58.0.5"
+    },
+    "expo-sensors": {
+      "url": "https://registry.npmjs.org/expo-sensors/latest",
+      "latest": "58.0.5"
+    },
+    "metro": {
+      "url": "https://registry.npmjs.org/metro/latest",
+      "latest": "0.88.0"
+    },
+    "metro-babel-transformer": {
+      "url": "https://registry.npmjs.org/metro-babel-transformer/latest",
+      "latest": "0.88.0"
+    },
+    "metro-cache": {
+      "url": "https://registry.npmjs.org/metro-cache/latest",
+      "latest": "0.88.0"
+    },
+    "metro-cache-key": {
+      "url": "https://registry.npmjs.org/metro-cache-key/latest",
+      "latest": "0.88.0"
+    },
+    "metro-core": {
+      "url": "https://registry.npmjs.org/metro-core/latest",
+      "latest": "0.88.0"
+    },
+    "metro-file-map": {
+      "url": "https://registry.npmjs.org/metro-file-map/latest",
+      "latest": "0.88.0"
+    },
+    "metro-config": {
+      "url": "https://registry.npmjs.org/metro-config/latest",
+      "latest": "0.88.0"
+    },
+    "metro-minify-terser": {
+      "url": "https://registry.npmjs.org/metro-minify-terser/latest",
+      "latest": "0.88.0"
+    },
+    "metro-runtime": {
+      "url": "https://registry.npmjs.org/metro-runtime/latest",
+      "latest": "0.88.0"
+    },
+    "metro-resolver": {
+      "url": "https://registry.npmjs.org/metro-resolver/latest",
+      "latest": "0.88.0"
+    },
+    "metro-symbolicate": {
+      "url": "https://registry.npmjs.org/metro-symbolicate/latest",
+      "latest": "0.88.0"
+    },
+    "metro-transform-plugins": {
+      "url": "https://registry.npmjs.org/metro-transform-plugins/latest",
+      "latest": "0.88.0"
+    },
+    "metro-transform-worker": {
+      "url": "https://registry.npmjs.org/metro-transform-worker/latest",
+      "latest": "0.88.0"
+    },
+    "metro-source-map": {
+      "url": "https://registry.npmjs.org/metro-source-map/latest",
+      "latest": "0.88.0"
+    },
+    "playwright": {
+      "url": "https://registry.npmjs.org/playwright/latest",
+      "latest": "1.65.1"
+    },
+    "pnpm": {
+      "url": "https://registry.npmjs.org/pnpm/latest",
+      "latest": "12.18.0"
+    },
+    "react": {
+      "url": "https://registry.npmjs.org/react/latest",
+      "latest": "19.3.1"
+    },
+    "react-dom": {
+      "url": "https://registry.npmjs.org/react-dom/latest",
+      "latest": "19.3.1"
+    },
+    "react-native": {
+      "url": "https://registry.npmjs.org/react-native/latest",
+      "latest": "0.88.1"
+    },
+    "nitro-core": {
+      "url": "https://registry.npmjs.org/nitro-core/latest",
+      "latest": "0.37.2"
+    },
+    "nitrogen": {
+      "url": "https://registry.npmjs.org/nitrogen/latest",
+      "latest": "0.37.2"
+    },
+    "react-native-gesture-handler": {
+      "url": "https://registry.npmjs.org/react-native-gesture-handler/latest",
+      "latest": "3.5.0"
+    },
+    "react-native-audio-api": {
+      "url": "https://registry.npmjs.org/react-native-audio-api/latest",
+      "latest": "1.0.0"
+    },
+    "react-native-reanimated": {
+      "url": "https://registry.npmjs.org/react-native-reanimated/latest",
+      "latest": "4.7.1"
+    },
+    "react-native-nitro-image": {
+      "url": "https://registry.npmjs.org/react-native-nitro-image/latest",
+      "latest": "0.15.2"
+    },
+    "react-native-safe-area-context": {
+      "url": "https://registry.npmjs.org/react-native-safe-area-context/latest",
+      "latest": "5.11.1"
+    },
+    "react-native-pulsar": {
+      "url": "https://registry.npmjs.org/react-native-pulsar/latest",
+      "latest": "1.7.0"
+    },
+    "react-native-nitro-modules": {
+      "url": "https://registry.npmjs.org/react-native-nitro-modules/latest",
+      "latest": "0.37.2"
+    },
+    "react-native-svg": {
+      "url": "https://registry.npmjs.org/react-native-svg/latest",
+      "latest": "15.16.1"
+    },
+    "react-native-skia": {
+      "url": "https://registry.npmjs.org/react-native-skia/latest",
+      "latest": "3.10.1"
+    },
+    "react-native-video": {
+      "url": "https://registry.npmjs.org/react-native-video/latest",
+      "latest": "6.19.3"
+    },
+    "react-native-screens": {
+      "url": "https://registry.npmjs.org/react-native-screens/latest",
+      "latest": "4.30.1"
+    },
+    "react-native-vision-camera": {
+      "url": "https://registry.npmjs.org/react-native-vision-camera/latest",
+      "latest": "5.2.4"
+    },
+    "react-native-web": {
+      "url": "https://registry.npmjs.org/react-native-web/latest",
+      "latest": "0.21.4"
+    },
+    "tailwindcss": {
+      "url": "https://registry.npmjs.org/tailwindcss/latest",
+      "latest": "4.3.5"
+    },
+    "react-native-worklets": {
+      "url": "https://registry.npmjs.org/react-native-worklets/latest",
+      "latest": "0.13.1"
+    },
+    "tsx": {
+      "url": "https://registry.npmjs.org/tsx/latest",
+      "latest": "4.23.15"
+    },
+    "react-native-vision-camera-worklets": {
+      "url": "https://registry.npmjs.org/react-native-vision-camera-worklets/latest",
+      "latest": "5.2.4"
+    },
+    "typescript": {
+      "url": "https://registry.npmjs.org/typescript/latest",
+      "latest": "7.0.2"
+    },
+    "react-native-webgpu": {
+      "url": "https://registry.npmjs.org/react-native-webgpu/latest",
+      "latest": "0.21.4"
+    },
+    "vite": {
+      "url": "https://registry.npmjs.org/vite/latest",
+      "latest": "8.3.8"
+    },
+    "vitest": {
+      "url": "https://registry.npmjs.org/vitest/latest",
+      "latest": "5.1.0"
+    },
+    "zustand": {
+      "url": "https://registry.npmjs.org/zustand/latest",
+      "latest": "5.1.0"
+    },
+    "turbo": {
+      "url": "https://registry.npmjs.org/turbo/latest",
+      "latest": "2.11.11"
+    },
+    "uniwind": {
+      "url": "https://registry.npmjs.org/uniwind/latest",
+      "latest": "1.13.2"
+    }
+  },
+  "uses": [
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/prism",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/cadence",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/splice",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/folio",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/pitch",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/tally",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/quill",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/photo",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/motion",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/design",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/draft",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/scene",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/console/package.json",
+      "group": "devDependencies",
+      "name": "tsx",
+      "spec": "4.23.15",
+      "latest": "4.23.15",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@expo/html-elements",
+      "spec": "58.0.3",
+      "latest": "58.0.3",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@expo/metro-runtime",
+      "spec": "58.0.17",
+      "latest": "58.0.17",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@expo/ui",
+      "spec": "58.0.28",
+      "latest": "58.0.28",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/cadence",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/design",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/draft",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/folio",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/icons",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/persona-native",
+      "spec": "link:../../native/persona/nitro",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/motion",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/photo",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/pitch",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/prism",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/quill",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/splice",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/studio-layout",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/studio-workspace",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/tally",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/core",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-core-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/expo-controls",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-expo-controls-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/reserved-regions",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-reserved-regions-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo",
+      "spec": "58.0.25",
+      "latest": "58.0.25",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-build-properties",
+      "spec": "58.0.12",
+      "latest": "58.0.12",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-constants",
+      "spec": "58.0.16",
+      "latest": "58.0.16",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-dev-client",
+      "spec": "58.0.20",
+      "latest": "58.0.20",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-drag-drop-content-view",
+      "spec": "0.9.2",
+      "latest": "0.9.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-file-system",
+      "spec": "58.0.13",
+      "latest": "58.0.13",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-haptics",
+      "spec": "58.0.8",
+      "latest": "58.0.8",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-image",
+      "spec": "58.0.18",
+      "latest": "58.0.18",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-linking",
+      "spec": "58.0.17",
+      "latest": "58.0.17",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-router",
+      "spec": "58.0.31",
+      "latest": "58.0.31",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-sensors",
+      "spec": "~58.0.5",
+      "latest": "58.0.5",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "expo-status-bar",
+      "spec": "58.0.5",
+      "latest": "58.0.5",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "nitro-core",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 v 1 trio; do not replace with unrelated stable/placeholder npm latest."
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-dom",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native",
+      "spec": "0.88.1",
+      "latest": "0.88.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-gesture-handler",
+      "spec": "3.5.0",
+      "latest": "3.5.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-nitro-image",
+      "spec": "^0.15.2",
+      "latest": "0.15.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-nitro-modules",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 trio is newest official published v 1 release on 2026-11-13; npm stable latest is a separate 0.x channel and is not an upgrade target."
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-pulsar",
+      "spec": "1.7.0",
+      "latest": "1.7.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-reanimated",
+      "spec": "4.7.1",
+      "latest": "4.7.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-safe-area-context",
+      "spec": "5.11.1",
+      "latest": "5.11.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-screens",
+      "spec": "4.30.1",
+      "latest": "4.30.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-skia",
+      "spec": "3.9.1",
+      "latest": "3.10.1",
+      "action": "hold",
+      "reason": "Hold 3.9.1 with WebGPU 0.21.0/Dawn 157.1.0. Published 3.10.1 and WebGPU 0.21.4 both require Dawn 158.0.0; refresh local SPM patches and require paired apps/example iOS+Android builds and Tron T 1 before admission."
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-svg",
+      "spec": "15.16.0",
+      "latest": "15.16.1",
+      "action": "hold",
+      "reason": "Hold 15.16.0 until local new-file Package.swift patch is reconciled with published 15.16.1's own Package.swift and iOS SPM build proves native support. Do not apply old new-file patch over upstream file."
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-vision-camera",
+      "spec": "5.2.4",
+      "latest": "5.2.4",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-vision-camera-worklets",
+      "spec": "5.2.4",
+      "latest": "5.2.4",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-web",
+      "spec": "0.21.4",
+      "latest": "0.21.4",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-webgpu",
+      "spec": "0.21.0",
+      "latest": "0.21.4",
+      "action": "hold",
+      "reason": "Hold 0.21.0 with Skia 3.9.1/Dawn 157.1.0. Published 0.21.4 requires Dawn 158.0.0 and checks Skia binary/Dawn identity; paired 3.10.1 native compatibility and local patch migration remain unverified."
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "react-native-worklets",
+      "spec": "0.13.1",
+      "latest": "0.13.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "tailwindcss",
+      "spec": "4.3.5",
+      "latest": "4.3.5",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "uniwind",
+      "spec": "1.13.2",
+      "latest": "1.13.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "dependencies",
+      "name": "zustand",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "devDependencies",
+      "name": "@webgpu/types",
+      "spec": "0.1.74",
+      "latest": "0.1.74",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/example/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/audio-ui",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/media-ui",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "@expo/ui",
+      "spec": "^58.0.28",
+      "latest": "58.0.28",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "expo",
+      "spec": "^58.0.25",
+      "latest": "58.0.25",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "expo-asset",
+      "spec": "^58.0.21",
+      "latest": "58.0.21",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "react",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "react-dom",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "react-native",
+      "spec": "0.88.1",
+      "latest": "0.88.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "react-native-web",
+      "spec": "~0.21.4",
+      "latest": "0.21.4",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "zustand",
+      "spec": "^5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "react-native-audio-api",
+      "spec": "1.0.0",
+      "latest": "1.0.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "tailwindcss",
+      "spec": "4.3.5",
+      "latest": "4.3.5",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "uniwind",
+      "spec": "1.13.2",
+      "latest": "1.13.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/platform-services",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-platform-services-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "dependencies",
+      "name": "expo-constants",
+      "spec": "58.0.16",
+      "latest": "58.0.16",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "~19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-audio-lab/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "~7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "@expo/ui",
+      "spec": "^58.0.28",
+      "latest": "58.0.28",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/media-ui",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "expo",
+      "spec": "^58.0.25",
+      "latest": "58.0.25",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "react",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "react-dom",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "react-native",
+      "spec": "0.88.1",
+      "latest": "0.88.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "react-native-web",
+      "spec": "~0.21.4",
+      "latest": "0.21.4",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "tailwindcss",
+      "spec": "4.3.5",
+      "latest": "4.3.5",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "uniwind",
+      "spec": "1.13.2",
+      "latest": "1.13.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "zustand",
+      "spec": "^5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "dependencies",
+      "name": "expo-constants",
+      "spec": "58.0.16",
+      "latest": "58.0.16",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "~19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/forge-media-lab/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "~7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "expo-linear-gradient",
+      "spec": "58.0.4",
+      "latest": "58.0.4",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/studio-workspace",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/studio-layout",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "react",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "react-dom",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "react-native-web",
+      "spec": "0.21.4",
+      "latest": "0.21.4",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "zustand",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/icons",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "react-native-svg",
+      "spec": "15.16.0",
+      "latest": "15.16.1",
+      "action": "hold",
+      "reason": "Hold 15.16.0 until local new-file Package.swift patch is reconciled with published 15.16.1's own Package.swift and iOS SPM build proves native support. Do not apply old new-file patch over upstream file."
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/expo-controls",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-expo-controls-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "devDependencies",
+      "name": "@types/react-dom",
+      "spec": "19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "devDependencies",
+      "name": "playwright",
+      "spec": "1.65.1",
+      "latest": "1.65.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "devDependencies",
+      "name": "vite",
+      "spec": "8.3.8",
+      "latest": "8.3.8",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "devDependencies",
+      "name": "tailwindcss",
+      "spec": "4.3.5",
+      "latest": "4.3.5",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "devDependencies",
+      "name": "@tailwindcss/vite",
+      "spec": "4.3.5",
+      "latest": "4.3.5",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "apps/studio-preview/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@expo/ui",
+      "spec": "58.0.28",
+      "latest": "58.0.28",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/cadence",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/telemetry",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/core",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-core-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/hardware-keys",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-hardware-keys-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/native-controls",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-native-controls-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/platform-services",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-platform-services-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/reserved-regions",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-reserved-regions-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "expo",
+      "spec": "58.0.25",
+      "latest": "58.0.25",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "expo-constants",
+      "spec": "58.0.16",
+      "latest": "58.0.16",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "expo-file-system",
+      "spec": "~58.0.13",
+      "latest": "58.0.13",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "react",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "react-native",
+      "spec": "0.88.1",
+      "latest": "0.88.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "react-native-nitro-modules",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 trio is newest official published v 1 release on 2026-11-13; npm stable latest is a separate 0.x channel and is not an upgrade target."
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "dependencies",
+      "name": "zustand",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "devDependencies",
+      "name": "@react-native-community/cli",
+      "spec": "20.2.0",
+      "latest": "21.0.0",
+      "action": "hold",
+      "reason": "Official RN 0.88.1 template pins CLI 20.2.0 and both platform CLIs 20.2.0; upstream CLI guidance warns against independent major updates. CLI 21 is not admitted by that template or current native proof. Hold coherent 20.2.0 until RN 0.88/SPM compatibility is independently verified; do not claim CLI 21 targets another RN lane without evidence."
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "devDependencies",
+      "name": "@react-native-community/cli-platform-android",
+      "spec": "20.2.0",
+      "latest": "21.0.0",
+      "action": "hold",
+      "reason": "Official RN 0.88.1 template pins CLI 20.2.0 and both platform CLIs 20.2.0; upstream CLI guidance warns against independent major updates. CLI 21 is not admitted by that template or current native proof. Hold coherent 20.2.0 until RN 0.88/SPM compatibility is independently verified; do not claim CLI 21 targets another RN lane without evidence."
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "devDependencies",
+      "name": "@react-native-community/cli-platform-ios",
+      "spec": "20.2.0",
+      "latest": "21.0.0",
+      "action": "hold",
+      "reason": "Official RN 0.88.1 template pins CLI 20.2.0 and both platform CLIs 20.2.0; upstream CLI guidance warns against independent major updates. CLI 21 is not admitted by that template or current native proof. Hold coherent 20.2.0 until RN 0.88/SPM compatibility is independently verified; do not claim CLI 21 targets another RN lane without evidence."
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "~19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "devDependencies",
+      "name": "react-native-video",
+      "spec": "file:../../tooling/react-native-video-v1/experimental-build-v1.tgz",
+      "latest": "6.19.3",
+      "action": "hold",
+      "reason": "Vendored experimental-build-v 1.tgz retains recorded upstream provenance but was generated with nightly 120. Nightly 136 runtime override does not prove regenerated binding compatibility; upstream checkout/regeneration/native proof still required."
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "~7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/package.json",
+      "group": "packageManager",
+      "name": "pnpm",
+      "spec": "12.18.0",
+      "latest": "12.18.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "native/persona/nitro/package.json",
+      "group": "devDependencies",
+      "name": "nitrogen",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 v 1 generator/runtime trio; preserve generated diff and native proofs."
+    },
+    {
+      "path": "native/persona/nitro/package.json",
+      "group": "peerDependencies",
+      "name": "nitro-core",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 v 1 trio; do not replace with unrelated stable/placeholder npm latest."
+    },
+    {
+      "path": "package.json",
+      "group": "devDependencies",
+      "name": "@types/node",
+      "spec": "26.6.6",
+      "latest": "26.6.6",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "package.json",
+      "group": "devDependencies",
+      "name": "tsx",
+      "spec": "4.23.15",
+      "latest": "4.23.15",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "package.json",
+      "group": "devDependencies",
+      "name": "turbo",
+      "spec": "2.11.11",
+      "latest": "2.11.11",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "package.json",
+      "group": "packageManager",
+      "name": "pnpm",
+      "spec": "12.18.0",
+      "latest": "12.18.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/adaptive-layout/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "^7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/adaptive-layout/package.json",
+      "group": "devDependencies",
+      "name": "@types/node",
+      "spec": "^26.6.6",
+      "latest": "26.6.6",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/agpl-speed-curve/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "^5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/agpl-speed-curve/package.json",
+      "group": "peerDependencies",
+      "name": "expo",
+      "spec": "^58.0.0",
+      "latest": "58.0.25",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/media-ui",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "dependencies",
+      "name": "zustand",
+      "spec": "^5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/platform-services",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-platform-services-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "~19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "^5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "peerDependencies",
+      "name": "expo",
+      "spec": "^58.0.0",
+      "latest": "58.0.25",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "peerDependencies",
+      "name": "react",
+      "spec": ">=19.0.0",
+      "latest": "19.3.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "peerDependencies",
+      "name": "react-native",
+      "spec": ">=0.88.0",
+      "latest": "0.88.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/audio-ui/package.json",
+      "group": "peerDependencies",
+      "name": "react-native-audio-api",
+      "spec": "1.0.0",
+      "latest": "1.0.0",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/cadence/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/cadence/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/cadence/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/cadence/package.json",
+      "group": "devDependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/cadence/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "~19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/cadence/package.json",
+      "group": "devDependencies",
+      "name": "react",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/cadence/package.json",
+      "group": "devDependencies",
+      "name": "react-native",
+      "spec": "0.88.1",
+      "latest": "0.88.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/collaboration-server/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/collaboration-server/package.json",
+      "group": "devDependencies",
+      "name": "@types/node",
+      "spec": "26.6.6",
+      "latest": "26.6.6",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/collaboration-server/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/collaboration-server/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/collaboration-server/package.json",
+      "group": "devDependencies",
+      "name": "tsx",
+      "spec": "4.23.15",
+      "latest": "4.23.15",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/design/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/design/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/draft/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/draft/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/folio/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/folio/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/folio/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/folio/package.json",
+      "group": "devDependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/icons/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/icons/package.json",
+      "group": "peerDependencies",
+      "name": "react",
+      "spec": ">=19",
+      "latest": "19.3.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/icons/package.json",
+      "group": "peerDependencies",
+      "name": "react-native-svg",
+      "spec": ">=15",
+      "latest": "15.16.1",
+      "action": "hold",
+      "reason": "Hold 15.16.0 until local new-file Package.swift patch is reconciled with published 15.16.1's own Package.swift and iOS SPM build proves native support. Do not apply old new-file patch over upstream file."
+    },
+    {
+      "path": "packages/icons/package.json",
+      "group": "peerDependencies",
+      "name": "react-native",
+      "spec": ">=0.81",
+      "latest": "0.88.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/ignition/package.json",
+      "group": "devDependencies",
+      "name": "react-native-nitro-modules",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 trio is newest official published v 1 release on 2026-11-13; npm stable latest is a separate 0.x channel and is not an upgrade target."
+    },
+    {
+      "path": "packages/ignition/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/ignition/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/ignition/package.json",
+      "group": "devDependencies",
+      "name": "nitrogen",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 v 1 generator/runtime trio; preserve generated diff and native proofs."
+    },
+    {
+      "path": "packages/ignition/package.json",
+      "group": "devDependencies",
+      "name": "nitro-core",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 v 1 trio; do not replace with unrelated stable/placeholder npm latest."
+    },
+    {
+      "path": "packages/ignition/package.json",
+      "group": "peerDependencies",
+      "name": "react-native-nitro-modules",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 trio is newest official published v 1 release on 2026-11-13; npm stable latest is a separate 0.x channel and is not an upgrade target."
+    },
+    {
+      "path": "packages/ignition/package.json",
+      "group": "peerDependencies",
+      "name": "nitro-core",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 v 1 trio; do not replace with unrelated stable/placeholder npm latest."
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/platform-services",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-platform-services-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "^5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "^19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "devDependencies",
+      "name": "react-native-video",
+      "spec": "file:../../tooling/react-native-video-v1/experimental-build-v1.tgz",
+      "latest": "6.19.3",
+      "action": "hold",
+      "reason": "Vendored experimental-build-v 1.tgz retains recorded upstream provenance but was generated with nightly 120. Nightly 136 runtime override does not prove regenerated binding compatibility; upstream checkout/regeneration/native proof still required."
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "peerDependencies",
+      "name": "@expo/ui",
+      "spec": "^58.0.0",
+      "latest": "58.0.28",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "peerDependencies",
+      "name": "expo",
+      "spec": "^58.0.0",
+      "latest": "58.0.25",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "peerDependencies",
+      "name": "react",
+      "spec": ">=19.0.0",
+      "latest": "19.3.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "peerDependencies",
+      "name": "react-native",
+      "spec": ">=0.88.0",
+      "latest": "0.88.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "peerDependencies",
+      "name": "zustand",
+      "spec": "^5.0.16",
+      "latest": "5.1.0",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/media-ui/package.json",
+      "group": "peerDependencies",
+      "name": "react-native-video",
+      "spec": "7.0.0-beta.12-nitrov1-experimental.1",
+      "latest": "6.19.3",
+      "action": "hold",
+      "reason": "Vendored experimental-build-v 1.tgz retains recorded upstream provenance but was generated with nightly 120. Nightly 136 runtime override does not prove regenerated binding compatibility; upstream checkout/regeneration/native proof still required."
+    },
+    {
+      "path": "packages/motion/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/motion/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/native-signal/package.json",
+      "group": "peerDependencies",
+      "name": "expo",
+      "spec": "^58.0.0",
+      "latest": "58.0.25",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/photo/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/photo/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/pitch/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/pitch/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/pitch/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/pitch/package.json",
+      "group": "devDependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/prism/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/prism/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/prism/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/quill/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/quill/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/quill/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/quill/package.json",
+      "group": "devDependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/scene/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/scene/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/spatial-ink/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "^7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/spatial-ink/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "^5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/splice/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/splice/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/splice/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/splice/package.json",
+      "group": "devDependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/studio-layout",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "dependencies",
+      "name": "zustand",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/icons",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "dependencies",
+      "name": "react-native-svg",
+      "spec": "15.16.0",
+      "latest": "15.16.1",
+      "action": "hold",
+      "reason": "Hold 15.16.0 until local new-file Package.swift patch is reconciled with published 15.16.1's own Package.swift and iOS SPM build proves native support. Do not apply old new-file patch over upstream file."
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "dependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "devDependencies",
+      "name": "@types/react",
+      "spec": "19.3.0",
+      "latest": "19.3.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "devDependencies",
+      "name": "react",
+      "spec": "19.3.1",
+      "latest": "19.3.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "devDependencies",
+      "name": "react-native",
+      "spec": "0.88.1",
+      "latest": "0.88.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "devDependencies",
+      "name": "react-native-gesture-handler",
+      "spec": "3.5.0",
+      "latest": "3.5.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "devDependencies",
+      "name": "esbuild",
+      "spec": "0.28.2",
+      "latest": "0.28.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "devDependencies",
+      "name": "@babel/parser",
+      "spec": "8.1.2",
+      "latest": "8.1.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "devDependencies",
+      "name": "react-native-reanimated",
+      "spec": "4.7.1",
+      "latest": "4.7.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "devDependencies",
+      "name": "react-native-worklets",
+      "spec": "0.13.1",
+      "latest": "0.13.1",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "peerDependencies",
+      "name": "react",
+      "spec": ">=19",
+      "latest": "19.3.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "peerDependencies",
+      "name": "react-native",
+      "spec": ">=0.81",
+      "latest": "0.88.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "peerDependencies",
+      "name": "react-native-gesture-handler",
+      "spec": ">=3.4.0 <4",
+      "latest": "3.5.0",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/studio-workspace/package.json",
+      "group": "peerDependencies",
+      "name": "react-native-reanimated",
+      "spec": ">=4.7.1 <5",
+      "latest": "4.7.1",
+      "action": "compatibility-range",
+      "reason": "Consumer compatibility declaration, not a latest-version pin; retain and validate admitted host graph"
+    },
+    {
+      "path": "packages/tally/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/tally/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/tally/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/tally/package.json",
+      "group": "devDependencies",
+      "name": "@nyc-tron/ui",
+      "spec": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
+      "latest": null,
+      "action": "source-pin",
+      "reason": "F2 rc.2 archive pin; source/hash checks separate; stable repin still required"
+    },
+    {
+      "path": "packages/telemetry/package.json",
+      "group": "dependencies",
+      "name": "@nitro-forge/ignition",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/telemetry/package.json",
+      "group": "devDependencies",
+      "name": "@nitro-forge/prism",
+      "spec": "workspace:*",
+      "latest": null,
+      "action": "internal-workspace",
+      "reason": "Resolved from this source tree"
+    },
+    {
+      "path": "packages/telemetry/package.json",
+      "group": "devDependencies",
+      "name": "typescript",
+      "spec": "7.0.2",
+      "latest": "7.0.2",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "packages/telemetry/package.json",
+      "group": "devDependencies",
+      "name": "vitest",
+      "spec": "5.1.0",
+      "latest": "5.1.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "examples/native-cadence/pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "react-native-nitro-modules",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 trio is newest official published v 1 release on 2026-11-13; npm stable latest is a separate 0.x channel and is not an upgrade target."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "enhanced-resolve",
+      "spec": "5.27.0",
+      "latest": "5.27.0",
+      "action": "current",
+      "reason": "Declared floor/exact version matches dated latest tag"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "react-native-nitro-modules",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 trio is newest official published v 1 release on 2026-11-13; npm stable latest is a separate 0.x channel and is not an upgrade target."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "nitro-core",
+      "spec": "1.0.0-alpha.nightly.136.gdb81de61bd32",
+      "latest": "0.37.2",
+      "action": "hold",
+      "reason": "Exact coherent nightly 136 v 1 trio; do not replace with unrelated stable/placeholder npm latest."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Admitted coherent 0.87.2 family with reviewed Expo 58 file-map compatibility port; preserve override family pending separate compatibility review."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-babel-transformer",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-cache",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-cache-key",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-config",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-core",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-file-map",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-minify-terser",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-resolver",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-runtime",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-source-map",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-symbolicate",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-transform-plugins",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "group": "overrides",
+      "name": "metro-transform-worker",
+      "spec": "0.87.2",
+      "latest": "0.88.0",
+      "action": "hold",
+      "reason": "Part of admitted coherent Metro 0.87.2 family and reviewed file-map port."
+    }
+  ],
+  "unresolved": [],
+  "note": "Declared constraints only; not a full locked/transitive audit. pnpm outdated and native compatibility proofs remain separate. No source/lock mutation or F1 gate pass."
+}

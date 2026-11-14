@@ -1,6 +1,7 @@
 name: Design studio persona continuity
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'packages/studio-workspace/src/persona.ts'

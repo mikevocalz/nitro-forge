@@ -1,0 +1,41 @@
+{
+  "@react-native-community/cli": {
+    "current": "20.2.0",
+    "latest": "21.0.0",
+    "wanted": "20.2.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@nitro-forge/native-cadence-lab",
+        "location": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness/examples/native-cadence"
+      }
+    ]
+  },
+  "@react-native-community/cli-platform-android": {
+    "current": "20.2.0",
+    "latest": "21.0.0",
+    "wanted": "20.2.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@nitro-forge/native-cadence-lab",
+        "location": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness/examples/native-cadence"
+      }
+    ]
+  },
+  "@react-native-community/cli-platform-ios": {
+    "current": "20.2.0",
+    "latest": "21.0.0",
+    "wanted": "20.2.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@nitro-forge/native-cadence-lab",
+        "location": "/Users/mikevocalz/Documents/Codex/2026-11-13/users-mikevocalz-downloads-nyc-tron-forge/work/f2-plan/f1-freshness/examples/native-cadence"
+      }
+    ]
+  }
+}

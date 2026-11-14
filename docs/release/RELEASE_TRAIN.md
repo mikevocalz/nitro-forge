@@ -103,6 +103,19 @@ Checked against npm and crates.io on 2026-11-11. Every row is either bumped in t
 | zip | 2.6.1 | 9.5.1 | RUSTSEC-2026-0367, -0368, -0369, -0429. All four are in `ZipArchive::extract` / `ZipStreamReader::extract`, which no Forge crate calls (Tally and Quill read entries by name). The 2-to-9 migration goes with the quick-xml engine PR. |
 | harfrust, moxcms, skrifa, rand, sha2, md-5 | current majors | newer majors | Semver-major crate releases; outside `cargo update` and not flagged by `cargo audit`. |
 
+## F1 routine patch slice, 2026-11-13
+
+The [dated source/graph receipt](evidence/2026-11-13-dab27e1-f1/README.md) records
+Expo 58.0.25, dev-client 58.0.20, Playwright 1.65.1, type floors and enhanced-resolve
+5.27.0, both regenerated locks, all 32 manifest/peer/override/source dispositions
+and actual nonzero outdated output. Nitro 136/RN 0.88.1/React 19.3.1 remain unchanged.
+The historical rows above retain their original date and results. Current
+Skia 3.10.1/WebGPU 0.21.4 both require Dawn 158.0.0 and SVG 15.16.1 supplies its own
+Swift package; a separate stacked native integration trial must test them before
+a final hold/adoption decision. Retain the macro workaround until actual native
+proof replaces it. Full exact-head CI/evidence and independent F1 review remain
+pending; no gate is passed by this slice.
+
 ## Skills and standards
 - [No AI Slop](https://github.com/petergyang/no-ai-slop/blob/000650b156983f5159695b441477f4e63b25dc85/skills/no-ai-slop/SKILL.md) + [Everything Claude Code verification loop](https://github.com/WorldFlowAI/everything-claude-code/blob/432485ba6b92c14fb357276a98957f348bcff9ee/skills/verification-loop/SKILL.md).
 - [Expo overview/upgrade](https://github.com/expo/skills/tree/a9e5bd3fa00b4e61f632e43f85da73aee1942582/plugins/expo/skills) and [Callstack upgrading RN](https://github.com/callstackincubator/agent-skills/blob/59e9d17446a248b21d86f078fcd0bd2d36db1ca4/skills/upgrading-react-native/SKILL.md).

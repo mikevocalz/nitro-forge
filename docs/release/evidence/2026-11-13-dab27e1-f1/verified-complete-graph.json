@@ -1,0 +1,114 @@
+{
+  "checks": [
+    {
+      "path": "pnpm-lock.yaml",
+      "yamlDocuments": 2,
+      "bootstrapDocumentIdentical": true,
+      "oldPackages": 774,
+      "newPackages": 773,
+      "oldSnapshots": 774,
+      "newSnapshots": 773,
+      "publishedSHA512Matches": [
+        "expo@58.0.25",
+        "expo-dev-client@58.0.20",
+        "expo-dev-launcher@58.0.20",
+        "enhanced-resolve@5.27.0",
+        "playwright@1.65.1",
+        "playwright-core@1.65.1"
+      ],
+      "completeNormalizedGraphMatches": true,
+      "regeneratedPeerHashes": {
+        "f4132b9c2a9693355f2ebb1d275b03e3": "a7b9944ba878116e48b5d88634f5293a",
+        "339eae349a78f9b385ce9a6fd482f24f": "5abdae2b7d8589507d31810d7bbfdeca"
+      },
+      "resolverSemverDedupeEdges": [
+        {
+          "snapshot": "@expo/cli@58.1.20(@expo/dom-webview@58.0.2)(@expo/metro-runtime@58.0.17)(expo-constants@58.0.16)(expo-font@58.0.12(expo@58.0.25)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1))(expo-router@58.0.31)(expo@58.0.25)(react-dom@19.3.1(react@19.3.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)(typescript@7.0.2)",
+          "dependency": "semver",
+          "from": "7.8.5",
+          "to": "7.8.6"
+        },
+        {
+          "snapshot": "@expo/config-plugins@58.0.13(supports-color@8.1.1)(typescript@7.0.2)",
+          "dependency": "semver",
+          "from": "7.8.5",
+          "to": "7.8.6"
+        },
+        {
+          "snapshot": "@expo/config@58.0.12(supports-color@8.1.1)(typescript@7.0.2)",
+          "dependency": "semver",
+          "from": "7.8.5",
+          "to": "7.8.6"
+        },
+        {
+          "snapshot": "@expo/fingerprint@0.21.10(supports-color@8.1.1)",
+          "dependency": "semver",
+          "from": "7.8.5",
+          "to": "7.8.6"
+        },
+        {
+          "snapshot": "@expo/prebuild-config@58.0.20(supports-color@8.1.1)(typescript@7.0.2)",
+          "dependency": "semver",
+          "from": "7.8.5",
+          "to": "7.8.6"
+        },
+        {
+          "snapshot": "npm-package-arg@11.0.3",
+          "dependency": "semver",
+          "from": "7.8.5",
+          "to": "7.8.6"
+        }
+      ]
+    },
+    {
+      "path": "examples/native-cadence/pnpm-lock.yaml",
+      "yamlDocuments": 2,
+      "bootstrapDocumentIdentical": true,
+      "oldPackages": 716,
+      "newPackages": 716,
+      "oldSnapshots": 716,
+      "newSnapshots": 716,
+      "publishedSHA512Matches": [
+        "expo@58.0.25"
+      ],
+      "completeNormalizedGraphMatches": true,
+      "regeneratedPeerHashes": {
+        "c68fb3b5cc3a2c33db109ed14a8ff785": "3122faf879f030b6de3ef68328774edf",
+        "1c38495d520ecd2cd90fd90a743be6e3": "9aa8751152134ab67cefd9d4c2a34b6d",
+        "85ff34e5a469ae415622293391addc75": "f71d6956f28a76a3b351caf19066b84e",
+        "da3ad2ea3e935374d53d79a16d1990c1": "fab286468b146f1e2ce88bda39a3149e",
+        "523d8fa5a5401c4785ecd7f4abf0b4f3": "466ae768c13a32c537e80ae2d3159030",
+        "da3f6c9d3f1fd8dd5b0e55eeaa23f517": "1861c7059ff9ece0a38bba936c35bc62"
+      },
+      "resolverSemverDedupeEdges": []
+    }
+  ],
+  "allowedVersions": {
+    "expo": [
+      "58.0.24",
+      "58.0.25"
+    ],
+    "expo-dev-client": [
+      "58.0.19",
+      "58.0.20"
+    ],
+    "expo-dev-launcher": [
+      "58.0.19",
+      "58.0.20"
+    ],
+    "enhanced-resolve": [
+      "5.26.1",
+      "5.27.0"
+    ],
+    "playwright": [
+      "1.62.1",
+      "1.65.1"
+    ],
+    "playwright-core": [
+      "1.62.1",
+      "1.65.1"
+    ]
+  },
+  "additionalExpectedRemoval": "Root only: playwright1.65.1 removes optional fsevents2.3.2; verified actual published Playwright metadata optionalDependencies is absent",
+  "unchanged": "All package entries/edges outside the enumerated versions, removal, peer hashes and semver dedupe edges are identical. Nitro136/RN0.88.1 and Tron archive SHA512 unchanged. Cargo.lock unchanged by git diff."
+}

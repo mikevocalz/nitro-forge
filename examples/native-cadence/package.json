@@ -20,7 +20,7 @@
     "@nyc-tron/platform-services": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-platform-services-1.0.0-rc.2.tgz",
     "@nyc-tron/reserved-regions": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-reserved-regions-1.0.0-rc.2.tgz",
     "@nyc-tron/ui": "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.2/nyc-tron-ui-1.0.0-rc.2.tgz",
-    "expo": "58.0.24",
+    "expo": "58.0.25",
     "expo-constants": "58.0.16",
     "expo-file-system": "~58.0.13",
     "react": "19.3.1",
