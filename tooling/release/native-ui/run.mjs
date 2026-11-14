@@ -105,6 +105,8 @@ try {
   assert.equal(hash(resolve(artifacts, 'candidate.json')), record.manifestSha256);
   assert.equal(hash(resolve(artifacts, 'pnpm-lock.yaml')), record.lockSha256);
   assert.equal(hash(resolve(artifacts, 'installed-packages.json')), record.installedPackagesSha256);
+  assert.equal(hash(resolve(artifacts, 'pnpm-workspace.yaml')), record.workspaceSha256);
+  assert.equal(hash(resolve(artifacts, 'pnpm-effective-config.json')), record.pnpmConfigSha256);
   const candidate = json(resolve(artifacts, 'candidate.json')), installed = json(resolve(artifacts, 'installed-packages.json'));
   assert.equal(candidate.sourceCommit, values.source);
   assert.equal(installed.sourceCommit, values.source);
@@ -112,7 +114,7 @@ try {
   assert.equal(installed.lockSha256, record.lockSha256);
   for (const [name, version] of Object.entries(candidate.runtime)) assert.equal(installed.packages.find(pkg => pkg.name === name)?.version, version, `Actual installed runtime differs: ${name}`);
   assert.deepEqual(installed.archives, candidate.archives.map(({ name, sha256 }) => ({ name, sha256 })));
-  for (const file of ['runtime-artifact.json', 'candidate.json', 'installed-packages.json', 'pnpm-lock.yaml', 'forge-consumer-receipt.json']) copyFileSync(resolve(artifacts, file), resolve(output, file));
+  for (const file of ['runtime-artifact.json', 'candidate.json', 'installed-packages.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'pnpm-effective-config.json', 'forge-consumer-receipt.json']) copyFileSync(resolve(artifacts, file), resolve(output, file));
   assert.equal(run(maestro, ['--version'], { log: 'maestro-version.log' }).trim().split(/\r?\n/).at(-1), MAESTRO.version);
   if (platform === 'ios') {
     app = unpackArchive(inside(artifacts, record.archive), resolve(output, 'unpacked-app'), { prefix: record.applicationDirectory, sha256: record.sha256 });
@@ -159,7 +161,8 @@ try {
   writeFileSync(resolve(output, 'runtime-proof.json'), JSON.stringify({ sourceCommit: values.source, platform, appId, device,
     observedVia: platform === 'ios' ? 'Pinned official Maestro XCTest OS touches and native accessibility' : 'Pinned official Maestro Android OS touches and native accessibility',
     candidateManifestSha256: record.manifestSha256, installedPackagesSha256: record.installedPackagesSha256, lockSha256: record.lockSha256,
-    applicationArchiveSha256: record.sha256, embeddedBundleSha256: record.embeddedBundleSha256, driver: MAESTRO, geometry, stages,
+    applicationArchiveSha256: record.sha256, embeddedBundleSha256: record.embeddedBundleSha256,
+    workspaceSha256: record.workspaceSha256, pnpmConfigSha256: record.pnpmConfigSha256, driver: MAESTRO, geometry, stages,
     nativeDurableWorkflows: 'PASS: two executed full seven-studio flows; OS sandbox NFD/expected files retained', independentVisualReview: 'PENDING',
     localArgent: 'NOT RUN; CI-hosted native drivers used', f6Gate: 'UNCHANGED; independent source, runtime and visual review still required',
   }, null, 2) + '\n');

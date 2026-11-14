@@ -1,0 +1,1627 @@
+﻿2026-11-14T03:23:50.3001890Z Current runner version: '2.338.2'
+2026-11-14T03:23:50.3028248Z ##[group]Runner Image Provisioner
+2026-11-14T03:23:50.3029208Z Hosted Compute Agent
+2026-11-14T03:23:50.3029847Z Version: 20261103.629
+2026-11-14T03:23:50.3030532Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-14T03:23:50.3031269Z Build Date: 2026-11-03T17:26:59Z
+2026-11-14T03:23:50.3031989Z Worker ID: {8eee2c49-3f9d-44c3-91c9-d96a63e4c9a3}
+2026-11-14T03:23:50.3032772Z Region: southcentralus
+2026-11-14T03:23:50.3033351Z Cloud: Azure
+2026-11-14T03:23:50.3033915Z ##[endgroup]
+2026-11-14T03:23:50.3035830Z ##[group]Operating System
+2026-11-14T03:23:50.3036545Z Ubuntu
+2026-11-14T03:23:50.3037166Z 26.04.1
+2026-11-14T03:23:50.3038038Z LTS
+2026-11-14T03:23:50.3038640Z ##[endgroup]
+2026-11-14T03:23:50.3039230Z ##[group]Runner Image
+2026-11-14T03:23:50.3039867Z Image: ubuntu-26.04
+2026-11-14T03:23:50.3040476Z Version: 20261111.196.1
+2026-11-14T03:23:50.3041722Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-14T03:23:50.3043343Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-14T03:23:50.3044663Z ##[endgroup]
+2026-11-14T03:23:50.3045890Z ##[group]GITHUB_TOKEN Permissions
+2026-11-14T03:23:50.3048057Z Contents: read
+2026-11-14T03:23:50.3048779Z Metadata: read
+2026-11-14T03:23:50.3049386Z ##[endgroup]
+2026-11-14T03:23:50.3051470Z Secret source: Actions
+2026-11-14T03:23:50.3052574Z Cache mode: write
+2026-11-14T03:23:50.3053601Z Prepare workflow directory
+2026-11-14T03:23:50.3459960Z Prepare all required actions
+2026-11-14T03:23:50.3526790Z Getting action download info
+2026-11-14T03:23:50.6306978Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-14T03:23:50.7808769Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-14T03:23:50.8984888Z Download action repository 'dtolnay/rust-toolchain@stable' (SHA:b725eda525362e7cf34af9a7243cac1e3f01a7ec)
+2026-11-14T03:23:51.0716544Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2026-11-14T03:23:51.4831580Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-14T03:23:51.7688257Z Complete job name: archives
+2026-11-14T03:23:51.8837790Z ##[group]Run actions/checkout@v4
+2026-11-14T03:23:51.8838766Z with:
+2026-11-14T03:23:51.8839263Z   repository: mikevocalz/nitro-forge
+2026-11-14T03:23:51.8843345Z   token: ***
+2026-11-14T03:23:51.8843815Z   ssh-strict: true
+2026-11-14T03:23:51.8844620Z   ssh-user: git
+2026-11-14T03:23:51.8845116Z   persist-credentials: true
+2026-11-14T03:23:51.8845648Z   clean: true
+2026-11-14T03:23:51.8846128Z   sparse-checkout-cone-mode: true
+2026-11-14T03:23:51.8846710Z   fetch-depth: 1
+2026-11-14T03:23:51.8847207Z   fetch-tags: false
+2026-11-14T03:23:51.8847694Z   show-progress: true
+2026-11-14T03:23:51.8848190Z   lfs: false
+2026-11-14T03:23:51.8848685Z   submodules: false
+2026-11-14T03:23:51.8849190Z   set-safe-directory: true
+2026-11-14T03:23:51.8849742Z   allow-unsafe-pr-checkout: false
+2026-11-14T03:23:51.8850596Z env:
+2026-11-14T03:23:51.8851033Z   CI: 1
+2026-11-14T03:23:51.8851479Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:23:51.8851967Z ##[endgroup]
+2026-11-14T03:23:52.4589096Z Syncing repository: mikevocalz/nitro-forge
+2026-11-14T03:23:52.4592226Z ##[group]Getting Git version info
+2026-11-14T03:23:52.4593652Z Working directory is '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T03:23:52.4597029Z [command]/usr/bin/git version
+2026-11-14T03:23:52.4598191Z git version 2.56.1
+2026-11-14T03:23:52.4622505Z ##[endgroup]
+2026-11-14T03:23:52.4640440Z Temporarily overriding HOME='/home/runner/work/_temp/859358d4-5b63-4014-aa86-857602a820e1' before making global git config changes
+2026-11-14T03:23:52.4645065Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T03:23:52.4649254Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T03:23:52.4718682Z Deleting the contents of '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-14T03:23:52.4722384Z ##[group]Initializing the repository
+2026-11-14T03:23:52.4727455Z [command]/usr/bin/git init /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T03:23:52.4846293Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-14T03:23:52.4849496Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-14T03:23:52.4853488Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-14T03:23:52.4856688Z hint: call:
+2026-11-14T03:23:52.4858521Z hint:
+2026-11-14T03:23:52.4860814Z hint: 	git config --global init.defaultBranch <name>
+2026-11-14T03:23:52.4864930Z hint:
+2026-11-14T03:23:52.4867452Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-14T03:23:52.4871543Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-14T03:23:52.4874765Z hint:
+2026-11-14T03:23:52.4877171Z hint: 	git branch -m <name>
+2026-11-14T03:23:52.4879639Z hint:
+2026-11-14T03:23:52.4882133Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-14T03:23:52.4888085Z Initialized empty Git repository in /home/runner/work/nitro-forge/nitro-forge/.git/
+2026-11-14T03:23:52.4922304Z [command]/usr/bin/git remote add origin https://github.com/mikevocalz/nitro-forge
+2026-11-14T03:23:52.4943432Z ##[endgroup]
+2026-11-14T03:23:52.4945869Z ##[group]Disabling automatic garbage collection
+2026-11-14T03:23:52.4950033Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-14T03:23:52.4987514Z ##[endgroup]
+2026-11-14T03:23:52.4990043Z ##[group]Setting up auth
+2026-11-14T03:23:52.4995343Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T03:23:52.5034234Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T03:23:52.5537100Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T03:23:52.5577341Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T03:23:52.5861503Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T03:23:52.5899299Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T03:23:52.6172292Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-14T03:23:52.6212830Z ##[endgroup]
+2026-11-14T03:23:52.6215867Z ##[group]Fetching the repository
+2026-11-14T03:23:52.6226818Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ce9f10805996770cc5d709412f3d47b9f872c85d:refs/remotes/pull/88/merge
+2026-11-14T03:23:53.7548754Z From https://github.com/mikevocalz/nitro-forge
+2026-11-14T03:23:53.7551690Z  * [new ref]         ce9f10805996770cc5d709412f3d47b9f872c85d -> pull/88/merge
+2026-11-14T03:23:53.7556097Z ##[endgroup]
+2026-11-14T03:23:53.7556772Z ##[group]Determining the checkout info
+2026-11-14T03:23:53.7557668Z ##[endgroup]
+2026-11-14T03:23:53.7598828Z [command]/usr/bin/git sparse-checkout disable
+2026-11-14T03:23:53.7658214Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-14T03:23:53.7689212Z ##[group]Checking out the ref
+2026-11-14T03:23:53.7693073Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/88/merge
+2026-11-14T03:23:53.9530516Z Note: switching to 'refs/remotes/pull/88/merge'.
+2026-11-14T03:23:53.9531164Z 
+2026-11-14T03:23:53.9531639Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-14T03:23:53.9533342Z changes and commit them, and you can discard any commits you make in this
+2026-11-14T03:23:53.9534612Z state without impacting any branches by switching back to a branch.
+2026-11-14T03:23:53.9535219Z 
+2026-11-14T03:23:53.9535642Z If you want to create a new branch to retain commits you create, you may
+2026-11-14T03:23:53.9536525Z do so (now or later) by using -c with the switch command. Example:
+2026-11-14T03:23:53.9537010Z 
+2026-11-14T03:23:53.9537242Z   git switch -c <new-branch-name>
+2026-11-14T03:23:53.9537587Z 
+2026-11-14T03:23:53.9537820Z Or undo this operation with:
+2026-11-14T03:23:53.9538151Z 
+2026-11-14T03:23:53.9538345Z   git switch -
+2026-11-14T03:23:53.9538640Z 
+2026-11-14T03:23:53.9539115Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-14T03:23:53.9539726Z 
+2026-11-14T03:23:53.9540389Z HEAD is now at ce9f108 Merge b93c842e13c4c4fc166ae63e187386bf0510608b into dab27e177f05a747f2a234e3892f62e2f7b8c28b
+2026-11-14T03:23:53.9550758Z ##[endgroup]
+2026-11-14T03:23:53.9604281Z [command]/usr/bin/git log -1 --format=%H
+2026-11-14T03:23:53.9630219Z ce9f10805996770cc5d709412f3d47b9f872c85d
+2026-11-14T03:23:53.9919113Z ##[group]Run actions/setup-node@v4
+2026-11-14T03:23:53.9919497Z with:
+2026-11-14T03:23:53.9919776Z   node-version: 24.19.0
+2026-11-14T03:23:53.9920065Z   always-auth: false
+2026-11-14T03:23:53.9920344Z   check-latest: false
+2026-11-14T03:23:53.9922877Z   token: ***
+2026-11-14T03:23:53.9923140Z env:
+2026-11-14T03:23:53.9923406Z   CI: 1
+2026-11-14T03:23:53.9923660Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:23:53.9923942Z ##[endgroup]
+2026-11-14T03:23:54.1377430Z Attempting to download 24.19.0...
+2026-11-14T03:23:54.1588101Z (node:2379) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T03:23:54.1588988Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T03:23:54.9338958Z Acquiring 24.19.0 - x64 from https://github.com/actions/node-versions/releases/download/24.19.0-30872449280/node-24.19.0-linux-x64.tar.gz
+2026-11-14T03:23:55.5596960Z Extracting ...
+2026-11-14T03:23:55.5746977Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/bb5a91b5-26ca-4a00-9510-ac13648a4328 -f /home/runner/work/_temp/c56a163a-d5bd-44c8-b4ff-63504d0f5b13
+2026-11-14T03:23:56.3613745Z Adding to the cache ...
+2026-11-14T03:23:58.0553245Z ##[group]Environment details
+2026-11-14T03:23:58.3045060Z node: v24.19.0
+2026-11-14T03:23:58.3045325Z npm: 11.17.0
+2026-11-14T03:23:58.3045528Z yarn: 1.22.22
+2026-11-14T03:23:58.3046031Z ##[endgroup]
+2026-11-14T03:23:58.3258737Z ##[group]Run corepack enable
+2026-11-14T03:23:58.3259082Z [36;1mcorepack enable[0m
+2026-11-14T03:23:58.3317251Z shell: /usr/bin/bash -e {0}
+2026-11-14T03:23:58.3317521Z env:
+2026-11-14T03:23:58.3317710Z   CI: 1
+2026-11-14T03:23:58.3317900Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:23:58.3318127Z ##[endgroup]
+2026-11-14T03:23:58.4236481Z ##[group]Run dtolnay/rust-toolchain@stable
+2026-11-14T03:23:58.4236819Z with:
+2026-11-14T03:23:58.4237019Z   toolchain: stable
+2026-11-14T03:23:58.4237221Z env:
+2026-11-14T03:23:58.4237395Z   CI: 1
+2026-11-14T03:23:58.4237586Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:23:58.4237801Z ##[endgroup]
+2026-11-14T03:23:58.4331624Z ##[start-action display=Parse toolchain version;id=__dtolnay_rust-toolchain.parse]
+2026-11-14T03:23:58.4376993Z ##[group]Run if [[ -z $toolchain ]]; then
+2026-11-14T03:23:58.4377367Z [36;1mif [[ -z $toolchain ]]; then[0m
+2026-11-14T03:23:58.4377914Z [36;1m  # GitHub does not enforce `required: true` inputs itself. https://github.com/actions/runner/issues/1070[0m
+2026-11-14T03:23:58.4378495Z [36;1m  echo "'toolchain' is a required input" >&2[0m
+2026-11-14T03:23:58.4378793Z [36;1m  exit 1[0m
+2026-11-14T03:23:58.4379132Z [36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then[0m
+2026-11-14T03:23:58.4379591Z [36;1m  if [[ Linux == macOS ]]; then[0m
+2026-11-14T03:23:58.4380307Z [36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-11-14T03:23:58.4380828Z [36;1m  else[0m
+2026-11-14T03:23:58.4381233Z [36;1m    echo "toolchain=1.$((($(date --date "${toolchain#stable }" +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-11-14T03:23:58.4381696Z [36;1m  fi[0m
+2026-11-14T03:23:58.4381993Z [36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then[0m
+2026-11-14T03:23:58.4382534Z [36;1m  echo "toolchain=1.$((($(date +%s)/60/60/24-16569)/7/6-${toolchain//[^0-9]/}))" >> $GITHUB_OUTPUT[0m
+2026-11-14T03:23:58.4383022Z [36;1melif [[ $toolchain =~ ^1\.[0-9]+$ ]]; then[0m
+2026-11-14T03:23:58.4383554Z [36;1m  echo "toolchain=1.$((i=${toolchain#1.}, c=($(date +%s)/60/60/24-16569)/7/6, i+9*i*(10*i<=c)+90*i*(100*i<=c)))" >> $GITHUB_OUTPUT[0m
+2026-11-14T03:23:58.4384200Z [36;1melse[0m
+2026-11-14T03:23:58.4384409Z [36;1m  delimiter=EOF[0m
+2026-11-14T03:23:58.4384725Z [36;1m  while [[ $toolchain == *$delimiter* ]]; do delimiter+=_; done[0m
+2026-11-14T03:23:58.4385232Z [36;1m  printf 'toolchain<<%s\n%s\n%s\n' "$delimiter" "$toolchain" "$delimiter" >> $GITHUB_OUTPUT[0m
+2026-11-14T03:23:58.4385653Z [36;1mfi[0m
+2026-11-14T03:23:58.4439311Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:23:58.4439660Z env:
+2026-11-14T03:23:58.4439849Z   CI: 1
+2026-11-14T03:23:58.4440036Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:23:58.4440255Z   toolchain: stable
+2026-11-14T03:23:58.4440454Z ##[endgroup]
+2026-11-14T03:23:58.4547587Z ##[end-action id=__dtolnay_rust-toolchain.parse;outcome=success;conclusion=success;duration_ms=21]
+2026-11-14T03:23:58.4552131Z ##[start-action display=Set $CARGO_HOME;id=__dtolnay_rust-toolchain.__run]
+2026-11-14T03:23:58.4572300Z ##[group]Run echo CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV
+2026-11-14T03:23:58.4572806Z [36;1mecho CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV[0m
+2026-11-14T03:23:58.4626998Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:23:58.4627360Z env:
+2026-11-14T03:23:58.4627546Z   CI: 1
+2026-11-14T03:23:58.4627735Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:23:58.4627959Z ##[endgroup]
+2026-11-14T03:23:58.4713641Z ##[end-action id=__dtolnay_rust-toolchain.__run;outcome=success;conclusion=success;duration_ms=16]
+2026-11-14T03:23:58.4716133Z ##[start-action display=Install rustup if needed;id=__dtolnay_rust-toolchain.__run_2]
+2026-11-14T03:23:58.4739852Z ##[group]Run if ! command -v rustup &>/dev/null; then
+2026-11-14T03:23:58.4740225Z [36;1mif ! command -v rustup &>/dev/null; then[0m
+2026-11-14T03:23:58.4741005Z [36;1m  curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail https://sh.rustup.rs | sh -s -- --default-toolchain none -y[0m
+2026-11-14T03:23:58.4741740Z [36;1m  echo "$CARGO_HOME/bin" >> $GITHUB_PATH[0m
+2026-11-14T03:23:58.4742017Z [36;1mfi[0m
+2026-11-14T03:23:58.4793204Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:23:58.4793576Z env:
+2026-11-14T03:23:58.4793759Z   CI: 1
+2026-11-14T03:23:58.4793945Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:23:58.4794341Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:23:58.4794643Z ##[endgroup]
+2026-11-14T03:23:58.4873585Z ##[end-action id=__dtolnay_rust-toolchain.__run_2;outcome=success;conclusion=success;duration_ms=15]
+2026-11-14T03:23:58.4876055Z ##[start-action display=Install rustup if needed on windows;id=__dtolnay_rust-toolchain.__run_3]
+2026-11-14T03:23:58.4880992Z ##[end-action id=__dtolnay_rust-toolchain.__run_3;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-11-14T03:23:58.4893025Z ##[start-action display=rustup toolchain install stable;id=__dtolnay_rust-toolchain.__run_4]
+2026-11-14T03:23:58.4911814Z ##[group]Run set -f  # split targets and components on commas and whitespace, without glob expansion
+2026-11-14T03:23:58.4912503Z [36;1mset -f  # split targets and components on commas and whitespace, without glob expansion[0m
+2026-11-14T03:23:58.4913096Z [36;1mflags=()[0m
+2026-11-14T03:23:58.4913373Z [36;1mfor t in ${targets//,/ }; do flags+=(--target "$t"); done[0m
+2026-11-14T03:23:58.4913809Z [36;1mfor c in ${components//,/ }; do flags+=(--component "$c"); done[0m
+2026-11-14T03:23:58.4914592Z [36;1mif [[ $toolchain == nightly && -n $components ]]; then flags+=(--allow-downgrade); fi[0m
+2026-11-14T03:23:58.4915042Z [36;1mlog=$(mktemp)[0m
+2026-11-14T03:23:58.4915280Z [36;1mtrap 'rm -f "$log"' EXIT[0m
+2026-11-14T03:23:58.4915544Z [36;1mfor attempt in 1 2 3 4 5; do[0m
+2026-11-14T03:23:58.4916131Z [36;1m  if rustup toolchain install "$toolchain" "${flags[@]}" --profile minimal --no-self-update --force-non-host 2>&1 | tee "$log"; then[0m
+2026-11-14T03:23:58.4916701Z [36;1m    break[0m
+2026-11-14T03:23:58.4916899Z [36;1m  else[0m
+2026-11-14T03:23:58.4917095Z [36;1m    status=$?[0m
+2026-11-14T03:23:58.4917303Z [36;1m  fi[0m
+2026-11-14T03:23:58.4917599Z [36;1m  if [[ $attempt == 5 ]] || ! grep -Fq 'checksum failed for ' "$log" \[0m
+2026-11-14T03:23:58.4918170Z [36;1m      || ! grep -Fq 'this is likely due to an ongoing update of the official release server' "$log"; then[0m
+2026-11-14T03:23:58.4918636Z [36;1m    exit "$status"[0m
+2026-11-14T03:23:58.4918856Z [36;1m  fi[0m
+2026-11-14T03:23:58.4919217Z [36;1m  echo "Retrying rustup toolchain install in 30 seconds (retry $attempt of 4)" >&2[0m
+2026-11-14T03:23:58.4919641Z [36;1m  sleep 30[0m
+2026-11-14T03:23:58.4919842Z [36;1mdone[0m
+2026-11-14T03:23:58.4969564Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:23:58.4969908Z env:
+2026-11-14T03:23:58.4970087Z   CI: 1
+2026-11-14T03:23:58.4970273Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:23:58.4970509Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:23:58.4970764Z   toolchain: stable
+2026-11-14T03:23:58.4970968Z   targets: 
+2026-11-14T03:23:58.4971151Z   components: 
+2026-11-14T03:23:58.4971357Z   RUSTUP_PERMIT_COPY_RENAME: 1
+2026-11-14T03:23:58.4971604Z ##[endgroup]
+2026-11-14T03:23:58.7826383Z info: syncing channel updates for stable-x86_64-unknown-linux-gnu
+2026-11-14T03:23:59.0156833Z info: latest update on 2026-11-12 for version 1.100.0 (0ef1bc386 2026-11-09)
+2026-11-14T03:23:59.0336835Z info: removing previous version of component rustfmt
+2026-11-14T03:23:59.0387670Z info: removing previous version of component clippy
+2026-11-14T03:23:59.0399660Z info: removing previous version of component cargo
+2026-11-14T03:23:59.0483825Z info: removing previous version of component rust-std
+2026-11-14T03:23:59.0568062Z info: removing previous version of component rustc
+2026-11-14T03:23:59.0620966Z info: downloading 5 components
+2026-11-14T03:24:07.7267109Z 
+2026-11-14T03:24:07.7336953Z   stable-x86_64-unknown-linux-gnu updated - rustc 1.100.0 (0ef1bc386 2026-11-09) (from rustc 1.99.1 (58cf8f9c3 2026-10-13))
+2026-11-14T03:24:07.7337826Z 
+2026-11-14T03:24:07.7671375Z ##[end-action id=__dtolnay_rust-toolchain.__run_4;outcome=success;conclusion=success;duration_ms=9277]
+2026-11-14T03:24:07.7680054Z ##[start-action display=rustup default stable;id=__dtolnay_rust-toolchain.__run_5]
+2026-11-14T03:24:07.7707372Z ##[group]Run rustup default "$toolchain" --force-non-host
+2026-11-14T03:24:07.7708042Z [36;1mrustup default "$toolchain" --force-non-host[0m
+2026-11-14T03:24:07.7770865Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:24:07.7771287Z env:
+2026-11-14T03:24:07.7771543Z   CI: 1
+2026-11-14T03:24:07.7771766Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:07.7772043Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:07.7772342Z   toolchain: stable
+2026-11-14T03:24:07.7772586Z ##[endgroup]
+2026-11-14T03:24:07.7888880Z info: using existing install for stable-x86_64-unknown-linux-gnu
+2026-11-14T03:24:07.7895467Z info: default toolchain set to stable-x86_64-unknown-linux-gnu
+2026-11-14T03:24:07.7895779Z 
+2026-11-14T03:24:07.7960035Z   stable-x86_64-unknown-linux-gnu unchanged - rustc 1.100.0 (0ef1bc386 2026-11-09)
+2026-11-14T03:24:07.7960426Z 
+2026-11-14T03:24:07.7979069Z ##[end-action id=__dtolnay_rust-toolchain.__run_5;outcome=success;conclusion=success;duration_ms=29]
+2026-11-14T03:24:07.7982241Z ##[start-action display=Create cachekey;id=__dtolnay_rust-toolchain.rustc-version]
+2026-11-14T03:24:07.8000401Z ##[group]Run DATE=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')
+2026-11-14T03:24:07.8001275Z [36;1mDATE=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')[0m
+2026-11-14T03:24:07.8001952Z [36;1mHASH=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-hash: //p')[0m
+2026-11-14T03:24:07.8002469Z [36;1mecho "cachekey=$(echo $DATE$HASH | head -c12)" >> $GITHUB_OUTPUT[0m
+2026-11-14T03:24:07.8048444Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:24:07.8048776Z env:
+2026-11-14T03:24:07.8048957Z   CI: 1
+2026-11-14T03:24:07.8049144Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:07.8049381Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:07.8049631Z   toolchain: stable
+2026-11-14T03:24:07.8049838Z ##[endgroup]
+2026-11-14T03:24:07.8390911Z ##[end-action id=__dtolnay_rust-toolchain.rustc-version;outcome=success;conclusion=success;duration_ms=40]
+2026-11-14T03:24:07.8393223Z ##[start-action display=Disable incremental compilation;id=__dtolnay_rust-toolchain.__run_6]
+2026-11-14T03:24:07.8412169Z ##[group]Run if [ -z "${CARGO_INCREMENTAL+set}" ]; then
+2026-11-14T03:24:07.8412725Z [36;1mif [ -z "${CARGO_INCREMENTAL+set}" ]; then[0m
+2026-11-14T03:24:07.8413169Z [36;1m  echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV[0m
+2026-11-14T03:24:07.8413538Z [36;1mfi[0m
+2026-11-14T03:24:07.8460515Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:24:07.8461059Z env:
+2026-11-14T03:24:07.8461332Z   CI: 1
+2026-11-14T03:24:07.8461595Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:07.8462028Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:07.8462379Z ##[endgroup]
+2026-11-14T03:24:07.8567422Z ##[end-action id=__dtolnay_rust-toolchain.__run_6;outcome=success;conclusion=success;duration_ms=17]
+2026-11-14T03:24:07.8570680Z ##[start-action display=Enable colors in Cargo output;id=__dtolnay_rust-toolchain.__run_7]
+2026-11-14T03:24:07.8596598Z ##[group]Run if [ -z "${CARGO_TERM_COLOR+set}" ]; then
+2026-11-14T03:24:07.8597214Z [36;1mif [ -z "${CARGO_TERM_COLOR+set}" ]; then[0m
+2026-11-14T03:24:07.8597788Z [36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV[0m
+2026-11-14T03:24:07.8598291Z [36;1mfi[0m
+2026-11-14T03:24:07.8657439Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:24:07.8658218Z env:
+2026-11-14T03:24:07.8658539Z   CI: 1
+2026-11-14T03:24:07.8658749Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:07.8658987Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:07.8659247Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:07.8659463Z ##[endgroup]
+2026-11-14T03:24:07.8732699Z ##[end-action id=__dtolnay_rust-toolchain.__run_7;outcome=success;conclusion=success;duration_ms=16]
+2026-11-14T03:24:07.8736359Z ##[start-action display=Enable Cargo sparse registry;id=__dtolnay_rust-toolchain.__run_8]
+2026-11-14T03:24:07.8755090Z ##[group]Run # implemented in 1.66, stabilized in 1.68, made default in 1.70
+2026-11-14T03:24:07.8755607Z [36;1m# implemented in 1.66, stabilized in 1.68, made default in 1.70[0m
+2026-11-14T03:24:07.8756325Z [36;1mif [ -z "${CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set}" -o -f "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol ]; then[0m
+2026-11-14T03:24:07.8757085Z [36;1m  if rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.6[89]\.'; then[0m
+2026-11-14T03:24:07.8757681Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-11-14T03:24:07.8758229Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV[0m
+2026-11-14T03:24:07.8758766Z [36;1m  elif rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.6[67]\.'; then[0m
+2026-11-14T03:24:07.8759404Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-11-14T03:24:07.8760111Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV[0m
+2026-11-14T03:24:07.8760464Z [36;1m  fi[0m
+2026-11-14T03:24:07.8760653Z [36;1mfi[0m
+2026-11-14T03:24:07.8804853Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:24:07.8805202Z env:
+2026-11-14T03:24:07.8805386Z   CI: 1
+2026-11-14T03:24:07.8805574Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:07.8805806Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:07.8806064Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:07.8806292Z   CARGO_TERM_COLOR: always
+2026-11-14T03:24:07.8806523Z   toolchain: stable
+2026-11-14T03:24:07.8806725Z ##[endgroup]
+2026-11-14T03:24:07.9110442Z ##[end-action id=__dtolnay_rust-toolchain.__run_8;outcome=success;conclusion=success;duration_ms=37]
+2026-11-14T03:24:07.9113770Z ##[start-action display=Work around spurious network errors in curl 8.0;id=__dtolnay_rust-toolchain.__run_9]
+2026-11-14T03:24:07.9132153Z ##[group]Run # https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation
+2026-11-14T03:24:07.9132915Z [36;1m# https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation[0m
+2026-11-14T03:24:07.9133567Z [36;1mif rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.7[01]\.'; then[0m
+2026-11-14T03:24:07.9134428Z [36;1m  echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV[0m
+2026-11-14T03:24:07.9134852Z [36;1mfi[0m
+2026-11-14T03:24:07.9180629Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:24:07.9180974Z env:
+2026-11-14T03:24:07.9181157Z   CI: 1
+2026-11-14T03:24:07.9181343Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:07.9181583Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:07.9181835Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:07.9182060Z   CARGO_TERM_COLOR: always
+2026-11-14T03:24:07.9182293Z   toolchain: stable
+2026-11-14T03:24:07.9182503Z ##[endgroup]
+2026-11-14T03:24:07.9368811Z ##[end-action id=__dtolnay_rust-toolchain.__run_9;outcome=success;conclusion=success;duration_ms=25]
+2026-11-14T03:24:07.9372914Z ##[start-action display=rustc +stable --version --verbose;id=__dtolnay_rust-toolchain.__run_10]
+2026-11-14T03:24:07.9390859Z ##[group]Run rustc +"$toolchain" --version --verbose
+2026-11-14T03:24:07.9391221Z [36;1mrustc +"$toolchain" --version --verbose[0m
+2026-11-14T03:24:07.9436981Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-14T03:24:07.9437322Z env:
+2026-11-14T03:24:07.9437503Z   CI: 1
+2026-11-14T03:24:07.9437698Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:07.9437935Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:07.9438186Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:07.9438405Z   CARGO_TERM_COLOR: always
+2026-11-14T03:24:07.9438628Z   toolchain: stable
+2026-11-14T03:24:07.9438829Z ##[endgroup]
+2026-11-14T03:24:07.9606178Z rustc 1.100.0 (0ef1bc386 2026-11-09)
+2026-11-14T03:24:07.9606940Z binary: rustc
+2026-11-14T03:24:07.9608204Z commit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a
+2026-11-14T03:24:07.9609018Z commit-date: 2026-11-09
+2026-11-14T03:24:07.9609652Z host: x86_64-unknown-linux-gnu
+2026-11-14T03:24:07.9610244Z release: 1.100.0
+2026-11-14T03:24:07.9610794Z LLVM version: 23.1.5
+2026-11-14T03:24:07.9622039Z ##[end-action id=__dtolnay_rust-toolchain.__run_10;outcome=success;conclusion=success;duration_ms=24]
+2026-11-14T03:24:07.9697281Z ##[group]Run actions/download-artifact@v4
+2026-11-14T03:24:07.9697590Z with:
+2026-11-14T03:24:07.9697799Z   pattern: forge-native-*
+2026-11-14T03:24:07.9698044Z   merge-multiple: true
+2026-11-14T03:24:07.9698289Z   path: /home/runner/work/_temp/native
+2026-11-14T03:24:07.9698581Z   repository: mikevocalz/nitro-forge
+2026-11-14T03:24:07.9698837Z   run-id: 43550831178
+2026-11-14T03:24:07.9699037Z env:
+2026-11-14T03:24:07.9699207Z   CI: 1
+2026-11-14T03:24:07.9699394Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:07.9699624Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:07.9699875Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:07.9700089Z   CARGO_TERM_COLOR: always
+2026-11-14T03:24:07.9700493Z ##[endgroup]
+2026-11-14T03:24:08.1460744Z (node:2567) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T03:24:08.1462142Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T03:24:08.3114784Z Found 2 artifact(s)
+2026-11-14T03:24:08.3115817Z Filtering artifacts by pattern 'forge-native-*'
+2026-11-14T03:24:08.3138159Z Preparing to download the following artifacts:
+2026-11-14T03:24:08.3139928Z - forge-native-apple (ID: 14096655868, Size: 51540886, Expected Digest: sha256:2bbe8756fe2a6d97c232f9046581eacd4f9a53e0934afa49d3336804c556fa38)
+2026-11-14T03:24:08.3142210Z - forge-native-android (ID: 14096521001, Size: 74957818, Expected Digest: sha256:b674eb04b92b9bc3103ded90e303b93573948430d46bb998ab3bc516b7177c11)
+2026-11-14T03:24:08.5204292Z Redirecting to blob download url: https://productionresultssa2.blob.core.windows.net/actions-results/7c52041a-b0a8-84a0-b13f-e6629f1fe665/workflow-job-run-a898beda-8eb8-566e-8404-ffc873325772/artifacts/8b856fe52b8b33c87b567ca114b7d33b09d42a97d65ed05f9c9e5e1cd62032f5.zip
+2026-11-14T03:24:08.5207002Z Starting download of artifact to: /home/runner/work/_temp/native
+2026-11-14T03:24:08.5601859Z Redirecting to blob download url: https://productionresultssa2.blob.core.windows.net/actions-results/7c52041a-b0a8-84a0-b13f-e6629f1fe665/workflow-job-run-cd28f59b-0cf4-5124-b1ad-55b3e2d0cc13/artifacts/4a2005c25dd498a98932406361f4c77d6011972afd1681c256d0353e48a541fd.zip
+2026-11-14T03:24:08.5604373Z Starting download of artifact to: /home/runner/work/_temp/native
+2026-11-14T03:24:08.7116261Z (node:2567) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-11-14T03:24:10.4855928Z SHA256 digest of downloaded artifact is 2bbe8756fe2a6d97c232f9046581eacd4f9a53e0934afa49d3336804c556fa38
+2026-11-14T03:24:10.4857021Z Artifact download completed successfully.
+2026-11-14T03:24:11.2319272Z SHA256 digest of downloaded artifact is b674eb04b92b9bc3103ded90e303b93573948430d46bb998ab3bc516b7177c11
+2026-11-14T03:24:11.2320487Z Artifact download completed successfully.
+2026-11-14T03:24:11.2321185Z Total of 2 artifact(s) downloaded
+2026-11-14T03:24:11.2327365Z Download artifact has finished successfully
+2026-11-14T03:24:11.2483295Z ##[group]Run node tooling/release/collect-native-licenses.mjs --native "$RUNNER_TEMP/native"
+2026-11-14T03:24:11.2484205Z [36;1mnode tooling/release/collect-native-licenses.mjs --native "$RUNNER_TEMP/native"[0m
+2026-11-14T03:24:11.2533702Z shell: /usr/bin/bash -e {0}
+2026-11-14T03:24:11.2533974Z env:
+2026-11-14T03:24:11.2534427Z   CI: 1
+2026-11-14T03:24:11.2534636Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:11.2534906Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:11.2535181Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:11.2535423Z   CARGO_TERM_COLOR: always
+2026-11-14T03:24:11.2535662Z ##[endgroup]
+2026-11-14T03:24:12.9030273Z [1m[92m    Updating[0m crates.io index
+2026-11-14T03:24:12.9030807Z [1m[92m Downloading[0m crates ...
+2026-11-14T03:24:12.9031302Z [1m[92m  Downloaded[0m android_system_properties v0.1.6
+2026-11-14T03:24:12.9031765Z [1m[92m  Downloaded[0m arrayref v0.3.9
+2026-11-14T03:24:12.9032145Z [1m[92m  Downloaded[0m aes v0.8.4
+2026-11-14T03:24:12.9032660Z [1m[92m  Downloaded[0m adler2 v2.0.1
+2026-11-14T03:24:12.9033206Z [1m[92m  Downloaded[0m cpufeatures v0.2.17
+2026-11-14T03:24:12.9033832Z [1m[92m  Downloaded[0m cbc v0.1.2
+2026-11-14T03:24:12.9034683Z [1m[92m  Downloaded[0m arbitrary v1.5.0
+2026-11-14T03:24:12.9035301Z [1m[92m  Downloaded[0m crossbeam-epoch v0.9.21
+2026-11-14T03:24:12.9035841Z [1m[92m  Downloaded[0m num-conv v0.2.2
+2026-11-14T03:24:12.9036354Z [1m[92m  Downloaded[0m powerfmt v0.2.1
+2026-11-14T03:24:12.9099130Z [1m[92m  Downloaded[0m iana-time-zone-haiku v0.1.2
+2026-11-14T03:24:12.9100160Z [1m[92m  Downloaded[0m itoa v1.0.19
+2026-11-14T03:24:12.9100975Z [1m[92m  Downloaded[0m bytemuck v1.25.2
+2026-11-14T03:24:12.9102279Z [1m[92m  Downloaded[0m cfg-if v1.0.5
+2026-11-14T03:24:12.9102697Z [1m[92m  Downloaded[0m autocfg v1.5.1
+2026-11-14T03:24:12.9103082Z [1m[92m  Downloaded[0m digest v0.10.7
+2026-11-14T03:24:12.9103457Z [1m[92m  Downloaded[0m deranged v0.5.9
+2026-11-14T03:24:12.9103853Z [1m[92m  Downloaded[0m core_detect v1.0.0
+2026-11-14T03:24:12.9104583Z [1m[92m  Downloaded[0m crossbeam-deque v0.8.8
+2026-11-14T03:24:12.9105023Z [1m[92m  Downloaded[0m bytecount v0.6.9
+2026-11-14T03:24:12.9105428Z [1m[92m  Downloaded[0m font-types v0.12.7
+2026-11-14T03:24:12.9105818Z [1m[92m  Downloaded[0m log v0.4.35
+2026-11-14T03:24:12.9106195Z [1m[92m  Downloaded[0m arrayvec v0.7.8
+2026-11-14T03:24:12.9106620Z [1m[92m  Downloaded[0m core-foundation-sys v0.8.7
+2026-11-14T03:24:12.9107061Z [1m[92m  Downloaded[0m crossbeam-utils v0.8.23
+2026-11-14T03:24:12.9107456Z [1m[92m  Downloaded[0m crc32fast v1.5.5
+2026-11-14T03:24:12.9107872Z [1m[92m  Downloaded[0m zerofrom-derive v0.1.8
+2026-11-14T03:24:12.9108298Z [1m[92m  Downloaded[0m miniz_oxide v0.9.1
+2026-11-14T03:24:12.9108697Z [1m[92m  Downloaded[0m time-core v0.1.9
+2026-11-14T03:24:12.9109080Z [1m[92m  Downloaded[0m bumpalo v3.20.3
+2026-11-14T03:24:12.9109467Z [1m[92m  Downloaded[0m bytes v1.12.1
+2026-11-14T03:24:12.9109875Z [1m[92m  Downloaded[0m windows-result v0.4.1
+2026-11-14T03:24:12.9110264Z [1m[92m  Downloaded[0m png v0.18.1
+2026-11-14T03:24:12.9110660Z [1m[92m  Downloaded[0m generic-array v0.14.7
+2026-11-14T03:24:12.9111088Z [1m[92m  Downloaded[0m windows-implement v0.60.2
+2026-11-14T03:24:12.9111516Z [1m[92m  Downloaded[0m scopeguard v1.2.0
+2026-11-14T03:24:12.9111891Z [1m[92m  Downloaded[0m cc v1.11.1
+2026-11-14T03:24:12.9112284Z [1m[92m  Downloaded[0m either v1.19.0
+2026-11-14T03:24:12.9112676Z [1m[92m  Downloaded[0m futures-core v0.3.34
+2026-11-14T03:24:12.9113075Z [1m[92m  Downloaded[0m once_cell v1.21.4
+2026-11-14T03:24:12.9113700Z [1m[92m  Downloaded[0m equivalent v1.0.3
+2026-11-14T03:24:12.9116637Z [1m[92m  Downloaded[0m rustversion v1.0.23
+2026-11-14T03:24:12.9117506Z [1m[92m  Downloaded[0m simd-adler32 v0.3.10
+2026-11-14T03:24:12.9118320Z [1m[92m  Downloaded[0m utf16string v0.2.0
+2026-11-14T03:24:12.9119092Z [1m[92m  Downloaded[0m zmij v1.0.23
+2026-11-14T03:24:12.9120180Z [1m[92m  Downloaded[0m ecb v0.1.2
+2026-11-14T03:24:12.9120996Z [1m[92m  Downloaded[0m iana-time-zone v0.1.65
+2026-11-14T03:24:12.9121711Z [1m[92m  Downloaded[0m inout v0.1.4
+2026-11-14T03:24:12.9122396Z [1m[92m  Downloaded[0m serde v1.0.229
+2026-11-14T03:24:12.9123090Z [1m[92m  Downloaded[0m thiserror v2.0.21
+2026-11-14T03:24:12.9123836Z [1m[92m  Downloaded[0m serde_derive v1.0.229
+2026-11-14T03:24:12.9124860Z [1m[92m  Downloaded[0m wit-bindgen v0.57.1
+2026-11-14T03:24:12.9125598Z [1m[92m  Downloaded[0m zune-jpeg v0.5.15
+2026-11-14T03:24:12.9126351Z [1m[92m  Downloaded[0m bytemuck_derive v1.12.1
+2026-11-14T03:24:12.9127083Z [1m[92m  Downloaded[0m serde_json v1.0.154
+2026-11-14T03:24:12.9127878Z [1m[92m  Downloaded[0m wasip2 v1.0.4+wasi-0.2.12
+2026-11-14T03:24:12.9128627Z [1m[92m  Downloaded[0m web-sys v0.3.107
+2026-11-14T03:24:12.9129368Z [1m[92m  Downloaded[0m byteorder-lite v0.1.0
+2026-11-14T03:24:12.9130198Z [1m[92m  Downloaded[0m jiff-tzdb-platform v0.1.3
+2026-11-14T03:24:12.9130998Z [1m[92m  Downloaded[0m crypto-common v0.1.7
+2026-11-14T03:24:12.9131777Z [1m[92m  Downloaded[0m derive_arbitrary v1.5.0
+2026-11-14T03:24:12.9132530Z [1m[92m  Downloaded[0m block-padding v0.3.3
+2026-11-14T03:24:12.9133295Z [1m[92m  Downloaded[0m jiff-static v0.2.43
+2026-11-14T03:24:12.9134341Z [1m[92m  Downloaded[0m maybe-owned v0.3.4
+2026-11-14T03:24:12.9135150Z [1m[92m  Downloaded[0m block-buffer v0.10.4
+2026-11-14T03:24:12.9135955Z [1m[92m  Downloaded[0m futures-task v0.3.34
+2026-11-14T03:24:12.9136763Z [1m[92m  Downloaded[0m md-5 v0.10.6
+2026-11-14T03:24:12.9137541Z [1m[92m  Downloaded[0m multiversion_no_op v1.0.0
+2026-11-14T03:24:12.9138739Z [1m[92m  Downloaded[0m piston-float v1.0.1
+2026-11-14T03:24:12.9139498Z [1m[92m  Downloaded[0m chrono v0.4.45
+2026-11-14T03:24:12.9140250Z [1m[92m  Downloaded[0m console_log v1.1.0
+2026-11-14T03:24:12.9141039Z [1m[92m  Downloaded[0m rand_chacha v0.9.0
+2026-11-14T03:24:12.9141794Z [1m[92m  Downloaded[0m byteorder v1.5.0
+2026-11-14T03:24:12.9142550Z [1m[92m  Downloaded[0m fdeflate v0.3.7
+2026-11-14T03:24:12.9143299Z [1m[92m  Downloaded[0m ppv-lite86 v0.2.21
+2026-11-14T03:24:12.9144294Z [1m[92m  Downloaded[0m rand_core v0.9.5
+2026-11-14T03:24:12.9145036Z [1m[92m  Downloaded[0m quote v1.0.47
+2026-11-14T03:24:12.9145762Z [1m[92m  Downloaded[0m cipher v0.4.4
+2026-11-14T03:24:12.9146528Z [1m[92m  Downloaded[0m find-msvc-tools v0.1.15
+2026-11-14T03:24:12.9147376Z [1m[92m  Downloaded[0m pin-project-lite v0.2.17
+2026-11-14T03:24:12.9148318Z [1m[92m  Downloaded[0m wasm-bindgen-futures v0.4.80
+2026-11-14T03:24:12.9149125Z [1m[92m  Downloaded[0m foldhash v0.2.0
+2026-11-14T03:24:12.9149912Z [1m[92m  Downloaded[0m libloading v0.9.0
+2026-11-14T03:24:12.9150638Z [1m[92m  Downloaded[0m r-efi v5.3.0
+2026-11-14T03:24:12.9151362Z [1m[92m  Downloaded[0m getrandom v0.3.4
+2026-11-14T03:24:12.9152106Z [1m[92m  Downloaded[0m nom_locate v5.0.0
+2026-11-14T03:24:12.9152868Z [1m[92m  Downloaded[0m rangemap v1.8.0
+2026-11-14T03:24:12.9153598Z [1m[92m  Downloaded[0m bitflags v2.13.2
+2026-11-14T03:24:12.9154625Z [1m[92m  Downloaded[0m num-traits v0.2.19
+2026-11-14T03:24:12.9155441Z [1m[92m  Downloaded[0m portable-atomic-util v0.2.8
+2026-11-14T03:24:12.9156273Z [1m[92m  Downloaded[0m proc-macro2 v1.0.107
+2026-11-14T03:24:12.9157037Z [1m[92m  Downloaded[0m miniz_oxide v0.8.9
+2026-11-14T03:24:12.9157790Z [1m[92m  Downloaded[0m rayon-core v1.13.0
+2026-11-14T03:24:12.9158586Z [1m[92m  Downloaded[0m windows-link v0.2.1
+2026-11-14T03:24:12.9159362Z [1m[92m  Downloaded[0m jiff-tzdb v0.1.9
+2026-11-14T03:24:12.9160091Z [1m[92m  Downloaded[0m flate2 v1.1.11
+2026-11-14T03:24:12.9160869Z [1m[92m  Downloaded[0m indexmap v2.14.2
+2026-11-14T03:24:12.9161630Z [1m[92m  Downloaded[0m memchr v2.8.3
+2026-11-14T03:24:12.9162375Z [1m[92m  Downloaded[0m hashbrown v0.17.1
+2026-11-14T03:24:12.9163133Z [1m[92m  Downloaded[0m jiff-core v0.1.5
+2026-11-14T03:24:12.9164318Z [1m[92m  Downloaded[0m js-sys v0.3.107
+2026-11-14T03:24:12.9165069Z [1m[92m  Downloaded[0m rand v0.9.5
+2026-11-14T03:24:12.9165745Z [1m[92m  Downloaded[0m moxcms v0.8.1
+2026-11-14T03:24:12.9166438Z [1m[92m  Downloaded[0m quick-xml v0.37.5
+2026-11-14T03:24:12.9167267Z [1m[92m  Downloaded[0m wasm-bindgen-shared v0.2.130
+2026-11-14T03:24:12.9168186Z [1m[92m  Downloaded[0m windows-interface v0.59.3
+2026-11-14T03:24:12.9168960Z [1m[92m  Downloaded[0m nom v8.0.0
+2026-11-14T03:24:12.9169687Z [1m[92m  Downloaded[0m itertools v0.15.0
+2026-11-14T03:24:12.9170512Z [1m[92m  Downloaded[0m portable-atomic v1.15.0
+2026-11-14T03:24:12.9171299Z [1m[92m  Downloaded[0m rayon v1.12.0
+2026-11-14T03:24:12.9172115Z [1m[92m  Downloaded[0m futures-util v0.3.34
+2026-11-14T03:24:12.9172898Z [1m[92m  Downloaded[0m version_check v0.9.5
+2026-11-14T03:24:12.9173691Z [1m[92m  Downloaded[0m wasm-bindgen-macro v0.2.130
+2026-11-14T03:24:12.9174893Z [1m[92m  Downloaded[0m console_error_panic_hook v0.1.7
+2026-11-14T03:24:12.9175690Z [1m[92m  Downloaded[0m image v0.25.10
+2026-11-14T03:24:12.9176442Z [1m[92m  Downloaded[0m encoding_rs v0.8.44
+2026-11-14T03:24:12.9177231Z [1m[92m  Downloaded[0m harfrust v0.15.0
+2026-11-14T03:24:12.9177997Z [1m[92m  Downloaded[0m vecmath v1.0.0
+2026-11-14T03:24:12.9178806Z [1m[92m  Downloaded[0m windows-strings v0.5.1
+2026-11-14T03:24:12.9179606Z [1m[92m  Downloaded[0m yoke-derive v0.8.4
+2026-11-14T03:24:12.9180471Z [1m[92m  Downloaded[0m stable_deref_trait v1.2.1
+2026-11-14T03:24:12.9181241Z [1m[92m  Downloaded[0m sha2 v0.10.9
+2026-11-14T03:24:12.9181973Z [1m[92m  Downloaded[0m simdutf8 v0.1.5
+2026-11-14T03:24:12.9183084Z [1m[92m  Downloaded[0m thiserror-impl v2.0.21
+2026-11-14T03:24:12.9183865Z [1m[92m  Downloaded[0m shlex v2.0.1
+2026-11-14T03:24:12.9184888Z [1m[92m  Downloaded[0m strict-num v0.1.1
+2026-11-14T03:24:12.9185699Z [1m[92m  Downloaded[0m synstructure v0.14.0
+2026-11-14T03:24:12.9186644Z [1m[92m  Downloaded[0m unicode-ident v1.0.27
+2026-11-14T03:24:12.9187434Z [1m[92m  Downloaded[0m zerofrom v0.1.8
+2026-11-14T03:24:12.9188161Z [1m[92m  Downloaded[0m zune-core v0.5.3
+2026-11-14T03:24:12.9188906Z [1m[92m  Downloaded[0m smallvec v1.16.5
+2026-11-14T03:24:12.9189649Z [1m[92m  Downloaded[0m pxfm v0.1.30
+2026-11-14T03:24:12.9190390Z [1m[92m  Downloaded[0m slab v0.4.12
+2026-11-14T03:24:12.9191219Z [1m[92m  Downloaded[0m tiny-skia-path v0.12.0
+2026-11-14T03:24:12.9191969Z [1m[92m  Downloaded[0m yoke v0.8.4
+2026-11-14T03:24:12.9192664Z [1m[92m  Downloaded[0m stringprep v0.1.5
+2026-11-14T03:24:12.9193457Z [1m[92m  Downloaded[0m unicode-properties v0.1.5
+2026-11-14T03:24:12.9194464Z [1m[92m  Downloaded[0m tinyvec v1.13.3
+2026-11-14T03:24:12.9195267Z [1m[92m  Downloaded[0m unicode-bidi v0.3.18
+2026-11-14T03:24:12.9196088Z [1m[92m  Downloaded[0m time-macros v0.2.32
+2026-11-14T03:24:12.9196873Z [1m[92m  Downloaded[0m jiff v0.2.43
+2026-11-14T03:24:12.9197671Z [1m[92m  Downloaded[0m weezl v0.1.12
+2026-11-14T03:24:12.9198447Z [1m[92m  Downloaded[0m windows-core v0.62.2
+2026-11-14T03:24:12.9199220Z [1m[92m  Downloaded[0m zopfli v0.8.4
+2026-11-14T03:24:12.9199996Z [1m[92m  Downloaded[0m serde_core v1.0.229
+2026-11-14T03:24:12.9200902Z [1m[92m  Downloaded[0m wasm-bindgen v0.2.130
+2026-11-14T03:24:12.9201649Z [1m[92m  Downloaded[0m zip v2.6.1
+2026-11-14T03:24:12.9202382Z [1m[92m  Downloaded[0m typenum v1.20.1
+2026-11-14T03:24:12.9203218Z [1m[92m  Downloaded[0m unicode-normalization v0.1.25
+2026-11-14T03:24:12.9204422Z [1m[92m  Downloaded[0m wasm-bindgen-macro-support v0.2.130
+2026-11-14T03:24:12.9205311Z [1m[92m  Downloaded[0m zerocopy-derive v0.8.63
+2026-11-14T03:24:12.9206063Z [1m[92m  Downloaded[0m libc v0.2.191
+2026-11-14T03:24:12.9206795Z [1m[92m  Downloaded[0m read-fonts v0.46.0
+2026-11-14T03:24:12.9207517Z [1m[92m  Downloaded[0m zlib-rs v0.6.8
+2026-11-14T03:24:12.9208237Z [1m[92m  Downloaded[0m time v0.3.55
+2026-11-14T03:24:12.9209023Z [1m[92m  Downloaded[0m tiny-skia v0.12.0
+2026-11-14T03:24:12.9210071Z [1m[92m  Downloaded[0m syn v3.0.10
+2026-11-14T03:24:12.9210838Z [1m[92m  Downloaded[0m syn v2.0.119
+2026-11-14T03:24:12.9211592Z [1m[92m  Downloaded[0m skrifa v0.49.0
+2026-11-14T03:24:12.9212353Z [1m[92m  Downloaded[0m zerocopy v0.8.63
+2026-11-14T03:24:12.9213090Z [1m[92m  Downloaded[0m tokio v1.54.1
+2026-11-14T03:24:12.9213536Z [1m[92m  Downloaded[0m pdfium-render v0.9.5
+2026-11-14T03:24:12.9213948Z [1m[92m  Downloaded[0m lopdf v0.36.0
+2026-11-14T03:24:17.9902984Z {"stage":"native-license-materials","sourceCommit":"ce9f10805996770cc5d709412f3d47b9f872c85d","components":157}
+2026-11-14T03:24:18.0078926Z ##[group]Run actions/upload-artifact@v4
+2026-11-14T03:24:18.0079259Z with:
+2026-11-14T03:24:18.0079484Z   name: forge-license-materials
+2026-11-14T03:24:18.0079786Z   path: /home/runner/work/_temp/native/licenses
+2026-11-14T03:24:18.0080093Z   retention-days: 14
+2026-11-14T03:24:18.0080329Z   if-no-files-found: warn
+2026-11-14T03:24:18.0080567Z   compression-level: 6
+2026-11-14T03:24:18.0080788Z   overwrite: false
+2026-11-14T03:24:18.0081014Z   include-hidden-files: false
+2026-11-14T03:24:18.0081251Z env:
+2026-11-14T03:24:18.0081436Z   CI: 1
+2026-11-14T03:24:18.0081626Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:18.0081855Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:18.0082115Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:18.0082339Z   CARGO_TERM_COLOR: always
+2026-11-14T03:24:18.0082569Z ##[endgroup]
+2026-11-14T03:24:18.1772202Z (node:3491) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T03:24:18.1773120Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T03:24:18.3304983Z With the provided path, there will be 752 files uploaded
+2026-11-14T03:24:18.3306003Z Artifact name is valid!
+2026-11-14T03:24:18.3306522Z Root directory input is valid!
+2026-11-14T03:24:18.6043587Z Beginning upload of artifact content to blob storage
+2026-11-14T03:24:19.3416217Z (node:3491) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-14T03:24:19.9508581Z Uploaded bytes 8388608
+2026-11-14T03:24:20.1363860Z Uploaded bytes 16777216
+2026-11-14T03:24:20.3261768Z Uploaded bytes 21107174
+2026-11-14T03:24:20.3740747Z Finished uploading artifact content to blob storage!
+2026-11-14T03:24:20.3742308Z SHA256 digest of uploaded artifact zip is 8c3793b61fe8d525a2da5b3d3f7175d57913138d655f86d4515bbcd398518145
+2026-11-14T03:24:20.3745144Z Finalizing artifact upload
+2026-11-14T03:24:20.7119123Z Artifact forge-license-materials.zip successfully finalized. Artifact ID 14096046703
+2026-11-14T03:24:20.7120875Z Artifact forge-license-materials has been successfully uploaded! Final size is 21107174 bytes. Artifact ID is 14096046703
+2026-11-14T03:24:20.7127231Z Artifact download URL: https://github.com/mikevocalz/nitro-forge/actions/runs/43550831178/artifacts/14096046703
+2026-11-14T03:24:20.7366869Z ##[group]Run node tooling/release/pack-candidate.mjs --native "$RUNNER_TEMP/native" --output "$RUNNER_TEMP/candidate" --version "1.0.0-f6.43550831178.1"
+2026-11-14T03:24:20.7368800Z [36;1mnode tooling/release/pack-candidate.mjs --native "$RUNNER_TEMP/native" --output "$RUNNER_TEMP/candidate" --version "1.0.0-f6.43550831178.1"[0m
+2026-11-14T03:24:20.7429143Z shell: /usr/bin/bash -e {0}
+2026-11-14T03:24:20.7429428Z env:
+2026-11-14T03:24:20.7429625Z   CI: 1
+2026-11-14T03:24:20.7429833Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:20.7430090Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:20.7430376Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:20.7430635Z   CARGO_TERM_COLOR: always
+2026-11-14T03:24:20.7430882Z ##[endgroup]
+2026-11-14T03:24:23.2912278Z Downloading the pnpm 12.18.0 binary for linux-x64...
+2026-11-14T03:24:31.3583105Z package: @nitro-forge/ignition@1.0.0-f6.43550831178.1
+2026-11-14T03:24:31.3583938Z Tarball Contents
+2026-11-14T03:24:31.3584690Z android/build.gradle
+2026-11-14T03:24:31.3585660Z android/CMakeLists.txt
+2026-11-14T03:24:31.3586583Z android/src/main/AndroidManifest.xml
+2026-11-14T03:24:31.3587531Z android/src/main/cpp-adapter.cpp
+2026-11-14T03:24:31.3588512Z android/src/main/java/com/nitroforge/ignitionv1/NitroForgePackage.java
+2026-11-14T03:24:31.3589361Z app.plugin.cjs
+2026-11-14T03:24:31.3589840Z app.plugin.d.cts
+2026-11-14T03:24:31.3590379Z cpp/ForgeRustSession.cpp
+2026-11-14T03:24:31.3590967Z cpp/HybridForgeDocument.cpp
+2026-11-14T03:24:31.3591613Z cpp/HybridForgeFactory.cpp
+2026-11-14T03:24:31.3592177Z cpp/nf_v1.h
+2026-11-14T03:24:31.3592744Z cpp/NitroForgeV1/ByteCache.hpp
+2026-11-14T03:24:31.3593433Z cpp/NitroForgeV1/ForgeRustSession.hpp
+2026-11-14T03:24:31.3594282Z cpp/NitroForgeV1/HybridForgeDocument.hpp
+2026-11-14T03:24:31.3594955Z cpp/NitroForgeV1/HybridForgeFactory.hpp
+2026-11-14T03:24:31.3595614Z cpp/NitroForgeV1/HybridForgeMediaCache.hpp
+2026-11-14T03:24:31.3596254Z cpp/NitroForgeV1/HybridForgeTask.hpp
+2026-11-14T03:24:31.3596862Z cpp/NitroForgeV1/SerialQueue.hpp
+2026-11-14T03:24:31.3597423Z cpp/NitroForgeV1/TaskControl.hpp
+2026-11-14T03:24:31.3597870Z LICENSE
+2026-11-14T03:24:31.3598253Z licenses/Nitro-MIT.txt
+2026-11-14T03:24:31.3598761Z native/android/arm64-v8a/libnf_sys.a
+2026-11-14T03:24:31.3599266Z native/android/armeabi-v7a/libnf_sys.a
+2026-11-14T03:24:31.3599605Z native/android/x86_64/libnf_sys.a
+2026-11-14T03:24:31.3599916Z native/android/x86/libnf_sys.a
+2026-11-14T03:24:31.3600190Z native/assets.json
+2026-11-14T03:24:31.3600478Z native/ForgeRust.xcframework/Info.plist
+2026-11-14T03:24:31.3600961Z native/ForgeRust.xcframework/ios-arm64_x86_64-simulator/Headers/nf_v1.h
+2026-11-14T03:24:31.3601819Z native/ForgeRust.xcframework/ios-arm64_x86_64-simulator/libnf_sys.a
+2026-11-14T03:24:31.3602319Z native/ForgeRust.xcframework/ios-arm64/Headers/nf_v1.h
+2026-11-14T03:24:31.3602773Z native/ForgeRust.xcframework/ios-arm64/libnf_sys.a
+2026-11-14T03:24:31.3603123Z native/licenses/Cargo.lock
+2026-11-14T03:24:31.3603480Z native/licenses/components/adler2-2.0.1/Cargo.toml
+2026-11-14T03:24:31.3603916Z native/licenses/components/adler2-2.0.1/LICENSE-0BSD
+2026-11-14T03:24:31.3615135Z native/licenses/components/adler2-2.0.1/LICENSE-APACHE
+2026-11-14T03:24:31.3615928Z native/licenses/components/adler2-2.0.1/LICENSE-MIT
+2026-11-14T03:24:31.3616932Z native/licenses/components/adler2-2.0.1/source-checksums.json
+2026-11-14T03:24:31.3617757Z native/licenses/components/aes-0.8.4/Cargo.toml
+2026-11-14T03:24:31.3618485Z native/licenses/components/aes-0.8.4/LICENSE-APACHE
+2026-11-14T03:24:31.3619149Z native/licenses/components/aes-0.8.4/LICENSE-MIT
+2026-11-14T03:24:31.3619837Z native/licenses/components/aes-0.8.4/source-checksums.json
+2026-11-14T03:24:31.3620428Z native/licenses/components/android_system_properties-0.1.6/Cargo.toml
+2026-11-14T03:24:31.3621057Z native/licenses/components/android_system_properties-0.1.6/LICENSE-APACHE
+2026-11-14T03:24:31.3621657Z native/licenses/components/android_system_properties-0.1.6/LICENSE-MIT
+2026-11-14T03:24:31.3622537Z native/licenses/components/android_system_properties-0.1.6/source-checksums.json
+2026-11-14T03:24:31.3623115Z native/licenses/components/arbitrary-1.5.0/Cargo.toml
+2026-11-14T03:24:31.3623577Z native/licenses/components/arbitrary-1.5.0/LICENSE-APACHE
+2026-11-14T03:24:31.3624279Z native/licenses/components/arbitrary-1.5.0/LICENSE-MIT
+2026-11-14T03:24:31.3624868Z native/licenses/components/arbitrary-1.5.0/source-checksums.json
+2026-11-14T03:24:31.3625370Z native/licenses/components/arrayref-0.3.9/Cargo.toml
+2026-11-14T03:24:31.3625799Z native/licenses/components/arrayref-0.3.9/LICENSE
+2026-11-14T03:24:31.3626277Z native/licenses/components/arrayref-0.3.9/source-checksums.json
+2026-11-14T03:24:31.3626773Z native/licenses/components/arrayvec-0.7.8/Cargo.toml
+2026-11-14T03:24:31.3627227Z native/licenses/components/arrayvec-0.7.8/LICENSE-APACHE
+2026-11-14T03:24:31.3627674Z native/licenses/components/arrayvec-0.7.8/LICENSE-MIT
+2026-11-14T03:24:31.3628156Z native/licenses/components/arrayvec-0.7.8/source-checksums.json
+2026-11-14T03:24:31.3628629Z native/licenses/components/autocfg-1.5.1/Cargo.toml
+2026-11-14T03:24:31.3629071Z native/licenses/components/autocfg-1.5.1/LICENSE-APACHE
+2026-11-14T03:24:31.3629510Z native/licenses/components/autocfg-1.5.1/LICENSE-MIT
+2026-11-14T03:24:31.3629982Z native/licenses/components/autocfg-1.5.1/source-checksums.json
+2026-11-14T03:24:31.3630454Z native/licenses/components/bitflags-2.13.2/Cargo.toml
+2026-11-14T03:24:31.3630906Z native/licenses/components/bitflags-2.13.2/LICENSE-APACHE
+2026-11-14T03:24:31.3631373Z native/licenses/components/bitflags-2.13.2/LICENSE-MIT
+2026-11-14T03:24:31.3631868Z native/licenses/components/bitflags-2.13.2/source-checksums.json
+2026-11-14T03:24:31.3632367Z native/licenses/components/block-buffer-0.10.4/Cargo.toml
+2026-11-14T03:24:31.3632861Z native/licenses/components/block-buffer-0.10.4/LICENSE-APACHE
+2026-11-14T03:24:31.3633347Z native/licenses/components/block-buffer-0.10.4/LICENSE-MIT
+2026-11-14T03:24:31.3633878Z native/licenses/components/block-buffer-0.10.4/source-checksums.json
+2026-11-14T03:24:31.3634742Z native/licenses/components/block-padding-0.3.3/Cargo.toml
+2026-11-14T03:24:31.3635237Z native/licenses/components/block-padding-0.3.3/LICENSE-APACHE
+2026-11-14T03:24:31.3635733Z native/licenses/components/block-padding-0.3.3/LICENSE-MIT
+2026-11-14T03:24:31.3636258Z native/licenses/components/block-padding-0.3.3/source-checksums.json
+2026-11-14T03:24:31.3636763Z native/licenses/components/bumpalo-3.20.3/Cargo.toml
+2026-11-14T03:24:31.3637219Z native/licenses/components/bumpalo-3.20.3/LICENSE-APACHE
+2026-11-14T03:24:31.3637667Z native/licenses/components/bumpalo-3.20.3/LICENSE-MIT
+2026-11-14T03:24:31.3638317Z native/licenses/components/bumpalo-3.20.3/source-checksums.json
+2026-11-14T03:24:31.3638801Z native/licenses/components/bytecount-0.6.9/Cargo.toml
+2026-11-14T03:24:31.3639266Z native/licenses/components/bytecount-0.6.9/LICENSE.Apache2
+2026-11-14T03:24:31.3639730Z native/licenses/components/bytecount-0.6.9/LICENSE.MIT
+2026-11-14T03:24:31.3640223Z native/licenses/components/bytecount-0.6.9/source-checksums.json
+2026-11-14T03:24:31.3640744Z native/licenses/components/bytemuck_derive-1.12.1/Cargo.toml
+2026-11-14T03:24:31.3641252Z native/licenses/components/bytemuck_derive-1.12.1/LICENSE-APACHE
+2026-11-14T03:24:31.3641769Z native/licenses/components/bytemuck_derive-1.12.1/LICENSE-MIT
+2026-11-14T03:24:31.3642282Z native/licenses/components/bytemuck_derive-1.12.1/LICENSE-ZLIB
+2026-11-14T03:24:31.3642836Z native/licenses/components/bytemuck_derive-1.12.1/source-checksums.json
+2026-11-14T03:24:31.3643348Z native/licenses/components/bytemuck-1.25.2/Cargo.toml
+2026-11-14T03:24:31.3643830Z native/licenses/components/bytemuck-1.25.2/LICENSE-APACHE
+2026-11-14T03:24:31.3644507Z native/licenses/components/bytemuck-1.25.2/LICENSE-MIT
+2026-11-14T03:24:31.3644958Z native/licenses/components/bytemuck-1.25.2/LICENSE-ZLIB
+2026-11-14T03:24:31.3645447Z native/licenses/components/bytemuck-1.25.2/source-checksums.json
+2026-11-14T03:24:31.3646086Z native/licenses/components/cadence-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3646529Z native/licenses/components/cbc-0.1.2/Cargo.toml
+2026-11-14T03:24:31.3646947Z native/licenses/components/cbc-0.1.2/LICENSE-APACHE
+2026-11-14T03:24:31.3647364Z native/licenses/components/cbc-0.1.2/LICENSE-MIT
+2026-11-14T03:24:31.3647803Z native/licenses/components/cbc-0.1.2/source-checksums.json
+2026-11-14T03:24:31.3648235Z native/licenses/components/cc-1.11.1/Cargo.toml
+2026-11-14T03:24:31.3648673Z native/licenses/components/cc-1.11.1/LICENSE-APACHE
+2026-11-14T03:24:31.3649075Z native/licenses/components/cc-1.11.1/LICENSE-MIT
+2026-11-14T03:24:31.3649511Z native/licenses/components/cc-1.11.1/source-checksums.json
+2026-11-14T03:24:31.3649948Z native/licenses/components/cfg-if-1.0.5/Cargo.toml
+2026-11-14T03:24:31.3650379Z native/licenses/components/cfg-if-1.0.5/LICENSE-APACHE
+2026-11-14T03:24:31.3650802Z native/licenses/components/cfg-if-1.0.5/LICENSE-MIT
+2026-11-14T03:24:31.3651269Z native/licenses/components/cfg-if-1.0.5/source-checksums.json
+2026-11-14T03:24:31.3651733Z native/licenses/components/chrono-0.4.45/Cargo.toml
+2026-11-14T03:24:31.3652151Z native/licenses/components/chrono-0.4.45/LICENSE.txt
+2026-11-14T03:24:31.3652629Z native/licenses/components/chrono-0.4.45/source-checksums.json
+2026-11-14T03:24:31.3653082Z native/licenses/components/cipher-0.4.4/Cargo.toml
+2026-11-14T03:24:31.3653515Z native/licenses/components/cipher-0.4.4/LICENSE-APACHE
+2026-11-14T03:24:31.3653942Z native/licenses/components/cipher-0.4.4/LICENSE-MIT
+2026-11-14T03:24:31.3654823Z native/licenses/components/cipher-0.4.4/source-checksums.json
+2026-11-14T03:24:31.3655310Z native/licenses/components/core_detect-1.0.0/Cargo.toml
+2026-11-14T03:24:31.3655781Z native/licenses/components/core_detect-1.0.0/LICENSE-APACHE
+2026-11-14T03:24:31.3656258Z native/licenses/components/core_detect-1.0.0/LICENSE-MIT
+2026-11-14T03:24:31.3656762Z native/licenses/components/core_detect-1.0.0/source-checksums.json
+2026-11-14T03:24:31.3657319Z native/licenses/components/core-foundation-sys-0.8.7/Cargo.toml
+2026-11-14T03:24:31.3657864Z native/licenses/components/core-foundation-sys-0.8.7/LICENSE-APACHE
+2026-11-14T03:24:31.3658414Z native/licenses/components/core-foundation-sys-0.8.7/LICENSE-MIT
+2026-11-14T03:24:31.3658996Z native/licenses/components/core-foundation-sys-0.8.7/source-checksums.json
+2026-11-14T03:24:31.3659534Z native/licenses/components/cpufeatures-0.2.17/Cargo.toml
+2026-11-14T03:24:31.3660028Z native/licenses/components/cpufeatures-0.2.17/LICENSE-APACHE
+2026-11-14T03:24:31.3660509Z native/licenses/components/cpufeatures-0.2.17/LICENSE-MIT
+2026-11-14T03:24:31.3661030Z native/licenses/components/cpufeatures-0.2.17/source-checksums.json
+2026-11-14T03:24:31.3661675Z native/licenses/components/crc32fast-1.5.5/Cargo.toml
+2026-11-14T03:24:31.3662123Z native/licenses/components/crc32fast-1.5.5/LICENSE-APACHE
+2026-11-14T03:24:31.3662577Z native/licenses/components/crc32fast-1.5.5/LICENSE-MIT
+2026-11-14T03:24:31.3663130Z native/licenses/components/crc32fast-1.5.5/source-checksums.json
+2026-11-14T03:24:31.3663655Z native/licenses/components/crossbeam-deque-0.8.8/Cargo.toml
+2026-11-14T03:24:31.3664420Z native/licenses/components/crossbeam-deque-0.8.8/LICENSE-APACHE
+2026-11-14T03:24:31.3664938Z native/licenses/components/crossbeam-deque-0.8.8/LICENSE-MIT
+2026-11-14T03:24:31.3665492Z native/licenses/components/crossbeam-deque-0.8.8/source-checksums.json
+2026-11-14T03:24:31.3666027Z native/licenses/components/crossbeam-epoch-0.9.21/Cargo.toml
+2026-11-14T03:24:31.3666540Z native/licenses/components/crossbeam-epoch-0.9.21/LICENSE-APACHE
+2026-11-14T03:24:31.3667107Z native/licenses/components/crossbeam-epoch-0.9.21/LICENSE-MIT
+2026-11-14T03:24:31.3667688Z native/licenses/components/crossbeam-epoch-0.9.21/source-checksums.json
+2026-11-14T03:24:31.3668237Z native/licenses/components/crossbeam-utils-0.8.23/Cargo.toml
+2026-11-14T03:24:31.3668768Z native/licenses/components/crossbeam-utils-0.8.23/LICENSE-APACHE
+2026-11-14T03:24:31.3669311Z native/licenses/components/crossbeam-utils-0.8.23/LICENSE-MIT
+2026-11-14T03:24:31.3670041Z native/licenses/components/crossbeam-utils-0.8.23/source-checksums.json
+2026-11-14T03:24:31.3670628Z native/licenses/components/crypto-common-0.1.7/Cargo.toml
+2026-11-14T03:24:31.3671167Z native/licenses/components/crypto-common-0.1.7/LICENSE-APACHE
+2026-11-14T03:24:31.3671706Z native/licenses/components/crypto-common-0.1.7/LICENSE-MIT
+2026-11-14T03:24:31.3672280Z native/licenses/components/crypto-common-0.1.7/source-checksums.json
+2026-11-14T03:24:31.3672829Z native/licenses/components/deranged-0.5.9/Cargo.toml
+2026-11-14T03:24:31.3673323Z native/licenses/components/deranged-0.5.9/LICENSE-Apache
+2026-11-14T03:24:31.3673816Z native/licenses/components/deranged-0.5.9/LICENSE-MIT
+2026-11-14T03:24:31.3674606Z native/licenses/components/deranged-0.5.9/source-checksums.json
+2026-11-14T03:24:31.3675205Z native/licenses/components/derive_arbitrary-1.5.0/Cargo.toml
+2026-11-14T03:24:31.3675854Z native/licenses/components/derive_arbitrary-1.5.0/LICENSE-APACHE
+2026-11-14T03:24:31.3676468Z native/licenses/components/derive_arbitrary-1.5.0/LICENSE-MIT
+2026-11-14T03:24:31.3677056Z native/licenses/components/derive_arbitrary-1.5.0/source-checksums.json
+2026-11-14T03:24:31.3677603Z native/licenses/components/design-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3678091Z native/licenses/components/digest-0.10.7/Cargo.toml
+2026-11-14T03:24:31.3678558Z native/licenses/components/digest-0.10.7/LICENSE-APACHE
+2026-11-14T03:24:31.3679039Z native/licenses/components/digest-0.10.7/LICENSE-MIT
+2026-11-14T03:24:31.3679560Z native/licenses/components/digest-0.10.7/source-checksums.json
+2026-11-14T03:24:31.3680087Z native/licenses/components/draft-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3680559Z native/licenses/components/ecb-0.1.2/Cargo.toml
+2026-11-14T03:24:31.3680997Z native/licenses/components/ecb-0.1.2/LICENSE
+2026-11-14T03:24:31.3681507Z native/licenses/components/ecb-0.1.2/source-checksums.json
+2026-11-14T03:24:31.3682088Z native/licenses/components/either-1.19.0/Cargo.toml
+2026-11-14T03:24:31.3682638Z native/licenses/components/either-1.19.0/LICENSE-APACHE
+2026-11-14T03:24:31.3683122Z native/licenses/components/either-1.19.0/LICENSE-MIT
+2026-11-14T03:24:31.3683641Z native/licenses/components/either-1.19.0/source-checksums.json
+2026-11-14T03:24:31.3684395Z native/licenses/components/encoding_rs-0.8.44/Cargo.toml
+2026-11-14T03:24:31.3684881Z native/licenses/components/encoding_rs-0.8.44/COPYRIGHT
+2026-11-14T03:24:31.3685388Z native/licenses/components/encoding_rs-0.8.44/LICENSE-APACHE
+2026-11-14T03:24:31.3685911Z native/licenses/components/encoding_rs-0.8.44/LICENSE-MIT
+2026-11-14T03:24:31.3686429Z native/licenses/components/encoding_rs-0.8.44/LICENSE-WHATWG
+2026-11-14T03:24:31.3687166Z native/licenses/components/encoding_rs-0.8.44/source-checksums.json
+2026-11-14T03:24:31.3687727Z native/licenses/components/equivalent-1.0.3/Cargo.toml
+2026-11-14T03:24:31.3688230Z native/licenses/components/equivalent-1.0.3/LICENSE-APACHE
+2026-11-14T03:24:31.3688743Z native/licenses/components/equivalent-1.0.3/LICENSE-MIT
+2026-11-14T03:24:31.3689300Z native/licenses/components/equivalent-1.0.3/source-checksums.json
+2026-11-14T03:24:31.3689828Z native/licenses/components/fdeflate-0.3.7/Cargo.toml
+2026-11-14T03:24:31.3690325Z native/licenses/components/fdeflate-0.3.7/LICENSE-APACHE
+2026-11-14T03:24:31.3690810Z native/licenses/components/fdeflate-0.3.7/LICENSE-MIT
+2026-11-14T03:24:31.3691342Z native/licenses/components/fdeflate-0.3.7/source-checksums.json
+2026-11-14T03:24:31.3691907Z native/licenses/components/find-msvc-tools-0.1.15/Cargo.toml
+2026-11-14T03:24:31.3692478Z native/licenses/components/find-msvc-tools-0.1.15/LICENSE-APACHE
+2026-11-14T03:24:31.3693043Z native/licenses/components/find-msvc-tools-0.1.15/LICENSE-MIT
+2026-11-14T03:24:31.3693642Z native/licenses/components/find-msvc-tools-0.1.15/source-checksums.json
+2026-11-14T03:24:31.3694417Z native/licenses/components/flate2-1.1.11/Cargo.toml
+2026-11-14T03:24:31.3694909Z native/licenses/components/flate2-1.1.11/LICENSE-APACHE
+2026-11-14T03:24:31.3695387Z native/licenses/components/flate2-1.1.11/LICENSE-MIT
+2026-11-14T03:24:31.3696041Z native/licenses/components/flate2-1.1.11/source-checksums.json
+2026-11-14T03:24:31.3696597Z native/licenses/components/foldhash-0.2.0/Cargo.toml
+2026-11-14T03:24:31.3697073Z native/licenses/components/foldhash-0.2.0/LICENSE
+2026-11-14T03:24:31.3697547Z native/licenses/components/foldhash-0.2.0/source-checksums.json
+2026-11-14T03:24:31.3698054Z native/licenses/components/folio-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3698537Z native/licenses/components/font-types-0.12.7/Cargo.toml
+2026-11-14T03:24:31.3699002Z native/licenses/components/font-types-0.12.7/LICENSE-APACHE
+2026-11-14T03:24:31.3699505Z native/licenses/components/font-types-0.12.7/LICENSE-MIT
+2026-11-14T03:24:31.3700041Z native/licenses/components/font-types-0.12.7/source-checksums.json
+2026-11-14T03:24:31.3700839Z native/licenses/components/futures-core-0.3.34/Cargo.toml
+2026-11-14T03:24:31.3701838Z native/licenses/components/futures-core-0.3.34/LICENSE-APACHE
+2026-11-14T03:24:31.3702365Z native/licenses/components/futures-core-0.3.34/LICENSE-MIT
+2026-11-14T03:24:31.3702917Z native/licenses/components/futures-core-0.3.34/source-checksums.json
+2026-11-14T03:24:31.3703527Z native/licenses/components/futures-task-0.3.34/Cargo.toml
+2026-11-14T03:24:31.3704381Z native/licenses/components/futures-task-0.3.34/LICENSE-APACHE
+2026-11-14T03:24:31.3704887Z native/licenses/components/futures-task-0.3.34/LICENSE-MIT
+2026-11-14T03:24:31.3705465Z native/licenses/components/futures-task-0.3.34/source-checksums.json
+2026-11-14T03:24:31.3705989Z native/licenses/components/futures-util-0.3.34/Cargo.toml
+2026-11-14T03:24:31.3706482Z native/licenses/components/futures-util-0.3.34/LICENSE-APACHE
+2026-11-14T03:24:31.3706976Z native/licenses/components/futures-util-0.3.34/LICENSE-MIT
+2026-11-14T03:24:31.3707501Z native/licenses/components/futures-util-0.3.34/source-checksums.json
+2026-11-14T03:24:31.3708013Z native/licenses/components/generic-array-0.14.7/Cargo.toml
+2026-11-14T03:24:31.3708477Z native/licenses/components/generic-array-0.14.7/LICENSE
+2026-11-14T03:24:31.3708999Z native/licenses/components/generic-array-0.14.7/source-checksums.json
+2026-11-14T03:24:31.3709500Z native/licenses/components/getrandom-0.3.4/Cargo.toml
+2026-11-14T03:24:31.3709955Z native/licenses/components/getrandom-0.3.4/LICENSE-APACHE
+2026-11-14T03:24:31.3710406Z native/licenses/components/getrandom-0.3.4/LICENSE-MIT
+2026-11-14T03:24:31.3710897Z native/licenses/components/getrandom-0.3.4/source-checksums.json
+2026-11-14T03:24:31.3711377Z native/licenses/components/harfrust-0.15.0/Cargo.toml
+2026-11-14T03:24:31.3711796Z native/licenses/components/harfrust-0.15.0/LICENSE
+2026-11-14T03:24:31.3712279Z native/licenses/components/harfrust-0.15.0/source-checksums.json
+2026-11-14T03:24:31.3712937Z native/licenses/components/hashbrown-0.17.1/Cargo.toml
+2026-11-14T03:24:31.3713399Z native/licenses/components/hashbrown-0.17.1/LICENSE-APACHE
+2026-11-14T03:24:31.3713866Z native/licenses/components/hashbrown-0.17.1/LICENSE-MIT
+2026-11-14T03:24:31.3714982Z native/licenses/components/hashbrown-0.17.1/source-checksums.json
+2026-11-14T03:24:31.3715949Z native/licenses/components/iana-time-zone-0.1.65/Cargo.toml
+2026-11-14T03:24:31.3716888Z native/licenses/components/iana-time-zone-0.1.65/LICENSE-APACHE
+2026-11-14T03:24:31.3717828Z native/licenses/components/iana-time-zone-0.1.65/LICENSE-MIT
+2026-11-14T03:24:31.3718817Z native/licenses/components/iana-time-zone-0.1.65/source-checksums.json
+2026-11-14T03:24:31.3719830Z native/licenses/components/iana-time-zone-haiku-0.1.2/Cargo.toml
+2026-11-14T03:24:31.3720813Z native/licenses/components/iana-time-zone-haiku-0.1.2/LICENSE-APACHE
+2026-11-14T03:24:31.3721788Z native/licenses/components/iana-time-zone-haiku-0.1.2/LICENSE-MIT
+2026-11-14T03:24:31.3722863Z native/licenses/components/iana-time-zone-haiku-0.1.2/source-checksums.json
+2026-11-14T03:24:31.3723848Z native/licenses/components/ignition-core-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3724843Z native/licenses/components/indexmap-2.14.2/Cargo.toml
+2026-11-14T03:24:31.3725843Z native/licenses/components/indexmap-2.14.2/LICENSE-APACHE
+2026-11-14T03:24:31.3726662Z native/licenses/components/indexmap-2.14.2/LICENSE-MIT
+2026-11-14T03:24:31.3727548Z native/licenses/components/indexmap-2.14.2/source-checksums.json
+2026-11-14T03:24:31.3728375Z native/licenses/components/inout-0.1.4/Cargo.toml
+2026-11-14T03:24:31.3729123Z native/licenses/components/inout-0.1.4/LICENSE-APACHE
+2026-11-14T03:24:31.3729873Z native/licenses/components/inout-0.1.4/LICENSE-MIT
+2026-11-14T03:24:31.3730692Z native/licenses/components/inout-0.1.4/source-checksums.json
+2026-11-14T03:24:31.3731538Z native/licenses/components/itoa-1.0.19/Cargo.toml
+2026-11-14T03:24:31.3732298Z native/licenses/components/itoa-1.0.19/LICENSE-APACHE
+2026-11-14T03:24:31.3733035Z native/licenses/components/itoa-1.0.19/LICENSE-MIT
+2026-11-14T03:24:31.3733850Z native/licenses/components/itoa-1.0.19/source-checksums.json
+2026-11-14T03:24:31.3734777Z native/licenses/components/jiff-0.2.43/Cargo.toml
+2026-11-14T03:24:31.3735489Z native/licenses/components/jiff-0.2.43/COPYING
+2026-11-14T03:24:31.3736195Z native/licenses/components/jiff-0.2.43/LICENSE-MIT
+2026-11-14T03:24:31.3736995Z native/licenses/components/jiff-0.2.43/source-checksums.json
+2026-11-14T03:24:31.3737810Z native/licenses/components/jiff-core-0.1.5/Cargo.toml
+2026-11-14T03:24:31.3738545Z native/licenses/components/jiff-core-0.1.5/COPYING
+2026-11-14T03:24:31.3739301Z native/licenses/components/jiff-core-0.1.5/LICENSE-MIT
+2026-11-14T03:24:31.3740176Z native/licenses/components/jiff-core-0.1.5/source-checksums.json
+2026-11-14T03:24:31.3741047Z native/licenses/components/jiff-static-0.2.43/Cargo.toml
+2026-11-14T03:24:31.3741837Z native/licenses/components/jiff-static-0.2.43/COPYING
+2026-11-14T03:24:31.3742638Z native/licenses/components/jiff-static-0.2.43/LICENSE-MIT
+2026-11-14T03:24:31.3743562Z native/licenses/components/jiff-static-0.2.43/source-checksums.json
+2026-11-14T03:24:31.3744606Z native/licenses/components/jiff-tzdb-0.1.9/Cargo.toml
+2026-11-14T03:24:31.3745348Z native/licenses/components/jiff-tzdb-0.1.9/COPYING
+2026-11-14T03:24:31.3746105Z native/licenses/components/jiff-tzdb-0.1.9/LICENSE-MIT
+2026-11-14T03:24:31.3747016Z native/licenses/components/jiff-tzdb-0.1.9/source-checksums.json
+2026-11-14T03:24:31.3747961Z native/licenses/components/jiff-tzdb-platform-0.1.3/Cargo.toml
+2026-11-14T03:24:31.3748928Z native/licenses/components/jiff-tzdb-platform-0.1.3/COPYING
+2026-11-14T03:24:31.3749815Z native/licenses/components/jiff-tzdb-platform-0.1.3/LICENSE-MIT
+2026-11-14T03:24:31.3772645Z native/licenses/components/jiff-tzdb-platform-0.1.3/source-checksums.json
+2026-11-14T03:24:31.3773321Z native/licenses/components/js-sys-0.3.107/Cargo.toml
+2026-11-14T03:24:31.3774230Z native/licenses/components/js-sys-0.3.107/LICENSE-APACHE
+2026-11-14T03:24:31.3774842Z native/licenses/components/js-sys-0.3.107/LICENSE-MIT
+2026-11-14T03:24:31.3775517Z native/licenses/components/js-sys-0.3.107/source-checksums.json
+2026-11-14T03:24:31.3776018Z native/licenses/components/libc-0.2.191/Cargo.toml
+2026-11-14T03:24:31.3776481Z native/licenses/components/libc-0.2.191/LICENSE-APACHE
+2026-11-14T03:24:31.3776922Z native/licenses/components/libc-0.2.191/LICENSE-MIT
+2026-11-14T03:24:31.3777406Z native/licenses/components/libc-0.2.191/source-checksums.json
+2026-11-14T03:24:31.3777864Z native/licenses/components/log-0.4.35/Cargo.toml
+2026-11-14T03:24:31.3778300Z native/licenses/components/log-0.4.35/LICENSE-APACHE
+2026-11-14T03:24:31.3778731Z native/licenses/components/log-0.4.35/LICENSE-MIT
+2026-11-14T03:24:31.3779192Z native/licenses/components/log-0.4.35/source-checksums.json
+2026-11-14T03:24:31.3779973Z native/licenses/components/lopdf-0.36.0/Cargo.toml
+2026-11-14T03:24:31.3780718Z native/licenses/components/lopdf-0.36.0/LICENSE
+2026-11-14T03:24:31.3781310Z native/licenses/components/lopdf-0.36.0/source-checksums.json
+2026-11-14T03:24:31.3781778Z native/licenses/components/md-5-0.10.6/Cargo.toml
+2026-11-14T03:24:31.3782206Z native/licenses/components/md-5-0.10.6/LICENSE-APACHE
+2026-11-14T03:24:31.3782803Z native/licenses/components/md-5-0.10.6/LICENSE-MIT
+2026-11-14T03:24:31.3783277Z native/licenses/components/md-5-0.10.6/source-checksums.json
+2026-11-14T03:24:31.3783733Z native/licenses/components/memchr-2.8.3/Cargo.toml
+2026-11-14T03:24:31.3784456Z native/licenses/components/memchr-2.8.3/COPYING
+2026-11-14T03:24:31.3784906Z native/licenses/components/memchr-2.8.3/LICENSE-MIT
+2026-11-14T03:24:31.3785387Z native/licenses/components/memchr-2.8.3/source-checksums.json
+2026-11-14T03:24:31.3785868Z native/licenses/components/miniz_oxide-0.8.9/Cargo.toml
+2026-11-14T03:24:31.3786320Z native/licenses/components/miniz_oxide-0.8.9/LICENSE
+2026-11-14T03:24:31.3786805Z native/licenses/components/miniz_oxide-0.8.9/LICENSE-APACHE.md
+2026-11-14T03:24:31.3787316Z native/licenses/components/miniz_oxide-0.8.9/LICENSE-MIT.md
+2026-11-14T03:24:31.3787815Z native/licenses/components/miniz_oxide-0.8.9/LICENSE-ZLIB.md
+2026-11-14T03:24:31.3788335Z native/licenses/components/miniz_oxide-0.8.9/source-checksums.json
+2026-11-14T03:24:31.3788838Z native/licenses/components/miniz_oxide-0.9.1/Cargo.toml
+2026-11-14T03:24:31.3789287Z native/licenses/components/miniz_oxide-0.9.1/LICENSE
+2026-11-14T03:24:31.3789763Z native/licenses/components/miniz_oxide-0.9.1/LICENSE-APACHE.md
+2026-11-14T03:24:31.3790266Z native/licenses/components/miniz_oxide-0.9.1/LICENSE-MIT.md
+2026-11-14T03:24:31.3790751Z native/licenses/components/miniz_oxide-0.9.1/LICENSE-ZLIB.md
+2026-11-14T03:24:31.3791275Z native/licenses/components/miniz_oxide-0.9.1/source-checksums.json
+2026-11-14T03:24:31.3791789Z native/licenses/components/motion-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3792281Z native/licenses/components/multiversion_no_op-1.0.0/Cargo.toml
+2026-11-14T03:24:31.3792802Z native/licenses/components/multiversion_no_op-1.0.0/COPYRIGHT
+2026-11-14T03:24:31.3793332Z native/licenses/components/multiversion_no_op-1.0.0/LICENSE-APACHE
+2026-11-14T03:24:31.3793872Z native/licenses/components/multiversion_no_op-1.0.0/LICENSE-MIT
+2026-11-14T03:24:31.3794674Z native/licenses/components/multiversion_no_op-1.0.0/source-checksums.json
+2026-11-14T03:24:31.3795190Z native/licenses/components/nf-sys-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3795635Z native/licenses/components/nom_locate-5.0.0/Cargo.toml
+2026-11-14T03:24:31.3796061Z native/licenses/components/nom_locate-5.0.0/LICENSE
+2026-11-14T03:24:31.3796551Z native/licenses/components/nom_locate-5.0.0/source-checksums.json
+2026-11-14T03:24:31.3797023Z native/licenses/components/nom-8.0.0/Cargo.toml
+2026-11-14T03:24:31.3797412Z native/licenses/components/nom-8.0.0/LICENSE
+2026-11-14T03:24:31.3797853Z native/licenses/components/nom-8.0.0/source-checksums.json
+2026-11-14T03:24:31.3798383Z native/licenses/components/num-conv-0.2.2/Cargo.toml
+2026-11-14T03:24:31.3799136Z native/licenses/components/num-conv-0.2.2/LICENSE-Apache
+2026-11-14T03:24:31.3799620Z native/licenses/components/num-conv-0.2.2/LICENSE-MIT
+2026-11-14T03:24:31.3800105Z native/licenses/components/num-conv-0.2.2/source-checksums.json
+2026-11-14T03:24:31.3800606Z native/licenses/components/num-traits-0.2.19/Cargo.toml
+2026-11-14T03:24:31.3801081Z native/licenses/components/num-traits-0.2.19/LICENSE-APACHE
+2026-11-14T03:24:31.3801563Z native/licenses/components/num-traits-0.2.19/LICENSE-MIT
+2026-11-14T03:24:31.3802076Z native/licenses/components/num-traits-0.2.19/source-checksums.json
+2026-11-14T03:24:31.3802566Z native/licenses/components/once_cell-1.21.4/Cargo.toml
+2026-11-14T03:24:31.3803028Z native/licenses/components/once_cell-1.21.4/LICENSE-APACHE
+2026-11-14T03:24:31.3803485Z native/licenses/components/once_cell-1.21.4/LICENSE-MIT
+2026-11-14T03:24:31.3803984Z native/licenses/components/once_cell-1.21.4/source-checksums.json
+2026-11-14T03:24:31.3804820Z native/licenses/components/photo-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3805311Z native/licenses/components/pin-project-lite-0.2.17/Cargo.toml
+2026-11-14T03:24:31.3805843Z native/licenses/components/pin-project-lite-0.2.17/LICENSE-APACHE
+2026-11-14T03:24:31.3806369Z native/licenses/components/pin-project-lite-0.2.17/LICENSE-MIT
+2026-11-14T03:24:31.3807101Z native/licenses/components/pin-project-lite-0.2.17/source-checksums.json
+2026-11-14T03:24:31.3807649Z native/licenses/components/pitch-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3808077Z native/licenses/components/png-0.18.1/Cargo.toml
+2026-11-14T03:24:31.3808504Z native/licenses/components/png-0.18.1/LICENSE-APACHE
+2026-11-14T03:24:31.3808922Z native/licenses/components/png-0.18.1/LICENSE-MIT
+2026-11-14T03:24:31.3809380Z native/licenses/components/png-0.18.1/source-checksums.json
+2026-11-14T03:24:31.3809884Z native/licenses/components/portable-atomic-1.15.0/Cargo.toml
+2026-11-14T03:24:31.3810406Z native/licenses/components/portable-atomic-1.15.0/LICENSE-APACHE
+2026-11-14T03:24:31.3810951Z native/licenses/components/portable-atomic-1.15.0/LICENSE-MIT
+2026-11-14T03:24:31.3811510Z native/licenses/components/portable-atomic-1.15.0/source-checksums.json
+2026-11-14T03:24:31.3812083Z native/licenses/components/portable-atomic-util-0.2.8/Cargo.toml
+2026-11-14T03:24:31.3812645Z native/licenses/components/portable-atomic-util-0.2.8/LICENSE-APACHE
+2026-11-14T03:24:31.3813206Z native/licenses/components/portable-atomic-util-0.2.8/LICENSE-MIT
+2026-11-14T03:24:31.3813800Z native/licenses/components/portable-atomic-util-0.2.8/source-checksums.json
+2026-11-14T03:24:31.3814756Z native/licenses/components/powerfmt-0.2.1/Cargo.toml
+2026-11-14T03:24:31.3815221Z native/licenses/components/powerfmt-0.2.1/LICENSE-Apache
+2026-11-14T03:24:31.3815675Z native/licenses/components/powerfmt-0.2.1/LICENSE-MIT
+2026-11-14T03:24:31.3816165Z native/licenses/components/powerfmt-0.2.1/source-checksums.json
+2026-11-14T03:24:31.3816658Z native/licenses/components/ppv-lite86-0.2.21/Cargo.toml
+2026-11-14T03:24:31.3817140Z native/licenses/components/ppv-lite86-0.2.21/LICENSE-APACHE
+2026-11-14T03:24:31.3817610Z native/licenses/components/ppv-lite86-0.2.21/LICENSE-MIT
+2026-11-14T03:24:31.3818123Z native/licenses/components/ppv-lite86-0.2.21/source-checksums.json
+2026-11-14T03:24:31.3818622Z native/licenses/components/prism-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3819160Z native/licenses/components/prism-engine-0.1.0/packages_prism-NOTICES.md
+2026-11-14T03:24:31.3819698Z native/licenses/components/proc-macro2-1.0.107/Cargo.toml
+2026-11-14T03:24:31.3820186Z native/licenses/components/proc-macro2-1.0.107/LICENSE-APACHE
+2026-11-14T03:24:31.3820684Z native/licenses/components/proc-macro2-1.0.107/LICENSE-MIT
+2026-11-14T03:24:31.3821207Z native/licenses/components/proc-macro2-1.0.107/source-checksums.json
+2026-11-14T03:24:31.3821712Z native/licenses/components/quick-xml-0.37.5/Cargo.toml
+2026-11-14T03:24:31.3822178Z native/licenses/components/quick-xml-0.37.5/LICENSE-MIT.md
+2026-11-14T03:24:31.3822858Z native/licenses/components/quick-xml-0.37.5/source-checksums.json
+2026-11-14T03:24:31.3823354Z native/licenses/components/quill-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3823879Z native/licenses/components/quill-engine-0.1.0/packages_quill-NOTICES.md
+2026-11-14T03:24:31.3824592Z native/licenses/components/quote-1.0.47/Cargo.toml
+2026-11-14T03:24:31.3825036Z native/licenses/components/quote-1.0.47/LICENSE-APACHE
+2026-11-14T03:24:31.3825461Z native/licenses/components/quote-1.0.47/LICENSE-MIT
+2026-11-14T03:24:31.3825933Z native/licenses/components/quote-1.0.47/source-checksums.json
+2026-11-14T03:24:31.3826381Z native/licenses/components/r-efi-5.3.0/AUTHORS
+2026-11-14T03:24:31.3826790Z native/licenses/components/r-efi-5.3.0/Cargo.toml
+2026-11-14T03:24:31.3827260Z native/licenses/components/r-efi-5.3.0/source-checksums.json
+2026-11-14T03:24:31.3827767Z native/licenses/components/rand_chacha-0.9.0/Cargo.toml
+2026-11-14T03:24:31.3828220Z native/licenses/components/rand_chacha-0.9.0/COPYRIGHT
+2026-11-14T03:24:31.3828692Z native/licenses/components/rand_chacha-0.9.0/LICENSE-APACHE
+2026-11-14T03:24:31.3829168Z native/licenses/components/rand_chacha-0.9.0/LICENSE-MIT
+2026-11-14T03:24:31.3829682Z native/licenses/components/rand_chacha-0.9.0/source-checksums.json
+2026-11-14T03:24:31.3830169Z native/licenses/components/rand_core-0.9.5/Cargo.toml
+2026-11-14T03:24:31.3830736Z native/licenses/components/rand_core-0.9.5/COPYRIGHT
+2026-11-14T03:24:31.3831198Z native/licenses/components/rand_core-0.9.5/LICENSE-APACHE
+2026-11-14T03:24:31.3831654Z native/licenses/components/rand_core-0.9.5/LICENSE-MIT
+2026-11-14T03:24:31.3832142Z native/licenses/components/rand_core-0.9.5/source-checksums.json
+2026-11-14T03:24:31.3832601Z native/licenses/components/rand-0.9.5/Cargo.toml
+2026-11-14T03:24:31.3833012Z native/licenses/components/rand-0.9.5/COPYRIGHT
+2026-11-14T03:24:31.3833479Z native/licenses/components/rand-0.9.5/LICENSE-APACHE
+2026-11-14T03:24:31.3834411Z native/licenses/components/rand-0.9.5/LICENSE-MIT
+2026-11-14T03:24:31.3835333Z native/licenses/components/rand-0.9.5/source-checksums.json
+2026-11-14T03:24:31.3836311Z native/licenses/components/rangemap-1.8.0/Cargo.toml
+2026-11-14T03:24:31.3836975Z native/licenses/components/rangemap-1.8.0/LICENSE-APACHE
+2026-11-14T03:24:31.3837764Z native/licenses/components/rangemap-1.8.0/LICENSE-MIT
+2026-11-14T03:24:31.3838326Z native/licenses/components/rangemap-1.8.0/source-checksums.json
+2026-11-14T03:24:31.3839104Z native/licenses/components/rayon-1.12.0/Cargo.toml
+2026-11-14T03:24:31.3839672Z native/licenses/components/rayon-1.12.0/LICENSE-APACHE
+2026-11-14T03:24:31.3840393Z native/licenses/components/rayon-1.12.0/LICENSE-MIT
+2026-11-14T03:24:31.3841120Z native/licenses/components/rayon-1.12.0/source-checksums.json
+2026-11-14T03:24:31.3842010Z native/licenses/components/rayon-core-1.13.0/Cargo.toml
+2026-11-14T03:24:31.3842675Z native/licenses/components/rayon-core-1.13.0/LICENSE-APACHE
+2026-11-14T03:24:31.3843443Z native/licenses/components/rayon-core-1.13.0/LICENSE-MIT
+2026-11-14T03:24:31.3844491Z native/licenses/components/rayon-core-1.13.0/source-checksums.json
+2026-11-14T03:24:31.3845514Z native/licenses/components/read-fonts-0.46.0/Cargo.toml
+2026-11-14T03:24:31.3846298Z native/licenses/components/read-fonts-0.46.0/LICENSE-APACHE
+2026-11-14T03:24:31.3847159Z native/licenses/components/read-fonts-0.46.0/LICENSE-MIT
+2026-11-14T03:24:31.3848147Z native/licenses/components/read-fonts-0.46.0/source-checksums.json
+2026-11-14T03:24:31.3848799Z native/licenses/components/rustversion-1.0.23/Cargo.toml
+2026-11-14T03:24:31.3849661Z native/licenses/components/rustversion-1.0.23/LICENSE-APACHE
+2026-11-14T03:24:31.3850630Z native/licenses/components/rustversion-1.0.23/LICENSE-MIT
+2026-11-14T03:24:31.3851673Z native/licenses/components/rustversion-1.0.23/source-checksums.json
+2026-11-14T03:24:31.3852634Z native/licenses/components/scene-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3853569Z native/licenses/components/scopeguard-1.2.0/Cargo.toml
+2026-11-14T03:24:31.3854708Z native/licenses/components/scopeguard-1.2.0/LICENSE-APACHE
+2026-11-14T03:24:31.3856013Z native/licenses/components/scopeguard-1.2.0/LICENSE-MIT
+2026-11-14T03:24:31.3856906Z native/licenses/components/scopeguard-1.2.0/source-checksums.json
+2026-11-14T03:24:31.3857551Z native/licenses/components/serde_core-1.0.229/Cargo.toml
+2026-11-14T03:24:31.3858047Z native/licenses/components/serde_core-1.0.229/LICENSE-APACHE
+2026-11-14T03:24:31.3858542Z native/licenses/components/serde_core-1.0.229/LICENSE-MIT
+2026-11-14T03:24:31.3859067Z native/licenses/components/serde_core-1.0.229/source-checksums.json
+2026-11-14T03:24:31.3859600Z native/licenses/components/serde_derive-1.0.229/Cargo.toml
+2026-11-14T03:24:31.3860092Z native/licenses/components/serde_derive-1.0.229/LICENSE-APACHE
+2026-11-14T03:24:31.3860592Z native/licenses/components/serde_derive-1.0.229/LICENSE-MIT
+2026-11-14T03:24:31.3861129Z native/licenses/components/serde_derive-1.0.229/source-checksums.json
+2026-11-14T03:24:31.3861640Z native/licenses/components/serde_json-1.0.154/Cargo.toml
+2026-11-14T03:24:31.3862119Z native/licenses/components/serde_json-1.0.154/LICENSE-APACHE
+2026-11-14T03:24:31.3862595Z native/licenses/components/serde_json-1.0.154/LICENSE-MIT
+2026-11-14T03:24:31.3863110Z native/licenses/components/serde_json-1.0.154/source-checksums.json
+2026-11-14T03:24:31.3863597Z native/licenses/components/serde-1.0.229/Cargo.toml
+2026-11-14T03:24:31.3864375Z native/licenses/components/serde-1.0.229/LICENSE-APACHE
+2026-11-14T03:24:31.3864872Z native/licenses/components/serde-1.0.229/LICENSE-MIT
+2026-11-14T03:24:31.3865359Z native/licenses/components/serde-1.0.229/source-checksums.json
+2026-11-14T03:24:31.3865824Z native/licenses/components/sha2-0.10.9/Cargo.toml
+2026-11-14T03:24:31.3866257Z native/licenses/components/sha2-0.10.9/LICENSE-APACHE
+2026-11-14T03:24:31.3866688Z native/licenses/components/sha2-0.10.9/LICENSE-MIT
+2026-11-14T03:24:31.3867157Z native/licenses/components/sha2-0.10.9/source-checksums.json
+2026-11-14T03:24:31.3867610Z native/licenses/components/shlex-2.0.1/Cargo.toml
+2026-11-14T03:24:31.3868043Z native/licenses/components/shlex-2.0.1/LICENSE-APACHE
+2026-11-14T03:24:31.3868464Z native/licenses/components/shlex-2.0.1/LICENSE-MIT
+2026-11-14T03:24:31.3868924Z native/licenses/components/shlex-2.0.1/source-checksums.json
+2026-11-14T03:24:31.3869411Z native/licenses/components/simd-adler32-0.3.10/Cargo.toml
+2026-11-14T03:24:31.3869882Z native/licenses/components/simd-adler32-0.3.10/LICENSE.md
+2026-11-14T03:24:31.3870404Z native/licenses/components/simd-adler32-0.3.10/source-checksums.json
+2026-11-14T03:24:31.3870910Z native/licenses/components/simdutf8-0.1.5/Cargo.toml
+2026-11-14T03:24:31.3871367Z native/licenses/components/simdutf8-0.1.5/LICENSE-Apache
+2026-11-14T03:24:31.3871822Z native/licenses/components/simdutf8-0.1.5/LICENSE-MIT
+2026-11-14T03:24:31.3872306Z native/licenses/components/simdutf8-0.1.5/source-checksums.json
+2026-11-14T03:24:31.3872783Z native/licenses/components/skrifa-0.49.0/Cargo.toml
+2026-11-14T03:24:31.3873221Z native/licenses/components/skrifa-0.49.0/LICENSE-APACHE
+2026-11-14T03:24:31.3873677Z native/licenses/components/skrifa-0.49.0/LICENSE-MIT
+2026-11-14T03:24:31.3874380Z native/licenses/components/skrifa-0.49.0/source-checksums.json
+2026-11-14T03:24:31.3874854Z native/licenses/components/slab-0.4.12/Cargo.toml
+2026-11-14T03:24:31.3875258Z native/licenses/components/slab-0.4.12/LICENSE
+2026-11-14T03:24:31.3875711Z native/licenses/components/slab-0.4.12/source-checksums.json
+2026-11-14T03:24:31.3876178Z native/licenses/components/smallvec-1.16.5/Cargo.toml
+2026-11-14T03:24:31.3876628Z native/licenses/components/smallvec-1.16.5/LICENSE-APACHE
+2026-11-14T03:24:31.3877078Z native/licenses/components/smallvec-1.16.5/LICENSE-MIT
+2026-11-14T03:24:31.3877571Z native/licenses/components/smallvec-1.16.5/source-checksums.json
+2026-11-14T03:24:31.3878067Z native/licenses/components/splice-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3878554Z native/licenses/components/stable_deref_trait-1.2.1/Cargo.toml
+2026-11-14T03:24:31.3879087Z native/licenses/components/stable_deref_trait-1.2.1/LICENSE-APACHE
+2026-11-14T03:24:31.3879763Z native/licenses/components/stable_deref_trait-1.2.1/LICENSE-MIT
+2026-11-14T03:24:31.3880335Z native/licenses/components/stable_deref_trait-1.2.1/source-checksums.json
+2026-11-14T03:24:31.3880859Z native/licenses/components/strict-num-0.1.1/Cargo.toml
+2026-11-14T03:24:31.3881291Z native/licenses/components/strict-num-0.1.1/LICENSE
+2026-11-14T03:24:31.3881783Z native/licenses/components/strict-num-0.1.1/source-checksums.json
+2026-11-14T03:24:31.3882267Z native/licenses/components/stringprep-0.1.5/Cargo.toml
+2026-11-14T03:24:31.3882738Z native/licenses/components/stringprep-0.1.5/LICENSE-APACHE
+2026-11-14T03:24:31.3883204Z native/licenses/components/stringprep-0.1.5/LICENSE-MIT
+2026-11-14T03:24:31.3883700Z native/licenses/components/stringprep-0.1.5/source-checksums.json
+2026-11-14T03:24:31.3884378Z native/licenses/components/syn-2.0.119/Cargo.toml
+2026-11-14T03:24:31.3884814Z native/licenses/components/syn-2.0.119/LICENSE-APACHE
+2026-11-14T03:24:31.3885244Z native/licenses/components/syn-2.0.119/LICENSE-MIT
+2026-11-14T03:24:31.3885704Z native/licenses/components/syn-2.0.119/source-checksums.json
+2026-11-14T03:24:31.3886153Z native/licenses/components/syn-3.0.10/Cargo.toml
+2026-11-14T03:24:31.3886576Z native/licenses/components/syn-3.0.10/LICENSE-APACHE
+2026-11-14T03:24:31.3887114Z native/licenses/components/syn-3.0.10/LICENSE-MIT
+2026-11-14T03:24:31.3887579Z native/licenses/components/syn-3.0.10/source-checksums.json
+2026-11-14T03:24:31.3888059Z native/licenses/components/synstructure-0.14.0/Cargo.toml
+2026-11-14T03:24:31.3888521Z native/licenses/components/synstructure-0.14.0/LICENSE
+2026-11-14T03:24:31.3889039Z native/licenses/components/synstructure-0.14.0/source-checksums.json
+2026-11-14T03:24:31.3889553Z native/licenses/components/tally-engine-0.1.0/Cargo.toml
+2026-11-14T03:24:31.3890009Z native/licenses/components/thiserror-2.0.21/Cargo.toml
+2026-11-14T03:24:31.3890469Z native/licenses/components/thiserror-2.0.21/LICENSE-APACHE
+2026-11-14T03:24:31.3890946Z native/licenses/components/thiserror-2.0.21/LICENSE-MIT
+2026-11-14T03:24:31.3891446Z native/licenses/components/thiserror-2.0.21/source-checksums.json
+2026-11-14T03:24:31.3891954Z native/licenses/components/thiserror-impl-2.0.21/Cargo.toml
+2026-11-14T03:24:31.3892465Z native/licenses/components/thiserror-impl-2.0.21/LICENSE-APACHE
+2026-11-14T03:24:31.3892978Z native/licenses/components/thiserror-impl-2.0.21/LICENSE-MIT
+2026-11-14T03:24:31.3893528Z native/licenses/components/thiserror-impl-2.0.21/source-checksums.json
+2026-11-14T03:24:31.3894191Z native/licenses/components/time-0.3.55/Cargo.toml
+2026-11-14T03:24:31.3894646Z native/licenses/components/time-0.3.55/LICENSE-Apache
+2026-11-14T03:24:31.3895071Z native/licenses/components/time-0.3.55/LICENSE-MIT
+2026-11-14T03:24:31.3895522Z native/licenses/components/time-0.3.55/source-checksums.json
+2026-11-14T03:24:31.3895981Z native/licenses/components/time-core-0.1.9/Cargo.toml
+2026-11-14T03:24:31.3896435Z native/licenses/components/time-core-0.1.9/LICENSE-Apache
+2026-11-14T03:24:31.3896890Z native/licenses/components/time-core-0.1.9/LICENSE-MIT
+2026-11-14T03:24:31.3897384Z native/licenses/components/time-core-0.1.9/source-checksums.json
+2026-11-14T03:24:31.3897873Z native/licenses/components/time-macros-0.2.32/Cargo.toml
+2026-11-14T03:24:31.3898355Z native/licenses/components/time-macros-0.2.32/LICENSE-Apache
+2026-11-14T03:24:31.3898841Z native/licenses/components/time-macros-0.2.32/LICENSE-MIT
+2026-11-14T03:24:31.3899353Z native/licenses/components/time-macros-0.2.32/source-checksums.json
+2026-11-14T03:24:31.3899849Z native/licenses/components/tiny-skia-0.12.0/Cargo.toml
+2026-11-14T03:24:31.3900269Z native/licenses/components/tiny-skia-0.12.0/LICENSE
+2026-11-14T03:24:31.3900755Z native/licenses/components/tiny-skia-0.12.0/source-checksums.json
+2026-11-14T03:24:31.3901276Z native/licenses/components/tiny-skia-path-0.12.0/Cargo.toml
+2026-11-14T03:24:31.3901752Z native/licenses/components/tiny-skia-path-0.12.0/LICENSE
+2026-11-14T03:24:31.3902279Z native/licenses/components/tiny-skia-path-0.12.0/source-checksums.json
+2026-11-14T03:24:31.3902924Z native/licenses/components/tinyvec-1.13.3/Cargo.toml
+2026-11-14T03:24:31.3903382Z native/licenses/components/tinyvec-1.13.3/LICENSE-APACHE.md
+2026-11-14T03:24:31.3903862Z native/licenses/components/tinyvec-1.13.3/LICENSE-MIT.md
+2026-11-14T03:24:31.3904616Z native/licenses/components/tinyvec-1.13.3/LICENSE-ZLIB.md
+2026-11-14T03:24:31.3905121Z native/licenses/components/tinyvec-1.13.3/source-checksums.json
+2026-11-14T03:24:31.3905598Z native/licenses/components/typenum-1.20.1/Cargo.toml
+2026-11-14T03:24:31.3906026Z native/licenses/components/typenum-1.20.1/LICENSE
+2026-11-14T03:24:31.3906477Z native/licenses/components/typenum-1.20.1/LICENSE-APACHE
+2026-11-14T03:24:31.3906918Z native/licenses/components/typenum-1.20.1/LICENSE-MIT
+2026-11-14T03:24:31.3907399Z native/licenses/components/typenum-1.20.1/source-checksums.json
+2026-11-14T03:24:31.3907882Z native/licenses/components/unicode-bidi-0.3.18/AUTHORS
+2026-11-14T03:24:31.3908346Z native/licenses/components/unicode-bidi-0.3.18/Cargo.toml
+2026-11-14T03:24:31.3908818Z native/licenses/components/unicode-bidi-0.3.18/COPYRIGHT
+2026-11-14T03:24:31.3909301Z native/licenses/components/unicode-bidi-0.3.18/LICENSE-APACHE
+2026-11-14T03:24:31.3909799Z native/licenses/components/unicode-bidi-0.3.18/LICENSE-MIT
+2026-11-14T03:24:31.3910453Z native/licenses/components/unicode-bidi-0.3.18/source-checksums.json
+2026-11-14T03:24:31.3910985Z native/licenses/components/unicode-ident-1.0.27/Cargo.toml
+2026-11-14T03:24:31.3911483Z native/licenses/components/unicode-ident-1.0.27/LICENSE-APACHE
+2026-11-14T03:24:31.3911974Z native/licenses/components/unicode-ident-1.0.27/LICENSE-MIT
+2026-11-14T03:24:31.3912490Z native/licenses/components/unicode-ident-1.0.27/LICENSE-UNICODE
+2026-11-14T03:24:31.3913045Z native/licenses/components/unicode-ident-1.0.27/source-checksums.json
+2026-11-14T03:24:31.3913607Z native/licenses/components/unicode-normalization-0.1.25/Cargo.toml
+2026-11-14T03:24:31.3914472Z native/licenses/components/unicode-normalization-0.1.25/COPYRIGHT
+2026-11-14T03:24:31.3915157Z native/licenses/components/unicode-normalization-0.1.25/LICENSE-APACHE
+2026-11-14T03:24:31.3915847Z native/licenses/components/unicode-normalization-0.1.25/LICENSE-MIT
+2026-11-14T03:24:31.3916482Z native/licenses/components/unicode-normalization-0.1.25/source-checksums.json
+2026-11-14T03:24:31.3917075Z native/licenses/components/unicode-properties-0.1.5/Cargo.toml
+2026-11-14T03:24:31.3917596Z native/licenses/components/unicode-properties-0.1.5/COPYRIGHT
+2026-11-14T03:24:31.3918128Z native/licenses/components/unicode-properties-0.1.5/LICENSE-APACHE
+2026-11-14T03:24:31.3918667Z native/licenses/components/unicode-properties-0.1.5/LICENSE-MIT
+2026-11-14T03:24:31.3919227Z native/licenses/components/unicode-properties-0.1.5/LICENSE-UNICODE
+2026-11-14T03:24:31.3919817Z native/licenses/components/unicode-properties-0.1.5/source-checksums.json
+2026-11-14T03:24:31.3920363Z native/licenses/components/version_check-0.9.5/Cargo.toml
+2026-11-14T03:24:31.3920853Z native/licenses/components/version_check-0.9.5/LICENSE-APACHE
+2026-11-14T03:24:31.3921345Z native/licenses/components/version_check-0.9.5/LICENSE-MIT
+2026-11-14T03:24:31.3921871Z native/licenses/components/version_check-0.9.5/source-checksums.json
+2026-11-14T03:24:31.3922400Z native/licenses/components/wasip2-1.0.4+wasi-0.2.12/Cargo.toml
+2026-11-14T03:24:31.3922934Z native/licenses/components/wasip2-1.0.4+wasi-0.2.12/LICENSE-APACHE
+2026-11-14T03:24:31.3923602Z native/licenses/components/wasip2-1.0.4+wasi-0.2.12/LICENSE-Apache-2.0_WITH_LLVM-exception
+2026-11-14T03:24:31.3924511Z native/licenses/components/wasip2-1.0.4+wasi-0.2.12/LICENSE-MIT
+2026-11-14T03:24:31.3925104Z native/licenses/components/wasip2-1.0.4+wasi-0.2.12/source-checksums.json
+2026-11-14T03:24:31.3925663Z native/licenses/components/wasm-bindgen-0.2.130/Cargo.toml
+2026-11-14T03:24:31.3926182Z native/licenses/components/wasm-bindgen-0.2.130/LICENSE-APACHE
+2026-11-14T03:24:31.3926691Z native/licenses/components/wasm-bindgen-0.2.130/LICENSE-MIT
+2026-11-14T03:24:31.3927403Z native/licenses/components/wasm-bindgen-0.2.130/source-checksums.json
+2026-11-14T03:24:31.3927970Z native/licenses/components/wasm-bindgen-macro-0.2.130/Cargo.toml
+2026-11-14T03:24:31.3928537Z native/licenses/components/wasm-bindgen-macro-0.2.130/LICENSE-APACHE
+2026-11-14T03:24:31.3929106Z native/licenses/components/wasm-bindgen-macro-0.2.130/LICENSE-MIT
+2026-11-14T03:24:31.3929695Z native/licenses/components/wasm-bindgen-macro-0.2.130/source-checksums.json
+2026-11-14T03:24:31.3930319Z native/licenses/components/wasm-bindgen-macro-support-0.2.130/Cargo.toml
+2026-11-14T03:24:31.3930955Z native/licenses/components/wasm-bindgen-macro-support-0.2.130/LICENSE-APACHE
+2026-11-14T03:24:31.3931590Z native/licenses/components/wasm-bindgen-macro-support-0.2.130/LICENSE-MIT
+2026-11-14T03:24:31.3932262Z native/licenses/components/wasm-bindgen-macro-support-0.2.130/source-checksums.json
+2026-11-14T03:24:31.3932888Z native/licenses/components/wasm-bindgen-shared-0.2.130/Cargo.toml
+2026-11-14T03:24:31.3933460Z native/licenses/components/wasm-bindgen-shared-0.2.130/LICENSE-APACHE
+2026-11-14T03:24:31.3934217Z native/licenses/components/wasm-bindgen-shared-0.2.130/LICENSE-MIT
+2026-11-14T03:24:31.3934897Z native/licenses/components/wasm-bindgen-shared-0.2.130/source-checksums.json
+2026-11-14T03:24:31.3935553Z native/licenses/components/weezl-0.1.12/Cargo.toml
+2026-11-14T03:24:31.3935995Z native/licenses/components/weezl-0.1.12/LICENSE-APACHE
+2026-11-14T03:24:31.3936433Z native/licenses/components/weezl-0.1.12/LICENSE-MIT
+2026-11-14T03:24:31.3936907Z native/licenses/components/weezl-0.1.12/source-checksums.json
+2026-11-14T03:24:31.3937400Z native/licenses/components/windows-core-0.62.2/Cargo.toml
+2026-11-14T03:24:31.3937917Z native/licenses/components/windows-core-0.62.2/license-apache-2.0
+2026-11-14T03:24:31.3938422Z native/licenses/components/windows-core-0.62.2/license-mit
+2026-11-14T03:24:31.3938954Z native/licenses/components/windows-core-0.62.2/source-checksums.json
+2026-11-14T03:24:31.3939503Z native/licenses/components/windows-implement-0.60.2/Cargo.toml
+2026-11-14T03:24:31.3940059Z native/licenses/components/windows-implement-0.60.2/license-apache-2.0
+2026-11-14T03:24:31.3940618Z native/licenses/components/windows-implement-0.60.2/license-mit
+2026-11-14T03:24:31.3941191Z native/licenses/components/windows-implement-0.60.2/source-checksums.json
+2026-11-14T03:24:31.3941764Z native/licenses/components/windows-interface-0.59.3/Cargo.toml
+2026-11-14T03:24:31.3942322Z native/licenses/components/windows-interface-0.59.3/license-apache-2.0
+2026-11-14T03:24:31.3942869Z native/licenses/components/windows-interface-0.59.3/license-mit
+2026-11-14T03:24:31.3943444Z native/licenses/components/windows-interface-0.59.3/source-checksums.json
+2026-11-14T03:24:31.3943980Z native/licenses/components/windows-link-0.2.1/Cargo.toml
+2026-11-14T03:24:31.3944813Z native/licenses/components/windows-link-0.2.1/license-apache-2.0
+2026-11-14T03:24:31.3945327Z native/licenses/components/windows-link-0.2.1/license-mit
+2026-11-14T03:24:31.3945849Z native/licenses/components/windows-link-0.2.1/source-checksums.json
+2026-11-14T03:24:31.3946369Z native/licenses/components/windows-result-0.4.1/Cargo.toml
+2026-11-14T03:24:31.3946886Z native/licenses/components/windows-result-0.4.1/license-apache-2.0
+2026-11-14T03:24:31.3947398Z native/licenses/components/windows-result-0.4.1/license-mit
+2026-11-14T03:24:31.3947939Z native/licenses/components/windows-result-0.4.1/source-checksums.json
+2026-11-14T03:24:31.3948502Z native/licenses/components/windows-strings-0.5.1/Cargo.toml
+2026-11-14T03:24:31.3949030Z native/licenses/components/windows-strings-0.5.1/license-apache-2.0
+2026-11-14T03:24:31.3949561Z native/licenses/components/windows-strings-0.5.1/license-mit
+2026-11-14T03:24:31.3950097Z native/licenses/components/windows-strings-0.5.1/source-checksums.json
+2026-11-14T03:24:31.3950617Z native/licenses/components/wit-bindgen-0.57.1/Cargo.toml
+2026-11-14T03:24:31.3951096Z native/licenses/components/wit-bindgen-0.57.1/LICENSE-APACHE
+2026-11-14T03:24:31.3951855Z native/licenses/components/wit-bindgen-0.57.1/LICENSE-Apache-2.0_WITH_LLVM-exception
+2026-11-14T03:24:31.3952444Z native/licenses/components/wit-bindgen-0.57.1/LICENSE-MIT
+2026-11-14T03:24:31.3952956Z native/licenses/components/wit-bindgen-0.57.1/source-checksums.json
+2026-11-14T03:24:31.3953437Z native/licenses/components/yoke-0.8.4/Cargo.toml
+2026-11-14T03:24:31.3953840Z native/licenses/components/yoke-0.8.4/LICENSE
+2026-11-14T03:24:31.3954560Z native/licenses/components/yoke-0.8.4/source-checksums.json
+2026-11-14T03:24:31.3955039Z native/licenses/components/yoke-derive-0.8.4/Cargo.toml
+2026-11-14T03:24:31.3955477Z native/licenses/components/yoke-derive-0.8.4/LICENSE
+2026-11-14T03:24:31.3955971Z native/licenses/components/yoke-derive-0.8.4/source-checksums.json
+2026-11-14T03:24:31.3956468Z native/licenses/components/zerocopy-0.8.63/Cargo.toml
+2026-11-14T03:24:31.3956926Z native/licenses/components/zerocopy-0.8.63/LICENSE-APACHE
+2026-11-14T03:24:31.3957387Z native/licenses/components/zerocopy-0.8.63/LICENSE-BSD
+2026-11-14T03:24:31.3957834Z native/licenses/components/zerocopy-0.8.63/LICENSE-MIT
+2026-11-14T03:24:31.3958320Z native/licenses/components/zerocopy-0.8.63/source-checksums.json
+2026-11-14T03:24:31.3958836Z native/licenses/components/zerocopy-derive-0.8.63/Cargo.toml
+2026-11-14T03:24:31.3959487Z native/licenses/components/zerocopy-derive-0.8.63/LICENSE-APACHE
+2026-11-14T03:24:31.3960021Z native/licenses/components/zerocopy-derive-0.8.63/LICENSE-BSD
+2026-11-14T03:24:31.3960524Z native/licenses/components/zerocopy-derive-0.8.63/LICENSE-MIT
+2026-11-14T03:24:31.3961077Z native/licenses/components/zerocopy-derive-0.8.63/source-checksums.json
+2026-11-14T03:24:31.3961587Z native/licenses/components/zerofrom-0.1.8/Cargo.toml
+2026-11-14T03:24:31.3962011Z native/licenses/components/zerofrom-0.1.8/LICENSE
+2026-11-14T03:24:31.3962490Z native/licenses/components/zerofrom-0.1.8/source-checksums.json
+2026-11-14T03:24:31.3962996Z native/licenses/components/zerofrom-derive-0.1.8/Cargo.toml
+2026-11-14T03:24:31.3963507Z native/licenses/components/zerofrom-derive-0.1.8/LICENSE
+2026-11-14T03:24:31.3964134Z native/licenses/components/zerofrom-derive-0.1.8/source-checksums.json
+2026-11-14T03:24:31.3964637Z native/licenses/components/zip-2.6.1/Cargo.toml
+2026-11-14T03:24:31.3965032Z native/licenses/components/zip-2.6.1/LICENSE
+2026-11-14T03:24:31.3965472Z native/licenses/components/zip-2.6.1/source-checksums.json
+2026-11-14T03:24:31.3965923Z native/licenses/components/zlib-rs-0.6.8/Cargo.toml
+2026-11-14T03:24:31.3966334Z native/licenses/components/zlib-rs-0.6.8/LICENSE
+2026-11-14T03:24:31.3966797Z native/licenses/components/zlib-rs-0.6.8/source-checksums.json
+2026-11-14T03:24:31.3967268Z native/licenses/components/zmij-1.0.23/Cargo.toml
+2026-11-14T03:24:31.3967681Z native/licenses/components/zmij-1.0.23/LICENSE-MIT
+2026-11-14T03:24:31.3968147Z native/licenses/components/zmij-1.0.23/source-checksums.json
+2026-11-14T03:24:31.3968593Z native/licenses/components/zopfli-0.8.4/Cargo.toml
+2026-11-14T03:24:31.3969006Z native/licenses/components/zopfli-0.8.4/COPYING
+2026-11-14T03:24:31.3969475Z native/licenses/components/zopfli-0.8.4/source-checksums.json
+2026-11-14T03:24:31.3969874Z native/licenses/Forge-LICENSE
+2026-11-14T03:24:31.3970171Z native/licenses/Nitro-MIT.txt
+2026-11-14T03:24:31.3970479Z native/licenses/provenance.json
+2026-11-14T03:24:31.3970822Z native/licenses/rust-toolchain/COPYRIGHT
+2026-11-14T03:24:31.3971239Z native/licenses/rust-toolchain/COPYRIGHT-library.html
+2026-11-14T03:24:31.3971664Z native/licenses/rust-toolchain/COPYRIGHT.html
+2026-11-14T03:24:31.3972061Z native/licenses/rust-toolchain/LICENSE-APACHE
+2026-11-14T03:24:31.3972438Z native/licenses/rust-toolchain/LICENSE-MIT
+2026-11-14T03:24:31.3972856Z native/licenses/rust-toolchain/licenses/Apache-2.0.txt
+2026-11-14T03:24:31.3973313Z native/licenses/rust-toolchain/licenses/BSD-2-Clause.txt
+2026-11-14T03:24:31.3973776Z native/licenses/rust-toolchain/licenses/CC-BY-SA-4.0.txt
+2026-11-14T03:24:31.3974404Z native/licenses/rust-toolchain/licenses/GCC-exception-3.1.txt
+2026-11-14T03:24:31.3975021Z native/licenses/rust-toolchain/licenses/GPL-2.0-only.txt
+2026-11-14T03:24:31.3975503Z native/licenses/rust-toolchain/licenses/GPL-3.0-or-later.txt
+2026-11-14T03:24:31.3975943Z native/licenses/rust-toolchain/licenses/ISC.txt
+2026-11-14T03:24:31.3976398Z native/licenses/rust-toolchain/licenses/LLVM-exception.txt
+2026-11-14T03:24:31.3976842Z native/licenses/rust-toolchain/licenses/MIT.txt
+2026-11-14T03:24:31.3977245Z native/licenses/rust-toolchain/licenses/NCSA.txt
+2026-11-14T03:24:31.3977666Z native/licenses/rust-toolchain/licenses/OFL-1.1.txt
+2026-11-14T03:24:31.3978109Z native/licenses/rust-toolchain/licenses/Unicode-3.0.txt
+2026-11-14T03:24:31.3978516Z native/licenses/sources/adler2-2.0.1.crate
+2026-11-14T03:24:31.3978873Z native/licenses/sources/aes-0.8.4.crate
+2026-11-14T03:24:31.3979311Z native/licenses/sources/android_system_properties-0.1.6.crate
+2026-11-14T03:24:31.3979758Z native/licenses/sources/arbitrary-1.5.0.crate
+2026-11-14T03:24:31.3980140Z native/licenses/sources/arrayref-0.3.9.crate
+2026-11-14T03:24:31.3980531Z native/licenses/sources/arrayvec-0.7.8.crate
+2026-11-14T03:24:31.3980903Z native/licenses/sources/autocfg-1.5.1.crate
+2026-11-14T03:24:31.3981281Z native/licenses/sources/bitflags-2.13.2.crate
+2026-11-14T03:24:31.3981683Z native/licenses/sources/block-buffer-0.10.4.crate
+2026-11-14T03:24:31.3982214Z native/licenses/sources/block-padding-0.3.3.crate
+2026-11-14T03:24:31.3982623Z native/licenses/sources/bumpalo-3.20.3.crate
+2026-11-14T03:24:31.3983009Z native/licenses/sources/bytecount-0.6.9.crate
+2026-11-14T03:24:31.3983424Z native/licenses/sources/bytemuck_derive-1.12.1.crate
+2026-11-14T03:24:31.3983834Z native/licenses/sources/bytemuck-1.25.2.crate
+2026-11-14T03:24:31.3984308Z native/licenses/sources/cbc-0.1.2.crate
+2026-11-14T03:24:31.3984655Z native/licenses/sources/cc-1.11.1.crate
+2026-11-14T03:24:31.3985009Z native/licenses/sources/cfg-if-1.0.5.crate
+2026-11-14T03:24:31.3985398Z native/licenses/sources/chrono-0.4.45.crate
+2026-11-14T03:24:31.3985769Z native/licenses/sources/cipher-0.4.4.crate
+2026-11-14T03:24:31.3986148Z native/licenses/sources/core_detect-1.0.0.crate
+2026-11-14T03:24:31.3986587Z native/licenses/sources/core-foundation-sys-0.8.7.crate
+2026-11-14T03:24:31.3987017Z native/licenses/sources/cpufeatures-0.2.17.crate
+2026-11-14T03:24:31.3987415Z native/licenses/sources/crc32fast-1.5.5.crate
+2026-11-14T03:24:31.3987826Z native/licenses/sources/crossbeam-deque-0.8.8.crate
+2026-11-14T03:24:31.3988259Z native/licenses/sources/crossbeam-epoch-0.9.21.crate
+2026-11-14T03:24:31.3988697Z native/licenses/sources/crossbeam-utils-0.8.23.crate
+2026-11-14T03:24:31.3989111Z native/licenses/sources/crypto-common-0.1.7.crate
+2026-11-14T03:24:31.3989506Z native/licenses/sources/deranged-0.5.9.crate
+2026-11-14T03:24:31.3989912Z native/licenses/sources/derive_arbitrary-1.5.0.crate
+2026-11-14T03:24:31.3990301Z native/licenses/sources/digest-0.10.7.crate
+2026-11-14T03:24:31.3990665Z native/licenses/sources/ecb-0.1.2.crate
+2026-11-14T03:24:31.3991015Z native/licenses/sources/either-1.19.0.crate
+2026-11-14T03:24:31.3991402Z native/licenses/sources/encoding_rs-0.8.44.crate
+2026-11-14T03:24:31.3991802Z native/licenses/sources/equivalent-1.0.3.crate
+2026-11-14T03:24:31.3992185Z native/licenses/sources/fdeflate-0.3.7.crate
+2026-11-14T03:24:31.3992595Z native/licenses/sources/find-msvc-tools-0.1.15.crate
+2026-11-14T03:24:31.3992989Z native/licenses/sources/flate2-1.1.11.crate
+2026-11-14T03:24:31.3993363Z native/licenses/sources/foldhash-0.2.0.crate
+2026-11-14T03:24:31.3993751Z native/licenses/sources/font-types-0.12.7.crate
+2026-11-14T03:24:31.3994288Z native/licenses/sources/futures-core-0.3.34.crate
+2026-11-14T03:24:31.3994701Z native/licenses/sources/futures-task-0.3.34.crate
+2026-11-14T03:24:31.3995113Z native/licenses/sources/futures-util-0.3.34.crate
+2026-11-14T03:24:31.3995524Z native/licenses/sources/generic-array-0.14.7.crate
+2026-11-14T03:24:31.3995920Z native/licenses/sources/getrandom-0.3.4.crate
+2026-11-14T03:24:31.3996314Z native/licenses/sources/harfrust-0.15.0.crate
+2026-11-14T03:24:31.3996841Z native/licenses/sources/hashbrown-0.17.1.crate
+2026-11-14T03:24:31.3997250Z native/licenses/sources/iana-time-zone-0.1.65.crate
+2026-11-14T03:24:31.3997708Z native/licenses/sources/iana-time-zone-haiku-0.1.2.crate
+2026-11-14T03:24:31.3998129Z native/licenses/sources/indexmap-2.14.2.crate
+2026-11-14T03:24:31.3998516Z native/licenses/sources/inout-0.1.4.crate
+2026-11-14T03:24:31.3998880Z native/licenses/sources/itoa-1.0.19.crate
+2026-11-14T03:24:31.3999232Z native/licenses/sources/jiff-0.2.43.crate
+2026-11-14T03:24:31.3999605Z native/licenses/sources/jiff-core-0.1.5.crate
+2026-11-14T03:24:31.3999994Z native/licenses/sources/jiff-static-0.2.43.crate
+2026-11-14T03:24:31.4000392Z native/licenses/sources/jiff-tzdb-0.1.9.crate
+2026-11-14T03:24:31.4000819Z native/licenses/sources/jiff-tzdb-platform-0.1.3.crate
+2026-11-14T03:24:31.4001226Z native/licenses/sources/js-sys-0.3.107.crate
+2026-11-14T03:24:31.4001596Z native/licenses/sources/libc-0.2.191.crate
+2026-11-14T03:24:31.4001952Z native/licenses/sources/log-0.4.35.crate
+2026-11-14T03:24:31.4002308Z native/licenses/sources/lopdf-0.36.0.crate
+2026-11-14T03:24:31.4002656Z native/licenses/sources/md-5-0.10.6.crate
+2026-11-14T03:24:31.4003014Z native/licenses/sources/memchr-2.8.3.crate
+2026-11-14T03:24:31.4003395Z native/licenses/sources/miniz_oxide-0.8.9.crate
+2026-11-14T03:24:31.4003906Z native/licenses/sources/miniz_oxide-0.9.1.crate
+2026-11-14T03:24:31.4004466Z native/licenses/sources/multiversion_no_op-1.0.0.crate
+2026-11-14T03:24:31.4004876Z native/licenses/sources/nom_locate-5.0.0.crate
+2026-11-14T03:24:31.4005241Z native/licenses/sources/nom-8.0.0.crate
+2026-11-14T03:24:31.4005602Z native/licenses/sources/num-conv-0.2.2.crate
+2026-11-14T03:24:31.4005982Z native/licenses/sources/num-traits-0.2.19.crate
+2026-11-14T03:24:31.4006367Z native/licenses/sources/once_cell-1.21.4.crate
+2026-11-14T03:24:31.4006783Z native/licenses/sources/pin-project-lite-0.2.17.crate
+2026-11-14T03:24:31.4007176Z native/licenses/sources/png-0.18.1.crate
+2026-11-14T03:24:31.4007581Z native/licenses/sources/portable-atomic-1.15.0.crate
+2026-11-14T03:24:31.4008041Z native/licenses/sources/portable-atomic-util-0.2.8.crate
+2026-11-14T03:24:31.4008466Z native/licenses/sources/powerfmt-0.2.1.crate
+2026-11-14T03:24:31.4008850Z native/licenses/sources/ppv-lite86-0.2.21.crate
+2026-11-14T03:24:31.4009260Z native/licenses/sources/proc-macro2-1.0.107.crate
+2026-11-14T03:24:31.4009664Z native/licenses/sources/quick-xml-0.37.5.crate
+2026-11-14T03:24:31.4010036Z native/licenses/sources/quote-1.0.47.crate
+2026-11-14T03:24:31.4010399Z native/licenses/sources/r-efi-5.3.0.crate
+2026-11-14T03:24:31.4010774Z native/licenses/sources/rand_chacha-0.9.0.crate
+2026-11-14T03:24:31.4011174Z native/licenses/sources/rand_core-0.9.5.crate
+2026-11-14T03:24:31.4011553Z native/licenses/sources/rand-0.9.5.crate
+2026-11-14T03:24:31.4011924Z native/licenses/sources/rangemap-1.8.0.crate
+2026-11-14T03:24:31.4012302Z native/licenses/sources/rayon-1.12.0.crate
+2026-11-14T03:24:31.4012686Z native/licenses/sources/rayon-core-1.13.0.crate
+2026-11-14T03:24:31.4013097Z native/licenses/sources/read-fonts-0.46.0.crate
+2026-11-14T03:24:31.4013504Z native/licenses/sources/rustversion-1.0.23.crate
+2026-11-14T03:24:31.4013914Z native/licenses/sources/scopeguard-1.2.0.crate
+2026-11-14T03:24:31.4014531Z native/licenses/sources/serde_core-1.0.229.crate
+2026-11-14T03:24:31.4014941Z native/licenses/sources/serde_derive-1.0.229.crate
+2026-11-14T03:24:31.4015346Z native/licenses/sources/serde_json-1.0.154.crate
+2026-11-14T03:24:31.4015718Z native/licenses/sources/serde-1.0.229.crate
+2026-11-14T03:24:31.4016085Z native/licenses/sources/sha2-0.10.9.crate
+2026-11-14T03:24:31.4016445Z native/licenses/sources/shlex-2.0.1.crate
+2026-11-14T03:24:31.4016827Z native/licenses/sources/simd-adler32-0.3.10.crate
+2026-11-14T03:24:31.4017217Z native/licenses/sources/simdutf8-0.1.5.crate
+2026-11-14T03:24:31.4017588Z native/licenses/sources/skrifa-0.49.0.crate
+2026-11-14T03:24:31.4017951Z native/licenses/sources/slab-0.4.12.crate
+2026-11-14T03:24:31.4018452Z native/licenses/sources/smallvec-1.16.5.crate
+2026-11-14T03:24:31.4018869Z native/licenses/sources/stable_deref_trait-1.2.1.crate
+2026-11-14T03:24:31.4019293Z native/licenses/sources/strict-num-0.1.1.crate
+2026-11-14T03:24:31.4019685Z native/licenses/sources/stringprep-0.1.5.crate
+2026-11-14T03:24:31.4020065Z native/licenses/sources/syn-2.0.119.crate
+2026-11-14T03:24:31.4020419Z native/licenses/sources/syn-3.0.10.crate
+2026-11-14T03:24:31.4020800Z native/licenses/sources/synstructure-0.14.0.crate
+2026-11-14T03:24:31.4021206Z native/licenses/sources/thiserror-2.0.21.crate
+2026-11-14T03:24:31.4021620Z native/licenses/sources/thiserror-impl-2.0.21.crate
+2026-11-14T03:24:31.4022012Z native/licenses/sources/time-0.3.55.crate
+2026-11-14T03:24:31.4022380Z native/licenses/sources/time-core-0.1.9.crate
+2026-11-14T03:24:31.4022783Z native/licenses/sources/time-macros-0.2.32.crate
+2026-11-14T03:24:31.4023180Z native/licenses/sources/tiny-skia-0.12.0.crate
+2026-11-14T03:24:31.4023586Z native/licenses/sources/tiny-skia-path-0.12.0.crate
+2026-11-14T03:24:31.4023994Z native/licenses/sources/tinyvec-1.13.3.crate
+2026-11-14T03:24:31.4024852Z native/licenses/sources/typenum-1.20.1.crate
+2026-11-14T03:24:31.4025270Z native/licenses/sources/unicode-bidi-0.3.18.crate
+2026-11-14T03:24:31.4025703Z native/licenses/sources/unicode-ident-1.0.27.crate
+2026-11-14T03:24:31.4026359Z native/licenses/sources/unicode-normalization-0.1.25.crate
+2026-11-14T03:24:31.4026861Z native/licenses/sources/unicode-properties-0.1.5.crate
+2026-11-14T03:24:31.4027295Z native/licenses/sources/version_check-0.9.5.crate
+2026-11-14T03:24:31.4027730Z native/licenses/sources/wasip2-1.0.4+wasi-0.2.12.crate
+2026-11-14T03:24:31.4028157Z native/licenses/sources/wasm-bindgen-0.2.130.crate
+2026-11-14T03:24:31.4028603Z native/licenses/sources/wasm-bindgen-macro-0.2.130.crate
+2026-11-14T03:24:31.4029118Z native/licenses/sources/wasm-bindgen-macro-support-0.2.130.crate
+2026-11-14T03:24:31.4029629Z native/licenses/sources/wasm-bindgen-shared-0.2.130.crate
+2026-11-14T03:24:31.4030053Z native/licenses/sources/weezl-0.1.12.crate
+2026-11-14T03:24:31.4030447Z native/licenses/sources/windows-core-0.62.2.crate
+2026-11-14T03:24:31.4030926Z native/licenses/sources/windows-implement-0.60.2.crate
+2026-11-14T03:24:31.4031376Z native/licenses/sources/windows-interface-0.59.3.crate
+2026-11-14T03:24:31.4031799Z native/licenses/sources/windows-link-0.2.1.crate
+2026-11-14T03:24:31.4032218Z native/licenses/sources/windows-result-0.4.1.crate
+2026-11-14T03:24:31.4032640Z native/licenses/sources/windows-strings-0.5.1.crate
+2026-11-14T03:24:31.4033053Z native/licenses/sources/wit-bindgen-0.57.1.crate
+2026-11-14T03:24:31.4033435Z native/licenses/sources/yoke-0.8.4.crate
+2026-11-14T03:24:31.4033812Z native/licenses/sources/yoke-derive-0.8.4.crate
+2026-11-14T03:24:31.4034486Z native/licenses/sources/zerocopy-0.8.63.crate
+2026-11-14T03:24:31.4034923Z native/licenses/sources/zerocopy-derive-0.8.63.crate
+2026-11-14T03:24:31.4035332Z native/licenses/sources/zerofrom-0.1.8.crate
+2026-11-14T03:24:31.4035755Z native/licenses/sources/zerofrom-derive-0.1.8.crate
+2026-11-14T03:24:31.4036142Z native/licenses/sources/zip-2.6.1.crate
+2026-11-14T03:24:31.4036510Z native/licenses/sources/zlib-rs-0.6.8.crate
+2026-11-14T03:24:31.4036878Z native/licenses/sources/zmij-1.0.23.crate
+2026-11-14T03:24:31.4037246Z native/licenses/sources/zopfli-0.8.4.crate
+2026-11-14T03:24:31.4037548Z nitro.json
+2026-11-14T03:24:31.4037786Z NitroForgeV1.podspec
+2026-11-14T03:24:31.4038092Z nitrogen/generated/.gitattributes
+2026-11-14T03:24:31.4038547Z nitrogen/generated/android/c++/HybridForgeDocumentSpecClass.cpp
+2026-11-14T03:24:31.4039108Z nitrogen/generated/android/c++/HybridForgeFactorySpecClass.cpp
+2026-11-14T03:24:31.4039679Z nitrogen/generated/android/c++/HybridForgeMediaCacheSpecClass.cpp
+2026-11-14T03:24:31.4040213Z nitrogen/generated/android/c++/HybridForgeTaskSpecClass.cpp
+2026-11-14T03:24:31.4040815Z nitrogen/generated/android/include/NitroForgeV1/private/NitroForgeV1OnLoad.hpp
+2026-11-14T03:24:31.4041710Z nitrogen/generated/android/kotlin/com/margelo/nitro/nitroforge/ignitionv1/NitroForgeV1OnLoad.kt
+2026-11-14T03:24:31.4042353Z nitrogen/generated/android/NitroForgeV1+autolinking.cmake
+2026-11-14T03:24:31.4042860Z nitrogen/generated/android/NitroForgeV1+autolinking.gradle
+2026-11-14T03:24:31.4043320Z nitrogen/generated/android/NitroForgeV1OnLoad.cpp
+2026-11-14T03:24:31.4043818Z nitrogen/generated/apple/c++/HybridForgeDocumentSpecClass.cpp
+2026-11-14T03:24:31.4044491Z nitrogen/generated/apple/c++/HybridForgeFactorySpecClass.cpp
+2026-11-14T03:24:31.4045035Z nitrogen/generated/apple/c++/HybridForgeMediaCacheSpecClass.cpp
+2026-11-14T03:24:31.4045550Z nitrogen/generated/apple/c++/HybridForgeTaskSpecClass.cpp
+2026-11-14T03:24:31.4046011Z nitrogen/generated/apple/c++/include/module.modulemap
+2026-11-14T03:24:31.4046570Z nitrogen/generated/apple/c++/include/NitroForgeV1/NitroForgeV1Autolinking.hpp
+2026-11-14T03:24:31.4047299Z nitrogen/generated/apple/c++/include/NitroForgeV1/private/NitroForgeV1-Swift-Cxx-Umbrella.hpp
+2026-11-14T03:24:31.4047945Z nitrogen/generated/apple/NitroForgeV1-Swift-Cxx-Bridge.cpp
+2026-11-14T03:24:31.4048658Z nitrogen/generated/apple/NitroForgeV1AppleCxx/include/NitroForgeV1AppleCxx/NitroForgeV1AppleCxx.h
+2026-11-14T03:24:31.4049369Z nitrogen/generated/apple/NitroForgeV1AppleCxx/NitroForgeV1AppleCxx.cpp
+2026-11-14T03:24:31.4050016Z nitrogen/generated/apple/NitroForgeV1Autolinking.cpp
+2026-11-14T03:24:31.4050469Z nitrogen/generated/apple/NitroForgeV1Autolinking.mm
+2026-11-14T03:24:31.4050923Z nitrogen/generated/apple/swift/NitroForgeV1Module.swift
+2026-11-14T03:24:31.4051340Z nitrogen/generated/hybrid-classes.json
+2026-11-14T03:24:31.4051767Z nitrogen/generated/shared/c++/ForgeBinaryCommandResult.cpp
+2026-11-14T03:24:31.4052215Z nitrogen/generated/shared/c++/ForgeCommand.cpp
+2026-11-14T03:24:31.4052641Z nitrogen/generated/shared/c++/ForgeCommandResult.cpp
+2026-11-14T03:24:31.4053050Z nitrogen/generated/shared/c++/ForgeEvent.cpp
+2026-11-14T03:24:31.4053500Z nitrogen/generated/shared/c++/HybridForgeDocumentSpec.cpp
+2026-11-14T03:24:31.4053989Z nitrogen/generated/shared/c++/HybridForgeFactorySpec.cpp
+2026-11-14T03:24:31.4054636Z nitrogen/generated/shared/c++/HybridForgeMediaCacheSpec.cpp
+2026-11-14T03:24:31.4055135Z nitrogen/generated/shared/c++/HybridForgeTaskSpec.cpp
+2026-11-14T03:24:31.4055717Z nitrogen/generated/shared/c++/include/NitroForgeV1/ForgeBinaryCommandResult.hpp
+2026-11-14T03:24:31.4056344Z nitrogen/generated/shared/c++/include/NitroForgeV1/ForgeCommand.hpp
+2026-11-14T03:24:31.4056933Z nitrogen/generated/shared/c++/include/NitroForgeV1/ForgeCommandResult.hpp
+2026-11-14T03:24:31.4057541Z nitrogen/generated/shared/c++/include/NitroForgeV1/ForgeEngineKind.hpp
+2026-11-14T03:24:31.4058114Z nitrogen/generated/shared/c++/include/NitroForgeV1/ForgeEvent.hpp
+2026-11-14T03:24:31.4058721Z nitrogen/generated/shared/c++/include/NitroForgeV1/HybridForgeDocumentSpec.hpp
+2026-11-14T03:24:31.4059381Z nitrogen/generated/shared/c++/include/NitroForgeV1/HybridForgeFactorySpec.hpp
+2026-11-14T03:24:31.4060040Z nitrogen/generated/shared/c++/include/NitroForgeV1/HybridForgeMediaCacheSpec.hpp
+2026-11-14T03:24:31.4066382Z nitrogen/generated/shared/c++/include/NitroForgeV1/HybridForgeTaskSpec.hpp
+2026-11-14T03:24:31.4067030Z nitrogen/generated/shared/javascript/ForgeDocument.cjs
+2026-11-14T03:24:31.4067539Z nitrogen/generated/shared/javascript/ForgeDocument.d.cts
+2026-11-14T03:24:31.4068031Z nitrogen/generated/shared/javascript/ForgeFactory.cjs
+2026-11-14T03:24:31.4068497Z nitrogen/generated/shared/javascript/ForgeFactory.d.cts
+2026-11-14T03:24:31.4068974Z nitrogen/generated/shared/javascript/ForgeMediaCache.cjs
+2026-11-14T03:24:31.4069461Z nitrogen/generated/shared/javascript/ForgeMediaCache.d.cts
+2026-11-14T03:24:31.4069921Z nitrogen/generated/shared/javascript/ForgeTask.cjs
+2026-11-14T03:24:31.4070359Z nitrogen/generated/shared/javascript/ForgeTask.d.cts
+2026-11-14T03:24:31.4070692Z package.json
+2026-11-14T03:24:31.4070919Z Package.swift
+2026-11-14T03:24:31.4071168Z plugin/withForge.cjs
+2026-11-14T03:24:31.4071440Z react-native.config.cjs
+2026-11-14T03:24:31.4071887Z src/autosave.ts
+2026-11-14T03:24:31.4072110Z src/base64.ts
+2026-11-14T03:24:31.4072388Z src/collaboration-checkpoint.ts
+2026-11-14T03:24:31.4072696Z src/collaboration-http.ts
+2026-11-14T03:24:31.4072973Z src/collaboration.ts
+2026-11-14T03:24:31.4073209Z src/contracts.ts
+2026-11-14T03:24:31.4073433Z src/document.ts
+2026-11-14T03:24:31.4073661Z src/host-cli.ts
+2026-11-14T03:24:31.4073872Z src/host.ts
+2026-11-14T03:24:31.4074324Z src/index.ts
+2026-11-14T03:24:31.4074581Z src/owned-json.ts
+2026-11-14T03:24:31.4074868Z src/specs/ForgeDocument.nitro.ts
+2026-11-14T03:24:31.4075208Z src/specs/ForgeFactory.nitro.ts
+2026-11-14T03:24:31.4075543Z src/specs/ForgeMediaCache.nitro.ts
+2026-11-14T03:24:31.4075860Z src/specs/ForgeTask.nitro.ts
+2026-11-14T03:24:31.4076140Z src/transactions.ts
+2026-11-14T03:24:31.4076388Z src/transfer-ui.ts
+2026-11-14T03:24:31.4076614Z src/transfer.ts
+2026-11-14T03:24:31.4076836Z src/types.ts
+2026-11-14T03:24:31.4077045Z src/v1-host.ts
+2026-11-14T03:24:31.4077287Z src/workspace-ui.ts
+2026-11-14T03:24:31.4077523Z src/workspace.ts
+2026-11-14T03:24:31.4077765Z THIRD_PARTY_NOTICES.md
+2026-11-14T03:24:31.4078012Z Tarball Details
+2026-11-14T03:24:31.4078475Z /home/runner/work/_temp/candidate/nitro-forge-ignition-1.0.0-f6.43550831178.1.tgz
+2026-11-14T03:24:36.8062184Z package: @nitro-forge/prism@1.0.0-f6.43550831178.1
+2026-11-14T03:24:36.8063095Z Tarball Contents
+2026-11-14T03:24:36.8063459Z LICENSE
+2026-11-14T03:24:36.8063793Z package.json
+2026-11-14T03:24:36.8064369Z src/canvas-cluster.ts
+2026-11-14T03:24:36.8064795Z src/canvas-types.ts
+2026-11-14T03:24:36.8065205Z src/color-cluster.ts
+2026-11-14T03:24:36.8065575Z src/index.ts
+2026-11-14T03:24:36.8065910Z src/rgba.ts
+2026-11-14T03:24:36.8066268Z THIRD_PARTY_NOTICES.md
+2026-11-14T03:24:36.8066654Z Tarball Details
+2026-11-14T03:24:36.8067405Z /home/runner/work/_temp/candidate/nitro-forge-prism-1.0.0-f6.43550831178.1.tgz
+2026-11-14T03:24:36.9439383Z package: @nitro-forge/cadence@1.0.0-f6.43550831178.1
+2026-11-14T03:24:36.9440021Z Tarball Contents
+2026-11-14T03:24:36.9440441Z LICENSE
+2026-11-14T03:24:36.9440828Z package.json
+2026-11-14T03:24:36.9441113Z src/editor-adapter.ts
+2026-11-14T03:24:36.9441383Z src/index.ts
+2026-11-14T03:24:36.9441639Z src/instrument-adapter.ts
+2026-11-14T03:24:36.9441933Z src/instrument-session.ts
+2026-11-14T03:24:36.9442204Z src/mixer-cluster.ts
+2026-11-14T03:24:36.9442474Z src/transfer.ts
+2026-11-14T03:24:36.9442700Z Tarball Details
+2026-11-14T03:24:36.9443165Z /home/runner/work/_temp/candidate/nitro-forge-cadence-1.0.0-f6.43550831178.1.tgz
+2026-11-14T03:24:37.0649043Z package: @nitro-forge/splice@1.0.0-f6.43550831178.1
+2026-11-14T03:24:37.0650024Z Tarball Contents
+2026-11-14T03:24:37.0650471Z LICENSE
+2026-11-14T03:24:37.0650928Z package.json
+2026-11-14T03:24:37.0651313Z src/index.ts
+2026-11-14T03:24:37.0651756Z src/timeline-cluster.ts
+2026-11-14T03:24:37.0652128Z src/transfer.ts
+2026-11-14T03:24:37.0652463Z Tarball Details
+2026-11-14T03:24:37.0653213Z /home/runner/work/_temp/candidate/nitro-forge-splice-1.0.0-f6.43550831178.1.tgz
+2026-11-14T03:24:37.1854628Z package: @nitro-forge/folio@1.0.0-f6.43550831178.1
+2026-11-14T03:24:37.1855546Z Tarball Contents
+2026-11-14T03:24:37.1855962Z LICENSE
+2026-11-14T03:24:37.1856532Z package.json
+2026-11-14T03:24:37.1857338Z src/index.ts
+2026-11-14T03:24:37.1857924Z src/office-cluster.ts
+2026-11-14T03:24:37.1858754Z src/render.ts
+2026-11-14T03:24:37.1859378Z src/transfer.ts
+2026-11-14T03:24:37.1860073Z Tarball Details
+2026-11-14T03:24:37.1861593Z /home/runner/work/_temp/candidate/nitro-forge-folio-1.0.0-f6.43550831178.1.tgz
+2026-11-14T03:24:37.3035823Z package: @nitro-forge/pitch@1.0.0-f6.43550831178.1
+2026-11-14T03:24:37.3045365Z Tarball Contents
+2026-11-14T03:24:37.3045800Z LICENSE
+2026-11-14T03:24:37.3046082Z package.json
+2026-11-14T03:24:37.3046320Z src/index.ts
+2026-11-14T03:24:37.3046572Z src/office-cluster.ts
+2026-11-14T03:24:37.3046828Z Tarball Details
+2026-11-14T03:24:37.3047305Z /home/runner/work/_temp/candidate/nitro-forge-pitch-1.0.0-f6.43550831178.1.tgz
+2026-11-14T03:24:37.4215563Z package: @nitro-forge/tally@1.0.0-f6.43550831178.1
+2026-11-14T03:24:37.4217518Z Tarball Contents
+2026-11-14T03:24:37.4223240Z LICENSE
+2026-11-14T03:24:37.4224448Z package.json
+2026-11-14T03:24:37.4225039Z src/grid-adapter.ts
+2026-11-14T03:24:37.4225495Z src/grid-cluster.ts
+2026-11-14T03:24:37.4225887Z src/index.ts
+2026-11-14T03:24:37.4226280Z src/transfer.ts
+2026-11-14T03:24:37.4226661Z Tarball Details
+2026-11-14T03:24:37.4227457Z /home/runner/work/_temp/candidate/nitro-forge-tally-1.0.0-f6.43550831178.1.tgz
+2026-11-14T03:24:37.5396474Z package: @nitro-forge/quill@1.0.0-f6.43550831178.1
+2026-11-14T03:24:37.5397665Z Tarball Contents
+2026-11-14T03:24:37.5398475Z LICENSE
+2026-11-14T03:24:37.5399109Z package.json
+2026-11-14T03:24:37.5399905Z src/index.ts
+2026-11-14T03:24:37.5400694Z src/list-markers.ts
+2026-11-14T03:24:37.5401575Z src/office-cluster.ts
+2026-11-14T03:24:37.5402427Z src/transfer.ts
+2026-11-14T03:24:37.5403178Z THIRD_PARTY_NOTICES.md
+2026-11-14T03:24:37.5403688Z Tarball Details
+2026-11-14T03:24:37.5404727Z /home/runner/work/_temp/candidate/nitro-forge-quill-1.0.0-f6.43550831178.1.tgz
+2026-11-14T03:24:37.5685659Z {"stage":"candidate-archives","sourceCommit":"ce9f10805996770cc5d709412f3d47b9f872c85d","archives":8,"output":"/home/runner/work/_temp/candidate"}
+2026-11-14T03:24:37.8041444Z ##[group]Run actions/upload-artifact@v4
+2026-11-14T03:24:37.8041810Z with:
+2026-11-14T03:24:37.8042046Z   name: forge-candidate
+2026-11-14T03:24:37.8042326Z   path: /home/runner/work/_temp/candidate
+2026-11-14T03:24:37.8042644Z   retention-days: 14
+2026-11-14T03:24:37.8042886Z   if-no-files-found: error
+2026-11-14T03:24:37.8043146Z   compression-level: 6
+2026-11-14T03:24:37.8043377Z   overwrite: false
+2026-11-14T03:24:37.8043612Z   include-hidden-files: false
+2026-11-14T03:24:37.8043872Z env:
+2026-11-14T03:24:37.8044445Z   CI: 1
+2026-11-14T03:24:37.8044684Z   EXPO_NO_TELEMETRY: 1
+2026-11-14T03:24:37.8044944Z   CARGO_HOME: /home/runner/.cargo
+2026-11-14T03:24:37.8045234Z   CARGO_INCREMENTAL: 0
+2026-11-14T03:24:37.8045491Z   CARGO_TERM_COLOR: always
+2026-11-14T03:24:37.8045739Z ##[endgroup]
+2026-11-14T03:24:37.9775663Z (node:3846) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T03:24:37.9777279Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T03:24:37.9851230Z With the provided path, there will be 10 files uploaded
+2026-11-14T03:24:37.9859104Z Artifact name is valid!
+2026-11-14T03:24:37.9860102Z Root directory input is valid!
+2026-11-14T03:24:38.3086441Z Beginning upload of artifact content to blob storage
+2026-11-14T03:24:38.6015855Z (node:3846) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-14T03:24:39.0967874Z Uploaded bytes 8388608
+2026-11-14T03:24:39.2863773Z Uploaded bytes 16777216
+2026-11-14T03:24:39.4010564Z Uploaded bytes 25165824
+2026-11-14T03:24:39.5421688Z Uploaded bytes 33554432
+2026-11-14T03:24:39.7935485Z Uploaded bytes 41943040
+2026-11-14T03:24:40.0622590Z Uploaded bytes 50331648
+2026-11-14T03:24:40.3028087Z Uploaded bytes 58720256
+2026-11-14T03:24:40.5835334Z Uploaded bytes 67108864
+2026-11-14T03:24:40.8718220Z Uploaded bytes 75497472
+2026-11-14T03:24:41.1424688Z Uploaded bytes 83886080
+2026-11-14T03:24:41.4028197Z Uploaded bytes 92274688
+2026-11-14T03:24:41.6958443Z Uploaded bytes 100663296
+2026-11-14T03:24:41.9576073Z Uploaded bytes 109051904
+2026-11-14T03:24:42.2053838Z Uploaded bytes 117440512
+2026-11-14T03:24:42.4906729Z Uploaded bytes 125829120
+2026-11-14T03:24:42.7567002Z Uploaded bytes 134217728
+2026-11-14T03:24:43.0259785Z Uploaded bytes 142606336
+2026-11-14T03:24:43.1667621Z Uploaded bytes 147263506
+2026-11-14T03:24:43.2156818Z Finished uploading artifact content to blob storage!
+2026-11-14T03:24:43.2160738Z SHA256 digest of uploaded artifact zip is 2185de5a076e3f2ca005a5f937631bdcbcfbed273c703da188bcd727e0ee470b
+2026-11-14T03:24:43.2162710Z Finalizing artifact upload
+2026-11-14T03:24:43.5666701Z Artifact forge-candidate.zip successfully finalized. Artifact ID 14096675968
+2026-11-14T03:24:43.5668229Z Artifact forge-candidate has been successfully uploaded! Final size is 147263506 bytes. Artifact ID is 14096675968
+2026-11-14T03:24:43.5675133Z Artifact download URL: https://github.com/mikevocalz/nitro-forge/actions/runs/43550831178/artifacts/14096675968
+2026-11-14T03:24:43.5952103Z Post job cleanup.
+2026-11-14T03:24:43.7266164Z (node:3858) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T03:24:43.7277035Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T03:24:43.7501303Z Post job cleanup.
+2026-11-14T03:24:43.8692702Z [command]/usr/bin/git version
+2026-11-14T03:24:43.8742764Z git version 2.56.1
+2026-11-14T03:24:43.8809073Z Temporarily overriding HOME='/home/runner/work/_temp/64bb8252-6efe-477e-bebb-27e5b8624974' before making global git config changes
+2026-11-14T03:24:43.8820334Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T03:24:43.8821983Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-14T03:24:43.8873396Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T03:24:43.8919108Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T03:24:43.9295216Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T03:24:43.9332353Z http.https://github.com/.extraheader
+2026-11-14T03:24:43.9350595Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-14T03:24:43.9392283Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T03:24:43.9699232Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T03:24:43.9735564Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T03:24:44.0158732Z Cleaning up orphan processes
+2026-11-14T03:24:44.0681234Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/download-artifact@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

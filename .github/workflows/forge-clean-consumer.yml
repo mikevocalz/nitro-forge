@@ -144,6 +144,9 @@ jobs:
           path: |
             ${{ runner.temp }}/consumer/pnpm-lock.yaml
             ${{ runner.temp }}/consumer/forge-consumer-receipt.json
+            ${{ runner.temp }}/consumer/package.json
+            ${{ runner.temp }}/consumer/pnpm-workspace.yaml
+            ${{ runner.temp }}/consumer/pnpm-effective-config.json
           retention-days: 14
   native-compile:
     needs: bundle

@@ -20,6 +20,10 @@ const installed = json(resolve(consumer, 'installed-packages.json'));
 assert.equal(installed.sourceCommit, receipt.sourceCommit);
 assert.equal(installed.manifestSha256, receipt.manifestSha256);
 assert.equal(installed.lockSha256, hash(resolve(consumer, 'pnpm-lock.yaml')));
+const pnpmConfig = json(resolve(consumer, 'pnpm-effective-config.json'));
+assert.equal(pnpmConfig.sourceCommit, receipt.sourceCommit);
+assert.equal(pnpmConfig.manifestSha256, receipt.manifestSha256);
+assert.equal(pnpmConfig.workspaceSha256, hash(resolve(consumer, 'pnpm-workspace.yaml')));
 requireDisk(consumer, 512 * 1024 * 1024);
 mkdirSync(output, { recursive: true });
 let archive, embeddedBundleSha256, applicationId, architectures, signingVerification;
@@ -61,10 +65,12 @@ copyFileSync(resolve(consumer, 'pnpm-lock.yaml'), resolve(output, 'pnpm-lock.yam
 copyFileSync(resolve(consumer, 'forge-consumer-receipt.json'), resolve(output, 'forge-consumer-receipt.json'));
 copyFileSync(resolve(consumer, 'installed-packages.json'), resolve(output, 'installed-packages.json'));
 copyFileSync(resolve(values.manifest), resolve(output, 'candidate.json'));
+for (const name of ['pnpm-workspace.yaml', 'pnpm-effective-config.json']) copyFileSync(resolve(consumer, name), resolve(output, name));
 writeFileSync(resolve(output, 'runtime-artifact.json'), JSON.stringify({
   schemaVersion: 1, platform: values.platform, configuration: 'Release', sourceCommit: receipt.sourceCommit,
   manifestSha256: receipt.manifestSha256, lockSha256: hash(resolve(output, 'pnpm-lock.yaml')),
   installedPackagesSha256: hash(resolve(output, 'installed-packages.json')),
+  workspaceSha256: hash(resolve(output, 'pnpm-workspace.yaml')), pnpmConfigSha256: hash(resolve(output, 'pnpm-effective-config.json')),
   archive, sha256: hash(resolve(output, archive)), bytes: statSync(resolve(output, archive)).size,
   embeddedBundleSha256, applicationId, architectures,
   applicationDirectory: values.platform === 'ios' ? basename(app) : undefined,

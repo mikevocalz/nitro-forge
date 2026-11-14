@@ -225,3 +225,13 @@ rejection boundaries; they cannot prove a native library's behavior.
 No local full dependency install or native build is required for those tests.
 Tooling checks enforce the owner's 10 GB floor before bounded work; this is
 10,000,000,000 bytes, not 10 GiB.
+
+PNPM 12 requires resolution/layout settings in `pnpm-workspace.yaml`; the
+consumer puts all eight portable archive overrides, isolated node linker and
+disabled global virtual store there. Before installation it queries the actual
+pinned CLI's effective values and rejects ignored/different configuration. The
+active YAML and observed non-auth configuration are retained and hashed through
+native runtime evidence. This prevents a transitive adapter from looking up
+an unpublished Ignition candidate in the registry; no registry/source fallback
+or authentication workaround is allowed. See [PNPM settings](https://pnpm.io/settings)
+and [the config reader](https://pnpm.io/cli/config).

@@ -28,6 +28,23 @@ function run(command, args, cwd = app) {
   requireDisk(cwd);
   execFileSync(command, args, { cwd, stdio: 'inherit', env: { ...process.env, CI: '1', EXPO_NO_TELEMETRY: '1' } });
 }
+function archiveOverrides() {
+  return Object.fromEntries(manifest.archives.map(({ name, archive }) => [name, 'file:./artifacts/' + archive]));
+}
+function inspectEffectivePnpmConfig() {
+  requireDisk(app, 64 * 1024 * 1024);
+  const options = { cwd: app, encoding: 'utf8', env: { ...process.env, CI: '1' } };
+  const version = execFileSync('corepack', ['pnpm', '--version'], options).trim().split(/\r?\n/).at(-1);
+  assert.equal(version, '12.18.0', 'Use the pinned actual consumer package manager');
+  const read = key => JSON.parse(execFileSync('corepack', ['pnpm', 'config', 'get', '--json', key], options));
+  const config = { overrides: read('overrides'), nodeLinker: read('nodeLinker'),
+    enableGlobalVirtualStore: read('enableGlobalVirtualStore'), minimumReleaseAge: read('minimumReleaseAge') };
+  assert.deepEqual(config, { overrides: archiveOverrides(), nodeLinker: 'isolated', enableGlobalVirtualStore: false, minimumReleaseAge: 0 },
+    'PNPM must actually read the portable tarball overrides and isolated store settings');
+  writeFileSync(resolve(app, 'pnpm-effective-config.json'), JSON.stringify({ sourceCommit: manifest.sourceCommit,
+    manifestSha256: identity, workspaceSha256: hash(resolve(app, 'pnpm-workspace.yaml')), pnpmVersion: version, config }, null, 2) + '\n');
+  console.log(JSON.stringify({ stage: 'effective-pnpm-config', pnpmVersion: version, ...config }));
+}
 if (values.stage === 'prepare') {
   assert.ok(!existsSync(app), 'Consumer directory exists; choose a fresh app');
   requireDisk(dirname(app), manifest.archives.reduce((n, a) => n + statSync(inside(dirname(manifestFile), a.archive)).size, 0) * 3);
@@ -71,16 +88,19 @@ if (values.stage === 'prepare') {
     name: 'forge-clean-consumer', private: true, version: '0.0.0', main: 'index.js',
     packageManager: 'pnpm@12.18.0', dependencies,
     devDependencies: { typescript: '7.0.2', '@types/react': '19.3.0' },
-    pnpm: { overrides },
   }, null, 2) + '\n');
-  writeFileSync(resolve(app, 'pnpm-workspace.yaml'), 'packages:\n  - "."\nminimumReleaseAge: 0\n');
-  writeFileSync(resolve(app, '.npmrc'), 'node-linker=isolated\nenable-global-virtual-store=false\n');
+  // PNPM 12 reads resolution/layout settings from this active YAML file.
+  // package.json.pnpm and non-auth .npmrc settings are not consumed.
+  const workspace = ['packages:', '  - "."', 'minimumReleaseAge: 0', 'nodeLinker: isolated',
+    'enableGlobalVirtualStore: false', 'overrides:',
+    ...Object.entries(overrides).map(([name, specifier]) => '  ' + JSON.stringify(name) + ': ' + JSON.stringify(specifier))].join('\n') + '\n';
+  writeFileSync(resolve(app, 'pnpm-workspace.yaml'), workspace);
   writeFileSync(receiptPath, JSON.stringify({ sourceCommit: manifest.sourceCommit, manifestSha256: identity, stages: ['prepare'], nativeRuntime: 'NOT RUN' }, null, 2));
 } else {
   assert.equal(json(receiptPath).manifestSha256, identity, 'Consumer belongs to different archive bytes');
   assert.ok(realpathSync(app) === app, 'Consumer root cannot be a symlink');
   switch (values.stage) {
-    case 'install': run('corepack', ['pnpm', 'install', '--strict-peer-dependencies', '--ignore-scripts',
+    case 'install': inspectEffectivePnpmConfig(); run('corepack', ['pnpm', 'install', '--strict-peer-dependencies', '--ignore-scripts',
       ...(existsSync(resolve(app, 'pnpm-lock.yaml')) ? ['--frozen-lockfile'] : [])]); break;
     case 'verify': {
       const appRequire = createRequire(resolve(app, 'package.json'));
@@ -144,10 +164,11 @@ if (values.stage === 'prepare') {
       assert.ok(['ios', 'android'].includes(values.platform));
       if (values.platform === 'ios') assert.equal(process.platform, 'darwin', 'iOS integration requires macOS; skipped setup is not a pass');
       {
-      const packageHash = hash(resolve(app, 'package.json')), lockHash = hash(resolve(app, 'pnpm-lock.yaml'));
+      const packageHash = hash(resolve(app, 'package.json')), lockHash = hash(resolve(app, 'pnpm-lock.yaml')), workspaceHash = hash(resolve(app, 'pnpm-workspace.yaml'));
       run('corepack', ['pnpm', 'exec', 'expo', 'prebuild', '--clean', '--platform', values.platform]);
       assert.equal(hash(resolve(app, 'package.json')), packageHash, 'Prebuild changed the pinned dependency graph; diagnose template mismatch');
       assert.equal(hash(resolve(app, 'pnpm-lock.yaml')), lockHash, 'Prebuild changed the frozen lockfile');
+      assert.equal(hash(resolve(app, 'pnpm-workspace.yaml')), workspaceHash, 'Prebuild changed active package-manager configuration');
       if (values.platform === 'ios') {
         const project = execFileSync('find', ['ios', '-maxdepth', '1', '-name', '*.xcodeproj'], { cwd: app, encoding: 'utf8' }).trim();
         assert.ok(project && !project.includes('\n'));

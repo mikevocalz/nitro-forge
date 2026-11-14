@@ -5,7 +5,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { candidate } from './candidate-manifest.mjs';
-import { assertInstalledInside, checkExports, checkSourceClosure, files, hash, inside } from './archive-files.mjs';
+import { assertInstalledInside, checkExports, checkSourceClosure, files, hash, inside, requireDisk } from './archive-files.mjs';
 import { unpackArchive, verifyRegistrySource } from './unpack-archive.mjs';
 import { fileURLToPath } from 'node:url';
 import { checkLicenseMembers, checkProducerSources, nativeClosure, RUST_ROOT_NOTICES, rustCompilerSource, rustNoticeUrl } from './license-materials.mjs';
@@ -274,7 +274,23 @@ test('prepare keeps archive specifiers and hashes portable across distinct consu
   }
   const packages = consumers.map(app => JSON.parse(readFileSync(resolve(app, 'package.json'), 'utf8')));
   assert.deepEqual(packages[0].dependencies, packages[1].dependencies);
-  assert.deepEqual(packages[0].pnpm.overrides, packages[1].pnpm.overrides);
+  assert.equal(packages[0].pnpm, undefined, 'PNPM 12 ignores package.json.pnpm; do not put effective settings there');
+  assert.equal(packages[1].pnpm, undefined);
+  const workspaces = consumers.map(app => readFileSync(resolve(app, 'pnpm-workspace.yaml'), 'utf8'));
+  assert.equal(workspaces[0], workspaces[1], 'Active settings must be portable across runner roots');
+  const expected = Object.fromEntries(value.archives.map(archive => [archive.name, 'file:./artifacts/' + archive.archive]));
+  // Read the effective settings through the actual pinned PNPM CLI, without
+  // installing fake packages or calling any engine/native API.
+  for (const app of consumers) {
+    requireDisk(app, 64 * 1024 * 1024);
+    const options = { cwd: app, encoding: 'utf8' };
+    assert.equal(execFileSync('corepack', ['pnpm', '--version'], options).trim().split(/\r?\n/).at(-1), '12.18.0');
+    const read = key => JSON.parse(execFileSync('corepack', ['pnpm', 'config', 'get', '--json', key], options));
+    assert.deepEqual(read('overrides'), expected);
+    assert.equal(read('nodeLinker'), 'isolated');
+    assert.equal(read('enableGlobalVirtualStore'), false);
+    assert.equal(read('minimumReleaseAge'), 0);
+  }
   for (const archive of value.archives) {
     assert.equal(packages[0].dependencies[archive.name], `file:./artifacts/${archive.archive}`);
     for (const app of consumers) assert.equal(hash(resolve(app, 'artifacts', archive.archive)), archive.sha256);
