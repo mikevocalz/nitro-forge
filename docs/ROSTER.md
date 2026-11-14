@@ -55,9 +55,12 @@ output actually exists; anything not executed is marked NOT RUN.
 ## Transport status
 
 This table and `compatibility.v1.json` state the same results; the JSON names
-the receipt and commit for each row. Regenerated 2026-11-11 from receipts read
-at `0ad4ed2`. A result applies only to the commit and target named. No row is
-a release candidate receipt (gate F7 in `docs/release/v1-readiness.json`).
+the receipt and commit for each row. Selectively refreshed 2026-11-13 at
+`b000c8a`: web now includes the source-bound PR #81/#82 browser receipts below.
+Other rows retain their historical identities. A result applies only to its named
+commit and target; none completes the final-candidate matrix (gate F7).
+The current partial PR #85 CI snapshot is separate in
+`docs/release/evidence/2026-11-13-b000c8a/README.md`.
 Linux CI receipts are in `docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json`;
 PR #75 head `3dd98cc` has the same tree as `0ad4ed2`.
 
@@ -74,7 +77,7 @@ PR #75 head `3dd98cc` has the same tree as `0ad4ed2`.
 | Nitro HybridObject codegen (nitrogen) | not tracked | ✅ `pnpm --filter @nitro-forge/ignition codegen` followed by `git diff --exit-code` on the generated files passed in Ignition v1 shared host CI at `3dd98cc` |
 | iOS build + run (examples/native-cadence) | `react-native-ios`: partial | Build ✅ CI at `3dd98cc` (xcodebuild for iOS Simulator, BUILD SUCCEEDED, not launched; forge-audio-lab also compiled). Run ✅ on the iOS 27.1 simulator at `ad2696e` (W32, all 12 engine kinds incl. scene) and `defae63` (P01). Run at `0ad4ed2` NOT RUN; physical device NOT RUN |
 | Android build + run (examples/native-cadence, arm64-v8a APK) | `react-native-android`: partial | Build ✅ CI at `3dd98cc` (assembleDebug, BUILD SUCCESSFUL, not launched; forge-audio-lab also assembled). Run ✅ on the API 36 emulator at `313973f` (W31, all 12 engine kinds incl. scene) and `defae63` (P01). Run at `0ad4ed2` NOT RUN; physical device NOT RUN |
-| Web (Expo web, studio-preview) | `web`: build-passed | Metro web bundle exported in CI at `3dd98cc`. Any browser run NOT RUN |
+| Web (Expo web, studio-preview) | `web`: partial | Historical Metro export at `3dd98cc`; unchanged CI bundle launcher/Prism shell in Chrome 157 at tested merge `370e10b`, with backend unavailable; Tally pivot and Cadence real-engine interactions at tested merge `0c8ba55`. Source/artifact/browser receipts: `docs/release/evidence/2026-11-13-b000c8a/`. Full all-studio/final-candidate web acceptance NOT RUN |
 | WASM build | `wasm`: not-verified | ⚠️ the W33 receipts (`docs/completion/evidence/W33-wasm-*.txt`, added in `69dd2ee`) record no source revision, so they are not bound to a commit. They report all 12 engine crates compiling for `wasm32-wasip1` and passing the `nf-wasm-probe` round trip under Node WASI, and folio-engine failing on `getrandom` for `wasm32-unknown-unknown`. `nf-raw`/`raw-decode` and `folio-render` are not wasm-feasible. Browser/wasm-bindgen host, wasm-opt and any run at `0ad4ed2`: NOT RUN |
 | macOS desktop, Windows desktop | `desktop-macos`, `desktop-windows`: NOT RUN | ❌ no desktop target exists (gate F5) |
 | apps/example on simulator/device | not tracked | ❌ NOT RUN (examples/native-cadence ran instead) |

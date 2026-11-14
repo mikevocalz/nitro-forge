@@ -1,0 +1,143 @@
+{
+  "reviewScope": "Independent read-only selection from actual completed GitHub job logs; excerpts, not full original logs",
+  "head": "f6b6e17e0600fcb1f8e14023a1692026738daaa7",
+  "testedMerge": "2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+  "jobs": [
+    {
+      "jobId": 132265903875,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267585/job/132265903875",
+      "excerpts": [
+        "2026-11-14T00:45:45.7085421Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:45:46.5246026Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:45:46.6637269Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:45:46.6698252Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:46:03.7601259Z All four recovered adapter contracts match released NYC-Tron 1.0.0-rc.2",
+        "2026-11-14T00:46:04.6605320Z NYC-Tron v1.0.0-rc.2: 7 packages pinned, used and verified",
+        "2026-11-14T00:46:06.7460601Z       Tests  8 passed (8)",
+        "2026-11-14T00:46:37.7052294Z Studio shell rendered in Chromium (preview)",
+        "2026-11-14T00:46:39.8692433Z Studio shell rendered in Chromium (dev)",
+        "2026-11-14T00:46:39.9960761Z Retained 8 rendered production files at 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:47:25.1248648Z       Tests  39 passed (39)",
+        "2026-11-14T00:47:26.3824965Z       Tests  2 passed (2)",
+        "2026-11-14T00:47:29.2103540Z SHA256 digest of uploaded artifact zip is 6158e3127594e4d62be7f4ad37d4ea140480b27e5ec6f4a7494d0a96d09d3ff2"
+      ]
+    },
+    {
+      "jobId": 132265904005,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267585/job/132265904005",
+      "excerpts": [
+        "2026-11-14T00:45:48.7484495Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:45:49.2096831Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:45:49.3504931Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:45:49.3566014Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:46:24.9176267Z Exported: /tmp/export-ios",
+        "2026-11-14T00:46:40.4346602Z Exported: /tmp/export-android",
+        "2026-11-14T00:46:52.7254007Z Exported: /tmp/export-web"
+      ]
+    },
+    {
+      "jobId": 132265903396,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267383/job/132265903396",
+      "excerpts": [
+        "2026-11-14T00:45:07.2365388Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:45:07.8896293Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:45:08.0674220Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:45:08.0774168Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:45:12.9187117Z NYC-Tron pin v1.0.0-rc.2: 26 manifest references match; release assets re-hashed",
+        "2026-11-14T00:45:31.3365000Z Exported: /home/runner/work/_temp/export-android",
+        "2026-11-14T00:45:31.5529519Z react: 1 copy",
+        "2026-11-14T00:45:31.5530633Z react-native: 1 copy",
+        "2026-11-14T00:45:31.5552922Z react-native-nitro-modules: 1 copy",
+        "2026-11-14T00:45:31.5553583Z zustand: 1 copy",
+        "2026-11-14T00:45:31.5553996Z @expo/ui: 1 copy",
+        "2026-11-14T00:45:31.5554295Z @nyc-tron/ui: 1 copy",
+        "2026-11-14T00:45:31.5554621Z @nyc-tron/native-controls: 1 copy",
+        "2026-11-14T00:45:44.2179434Z Exported: /home/runner/work/_temp/export-ios",
+        "2026-11-14T00:45:44.4034573Z react: 1 copy",
+        "2026-11-14T00:45:44.4035477Z react-native: 1 copy",
+        "2026-11-14T00:45:44.4036042Z react-native-nitro-modules: 1 copy",
+        "2026-11-14T00:45:44.4036543Z zustand: 1 copy",
+        "2026-11-14T00:45:44.4037118Z @expo/ui: 1 copy",
+        "2026-11-14T00:45:44.4037422Z @nyc-tron/ui: 1 copy",
+        "2026-11-14T00:45:44.4037805Z @nyc-tron/native-controls: 1 copy"
+      ]
+    },
+    {
+      "jobId": 132265903162,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267286/job/132265903162",
+      "excerpts": [
+        "2026-11-14T00:45:07.7473352Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:45:08.7321493Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:45:08.8721973Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:45:08.8782590Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:45:17.7086601Z NYC-Tron pin v1.0.0-rc.2: 26 manifest references match",
+        "2026-11-14T00:46:06.1612547Z       Tests  47 passed (47)"
+      ]
+    },
+    {
+      "jobId": 132265903759,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267610/job/132265903759",
+      "excerpts": [
+        "2026-11-14T00:45:41.3768184Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:45:42.2505528Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:45:42.3738336Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:45:42.3813390Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:46:45.4446240Z       Tests  39 passed (39)"
+      ]
+    },
+    {
+      "jobId": 132265904315,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267620/job/132265904315",
+      "excerpts": [
+        "2026-11-14T00:45:57.9064993Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:45:58.5606169Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:45:58.6917604Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:45:58.6985849Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:46:11.3389835Z NYC-Tron pin v1.0.0-rc.2: 26 manifest references match; release assets re-hashed",
+        "2026-11-14T00:46:12.4765156Z       Tests  22 passed (22)",
+        "2026-11-14T00:47:08.2110052Z       Tests  9 passed (9)"
+      ]
+    },
+    {
+      "jobId": 132265903336,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267330/job/132265903336",
+      "excerpts": [
+        "2026-11-14T00:45:12.3894224Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:45:13.4102191Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:45:13.5318925Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:45:13.5385693Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:48:29.4082858Z       Tests  39 passed (39)"
+      ]
+    },
+    {
+      "jobId": 132265903451,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267388/job/132265903451",
+      "excerpts": [
+        "2026-11-14T00:46:14.3709887Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:46:14.9455189Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:46:15.1183353Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:46:15.1277118Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:46:29.7296918Z NYC-Tron pin v1.0.0-rc.2: 26 manifest references match; release assets re-hashed",
+        "2026-11-14T00:46:31.5699663Z       Tests  14 passed (14)",
+        "2026-11-14T00:46:32.2517307Z       Tests  15 passed (15)",
+        "2026-11-14T00:46:32.8985300Z       Tests  8 passed (8)",
+        "2026-11-14T00:48:52.8144847Z       Tests  47 passed (47)",
+        "2026-11-14T00:48:54.2208754Z       Tests  64 passed (64)",
+        "2026-11-14T00:48:55.5167302Z       Tests  39 passed | 5 skipped (44)"
+      ]
+    },
+    {
+      "jobId": 132265903583,
+      "url": "https://github.com/mikevocalz/nitro-forge/actions/runs/43536267322/job/132265903583",
+      "excerpts": [
+        "2026-11-14T00:45:07.3579552Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2463139896b61e8bfe49a2ad6dd2da50fb02043a:refs/remotes/pull/85/merge",
+        "2026-11-14T00:45:08.0103566Z  * [new ref]         2463139896b61e8bfe49a2ad6dd2da50fb02043a -> pull/85/merge",
+        "2026-11-14T00:45:08.1918893Z HEAD is now at 2463139 Merge f6b6e17e0600fcb1f8e14023a1692026738daaa7 into fe6cc5a3b3e9fbba72be7bca3e6aa9453b8c256e",
+        "2026-11-14T00:45:08.1930154Z 2463139896b61e8bfe49a2ad6dd2da50fb02043a",
+        "2026-11-14T00:45:25.3560661Z NYC-Tron pin v1.0.0-rc.2: 26 manifest references match; release assets re-hashed",
+        "2026-11-14T00:45:26.4890214Z       Tests  20 passed (20)",
+        "2026-11-14T00:45:47.3397585Z Exported: dist-web"
+      ]
+    }
+  ]
+}
