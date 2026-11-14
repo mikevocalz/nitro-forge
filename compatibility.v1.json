@@ -3,14 +3,14 @@
   "product": "nitro-forge",
   "status": "not-released",
   "version": "0.0.0",
-  "generatedAt": "2026-11-11",
+  "generatedAt": "2026-11-13",
   "baseCommit": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
   "candidateCommit": null,
-  "generatedFrom": "Evidence receipts in docs/completion/evidence and docs/release/evidence, read at 0ad4ed2. Replaces the 2026-11-02 ROSTER review. docs/ROSTER.md (Transport status) states the same results.",
+  "generatedFrom": "Selective F0 status refresh read at b000c8ab9f8201bcba3c67163f6c8f700acf6453. Historical engine, C ABI and native receipt identities below remain unchanged; web adds source-bound PR #81/#82 browser receipts. Current partial PR #85 CI is recorded separately in docs/release/evidence/2026-11-13-b000c8a/README.md. docs/ROSTER.md (Transport status) states the same results.",
   "rules": [
     "A result applies only to the commit, host and target named in its receipt. It does not transfer to another commit, platform or lane.",
     "passed: a receipt shows the target running the named checks. build-passed: a receipt shows a compile or bundle, nothing launched. not-verified: a receipt exists but cannot be bound to a source commit, or does not show the claimed result. NOT RUN: no receipt.",
-    "No entry certifies a release. Gate F7 needs fresh receipts at a candidate commit; no candidate commit exists yet."
+    "No entry certifies a release. Gate F7 needs complete fresh receipts at one final candidate. Active PR #85 partial CI does not transfer historical browser/native results to that candidate."
   ],
   "statusValues": ["passed", "build-passed", "partial", "not-verified", "NOT RUN"],
   "distribution": {
@@ -171,8 +171,8 @@
     },
     "web": {
       "label": "Web (Expo web and studio-preview in a browser)",
-      "status": "build-passed",
-      "scope": "Metro web bundle export only",
+      "status": "partial",
+      "scope": "Historical Metro export plus source-bound studio-preview launcher/Prism shell and Tally/Cadence real-engine browser interactions; not all studios/platform acceptance",
       "receipts": [
         {
           "path": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
@@ -180,11 +180,26 @@
           "capturedAt": "2026-11-11",
           "runId": 43113143814,
           "result": "Studio workspace and dock contract / expo-native-bundles: iOS, Android and web bundles exported through Expo's Metro. Nothing ran in a browser."
+        },
+        {
+          "path": "docs/release/evidence/2026-11-13-b000c8a/forge-pr82-2026-11-13-166f22f/RECEIPT.md",
+          "commit": "370e10b6b2c95ddeeeb2ae0ad89815e5305c884f",
+          "capturedAt": "2026-11-13",
+          "runId": 43514127599,
+          "result": "Production launcher and Prism shell rendered in Chrome 157 from the unchanged CI artifact. Static server had no engine bridge; visible backend error retained. This is shell rendering only."
+        },
+        {
+          "path": "docs/release/evidence/2026-11-13-b000c8a/forge-pr81-2026-11-13-c0b000a/RECEIPT.md",
+          "commit": "0c8ba55452fb7dd952d6c933dd56071862f350c3",
+          "capturedAt": "2026-11-13",
+          "runId": 43518003107,
+          "result": "Unchanged production artifact plus source-bound nf-cli: Tally All-filter pivot refresh/undo/redo and Cadence sensitivity/detection/marker rename/tick preservation/undo/redo observed in Chrome 157. Review scope and omitted checks are in the original receipt."
         }
       ],
       "notRun": [
-        "Any browser runtime of a Forge app or studio",
-        "studio-preview in a browser (w16-studio-preview-integration.log exercises the dev-server engine bridge from Node, has no source revision, and is not a browser run)"
+        "Complete all-studio browser acceptance, accessibility/design sequence and native audio playback in these browser receipts",
+        "Full final-candidate web/runtime matrix; PR #85 CI Chromium render checks are separate from these manual interactions",
+        "Physical iOS/Android/iPad/Quest/PICO or desktop execution in these browser receipts"
       ]
     },
     "wasm": {

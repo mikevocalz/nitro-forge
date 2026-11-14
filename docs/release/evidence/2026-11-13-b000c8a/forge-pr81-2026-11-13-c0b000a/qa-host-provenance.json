@@ -1,0 +1,35 @@
+{
+  "sourceRevision": "0c8ba55452fb7dd952d6c933dd56071862f350c3",
+  "binarySha256": "91aebc9b3168866fbb65e3e6701fa93163776b7e2a55a14f91079761df72a2dc",
+  "artifactSourceRevision": "0c8ba55452fb7dd952d6c933dd56071862f350c3",
+  "artifactPullRequestHeadRevision": "c0b000aef9b91bd5d5cae6317a20fbd87caffe8f",
+  "artifactRunUrl": "https://github.com/mikevocalz/nitro-forge/actions/runs/43518003107",
+  "artifactFiles": 8,
+  "apiOnly": false,
+  "transforms": [
+    {
+      "source": "packages/ignition/src/host-cli.ts",
+      "originalSha256": "8edb0a5fe43a5353e8d157beec7938f616ee3412db7f5971f61a480fcbdaf1cd",
+      "generatedSha256": "3142fc11219102937e40beaf4a5387dd9e00d248b9c8863ef37075c195e3589c",
+      "changes": "Node type erasure; relative runtime import extensions only"
+    },
+    {
+      "source": "packages/ignition/src/types.ts",
+      "originalSha256": "f5289e8af28e4e9b1134e09ecdc1257f98ecc9544acf3b40e79440302625adb6",
+      "generatedSha256": "56cf6aea1023a8bb6e05e471b0e082edb772f8d72efb366942d571479b6828b6",
+      "changes": "Node type erasure; relative runtime import extensions only"
+    },
+    {
+      "source": "packages/ignition/src/base64.ts",
+      "originalSha256": "0880081ce412d83ee9405d24d1963f49a988edd9004a2b974442c888aa025d45",
+      "generatedSha256": "3ad24fee47d2037dbb2beaefe91357860b213d66a75da9f3baab42018550aa39",
+      "changes": "Node type erasure; relative runtime import extensions only"
+    },
+    {
+      "source": "apps/studio-preview/vite.config.ts#engineBridge",
+      "originalSha256": "a11d88b0ada468ff4410fdd46c2352c9a3e45199fc99c35a31dfa90d19f7dc16",
+      "generatedSha256": "379910a4938b243696e8924706bc87ef2b90bff2eaf88876a24ac1d42ec3238c",
+      "changes": "Extract original plugin; Node type erasure; explicit binary-path argument replacing fixed binary URL"
+    }
+  ]
+}

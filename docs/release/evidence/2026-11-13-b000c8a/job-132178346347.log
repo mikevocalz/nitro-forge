@@ -1,0 +1,208 @@
+﻿2026-11-13T21:23:29.6794528Z Current runner version: '2.338.2'
+2026-11-13T21:23:29.6828917Z ##[group]Runner Image Provisioner
+2026-11-13T21:23:29.6830221Z Hosted Compute Agent
+2026-11-13T21:23:29.6831039Z Version: 20261103.629
+2026-11-13T21:23:29.6831976Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-13T21:23:29.6833358Z Build Date: 2026-11-03T17:26:59Z
+2026-11-13T21:23:29.6834408Z Worker ID: {4bdbda31-ad27-4251-b7c8-db500517d84a}
+2026-11-13T21:23:29.6835406Z Region: eastus2
+2026-11-13T21:23:29.6836345Z Cloud: Azure
+2026-11-13T21:23:29.6837107Z ##[endgroup]
+2026-11-13T21:23:29.6838730Z ##[group]Operating System
+2026-11-13T21:23:29.6839421Z Ubuntu
+2026-11-13T21:23:29.6840056Z 26.04.1
+2026-11-13T21:23:29.6840679Z LTS
+2026-11-13T21:23:29.6841187Z ##[endgroup]
+2026-11-13T21:23:29.6841881Z ##[group]Runner Image
+2026-11-13T21:23:29.6842883Z Image: ubuntu-26.04
+2026-11-13T21:23:29.6843504Z Version: 20261111.196.1
+2026-11-13T21:23:29.6844932Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-13T21:23:29.6846580Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-13T21:23:29.6847709Z ##[endgroup]
+2026-11-13T21:23:29.6848886Z ##[group]GITHUB_TOKEN Permissions
+2026-11-13T21:23:29.6851376Z Contents: read
+2026-11-13T21:23:29.6851982Z Metadata: read
+2026-11-13T21:23:29.6853029Z ##[endgroup]
+2026-11-13T21:23:29.6855747Z Secret source: Actions
+2026-11-13T21:23:29.6856777Z Cache mode: write
+2026-11-13T21:23:29.6857676Z Prepare workflow directory
+2026-11-13T21:23:29.7354969Z Prepare all required actions
+2026-11-13T21:23:29.7432779Z Getting action download info
+2026-11-13T21:23:29.9211483Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-13T21:23:30.0381181Z Download action repository 'taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39' (SHA:cfdb7ed4ccc7c7dce37759eae89dc5674b469b39)
+2026-11-13T21:23:30.3612447Z Complete job name: cargo-audit
+2026-11-13T21:23:30.4407176Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-13T21:23:30.4408275Z with:
+2026-11-13T21:23:30.4408828Z   repository: mikevocalz/nitro-forge
+2026-11-13T21:23:30.4414076Z   token: ***
+2026-11-13T21:23:30.4414819Z   ssh-strict: true
+2026-11-13T21:23:30.4415394Z   ssh-user: git
+2026-11-13T21:23:30.4416043Z   persist-credentials: true
+2026-11-13T21:23:30.4416655Z   clean: true
+2026-11-13T21:23:30.4417216Z   sparse-checkout-cone-mode: true
+2026-11-13T21:23:30.4417838Z   fetch-depth: 1
+2026-11-13T21:23:30.4418355Z   fetch-tags: false
+2026-11-13T21:23:30.4418995Z   show-progress: true
+2026-11-13T21:23:30.4419542Z   lfs: false
+2026-11-13T21:23:30.4420061Z   submodules: false
+2026-11-13T21:23:30.4420614Z   set-safe-directory: true
+2026-11-13T21:23:30.4421203Z   allow-unsafe-pr-checkout: false
+2026-11-13T21:23:30.4422340Z ##[endgroup]
+2026-11-13T21:23:30.7106846Z Syncing repository: mikevocalz/nitro-forge
+2026-11-13T21:23:30.7109950Z ##[group]Getting Git version info
+2026-11-13T21:23:30.7111111Z Working directory is '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-13T21:23:30.7112697Z [command]/usr/bin/git version
+2026-11-13T21:23:30.7124405Z git version 2.56.1
+2026-11-13T21:23:30.7148143Z ##[endgroup]
+2026-11-13T21:23:30.7165045Z Temporarily overriding HOME='/home/runner/work/_temp/bb327cd4-b517-4555-bb0b-d246def0f481' before making global git config changes
+2026-11-13T21:23:30.7166513Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-13T21:23:30.7171217Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-13T21:23:30.7258331Z Deleting the contents of '/home/runner/work/nitro-forge/nitro-forge'
+2026-11-13T21:23:30.7264434Z ##[group]Initializing the repository
+2026-11-13T21:23:30.7271718Z [command]/usr/bin/git init /home/runner/work/nitro-forge/nitro-forge
+2026-11-13T21:23:30.7410686Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-13T21:23:30.7417275Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-13T21:23:30.7449233Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-13T21:23:30.7451011Z hint: call:
+2026-11-13T21:23:30.7452926Z hint:
+2026-11-13T21:23:30.7454324Z hint: 	git config --global init.defaultBranch <name>
+2026-11-13T21:23:30.7456298Z hint:
+2026-11-13T21:23:30.7458307Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-13T21:23:30.7460850Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-13T21:23:30.7462718Z hint:
+2026-11-13T21:23:30.7464455Z hint: 	git branch -m <name>
+2026-11-13T21:23:30.7465585Z hint:
+2026-11-13T21:23:30.7467596Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-13T21:23:30.7473856Z Initialized empty Git repository in /home/runner/work/nitro-forge/nitro-forge/.git/
+2026-11-13T21:23:30.7476027Z [command]/usr/bin/git remote add origin https://github.com/mikevocalz/nitro-forge
+2026-11-13T21:23:30.7532743Z ##[endgroup]
+2026-11-13T21:23:30.7534188Z ##[group]Disabling automatic garbage collection
+2026-11-13T21:23:30.7536681Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-13T21:23:30.7574798Z ##[endgroup]
+2026-11-13T21:23:30.7576102Z ##[group]Setting up auth
+2026-11-13T21:23:30.7583379Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-13T21:23:30.7620315Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-13T21:23:30.8086382Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-13T21:23:30.8130671Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-13T21:23:30.8360124Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-13T21:23:30.8389746Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-13T21:23:30.8613983Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-13T21:23:30.8658943Z ##[endgroup]
+2026-11-13T21:23:30.8660195Z ##[group]Fetching the repository
+2026-11-13T21:23:30.8667652Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +9f64228e589a42e86f5b6a2909dba8cab7da8cd2:refs/remotes/pull/83/merge
+2026-11-13T21:23:31.9485247Z From https://github.com/mikevocalz/nitro-forge
+2026-11-13T21:23:31.9487360Z  * [new ref]         9f64228e589a42e86f5b6a2909dba8cab7da8cd2 -> pull/83/merge
+2026-11-13T21:23:31.9492249Z ##[endgroup]
+2026-11-13T21:23:31.9494344Z ##[group]Determining the checkout info
+2026-11-13T21:23:31.9496639Z ##[endgroup]
+2026-11-13T21:23:31.9498966Z [command]/usr/bin/git sparse-checkout disable
+2026-11-13T21:23:31.9554792Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-13T21:23:31.9585403Z ##[group]Checking out the ref
+2026-11-13T21:23:31.9589200Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/83/merge
+2026-11-13T21:23:32.1054878Z Note: switching to 'refs/remotes/pull/83/merge'.
+2026-11-13T21:23:32.1056552Z 
+2026-11-13T21:23:32.1057699Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-13T21:23:32.1060801Z changes and commit them, and you can discard any commits you make in this
+2026-11-13T21:23:32.1063524Z state without impacting any branches by switching back to a branch.
+2026-11-13T21:23:32.1064764Z 
+2026-11-13T21:23:32.1065736Z If you want to create a new branch to retain commits you create, you may
+2026-11-13T21:23:32.1068012Z do so (now or later) by using -c with the switch command. Example:
+2026-11-13T21:23:32.1069416Z 
+2026-11-13T21:23:32.1069886Z   git switch -c <new-branch-name>
+2026-11-13T21:23:32.1070844Z 
+2026-11-13T21:23:32.1071405Z Or undo this operation with:
+2026-11-13T21:23:32.1072369Z 
+2026-11-13T21:23:32.1072820Z   git switch -
+2026-11-13T21:23:32.1073371Z 
+2026-11-13T21:23:32.1074382Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-13T21:23:32.1075759Z 
+2026-11-13T21:23:32.1077244Z HEAD is now at 9f64228 Merge d380a19e3bd4edc632817e1a91bf90219959b10e into 93783680d7bf9a757170dc1cbec93c2c476c8e34
+2026-11-13T21:23:32.1082524Z ##[endgroup]
+2026-11-13T21:23:32.1116758Z [command]/usr/bin/git log -1 --format=%H
+2026-11-13T21:23:32.1140053Z 9f64228e589a42e86f5b6a2909dba8cab7da8cd2
+2026-11-13T21:23:32.1640217Z ##[group]Run taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+2026-11-13T21:23:32.1642414Z with:
+2026-11-13T21:23:32.1643541Z   tool: cargo-audit@0.23.0
+2026-11-13T21:23:32.1644838Z   checksum: true
+2026-11-13T21:23:32.1646078Z   fallback: cargo-binstall
+2026-11-13T21:23:32.1647795Z ##[endgroup]
+2026-11-13T21:23:32.1759548Z ##[start-action display=Run bail() {;id=__taiki-e_install-action.__run]
+2026-11-13T21:23:32.1846957Z ##[group]Run bail() {
+2026-11-13T21:23:32.1848309Z [36;1mbail() {[0m
+2026-11-13T21:23:32.1849680Z [36;1m  printf '::error::install-action: %s\n' "$*"[0m
+2026-11-13T21:23:32.1851165Z [36;1m  exit 1[0m
+2026-11-13T21:23:32.1852421Z [36;1m}[0m
+2026-11-13T21:23:32.1854156Z [36;1m# If /bin/sh is dash, environment variable containing % is not imported, but is fine[0m
+2026-11-13T21:23:32.1856616Z [36;1m# because it also means that it will not be exposed to subprocess.[0m
+2026-11-13T21:23:32.1858750Z [36;1mif /usr/bin/env | grep -Eq '^BASH_FUNC_'; then[0m
+2026-11-13T21:23:32.1861121Z [36;1m  bail 'bash function injection via BASH_FUNC_ environment variable is not allowed for security reasons'[0m
+2026-11-13T21:23:32.1863511Z [36;1mfi[0m
+2026-11-13T21:23:32.1864646Z [36;1mif ! command -v bash >/dev/null; then[0m
+2026-11-13T21:23:32.1866230Z [36;1m  if grep -Eq '^ID=alpine' /etc/os-release; then[0m
+2026-11-13T21:23:32.1868250Z [36;1m    printf '::group::Install packages required for install-action (bash)\n'[0m
+2026-11-13T21:23:32.1870186Z [36;1m    # NB: sync with apk_install in main.sh[0m
+2026-11-13T21:23:32.1872453Z [36;1m    if command -v sudo >/dev/null; then[0m
+2026-11-13T21:23:32.1873972Z [36;1m      sudo apk --no-cache add bash[0m
+2026-11-13T21:23:32.1875450Z [36;1m    elif command -v doas >/dev/null; then[0m
+2026-11-13T21:23:32.1877032Z [36;1m      doas apk --no-cache add bash[0m
+2026-11-13T21:23:32.1878354Z [36;1m    else[0m
+2026-11-13T21:23:32.1879450Z [36;1m      apk --no-cache add bash[0m
+2026-11-13T21:23:32.1880741Z [36;1m    fi[0m
+2026-11-13T21:23:32.1881854Z [36;1m    printf '::endgroup::\n'[0m
+2026-11-13T21:23:32.1883240Z [36;1m  else[0m
+2026-11-13T21:23:32.1884364Z [36;1m    bail 'this action requires bash'[0m
+2026-11-13T21:23:32.1885721Z [36;1m  fi[0m
+2026-11-13T21:23:32.1886773Z [36;1mfi[0m
+2026-11-13T21:23:32.1888161Z [36;1mbash --noprofile --norc "${GITHUB_ACTION_PATH:?}/main.sh"[0m
+2026-11-13T21:23:32.1894768Z shell: /usr/bin/env -u ENV -u BASH_ENV -u CDPATH -u SHELLOPTS -u BASHOPTS /bin/sh -eu {0}
+2026-11-13T21:23:32.1896643Z env:
+2026-11-13T21:23:32.1897702Z   INPUT_TOOL: cargo-audit@0.23.0
+2026-11-13T21:23:32.1898974Z   INPUT_CHECKSUM: true
+2026-11-13T21:23:32.1900138Z   INPUT_FALLBACK: cargo-binstall
+2026-11-13T21:23:32.1911426Z   DEFAULT_GITHUB_TOKEN: ***
+2026-11-13T21:23:32.1913375Z   ACTION_USER_AGENT: taiki-e/install-action (cfdb7ed4ccc7c7dce37759eae89dc5674b469b39)
+2026-11-13T21:23:32.1915326Z   RUNNER_OS: Linux
+2026-11-13T21:23:32.1916402Z   RUNNER_ARCH: X64
+2026-11-13T21:23:32.1917471Z ##[endgroup]
+2026-11-13T21:23:32.2118012Z info: host platform: x86_64_linux
+2026-11-13T21:23:32.2210158Z ##[warning]install-action: cargo-audit is supported but version 0.23.0 for 'x86_64_linux' is not supported (updating install-action might resolve this); fallback to cargo-binstall
+2026-11-13T21:23:32.2215866Z info: install-action does not support cargo-audit@0.23.0 (updating install-action might resolve this); fallback to cargo-binstall
+2026-11-13T21:23:32.2229849Z info: installing cargo-binstall@latest (1.26.2)
+2026-11-13T21:23:32.2551111Z info: downloading https://github.com/cargo-bins/cargo-binstall/releases/download/v1.26.2/cargo-binstall-x86_64-unknown-linux-musl.tgz
+2026-11-13T21:23:32.4031687Z info: verifying sha256 checksum for cargo-binstall-x86_64-unknown-linux-musl.tgz
+2026-11-13T21:23:32.5198373Z info: cargo-binstall installed at /home/runner/.cargo/bin/cargo-binstall
+2026-11-13T21:23:32.5200264Z + cargo-binstall binstall -V
+2026-11-13T21:23:32.5207631Z 1.26.2
+2026-11-13T21:23:32.5274756Z cargo-binstall:  INFO resolve: Resolving package: 'cargo-audit@=0.23.0'
+2026-11-13T21:23:35.5906945Z cargo-binstall:  WARN The package cargo-audit v0.23.0 (x86_64-unknown-linux-gnu) has been downloaded from github.com
+2026-11-13T21:23:35.5908467Z cargo-binstall:  INFO This will install the following binaries:
+2026-11-13T21:23:35.5909513Z cargo-binstall:  INFO   - cargo-audit => /home/runner/.cargo/bin/cargo-audit
+2026-11-13T21:23:35.5910208Z cargo-binstall:  INFO Installing binaries...
+2026-11-13T21:23:35.5920030Z cargo-binstall:  INFO Done in 3.069897307s
+2026-11-13T21:23:35.5948774Z ##[end-action id=__taiki-e_install-action.__run;outcome=success;conclusion=success;duration_ms=3418]
+2026-11-13T21:23:35.5963128Z ##[start-action display=Run Set-StrictMode -Version Latest;id=__taiki-e_install-action.__run_2]
+2026-11-13T21:23:35.5971703Z ##[end-action id=__taiki-e_install-action.__run_2;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-11-13T21:23:35.6050263Z ##[group]Run cargo audit --deny warnings
+2026-11-13T21:23:35.6050786Z [36;1mcargo audit --deny warnings[0m
+2026-11-13T21:23:35.6089574Z shell: /usr/bin/bash -e {0}
+2026-11-13T21:23:35.6090045Z ##[endgroup]
+2026-11-13T21:23:36.7486934Z     Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+2026-11-13T21:23:38.4148913Z       Loaded 1509 security advisories (from /home/runner/.cargo/advisory-db)
+2026-11-13T21:23:38.4149905Z     Updating crates.io index
+2026-11-13T21:23:38.4529108Z     Scanning Cargo.lock for vulnerabilities (185 crate dependencies)
+2026-11-13T21:23:38.8976298Z Post job cleanup.
+2026-11-13T21:23:38.9835797Z [command]/usr/bin/git version
+2026-11-13T21:23:38.9876365Z git version 2.56.1
+2026-11-13T21:23:38.9910837Z Temporarily overriding HOME='/home/runner/work/_temp/2ff60848-ab9f-4f03-8d38-aa6fd4aadf42' before making global git config changes
+2026-11-13T21:23:38.9912497Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-13T21:23:38.9915120Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nitro-forge/nitro-forge
+2026-11-13T21:23:38.9956211Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-13T21:23:38.9994217Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-13T21:23:39.0275663Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-13T21:23:39.0299511Z http.https://github.com/.extraheader
+2026-11-13T21:23:39.0310925Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-13T21:23:39.0346930Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-13T21:23:39.0611883Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-13T21:23:39.0644287Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-13T21:23:39.1027837Z Cleaning up orphan processes
+2026-11-13T21:23:39.1348947Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

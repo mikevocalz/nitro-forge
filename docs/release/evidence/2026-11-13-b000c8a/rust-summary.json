@@ -1,0 +1,16 @@
+[
+  {
+    "job": 132265903612,
+    "resultLines": 50,
+    "passed": 1452,
+    "failed": 0,
+    "ignored": 2
+  },
+  {
+    "job": 132204809529,
+    "resultLines": 50,
+    "passed": 1452,
+    "failed": 0,
+    "ignored": 2
+  }
+]

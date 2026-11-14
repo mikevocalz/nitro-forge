@@ -3,7 +3,7 @@
   "product": "nitro-forge",
   "gateSet": "v1",
   "updatedAt": "2026-11-13",
-  "baseCommit": "0ad4ed22f7523d4dcf16574a57ea62b067d264da",
+  "baseCommit": "b000c8ab9f8201bcba3c67163f6c8f700acf6453",
   "source": "Track F gates F1 to F9 of the owner's NYC-Tron UI 1.0.0 and Nitro Forge v1 program (revision 3, 2026-11-11). Acceptance text is copied from it unchanged. References to §2.5, §3.3, §4 and §5 point at that program; F1 carries its §5 Forge rows below, and F8.1 moves §2.5 into design/DIRECTION.md.",
   "evidenceRule": "Evidence rule for every gate: implement, capture evidence with date and commit in its path, have the reviewer inspect the actual result, and only then change status. A file existing does not prove the claim inside it.",
   "statusValues": ["not-started", "in-progress", "blocked", "not-run", "passed"],
@@ -35,9 +35,9 @@
           { "dependency": "Rust crates", "pinned": "`Cargo.lock`", "latest": "—", "action": "`cargo update`, `cargo audit`, full `cargo test --locked --workspace`" }
         ]
       },
-      "status": "not-started",
-      "statusReason": "No dependency bump has landed on master at 0ad4ed2: package.json still pins turbo 2.11.10 and pnpm 12.16.1. The 22 workflows have not run on an updated graph.",
-      "evidence": null,
+      "status": "in-progress",
+      "statusReason": "Dependency baseline PR #78 merged as 17abb543f69da99f8a2821c766e32476cc5b0300: Nitro nightly.136, pnpm 12.18.0 and the other documented bumps landed. RELEASE_TRAIN.md records holds, and cargo-audit PR #83 merged as d31cf2cf9500cb32ed1ec43ef68e628856e9f54f (exact-head audit run 43510259292 passed with seven explicit advisory ignores). Full §5 audit/hold disposition and a fresh pnpm outdated -r review remain incomplete; the original all-22-workflow acceptance has not been independently signed. Historical and current partial CI results are separated in the evidence; this is not a gate pass.",
+      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null
@@ -69,9 +69,9 @@
         "- Blend and opacity: no engine op for its premultiplied-alpha option.",
         "Each needs a component change in Tron or a new engine op in Forge. That is a design decision. For each, write a one-page proposal with both options, the API change, and the test, then stop and report. Implement after the owner chooses. A component change goes into Tron before `rc.2`."
       ],
-      "status": "not-started",
-      "statusReason": "No proposal exists in the repository at 0ad4ed2, and the owner has made none of the three choices.",
-      "evidence": null,
+      "status": "in-progress",
+      "statusReason": "docs/proposals/F3-deferred-rows.md exists. PR #81 implemented the recorded option-B Tally pivot and Cadence sensitivity/marker operations and merged as a58994d4802de2db9067ae3cbe824912c4a50b9c. Source-bound browser receipts at tested merge 0c8ba55452fb7dd952d6c933dd56071862f350c3 cover All-filter refresh, undo/redo, beat detection and marker rename/tick preservation. The Prism B11 alphaModes Forge catalog wiring and its row tests/render review remain incomplete; the three-row gate has no full acceptance signature. Proposal and historical source identities are preserved.",
+      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null
@@ -136,8 +136,8 @@
         "Fresh receipts at the candidate commit for the Rust engines, the C ABI, iOS and Android native apps, and web. `ROSTER.md` and `compatibility.v1.json` agree with each other and with the receipts. Anything not run says NOT RUN."
       ],
       "status": "in-progress",
-      "statusReason": "compatibility.v1.json was regenerated from the receipts that exist at 0ad4ed2 and ROSTER.md's transport table now matches it. No candidate commit exists, so no receipt is at the candidate commit. iOS and Android runtime receipts are simulator and emulator runs at older commits; web in a browser is NOT RUN.",
-      "evidence": "docs/release/evidence/2026-11-11-0ad4ed2/ci-runs.json",
+      "statusReason": "Source-bound browser receipts now exist: PR #82 launcher/Prism shell at tested merge 370e10b6b2c95ddeeeb2ae0ad89815e5305c884f, and PR #81 Tally/Cadence real-engine interactions at 0c8ba55452fb7dd952d6c933dd56071862f350c3. compatibility.v1.json and ROSTER.md mark web partial. Active F2 PR #85 head f6b6e17e0600fcb1f8e14023a1692026738daaa7 has separate partial CI at tested merge 2463139896b61e8bfe49a2ad6dd2da50fb02043a; its two native workflows were still running at the captured snapshot. Fresh complete Rust/C ABI/native runtime/web receipts at one final candidate remain outstanding. Older simulator/emulator receipts are not relabeled; physical-device and wider platform work remain NOT RUN.",
+      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null
@@ -156,9 +156,9 @@
         "5. Micro-interactions, responsive behaviour and native popovers and menus are present in every studio, not only the ones reviewed first.",
         "Acceptance: the radius check passing with zero exemptions beyond those listed in §2.5; a view-by-view radius inventory per studio showing outer views at `rounded-md` and inner views at `rounded-sm`; side-by-side captures of all studios at iPad size showing one grammar; the critique record for each studio."
       ],
-      "status": "not-started",
-      "statusReason": "design/DIRECTION.md still says \"4 pt radius\" without the two-token rule, the labs define --radius-control 8px and --radius-card 12px, and no radius check exists under tooling/.",
-      "evidence": null,
+      "status": "in-progress",
+      "statusReason": "PR #86 merged the owner’s §2.5 suite brief and two-token radius direction into design/DIRECTION.md at b000c8ab9f8201bcba3c67163f6c8f700acf6453. This completes the direction-document piece only. Shared token migration, the radius validator wired into validate:v1, view-by-view inventory, full §3.3 per-studio critique, cross-studio consistency and iPad-size captures, interactions and native accessibility evidence remain incomplete. No full design acceptance or gate signature is claimed.",
+      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
       "commit": null,
       "reviewer": null,
       "reviewedAt": null

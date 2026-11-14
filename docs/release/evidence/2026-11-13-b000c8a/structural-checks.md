@@ -1,0 +1,1 @@
+Acceptance arrays unchanged for all nine gates. F2/F4/F5/F6/F9 objects unchanged. Non-web runtime entries and all host-service entries unchanged. Validators unchanged. Retained browser receipt files byte-identical to original outputs. All assertions passed.

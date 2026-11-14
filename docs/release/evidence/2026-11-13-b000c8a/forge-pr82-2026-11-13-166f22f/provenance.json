@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "repository": "mikevocalz/nitro-forge",
+  "sourceRevision": "370e10b6b2c95ddeeeb2ae0ad89815e5305c884f",
+  "pullRequestHeadRevision": "166f22f7267fe9eb8f6c1f97a9b8b9555e03d926",
+  "runId": "43514127599",
+  "runAttempt": "1",
+  "runUrl": "https://github.com/mikevocalz/nitro-forge/actions/runs/43514127599",
+  "capturedAt": "2026-11-13T21:54:14.629Z",
+  "nodeVersion": "v26.13.1",
+  "lockfileSha256": "500c55952409c95c7565853402bb0f4586d6f694a080c27afa2b32bbcd532b9c",
+  "buildCommand": "pnpm --filter @nitro-forge/studio-preview build",
+  "passedRenderCommands": [
+    "pnpm --filter @nitro-forge/studio-preview test:render:build",
+    "pnpm --filter @nitro-forge/studio-preview test:render"
+  ],
+  "scope": "Chromium launcher rendering only. Engine operations require the existing Vite/nf-cli bridge; no native or standalone engine-service acceptance.",
+  "files": [
+    {
+      "path": "dist/apple-touch-icon.png",
+      "bytes": 1610,
+      "sha256": "1ff0ff804c6a6f96ca912353119d61f2d925c298654789ede3d1840cf14af0ed"
+    },
+    {
+      "path": "dist/assets/index-Cjdny_GY.css",
+      "bytes": 44874,
+      "sha256": "ffe1b326cadd31d5bc2a61594331bfb7ce94e2f2496111c57502d0cb6a56a479"
+    },
+    {
+      "path": "dist/assets/index-DoQfvAtX.js",
+      "bytes": 1794196,
+      "sha256": "17ea7293a7118d5b26e56e78f09fc4b9dbb65f4e5216a43b8af9caafe2a2a188"
+    },
+    {
+      "path": "dist/favicon.svg",
+      "bytes": 646,
+      "sha256": "af4e5774a485c992cfcab87cbb700c7a2800ff0e88dbc3508f7b56b349b9186d"
+    },
+    {
+      "path": "dist/icon-192.png",
+      "bytes": 2872,
+      "sha256": "2fea4638adbd0d2a5ddc907883830cb78fedd4a109836b65d7fa218b7b10cc46"
+    },
+    {
+      "path": "dist/icon-512.png",
+      "bytes": 7679,
+      "sha256": "201491fad72ab2cabfcfb0182ae6fae67f398576e4de54af8b30c1724e15591e"
+    },
+    {
+      "path": "dist/index.html",
+      "bytes": 569,
+      "sha256": "0d1b8d4a292cda5e29dd93dbfa9bf455f7dabebbc59e0c5a0c80c84b39cc682c"
+    },
+    {
+      "path": "dist/manifest.webmanifest",
+      "bytes": 324,
+      "sha256": "7185f52c072337b38f3aab36695e8a9b00f95e51c8319181ced9aa4d12815cbd"
+    }
+  ]
+}

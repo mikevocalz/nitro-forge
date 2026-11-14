@@ -1,0 +1,221 @@
+{
+  "status": "candidate",
+  "channel": "prerelease",
+  "version": "1.0.0-rc.1",
+  "passed": 0,
+  "total": 9,
+  "gates": [
+    {
+      "id": "F1",
+      "title": "Packages updated",
+      "status": "in-progress",
+      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status in-progress",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "Dependency baseline PR #78 merged as 17abb543f69da99f8a2821c766e32476cc5b0300: Nitro nightly.136, pnpm 12.18.0 and the other documented bumps landed. RELEASE_TRAIN.md records holds, and cargo-audit PR #83 merged as d31cf2cf9500cb32ed1ec43ef68e628856e9f54f (exact-head audit run 43510259292 passed with seven explicit advisory ignores). Full §5 audit/hold disposition and a fresh pnpm outdated -r review remain incomplete; the original all-22-workflow acceptance has not been independently signed. Historical and current partial CI results are separated in the evidence; this is not a gate pass."
+    },
+    {
+      "id": "F2",
+      "title": "Tron pin",
+      "status": "blocked",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status blocked",
+        "no evidence",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "Neither Tron v1.0.0-rc.2 nor v1.0.0 exists (gh release list on mikevocalz/NYC-Tron-UI, 2026-11-11: latest is v1.0.0-rc.1). tooling/nyc-tron.json pins v1.0.0-rc.1."
+    },
+    {
+      "id": "F3",
+      "title": "Deferred rows",
+      "status": "in-progress",
+      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status in-progress",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "docs/proposals/F3-deferred-rows.md exists. PR #81 implemented the recorded option-B Tally pivot and Cadence sensitivity/marker operations and merged as a58994d4802de2db9067ae3cbe824912c4a50b9c. Source-bound browser receipts at tested merge 0c8ba55452fb7dd952d6c933dd56071862f350c3 cover All-filter refresh, undo/redo, beat detection and marker rename/tick preservation. The Prism B11 alphaModes Forge catalog wiring and its row tests/render review remain incomplete; the three-row gate has no full acceptance signature. Proposal and historical source identities are preserved."
+    },
+    {
+      "id": "F4",
+      "title": "App identity and rebranding",
+      "status": "in-progress",
+      "evidence": "design/F4-REFERENCE-DECISION-2026-11-13.md",
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status in-progress",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "Brand manifests, icon assets and rebrand checks are present in the inspected master baseline a58994d4. On 2026-11-13 the owner accepted the earlier iPhone Duo launcher captures as the F4 design-reference basis. These remain iOS simulator captures of stub launcher bundles, not iPad or studio runtime proof. See design/F4-REFERENCE-DECISION-2026-11-13.md for the exact captures and remaining T3 adoption, platform/rebrand build, rendered-surface and owner-review criteria. No gate acceptance or reviewer signature is inferred."
+    },
+    {
+      "id": "F5",
+      "title": "Desktop target and window chrome",
+      "status": "blocked",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status blocked",
+        "no evidence",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "F5 desktop scope was struck from Forge v1 on 2026-11-13 by the integrator (A0) on the owner's instruction to drop the spike; owner confirmation is pending. See docs/proposals/F5-desktop-scope.md for the ABI/runtime return condition. No desktop spike or desktop native target ran for this record, and every studio still needs iPad windowed-mode toolbar-clearance verification. The acceptance text and validator remain unchanged; this strike does not pass F5."
+    },
+    {
+      "id": "F6",
+      "title": "Expo consumer path",
+      "status": "not-started",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status not-started",
+        "no evidence",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "Forge produces no release tarballs yet and has no clean-consumer smoke job. examples/native-cadence consumes workspace sources, not tarballs."
+    },
+    {
+      "id": "F7",
+      "title": "Platform evidence",
+      "status": "in-progress",
+      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status in-progress",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "Source-bound browser receipts now exist: PR #82 launcher/Prism shell at tested merge 370e10b6b2c95ddeeeb2ae0ad89815e5305c884f, and PR #81 Tally/Cadence real-engine interactions at 0c8ba55452fb7dd952d6c933dd56071862f350c3. compatibility.v1.json and ROSTER.md mark web partial. Active F2 PR #85 head f6b6e17e0600fcb1f8e14023a1692026738daaa7 has separate partial CI at tested merge 2463139896b61e8bfe49a2ad6dd2da50fb02043a; its two native workflows were still running at the captured snapshot. Fresh complete Rust/C ABI/native runtime/web receipts at one final candidate remain outstanding. Older simulator/emulator receipts are not relabeled; physical-device and wider platform work remain NOT RUN."
+    },
+    {
+      "id": "F8",
+      "title": "Design pass",
+      "status": "in-progress",
+      "evidence": "docs/release/evidence/2026-11-13-b000c8a/README.md",
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status in-progress",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "PR #86 merged the owner’s §2.5 suite brief and two-token radius direction into design/DIRECTION.md at b000c8ab9f8201bcba3c67163f6c8f700acf6453. This completes the direction-document piece only. Shared token migration, the radius validator wired into validate:v1, view-by-view inventory, full §3.3 per-studio critique, cross-studio consistency and iPad-size captures, interactions and native accessibility evidence remain incomplete. No full design acceptance or gate signature is claimed."
+    },
+    {
+      "id": "F9",
+      "title": "Release",
+      "status": "blocked",
+      "evidence": null,
+      "commit": null,
+      "reviewer": null,
+      "ready": false,
+      "problems": [
+        "status blocked",
+        "no evidence",
+        "no commit",
+        "no reviewer signature"
+      ],
+      "reason": "Depends on F1 to F8 and on Tron 1.0.0 (F2). The root version is 0.0.0, no tag or GitHub Release exists, and there is no owner approval to bind to a checksum."
+    }
+  ],
+  "compatibility": [
+    {
+      "name": "rust-engines",
+      "status": "passed"
+    },
+    {
+      "name": "rust-c-abi",
+      "status": "passed"
+    },
+    {
+      "name": "nf-cli-package-suites",
+      "status": "passed"
+    },
+    {
+      "name": "react-native-ios",
+      "status": "partial"
+    },
+    {
+      "name": "react-native-android",
+      "status": "partial"
+    },
+    {
+      "name": "web",
+      "status": "partial"
+    },
+    {
+      "name": "wasm",
+      "status": "not-verified"
+    },
+    {
+      "name": "desktop-macos",
+      "status": "NOT RUN"
+    },
+    {
+      "name": "desktop-windows",
+      "status": "NOT RUN"
+    },
+    {
+      "name": "skia-v3-graphite",
+      "status": "NOT RUN"
+    },
+    {
+      "name": "expo-ui-editor",
+      "status": "NOT RUN"
+    },
+    {
+      "name": "native-adaptive-layout",
+      "status": "NOT RUN"
+    },
+    {
+      "name": "folio-render",
+      "status": "not-verified"
+    },
+    {
+      "name": "raw-decode",
+      "status": "passed"
+    },
+    {
+      "name": "scene-render",
+      "status": "passed"
+    },
+    {
+      "name": "splice-render",
+      "status": "passed"
+    },
+    {
+      "name": "nf-color",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "blockers": [],
+  "note": "Prerelease report only. It does not claim any v1 gate or owner approval."
+}

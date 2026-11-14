@@ -1,0 +1,44 @@
+{
+  "requestId": "3057.138",
+  "state": "complete",
+  "resourceType": "Fetch",
+  "durationMs": 3,
+  "encodedDataLength": 262,
+  "request": {
+    "url": "http://127.0.0.1:4193/api/engine",
+    "method": "POST",
+    "headers": {
+      "Accept": "*/*",
+      "Accept-Encoding": "gzip, deflate, br, zstd",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Connection": "keep-alive",
+      "Content-Length": "89",
+      "Content-Type": "application/json",
+      "Host": "127.0.0.1:4193",
+      "Origin": "http://127.0.0.1:4193",
+      "Referer": "http://127.0.0.1:4193/",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not-A.Brand\";v=\"99\", \"Google Chrome\";v=\"157\", \"Chromium\";v=\"157\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    },
+    "postData": "{\"op\":\"apply\",\"args\":[2,{\"op\":\"updateMarker\",\"payload\":{\"id\":3,\"name\":\"Reviewed seed\"}}]}"
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+      "Cache-Control": "no-store",
+      "Connection": "keep-alive",
+      "Content-Length": "82",
+      "Content-Type": "application/json",
+      "Date": "Fri, 13 Nov 2026 22:29:23 GMT",
+      "Keep-Alive": "timeout=5"
+    },
+    "mimeType": "application/json",
+    "body": "{\"data\":{\"events\":[{\"detail\":null,\"kind\":\"document:changed\"}],\"data\":{\"ok\":true}}}"
+  }
+}
