@@ -46,7 +46,7 @@ for existing controls; keep app navigation, tabs and radio choices distinct.
 
 ## Advanced native UI extraction
 
-NYC-Tron UI is the single owner of reusable native controls, released as [NYC-Tron `v0.1.0-alpha.3`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v0.1.0-alpha.3), the release `tooling/nyc-tron.json` pins (GitHub Release tarballs, not npm; the controls came in via NYC-Tron PR #2). Forge adds only Rust/native engine behavior and typed adapters. Inspect [the source-port roster](docs/ADVANCED_NATIVE_PORT_ROSTER.md) before introducing an upstream port; file-level license review is mandatory. Never recreate the knob, graph, crop overlay, or generic native popup inside Forge.
+NYC-Tron UI is the single owner of reusable native controls. The release pinned in `tooling/nyc-tron.json` is [NYC-Tron `v1.0.0-rc.2`](https://github.com/mikevocalz/NYC-Tron-UI/releases/tag/v1.0.0-rc.2) (GitHub Release tarballs, not npm; the controls came in via NYC-Tron PR #2). Forge adds only Rust/native engine behavior and typed adapters. Inspect [the source-port roster](docs/ADVANCED_NATIVE_PORT_ROSTER.md) before introducing an upstream port; file-level license review is mandatory. Never recreate the knob, graph, crop overlay, or generic native popup inside Forge.
 
 ## Writing and native skills
 

@@ -59,7 +59,8 @@ for (const manifestPath of findManifests(root)) {
 }
 
 // Every @nyc-tron tarball any committed lockfile resolves must be a pinned URL.
-// pnpm records no integrity hash for URL tarballs, so `--download` re-hashes them.
+// pnpm 12 records SHA-512 integrity for URL tarballs; `--download` independently
+// checks the release's SHA-256 pins and published checksum manifest as well.
 const pinnedUrls = new Set(Object.values(pin.packages).map((p) => p.url));
 const lockfiles = ["pnpm-lock.yaml", ...findLockfiles(join(root, "examples"))];
 for (const lockPath of lockfiles) {

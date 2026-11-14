@@ -1,5 +1,5 @@
-// Consumer contract against the NYC-Tron release pinned in package.json
-// (v1.0.0-rc.1). Type-only imports: the adapter's runtime never loads
+// Consumer contract against the NYC-Tron release pinned in tooling/nyc-tron.json.
+// Type-only imports: the adapter's runtime never loads
 // @nyc-tron/*, React or React Native. `pnpm --filter @nitro-forge/splice
 // typecheck` checks the assignments below; vitest checks the pin itself.
 //
@@ -25,8 +25,9 @@ export const clipFits = (c: TimelineClipView): TimelineClipLaneProps["tracks"][n
 describe("NYC-Tron pin", () => {
   it("installs @nyc-tron/ui as a dev-only dependency from the pinned release tarball", () => {
     const manifest = JSON.parse(readFileSync(join(import.meta.dirname, "../package.json"), "utf8"));
+    const pin = JSON.parse(readFileSync(join(import.meta.dirname, "../../../tooling/nyc-tron.json"), "utf8"));
     expect(manifest.devDependencies["@nyc-tron/ui"]).toBe(
-      "https://github.com/mikevocalz/NYC-Tron-UI/releases/download/v1.0.0-rc.1/nyc-tron-ui-1.0.0-rc.1.tgz",
+      pin.packages["@nyc-tron/ui"].url,
     );
     expect(manifest.dependencies?.["@nyc-tron/ui"]).toBeUndefined();
   });

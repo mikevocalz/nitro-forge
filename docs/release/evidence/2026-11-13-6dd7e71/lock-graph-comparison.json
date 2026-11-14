@@ -1,0 +1,86 @@
+[
+  {
+    "lock": "pnpm-lock.yaml",
+    "yamlDocuments": 2,
+    "packageManagerDocumentUnchanged": true,
+    "packagesBefore": 774,
+    "packagesAfter": 774,
+    "snapshotsBefore": 774,
+    "snapshotsAfter": 774,
+    "nonTronPackagesAndSnapshotsUnchanged": true,
+    "importersAndSnapshotsOnlyTronUrlsAndPeerContextsChanged": true,
+    "allTronSha512MatchPublishedBytes": true,
+    "metadataChanges": [
+      {
+        "package": "@nyc-tron/expo-controls",
+        "field": "peerDependencies.@nyc-tron/ui",
+        "before": "^1.0.0-rc.1",
+        "after": "^1.0.0-rc.2",
+        "matchesPublishedManifest": true
+      },
+      {
+        "package": "@nyc-tron/reserved-regions",
+        "field": "peerDependencies.@nyc-tron/core",
+        "before": "^1.0.0-rc.1",
+        "after": "^1.0.0-rc.2",
+        "matchesPublishedManifest": true
+      },
+      {
+        "package": "@nyc-tron/ui",
+        "field": "peerDependencies.@nyc-tron/core",
+        "before": "^1.0.0-rc.1",
+        "after": "^1.0.0-rc.2",
+        "matchesPublishedManifest": true
+      },
+      {
+        "package": "@nyc-tron/ui",
+        "field": "peerDependencies.react-native-gesture-handler",
+        "before": ">=3.4.0 <4",
+        "after": ">=3.3.0 <4",
+        "matchesPublishedManifest": true
+      }
+    ]
+  },
+  {
+    "lock": "examples/native-cadence/pnpm-lock.yaml",
+    "yamlDocuments": 2,
+    "packageManagerDocumentUnchanged": true,
+    "packagesBefore": 716,
+    "packagesAfter": 716,
+    "snapshotsBefore": 716,
+    "snapshotsAfter": 716,
+    "nonTronPackagesAndSnapshotsUnchanged": true,
+    "importersAndSnapshotsOnlyTronUrlsAndPeerContextsChanged": true,
+    "allTronSha512MatchPublishedBytes": true,
+    "metadataChanges": [
+      {
+        "package": "@nyc-tron/hardware-keys",
+        "field": "peerDependencies.@nyc-tron/ui",
+        "before": "^1.0.0-rc.1",
+        "after": "^1.0.0-rc.2",
+        "matchesPublishedManifest": true
+      },
+      {
+        "package": "@nyc-tron/reserved-regions",
+        "field": "peerDependencies.@nyc-tron/core",
+        "before": "^1.0.0-rc.1",
+        "after": "^1.0.0-rc.2",
+        "matchesPublishedManifest": true
+      },
+      {
+        "package": "@nyc-tron/ui",
+        "field": "peerDependencies.@nyc-tron/core",
+        "before": "^1.0.0-rc.1",
+        "after": "^1.0.0-rc.2",
+        "matchesPublishedManifest": true
+      },
+      {
+        "package": "@nyc-tron/ui",
+        "field": "peerDependencies.react-native-gesture-handler",
+        "before": ">=3.4.0 <4",
+        "after": ">=3.3.0 <4",
+        "matchesPublishedManifest": true
+      }
+    ]
+  }
+]
