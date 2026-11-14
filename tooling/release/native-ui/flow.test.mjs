@@ -86,7 +86,7 @@ test('every action is an enabled control touch followed by its scoped visible re
 
 test('result assertions reject wrong studios, wrong actions, failed results and generic PASS', () => {
   const selectors = results(createFlow().commands);
-  assert.equal(selectors.length, 7 * 12);
+  assert.equal(selectors.length, 7 * 12 + 7 * 6, 'Keep all action assertions plus each centered action capture assertion');
   for (const selector of selectors) {
     assert.equal(selector.id, 'f6-result');
     assert.ok(selector.text.startsWith('^') && selector.text.endsWith('$'));
@@ -177,3 +177,23 @@ test('CLI writes ordinary two-document YAML with preserved selectors and refuses
   assert.throws(() => execFileSync(process.execPath, args, { stdio: 'pipe' }), /Command failed/);
 });
 
+
+test('each action PNG recenters the exact FINAL result after its wait and before capture', () => {
+  const commands = createFlow().commands;
+  let captures = 0;
+  for (const [index, command] of commands.entries()) {
+    if (!command.takeScreenshot || command.takeScreenshot.endsWith('-picker')) continue;
+    const assertion = commands[index - 1].assertVisible;
+    const centered = commands[index - 2].scrollUntilVisible;
+    assert.equal(assertion?.id, 'f6-result');
+    assert.deepEqual(centered.element, assertion);
+    assert.equal(centered.centerElement, true);
+    assert.equal(centered.visibilityPercentage, 100);
+    const previousAction = commands.findLastIndex((step, at) => at < index && step.tapOn?.id);
+    const finalWait = commands.findIndex((step, at) => at > previousAction && at < index && step.extendedWaitUntil?.visible.id === 'f6-result');
+    assert.ok(finalWait > previousAction && finalWait < index - 2, 'Final result wait precedes capture centering');
+    assert.deepEqual(commands[finalWait].extendedWaitUntil.visible, assertion);
+    captures++;
+  }
+  assert.equal(captures, 42, 'Six result images for each of seven actual studios');
+});

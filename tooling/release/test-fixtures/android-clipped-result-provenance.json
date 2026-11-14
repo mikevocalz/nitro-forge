@@ -1,0 +1,14 @@
+{
+  "sourceHead": "20165261dfdf2f9000b29d4789738ee730696e4a",
+  "executedMerge": "5f6142a7f9a4caa6be0d9c6f312234bea1239707",
+  "run": 43580353727,
+  "artifact": 14109547648,
+  "artifactSha256": "e3b109d60a92caf4ca2a5137ee761d508363dfb78526b110cbf6318fae47a55b",
+  "maestro": "2.12.1",
+  "trace": "runtime-ui/pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/logs/maestro.log",
+  "screenshot": {
+    "path": "pass-2/artifacts/2026-11-14_095849/Forge seven-studio durable document workflows/takeScreenshot/f6-tally-bad-restore-rejected.png",
+    "sha256": "4e7126a18a3d07a2d2b8e5129195a54f2ed2cbbc4ae5afebe5433cb9d420bcda"
+  },
+  "scope": "Verbatim single completed result-scroll event from actual native trace. AX reports six clipped pixels at the bottom edge as Visibility Percent1.0; original image does not visibly show the rejected-restore result. No source/result/image was edited."
+}

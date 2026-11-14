@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { files, hash, inside, json, requireDisk } from '../archive-files.mjs';
 import { unpackArchive } from '../unpack-archive.mjs';
+import { resultCaptureGeometry, resultCapturePlans } from './capture-bounds.mjs';
 import { androidTransport, observedCommand } from './transport.mjs';
 import { createFlow, createPickerFlow, serializeFlow } from './flow.mjs';
 import { MAESTRO, parseHierarchy, requirePassedFlow, requireSemanticLabels } from './ui-evidence.mjs';
@@ -22,7 +23,7 @@ const record = json(resolve(artifacts, 'runtime-artifact.json')), appId = 'dev.n
 const maestro = process.env.MAESTRO_BIN;
 assert.ok(maestro && existsSync(maestro), 'Verified pinned Maestro binary required');
 const env = { ...process.env, CI: '1', MAESTRO_CLI_NO_ANALYTICS: '1', MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: 'true', MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000' };
-let device, ownedSimulator, adb, app, iosContainer;
+let device, ownedSimulator, adb, app, iosContainer, nativeViewport;
 const stages = [];
 let cliSequence = 0;
 const execution = { runId: process.env.GITHUB_RUN_ID ?? null, runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
@@ -87,6 +88,18 @@ function flow(name, definition) {
   for (const image of expectedImages) assert.ok(images.some(file => file === image || file.endsWith(`/${image}`)), `Actual native screenshot missing: ${image}`);
   for (const image of images) assert.equal(readFileSync(inside(directory, image)).subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   const result = { name, ...passed, flowSha256: hash(path), reportSha256: hash(report), screenshots: images.map(file => ({ path: `${name}/${file}`, sha256: hash(inside(directory, file)) })) };
+  const plans = resultCapturePlans(definition);
+  if (plans.length) {
+    assert.ok(nativeViewport, 'Actual native picker viewport required before action captures');
+    const logs = files(directory).filter(file => file.startsWith('artifacts/') && file.endsWith('/logs/maestro.log'));
+    assert.equal(logs.length, 1, 'Unique executed Maestro native command log required');
+    const log = inside(directory, logs[0]);
+    result.captureLogSha256 = hash(log);
+    result.captures = resultCaptureGeometry(readFileSync(log, 'utf8'), plans, nativeViewport).map(capture => {
+      const png = exactFlowScreenshot(result, capture.name + '.png');
+      return { ...capture, path: png.path, sha256: png.sha256 };
+    });
+  }
   stages.push(result);
   return result;
 }
@@ -200,6 +213,7 @@ try {
     writeFileSync(inside(output, 'picker-capture.json'), JSON.stringify({ tool: 'Pinned official Maestro XCTest screenshot from executed picker flow', originalPath: captured.path, sha256: captured.sha256 }, null, 2) + '\n');
   } else pickerImage = screenshot('picker-native');
   const geometry = pickerGeometry(tree, pickerImage, platform === 'android' ? 320 : undefined);
+  nativeViewport = { width: geometry.viewportWidth, height: geometry.viewportHeight };
   for (const pass of [1, 2]) {
     flow(`pass-${pass}`, createFlow({ screenshotPrefix: 'f6' }));
     const tree = hierarchy(`pass-${pass}`);

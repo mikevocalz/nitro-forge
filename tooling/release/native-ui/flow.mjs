@@ -69,7 +69,13 @@ function action(commands, kind, key, screenshot) {
     commands.push(scroll({ id: 'f6-file' }, 'DOWN'));
     commands.push({ assertVisible: { id: 'f6-file', text: `^file://[^\\n]+/forge-f6-${kind}\\.nfd$` } });
   }
-  if (screenshot) commands.push({ takeScreenshot: screenshot });
+  if (screenshot) {
+    // AX can report a clipped six-pixel result as 100% visible. Wait for the
+    // final text first, then center that exact result and reassert before PNG.
+    commands.push({ scrollUntilVisible: { ...scroll(result, 'DOWN').scrollUntilVisible, centerElement: true } });
+    commands.push({ assertVisible: result });
+    commands.push({ takeScreenshot: screenshot });
+  }
   commands.push(scroll({ id: 'f6-selected' }, 'UP'));
   commands.push({ assertVisible: selected(kind, state) });
 }
